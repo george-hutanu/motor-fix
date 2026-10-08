@@ -2,11 +2,12 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 import { GarageBrandAnswerDto } from './garage-brands.dto';
+import { NearQueryDto } from './near.dto';
 
 const GARAGE_BRAND_ANSWERS = ['works_on', 'does_not_take', 'unstated'] as const;
 type GarageBrandAnswer = (typeof GARAGE_BRAND_ANSWERS)[number];
 
-export class GarageSearchQueryDto {
+export class GarageSearchQueryDto extends NearQueryDto {
   @ApiProperty({
     description: 'The brand, by its catalogue id',
     format: 'uuid',
@@ -40,6 +41,20 @@ export class ListedGarageDto extends GarageBrandAnswerDto {
     enum: GARAGE_BRAND_ANSWERS,
   })
   stance!: GarageBrandAnswer;
+
+  @ApiPropertyOptional({
+    description:
+      'Km from the place, one decimal; null for a mobile mechanic. Only with near',
+    nullable: true,
+    type: Number,
+  })
+  distanceKm?: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'True for a mobile mechanic whose area holds the place. Only with near',
+  })
+  comesToYou?: boolean;
 }
 
 export class BrandCountsDto {
