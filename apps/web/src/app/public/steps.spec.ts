@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 
-import { currentStep, keepsTapped, STEPS } from './steps';
+import { currentStep, jumpTarget, keepsTapped, STEPS } from './steps';
 
 describe('the six steps', () => {
   it('are numbered 1 to 6, the mechanics optional and the verification required', () => {
@@ -89,5 +89,28 @@ describe('a tapped step', () => {
   it('gives way to the scroll once the scroll reaches it or a later step', () => {
     expect(keepsTapped(3, 3, -10, bottom)).toBe(false);
     expect(keepsTapped(6, 3, 170, bottom)).toBe(false);
+  });
+});
+
+describe('where a jump to a heading takes the page', () => {
+  // A 3000 px page in a 720 px window: it scrolls from 0 to 2280.
+  const target = (top: number, margin: number, scrollY: number) =>
+    jumpTarget(top, margin, scrollY, 3000, 720);
+
+  it('brings the heading to the top, short of its scroll margin', () => {
+    expect(target(900, 44, 100)).toBe(956);
+    expect(target(-300, 16, 1000)).toBe(684);
+  });
+
+  it('stops at the end of the page when the heading is too near it', () => {
+    expect(target(2000, 16, 1000)).toBe(2280);
+  });
+
+  it('stops at the top of the page', () => {
+    expect(target(10, 44, 0)).toBe(0);
+  });
+
+  it('goes nowhere on a page shorter than the window', () => {
+    expect(jumpTarget(400, 16, 0, 600, 720)).toBe(0);
   });
 });
