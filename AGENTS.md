@@ -157,6 +157,12 @@ epic or a plan, whether run through spec-kit or by hand.
   `after_specify`, `before_plan`, `before_implement`), and so do
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
   yourself. After every merge to `main`, run `speckit-notion-sync finish`.
+- **Observability ships with the change.** A story that adds a service,
+  resource, queue, outside call, endpoint or product action adds its metrics,
+  logs, traces, dashboard panel and alert (or says why not) in the same PR,
+  lists them in its Observability section and in
+  `infra/observability/inventory.json`; `scripts/observability-inventory.ts`
+  fails CI on one left out.
 - **Every PR uses the template**, `.github/pull_request_template.md`, whoever
   opens it. The `PR template` workflow (`scripts/pr-body-check.ts`, whose
   header lists the rules) checks a draft's headings and a ready PR's every

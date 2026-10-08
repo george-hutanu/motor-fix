@@ -39,6 +39,16 @@ Locally, `docker compose --profile observability up -d otel-lgtm` runs
 They are imported or provisioned into Grafana Cloud by the stories that add them; a
 change made only in the Grafana UI is lost.
 
+## Inventory
+
+`inventory.json` lists every app, Railway service, queue and outside service
+with its dashboard uid and alert rule uids, or `"none"` and the reason, plus
+the API's endpoint count. `node scripts/observability-inventory.ts` (CI Checks
+job) fails while the code holds one it does not list, an entry outlives what
+it names, a uid is not declared by a JSON file here, or the endpoint count is
+stale (`--write` updates it). PostgreSQL, Redis and product counters are
+listed by hand.
+
 ## Staying free
 
 | Signal | Free-tier limit | Expected (staging + production, before launch) |

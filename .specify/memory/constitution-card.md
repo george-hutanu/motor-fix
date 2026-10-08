@@ -1,4 +1,4 @@
-# Constitution card — v1.8.2
+# Constitution card — v1.8.3
 
 For authors: each principle of `.specify/memory/constitution.md` in one line,
 with the gate that enforces it. The full text governs, and the reviewers and
@@ -16,5 +16,6 @@ the principles or the version drift.
 Always: a one-line Conventional Commit (`commit-msg-policy.js`); spec-drift on
 `feat`/`fix`/`perf` (`spec-drift.mjs --staged`); author george-hutanu
 (`.husky/identity.sh`); no force-push, `reset --hard` or `clean -f`
-(`bash-guard.mjs`). The Agent Execution Rules (scope is the deliverable,
+(`bash-guard.mjs`); a new service, queue, outside call or endpoint listed with
+its dashboard and alerts (`scripts/observability-inventory.ts`). The Agent Execution Rules (scope is the deliverable,
 grounded claims, finish the task, report faithfully) are in the full file.
