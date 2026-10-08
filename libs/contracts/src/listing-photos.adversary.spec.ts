@@ -1,9 +1,9 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
-import { isListingDraftData } from './listing-drafts.dto';
 import { hasConfirmedPhoto } from './listing-photos';
 import { ConfirmPhotoDto, PhotoUploadRequestDto } from './listing-photos.dto';
+import { isListingDraftData } from './listing-sections';
 
 const OWNER = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
 const ID = '5e0a8f3b-91c2-4d7e-8b6a-0c4f2e9d1a37';

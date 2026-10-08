@@ -1,7 +1,10 @@
-// Steps 1, 3 and 4 of the listing form as the draft holds them. The guards
-// judge shape only, so a half-typed section is kept; the completeness
-// functions say whether a step is ready to tick.
+// Steps 1, 3 and 4 of the listing form as the draft holds them, and the
+// draft's whole data envelope. The guards judge shape only, so a half-typed
+// section is kept; the completeness functions say whether a step is ready to
+// tick. Browser-safe: the web app and the API read the same rule.
 
+import { type HoursSection, isHoursSection } from './garage-hours';
+import { isStep6Section, type Step6Section } from './listing-verification';
 import { normalisePhone } from './phone';
 import { checkPriceRange } from './price-range';
 
@@ -204,3 +207,53 @@ export const mechanicsComplete = (section: MechanicsSection): boolean =>
   (section.mechanics ?? []).every((card) =>
     trimmedWithin(card.name, MECHANIC_NAME_MIN, MECHANIC_NAME_MAX),
   );
+
+// The form's own data: one section per step, the survey, and the storage keys
+// of the files the draft holds. Each step's story checks its own section.
+export interface ListingDraftData {
+  steps?: Partial<
+    Record<'2', Record<string, unknown>> & {
+      '1': DetailsSection;
+      '3': PricesSection;
+      '4': MechanicsSection;
+      '5': Record<string, unknown> & HoursSection;
+      '6': Step6Section;
+    }
+  >;
+  survey?: Record<string, unknown>;
+  files?: string[];
+}
+
+const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
+  '1': isDetailsSection,
+  '2': isRecord,
+  '3': isPricesSection,
+  '4': isMechanicsSection,
+  '5': isHoursSection,
+  '6': isStep6Section,
+};
+const FILE_KEY = /^[a-z_-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
+
+// The envelope only: an object holding nothing but those three keys.
+export function isListingDraftData(value: unknown): value is ListingDraftData {
+  if (!isRecord(value) || !onlyKeys(value, ['steps', 'survey', 'files']))
+    return false;
+  const { files, steps, survey } = value;
+  if (survey !== undefined && !isRecord(survey)) return false;
+  if (
+    files !== undefined &&
+    !(
+      Array.isArray(files) &&
+      files.every((key) => typeof key === 'string' && FILE_KEY.test(key))
+    )
+  )
+    return false;
+  if (steps === undefined) return true;
+  return (
+    isRecord(steps) &&
+    Object.entries(steps).every(
+      ([key, section]) =>
+        Object.hasOwn(SECTION_GUARDS, key) && SECTION_GUARDS[key](section),
+    )
+  );
+}

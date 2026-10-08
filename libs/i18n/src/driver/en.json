@@ -40,5 +40,37 @@
     "itpMissing": "ITP: add the date from the registration",
     "itpUntil": "ITP valid until {day}",
     "retry": "Try again"
+  },
+  "notifications": {
+    "alwaysSent": "Always sent: booking confirmed, new time proposed by the garage, booking cancelled or lapsed, car ready.",
+    "consent": {
+      "cancel": "Cancel",
+      "confirm": "I agree",
+      "text": "I want to receive MotorFix news by e‑mail, at most once a month. I can stop at any time, with one click.",
+      "title": "Get MotorFix news?"
+    },
+    "group": {
+      "bookings": {
+        "hint": "A day before, and while the car is at the garage",
+        "title": "Bookings"
+      },
+      "due_dates": {
+        "hint": "ITP, RCA, road vignette, tyres and services",
+        "title": "Due dates"
+      },
+      "news": {
+        "hint": "At most one e‑mail a month",
+        "title": "MotorFix news"
+      },
+      "offers": {
+        "hint": "When a garage answers your request",
+        "title": "New offer"
+      },
+      "reviews_history": {
+        "hint": "Reviews, repair history and car transfer",
+        "title": "Reviews and history"
+      }
+    },
+    "title": "Notifications"
   }
 }

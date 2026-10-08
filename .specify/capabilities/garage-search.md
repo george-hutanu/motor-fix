@@ -1,9 +1,10 @@
 ---
 capability: garage-search
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
+  - 225-brand-picker
 ---
 
 # Capability: Garage search
@@ -55,6 +56,18 @@ _From 043-brand-first-garage-list._
 ### 043-FR-011 — The search MUST write nothing: no audit entry, no event, no search log (MF-10 owns the search log).
 
 _From 043-brand-first-garage-list._
+
+### 225-FR-009 — `GET /api/v1/home?brand={slug}&near={lat},{lng}` MUST answer without a session, from the `search` module and the one public garage scope, with: the brand (id, name, slug), `total` (Y) and `takers` (X); `near` is accepted (two finite numbers, latitude −90..90, longitude −180..180, else 400 `validation_failed`) and ignored until the place story; a missing, blank, over-long or control-character `brand` answers 400 `validation_failed`; a slug with no active brand answers 404 `not_found`; the answer carries `Cache-Control: public, max-age=60`.
+
+_From 225-brand-picker._
+
+### 225-FR-010 — `GET /api/v1/brands/popular?limit={n}` MUST answer without a session, from the `search` module, with the tiles of FR-003 as a list of brands (id, name, slug, popularity), `limit` a whole number 1–12 defaulting to 8 (else 400 `validation_failed`); the answer carries `Cache-Control: public, max-age=60`.
+
+_From 225-brand-picker._
+
+### 225-FR-011 — Both routes MUST be marked public and listed in the public routes test, documented in the OpenAPI document with their DTOs from the contracts library, and the generated web client regenerated from it; nothing in Home calls the API by hand.
+
+_From 225-brand-picker._
 
 ## Retired
 

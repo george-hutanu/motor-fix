@@ -30,6 +30,9 @@
       "@motor-fix/contracts/listing-verification": [
         "./libs/contracts/src/listing-verification.ts"
       ],
+      "@motor-fix/contracts/notification-groups": [
+        "./libs/contracts/src/notification-groups.ts"
+      ],
       "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
       "@motor-fix/contracts/plate": ["./libs/contracts/src/plate.ts"],
       "@motor-fix/contracts/price-range": [

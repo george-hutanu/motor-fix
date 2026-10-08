@@ -1,3 +1,4 @@
+import { isListingDraftData } from '@motor-fix/contracts/listing-sections';
 import type { ListingDraftDto } from '@motor-fix/data-access';
 
 export const STORAGE_KEY = 'mf.listing-draft';
@@ -19,7 +20,7 @@ export interface BrowserDraft {
   savedAt: string;
 }
 
-export type LoadPlan =
+type LoadPlan =
   | { kind: 'empty' }
   | { kind: 'local'; draft: BrowserDraft }
   | { kind: 'push'; draft: BrowserDraft }
@@ -32,9 +33,7 @@ const isEntry = (value: unknown): value is BrowserDraft => {
   if (typeof value !== 'object' || value === null) return false;
   const entry = value as Partial<BrowserDraft>;
   return (
-    typeof entry.data === 'object' &&
-    entry.data !== null &&
-    !Array.isArray(entry.data) &&
+    isListingDraftData(entry.data) &&
     optionalText(entry.token) &&
     optionalText(entry.draftId) &&
     optionalText(entry.email) &&

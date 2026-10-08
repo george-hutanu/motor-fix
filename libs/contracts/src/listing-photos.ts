@@ -1,4 +1,4 @@
-import type { ListingDraftData } from './listing-drafts.dto';
+import type { ListingDraftData } from './listing-sections';
 
 export const PHOTOS_MAX = 20;
 
