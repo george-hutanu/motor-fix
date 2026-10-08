@@ -5,7 +5,7 @@ import { Test } from '@nestjs/testing';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { BrevoMock } from './brevo-mock.testing';
+import { BrevoMock } from './brevo/brevo-mock.testing';
 import { NotificationsModule } from './notifications.module';
 import { NotificationsService } from './notifications.service';
 import {

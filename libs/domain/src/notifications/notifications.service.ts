@@ -12,14 +12,14 @@ import type { JobsOptions } from 'bullmq';
 
 import { type NotificationType, notificationType } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
-import { mutedChannels, rowsType } from './preferences';
-import { PUSH_CONFIG, type PushConfig } from './push-config';
+import { mutedChannels, rowsType } from './preferences/preferences';
+import { PUSH_CONFIG, type PushConfig } from './push/push-config';
 import { isQuiet, nextMorning } from './quiet-hours';
 import { outsideChannels, type SentChannel } from './routing';
 import { STAFF_TYPES } from './staff-lists';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
-import { LIVE_CHANNEL } from '../events/live.hub';
+import { LIVE_CHANNEL } from '../events/live/live.hub';
 import type {
   Notification,
   Prisma,

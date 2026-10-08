@@ -1,0 +1,140 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-3);
+  margin-top: var(--mf-space-3);
+  min-width: 0;
+}
+h3 {
+  margin: var(--mf-space-2) 0 0;
+  font-size: var(--mf-size-body);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.hint,
+.holidays {
+  color: var(--mf-text-secondary);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  min-width: 0;
+}
+.row > .name {
+  flex: 1 0 8rem;
+  font-weight: 600;
+}
+.times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+select,
+input:not([type="checkbox"]) {
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+  font: inherit;
+  font-size: max(16px, 1rem);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  padding: 0 var(--mf-space-2);
+  max-width: 100%;
+}
+select:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}
+.tick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  cursor: pointer;
+}
+.tick input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mf-space-2);
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  min-width: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.error {
+  flex-basis: 100%;
+  color: var(--mf-red);
+}
+details {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+summary {
+  min-height: var(--mf-tap);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.days {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-1);
+}
+.field input {
+  width: 100%;
+}
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.closed-days,
+.facilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.closed-days li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.holidays ul {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin-top: var(--mf-space-1);
+  font-size: var(--mf-size-small);
+}
+.facilities button[aria-pressed="true"] {
+  border-color: var(--mf-text-secondary);
+  font-weight: 600;
+}
+mf-lamp {
+  font-size: var(--mf-size-small);
+}

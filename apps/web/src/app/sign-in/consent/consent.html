@@ -1,0 +1,14 @@
+<label>
+  <input
+    type="checkbox"
+    [formControl]="control()"
+    [attr.aria-describedby]="errorId()"
+    [attr.aria-invalid]="invalid() || null"
+  />
+  <span
+    >{{ 'public.consent.before' | t }}<a [href]="'/' + lang() + '/terms'" target="_blank" rel="noopener">{{ 'public.consent.terms' | t }}</a
+    >{{ 'public.consent.between' | t }}<a [href]="'/' + lang() + '/privacy'" target="_blank" rel="noopener">{{ 'public.consent.privacy' | t }}</a
+    >{{ 'public.consent.after' | t }}</span
+  >
+</label>
+<p [id]="errorId()" class="error">@if (invalid()) {{{ 'public.consent.required' | t }}}</p>

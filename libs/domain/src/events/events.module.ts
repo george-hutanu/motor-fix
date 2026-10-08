@@ -10,8 +10,8 @@ import {
 import { Redis } from 'ioredis';
 
 import { loadGarageAccess } from './garage-access';
-import { LiveController } from './live.controller';
-import { LIVE_CHANNEL, LiveHub } from './live.hub';
+import { LiveController } from './live/live.controller';
+import { LIVE_CHANNEL, LiveHub } from './live/live.hub';
 import { PublicLiveController } from './public-live.controller';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
