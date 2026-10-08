@@ -1,4 +1,4 @@
-import { fold } from '@motor-fix/contracts';
+import { fold } from '@motor-fix/contracts/fold';
 import type { BrandDto } from '@motor-fix/data-access';
 
 const SHOWN = 8;
