@@ -26,6 +26,17 @@ export async function ready(page: Page, path: string) {
   await page.waitForLoadState('networkidle');
 }
 
+// Angular drops each server-rendered node's ngh marker as it hydrates it, so
+// none left means the page answers. Unlike networkidle, it still comes on a
+// page that holds a live stream, which never ends. Only for a page the server
+// renders: one drawn in the browser alone has no marker to wait for. Without
+// a path it waits on the page already there, after a reload. Like goto and
+// the networkidle wait it replaces, only the test's own timeout bounds it.
+export async function hydrated(page: Page, path?: string) {
+  if (path !== undefined) await page.goto(path);
+  await expect(page.locator('[ngh]')).toHaveCount(0, { timeout: 0 });
+}
+
 export async function signIn(
   page: Page,
   email: string,

@@ -1,6 +1,6 @@
-import { expect, type Page } from '@playwright/test';
+import { type BrowserContext, expect, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { hydrated } from './accounts.js';
 import { test } from './fixtures.js';
 
 const MAILBOX = 'http://127.0.0.1:3025';
@@ -23,12 +23,38 @@ const SIZES = [
   ['a desktop', 1280, 800],
 ] as const;
 
+// The place step's map reads the app's own empty style: no outside tiles, and
+// no software WebGL render holding the page's thread while the photos move.
+const ownMap = (context: BrowserContext) =>
+  context.addInitScript(() => {
+    (window as unknown as { __MF_MAP_STYLE: string }).__MF_MAP_STYLE =
+      '/map/empty-style.json';
+  });
+
 const step = (page: Page) => page.locator('mf-photos-step');
 const tiles = (page: Page) => step(page).locator('li.photo');
 const names = (page: Page) =>
   tiles(page).evaluateAll((items) =>
     items.map((item) => item.getAttribute('data-name')),
   );
+const keys = (page: Page) =>
+  tiles(page).evaluateAll((items) =>
+    items.map((item) => item.getAttribute('data-key')),
+  );
+
+// The draft's server copy, once it holds these photo keys in this order.
+const savedWith = (page: Page, files: (string | null)[]) =>
+  page.waitForResponse((res) => {
+    if (
+      res.request().method() !== 'PATCH' ||
+      !/\/listing-drafts\/[^/?]+$/.test(new URL(res.url()).pathname)
+    )
+      return false;
+    const sent = res.request().postDataJSON() as {
+      data?: { files?: string[] };
+    };
+    return res.ok() && sent.data?.files?.join() === files.join();
+  });
 
 async function draftLink(page: Page, email: string): Promise<string> {
   let link: string | undefined;
@@ -63,7 +89,7 @@ async function toStep5(page: Page, nav: 'Pași' | 'Steps') {
 }
 
 async function toPhotos(page: Page, email: string) {
-  await ready(page, '/ro/list-your-garage');
+  await hydrated(page, '/ro/list-your-garage');
   await page.getByLabel('E‑mail').fill(email);
   await page.getByLabel('E‑mail').blur();
   await toStep5(page, 'Pași');
@@ -92,6 +118,8 @@ const confirmedCount = (page: Page, count: number) =>
     .toBe(count);
 
 test.describe('step 5 of list your garage, the photos @mailbox', () => {
+  test.beforeEach(({ context }) => ownMap(context));
+
   // @traces 948-FR-001 948-FR-002 948-FR-003 948-FR-004
   for (const [size, width, height] of SIZES) {
     test(`on ${size}: three photos uploaded, the last moved first, kept after a reload and on the link, one removed`, async ({
@@ -99,9 +127,11 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
       page,
     }) => {
       // Two reloads, a second browser and the mailbox: on a CI runner with
-      // four workers each step takes seconds (fill 2.8 s, networkidle 3.3 s
-      // in run 37734125105's trace), and the flow ran past 30 s while still
-      // correct. Its retries then used up the 10 drafts an hour per address.
+      // four workers each step takes seconds (fill 2.8 s in run
+      // 37734125105's trace), and the flow ran past 30 s while still correct.
+      // Its retries then used up the 10 drafts an hour per address.
+      // No wait here is for a quiet network: a page holding a live stream
+      // never gets one (runs 37814121036 and 37848562526).
       test.slow();
       await page.setViewportSize({ height, width });
       const email = `photos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
@@ -127,26 +157,26 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
         .poll(() => names(page))
         .toEqual(['trei.jpg', 'unu.jpg', 'doi.jpg']);
       await expect(tiles(page).first()).toContainText('Copertă');
+      const order = await keys(page);
+      expect(order).not.toContain(null);
+      // The other browser reads the server copy: it must hold the new order.
+      const saved = savedWith(page, order);
       await page.getByRole('button', { name: 'Salvează ciorna' }).click();
+      await saved;
 
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await hydrated(page);
       await expect(tiles(page)).toHaveCount(3);
-      const keys = await tiles(page).evaluateAll((items) =>
-        items.map((item) => item.getAttribute('data-key')),
-      );
+      expect(await keys(page)).toEqual(order);
 
       const other = await browser.newContext();
+      await ownMap(other);
       try {
         const phone = await other.newPage();
-        await ready(phone, await draftLink(page, email));
+        await hydrated(phone, await draftLink(page, email));
         await toStep5(phone, 'Pași');
         await expect(tiles(phone)).toHaveCount(3);
-        expect(
-          await tiles(phone).evaluateAll((items) =>
-            items.map((item) => item.getAttribute('data-key')),
-          ),
-        ).toEqual(keys);
+        expect(await keys(phone)).toEqual(order);
       } finally {
         await other.close();
       }
@@ -164,13 +194,9 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
       expect((await removed).ok()).toBe(true);
       await expect(tiles(page)).toHaveCount(2);
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await hydrated(page);
       await expect(tiles(page)).toHaveCount(2);
-      expect(
-        await tiles(page).evaluateAll((items) =>
-          items.map((item) => item.getAttribute('data-key')),
-        ),
-      ).toEqual([keys[0], keys[2]]);
+      expect(await keys(page)).toEqual([order[0], order[2]]);
     });
   }
 
@@ -180,7 +206,7 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
     }) => {
       await page.setViewportSize({ height: 640, width: 320 });
       await page.emulateMedia({ colorScheme: scheme });
-      await ready(page, '/en/list-your-garage');
+      await hydrated(page, '/en/list-your-garage');
       await toStep5(page, 'Steps');
 
       await expect(step(page)).toContainText(
