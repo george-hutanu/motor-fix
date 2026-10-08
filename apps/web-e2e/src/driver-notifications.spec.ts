@@ -190,8 +190,9 @@ test.describe("the driver's notification switches @seeded", () => {
   });
 
   test('fits a 320 px phone with no sideways scroll', async ({ page }) => {
-    await page.setViewportSize({ height: 640, width: 320 });
+    // The header's sign-in button shows from the tablet width up.
     await signedInSettings(page);
+    await page.setViewportSize({ height: 640, width: 320 });
 
     await expect(switchOf(page, 'Recenzii și istoric')).toBeVisible();
     expect(
