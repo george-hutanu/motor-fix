@@ -142,7 +142,14 @@ describe('observeDataStores', () => {
   it('reads again on every interval', async () => {
     const store = redis();
     observe({ outbox: outbox(), postgres: postgres(), redis: store });
-    await tick(70);
+    // Poll rather than sleep a fixed 70 ms: a loaded CI runner fires a 20 ms interval late.
+    for (
+      let waited = 0;
+      store.info.mock.calls.length < 3 && waited < 2000;
+      waited += 20
+    ) {
+      await tick(20);
+    }
     expect(store.info.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 

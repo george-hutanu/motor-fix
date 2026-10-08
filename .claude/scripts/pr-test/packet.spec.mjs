@@ -283,6 +283,30 @@ describe('the baseline run', () => {
   });
 });
 
+describe('the run\'s pixel diff', () => {
+  it('names each changed shot with its regions and diff, the new ones, and the counts', () => {
+    const out = artifact(report({ findings: [] }), { 'shots/a.png': 'x', 'shots/b.png': 'y', 'shots/n.png': 'z' });
+    writeFileSync(
+      join(out, 'visual.json'),
+      JSON.stringify({
+        baseline: { run: 20, pr: 120, sha: MAIN_SHA, lap: 1 },
+        shots: {
+          'shots/a.png': { status: 'changed', regions: [{ x: 0, y: 16, width: 32, height: 16 }], diff: 'diff/a.png' },
+          'shots/b.png': { status: 'identical' },
+          'shots/n.png': { status: 'new' },
+        },
+      }),
+    );
+    const { gh } = fakeGh({ prView: ok(pr(files(['apps/web/src/main.ts']))), runs: [] });
+    buildPacket({ out, pr: 137, repo: REPO, gh });
+    const md = packetOf(out);
+    assert.match(md, /Pixel diff against run 20 of ccccccc: changed 1 · new 1 · removed 0 · identical 1/);
+    assert.match(md, /- shots\/a\.png: 1 region\(s\) 32×16@0,16; outlined in diff\/a\.png/);
+    assert.match(md, /- shots\/n\.png/);
+    assert.doesNotMatch(md, /- shots\/b\.png/);
+  });
+});
+
 describe('the screenshot delta', () => {
   it('sorts screenshots by content and names the ones to look at', () => {
     const d = shotDelta({
