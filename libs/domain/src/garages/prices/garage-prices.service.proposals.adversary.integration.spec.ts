@@ -511,6 +511,28 @@ describe('GaragePricesService.saveStarting proposing a catalogue name', () => {
     await nothingStored(w);
   });
 
+  it('names the approved-name error before the brand error of the same row', async () => {
+    const w = await world();
+    await named('Schimb ulei', 'Oil change');
+
+    expect(
+      await refused(
+        save(w, {
+          jobs: [
+            { fromBani: lei(100), name: 'Schimb ulei' },
+            { brandId: w.ford, fromBani: lei(90), name: 'Schimb ulei' },
+          ],
+          labour,
+        }),
+      ),
+    ).toEqual([
+      { code: 'duplicate', field: 'jobs[0].name' },
+      { code: 'duplicate', field: 'jobs[1].name' },
+      { code: 'not_taken', field: 'jobs[1].brandId' },
+    ]);
+    await nothingStored(w);
+  });
+
   it.each(['pending', 'rejected'] as const)(
     'saves a proposal named like a %s job as a new pending job',
     async (status) => {
