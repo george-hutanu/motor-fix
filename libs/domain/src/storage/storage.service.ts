@@ -32,7 +32,7 @@ import {
 export const STORAGE_OPTIONS = Symbol('STORAGE_OPTIONS');
 
 const FILE_COPIES = ['thumb', 'display'] as const;
-export type FileCopy = (typeof FILE_COPIES)[number];
+type FileCopy = (typeof FILE_COPIES)[number];
 
 export interface SignedUpload {
   expiresAt: string;
