@@ -37,7 +37,7 @@
       "source": "apps/web-e2e",
       "dashboard": "none",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "test project, not deployed",
       "story": "ST-881"
     },
     {

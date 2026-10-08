@@ -147,9 +147,8 @@ function discover(root: string): Found[] {
   const outside = [...texts].flatMap(([file, text]) =>
     outsideServices(text).map(([key, name]) => ({ file, key, name })),
   );
-  for (const key of ['host', 'client'])
-    for (const item of outside.filter((o) => o.key === key))
-      add('outside-service', item.name, item.file, key);
+  for (const item of outside)
+    add('outside-service', item.name, item.file, item.key);
   return found;
 }
 
@@ -260,8 +259,9 @@ function referenceProblems(
 
 export function checkInventory(root: string): string[] {
   const inventory = readInventory(root);
-  if (!Array.isArray(inventory?.entries))
-    return [`inventory: ${INVENTORY} is not valid JSON`];
+  if (!inventory) return [`inventory: ${INVENTORY} is not valid JSON`];
+  if (!Array.isArray(inventory.entries))
+    return [`inventory: ${INVENTORY} has no "entries" array`];
 
   const seen = new Set<string>();
   const shape = inventory.entries.map((entry: Entry, index: number) =>

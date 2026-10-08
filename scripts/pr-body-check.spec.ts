@@ -132,6 +132,29 @@ describe('checkPrBody on a ready PR', () => {
     expect(ready(body)).toEqual(['"## Why" is empty.']);
   });
 
+  it.each([
+    ['empty', '', '"## Observability" is empty.'],
+    [
+      'a placeholder',
+      '_(fill in: what this change adds - service, queue, endpoint, outside call, product action - and the signals, dashboard panel and alert that come with it, or N/A and the reason)_',
+      '"## Observability" still has template placeholder text: "(fill in: what this change adds - service, queue, endpoint, outside call, product action - and the signals, dashboard panel and alert that come with it, or N/A and the reason)".',
+    ],
+    ['a bare N/A', 'N/A', '"## Observability" says N/A without a reason.'],
+  ])('refuses an Observability section left %s', (_, content, problem) => {
+    expect(ready(withSection(filled(), 'Observability', content))).toEqual([
+      problem,
+    ]);
+  });
+
+  it('passes an Observability section answered N/A with a reason', () => {
+    const body = withSection(
+      filled(),
+      'Observability',
+      'N/A: adds no service, queue, endpoint or outside call',
+    );
+    expect(ready(body)).toEqual([]);
+  });
+
   it('refuses a bare N/A', () => {
     const body = withSection(filled(), 'UI evidence', 'N/A');
     expect(ready(body)).toEqual([
