@@ -48,6 +48,7 @@
         },
         "styles": [
           "libs/ui-cockpit/src/styles/cockpit.css",
+          "node_modules/maplibre-gl/dist/maplibre-gl.css",
           "apps/web/src/styles.css"
         ],
         "tsConfig": "apps/web/tsconfig.app.json"

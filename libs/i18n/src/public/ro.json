@@ -159,6 +159,29 @@
     "notSaved": "Ciorna nu a putut fi salvată pe server. Încearcă din nou.",
     "offline": "Neconectat · salvăm când revii online",
     "optional": "opțional",
+    "place": {
+      "address": "Adresă",
+      "armed": "Atinge harta acolo unde e garajul.",
+      "dragHint": "Trage pinul dacă nu stă exact pe garaj. Pe hartă, săgețile îl mută.",
+      "found": {
+        "few": "{count} adrese găsite",
+        "one": "O adresă găsită",
+        "other": "{count} de adrese găsite"
+      },
+      "km": "km",
+      "manualPin": "Pune pinul pe hartă",
+      "map": "Harta cu poziția garajului",
+      "mapDown": "Harta nu s‑a putut încărca. Adresa scrisă rămâne.",
+      "mapHint": "Alege o adresă din listă sau pune pinul pe hartă.",
+      "nothingFound": "Nu am găsit adresa. Poți pune pinul pe hartă.",
+      "outside": "Adresa trebuie să fie în România",
+      "placeholder": "Stradă și număr, sector, oraș",
+      "radius": "Zona în care lucrezi",
+      "radiusHint": "Între 1 și 100 km",
+      "searchDown": "Căutarea adresei nu merge acum. Poți pune pinul pe hartă.",
+      "seat": "Sediul înregistrat",
+      "suggestions": "Adrese găsite"
+    },
     "prices": {
       "addJob": "Adaugă o lucrare",
       "brandRange": "Interval diferit pentru o marcă",

@@ -127,6 +127,11 @@
               <mf-mechanics-step [value]="mechanics()" (valueChange)="keeper.section('4', $event)" />
             }
             @if (step.n === 5) {
+              <mf-place-step
+                [value]="place()"
+                [businessKind]="details().businessKind"
+                (valueChange)="keepPlace($event)"
+              />
               <mf-hours-step [value]="hours()" (valueChange)="keepHours($event)" />
             }
           </section>

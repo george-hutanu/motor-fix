@@ -28,6 +28,11 @@ import {
   RAR_NUMBER_MIN,
   stripCui,
 } from '@motor-fix/contracts/listing-verification';
+import {
+  isPlaceSection,
+  type PlaceSection,
+  placeComplete,
+} from '@motor-fix/contracts/place-section';
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -39,6 +44,7 @@ import { DraftKeeper } from '../draft-keeper';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
+import { PlaceStep } from '../place-step/place-step';
 import { dropUntaken } from '../prices-step/prices-rows';
 import { PricesStep } from '../prices-step/prices-step';
 import {
@@ -70,6 +76,7 @@ const STALL_MS = 3000;
     HoursStep,
     LanguageSwitch,
     MechanicsStep,
+    PlaceStep,
     PricesStep,
     TranslatePipe,
   ],
@@ -120,6 +127,15 @@ export class ListYourGarage {
     const section: unknown = this.kept()['4'];
     return isMechanicsSection(section) ? section : {};
   });
+  // steps['5'].place, beside the hours; a place not in its shape opens empty.
+  protected readonly place = computed(() => {
+    const section: unknown = this.kept()['5'];
+    const place =
+      typeof section === 'object' && section !== null
+        ? (section as Record<string, unknown>)['place']
+        : undefined;
+    return isPlaceSection(place) ? place : {};
+  });
   protected readonly takenBrands = computed(() =>
     this.brands().brands.filter((b) => b.stance === 'works_on'),
   );
@@ -130,6 +146,7 @@ export class ListYourGarage {
       ...(detailsComplete(this.details()) ? [1] : []),
       ...(prices && pricesComplete(prices) ? [3] : []),
       ...(mechanicsComplete(this.mechanics()) ? [4] : []),
+      ...(placeComplete(this.place()) ? [5] : []),
     ]);
   });
   protected readonly current = signal(1);
@@ -237,6 +254,11 @@ export class ListYourGarage {
   protected keepHours(value: HoursSection) {
     const data = this.keeper.draft().data as ListingDraftData;
     this.keeper.section('5', mergeHours(data.steps?.['5'], value));
+  }
+
+  protected keepPlace(place: PlaceSection) {
+    const data = this.keeper.draft().data as ListingDraftData;
+    this.keeper.section('5', { ...data.steps?.['5'], place });
   }
 
   protected save() {
