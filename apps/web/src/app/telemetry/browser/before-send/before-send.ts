@@ -1,7 +1,7 @@
 import { type TransportItem, TransportItemType } from '@grafana/faro-web-sdk';
-import { scrub } from '@motor-fix/observability/scrub';
+import { scrub, scrubDeep } from '@motor-fix/observability/scrub';
 
-export type Viewport = 'phone' | 'tablet' | 'desktop';
+type Viewport = 'phone' | 'tablet' | 'desktop';
 
 const MAX_ERRORS = 20;
 // A URL's query and fragment can carry a token, a search or an e-mail.
@@ -12,14 +12,7 @@ export function viewportClass(width: number): Viewport {
   return width < 1200 ? 'tablet' : 'desktop';
 }
 
-function clean(value: unknown): unknown {
-  if (typeof value === 'string') return scrub(value.replace(URL_TAIL, '$1'));
-  if (Array.isArray(value)) return value.map(clean);
-  if (value === null || typeof value !== 'object') return value;
-  return Object.fromEntries(
-    Object.entries(value).map(([key, inner]) => [key, clean(inner)]),
-  );
-}
+const clean = (text: string) => scrub(text.replace(URL_TAIL, '$1'));
 
 // Runs on every item before it leaves the browser: personal values masked,
 // URLs cut to their path, no session or user, the viewport class on each
@@ -29,7 +22,7 @@ export function createBeforeSend(viewport: Viewport) {
   return (item: TransportItem): TransportItem | null => {
     if (item.type === TransportItemType.EXCEPTION && ++errors > MAX_ERRORS)
       return null;
-    const sent = clean(item) as TransportItem;
+    const sent = scrubDeep(item, clean);
     delete sent.meta.session;
     delete sent.meta.user;
     if (sent.type === TransportItemType.MEASUREMENT) {

@@ -29,6 +29,8 @@ const browserDistFolder = resolve(
 const app = express();
 const publicUrl = publicWebUrl();
 const faro = faroUrl();
+// Read raw, not through readEnv: the build and the dev server import this
+// file without the runtime environment readEnv requires (see below).
 const collector = faro
   ? { url: faro, version: process.env['RELEASE_SHA'] || 'dev' }
   : undefined;

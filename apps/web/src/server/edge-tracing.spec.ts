@@ -6,7 +6,7 @@ import { type AddressInfo, connect } from 'node:net';
 
 import { startTelemetry } from '@motor-fix/observability';
 import { inMemory, patchForJest } from '@motor-fix/observability/testing';
-import { SpanKind } from '@opentelemetry/api';
+import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import express from 'express';
 
 import { mountEdge } from './edge';
@@ -125,5 +125,39 @@ describe('the web edge, traced', () => {
     await fetch(`${base}/health/ready`);
 
     expect(await finished()).toEqual([]);
+  });
+
+  it('marks the pass-through failed and logs one line when the API is down', async () => {
+    const down = express();
+    mountEdge(down, 'http://127.0.0.1:1');
+    const server = createServer(down);
+    const downBase = await listen(server);
+    const lines: string[] = [];
+    const error = jest
+      .spyOn(console, 'error')
+      .mockImplementation((line: string) => lines.push(line));
+
+    try {
+      const answer = await fetch(`${downBase}/api/v1/brands?email=a@b.ro`);
+      expect(answer.status).toBe(502);
+    } finally {
+      error.mockRestore();
+      server.closeAllConnections();
+      await close(server);
+    }
+
+    const web = (await finished()).find(
+      (span) =>
+        span.kind === SpanKind.SERVER &&
+        span.attributes['http.route'] === '/api',
+    );
+    expect(web?.status.code).toBe(SpanStatusCode.ERROR);
+    expect(lines).toHaveLength(1);
+    const line = JSON.parse(lines[0] ?? '{}');
+    expect(line).toMatchObject({
+      level: 'error',
+      trace_id: web?.spanContext().traceId,
+    });
+    expect(lines[0]).not.toContain('a@b.ro');
   });
 });

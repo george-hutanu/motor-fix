@@ -4,6 +4,8 @@ import { request as httpsRequest } from 'node:https';
 import { setRoute } from '@motor-fix/observability';
 import type { Express } from 'express';
 
+import { reportServerError } from './render-error/render-error';
+
 const READY_TIMEOUT_MS = 2_000;
 
 // The browser reaches the API on the web app's own address. Answers are piped
@@ -55,7 +57,8 @@ export function mountEdge(app: Express, apiUrl: string) {
     res.on('close', () => {
       if (!res.writableFinished) upstream.destroy();
     });
-    upstream.on('error', () => {
+    upstream.on('error', (error) => {
+      reportServerError(error);
       if (res.headersSent) res.destroy();
       else res.status(502).end();
     });
