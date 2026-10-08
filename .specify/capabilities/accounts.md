@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 079-account-model
   - 082-sign-in
@@ -20,6 +20,7 @@ features:
   - 765-reload-after-failed-switch
   - 028-driver-dashboard-views
   - 089-add-a-car
+  - 261-maintenance-mode
 ---
 
 # Capability: Accounts
@@ -120,9 +121,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-006 — While maintenance mode reads as on, a sign-in with the right credentials by an account not holding `admin` MUST answer 503 `maintenance`; an admin MUST sign in. Maintenance MUST read as off until the platform rule exists.
+### 261-FR-005 — The existing `MAINTENANCE` port (`libs/domain/src/auth/ maintenance.ts`), which sign-in, sign-up, phone sign-in, OAuth and password reset already consult, MUST be bound to the real rule, so those services refuse non-admins as their requirements already state (082-FR-006, 080-FR-007, 083-FR-006, 083-FR-007, 083-FR-008, 393-FR-010, 569-FR-002) and the port's "reads as off until the rule exists" clause ends.
 
-_From 082-sign-in._
+_From 261-maintenance-mode._
 
 ### 082-FR-007 — The refresh token MUST be a random value stored only as its hash, sent in a cookie that is `HttpOnly`, `Secure`, `SameSite=Strict` and scoped to `/api/v1/auth`; with "keep me signed in" it MUST carry a 30-day lifetime and the server MUST accept it for 30 days from its issue; without, it MUST be a browser-session cookie the server accepts for 12 hours from its issue. Every token issued by renewal keeps its family's choice.
 
@@ -584,3 +585,5 @@ _From 089-add-a-car._
 - `079-FR-018` — superseded by `160-FR-007` (2026-10-07)
 
 - `082-FR-021` — superseded by `028-FR-005` (2026-10-07)
+
+- `082-FR-006` — superseded by `261-FR-005` (2026-10-08)

@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 253-live-connection
   - 254-live-audience
@@ -12,6 +12,7 @@ features:
   - 586-live-e2e-typed-text
   - 419-live-garage-updates
   - 258-platform-rules-switches
+  - 261-maintenance-mode
 ---
 
 # Capability: Live updates
@@ -343,6 +344,10 @@ _From 419-live-garage-updates._
 ### 258-FR-006 — The `platform_rule.changed` event MUST reach every open admin Setări view on the `admin` channel, and the view MUST re-read the rules and show the new state without a reload; only a change of `maintenance_mode` MUST also go out on the `system` channel to every connection.
 
 _From 258-platform-rules-switches._
+
+### 261-FR-009 — An open screen MUST switch to the maintenance page without a reload within 5 seconds of `platform_rule.changed` for `maintenance_mode` arriving on the `system` channel, and MUST return to the address the person was on, without a reload, within 5 seconds of the change to off. On each such event the app re-reads `GET /api/v1/platform-status` and acts on that answer, not on the event's payload, so a quick on-off ends in the last state. While the page shows, the screen under it is kept, so unsaved form text is there when it returns.
+
+_From 261-maintenance-mode._
 
 ## Retired
 

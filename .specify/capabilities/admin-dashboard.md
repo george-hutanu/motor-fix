@@ -1,11 +1,12 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
   - 258-platform-rules-switches
   - 162-growth-12-months
+  - 261-maintenance-mode
 ---
 
 # Capability: Admin dashboard
@@ -193,6 +194,66 @@ _From 162-growth-12-months._
 ### 162-FR-012 — Tests MUST cover, against seeded snapshot rows on a real database: the month-end selection (the following month's first-day row, the last-day fallback, neither); the live current month; months before the first snapshot empty; a garage approved mid-range and suspended later counted only while listed (the snapshot write run at simulated month ends, the garage's status changed between runs); the Europe/Bucharest month boundary; and 404 for each non-admin role. An end-to-end check answers the growth read with twelve months of figures (stubbed in the browser, since the end-to-end suite also runs against a deployed address and writes no database rows; the real-database path is the integration tests above), opens "Panou" as the seeded admin and reads the first and last labels, the latest values (the seeded live counts) and one tooltip, on a phone and a desktop, in both languages.
 
 _From 162-growth-12-months._
+
+### 261-FR-001 — While the platform rule `maintenance_mode` is on, every API call by a visitor or by a session not holding the `admin` role MUST be answered 503 with code `maintenance` and the header `Retry-After: 300`, before any handler runs, so nothing is read or written for it. A call with a valid session whose account holds `admin` (whatever role the session has switched to) MUST be answered as when maintenance is off. A call with no session, or a valid session of a non-admin account, gets 503 `maintenance`, ahead of any 403 or 404 the route's guard would otherwise answer (an address no route matches stays 404). A token that does not resolve (expired, invalid, a suspended account) answers 401 or 403 as usual, so the app can renew an admin's session; a renewed non-admin session then gets the 503.
+
+_From 261-maintenance-mode._
+
+### 261-FR-002 — These MUST stay open to everyone during maintenance: `GET /api/v1/platform-status`; the live streams (public and signed in), so the `system` channel reaches every open connection; the sign-in calls (e-mail, phone code and phone sign-in, the OAuth routes), which open a session only for an account holding `admin` as the accounts capability already requires; session refresh and sign-out, which open nothing new; sign-up, whose own check refuses a valid request after counting it against the hourly limit (080-FR-006); and the password reset (ask, check, complete), where completing refuses anyone but an admin (569-FR-002), so an admin can still reset a forgotten password; asking for a link behaves as before this feature; the health checks under `/health`; and the e-mail provider's callbacks under `/webhooks/brevo`. Sign-out-everywhere is not among them.
+
+_From 261-maintenance-mode._
+
+### 261-FR-003 — `GET /api/v1/platform-status` MUST be public and answer `{ maintenance: boolean }`, the current value of the rule, with no cache beyond the flag's own freshness (FR-004).
+
+_From 261-maintenance-mode._
+
+### 261-FR-004 — The flag MUST be read on each call from the shared fast store (Redis), which the change of `maintenance_mode` writes right after its transaction commits (not through the worker), so a change takes effect on every running copy of the API within 2 seconds, with no restart (if that write is lost, the stored value expires within 60 seconds and is read afresh from the database); when the store holds no value it is filled from the database, and when it cannot be read the rule MUST be read from the database instead. A store failure MUST never decide a call either way. The database stays the truth.
+
+_From 261-maintenance-mode._
+
+### 261-FR-006 — Existing non-admin sessions MUST NOT be ended by maintenance: the same session works again when maintenance ends, and its refresh keeps working meanwhile.
+
+_From 261-maintenance-mode._
+
+### 261-FR-007 — The worker MUST keep running during maintenance: reminders, timers, e-mails and the outbox continue, and no deadline is paused or extended.
+
+_From 261-maintenance-mode._
+
+### 261-FR-008 — While maintenance is on, every page for a visitor or a non-admin session MUST show the maintenance page instead of its content: the MotorFix wordmark, the heading and the message "MotorFix este în mentenanță. Revenim în curând." (EN "MotorFix is down for maintenance. We'll be back soon."), the RO / EN language switch, and a quiet link "Administrator? Intră în cont" (EN "Admin? Sign in") to `/admin`; no other sign-in or sign-up control. The texts MUST come from i18n keys in both languages.
+
+_From 261-maintenance-mode._
+
+### 261-FR-010 — A 503 `maintenance` answer to any call MUST show the maintenance page even when the live connection is lost, and the app MUST read `GET /api/v1/platform-status` at boot so a visitor who opens the site during maintenance sees the page before any other call.
+
+_From 261-maintenance-mode._
+
+### 261-FR-011 — The server-rendered response for every server-rendered page (the public pages search engines read) during maintenance MUST carry status 503 and `Retry-After: 300` with the maintenance page as its body; the server does not read the session. The client-rendered `/app/**` addresses keep answering their shell, and the browser shows the page. The app in the browser then shows the real page only for an admin session.
+
+_From 261-maintenance-mode._
+
+### 261-FR-012 — `/admin` MUST open the admin sign-in page: the existing sign-in dialog (e-mail and password, with the phone and provider options the dialog already has) over the maintenance page while maintenance is on, and over the home page when it is off. After an admin signs in it MUST open the admin dashboard; a non-admin sign-in MUST show the existing `maintenance` message in the dialog and leave the maintenance page.
+
+_From 261-maintenance-mode._
+
+### 261-FR-013 — For a signed-in admin while maintenance is on, every page MUST show a thin banner "Mentenanță activă" (EN "Maintenance on") at the top, announced to screen readers as a status, in the warning colour tokens, and the page otherwise unchanged; the banner MUST appear and go within 5 seconds of the change, without a reload. The `admin/*` routes keep working as 160-FR-003 requires.
+
+_From 261-maintenance-mode._
+
+### 261-FR-014 — The maintenance page and the banner MUST read at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways scroll, the smallest text at the label size and tap targets of 44 px.
+
+_From 261-maintenance-mode._
+
+### 261-FR-015 — The MCP app holds no tool and no API client today (it serves only `/health/live`), so the rule holds by absence: there is no tool to call during maintenance and nothing to change. A tool added later MUST pass the API's `maintenance` answer through as a tool error naming maintenance (no flag read in the MCP app) and act on nothing.
+
+_From 261-maintenance-mode._
+
+### 261-FR-016 — The guard's refusals MUST be counted (a metric with the route and role class), a switch on or off MUST be logged, and the new endpoint and the guard MUST be listed in `infra/observability/inventory.json` with their panel and alert (or why not), as the observability rule requires.
+
+_From 261-maintenance-mode._
+
+### 261-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: 503 `maintenance` with `Retry-After` for a visitor, a driver and a garage owner on several calls and 200 for an admin; the status call, the live streams, the health checks and the Brevo callback staying open; sign-in opening a session only for an admin; the flag taking effect after a change and the database fallback when the fast store fails; the MCP part holding by absence (no tool exists; a future tool's pass-through is that tool's own test). A Playwright end-to-end test MUST, with a driver tab open on results, switch maintenance on as an admin, check the driver tab shows the maintenance page without a reload, sign in as an admin through `/admin`, switch it off and check the driver tab comes back.
+
+_From 261-maintenance-mode._
 
 ## Retired
 
