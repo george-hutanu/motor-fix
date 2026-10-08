@@ -1,12 +1,8 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 async function accessToken(
   request: APIRequestContext,

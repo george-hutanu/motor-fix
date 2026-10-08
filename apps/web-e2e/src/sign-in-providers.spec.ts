@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready } from './accounts.js';
+import { test } from './fixtures.js';
 
 // The stand-in issuer (openid.mjs, web-e2e:openid) approves at once, as the
 // person set here: never the real Google.

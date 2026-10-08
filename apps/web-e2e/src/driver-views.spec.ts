@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 // [entry in the menu, tab in the bar, address, title]
 const VIEWS = [

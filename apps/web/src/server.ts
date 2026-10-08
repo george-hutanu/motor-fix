@@ -11,6 +11,7 @@ import { publicWebUrl, readEnv } from '@motor-fix/contracts/env';
 import express from 'express';
 
 import { apiInternalUrl } from './api-url';
+import { mountCompression } from './server/compress/compress';
 import { mountEdge } from './server/edge';
 import { mountSearch } from './server/search';
 
@@ -26,6 +27,7 @@ const angularApp = new AngularNodeAppEngine({
 });
 
 mountEdge(app, apiInternalUrl());
+mountCompression(app);
 mountSearch(app, publicUrl?.origin);
 
 app.use(
