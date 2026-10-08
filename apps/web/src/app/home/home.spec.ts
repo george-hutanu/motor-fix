@@ -476,6 +476,27 @@ describe('Home brand picker on the server', () => {
     expect(count()?.getAttribute('aria-busy')).toBe('true');
   });
 
+  it('renders the brand search field, labelled and enabled', async () => {
+    tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
+    fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const field = root.querySelector<HTMLInputElement>(
+      'mf-brand-search input#mf-brand-search',
+    );
+    expect(field).not.toBeNull();
+    expect(field?.disabled).toBe(false);
+    expect(field?.getAttribute('role')).toBe('combobox');
+    expect(
+      root
+        .querySelector('mf-brand-search label[for="mf-brand-search"]')
+        ?.textContent?.trim(),
+    ).toBeTruthy();
+  });
+
   it('hands the browser no tiles when the read fails', async () => {
     tilesApi.popularBrandsControllerTiles.mockRejectedValue(
       new HttpErrorResponse({ status: 500 }),
