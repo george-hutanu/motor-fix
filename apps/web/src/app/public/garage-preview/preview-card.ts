@@ -4,10 +4,9 @@ import type {
   MechanicsSection,
   PricesSection,
 } from '@motor-fix/contracts/listing-sections';
-import type { GarageBrandAnswerDto } from '@motor-fix/data-access';
 
 import { initials } from '../../dashboard/initials';
-import { written } from '../brand-verdict';
+import { type BrandAnswer, written } from '../brand-verdict';
 import type { BrandsSection, MarkedBrand } from '../brands-section';
 
 // The service area a mobile mechanic is shown with until the form asks for one.
@@ -27,7 +26,7 @@ interface PreviewCardInput {
 interface PreviewCard {
   name: string | null;
   range: { from: number | null; to: number | null } | null;
-  brands: GarageBrandAnswerDto | null;
+  brands: BrandAnswer | null;
   sample: { id: string; name: string } | null;
   mechanics: { name: string; initials: string }[];
   mobileKm: number | null;
@@ -58,7 +57,7 @@ function inOrder(brands: MarkedBrand[], order: string[]): MarkedBrand[] {
 
 export function previewCard(input: PreviewCardInput): PreviewCard {
   const marked = inOrder(input.brands.brands, input.order);
-  const ref = (b: MarkedBrand) => ({ id: b.brandId, name: b.name, slug: '' });
+  const ref = (b: MarkedBrand) => ({ id: b.brandId, name: b.name });
   const taken = marked.filter((b) => b.stance === 'works_on');
   const refused = marked.filter((b) => b.stance === 'does_not_take');
   const refusalPhrase = written(input.brands.refusalPhrase);

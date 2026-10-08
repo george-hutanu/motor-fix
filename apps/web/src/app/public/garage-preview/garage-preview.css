@@ -29,12 +29,8 @@ ul {
   text-align: start;
   cursor: pointer;
 }
-.toggle::after {
-  content: "▾" / "";
+.arrow {
   color: var(--mf-text-secondary);
-}
-.toggle[aria-expanded="true"]::after {
-  content: "▴" / "";
 }
 .toggle:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus);

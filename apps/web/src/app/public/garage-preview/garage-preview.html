@@ -5,7 +5,8 @@
   [attr.aria-controls]="id"
   (click)="open.set(!open())"
 >
-  {{ 'public.listing.preview.toggle' | t }}
+  <span class="label">{{ 'public.listing.preview.toggle' | t }}</span>
+  <span class="arrow" aria-hidden="true">{{ open() ? '▴' : '▾' }}</span>
 </button>
 <div class="body" [id]="id" [class.open]="open()">
   <p class="title">{{ 'public.listing.preview.title' | t }}</p>

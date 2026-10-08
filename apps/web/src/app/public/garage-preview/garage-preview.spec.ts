@@ -126,7 +126,7 @@ describe('the garage preview', () => {
     expect(text(host.querySelector('.state'))).toBe(
       'Draft · published after verification',
     );
-    expect(text(toggle(host))).toBe('Preview');
+    expect(text(toggle(host)?.querySelector('.label'))).toBe('Preview');
   });
 
   it('asks nothing of the server', async () => {
@@ -302,7 +302,10 @@ describe('the preview panel on a phone', () => {
     const button = toggle(host);
     expect(button?.tagName).toBe('BUTTON');
     expect(button?.type).toBe('button');
-    expect(text(button)).toBe('Previzualizare');
+    expect(text(button?.querySelector('.label'))).toBe('Previzualizare');
+    expect(button?.querySelector('.arrow')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
     expect(button?.getAttribute('aria-expanded')).toBe('false');
     const body = host.querySelector(
       `#${button?.getAttribute('aria-controls')}`,

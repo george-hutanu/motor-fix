@@ -11,12 +11,17 @@ import { Lamp, type LampState } from '@motor-fix/ui-cockpit';
 
 type Verdict = 'works_on' | 'refused';
 
+type Named = { id: string; name: string };
+
+// What the lamp and the lists read of a garage's answer about its brands.
+export type BrandAnswer = Pick<
+  GarageBrandAnswerDto,
+  'brandNote' | 'refusalPhrase'
+> & { worksOn: Named[]; doesNotTake: Named[] };
+
 // A garage works on a brand only when it said so; a refusal, or no answer at
 // all for that brand, reads as "does not take". Works-on wins a tie.
-export function verdict(
-  answer: GarageBrandAnswerDto,
-  brandId: string,
-): Verdict {
+export function verdict(answer: BrandAnswer, brandId: string): Verdict {
   return answer.worksOn.some((brand) => brand.id === brandId)
     ? 'works_on'
     : 'refused';
@@ -96,7 +101,7 @@ export const written = (value: string | null | undefined) =>
   `,
 })
 export class BrandVerdict {
-  readonly answer = input<GarageBrandAnswerDto | null>(null);
+  readonly answer = input<BrandAnswer | null>(null);
   readonly brand = input<{ id: string; name: string } | null>(null);
   readonly mode = input<'card' | 'profile'>('card');
 

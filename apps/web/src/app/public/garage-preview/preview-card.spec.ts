@@ -79,12 +79,12 @@ describe('the preview card', () => {
 
     expect(card({ brands }).brands).toEqual({
       brandNote: null,
-      doesNotTake: [{ id: TESLA, name: 'Tesla', slug: '' }],
+      doesNotTake: [{ id: TESLA, name: 'Tesla' }],
       refusalPhrase: null,
       worksOn: [
-        { id: BMW, name: 'BMW', slug: '' },
-        { id: DACIA, name: 'Dacia', slug: '' },
-        { id: AUDI, name: 'Audi', slug: '' },
+        { id: BMW, name: 'BMW' },
+        { id: DACIA, name: 'Dacia' },
+        { id: AUDI, name: 'Audi' },
       ],
     });
   });
@@ -105,9 +105,7 @@ describe('the preview card', () => {
     const result = card({ brands });
     expect(result.sample).toBeNull();
     expect(result.brands?.worksOn).toEqual([]);
-    expect(result.brands?.doesNotTake).toEqual([
-      { id: TESLA, name: 'Tesla', slug: '' },
-    ]);
+    expect(result.brands?.doesNotTake).toEqual([{ id: TESLA, name: 'Tesla' }]);
   });
 
   it('keeps a trimmed specialist phrase, and counts it as something chosen', () => {
