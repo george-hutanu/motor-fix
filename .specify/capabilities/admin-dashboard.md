@@ -1,11 +1,12 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
   - 258-platform-rules-switches
   - 162-growth-12-months
+  - 260-rule-off-confirm
 ---
 
 # Capability: Admin dashboard
@@ -130,9 +131,9 @@ _From 258-platform-rules-switches._
 
 _From 258-platform-rules-switches._
 
-### 258-FR-010 — A switch MUST move at once when the admin changes it and send the change with the value the admin saw; on any refusal or failure it MUST go back and show an error line (for 409 `two_admins_required`: that a second admin is needed; for a stale 409: re-read the rules and show the saved state).
+### 260-FR-010 — In the admin's Setări view, switching off a rule that needs two admins MUST NOT send a change; the switch stays where it is and a dialog opens with the title "Oprești regula „Recenzii doar după o lucrare confirmată”?" / "Switch off \"Reviews only after a confirmed job\"?", the text "Șoferii conectați vor putea lăsa recenzii și din profilul unui service, fără o lucrare prin MotorFix. Aceste recenzii vor fi marcate „nu prin MotorFix”. Un alt administrator trebuie să aprobe." / "Signed-in drivers will also be able to review a garage from its profile, without a MotorFix job. Those reviews will be marked \"not through MotorFix\". Another admin has to approve.", a reason field labelled "Motiv" / "Reason" with the range shown, and the buttons "Trimite cererea" / "Send the request" and "Renunță" / "Cancel". Confirming sends the request; cancelling sends nothing. The direct change of that rule to `false` stays refused by the API (258-FR-004) and the view's existing error line for 409 `two_admins_required` remains as the fallback.
 
-_From 258-platform-rules-switches._
+_From 260-rule-off-confirm._
 
 ### 258-FR-011 — When the rules cannot be read, the block MUST show an error line with a way to try again; the rest of the view still shows.
 
@@ -194,9 +195,63 @@ _From 162-growth-12-months._
 
 _From 162-growth-12-months._
 
+### 260-FR-001 — The system MUST keep platform rule change requests on the server, each with the rule key, the old and the new value, the reason, who asked and when, who decided and when, and a status among `requested`, `approved`, `refused` and `cancelled`. At most one request per rule MUST be in `requested` at a time, enforced by the database (a partial unique index), the losing insert answering 409 `change_pending`. The row MUST store the asker's and the decider's first names at write time; the asker and decider ids are kept without a foreign key, as the rule's last changer is, so a deleted account's request still shows its stored name.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-002 — An admin MUST be able to ask to switch off a rule that needs two admins, sending only the rule key and a reason of 5–300 characters after trimming (no seen value, no `Idempotency-Key`). The checks run in this order: 404 when the key is unknown, test-only in production, or does not need two admins; 400 `validation_failed` when the reason is missing or out of range; 409 `stale_value` when the rule's current value is not `true`; 409 `change_pending` when a request for the rule already waits. The rule's value MUST NOT change on a request.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-003 — An admin other than the asker MUST be able to approve or refuse a waiting request by its id. The asker MUST get 403 `own_request`. A request that is no longer `requested` MUST answer 409 `already_decided`, naming in its detail the admin who decided (or withdrew) and how. An unknown id MUST answer 404.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-004 — The asker MUST be able to withdraw their own waiting request, being recorded as its decider; another admin MUST get 403 `not_requester`; a request no longer `requested` MUST answer 409 `already_decided`.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-005 — An approval MUST, in one transaction: set the request to `approved` with the approver and the time; set the rule's value to `false` with the approver as who changed it last; write the request's decision audit entry and the rule's change audit entry; record `platform_rule.change_decided` and `platform_rule.changed`. A refusal or a withdrawal MUST, in one transaction, set the status, write its audit entry and record `platform_rule.change_decided`; the rule's value MUST stay as it is. Two decisions on the same request MUST serialise so that exactly one is saved.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-006 — A request MUST, in one transaction, write the request row, its audit entry (actor the asker, action `create`, subject the request, kind `platform_rule.change_requested`, the rule key, old `true`, new `false` and the reason) and record `platform_rule.change_requested`. A decision's audit entry MUST be action `update`, subject the request, field `status`, old `requested`, new `approved`, `refused` or `cancelled`, actor the admin who decided or withdrew.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-009 — An admin MUST be able to list a rule's requests: the waiting one, if any, and the last 5 others newest first by decision time (`decided_at`), each with its status, reason, the asker's first name and time, and the decider's first name and time when decided. The list, the request, the decision and the withdrawal routes MUST be admin-only: 404 for every other role, 401 without a session, as every `admin/*` route; the admin-route guard test's list of known routes gains them, its guard loop unchanged.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-011 — While a request waits, the rule line MUST show the switch on and disabled, the mark "Așteaptă aprobarea altui admin" / "Waiting for another admin's approval", and a card with the asker's first name, the time (in the admin's language and Europe/Bucharest) and the reason. For an admin other than the asker the card MUST carry "Aprobă" / "Approve" and "Refuză" / "Refuse"; for the asker, "Retrage cererea" / "Withdraw the request". A button in flight MUST ignore a second press; on a refusal of the call the view MUST re-read and show an error line (for 409 `already_decided` and `change_pending`: no error line, the re-read shows the saved state). While the first read of the requests is in flight the rule line shows no waiting card and no history, and the switch keeps its last known state; when that read fails the view shows the existing rules error line and no card (a waiting request is then not shown, and the API still refuses a direct change).
+
+_From 260-rule-off-confirm._
+
+### 260-FR-012 — Under the rule line the view MUST show the last decided or withdrawn requests from the list (FR-009) as one line each: "Aprobată de {name} · {time}" / "Approved by {name} · {time}", "Refuzată de {name} · {time}" / "Refused by {name} · {time}", "Retrasă de {name} · {time}" / "Withdrawn by {name} · {time}", each with its reason; nothing when there are none.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-013 — The `admin` module MUST expose one in-process read, `reviewPolicy()`, from the rule's current value: `{ mode: 'job_only' }` while `reviews_only_after_confirmed_job` is `true`; `{ mode: 'profile_allowed', source: 'profile' }` while it is `false`. It is read from the database at each call and exposes no HTTP route; the reviews stories call it.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-014 — Switching the rule back on, and every other rule's change, MUST keep working with one admin through the existing change (258-FR-004); the test-only rules and maintenance take no requests.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-015 — The dialog, the waiting card and the history lines MUST read at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways scroll; the dialog MUST be operable by keyboard, trap focus while open and return focus to the switch when closed; every text MUST live in the shared i18n files. The waiting state MUST be conveyed by text and not by colour alone; a live region MUST announce "waiting" and each decision to assistive technology when the live message re-reads the state; the dialog's reason field MUST name its range and its error through `aria-describedby`; every button and the switch MUST have a touch target of at least 44 × 44 px at 320 px and 390 px.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-016 — The seed MUST hold a second admin account, so the end-to-end suite can ask as one admin and approve as another.
+
+_From 260-rule-off-confirm._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
 - `160-FR-002` — superseded by `161-FR-003` (2026-10-07)
 - `160-FR-011` — superseded by `161-FR-007` (2026-10-07)
 - `160-FR-014` — superseded by `161-FR-011` (2026-10-07)
+
+- `258-FR-010` — superseded by `260-FR-010` (2026-10-08)
