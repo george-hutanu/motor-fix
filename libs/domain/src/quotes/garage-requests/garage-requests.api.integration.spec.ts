@@ -207,6 +207,25 @@ describe('GET /garage/requests/:id', () => {
     }
   });
 
+  it.each(['completed', 'no_show'] as const)(
+    'keeps the plate once a confirmed booking is %s',
+    async (status) => {
+      const andrei = await driver();
+      const t = await team('Atelier Dinamo');
+      const { request } = await world.chain(andrei, t.garage.id, {
+        booking: status,
+      });
+
+      const res = await get(
+        `/garage/requests/${request.id}`,
+        bearer(t.owner, 'garage'),
+      );
+
+      expect(res.body.booking).toMatchObject({ status });
+      expect(res.body.car.plate).toBe('B123ABC');
+    },
+  );
+
   it('shortens a one-word name to itself', async () => {
     const solo = await driver('Andrei');
     const t = await team('Atelier Dinamo');

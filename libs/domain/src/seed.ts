@@ -121,6 +121,15 @@ const PEOPLE: Person[] = [
     name: 'Andrei Popescu',
     roles: ['driver'],
   },
+  // The driver of the seeded requests below, apart from the first driver so
+  // the screens that start from no car keep doing so.
+  {
+    email: 'cerere@example.test',
+    lastRole: 'driver',
+    name: 'Andrei Marin',
+    phone: '+40700000102',
+    roles: ['driver'],
+  },
   // A second driver, for what one driver must never see of another.
   {
     email: 'sofer2@example.test',
@@ -297,6 +306,133 @@ async function list(db: Client, garage: (typeof LISTED)[number]) {
   }
 }
 
+interface Requester {
+  carId: string;
+  driverId: string;
+  garageId: string;
+  mechanic: string;
+}
+
+// The requester's car and the staff's garage and mechanic; null when one is
+// missing, as on a database seeded before them.
+async function requester(db: Client): Promise<Requester | null> {
+  // The API's catalogue loader reconciles this row by key when it boots.
+  await db.query(
+    `INSERT INTO job_type (id, key, name_ro, name_en, status, updated_at)
+     VALUES (gen_random_uuid(), 'oil-service', 'Schimb de ulei și filtre',
+             'Oil and filter service', 'approved', now())
+     ON CONFLICT (key) DO NOTHING`,
+  );
+  const car = await db.query<{ id: string; owner_id: string }>(
+    `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, engine, odometer_km, plate, idempotency_key)
+     SELECT gen_random_uuid(), a.id, b.id, 'Logan', 2018, 'petrol', '1.0 TCe', 98000, 'B101QAT', 'seed'
+     FROM account a, brand b WHERE a.email = 'cerere@example.test' AND b.key = 'dacia'
+     ON CONFLICT (owner_id, idempotency_key) DO UPDATE SET plate = car.plate
+     RETURNING id, owner_id`,
+  );
+  const garage = await db.query<{ id: string; mechanic: string }>(
+    `SELECT g.id, m.id AS mechanic FROM garage g
+     JOIN mechanic m ON m.garage_id = g.id
+     JOIN account a ON a.id = m.account_id AND a.email = 'mecanic@example.test'
+     WHERE g.slug = 'atelier-test'`,
+  );
+  const [mine] = car.rows;
+  const [at] = garage.rows;
+  if (!mine || !at) return null;
+  return {
+    carId: mine.id,
+    driverId: mine.owner_id,
+    garageId: at.id,
+    mechanic: at.mechanic,
+  };
+}
+
+// One request from the requester to the garage, `hours` old; its recipient
+// row is returned.
+async function send(
+  db: Client,
+  who: Requester,
+  hours: number,
+  booked: boolean,
+) {
+  const request = await db.query<{ id: string }>(
+    `INSERT INTO quote_request (id, driver_id, car_id, car_brand, car_model, car_year, car_fuel, car_engine,
+                                description, status, created_at, expires_at)
+     VALUES (gen_random_uuid(), $1, $2, 'Dacia', 'Logan', 2018, 'petrol', '1.0 TCe',
+             'Scârțâie la frânare', $3::quote_request_status,
+             now() - make_interval(hours => $4), now() + interval '7 days')
+     RETURNING id`,
+    [who.driverId, who.carId, booked ? 'booked' : 'sent', hours],
+  );
+  const requestId = request.rows[0]?.id;
+  await db.query(
+    `INSERT INTO request_job (id, request_id, job_type_id, position)
+     SELECT gen_random_uuid(), $1, id, 0 FROM job_type WHERE key = 'oil-service'`,
+    [requestId],
+  );
+  const recipient = await db.query<{ id: string }>(
+    `INSERT INTO request_recipient (id, request_id, garage_id, status, source, answered_at)
+     VALUES (gen_random_uuid(), $1, $2, $3::request_recipient_status, 'search',
+             CASE WHEN $4 THEN now() END)
+     RETURNING id`,
+    [requestId, who.garageId, booked ? 'quoted' : 'waiting', booked],
+  );
+  return { recipientId: recipient.rows[0]?.id, requestId };
+}
+
+// The garage's accepted quote on it, its confirmed booking for the mechanic,
+// and the mechanic's job.
+async function book(
+  db: Client,
+  who: Requester,
+  sent: { recipientId?: string; requestId?: string },
+) {
+  const quote = await db.query<{ id: string; slot: Date }>(
+    `INSERT INTO quote (id, request_id, recipient_id, garage_id, from_bani, to_bani, duration_minutes,
+                        slot, status, accepted_at, expires_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, 45000, 60000, 90,
+             now() + interval '2 days', 'accepted', now(), now() + interval '7 days')
+     RETURNING id, slot`,
+    [sent.requestId, sent.recipientId, who.garageId],
+  );
+  const booking = await db.query<{ id: string }>(
+    `INSERT INTO booking (id, quote_id, request_id, garage_id, driver_id, starts_at, duration_minutes,
+                          status, confirm_by, confirmed_at, mechanic_id)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 90,
+             'confirmed', now() + interval '1 day', now(), $6)
+     RETURNING id`,
+    [
+      quote.rows[0]?.id,
+      sent.requestId,
+      who.garageId,
+      who.driverId,
+      quote.rows[0]?.slot,
+      who.mechanic,
+    ],
+  );
+  await db.query(
+    `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'to_do')`,
+    [booking.rows[0]?.id, who.garageId, who.carId, who.driverId, who.mechanic],
+  );
+}
+
+// No route writes a request yet, so the seed writes two straight to the
+// tables, from the requester to the staff's garage: one waiting for an
+// answer, one quoted, accepted, confirmed and made a job for the seeded
+// mechanic. QA reads them through the request and job routes.
+async function requests(db: Client) {
+  const done = await db.query(
+    `SELECT 1 FROM quote_request r JOIN account a ON a.id = r.driver_id
+     WHERE a.email = 'cerere@example.test'`,
+  );
+  if (done.rowCount) return;
+  const who = await requester(db);
+  if (!who) return;
+  await send(db, who, 2, false);
+  await book(db, who, await send(db, who, 1, true));
+}
+
 async function seed(db: Client, secret: string) {
   for (const garage of GARAGES) {
     await db.query(
@@ -334,6 +470,7 @@ async function seed(db: Client, secret: string) {
      CROSS JOIN unnest(enum_range(NULL::verification_check_kind)) AS k
      ON CONFLICT (file_id, kind) DO NOTHING`,
   );
+  await requests(db);
   // The checks a test run may switch off; production refused the seed above.
   await db.query(
     `INSERT INTO platform_rule (id, key, value, default_value)
