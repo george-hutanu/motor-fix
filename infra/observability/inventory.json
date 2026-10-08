@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 67,
+    "count": 71,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -98,6 +98,15 @@
       "kind": "queue",
       "name": "notifications",
       "source": "libs/domain/src/notifications/notifications.module.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "queue",
+      "name": "listing-photos",
+      "source": "libs/domain/src/garages/photos/listing-photos.module.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",

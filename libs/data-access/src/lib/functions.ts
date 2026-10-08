@@ -129,6 +129,14 @@ export type { ListingDraftsControllerSave$Params as ListingDraftsControllerSave$
 export { listingDraftsControllerSave as listingDraftsControllerSave } from './fn/listing-drafts/listing-drafts-controller-save';
 export type { ListingDraftsControllerSendLink$Params as ListingDraftsControllerSendLink$Params } from './fn/listing-drafts/listing-drafts-controller-send-link';
 export { listingDraftsControllerSendLink as listingDraftsControllerSendLink } from './fn/listing-drafts/listing-drafts-controller-send-link';
+export type { ListingPhotosControllerUploadAddress$Params as ListingPhotosControllerUploadAddress$Params } from './fn/listing-drafts/listing-photos-controller-upload-address';
+export { listingPhotosControllerUploadAddress as listingPhotosControllerUploadAddress } from './fn/listing-drafts/listing-photos-controller-upload-address';
+export type { ListingPhotosControllerList$Params as ListingPhotosControllerList$Params } from './fn/listing-drafts/listing-photos-controller-list';
+export { listingPhotosControllerList as listingPhotosControllerList } from './fn/listing-drafts/listing-photos-controller-list';
+export type { ListingPhotosControllerConfirm$Params as ListingPhotosControllerConfirm$Params } from './fn/listing-drafts/listing-photos-controller-confirm';
+export { listingPhotosControllerConfirm as listingPhotosControllerConfirm } from './fn/listing-drafts/listing-photos-controller-confirm';
+export type { ListingPhotosControllerRemove$Params as ListingPhotosControllerRemove$Params } from './fn/listing-drafts/listing-photos-controller-remove';
+export { listingPhotosControllerRemove as listingPhotosControllerRemove } from './fn/listing-drafts/listing-photos-controller-remove';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

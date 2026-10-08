@@ -185,17 +185,21 @@ jobs:
       GOOGLE_CLIENT_ID: e2e-client
       GOOGLE_CLIENT_SECRET: e2e-only-not-a-secret
       GOOGLE_ISSUER: http://127.0.0.1:3026
-      # The e2e suite does not upload files; the api only needs the settings.
+      # The photo flows upload to the compose MinIO, started in the steps below.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1
       STORAGE_BUCKET: motorfix
-      STORAGE_ACCESS_KEY_ID: ci-only
-      STORAGE_SECRET_ACCESS_KEY: ci-only
+      STORAGE_ACCESS_KEY_ID: motorfix
+      STORAGE_SECRET_ACCESS_KEY: motorfix-secret
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Object storage
+        run: |
+          docker compose up -d --wait minio
+          docker compose run --rm minio-setup
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       # The sign-in flows use the seeded accounts.

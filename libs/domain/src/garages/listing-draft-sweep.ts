@@ -122,7 +122,7 @@ export class ListingDraftSweep implements DailyTask {
       where: { id: draft.id },
     });
     for (const key of filesOf(row?.data)) {
-      await this.storage.deleteObject(key);
+      await this.storage.deleteWithCopies(key);
     }
     await this.prisma.listingDraft.deleteMany({
       where: { id: draft.id, status: 'open', updatedAt: { lte: cutoff } },

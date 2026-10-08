@@ -54,6 +54,7 @@ export class GaragesModule {
         VerificationChecksController,
       ],
       exports: [
+        ListingDraftsService,
         GarageDetailsService,
         GarageMechanicsService,
         GaragePlaceService,

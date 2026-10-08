@@ -44,6 +44,7 @@ import { DraftKeeper } from '../draft-keeper';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
+import { PhotosStep } from '../photos-step/photos-step';
 import { PlaceStep } from '../place-step/place-step';
 import { dropUntaken } from '../prices-step/prices-rows';
 import { PricesStep } from '../prices-step/prices-step';
@@ -76,6 +77,7 @@ const STALL_MS = 3000;
     HoursStep,
     LanguageSwitch,
     MechanicsStep,
+    PhotosStep,
     PlaceStep,
     PricesStep,
     TranslatePipe,
@@ -127,6 +129,9 @@ export class ListYourGarage {
     const section: unknown = this.kept()['4'];
     return isMechanicsSection(section) ? section : {};
   });
+  protected readonly photos = computed(
+    () => (this.keeper.draft().data as ListingDraftData).files ?? [],
+  );
   // steps['5'].place, beside the hours; a place not in its shape opens empty.
   protected readonly place = computed(() => {
     const section: unknown = this.kept()['5'];
