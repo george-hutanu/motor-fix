@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import {
   type BrandDto,
@@ -12,6 +13,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
+import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { HEALTH, Home, TILES } from './home';
 
 const NAMES = [
@@ -30,7 +32,21 @@ const BRANDS: BrandDto[] = NAMES.map((name, i) => ({
   popularity: i + 1,
   slug: name.toLowerCase(),
 }));
-const brand = (slug: string) => BRANDS.find((b) => b.slug === slug) as BrandDto;
+// Two brands outside the tiles, found only by search.
+const ALFA: BrandDto = {
+  id: 'alfa',
+  name: 'Alfa Romeo',
+  popularity: null,
+  slug: 'alfa-romeo',
+};
+const CITROEN: BrandDto = {
+  id: 'citroen',
+  name: 'Citroën',
+  popularity: null,
+  slug: 'citroen',
+};
+const brand = (slug: string) =>
+  [...BRANDS, ALFA, CITROEN].find((b) => b.slug === slug) as BrandDto;
 
 // Each Home read stays open until the test answers it.
 type Read = {
@@ -57,7 +73,10 @@ const homeApi = {
       }),
   ),
 };
-const tilesApi = { popularBrandsControllerTiles: jest.fn() };
+const tilesApi = {
+  brandsControllerSearch: jest.fn(),
+  popularBrandsControllerTiles: jest.fn(),
+};
 const healthApi = { healthControllerReady: jest.fn() };
 const reduced = signal(false);
 
@@ -73,6 +92,7 @@ beforeEach(async () => {
   reduced.set(false);
   homeApi.homeControllerForBrand.mockClear();
   tilesApi.popularBrandsControllerTiles.mockReset();
+  tilesApi.brandsControllerSearch.mockReset();
   healthApi.healthControllerReady.mockReset();
   await configure();
 });
@@ -327,6 +347,112 @@ describe('Home brand picker', () => {
   });
 });
 
+describe('Home brand search', () => {
+  const field = () => fixture.debugElement.query(By.directive(BrandSearch));
+  async function find(found: BrandDto) {
+    field().componentInstance.chosen.emit(found);
+    await settle();
+  }
+  const names = () => tiles().map((t) => t.textContent?.trim());
+
+  it('puts the search field right after the brand tiles', async () => {
+    await render();
+
+    const picker = page().querySelector('mf-brand-picker');
+    expect(picker?.nextElementSibling?.tagName).toBe('MF-BRAND-SEARCH');
+  });
+
+  it('selects a searched brand as the first tile, the other seven after it', async () => {
+    await render();
+    await find(ALFA);
+
+    expect(names()).toEqual(['Alfa Romeo', ...NAMES.slice(0, 7)]);
+    expect(checked()).toBe('Alfa Romeo');
+    expect(text()).toContain('Service‑uri pentru Alfa Romeo');
+    expect(slugsRead()).toEqual(['bmw', 'alfa-romeo']);
+    await reads[1].answer(2, 6);
+    expect(count()?.textContent).toContain('Alfa Romeo');
+  });
+
+  it('points the main button at the results for a searched brand', async () => {
+    await render();
+    await find(ALFA);
+
+    expect(search()?.getAttribute('href')).toBe('/ro/garages?brand=alfa-romeo');
+  });
+
+  it('lets a later searched brand take the first place of the earlier one', async () => {
+    await render();
+    await find(ALFA);
+    await find(CITROEN);
+
+    expect(names()).toEqual(['Citroën', ...NAMES.slice(0, 7)]);
+    expect(checked()).toBe('Citroën');
+  });
+
+  it('selects a searched brand that is already a tile where it is', async () => {
+    await render();
+    await find(brand('dacia'));
+
+    expect(names()).toEqual(NAMES);
+    expect(checked()).toBe('Dacia');
+  });
+
+  it('shows a popular brand a search pushed off the tiles when it is searched next', async () => {
+    await render();
+    await find(ALFA);
+    await find(brand('renault'));
+
+    expect(names()).toEqual(['Renault', ...NAMES.slice(0, 7)]);
+    expect(checked()).toBe('Renault');
+  });
+
+  it('reads nothing again when the selected brand is searched', async () => {
+    await render();
+    await find(ALFA);
+    await find(ALFA);
+    await find(brand('bmw'));
+    await find(brand('bmw'));
+
+    expect(slugsRead()).toEqual(['bmw', 'alfa-romeo', 'bmw']);
+  });
+
+  it('keeps a tile chosen after a search working', async () => {
+    await render();
+    await find(ALFA);
+    await choose('Dacia');
+
+    expect(checked()).toBe('Dacia');
+    expect(names()[0]).toBe('Alfa Romeo');
+  });
+
+  it('shows the popular tiles again on a new visit to Home', async () => {
+    await render();
+    await find(ALFA);
+    fixture.destroy();
+    await render();
+
+    expect(names()).toEqual(NAMES);
+    expect(checked()).toBe('BMW');
+  });
+
+  it('keeps the tiles, hero, count and button working when the brand list fails', async () => {
+    tilesApi.brandsControllerSearch.mockRejectedValue(new Error('down'));
+    await render();
+    const input = page().querySelector<HTMLInputElement>(
+      'mf-brand-search input',
+    );
+    input?.dispatchEvent(new FocusEvent('focus'));
+    await settle();
+    await choose('Dacia');
+
+    expect(input?.disabled).toBe(true);
+    expect(checked()).toBe('Dacia');
+    expect(search()?.getAttribute('href')).toBe('/ro/garages?brand=dacia');
+    expect(slugsRead()).toEqual(['bmw', 'dacia']);
+  });
+});
+
 describe('Home brand picker on the server', () => {
   beforeEach(async () => {
     TestBed.resetTestingModule();
@@ -348,6 +474,27 @@ describe('Home brand picker on the server', () => {
     expect(tiles()).toHaveLength(8);
     expect(homeApi.homeControllerForBrand).not.toHaveBeenCalled();
     expect(count()?.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('renders the brand search field, labelled and enabled', async () => {
+    tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
+    fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const field = root.querySelector<HTMLInputElement>(
+      'mf-brand-search input#mf-brand-search',
+    );
+    expect(field).not.toBeNull();
+    expect(field?.disabled).toBe(false);
+    expect(field?.getAttribute('role')).toBe('combobox');
+    expect(
+      root
+        .querySelector('mf-brand-search label[for="mf-brand-search"]')
+        ?.textContent?.trim(),
+    ).toBeTruthy();
   });
 
   it('hands the browser no tiles when the read fails', async () => {
@@ -441,6 +588,20 @@ describe('Home brand cycling', () => {
 
     expect(checked()).toBe('Mini');
     expect(slugsRead()).toEqual(['bmw', 'mini']);
+  });
+
+  it('stops for good when the visitor reaches for the brand search', async () => {
+    tilesApi.brandsControllerSearch.mockReturnValue(new Promise(() => {}));
+    await render();
+    await tick(5000);
+
+    page()
+      .querySelector('mf-brand-search input')
+      ?.dispatchEvent(new FocusEvent('focus'));
+    await tick(60000);
+
+    expect(checked()).toBe('Mini');
+    expect(count()?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('keeps the chosen brand after a tap', async () => {
