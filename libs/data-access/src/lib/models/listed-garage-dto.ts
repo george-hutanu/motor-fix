@@ -4,6 +4,16 @@
 import { BrandRefDto } from '../models/brand-ref-dto';
 export interface ListedGarageDto {
   brandNote: string | null;
+
+  /**
+   * True for a mobile mechanic whose area holds the place. Only with near
+   */
+  comesToYou?: boolean;
+
+  /**
+   * Km from the place, one decimal; null for a mobile mechanic. Only with near
+   */
+  distanceKm?: number | null;
   doesNotTake: Array<BrandRefDto>;
   id: string;
   name: string;

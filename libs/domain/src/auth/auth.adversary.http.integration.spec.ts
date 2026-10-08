@@ -210,6 +210,7 @@ describe('who am I over HTTP and account writes under attack', () => {
       expect(res.status).toBe(200);
       expect(Object.keys(res.body).sort()).toEqual([
         'capabilities',
+        'city',
         'email',
         'emailConfirmed',
         'garageId',
