@@ -156,7 +156,7 @@ describe('the news worker', () => {
     }
     const rows = await newsEmails();
     expect(rows.map((r) => r.accountId).sort()).toEqual([andrei, elena].sort());
-  }, 20_000);
+  });
 
   it('runs the news the outbox holds, queued by the relay', async () => {
     const admin = await account('admin', ['admin']);
@@ -180,7 +180,7 @@ describe('the news worker', () => {
       await app.close();
     }
     expect((await newsEmails()).map((r) => r.accountId)).toEqual([andrei]);
-  }, 20_000);
+  });
 
   it('queues the outbox news with the run’s retries', async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
@@ -211,7 +211,7 @@ describe('the news worker', () => {
       attempts: NEWS_CONSUMER.jobs.attempts,
       backoff: NEWS_CONSUMER.jobs.backoff,
     });
-  }, 20_000);
+  });
 
   it.each([
     ['AUTH_TOKEN_SECRET', undefined, 'https://motorfix.test'],
@@ -267,7 +267,7 @@ describe('the news worker', () => {
     }
     expect(await prisma.newsSend.count()).toBe(0);
     expect(await newsJobs.getJobState('news-2026-11')).toBe('unknown');
-  }, 20_000);
+  });
 
   it('queues a claimed month’s run again when Redis lost it, and marks it ran', async () => {
     const admin = await account('admin', ['admin']);
@@ -288,7 +288,7 @@ describe('the news worker', () => {
     }
     expect((await newsEmails()).map((r) => r.accountId)).toEqual([andrei]);
     expect((await prisma.newsSend.findFirst())?.ranAt).toBeInstanceOf(Date);
-  }, 20_000);
+  });
 
   it('leaves a run that completed, or was relayed moments ago, where it is', async () => {
     const admin = await account('admin', ['admin']);
@@ -357,5 +357,5 @@ describe('the news worker', () => {
     );
     expect(await newsJobs.getJobState(`event-${id}`)).toBe('waiting');
     expect((await prisma.newsSend.findFirst())?.ranAt).toBeNull();
-  }, 20_000);
+  });
 });

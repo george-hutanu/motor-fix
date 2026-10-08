@@ -12,6 +12,7 @@ import { AuthModule } from '../../../auth/auth.module';
 import type { Role } from '../../../auth/capabilities';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import { localDay } from '../../../bucharest';
+import { outboxMark } from '../../../events/outbox.testing';
 import {
   databaseUrl,
   fixtures,
@@ -26,6 +27,7 @@ serialDatabase(databaseUrl);
 let app: NestExpressApplication;
 // The history and the outbox are never emptied: each test reads its own.
 let since: Date;
+let mark: bigint;
 
 beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
@@ -56,6 +58,7 @@ beforeEach(async () => {
     { now: Date }[]
   >`SELECT clock_timestamp() AS now`;
   since = now;
+  mark = await outboxMark(prisma);
 });
 
 afterEach(() => {
@@ -454,7 +457,7 @@ describe('what a save writes beside the car', () => {
     });
   const added = () =>
     prisma.outboxEvent.findMany({
-      where: { createdAt: { gte: since }, kind: 'car.added' },
+      where: { id: { gt: mark }, kind: 'car.added' },
     });
 
   it('writes one "car added" entry with the new values', async () => {

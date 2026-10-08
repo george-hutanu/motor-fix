@@ -6,6 +6,7 @@ import type { DataPoint } from '@opentelemetry/sdk-metrics';
 import { Client, Pool } from 'pg';
 
 import { DataStoreMetricsModule } from './data-store-metrics.module';
+import { until } from '../waits.testing';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -44,15 +45,6 @@ async function points(name: string) {
     .flatMap((scope) => scope.metrics)
     .filter((metric) => metric.descriptor.name === name)
     .flatMap((metric) => metric.dataPoints as DataPoint<number>[]);
-}
-
-async function until<T>(read: () => Promise<T | undefined>, ms = 20_000) {
-  const end = Date.now() + ms;
-  for (;;) {
-    const value = await read();
-    if (value !== undefined || Date.now() > end) return value;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
 }
 
 const up = async (store: string) =>
@@ -101,12 +93,12 @@ afterAll(async () => {
 // @traces 878-FR-013
 describe('DataStoreMetricsModule on a real PostgreSQL and Redis', () => {
   it('reports both stores up after its first reading', async () => {
-    expect(await until(() => up('postgres'))).toBe(1);
-    expect(await until(() => up('redis'))).toBe(1);
+    expect(await until('PostgreSQL up', () => up('postgres'))).toBe(1);
+    expect(await until('Redis up', () => up('redis'))).toBe(1);
   });
 
   it('reports the PostgreSQL figures, the slow-statement count included', async () => {
-    await until(() => up('postgres'));
+    await until('a PostgreSQL reading', () => up('postgres'));
     const [max] = await points('motorfix_pg_connections_max');
     expect(max?.value).toBeGreaterThan(0);
     const [size] = await points('motorfix_pg_database_size_bytes');
@@ -123,7 +115,7 @@ describe('DataStoreMetricsModule on a real PostgreSQL and Redis', () => {
   });
 
   it('reports the Redis figures', async () => {
-    await until(() => up('redis'));
+    await until('a Redis reading', () => up('redis'));
     const [used] = await points('motorfix_redis_memory_used_bytes');
     expect(used?.value).toBeGreaterThan(0);
     const [clients] = await points('motorfix_redis_clients_connected');
@@ -131,7 +123,7 @@ describe('DataStoreMetricsModule on a real PostgreSQL and Redis', () => {
   });
 
   it('reports the age of the oldest outbox event not yet relayed', async () => {
-    const age = await until(async () => {
+    const age = await until('the outbox age', async () => {
       const [point] = await points('motorfix_outbox_oldest_pending_seconds');
       return point?.value;
     });
@@ -175,19 +167,26 @@ describe('the monitoring role', () => {
 describe('slow statements on a real PostgreSQL', () => {
   it('logs a statement slower than 500 ms within one reading of its run', async () => {
     const pool = new Pool({ connectionString: monitorUrl, max: 1 });
+    let baselineTaken = false;
     const stop = observeDataStores({
       intervalMs: 300,
       outbox: { oldestPendingSeconds: async () => 0 },
       postgres: {
-        query: async <T>(sql: string) => (await pool.query(sql)).rows as T[],
+        query: async <T>(sql: string) => {
+          const { rows } = await pool.query(sql);
+          if (sql.includes('pg_stat_statements')) baselineTaken = true;
+          return rows as T[];
+        },
       },
       redis: { info: async () => '' },
     });
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // The first reading only takes the baseline: the slow statement must
+      // come after it to count.
+      await until('the baseline reading', () => baselineTaken);
       await admin.query('SELECT pg_sleep(0.6)');
 
-      const record = await until(async () => {
+      const record = await until('the slow statement log', async () => {
         await started?.flush();
         return memory.logExporter
           .getFinishedLogRecords()

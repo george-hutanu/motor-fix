@@ -20,6 +20,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../../notifications/notifications.testing';
+import { until } from '../../../waits.testing';
 import { AccountsService } from '../../accounts.service';
 import { AuthModule } from '../../auth.module';
 import { hashToken } from '../../email-confirmation/email-confirmation';
@@ -236,6 +237,8 @@ describe('the event a completed reset records', () => {
     expect(answers.filter((r) => r.status === 200)).toHaveLength(1);
     expect(answers.filter((r) => r.status === 410)).toHaveLength(11);
     expect(await outbox()).toHaveLength(1);
+    await until('the session message', () => heard().length > 0);
+    // Long enough for a second, wrong, message to arrive.
     await pause(300);
     expect(
       heard().filter(
@@ -293,6 +296,7 @@ describe('the event a completed reset records', () => {
       await http().post('/auth/password-reset/complete').send(body).expect(400);
     }
     await complete(token, '   ').expect(400);
+    // Long enough for a wrong message to arrive.
     await pause(150);
     expect(await outbox()).toEqual([]);
     expect(heard()).toEqual([]);
@@ -371,6 +375,8 @@ describe('the event a completed reset records', () => {
     const id = await person();
     const token = await linkFor(id);
     await complete(token).expect(200);
+    await until('the session message', () => heard().length > 0);
+    // Long enough for a second, wrong, message to arrive.
     await pause(300);
     expect(heard()).toEqual([
       {
@@ -404,6 +410,8 @@ describe('signing out on all devices alongside the reset', () => {
     const cookie = await session();
     await everywhere(cookie).expect(204);
     await everywhere(cookie).expect(401);
+    await until('the session message', () => heard().length > 0);
+    // Long enough for a second, wrong, message to arrive.
     await pause(300);
     expect(heard()).toEqual([
       {
@@ -428,6 +436,7 @@ describe('signing out on all devices alongside the reset', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await everywhere(cookie).expect(500);
     failing = undefined;
+    // Long enough for a wrong message to arrive.
     await pause(200);
     expect(heard()).toEqual([]);
     expect(await prisma.refreshToken.count({ where: { accountId: id } })).toBe(
@@ -440,6 +449,8 @@ describe('signing out on all devices alongside the reset', () => {
     const id = await person();
     await everywhere(await session()).expect(204);
     await complete(await linkFor(id)).expect(200);
+    await until('both session messages', () => heard().length >= 2);
+    // Long enough for a third, wrong, message to arrive.
     await pause(300);
     expect((await outbox()).map((r) => r.kind).sort()).toEqual([
       'account.password_reset',

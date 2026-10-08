@@ -18,6 +18,7 @@ import {
 } from './notifications.testing';
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { timersArmedBy, until } from '../waits.testing';
 
 const redisUrl = redisUrlFor(2);
 const { account, prisma, reset } = fixtures();
@@ -474,7 +475,11 @@ describe('releasing a claim', () => {
       () => 'resolved',
       () => 'rejected',
     );
-    await wait(300);
+    await until(
+      'the slow send to claim the row',
+      async () =>
+        (await row(queued.id)).claimedAt?.getTime() === new Date(DAY).getTime(),
+    );
     expect((await row(queued.id)).claimedAt).toEqual(new Date(DAY));
     const takeoverAt = new Date('2026-10-05T11:02:00.000Z');
     const other = new NotificationsProcessor(
@@ -488,6 +493,7 @@ describe('releasing a claim', () => {
       testPhoneConfig({ PHONE_SENDING: 'off', WHATSAPP_SENDER: '' }),
     );
     other.now = () => takeoverAt;
+    // Not a wait for work: the slow send stays hung on Brevo meanwhile.
     await wait(1200);
     const takeover = other
       .handle({ attemptsMade: 1, data: { id: queued.id }, name: 'send' })
@@ -495,7 +501,11 @@ describe('releasing a claim', () => {
         () => 'resolved',
         () => 'rejected',
       );
-    await wait(300);
+    await until(
+      'the takeover to claim the row',
+      async () =>
+        (await row(queued.id)).claimedAt?.getTime() === takeoverAt.getTime(),
+    );
     expect((await row(queued.id)).claimedAt).toEqual(takeoverAt);
     expect(await slow).toBe('rejected');
     expect(await row(queued.id)).toMatchObject({
@@ -579,14 +589,19 @@ describe('a database error after Brevo accepted an e-mail', () => {
     const logged = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
+    let waits: string[];
     try {
-      await expect(sendJob(queued.id)).resolves.toBeUndefined();
+      ({ log: waits } = await timersArmedBy('notifications.processor', () =>
+        sendJob(queued.id),
+      ));
     } finally {
       failing();
       logged.mockRestore();
     }
     expect(tries).toHaveLength(3);
-    expect(tries[2] - tries[0]).toBeLessThan(150);
+    // Back to back: no timer ran out between them (Brevo's own request
+    // limit is armed, and never reached).
+    expect(waits.filter((entry) => entry.startsWith('fired'))).toEqual([]);
   });
 
   it('finishes the job when releasing the claim fails', async () => {

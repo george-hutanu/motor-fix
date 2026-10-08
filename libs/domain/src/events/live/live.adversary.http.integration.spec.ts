@@ -22,6 +22,7 @@ import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { until } from '../../waits.testing';
 import { noEvents } from '../event.port';
 import { EventsModule } from '../events.module';
 import { OutboxRelayModule } from '../outbox-relay/outbox-relay.module';
@@ -129,17 +130,19 @@ function stream(target: INestApplication, auth?: string) {
               const seen = () => out.messages.find((m) => m.event === kind);
               const found = seen();
               if (found) return ok(found);
-              const timer = setTimeout(
-                () => fail(new Error(`no ${kind} within ${ms} ms`)),
-                ms,
-              );
-              res.on('data', () => {
+              const onData = () => {
                 const m = seen();
                 if (m) {
                   clearTimeout(timer);
+                  res.off('data', onData);
                   ok(m);
                 }
-              });
+              };
+              const timer = setTimeout(() => {
+                res.off('data', onData);
+                fail(new Error(`no ${kind} within ${ms} ms`));
+              }, ms);
+              res.on('data', onData);
             }),
           res,
         };
@@ -164,6 +167,8 @@ function stream(target: INestApplication, auth?: string) {
   });
 }
 
+// An absence window, after the wait for what did arrive: long enough for a
+// wrong message to arrive. Never a wait for work.
 const settle = () => new Promise((r) => setTimeout(r, 250));
 
 const publish = async (audience: string[], kind = 'live.test') => {
@@ -240,6 +245,11 @@ describe('the live stream audiences', () => {
     await publish(['admin'], 'admin.ping');
     await publish(['system'], 'system.ping');
     await publish([`garage:${otherGarageId}`], 'other.ping');
+    await until('every stream to hear its kinds', () =>
+      [d, o, r, m, a, s].every(
+        (live, i) => (live?.messages.length ?? 0) >= (i === 0 ? 2 : 3),
+      ),
+    );
     await settle();
 
     const seen = (live: typeof d) =>
@@ -569,6 +579,7 @@ describe('the admin test update repeated', () => {
       { accountId: driver },
       `Bearer ${token(admin, 'admin')}`,
     ).expect(202);
+    await until('both updates', () => kinds(live, 'live.test').length >= 2);
     await settle();
 
     const tests = kinds(live, 'live.test');
@@ -679,6 +690,8 @@ describe('Redis going away and coming back', () => {
       await live.next('before.ping');
 
       await proxy.stop();
+      // Not a wait for work: what follows holds whether or not the hub has
+      // noticed Redis is gone.
       await new Promise((r) => setTimeout(r, 500));
       const down = await sendTest(
         { accountId: driver },
@@ -689,7 +702,13 @@ describe('Redis going away and coming back', () => {
       await during.next('hello');
 
       await proxy.start();
-      await new Promise((r) => setTimeout(r, 3_000));
+      await until('the stream to hear Redis again', async () => {
+        await publish([`account:${driver}`], 'probe.ping');
+        return live.next('probe.ping', 500).then(
+          () => true,
+          () => false,
+        );
+      });
       await publish([`account:${driver}`], 'after.ping');
 
       expect(down.status).toBe(202);
@@ -702,5 +721,5 @@ describe('Redis going away and coming back', () => {
       await flaky.close();
       await proxy.stop();
     }
-  }, 30_000);
+  });
 });

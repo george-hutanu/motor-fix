@@ -214,5 +214,5 @@ describe('the reminders worker with shortened days', () => {
 
     const sent = await bell();
     expect(sent.map((n) => n.eventId.split(':')[2])).toEqual(['30', '7']);
-  }, 30_000);
+  });
 });
