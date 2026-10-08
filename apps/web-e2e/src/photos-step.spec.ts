@@ -67,7 +67,11 @@ async function toPhotos(page: Page, email: string) {
   await page.getByLabel('E‑mail').fill(email);
   await page.getByLabel('E‑mail').blur();
   await toStep5(page, 'Pași');
-  await expect(step(page).getByText('Alege fotografii')).toBeVisible();
+  // The picker opens once the draft exists on the server; files set before
+  // then wait for a connection that is already there (ST-948).
+  await expect(
+    step(page).getByRole('button', { name: 'Alege fotografii' }),
+  ).toBeEnabled();
 }
 
 const confirmedCount = (page: Page, count: number) =>
@@ -141,10 +145,17 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
         await other.close();
       }
 
+      // A reload that aborts the delete would leave the photo on the server.
+      const removed = page.waitForResponse(
+        (res) =>
+          res.request().method() === 'DELETE' &&
+          /\/listing-drafts\/[^/]+\/photos\//.test(res.url()),
+      );
       await tiles(page)
         .nth(1)
         .getByRole('button', { name: /Șterge/ })
         .click();
+      expect((await removed).ok()).toBe(true);
       await expect(tiles(page)).toHaveCount(2);
       await page.reload();
       await page.waitForLoadState('networkidle');

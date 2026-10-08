@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 
 import { test } from './fixtures.js';
 import globalSetup from './global-setup.js';
-import { clearSignUpCounts } from './sign-up-counts.js';
+import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './sign-up-counts.js';
 
 // A Redis that holds plain keys and answers SCAN one key per page, so the
 // cursor has to be followed to the end.
@@ -26,7 +26,7 @@ function keyStore(keys: string[]) {
   return { redis, store };
 }
 
-test.describe('the sign-up counts a local run clears', () => {
+test.describe('the per-address counts a local run clears', () => {
   test('deletes every sign-up count and nothing else', async () => {
     const { redis, store } = keyStore([
       'auth:signup:address:aaa',
@@ -35,12 +35,24 @@ test.describe('the sign-up counts a local run clears', () => {
       'auth:reset:address:ddd',
     ]);
 
-    expect(await clearSignUpCounts(redis)).toBe(2);
+    expect(await clearCounts(redis, SIGN_UP_KEYS)).toBe(2);
 
     expect([...store].sort()).toEqual([
       'auth:fail:email:bbb',
       'auth:reset:address:ddd',
     ]);
+  });
+
+  test('deletes every listing-draft create count and nothing else', async () => {
+    const { redis, store } = keyStore([
+      'listing-drafts:create:aaa',
+      'auth:signup:address:bbb',
+      'listing-drafts:create:ccc',
+    ]);
+
+    expect(await clearCounts(redis, DRAFT_KEYS)).toBe(2);
+
+    expect([...store]).toEqual(['auth:signup:address:bbb']);
   });
 
   test('stops scanning after its page cap when the cursor never ends', async () => {
@@ -53,7 +65,7 @@ test.describe('the sign-up counts a local run clears', () => {
       },
     };
 
-    expect(await clearSignUpCounts(endless)).toBe(0);
+    expect(await clearCounts(endless, SIGN_UP_KEYS)).toBe(0);
     expect(pages).toBe(1000);
   });
 });
