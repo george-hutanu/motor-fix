@@ -236,9 +236,9 @@ const FILE_KEY = /^[a-z-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
 
 // The envelope only: an object holding nothing but those three keys.
 export function isListingDraftData(value: unknown): value is ListingDraftData {
-  if (!isRecord(value)) return false;
-  const { files, steps, survey, ...rest } = value;
-  if (Object.keys(rest).length > 0) return false;
+  if (!isRecord(value) || !onlyKeys(value, ['steps', 'survey', 'files']))
+    return false;
+  const { files, steps, survey } = value;
   if (survey !== undefined && !isRecord(survey)) return false;
   if (
     files !== undefined &&
