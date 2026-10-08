@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -584,5 +587,20 @@ describe('step 2, the fuels of a taken brand', () => {
     expect(fuels(step, 'BMW')).toHaveLength(4);
     for (const f of fuels(step, 'BMW'))
       expect(f.getAttribute('aria-pressed')).toBe('true');
+  });
+});
+
+describe('the fuels under a taken brand on a phone', () => {
+  const css = readFileSync(join(__dirname, 'brands-step.css'), 'utf8');
+  const tablet =
+    /@media \(min-width: 768px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  const outside = css.replace(tablet, '');
+
+  it('keeps the fuel chips and the no-requests line at the body size: the small size starts at a tablet', () => {
+    expect(outside).not.toMatch(/\.fuels button \{[^}]*font-size/);
+    expect(outside).not.toMatch(/\.quiet \{[^}]*font-size/);
+    expect(tablet).toMatch(
+      /\.fuels button,\s*\.quiet \{[^}]*font-size:\s*var\(--mf-size-small\);/,
+    );
   });
 });

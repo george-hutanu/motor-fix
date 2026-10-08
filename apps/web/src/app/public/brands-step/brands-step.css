@@ -70,10 +70,13 @@ mf-lamp {
   justify-items: start;
   min-width: 0;
 }
-.fuels button {
-  font-size: var(--mf-size-small);
-}
 .quiet {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
+}
+/* A phone reads the fuels and the no-requests line at the body size; the small size starts at a tablet. */
+@media (min-width: 768px) {
+  .fuels button,
+  .quiet {
+    font-size: var(--mf-size-small);
+  }
 }
