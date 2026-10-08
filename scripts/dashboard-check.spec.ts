@@ -307,6 +307,30 @@ describe('the dashboard check', () => {
     expect(checkDashboards(join(__dirname, '..'))).toEqual([]);
   });
 
+  // The worker serves only its health routes over HTTP: its errors are failed jobs.
+  it("counts the worker's failed jobs, not its HTTP 5xx, as the overview's worker Error %", () => {
+    const overview = JSON.parse(
+      readFileSync(
+        join(__dirname, '..', DASHBOARDS, 'motorfix-overview.json'),
+        'utf8',
+      ),
+    ) as { panels: Json[] };
+    const flat = (panels: Json[]): Json[] =>
+      panels.flatMap((p) => [p, ...flat((p['panels'] as Json[]) ?? [])]);
+    const all = flat(overview.panels);
+    const row = all.findIndex(
+      (p) => p['type'] === 'row' && p['title'] === 'worker',
+    );
+    const error = all
+      .slice(row + 1)
+      .find((p) => p['title'] === 'Error %') as Json;
+    const expr = (error['targets'] as Json[])[0]['expr'] as string;
+
+    expect(expr).toContain('motorfix_jobs_total');
+    expect(expr).toContain('outcome="failed"');
+    expect(expr).not.toContain('http_server_request_duration_seconds_count');
+  });
+
   // A counter renamed in the code must not leave the check reading old names.
   it('knows the counters the product code defines', () => {
     const source = readFileSync(

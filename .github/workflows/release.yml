@@ -181,7 +181,7 @@ jobs:
         run: exec node scripts/railway-deploy.ts staging
       # Marks the deploy on every dashboard (tags deploy and env:staging); a
       # release without the token skips it (the images job named what is
-      # missing). A shell check, not an `if:`, so the job carries no condition.
+      # missing), and a refused annotation only warns: the deploy has happened. A shell check, not an `if:`, so the job carries no condition.
       - name: Annotate the deploy
         env:
           GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
@@ -192,7 +192,8 @@ jobs:
             '{text: $sha, tags: ["deploy", "env:staging"], time: $t}' |
           curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
             -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
-            --data-binary @- > /dev/null
+            --data-binary @- > /dev/null ||
+            echo "::warning::Grafana refused the deploy annotation; the release goes on without it"
       # The end-to-end run signs in as the seed accounts, and only a reset used
       # to seed staging, so an account added since the last one was missing.
       # The seed only adds what is missing. Staging's Postgres has no public
@@ -280,7 +281,7 @@ jobs:
         run: exec node scripts/railway-deploy.ts production
       # Marks the deploy on every dashboard (tags deploy and env:production); a
       # release without the token skips it (the images job named what is
-      # missing). A shell check, not an `if:`, so the job carries no condition.
+      # missing), and a refused annotation only warns: the deploy has happened. A shell check, not an `if:`, so the job carries no condition.
       - name: Annotate the deploy
         env:
           GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
@@ -291,4 +292,5 @@ jobs:
             '{text: $sha, tags: ["deploy", "env:production"], time: $t}' |
           curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
             -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
-            --data-binary @- > /dev/null
+            --data-binary @- > /dev/null ||
+            echo "::warning::Grafana refused the deploy annotation; the release goes on without it"

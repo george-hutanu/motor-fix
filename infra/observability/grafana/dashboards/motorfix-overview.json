@@ -622,7 +622,7 @@
             "type": "prometheus",
             "uid": "${prom}"
           },
-          "expr": "100 * sum(rate(http_server_request_duration_seconds_count{service_name=\"worker\", deployment_environment=\"$env\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"worker\", deployment_environment=\"$env\"}[5m]))",
+          "expr": "100 * sum(rate(motorfix_jobs_total{service_name=\"worker\", deployment_environment=\"$env\", outcome=\"failed\"}[5m])) / sum(rate(motorfix_jobs_total{service_name=\"worker\", deployment_environment=\"$env\"}[5m]))",
           "legendFormat": "5xx %"
         }
       ],

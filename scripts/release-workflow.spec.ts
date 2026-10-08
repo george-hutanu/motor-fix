@@ -202,4 +202,15 @@ describe('release workflow', () => {
       );
     },
   );
+
+  // @traces 879-FR-014
+  it.each(['staging', 'production'])(
+    'warns, and does not fail the %s release, when Grafana refuses the annotation',
+    (name) => {
+      const note = step(job(name), 'Annotate the deploy');
+
+      expect(note).toMatch(/\|\|\s+echo "::warning::[^"]*annotation[^"]*"$/m);
+      expect(note).not.toContain('continue-on-error');
+    },
+  );
 });
