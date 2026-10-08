@@ -12,6 +12,10 @@ const REVIEWS = 'Recenzii doar după o lucrare confirmată';
 const KEY = 'reviews_only_after_confirmed_job';
 const REASON = 'Testăm recenziile din profilul service-ului.';
 
+// Each request carries its own reason, so a history line left by an earlier
+// test or a retry never answers for this one.
+const reasonFor = () => `${REASON} ${Date.now()}`;
+
 async function headers(request: APIRequestContext, email: string) {
   const res = await request.post('/api/v1/auth/sign-in', {
     data: { email, password: PASSWORD, remember: false },
@@ -76,12 +80,19 @@ async function otherAdmin(browser: Browser) {
 const reviews = (page: Page) =>
   page.getByRole('switch', { exact: true, name: REVIEWS });
 
-async function ask(page: Page) {
+// The modal dialog hides the page behind it from the accessibility tree.
+const behind = (page: Page) =>
+  page.getByRole('switch', { exact: true, includeHidden: true, name: REVIEWS });
+
+const decided = (page: Page, reason: string) =>
+  page.locator('[data-decided] p').filter({ hasText: reason });
+
+async function ask(page: Page, reason: string) {
   await reviews(page).click();
   const dialog = page.getByRole('dialog', {
     name: `Oprești regula „${REVIEWS}”?`,
   });
-  await dialog.getByLabel('Motiv').fill(REASON);
+  await dialog.getByLabel('Motiv').fill(reason);
   await dialog.getByRole('button', { name: 'Trimite cererea' }).click();
   await expect(dialog).toBeHidden();
 }
@@ -97,8 +108,9 @@ test.describe('a second admin confirms switching a rule off @seeded', () => {
   }) => {
     await openSettings(page, ACCOUNTS.admin);
     const other = await otherAdmin(browser);
+    const reason = reasonFor();
 
-    await ask(page);
+    await ask(page, reason);
 
     await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
     await expect(reviews(page)).toBeDisabled();
@@ -108,9 +120,8 @@ test.describe('a second admin confirms switching a rule off @seeded', () => {
     await expect(
       other.page.getByText('Așteaptă aprobarea altui admin'),
     ).toBeVisible({ timeout: 5000 });
-    // The decided history below repeats the reasons of earlier runs.
     await expect(
-      other.page.locator('[data-waiting]').getByText(REASON, { exact: true }),
+      other.page.locator('[data-waiting]').getByText(reason, { exact: true }),
     ).toBeVisible();
 
     await other.page.getByRole('button', { name: 'Aprobă' }).click();
@@ -119,17 +130,42 @@ test.describe('a second admin confirms switching a rule off @seeded', () => {
     await expect(reviews(page)).toHaveAttribute('aria-checked', 'false', {
       timeout: 5000,
     });
-    await expect(page.getByText(/Aprobată de Mihai · /)).toBeVisible();
+    await expect(decided(page, reason)).toContainText(/Aprobată de Mihai · /);
+    await other.context.close();
+  });
+
+  test('ask as one admin, refused by another, without a reload', async ({
+    browser,
+    page,
+  }) => {
+    await openSettings(page, ACCOUNTS.admin);
+    const other = await otherAdmin(browser);
+    const reason = reasonFor();
+
+    await ask(page, reason);
+    await expect(
+      other.page.locator('[data-waiting]').getByText(reason, { exact: true }),
+    ).toBeVisible({ timeout: 5000 });
+    await other.page.getByRole('button', { name: 'Refuză' }).click();
+
+    await expect(decided(page, reason)).toContainText(/Refuzată de Mihai · /, {
+      timeout: 5000,
+    });
+    await expect(page.locator('[data-waiting]')).toHaveCount(0);
+    await expect(reviews(page)).toBeEnabled();
+    await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
+    await expect(reviews(other.page)).toHaveAttribute('aria-checked', 'true');
     await other.context.close();
   });
 
   test('withdraw a request as its asker', async ({ page }) => {
     await openSettings(page, ACCOUNTS.admin);
-    await ask(page);
+    const reason = reasonFor();
+    await ask(page, reason);
 
     await page.getByRole('button', { name: 'Retrage cererea' }).click();
 
-    await expect(page.getByText(/Retrasă de Admin · /)).toBeVisible();
+    await expect(decided(page, reason)).toContainText(/Retrasă de Admin · /);
     await expect(reviews(page)).toBeEnabled();
     await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
   });
@@ -145,7 +181,7 @@ test.describe('a second admin confirms switching a rule off @seeded', () => {
 
     await reviews(page).click();
     await expect(page.getByLabel('Motiv')).toBeVisible();
-    await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
+    await expect(behind(page)).toHaveAttribute('aria-checked', 'true');
     await page.getByRole('button', { name: 'Renunță' }).click();
 
     await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
@@ -196,7 +232,7 @@ test.describe('a second admin confirms switching a rule off @seeded', () => {
     await reviews(page).click();
     await expect(page.getByLabel('Motiv')).toBeVisible();
     expect(await wide()).toBeLessThanOrEqual(0);
-    await page.getByLabel('Motiv').fill(REASON);
+    await page.getByLabel('Motiv').fill(reasonFor());
     await page.getByRole('button', { name: 'Trimite cererea' }).click();
     await expect(
       page.getByText('Așteaptă aprobarea altui admin'),
