@@ -24,7 +24,7 @@ const notifications = {
 
 const deleted: string[] = [];
 const storage = {
-  deleteObject: async (key: string) => {
+  deleteWithCopies: async (key: string) => {
     deleted.push(key);
   },
 } as unknown as StorageService;
@@ -122,7 +122,7 @@ describe('the reminder', () => {
 });
 
 describe('the clean-up', () => {
-  it('deletes an open draft 90 days old with its files and keys', async () => {
+  it('deletes an open draft 90 days old with its files, their copies and keys', async () => {
     const old = await draft(daysAgo(90), {
       data: { files: ['listing/a.jpg', 'listing/b.jpg'] },
     });
@@ -161,7 +161,7 @@ describe('the clean-up', () => {
     });
     const gone = await draft(daysAgo(91));
     const failing = {
-      deleteObject: async () => {
+      deleteWithCopies: async () => {
         throw new Error('bucket down');
       },
     } as unknown as StorageService;

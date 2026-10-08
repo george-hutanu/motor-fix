@@ -22,7 +22,7 @@ const notifications = {
 
 const deleted: unknown[] = [];
 const storage = {
-  deleteObject: async (key: unknown) => {
+  deleteWithCopies: async (key: unknown) => {
     deleted.push(key);
   },
 } as unknown as StorageService;

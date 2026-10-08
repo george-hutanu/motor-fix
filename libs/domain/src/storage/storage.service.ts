@@ -31,6 +31,9 @@ import {
 
 export const STORAGE_OPTIONS = Symbol('STORAGE_OPTIONS');
 
+const FILE_COPIES = ['thumb', 'display'] as const;
+type FileCopy = (typeof FILE_COPIES)[number];
+
 export interface SignedUpload {
   expiresAt: string;
   fields: Record<string, string>;
@@ -231,6 +234,7 @@ export class StorageService implements OnApplicationShutdown {
     key: string,
     body: Buffer | Uint8Array | string,
     contentType: string,
+    metadata?: Record<string, string>,
   ): Promise<void> {
     await this.s3.send(
       new PutObjectCommand({
@@ -238,7 +242,42 @@ export class StorageService implements OnApplicationShutdown {
         Bucket: this.bucket,
         ContentType: contentType,
         Key: key,
+        Metadata: metadata,
       }),
+    );
+  }
+
+  async readObject(key: string): Promise<Buffer> {
+    const object = await this.s3.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    return Buffer.from((await object.Body?.transformToByteArray()) ?? []);
+  }
+
+  // Null when nothing is stored at the key.
+  metadataOf(key: string): Promise<Record<string, string> | null> {
+    return this.s3
+      .send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+      .then(
+        (head) => head.Metadata ?? {},
+        (error: unknown) => {
+          if (statusOf(error) === 404) return null;
+          throw error;
+        },
+      );
+  }
+
+  derivedKey(key: string, copy: FileCopy): string {
+    return `${key}.${copy}`;
+  }
+
+  // A file goes with every copy made from it; S3 answers a delete of a
+  // missing key with success, so copies never made cost nothing.
+  async deleteWithCopies(key: string): Promise<void> {
+    await Promise.all(
+      [key, ...FILE_COPIES.map((copy) => this.derivedKey(key, copy))].map(
+        (each) => this.deleteObject(each),
+      ),
     );
   }
 

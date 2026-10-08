@@ -17,6 +17,7 @@ interface StoredObject {
   body: Buffer;
   contentType: string;
   etag: string;
+  metadata: Record<string, string>;
 }
 
 type Fields = Record<string, string>;
@@ -98,8 +99,18 @@ export class S3TestStore {
     };
   }
 
-  put(key: string, body: Buffer, contentType: string) {
-    this.objects.set(key, { body, contentType, etag: `"${randomUUID()}"` });
+  put(
+    key: string,
+    body: Buffer,
+    contentType: string,
+    metadata: Record<string, string> = {},
+  ) {
+    this.objects.set(key, {
+      body,
+      contentType,
+      etag: `"${randomUUID()}"`,
+      metadata,
+    });
   }
 
   private async handle(req: IncomingMessage, res: ServerResponse) {
@@ -230,7 +241,12 @@ export class S3TestStore {
   ) {
     const copySource = req.headers['x-amz-copy-source'];
     if (typeof copySource !== 'string') {
-      this.put(key, body, req.headers['content-type'] ?? 'binary/octet-stream');
+      this.put(
+        key,
+        body,
+        req.headers['content-type'] ?? 'binary/octet-stream',
+        metadataOf(req),
+      );
       res.writeHead(200, { etag: this.objects.get(key)?.etag }).end();
       return;
     }
@@ -244,7 +260,7 @@ export class S3TestStore {
     if (ifMatch && ifMatch !== source.etag) {
       throw new Refusal(412, 'PreconditionFailed');
     }
-    this.put(key, source.body, source.contentType);
+    this.put(key, source.body, source.contentType, source.metadata);
     res
       .writeHead(200, { 'content-type': 'application/xml' })
       .end(
@@ -267,6 +283,12 @@ export class S3TestStore {
     const headers: Record<string, string> = {
       'content-type': object.contentType,
       etag: object.etag,
+      ...Object.fromEntries(
+        Object.entries(object.metadata).map(([name, value]) => [
+          `x-amz-meta-${name}`,
+          value,
+        ]),
+      ),
     };
     const disposition = url.searchParams.get('response-content-disposition');
     if (disposition) headers['content-disposition'] = disposition;
@@ -285,6 +307,13 @@ export class S3TestStore {
     res.end(req.method === 'HEAD' ? undefined : body);
   }
 }
+
+const metadataOf = (req: IncomingMessage) =>
+  Object.fromEntries(
+    Object.entries(req.headers)
+      .filter(([name]) => name.startsWith('x-amz-meta-'))
+      .map(([name, value]) => [name.slice(11), String(value)]),
+  );
 
 function read(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {

@@ -1,8 +1,9 @@
 ---
 capability: storage
-updated: 2026-10-04
+updated: 2026-10-08
 features:
   - 422-private-file-storage
+  - 110-workshop-photos
 ---
 
 # Capability: Storage
@@ -39,9 +40,9 @@ _From 422-private-file-storage._
 
 _From 422-private-file-storage._
 
-### 422-FR-008 — Deleting a key MUST remove the object, and deleting a key that holds no object MUST succeed.
+### 110-FR-003 — Deleting a photo key MUST also delete the keys derived from it (its thumbnail and display copy), in one storage call, and succeed when any of them holds no object (422-FR-008); the storage rules for the `garage_photo` purpose stay JPEG, PNG and WebP with their signature check (422-FR-001, 422-FR-005), so a file whose bytes are not a photo is deleted and refused with `file_type_mismatch`. HEIC is not accepted: the worker's image library cannot decode it on the runtime image (`deferred.md`).
 
-_From 422-private-file-storage._
+_From 110-workshop-photos._
 
 ### 422-FR-011 — The refusals in FR-002 and FR-005 MUST be raised as HTTP errors with status 422 or 409 whose body carries the stable `code`, so the owning endpoint answers with that status and code. (The API's error filter keeping a carried `code` is delivered by ST-79, not here.)
 
@@ -50,3 +51,7 @@ _From 422-private-file-storage._
 ### 422-FR-012 — The browser upload helper MUST post the file and the address's form fields straight to the store, report progress, retry a dropped connection up to 3 times, ask for a new address once when the store refuses an expired one, then call the owning confirm call and return its result, or fail with an error.
 
 _From 422-private-file-storage._
+
+## Retired
+
+- `422-FR-008` — superseded by `110-FR-003` (2026-10-08)

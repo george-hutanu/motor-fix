@@ -127,6 +127,13 @@
               <mf-mechanics-step [value]="mechanics()" (valueChange)="keeper.section('4', $event)" />
             }
             @if (step.n === 5) {
+              <mf-photos-step
+                [draftId]="keeper.draft().draftId"
+                [token]="keeper.draft().token"
+                [kind]="details().businessKind"
+                [files]="photos()"
+                (filesChange)="keeper.files($event)"
+              />
               <mf-hours-step [value]="hours()" (valueChange)="keepHours($event)" />
             }
           </section>

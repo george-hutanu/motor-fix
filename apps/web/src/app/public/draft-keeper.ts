@@ -128,6 +128,13 @@ export class DraftKeeper {
     this.later();
   }
 
+  // The photo keys in their order, the first the cover.
+  files(keys: string[]) {
+    const data = this.draft().data as ListingDraftData;
+    this.change({ data: { ...data, files: keys } });
+    this.later();
+  }
+
   leaveEmail() {
     const email = this.checked(false);
     if (email === null) return;

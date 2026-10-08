@@ -11,6 +11,7 @@ import { openApiDocument } from './bootstrap';
 const api = apiBoot();
 
 const PUBLIC = [
+  'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/auth/oauth/apple',
   'GET /api/v1/auth/oauth/google',
   'GET /api/v1/auth/oauth/google/callback',
@@ -21,6 +22,7 @@ const PUBLIC = [
   'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/home',
   'GET /api/v1/job-types',
+  'GET /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos',
   'GET /api/v1/listing-drafts/current',
   'GET /api/v1/live/public',
   'GET /api/v1/public-holidays',
@@ -46,6 +48,8 @@ const PUBLIC = [
   'POST /api/v1/invites/check',
   'POST /api/v1/listing-drafts',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/continue-link',
+  'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos',
+  'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/upload-url',
   'POST /api/v1/notification-preferences/unsubscribe',
 ];
 

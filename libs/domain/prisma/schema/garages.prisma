@@ -69,8 +69,26 @@ model Garage {
   businessKind            BusinessKind?            @map("business_kind")
   mobileLegalForm         MobileLegalForm?         @map("mobile_legal_form")
   proposedJobs            JobType[]
+  photos                  GaragePhoto[]
 
   @@map("garage")
+}
+
+// The gallery, written when the listing is sent; the files stay under the
+// draft's storage keys. CHECKs in the migration: a position from 0, the
+// cover; a width and height above 0 when the photo was processed.
+model GaragePhoto {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  garageId  String   @map("garage_id") @db.Uuid
+  fileKey   String   @unique @map("file_key")
+  position  Int
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  garage    Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@unique([garageId, position])
+  @@map("garage_photo")
 }
 
 // The garage's own closed days; a legal holiday is closed through the
