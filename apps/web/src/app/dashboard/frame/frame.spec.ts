@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -1086,5 +1089,20 @@ describe('the garage header', () => {
       'Service Auto Foarte Lung Pentru Ecranele Mici Din Centru',
     );
     expect(line?.getAttribute('translate')).toBe('no');
+  });
+});
+
+describe('Frame account buttons', () => {
+  it('are styled tap targets in body text, padded on the 4 px grid', () => {
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(
+      /\s+/g,
+      ' ',
+    );
+    const rule = /\.account > button \{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(rule).toContain('min-height: var(--mf-tap)');
+    expect(rule).toContain('padding: 0 var(--mf-space-3)');
+    expect(rule).toContain('font: inherit');
+    expect(rule).toContain('font-size: var(--mf-size-body)');
   });
 });
