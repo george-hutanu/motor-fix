@@ -316,6 +316,20 @@ describe('telling the other admins', () => {
     expect(notify.mock.calls[0][0].params.reason).toHaveLength(300);
   });
 
+  it('cuts the push text between characters, never inside an emoji', async () => {
+    const notify = jest.fn().mockResolvedValue(2);
+
+    await changes(false, { notify }).request(ioana, {
+      key: REVIEWS,
+      reason: '😀'.repeat(200),
+    });
+
+    const { brief } = notify.mock.calls[0][0].params;
+    expect([...brief]).toHaveLength(120);
+    expect(brief).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+    expect(brief.endsWith('😀…')).toBe(true);
+  });
+
   it('tells no one when the asker is the only admin', async () => {
     await prisma.accountRole.deleteMany({
       where: {

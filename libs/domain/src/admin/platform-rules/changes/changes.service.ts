@@ -48,8 +48,11 @@ const dto = (row: PlatformRuleChange, actor: Actor): PlatformRuleChangeDto => ({
 });
 
 const brief = (name: string, reason: string) => {
-  const text = `${name}: ${reason}`;
-  return text.length <= BRIEF_MAX ? text : `${text.slice(0, BRIEF_MAX - 1)}…`;
+  // Cut in code points, so an emoji at the cut stays whole.
+  const text = [...`${name}: ${reason}`];
+  return text.length <= BRIEF_MAX
+    ? text.join('')
+    : `${text.slice(0, BRIEF_MAX - 1).join('')}…`;
 };
 
 // Only another admin decides; only the asker withdraws; a decided request
@@ -129,7 +132,8 @@ export class PlatformRuleChangesService {
     const text = typeof reason === 'string' ? reason.trim() : '';
     // Counted in code points, as the web form counts them.
     const length = [...text].length;
-    if (length < REASON_MIN || length > REASON_MAX) {
+    // PostgreSQL text cannot hold NUL.
+    if (length < REASON_MIN || length > REASON_MAX || text.includes('\u0000')) {
       throw refusal(
         HttpStatus.BAD_REQUEST,
         'validation_failed',
@@ -267,7 +271,9 @@ export class PlatformRuleChangesService {
     return dto(row, actor);
   }
 
-  private async rule(key: string) {
+  // The key comes from a body or a query: anything but text is unknown.
+  private async rule(key: unknown) {
+    if (typeof key !== 'string') throw unknownRule();
     const rule = this.visible(key)
       ? await this.prisma.platformRule.findUnique({ where: { key } })
       : null;
@@ -300,6 +306,7 @@ export class PlatformRuleChangesService {
   private async tellAdmins(row: PlatformRuleChange) {
     try {
       const { webUrl } = this.options;
+      // The config leaves it optional (email-config.ts); unset, no one is told.
       if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
       const admins = await this.prisma.account.findMany({
         select: { id: true },
