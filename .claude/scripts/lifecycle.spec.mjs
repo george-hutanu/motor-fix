@@ -462,14 +462,16 @@ describe('merge', () => {
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
-    assert.equal(calls[0], 'gh pr view --json number,state,url,title');
+    assert.equal(calls[0], 'gh pr view --json number,state,url,title,headRefName');
     assert.equal(calls[1], 'gh pr merge 141 --merge');
     assert.equal(calls[2], 'gh pr view 141 --json mergeCommit --jq .mergeCommit.oid');
-    assert.equal(calls[3], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
-    assert.equal(calls[4], `git -C specs diff -U0 -- ${FEATURE}/notion-sync.md`);
-    assert.equal(calls[5], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`);
-    assert.match(calls[6], /^gh pr comment 141 --body-file \S+$/);
-    assert.equal(calls.length, 7);
+    assert.equal(calls[3], 'git worktree list --porcelain');
+    assert.equal(calls[4], `node scripts/test-services.ts down ${repo}`);
+    assert.equal(calls[5], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
+    assert.equal(calls[6], `git -C specs diff -U0 -- ${FEATURE}/notion-sync.md`);
+    assert.equal(calls[7], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`);
+    assert.match(calls[8], /^gh pr comment 141 --body-file \S+$/);
+    assert.equal(calls.length, 9);
     assert.match(comment, /^## Finish log/);
     assert.match(comment, /feed1234beef/);
     assert.match(comment, /- one/);
@@ -492,7 +494,8 @@ describe('merge', () => {
     assert.equal(result.stopped, 'gate: gh pr merge 141 --merge');
     assert.equal(result.fix, message);
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr merge')));
-    assert.equal(h.calls.at(-1), 'gh pr view --json number,state,url,title');
+    assert.equal(h.calls.at(-1), 'gh pr view --json number,state,url,title,headRefName');
+    assert.ok(!h.calls.some((c) => c.includes('test-services')), 'no stack is stopped for a PR that did not merge');
     assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
   });
 
@@ -503,6 +506,7 @@ describe('merge', () => {
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr merge')));
     assert.ok(!h.calls.some((c) => c.includes('notion-sync.mjs')));
     assert.ok(h.calls.some((c) => c.startsWith('gh pr comment 141')));
+    assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`), 'a rerun stops the stack again');
   });
 
   it('stops at Notion exit 3 after the merge with finish left and the rerun', () => {
@@ -511,8 +515,96 @@ describe('merge', () => {
     assert.equal(result.ok, false);
     assert.deepEqual(result.left, ['speckit-notion-sync finish']);
     assert.equal(result.then, 'node .claude/scripts/lifecycle.mjs merge --pr 141 --notion-done');
+    assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`), 'the stack is stopped before the Notion finish can stop the step');
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr comment')));
     assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
+  });
+});
+
+describe('merge stops the merged worktree test stack', () => {
+  beforeEach(() => fixture());
+
+  const diff = ['git -C specs diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
+  const WT = '/machine/motor-fix/.claude/worktrees/696-lifecycle-script';
+  const viewHead = ['gh pr view --json number,state,url,title,headRefName', { stdout: JSON.stringify({ number: 141, state: 'OPEN', url: PR_URL, title: TITLE, headRefName: BRANCH }) }];
+  const worktrees = ['git worktree list --porcelain', { stdout: `worktree /machine/motor-fix\nHEAD 1\nbranch refs/heads/main\n\nworktree ${WT}\nHEAD 2\nbranch refs/heads/${BRANCH}\n\nworktree /machine/motor-fix/.claude/worktrees/loose\nHEAD 3\ndetached\n` }];
+  const down = (out) => ['node scripts/test-services.ts down', out];
+  const stopped = { stdout: '{"project":"mf-test-696-lifecycle-script-abc123","stopped":true}\n' };
+
+  it('stops the stack of the worktree carrying the PR head branch, before the Notion finish, and reports it', () => {
+    const h = harness({ answers: [diff, viewHead, worktrees, down(stopped)] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const at = h.calls.indexOf(`node scripts/test-services.ts down ${WT}`);
+    assert.ok(at > h.calls.indexOf('gh pr merge 141 --merge'), 'after the merge');
+    assert.ok(at < h.calls.findIndex((c) => c.includes('notion-sync.mjs finish')), 'before the finish');
+    assert.deepEqual(result.test_stack, { project: 'mf-test-696-lifecycle-script-abc123', stopped: true });
+    assert.ok(result.did.includes('test stack mf-test-696-lifecycle-script-abc123 stopped'));
+  });
+
+  it('judges the worktree list with the gates like every other git command', () => {
+    const h = harness({ answers: [diff, viewHead, worktrees, down(stopped)] });
+    step(['merge'], h.io);
+    assert.ok(h.gated.some((c) => c.replace(/"/g, '') === 'git worktree list --porcelain'));
+  });
+
+  it('falls back to the checkout it runs in when no worktree carries the branch', () => {
+    const h = harness({ answers: [diff, viewHead, ['git worktree list --porcelain', { stdout: 'worktree /machine/motor-fix\nHEAD 1\nbranch refs/heads/main\n' }], down(stopped)] });
+    step(['merge'], h.io);
+    assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`));
+  });
+
+  const finishesAnyway = (h, result) => {
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.test_stack.stopped, false);
+    assert.ok(h.calls.some((c) => c.includes('notion-sync.mjs finish')));
+    assert.ok(h.calls.some((c) => c.startsWith('node .claude/scripts/specs-repo.mjs commit')));
+    assert.ok(h.calls.some((c) => c.startsWith('gh pr comment 141')));
+    assert.ok(result.did.some((d) => d.startsWith('test stack not stopped: ')), JSON.stringify(result.did));
+  };
+
+  it('finishes the merge when Docker is not there, with the reason', () => {
+    const h = harness({ answers: [diff, viewHead, worktrees, down({ stdout: '{"project":"mf-test-x","stopped":false,"reason":"docker unavailable"}\n' })] });
+    const result = step(['merge'], h.io);
+    finishesAnyway(h, result);
+    assert.deepEqual(result.test_stack, { project: 'mf-test-x', stopped: false, reason: 'docker unavailable' });
+  });
+
+  it('finishes the merge when the stop exits non-zero', () => {
+    const h = harness({ answers: [diff, viewHead, worktrees, down({ code: 1, stderr: 'node: boom\n' })] });
+    const result = step(['merge'], h.io);
+    finishesAnyway(h, result);
+    assert.match(result.test_stack.reason, /boom/);
+  });
+
+  it('finishes the merge when the stop prints nothing it can read', () => {
+    const h = harness({ answers: [diff, viewHead, worktrees, down({ stdout: 'garbage\n' })] });
+    const result = step(['merge'], h.io);
+    finishesAnyway(h, result);
+  });
+
+  it('finishes the merge when the stop throws', () => {
+    const h = harness({ answers: [diff, viewHead, worktrees, ['node scripts/test-services.ts down', () => { throw new Error('spawn node ENOENT'); }]] });
+    const result = step(['merge'], h.io);
+    finishesAnyway(h, result);
+    assert.match(result.test_stack.reason, /ENOENT/);
+  });
+
+  it('finishes the merge when the worktree list cannot be read, stopping the stack of the checkout it runs in', () => {
+    const h = harness({ answers: [diff, viewHead, ['git worktree list --porcelain', { code: 128, stderr: 'fatal' }], down(stopped)] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`));
+  });
+
+  it('reads the head branch over REST in a cloud session', () => {
+    const cloud = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
+    const rest = ['gh api repos/{owner}/{repo}/pulls/141 --jq', { stdout: `${JSON.stringify({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef', title: TITLE, head: BRANCH })}\n` }];
+    const h = harness({ env: cloud, answers: [diff, rest, worktrees, down(stopped)] });
+    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.some((c) => c.startsWith('gh api repos/{owner}/{repo}/pulls/141 --jq') && c.includes('head: .head.ref')));
+    assert.ok(h.calls.includes(`node scripts/test-services.ts down ${WT}`));
   });
 });
 
@@ -901,7 +993,7 @@ describe('the story: --story, the PR title, feature.json, then the folder number
     const h = harness({ branch: OTHER, answers: [diff, view(T660), ['gh pr view 244 --json mergeCommit', { stdout: 'feed1234beef\n' }]] });
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.equal(h.calls.find((c) => !c.startsWith('git rev-parse') && !c.startsWith('gh auth')), 'gh pr view --json number,state,url,title');
+    assert.equal(h.calls.find((c) => !c.startsWith('git rev-parse') && !c.startsWith('gh auth')), 'gh pr view --json number,state,url,title,headRefName');
     assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
     assert.ok(!h.calls.some((c) => c.includes('ST-854')), h.calls.join('\n'));
