@@ -83,6 +83,21 @@ describe('reading the maintenance switch', () => {
     expect(await flag.on()).toBe(true);
   });
 
+  it('never lets a fill after a miss overwrite a switch written meanwhile', async () => {
+    const find = prisma.platformRule.findUnique.bind(prisma.platformRule);
+    jest.spyOn(prisma.platformRule, 'findUnique').mockImplementation((async (
+      args: Parameters<typeof find>[0],
+    ) => {
+      const rule = await find(args);
+      await flag.set(false);
+      return rule;
+    }) as never);
+    await stored(true);
+
+    expect(await flag.on()).toBe(true);
+    expect(await redis.get(KEY)).toBe('0');
+  });
+
   it('reads as off when the rule is not stored at all', async () => {
     jest.spyOn(prisma.platformRule, 'findUnique').mockResolvedValue(null);
 

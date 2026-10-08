@@ -47,12 +47,17 @@ export class MaintenanceFlag implements Maintenance {
       where: { key: KEY },
     });
     const on = rule?.value === true;
-    if (kept === null) await this.cache(() => this.write(on));
+    if (kept === null) await this.cache(() => this.fill(on));
     return on;
   }
 
   async set(on: boolean): Promise<void> {
     await this.write(on);
+  }
+
+  // Only into an empty key: a switch written since the miss stays.
+  private fill(on: boolean) {
+    return this.redis.set(KEY, on ? '1' : '0', 'EX', KEEP_SECONDS, 'NX');
   }
 
   private write(on: boolean) {
