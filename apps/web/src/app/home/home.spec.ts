@@ -8,11 +8,17 @@ import {
   HealthService,
   type HomeDto,
   HomeService,
+  type MeDto,
+  PlacesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { HEALTH, Home, TILES } from './home';
+import { PlaceDialog } from './place/place-dialog/place-dialog';
+import type { Place } from './place/place-store';
+import { Session } from '../dashboard/session';
 
 const NAMES = [
   'BMW',
@@ -35,13 +41,14 @@ const brand = (slug: string) => BRANDS.find((b) => b.slug === slug) as BrandDto;
 // Each Home read stays open until the test answers it.
 type Read = {
   slug: string;
+  near: string | undefined;
   answer: (takers: number, total: number) => Promise<void>;
   fail: (error: unknown) => Promise<void>;
 };
 let reads: Read[];
 const homeApi = {
   homeControllerForBrand: jest.fn(
-    ({ brand: slug }: { brand: string }) =>
+    ({ brand: slug, near }: { brand: string; near?: string }) =>
       new Promise<HomeDto>((resolve, reject) => {
         reads.push({
           answer: async (takers, total) => {
@@ -52,6 +59,7 @@ const homeApi = {
             reject(error);
             await settle();
           },
+          near,
           slug,
         });
       }),
@@ -59,6 +67,20 @@ const homeApi = {
 };
 const tilesApi = { popularBrandsControllerTiles: jest.fn() };
 const healthApi = { healthControllerReady: jest.fn() };
+const placesApi = { placesControllerSearch: jest.fn() };
+const session = {
+  current: signal<MeDto | null>(null),
+  load: jest.fn<Promise<MeDto | null>, []>(),
+};
+let dialog: (value: OverlayResult<Place>) => void;
+const overlays = {
+  open: jest.fn(
+    () =>
+      new Promise<OverlayResult<Place>>((resolve) => {
+        dialog = resolve;
+      }),
+  ),
+};
 const reduced = signal(false);
 
 let fixture: ComponentFixture<Home>;
@@ -71,6 +93,11 @@ async function settle() {
 beforeEach(async () => {
   reads = [];
   reduced.set(false);
+  localStorage.clear();
+  session.load.mockReset().mockResolvedValue(null);
+  session.current.set(null);
+  placesApi.placesControllerSearch.mockReset();
+  overlays.open.mockClear();
   homeApi.homeControllerForBrand.mockClear();
   tilesApi.popularBrandsControllerTiles.mockReset();
   healthApi.healthControllerReady.mockReset();
@@ -84,6 +111,9 @@ async function configure(platform = 'browser') {
       { provide: HomeService, useValue: homeApi },
       { provide: BrandsService, useValue: tilesApi },
       { provide: HealthService, useValue: healthApi },
+      { provide: PlacesService, useValue: placesApi },
+      { provide: Session, useValue: session },
+      { provide: Overlays, useValue: overlays },
       { provide: REDUCED_MOTION, useValue: reduced },
       { provide: PLATFORM_ID, useValue: platform },
     ],
@@ -537,5 +567,250 @@ describe('Home count that fails', () => {
 
     expect(count()?.textContent).toContain('We could not load the garages');
     expect(retry()?.textContent?.trim()).toBe('Try again');
+  });
+});
+
+const CLUJ: Place = {
+  label: 'Strada Exemplu 2, Cluj-Napoca',
+  lat: 46.771,
+  lng: 23.624,
+  origin: 'address',
+};
+const HERE: Place = {
+  label: null,
+  lat: 44.427,
+  lng: 26.103,
+  origin: 'location',
+};
+const line = () => page().querySelector<HTMLElement>('.place');
+const lineText = () => line()?.textContent?.replace(/\s+/g, ' ').trim();
+const lineButton = () => line()?.querySelector('button') as HTMLButtonElement;
+const nearsRead = () =>
+  homeApi.homeControllerForBrand.mock.calls.map(([q]) => q.near);
+const stored = () => localStorage.getItem('mf-place');
+const store = (place: Place) =>
+  localStorage.setItem('mf-place', JSON.stringify(place));
+
+async function pick(place: OverlayResult<Place>) {
+  lineButton().click();
+  await settle();
+  dialog(place);
+  await settle();
+}
+
+describe('Home place line', () => {
+  it('covers all of Romania before a place is chosen, and reads no place', async () => {
+    await render();
+
+    expect(lineText()).toBe('În toată România · Alege locul');
+    expect(nearsRead()).toEqual([undefined]);
+  });
+
+  it('sits between the hero and the picker', async () => {
+    await render();
+
+    const hero = page().querySelector('.hero') as Node;
+    const picker = page().querySelector('[role="radiogroup"]') as Node;
+    expect(
+      hero.compareDocumentPosition(line() as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      (line() as Node).compareDocumentPosition(picker) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('says it in English on the English page', async () => {
+    await render();
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(lineText()).toBe('All of Romania · Choose a place');
+  });
+
+  it('opens the place dialog from its button', async () => {
+    await render();
+
+    lineButton().click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(PlaceDialog, {
+      confirmDiscard: false,
+      shape: 'dialog',
+      title: 'public.home.place.title',
+    });
+  });
+
+  it('reads the count once more, near the location chosen, and says so', async () => {
+    await render();
+
+    await pick(HERE);
+
+    expect(lineText()).toBe('Lângă tine · Schimbă');
+    expect(nearsRead()).toEqual([undefined, '44.427,26.103']);
+    await reads[1].answer(2, 2);
+    expect(count()?.textContent).toContain('2 din 2 service‑uri primesc BMW');
+  });
+
+  it('names the address chosen, and keeps it for the next visit', async () => {
+    await render();
+
+    await pick(CLUJ);
+
+    expect(lineText()).toBe('Lângă Strada Exemplu 2, Cluj-Napoca · Schimbă');
+    expect(JSON.parse(stored() ?? 'null')).toEqual(CLUJ);
+  });
+
+  it('changes nothing when the dialog is closed without a place', async () => {
+    await render();
+
+    await pick('cancelled');
+
+    expect(lineText()).toBe('În toată România · Alege locul');
+    expect(nearsRead()).toEqual([undefined]);
+  });
+
+  it('starts from the stored place, in the very first read', async () => {
+    store(CLUJ);
+    await render();
+
+    expect(lineText()).toBe('Lângă Strada Exemplu 2, Cluj-Napoca · Schimbă');
+    expect(nearsRead()).toEqual(['46.771,23.624']);
+    expect(session.load).not.toHaveBeenCalled();
+  });
+
+  it('keeps the place when the language changes, and re-fills the line', async () => {
+    store(HERE);
+    await render();
+
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(lineText()).toBe('Near you · Change');
+    expect(nearsRead()).toEqual(['44.427,26.103']);
+  });
+
+  it('drops the answer for a place no longer chosen', async () => {
+    await render();
+    await pick(HERE);
+    await pick(CLUJ);
+
+    await reads[2].answer(2, 2);
+    await reads[1].answer(9, 9);
+
+    expect(count()?.textContent).toContain('2 din 2');
+    expect(nearsRead()).toEqual([undefined, '44.427,26.103', '46.771,23.624']);
+  });
+
+  it('retries a failed read with the same place', async () => {
+    store(CLUJ);
+    await render();
+
+    await reads[0].fail(new HttpErrorResponse({ status: 503 }));
+    retry()?.click();
+    await settle();
+
+    expect(nearsRead()).toEqual(['46.771,23.624', '46.771,23.624']);
+  });
+
+  it('reads the brand chosen near the place chosen', async () => {
+    store(CLUJ);
+    await render();
+
+    await choose('Dacia');
+
+    expect(homeApi.homeControllerForBrand).toHaveBeenLastCalledWith({
+      brand: 'dacia',
+      near: '46.771,23.624',
+    });
+  });
+});
+
+describe('Home place from the Setări city', () => {
+  const driver = (city: string | null) => ({ city }) as MeDto;
+
+  it('looks the city up once and takes its first suggestion, without storing it', async () => {
+    session.current.set(driver('Cluj-Napoca'));
+    placesApi.placesControllerSearch.mockResolvedValue({
+      items: [
+        { label: 'Cluj-Napoca, Cluj', lat: 46.7712, lng: 23.6236 },
+        { label: 'Cluj, Iași', lat: 47.1, lng: 27.5 },
+      ],
+    });
+
+    await render();
+    await settle();
+
+    expect(placesApi.placesControllerSearch).toHaveBeenCalledTimes(1);
+    expect(placesApi.placesControllerSearch).toHaveBeenCalledWith({
+      lang: 'ro',
+      q: 'Cluj-Napoca',
+    });
+    expect(lineText()).toBe('Lângă Cluj-Napoca · Schimbă');
+    expect(nearsRead()).toEqual([undefined, '46.771,23.624']);
+    expect(stored()).toBeNull();
+    expect(session.load).not.toHaveBeenCalled();
+  });
+
+  it('takes the city once another screen has loaded the session', async () => {
+    placesApi.placesControllerSearch.mockResolvedValue({
+      items: [{ label: 'Cluj-Napoca, Cluj', lat: 46.7712, lng: 23.6236 }],
+    });
+    await render();
+    await settle();
+    expect(placesApi.placesControllerSearch).not.toHaveBeenCalled();
+
+    session.current.set(driver('Cluj-Napoca'));
+    await settle();
+    session.current.set(driver('Cluj-Napoca'));
+    await settle();
+
+    expect(placesApi.placesControllerSearch).toHaveBeenCalledTimes(1);
+    expect(lineText()).toBe('Lângă Cluj-Napoca · Schimbă');
+  });
+
+  it.each([
+    ['a visitor', null, undefined],
+    ['a driver with no city', driver(null), undefined],
+    ['a city nothing is found for', driver('Nicaieri'), { items: [] }],
+  ])('stays on all of Romania for %s', async (_, me, answer) => {
+    session.current.set(me);
+    placesApi.placesControllerSearch.mockResolvedValue(answer);
+
+    await render();
+    await settle();
+
+    expect(lineText()).toBe('În toată România · Alege locul');
+    expect(nearsRead()).toEqual([undefined]);
+  });
+
+  it('stays on all of Romania, saying nothing, when the look-up fails', async () => {
+    session.current.set(driver('Cluj-Napoca'));
+    placesApi.placesControllerSearch.mockRejectedValue(
+      new HttpErrorResponse({ status: 503 }),
+    );
+
+    await render();
+    await settle();
+
+    expect(lineText()).toBe('În toată România · Alege locul');
+    expect(text()).not.toContain('Nu putem');
+  });
+
+  it('lets a place chosen meanwhile win over the city', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    session.current.set(driver('Cluj-Napoca'));
+    placesApi.placesControllerSearch.mockImplementation(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    await render();
+    await settle();
+
+    await pick(HERE);
+    answer({ items: [{ label: 'Cluj-Napoca', lat: 46.77, lng: 23.62 }] });
+    await settle();
+
+    expect(lineText()).toBe('Lângă tine · Schimbă');
   });
 });
