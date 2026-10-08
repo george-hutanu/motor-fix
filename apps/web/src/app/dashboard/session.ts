@@ -62,7 +62,10 @@ function keepPending(kind: SignOut | null) {
 
 // The garage of the session, from the person's memberships, never the address.
 export const garageOf = (me: MeDto | null) =>
-  me?.garageAccess.find((garage) => garage.garageId === me.garageId) ?? null;
+  me?.garageId
+    ? (me.garageAccess.find((garage) => garage.garageId === me.garageId) ??
+      null)
+    : null;
 
 // The signed-in account. The access token lives in this object's memory only;
 // the refresh token is a cookie the page cannot read, used to renew it.

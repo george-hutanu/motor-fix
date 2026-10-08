@@ -91,7 +91,7 @@ const marked = (page: Page) =>
 
 // @seeded: signs in as the seeded accounts against the real API.
 test.describe('garage views @seeded', () => {
-  // @traces 097-FR-001 097-FR-002 097-FR-003 097-FR-006
+  // @traces 097-FR-001 097-FR-002 097-FR-003 097-FR-006 097-FR-011
   test('the owner opens every released view from the menu, each with its own address, title and line', async ({
     page,
   }) => {

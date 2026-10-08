@@ -88,6 +88,10 @@ header h1 {
   font-size: var(--mf-size-small);
   overflow-wrap: anywhere;
 }
+/* On a phone the line under the title is read as body text. */
+.line {
+  font-size: var(--mf-size-body);
+}
 .who {
   display: flex;
   align-items: center;
@@ -167,5 +171,8 @@ main {
   }
   aside nav {
     display: flex;
+  }
+  .line {
+    font-size: var(--mf-size-small);
   }
 }

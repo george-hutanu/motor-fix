@@ -5,6 +5,7 @@ import { Session } from './session';
 
 const GARAGE = {
   capabilities: ['garage.requests', 'garage.team'],
+  city: null,
   email: 'ioana@example.ro',
   emailConfirmed: true,
   garageAccess: [],

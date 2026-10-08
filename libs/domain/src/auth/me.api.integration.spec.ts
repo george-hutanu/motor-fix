@@ -175,6 +175,23 @@ describe('who am I, at the garages I work at', () => {
     ]);
   });
 
+  it('lists a garage once for a member who also has a mechanic card there, as the member', async () => {
+    const { atelier, owner } = await garage();
+    await prisma.mechanic.create({
+      data: { accountId: owner, garageId: atelier.id, name: 'Mihai' },
+    });
+
+    const res = await me(owner, 'garage');
+
+    expect(res.body.garageAccess).toEqual([
+      expect.objectContaining({
+        garageId: atelier.id,
+        permissions: ALL,
+        role: 'owner',
+      }),
+    ]);
+  });
+
   it('answers an empty list to a driver and to a garage account with no garage', async () => {
     await garage();
     const driver = await account('andrei', ['driver']);

@@ -1078,11 +1078,13 @@ describe('the garage header', () => {
       '/app/garage',
       OWNER,
       '/app/garage',
-      atelier({}, 'Service Auto Foarte Lung Pentru Ecranele Mici De 320'),
+      atelier({}, 'Service Auto Foarte Lung Pentru Ecranele Mici Din Centru'),
     );
 
-    expect(
-      element.querySelector('header .line')?.getAttribute('translate'),
-    ).toBe('no');
+    const line = element.querySelector('header .line');
+    expect(line?.textContent?.trim()).toBe(
+      'Service Auto Foarte Lung Pentru Ecranele Mici Din Centru',
+    );
+    expect(line?.getAttribute('translate')).toBe('no');
   });
 });

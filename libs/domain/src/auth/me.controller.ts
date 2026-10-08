@@ -86,7 +86,8 @@ export class MeController {
           canRecordFinalPrice: true,
         }),
       ),
-      ...(card
+      // A member's own row wins over a mechanic card at the same garage.
+      ...(card && !memberships.some((m) => m.garageId === card.garageId)
         ? [
             entry(card.garage, 'mechanic', {
               canAnswerQuotes: card.canAnswerQuotes,
