@@ -376,6 +376,27 @@ describe('down and sweep, against fake docker, git and gh', () => {
     expect(JSON.parse(result.stdout).project).toBe(composeProject(cwd));
   });
 
+  it('down still stops the stack when the timeout setting is not a number', () => {
+    fake('docker', 'exit 0');
+    const result = spawnSync(
+      'node',
+      ['scripts/test-services.ts', 'down', '/r/x'],
+      {
+        cwd,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          TEST_SERVICES_DOCKER_TIMEOUT_MS: 'soon',
+        },
+      },
+    );
+    expect(JSON.parse(result.stdout)).toEqual({
+      project: composeProject('/r/x'),
+      stopped: true,
+    });
+  });
+
   it('down with no worktree stops the current checkout stack', () => {
     fake('docker', 'exit 0');
     fake('git', 'echo /r/here');
@@ -493,6 +514,17 @@ describe('down and sweep, against fake docker, git and gh', () => {
       fake('gh', 'exit 1');
       const result = run('sweep');
       expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe(
+        `test-services: stopped ${composeProject(gone)} (worktree gone)`,
+      );
+    });
+
+    it('says so when gh prints JSON that is not a PR list', () => {
+      docker();
+      fake('gh', `echo '{"message":"Bad credentials"}'`);
+      const result = run('sweep');
+      expect(result.status).toBe(0);
+      expect(result.stderr).toMatch(/no PR list/);
       expect(result.stdout.trim()).toBe(
         `test-services: stopped ${composeProject(gone)} (worktree gone)`,
       );

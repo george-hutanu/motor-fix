@@ -335,9 +335,8 @@ function main() {
 
 // Docker (and git, gh) get this long per call when stopping stacks, so a hung
 // daemon never holds a merge or a watch pass.
-const dockerTimeout = Number(
-  process.env.TEST_SERVICES_DOCKER_TIMEOUT_MS ?? 60_000,
-);
+const dockerTimeout =
+  Number(process.env.TEST_SERVICES_DOCKER_TIMEOUT_MS) || 60_000;
 
 const tryRun = (command: string, args: string[]) => {
   const result = spawnSync(command, args, {
@@ -427,9 +426,10 @@ function sweepStops(): Stop[] | undefined {
     '--json',
     'headRefName,state,number',
   ]);
-  const prs = prList.error
+  const prJson = prList.error
     ? null
-    : readJson(() => JSON.parse(prList.stdout) as Pr[]);
+    : readJson(() => JSON.parse(prList.stdout) as unknown);
+  const prs = Array.isArray(prJson) ? (prJson as Pr[]) : null;
   if (!prs)
     console.error(
       `test-services: no PR list, only gone worktrees swept: ${prList.error ?? 'unreadable output'}`,
@@ -437,7 +437,7 @@ function sweepStops(): Stop[] | undefined {
   return sweepPlan(
     stacks,
     worktrees.error ? [] : parseWorktrees(worktrees.stdout),
-    Array.isArray(prs) ? prs : null,
+    prs,
   );
 }
 
