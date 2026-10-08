@@ -312,7 +312,7 @@ describe('the public tab bar', () => {
       /padding: 8px 8px max\(16px, var\(--mf-safe-bottom\)\)/,
     );
     expect(css).toMatch(/min-height: (4[4-9]|5\d)px/);
-    // ST-953 FR-001: a link's text on a phone is at the 16 px body size, on the 4 px grid.
+    // a link's text on a phone is at the 16 px body size, on the 4 px grid.
     expect(css).toMatch(/font-size: var\(--mf-size-body\)/);
     expect(css).toMatch(/\ba \{[^}]*gap: 4px/);
     expect(css).toMatch(

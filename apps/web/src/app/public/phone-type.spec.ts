@@ -34,7 +34,7 @@ const bodyOnPhone = (file: string, selector: string) => {
   ).test(phoneRules(file));
 };
 
-// ST-953 FR-001: on a phone, running text (p, li, button, a) is at least the 16 px body size.
+// on a phone, running text (p, li, button, a) is at least the 16 px body size.
 // The listing page and steps 1-4 are checked by list-your-garage/phone-sizes.spec.ts.
 describe('running text on a phone is at body size', () => {
   it.each([

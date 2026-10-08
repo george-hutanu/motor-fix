@@ -130,7 +130,7 @@ summary:focus-visible {
   outline-offset: 2px;
 }
 
-/* ST-953 FR-001: running text on a phone is at the 16 px body size. */
+/* running text on a phone is at the 16 px body size. */
 @media (max-width: 767.98px) {
   .warning {
     font-size: var(--mf-size-body);
