@@ -8,6 +8,8 @@
       "unitTestRunner": "jest"
     },
     "@nx/angular:component": {
+      "inlineStyle": false,
+      "inlineTemplate": false,
       "style": "css"
     },
     "@nx/angular:library": {

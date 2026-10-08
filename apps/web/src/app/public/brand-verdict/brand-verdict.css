@@ -1,0 +1,28 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  min-width: 0;
+  color: var(--mf-text);
+  font-family: var(--mf-font-body);
+}
+.line,
+.note {
+  margin: 0;
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+}
+.line {
+  color: var(--mf-text);
+}
+.label {
+  font-weight: 600;
+}
+.note {
+  color: var(--mf-text-secondary);
+}
+.note.card {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

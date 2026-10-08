@@ -1,9 +1,11 @@
 ---
 capability: cockpit-theme
-updated: 2026-10-04
+updated: 2026-10-08
 features:
   - 050-cockpit-theme
   - 158-small-action-sheet
+  - 953-ui-review-checks
+  - 954-input-border-contrast
 ---
 
 # Capability: Cockpit theme
@@ -12,13 +14,13 @@ The shared look of the web app: the `--mf-*` design tokens in a dark and a light
 
 ## Requirements
 
-### 050-FR-001 — The theme MUST define the dark token set with exactly the dark values of US1 scenario 1, applied when the device prefers dark.
+### 954-FR-001 — In the dark theme, the strong line colour (`--mf-line-strong`) MUST reach a contrast ratio of at least 3:1 against each of the background, the panel and the raised panel surfaces, as measured by the WCAG 2.1 relative-luminance formula (the design-audit contrast tool).
 
-_From 050-cockpit-theme._
+_From 954-input-border-contrast._
 
-### 050-FR-002 — The theme MUST define the light token set with the values of US1 scenario 2, applied when the device prefers light (or states no preference) and when printing.
+### 954-FR-002 — In the light theme, and therefore the print set that reuses it, the strong line colour MUST reach at least 3:1 against each of the same three surfaces.
 
-_From 050-cockpit-theme._
+_From 954-input-border-contrast._
 
 ### 050-FR-003 — The theme MUST follow the device's colour-scheme setting live, with no reload, no stored choice and no in-app switch, and MUST NOT disturb form input when it changes.
 
@@ -48,9 +50,9 @@ _From 050-cockpit-theme._
 
 _From 050-cockpit-theme._
 
-### 050-FR-010 — The type scale MUST be one set of tokens with no per-width variation and a 12 px floor: no rendered text smaller than 12 px at any width (checked at 375 px); body text (the default Hanken Grotesk size) 13 px or more; form-field text 16 px.
+### 953-FR-021 — The Cockpit type scale MUST stay one set of tokens with no per-width variation and a 12 px floor (no rendered text under 12 px at any width); its body size (the default body typeface size) MUST be 16 px and its form-field size 16 px, so the theme itself meets FR-001 on every viewport.
 
-_From 050-cockpit-theme._
+_From 953-ui-review-checks._
 
 ### 050-FR-011 — Michroma MUST be used for labels, headings and numerals, in capitals with 0.14em spacing; Hanken Grotesk for all other text. Both MUST be self-hosted with `font-display: swap`, cover Latin Extended (ă, â, î, ș, ț), and fall back to Hanken Grotesk then the system sans-serif.
 
@@ -76,4 +78,28 @@ _From 050-cockpit-theme._
 
 _From 050-cockpit-theme._
 
+### 954-FR-003 — The corrected colours MUST stay a neutral grey of the same hue family as today's (a mid-grey, no tint toward amber or blue; judged in review, not by a test), and no other colour token MUST change: the hover border (secondary text), the focus border (amber ink) and the invalid border (red) stay as they are, since they already pass 3:1.
+
+_From 954-input-border-contrast._
+
+### 954-FR-004 — The theme library's test suite MUST contain a test that measures the strong line colour against every surface in both themes and fails, naming the theme, the token, the surface and the ratio, when any pair is under 3:1, and that fails when the switch thumb colour (`--mf-text`) on the strong line colour is under 3:1. It collects every failing pair per theme before asserting, compares the unrounded ratio, and MUST be written before the token change and seen failing against today's values.
+
+_From 954-input-border-contrast._
+
+### 954-FR-005 — Every screen with a text field, the theme's sample page included, MUST be checked at 320 px, 390 px, tablet and desktop widths, in dark and light, Romanian and English: each field's border is visible, no screen scrolls sideways at 320 px, and no accessibility violation appears that the latest merged PR QA report did not already show for the same route, size, scheme and language. The PR's QA run is that check; its screenshots are the evidence.
+
+_From 954-input-border-contrast._
+
+### 954-FR-006 — The change MUST add no service, endpoint, queue, outside call or product action, and so no observability entry.
+
+_From 954-input-border-contrast._
+
+### 954-FR-007 — The decorative divider colour (`--mf-line`: panel borders, table rules, separators) MUST NOT change: it bounds no control and is outside WCAG 1.4.11.
+
+_From 954-input-border-contrast._
+
 ## Retired
+
+- `050-FR-010` — superseded by `953-FR-021` (2026-10-08)
+- `050-FR-001` — superseded by `954-FR-001` (2026-10-08)
+- `050-FR-002` — superseded by `954-FR-002` (2026-10-08)

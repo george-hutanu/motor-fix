@@ -77,10 +77,9 @@ export function diffStat(repo, from) {
 
 /**
  * Findings a reviewer deliberately did not act on. Borrowed from BMAD's review
- * triage, which routes each verified finding to patch, defer ("a real
- * pre-existing issue that is not this change") or decision-needed. This
- * repository had no defer bucket, so a real pre-existing bug either got fixed —
- * scope creep the Agent Execution Rules forbid — or evaporated.
+ * triage, which routes each verified finding to patch, defer or
+ * decision-needed. Here defer holds only a large fix (AGENTS.md, "Technical
+ * debt a review defers"); a small or medium one is made in the PR.
  */
 export function parseDeferred(text) {
   const items = [];

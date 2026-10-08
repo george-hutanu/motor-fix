@@ -5,7 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { AdminService, type MeDto } from '@motor-fix/data-access';
 import { NEVER, Subject } from 'rxjs';
 
-import { Frame } from './frame';
+import { Frame } from './frame/frame';
 import { Live } from './live';
 import { Session } from './session';
 import { type Area, allowedViews, DASHBOARDS, dashboardRoutes } from './views';

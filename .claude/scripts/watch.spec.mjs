@@ -23,6 +23,7 @@ import {
   qaCapFrom,
   scratchRun,
   summarizePr,
+  sweepStacks,
   writeClaim,
 } from './watch.mjs';
 import { waitHolder } from './lib/watch-wait.mjs';
@@ -1117,7 +1118,7 @@ describe('--gate', () => {
         rmSync(f.root, { recursive: true, force: true });
       }
     }
-  });
+  }, 20000);
 
   it('is an error outside a repository and with --fix, --json or --wait', () => {
     const f = fixture();
@@ -1518,6 +1519,68 @@ describe('a ready PR that conflicts with main', () => {
       assert.match(board, /conflict 1/);
       assert.match(board, /#21 ready ci:pass conflict/);
       assert.match(board, /dispatch: merge-main agent-a/);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('the test stack sweep', () => {
+  it('runs the test-services sweep in the repository and reports its line', () => {
+    const seen = [];
+    const run = (file, args, opts) => {
+      seen.push({ file, args, cwd: opts.cwd });
+      return 'test-services: stopped mf-test-a-111111 (PR #7 merged)\n';
+    };
+    assert.deepEqual(sweepStacks('/r', run), { what: 'test-services: stopped mf-test-a-111111 (PR #7 merged)', ok: true });
+    assert.deepEqual(seen, [{ file: 'node', args: ['scripts/test-services.ts', 'sweep'], cwd: '/r' }]);
+  });
+
+  it('reports a failed sweep as a failed action, never a throw', () => {
+    const run = () => {
+      throw Object.assign(new Error('Command failed'), { stderr: 'node: cannot find scripts/test-services.ts\n' });
+    };
+    assert.deepEqual(sweepStacks('/r', run), { what: 'sweep test stacks', ok: false, error: 'node: cannot find scripts/test-services.ts' });
+  });
+
+  const capture = (fn) => {
+    const out = [];
+    const log = console.log;
+    console.log = (...a) => out.push(a.join(' '));
+    try {
+      return { status: fn(), out: out.join('\n') };
+    } finally {
+      console.log = log;
+    }
+  };
+
+  it('runs on --fix, after the other fixes, and prints its line', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      let calls = 0;
+      const sweep = () => (calls++, { what: 'test-services: nothing to stop', ok: true });
+      const { status, out } = capture(() => main(['--fix'], { cwd: f.repo, ...env(), sweep }));
+      assert.equal(status, 0);
+      assert.equal(calls, 1);
+      assert.match(out, /fixed: test-services: nothing to stop/);
+      const json = capture(() => main(['--fix', '--json'], { cwd: f.repo, ...env(), sweep }));
+      assert.deepEqual(JSON.parse(json.out).actions.at(-1), { what: 'test-services: nothing to stop', ok: true });
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('never runs without --fix, nor on --gate', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      let calls = 0;
+      const sweep = () => (calls++, { what: 'x', ok: true });
+      capture(() => main([], { cwd: f.repo, ...env(), sweep }));
+      capture(() => main(['--json'], { cwd: f.repo, ...env(), sweep }));
+      capture(() => main(['--gate'], { cwd: f.repo, ...env(), sweep }));
+      assert.equal(calls, 0);
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }

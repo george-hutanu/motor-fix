@@ -1,0 +1,9 @@
+<p>{{ 'shell.signOutEverywhere.text' | t }}</p>
+<div class="actions">
+  <button hlmBtn type="button" (click)="task.close(true)">
+    {{ 'shell.signOutEverywhere.confirm' | t }}
+  </button>
+  <button hlmBtn variant="ghost" type="button" (click)="task.close(false)">
+    {{ 'shell.signOutEverywhere.cancel' | t }}
+  </button>
+</div>

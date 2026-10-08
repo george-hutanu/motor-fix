@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import type { PhotoSize } from './listing-photos.service';
+import type { PhotoSize } from './listing-photos/listing-photos.service';
 import type { Prisma } from '../../generated/prisma/client';
 
 // The gallery of a garage, written by the sending story inside its own

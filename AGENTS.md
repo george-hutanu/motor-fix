@@ -121,8 +121,17 @@ epic or a plan, whether run through spec-kit or by hand.
      other check green, `CI OK` included, with no `agent-review` status; a
      failing, pending or missing check still refuses it.
 
-  Technical debt a review defers (`specs/<feature>/deferred.md`) is filed as
-  a To do task in Notion (`speckit-notion-sync debt`) before the merge; each
+  Technical debt a review defers is only a large fix. A verified finding from
+  review, harden, QA or the PR tester (code-reviewer, spec-reviewer,
+  test-adversary, a mutation survivor, pr-tester) whose fix is small or medium
+  is fixed in the same PR (route `patch`), even when the problem existed
+  before the change or sits next to it. The size test: A fix is large when it
+  needs its own design or decision, a data migration, a different area or
+  epic, or work clearly bigger than the story itself. A different area is an
+  Nx project or harness area the branch does not touch; the file or module
+  the change touches is never one. Only a large fix is routed `defer`: a
+  bullet in `specs/<feature>/deferred.md` naming the arm it meets, filed as a
+  To do task in Notion (`speckit-notion-sync debt`) before the merge; each
   bullet carries its task's URL so it is never filed twice.
 
   Whenever the work cannot go on without something outside it (a Hard Stop,
@@ -300,6 +309,35 @@ that variable, so the laptop behaves as before.
   `.claude/settings.json` name connector-id prefixes; a cloud session's
   connector prefix may differ and must be added to them.
 
+## Folder structure
+
+Two rules for `apps/*/src` and `libs/*/src` (Constitution IV), checked by
+`node scripts/structure-check.ts` in CI's Checks job and in `.husky/pre-commit`:
+
+- **Submodules get their own subfolder.** A module's own files sit at its
+  root: `index.ts` and files named after the folder (`notifications.module.ts`).
+  Any other group of files sharing a name (`bell.service.ts`,
+  `bell.controller.ts`) is a submodule and moves to `notifications/bell/`.
+  Files inside that subfolder are named after it (`bell/bell.service.ts`),
+  not after the parent module.
+- **A web component is a folder.** A `@Component` in `apps/web/src` lives at
+  `<name>/<name>.ts`, with `templateUrl: './<name>.html'` and, when it has
+  styles, `styleUrl: './<name>.css'`: no inline `template` or `styles`.
+  Generate one with `npx nx g @nx/angular:component --path <area>/<name>/<name>`
+  (`nx.json` already turns inline templates and styles off); delete an empty
+  stylesheet together with its `styleUrl`.
+
+Out of scope: `libs/ui-cockpit` (Spartan's copied helm components),
+`libs/data-access` and `libs/domain/src/generated` (generated), `web-e2e`.
+`scripts/structure-baseline.json` lists the violations older than the check;
+it only shrinks (`config-protection.mjs`), an entry goes in the change that
+fixes it, and on a PR the check refuses an entry the base branch lacks.
+
+A Biome a11y override for an external template lists the files it covers and
+why, never `apps/web/**/*.html`; template accessibility is still covered by
+the axe checks in the QA sweep (`.claude/scripts/pr-test/sweep.mjs`) and
+`web-e2e`.
+
 ## Product and stack
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The
@@ -358,7 +396,12 @@ decisions are the source for anything the constitution does not fix.
   an affected project has integration specs it starts and migrates the
   worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
   project `mf-test-<worktree>-<hash>`, left running between commits; Docker
-  required), and it refuses a commit with `JEST_SUITE` set.
+  required), and it refuses a commit with `JEST_SUITE` set. `lifecycle.mjs
+  merge` stops the merged worktree's stack (`test-services.ts down`, volumes
+  kept), and each `/speckit-watch` pass runs `test-services.ts sweep`, which
+  stops those of merged, closed or deleted worktrees; neither fails on Docker.
+  By hand, `node scripts/test-services.ts down [<worktree>]` stops one stack
+  (the current checkout's by default).
 - PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
   of the free plan's 20 concurrent runners: Checks (one runner and one
   install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,

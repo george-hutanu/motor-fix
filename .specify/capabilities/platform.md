@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -57,6 +57,11 @@ features:
   - 499-trace-matrix-delta-ids
   - 884-railway-egress
   - 891-lifecycle-story-override
+  - 893-folder-rules
+  - 960-traces-id-form
+  - 962-gate-fail-closed
+  - 974-stop-test-stack-on-merge
+  - 976-integration-specs-under-load
 ---
 
 # Capability: Platform
@@ -1286,6 +1291,186 @@ _From 891-lifecycle-story-override._
 ### 891-FR-005 — A harness spec (`lifecycle.spec.mjs`) MUST cover a branch whose folder number is not the story's: the title wins over the folder, `--story` is recorded and read back, a `story_for` naming another feature is ignored, a disagreement refuses before the merge call (and `ready`), leading zeros agree, and a malformed `--story` exits 64.
 
 _From 891-lifecycle-story-override._
+
+### 893-FR-001 — The structure check MUST report every flat-submodule violation (rule 1) in the checked tree, as defined in Definitions, naming the file, the group key and the suggested subfolder.
+
+_From 893-folder-rules._
+
+### 893-FR-002 — The structure check MUST report every folder-component violation (rule 2) in `apps/web/src`, naming the file and the reason (inline template or styles, wrong folder or file name, wrong template or style path).
+
+_From 893-folder-rules._
+
+### 893-FR-003 — The structure check MUST NOT read `libs/ui-cockpit/`, `libs/data-access/`, `libs/domain/src/generated/` or `apps/web-e2e/`, and MUST only consider files tracked by git.
+
+_From 893-folder-rules._
+
+### 893-FR-004 — The structure check MUST exit non-zero when it finds a violation not listed in the baseline, or a baseline entry that no longer matches a violation, and exit zero otherwise.
+
+_From 893-folder-rules._
+
+### 893-FR-005 — The repository MUST carry a baseline, one entry per file and rule, listing only the violations that remain when this feature merges: those in a file an open pull request still edits, left for the change that follows it.
+
+_From 893-folder-rules._
+
+### 893-FR-006 — The baseline MUST only shrink. The config-protection ratchet MUST refuse an edit that raises its entry count, as it does for `.specify/trace-baseline.json`. The check, given a base ref (`--base <ref>`: `origin/<base_ref>` in PR CI, `origin/main` in pre-commit), MUST fail when the baseline holds an entry absent from that ref's baseline. A base ref with no baseline file, or no base ref (a push to `main`), skips that comparison.
+
+_From 893-folder-rules._
+
+### 893-FR-007 — The structure check MUST run in CI's Checks job as its own step, and in the pre-commit hook.
+
+_From 893-folder-rules._
+
+### 893-FR-008 — The Nx `@nx/angular:component` generator defaults MUST set `inlineTemplate: false` and `inlineStyle: false`, keeping `style: css`; AGENTS.md MUST give the `--path <area>/<name>/<name>` form that puts the component in its own folder (Clarification Q6).
+
+_From 893-folder-rules._
+
+### 893-FR-009 — AGENTS.md MUST carry a "Folder structure" section stating both rules, the definitions a reader needs to apply them, the out-of-scope paths, the baseline and how to run the check.
+
+_From 893-folder-rules._
+
+### 893-FR-010 — The constitution MUST state the folder rules under Principle IV with the structure check named in its Enforcement section, at the next minor version, and the constitution card MUST match.
+
+_From 893-folder-rules._
+
+### 893-FR-011 — The speckit plan template, tasks template and implement skill MUST name the layout so planned file paths follow it.
+
+_From 893-folder-rules._
+
+### 893-FR-012 — Tests MUST show: a flat module fails, an inline template fails, a misplaced component fails, a baselined entry passes, a stale baseline entry fails, and a grown baseline is refused. One test MUST run the rule 1 grouping over the `libs/domain/src/notifications/` listing as it stood before the move and find exactly the groups bell, brevo, news, preferences and push; another MUST show the checked tree holds no violation outside the baseline.
+
+_From 893-folder-rules._
+
+### 893-FR-013 — This feature MUST move every file that violates a rule into place (the owner, 2026-10-08: backfill in the same PR), taking the work ST-894 and ST-895 planned, and change no behaviour while doing it: imports and paths follow the files, inline templates and styles move to the component's `.html` and `.css` unchanged, and the affected projects' typecheck, tests, lint and build stay green. A file an open pull request edits stays in the baseline until that pull request merges.
+
+_From 893-folder-rules._
+
+### 960-FR-001 — Constitution II MUST state that the only requirement id allowed in source is a line comment in a test file (a file named `*.spec.*` or `*.test.*`) of the form `// @traces` followed by one or more feature-qualified requirement ids (`NNN-FR-NNN`), separated by single spaces — the whole line matching `^\s*// @traces( \d{3}-FR-\d{3})+\s*$`; a line that misses the grammar is not the form and none of its ids count — and that a requirement id, feature number, task id or ticket key anywhere else (test titles, other comments, non-test code) stays forbidden.
+
+_From 960-traces-id-form._
+
+### 960-FR-002 — The amendment MUST be versioned 1.11.0 (MINOR), with its Sync Impact Report first in the header, every earlier report (1.10.0 down to 1.0.0, 1.8.3 included) kept, and the Governance footer's version and Last Amended date updated.
+
+_From 960-traces-id-form._
+
+### 960-FR-003 — Every file that pins the constitution's version MUST say 1.11.0: the constitution card (whose Principle II line names the exception) and the private workflow notes' version line, which MUST NOT grow past its baseline; the card's drift test MUST pass.
+
+_From 960-traces-id-form._
+
+### 960-FR-004 — The traceability matrix MUST read a requirement id from a test file only when it sits on a conforming `// @traces` line, every id on such a line counted; it MUST report the same set of tagged ids on the current tree as before the change.
+
+_From 960-traces-id-form._
+
+### 960-FR-005 — The removal ratchet MUST read ids with the same line grammar as the matrix (one shared parser): an id removed from a conforming line is refused as today; an id in any other form is neither protected nor counted. Each tool keeps the set of files it reads today (the matrix walks `apps`, `libs`, `e2e`, `scripts`; the ratchet judges any test file it is handed).
+
+_From 960-traces-id-form._
+
+### 960-FR-006 — Every skill, agent definition, hook comment and gate message that today forbids `@traces` or any requirement id in source MUST state the exception (or stop stating the rule), and a gate message MUST NOT cite a constitution version (it cites the principle, so a later amendment cannot leave it stale).
+
+_From 960-traces-id-form._
+
+### 960-FR-007 — The existing tagged tests MUST all conform after the change; the one line carrying a non-requirement id is brought to the allowed form.
+
+_From 960-traces-id-form._
+
+### 960-FR-008 — Pre-commit traceability MUST stay non-blocking; only its explanatory comment changes.
+
+_From 960-traces-id-form._
+
+### 962-FR-001 — The hook wrapper MUST exit 2 when any registry entry marked `fail_closed` (all seven today) runs a script whose exit code is neither 0 nor 2 and that was not stopped by a timeout or a signal.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-002 — That refusal MUST write one stderr line naming the entry id, the exit code the gate produced, that the gate has therefore not approved the request, the gate's script (`.claude/hooks/<script>`, the fix an agent can make) and `SPECKIT_DISABLED_HOOKS=<id>` as the way to disable the gate by id; the gate's own stdout, then its stderr, MUST be forwarded before it.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-003 — A `fail_closed` entry whose script exits 0 or 2 MUST behave as today: output forwarded, exit code passed through.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-004 — An entry not marked `fail_closed` MUST keep its script's exit code and output unchanged, whatever the code.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-005 — Under `SPECKIT_HOOKS_DRY_RUN` the crash refusal MUST be written to stderr prefixed `DRY RUN —` and the wrapper MUST exit 0, as the stdin and timeout refusals do; for a fail-closed crash this line replaces the generic "would have blocked" report, which stays for exit 2 and for advisory hooks.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-006 — `.claude/evals/cases/` MUST hold a case that, in a fixture repository, replaces a fail-closed gate's script with one that cannot load and expects exit 2 with the refusal on stderr, and a case that runs an advisory hook exiting 1 and expects exit 1; `.claude/evals/baseline.json`'s pass rate MUST not fall.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-007 — `.claude/hooks/run-hook.spec.mjs` MUST cover FR-001 to FR-005 with specs written before the wrapper change (red first).
+
+_From 962-gate-fail-closed._
+
+### 962-FR-008 — The change touches only `.claude/hooks/run-hook.mjs` (code and header comment), its spec, the eval cases and the `fail_closed` sentence of `.claude/hooks/registry.json`'s `_comment`, which today names only the stdin refusal; no product code, no new environment variable, no registry field.
+
+_From 962-gate-fail-closed._
+
+### 974-FR-001 — Once the PR is merged, the lifecycle merge step MUST stop the test stack of the worktree that carries the PR's head branch (the current checkout when none does), before the Notion finish, keeping its volumes, and MUST name the stack in its result (`test_stack`).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-002 — An absent, failing or hanging Docker (each call bounded by a 60 s timeout) MUST never fail the merge step, the Notion finish that follows it, or the sweep: the failure is one logged line and the step goes on; a `down` that fails for one stack does not stop the sweep reaching the others, and an unavailable `gh` skips only the PR-based judgements.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-003 — `scripts/test-services.ts` MUST offer `down [<worktree>]`, which stops the stack of the given worktree (the current checkout by default), keeping its volumes.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-004 — `scripts/test-services.ts` MUST offer `sweep`, which stops every `mf-test-*` stack whose compose working directory no longer exists (volumes removed) or whose worktree's newest PR is merged or closed (volumes kept), leaves every other stack untouched, and prints one line naming what it stopped (or that nothing was).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-005 — Every stack name used by the merge step, `down` and `sweep` MUST come from `composeProject` in `scripts/test-services.ts`; no other code derives the name.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-006 — Each `/speckit-watch` pass MUST run the sweep as one of its safe fixes and include its result line in the pass output; a sweep failure never stops the pass.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-007 — AGENTS.md's description of `scripts/test-services.ts` MUST say when the stack is stopped (merge, sweep, `down`).
+
+_From 974-stop-test-stack-on-merge._
+
+### 976-FR-001 — Every `libs/domain` integration spec MUST run its tests and hooks under an explicit 30-second limit, set once for `*.integration.spec.ts` files, so database setup and bulk work no longer fail on Jest's default 5-second limit on a loaded machine; unit specs keep the default, and a test or hook that still exceeds the limit fails with Jest's message naming it.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-002 — No `libs/domain` integration spec MUST sleep a fixed wall-clock interval and then assert that asynchronous work (a queued job, a published live message, a queue worker, an outbox relay, an e-mail) has finished. Each such wait is replaced by waiting for the asserted condition up to a deadline, or by faked time advanced past the window where no real I/O is awaited inside it.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-003 — A spec that proves an absence (nothing sent, not yet drained, no second message) MUST keep a proof at least as strong as before: faked time advanced past the window, or the sibling event that shows the window closed. Shortening the window or dropping the check is not a fix.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-004 — Each assertion that bounds elapsed real time (`Date.now() - started` under a fixed number) MUST be replaced by a proof of the same property that does not depend on machine speed, or measured under faked time; the property proved MUST be stated in the spec's description text so a reviewer can compare it with the bound it replaces.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-005 — No assertion is weakened, no test is skipped or deleted, and every spec that ran before still runs; each spec file MUST keep the same number of tests, and each replaced wait or bound MUST prove the same property or a stronger one.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-006 — CI behaviour MUST be unchanged: the same specs run with the same worker settings in the same jobs; any worker-count change applies only to the pre-commit run under `scripts/heavy.sh`, MUST stay above 1 worker, and is made only when the reproduction shows it is needed.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-007 — One shared test helper in `libs/domain` MUST provide the wait-until-condition-or-deadline, with the condition's name and the deadline in its failure; every wait this change adds or replaces uses it, including the polling loops that gave up within two seconds. Loops that already wait 10 seconds or more are not load failures and stay.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-008 — The failure MUST be reproduced before the fix and shown gone after it: a repeatable procedure (a script or a documented command in the feature folder) puts the machine under artificial CPU load and runs the domain integration suite with the pre-commit's settings; its before and after results (which specs failed, how many runs) are recorded in the feature folder.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-009 — A spec that counts the outbox rows a request wrote (`cars/my-cars/cars/cars.api`, `garages/staff-invite/staff-invite.api`, `garages/garage-brands/garage-brands.api` and `.write.adversary`) MUST select them by a mark taken from the outbox itself before the request (the highest id), not by comparing the row's `created_at`, which the application stamps from the host clock, with a time read from the database clock; never by a sleep.
+
+_From 976-integration-specs-under-load._
 
 ## Retired
 

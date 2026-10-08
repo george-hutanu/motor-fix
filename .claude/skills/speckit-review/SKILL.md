@@ -185,8 +185,11 @@ ready` may refuse a level 2 or 3 feature whose owed artifacts are missing
 (`level.mjs check --ready`): run the phases it names, then run it again. Then run the QA step
 and merge exactly as `/speckit-auto`'s "The tail" steps 1–6 do: green CI, `/speckit-pr-test <n>`
 (story → QA) until `agent-review` is success on the head commit, then merge.
-Findings routed to defer go to `specs/<feature>/deferred.md` and are filed as
-Notion tasks (`speckit-notion-sync debt`). With a blocker left, do none of this.
+MEDIUM/LOW findings with a small or medium fix are fixed on the branch before
+ready, pre-existing or adjacent ones included; only a large fix (the size test
+in AGENTS.md, "Technical debt a review defers") is routed to defer, goes to
+`specs/<feature>/deferred.md` and is filed as a Notion task
+(`speckit-notion-sync debt`). With a blocker left, do none of this.
 
 ## Done When
 
@@ -205,7 +208,8 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
   wrong fix is higher than the cost of a missed nit. Say in the report when
   that default plainly threw away something real, and let the user decide.
 - No internal identifiers in anything written to source as a result of this
-  review (constitution v1.2.1).
+  review (Constitution II), apart from a whole-line `// @traces
+  <feature>-FR-<n>` comment in a test file.
 
 ## The repair loop has a cap
 

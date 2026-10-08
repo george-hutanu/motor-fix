@@ -53,7 +53,8 @@ running: keep the grep result, mark it "unconfirmed", move on.
 5. **Bloat.** An abstraction with one implementation. A parameter every caller
    passes the same value for. A wrapper that only forwards. A config knob
    nothing sets. An export nothing imports. A comment restating its own code, or
-   carrying an internal identifier (FR id, task id, ticket key). Each is a
+   carrying an internal identifier (FR id, task id, ticket key) — a whole-line
+   `// @traces <feature>-FR-<n>` comment in a test file excepted. Each is a
    deletion, and each is a finding: MEDIUM alone, HIGH when it adds a dependency
    or a layer.
 6. **Test honesty.** Would each new test still pass with the implementation
@@ -103,7 +104,7 @@ it costs a review round.
 - **A known gap is a `TODO`, never silence.** A limit that will be revisited,
   a stub logger, a temporary build step — each carries a `TODO:` saying what
   changes and when. A gap with no TODO is a finding; a TODO with a ticket key
-  in it is one too (constitution v1.2.1). LOW.
+  in it is one too (Constitution II). LOW.
 
 Also asked, once each, and worth pre-empting: why `interface` over `type`;
 why an `unknown` (document it); whether a regex really wants a global
@@ -114,15 +115,20 @@ under `node_modules/.cache`, never in the tree.
 ## Triage — every finding takes one of three routes
 
 Borrowed from BMAD's code review, which routes each verified finding to
-**patch**, **defer** or **decision needed**. Without a defer route a reviewer
-facing a real pre-existing bug has only bad options: fix it, which is the scope
-creep the constitution's Agent Execution Rules forbid, or drop it, which loses
-it. Add a **Route** column and fill it for every row.
+**patch**, **defer** or **decision needed**. The route follows the size of the
+fix, not whose problem it is (AGENTS.md, "Technical debt a review defers"): a
+small or medium fix is made in this PR, even for a bug that existed before the
+change or sits next to it, so a finding is neither dropped nor turned into a
+ticket it did not need. Add a **Route** column and fill it for every row.
+
+The size test: A fix is large when it needs its own design or decision, a data
+migration, a different area or epic, or work clearly bigger than the story
+itself. Anything else is small or medium.
 
 | Route | When | What happens |
 | --- | --- | --- |
-| `patch` | an unambiguous fix inside this change's scope | the caller fixes it and re-runs you once |
-| `defer` | a real issue that is **not this change** — pre-existing, or out of scope | append it to `specs/<feature>/deferred.md` |
+| `patch` | a small or medium fix, this change's problem or not (pre-existing or adjacent included) | the caller fixes it and re-runs you once |
+| `defer` | a real issue whose fix is **large** by the size test | append it to `specs/<feature>/deferred.md`, naming the arm it meets |
 | `decision` | an ambiguous choice only a human can settle | name the two options and what each costs; never pick one silently |
 
 `decision` is available only when the feature has a spec to be ambiguous about.
@@ -142,8 +148,8 @@ A `defer` row is written to `specs/<feature>/deferred.md` in the format
 `.specify/templates/deferred-template.md` gives, one line, with its `path:line`
 source. `.claude/scripts/retro-evidence.mjs` reads that file, so `/speckit-retro`
 reports what is still open instead of the finding evaporating. A `defer` never
-lowers a severity: a deferred CRITICAL still blocks, because "not this change"
-is a statement about ownership, not about danger.
+lowers a severity: a deferred CRITICAL still blocks, because "large" is a
+statement about the fix, not about danger.
 
 ## Output
 

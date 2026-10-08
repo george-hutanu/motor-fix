@@ -98,8 +98,11 @@
   },
   "overrides": [
     {
-      // Biome reads Angular templates as plain HTML: it cannot see this dialog's [attr.aria-*] or [for] bindings, and it flags its ARIA combobox (a ul listbox whose options are reached by aria-activedescendant, never focused).
-      "includes": ["apps/web/src/app/dashboard/add-car/add-car.html"],
+      // Biome reads Angular templates as plain HTML: it cannot see these comboboxes' [attr.aria-*] bindings, and it flags the ARIA combobox (a ul listbox whose options are reached by aria-activedescendant, never focused).
+      "includes": [
+        "apps/web/src/app/dashboard/add-car/add-car.html",
+        "apps/web/src/app/home/brand-picker/brand-search/brand-search.html"
+      ],
       "linter": {
         "rules": {
           "a11y": {
@@ -123,6 +126,54 @@
             "useAriaPropsForRole": "off",
             "useSemanticElements": "off",
             "useValidAnchor": "off"
+          }
+        }
+      }
+    },
+    {
+      // Biome reads Angular templates as plain HTML: it cannot see the href that routerLink or a bound [href] writes on these links.
+      "includes": [
+        "apps/web/src/app/dashboard/due-date-line/due-date-line.html",
+        "apps/web/src/app/dashboard/frame/frame.html",
+        "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
+        "apps/web/src/app/not-found/not-found.html",
+        "apps/web/src/app/public/confirm-email/confirm-email.html",
+        "apps/web/src/app/public/invite/invite.html",
+        "apps/web/src/app/public/tab-bar/tab-bar.html",
+        "apps/web/src/app/public/unsubscribe/unsubscribe.html",
+        "apps/web/src/app/sign-in/consent/consent.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useValidAnchor": "off"
+          }
+        }
+      }
+    },
+    {
+      // A labelled role="group" of tiles, buttons or role chips outside any form, where a fieldset would be wrong.
+      "includes": [
+        "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
+        "apps/web/src/app/dashboard/frame/frame.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
+      // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders.
+      "includes": [
+        "apps/web/src/app/dashboard/notification-settings/notification-settings.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off"
           }
         }
       }

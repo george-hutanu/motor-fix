@@ -27,6 +27,12 @@ async function signedInDriver(page: Page) {
     .click();
   await signIn(page, ACCOUNTS.driver);
   await expect(page).toHaveURL('/app/driver');
+  // The seeded driver's account language is shared with specs running beside
+  // this one (one-language.spec turns it English), so Romanian is chosen here.
+  await page
+    .getByRole('group', { name: /^(Limba|Language)$/ })
+    .getByRole('button', { exact: true, name: 'RO' })
+    .click();
   await expect(title(page)).toHaveText('Panoul tău');
 }
 

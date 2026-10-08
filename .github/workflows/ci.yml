@@ -80,6 +80,32 @@ jobs:
       - name: Observability inventory
         if: ${{ !cancelled() }}
         run: node scripts/observability-inventory.ts
+      # On a PR the baseline may hold no entry the base branch's baseline lacks.
+      - name: Structure
+        if: ${{ !cancelled() }}
+        run: node scripts/structure-check.ts ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }}
+      # The PR tester's layout and sweep specs measure fixture pages in a real
+      # browser and fail in CI without one. The headless shell is enough, and
+      # the runner image already carries Chrome's system libraries.
+      - id: harness-playwright
+        if: ${{ !cancelled() }}
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: harness-browser
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-shell-${{ runner.os }}-${{ steps.harness-playwright.outputs.version }}
+      - name: Browser for the harness
+        if: ${{ !cancelled() && steps.harness-browser.outputs.cache-hit != 'true' }}
+        timeout-minutes: 10
+        # Bounded and retried like every Playwright install; no apt runs here, so nothing to repair.
+        run: |
+          for attempt in 1 2 3; do
+            timeout -k 10 180 npx playwright install --only-shell chromium && exit 0
+            echo "::warning::playwright install --only-shell chromium: attempt $attempt of 3 failed or timed out"
+          done
+          exit 1
       - name: Harness
         if: ${{ !cancelled() }}
         run: |
@@ -144,6 +170,18 @@ jobs:
         env:
           JEST_SUITE: unit
         run: npx nx $NX_SCOPE -t test --passWithNoTests
+      # Service containers take no command, so the slow-statement view is
+      # preloaded here: the data-store specs read it, never skip it.
+      - name: Preload pg_stat_statements
+        if: ${{ !cancelled() }}
+        run: |
+          docker exec ${{ job.services.postgres.id }} psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'"
+          docker restart ${{ job.services.postgres.id }}
+          for i in $(seq 1 30); do
+            docker exec ${{ job.services.postgres.id }} pg_isready -U postgres && break
+            sleep 1
+          done
+          docker exec ${{ job.services.postgres.id }} pg_isready -U postgres
       - name: Migrate the test database
         if: ${{ !cancelled() }}
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
@@ -185,6 +223,9 @@ jobs:
       GOOGLE_CLIENT_ID: e2e-client
       GOOGLE_CLIENT_SECRET: e2e-only-not-a-secret
       GOOGLE_ISSUER: http://127.0.0.1:3026
+      # Pages carry the browser telemetry tag; the tests answer the
+      # collector themselves (apps/web-e2e/src/fixtures.ts), so nothing leaves.
+      FARO_URL: https://faro.invalid/collect/e2e
       # The photo flows upload to the compose MinIO, started in the steps below.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1

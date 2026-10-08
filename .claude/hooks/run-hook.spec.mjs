@@ -1,7 +1,8 @@
-import { describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   disabledIds,
@@ -258,5 +259,71 @@ describe('hook registry — fail-closed stdin', () => {
     const run = runHook('pre:bash:guard', DESTRUCTIVE);
     assert.equal(run.status, 2, 'the gate itself must still be the one deciding');
     assert.match(run.stderr, /destroys uncommitted work/);
+  });
+});
+
+// A gate whose script dies before deciding (a syntax error, an import that
+// cannot load) exits 1, which Claude Code reads as a non-blocking error: the
+// tool would run as if the gate had approved it. For a fail-closed entry the
+// wrapper refuses instead; an advisory hook keeps its exit code.
+describe('run-hook.mjs — a gate that crashes', () => {
+  // The registry and the gate scripts resolve under CLAUDE_PROJECT_DIR, so a
+  // copy of .claude/hooks with one script broken leaves the real gates alone.
+  const repo = realpathSync(mkdtempSync(join(tmpdir(), 'run-hook-crash-')));
+  cpSync(join(REPO, '.claude/hooks'), join(repo, '.claude/hooks'), { recursive: true });
+  const hook = (name, body) => writeFileSync(join(repo, '.claude/hooks', name), body);
+  afterAll(() => rmSync(repo, { recursive: true, force: true }));
+
+  const run = (id, env = {}) =>
+    spawnSync(process.execPath, [RUNNER, id], {
+      input: JSON.stringify({ tool_input: { command: 'ls' } }),
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: repo, SPECKIT_HOOKS_DRY_RUN: '', SPECKIT_DISABLED_HOOKS: '', ...env },
+    });
+
+  it('refuses a fail-closed gate that cannot load, naming it, its script and the way to disable it', () => {
+    hook('bash-guard.mjs', 'import "./does-not-exist.mjs";\n');
+    const r = run('pre:bash:guard');
+    assert.equal(r.status, 2, 'a gate that crashed has not approved the request');
+    const cause = r.stderr.indexOf('does-not-exist.mjs');
+    const refusal = r.stderr.indexOf('[run-hook] pre:bash:guard refused');
+    assert.ok(cause >= 0, 'the gate\'s own error is forwarded');
+    assert.ok(refusal > cause, 'the refusal comes after the cause');
+    const line = r.stderr.slice(refusal).split('\n')[0];
+    assert.match(line, /exit 1/);
+    assert.match(line, /has not approved/);
+    assert.match(line, /\.claude\/hooks\/bash-guard\.mjs/);
+    assert.match(line, /SPECKIT_DISABLED_HOOKS=pre:bash:guard/);
+  });
+
+  it('refuses any exit other than 0 or 2, and forwards stdout too', () => {
+    hook('bash-guard.mjs', 'process.stdout.write("half-done\\n"); process.exit(3);\n');
+    const r = run('pre:bash:guard');
+    assert.equal(r.status, 2);
+    assert.match(r.stdout, /half-done/);
+    assert.match(r.stderr, /pre:bash:guard refused: .*exit 3/);
+  });
+
+  it('reports the refusal and lets the call through under dry run', () => {
+    hook('bash-guard.mjs', 'import "./does-not-exist.mjs";\n');
+    const r = run('pre:bash:guard', { SPECKIT_HOOKS_DRY_RUN: '1' });
+    assert.equal(r.status, 0);
+    assert.match(r.stderr, /DRY RUN — pre:bash:guard refused: .*SPECKIT_DISABLED_HOOKS=pre:bash:guard/);
+    assert.doesNotMatch(r.stderr, /would have blocked/);
+  });
+
+  it('does not run a crashing gate disabled by id', () => {
+    hook('bash-guard.mjs', 'import "./does-not-exist.mjs";\n');
+    const r = run('pre:bash:guard', { SPECKIT_DISABLED_HOOKS: 'pre:bash:guard' });
+    assert.equal(r.status, 0);
+    assert.doesNotMatch(r.stderr, /refused/);
+  });
+
+  it('passes an advisory hook\'s exit 1 through unchanged', () => {
+    hook('session-telemetry.mjs', 'process.stderr.write("ledger broke\\n"); process.exit(1);\n');
+    const r = run('stop:telemetry');
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /ledger broke/);
+    assert.doesNotMatch(r.stderr, /refused/);
   });
 });

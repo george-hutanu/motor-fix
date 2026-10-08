@@ -6,11 +6,11 @@ import { join } from 'node:path';
 import {
   baselineSize,
   breakFloor,
-  frTokens,
   proposedContent,
   verdict,
   isTestFile,
 } from './config-protection.mjs';
+import { traceTokens } from '../scripts/lib/traces.mjs';
 
 // The ratchet guard. Each rule here corresponds to a line in CLAUDE.md that
 // used to be prose only: the mutation floor only goes up, the trace baseline
@@ -121,11 +121,44 @@ describe('config-protection — the traceability baseline', () => {
   });
 });
 
+describe('config-protection — the structure baseline', () => {
+  const rel = 'scripts/structure-baseline.json';
+  const base = (submodules, components) => JSON.stringify({ _comment: 'shrink only', submodules, components });
+
+  it('counts the entries of both lists', () => {
+    assert.equal(baselineSize(base(['a.ts'], ['b.ts', 'c.ts']), ['submodules', 'components']), 3);
+  });
+
+  it('blocks growing it', () => {
+    const why = judge({ rel, current: base(['a.ts'], []), next: base(['a.ts'], ['b.ts']) });
+    assert.match(why, /structure baseline/);
+    assert.match(why, /1 → 2/);
+  });
+
+  it('allows shrinking or keeping it', () => {
+    assert.equal(judge({ rel, current: base(['a.ts', 'b.ts'], []), next: base(['a.ts'], []) }), null);
+    assert.equal(judge({ rel, current: base(['a.ts'], ['b.ts']), next: base(['a.ts'], ['c.ts']) }), null);
+  });
+});
+
 describe('config-protection — requirement tokens', () => {
-  it('finds every feature-qualified token', () => {
-    const text = `[${fake('001', '002')}] and [${fake('012', '134')}]`;
-    assert.deepEqual([...frTokens(text)], [fake('001', '002'), fake('012', '134')]);
-    assert.equal(frTokens('FR-002 alone').size, 0);
+  it('finds every id on a // @traces line, and only there', () => {
+    const text = `// @traces ${fake('001', '002')} ${fake('012', '134')}\n  // @traces ${fake('003', '004')}\n`;
+    assert.deepEqual([...traceTokens(text)], [fake('001', '002'), fake('012', '134'), fake('003', '004')]);
+    assert.equal(traceTokens('FR-002 alone').size, 0);
+    assert.equal(traceTokens(`it('covers ${fake('001', '002')}', () => {});`).size, 0);
+    assert.equal(traceTokens(`// see ${fake('001', '002')}`).size, 0);
+  });
+
+  it('lets an id leave a test title, which is not the traced form', () => {
+    assert.equal(
+      judge({
+        rel: 'libs/utils/src/slug.spec.ts',
+        current: `it('covers ${fake('001', '003')}', () => {})`,
+        next: "it('covers it', () => {})",
+      }),
+      null,
+    );
   });
 
   it('blocks deleting one from a test file', () => {
@@ -135,7 +168,7 @@ describe('config-protection — requirement tokens', () => {
       next: "it('x', () => {})",
     });
     assert.ok(why.includes(fake('001', '003')), why);
-    assert.match(why, /traceability gate/);
+    assert.match(why, /trace-matrix\.mjs reads those \/\/ @traces lines/);
   });
 
   it('ignores test edits that keep their tokens', () => {
@@ -233,7 +266,7 @@ describe('config-protection — what the port changed', () => {
       current: `// @traces ${fake('002', '004')}\nit('compiles', () => {})`,
       next: "it('compiles', () => {})",
     });
-    assert.match(why, /traceability gate/);
+    assert.match(why, /trace-matrix\.mjs reads those \/\/ @traces lines/);
     assert.ok(why.includes(fake('002', '004')), why);
   });
 });

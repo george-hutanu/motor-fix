@@ -88,7 +88,25 @@ async function addCar(
   await expect(dialog).toHaveCount(0);
 }
 
-const nextYear = () => `${new Date().getFullYear() + 1}-03-08`;
+// A calendar day this many days after today in Bucharest, as the app counts.
+function daysAhead(days: number) {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(new Date());
+  const day = new Date(`${today}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + days);
+  return day.toISOString().slice(0, 10);
+}
+
+const monthYear = (day: string) =>
+  new Intl.DateTimeFormat('en-GB', {
+    month: 'long',
+    timeZone: 'UTC',
+    year: 'numeric',
+  }).format(new Date(`${day}T00:00:00Z`));
+
+const itpLamp = (page: Page, name: string) =>
+  card(page, name).locator('mf-due-date-line mf-lamp');
 
 test.describe('a driver can add a car @seeded', () => {
   test('a new driver can add a car, finds it after signing in again, and adds another in English', async ({
@@ -104,7 +122,7 @@ test.describe('a driver can add a car @seeded', () => {
     await addCar(page, {
       brand: 'BMW',
       fuel: 'Motorină',
-      itp: nextYear(),
+      itp: daysAhead(36),
       km: '148200',
       model: '320d',
       year: '2019',
@@ -112,7 +130,13 @@ test.describe('a driver can add a car @seeded', () => {
 
     const bmw = card(page, 'BMW 320d');
     await expect(bmw).toContainText('2019 · 148.200 km');
-    await expect(bmw).toContainText(/ITP valabil până la \d{1,2} mart\. \d{4}/);
+    await expect(itpLamp(page, 'BMW 320d')).toHaveText(
+      'ITP‑ul expiră în 36 de zile',
+    );
+    await expect(itpLamp(page, 'BMW 320d')).toHaveAttribute(
+      'data-state',
+      'amber',
+    );
 
     await page
       .getByRole('button', { exact: true, name: 'Ieși din cont' })
@@ -130,6 +154,7 @@ test.describe('a driver can add a car @seeded', () => {
       {
         brand: 'Dacia',
         fuel: 'Petrol',
+        itp: daysAhead(400),
         km: '90000',
         model: 'Logan',
         year: '2018',
@@ -148,8 +173,12 @@ test.describe('a driver can add a car @seeded', () => {
       'Dacia Logan',
     );
     await expect(card(page, 'Dacia Logan')).toContainText('2018 · 90,000 km');
-    await expect(card(page, 'Dacia Logan')).toContainText(
-      'ITP: add the date from the registration',
+    await expect(itpLamp(page, 'Dacia Logan')).toHaveText(
+      `ITP valid until ${monthYear(daysAhead(400))}`,
+    );
+    await expect(itpLamp(page, 'Dacia Logan')).toHaveAttribute(
+      'data-state',
+      'green',
     );
     await expect(card(page, 'BMW 320d')).toContainText('2019 · 148,200 km');
   });

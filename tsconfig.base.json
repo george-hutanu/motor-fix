@@ -22,7 +22,7 @@
         "./libs/contracts/src/garage-hours.ts"
       ],
       "@motor-fix/contracts/listing-photos": [
-        "./libs/contracts/src/listing-photos.ts"
+        "./libs/contracts/src/listing-photos/listing-photos.ts"
       ],
       "@motor-fix/contracts/listing-sections": [
         "./libs/contracts/src/listing-sections.ts"
@@ -34,11 +34,17 @@
         "./libs/contracts/src/notification-groups.ts"
       ],
       "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
+      "@motor-fix/contracts/place-section": [
+        "./libs/contracts/src/place-section.ts"
+      ],
       "@motor-fix/contracts/plate": ["./libs/contracts/src/plate.ts"],
       "@motor-fix/contracts/price-range": [
         "./libs/contracts/src/price-range.ts"
       ],
       "@motor-fix/contracts/problem": ["./libs/contracts/src/problem.ts"],
+      "@motor-fix/contracts/search-place": [
+        "./libs/contracts/src/search-place.ts"
+      ],
       "@motor-fix/data-access": ["./libs/data-access/src/index.ts"],
       "@motor-fix/domain": ["./libs/domain/src/index.ts"],
       "@motor-fix/domain/testing": [
@@ -48,6 +54,9 @@
       "@motor-fix/i18n/formats": ["./libs/i18n/src/formats.ts"],
       "@motor-fix/media": ["./libs/media/src/index.ts"],
       "@motor-fix/observability": ["./libs/observability/src/index.ts"],
+      "@motor-fix/observability/scrub": [
+        "./libs/observability/src/scrub/scrub.ts"
+      ],
       "@motor-fix/observability/testing": [
         "./libs/observability/src/testing/in-memory.ts"
       ],

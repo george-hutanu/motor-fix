@@ -51,6 +51,17 @@ export const APPLE_ENV = [
   'APPLE_PRIVATE_KEY',
 ] as const;
 
+// The address look-up's key: unset, the api still boots and the look-up says
+// it is down (a stand-in answers in tests).
+export const PLACES_ENV = ['GEOAPIFY_API_KEY'] as const;
+
+export function placesApiKey(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const [key] = PLACES_ENV;
+  return source[key]?.trim() || undefined;
+}
+
 // The web app's public address: unset in development and at build time.
 export function publicWebUrl(
   source: Record<string, string | undefined> = process.env,
@@ -61,6 +72,21 @@ export function publicWebUrl(
     throw new Error('PUBLIC_WEB_URL must be an absolute URL');
   }
   return new URL(value);
+}
+
+// The browser collector's address (Grafana Faro): unset means the browser
+// sends nothing. Its path carries the app key, so a bad value is never echoed.
+export function faroUrl(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const value = source['FARO_URL'];
+  if (value === undefined || value === '') return undefined;
+  const url =
+    typeof value === 'string' && /^https?:\/\//i.test(value)
+      ? URL.parse(value)
+      : null;
+  if (!url) throw new Error('FARO_URL must be an absolute http(s) URL');
+  return url.href;
 }
 
 // Telemetry: optional; unset endpoint means off. Grafana Cloud's OTLP gateway

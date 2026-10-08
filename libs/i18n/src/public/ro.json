@@ -35,8 +35,33 @@
       "paragraph": "Alege marca și vezi câte service‑uri o primesc. Căutarea este pe marcă; modelul, anul și combustibilul intră în cererea de ofertă."
     },
     "picker": "Marca mașinii",
+    "place": {
+      "all": "În toată România",
+      "change": "Schimbă",
+      "choose": "Alege locul",
+      "field": "Adresă",
+      "locating": "Se caută locația…",
+      "locationFailed": "Nu am putut afla locația; scrie o adresă",
+      "near": "Lângă {label}",
+      "nearYou": "Lângă tine",
+      "nothingFound": "Nu am găsit adresa",
+      "placeholder": "Stradă, oraș",
+      "searchUnavailable": "Nu putem căuta adrese acum",
+      "title": "Alege locul",
+      "useLocation": "Folosește locația mea"
+    },
     "retry": "Reîncearcă",
     "search": "Caută service‑uri",
+    "searchFailed": "Lista de mărci nu s‑a încărcat",
+    "searchFound": {
+      "few": "{count} mărci găsite",
+      "one": "{count} marcă găsită",
+      "other": "{count} de mărci găsite"
+    },
+    "searchLabel": "Caută marca",
+    "searchList": "Mărci găsite",
+    "searchLoading": "Se încarcă mărcile…",
+    "searchNone": "Nicio marcă găsită",
     "takes": {
       "few": "primesc",
       "one": "primește",
@@ -202,6 +227,40 @@
       "retry": "Reîncearcă",
       "uploaded": "Fotografia {n} este încărcată",
       "waiting": "Așteaptă conexiunea"
+    },
+    "place": {
+      "address": "Adresă",
+      "armed": "Atinge harta acolo unde e garajul.",
+      "dragHint": "Trage pinul dacă nu stă exact pe garaj. Pe hartă, săgețile îl mută.",
+      "found": {
+        "few": "{count} adrese găsite",
+        "one": "O adresă găsită",
+        "other": "{count} de adrese găsite"
+      },
+      "km": "km",
+      "manualPin": "Pune pinul pe hartă",
+      "map": "Harta cu poziția garajului",
+      "mapDown": "Harta nu s‑a putut încărca. Adresa scrisă rămâne.",
+      "mapHint": "Alege o adresă din listă sau pune pinul pe hartă.",
+      "nothingFound": "Nu am găsit adresa. Poți pune pinul pe hartă.",
+      "outside": "Adresa trebuie să fie în România",
+      "placeholder": "Stradă și număr, sector, oraș",
+      "radius": "Zona în care lucrezi",
+      "radiusHint": "Între 1 și 100 km",
+      "searchDown": "Căutarea adresei nu merge acum. Poți pune pinul pe hartă.",
+      "seat": "Sediul înregistrat",
+      "suggestions": "Adrese găsite"
+    },
+    "preview": {
+      "draft": "Ciornă · se publică după verificare",
+      "mechanicNote": "apare după ce acceptă invitația",
+      "mobile": "Mobil · {km} km în jurul sediului",
+      "namePlaceholder": "Numele service‑ului",
+      "noBrand": "Nicio marcă aleasă",
+      "range": "{from}–{to} lei/oră",
+      "rangePlaceholder": "Manopera: — lei/oră",
+      "title": "Cum îl vor vedea șoferii",
+      "toggle": "Previzualizare"
     },
     "prices": {
       "addJob": "Adaugă o lucrare",

@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { parseDeferred, taskFor } from './debt-tasks.mjs';
 import { defaultGh, logLine, main, PLANS_PAGE, STORIES } from './notion-sync.mjs';
 import { readProp } from './lib/notion.mjs';
+import { readyLogged } from './notion-ready.mjs';
 import { readState } from './run-state.mjs';
 
 // Every run injects fetch and gh: nothing here reaches Notion or GitHub.
@@ -472,6 +473,51 @@ describe('debt with a bad answer', () => {
     const r = await run(['debt'], { ws, repo });
     assert.equal(r.json.pending, 'debt ST-687 line 2 — bad response');
     assert.equal(readFileSync(join(repo, FEATURE, 'deferred.md'), 'utf8'), deferred);
+  });
+});
+
+describe('a story with no epic', () => {
+  const NO_EPIC_READS = [`POST /data_sources/${STORIES}/query`];
+
+  it('files its deferred debt without an Epic relation, and marks the bullet', async () => {
+    const deferred = '# Deferred\n\n- **low** — `x.mjs` — a follow-up (code-reviewer)\n';
+    const repo = repoWith({ deferred });
+    const ws = workspace({ stories: [story(687, 'QA', { pr: PR_URL, epic: null })] });
+    const r = await run(['debt'], { ws, repo });
+    assert.equal(r.code, 0);
+    const post = ws.calls.find((c) => c.method === 'POST' && c.path === '/pages');
+    assert.ok(post, 'the task is filed');
+    assert.equal('Epic' in post.body.properties, false, 'no Epic relation is sent');
+    assert.deepEqual(post.body.properties.Status, { select: { name: 'To do' } });
+    assert.match(readFileSync(join(repo, FEATURE, 'deferred.md'), 'utf8'), /a follow-up \(code-reviewer\) — Notion: https:\/\/www\.notion\.so\/new1/);
+    assert.deepEqual(r.lines, ['- 2026-10-05 · debt · ST-687 · deferred.md line 2 → https://www.notion.so/new1']);
+  });
+
+  it('unticks the story it starts and logs the ready line itself', async () => {
+    const ws = workspace({ stories: [story(687, 'To do', { epic: null, ticked: true })] });
+    const r = await run(['start'], { ws });
+    assert.equal(r.code, 0);
+    assert.deepEqual(requests(ws.calls), [...NO_EPIC_READS, 'PATCH /pages/story687', 'PATCH /pages/story687']);
+    assert.deepEqual(writes(ws.calls).at(-1), 'PATCH /pages/story687 {"properties":{"Ready to work":{"checkbox":false}}}');
+    assert.equal(r.lines.at(-1), '- 2026-10-05 · ready · ST-687 · −ST-687 (the story has no epic)');
+    assert.deepEqual(r.json.ready.untick, ['ST-687']);
+  });
+
+  it('logs a clean no-change ready line after its finish, which the archive check accepts', async () => {
+    const ws = workspace({ stories: [story(687, 'QA', { epic: null, pr: PR_URL })] });
+    const r = await run(['finish', '--no-comment'], { ws });
+    assert.equal(r.code, 0);
+    assert.deepEqual(writes(ws.calls), ['PATCH /pages/story687 {"properties":{"Status":{"select":{"name":"Done"}}}}']);
+    assert.equal(r.lines.at(-1), '- 2026-10-05 · ready · ST-687 · no change (the story has no epic)');
+    assert.deepEqual(readyLogged(r.log), { ok: true, reason: 'ready refreshed after finish' });
+  });
+
+  it('logs the same line for a ready refresh run on its own', async () => {
+    const ws = workspace({ stories: [story(687, 'Implementing', { epic: null })] });
+    const r = await run(['ready'], { ws });
+    assert.equal(r.code, 0);
+    assert.deepEqual(writes(ws.calls), []);
+    assert.deepEqual(r.lines, ['- 2026-10-05 · ready · ST-687 · no change (the story has no epic)']);
   });
 });
 

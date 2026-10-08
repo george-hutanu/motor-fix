@@ -1,0 +1,63 @@
+<label hlmLabel for="mf-brand-search">{{ 'public.home.searchLabel' | t }}</label>
+<div class="field">
+  <input
+    #field
+    hlmInput
+    type="search"
+    autocomplete="off"
+    spellcheck="false"
+    id="mf-brand-search"
+    role="combobox"
+    aria-autocomplete="list"
+    aria-controls="mf-brand-search-list"
+    [value]="text()"
+    [disabled]="state() === 'failed'"
+    [attr.aria-expanded]="listed()"
+    [attr.aria-activedescendant]="listed() && active() >= 0 ? option(active()) : null"
+    [attr.aria-describedby]="state() === 'failed' ? 'mf-brand-search-failed' : null"
+    (focus)="reach()"
+    (pointerdown)="reach()"
+    (keydown)="key($event)"
+    (input)="write($any($event.target).value)"
+    (blur)="close()"
+  />
+  @if (listed()) {
+    <ul id="mf-brand-search-list" role="listbox" [attr.aria-label]="'public.home.searchList' | t">
+      @for (brand of found(); track brand.id; let i = $index) {
+        <li
+          role="option"
+          [id]="option(i)"
+          [attr.aria-selected]="i === active()"
+          (mousedown)="$event.preventDefault()"
+          (click)="choose(brand)"
+        >
+          {{ brand.name }}
+        </li>
+      }
+    </ul>
+  }
+  @if (state() === 'loading' && typed()) {
+    <p class="none" aria-hidden="true">{{ 'public.home.searchLoading' | t }}</p>
+  } @else if (none() && open()) {
+    <p class="none" aria-hidden="true">{{ 'public.home.searchNone' | t }}</p>
+  }
+</div>
+@if (state() === 'failed') {
+  <p class="failed" id="mf-brand-search-failed">{{ 'public.home.searchFailed' | t }}</p>
+  <button
+    type="button"
+    class="spartan-button spartan-button-variant-ghost"
+    (click)="retry()"
+  >
+    {{ 'public.home.retry' | t }}
+  </button>
+}
+<p class="hidden" role="status">
+  @if (state() === 'loading' && typed()) {
+    {{ 'public.home.searchLoading' | t }}
+  } @else if (none()) {
+    {{ 'public.home.searchNone' | t }}
+  } @else if (listed()) {
+    {{ 'public.home.searchFound' | t: { count: found().length } }}
+  }
+</p>

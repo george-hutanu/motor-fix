@@ -31,6 +31,33 @@ Locally, `docker compose --profile observability up -d otel-lgtm` runs
 `grafana/otel-lgtm`: Grafana on `${GRAFANA_PORT:-3300}` (clear of the api's
 3000), OTLP on 4317 and 4318. Without the profile compose starts what it always has.
 
+## The web app and the browser
+
+The web server is a service like the others (`service.name` `web`): request
+spans named by route template (`GET /:lang/garages/:garage`, `GET /api` for
+the pass-through to the API, `client-rendered` for a page left to the
+browser, `unmatched` for a failed render or no route), request duration and
+runtime metrics, and one masked JSON line plus an OTLP log record per render
+error. Static files and `/health/*` are not traced. `/health/ready` is ready
+only while the API's is.
+
+The browser sends to Grafana Faro, only when the server is given
+`FARO_URL` (the Faro collector URL with its app key; unset sends nothing):
+the server puts it in a `<meta name="mf-telemetry">` tag with the release,
+and the page loads the SDK once idle, as its own chunk. It sends errors (at
+most twenty per page load), Web Vitals labelled by route template and
+viewport class (phone, tablet, desktop), and traces of same-origin `/api`
+calls, which carry `traceparent` to the web server. No session id, no user,
+nothing stored on the device; e-mails, phones and plates become `***`, and
+URLs lose their query and fragment, before anything leaves the browser.
+
+Production builds emit hidden source maps; they stay out of the image, and
+the release uploads them to Faro for the commit when the secret
+`FARO_SOURCEMAP_API_KEY` is set, with the repository variables
+`FARO_SOURCEMAP_ENDPOINT`, `FARO_SOURCEMAP_APP_ID` and
+`FARO_SOURCEMAP_STACK_ID`; without the secret both steps are skipped and
+the release goes on.
+
 ## Dashboards and alerts as code
 
 - `infra/observability/dashboards/` — dashboard JSON.
@@ -68,5 +95,9 @@ Rules that keep it there:
   values: service, `env`, route template, method, status class, queue name.
   Never a user, garage, request, record or session id, a raw URL or an
   e-mail; those belong in logs and trace attributes.
+- **Data-store figures.** The worker's PostgreSQL, Redis, outbox and object
+  storage figures add at most 150 series per environment, every label value in
+  use (`libs/observability/src/datastores/series.spec.ts` holds the ceiling);
+  slow statements are WARN log records, never labels.
 - Check usage in Grafana Cloud's billing dashboard when a story adds a signal;
   past half of any limit, cut before adding.

@@ -96,6 +96,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 3. Load and analyze the implementation context:
    - **REQUIRED**: Read tasks.md for the complete task list and execution plan
+   - New files follow AGENTS.md "Folder structure": a submodule gets its own subfolder, a web component is `<name>/<name>.ts|html|css` (`node scripts/structure-check.ts` checks)
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
    - **IF EXISTS**: Read data-model.md for entities and relationships
    - **IF EXISTS**: Read contracts/ for API specifications and test requirements
@@ -220,7 +221,7 @@ Check if `.specify/extensions.yml` exists in the project root.
 
 ## Re-read the ticket before reporting
 
-<!-- project-local addition (constitution v1.2.1) -->
+<!-- project-local addition (Constitution II) -->
 
 Work takes hours; tickets move underneath it. Before writing the completion
 report, fetch the feature's Jira issue again with
@@ -269,7 +270,9 @@ motor-fix Constitution Principle I applies to everything this skill produces:
 - No internal identifier in the source: no FR id, feature number, task id or
   Jira key, in a comment or anywhere else. They name what the repo does not
   contain — the spec is local-only, the numbering is renumbered, the ticket
-  moves — leaving a reference a future reader cannot resolve. The FR → task
+  moves — leaving a reference a future reader cannot resolve. The one
+  exception (Constitution II) is a whole-line `// @traces <feature>-FR-<n>`
+  comment in a test file, which `trace-matrix.mjs` reads. The FR → task
   mapping lives in `tasks.md` and the completion report.
 - A comment is code that has to earn its line. Write one only where the code
   cannot speak for itself: why a non-obvious choice was made, a constraint from

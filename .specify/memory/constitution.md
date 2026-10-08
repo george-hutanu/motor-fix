@@ -1,5 +1,59 @@
 <!--
-Sync Impact Report (v1.8.3)
+Sync Impact Report (v1.11.0)
+- Version change: 1.10.0 → 1.11.0 (MINOR: Principle II gains one allowed
+  form of requirement id in source — a whole-line `// @traces
+  <feature>-FR-<n>` comment in a test file, read by `trace-matrix.mjs`. The
+  prohibition stays for every other place and every other identifier;
+  nothing removed)
+- Source: ST-960 (supersedes the 1.9.0 figure in ST-952 and ST-925 comments).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — v1.11.0, II line
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ .claude/scripts/lib/traces.mjs — the one parser; trace-matrix.mjs and
+    config-protection.mjs read ids through it
+  - ✅ .claude/skills/speckit-tests, speckit-implement, speckit-review,
+    speckit-harden, speckit-bug-fix, speckit-auto (phases-build, report,
+    commit-protocol) — state the exception
+  - ✅ .claude/agents/code-reviewer.md, spec-reviewer.md, test-adversary.md
+  - ✅ .claude/hooks/red-first-gate.mjs, pre-commit-check.sh — comment and
+    message
+  - ✅ .claude/scripts/traces-rule.spec.mjs — keeps the files agreeing
+- Follow-ups: ST-817 (eval-case id prefixes) and ST-733 (matrix test roots)
+  stay their own tasks.
+
+Previous report (v1.10.0)
+- Version change: 1.9.0 → 1.10.0 (MINOR: the Agent Execution Rule "Scope is
+  the deliverable" gains the review clause — a verified review, harden, QA or
+  PR-tester finding with a small or medium fix is fixed in the same PR,
+  pre-existing or adjacent included; only a large fix, by the size test, is
+  deferred. Implementation scope is unchanged; nothing removed)
+- Source: ST-966, the owner's rule of 2026-10-08 (fewer tech-debt tickets).
+  1.9.0 belongs to ST-893; ST-960 takes the next free version.
+- Templates:
+  - ✅ .specify/templates/deferred-template.md — large fixes only, size test
+  - ✅ .claude/agents/code-reviewer.md, spec-reviewer.md — routing table
+  - ✅ .claude/skills/speckit-review, speckit-harden, speckit-auto,
+    speckit-pr-test, speckit-notion-sync — the route by fix size
+  - ✅ AGENTS.md — "Technical debt a review defers"; CLAUDE.local.md — the
+    defer bullet and the version line
+  - ✅ .specify/memory/constitution-card.md — v1.10.0
+  - ✅ .claude/scripts/fix-in-pr-rule.spec.mjs — keeps the files agreeing
+
+Previous report (v1.9.0)
+- Version change: 1.8.3 → 1.9.0 (MINOR: Principle IV gains the folder rules —
+  a module's submodules get their own subfolder, and a web component is a
+  `<name>/` folder holding `<name>.ts`, `<name>.html` and `<name>.css` — and
+  Enforcement gains `scripts/structure-check.ts` with its shrink-only
+  baseline. Nothing removed or redefined)
+- Source: ST-893, the owner's folder rules.
+- Templates:
+  - ✅ .specify/templates/plan-template.md — Project Structure note
+  - ✅ .specify/templates/tasks-template.md — Path Conventions line
+  - ✅ .claude/skills/speckit-implement/SKILL.md — step 3 names the layout
+  - ✅ AGENTS.md — "Folder structure" section
+  - ✅ .specify/memory/constitution-card.md — IV line, v1.9.0
+
+Previous report (v1.8.3)
 - Version change: 1.8.2 → 1.8.3 (PATCH: Additional Constraints gains the
   observability rule — a change that adds a service, resource, queue, outside
   call, endpoint or product action ships its metrics, logs, traces, dashboard
@@ -236,8 +290,13 @@ might be useful later" is not a defense.
 - Tests follow Principle I: cover real behavior and contracts, no padding
   suites for coverage numbers.
 - Source carries no internal identifiers — no FR id, feature number, task id,
-  or ticket key in code, comments, or test titles. The FR → test mapping lives
-  in `tasks.md` and each command's completion report.
+  or ticket key in code, comments, or test titles — with one exception: a
+  test file (`*.spec.*`, `*.test.*`) may carry a whole-line comment
+  `// @traces <feature>-FR-<n>` naming one or more requirement ids and nothing
+  else (`^\s*// @traces( \d{3}-FR-\d{3})+\s*$`), which `trace-matrix.mjs`
+  reads. An id anywhere else, in non-test code, or on a line that carries
+  anything more is still forbidden. The FR → test mapping also lives in
+  `tasks.md` and each command's completion report.
 
 Rationale: concrete failing tests cut agent regressions where advisory TDD
 prose does not; tests against the real database catch what mocks agree to.
@@ -275,6 +334,13 @@ it; a quiet substitute invalidates the documentation the build follows.
   eslint, no prettier, no per-project Biome config; a genuinely
   project-specific need is a scoped `overrides` entry in the root file.
 - Jest runs from the root config across every project.
+- Folder rules: a module's submodules each get their own subfolder, never
+  files left flat at the module's root (`notifications/bell/`, not
+  `notifications/bell.service.ts` beside `bell.controller.ts`); a web
+  component is a `<name>/` folder holding `<name>.ts`, `<name>.html` and,
+  when it has styles, `<name>.css`, with no inline template or styles.
+  `scripts/structure-check.ts` checks both, against a baseline of older
+  violations that only shrinks.
 
 Rationale: one of each, until it hurts — a small team ships faster with one
 deployable and one toolchain, and duplicate configs drift silently
@@ -410,6 +476,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
 | VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester, or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
+| IV folder rules | `scripts/structure-check.ts` (CI Checks job, `.husky/pre-commit`); `config-protection.mjs` | fails on a flat submodule or a component that is not a `<name>/` folder with external `<name>.html`/`<name>.css` unless `scripts/structure-baseline.json` lists it, on a stale baseline entry, and on an entry the base branch's baseline lacks; the hook refuses an edit that grows the baseline |
 | Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit, in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
@@ -436,10 +503,16 @@ gate is the enforcement and the prose is the explanation; the rest are
 prompt-level, and `spec-reviewer` is where deviations surface.
 
 - **Scope is the deliverable.** Build exactly what spec, plan, and tasks
-  call for. A pre-existing bug, performance concern, cleanup, or behavior
-  the task doesn't mention is NOT fixed, optimized, or extended unless the
+  call for. While implementing, a pre-existing bug, performance concern,
+  cleanup, or behavior the task doesn't mention is left alone unless the
   requested behavior cannot work without it — it goes under "Follow-ups"
-  in the completion report.
+  in the completion report. A verified finding of the story's own review,
+  harden, QA or PR-tester laps is different: a small or medium fix is made
+  in the same PR, even when the problem existed before or sits next to the
+  change; only a large fix is deferred (`specs/<feature>/deferred.md` and a
+  Notion tech-debt task). A fix is large when it needs its own design or
+  decision, a data migration, a different area or epic, or work clearly
+  bigger than the story itself.
 - **Ambiguity.** Implement the reading the wording and surrounding code
   most directly support, state that assumption in the report, and don't
   build for the other readings too. Ask only when different readings mean
@@ -482,4 +555,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.8.3 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08
+**Version**: 1.11.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08

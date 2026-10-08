@@ -1,0 +1,62 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <p class="brand">{{ 'public.signIn.brand' | t }}</p>
+  @if (reason) {
+    <p class="brand">{{ 'public.signIn.reason' | t }}</p>
+  }
+  @if (problem; as problem) {
+    <p class="problem" role="alert">{{ problem.key | t: { provider: problem.provider } }}</p>
+  }
+  <div class="field">
+    <label for="mf-sign-in-email">{{ 'public.signIn.email' | t }}</label>
+    <input
+      hlmInput
+      id="mf-sign-in-email"
+      type="email"
+      inputmode="email"
+      autocomplete="email"
+      spellcheck="false"
+      formControlName="email"
+      [placeholder]="'public.signIn.emailPlaceholder' | t"
+      aria-describedby="mf-sign-in-email-error"
+    />
+    <mf-field-error id="mf-sign-in-email-error" [save]="save" [control]="form.controls.email" />
+  </div>
+  <div class="field">
+    <label for="mf-sign-in-password">{{ 'public.signIn.password' | t }}</label>
+    <input
+      #passwordInput
+      hlmInput
+      id="mf-sign-in-password"
+      type="password"
+      autocomplete="current-password"
+      formControlName="password"
+      [placeholder]="'public.signIn.passwordPlaceholder' | t"
+      aria-describedby="mf-sign-in-password-error"
+    />
+    <mf-field-error id="mf-sign-in-password-error" [save]="save" [control]="form.controls.password" />
+  </div>
+  <div class="remember-row">
+    <label class="remember">
+      <input type="checkbox" formControlName="remember" />
+      <span>{{ 'public.signIn.remember' | t }}</span>
+    </label>
+    <button type="button" class="forgot" [disabled]="save.state() === 'sending'" (click)="switchTo('reset')">
+      {{ 'public.signIn.forgot' | t }}
+    </button>
+  </div>
+  <mf-task-error [save]="save" />
+  <button hlmBtn type="submit" [mfTaskSubmit]="save">
+    {{ 'public.signIn.submit' | t }}
+  </button>
+  <mf-provider-buttons [remember]="form.controls.remember.value" [returnTo]="returnTo" />
+  <p class="or" aria-hidden="true">{{ 'public.signIn.or' | t }}</p>
+  <button hlmBtn variant="secondary" type="button" class="phone" [disabled]="save.state() === 'sending'" (click)="switchTo('phone')">
+    {{ 'public.signIn.withPhone' | t }}
+  </button>
+  <p class="switch">
+    <span>{{ 'public.signIn.newHere' | t }}</span>
+    <button type="button" [disabled]="save.state() === 'sending'" (click)="switchTo('sign-up')">
+      {{ 'public.signIn.createAccount' | t }}
+    </button>
+  </p>
+</form>
