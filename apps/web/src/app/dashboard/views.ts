@@ -2,6 +2,7 @@ import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 import { AdminPanel } from './admin-panel/admin-panel';
+import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view/push-view';
@@ -62,11 +63,11 @@ export const DASHBOARDS: Record<
         tab: 'shell.frame.tab.garages',
       },
       {
+        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
         path: 'users',
         tab: 'shell.frame.tab.users',
-        unreleased: true,
       },
       {
         capability: 'admin.reviews',
