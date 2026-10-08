@@ -303,7 +303,7 @@ describe('Frame', () => {
           ])
         ).element,
       ),
-    ).toEqual(['Panou', 'Service‑uri', 'Setări']);
+    ).toEqual(['Panou', 'Service‑uri', 'Utilizatori', 'Setări']);
   });
 
   it('gives the bar the same views as the menu, in the same order, with short labels', async () => {
@@ -512,10 +512,16 @@ describe('Frame', () => {
     expect(admin.element.querySelector('aside span')?.textContent?.trim()).toBe(
       'Admin',
     );
-    expect(menu(admin.element)).toEqual(['Dashboard', 'Garages', 'Settings']);
+    expect(menu(admin.element)).toEqual([
+      'Dashboard',
+      'Garages',
+      'Users',
+      'Settings',
+    ]);
     expect(bar(admin.element).map((a) => a.textContent?.trim())).toEqual([
       'Dashboard',
       'Garages',
+      'Users',
       'Settings',
     ]);
   });

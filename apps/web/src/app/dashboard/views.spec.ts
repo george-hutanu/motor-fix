@@ -8,6 +8,7 @@ import { Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
+import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { Live } from './live';
@@ -146,11 +147,11 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.garages',
       },
       {
+        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
         path: 'users',
         tab: 'shell.frame.tab.users',
-        unreleased: true,
       },
       {
         capability: 'admin.reviews',
@@ -265,11 +266,11 @@ describe('the dashboard view lists', () => {
         'admin.settings',
         'admin.audit_history',
       ]),
-    ).toEqual(['', 'garages', 'settings']);
+    ).toEqual(['', 'garages', 'users', 'settings']);
   });
 
   it('hides an unreleased view even from a role that may open it', () => {
-    expect(paths('admin', ['admin.users'])).toEqual(['']);
+    expect(paths('admin', ['admin.reviews'])).toEqual(['']);
   });
 
   // @traces 097-FR-002
@@ -572,7 +573,7 @@ describe('the dashboard view routes', () => {
     expect(TestBed.inject(Router).url).toBe('/app/garage');
   });
 
-  it.each(['users', 'reviews', 'catalogue', 'assistant'])(
+  it.each(['reviews', 'catalogue', 'assistant'])(
     'sends an admin who types the unreleased %s address to the dashboard',
     async (path) => {
       await open(`/app/admin/${path}`, ADMIN, 'admin');

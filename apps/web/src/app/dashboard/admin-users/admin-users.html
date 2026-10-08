@@ -1,0 +1,82 @@
+@switch (summaryState()) {
+  @case ('loading') {
+    <p class="totals" aria-busy="true"><span class="skeleton"></span></p>
+  }
+  @case ('failed') {
+    <p class="totals">
+      —
+      <button
+        type="button"
+        class="info"
+        aria-describedby="mf-users-totals-tip"
+        [attr.aria-label]="unavailable()"
+        [attr.aria-expanded]="tip()"
+        (click)="tip.set(true)"
+        (focus)="tip.set(true)"
+        (blur)="tip.set(false)"
+        (keydown.escape)="tip.set(false)"
+      >
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
+          <circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" />
+          <path d="M9 8v5M9 5v1" stroke="currentColor" stroke-width="1.6" />
+        </svg>
+      </button>
+      <span class="tip" role="tooltip" id="mf-users-totals-tip" [hidden]="!tip()">{{ unavailable() }}</span>
+    </p>
+  }
+  @default {
+    <p class="totals">{{ totals() }}</p>
+  }
+}
+<div class="panels">
+  <mf-panel [heading]="'admin.users.recent' | t">
+    @switch (listState()) {
+      @case ('loading') {
+        <ul class="list" aria-busy="true" [attr.aria-label]="'admin.users.loading' | t">
+          @for (n of skeletonRows; track n) {
+            <li class="skeleton-row"><span class="skeleton"></span></li>
+          }
+        </ul>
+      }
+      @case ('failed') {
+        <div class="failed" role="alert">
+          <p>{{ 'admin.users.failed' | t }}</p>
+          <button type="button" class="retry" (click)="readFirst()">{{ 'admin.users.retry' | t }}</button>
+        </div>
+      }
+      @default {
+        @if (rows().length === 0) {
+          <p class="empty">{{ 'admin.users.empty' | t }}</p>
+        } @else {
+          <ul class="list" [attr.aria-busy]="moreState() === 'loading' ? 'true' : null">
+            @for (row of rows(); track row.id) {
+              <li class="row">
+                <span class="who">
+                  <span class="name">{{ row.name }}</span>
+                  <span class="detail">{{ row.detail }}</span>
+                </span>
+                <mf-lamp [state]="row.lamp" [label]="row.state" />
+                <span class="count">{{ row.count }}</span>
+              </li>
+            }
+          </ul>
+          @if (moreState() === 'failed') {
+            <div class="more-failed" role="alert">
+              <p>{{ 'admin.users.more' | t }}</p>
+              <button type="button" class="retry" (click)="readMore(true)">{{ 'admin.users.retry' | t }}</button>
+            </div>
+          } @else if (hasMore()) {
+            <div #sentinel class="sentinel" aria-hidden="true">
+              @if (moreState() === 'loading') {
+                <span class="skeleton"></span>
+              }
+            </div>
+          }
+        }
+      }
+    }
+  </mf-panel>
+  <mf-panel>
+    <mf-admin-growth />
+  </mf-panel>
+</div>
