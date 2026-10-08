@@ -22,6 +22,33 @@ describe('which address search the api uses', () => {
     expect(placesConfig('test', {})).toEqual({ provider: 'fake' });
   });
 
+  it('takes the look-up limit and the provider timeout from the environment', () => {
+    expect(
+      placesConfig('production', {
+        GEOAPIFY_API_KEY: 'k',
+        GEOAPIFY_TIMEOUT_MS: '1500',
+        PLACES_LOOKUPS_PER_MINUTE: '30',
+      }),
+    ).toEqual({
+      apiKey: 'k',
+      lookupsPerMinute: 30,
+      provider: 'geoapify',
+      timeoutMs: 1500,
+    });
+  });
+
+  it.each(['0', '-5', '2.5', 'many'])(
+    'keeps the defaults for a limit of %s',
+    (value) => {
+      expect(
+        placesConfig('test', {
+          GEOAPIFY_TIMEOUT_MS: value,
+          PLACES_LOOKUPS_PER_MINUTE: value,
+        }),
+      ).toEqual({ provider: 'fake' });
+    },
+  );
+
   it.each(['development', 'staging', 'production'] as const)(
     'has none in %s without a key',
     (appEnv) => {

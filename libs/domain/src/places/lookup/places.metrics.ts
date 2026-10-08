@@ -1,6 +1,6 @@
 import { metrics } from '@opentelemetry/api';
 
-export type LookupOutcome = 'found' | 'empty' | 'unavailable' | 'throttled';
+type LookupOutcome = 'found' | 'empty' | 'unavailable' | 'throttled';
 
 const meter = () => metrics.getMeter('motorfix');
 

@@ -1,4 +1,4 @@
-import { inRomania } from '@motor-fix/contracts/place-section';
+import { ADDRESS_MAX, inRomania } from '@motor-fix/contracts/place-section';
 import { Logger } from '@nestjs/common';
 
 import {
@@ -9,18 +9,20 @@ import {
 } from './places.provider';
 
 const ENDPOINT = 'https://api.geoapify.com/v1/geocode/autocomplete';
-const TIMEOUT_MS = 3_000;
+const TIMEOUT_MS = 3000;
 
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 
 const suggestionOf = (row: unknown): PlaceSuggestion | null => {
   if (typeof row !== 'object' || row === null) return null;
   const { formatted, lat, lon } = row as Record<string, unknown>;
-  if (typeof formatted !== 'string' || !formatted.trim()) return null;
+  const label = typeof formatted === 'string' ? formatted.trim() : '';
+  // A label the address field would refuse is no suggestion.
+  if (!label || label.length > ADDRESS_MAX) return null;
   if (typeof lat !== 'number' || typeof lon !== 'number') return null;
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !inRomania(lat, lon))
     return null;
-  return { label: formatted.trim(), lat, lng: lon };
+  return { label, lat, lng: lon };
 };
 
 // Geoapify's address autocomplete, asked for Romania only. Its log lines and
@@ -32,6 +34,7 @@ export class GeoapifyPlaces implements PlacesProvider {
   constructor(
     private readonly apiKey: string,
     private readonly fetchFn: Fetch = fetch,
+    private readonly timeoutMs = TIMEOUT_MS,
   ) {}
 
   async search(q: string, lang: string): Promise<PlacesAnswer> {
@@ -47,7 +50,7 @@ export class GeoapifyPlaces implements PlacesProvider {
     let response: Response;
     try {
       response = await this.fetchFn(url.toString(), {
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (error) {
       const timedOut = (error as Error | undefined)?.name === 'TimeoutError';

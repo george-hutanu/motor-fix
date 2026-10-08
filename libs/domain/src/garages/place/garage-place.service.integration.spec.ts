@@ -191,6 +191,13 @@ describe('GaragePlaceService.write', () => {
     },
   );
 
+  it('refuses a workshop a radius out of range too', async () => {
+    expect(await refused(write({ ...workshop, radiusKm: 101 }))).toEqual([
+      { code: 'range', field: 'radiusKm' },
+    ]);
+    expect((await stored()).address).toBeNull();
+  });
+
   it.each([0, 101, 12.5])(
     'refuses a mobile mechanic a radius of %d km',
     async (radiusKm) => {
@@ -213,6 +220,19 @@ describe('GaragePlaceService.write', () => {
 
     expect((await stored()).address).toBeNull();
     expect(await history()).toEqual([]);
+  });
+
+  it.each([
+    ['an empty address', { address: '' }],
+    ['an empty seat', { seatAddress: '' }],
+    [
+      'both an address and a seat',
+      { address: 'Strada A 1', seatAddress: 'Strada B 2' },
+    ],
+  ])('is held by the database to never keep %s', async (_, data) => {
+    await expect(
+      prisma.garage.update({ data, where: { id: garageId } }),
+    ).rejects.toThrow();
   });
 
   it('is held by the database to a position inside Romania', async () => {

@@ -7,10 +7,10 @@ export const PLACES_LOOKUPS_PER_MINUTE = 60;
 // Look-ups per address a minute: what a person typing needs, and a cap on
 // what one source can spend of the provider's free quota.
 export class PlacesThrottle extends AddressThrottle {
-  constructor(redis: Redis) {
+  constructor(redis: Redis, limit = PLACES_LOOKUPS_PER_MINUTE) {
     super(redis, {
       key: 'places:lookup',
-      limit: PLACES_LOOKUPS_PER_MINUTE,
+      limit,
       name: 'Places',
       windowSeconds: 60,
     });

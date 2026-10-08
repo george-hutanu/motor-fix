@@ -5,7 +5,7 @@ import type { Redis } from 'ioredis';
 
 import { clientOf } from '../auth/attempts';
 
-export interface AddressRule {
+interface AddressRule {
   // The Redis key prefix the counts live under.
   key: string;
   limit: number;

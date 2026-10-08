@@ -26,11 +26,17 @@ describe('the stand-in address search', () => {
     expect(found.items[0].label).toContain('Ștefan cel Mare');
   });
 
+  it('finds nothing for its one text that finds nothing', async () => {
+    expect(await places.search('Strada NICAIERI 7', 'ro')).toEqual({
+      items: [],
+    });
+  });
+
   it('offers the typed text in Bucharest when nothing in its list matches', async () => {
-    expect(await places.search('Bulevardul Nicăieri 7', 'ro')).toEqual({
+    expect(await places.search('Bulevardul Florilor 7', 'ro')).toEqual({
       items: [
         {
-          label: 'Bulevardul Nicăieri 7, București',
+          label: 'Bulevardul Florilor 7, București',
           lat: 44.4268,
           lng: 26.1025,
         },

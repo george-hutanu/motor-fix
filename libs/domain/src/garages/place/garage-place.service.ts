@@ -24,7 +24,7 @@ const refuse = (errors: FieldProblem[]) =>
 const isCoordinate = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
-function sectionErrors(section: PlaceSection, mobile: boolean) {
+function sectionErrors(section: PlaceSection) {
   const errors: FieldProblem[] = [];
   const address = plainText(section.address).trim();
   if (!address) errors.push({ code: 'required', field: 'address' });
@@ -35,11 +35,7 @@ function sectionErrors(section: PlaceSection, mobile: boolean) {
     errors.push({ code: 'required', field: 'location' });
   else if (!inRomania(lat, lng))
     errors.push({ code: 'romania', field: 'location' });
-  if (
-    mobile &&
-    section.radiusKm !== undefined &&
-    !radiusAllowed(section.radiusKm)
-  )
+  if (section.radiusKm !== undefined && !radiusAllowed(section.radiusKm))
     errors.push({ code: 'range', field: 'radiusKm' });
   return errors;
 }
@@ -57,12 +53,20 @@ export class GaragePlaceService {
     garageId: string,
     section: PlaceSection,
   ): Promise<void> {
-    const { businessKind } = await tx.garage.findUniqueOrThrow({
-      select: { businessKind: true },
-      where: { id: garageId },
-    });
+    const { businessKind, latitude, longitude, ...held } =
+      await tx.garage.findUniqueOrThrow({
+        select: {
+          address: true,
+          businessKind: true,
+          latitude: true,
+          longitude: true,
+          seatAddress: true,
+          serviceRadiusKm: true,
+        },
+        where: { id: garageId },
+      });
     const mobile = businessKind === 'mobile';
-    const errors = sectionErrors(section, mobile);
+    const errors = sectionErrors(section);
     if (errors.length > 0) throw refuse(errors);
     const address = plainText(section.address).trim();
     const lat = section.lat as number;
@@ -89,7 +93,10 @@ export class GaragePlaceService {
         subjectId: garageId,
         subjectType: 'garage',
       },
-      {},
+      {
+        ...held,
+        location: latitude === null ? null : { lat: latitude, lng: longitude },
+      },
       mobile
         ? { location: { lat, lng }, seatAddress: address, serviceRadiusKm }
         : { address, location: { lat, lng } },

@@ -1,7 +1,10 @@
-import type {
-  PlaceSuggestion,
-  PlacesAnswer,
-  PlacesProvider,
+import { ADDRESS_MAX } from '@motor-fix/contracts/place-section';
+
+import {
+  PLACES_LIMIT,
+  type PlaceSuggestion,
+  type PlacesAnswer,
+  type PlacesProvider,
 } from './places.provider';
 
 const PLACES: readonly PlaceSuggestion[] = [
@@ -20,6 +23,9 @@ const PLACES: readonly PlaceSuggestion[] = [
   { label: 'Bulevardul Eroilor 5, Brașov', lat: 45.6427, lng: 25.5887 },
   { label: 'Strada Mihai Viteazu 3, Timișoara', lat: 45.7537, lng: 21.2257 },
 ];
+// A text with this word finds nothing, for the "nothing found" line and the
+// manual pin.
+const NOWHERE = 'nicaieri';
 // Where the text is offered when nothing in the list matches.
 const BUCHAREST = { lat: 44.4268, lng: 26.1025 };
 
@@ -40,14 +46,15 @@ export class FakePlaces implements PlacesProvider {
     const words = plain(q)
       .split(' ')
       .filter((word) => word.length > 2 && word !== 'str');
+    if (words.includes(NOWHERE)) return { items: [] };
     const found = PLACES.filter((place) => {
       const label = plain(place.label);
       return words.length > 0 && words.every((word) => label.includes(word));
     });
+    if (found.length) return { items: found.slice(0, PLACES_LIMIT) };
+    const label = `${q.trim()}, București`;
     return {
-      items: found.length
-        ? found.slice(0, 5)
-        : [{ label: `${q}, București`, ...BUCHAREST }],
+      items: label.length > ADDRESS_MAX ? [] : [{ label, ...BUCHAREST }],
     };
   }
 }

@@ -10,8 +10,6 @@ import type { PrismaClient } from '../generated/prisma/client';
 // of a garage read. A test fails when a public handler's read skips it.
 export const publicGarages = () => ({ status: 'approved' as const });
 
-// A mobile mechanic is shown by the area it serves: its position is the
-// owner's seat, so it never leaves with the garage.
 const present = <T extends Record<string, unknown>>(fields: T) =>
   Object.fromEntries(
     Object.entries(fields).filter(([, value]) => value !== null),
@@ -68,6 +66,8 @@ export class PublicGaragesService {
         name,
         slug: held,
         ...brandAnswer(brands, texts),
+        // A mobile mechanic is shown by the area it serves: its position is
+        // the owner's seat, so it never leaves with the garage.
         ...(businessKind === 'mobile'
           ? present({ serviceRadiusKm })
           : present({ address, latitude, longitude })),

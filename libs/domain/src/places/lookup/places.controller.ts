@@ -1,4 +1,5 @@
 import { PlacesQueryDto, PlacesResultDto } from '@motor-fix/contracts';
+import { inRomania } from '@motor-fix/contracts/place-section';
 import {
   Controller,
   Get,
@@ -21,7 +22,9 @@ import { recordLookup } from './places.metrics';
 import { PlacesThrottle } from './places.throttle';
 import { Public } from '../../auth/actor.guard';
 import {
+  PLACES_LIMIT,
   PLACES_PROVIDER,
+  type PlacesAnswer,
   type PlacesProvider,
 } from '../providers/places.provider';
 
@@ -59,7 +62,9 @@ export class PlacesController {
       );
     }
     const started = performance.now();
-    const answer = await this.provider.search(q, lang);
+    const answer = await this.provider
+      .search(q, lang)
+      .catch((): PlacesAnswer => ({ unavailable: 'thrown' }));
     const seconds = (performance.now() - started) / 1_000;
     if ('unavailable' in answer) {
       recordLookup(name, 'unavailable', seconds);
@@ -71,7 +76,10 @@ export class PlacesController {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
-    recordLookup(name, answer.items.length ? 'found' : 'empty', seconds);
-    return { items: answer.items };
+    const items = answer.items
+      .filter(({ lat, lng }) => inRomania(lat, lng))
+      .slice(0, PLACES_LIMIT);
+    recordLookup(name, items.length ? 'found' : 'empty', seconds);
+    return { items };
   }
 }

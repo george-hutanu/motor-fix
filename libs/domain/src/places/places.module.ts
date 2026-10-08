@@ -12,10 +12,29 @@ import {
 } from './providers/places.provider';
 import { AUTH_REDIS } from '../auth/attempts';
 
-export type PlacesConfig =
-  | { provider: 'geoapify'; apiKey: string }
-  | { provider: 'fake' }
-  | { provider: 'none' };
+type Limits = { lookupsPerMinute?: number; timeoutMs?: number };
+type PlacesConfig = Limits &
+  (
+    | { provider: 'geoapify'; apiKey: string }
+    | { provider: 'fake' }
+    | { provider: 'none' }
+  );
+
+const positive = (value: string | undefined) =>
+  value && /^\d+$/.test(value.trim()) && Number(value) > 0
+    ? Number(value)
+    : undefined;
+
+// PLACES_LOOKUPS_PER_MINUTE and GEOAPIFY_TIMEOUT_MS, each only when set to a
+// whole number above zero; otherwise the defaults hold.
+function limitsOf(source: Record<string, string | undefined>): Limits {
+  const lookupsPerMinute = positive(source['PLACES_LOOKUPS_PER_MINUTE']);
+  const timeoutMs = positive(source['GEOAPIFY_TIMEOUT_MS']);
+  return {
+    ...(lookupsPerMinute ? { lookupsPerMinute } : {}),
+    ...(timeoutMs ? { timeoutMs } : {}),
+  };
+}
 
 // Chosen once at boot: the key wins; tests without one get the stand-in;
 // anywhere else without one the look-up says it is down.
@@ -24,8 +43,9 @@ export function placesConfig(
   source: Record<string, string | undefined>,
 ): PlacesConfig {
   const apiKey = placesApiKey(source);
-  if (apiKey) return { apiKey, provider: 'geoapify' };
-  return appEnv === 'test' ? { provider: 'fake' } : { provider: 'none' };
+  const limits = limitsOf(source);
+  if (apiKey) return { apiKey, provider: 'geoapify', ...limits };
+  return { provider: appEnv === 'test' ? 'fake' : 'none', ...limits };
 }
 
 const NONE: PlacesProvider = {
@@ -41,7 +61,7 @@ function providerFor(config: PlacesConfig): PlacesProvider {
   }
   const provider =
     config.provider === 'geoapify'
-      ? new GeoapifyPlaces(config.apiKey)
+      ? new GeoapifyPlaces(config.apiKey, fetch, config.timeoutMs)
       : new FakePlaces();
   logger.log(`address search: ${provider.name}`);
   return provider;
@@ -60,7 +80,8 @@ export class PlacesModule {
         {
           inject: [AUTH_REDIS],
           provide: PlacesThrottle,
-          useFactory: (redis: Redis) => new PlacesThrottle(redis),
+          useFactory: (redis: Redis) =>
+            new PlacesThrottle(redis, config.lookupsPerMinute),
         },
       ],
     };

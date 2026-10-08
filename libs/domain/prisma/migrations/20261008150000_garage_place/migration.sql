@@ -5,6 +5,12 @@ ALTER TABLE "garage"
   ADD COLUMN "latitude" DOUBLE PRECISION,
   ADD COLUMN "longitude" DOUBLE PRECISION,
   ADD COLUMN "service_radius_km" SMALLINT,
+  ADD CONSTRAINT "garage_address_length"
+    CHECK ("address" IS NULL OR char_length("address") BETWEEN 1 AND 200),
+  ADD CONSTRAINT "garage_seat_address_length"
+    CHECK ("seat_address" IS NULL OR char_length("seat_address") BETWEEN 1 AND 200),
+  ADD CONSTRAINT "garage_address_or_seat"
+    CHECK ("address" IS NULL OR "seat_address" IS NULL),
   ADD CONSTRAINT "garage_position_both_or_neither"
     CHECK (("latitude" IS NULL) = ("longitude" IS NULL)),
   ADD CONSTRAINT "garage_position_in_romania"

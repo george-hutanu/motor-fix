@@ -4,6 +4,7 @@
 
 export const ADDRESS_MAX = 200;
 export const PLACE_SEARCH_MIN = 3;
+export const PLACE_SUGGESTIONS_MAX = 5;
 // Street level: close enough to put the pin on the right gate.
 export const PLACE_ZOOM = 16;
 export const RADIUS_KM = { default: 20, max: 100, min: 1 } as const;
