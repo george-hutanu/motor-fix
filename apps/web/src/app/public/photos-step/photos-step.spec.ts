@@ -268,6 +268,49 @@ describe('step 5, the photos', () => {
     expect(opened.fixture.componentInstance.files()).toEqual([keyOf(0)]);
   });
 
+  it('drops a photo the server refuses at confirm, says why, and never sends it again', async () => {
+    const opened = await open();
+
+    await choose(opened, [photo('atelier.jpg')]);
+    const [asked] = askedForAddress(opened.http);
+    await answerAddress(opened, asked as TestRequest, 0);
+    opened.http
+      .expectOne(STORE)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await opened.settle();
+    opened.http
+      .expectOne((r) => r.method === 'POST' && r.url === BASE)
+      .flush(
+        { code: 'file_type_mismatch' },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+    await opened.settle();
+
+    expect(tiles(opened.step)).toEqual([]);
+    expect(text(opened.step)).toContain(
+      'Doar fotografii JPG, PNG sau WEBP, de cel mult 10 MB',
+    );
+    expect(text(opened.step)).not.toContain(
+      'Fotografiile se încarcă mai târziu',
+    );
+    await choose(opened, [photo('elevator.jpg')]);
+    expect(askedForAddress(opened.http)).toHaveLength(1);
+  });
+
+  it('says 20 is the most when the draft filled up from elsewhere', async () => {
+    const opened = await open();
+
+    await choose(opened, [photo('atelier.jpg')]);
+    askedForAddress(opened.http)[0]?.flush(
+      { code: 'photos_full' },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    await opened.settle();
+
+    expect(tiles(opened.step)).toEqual([]);
+    expect(text(opened.step)).toContain('Cel mult 20 de fotografii');
+  });
+
   it('keeps photos chosen offline waiting, then uploads them and keeps the order they were chosen in', async () => {
     const opened = await open();
     Object.defineProperty(navigator, 'onLine', {
@@ -375,6 +418,33 @@ describe('ordering and removing the photos', () => {
     expect(button(first, /Mută înapoi/).disabled).toBe(false);
     expect(button(last, /Mută înainte/).disabled).toBe(false);
     expect(button(last, /Mută înapoi/).disabled).toBe(true);
+  });
+
+  it('stops asking about a photo that never finishes processing', async () => {
+    jest.useFakeTimers({ doNotFake: ['queueMicrotask', 'nextTick'] });
+    try {
+      const opened = await open({ files: [keyOf(0)] });
+      const pending = () =>
+        opened.http.match((r) => r.method === 'GET' && r.url === BASE);
+      let reads = 0;
+      for (let lap = 0; lap < 40; lap++) {
+        const [read] = pending();
+        if (!read) break;
+        reads++;
+        read.flush({
+          photos: [{ key: keyOf(0), position: 0, processed: false }],
+        });
+        await opened.settle();
+        await jest.advanceTimersByTimeAsync(5000);
+        await opened.settle();
+      }
+
+      expect(reads).toBeGreaterThan(1);
+      expect(reads).toBeLessThan(40);
+      expect(tiles(opened.step)).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('moves a photo by keyboard, keeps the focus on it and announces its place', async () => {

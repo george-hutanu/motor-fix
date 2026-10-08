@@ -4,7 +4,7 @@ import {
   CdkDropList,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -33,6 +33,9 @@ const TYPES: readonly string[] = RULE.types;
 // A photo just confirmed shows the local file; one restored before its
 // copies exist is read again after this long.
 const PROCESSING_POLL_MS = 5000;
+// Two minutes of reads: a photo still processing by then has failed for
+// good, and each read would queue its job again.
+const PROCESSING_READS_MAX = 24;
 
 type Status = 'waiting' | 'uploading' | 'failed' | 'processing' | 'ready';
 interface Tile {
@@ -221,6 +224,13 @@ export class PhotosStep {
       .subscribe({
         error: (error: unknown) => {
           this.sending.delete(id);
+          if (
+            error instanceof HttpErrorResponse &&
+            error.status === HttpStatusCode.UnprocessableEntity
+          ) {
+            this.refuse(id, error.error?.code === 'photos_full');
+            return;
+          }
           const offline =
             error instanceof HttpErrorResponse && error.status === 0;
           this.patch(id, { status: offline ? 'waiting' : 'failed' });
@@ -255,7 +265,7 @@ export class PhotosStep {
     void this.load();
   }
 
-  private async load() {
+  private async load(reads = 1) {
     clearTimeout(this.poll);
     const draftId = this.draftId();
     const token = this.token();
@@ -278,8 +288,14 @@ export class PhotosStep {
     } catch {
       // Read again below, as for a photo still being processed.
     }
-    if (this.tiles().some((t) => t.key && t.status === 'processing')) {
-      this.poll = setTimeout(() => void this.load(), PROCESSING_POLL_MS);
+    if (
+      reads < PROCESSING_READS_MAX &&
+      this.tiles().some((t) => t.key && t.status === 'processing')
+    ) {
+      this.poll = setTimeout(
+        () => void this.load(reads + 1),
+        PROCESSING_POLL_MS,
+      );
     }
   }
 
@@ -304,6 +320,15 @@ export class PhotosStep {
     this.tiles.update((tiles) =>
       tiles.map((tile) => (tile.id === id ? { ...tile, ...change } : tile)),
     );
+  }
+
+  // The server will never take this file: drop it rather than send it again.
+  private refuse(id: number, full: boolean) {
+    const tile = this.tiles().find((t) => t.id === id);
+    if (tile) this.release(tile);
+    this.tiles.update((tiles) => tiles.filter((t) => t.id !== id));
+    if (full) this.full.set(true);
+    else this.refused.set(true);
   }
 
   private release(tile: Tile) {
