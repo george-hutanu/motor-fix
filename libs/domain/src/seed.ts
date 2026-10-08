@@ -155,6 +155,13 @@ const PEOPLE: Person[] = [
     name: 'Admin MotorFix',
     roles: ['admin'],
   },
+  // A second admin, for the rules that need another admin to approve.
+  {
+    email: 'admin2@example.test',
+    lastRole: 'admin',
+    name: 'Mihai Ionescu',
+    roles: ['admin'],
+  },
   {
     at: { as: 'owner', garage: 'service-dobre' },
     email: 'doua-roluri@example.test',

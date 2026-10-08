@@ -36,13 +36,13 @@ label {
   height: var(--mf-tap);
   padding: 0;
   border: 0;
-  border-radius: var(--mf-radius-sm, 8px);
+  border-radius: var(--mf-radius-chip);
   background: transparent;
   color: var(--mf-text-secondary);
   cursor: pointer;
 }
 .reveal[aria-pressed="true"] {
-  color: var(--mf-text-primary);
+  color: var(--mf-text);
 }
 .reveal:focus-visible {
   outline: 2px solid var(--mf-amber-ink);
