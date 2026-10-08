@@ -169,7 +169,8 @@ export function closedDayError(
   return null;
 }
 
-const isSetOf =
+// A list holding only the given values, each at most once.
+export const isSetOf =
   <T>(values: readonly T[]) =>
   (value: unknown): value is T[] =>
     Array.isArray(value) &&

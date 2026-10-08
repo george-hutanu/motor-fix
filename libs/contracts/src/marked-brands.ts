@@ -3,6 +3,7 @@
 // form, the draft save and the write at submit read it by these rules.
 // Browser-safe: no Nest or validator import.
 
+import { isSetOf } from './garage-hours';
 import { FUELS } from './plate';
 
 export { FUELS };
@@ -40,10 +41,7 @@ const textUpTo = (value: unknown, max: number) =>
   value === undefined ||
   (typeof value === 'string' && [...value].length <= max);
 
-const isFuels = (value: unknown): value is Fuel[] =>
-  Array.isArray(value) &&
-  value.every((fuel) => (FUELS as readonly unknown[]).includes(fuel)) &&
-  new Set(value).size === value.length;
+const isFuels = isSetOf<Fuel>(FUELS);
 
 function isMarkedBrand(value: unknown): value is MarkedBrand {
   if (!isRecord(value)) return false;
