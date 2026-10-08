@@ -13,7 +13,7 @@
 article,
 .skeleton {
   border: 1px solid var(--mf-line-strong);
-  border-radius: var(--mf-radius-md, 12px);
+  border-radius: var(--mf-radius-control);
   min-width: 0;
 }
 article {

@@ -231,3 +231,49 @@ describe('every other rule still fires for an archived feature', () => {
     assert.deepEqual(rulesOf(findings), ['delta-unknown-capability']);
   });
 });
+
+describe('an archived feature whose Modifies and Removes are already merged', () => {
+  const head = '**Status**: Archived (2026-10-08)';
+  const frs = [['FR-001', 'adds a flag'], ['FR-002', 'replaces the old flag']];
+  const delta =
+    '### Capability: `cli-tasks`\n\n- **Adds**: FR-001\n- **Modifies**: `001-FR-004` → `FR-002`\n- **Removes**: `001-FR-005`';
+  const caps = (retired) => [
+    ['cli-tasks', [[T('002', '001'), 'adds a flag'], [T('002', '002'), 'replaces the old flag']], retired],
+  ];
+
+  // @traces 845-FR-001
+  it('accepts the bases its own archive retired', () => {
+    const findings = validate(
+      spec({ delta, frs, head }),
+      caps([
+        [T('001', '004'), `superseded by \`${T('002', '002')}\` (2026-10-08)`],
+        [T('001', '005'), 'removed by 002-fixture (2026-10-08)'],
+      ]),
+    );
+    assert.deepEqual(rulesOf(findings), []);
+  });
+
+  // @traces 845-FR-001
+  it('still refuses a base another feature retired', () => {
+    const findings = validate(
+      spec({ delta, frs, head }),
+      caps([
+        [T('001', '004'), `superseded by \`${T('003', '001')}\` (2026-10-08)`],
+        [T('001', '005'), 'removed by 003-other (2026-10-08)'],
+      ]),
+    );
+    assert.deepEqual(rulesOf(findings), ['delta-base-retired', 'delta-base-retired']);
+  });
+
+  // @traces 845-FR-001
+  it('still refuses a retired base while the feature is not archived', () => {
+    const findings = validate(
+      spec({ delta, frs, head: '**Status**: Draft' }),
+      caps([
+        [T('001', '004'), `superseded by \`${T('002', '002')}\` (2026-10-08)`],
+        [T('001', '005'), 'removed by 002-fixture (2026-10-08)'],
+      ]),
+    );
+    assert.ok(rulesOf(findings).includes('delta-base-retired'));
+  });
+});

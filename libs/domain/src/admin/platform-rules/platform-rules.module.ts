@@ -1,5 +1,7 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 
+import { PlatformRuleChangesController } from './changes/changes.controller';
+import { PlatformRuleChangesService } from './changes/changes.service';
 import { PlatformRulesController } from './platform-rules.controller';
 import {
   PLATFORM_RULES_OPTIONS,
@@ -11,12 +13,21 @@ import { AuditService } from '../../audit/audit.service';
 
 @Module({})
 export class PlatformRulesModule {
-  static register(options: PlatformRulesOptions): DynamicModule {
+  // `notifications` is the application's NotificationsModule: a change
+  // request tells the other admins.
+  static register(
+    options: PlatformRulesOptions,
+    notifications: DynamicModule,
+  ): DynamicModule {
     return {
-      controllers: [PlatformRulesController],
+      controllers: [PlatformRulesController, PlatformRuleChangesController],
+      // Other modules (the reviews story) read reviewPolicy() from here.
+      exports: [PlatformRulesService],
+      imports: [notifications],
       module: PlatformRulesModule,
       providers: [
         PlatformRulesService,
+        PlatformRuleChangesService,
         { provide: PLATFORM_RULES_OPTIONS, useValue: options },
         { provide: AUDIT_PORT, useClass: AuditService },
       ],

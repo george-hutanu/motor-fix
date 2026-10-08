@@ -14,3 +14,34 @@ model PlatformRule {
 
   @@map("platform_rule")
 }
+
+enum PlatformRuleChangeStatus {
+  requested
+  approved
+  refused
+  cancelled
+
+  @@map("platform_rule_change_status")
+}
+
+// An admin's request to switch off a rule that needs a second admin, and how
+// it ended. One waits per rule at most (a partial unique index in the
+// migration). Ids without foreign keys and names kept at write time: the
+// request outlives the accounts, as the audit does.
+model PlatformRuleChange {
+  id              String                   @id @default(uuid()) @db.Uuid
+  ruleKey         String                   @map("rule_key")
+  oldValue        Json                     @map("old_value")
+  newValue        Json                     @map("new_value")
+  reason          String
+  status          PlatformRuleChangeStatus @default(requested)
+  requestedBy     String                   @map("requested_by") @db.Uuid
+  requestedByName String                   @map("requested_by_name")
+  requestedAt     DateTime                 @default(now()) @map("requested_at") @db.Timestamptz(3)
+  decidedBy       String?                  @map("decided_by") @db.Uuid
+  decidedByName   String?                  @map("decided_by_name")
+  decidedAt       DateTime?                @map("decided_at") @db.Timestamptz(3)
+
+  @@index([ruleKey, requestedAt(sort: Desc)])
+  @@map("platform_rule_change")
+}
