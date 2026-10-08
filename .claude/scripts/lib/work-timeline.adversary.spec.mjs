@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { notionClient } from './notion.mjs';
-import { syncWorkTimeline, WORK_TIMELINE, WORK_TIMELINE_VERSION } from './work-timeline.mjs';
+import { syncWorkTimeline, WORK_TIMELINE, WORK_TIMELINE_VERSION, whenEnd } from './work-timeline.mjs';
 
 const NOW = new Date('2026-10-07T10:00:00.000Z');
 const PR = 'https://github.com/george-hutanu/motor-fix/pull/233';
@@ -334,6 +334,18 @@ describe('When range', () => {
       await sync(n, event, story({ started: iso(30) }));
       assert.ok(!('QA from' in rowWrite(n).properties), `${event} wrote QA from`);
     }
+  });
+  // A Merged state with no Merged at cannot come out of sync() today (finish
+  // always stamps it), so the end is checked where it is computed.
+  it('a Merged row with no Merged at value ends at now plus two hours', () => {
+    for (const merged of [null, undefined, ''])
+      assert.equal(whenEnd('Merged', merged, NOW), '2026-10-07T12:00:00.000Z', JSON.stringify(merged));
+  });
+  it('a Merged row with a Merged at value ends at it', () => {
+    assert.equal(whenEnd('Merged', iso(100), NOW), iso(100));
+  });
+  it('a row in any other state ends at now plus two hours, whatever Merged at it holds', () => {
+    for (const state of ['In progress', 'QA', 'Blocked']) assert.equal(whenEnd(state, iso(100), NOW), '2026-10-07T12:00:00.000Z', state);
   });
 });
 

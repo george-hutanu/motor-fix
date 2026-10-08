@@ -127,6 +127,14 @@ ios/ or android/
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]
 
+## Observability
+
+[What this change adds: service, resource, queue, outside call, endpoint or
+product action, or "nothing". For each, the metrics, logs and traces it emits,
+the dashboard panel and alert rule it adds (or why not), and its line in
+`infra/observability/inventory.json`, checked by
+`scripts/observability-inventory.ts`.]
+
 ## Complexity Tracking
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
