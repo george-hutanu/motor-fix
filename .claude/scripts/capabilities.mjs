@@ -208,6 +208,9 @@ export function validateFeature(repo, feature) {
   // Only the spec's own status line counts: a fenced example of one does not,
   // nor a status word that merely starts with Archived ("Archived-pending").
   const isArchived = /^\*\*Status\*\*:[ \t]*archived(?=\s|\(|$)/im.test(specText.replace(/^```[\s\S]*?^```/gm, ""));
+  // Its Modifies and Removes are tombstones by then: a base this feature's
+  // own archive retired is that merge, not a retired requirement reused.
+  const mergedHere = (cap, base, mark) => isArchived && (cap.retired.get(base) ?? "").startsWith(mark);
 
   if (delta.length === 0) {
     if (declared.size > 0)
@@ -242,8 +245,7 @@ export function validateFeature(repo, feature) {
       if (by) assigned.add(by);
       if (by && !declared.has(by)) add("ERROR", "delta-modifies-undeclared", `Modifies replaces ${base} with ${by}, which spec.md does not declare`);
       if (!by) add("ERROR", "delta-modifies-malformed", `Modifies entry "${base}" names no replacement — write \`${base}\` → \`FR-XXX\``);
-      const ownMerge = isArchived && by && cap.retired.get(base)?.startsWith(`superseded by \`${feature.num}-${by}\``);
-      if (!cap.requirements.has(base) && !ownMerge) {
+      if (!cap.requirements.has(base) && !(by && mergedHere(cap, base, `superseded by \`${feature.num}-${by}\``))) {
         add(
           "ERROR",
           cap.retired.has(base) ? "delta-base-retired" : "delta-base-missing",
@@ -255,8 +257,7 @@ export function validateFeature(repo, feature) {
     }
 
     for (const { base } of section.removes) {
-      const ownMerge = isArchived && cap.retired.get(base)?.startsWith(`removed by ${feature.name} `);
-      if (!cap.requirements.has(base) && !ownMerge) {
+      if (!cap.requirements.has(base) && !mergedHere(cap, base, `removed by ${feature.name} `)) {
         add(
           "ERROR",
           cap.retired.has(base) ? "delta-base-retired" : "delta-base-missing",

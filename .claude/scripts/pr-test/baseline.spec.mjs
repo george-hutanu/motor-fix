@@ -206,7 +206,14 @@ describe('what the run makes of the baseline', () => {
   it('reports a medium visual finding per changed shot only when the PR touches no web file', () => {
     const got = visualOutcome({ meta, shots, web: false });
     assert.deepEqual(got.findings, [
-      { kind: 'visual', severity: 'medium', title: 'Unintended visual change: shots/a.png, 2 regions', evidence: 'diff/a.png', key: 'visual|shots/a.png' },
+      {
+        kind: 'visual',
+        severity: 'medium',
+        title: 'Unintended visual change: shots/a.png, 2 regions',
+        evidence: 'diff/a.png',
+        key: 'visual|shots/a.png',
+        steps: ['Compare shots/a.png with the baseline run 20 of aaaaaaa', 'See the changed regions in diff/a.png'],
+      },
     ]);
   });
 

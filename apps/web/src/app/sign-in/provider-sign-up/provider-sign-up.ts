@@ -17,11 +17,11 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
+import { characters } from '../../characters';
 import { Session } from '../../dashboard/session';
 import { Consent, consentControl } from '../consent/consent';
 import { PROVIDER_NAME } from '../providers/providers';
 import type { AuthSwitch } from '../sign-in';
-import { characters } from '../sign-up/sign-up';
 
 // A person the provider vouched for, with no account yet: the name, and the
 // tick on the terms, before the account exists. Nothing waiting (the step

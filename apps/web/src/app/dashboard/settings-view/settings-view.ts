@@ -7,7 +7,8 @@ import { Session } from '../session';
 
 // Setări of the garage and admin dashboards: for an admin the platform rules
 // first, then this device's push panel and the person's staff notification
-// choices.
+// choices. The rules are admin-only and load in a chunk of their own
+// (@defer), out of the first bundle.
 @Component({
   imports: [NotificationSettings, PlatformRules, PushPanel],
   selector: 'mf-dashboard-settings-view',

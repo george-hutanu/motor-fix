@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 253-live-connection
   - 254-live-audience
@@ -12,6 +12,7 @@ features:
   - 586-live-e2e-typed-text
   - 419-live-garage-updates
   - 258-platform-rules-switches
+  - 260-rule-off-confirm
 ---
 
 # Capability: Live updates
@@ -343,6 +344,10 @@ _From 419-live-garage-updates._
 ### 258-FR-006 — The `platform_rule.changed` event MUST reach every open admin Setări view on the `admin` channel, and the view MUST re-read the rules and show the new state without a reload; only a change of `maintenance_mode` MUST also go out on the `system` channel to every connection.
 
 _From 258-platform-rules-switches._
+
+### 260-FR-007 — `platform_rule.change_requested` and `platform_rule.change_decided` MUST reach every admin's open Setări view on the `admin` channel and no other channel; the view MUST re-read the rules and the requests and show the new state without a reload. The `platform_rule.changed` of an approval follows 258-FR-006 (the `admin` channel).
+
+_From 260-rule-off-confirm._
 
 ## Retired
 

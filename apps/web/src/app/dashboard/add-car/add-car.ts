@@ -39,7 +39,7 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
-import { characters } from '../../sign-in/sign-up/sign-up';
+import { characters } from '../../characters';
 
 const SEARCH_PAUSE_MS = 250;
 const DATES = [
