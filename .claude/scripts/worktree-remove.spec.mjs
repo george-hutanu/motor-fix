@@ -263,6 +263,16 @@ describe('backup', () => {
     assert.match(result.backup.product, /140509-1\.product\.patch$/);
   });
 
+  it('refuses, keeping the worktree, when every patch name for that second is taken', () => {
+    mkdirSync(backfill(), { recursive: true });
+    for (let i = 0; i < 1000; i++) writeFileSync(join(backfill(), `${BRANCH}-140509${i ? `-${i}` : ''}.product.patch`), 'earlier\n');
+    const f = fake([[`git -C ${wt} diff --binary HEAD`, { stdout: 'later\n' }]]);
+    const result = removeWorktree(wt, opts(f).options);
+    assert.equal(result.removed, false);
+    assert.match(result.reason, /^backup failed: no free name for /);
+    assert.ok(!f.cmds().some((c) => /test-services|worktree remove|branch -D/.test(c)));
+  });
+
   it('refuses the removal when the product diff cannot be read', () => {
     const f = fake([[`git -C ${wt} diff --binary HEAD`, { code: 128, stderr: 'fatal: index locked' }]]);
     const result = removeWorktree(wt, opts(f).options);

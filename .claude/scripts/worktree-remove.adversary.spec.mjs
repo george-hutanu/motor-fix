@@ -759,20 +759,10 @@ describe('the specs clone', () => {
     writeFileSync(join(wt, 'specs', 'loose.md'), 'loose note\n');
     const f = fake();
     const o = options(f);
-    let result;
-    try {
-      result = removeWorktree(wt, o.options);
-    } catch (err) {
-      assert.equal(existsSync(join(wt, 'specs', 'loose.md')), true, `threw ${err.message}`);
-      return;
-    }
-    if (result.removed) {
-      const copied = /^copy /.test(result.backup.specs) && existsSync(join(result.backup.specs.slice(5), 'loose.md'));
-      const kept = copied || [...patches('.specs.patch'), ...patches('.product.patch')].some((p) => /loose note/.test(readFileSync(p, 'utf8')));
-      assert.equal(kept, true, 'loose specs note was deleted with no copy');
-    } else {
-      assert.equal(existsSync(join(wt, 'specs', 'loose.md')), true);
-    }
+    const result = removeWorktree(wt, o.options);
+    assert.equal(result.removed, true, JSON.stringify(result));
+    assert.match(result.backup.specs, /^copy /);
+    assert.equal(readFileSync(join(result.backup.specs.slice(5), 'loose.md'), 'utf8'), 'loose note\n');
   });
 });
 
