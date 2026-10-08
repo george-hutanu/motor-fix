@@ -58,6 +58,7 @@ features:
   - 884-railway-egress
   - 891-lifecycle-story-override
   - 893-folder-rules
+  - 962-gate-fail-closed
 ---
 
 # Capability: Platform
@@ -1339,6 +1340,38 @@ _From 893-folder-rules._
 ### 893-FR-013 — This feature MUST move every file that violates a rule into place (the owner, 2026-10-08: backfill in the same PR), taking the work ST-894 and ST-895 planned, and change no behaviour while doing it: imports and paths follow the files, inline templates and styles move to the component's `.html` and `.css` unchanged, and the affected projects' typecheck, tests, lint and build stay green. A file an open pull request edits stays in the baseline until that pull request merges.
 
 _From 893-folder-rules._
+
+### 962-FR-001 — The hook wrapper MUST exit 2 when any registry entry marked `fail_closed` (all seven today) runs a script whose exit code is neither 0 nor 2 and that was not stopped by a timeout or a signal.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-002 — That refusal MUST write one stderr line naming the entry id, the exit code the gate produced, that the gate has therefore not approved the request, the gate's script (`.claude/hooks/<script>`, the fix an agent can make) and `SPECKIT_DISABLED_HOOKS=<id>` as the way to disable the gate by id; the gate's own stdout, then its stderr, MUST be forwarded before it.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-003 — A `fail_closed` entry whose script exits 0 or 2 MUST behave as today: output forwarded, exit code passed through.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-004 — An entry not marked `fail_closed` MUST keep its script's exit code and output unchanged, whatever the code.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-005 — Under `SPECKIT_HOOKS_DRY_RUN` the crash refusal MUST be written to stderr prefixed `DRY RUN —` and the wrapper MUST exit 0, as the stdin and timeout refusals do; for a fail-closed crash this line replaces the generic "would have blocked" report, which stays for exit 2 and for advisory hooks.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-006 — `.claude/evals/cases/` MUST hold a case that, in a fixture repository, replaces a fail-closed gate's script with one that cannot load and expects exit 2 with the refusal on stderr, and a case that runs an advisory hook exiting 1 and expects exit 1; `.claude/evals/baseline.json`'s pass rate MUST not fall.
+
+_From 962-gate-fail-closed._
+
+### 962-FR-007 — `.claude/hooks/run-hook.spec.mjs` MUST cover FR-001 to FR-005 with specs written before the wrapper change (red first).
+
+_From 962-gate-fail-closed._
+
+### 962-FR-008 — The change touches only `.claude/hooks/run-hook.mjs` (code and header comment), its spec, the eval cases and the `fail_closed` sentence of `.claude/hooks/registry.json`'s `_comment`, which today names only the stdin refusal; no product code, no new environment variable, no registry field.
+
+_From 962-gate-fail-closed._
 
 ## Retired
 
