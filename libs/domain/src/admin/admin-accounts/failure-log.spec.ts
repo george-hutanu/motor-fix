@@ -1,23 +1,22 @@
-import {
-  BadRequestException,
-  type CallHandler,
-  type ExecutionContext,
-  Logger,
-} from '@nestjs/common';
-import { lastValueFrom, of, throwError } from 'rxjs';
+import { EventEmitter } from 'node:events';
+
+import { Logger } from '@nestjs/common';
+import type { Request, Response } from 'express';
 
 import { FailureLog } from './failure-log';
 
-function context(path: string, url: string): ExecutionContext {
-  const request = { method: 'GET', originalUrl: url, route: { path }, url };
-  return {
-    switchToHttp: () => ({ getRequest: () => request }),
-  } as unknown as ExecutionContext;
+// A request through the middleware, ended with the status the route (or the
+// guard in front of it) answered.
+function answer(url: string, status: number) {
+  const req = { method: 'GET', originalUrl: url } as Request;
+  const res = Object.assign(new EventEmitter(), {
+    statusCode: status,
+  }) as unknown as Response;
+  const next = jest.fn();
+  new FailureLog().use(req, res, next);
+  expect(next).toHaveBeenCalledTimes(1);
+  res.emit('finish');
 }
-
-const handler = (result: () => unknown): CallHandler => ({
-  handle: () => result() as ReturnType<CallHandler['handle']>,
-});
 
 // @traces 001-FR-014
 describe('FailureLog', () => {
@@ -34,14 +33,9 @@ describe('FailureLog', () => {
 
   afterEach(() => jest.restoreAllMocks());
 
-  it('writes one line with the route and status when a request fails, and rethrows', async () => {
-    const error = new BadRequestException({ code: 'invalid_cursor' });
-    const call = new FailureLog().intercept(
-      context('/api/v1/admin/accounts', '/api/v1/admin/accounts?cursor=secret'),
-      handler(() => throwError(() => error)),
-    );
+  it('writes one line with the route and status when a request fails, never the cursor', () => {
+    answer('/api/v1/admin/accounts?cursor=secret', 400);
 
-    await expect(lastValueFrom(call)).rejects.toBe(error);
     expect(lines).toEqual([
       {
         message: 'admin accounts request failed',
@@ -52,32 +46,24 @@ describe('FailureLog', () => {
     expect(JSON.stringify(lines)).not.toContain('secret');
   });
 
-  it('counts an error that is not an HTTP one as a 500', async () => {
-    const call = new FailureLog().intercept(
-      context(
-        '/api/v1/admin/accounts/summary',
-        '/api/v1/admin/accounts/summary',
-      ),
-      handler(() => throwError(() => new Error('db down'))),
-    );
+  it.each([401, 403, 404, 500])(
+    'logs a %s, including a refusal the guard answers before the route runs',
+    (status) => {
+      answer('/api/v1/admin/accounts/summary', status);
 
-    await expect(lastValueFrom(call)).rejects.toThrow('db down');
-    expect(lines).toEqual([
-      {
-        message: 'admin accounts request failed',
-        route: 'GET /api/v1/admin/accounts/summary',
-        status: 500,
-      },
-    ]);
-  });
+      expect(lines).toEqual([
+        {
+          message: 'admin accounts request failed',
+          route: 'GET /api/v1/admin/accounts/summary',
+          status,
+        },
+      ]);
+    },
+  );
 
-  it('writes nothing when the request succeeds', async () => {
-    const call = new FailureLog().intercept(
-      context('/api/v1/admin/accounts', '/api/v1/admin/accounts'),
-      handler(() => of({ items: [] })),
-    );
+  it('writes nothing when the request succeeds', () => {
+    answer('/api/v1/admin/accounts', 200);
 
-    await expect(lastValueFrom(call)).resolves.toEqual({ items: [] });
     expect(lines).toEqual([]);
   });
 });

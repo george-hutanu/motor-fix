@@ -3,7 +3,7 @@ import {
   AdminAccountsQueryDto,
   AdminAccountsSummaryDto,
 } from '@motor-fix/contracts';
-import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -13,13 +13,11 @@ import {
 } from '@nestjs/swagger';
 
 import { AdminAccountsService } from './admin-accounts.service';
-import { FailureLog } from './failure-log';
 import { Requires } from '../../auth/actor.guard';
 
 @ApiTags('admin')
 @ApiBearerAuth()
 @Controller('admin/accounts')
-@UseInterceptors(FailureLog)
 export class AdminAccountsController {
   constructor(private readonly accounts: AdminAccountsService) {}
 

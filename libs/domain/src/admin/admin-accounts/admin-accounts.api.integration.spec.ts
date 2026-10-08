@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
@@ -139,4 +139,30 @@ describe.each(ROUTES)('who may read %s', (path) => {
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('account_suspended');
   });
+});
+
+// @traces 001-FR-014
+describe('the failure log', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it.each(ROUTES)(
+    'writes a line for a refusal the guard answers on %s',
+    async (path) => {
+      const lines: unknown[] = [];
+      jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation((message: unknown) => {
+          lines.push(message);
+        });
+
+      const res = await get(path, await as('driver'));
+
+      expect(res.status).toBe(404);
+      expect(lines).toContainEqual({
+        message: 'admin accounts request failed',
+        route: `GET ${path}`,
+        status: 404,
+      });
+    },
+  );
 });
