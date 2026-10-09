@@ -21,6 +21,7 @@ features:
   - 028-driver-dashboard-views
   - 089-add-a-car
   - 261-maintenance-mode
+  - 097-garage-dashboard
 ---
 
 # Capability: Accounts
@@ -89,9 +90,9 @@ _From 079-account-model._
 
 _From 079-account-model._
 
-### 079-FR-016 — The API MUST answer "who am I" for the actor: account id, name, e-mail, language, roles, role in use, garage id, the capabilities of the role in use, and the landing address (`/app/driver`, `/app/garage` for garage, receptionist and mechanic, `/app/admin`).
+### 097-FR-005 — `GET /api/v1/me` MUST add `garageAccess`: for each garage the account works at, `{ garageId, name, status, role, permissions, features }` — the garage's id, name and status (`draft`, `approved`, `suspended`), the person's role there (`owner`, `receptionist`, `mechanic`), their three permissions (`canMoveBookings`, `canAnswerQuotes`, `canRecordFinalPrice`, all true for an owner and a receptionist as the capability table gives them today, the mechanic card's for a mechanic) and `features`, a `Record<string, boolean>` of the garage's `GARAGE_FEATURE` rows, key → `enabled` (`team_mechanics`, `whatsapp` today; a missing key means on); an empty list for an account with no membership. The existing fields stay (`garageId` included); no write is added, and reads are not recorded in the change history. The DTO lives in the contracts library, the OpenAPI file and the generated client are regenerated (Principle V). Modifies 079‑FR‑016.
 
-_From 079-account-model._
+_From 097-garage-dashboard._
 
 ### 028-FR-005 — A signed‑out visit to a dashboard view address MUST end on Home with the sign‑in dialog open and keep that address; after signing in, that address MUST open when the area guard admits it (it is under the landing of the role the account signs in with), otherwise the landing opens as today; the kept address never changes the role used last. Closing the dialog without signing in MUST drop the kept address; the router URL (path, query and fragment) is kept only when it starts with `/` and not `//` or `/\`; it is opened only through the router (an address of this site, never a browser location change); it uses the one return key the provider sign‑in already uses (083‑FR‑003), the last writer winning. Modifies 082‑FR‑021 (after signing in, the landing opened). A session that expires mid‑visit is not this rule: a view change reads the session in memory, and a refused call is answered by the dialog over the screen (ST-130, unchanged).
 
@@ -587,3 +588,4 @@ _From 089-add-a-car._
 - `082-FR-021` — superseded by `028-FR-005` (2026-10-07)
 
 - `082-FR-006` — superseded by `261-FR-005` (2026-10-08)
+- `079-FR-016` — superseded by `097-FR-005` (2026-10-08)

@@ -73,12 +73,24 @@
     "area": {
       "admin": "Admin",
       "driver": "CONT ȘOFER",
-      "garage": "Service"
+      "garage": "CONT SERVICE"
     },
     "bar": {
       "admin": "Panou admin",
       "driver": "Panou șofer",
       "garage": "Panou service"
+    },
+    "coming": {
+      "garage": {
+        "dashboard": "Aici vei vedea ce se întâmplă azi în service.",
+        "history": "Aici vei vedea cine a schimbat ce în service.",
+        "prices": "Aici vei vedea intervalele de preț pe lucrări.",
+        "profile": "Aici vei edita profilul service‑ului.",
+        "requests": "Aici vei vedea cererile de ofertă ale șoferilor și vei răspunde cu o ofertă.",
+        "reviews": "Aici vei vedea recenziile șoferilor și vei putea răspunde.",
+        "schedule": "Aici vei vedea programările pe zile, pe mecanici și pe elevatoare.",
+        "team": "Aici vei vedea mecanicii service‑ului și ce poate face fiecare."
+      }
     },
     "counter": "{label}, {waiting} în așteptare",
     "empty": "Nimic aici încă.",
@@ -105,6 +117,8 @@
         "settings": "Setări"
       },
       "garage": {
+        "assistant": "Asistent AI",
+        "history": "Istoric modificări",
         "prices": "Prețuri",
         "profile": "Profilul service‑ului",
         "requests": "Cereri de ofertă",
@@ -128,6 +142,16 @@
     "subtitle": {
       "driver": {
         "settings": "Datele contului și notificările"
+      },
+      "garage": {
+        "history": "Cine a schimbat ce și când",
+        "prices": "Intervalele pe care le văd șoferii pe profilul tău",
+        "profile": "Așa te văd șoferii pe hartă",
+        "requests": "Răspunde în mai puțin de o oră ca să apari primul la șofer.",
+        "reviews": "Ce spun șoferii despre service",
+        "schedule": "Programările pe zile, pe mecanici și pe elevatoare",
+        "settings": "Contul, notificările și funcțiile service‑ului",
+        "team": "Echipa ta și ce poate face fiecare"
       }
     },
     "tab": {
@@ -137,6 +161,7 @@
       "cars": "Mașini",
       "dashboard": "Panou",
       "garages": "Service‑uri",
+      "history": "Istoric",
       "overview": "Panou",
       "prices": "Prețuri",
       "profile": "Profil",
@@ -158,8 +183,20 @@
         "reviews": "Recenziile mele",
         "saved": "Service‑uri salvate",
         "settings": "Setări"
+      },
+      "garage": {
+        "assistant": "Asistentul tău AI",
+        "history": "Istoric modificări",
+        "prices": "Prețuri",
+        "profile": "Profilul service‑ului",
+        "requests": "Cereri de ofertă",
+        "reviews": "Recenzii",
+        "schedule": "Programări",
+        "settings": "Setări",
+        "team": "Mecanici"
       }
-    }
+    },
+    "verification": "Profilul tău e în verificare."
   },
   "gauge": {
     "none": "Nicio recenzie încă",

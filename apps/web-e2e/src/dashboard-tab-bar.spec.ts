@@ -13,6 +13,7 @@ const OWNER = [
   'garage.prices',
   'garage.profile',
   'garage.feature_switches',
+  'garage.audit_history',
 ];
 
 // The capabilities "who am I" gives each seeded role (libs/domain/src/auth/capabilities.ts).
@@ -51,6 +52,7 @@ const DASHBOARDS = [
       ['Recenzii', '/reviews'],
       ['Profil', '/profile'],
       ['Setări', '/settings'],
+      ['Istoric', '/history'],
     ],
   },
   {
@@ -109,6 +111,7 @@ async function open(page: Page, path: string) {
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth);
 
+// @traces 097-FR-001
 test.describe('the dashboard tab bar on a 375 px phone', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ height: 812, width: 375 });
@@ -222,7 +225,7 @@ test.describe('the bar on the smallest phones', () => {
           };
         }),
       );
-      expect(tabs).toHaveLength(8);
+      expect(tabs).toHaveLength(9);
       expect(tabs.filter((t) => t.cut)).toEqual([]);
       expect(tabs.filter((t) => t.height < 44)).toEqual([]);
       expect(tabs.filter((t) => t.size < 12)).toEqual([]);

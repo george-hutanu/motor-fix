@@ -68,3 +68,10 @@ input {
   outline: 2px solid var(--mf-focus);
   outline-offset: 2px;
 }
+
+/* running text on a phone is at the 16 px body size. */
+@media (max-width: 767.98px) {
+  .error {
+    font-size: var(--mf-size-body);
+  }
+}

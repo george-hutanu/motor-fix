@@ -5,6 +5,7 @@ import { test } from './fixtures.js';
 const driver = {
   capabilities: [],
   email: 'andrei@example.ro',
+  garageAccess: [],
   garageId: null,
   id: 'driver-1',
   landing: '/app/driver',
