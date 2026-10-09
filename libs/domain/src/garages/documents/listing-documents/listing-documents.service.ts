@@ -96,7 +96,13 @@ export class ListingDocumentsService {
         await this.discard(incoming);
       throw error;
     });
-    const known = checkedKind(kind);
+    let known: ReturnType<typeof checkedKind>;
+    try {
+      known = checkedKind(kind);
+    } catch (error) {
+      if (ours) await this.discard(incoming);
+      throw error;
+    }
     if (pagesOf(draft.data, known).length >= DOCUMENT_PAGES_MAX) {
       if (ours) await this.discard(incoming);
       throw full();

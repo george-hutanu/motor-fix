@@ -493,7 +493,7 @@ describe('confirming a page', () => {
   });
 
   // @traces 206-FR-003
-  it('refuses an unknown kind and touches nothing', async () => {
+  it('refuses an unknown kind, keeps the draft and deletes the upload', async () => {
     const draft = await newDraft();
     const key = await upload(draft.id, draft.token);
 
@@ -503,7 +503,8 @@ describe('confirming a page', () => {
 
     expect(refused.status).toBe(422);
     expect(refused.body).toMatchObject({ code: 'document_kind_unknown' });
-    expect(store.objects.has(key)).toBe(true);
+    expect(store.objects.has(key)).toBe(false);
+    expect(await documentsOf(draft.id)).toBeUndefined();
   });
 });
 
