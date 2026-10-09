@@ -1,6 +1,7 @@
 import { afterEach, describe, it, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -478,6 +479,22 @@ describe('merge', () => {
     assert.match(comment, /finish · ST-696 · QA → Done/);
     assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
     assert.deepEqual(result.review, ['ST-31']);
+  });
+
+  // @traces 1018-FR-005
+  it('reads the finish log through the features folder of a moved clone, committing the path under specs/', () => {
+    const clone = join(repo, '.motor-fix-specs');
+    mkdirSync(clone);
+    renameSync(join(repo, 'specs'), join(clone, 'specs'));
+    for (const args of [['init', '-q', '-b', 'trunk'], ['add', '-A'], ['-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'seed']]) {
+      execFileSync('git', args, { cwd: clone, stdio: 'ignore' });
+    }
+    symlinkSync('.motor-fix-specs/specs', join(repo, 'specs'));
+    const h = harness({ answers: [['git -C .motor-fix-specs/specs diff -U0 --', diff[1]]] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(`git -C .motor-fix-specs/specs diff -U0 -- ${FEATURE}/notion-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`));
   });
 
   it('passes --no-comment when there is no finish-comment.md', () => {

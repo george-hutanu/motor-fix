@@ -19,12 +19,17 @@ range (or "working tree"). Gather your own evidence:
   only — never modify anything)
 - `specs/NNN-slug/spec.md` — requirements (FR-###), acceptance scenarios, edge cases
 - `specs/NNN-slug/plan.md` + `tasks.md` — the promised design and task list
-- `specs/NNN-slug/context.md` when present — the owner's Notion space as
+- `specs/NNN-slug/context.md` when present — the owner's documentation as
   `/speckit-context` read it, the latest source winning. Its
   Constraints bind the diff as tightly
   as the spec does
-- the feature's story or feature page in the Notion space "MotorFix — Product
-  documentation", **comments included**, when the spec links one (Notion read tools only — never a write). The local
+- the feature page, architecture pages and decisions the spec or `context.md`
+  cites, read from the specs clone's `.motor-fix-specs/docs/` (find a Notion id's
+  file in `docs/index.json`; Read and Grep, never an edit); only while the clone
+  has no `docs/index.json`, read them in Notion instead, the space named in
+  `/speckit-context` (fallback until docs/ exists)
+- the feature's story in the Notion tracker, **comments included**, when the
+  spec links one (Notion read tools only — never a write). The local
   artifacts are as current as the day they were written; the story is current
   now. A comment that narrowed the ask after the spec was frozen is the finding
   the implementing agent structurally cannot see. Load the Notion tools with one

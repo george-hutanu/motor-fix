@@ -3,8 +3,10 @@
 // adaptations for this repo:
 //
 //   * Tests are COLOCATED TypeScript (`foo.ts` / `foo.spec.ts`) across
-//     apps/*, libs/*, e2e/ and scripts/ — not a flat tests/*.js directory. The walker
-//     therefore scans the workspace roots and skips build/output dirs.
+//     apps/*, libs/*, e2e/ and scripts/, plus the harness's own
+//     `.claude/**/*.spec.mjs` — not a flat tests/*.js directory. The walker
+//     therefore scans those roots and skips build/output dirs and worktree
+//     copies (`.claude/worktrees/`).
 //   * Features shipped before this gate existed have no `NNN-FR-XXX` tokens
 //     at all, and all five of them are fully implemented, so a verbatim
 //     --check would fail every commit forever. `.specify/trace-baseline.json`
@@ -37,6 +39,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { grandfathered } from "./lib/feature.mjs";
+import { isTestFile, SKIP_DIRS, TEST_ROOTS } from "./lib/tests.mjs";
 import { traceTokens } from "./lib/traces.mjs";
 import { retiredTokens } from "./capabilities.mjs";
 
@@ -48,23 +51,11 @@ const check = args.has("--check");
 const specsDir = join(repo, "specs");
 const exempt = grandfathered(repo);
 
-// Workspace roots that can hold tests, and the directories never worth walking.
-const TEST_ROOTS = ["apps", "libs", "e2e", "scripts"];
-const SKIP_DIRS = new Set([
-  "node_modules",
-  "dist",
-  "coverage",
-  ".turbo",
-  ".work",
-  ".worktrees",
-  ".git",
-]);
-const isTestFile = (name) => /\.(spec|test)\.[cm]?tsx?$/.test(name);
 
 // --- gather requirements per feature ---------------------------------------
 const features = [];
 for (const dir of existsSync(specsDir) ? readdirSync(specsDir).sort() : []) {
-  const m = dir.match(/^(\d{3})-/);
+  const m = dir.match(/^(\d{3,})-/);
   const specFile = join(specsDir, dir, "spec.md");
   if (!m || !existsSync(specFile)) continue;
   // `(?<!\d-)`: a Spec Delta names other features' requirements as

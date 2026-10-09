@@ -15,7 +15,7 @@ const T = (feature, n) => `${feature}${'-FR-'}${n}`;
 function matrix(specBody, files = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'taskr-trace-'));
   try {
-    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs', 'lib/traces.mjs']) {
+    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs', 'lib/tests.mjs', 'lib/traces.mjs']) {
       const to = join(dir, '.claude', 'scripts', rel);
       mkdirSync(dirname(to), { recursive: true });
       cpSync(join(root, '.claude', 'scripts', rel), to);
@@ -92,5 +92,14 @@ describe('trace-matrix tokens', () => {
   it('ignores a // @traces line outside a test file', () => {
     const f = matrix(spec, { 'libs/a/src/a.ts': `// @traces ${T('002', '001')}\nexport const a = 1;\n` });
     assert.deepEqual(tagged(f), []);
+  });
+  it('reads a harness spec under .claude, and never a worktree copy inside it', () => {
+    const f = matrix(spec, {
+      '.claude/scripts/a.spec.mjs': `// @traces ${T('002', '001')}\nit('a', () => {});\n`,
+      '.claude/worktrees/w/.claude/scripts/b.spec.mjs': `// @traces ${T('002', '002')}\nit('b', () => {});\n`,
+    });
+    const rows = Object.fromEntries(f.requirements.map((r) => [r.fr, r.tests]));
+    assert.deepEqual(rows['FR-001'], ['.claude/scripts/a.spec.mjs']);
+    assert.deepEqual(rows['FR-002'] ?? [], []);
   });
 });

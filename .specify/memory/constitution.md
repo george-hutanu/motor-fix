@@ -1,5 +1,35 @@
 <!--
-Sync Impact Report (v1.11.0)
+Sync Impact Report (v1.11.2)
+- Version change: 1.11.1 → 1.11.2 (PATCH: Principle II's `@traces` grammar
+  names a feature number of three or more digits, `\d{3,}`, now that feature
+  numbers reached four digits; the requirement number stays three digits; no
+  rule added, removed or redefined)
+- Source: ST-1018 (the first four-digit feature).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ .claude/scripts/lib/traces.mjs, lib/tests.mjs, trace-matrix.mjs,
+    capabilities.mjs, status.mjs, impact.mjs, retro-evidence.mjs — read the
+    longer feature number whole
+  - ✅ .claude/scripts/feature-number.spec.mjs — keeps them agreeing
+
+Previous report (v1.11.1)
+- Version change: 1.11.0 → 1.11.1 (PATCH: the documentation source moves —
+  Additional Constraints names the Architecture pages as exported to the
+  specs repo's `docs/` instead of the Notion space; no rule added, removed or
+  redefined)
+- Source: ST-1018 (move the documentation from Notion to the specs repo).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line
+  - ✅ CLAUDE.local.md — the version line and the `/speckit-context` entry
+  - ✅ AGENTS.md — "Product and stack", "Specs live in their own repo", Plans
+  - ✅ .claude/skills/speckit-context, speckit-design-check,
+    speckit-notion-sync (plan); .claude/agents/org-researcher.md,
+    spec-reviewer.md — read `docs/`, the Notion space only as a tagged
+    fallback
+  - ✅ .claude/scripts/docs-source.spec.mjs — keeps them agreeing
+
+Previous report (v1.11.0)
 - Version change: 1.10.0 → 1.11.0 (MINOR: Principle II gains one allowed
   form of requirement id in source — a whole-line `// @traces
   <feature>-FR-<n>` comment in a test file, read by `trace-matrix.mjs`. The
@@ -220,8 +250,8 @@ Previous report (v1.3.0)
 Previous report (v1.1.0)
 - Version change: 1.0.0 → 1.1.0 (MINOR: four principles added, II and the
   Enforcement section materially expanded; nothing removed or redefined)
-- Source: the owner's Notion space "MotorFix — Product documentation",
-  Architecture > Technology stack
+- Source: the owner's product documentation in Notion (since v1.11.1
+  exported to the specs repo's `docs/`), Architecture > Technology stack
   (https://app.notion.com/p/3ee607bff0d2819ab8e3ee6926a249f2) and
   Architecture decisions
   (https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a), read 2026-10-03.
@@ -293,7 +323,8 @@ might be useful later" is not a defense.
   or ticket key in code, comments, or test titles — with one exception: a
   test file (`*.spec.*`, `*.test.*`) may carry a whole-line comment
   `// @traces <feature>-FR-<n>` naming one or more requirement ids and nothing
-  else (`^\s*// @traces( \d{3}-FR-\d{3})+\s*$`), which `trace-matrix.mjs`
+  else (`^\s*// @traces( \d{3,}-FR-\d{3})+\s*$`: a feature number of three
+  or more digits, a requirement number of three), which `trace-matrix.mjs`
   reads. An id anywhere else, in non-test code, or on a line that carries
   anything more is still forbidden. The FR → test mapping also lives in
   `tasks.md` and each command's completion report.
@@ -430,10 +461,11 @@ tester, or with a passed PR left unmerged is not finished.
 - Every outside integration (ANAF, ONRC, RAR registers, WhatsApp, PDF) has a
   by-hand route, so no outside party can block a launch.
 - Personal data stays in an EU region.
-- The Notion Architecture section is the source of truth for the choices it
-  marks Proposed (Prisma, BullMQ, server-sent events, PostGIS, signed uploads,
-  and the rest); each is confirmed or replaced per feature in `/speckit-plan`,
-  citing the Notion page. Its To-decide items (T1–T10: hosting, maps, e-mail,
+- The Architecture section of the product documentation, exported to the
+  specs repo's `docs/` (`.motor-fix-specs/docs/`), is the source of truth for
+  the choices it marks Proposed (Prisma, BullMQ, server-sent events, PostGIS,
+  signed uploads, and the rest); each is confirmed or replaced per feature in
+  `/speckit-plan`, citing the `docs/` file. Its To-decide items (T1–T10: hosting, maps, e-mail,
   PWA or store apps, register automation, live video, scheduling component,
   OAuth for assistants, analytics, retention) are open: a plan that depends on
   one records it as `[NEEDS CLARIFICATION]` instead of assuming an answer.
@@ -555,4 +587,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.11.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08
+**Version**: 1.11.2 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-09
