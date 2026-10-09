@@ -264,7 +264,12 @@ describe('seed', () => {
     expect(seed('test').status).toBe(0);
     expect(seed('test').status).toBe(0);
 
-    expect(await prisma.verificationFile.count()).toBe(2);
+    expect(
+      await prisma.verificationFile.count({
+        where: { status: { not: 'approved' } },
+      }),
+    ).toBe(2);
+    expect(await prisma.verificationFile.count()).toBe(10);
     expect(await prisma.verificationCheck.count()).toBe(16);
   });
 
@@ -273,6 +278,7 @@ describe('seed', () => {
 
     const files = await prisma.verificationFile.findMany({
       include: { checks: { orderBy: { kind: 'asc' } } },
+      where: { status: { not: 'approved' } },
     });
     expect(files).toHaveLength(2);
     for (const file of files) {
@@ -375,6 +381,47 @@ describe('seed of the listed garages', () => {
         where: { key: 'dacia' },
       }),
     ).toEqual({ active: true, name: 'Dacia', popularity: 7, slug: 'dacia' });
+  });
+
+  // @traces 312-FR-008
+  it('gives each listed garage one approved verification file, decided when it was approved', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const garages = await prisma.garage.findMany({
+      select: {
+        approvedAt: true,
+        createdAt: true,
+        verificationFiles: {
+          select: {
+            decidedAt: true,
+            decidedBy: true,
+            openedAt: true,
+            reopenedAt: true,
+            reopenedBy: true,
+            reopenReason: true,
+            status: true,
+          },
+        },
+      },
+      where: { status: 'approved' },
+    });
+    const admin = await prisma.account.findUniqueOrThrow({
+      where: { email: 'admin@example.test' },
+    });
+    expect(garages).toHaveLength(8);
+    for (const garage of garages) {
+      expect(garage.verificationFiles).toEqual([
+        {
+          decidedAt: garage.approvedAt,
+          decidedBy: admin.id,
+          openedAt: garage.createdAt,
+          reopenedAt: null,
+          reopenedBy: null,
+          reopenReason: null,
+          status: 'approved',
+        },
+      ]);
+    }
   });
 
   it('changes nothing in the listed garages when run twice', async () => {

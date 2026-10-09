@@ -549,7 +549,17 @@ async function seed(db: Client, secret: string) {
      SELECT gen_random_uuid(), f.id, k
      FROM verification_file f
      CROSS JOIN unnest(enum_range(NULL::verification_check_kind)) AS k
+     WHERE f.status <> 'approved'
      ON CONFLICT (file_id, kind) DO NOTHING`,
+  );
+  // A listed garage was approved through a file, which a report reopens.
+  await db.query(
+    `INSERT INTO verification_file (id, garage_id, status, opened_at, decided_at, decided_by)
+     SELECT gen_random_uuid(), g.id, 'approved', g.created_at, g.approved_at, a.id
+     FROM garage g, account a
+     WHERE g.slug = ANY($1) AND a.email = 'admin@example.test'
+       AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
+    [LISTED.map(({ slug }) => slug)],
   );
   await requests(db);
   await quoteable(db);

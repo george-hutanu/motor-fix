@@ -42,6 +42,7 @@ model Garage {
   approvedAt                 DateTime?                @map("approved_at") @db.Timestamptz(3)
   createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
+  reports                    GarageReport[]
   members                    GarageMember[]
   mechanics                  Mechanic[]
   notificationPreferences    NotificationPreference[]
@@ -330,9 +331,43 @@ model VerificationFile {
   previousFile   VerificationFile?      @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
   nextFile       VerificationFile?      @relation("follows")
   checks         VerificationCheck[]
+  reopenReason   VerificationReopenReason? @map("reopen_reason")
+  reports        GarageReport[]
 
   @@index([garageId, createdAt])
   @@map("verification_file")
+}
+
+enum VerificationReopenReason {
+  garage_report
+
+  @@map("verification_reopen_reason")
+}
+
+enum GarageReportStatus {
+  open
+
+  @@map("garage_report_status")
+}
+
+// A driver's report of a garage, attached to the garage's newest verification
+// file. SQL only, in the migration: the text's 20 to 1,000 characters and one
+// open report per reporter and garage.
+model GarageReport {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  garageId           String             @map("garage_id") @db.Uuid
+  verificationFileId String             @map("verification_file_id") @db.Uuid
+  reporterId         String             @map("reporter_id") @db.Uuid
+  text               String
+  status             GarageReportStatus @default(open)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  garage             Garage             @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  verificationFile   VerificationFile   @relation(fields: [verificationFileId], references: [id], onDelete: Cascade)
+  reporter           Account            @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([verificationFileId])
+  @@index([reporterId, createdAt])
+  @@map("garage_report")
 }
 
 enum ListingDraftStatus {
