@@ -1482,10 +1482,6 @@ _From 977-worktree-cleanup._
 
 _From 977-worktree-cleanup._
 
-### 1018-FR-005 — Every script and hook that reads the clone's own git state or its trunk paths — the identity hook's clone check, the lifecycle gate's unpushed-specs refusal, `lifecycle.mjs` (its specs commit paths and diff), `worktree-remove.mjs`'s specs backup and the QA packet's report lookup on trunk — MUST resolve the clone through the location `specs-repo.mjs` exports and MUST work in both layouts, taking feature paths relative to `specs/` as today.
-
-_From 1018-notion-docs-to-specs._
-
 ### 977-FR-004 — The removal MUST save the worktree's uncommitted product changes, tracked and untracked but not ignored, as `<worktree name>-<HHMMSS>.product.patch` in the same folder, a patch that applies on the branch's head; a clean tree writes no file and the result says so.
 
 _From 977-worktree-cleanup._
@@ -1547,10 +1543,6 @@ _From 1016-mcp-staging._
 _From 1016-mcp-staging._
 
 ### 1018-FR-001 — After the trunk move, george-hutanu/motor-fix-specs on `trunk` MUST hold exactly two top-level folders, `specs/` (every `NNN-slug` feature folder, moved from the root with `git mv` so `git log --follow` on any moved file reaches its pre-move history) and `docs/` (the exported documentation), and at the root only `.github/` (the issue forms), `.gitignore` and `README.md` (which states the layout and how each folder is written).
-
-_From 1018-notion-docs-to-specs._
-
-### 1018-FR-002 — In every motor-fix checkout and worktree the specs clone MUST live at `<checkout>/.motor-fix-specs/`, ignored by git (`.gitignore` entries `/.motor-fix-specs/` and `/specs`, no trailing slash, so the link itself is ignored) and by Docker (`.dockerignore`), and `<checkout>/specs` MUST be a relative symlink (target `.motor-fix-specs/specs` or `.motor-fix-specs`, never an absolute path) that makes `specs/<NNN-slug>/...` resolve unchanged: to `.motor-fix-specs/specs` when the clone's own checked-out trunk has a top-level `specs/` directory (its layout), to `.motor-fix-specs` otherwise, so a clone not yet brought onto a moved `origin/trunk` keeps resolving (FR-003). `specs-repo.mjs` MUST export the clone's location and the docs location for other scripts.
 
 _From 1018-notion-docs-to-specs._
 
