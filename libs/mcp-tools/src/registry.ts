@@ -161,10 +161,15 @@ export async function callTool(
       return failure(refusal('maintenance', language));
     const input = z.object(tool.inputSchema).safeParse(args ?? {});
     if (!input.success) return failure(refusal('validation', language));
-    const output = await tool.handler(actor, input.data, ctx);
+    const answer = await tool.handler(actor, input.data, ctx);
+    // The declared output is all that leaves: a field a read grows later is
+    // dropped here rather than handed to the assistant.
+    const output = (
+      tool.outputSchema ? z.object(tool.outputSchema).parse(answer) : answer
+    ) as Record<string, unknown>;
     return {
       content: [{ text: JSON.stringify(output), type: 'text' }],
-      structuredContent: output as Record<string, unknown>,
+      structuredContent: output,
     };
   } catch (error) {
     return failure(toolError(error, language));

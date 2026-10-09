@@ -34,6 +34,7 @@ async function inbox(request: APIRequestContext) {
 }
 
 test.describe('the garage assistant reads @assistants', () => {
+  // TODO: drop the skip once MCP is deployed on Railway and staging sets MCP_URL.
   test.skip(
     !MCP_URL || !ISSUER,
     'needs the MCP server and the identity server',
