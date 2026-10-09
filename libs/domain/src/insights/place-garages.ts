@@ -12,6 +12,10 @@ const PLACE_GARAGES_PER_NIGHT = 25;
 
 const logger = new Logger('Insights');
 
+// A thrown error with its stack; any other thrown value as text.
+const described = (error: unknown) =>
+  error instanceof Error ? error.stack : String(error);
+
 // Gives a city to the garages saved before the address carried one, a few a
 // night so the look-up's free quota holds: the listed ones first, then the
 // oldest, and the ones never asked before the ones it could not place, so
@@ -65,7 +69,7 @@ export async function placeGarages(db: PrismaClient, provider: PlacesProvider) {
       if (city) placed += 1;
     }
   } catch (error) {
-    logger.error(`placing failed: ${(error as Error).message}`);
+    logger.error('placing failed', described(error));
   }
   const unplaced = garages.length - placed;
   logger.log(`placed ${placed}, unplaced ${unplaced}`);

@@ -29,8 +29,24 @@ describe('placeGarages when the database fails', () => {
       unplaced: 0,
     });
     expect(error).toHaveBeenCalledWith(
+      'placing failed',
       expect.stringContaining('connection lost'),
     );
+  });
+
+  it('logs a thrown value that is not an error as text', async () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const db = database({
+      findMany: async () => {
+        throw 'socket closed';
+      },
+    });
+
+    await expect(placeGarages(db, places)).resolves.toEqual({
+      placed: 0,
+      unplaced: 0,
+    });
+    expect(error).toHaveBeenCalledWith('placing failed', 'socket closed');
   });
 
   it('stops at the garage it could not save and resolves', async () => {
