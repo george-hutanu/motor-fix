@@ -95,6 +95,7 @@ model Garage {
   quotes                     Quote[]
   bookings                   Booking[]
   jobs                       Job[]
+  responseStats              GarageResponseStats?
 
   @@index([cityKey])
   @@map("garage")

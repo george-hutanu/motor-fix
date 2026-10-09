@@ -58,7 +58,7 @@ function newestMtime(dir) {
 export function featureStatus(repo, dir, { covered, retired, capabilities, staleDays, exempt = new Set() }) {
   const featureDir = join(repo, "specs", dir);
   const read = (name) => (existsSync(join(featureDir, name)) ? readFileSync(join(featureDir, name), "utf8") : null);
-  const num = dir.match(/^(\d{3})-/)?.[1] ?? "000";
+  const num = dir.match(/^(\d{3,})-/)?.[1] ?? "000";
 
   const spec = read("spec.md");
   const tasks = read("tasks.md");
@@ -146,7 +146,7 @@ export function gatherStatus(repo, { staleDays = DEFAULT_STALE_DAYS } = {}) {
     exempt: grandfathered(repo),
   };
   const features = (existsSync(specsDir) ? readdirSync(specsDir).sort() : [])
-    .filter((d) => /^\d{3}-/.test(d) && existsSync(join(specsDir, d, "spec.md")))
+    .filter((d) => /^\d{3,}-/.test(d) && existsSync(join(specsDir, d, "spec.md")))
     .map((d) => featureStatus(repo, d, context));
 
   const byState = {};

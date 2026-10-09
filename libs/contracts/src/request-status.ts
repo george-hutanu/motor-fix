@@ -69,6 +69,9 @@ export const JOB_STATUSES = [
 ] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
+// The most steps a job holds; the api refuses the next one and the web disables adding it.
+export const JOB_STEPS_MAX = 20;
+
 export const REQUEST_CLOSED_REASONS = [
   'expired',
   'cancelled',
@@ -78,6 +81,40 @@ export const REQUEST_CLOSED_REASONS = [
   'account_closed',
 ] as const;
 export type RequestClosedReason = (typeof REQUEST_CLOSED_REASONS)[number];
+
+// Why a garage's request closed for it, tried in this order; a close that
+// matches none reads as account_closed's "Request closed".
+export const GARAGE_CLOSE_REASONS = [
+  'expired',
+  'garage_suspended',
+  'cancelled',
+  'account_closed',
+  'accepted_elsewhere',
+] as const;
+export type GarageCloseReason = (typeof GARAGE_CLOSE_REASONS)[number];
+
+export const GARAGE_CLOSE_REASON_LABELS: Record<
+  'ro' | 'en',
+  Record<GarageCloseReason, string>
+> = {
+  en: {
+    accepted_elsewhere: 'The customer accepted another quote',
+    account_closed: 'Request closed',
+    cancelled: 'Request cancelled by the customer',
+    expired: 'Request expired',
+    garage_suspended: 'Garage suspended',
+  },
+  ro: {
+    accepted_elsewhere: 'Clientul a acceptat altă ofertă',
+    account_closed: 'Cerere închisă',
+    cancelled: 'Cerere anulată de client',
+    expired: 'Cerere expirată',
+    garage_suspended: 'Service suspendat',
+  },
+};
+
+export const GARAGE_REQUEST_FILTERS = ['waiting', 'closed', 'quoted'] as const;
+export type GarageRequestFilter = (typeof GARAGE_REQUEST_FILTERS)[number];
 
 export const REQUEST_SOURCES = [
   'search',
@@ -114,3 +151,19 @@ export const BOOKING_CANCEL_REASONS = [
   'driver_account_closed',
 ] as const;
 export type BookingCancelReasonCode = (typeof BOOKING_CANCEL_REASONS)[number];
+
+// Plain values the browser reads too, kept out of the DTO file and its
+// server imports.
+// The garages one request goes to, the profile's included.
+export const REQUEST_MAX_GARAGES = 5;
+export const REQUEST_DESCRIPTION_MAX = 1000;
+// A request with no job switched on says what is wrong in at least this many.
+export const REQUEST_DESCRIPTION_MIN_WITHOUT_JOBS = 10;
+
+export const CANNOT_RECEIVE_REASONS = [
+  'brand',
+  'fuel',
+  'jobs',
+  'not_taking_requests',
+] as const;
+export type CannotReceiveReason = (typeof CANNOT_RECEIVE_REASONS)[number];

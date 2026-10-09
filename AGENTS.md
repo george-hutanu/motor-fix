@@ -160,8 +160,9 @@ epic or a plan, whether run through spec-kit or by hand.
   open questions. `/speckit-archive` will not close a feature until the
   refresh is logged after its finish, in `notion-sync.md` or the merged
   PR's finish comment (`notion-ready.mjs check -`).
-- **Plans live under Delivery › Plans in Notion:** one execution-plan page and
-  one build-timeline database per epic (`speckit-notion-sync plan`).
+- **Plans:** one build-timeline database per epic under Delivery › Plans in
+  Notion, and its build plan as a file in the specs repo's
+  `docs/reference/build-plans/` (`speckit-notion-sync plan`).
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
   `after_specify`, `before_plan`, `before_implement`), and so do
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
@@ -242,13 +243,23 @@ Read only what decides the next step; every check still runs:
 
 ## Specs live in their own repo
 
-motor-fix is public and does not track `specs/` (`.gitignore`: `/specs/`).
-Every checkout, the main one and each worktree, holds its own clone of the
-private `george-hutanu/motor-fix-specs` at `specs/`, on `trunk`; never a
-submodule. `node .claude/scripts/specs-repo.mjs ensure` clones, adopts a
-plain folder or fast-forwards it (npm `prepare` and SessionStart run it
-`--soft`); `commit "<message>" -- <feature>` commits and pushes to `trunk`,
-rebasing and retrying when another session pushed first. `lifecycle.mjs`
+motor-fix is public and does not track the specs (`.gitignore`:
+`/.motor-fix-specs/`, `/specs`). Every checkout, the main one and each
+worktree, holds its own clone of the private `george-hutanu/motor-fix-specs`
+at `.motor-fix-specs/` (`cloneDir`), on `trunk`; never a submodule. Its
+`specs/` holds the feature folders and `specs` in the checkout links to it;
+its `docs/` holds the product documentation, organised by Diátaxis
+(`tutorials/`, `how-to/`, `reference/`, `explanation/`, decisions one file
+each in `explanation/decisions/`), the repo its only source; `llms.txt` at
+its root lists every page with its summary, so an agent reads it first, and
+`docs/index.json` maps each old Notion id to its file. Its
+`scripts/docs-lint.mjs` checks the pages and runs in its CI.
+`node .claude/scripts/specs-repo.mjs ensure` clones, adopts, moves an older
+clone at `specs/` into place or fast-forwards it (npm `prepare` and
+SessionStart run it `--soft`); `commit "<message>" -- <feature>` (or a
+`docs/…` path) commits and pushes to `trunk`, rebasing and retrying when
+another session pushed first. `migrate-trunk` moved trunk's feature folders
+under `specs/` once. `lifecycle.mjs`
 ready and merge use it, and `stop:pr-lifecycle` refuses unpushed specs
 commits. Workflows do not read specs; `SPECS_DEPLOY_KEY` (read-only) is
 there for one that will.
@@ -341,9 +352,10 @@ the axe checks in the QA sweep (`.claude/scripts/pr-test/sweep.mjs`) and
 ## Product and stack
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The
-product, architecture and backlog live in the Notion space **MotorFix —
-Product documentation** — Architecture > Technology stack and Architecture
-decisions are the source for anything the constitution does not fix.
+product and architecture documentation lives in the specs repo's
+`.motor-fix-specs/docs/` (start at its `llms.txt`; the backlog stays in the
+tracker) — `docs/reference/stack.md` and `docs/explanation/decisions/` are the
+source for anything the constitution does not fix.
 
 - Given: Angular (standalone, signals) + Spartan UI (brain primitives, helm
   components copied into `libs/ui-cockpit`, Angular CDK) with the Cockpit
@@ -408,7 +420,7 @@ decisions are the source for anything the constitution does not fix.
   deleted worktrees; neither fails on Docker. By hand,
   `node scripts/test-services.ts down [<worktree>] [--volumes]` stops one
   stack (the current checkout's by default).
-- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
+- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most eight
   of the free plan's 20 concurrent runners: Checks (one runner and one
   install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
   and Compose stack, where `docker-compose.yml` boots and creates the bucket;
@@ -416,7 +428,7 @@ decisions are the source for anything the constitution does not fix.
   (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright `web-e2e`,
   four workers, servers started in the job; a test that passes only on a
   retry fails), Docker build (`web`, `node-app`, reading the layer cache that
-  `release.yml` writes on `main`), then `CI OK`, which
+  `release.yml` writes on `main`, and `keycloak`), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the Changes and `CI OK` jobs; the

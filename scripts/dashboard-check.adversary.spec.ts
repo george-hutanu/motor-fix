@@ -615,7 +615,7 @@ describe('the dashboard check on the overview rows', () => {
 
 // @traces 879-FR-008 879-FR-015
 describe('the product dashboard', () => {
-  it('names the seven counters of the spec', () => {
+  it('names every product counter, the job steps one included', () => {
     expect(PRODUCT_COUNTERS).toEqual([
       'motorfix_searches_total',
       'motorfix_sign_ins_total',
@@ -624,6 +624,9 @@ describe('the product dashboard', () => {
       'motorfix_quotes_total',
       'motorfix_emails_sent_total',
       'motorfix_notifications_sent_total',
+      'motorfix_job_steps_total',
+      'motorfix_request_received_total',
+      'motorfix_quote_received_total',
     ]);
   });
 

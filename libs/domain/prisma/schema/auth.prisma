@@ -71,6 +71,7 @@ model Account {
   noShowBookings          Booking[]                @relation("BookingNoShowRecordedBy")
   jobs                    Job[]                    @relation("JobDriver")
   jobStageEntries         JobStageEntry[]          @relation("JobStageActor")
+  jobStepsDone            JobStep[]                @relation("JobStepDoneBy")
 
   @@index([createdAt(sort: Desc), id(sort: Desc)])
   @@map("account")

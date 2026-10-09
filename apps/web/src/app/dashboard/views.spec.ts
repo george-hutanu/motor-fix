@@ -1,17 +1,28 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { type MeDto, NotificationsService } from '@motor-fix/data-access';
+import {
+  GarageRequestsService,
+  type MeDto,
+  NotificationsService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
-import { Subject } from 'rxjs';
+import { NEVER, Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
+import { DriverHome } from './driver-home/driver-home';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
+import { GarageHome } from './garage-requests/garage-home/garage-home';
+import { GarageRequestsFeed } from './garage-requests/garage-requests-feed';
+import { GarageRequestsView } from './garage-requests/garage-requests-view/garage-requests-view';
+import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
+import { RequestsView } from './requests-view/requests-view';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
 
@@ -53,6 +64,7 @@ describe('the dashboard view lists', () => {
     expect(DASHBOARDS.driver.views).toEqual([
       {
         label: 'shell.frame.nav.dashboard',
+        load: expect.any(Function),
         path: '',
         tab: 'shell.frame.tab.dashboard',
         title: 'shell.frame.title.driver.dashboard',
@@ -60,6 +72,7 @@ describe('the dashboard view lists', () => {
       {
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
+        load: expect.any(Function),
         path: 'requests',
         tab: 'shell.frame.tab.requests',
         title: 'shell.frame.title.driver.requests',
@@ -107,11 +120,35 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 097-FR-001
+  // The driver's home and request list load with their view, so the first
+  // page any visitor opens does not carry them (the initial bundle budget).
+  it('loads the driver home and the request list only when their view opens', async () => {
+    const [home, requests] = DASHBOARDS.driver.views;
+
+    expect(home.body).toBeUndefined();
+    expect(requests.body).toBeUndefined();
+    expect(await home.load?.()).toBe(DriverHome);
+    expect(await requests.load?.()).toBe(RequestsView);
+  });
+
+  // @traces 343-FR-006
+  // @traces 343-FR-007
+  it('loads the garage Panou and Cereri de ofertă only when their view opens', async () => {
+    const [home, requests] = DASHBOARDS.garage.views;
+
+    expect(home.body).toBeUndefined();
+    expect(requests.body).toBeUndefined();
+    expect(await home.load?.()).toBe(GarageHome);
+    expect(await requests.load?.()).toBe(GarageRequestsView);
+    expect(requests.counter).toBe('requestsWaiting');
+  });
+
   it('gives the garage and admin dashboards their addresses in menu order', () => {
     expect(DASHBOARDS.garage.views.map((view) => view.path)).toEqual([
       '',
       'requests',
       'schedule',
+      'jobs',
       'team',
       'prices',
       'reviews',
@@ -147,9 +184,9 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.garages',
       },
       {
-        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
+        load: expect.any(Function),
         path: 'users',
         tab: 'shell.frame.tab.users',
       },
@@ -185,6 +222,12 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
+  it('downloads the admin users view when it is opened, not with the first page', async () => {
+    const users = DASHBOARDS.admin.views.find((view) => view.path === 'users');
+
+    await expect(users?.load?.()).resolves.toBe(AdminUsers);
+  });
+
   it('names each dashboard for its bar and tags it for its menu', () => {
     expect(DASHBOARDS.driver.name).toBe('shell.frame.bar.driver');
     expect(DASHBOARDS.garage.name).toBe('shell.frame.bar.garage');
@@ -197,6 +240,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'team',
       'prices',
       'reviews',
@@ -211,6 +255,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'settings',
       'history',
     ]);
@@ -219,7 +264,7 @@ describe('the dashboard view lists', () => {
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
-    ).toEqual(['', 'settings', 'history']);
+    ).toEqual(['', 'jobs', 'settings', 'history']);
     expect(
       paths('garage', [
         'garage.own_jobs',
@@ -227,7 +272,32 @@ describe('the dashboard view lists', () => {
         'garage.requests',
         'garage.schedule',
       ]),
-    ).toEqual(['', 'requests', 'schedule', 'settings', 'history']);
+    ).toEqual(['', 'requests', 'schedule', 'jobs', 'settings', 'history']);
+  });
+
+  // @traces 424-FR-012
+  it('gives every garage role the jobs view, with its body, between the schedule and the team', async () => {
+    const jobs = DASHBOARDS.garage.views.find((view) => view.path === 'jobs');
+    expect(jobs).toEqual({
+      capability: 'garage.own_jobs',
+      empty: 'shell.frame.coming.garage.jobs',
+      label: 'shell.frame.nav.garage.jobs',
+      load: expect.any(Function),
+      path: 'jobs',
+      subtitle: 'shell.frame.subtitle.garage.jobs',
+      tab: 'shell.frame.tab.jobs',
+      title: 'shell.frame.title.garage.jobs',
+    });
+    // Downloaded with the view, not with the first page.
+    await expect(jobs?.load?.()).resolves.toBe(JobsView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'jobs');
+    expect(route?.children?.[0].component).toBeUndefined();
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      JobsView,
+    );
+    for (const role of [OWNER, RECEPTIONIST, ['garage.own_jobs']])
+      expect(paths('garage', role)).toContain('jobs');
+    expect(paths('garage', ['garage.audit_history'])).not.toContain('jobs');
   });
 
   // @traces 198-FR-011
@@ -408,6 +478,12 @@ const ADMIN = [
 ];
 
 const ATELIER = 'garage-1';
+
+// What the garage's request list answers; the server's 404 means not allowed.
+let requestList: () => Promise<unknown>;
+beforeEach(() => {
+  requestList = async () => ({ items: [], nextCursor: null, total: 0 });
+});
 const access = (
   status: 'draft' | 'approved' | 'suspended' = 'approved',
   features: Record<string, boolean> = {},
@@ -455,7 +531,18 @@ async function open(
       },
       {
         provide: Live,
-        useValue: { events: new Subject(), resync: new Subject() },
+        useValue: {
+          events: new Subject(),
+          offline: signal(false),
+          on: () => NEVER,
+          resync: new Subject(),
+          state: signal('open'),
+        },
+      },
+      GarageRequestsFeed,
+      {
+        provide: GarageRequestsService,
+        useValue: { garageRequestsControllerList: () => requestList() },
       },
       {
         provide: AdminOverview,
@@ -490,8 +577,8 @@ describe('the dashboard view routes', () => {
   // @traces 097-FR-004
   it('keeps the shared placeholder for a driver view with no empty state of its own', async () => {
     const { element } = await open(
-      '/app/driver/requests',
-      ['driver.requests'],
+      '/app/driver/reviews',
+      ['driver.reviews'],
       'driver',
     );
 
@@ -604,7 +691,8 @@ describe('the dashboard view routes', () => {
   });
 
   // @traces 097-FR-004 097-FR-008
-  it('shows the dashboard’s empty state on the garage dashboard address of an approved or suspended garage', async () => {
+  // @traces 343-FR-006
+  it('shows the requests panel, not the empty state, on the garage dashboard address of an approved or suspended garage', async () => {
     for (const status of ['approved', 'suspended'] as const) {
       TestBed.resetTestingModule();
       const { element } = await open(
@@ -615,7 +703,8 @@ describe('the dashboard view routes', () => {
       );
 
       expect(element.querySelector('mf-admin-panel')).toBeNull();
-      expect(element.textContent).toContain(
+      expect(element.querySelector('mf-garage-requests-panel')).not.toBeNull();
+      expect(element.textContent).not.toContain(
         'Aici vei vedea ce se întâmplă azi în service.',
       );
       expect(element.textContent).not.toContain(
@@ -648,9 +737,16 @@ describe('the dashboard view routes', () => {
 
   // @traces 097-FR-006 097-FR-008
   it('shows the empty state, not the check line, when the session’s garage matches no membership', async () => {
-    const { element } = await open('/app/garage', OWNER, 'garage', [
+    requestList = () => Promise.reject(new HttpErrorResponse({ status: 404 }));
+    const { element, harness } = await open('/app/garage', OWNER, 'garage', [
       { ...access('draft')[0], garageId: 'another-garage' },
     ]);
+    // The requests' first read answers 404 a moment later.
+    for (let i = 0; i < 4; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await harness.fixture.whenStable();
+      harness.detectChanges();
+    }
 
     expect(element.textContent).toContain(
       'Aici vei vedea ce se întâmplă azi în service.',

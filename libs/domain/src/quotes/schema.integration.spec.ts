@@ -35,6 +35,7 @@ function insertQuote(columns: Record<string, unknown>) {
     expires_at: new Date(Date.now() + 7 * 24 * 3_600_000).toISOString(),
     garage_id: garageId,
     id: randomUUID(),
+    idempotency_key: randomUUID(),
     recipient_id: recipientId,
     request_id: requestId,
     ...columns,

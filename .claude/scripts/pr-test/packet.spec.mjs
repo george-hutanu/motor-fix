@@ -208,6 +208,23 @@ describe('requirements touched', () => {
     assert.ok(calls.some((c) => c.includes('repos/george-hutanu/motor-fix-specs/contents/001-thing/tasks.md?ref=trunk')), 'tasks.md is read from the private specs repository');
   });
 
+  // @traces 1018-FR-005
+  it('reads the feature from specs/ on a moved trunk first, then from the root of an old one', () => {
+    const out = artifact(report());
+    const { gh, calls } = fakeGh({
+      prView: ok(pr(files(['.claude/scripts/pr-test/packet.mjs']))),
+      contents: {
+        'specs/001-thing/tasks.md': '- [x] T001 Green: `.claude/scripts/pr-test/packet.mjs` (FR-001)\n',
+        'specs/001-thing/spec.md': '- **FR-001**: The script MUST write a packet.\n',
+      },
+    });
+    buildPacket({ out, pr: 137, repo: REPO, gh });
+    assert.match(packetOf(out), /FR-001.*MUST write a packet/);
+    const tasks = calls.filter((c) => /contents\/(specs\/)?001-thing\/tasks\.md/.test(c));
+    assert.ok(tasks[0].includes('contents/specs/001-thing/tasks.md?ref=trunk'), tasks.join('\n'));
+    assert.ok(!calls.some((c) => c.includes('contents/001-thing/tasks.md')), 'the root path is asked only after a 404');
+  });
+
   it('says so when the feature has no tasks file', () => {
     const out = artifact(report());
     const { gh } = fakeGh({ prView: ok(pr(files(['x.mjs']))) });

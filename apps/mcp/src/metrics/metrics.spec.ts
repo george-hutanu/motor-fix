@@ -10,6 +10,7 @@ import {
   recordAuthFailure,
   recordKeyFetch,
   recordRequest,
+  setIssuerUp,
   toolLabel,
 } from './metrics';
 
@@ -235,5 +236,34 @@ describe('a tool call', () => {
     expect(labels(await points('mcp_tool_calls_total'))).toEqual([
       { outcome: 'error', tool: 'list_my_cars' },
     ]);
+  });
+});
+
+describe('the identity server gauge', () => {
+  async function issuerUp() {
+    const { resourceMetrics } = await memory.metricReader.collect();
+    const values = resourceMetrics.scopeMetrics
+      .filter((scope) => scope.scope.name === 'mcp')
+      .flatMap((scope) => scope.metrics)
+      .filter((metric) => metric.descriptor.name === 'mcp_issuer_up')
+      .flatMap((metric) => metric.dataPoints as DataPoint<number>[]);
+    return {
+      environment:
+        resourceMetrics.resource.attributes['deployment.environment'],
+      values: values.map((p) => ({ attributes: p.attributes, value: p.value })),
+    };
+  }
+
+  it('says nothing before the first probe, then 1 while the identity server answers and 0 once it does not', async () => {
+    expect((await issuerUp()).values).toEqual([]);
+
+    setIssuerUp(true);
+    expect(await issuerUp()).toEqual({
+      environment: 'staging',
+      values: [{ attributes: {}, value: 1 }],
+    });
+
+    setIssuerUp(false);
+    expect((await issuerUp()).values).toEqual([{ attributes: {}, value: 0 }]);
   });
 });

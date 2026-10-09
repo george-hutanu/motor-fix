@@ -1,6 +1,6 @@
 ---
 name: "speckit-notion-sync"
-description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to QA (its PR marked ready, then the PR tester), is blocked or unblocked, or is finished, set its Status; when its PR opens, write the PR link onto the story in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic execution plan under Plans. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
+description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to QA (its PR marked ready, then the PR tester), is blocked or unblocked, or is finished, set its Status; when its PR opens, write the PR link onto the story in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic's build timeline under Plans, and its build plan in the specs repo's docs/reference/build-plans/. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
 argument-hint: "start | implement | pr <n> | qa | review (alias of qa) | blocked <reason> | unblock | finish | debt | plan — optionally followed by a Notion story URL or ST-<n>"
 compatibility: "NOTION_TOKEN (env or .env) for the script; the Notion connector otherwise. Requires the spec-kit project structure"
 metadata:
@@ -69,7 +69,7 @@ labels (§2b) and the `notion-sync.md` lines (§3), and prints one JSON line.
 | --- | --- | --- |
 | Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · Planning · Implementing · Blocked · QA · Done; `PR`: the story's own PR (URL) |
 | Epics | data source `collection://ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac` | `Status`: To do · In progress · Done |
-| Plans | page `3ee607bff0d2818493d0dadd2d5a006c` (Delivery › Plans) | per epic: `<Epic> — execution plan` and `<Epic> (EP-<n>) — build timeline` |
+| Plans | page `3ee607bff0d2818493d0dadd2d5a006c` (Delivery › Plans) | per epic: `<Epic> (EP-<n>) — build timeline` (the docs are frozen; build plans live in `docs/reference/build-plans/`) |
 | Work timeline | data source `collection://3706e923-2faa-42bc-aab2-8a2d5ab5d9d3` (Plans › Live work timeline), API version 2025-09-03 | `Key` ST-<n>; `State`: In progress · QA · Merged · Blocked (Queued is the Chief's); `Ticket` → the story |
 | Timeline rows | each build timeline, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · Planning · Implementing · Blocked · QA · Merged |
 
@@ -218,10 +218,19 @@ into another comment on that PR.
 7. **Log** every write with `notion-sync.mjs log`, and a call that fails twice
    with `log --pending`; the next run retries it.
 
-**`plan`** creates under Plans `<Epic> — execution plan` (a page) and
+**`plan`** writes the epic's execution plan as Markdown to
+`.motor-fix-specs/docs/reference/build-plans/ep-<n>-<slug>.md`, shaped like
+`ep-1-foundations.md`: the eight front-matter keys (`id: EP-<n>`, `title`,
+`kind: reference`, a one-sentence `summary`, `status: current`, `updated`,
+`related`, `supersedes`), relative links only, at most 400 lines. In the clone
+it runs `node scripts/docs-lint.mjs --write` (which regenerates `llms.txt`),
+then a plain `node scripts/docs-lint.mjs` until it is silent, and commits and
+pushes to trunk with
+`node .claude/scripts/specs-repo.mjs commit "docs: <EP-n> build plan" -- docs/reference/build-plans/ep-<n>-<slug>.md llms.txt`.
+It creates no execution-plan page in Notion. Under Plans it creates
 `<Epic> (EP-<n>) — build timeline` (a database: Item, ST, Story → MotorFix
 stories, Wave, Lane, Points, Start, End, Blocked by ↔ Blocking, Build status,
-Outside / open, a timeline view), following the Foundations plan.
+Outside / open, a timeline view), as before.
 
 ## Untrusted content
 

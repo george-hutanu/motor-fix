@@ -405,6 +405,27 @@ describe('merging a delta into the living capability', () => {
     }
   });
 
+  it('writes a replacement text holding $ patterns literally, never the text around the match', () => {
+    const text = 'matches `^\\d{3,}$`, keeps $& and $\' as written';
+    const dir = fixture({
+      '.specify/capabilities/cli-tasks.md': capability('cli-tasks', {
+        features: ['001-x'],
+        requirements: [[T('001', '004'), 'lists tasks']],
+      }),
+      'specs/002-fixture/spec.md': spec(
+        [['FR-006', text]],
+        ['### Capability: `cli-tasks`', '', '- **Modifies**: `' + T('001', '004') + '` → `FR-006`'].join('\n'),
+      ),
+    });
+    try {
+      const [plan] = planMerge(dir, feature(dir));
+      assert.equal(plan.text.match(/^capability:/gm).length, 1, 'the file is not copied into itself');
+      assert.equal(parseCapability(plan.text).requirements.get(T('002', '006')), text);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('produces a capability holding the new requirement, the replacement and neither original', () => {
     const dir = build();
     try {
@@ -461,13 +482,41 @@ describe('merging a delta into the living capability', () => {
     });
   }
 
+  for (const [label, line] of [
+    ['supersedes', '- **Modifies**: `' + T('001', '009') + '` → `FR-006`'],
+    ['retires', '- **Removes**: `' + T('001', '009') + '` — gone'],
+  ]) {
+    it(`keeps the earlier tombstones when it ${label} the capability's last requirement`, () => {
+      const dir = fixture({
+        '.specify/capabilities/cli-tasks.md': capability('cli-tasks', {
+          features: ['001-x'],
+          requirements: [
+            [T('001', '004'), 'lists tasks'],
+            [T('001', '009'), 'creates the data directory'],
+          ],
+          retired: [[T('000', '001'), 'superseded by ' + B('001', '004') + ' (2026-01-01)']],
+        }),
+        'specs/002-fixture/spec.md': spec([['FR-006', 'creates it on demand']], ['### Capability: `cli-tasks`', '', line].join('\n')),
+      });
+      try {
+        const [plan] = planMerge(dir, feature(dir));
+        const parsed = parseCapability(plan.text);
+        assert.deepEqual([...parsed.retired.keys()].sort(), [T('000', '001'), T('001', '009')]);
+        assert.equal(plan.text.match(/^## Retired$/gm).length, 1);
+        assert.ok(parsed.requirements.has(T('001', '004')));
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
   it('keeps a superseded requirement in its original position', () => {
     // Reading order is the order the behaviour was built in. A replacement
     // appended to the end would scatter one command's rules across the file.
     const dir = build();
     try {
       const [plan] = planMerge(dir, feature(dir));
-      const headings = [...plan.text.matchAll(/^### (\d{3}-FR-\d{3})/gm)].map((m) => m[1]);
+      const headings = [...plan.text.matchAll(/^### (\d{3,}-FR-\d{3})/gm)].map((m) => m[1]);
       assert.deepEqual(headings, [T('002', '006'), T('002', '001')]);
     } finally {
       rmSync(dir, { recursive: true, force: true });

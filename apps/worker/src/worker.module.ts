@@ -12,6 +12,8 @@ import {
   phoneConfig,
   placesConfig,
   pushConfig,
+  QUOTE_RECEIVED_CONSUMER,
+  REQUEST_RECEIVED_CONSUMER,
   RemindersModule,
   reminderDayMs,
   StorageModule,
@@ -56,7 +58,11 @@ export function workerModule(
       }),
       StorageModule.register(env),
       OutboxRelayModule.register({
-        consumers: [NEWS_CONSUMER],
+        consumers: [
+          NEWS_CONSUMER,
+          QUOTE_RECEIVED_CONSUMER,
+          REQUEST_RECEIVED_CONSUMER,
+        ],
         databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,
       }),

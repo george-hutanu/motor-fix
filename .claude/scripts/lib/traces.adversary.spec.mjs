@@ -77,8 +77,8 @@ describe('traceTokens adversarial', () => {
   it('rejects a hash comment', () => {
     assert.deepEqual(ids(`# @traces ${A}`), []);
   });
-  it('rejects four-digit feature numbers', () => {
-    assert.deepEqual(ids(`${tag} ${T('0001', '001')}`), []);
+  it('accepts four-digit feature numbers', () => {
+    assert.deepEqual(ids(`${tag} ${T('1018', '001')}`), [T('1018', '001')]);
   });
   it('rejects four-digit requirement numbers', () => {
     assert.deepEqual(ids(`${tag} ${T('001', '0001')}`), []);

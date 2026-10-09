@@ -22,6 +22,8 @@ export interface LiveView<T> {
   readonly isLoading: Signal<boolean>;
   // The last read failed, the first one or a re-read with data shown.
   readonly failed: Signal<boolean>;
+  // How many reads have succeeded: moves even when a read equals the last one.
+  readonly reads: Signal<number>;
   reload(): void;
 }
 
@@ -48,6 +50,7 @@ export function liveView<T>(
   const gone = signal(false);
   const isLoading = signal(false);
   const lastFailed = signal(false);
+  const reads = signal(0);
   const firstRead = computed(() => isLoading() && value() === undefined);
   const destroyRef = inject(DestroyRef);
   let again = false;
@@ -76,6 +79,7 @@ export function liveView<T>(
       error.set(undefined);
       gone.set(false);
       lastFailed.set(false);
+      reads.update((n) => n + 1);
     } catch (failure) {
       if (!destroyRef.destroyed) failed(failure);
     } finally {
@@ -106,6 +110,7 @@ export function liveView<T>(
     failed: lastFailed.asReadonly(),
     gone: gone.asReadonly(),
     isLoading: firstRead,
+    reads: reads.asReadonly(),
     reload: () => void read(),
     value: value.asReadonly(),
   };

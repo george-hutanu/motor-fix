@@ -66,15 +66,15 @@ export function parseCapability(text) {
       continue;
     }
     if (section === "requirements") {
-      const m = line.match(/^###\s+(\d{3}-FR-\d{3})\s*(?:—|-|:)?\s*(.*)$/);
+      const m = line.match(/^###\s+(\d{3,}-FR-\d{3})\s*(?:—|-|:)?\s*(.*)$/);
       if (m) requirements.set(m[1], m[2].trim());
     } else if (section === "retired") {
-      const m = line.match(/^-\s+`(\d{3}-FR-\d{3})`\s*(?:—|-|:)?\s*(.*)$/);
+      const m = line.match(/^-\s+`(\d{3,}-FR-\d{3})`\s*(?:—|-|:)?\s*(.*)$/);
       if (m) retired.set(m[1], m[2].trim());
     }
   }
   const slug = text.match(/^capability:\s*(\S+)\s*$/m)?.[1] ?? null;
-  const features = [...text.matchAll(/^\s+-\s+(\d{3}-[\w-]+)\s*$/gm)].map((m) => m[1]);
+  const features = [...text.matchAll(/^\s+-\s+(\d{3,}-[\w-]+)\s*$/gm)].map((m) => m[1]);
   return { slug, features, requirements, retired };
 }
 
@@ -149,13 +149,13 @@ export function parseDelta(specText) {
       for (const value of listValues(line)) current.adds.push(...expandRange(value.replace(/`/g, "")));
     } else if (/^[\s-]*\*{0,2}Modifies\*{0,2}\s*:/i.test(line)) {
       for (const value of listValues(line)) {
-        const m = value.match(/`?(\d{3}-FR-\d{3})`?\s*(?:→|->)\s*`?(FR-\d{3})`?/);
+        const m = value.match(/`?(\d{3,}-FR-\d{3})`?\s*(?:→|->)\s*`?(FR-\d{3})`?/);
         if (m) current.modifies.push({ base: m[1], by: m[2] });
         else current.modifies.push({ base: value.replace(/`/g, ""), by: null });
       }
     } else if (/^[\s-]*\*{0,2}Removes\*{0,2}\s*:/i.test(line)) {
       for (const value of listValues(line)) {
-        const m = value.match(/`?(\d{3}-FR-\d{3})`?\s*(?:—|-|:)?\s*(.*)$/);
+        const m = value.match(/`?(\d{3,}-FR-\d{3})`?\s*(?:—|-|:)?\s*(.*)$/);
         if (m) current.removes.push({ base: m[1], why: m[2].trim() });
       }
     }
@@ -289,6 +289,9 @@ const renderRequirement = (token, text, feature) =>
  * the new file text and never writes, so `merge` without `--apply` is an honest
  * preview rather than a description of what it intends to do.
  */
+/** A requirement's block: its heading to the next `##` or `###` heading, so the last one never takes `## Retired` with it. */
+const requirementBlock = (base) => new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^#{2,3} )[\\s\\S])*`, "m");
+
 export function planMerge(repo, feature) {
   const specText = readFileSync(join(feature.dir, "spec.md"), "utf8");
   const declared = declaredRequirements(specText);
@@ -308,14 +311,16 @@ export function planMerge(repo, feature) {
       const token = `${feature.num}-${by}`;
       // The replacement takes the base's place in the document, so the reading
       // order of a capability stays the order its behaviour was built in.
-      const pattern = new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^### )[\\s\\S])*`, "m");
-      text = text.replace(pattern, renderRequirement(token, declared.get(by) ?? "", feature) + "\n");
+      const pattern = requirementBlock(base);
+      // A function, so a `$` pattern in the requirement text is written as is.
+      const replacement = `${renderRequirement(token, declared.get(by) ?? "", feature)}\n`;
+      text = text.replace(pattern, () => replacement);
       modified.push({ base, token });
     }
 
     for (const { base, why } of section.removes) {
       if (!cap.requirements.has(base)) continue;
-      const pattern = new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^### )[\\s\\S])*`, "m");
+      const pattern = requirementBlock(base);
       text = text.replace(pattern, "");
       removed.push({ base, why });
     }
@@ -375,7 +380,7 @@ function main() {
 
   const resolve = () =>
     target
-      ? { dir: join(repo, target), name: basename(target), num: basename(target).match(/^(\d{3})-/)?.[1] ?? "000" }
+      ? { dir: join(repo, target), name: basename(target), num: basename(target).match(/^(\d{3,})-/)?.[1] ?? "000" }
       : activeFeature(repo);
 
   if (command === "list" || command === undefined) {

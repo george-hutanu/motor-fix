@@ -110,6 +110,7 @@
       "garage": {
         "dashboard": "Aici vei vedea ce se întâmplă azi în service.",
         "history": "Aici vei vedea cine a schimbat ce în service.",
+        "jobs": "Aici vei vedea lucrările service‑ului.",
         "prices": "Aici vei vedea intervalele de preț pe lucrări.",
         "profile": "Aici vei edita profilul service‑ului.",
         "requests": "Aici vei vedea cererile de ofertă ale șoferilor și vei răspunde cu o ofertă.",
@@ -145,6 +146,7 @@
       "garage": {
         "assistant": "Asistent AI",
         "history": "Istoric modificări",
+        "jobs": "Lucrări",
         "prices": "Prețuri",
         "profile": "Profilul service‑ului",
         "requests": "Cereri de ofertă",
@@ -171,6 +173,7 @@
       },
       "garage": {
         "history": "Cine a schimbat ce și când",
+        "jobs": "Lucrările confirmate, de azi încolo",
         "prices": "Intervalele pe care le văd șoferii pe profilul tău",
         "profile": "Așa te văd șoferii pe hartă",
         "requests": "Răspunde în mai puțin de o oră ca să apari primul la șofer.",
@@ -188,6 +191,7 @@
       "dashboard": "Panou",
       "garages": "Service‑uri",
       "history": "Istoric",
+      "jobs": "Lucrări",
       "overview": "Panou",
       "prices": "Prețuri",
       "profile": "Profil",
@@ -213,6 +217,7 @@
       "garage": {
         "assistant": "Asistentul tău AI",
         "history": "Istoric modificări",
+        "jobs": "Lucrări",
         "prices": "Prețuri",
         "profile": "Profilul service‑ului",
         "requests": "Cereri de ofertă",

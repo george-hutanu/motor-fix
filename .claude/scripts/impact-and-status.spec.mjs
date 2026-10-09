@@ -79,6 +79,18 @@ describe('what rests on a requirement', () => {
     }
   });
 
+  it('finds a harness spec under .claude that names it, and skips a worktree copy', () => {
+    const dir = build({
+      '.claude/scripts/emit.spec.mjs': `// @traces ${T('002', '002')}\nit('emits', () => {});\n`,
+      '.claude/worktrees/w/.claude/scripts/emit.spec.mjs': `// @traces ${T('002', '002')}\nit('emits', () => {});\n`,
+    });
+    try {
+      assert.deepEqual(impactOf(dir, feature(dir), 'FR-002').tests, ['.claude/scripts/emit.spec.mjs']);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('says so when the id is not declared at all', () => {
     const dir = build();
     try {

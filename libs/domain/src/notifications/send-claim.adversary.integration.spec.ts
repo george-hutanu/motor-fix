@@ -100,11 +100,19 @@ const emailRows = (accountId: string) =>
     where: { accountId, channel: 'email' },
   });
 
+// What the quote fan-out puts in a QUOTE_RECEIVED.
+const QUOTE = {
+  garage: 'Atelier Dinamo',
+  link: 'https://motorfix.test/app/driver/requests/r-1',
+  range: '450–600',
+};
+
 async function queuedEmail(name = 'andrei', eventId = 'evt-1') {
   const owner = await account(name);
   await service.notify({
     eventId,
     kind: 'QUOTE_RECEIVED',
+    params: QUOTE,
     recipients: [owner],
   });
   return { owner, row: (await emailRows(owner))[0] };

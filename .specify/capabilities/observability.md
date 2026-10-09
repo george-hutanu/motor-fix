@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -13,6 +13,10 @@ features:
   - 365-mcp-oauth
   - 879-dashboards
   - 397-listing-ticks
+  - 343-live-quote-requests
+  - 374-assistant-requests
+  - 1016-mcp-staging
+  - 344-send-quote
 ---
 
 # Capability: Observability
@@ -428,6 +432,30 @@ _From 879-dashboards._
 ### 397-FR-013 — The new endpoint MUST be listed with its telemetry in `infra/observability/inventory.json` (the API's request metrics and logs cover it; no new dashboard panel or alert, with the reason stated), as every new endpoint is.
 
 _From 397-listing-ticks._
+
+### 343-FR-017 — Observability: the consumer is listed in `infra/observability/inventory.json` with one counter of REQUEST_RECEIVED messages built per garage outcome (`built`, `muted`, `skipped`) and one structured log line per event with the request id and the recipient count (never the car, driver or description), the queue on the `motorfix-queues` dashboard and the counter on `motorfix-product` (the dashboards in `infra/observability/grafana/dashboards/`), and no alert (no agreed threshold; ST-880 adds alert rules); the `status` filter is one query on an existing endpoint and adds no inventory entry. The PR's Observability section names them.
+
+_From 343-live-quote-requests._
+
+### 374-FR-014 — Observability: every call of the four tools is counted in the existing `mcp_tool_calls_total{tool,outcome}` and `mcp_tool_call_duration_seconds{tool}` with the tool name from the catalogue (a closed set), logged as one `McpToolCall` line (tool, outcome, duration, request id; no input, no user text, no phone or plate) and traced as the `mcp.tool <name>` span; the MCP dashboard (`infra/observability/grafana/dashboards/motorfix-mcp.json`) gets a panel for the garage read tools (calls and refusals by tool, p95 by tool); the `mcp-tool-errors` alert covers them (an alert on a single tool's error rate is added only if the existing one cannot see it); `infra/observability/inventory.json` lists the four tools as a product action with their dashboard and alert, and `scripts/observability-inventory.ts` passes. (AGENTS.md observability rule; 365-FR-015)
+
+_From 374-assistant-requests._
+
+### 000-FR-010 — The MCP server MUST report a gauge, 1 when the identity server's discovery document at `ASSISTANT_ISSUER` answered the last probe and 0 otherwise, probed at start and then every 60 seconds, a probe not answered within 10 seconds counting as failed, no sample reported before the first answer, and carrying the same resource attributes as its other metrics; a failed probe is logged once per state change with the reason and no token or secret, and never changes how calls are answered (365-FR-003 keeps the 503 on a failed key fetch).
+
+_From 1016-mcp-staging._
+
+### 000-FR-011 — `infra/observability/alerts/mcp.json` MUST gain two rules on that gauge, "MCP server down" when the gauge for `deployment_environment="staging"` had samples in the last 24 hours and none in the last 5 minutes, and "identity server unreachable" when it has been 0 for 5 minutes; `motorfix-mcp` MUST gain one panel showing the gauge.
+
+_From 1016-mcp-staging._
+
+### 000-FR-012 — `infra/observability/inventory.json` MUST list `mcp` and `keycloak` as `railway-service` entries (`source` `scripts/railway-deploy.ts`, `dashboard` `motorfix-mcp`, `alerts` the two new uids, `story` ST-1016), and `node scripts/observability-inventory.ts` MUST pass against the changed deploy script (its service discovery reads the union of every service list in the deploy script). The existing `outside-service` `keycloak` entry stays.
+
+_From 1016-mcp-staging._
+
+### 344-FR-018 — Observability: the endpoint is listed in `infra/observability/inventory.json` with its route duration metric; the send (a product action) MUST emit one counter of quotes sent by outcome (`sent`, `refused`, `already_answered`, `request_not_open`; `refused` counts the refusals the service raises, 400 low-above-high or past slot, 403 and 404, while a body the validation pipe refuses and a missing `Idempotency-Key` are counted by the route's own 4xx metric) and one histogram of the response time (`answered_at` − `created_at`, in minutes, no identifiers) on the `motorfix-product` dashboard; the consumer of FR-016 is listed with one counter of QUOTE_RECEIVED messages built per outcome (`built`, `muted`) on the `motorfix-queues` dashboard; one structured log line per send with the quote id, the request id and the outcome (never the range, the note or the driver); no alert (no agreed threshold; ST-880 adds alert rules). The PR's Observability section names them.
+
+_From 344-send-quote._
 
 ## Retired
 

@@ -323,10 +323,10 @@ describe('workflow shape', () => {
 describe('release workflow', () => {
   const images = jobBlock(release, 'images');
 
-  it('pushes all four images', () => {
-    expect(images.match(/push: true/g)).toHaveLength(4);
+  it('pushes all five images', () => {
+    expect(images.match(/push: true/g)).toHaveLength(5);
     expect(images).not.toMatch(/push: false/);
-    for (const app of ['web', 'api', 'worker', 'mcp']) {
+    for (const app of ['web', 'api', 'worker', 'mcp', 'keycloak']) {
       expect(images).toContain(`-${app}:\${{ github.sha }}`);
     }
   });
