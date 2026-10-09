@@ -7,6 +7,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 import sharp from 'sharp';
 
+import { hydrated } from './accounts.js';
 import { test } from './fixtures.js';
 
 const sideways = (page: Page) =>
@@ -15,6 +16,10 @@ const sideways = (page: Page) =>
 const section = (page: Page) => page.locator('section[data-slot="photos"]');
 const tiles = (page: Page) => section(page).locator('button.tile');
 const view = (page: Page) => page.getByRole('dialog');
+// The dark the view draws: the dialog container around it, fixed to the
+// screen, can have no box of its own.
+const backdrop = (page: Page) =>
+  view(page).locator('[data-slot="viewer-backdrop"]');
 const insideView = (page: Page) =>
   page.evaluate(
     () =>
@@ -114,7 +119,7 @@ test.describe('the photos of a garage profile @seeded', () => {
   test('opens, moves and closes the view from the keyboard, back on the tile at the same scroll', async ({
     page,
   }) => {
-    await page.goto(`/ro/garages/${slug}`);
+    await hydrated(page, `/ro/garages/${slug}`);
     await expect(tiles(page)).toHaveCount(3);
     await tiles(page).nth(1).scrollIntoViewIfNeeded();
     const scrolled = await page.evaluate(() => window.scrollY);
@@ -132,9 +137,9 @@ test.describe('the photos of a garage profile @seeded', () => {
   });
 
   test('keeps Tab inside the open view', async ({ page }) => {
-    await page.goto(`/ro/garages/${slug}`);
+    await hydrated(page, `/ro/garages/${slug}`);
     await tiles(page).first().click();
-    await expect(view(page)).toBeVisible();
+    await expect(backdrop(page)).toBeVisible();
 
     for (let i = 0; i < 6; i++) {
       await page.keyboard.press('Tab');
@@ -144,7 +149,7 @@ test.describe('the photos of a garage profile @seeded', () => {
 
   test('moves between photos with a swipe on a phone', async ({ page }) => {
     await page.setViewportSize({ height: 812, width: 375 });
-    await page.goto(`/ro/garages/${slug}`);
+    await hydrated(page, `/ro/garages/${slug}`);
     await tiles(page).first().click();
     await expect(view(page)).toContainText('1 / 3');
     const photo = view(page).locator('img');
@@ -175,7 +180,7 @@ test.describe('the photos of a garage profile @seeded', () => {
         held.push(() => route.continue());
       },
     );
-    await page.goto(`/ro/garages/${slug}`);
+    await hydrated(page, `/ro/garages/${slug}`);
     await expect(tiles(page)).toHaveCount(3);
     const before = await tiles(page).evaluateAll((items) =>
       items.map((item) => item.getBoundingClientRect().toJSON()),
@@ -193,14 +198,14 @@ test.describe('the photos of a garage profile @seeded', () => {
   });
 
   test('names the photos in Romanian and in English', async ({ page }) => {
-    await page.goto(`/ro/garages/${slug}`);
+    await hydrated(page, `/ro/garages/${slug}`);
     await expect(section(page)).toHaveAttribute('aria-label', 'Fotografii');
     await expect(tiles(page).nth(1).locator('img')).toHaveAttribute(
       'alt',
       'Fotografie 2 din 3 · Atelier Foto E2E',
     );
 
-    await page.goto(`/en/garages/${slug}`);
+    await hydrated(page, `/en/garages/${slug}`);
     await expect(section(page)).toHaveAttribute('aria-label', 'Photos');
     await tiles(page).nth(1).click();
     await expect(view(page).locator('img')).toHaveAttribute(
@@ -213,12 +218,12 @@ test.describe('the photos of a garage profile @seeded', () => {
     page,
   }) => {
     await page.setViewportSize({ height: 640, width: 320 });
-    await page.goto(`/ro/garages/${slug}`);
+    await hydrated(page, `/ro/garages/${slug}`);
     await expect(tiles(page)).toHaveCount(3);
     expect(await sideways(page)).toBeLessThanOrEqual(0);
 
     await tiles(page).first().click();
-    await expect(view(page)).toBeVisible();
+    await expect(backdrop(page)).toBeVisible();
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
 
@@ -231,7 +236,7 @@ test.describe('the photos of a garage profile @seeded', () => {
         r.url().includes('garages=') &&
         r.ok(),
     );
-    await page.goto(`/ro/garages/${slug}`);
+    await hydrated(page, `/ro/garages/${slug}`);
     await stream;
     await tiles(page).nth(2).click();
     await expect(view(page)).toContainText('3 / 3');
