@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { keepSeededLanguage } from './seeded-language.js';
 
 // [entry in the menu, tab in the bar, address, title]
 const VIEWS = [
@@ -21,14 +22,14 @@ const VIEWS = [
 const title = (page: Page) => page.getByRole('heading', { level: 1 });
 
 async function signedInDriver(page: Page) {
+  await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, ACCOUNTS.driver);
   await expect(page).toHaveURL('/app/driver');
-  // The seeded driver's account language is shared with specs running beside
-  // this one (one-language.spec turns it English), so Romanian is chosen here.
+  // Romanian whatever an earlier run left saved on the shared account.
   await page
     .getByRole('group', { name: /^(Limba|Language)$/ })
     .getByRole('button', { exact: true, name: 'RO' })

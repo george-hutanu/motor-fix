@@ -22,6 +22,7 @@ import { audienceOf } from '../events/audience';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import { type LivePublisher, publishLive } from '../events/live/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
+import { countSignIn } from '../metrics/product-counters';
 
 const DAY_MS = 86_400_000;
 export const REMEMBERED_MS = 30 * DAY_MS;
@@ -111,7 +112,13 @@ export class SignInService {
       );
     }
     await this.attempts.clear(email);
-    return this.openSession(account.id, role, input.remember ?? true);
+    const issued = await this.openSession(
+      account.id,
+      role,
+      input.remember ?? true,
+    );
+    countSignIn('password');
+    return issued;
   }
 
   // A new session: its access token, and the refresh token of a new family.

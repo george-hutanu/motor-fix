@@ -5,6 +5,7 @@ import { withTelemetryMeta } from './telemetry-meta';
 
 const page = '<html><head><title>MotorFix</title></head><body></body></html>';
 const collector = {
+  environment: 'staging',
   url: 'https://faro.example/collect/key',
   version: 'abc1234',
 };
@@ -17,12 +18,13 @@ const html = (body = page, init: ResponseInit = {}) =>
   });
 
 describe('withTelemetryMeta', () => {
-  it('puts the collector and the release in one tag just before the head ends', async () => {
+  // @traces 879-FR-002
+  it('puts the collector, the release and the environment in one tag just before the head ends', async () => {
     const res = await withTelemetryMeta(html(), collector);
 
     expect(await res.text()).toBe(
       '<html><head><title>MotorFix</title>' +
-        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">' +
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234" data-environment="staging">' +
         '</head><body></body></html>',
     );
   });
@@ -47,6 +49,7 @@ describe('withTelemetryMeta', () => {
 
   it('escapes the values for an attribute', async () => {
     const res = await withTelemetryMeta(html(), {
+      environment: 'a&b',
       url: 'https://faro.example/collect/key?a=1&b="2"',
       version: '<dev>',
     });
@@ -56,6 +59,7 @@ describe('withTelemetryMeta', () => {
       'content="https://faro.example/collect/key?a=1&amp;b=&quot;2&quot;"',
     );
     expect(body).toContain('data-version="&lt;dev&gt;"');
+    expect(body).toContain('data-environment="a&amp;b"');
   });
 
   it('leaves the page untouched when no collector is set', async () => {
@@ -102,7 +106,7 @@ describe('withTelemetryMeta', () => {
 
     expect(early).toBe(
       '<html><HEAD><title>M</title>' +
-        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">' +
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234" data-environment="staging">' +
         '</head><body>first',
     );
     finish();
@@ -136,7 +140,7 @@ describe('withTelemetryMeta', () => {
 
     expect(await res.text()).toBe(
       '<html><head><title>Mașină 🚗 ok</title>' +
-        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">' +
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234" data-environment="staging">' +
         '</head><body></body></html>',
     );
   });

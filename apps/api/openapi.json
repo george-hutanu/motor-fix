@@ -6687,6 +6687,11 @@
             "items": {
               "$ref": "#/components/schemas/AdminCityDto"
             }
+          },
+          "observabilityUrl": {
+            "type": "string",
+            "description": "The MotorFix overview dashboard in Grafana for this API's environment, absent when Grafana is not configured",
+            "format": "uri"
           }
         },
         "required": [

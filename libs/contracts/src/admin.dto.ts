@@ -111,6 +111,13 @@ export class AdminOverviewDto {
     type: [AdminCityDto],
   })
   cities!: AdminCityDto[];
+
+  @ApiPropertyOptional({
+    description:
+      "The MotorFix overview dashboard in Grafana for this API's environment, absent when Grafana is not configured",
+    format: 'uri',
+  })
+  observabilityUrl?: string;
 }
 
 export class AdminGrowthMonthDto {

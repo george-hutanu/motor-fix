@@ -4,6 +4,7 @@
 import { withTelemetryMeta } from './telemetry-meta';
 
 const collector = {
+  environment: 'production',
   url: 'https://faro.example/collect/key',
   version: 'abc1234',
 };
@@ -76,6 +77,7 @@ describe('withTelemetryMeta under hostile pages', () => {
 
   it('cannot be broken out of the attribute by a hostile url or version', async () => {
     const res = await withTelemetryMeta(html('<head></head>'), {
+      environment: '"><svg onload=1>',
       url: 'https://f.example/"><script>alert(1)</script>',
       version: '"><img src=x onerror=1>',
     });
@@ -83,6 +85,7 @@ describe('withTelemetryMeta under hostile pages', () => {
 
     expect(out).not.toContain('<script>');
     expect(out).not.toContain('<img');
+    expect(out).not.toContain('<svg');
   });
 
   it('keeps multi-byte characters in a large page intact', async () => {

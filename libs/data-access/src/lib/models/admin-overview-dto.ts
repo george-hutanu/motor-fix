@@ -48,4 +48,9 @@ export interface AdminOverviewDto {
    * Verification files submitted or in review, on the whole platform
    */
   garagesWaiting: number;
+
+  /**
+   * The MotorFix overview dashboard in Grafana for this API's environment, absent when Grafana is not configured
+   */
+  observabilityUrl?: string;
 }

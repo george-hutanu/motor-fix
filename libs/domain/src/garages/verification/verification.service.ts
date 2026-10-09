@@ -21,6 +21,7 @@ import type {
   VerificationFile,
   VerificationFileStatus,
 } from '../../generated/prisma/client';
+import { countApproval } from '../../metrics/product-counters';
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
 
@@ -181,6 +182,8 @@ export class VerificationService {
     await this.announce(tx, file, 'verification.decided', {
       decision: decision.outcome,
     });
+    // A request for more documents is not a verdict.
+    if (decision.outcome !== 'more_requested') countApproval(decision.outcome);
     return file;
   }
 

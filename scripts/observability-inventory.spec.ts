@@ -216,6 +216,21 @@ describe('checkInventory', () => {
     expect(checkInventory(root)).toEqual([]);
   });
 
+  it('accepts a hand-listed endpoint and names one whose source is gone', () => {
+    const endpoint = {
+      ...NONE,
+      kind: 'endpoint',
+      name: 'admin-accounts',
+      source: 'libs/contracts/env.ts',
+      story: 'ST-1',
+    };
+    inventory([...listed, endpoint]);
+    expect(checkInventory(root)).toEqual([]);
+
+    inventory([...listed, { ...endpoint, source: 'libs/gone.ts' }]);
+    expect(checkInventory(root)).toEqual(['stale endpoint admin-accounts']);
+  });
+
   it('requires a reason for "none"', () => {
     inventory([{ ...listed[0], reason: '' }, ...listed.slice(1)]);
     expect(checkInventory(root)).toEqual(['app api: "none" needs a reason']);

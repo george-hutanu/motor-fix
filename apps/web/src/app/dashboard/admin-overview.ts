@@ -90,6 +90,7 @@ export class AdminOverview {
       garagesApprovedInPeriod: value.garagesApprovedInPeriod,
       garagesApprovedThisMonth: value.garagesApprovedThisMonth,
       garagesListed: value.garagesListed,
+      observabilityUrl: value.observabilityUrl,
       period: this.period(),
     };
   });

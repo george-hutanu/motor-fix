@@ -5,7 +5,14 @@ import {
   AdminOverviewQueryDto,
   CITY_ALL,
 } from '@motor-fix/contracts';
-import { Controller, Get, HttpStatus, Inject, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Inject,
+  Optional,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -28,6 +35,21 @@ import {
   snapshotActiveDrivers,
 } from '../insights/platform-figures';
 
+// The overview's link to the Grafana overview dashboard, built by the API
+// from GRAFANA_URL and its own environment.
+export const OBSERVABILITY_URL = Symbol('OBSERVABILITY_URL');
+
+export function observabilityUrl(
+  grafana: string | undefined,
+  env: string,
+): string | undefined {
+  if (!grafana) return undefined;
+  // A Grafana served under a path keeps it, as the release's push does.
+  const url = new URL(`${grafana.replace(/\/$/, '')}/d/motorfix-overview`);
+  url.searchParams.set('var-env', env);
+  return url.href;
+}
+
 const unknownCity = () =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', 'Unknown city', [
     { code: 'unknown', field: 'city' },
@@ -40,6 +62,9 @@ export class AdminOverviewController {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly verification: VerificationService,
+    @Optional()
+    @Inject(OBSERVABILITY_URL)
+    private readonly observabilityUrl?: string,
   ) {}
 
   @Get('overview')
@@ -80,6 +105,7 @@ export class AdminOverviewController {
         activeDriversPeriodStart,
       }),
       cities: list,
+      ...(this.observabilityUrl && { observabilityUrl: this.observabilityUrl }),
     };
   }
 

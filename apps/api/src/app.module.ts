@@ -1,4 +1,4 @@
-import type { Env, StorageEnv } from '@motor-fix/contracts';
+import { type Env, grafanaUrl, type StorageEnv } from '@motor-fix/contracts';
 import {
   AdminAccountsModule,
   AuthModule,
@@ -12,6 +12,7 @@ import {
   ListingPhotosModule,
   NotificationsModule,
   oauthSettings,
+  observabilityUrl,
   PasswordResetModule,
   PhoneSignInModule,
   PlacesModule,
@@ -53,6 +54,7 @@ export class AppModule {
       email,
       notifications,
       verificationConfig(env.APP_ENV, process.env),
+      observabilityUrl(grafanaUrl(process.env), env.APP_ENV),
     );
     return {
       imports: [

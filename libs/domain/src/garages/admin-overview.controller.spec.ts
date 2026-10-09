@@ -1,4 +1,8 @@
-import { AdminOverviewController } from './admin-overview.controller';
+// @traces 879-FR-018 879-FR-020
+import {
+  AdminOverviewController,
+  observabilityUrl,
+} from './admin-overview.controller';
 import type { VerificationService } from './verification/verification.service';
 import type { PrismaClient } from '../generated/prisma/client';
 import {
@@ -27,12 +31,16 @@ const CITIES = [
   { garages: 3, key: 'cluj-napoca', name: 'Cluj-Napoca' },
 ];
 
-const controller = (waiting: number) => {
+const controller = (waiting: number, observabilityUrl?: string) => {
   const countWaiting = jest.fn(async (_db: unknown, _city?: string) => waiting);
   const verification = { countWaiting } as unknown as VerificationService;
   return {
     countWaiting,
-    overview: new AdminOverviewController(prisma, verification),
+    overview: new AdminOverviewController(
+      prisma,
+      verification,
+      observabilityUrl,
+    ),
   };
 };
 
@@ -173,6 +181,23 @@ describe('the admin overview route', () => {
     expect(figures).toHaveBeenCalledTimes(2);
   });
 
+  it('carries the overview dashboard link when Grafana is configured', async () => {
+    const url = 'https://stack.grafana.net/d/motorfix-overview?var-env=test';
+    const { overview } = controller(1, url);
+
+    await expect(overview.overview({})).resolves.toMatchObject({
+      observabilityUrl: url,
+    });
+  });
+
+  it('carries no dashboard link when Grafana is not configured', async () => {
+    const { overview } = controller(1);
+
+    expect(Object.keys(await overview.overview({}))).not.toContain(
+      'observabilityUrl',
+    );
+  });
+
   it('is open only to a session that may review garages', () => {
     const required = Reflect.getMetadata(
       'auth:requires',
@@ -218,5 +243,34 @@ describe('the admin growth route', () => {
     );
 
     expect(required).toBe('admin.garages');
+  });
+});
+
+describe('the observability link', () => {
+  it('opens the overview dashboard with the environment preselected', () => {
+    expect(observabilityUrl('https://stack.grafana.net/', 'staging')).toBe(
+      'https://stack.grafana.net/d/motorfix-overview?var-env=staging',
+    );
+  });
+
+  it.each([
+    [
+      'https://example.org/grafana',
+      'https://example.org/grafana/d/motorfix-overview?var-env=staging',
+    ],
+    [
+      'https://example.org/grafana/',
+      'https://example.org/grafana/d/motorfix-overview?var-env=staging',
+    ],
+    [
+      'https://stack.grafana.net',
+      'https://stack.grafana.net/d/motorfix-overview?var-env=staging',
+    ],
+  ])('keeps the path of a Grafana served at %s', (grafana, url) => {
+    expect(observabilityUrl(grafana, 'staging')).toBe(url);
+  });
+
+  it('is absent when Grafana is not configured', () => {
+    expect(observabilityUrl(undefined, 'production')).toBeUndefined();
   });
 });

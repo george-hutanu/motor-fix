@@ -33,16 +33,31 @@ describe('loadTelemetry', () => {
     await loadTelemetry(
       router,
       pageWith(
-        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">',
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234" data-environment="staging">',
       ),
     );
 
     expect(startFaro).toHaveBeenCalledTimes(1);
     expect(startFaro).toHaveBeenCalledWith({
+      environment: 'staging',
       router,
       url: 'https://faro.example/collect/key',
       version: 'abc1234',
     });
+  });
+
+  // @traces 879-FR-002
+  it('falls back to development when the tag names no environment', async () => {
+    await loadTelemetry(
+      router,
+      pageWith(
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">',
+      ),
+    );
+
+    expect(startFaro).toHaveBeenCalledWith(
+      expect.objectContaining({ environment: 'development' }),
+    );
   });
 
   it('waits until the page is idle before loading', async () => {
