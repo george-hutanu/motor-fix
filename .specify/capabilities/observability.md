@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -13,6 +13,7 @@ features:
   - 365-mcp-oauth
   - 879-dashboards
   - 397-listing-ticks
+  - 343-live-quote-requests
 ---
 
 # Capability: Observability
@@ -428,6 +429,10 @@ _From 879-dashboards._
 ### 397-FR-013 — The new endpoint MUST be listed with its telemetry in `infra/observability/inventory.json` (the API's request metrics and logs cover it; no new dashboard panel or alert, with the reason stated), as every new endpoint is.
 
 _From 397-listing-ticks._
+
+### 343-FR-017 — Observability: the consumer is listed in `infra/observability/inventory.json` with one counter of REQUEST_RECEIVED messages built per garage outcome (`built`, `muted`, `skipped`) and one structured log line per event with the request id and the recipient count (never the car, driver or description), the queue on the `motorfix-queues` dashboard and the counter on `motorfix-product` (the dashboards in `infra/observability/grafana/dashboards/`), and no alert (no agreed threshold; ST-880 adds alert rules); the `status` filter is one query on an existing endpoint and adds no inventory entry. The PR's Observability section names them.
+
+_From 343-live-quote-requests._
 
 ## Retired
 
