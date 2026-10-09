@@ -41,6 +41,8 @@ export function moreRows<T>(
     while (next && items.length < count) {
       const read = await page(next);
       if (cursor !== from) return undefined;
+      // A page with no rows ends the list, whatever cursor it names.
+      if (!read.items.length) return { items, nextCursor: null };
       items.push(...read.items);
       next = read.nextCursor;
     }

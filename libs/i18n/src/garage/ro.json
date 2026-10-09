@@ -98,6 +98,7 @@
       "offline": "Ești offline",
       "problem": {
         "already_answered": "Altcineva a răspuns deja la această cerere",
+        "forbidden": "Nu ai dreptul să trimiți oferte",
         "request_not_open": "Cererea nu mai este deschisă"
       },
       "retry": "Încearcă din nou",

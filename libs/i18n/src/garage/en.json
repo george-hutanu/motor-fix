@@ -98,6 +98,7 @@
       "offline": "You are offline",
       "problem": {
         "already_answered": "Someone else already answered this request",
+        "forbidden": "You are not allowed to send quotes",
         "request_not_open": "The request is no longer open"
       },
       "retry": "Try again",

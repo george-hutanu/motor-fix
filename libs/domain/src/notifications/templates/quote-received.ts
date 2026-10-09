@@ -17,7 +17,7 @@ export const QUOTE_RECEIVED: Template = {
     },
     ro: {
       button: { label: 'Vezi oferta', link: 'link' },
-      lines: ['{garage} ți-a răspuns la cerere: {range} lei.'],
+      lines: ['{garage} ți‑a răspuns la cerere: {range} lei.'],
       reason: 'Primești acest e‑mail pentru că ai cerut oferte pe MotorFix.',
       subject: 'Ofertă nouă de la {garage}: {range} lei',
     },

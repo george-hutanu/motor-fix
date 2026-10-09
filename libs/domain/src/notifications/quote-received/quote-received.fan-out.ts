@@ -1,4 +1,4 @@
-import type { EventKind } from '@motor-fix/contracts';
+import { baniToLei, type EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
 
@@ -35,8 +35,6 @@ export interface QuoteSentEvent {
   payload: { quoteId: string };
 }
 
-const BANI_PER_LEU = 100;
-
 // Tells the driver that a garage quoted their request. The service applies
 // the driver's mute, the no-device fallback and the never-SMS rule; the
 // outbox event id keeps a retry or a second relay from building anything
@@ -66,7 +64,7 @@ export class QuoteReceivedFanOut {
     });
     // Withdrawn or answered before the message went out: nothing to tell.
     if (quote?.status !== 'waiting') return;
-    const range = `${quote.fromBani / BANI_PER_LEU}–${quote.toBani / BANI_PER_LEU}`;
+    const range = `${baniToLei(quote.fromBani)}–${baniToLei(quote.toBani)}`;
     const queued = await this.notifications.notify({
       eventId,
       kind: 'QUOTE_RECEIVED',

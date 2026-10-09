@@ -173,9 +173,10 @@ describe('the Oferte trimise panel', () => {
 // @traces 344-FR-015
 describe('the Oferte trimise panel kept current', () => {
   it('adds a sent quote at the top on quote.sent, keeps the rows shown and highlights only the new one', async () => {
+    const shown = sentRows(1, 2);
     const { element, settle } = await render([
-      listOf(sentRows(1, 2)),
-      listOf([...sentRows(0, 1), ...sentRows(1, 2)]),
+      listOf(shown),
+      listOf([...sentRows(0, 1), ...shown]),
     ]);
     const kept = rows(element)[0];
 

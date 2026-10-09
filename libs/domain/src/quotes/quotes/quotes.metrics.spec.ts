@@ -8,6 +8,8 @@ import {
 import { recordQuoteSend } from './quotes.metrics';
 
 const { metricReader } = inMemory();
+// A count before telemetry starts is lost, and must not keep later ones out.
+recordQuoteSend('refused');
 metrics.setGlobalMeterProvider(new MeterProvider({ readers: [metricReader] }));
 
 async function metric(name: string) {

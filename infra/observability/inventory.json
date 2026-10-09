@@ -327,7 +327,7 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts quotes garages send by outcome (sent, refused, already_answered, request_not_open) and records motorfix_quote_response_minutes (request created to quote sent) with no identifiers, with one Quotes log line per send naming the quote id, the request id and the outcome; no agreed threshold yet, ST-880 adds the alert rules",
+      "reason": "counts quotes garages send by outcome (sent, refused, already_answered, request_not_open; refused covers the service's own 400, 403 and 404, the validation pipe's 400s show in the route metric) and records motorfix_quote_response_minutes (request created to quote sent) with no identifiers, with one Quotes log line per send naming the quote id, the request id and the outcome; no agreed threshold yet, ST-880 adds the alert rules",
       "story": "ST-344"
     },
     {
