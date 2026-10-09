@@ -197,3 +197,5 @@ export type { LiveControllerTest$Params as LiveControllerTest$Params } from './f
 export { liveControllerTest as liveControllerTest } from './fn/live/live-controller-test';
 export type { PublicLiveControllerLive$Params as PublicLiveControllerLive$Params } from './fn/live/public-live-controller-live';
 export { publicLiveControllerLive as publicLiveControllerLive } from './fn/live/public-live-controller-live';
+export type { PlatformStatusControllerStatus$Params as PlatformStatusControllerStatus$Params } from './fn/platform/platform-status-controller-status';
+export { platformStatusControllerStatus as platformStatusControllerStatus } from './fn/platform/platform-status-controller-status';

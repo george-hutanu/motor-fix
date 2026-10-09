@@ -4,7 +4,6 @@ import {
   type Actor,
   AuditService,
   createPrisma,
-  maintenanceOff,
   outbox,
 } from '@motor-fix/domain';
 import { databaseTurn } from '@motor-fix/domain/testing';
@@ -52,7 +51,7 @@ const ctx: ToolContext = {
   accounts: loader,
   featureOn: async () => true,
   garage: {} as ToolContext['garage'],
-  maintenance: maintenanceOff,
+  maintenance: { on: async () => false },
 };
 
 const auth = (accountId: string): AuthInfo => ({

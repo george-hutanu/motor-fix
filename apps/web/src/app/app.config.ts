@@ -3,7 +3,12 @@ import {
   withFetch,
   withInterceptors,
 } from '@angular/common/http';
-import { ApplicationConfig, isDevMode } from '@angular/core';
+import {
+  ApplicationConfig,
+  inject,
+  isDevMode,
+  provideAppInitializer,
+} from '@angular/core';
 import {
   provideClientHydration,
   withEventReplay,
@@ -16,6 +21,7 @@ import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
 import { provideLanguageAddresses } from './addresses';
 import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
+import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
 
 export const appConfig: ApplicationConfig = {
@@ -29,6 +35,8 @@ export const appConfig: ApplicationConfig = {
     provideCockpitTheme(),
     provideRememberedLanguage(),
     provideLanguageAddresses(),
+    // Before the first render, so a visit during maintenance opens on its page.
+    provideAppInitializer(() => inject(PlatformStatus).read()),
     // Only the production build emits ngsw-worker.js.
     provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
   ],

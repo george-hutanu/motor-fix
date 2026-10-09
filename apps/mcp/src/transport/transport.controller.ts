@@ -9,7 +9,7 @@ import {
   GarageRequestsService,
   GarageScheduleService,
   MAINTENANCE,
-  type Maintenance,
+  type MaintenanceReader,
   PRISMA,
 } from '@motor-fix/domain';
 import {
@@ -68,7 +68,7 @@ export class TransportController {
     @Inject(ISSUER_SETTINGS) settings: IssuerSettings,
     @Inject(PRISMA) prisma: Prisma,
     accounts: AccountLoader,
-    @Inject(MAINTENANCE) maintenance: Maintenance,
+    @Inject(MAINTENANCE) maintenance: MaintenanceReader,
   ) {
     this.metadataUrl = metadataUrlOf(settings.mcpUrl);
     this.toolNames = tools.map((t) => t.name);

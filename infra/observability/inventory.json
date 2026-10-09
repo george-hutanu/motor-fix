@@ -255,6 +255,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_maintenance_refusals_total",
+      "source": "libs/domain/src/auth/maintenance.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "counts calls refused while maintenance is on, by route and role (visitor or signed_in); ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-261"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_platform_rule_changes_total",
       "source": "libs/domain/src/admin/platform-rules/changes/changes.metrics.ts",
       "dashboard": "motorfix-product",

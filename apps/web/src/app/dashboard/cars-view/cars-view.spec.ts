@@ -245,6 +245,8 @@ describe('Mașinile mele', () => {
     );
 
     button(element, 'Adaugă o mașină')?.click();
+    // The dialog's code loads on the first tap, then the saved car shows.
+    await settle();
     await settle();
 
     expect(open).toHaveBeenCalledWith(AddCar, {

@@ -41,4 +41,15 @@ describe('NotFound', () => {
 
     expect(init.status).toBe(404);
   });
+
+  it('leaves the 503 of the maintenance page rendered before it', () => {
+    const init: ResponseInit = { status: 503 };
+    TestBed.configureTestingModule({
+      providers: [{ provide: RESPONSE_INIT, useValue: init }],
+    });
+
+    render();
+
+    expect(init.status).toBe(503);
+  });
 });

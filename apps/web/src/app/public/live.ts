@@ -35,7 +35,8 @@ const PARAMS = [
 
 // A visitor's one live stream, open while a public view is. It sends no token
 // and needs no session; it names what the open views show, the newest view
-// winning where two name a garage, and re-opens only when that changes.
+// winning where two name a garage, and re-opens only when that changes. A view
+// that names nothing still holds it, for the platform's own events.
 @Injectable({ providedIn: 'root' })
 export class PublicLive implements OnDestroy {
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -62,7 +63,7 @@ export class PublicLive implements OnDestroy {
     const slept =
       this.hiddenAt !== null && Date.now() - this.hiddenAt >= ASLEEP_FOR;
     this.hiddenAt = null;
-    if (slept && this.query) this.connect();
+    if (slept && this.wanted) this.connect();
   };
 
   constructor() {
@@ -113,9 +114,10 @@ export class PublicLive implements OnDestroy {
       if (value) params.set(param, value);
     }
     const query = params.toString();
-    if (query === this.query) return;
+    const open = this.views.length > 0;
+    if (open === Boolean(this.wanted) && query === this.query) return;
     this.query = query;
-    if (query) {
+    if (open) {
       this.connect();
       return;
     }
@@ -129,7 +131,8 @@ export class PublicLive implements OnDestroy {
     this.wanted?.abort();
     const wanted = new AbortController();
     this.wanted = wanted;
-    void this.run(`/api/v1/live/public?${this.query}`, wanted.signal);
+    const query = this.query ? `?${this.query}` : '';
+    void this.run(`/api/v1/live/public${query}`, wanted.signal);
   }
 
   // Tries and waits until the views change or go away.

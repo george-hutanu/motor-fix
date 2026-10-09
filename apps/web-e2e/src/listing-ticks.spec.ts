@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { ready, settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 const brands = (page: Page) => page.locator('mf-brands-step');
@@ -61,7 +61,7 @@ test.describe('list your garage, the payment, fuel and courtesy car ticks', () =
     expect(sideways).toBe(false);
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await settled(page);
 
     await expect(brand(page, 'Dacia')).toHaveText(/lucrezi pe ea/);
     for (const name of ['Benzină', 'Diesel', 'Hibrid'])

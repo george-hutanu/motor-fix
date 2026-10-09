@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { ready, settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 // @traces 109-FR-010 109-FR-012 109-FR-020
@@ -109,7 +109,7 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
     expect(await ticked(page)).toEqual([1, 3, 4]);
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await settled(page);
 
     await expect(details(page).locator('[name="name"]')).toHaveValue(
       'Service Popescu',

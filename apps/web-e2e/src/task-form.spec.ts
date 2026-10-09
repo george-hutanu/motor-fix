@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 type Language = 'ro' | 'en';
@@ -47,7 +48,7 @@ async function openForm(page: Page, language: Language = 'ro') {
     name: t(language, 'cockpit.form.open'),
   });
   await expect(opener).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   await opener.click();
   // The panel: on a phone the dialog container around the sheet has no box.
   await expect(task(page, language).locator('mf-overlay-panel')).toBeVisible();

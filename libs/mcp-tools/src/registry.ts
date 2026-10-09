@@ -15,7 +15,7 @@ import {
   type GarageRequestsService,
   type GarageScheduleService,
   type LoadedAccount,
-  type Maintenance,
+  type MaintenanceReader,
   type Role,
 } from '@motor-fix/domain';
 import { type ZodRawShape, z } from 'zod';
@@ -46,7 +46,7 @@ export interface ToolContext {
     requests: Pick<GarageRequestsService, 'inbox'>;
     schedule: Pick<GarageScheduleService, 'list'>;
   };
-  maintenance: Maintenance;
+  maintenance: MaintenanceReader;
 }
 
 export interface ToolDefinition<In extends ZodRawShape = ZodRawShape> {

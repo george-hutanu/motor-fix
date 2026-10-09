@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -47,7 +48,7 @@ test.describe('the toast on the kit page', () => {
         if (language === 'en')
           await page.addInitScript(() => localStorage.setItem('mf.lang', 'en'));
         await page.goto('/cockpit');
-        await page.waitForLoadState('networkidle');
+        await settled(page);
 
         await page
           .getByRole('button', { exact: true, name: TEXTS[language].cockpit })

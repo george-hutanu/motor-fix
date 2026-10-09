@@ -23,3 +23,4 @@ export { GaragesService } from './services/garages.service';
 export { InvitesService } from './services/invites.service';
 export { ListingDraftsService } from './services/listing-drafts.service';
 export { LiveService } from './services/live.service';
+export { PlatformService } from './services/platform.service';

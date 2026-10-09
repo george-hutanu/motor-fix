@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 type Axe = {
@@ -52,7 +53,7 @@ for (const [label, width, height] of [
       await expect(
         page.getByRole('heading', { name: 'MotorFix' }),
       ).toBeVisible();
-      await page.waitForLoadState('networkidle');
+      await settled(page);
 
       expect(await landmarkViolations(page)).toEqual([]);
     });

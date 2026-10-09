@@ -28,6 +28,7 @@ const PUBLIC = [
   'GET /api/v1/listing-drafts/current',
   'GET /api/v1/live/public',
   'GET /api/v1/places',
+  'GET /api/v1/platform-status',
   'GET /api/v1/public-holidays',
   'GET /api/v1/search/garages',
   'GET /health/live',

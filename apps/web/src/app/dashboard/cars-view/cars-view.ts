@@ -11,7 +11,6 @@ import { I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
-import { AddCar } from '../add-car/add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
 
 // "Mașinile mele": a card per car, newest first, and the button that adds one.
@@ -51,6 +50,8 @@ export class CarsView implements OnInit {
   // The saved car goes first without reading the list again.
   protected async add() {
     const plates = (this.cars() ?? []).flatMap((c) => c.plate ?? []);
+    // Loaded on the first tap: the dialog stays out of the initial bundle.
+    const { AddCar } = await import('../add-car/add-car');
     const car = await this.overlays.open<CarDto, { plates: string[] }>(AddCar, {
       data: { plates },
       shape: 'dialog',

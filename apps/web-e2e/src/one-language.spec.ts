@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -64,7 +65,7 @@ async function open(
       language,
     );
   await page.goto(path);
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   // A dashboard opens in the account's language; English is chosen on it.
   if (role && language === 'en') {
     await page

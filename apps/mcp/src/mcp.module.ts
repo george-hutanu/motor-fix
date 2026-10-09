@@ -8,10 +8,10 @@ import {
   EVENT_PORT,
   JsonLogger,
   MAINTENANCE,
-  maintenanceOff,
   outbox,
   PRISMA,
   requestContext,
+  storedMaintenance,
 } from '@motor-fix/domain';
 import { catalogue, type ToolDefinition } from '@motor-fix/mcp-tools';
 import {
@@ -90,7 +90,11 @@ class McpModule implements NestModule, OnModuleDestroy {
         },
         { provide: AUDIT_PORT, useClass: AuditService },
         { provide: EVENT_PORT, useValue: outbox },
-        { provide: MAINTENANCE, useValue: maintenanceOff },
+        {
+          inject: [PRISMA],
+          provide: MAINTENANCE,
+          useFactory: storedMaintenance,
+        },
         { provide: MCP_TOOLS, useValue: tools },
         AccountLoader,
         AssistantGrants,

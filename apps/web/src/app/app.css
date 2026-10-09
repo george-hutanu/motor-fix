@@ -1,0 +1,4 @@
+/* The wrapper adds no box, so every screen lays out as before. */
+.screen:not([hidden]) {
+  display: contents;
+}
