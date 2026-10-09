@@ -138,8 +138,9 @@ jobs:
         env:
           GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
           GRAFANA_URL: ${{ vars.GRAFANA_URL }}
-        # curl -sS prints Grafana's answer on a refusal, never the request; a
-        # Grafana that hangs fails the step after a minute, not the 6 h default.
+        # Grafana's answer goes to /dev/null, so a refusal logs only curl's
+        # status line and never the request; a Grafana that hangs fails the
+        # step after a minute, not the 6 h default.
         run: |
           for f in infra/observability/grafana/dashboards/*.json; do
             jq -n --slurpfile d "$f" --arg m "release ${GITHUB_SHA}" \

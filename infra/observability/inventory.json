@@ -291,7 +291,7 @@
       "story": "ST-879"
     },
     {
-      "kind": "product-counter",
+      "kind": "endpoint",
       "name": "admin-accounts",
       "source": "libs/domain/src/admin/admin-accounts/admin-accounts.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/accounts and /api/v1/admin/accounts/summary",
