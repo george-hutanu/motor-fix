@@ -180,7 +180,9 @@ test.describe('the photos of a garage profile @seeded', () => {
         held.push(() => route.continue());
       },
     );
-    await hydrated(page, `/ro/garages/${slug}`);
+    // Its images are held, so the page's load event waits on them.
+    await page.goto(`/ro/garages/${slug}`, { waitUntil: 'domcontentloaded' });
+    await hydrated(page);
     await expect(tiles(page)).toHaveCount(3);
     const before = await tiles(page).evaluateAll((items) =>
       items.map((item) => item.getBoundingClientRect().toJSON()),
