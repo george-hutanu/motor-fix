@@ -187,6 +187,12 @@ export type { ListingPhotosControllerConfirm$Params as ListingPhotosControllerCo
 export { listingPhotosControllerConfirm as listingPhotosControllerConfirm } from './fn/listing-drafts/listing-photos-controller-confirm';
 export type { ListingPhotosControllerRemove$Params as ListingPhotosControllerRemove$Params } from './fn/listing-drafts/listing-photos-controller-remove';
 export { listingPhotosControllerRemove as listingPhotosControllerRemove } from './fn/listing-drafts/listing-photos-controller-remove';
+export type { ListingDocumentsControllerUploadAddress$Params as ListingDocumentsControllerUploadAddress$Params } from './fn/listing-drafts/listing-documents-controller-upload-address';
+export { listingDocumentsControllerUploadAddress as listingDocumentsControllerUploadAddress } from './fn/listing-drafts/listing-documents-controller-upload-address';
+export type { ListingDocumentsControllerConfirm$Params as ListingDocumentsControllerConfirm$Params } from './fn/listing-drafts/listing-documents-controller-confirm';
+export { listingDocumentsControllerConfirm as listingDocumentsControllerConfirm } from './fn/listing-drafts/listing-documents-controller-confirm';
+export type { ListingDocumentsControllerRemove$Params as ListingDocumentsControllerRemove$Params } from './fn/listing-drafts/listing-documents-controller-remove';
+export { listingDocumentsControllerRemove as listingDocumentsControllerRemove } from './fn/listing-drafts/listing-documents-controller-remove';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

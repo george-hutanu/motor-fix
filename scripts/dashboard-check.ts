@@ -34,6 +34,9 @@ export const PRODUCT_COUNTERS = [
   'motorfix_notifications_sent_total',
   'motorfix_job_steps_total',
   'motorfix_request_received_total',
+  'motorfix_documents_uploaded_total',
+  'motorfix_declarations_signed_total',
+  'motorfix_documents_opened_total',
 ];
 const SIGNAL_SOURCES = new Set(['prometheus', 'loki', 'tempo', 'grafana']);
 const GRAFANA = '-- Grafana --';

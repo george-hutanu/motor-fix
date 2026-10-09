@@ -45,6 +45,7 @@ export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
 export { observabilityUrl } from './garages/admin-overview.controller';
 export { GarageDetailsService } from './garages/details/garage-details.service';
+export { ListingDocumentsModule } from './garages/documents/listing-documents/listing-documents.module';
 export { writeGarageBrands } from './garages/garage-brands/write-garage-brands';
 export { writeGarageHours } from './garages/garage-hours';
 export { writeGaragePayments } from './garages/garage-settings/write-garage-payments';

@@ -153,6 +153,8 @@ const NOT_CHANGES = new Set([
   'ListingDraftsService.save',
   'ListingPhotosService.confirm',
   'ListingPhotosService.remove',
+  'ListingDocumentsService.confirm',
+  'ListingDocumentsService.remove',
   // Runs inside the sending transaction, which audits the new garage.
   'GaragePhotosService.saveRows',
 ]);

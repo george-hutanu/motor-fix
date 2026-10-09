@@ -2,6 +2,7 @@ import {
   type DetailsSection,
   detailsComplete,
   isDetailsSection,
+  isListingDraftData,
   isMechanicsSection,
   isPricesSection,
   isRomanianPhone,
@@ -218,5 +219,73 @@ describe('the mechanics section', () => {
     expect(mechanicsComplete({ mechanics: [], onProfile: false })).toBe(true);
     expect(mechanicsComplete({})).toBe(true);
     expect(mechanicsComplete({ mechanics: [{ name: ' I ' }] })).toBe(false);
+  });
+});
+
+// @traces 206-documents-declaration-FR-006
+describe('the draft envelope with documents and the declaration', () => {
+  const DRAFT = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
+  const page = (n: number) =>
+    `legal_document/${DRAFT}/5e0a8f3b-91c2-4d7e-8b6a-${String(n).padStart(12, '0')}`;
+  const pages = (count: number) =>
+    Array.from({ length: count }, (_, n) => page(n));
+
+  it('accepts both documents, the issue date and the declaration', () => {
+    expect(
+      isListingDraftData({
+        declaredAt: '2026-10-09T10:00:00.000Z',
+        declaredByName: 'Ion Popescu',
+        documents: {
+          onrc_certificate: { issuedOn: '2026-10-01', pages: pages(2) },
+          rar_authorisation: { pages: pages(10) },
+        },
+        files: [],
+      }),
+    ).toBe(true);
+    expect(isListingDraftData({ documents: {} })).toBe(true);
+  });
+
+  it.each([
+    ['an unknown kind', { documents: { identity_card: { pages: [page(1)] } } }],
+    ['no pages', { documents: { rar_authorisation: { pages: [] } } }],
+    ['11 pages', { documents: { rar_authorisation: { pages: pages(11) } } }],
+    [
+      'a page that is not a storage key',
+      { documents: { rar_authorisation: { pages: ['../etc/passwd'] } } },
+    ],
+    [
+      'the same page twice',
+      { documents: { rar_authorisation: { pages: [page(1), page(1)] } } },
+    ],
+    [
+      'an issue date on the authorisation',
+      {
+        documents: {
+          rar_authorisation: { issuedOn: '2026-10-01', pages: [page(1)] },
+        },
+      },
+    ],
+    [
+      'a malformed issue date',
+      {
+        documents: {
+          onrc_certificate: { issuedOn: '01.10.2026', pages: [page(1)] },
+        },
+      },
+    ],
+    [
+      'an unknown key on a document',
+      {
+        documents: {
+          onrc_certificate: { pages: [page(1)], status: 'valid' },
+        },
+      },
+    ],
+    ['documents that are a list', { documents: [] }],
+    ['a name over 80 code units', { declaredByName: 'a'.repeat(81) }],
+    ['a name that is not text', { declaredByName: 42 }],
+    ['a declaration time that is not text', { declaredAt: true }],
+  ])('refuses %s', (_, data) => {
+    expect(isListingDraftData(data)).toBe(false);
   });
 });

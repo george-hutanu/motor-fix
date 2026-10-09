@@ -326,14 +326,34 @@ model VerificationFile {
   previousFileId String?                @unique @map("previous_file_id") @db.Uuid
   reasonCode     String?                @map("reason_code")
   reasonNote     String?                @map("reason_note")
+  declaredAt     DateTime?              @map("declared_at") @db.Timestamptz(3)
+  declaredByName String?                @map("declared_by_name")
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
   garage         Garage                 @relation(fields: [garageId], references: [id], onDelete: Cascade)
   previousFile   VerificationFile?      @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
   nextFile       VerificationFile?      @relation("follows")
   checks         VerificationCheck[]
+  documents      LegalDocument[]
 
   @@index([garageId, createdAt])
   @@map("verification_file")
+}
+
+// A legal document sent with a listing: its pages are storage keys in page
+// order. The migration holds the 1-10 pages check.
+model LegalDocument {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  verificationFileId String           @map("verification_file_id") @db.Uuid
+  kind               String
+  pages              String[]
+  issuedOn           DateTime?        @map("issued_on") @db.Date
+  status             String           @default("valid")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  verificationFile   VerificationFile @relation(fields: [verificationFileId], references: [id], onDelete: Cascade)
+
+  @@unique([verificationFileId, kind])
+  @@index([verificationFileId])
+  @@map("legal_document")
 }
 
 enum ListingDraftStatus {

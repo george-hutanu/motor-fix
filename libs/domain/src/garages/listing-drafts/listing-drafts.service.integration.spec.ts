@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
 
@@ -787,5 +789,228 @@ describe('the place in step 5 of a draft', () => {
 
     expect(refused.status).toBe(400);
     expect(refused.body).toMatchObject({ code: 'validation_failed' });
+  });
+});
+
+describe('the documents of a draft', () => {
+  // 2026-10-09 in Bucharest, still 2026-10-08 in UTC.
+  const NOW = new Date('2026-10-08T22:30:00Z');
+  const realNow = service.now;
+  beforeEach(() => {
+    service.now = () => NOW;
+  });
+  afterAll(() => {
+    service.now = realNow;
+  });
+
+  type Documents = Record<string, { pages: string[]; issuedOn?: string }>;
+  const page = (id: string) => `legal_document/${id}/${randomUUID()}`;
+
+  // A draft holding the pages a confirm would have added.
+  async function draftHolding(build: (id: string) => Documents) {
+    const created = await service.create(body());
+    const documents = build(created.id);
+    await prisma.listingDraft.update({
+      data: { data: { ...body().data, documents } },
+      where: { id: created.id },
+    });
+    return { ...created, documents };
+  }
+
+  const pagesOf = (draft: { documents: Documents }, kind: string) =>
+    draft.documents[kind]?.pages ?? [];
+
+  const save = (
+    draft: { id: string; token: string },
+    data: Record<string, unknown>,
+  ) =>
+    service.save(
+      draft.id,
+      draft.token,
+      body({ data: { ...body().data, ...data }, step: 6 }),
+    );
+
+  const documentsOf = async (id: string) => {
+    const row = await prisma.listingDraft.findUniqueOrThrow({ where: { id } });
+    return (row.data as { documents?: Documents }).documents;
+  };
+
+  // @traces 206-documents-declaration-FR-006
+  it('keeps the page order the owner chose', async () => {
+    const draft = await draftHolding((id) => ({
+      onrc_certificate: { pages: [page(id), page(id), page(id)] },
+    }));
+    const [a, b, c] = pagesOf(draft, 'onrc_certificate') as [
+      string,
+      string,
+      string,
+    ];
+
+    await save(draft, {
+      documents: { onrc_certificate: { pages: [c, a, b] } },
+    });
+
+    expect(await documentsOf(draft.id)).toEqual({
+      onrc_certificate: { pages: [c, a, b] },
+    });
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('refuses a page the draft does not hold for that kind, and changes nothing', async () => {
+    const draft = await draftHolding((id) => ({
+      onrc_certificate: { pages: [page(id)] },
+      rar_authorisation: { pages: [page(id)] },
+    }));
+    const other = await draftHolding((id) => ({
+      rar_authorisation: { pages: [page(id)] },
+    }));
+    const certificate = pagesOf(draft, 'onrc_certificate');
+    const authorisation = pagesOf(draft, 'rar_authorisation');
+
+    for (const documents of [
+      {
+        rar_authorisation: {
+          pages: [...authorisation, ...pagesOf(other, 'rar_authorisation')],
+        },
+      },
+      { rar_authorisation: { pages: [page(draft.id)] } },
+      // A page held, but under the other kind.
+      { rar_authorisation: { pages: [...authorisation, ...certificate] } },
+    ]) {
+      const refused = await refusalOf(save(draft, { documents }));
+
+      expect(refused.status).toBe(400);
+      expect(refused.body).toMatchObject({ code: 'validation_failed' });
+    }
+    expect(await documentsOf(draft.id)).toEqual(draft.documents);
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('refuses a new draft that claims document pages', async () => {
+    const other = await draftHolding((id) => ({
+      rar_authorisation: { pages: [page(id)] },
+    }));
+
+    const refused = await refusalOf(
+      service.create(
+        body({
+          data: { ...body().data, documents: other.documents },
+          email: 'stranger@example.test',
+        }),
+      ),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ code: 'validation_failed' });
+    expect(await prisma.listingDraft.count()).toBe(1);
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('keeps a held page the save left out, at the end', async () => {
+    const draft = await draftHolding((id) => ({
+      rar_authorisation: { pages: [page(id), page(id), page(id)] },
+    }));
+    const [a, b, c] = pagesOf(draft, 'rar_authorisation') as [
+      string,
+      string,
+      string,
+    ];
+
+    await save(draft, { documents: { rar_authorisation: { pages: [c, a] } } });
+
+    expect(await documentsOf(draft.id)).toEqual({
+      rar_authorisation: { pages: [c, a, b] },
+    });
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('keeps the stored entry of a kind the save omits, and all of them when it carries none', async () => {
+    const draft = await draftHolding((id) => ({
+      onrc_certificate: { issuedOn: '2026-09-20', pages: [page(id)] },
+      rar_authorisation: { pages: [page(id), page(id)] },
+    }));
+    const [a, b] = pagesOf(draft, 'rar_authorisation') as [
+      string,
+      string,
+      string,
+    ];
+
+    await save(draft, { documents: { rar_authorisation: { pages: [b, a] } } });
+    expect(await documentsOf(draft.id)).toEqual({
+      onrc_certificate: draft.documents['onrc_certificate'],
+      rar_authorisation: { pages: [b, a] },
+    });
+
+    await save(draft, {});
+    expect(await documentsOf(draft.id)).toEqual({
+      onrc_certificate: draft.documents['onrc_certificate'],
+      rar_authorisation: { pages: [b, a] },
+    });
+  });
+
+  // @traces 206-documents-declaration-FR-007
+  it.each([
+    ['today in Bucharest', '2026-10-09'],
+    ['30 days before it', '2026-09-09'],
+  ])('accepts an issue date of %s', async (_, issuedOn) => {
+    const draft = await draftHolding((id) => ({
+      onrc_certificate: { pages: [page(id)] },
+    }));
+    const pages = pagesOf(draft, 'onrc_certificate');
+
+    await save(draft, { documents: { onrc_certificate: { issuedOn, pages } } });
+
+    expect(await documentsOf(draft.id)).toEqual({
+      onrc_certificate: { issuedOn, pages },
+    });
+  });
+
+  // @traces 206-documents-declaration-FR-007
+  it.each([
+    ['31 days ago', '2026-09-08'],
+    ['tomorrow in Bucharest', '2026-10-10'],
+  ])('refuses an issue date of %s', async (_, issuedOn) => {
+    const draft = await draftHolding((id) => ({
+      onrc_certificate: { issuedOn: '2026-10-01', pages: [page(id)] },
+    }));
+    const pages = pagesOf(draft, 'onrc_certificate');
+
+    const refused = await refusalOf(
+      save(draft, { documents: { onrc_certificate: { issuedOn, pages } } }),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ code: 'validation_failed' });
+    expect(await documentsOf(draft.id)).toEqual(draft.documents);
+  });
+
+  // @traces 206-documents-declaration-FR-007
+  it('keeps accepting a stored issue date that has aged past the window', async () => {
+    const draft = await draftHolding((id) => ({
+      onrc_certificate: { issuedOn: '2026-08-01', pages: [page(id)] },
+    }));
+    const stored = draft.documents['onrc_certificate'];
+
+    await save(draft, { documents: { onrc_certificate: stored } });
+
+    expect(await documentsOf(draft.id)).toEqual({ onrc_certificate: stored });
+  });
+
+  // @traces 206-documents-declaration-FR-017
+  it('refuses a save with documents to a sent draft', async () => {
+    const draft = await draftHolding((id) => ({
+      onrc_certificate: { pages: [page(id)] },
+    }));
+    await prisma.listingDraft.update({
+      data: { status: 'submitted' },
+      where: { id: draft.id },
+    });
+
+    const refused = await refusalOf(
+      save(draft, { documents: draft.documents }),
+    );
+
+    expect(refused.status).toBe(409);
+    expect(refused.body).toMatchObject({ code: 'draft_submitted' });
   });
 });

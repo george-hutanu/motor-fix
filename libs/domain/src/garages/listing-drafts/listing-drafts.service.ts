@@ -1,7 +1,10 @@
 import {
   type ContinueLinkSentDto,
+  DOCUMENT_KINDS,
+  type DraftDocuments,
   EMAIL_PATTERN,
   isListingDraftData,
+  issuedWithinWindow,
   type ListingDraftCreatedDto,
   type ListingDraftData,
   type ListingDraftDto,
@@ -98,23 +101,88 @@ const noSuchPhoto = () =>
     [{ code: 'invalid', field: 'files' }],
   );
 
+const noSuchPage = () =>
+  refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'The draft holds no such document page',
+    [{ code: 'invalid', field: 'documents' }],
+  );
+
+const issuedOutside = () =>
+  refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'The certificate must be issued in the last 30 days',
+    [{ code: 'out_of_range', field: 'documents.onrc_certificate.issuedOn' }],
+  );
+
+// The calendar date the 30-day rule is judged against on the server.
+const bucharestDate = (at: Date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest' }).format(at);
+
 // A save orders the photos the draft holds and nothing more: a key only a
 // confirm added may come in, and one it left out (an older copy of the form)
 // stays, at the end. Only the photo delete takes a key out.
-async function withHeldFiles(
+function heldFiles(held: string[], data: ListingDraftData): string[] {
+  const sent = [...new Set(data.files ?? [])];
+  if (sent.some((key) => !held.includes(key))) throw noSuchPhoto();
+  return [...sent, ...held.filter((key) => !sent.includes(key))];
+}
+
+// The same rule per document kind; a kind the save omits keeps its stored
+// entry. An issue date set or changed must fall in the window, while a
+// stored one is kept as it ages.
+function heldDocuments(
+  held: DraftDocuments,
+  sent: DraftDocuments,
+  today: string,
+): DraftDocuments {
+  const next = { ...held };
+  for (const kind of DOCUMENT_KINDS) {
+    const entry = sent[kind];
+    if (!entry) continue;
+    const stored = held[kind];
+    const keys = stored?.pages ?? [];
+    if (entry.pages.some((key) => !keys.includes(key))) throw noSuchPage();
+    const { issuedOn } = entry;
+    if (
+      issuedOn !== undefined &&
+      issuedOn !== stored?.issuedOn &&
+      !issuedWithinWindow(issuedOn, today)
+    )
+      throw issuedOutside();
+    next[kind] = {
+      ...entry,
+      pages: [
+        ...entry.pages,
+        ...keys.filter((key) => !entry.pages.includes(key)),
+      ],
+    };
+  }
+  return next;
+}
+
+async function withHeldKeys(
   tx: Prisma.TransactionClient,
   id: string,
   data: Prisma.InputJsonObject,
+  at: Date,
 ): Promise<Prisma.InputJsonObject> {
   await tx.$queryRaw`SELECT id FROM listing_draft WHERE id = ${id}::uuid FOR UPDATE`;
   const row = await tx.listingDraft.findUniqueOrThrow({ where: { id } });
-  const held = isListingDraftData(row.data) ? (row.data.files ?? []) : [];
-  const sent = [...new Set((data as ListingDraftData).files ?? [])];
-  if (sent.some((key) => !held.includes(key))) throw noSuchPhoto();
-  if (held.length === 0 && sent.length === 0) return data;
+  const stored = isListingDraftData(row.data) ? row.data : {};
+  const sent = data as ListingDraftData;
+  const files = heldFiles(stored.files ?? [], sent);
+  const documents = heldDocuments(
+    stored.documents ?? {},
+    sent.documents ?? {},
+    bucharestDate(at),
+  );
   return {
     ...data,
-    files: [...sent, ...held.filter((key) => !sent.includes(key))],
+    ...(files.length > 0 && { files }),
+    ...(Object.keys(documents).length > 0 && { documents }),
   };
 }
 
@@ -153,8 +221,10 @@ export class ListingDraftsService {
   ): Promise<ListingDraftCreatedDto> {
     const email = checkedEmail(body.email);
     const data = checkedData(body.data);
-    // A new draft holds no photo yet: only a confirm adds one.
+    // A new draft holds no photo or page yet: only a confirm adds one.
     if ((data as ListingDraftData).files?.length) throw noSuchPhoto();
+    if (Object.keys((data as ListingDraftData).documents ?? {}).length)
+      throw noSuchPage();
     const webUrl = this.webUrl();
     const browser = newToken();
     const at = this.now();
@@ -230,7 +300,7 @@ export class ListingDraftsService {
       }
       return tx.listingDraft.update({
         data: {
-          data: await withHeldFiles(tx, id, data),
+          data: await withHeldKeys(tx, id, data, at),
           email,
           language: body.language,
           step: body.step,

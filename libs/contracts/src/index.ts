@@ -19,6 +19,8 @@ export * from './health.dto';
 export * from './home.dto';
 export * from './job-types.dto';
 export * from './jobs.dto';
+export * from './legal-documents/legal-documents';
+export * from './legal-documents/legal-documents.dto';
 export * from './listing-drafts.dto';
 export * from './listing-photos/listing-photos';
 export * from './listing-photos/listing-photos.dto';
