@@ -17,7 +17,7 @@ import {
   type ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import type { GarageCannotReceiveProblem } from '@motor-fix/contracts';
 import {
   CANNOT_RECEIVE_REASONS,
@@ -59,6 +59,10 @@ export interface RequestQuoteData {
   // then closed by its X.
   sent?: (request: RequestDto) => void;
 }
+
+// What the dialog closes with: the request it sent, nothing, or where one of
+// its links points, for the opener to go once the dialog has closed.
+export type RequestQuoteResult = RequestDto | 'cancelled' | { go: string };
 
 type Nearby = 'idle' | 'loading' | 'ready' | 'failed' | 'no-place';
 
@@ -105,7 +109,6 @@ interface Unreceivable {
     HlmSwitch,
     KmPipe,
     ReactiveFormsModule,
-    RouterLink,
     TaskError,
     TaskSubmit,
     TranslatePipe,
@@ -122,8 +125,9 @@ export class RequestQuote {
   protected readonly i18n = inject(I18n);
   protected readonly task = injectOverlayTask<
     RequestQuoteData,
-    RequestDto | 'cancelled'
+    RequestQuoteResult
   >();
+  private readonly router = inject(Router);
   protected readonly garage = this.task.data.garage;
 
   protected readonly max = REQUEST_DESCRIPTION_MAX;
@@ -303,12 +307,28 @@ export class RequestQuote {
   protected backToSearch() {
     const brand = this.garage.brand;
     const home = ['/', this.i18n.language()];
-    return brand ? [...home, 'garages'] : home;
+    const tree = this.router.createUrlTree(
+      brand ? [...home, 'garages'] : home,
+      { queryParams: brand ? { brand: brand.slug } : {} },
+    );
+    return this.router.serializeUrl(tree);
   }
 
-  protected backQuery() {
-    const brand = this.garage.brand;
-    return brand ? { brand: brand.slug } : {};
+  // A link out closes the dialog and leaves the navigation to the opener:
+  // closing steps back over the dialog's history entry, which would undo a
+  // navigation the link had already started. A modified click opens the
+  // address the browser's way.
+  protected leave(event: MouseEvent, go: string) {
+    if (
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    this.task.close({ go });
   }
 
   protected sentLine(request: RequestDto) {

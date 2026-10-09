@@ -1,19 +1,24 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
   input,
+  PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { PublicGarageDto, RequestDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { Session } from '../../../dashboard/session';
-import type { RequestQuoteData } from '../request-quote/request-quote';
+import type {
+  RequestQuoteData,
+  RequestQuoteResult,
+} from '../request-quote/request-quote';
 import { sentLine } from '../request-quote/sent-line';
 
 // The profile's "Cere ofertă": opens the request dialog for the garage and,
@@ -31,6 +36,7 @@ export class RequestQuoteButton {
   private readonly overlays = inject(Overlays);
   private readonly session = inject(Session);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   protected readonly i18n = inject(I18n);
 
   protected readonly sent = signal<RequestDto | null>(null);
@@ -48,6 +54,13 @@ export class RequestQuoteButton {
     return request ? sentLine(this.i18n, request) : '';
   });
 
+  constructor() {
+    // Nothing else on a public profile asks who is signed in: without this a
+    // garage account that opens the profile by its address would see the
+    // button. The server renders it for a visitor.
+    if (isPlatformBrowser(inject(PLATFORM_ID))) void this.session.load();
+  }
+
   protected async open() {
     const source =
       this.route.snapshot.queryParamMap.get('src') === 'share'
@@ -55,7 +68,10 @@ export class RequestQuoteButton {
         : 'profile_direct';
     // Loaded on the first tap: the dialog stays out of the page's bundle.
     const { RequestQuote } = await import('../request-quote/request-quote');
-    await this.overlays.open<RequestDto, RequestQuoteData>(RequestQuote, {
+    const result = await this.overlays.open<
+      RequestQuoteResult,
+      RequestQuoteData
+    >(RequestQuote, {
       data: {
         garage: this.garage(),
         sent: (request) => this.sent.set(request),
@@ -64,5 +80,8 @@ export class RequestQuoteButton {
       shape: 'dialog',
       title: 'public.requestQuote.title',
     });
+    // Resolved after the close's step back, so this navigation stays.
+    if (typeof result === 'object' && 'go' in result)
+      await this.router.navigateByUrl(result.go);
   }
 }

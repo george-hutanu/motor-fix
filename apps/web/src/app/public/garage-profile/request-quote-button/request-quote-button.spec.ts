@@ -4,6 +4,7 @@ import {
   ActivatedRoute,
   convertToParamMap,
   provideRouter,
+  Router,
 } from '@angular/router';
 import type { PublicGarageDto, RequestDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -11,7 +12,10 @@ import { Overlays } from '@motor-fix/overlays';
 
 import { RequestQuoteButton } from './request-quote-button';
 import { Session } from '../../../dashboard/session';
-import type { RequestQuoteData } from '../request-quote/request-quote';
+import type {
+  RequestQuoteData,
+  RequestQuoteResult,
+} from '../request-quote/request-quote';
 
 const GARAGE: PublicGarageDto = {
   brand: { id: 'b-1', name: 'Dacia', slug: 'dacia', stance: 'works_on' },
@@ -38,30 +42,39 @@ const request = (names: string[]) =>
   }) as unknown as RequestDto;
 
 let open: jest.Mock;
+let load: jest.Mock;
 
 async function render(
   options: {
     garage?: PublicGarageDto;
     role?: 'driver' | 'garage' | 'mechanic' | 'admin' | null;
     query?: Record<string, string>;
-    answer?: RequestDto | 'cancelled';
+    answer?: RequestQuoteResult;
+    // The account the session's load finds, when it starts unknown.
+    loads?: 'driver' | 'garage' | null;
   } = {},
 ) {
   open = jest.fn(
     async (_task: unknown, { data }: { data: RequestQuoteData }) => {
       const answer = options.answer ?? 'cancelled';
-      if (answer !== 'cancelled') data.sent?.(answer);
+      if (answer !== 'cancelled' && !('go' in answer)) data.sent?.(answer);
       return answer;
     },
   );
   const role = options.role === undefined ? null : options.role;
+  const current = signal<{ role: string } | null>(role ? { role } : null);
+  load = jest.fn(async () => {
+    const found = options.loads ? { role: options.loads } : null;
+    if (found) current.set(found);
+    return found;
+  });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       { provide: Overlays, useValue: { open } },
       {
         provide: Session,
-        useValue: { current: signal(role ? { role } : null) },
+        useValue: { current, load },
       },
       {
         provide: ActivatedRoute,
@@ -143,6 +156,21 @@ describe('RequestQuoteButton', () => {
     expect(button(await render({ role: 'mechanic' }))).toBeNull();
   });
 
+  // A full load of the profile: nothing else on the page asks who is in.
+  it('asks who is signed in and hides once the account is a garage’s', async () => {
+    const host = await render({ loads: 'garage' });
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(button(host)).toBeNull();
+  });
+
+  it('stays for a visitor once the session finds nobody signed in', async () => {
+    const host = await render({ loads: null });
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(button(host)).not.toBeNull();
+  });
+
   it('says where the request went once it is sent, with the link to Cererile mele', async () => {
     const host = await render({ answer: request(['Service Auto Militari']) });
 
@@ -172,6 +200,28 @@ describe('RequestQuoteButton', () => {
     expect(host.querySelector('[role="status"]')?.textContent?.trim()).toBe(
       'Trimis către 3 service‑uri.',
     );
+  });
+
+  // The dialog only closes on a link out; the navigation comes after the
+  // close, so the close's step back over the dialog's entry cannot undo it.
+  it('goes where the dialog’s link pointed once the dialog has closed', async () => {
+    const host = await render({ answer: { go: '/app/driver/requests' } });
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
+
+    await press(host);
+
+    expect(navigate).toHaveBeenCalledWith('/app/driver/requests');
+  });
+
+  it('stays on the profile when the dialog closes without a link', async () => {
+    const host = await render({ answer: request(['Service Auto Militari']) });
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+    await press(host);
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('shows nothing new when the dialog is closed without sending', async () => {

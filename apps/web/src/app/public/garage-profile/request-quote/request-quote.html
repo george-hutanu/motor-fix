@@ -10,7 +10,7 @@
     }
   </div>
   <div class="actions">
-    <a hlmBtn variant="secondary" routerLink="/app/driver/requests" (click)="task.close(request)">{{ 'public.requestQuote.seeRequests' | t }}</a>
+    <a hlmBtn variant="secondary" href="/app/driver/requests" (click)="leave($event, '/app/driver/requests')">{{ 'public.requestQuote.seeRequests' | t }}</a>
     <button hlmBtn type="button" (click)="task.close(request)">{{ 'public.requestQuote.close' | t }}</button>
   </div>
 } @else if (carsFailed()) {
@@ -22,7 +22,7 @@
   @if (cars.length === 0) {
     <p class="lead">{{ 'public.requestQuote.noCar' | t }}</p>
     <div class="actions">
-      <a hlmBtn routerLink="/app/driver/cars" (click)="task.close('cancelled')">{{ 'public.requestQuote.addCar' | t }}</a>
+      <a hlmBtn href="/app/driver/cars" (click)="leave($event, '/app/driver/cars')">{{ 'public.requestQuote.addCar' | t }}</a>
     </div>
   } @else {
     <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
@@ -140,7 +140,7 @@
         @if (unreceivable(); as refused) {
           <p class="error" role="alert">{{ refusedLine() }}</p>
           @if (refused.reason === 'not_taking_requests') {
-            <a class="back" [routerLink]="backToSearch()" [queryParams]="backQuery()" (click)="task.close('cancelled')">{{ 'public.requestQuote.backToSearch' | t }}</a>
+            <a class="back" [href]="backToSearch()" (click)="leave($event, backToSearch())">{{ 'public.requestQuote.backToSearch' | t }}</a>
           }
         }
       </fieldset>

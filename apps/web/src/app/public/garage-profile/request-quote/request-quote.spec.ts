@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import {
   type CandidateGarageDto,
   type CarDto,
@@ -13,7 +13,11 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
-import { RequestQuote, type RequestQuoteData } from './request-quote';
+import {
+  RequestQuote,
+  type RequestQuoteData,
+  type RequestQuoteResult,
+} from './request-quote';
 import { PlaceStore } from '../../../home/place/place-store';
 
 @Component({ template: '' })
@@ -118,6 +122,8 @@ async function settle() {
   }
 }
 
+let result: Promise<unknown>;
+
 async function open(
   options: {
     cars?: CarDto[];
@@ -150,18 +156,18 @@ async function open(
   await TestBed.inject(I18n).enter('public');
   if (options.language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
-  void host.componentInstance.overlays.open<RequestDto, RequestQuoteData>(
-    RequestQuote,
-    {
-      data: {
-        garage: options.garage ?? GARAGE,
-        sent: onSent,
-        source: options.source ?? 'profile_direct',
-      },
-      shape: 'dialog',
-      title: 'public.requestQuote.title',
+  result = host.componentInstance.overlays.open<
+    RequestQuoteResult,
+    RequestQuoteData
+  >(RequestQuote, {
+    data: {
+      garage: options.garage ?? GARAGE,
+      sent: onSent,
+      source: options.source ?? 'profile_direct',
     },
-  );
+    shape: 'dialog',
+    title: 'public.requestQuote.title',
+  });
   await settle();
 }
 
@@ -174,6 +180,11 @@ const button = (name: string) =>
   [...panel().querySelectorAll('button')].find(
     (b) => b.textContent?.trim() === name,
   ) as HTMLButtonElement | undefined;
+
+const link = (name: string) =>
+  [...panel().querySelectorAll<HTMLAnchorElement>('a')].find(
+    (a) => a.textContent?.trim() === name,
+  );
 
 const select = () => panel().querySelector('select') as HTMLSelectElement;
 const textarea = () => panel().querySelector('textarea') as HTMLTextAreaElement;
@@ -305,6 +316,32 @@ describe('the quote request dialog', () => {
     expect(onSent).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'req-1' }),
     );
+  });
+
+  // A link out closes the dialog and leaves the navigation to the opener:
+  // closing steps back over the dialog's history entry, which would undo a
+  // navigation the link had already started.
+  it('closes on Vezi Cererile mele and hands the opener where to go', async () => {
+    await open();
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    jobSwitch('Schimb ulei').click();
+    await settle();
+    await press();
+
+    link('Vezi Cererile mele')?.click();
+
+    await expect(result).resolves.toEqual({ go: '/app/driver/requests' });
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('closes on Adaugă o mașină and hands the opener Mașinile mele', async () => {
+    await open({ cars: [] });
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+    panel().querySelector<HTMLAnchorElement>('a[href]')?.click();
+
+    await expect(result).resolves.toEqual({ go: '/app/driver/cars' });
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('sends a description-only request trimmed', async () => {
@@ -588,6 +625,25 @@ describe('the garage picker', () => {
     await press();
 
     expect(back()).toBe(true);
+  });
+
+  it('closes on Înapoi la căutare and hands the opener the search for the brand', async () => {
+    await open();
+    send.mockRejectedValueOnce(
+      refusal(400, {
+        code: 'garage_cannot_receive',
+        garageId: GARAGE.id,
+        garageName: GARAGE.name,
+        reason: 'not_taking_requests',
+        status: 400,
+      }),
+    );
+    type('Scârțâie la frânare');
+    await press();
+
+    link('Înapoi la căutare')?.click();
+
+    await expect(result).resolves.toEqual({ go: '/ro/garages?brand=dacia' });
   });
 
   it('keeps the way back away when the profile’s garage does not do the jobs', async () => {
