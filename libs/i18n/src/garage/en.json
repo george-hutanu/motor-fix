@@ -70,6 +70,46 @@
     },
     "stepsDone": "{done} of {total} done"
   },
+  "quotes": {
+    "send": {
+      "cancel": "Cancel",
+      "day": "Day",
+      "duration": "Duration",
+      "field": {
+        "duration_max": "The longest duration is 5 days",
+        "duration_min": "The shortest duration is 15 minutes",
+        "duration_step": "The duration goes in 15-minute steps",
+        "low_above_high": "The low price cannot be above the high price",
+        "maxlength": "Write at most {requiredLength} characters",
+        "past": "Pick a time in the future",
+        "price_max": "The highest price is 1,000,000 lei",
+        "price_min": "The lowest price is 1 leu",
+        "price_whole": "Enter whole lei",
+        "required": "Required",
+        "slot_step": "The time goes in 15-minute steps"
+      },
+      "from": "Price from (lei)",
+      "hint": "The range covers parts and labour, VAT included, for the customer’s exact car; the final price is set after you see the car.",
+      "hours": "Hours",
+      "loading": "Loading the request",
+      "minutes": "Minutes",
+      "note": "Message to the customer",
+      "notOffered": "Not offered: {jobs}",
+      "offline": "You are offline",
+      "problem": {
+        "already_answered": "Someone else already answered this request",
+        "request_not_open": "The request is no longer open"
+      },
+      "retry": "Try again",
+      "sent": "Quote sent",
+      "slot": "First free slot",
+      "submit": "Send",
+      "time": "Time",
+      "title": "Send a quote",
+      "to": "to (lei)",
+      "wide": "This range is very wide; the driver expects a narrow one."
+    }
+  },
   "requests": {
     "anyMechanic": "any mechanic",
     "closed": "Closed in the last 24 hours",

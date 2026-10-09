@@ -70,6 +70,46 @@
     },
     "stepsDone": "{done} din {total} gata"
   },
+  "quotes": {
+    "send": {
+      "cancel": "Renunță",
+      "day": "Ziua",
+      "duration": "Durată",
+      "field": {
+        "duration_max": "Durata maximă este 5 zile",
+        "duration_min": "Durata minimă este 15 minute",
+        "duration_step": "Durata merge din 15 în 15 minute",
+        "low_above_high": "Prețul de la nu poate fi mai mare decât prețul până la",
+        "maxlength": "Scrie cel mult {requiredLength} de caractere",
+        "past": "Alege un moment din viitor",
+        "price_max": "Prețul maxim este 1.000.000 lei",
+        "price_min": "Prețul minim este 1 leu",
+        "price_whole": "Scrie un număr întreg de lei",
+        "required": "Obligatoriu",
+        "slot_step": "Ora merge din 15 în 15 minute"
+      },
+      "from": "Preț de la (lei)",
+      "hint": "Intervalul acoperă piese și manoperă, cu TVA, pentru mașina exactă a clientului; prețul final se stabilește după ce vezi mașina.",
+      "hours": "Ore",
+      "loading": "Se încarcă cererea",
+      "minutes": "Minute",
+      "note": "Mesaj pentru client",
+      "notOffered": "Nu face: {jobs}",
+      "offline": "Ești offline",
+      "problem": {
+        "already_answered": "Altcineva a răspuns deja la această cerere",
+        "request_not_open": "Cererea nu mai este deschisă"
+      },
+      "retry": "Încearcă din nou",
+      "sent": "Ofertă trimisă",
+      "slot": "Primul loc liber",
+      "submit": "Trimite",
+      "time": "Ora",
+      "title": "Trimite oferta",
+      "to": "până la (lei)",
+      "wide": "Intervalul este foarte larg; șoferul așteaptă un interval strâns."
+    }
+  },
   "requests": {
     "anyMechanic": "orice mecanic",
     "closed": "Închise în ultimele 24 de ore",

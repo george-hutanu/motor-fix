@@ -21,6 +21,13 @@ import {
 
 import { FUELS } from './plate';
 import {
+  QUOTE_DURATION_MAX_MINUTES,
+  QUOTE_DURATION_MIN_MINUTES,
+  QUOTE_LEI_MAX,
+  QUOTE_LEI_MIN,
+  QUOTE_NOTE_MAX,
+} from './quote-limits';
+import {
   BOOKING_CANCEL_REASONS,
   BOOKING_STATUSES,
   type BookingCancelReasonCode,
@@ -443,13 +450,6 @@ export class GarageRequestListDto {
   @ApiProperty()
   total!: number;
 }
-
-export const QUOTE_DURATION_MIN_MINUTES = 15;
-export const QUOTE_DURATION_MAX_MINUTES = 7_200;
-export const QUOTE_NOTE_MAX = 500;
-// A quote's range is in whole lei and reaches past the price list's top.
-export const QUOTE_LEI_MIN = 1;
-export const QUOTE_LEI_MAX = 1_000_000;
 
 const trimmedOrNull = ({ value }: { value: unknown }) => {
   if (typeof value !== 'string') return value;
