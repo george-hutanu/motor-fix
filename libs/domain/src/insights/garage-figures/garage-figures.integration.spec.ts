@@ -269,6 +269,16 @@ describe('the garage figures read', () => {
       service.get(garageActor(t.plain, t.garage.id, 'mechanic'), {}, NOW),
     ).rejects.toMatchObject({ status: 404 });
     await expect(
+      service.get(
+        garageActor(t.plain, t.garage.id, 'mechanic', {
+          canAnswerQuotes: true,
+          canMoveBookings: true,
+        }),
+        {},
+        NOW,
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
       service.get(garageActor(t.owner, t.garage.id, 'driver'), {}, NOW),
     ).rejects.toMatchObject({ status: 404 });
   });

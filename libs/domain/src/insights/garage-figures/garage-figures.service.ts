@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -107,6 +107,9 @@ export class GarageFiguresService {
     query: FiguresQuery,
     now = new Date(),
   ): Promise<Figures> {
+    // The owner's and the desk's numbers: a mechanic's permissions do not
+    // reach them.
+    if (actor.role === 'mechanic') throw new NotFoundException();
     requireCapability(actor, 'garage.requests');
     const garageId = actor.garageId as string;
     const [period, before] = periodsOf(query, localDay(now));

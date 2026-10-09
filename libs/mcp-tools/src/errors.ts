@@ -84,8 +84,9 @@ export function refusal(code: string, language: Language): ToolError {
   return { code, message: text(code, language) };
 }
 
-// Nest's own keys on an exception body, never part of a tool's answer.
-const NEST_KEYS = new Set(['code', 'message', 'statusCode', 'error']);
+// The keys of an exception body a tool's refusal may carry: anything else a
+// use case puts there stays on the server.
+const DETAILS = new Set(['mechanics']);
 
 export function toolError(error: unknown, language: Language): ToolError {
   if (error instanceof HttpException) {
@@ -99,7 +100,7 @@ export function toolError(error: unknown, language: Language): ToolError {
         ? own.code
         : codeForStatus(error.getStatus());
     const details = Object.fromEntries(
-      Object.entries(own).filter(([key]) => !NEST_KEYS.has(key)),
+      Object.entries(own).filter(([key]) => DETAILS.has(key)),
     );
     // A use case states its refusal in English; until its code has a
     // Romanian text here, Romanian gets the general one.

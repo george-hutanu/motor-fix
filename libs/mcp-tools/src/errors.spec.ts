@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   HttpStatus,
@@ -114,6 +115,17 @@ describe('garage read texts', () => {
     expect(en).toMatchObject({ code: 'mechanic_not_found', mechanics });
     expect(ro.message).not.toBe(en.message);
     expect(ro.message).not.toBe(text('missing', 'ro'));
+  });
+
+  it('passes on only the details a tool names, never any other key of the body', () => {
+    const leaky = new BadRequestException({
+      accountId: 'acc-9',
+      code: 'validation',
+      message: 'bad',
+      phone: '+40712345678',
+      query: 'SELECT 1',
+    });
+    expect(toolError(leaky, 'en')).toEqual(refusal('validation', 'en'));
   });
 
   it('keeps Nest’s own status fields out of a refusal', () => {
