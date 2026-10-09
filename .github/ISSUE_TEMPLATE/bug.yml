@@ -1,6 +1,7 @@
 name: Bug
 description: Something that works differently from how it should.
 labels: ["type: bug"]
+projects: ["george-hutanu/11"]
 body:
   - type: textarea
     id: what-happens

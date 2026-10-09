@@ -1,6 +1,7 @@
 name: Tech debt
 description: Code that works but costs more to change than it should.
 labels: ["type: tech debt"]
+projects: ["george-hutanu/11"]
 body:
   - type: textarea
     id: problem

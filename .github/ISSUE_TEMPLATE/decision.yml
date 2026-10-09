@@ -1,6 +1,7 @@
 name: Decision
 description: A question the owner has to decide before work can go on.
 labels: ["type: decision"]
+projects: ["george-hutanu/11"]
 body:
   - type: textarea
     id: question
