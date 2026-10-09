@@ -1,7 +1,9 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+
+import { test } from './fixtures.js';
 
 // Every page listens for maintenance: a public page opens the public live
 // stream once it has gone quiet, and a stream never ends, so a networkidle

@@ -28,8 +28,13 @@ test('Home opens in Romanian with RO chosen, and each button is at least 44 px t
     'false',
   );
   for (const name of ['RO', 'EN']) {
-    const box = await group.getByRole('button', { name }).boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    // A late hydration pass can re-render the switch: measure the button
+    // once it is attached and visible again.
+    const button = group.getByRole('button', { name });
+    await expect(button).toBeVisible();
+    await expect
+      .poll(async () => (await button.boundingBox())?.height ?? 0)
+      .toBeGreaterThanOrEqual(44);
   }
   await expect(page.locator('html')).toHaveAttribute('lang', 'ro');
 });
