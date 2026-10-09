@@ -83,7 +83,6 @@
                 <button
                   type="button"
                   class="menu-button"
-                  aria-haspopup="menu"
                   [attr.aria-expanded]="menuFor() === step.id"
                   [attr.aria-label]="'garage.jobs.steps.more' | t: { step: step.label }"
                   (click)="toggleMenu(step.id)"
@@ -91,21 +90,21 @@
                   <span aria-hidden="true">⋯</span>
                 </button>
                 @if (menuFor() === step.id) {
-                  <div class="menu" role="menu">
-                    <button type="button" role="menuitem" (click)="startRename(step)">
+                  <div class="menu">
+                    <button type="button" (click)="startRename(step)">
                       {{ 'garage.jobs.steps.rename' | t }}
                     </button>
                     @if (!first) {
-                      <button type="button" role="menuitem" (click)="move(step, -1)">
+                      <button type="button" (click)="move(step, -1)">
                         {{ 'garage.jobs.steps.up' | t }}
                       </button>
                     }
                     @if (!last) {
-                      <button type="button" role="menuitem" (click)="move(step, 1)">
+                      <button type="button" (click)="move(step, 1)">
                         {{ 'garage.jobs.steps.down' | t }}
                       </button>
                     }
-                    <button type="button" role="menuitem" class="danger" (click)="remove(step)">
+                    <button type="button" class="danger" (click)="remove(step)">
                       {{ 'garage.jobs.steps.remove' | t }}
                     </button>
                   </div>

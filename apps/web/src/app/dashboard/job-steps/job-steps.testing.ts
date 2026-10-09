@@ -158,7 +158,7 @@ export const button = (root: ParentNode, name: string) =>
     (b) => text(b) === name,
   );
 export const menu = (element: HTMLElement, n: number) =>
-  rows(element)[n].querySelector<HTMLButtonElement>('button[aria-haspopup]');
+  rows(element)[n].querySelector<HTMLButtonElement>('button.menu-button');
 // The menu's items, wherever the popover puts them.
 export const item = (name: string) => button(document.body, name);
 export const input = (element: HTMLElement) =>
