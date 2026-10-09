@@ -5,6 +5,7 @@ import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
+import { JobsView } from './jobs-view/jobs-view';
 import { PushView } from './push-view/push-view';
 import { garageOf, Session } from './session';
 import { SettingsView } from './settings-view/settings-view';
@@ -179,6 +180,7 @@ export const DASHBOARDS: Record<
       },
       garageView('requests', 'garage.requests'),
       garageView('schedule', 'garage.schedule'),
+      { ...garageView('jobs', 'garage.own_jobs'), body: JobsView },
       { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
       garageView('prices', 'garage.prices'),
       garageView('reviews', 'garage.reviews'),

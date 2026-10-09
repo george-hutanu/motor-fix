@@ -30,5 +30,45 @@
     "sentLine": "Linkul este valabil 7 zile.",
     "submit": "Trimite invitația",
     "title": "Invită în echipă"
+  },
+  "jobs": {
+    "noMechanic": "Fără mecanic",
+    "noneToday": "Nicio lucrare azi",
+    "noSteps": "Niciun pas încă",
+    "open": "Deschide pașii lucrării {car}",
+    "panel": {
+      "title": "Lucrarea"
+    },
+    "problem": {
+      "forbidden": "Doar proprietarul și mecanicul lucrării scriu pașii.",
+      "job_closed": "Lucrarea e închisă, pașii nu se mai schimbă.",
+      "job_not_started": "Pornește lucrarea mai întâi",
+      "not_found": "Pasul nu mai există.",
+      "too_many_steps": "Cel mult 20 de pași"
+    },
+    "retry": "Încearcă din nou",
+    "stage": {
+      "cancelled": "Anulată",
+      "done": "Gata",
+      "in_work": "În lucru",
+      "paused": "În pauză",
+      "to_do": "De făcut"
+    },
+    "steps": {
+      "add": "Adaugă un pas",
+      "addSubmit": "Adaugă",
+      "cancel": "Anulează",
+      "cap": "Cel mult 20 de pași",
+      "down": "Mută mai jos",
+      "field": "Pasul",
+      "length": "Între 2 și 80 de caractere",
+      "more": "Mai multe pentru „{step}”",
+      "remove": "Șterge",
+      "rename": "Redenumește",
+      "save": "Salvează",
+      "title": "Pașii lucrării",
+      "up": "Mută mai sus"
+    },
+    "stepsDone": "{done} din {total} gata"
   }
 }

@@ -47,6 +47,7 @@ const DASHBOARDS = [
       ['Panou', ''],
       ['Cereri', '/requests'],
       ['Program', '/schedule'],
+      ['Lucrări', '/jobs'],
       ['Mecanici', '/team'],
       ['Prețuri', '/prices'],
       ['Recenzii', '/reviews'],
@@ -69,6 +70,7 @@ const DASHBOARDS = [
       ['Panou', ''],
       ['Cereri', '/requests'],
       ['Program', '/schedule'],
+      ['Lucrări', '/jobs'],
       ['Setări', '/settings'],
     ],
   },
@@ -80,6 +82,7 @@ const DASHBOARDS = [
     tabs: [
       ['Panou', ''],
       ['Cereri', '/requests'],
+      ['Lucrări', '/jobs'],
       ['Setări', '/settings'],
     ],
   },

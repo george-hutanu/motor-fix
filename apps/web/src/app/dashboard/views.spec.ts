@@ -11,6 +11,7 @@ import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
+import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
@@ -112,6 +113,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'team',
       'prices',
       'reviews',
@@ -197,6 +199,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'team',
       'prices',
       'reviews',
@@ -211,6 +214,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'settings',
       'history',
     ]);
@@ -219,7 +223,7 @@ describe('the dashboard view lists', () => {
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
-    ).toEqual(['', 'settings', 'history']);
+    ).toEqual(['', 'jobs', 'settings', 'history']);
     expect(
       paths('garage', [
         'garage.own_jobs',
@@ -227,7 +231,26 @@ describe('the dashboard view lists', () => {
         'garage.requests',
         'garage.schedule',
       ]),
-    ).toEqual(['', 'requests', 'schedule', 'settings', 'history']);
+    ).toEqual(['', 'requests', 'schedule', 'jobs', 'settings', 'history']);
+  });
+
+  // @traces 424-FR-012
+  it('gives every garage role the jobs view, with its body, between the schedule and the team', () => {
+    expect(
+      DASHBOARDS.garage.views.find((view) => view.path === 'jobs'),
+    ).toEqual({
+      body: JobsView,
+      capability: 'garage.own_jobs',
+      empty: 'shell.frame.coming.garage.jobs',
+      label: 'shell.frame.nav.garage.jobs',
+      path: 'jobs',
+      subtitle: 'shell.frame.subtitle.garage.jobs',
+      tab: 'shell.frame.tab.jobs',
+      title: 'shell.frame.title.garage.jobs',
+    });
+    for (const role of [OWNER, RECEPTIONIST, ['garage.own_jobs']])
+      expect(paths('garage', role)).toContain('jobs');
+    expect(paths('garage', ['garage.audit_history'])).not.toContain('jobs');
   });
 
   // @traces 198-FR-011

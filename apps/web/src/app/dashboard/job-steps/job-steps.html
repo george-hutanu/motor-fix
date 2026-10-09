@@ -1,0 +1,166 @@
+<section class="panel" aria-labelledby="job-steps-title">
+  @if (job(); as job) {
+    <header class="job">
+      <p class="car">
+        <span>{{ job.car.brand }} {{ job.car.model }}</span>
+        <span class="plate">{{ job.car.plate }}</span>
+      </p>
+      <p class="meta">{{ names(job) }}</p>
+      <p class="meta">
+        <span>{{ job.mechanicName ?? ('garage.jobs.noMechanic' | t) }}</span>
+        <span class="stage" [attr.data-stage]="job.status">{{ stage(job) | t }}</span>
+      </p>
+    </header>
+
+    <div class="heading">
+      <h3 id="job-steps-title">{{ 'garage.jobs.steps.title' | t }}</h3>
+      @if (steps().length) {
+        <span class="counter">
+          {{ 'garage.jobs.stepsDone' | t: { done: doneCount(), total: steps().length } }}
+        </span>
+      }
+    </div>
+
+    <p class="problem" role="alert">
+      @if (problem(); as key) {
+        {{ key | t }}
+      }
+    </p>
+
+    @if (steps().length) {
+      <ol class="steps">
+        @for (step of steps(); track step.id; let first = $first, last = $last) {
+          <li class="step" [attr.data-step]="step.id" [class.done]="isDone(step)">
+            @if (writable()) {
+              <button
+                type="button"
+                class="tick"
+                [attr.aria-pressed]="isDone(step)"
+                [attr.aria-label]="step.label"
+                (click)="tick(step)"
+              >
+                <span class="box" aria-hidden="true"></span>
+              </button>
+            } @else {
+              <span class="box" [class.on]="isDone(step)" aria-hidden="true"></span>
+            }
+
+            @if (editing()?.id === step.id) {
+              <form class="edit" (submit)="$event.preventDefault(); saveRename()">
+                <label class="field">
+                  <span class="label">{{ 'garage.jobs.steps.field' | t }}</span>
+                  <input
+                    hlmInput
+                    maxlength="120"
+                    [value]="editing()?.text ?? ''"
+                    [attr.aria-invalid]="editing()?.problem || null"
+                    (input)="typeRename($event)"
+                  />
+                </label>
+                @if (editing()?.problem) {
+                  <p class="hint">{{ 'garage.jobs.steps.length' | t }}</p>
+                }
+                <div class="actions">
+                  <button hlmBtn type="submit">
+                    {{ 'garage.jobs.steps.save' | t }}
+                  </button>
+                  <button hlmBtn type="button" variant="ghost" (click)="editing.set(null)">
+                    {{ 'garage.jobs.steps.cancel' | t }}
+                  </button>
+                </div>
+              </form>
+            } @else {
+              <span class="text">{{ step.label }}</span>
+              @if (sending(step)) {
+                <span class="sending">{{ 'shell.form.sending' | t }}</span>
+              }
+            }
+
+            @if (writable() && editing()?.id !== step.id) {
+              <div class="more">
+                <button
+                  type="button"
+                  class="menu-button"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="menuFor() === step.id"
+                  [attr.aria-label]="'garage.jobs.steps.more' | t: { step: step.label }"
+                  (click)="toggleMenu(step.id)"
+                >
+                  <span aria-hidden="true">⋯</span>
+                </button>
+                @if (menuFor() === step.id) {
+                  <div class="menu" role="menu">
+                    <button type="button" role="menuitem" (click)="startRename(step)">
+                      {{ 'garage.jobs.steps.rename' | t }}
+                    </button>
+                    @if (!first) {
+                      <button type="button" role="menuitem" (click)="move(step, -1)">
+                        {{ 'garage.jobs.steps.up' | t }}
+                      </button>
+                    }
+                    @if (!last) {
+                      <button type="button" role="menuitem" (click)="move(step, 1)">
+                        {{ 'garage.jobs.steps.down' | t }}
+                      </button>
+                    }
+                    <button type="button" role="menuitem" class="danger" (click)="remove(step)">
+                      {{ 'garage.jobs.steps.remove' | t }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ol>
+    } @else {
+      <p class="empty">{{ 'garage.jobs.noSteps' | t }}</p>
+    }
+
+    @if (writable()) {
+      @if (adding() !== null) {
+        <form class="edit add" (submit)="$event.preventDefault(); add()">
+          <label class="field">
+            <span class="label">{{ 'garage.jobs.steps.field' | t }}</span>
+            <input
+              hlmInput
+              maxlength="120"
+              [value]="adding() ?? ''"
+              [attr.aria-invalid]="addProblem() || null"
+              (input)="typeAdd($event)"
+            />
+          </label>
+          @if (addProblem()) {
+            <p class="hint">{{ 'garage.jobs.steps.length' | t }}</p>
+          }
+          <div class="actions">
+            <button hlmBtn type="submit">
+              {{ 'garage.jobs.steps.addSubmit' | t }}
+            </button>
+            <button hlmBtn type="button" variant="ghost" (click)="cancelAdd()">
+              {{ 'garage.jobs.steps.cancel' | t }}
+            </button>
+          </div>
+        </form>
+      } @else {
+        <div class="add-row">
+          <button hlmBtn type="button" variant="secondary" [disabled]="full()" (click)="startAdd()">
+            {{ 'garage.jobs.steps.add' | t }}
+          </button>
+          @if (full()) {
+            <p class="hint">{{ 'garage.jobs.steps.cap' | t }}</p>
+          }
+        </div>
+      }
+    }
+  } @else if (view.failed()) {
+    <p class="problem" role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    <button hlmBtn type="button" variant="secondary" (click)="view.reload()">
+      {{ 'garage.jobs.retry' | t }}
+    </button>
+  } @else {
+    <div class="skeleton" aria-busy="true">
+      <span></span><span></span><span></span>
+    </div>
+  }
+</section>

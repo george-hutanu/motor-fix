@@ -22,6 +22,13 @@ const VIEWS = [
     'Programările pe zile, pe mecanici și pe elevatoare',
   ],
   [
+    'Lucrări',
+    'Lucrări',
+    '/app/garage/jobs',
+    'Lucrări',
+    'Lucrările confirmate, de azi încolo',
+  ],
+  [
     'Mecanici',
     'Mecanici',
     '/app/garage/team',
