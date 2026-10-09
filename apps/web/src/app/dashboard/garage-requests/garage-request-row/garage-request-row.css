@@ -40,6 +40,14 @@ time,
 .mark {
   font-weight: 400;
 }
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
 @media (max-width: 900px) {
   :host {
     grid-template-columns: minmax(0, 1fr);

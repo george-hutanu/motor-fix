@@ -884,3 +884,192 @@ describe('GET /garage/requests/:id', () => {
     }
   });
 });
+
+// @traces 344-FR-007
+describe('GET /garage/requests/:id the price pre-fill', () => {
+  async function priced() {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const mini = await prisma.brand.create({
+      data: { key: 'mini', name: 'Mini', slug: 'mini' },
+    });
+    const request = await world.request(andrei);
+    await world.recipient(request.id, dinamo.garage.id);
+    const [oil] = await prisma.requestJob.findMany({
+      where: { requestId: request.id },
+    });
+    const row = (data: {
+      jobTypeId: string;
+      brandId?: string;
+      fromBani: number;
+      toBani?: number | null;
+      durationMinutes?: number | null;
+      visible?: boolean;
+    }) =>
+      prisma.garagePrice.create({
+        data: {
+          garageId: dinamo.garage.id,
+          position: 0,
+          updatedBy: dinamo.owner,
+          ...data,
+        },
+      });
+    const read = async () =>
+      (
+        await get(
+          `/garage/requests/${request.id}`,
+          bearer(dinamo.owner, 'garage'),
+        )
+      ).body.jobs as { id: string; price: unknown }[];
+    return { dinamo, mini, oil, read, request, row };
+  }
+
+  it('takes the row for the car’s brand over the default row, even a hidden one', async () => {
+    const { mini, oil, read, row } = await priced();
+    await row({
+      durationMinutes: 60,
+      fromBani: 30_000,
+      jobTypeId: oil.jobTypeId,
+      toBani: 40_000,
+    });
+    await row({
+      brandId: mini.id,
+      durationMinutes: 90,
+      fromBani: 45_000,
+      jobTypeId: oil.jobTypeId,
+      toBani: 55_000,
+      visible: false,
+    });
+
+    const [job] = await read();
+
+    expect(job.price).toEqual({
+      durationMinutes: 90,
+      fromBani: 45_000,
+      toBani: 55_000,
+    });
+  });
+
+  it('falls back to the default row, open-ended and without a duration', async () => {
+    const { oil, read, row } = await priced();
+    const dacia = await prisma.brand.create({
+      data: { key: 'dacia', name: 'Dacia', slug: 'dacia' },
+    });
+    await row({
+      brandId: dacia.id,
+      fromBani: 99_000,
+      jobTypeId: oil.jobTypeId,
+    });
+    await row({ fromBani: 30_000, jobTypeId: oil.jobTypeId, toBani: null });
+
+    const [job] = await read();
+
+    expect(job.price).toEqual({
+      durationMinutes: null,
+      fromBani: 30_000,
+      toBani: null,
+    });
+  });
+
+  it('gives no price to a job the garage has no row for, nor another garage’s row', async () => {
+    const { oil, read, request } = await priced();
+    const militari = await team('Service Militari');
+    await world.recipient(request.id, militari.garage.id);
+    await prisma.garagePrice.create({
+      data: {
+        fromBani: 30_000,
+        garageId: militari.garage.id,
+        jobTypeId: oil.jobTypeId,
+        position: 0,
+        updatedBy: militari.owner,
+      },
+    });
+
+    const [job] = await read();
+
+    expect(job.price).toBeNull();
+  });
+});
+
+// @traces 344-FR-008
+describe('GET /garage/requests?status=quoted', () => {
+  // A request sent to the garage and quoted at `sentAt`.
+  async function quotedAt(driverId: string, garageId: string, sentAt: Date) {
+    const r = await world.request(driverId, { status: 'quoted' });
+    const q = await world.quote(r.id, garageId);
+    await prisma.quote.update({ data: { sentAt }, where: { id: q.id } });
+    return r;
+  }
+
+  it('lists only the garage’s quoted rows with a waiting quote, newest quote first, each with its quote', async () => {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const militari = await team('Service Militari');
+    const older = await quotedAt(andrei, dinamo.garage.id, ago(2 * HOUR));
+    const newer = await quotedAt(andrei, dinamo.garage.id, ago(HOUR));
+    const withdrawn = await world.request(andrei, { status: 'quoted' });
+    await world.quote(withdrawn.id, dinamo.garage.id, 'withdrawn');
+    const accepted = await world.request(andrei, { status: 'booked' });
+    await world.quote(accepted.id, dinamo.garage.id, 'accepted');
+    const waiting = await world.request(andrei);
+    await world.recipient(waiting.id, dinamo.garage.id);
+    await quotedAt(andrei, militari.garage.id, ago(HOUR));
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.receptionist, 'receptionist'),
+    );
+
+    expect(res.status).toBe(200);
+    expect(ids(res)).toEqual([newer.id, older.id]);
+    expect(res.body.total).toBe(2);
+    expect(res.body.nextCursor).toBeNull();
+    for (const item of res.body.items) {
+      expect(item.recipient.status).toBe('quoted');
+      expect(item.quote).toMatchObject({
+        fromBani: 45_000,
+        status: 'waiting',
+        toBani: 60_000,
+      });
+    }
+  });
+
+  it('breaks a tie on the quote’s time by id, newest id first', async () => {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const at = ago(HOUR);
+    const a = await quotedAt(andrei, dinamo.garage.id, at);
+    const b = await quotedAt(andrei, dinamo.garage.id, at);
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(ids(res)).toEqual([a.id, b.id].sort().reverse());
+  });
+
+  it('pages 20 at a time with the count of the quoted rows only', async () => {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const made: string[] = [];
+    for (let i = 0; i < 21; i++) {
+      made.push(
+        (await quotedAt(andrei, dinamo.garage.id, ago((i + 1) * 60_000))).id,
+      );
+    }
+    const auth = bearer(dinamo.owner, 'garage');
+
+    const first = await get('/garage/requests?status=quoted', auth);
+    const second = await get(
+      `/garage/requests?status=quoted&cursor=${first.body.nextCursor}`,
+      auth,
+    );
+
+    expect(first.body.items).toHaveLength(20);
+    expect(first.body.total).toBe(21);
+    expect(ids(first)).toEqual(made.slice(0, 20));
+    expect(ids(second)).toEqual([made[20]]);
+    expect(second.body.nextCursor).toBeNull();
+  });
+});

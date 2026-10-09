@@ -96,10 +96,18 @@ const emailRows = (accountId: string) =>
 const sendJob = (id: string, attemptsMade = 0) =>
   processor.handle({ attemptsMade, data: { id }, name: 'send' });
 
+// What the quote fan-out puts in a QUOTE_RECEIVED.
+const QUOTE = {
+  garage: 'Atelier Dinamo',
+  link: 'https://motorfix.test/app/driver/requests/r-1',
+  range: '450–600',
+};
+
 async function quote(recipient: string, eventId: string) {
   await service.notify({
     eventId,
     kind: 'QUOTE_RECEIVED',
+    params: QUOTE,
     recipients: [recipient],
   });
   return (await emailRows(recipient)).at(-1)!;
@@ -582,8 +590,8 @@ describe('a grouping window', () => {
       name: 'flush',
     });
     expect(mock.emails()).toHaveLength(1);
-    expect((mock.emails()[0].body as { subject: string }).subject).not.toMatch(
-      /\d/,
+    expect((mock.emails()[0].body as { subject: string }).subject).toBe(
+      'Ofertă nouă de la Atelier Dinamo: 450–600 lei',
     );
   });
 

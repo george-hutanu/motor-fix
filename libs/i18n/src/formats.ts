@@ -315,13 +315,44 @@ export function requestAge(
   if (elapsed < 24 * 60 * MINUTE) {
     return AGO[language].hours(Math.floor(elapsed / (60 * MINUTE)));
   }
+  return dayAndTime(date, language, now, { [-1]: YESTERDAY[language] });
+}
+
+const TODAY: Record<Language, string> = { en: 'today', ro: 'azi' };
+const TOMORROW: Record<Language, string> = { en: 'tomorrow', ro: 'mâine' };
+
+// A proposed start: today or tomorrow with the Bucharest time, else the
+// weekday and the day: "mâine, 09:00", "joi, 15 oct., 14:00".
+export function formatSlot(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  return dayAndTime(date, language, now, {
+    0: TODAY[language],
+    1: TOMORROW[language],
+  });
+}
+
+// "<word>, 14:00" for a Bucharest day `named` has a word for (by days from
+// today), else "joi, 15 oct., 14:00".
+function dayAndTime(
+  date: Date,
+  language: Language,
+  now: Date,
+  named: Record<number, string>,
+): string {
   const day = bucharestDay(date);
   const today = bucharestDay(now);
   const start = Date.UTC(day.year, day.month - 1, day.day);
   const time = clock.format(date);
-  if (Date.UTC(today.year, today.month - 1, today.day) - start === DAY_MS) {
-    return `${YESTERDAY[language]}, ${time}`;
-  }
+  const offset = Math.round(
+    (start - Date.UTC(today.year, today.month - 1, today.day)) / DAY_MS,
+  );
+  const word = named[offset];
+  if (word) return `${word}, ${time}`;
   const weekday = WEEKDAYS_SHORT[language][new Date(start).getUTCDay()];
   return `${weekday}, ${day.day} ${MONTHS_SHORT[language][day.month - 1]}, ${time}`;
 }

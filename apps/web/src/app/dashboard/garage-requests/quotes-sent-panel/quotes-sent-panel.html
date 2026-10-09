@@ -1,0 +1,31 @@
+<section class="panel" [attr.aria-busy]="feed.quotedLoading() || null">
+  <header>
+    <h2>{{ 'garage.quotes.sentList.heading' | t }}</h2>
+  </header>
+  @if (feed.quotedLoading()) {
+    <ul class="rows">
+      <li class="skeleton" aria-hidden="true"></li>
+      <li class="skeleton" aria-hidden="true"></li>
+      <li class="skeleton" aria-hidden="true"></li>
+    </ul>
+    <span class="sr-only" role="status">{{ 'garage.quotes.sentList.loading' | t }}</span>
+  } @else {
+    <mf-live-pill [rows]="list" />
+    @if (list.rows().length) {
+      <ul class="rows" [mfLiveAnchor]="list.rows()">
+        @for (row of list.rows(); track row.id) {
+          <li
+            [mfQuoteSentRow]="row"
+            [now]="now()"
+            [attr.data-live-id]="row.id"
+            [mfLiveChange]="row"
+            [mfLiveChangeNew]="fresh().has(row.id)"
+          ></li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">{{ 'garage.quotes.sentList.empty' | t }}</p>
+    }
+  }
+  <span #end class="end" aria-hidden="true"></span>
+</section>

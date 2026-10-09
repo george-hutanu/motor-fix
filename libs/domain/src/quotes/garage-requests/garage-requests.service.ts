@@ -2,6 +2,7 @@ import type {
   GarageBookingDto,
   GarageCloseReason,
   GarageRequestDto,
+  GarageRequestJobPriceDto,
   GarageRequestListDto,
   GarageRequestSummaryDto,
   GarageRequestsQueryDto,
@@ -156,6 +157,7 @@ export class GarageRequestsService {
   ): Promise<GarageRequestListDto> {
     const garageId = this.garageOf(actor);
     if (query.status === 'closed') return this.closed(garageId);
+    if (query.status === 'quoted') return this.quoted(garageId, query.cursor);
     const where =
       query.status === 'waiting'
         ? {
@@ -271,6 +273,72 @@ export class GarageRequestsService {
     };
   }
 
+  // The rows this garage quoted whose quote still waits, newest quote first.
+  private async quoted(
+    garageId: string,
+    cursor?: string,
+  ): Promise<GarageRequestListDto> {
+    const where = {
+      garageId,
+      recipient: { status: 'quoted' as const },
+      status: 'waiting' as const,
+    };
+    const from = await assertCursor(cursor, (requestId) =>
+      this.prisma.quote.findFirst({ where: { ...where, requestId } }),
+    );
+    const [hits, total] = await Promise.all([
+      this.prisma.quote.findMany({
+        orderBy: [{ sentAt: 'desc' }, { requestId: 'desc' }],
+        select: { requestId: true },
+        take: PAGE_TAKE,
+        where,
+        ...(from.cursor && {
+          cursor: {
+            requestId_garageId: { garageId, requestId: from.cursor.id },
+          },
+          skip: 1,
+        }),
+      }),
+      this.prisma.quote.count({ where }),
+    ]);
+    const found = await this.prisma.quoteRequest.findMany({
+      include: summaryInclude(garageId),
+      where: { id: { in: hits.map((hit) => hit.requestId) } },
+    });
+    const byId = new Map(found.map((row) => [row.id, row]));
+    const rows = hits.flatMap((hit) => byId.get(hit.requestId) ?? []);
+    const offered = await this.offered(garageId, rows);
+    return page(rows, total, (row) => summaryOf(row, offered));
+  }
+
+  // The garage's price-list row for each asked job: the row for the car's
+  // brand, else its default row. Hidden rows count: the garage still means
+  // the price.
+  private async prices(
+    garageId: string,
+    row: Pick<QuoteRequest, 'carBrand'> & { jobs: { jobTypeId: string }[] },
+  ): Promise<Map<string, GarageRequestJobPriceDto>> {
+    const rows = await this.prisma.garagePrice.findMany({
+      orderBy: { brandId: { nulls: 'last', sort: 'asc' } },
+      select: {
+        durationMinutes: true,
+        fromBani: true,
+        jobTypeId: true,
+        toBani: true,
+      },
+      where: {
+        garageId,
+        jobTypeId: { in: row.jobs.map((job) => job.jobTypeId) },
+        OR: [{ brand: { name: row.carBrand } }, { brandId: null }],
+      },
+    });
+    const prices = new Map<string, GarageRequestJobPriceDto>();
+    for (const { jobTypeId, ...price } of rows) {
+      if (!prices.has(jobTypeId)) prices.set(jobTypeId, price);
+    }
+    return prices;
+  }
+
   // One read for the whole page: the jobs this garage ticked for the brands
   // of the rows' cars.
   private async offered(
@@ -313,7 +381,11 @@ export class GarageRequestsService {
       where: { id, recipients: { some: { garageId } } },
     });
     if (!row) throw new NotFoundException();
-    const summary = summaryOf(row, await this.offered(garageId, [row]));
+    const [offered, prices] = await Promise.all([
+      this.offered(garageId, [row]),
+      this.prices(garageId, row),
+    ]);
+    const summary = summaryOf(row, offered);
     const [booking] = row.bookings;
     // The plate shows from confirmation on, as it does on the job, even once
     // the booking is cancelled; a mechanic sees it only on their own booking.
@@ -334,6 +406,10 @@ export class GarageRequestsService {
       },
       description: row.description,
       driver: { ...summary.driver, ...(phone && { phone }) },
+      jobs: summary.jobs.map((job) => ({
+        ...job,
+        price: prices.get(job.jobTypeId) ?? null,
+      })),
     };
   }
 

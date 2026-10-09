@@ -113,7 +113,7 @@ export const GARAGE_CLOSE_REASON_LABELS: Record<
   },
 };
 
-export const GARAGE_REQUEST_FILTERS = ['waiting', 'closed'] as const;
+export const GARAGE_REQUEST_FILTERS = ['waiting', 'closed', 'quoted'] as const;
 export type GarageRequestFilter = (typeof GARAGE_REQUEST_FILTERS)[number];
 
 export const REQUEST_SOURCES = [

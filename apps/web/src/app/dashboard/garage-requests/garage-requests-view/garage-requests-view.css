@@ -28,3 +28,6 @@
 li[data-closed] {
   color: var(--mf-text-secondary);
 }
+mf-quotes-sent-panel {
+  margin-top: var(--mf-space-4);
+}
