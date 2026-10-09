@@ -36,6 +36,7 @@ const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
 // The field types set-fields writes; GitHub's own fields (CREATED, TITLE, …) take no value.
 const WRITABLE = new Set(["SINGLE_SELECT", "DATE", "NUMBER", "TEXT"]);
 const KINDS = ["create", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "blocked-by", "pr-closes"];
+const READERS = 4;
 const MARKER = /<!-- motorfix:((?:ST|EP)-\d+) -->/;
 // Set on an issue filed by hand and adopted: its title and labels stay the person's.
 const ADOPTED = "<!-- motorfix:adopted -->";
@@ -690,9 +691,13 @@ export async function runImport({
     const first = new Set(order.filter(quick));
     order.splice(0, order.length, ...first, ...order.filter((i) => !first.has(i)));
   }
-  const reading = (async () => {
-    for (const i of order) {
-      if (stopReading) return;
+  // Pages are read READERS at a time (Notion answers each page's block tree in
+  // many round trips); writes stay one at a time for GitHub's content limit.
+  let cursor = 0;
+  const reader = async () => {
+    for (;;) {
+      if (stopReading || readError || cursor >= order.length) return;
+      const i = order[cursor++];
       const plan = plans[i];
       try {
         if (plan.body === null) {
@@ -709,7 +714,8 @@ export async function runImport({
       ready[i] = true;
       woken();
     }
-  })();
+  };
+  const reading = Promise.all(Array.from({ length: READERS }, reader));
   /** The first page in import order that is read and not yet written, waiting for the reader when none is; null when all are done. */
   const taken = plans.map(() => false);
   const nextPage = async () => {

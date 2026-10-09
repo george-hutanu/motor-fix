@@ -685,6 +685,27 @@ describe("reading and writing together", () => {
     assert.ok(lines.includes(`read      notion: 12 pages' content, ${12 - epics.length} read from Notion, the rest from the cache`), lines.filter((l) => l.startsWith("read")).join("\n"));
   });
 
+  it("reads several pages from Notion at once, and still writes each issue once", async () => {
+    const client = notionClient({ token: "ntn_x", fetchImpl: fakeNotion({}).fetchImpl, sleep: async () => {} });
+    const t = await readTracker(client);
+    const inner = pageLoader(client, t);
+    let open = 0;
+    let most = 0;
+    const load = async (page) => {
+      open++;
+      most = Math.max(most, open);
+      await new Promise((r) => setTimeout(r, 5));
+      open--;
+      return inner(page);
+    };
+    load.cached = inner.cached;
+    const gh = await bootstrapped();
+    const { exit } = await importInto(gh, { tracker: t, load });
+    assert.equal(exit, 0);
+    assert.ok(most > 1 && most <= 4, `at most ${most} reads at once`);
+    assert.equal(gh.state.issues.length, 12);
+  });
+
   it("keeps reading while a slow writer works, so the reader runs ahead", async () => {
     const events = [];
     const { t, load } = await streaming(events);
