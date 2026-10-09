@@ -150,7 +150,7 @@
     {
       "kind": "queue",
       "name": "request-received",
-      "source": "libs/domain/src/metrics/product-counters.ts",
+      "source": "libs/domain/src/notifications/request-received/request-received.fan-out.ts",
       "dashboard": "motorfix-queues",
       "alerts": "none",
       "reason": "no agreed threshold yet; ST-880 adds the alerts",

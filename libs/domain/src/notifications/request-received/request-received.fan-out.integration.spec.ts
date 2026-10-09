@@ -478,6 +478,21 @@ describe('what the fan-out reports', () => {
     expect(await counted('skipped')).toBe(before.skipped + 1);
   });
 
+  it('counts a garage where nobody may answer quotes as skipped, not muted', async () => {
+    const garage = await world.garage('Atelier nimeni');
+    const { job } = await sent([garage.id]);
+    const { fanOut } = await start();
+    const before = {
+      muted: await counted('muted'),
+      skipped: await counted('skipped'),
+    };
+
+    await fanOut.handle(job);
+
+    expect(await counted('skipped')).toBe(before.skipped + 1);
+    expect(await counted('muted')).toBe(before.muted);
+  });
+
   it('logs one line with the request id and how many people it told, and nothing about the car or the driver', async () => {
     const log = jest
       .spyOn(Logger.prototype, 'log')

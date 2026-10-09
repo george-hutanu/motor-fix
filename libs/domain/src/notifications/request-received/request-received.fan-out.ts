@@ -93,14 +93,11 @@ export class RequestReceivedFanOut {
     const link = `${this.config.webUrl}/app/garage/requests`;
     let told = 0;
     for (const recipient of request.recipients) {
-      if (
-        recipient.garage.status === 'suspended' ||
-        recipient.status !== 'waiting'
-      ) {
+      const staff = await this.staff(recipient);
+      if (staff.length === 0) {
         countRequestReceived('skipped');
         continue;
       }
-      const staff = await this.staff(recipient.garageId);
       let queued = 0;
       for (const [language, people] of await this.byLanguage(staff)) {
         queued += await this.notifications.notify({
@@ -113,14 +110,28 @@ export class RequestReceivedFanOut {
         });
       }
       told += staff.length;
-      // Nothing queued: everyone who may answer muted it, or nobody may.
+      // Nothing queued: everyone who may answer muted it.
       countRequestReceived(queued > 0 ? 'built' : 'muted');
     }
     this.logger.log(`request ${payload.requestId} announced to ${told} staff`);
   }
 
-  private async staff(garageId: string): Promise<string[]> {
-    const { mechanics, owners, receptionists } = await this.access(garageId);
+  // Nobody to tell when the garage is suspended, its request no longer waits,
+  // or nobody there may answer quotes.
+  private async staff(recipient: {
+    garage: { status: string };
+    garageId: string;
+    status: string;
+  }): Promise<string[]> {
+    if (
+      recipient.garage.status === 'suspended' ||
+      recipient.status !== 'waiting'
+    ) {
+      return [];
+    }
+    const { mechanics, owners, receptionists } = await this.access(
+      recipient.garageId,
+    );
     const answering = [...mechanics]
       .filter(([, permissions]) => permissions.canAnswerQuotes)
       .map(([accountId]) => accountId);
