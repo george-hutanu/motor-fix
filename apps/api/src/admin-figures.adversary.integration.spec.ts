@@ -144,6 +144,7 @@ describe('the period range at its edges', () => {
       counts.push(res.body.activeDrivers);
     }
 
+    expect(counts[0]).toEqual(expect.any(Number));
     expect(new Set(counts).size).toBe(1);
   });
 

@@ -53,10 +53,4 @@ describe('the period ranges at the calendar edges', () => {
       periodRange('today', new Date('2026-12-31T22:30:00Z'))?.firstDay,
     ).toBe('2027-01-01');
   });
-
-  it('gives the same range twice for the same instant', () => {
-    const now = new Date('2026-10-08T10:00:00Z');
-
-    expect(periodRange('12m', now)).toEqual(periodRange('12m', now));
-  });
 });

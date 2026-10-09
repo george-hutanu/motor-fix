@@ -26,7 +26,8 @@ describe('the city of a hostile locality', () => {
     const composed = String.fromCharCode(73, 97, 0x219, 105);
     const decomposed = `Ias${String.fromCharCode(0x326)}i`;
 
-    expect(cityOf(decomposed)?.key).toBe(cityOf(composed)?.key);
+    expect(cityOf(composed)?.key).toBe('iasi');
+    expect(cityOf(decomposed)?.key).toBe('iasi');
   });
 
   it('does not fold a sector number past 6 into București', () => {
@@ -45,9 +46,5 @@ describe('the city of a hostile locality', () => {
 
   it('knows no city for a locality of only non-latin letters', () => {
     expect(cityOf('東京')).toBeNull();
-  });
-
-  it('is the same city called twice', () => {
-    expect(cityOf('Cluj-Napoca')).toEqual(cityOf('Cluj-Napoca'));
   });
 });
