@@ -141,7 +141,7 @@ describe('the clean-up', () => {
     ).resolves.toBe(0);
   });
 
-  // @traces 206-documents-declaration-FR-011
+  // @traces 206-FR-011
   it('deletes the document pages with the files, and never those of a sent draft', async () => {
     const old = await draft(daysAgo(90), {
       data: {

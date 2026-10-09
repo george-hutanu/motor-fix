@@ -159,7 +159,7 @@ afterEach(() => {
   });
 });
 
-// @traces 206-documents-declaration-FR-001
+// @traces 206-FR-001
 describe('step 6, the documents', () => {
   it('asks for the certificate, then the authorisation, each with its hint and a picker for PDF, JPG and PNG', async () => {
     const { step } = await open();
@@ -204,7 +204,7 @@ describe('step 6, the documents', () => {
     );
   });
 
-  // @traces 206-documents-declaration-FR-015
+  // @traces 206-FR-015
   it('says it all in English and keeps the pages and the date when the language changes', async () => {
     const issuedOn = daysAgo(3);
     const opened = await open({
@@ -235,7 +235,7 @@ describe('step 6, the documents', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-008
+  // @traces 206-FR-008
   it('tells a visitor with no e-mail yet to add one, and takes no files', async () => {
     const { http, step } = await open({ draftId: '' });
 
@@ -252,8 +252,8 @@ describe('step 6, the documents', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-002
-// @traces 206-documents-declaration-FR-003
+// @traces 206-FR-002
+// @traces 206-FR-003
 describe('uploading the pages', () => {
   it('refuses a file of another type or over 10 MB before asking, and uploads the rest', async () => {
     const opened = await open();
@@ -412,7 +412,7 @@ describe('uploading the pages', () => {
     );
   });
 
-  // @traces 206-documents-declaration-FR-008
+  // @traces 206-FR-008
   it('keeps files chosen offline waiting, then uploads them in order when the connection returns', async () => {
     const opened = await open();
     Object.defineProperty(navigator, 'onLine', {
@@ -447,7 +447,7 @@ describe('uploading the pages', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-015
+  // @traces 206-FR-015
   it('tells by words, not only colour, that files are being dragged over it', async () => {
     const { settle, step } = await open();
     const zone = certificate(step).querySelector('.drop') as HTMLElement;
@@ -463,7 +463,7 @@ describe('uploading the pages', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-008
+// @traces 206-FR-008
 describe('ordering and removing the pages', () => {
   const three = {
     rar_authorisation: { pages: [keyOf(0), keyOf(1), keyOf(2)] },
@@ -580,8 +580,8 @@ describe('ordering and removing the pages', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-007
-// @traces 206-documents-declaration-FR-017
+// @traces 206-FR-007
+// @traces 206-FR-017
 describe('the certificate issue date', () => {
   const held = { onrc_certificate: { pages: [keyOf(0)] } };
   const type = async (opened: Opened, value: string) => {
@@ -694,7 +694,7 @@ describe('the declaration', () => {
     await opened.settle();
   }
 
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-009
   it.each([
     [
       'ro' as const,
@@ -726,7 +726,7 @@ describe('the declaration', () => {
     },
   );
 
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-009
   it('marks the declaration when ticked and clears it when unticked', async () => {
     const opened = await open();
 
@@ -737,7 +737,7 @@ describe('the declaration', () => {
     expect(declarationOf(opened)).toEqual({});
   });
 
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-009
   it('keeps the name trimmed once it has 2 to 80 characters, and none shorter, showing what was typed', async () => {
     const opened = await open();
 
@@ -750,7 +750,7 @@ describe('the declaration', () => {
     expect(nameField(opened.step).value).toBe(' I ');
   });
 
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-009
   it('asks for the full name of a tick only once the field is left, and clears it when the name is whole', async () => {
     const opened = await open();
     await tick(opened);
@@ -774,7 +774,7 @@ describe('the declaration', () => {
     expect(nameErrorText(opened.step)).toBe('');
   });
 
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-009
   it('opens a kept declaration ticked, with its name and its time', async () => {
     const declaration = {
       declaredAt: '2026-10-09T08:00:00.000Z',
@@ -791,7 +791,7 @@ describe('the declaration', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-015
+  // @traces 206-FR-015
   it('gives the tick a target of the full tap height', async () => {
     const { step } = await open();
 

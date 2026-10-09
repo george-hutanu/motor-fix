@@ -73,7 +73,7 @@ describe('the step counter', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-009
+// @traces 206-FR-009
 describe('the declarer name error', () => {
   it.each(['', ' ', 'I', '  I  ', 'a'.repeat(81)])(
     'asks for the full name for %p once left, when the declaration is ticked',

@@ -1400,8 +1400,8 @@ describe('the counter of five', () => {
       '#listing-declared-name',
     ) as HTMLInputElement;
 
-  // @traces 206-documents-declaration-FR-010
-  // @traces 206-documents-declaration-FR-017
+  // @traces 206-FR-010
+  // @traces 206-FR-017
   it.each([
     ['/ro/list-your-garage', '5 din 5 completate'],
     ['/en/list-your-garage', '5 of 5 completed'],
@@ -1421,7 +1421,7 @@ describe('the counter of five', () => {
     },
   );
 
-  // @traces 206-documents-declaration-FR-010
+  // @traces 206-FR-010
   it('counts each document from its first page, the issue date not needed', async () => {
     seed({
       data: {
@@ -1434,8 +1434,8 @@ describe('the counter of five', () => {
     expect(counter(page)).toBe('1 din 5 completate');
   });
 
-  // @traces 206-documents-declaration-FR-009
-  // @traces 206-documents-declaration-FR-010
+  // @traces 206-FR-009
+  // @traces 206-FR-010
   it('counts the declaration only once ticked with a full name, and stops when unticked', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
 
@@ -1454,7 +1454,7 @@ describe('the counter of five', () => {
     expect(counter(page)).toBe('0 din 5 completate');
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('keeps the tick and the name in the browser copy', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     jest.useFakeTimers({ doNotFake: ['setImmediate'] });

@@ -835,7 +835,7 @@ describe('the documents of a draft', () => {
     return (row.data as { documents?: Documents }).documents;
   };
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('keeps the page order the owner chose', async () => {
     const draft = await draftHolding((id) => ({
       onrc_certificate: { pages: [page(id), page(id), page(id)] },
@@ -855,7 +855,7 @@ describe('the documents of a draft', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('refuses a page the draft does not hold for that kind, and changes nothing', async () => {
     const draft = await draftHolding((id) => ({
       onrc_certificate: { pages: [page(id)] },
@@ -885,7 +885,7 @@ describe('the documents of a draft', () => {
     expect(await documentsOf(draft.id)).toEqual(draft.documents);
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('refuses a new draft that claims document pages', async () => {
     const other = await draftHolding((id) => ({
       rar_authorisation: { pages: [page(id)] },
@@ -905,7 +905,7 @@ describe('the documents of a draft', () => {
     expect(await prisma.listingDraft.count()).toBe(1);
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('keeps a held page the save left out, at the end', async () => {
     const draft = await draftHolding((id) => ({
       rar_authorisation: { pages: [page(id), page(id), page(id)] },
@@ -923,7 +923,7 @@ describe('the documents of a draft', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('keeps the stored entry of a kind the save omits, and all of them when it carries none', async () => {
     const draft = await draftHolding((id) => ({
       onrc_certificate: { issuedOn: '2026-09-20', pages: [page(id)] },
@@ -948,7 +948,7 @@ describe('the documents of a draft', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-007
+  // @traces 206-FR-007
   it.each([
     ['today in Bucharest', '2026-10-09'],
     ['30 days before it', '2026-09-09'],
@@ -965,7 +965,7 @@ describe('the documents of a draft', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-007
+  // @traces 206-FR-007
   it.each([
     ['31 days ago', '2026-09-08'],
     ['tomorrow in Bucharest', '2026-10-10'],
@@ -984,7 +984,7 @@ describe('the documents of a draft', () => {
     expect(await documentsOf(draft.id)).toEqual(draft.documents);
   });
 
-  // @traces 206-documents-declaration-FR-007
+  // @traces 206-FR-007
   it('keeps accepting a stored issue date that has aged past the window', async () => {
     const draft = await draftHolding((id) => ({
       onrc_certificate: { issuedOn: '2026-08-01', pages: [page(id)] },
@@ -996,7 +996,7 @@ describe('the documents of a draft', () => {
     expect(await documentsOf(draft.id)).toEqual({ onrc_certificate: stored });
   });
 
-  // @traces 206-documents-declaration-FR-017
+  // @traces 206-FR-017
   it('refuses a save with documents to a sent draft', async () => {
     const draft = await draftHolding((id) => ({
       onrc_certificate: { pages: [page(id)] },
@@ -1041,8 +1041,8 @@ describe('the declaration of a draft', () => {
     return { declaredAt, declaredByName };
   };
 
-  // @traces 206-documents-declaration-FR-006
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-006
+  // @traces 206-FR-009
   it('stamps the server time on the save that adds the tick, whatever the browser sent, and counts it once', async () => {
     service.now = () => FIRST;
     const draft = await service.create(body());
@@ -1060,7 +1060,7 @@ describe('the declaration of a draft', () => {
     expect(await signed()).toBe(before + 1);
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('keeps the stored time on a save that keeps the tick, and counts nothing more', async () => {
     service.now = () => FIRST;
     const draft = await service.create(body());
@@ -1079,7 +1079,7 @@ describe('the declaration of a draft', () => {
     expect(await signed()).toBe(before);
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('clears the time on a save that drops the tick, and stamps anew on the next tick', async () => {
     service.now = () => FIRST;
     const draft = await service.create(body());
@@ -1098,7 +1098,7 @@ describe('the declaration of a draft', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-006
+  // @traces 206-FR-006
   it('stamps a new draft that arrives ticked with the server time', async () => {
     service.now = () => FIRST;
     const before = await signed();
@@ -1113,7 +1113,7 @@ describe('the declaration of a draft', () => {
     expect(await signed()).toBe(before + 1);
   });
 
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-009
   it('keeps the name trimmed', async () => {
     const draft = await service.create(body());
 
@@ -1124,7 +1124,7 @@ describe('the declaration of a draft', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-009
+  // @traces 206-FR-009
   it.each([
     ['over 80 characters', 'a'.repeat(81)],
     ['one character once trimmed', '  I  '],

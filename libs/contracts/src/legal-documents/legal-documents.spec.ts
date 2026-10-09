@@ -14,7 +14,7 @@ import { FILE_RULES } from '../files';
 const PAGE =
   'legal_document/7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00/5e0a8f3b-91c2-4d7e-8b6a-0c4f2e9d1a37';
 
-// @traces 206-documents-declaration-FR-004
+// @traces 206-FR-004
 describe('the document kinds', () => {
   it('are the trade register certificate and the RAR authorisation, in that order', () => {
     expect(DOCUMENT_KINDS).toEqual(['onrc_certificate', 'rar_authorisation']);
@@ -36,7 +36,7 @@ describe('the document kinds', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-007
+// @traces 206-FR-007
 describe('the certificate issue-date window', () => {
   const today = '2026-10-09';
 
@@ -66,7 +66,7 @@ describe('the certificate issue-date window', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-006
+// @traces 206-FR-006
 describe('a document done', () => {
   it('needs at least one confirmed page', () => {
     expect(
@@ -90,7 +90,7 @@ describe('a document done', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-009
+// @traces 206-FR-009
 describe('the declaration done', () => {
   const at = '2026-10-09T10:00:00.000Z';
 

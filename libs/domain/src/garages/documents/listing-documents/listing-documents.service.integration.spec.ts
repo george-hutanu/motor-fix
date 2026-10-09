@@ -137,7 +137,7 @@ const submit = (id: string) =>
     where: { id },
   });
 
-// @traces 206-documents-declaration-FR-005
+// @traces 206-FR-005
 describe('the document routes', () => {
   it('answer with Cache-Control: no-store', () => {
     expect(
@@ -147,7 +147,7 @@ describe('the document routes', () => {
 });
 
 describe('the upload address', () => {
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it('is signed for the draft for 15 minutes under an incoming legal_document key', async () => {
     const draft = await newDraft();
     const before = Date.now();
@@ -168,7 +168,7 @@ describe('the upload address', () => {
     expect(minutes).toBeLessThanOrEqual(15.1);
   });
 
-  // @traces 206-documents-declaration-FR-005
+  // @traces 206-FR-005
   it('answers a wrong, foreign or missing token as the draft routes answer a wrong one', async () => {
     const draft = await newDraft();
     const other = await newDraft();
@@ -186,7 +186,7 @@ describe('the upload address', () => {
     expect(unknown.status).toBe(404);
   });
 
-  // @traces 206-documents-declaration-FR-005
+  // @traces 206-FR-005
   it('is refused for a sent draft', async () => {
     const draft = await newDraft();
     await submit(draft.id);
@@ -202,7 +202,7 @@ describe('the upload address', () => {
     expect(refused.body).toMatchObject({ code: 'draft_submitted' });
   });
 
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it.each(['identity_card', '__proto__', 'constructor'])(
     'refuses the unknown kind %s with document_kind_unknown',
     async (kind) => {
@@ -220,7 +220,7 @@ describe('the upload address', () => {
     },
   );
 
-  // @traces 206-documents-declaration-FR-002
+  // @traces 206-FR-002
   it.each([
     [
       'a .docx',
@@ -244,7 +244,7 @@ describe('the upload address', () => {
     expect(refused.body).toMatchObject({ code });
   });
 
-  // @traces 206-documents-declaration-FR-002
+  // @traces 206-FR-002
   it('is refused with document_full once the kind holds 10 pages, and not for the other kind', async () => {
     const draft = await newDraft();
     await holding(draft.id, 'onrc_certificate', 10);
@@ -268,7 +268,7 @@ describe('the upload address', () => {
 });
 
 describe('confirming a page', () => {
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it('creates the document on its first page and appends the next, answering the document', async () => {
     const draft = await newDraft();
     const before = await uploaded('rar_authorisation');
@@ -307,7 +307,7 @@ describe('confirming a page', () => {
     expect(await uploaded('rar_authorisation')).toBe(before + 2);
   });
 
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it('keeps the issue date and the other kind when a page is added', async () => {
     const draft = await newDraft();
     const held = await holding(draft.id, 'onrc_certificate', 1, '2026-10-01');
@@ -333,7 +333,7 @@ describe('confirming a page', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-002
+  // @traces 206-FR-002
   it('refuses the 11th page and deletes what was uploaded', async () => {
     const draft = await newDraft();
     const key = await upload(draft.id, draft.token);
@@ -351,7 +351,7 @@ describe('confirming a page', () => {
     expect([...store.objects.keys()].sort()).toEqual([...held].sort());
   });
 
-  // @traces 206-documents-declaration-FR-002
+  // @traces 206-FR-002
   it('refuses bytes that are not a PDF under a PDF type and deletes them', async () => {
     const draft = await newDraft();
     const key = await upload(
@@ -371,7 +371,7 @@ describe('confirming a page', () => {
     expect(store.objects.size).toBe(0);
   });
 
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it('answers a replayed confirm with file_missing and holds the page once', async () => {
     const draft = await newDraft();
     const key = await upload(draft.id, draft.token);
@@ -388,7 +388,7 @@ describe('confirming a page', () => {
     ).toHaveLength(1);
   });
 
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it('keeps a page once when a second confirm of it passed storage at the same time', async () => {
     const draft = await newDraft();
     const incoming = await upload(draft.id, draft.token);
@@ -415,7 +415,7 @@ describe('confirming a page', () => {
     expect(store.objects.has(page)).toBe(true);
   });
 
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it('refuses a page held by the other kind of the same draft', async () => {
     const draft = await newDraft();
     const incoming = await upload(draft.id, draft.token, 'rar_authorisation');
@@ -442,7 +442,7 @@ describe('confirming a page', () => {
     expect(store.objects.has(page)).toBe(true);
   });
 
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it.each([
     ['uploaded for another draft', 'other'],
     ['never uploaded', 'unknown'],
@@ -463,7 +463,7 @@ describe('confirming a page', () => {
     expect(await documentsOf(draft.id)).toBeUndefined();
   });
 
-  // @traces 206-documents-declaration-FR-005
+  // @traces 206-FR-005
   it('refuses a page for a draft sent meanwhile and deletes the upload', async () => {
     const draft = await newDraft();
     const key = await upload(draft.id, draft.token);
@@ -478,7 +478,7 @@ describe('confirming a page', () => {
     expect(store.objects.size).toBe(0);
   });
 
-  // @traces 206-documents-declaration-FR-005
+  // @traces 206-FR-005
   it('touches nothing for a wrong token', async () => {
     const draft = await newDraft();
     const key = await upload(draft.id, draft.token);
@@ -492,7 +492,7 @@ describe('confirming a page', () => {
     expect(await documentsOf(draft.id)).toBeUndefined();
   });
 
-  // @traces 206-documents-declaration-FR-003
+  // @traces 206-FR-003
   it('refuses an unknown kind and touches nothing', async () => {
     const draft = await newDraft();
     const key = await upload(draft.id, draft.token);
@@ -508,7 +508,7 @@ describe('confirming a page', () => {
 });
 
 describe('removing a page', () => {
-  // @traces 206-documents-declaration-FR-011
+  // @traces 206-FR-011
   it('takes the key out of the document and deletes the object', async () => {
     const draft = await newDraft();
     const [a, b, c] = (await holding(draft.id, 'rar_authorisation', 3)) as [
@@ -526,7 +526,7 @@ describe('removing a page', () => {
     expect(store.objects.has(a)).toBe(true);
   });
 
-  // @traces 206-documents-declaration-FR-011
+  // @traces 206-FR-011
   it('removes the document and its issue date with its last page, keeping the other kind', async () => {
     const draft = await newDraft();
     const [page] = await holding(draft.id, 'onrc_certificate', 1, '2026-10-01');
@@ -544,7 +544,7 @@ describe('removing a page', () => {
     });
   });
 
-  // @traces 206-documents-declaration-FR-005
+  // @traces 206-FR-005
   it('answers 404 for a key the document does not hold and changes nothing', async () => {
     const draft = await newDraft();
     const mine = await holding(draft.id, 'onrc_certificate', 1);
@@ -564,7 +564,7 @@ describe('removing a page', () => {
     expect(store.objects.has(theirs[0] as string)).toBe(true);
   });
 
-  // @traces 206-documents-declaration-FR-016
+  // @traces 206-FR-016
   it('still removes the key when storage fails, and logs the draft and key without the e-mail or the token', async () => {
     const draft = await newDraft();
     const [first, second] = (await holding(
@@ -593,7 +593,7 @@ describe('removing a page', () => {
     logged.mockRestore();
   });
 
-  // @traces 206-documents-declaration-FR-005
+  // @traces 206-FR-005
   it('is refused for a wrong token, an unknown kind and a sent draft', async () => {
     const draft = await newDraft();
     const [page] = (await holding(draft.id, 'onrc_certificate', 1)) as [string];

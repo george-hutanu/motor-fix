@@ -87,12 +87,12 @@ async function toDocuments(page: Page, email: string) {
 test.describe('step 6 of list your garage, the documents', () => {
   test.beforeEach(({ context }) => ownMap(context));
 
-  // @traces 206-documents-declaration-FR-001
-  // @traces 206-documents-declaration-FR-008
-  // @traces 206-documents-declaration-FR-015
-  // @traces 206-documents-declaration-FR-017
-  // @traces 206-documents-declaration-FR-009
-  // @traces 206-documents-declaration-FR-010
+  // @traces 206-FR-001
+  // @traces 206-FR-008
+  // @traces 206-FR-015
+  // @traces 206-FR-017
+  // @traces 206-FR-009
+  // @traces 206-FR-010
   for (const [size, width, height] of SIZES) {
     test(`on ${size}: a PDF certificate with its date and two authorisation photos, reordered, one removed, the declaration signed, five of five kept after a reload`, async ({
       page,

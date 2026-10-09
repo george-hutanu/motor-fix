@@ -41,7 +41,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 
 // @traces 879-FR-009 879-FR-010 879-FR-011
 // @traces 424-FR-017
-// @traces 206-documents-declaration-FR-016
+// @traces 206-FR-016
 describe('the product counters', () => {
   it.each([
     [

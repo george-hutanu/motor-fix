@@ -16,10 +16,10 @@ import {
 import { S3TestStore } from '../../../storage/s3-test-store';
 import { StorageService } from '../../../storage/storage.service';
 
-// @traces 206-documents-declaration-FR-012
-// @traces 206-documents-declaration-FR-013
-// @traces 206-documents-declaration-FR-014
-// @traces 206-documents-declaration-FR-017
+// @traces 206-FR-012
+// @traces 206-FR-013
+// @traces 206-FR-014
+// @traces 206-FR-017
 
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);

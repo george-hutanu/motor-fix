@@ -222,7 +222,7 @@ describe('the mechanics section', () => {
   });
 });
 
-// @traces 206-documents-declaration-FR-006
+// @traces 206-FR-006
 describe('the draft envelope with documents and the declaration', () => {
   const DRAFT = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
   const page = (n: number) =>
