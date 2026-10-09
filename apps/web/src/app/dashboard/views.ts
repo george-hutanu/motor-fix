@@ -13,7 +13,9 @@ import { View } from './view/view';
 export type Area = 'driver' | 'garage' | 'admin';
 
 // The numbers a dashboard's menu entries carry, while known.
-export type Counts = Partial<Record<'garagesWaiting', number>>;
+export type Counts = Partial<
+  Record<'garagesWaiting' | 'requestsWaiting', number>
+>;
 
 // `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
 export interface DashboardView {
@@ -184,9 +186,20 @@ export const DASHBOARDS: Record<
       {
         ...HOME,
         empty: 'shell.frame.coming.garage.dashboard',
+        load: () =>
+          import('./garage-requests/garage-home/garage-home').then(
+            (m) => m.GarageHome,
+          ),
         title: 'shell.frame.bar.garage',
       },
-      garageView('requests', 'garage.requests'),
+      {
+        ...garageView('requests', 'garage.requests'),
+        counter: 'requestsWaiting',
+        load: () =>
+          import(
+            './garage-requests/garage-requests-view/garage-requests-view'
+          ).then((m) => m.GarageRequestsView),
+      },
       garageView('schedule', 'garage.schedule'),
       { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
       garageView('prices', 'garage.prices'),

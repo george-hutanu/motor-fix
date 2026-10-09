@@ -1,10 +1,15 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { type MeDto, NotificationsService } from '@motor-fix/data-access';
+import {
+  GarageRequestsService,
+  type MeDto,
+  NotificationsService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
-import { Subject } from 'rxjs';
+import { NEVER, Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
@@ -12,6 +17,9 @@ import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverHome } from './driver-home/driver-home';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
+import { GarageHome } from './garage-requests/garage-home/garage-home';
+import { GarageRequestsFeed } from './garage-requests/garage-requests-feed';
+import { GarageRequestsView } from './garage-requests/garage-requests-view/garage-requests-view';
 import { Live } from './live';
 import { RequestsView } from './requests-view/requests-view';
 import { Session } from './session';
@@ -120,6 +128,18 @@ describe('the dashboard view lists', () => {
     expect(requests.body).toBeUndefined();
     expect(await home.load?.()).toBe(DriverHome);
     expect(await requests.load?.()).toBe(RequestsView);
+  });
+
+  // @traces 343-live-quote-requests-FR-006
+  // @traces 343-live-quote-requests-FR-007
+  it('loads the garage Panou and Cereri de ofertă only when their view opens', async () => {
+    const [home, requests] = DASHBOARDS.garage.views;
+
+    expect(home.body).toBeUndefined();
+    expect(requests.body).toBeUndefined();
+    expect(await home.load?.()).toBe(GarageHome);
+    expect(await requests.load?.()).toBe(GarageRequestsView);
+    expect(requests.counter).toBe('requestsWaiting');
   });
 
   it('gives the garage and admin dashboards their addresses in menu order', () => {
@@ -423,6 +443,12 @@ const ADMIN = [
 ];
 
 const ATELIER = 'garage-1';
+
+// What the garage's request list answers; the server's 404 means not allowed.
+let requestList: () => Promise<unknown>;
+beforeEach(() => {
+  requestList = async () => ({ items: [], nextCursor: null, total: 0 });
+});
 const access = (
   status: 'draft' | 'approved' | 'suspended' = 'approved',
   features: Record<string, boolean> = {},
@@ -470,7 +496,18 @@ async function open(
       },
       {
         provide: Live,
-        useValue: { events: new Subject(), resync: new Subject() },
+        useValue: {
+          events: new Subject(),
+          offline: signal(false),
+          on: () => NEVER,
+          resync: new Subject(),
+          state: signal('open'),
+        },
+      },
+      GarageRequestsFeed,
+      {
+        provide: GarageRequestsService,
+        useValue: { garageRequestsControllerList: () => requestList() },
       },
       {
         provide: AdminOverview,
@@ -616,7 +653,8 @@ describe('the dashboard view routes', () => {
   });
 
   // @traces 097-FR-004 097-FR-008
-  it('shows the dashboard’s empty state on the garage dashboard address of an approved or suspended garage', async () => {
+  // @traces 343-live-quote-requests-FR-006
+  it('shows the requests panel, not the empty state, on the garage dashboard address of an approved or suspended garage', async () => {
     for (const status of ['approved', 'suspended'] as const) {
       TestBed.resetTestingModule();
       const { element } = await open(
@@ -627,7 +665,8 @@ describe('the dashboard view routes', () => {
       );
 
       expect(element.querySelector('mf-admin-panel')).toBeNull();
-      expect(element.textContent).toContain(
+      expect(element.querySelector('mf-garage-requests-panel')).not.toBeNull();
+      expect(element.textContent).not.toContain(
         'Aici vei vedea ce se întâmplă azi în service.',
       );
       expect(element.textContent).not.toContain(
@@ -660,9 +699,16 @@ describe('the dashboard view routes', () => {
 
   // @traces 097-FR-006 097-FR-008
   it('shows the empty state, not the check line, when the session’s garage matches no membership', async () => {
-    const { element } = await open('/app/garage', OWNER, 'garage', [
+    requestList = () => Promise.reject(new HttpErrorResponse({ status: 404 }));
+    const { element, harness } = await open('/app/garage', OWNER, 'garage', [
       { ...access('draft')[0], garageId: 'another-garage' },
     ]);
+    // The requests' first read answers 404 a moment later.
+    for (let i = 0; i < 4; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await harness.fixture.whenStable();
+      harness.detectChanges();
+    }
 
     expect(element.textContent).toContain(
       'Aici vei vedea ce se întâmplă azi în service.',
