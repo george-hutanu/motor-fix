@@ -1,0 +1,45 @@
+@if (view.value(); as list) {
+  @if (noneToday(list.items)) {
+    <p class="note">{{ 'garage.jobs.noneToday' | t }}</p>
+  }
+  @if (list.items.length) {
+    <ul class="jobs">
+      @for (job of list.items; track job.id) {
+        <li data-job>
+          <button type="button" class="row" (click)="open(job)">
+            <span class="line">
+              <span class="when">{{ when(job) }}</span>
+              <span class="stage" data-stage [attr.data-status]="job.status">{{ stage(job) | t }}</span>
+            </span>
+            <span class="line">
+              <span class="car">{{ job.car.brand }} {{ job.car.model }}</span>
+              @if (job.car.plate) {
+                <span class="plate">{{ job.car.plate }}</span>
+              }
+              <span class="names">{{ names(job) }}</span>
+            </span>
+            <span class="line muted">
+              <span>{{ job.mechanicName ?? ('garage.jobs.noMechanic' | t) }}</span>
+              <span class="progress">
+                @if (job.stepsTotal) {
+                  {{ 'garage.jobs.stepsDone' | t: { done: job.stepsDone, total: job.stepsTotal } }}
+                } @else {
+                  {{ 'garage.jobs.noSteps' | t }}
+                }
+              </span>
+            </span>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+} @else if (view.failed()) {
+  <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+  <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.jobs.retry' | t }}</button>
+} @else {
+  <ul class="jobs" aria-busy="true">
+    @for (n of skeletons; track n) {
+      <li data-skeleton class="skeleton" aria-hidden="true"></li>
+    }
+  </ul>
+}

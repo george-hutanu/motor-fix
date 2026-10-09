@@ -218,6 +218,7 @@ describe('Frame', () => {
       'Panou',
       'Cereri de ofertă',
       'Programări',
+      'Lucrări',
       'Mecanici',
       'Prețuri',
       'Recenzii',
@@ -245,7 +246,7 @@ describe('Frame', () => {
 
     expect(name()).toBe('Ioana Pop');
     expect(menu(element)).toEqual(before);
-    expect(menu(element)).toHaveLength(9);
+    expect(menu(element)).toHaveLength(10);
     expect(title(element)).toBe('Mecanici');
     expect(url()).toBe('/app/garage/team');
 
@@ -267,19 +268,22 @@ describe('Frame', () => {
       'Panou',
       'Cereri de ofertă',
       'Programări',
+      'Lucrări',
       'Setări',
     ]);
   });
 
   // @traces 198-FR-011
+  // @traces 424-FR-012
   it('shows a mechanic their own jobs and the settings', async () => {
     const { element } = await render('mechanic', '/app/garage', [
       'garage.own_jobs',
     ]);
 
-    expect(menu(element)).toEqual(['Panou', 'Setări']);
+    expect(menu(element)).toEqual(['Panou', 'Lucrări', 'Setări']);
     expect(bar(element).map((a) => a.textContent?.trim())).toEqual([
       'Panou',
+      'Lucrări',
       'Setări',
     ]);
   });
@@ -331,6 +335,7 @@ describe('Frame', () => {
       'Panou',
       'Cereri',
       'Program',
+      'Lucrări',
       'Mecanici',
       'Prețuri',
       'Recenzii',
@@ -503,6 +508,7 @@ describe('Frame', () => {
       'Dashboard',
       'Quote requests',
       'Schedule',
+      'Jobs',
       'Mechanics',
       'Prices',
       'Reviews',

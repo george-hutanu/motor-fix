@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 90,
+    "count": 95,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -252,6 +252,17 @@
     },
     {
       "kind": "product-counter",
+      "name": "mcp_tool_calls_total{tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats\"}",
+      "source": "libs/mcp-tools/src/catalogue.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-tool-errors"
+      ],
+      "reason": "the four garage read tools count under mcp_tool_calls_total{tool,outcome} and mcp_tool_call_duration_seconds{tool}, one McpToolCall log line and an mcp.tool <name> span per call, like every tool; the existing mcp-tool-errors alert sums every tool; reads write no audit row",
+      "story": "ST-374"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_garage_profile_cache_total",
       "source": "libs/domain/src/garages/public-garages/public-garages.metrics.ts",
       "dashboard": "motorfix-api",
@@ -359,6 +370,25 @@
       "alerts": "none",
       "reason": "ST-880 adds the alerts",
       "story": "ST-1"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-job-steps",
+      "source": "libs/domain/src/workshop/job-steps/job-steps.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/steps, /order, /:stepId and /:stepId/done",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "each refusal logs one 'job step refused' line with ids and its code; ST-880 adds the alerts",
+      "story": "ST-424"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_job_steps_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); ST-880 adds the alerts",
+      "story": "ST-424"
     }
   ]
 }

@@ -9,7 +9,8 @@ import {
 } from './quotes-config';
 import { AuditService } from '../audit/audit.service';
 import { AccountsService } from '../auth/accounts.service';
-import type { Role } from '../auth/capabilities';
+import type { Permissions, Role } from '../auth/capabilities';
+import type { Actor } from '../auth/policy';
 import { createPrisma } from '../auth/prisma';
 import { noEvents } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -25,6 +26,29 @@ export const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
 
 const HOUR = 3_600_000;
+
+// The actor a use case is called with for a garage role, as the API or the
+// assistant would build it.
+export function garageActor(
+  accountId: string,
+  garageId: string,
+  role: Role = 'garage',
+  permissions: Partial<Permissions> = {},
+): Actor {
+  return {
+    accountId,
+    garageId,
+    language: 'ro',
+    permissions: {
+      canAnswerQuotes: false,
+      canMoveBookings: false,
+      canRecordFinalPrice: false,
+      ...permissions,
+    },
+    role,
+    roles: [role],
+  };
+}
 
 // Rows written straight to the tables, in any status, so a spec can start
 // from the state it is about. The status-owned columns are filled as the
@@ -245,6 +269,43 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
     return { booking: b, quote: q, request: r };
   }
 
+  // A booked chain whose booking starts at `startsAt`, with its one asked
+  // job quoted, so a schedule has a job to name.
+  async function booked(
+    garageId: string,
+    startsAt: string,
+    status: BookingStatus = 'confirmed',
+    options: {
+      confirmBy?: string;
+      description?: string | null;
+      lift?: number;
+      mechanicId?: string;
+    } = {},
+  ) {
+    const driverId = await account('Andrei Ion Marin');
+    const r = await request(driverId, {
+      description: options.description,
+      status: 'booked',
+    });
+    const q = await quote(r.id, garageId, 'accepted');
+    const b = await booking(q.id, status);
+    const [asked] = await prisma.requestJob.findMany({
+      where: { requestId: r.id },
+    });
+    await prisma.quoteJob.create({
+      data: { included: true, quoteId: q.id, requestJobId: asked.id },
+    });
+    return prisma.booking.update({
+      data: {
+        lift: options.lift ?? null,
+        mechanicId: options.mechanicId ?? null,
+        startsAt: new Date(startsAt),
+        ...(options.confirmBy && { confirmBy: new Date(options.confirmBy) }),
+      },
+      where: { id: b.id },
+    });
+  }
+
   const reset = () =>
     prisma.$executeRawUnsafe(
       'TRUNCATE account, garage, brand, job_type CASCADE',
@@ -252,6 +313,7 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
 
   return {
     account,
+    booked,
     booking,
     car,
     chain,

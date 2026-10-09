@@ -31,6 +31,45 @@
     "submit": "Send the invite",
     "title": "Invite to the team"
   },
+  "jobs": {
+    "noMechanic": "No mechanic",
+    "noneToday": "No jobs today",
+    "noSteps": "No steps yet",
+    "panel": {
+      "title": "The job"
+    },
+    "problem": {
+      "forbidden": "Only the owner and the job’s mechanic write its steps.",
+      "job_closed": "The job is closed, its steps no longer change.",
+      "job_not_started": "Start the job first",
+      "not_found": "That step no longer exists.",
+      "too_many_steps": "At most 20 steps"
+    },
+    "retry": "Try again",
+    "stage": {
+      "cancelled": "Cancelled",
+      "done": "Done",
+      "in_work": "In progress",
+      "paused": "Paused",
+      "to_do": "To do"
+    },
+    "steps": {
+      "add": "Add a step",
+      "addSubmit": "Add",
+      "cancel": "Cancel",
+      "cap": "At most 20 steps",
+      "down": "Move down",
+      "field": "Step",
+      "length": "Between 2 and 80 characters",
+      "more": "More for “{step}”",
+      "remove": "Remove",
+      "rename": "Rename",
+      "save": "Save",
+      "title": "Job steps",
+      "up": "Move up"
+    },
+    "stepsDone": "{done} of {total} done"
+  },
   "requests": {
     "anyMechanic": "any mechanic",
     "closed": "Closed in the last 24 hours",

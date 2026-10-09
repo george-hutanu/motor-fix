@@ -624,6 +624,7 @@ describe('the product dashboard', () => {
       'motorfix_quotes_total',
       'motorfix_emails_sent_total',
       'motorfix_notifications_sent_total',
+      'motorfix_job_steps_total',
     ]);
   });
 

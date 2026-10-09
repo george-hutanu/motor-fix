@@ -69,6 +69,9 @@ export const JOB_STATUSES = [
 ] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
+// The most steps a job holds; the api refuses the next one and the web disables adding it.
+export const JOB_STEPS_MAX = 20;
+
 export const REQUEST_CLOSED_REASONS = [
   'expired',
   'cancelled',

@@ -20,6 +20,7 @@ import { DriverSettingsView } from './driver-settings-view/driver-settings-view'
 import { GarageHome } from './garage-requests/garage-home/garage-home';
 import { GarageRequestsFeed } from './garage-requests/garage-requests-feed';
 import { GarageRequestsView } from './garage-requests/garage-requests-view/garage-requests-view';
+import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
 import { RequestsView } from './requests-view/requests-view';
 import { Session } from './session';
@@ -147,6 +148,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'team',
       'prices',
       'reviews',
@@ -182,9 +184,9 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.garages',
       },
       {
-        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
+        load: expect.any(Function),
         path: 'users',
         tab: 'shell.frame.tab.users',
       },
@@ -220,6 +222,12 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
+  it('downloads the admin users view when it is opened, not with the first page', async () => {
+    const users = DASHBOARDS.admin.views.find((view) => view.path === 'users');
+
+    await expect(users?.load?.()).resolves.toBe(AdminUsers);
+  });
+
   it('names each dashboard for its bar and tags it for its menu', () => {
     expect(DASHBOARDS.driver.name).toBe('shell.frame.bar.driver');
     expect(DASHBOARDS.garage.name).toBe('shell.frame.bar.garage');
@@ -232,6 +240,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'team',
       'prices',
       'reviews',
@@ -246,6 +255,7 @@ describe('the dashboard view lists', () => {
       '',
       'requests',
       'schedule',
+      'jobs',
       'settings',
       'history',
     ]);
@@ -254,7 +264,7 @@ describe('the dashboard view lists', () => {
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
-    ).toEqual(['', 'settings', 'history']);
+    ).toEqual(['', 'jobs', 'settings', 'history']);
     expect(
       paths('garage', [
         'garage.own_jobs',
@@ -262,7 +272,32 @@ describe('the dashboard view lists', () => {
         'garage.requests',
         'garage.schedule',
       ]),
-    ).toEqual(['', 'requests', 'schedule', 'settings', 'history']);
+    ).toEqual(['', 'requests', 'schedule', 'jobs', 'settings', 'history']);
+  });
+
+  // @traces 424-FR-012
+  it('gives every garage role the jobs view, with its body, between the schedule and the team', async () => {
+    const jobs = DASHBOARDS.garage.views.find((view) => view.path === 'jobs');
+    expect(jobs).toEqual({
+      capability: 'garage.own_jobs',
+      empty: 'shell.frame.coming.garage.jobs',
+      label: 'shell.frame.nav.garage.jobs',
+      load: expect.any(Function),
+      path: 'jobs',
+      subtitle: 'shell.frame.subtitle.garage.jobs',
+      tab: 'shell.frame.tab.jobs',
+      title: 'shell.frame.title.garage.jobs',
+    });
+    // Downloaded with the view, not with the first page.
+    await expect(jobs?.load?.()).resolves.toBe(JobsView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'jobs');
+    expect(route?.children?.[0].component).toBeUndefined();
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      JobsView,
+    );
+    for (const role of [OWNER, RECEPTIONIST, ['garage.own_jobs']])
+      expect(paths('garage', role)).toContain('jobs');
+    expect(paths('garage', ['garage.audit_history'])).not.toContain('jobs');
   });
 
   // @traces 198-FR-011

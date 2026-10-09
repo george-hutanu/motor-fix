@@ -2,7 +2,6 @@ import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 import { AdminPanel } from './admin-panel/admin-panel';
-import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view/push-view';
@@ -82,9 +81,10 @@ export const DASHBOARDS: Record<
         tab: 'shell.frame.tab.garages',
       },
       {
-        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
+        load: () =>
+          import('./admin-users/admin-users').then((m) => m.AdminUsers),
         path: 'users',
         tab: 'shell.frame.tab.users',
       },
@@ -201,6 +201,10 @@ export const DASHBOARDS: Record<
           ).then((m) => m.GarageRequestsView),
       },
       garageView('schedule', 'garage.schedule'),
+      {
+        ...garageView('jobs', 'garage.own_jobs'),
+        load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),
+      },
       { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
       garageView('prices', 'garage.prices'),
       garageView('reviews', 'garage.reviews'),

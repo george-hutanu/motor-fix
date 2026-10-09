@@ -390,6 +390,7 @@ describe('seed of the listed garages', () => {
 });
 
 // @traces 220-FR-012
+// @traces 424-FR-018
 describe('seed of a request through to a job', () => {
   const chain = () =>
     prisma.quoteRequest.findMany({
@@ -397,7 +398,21 @@ describe('seed of a request through to a job', () => {
       select: {
         bookings: {
           select: {
-            job: { select: { mechanicId: true, status: true } },
+            job: {
+              select: {
+                mechanicId: true,
+                stages: {
+                  orderBy: { at: 'asc' },
+                  select: {
+                    actorRole: true,
+                    fromStatus: true,
+                    toStatus: true,
+                  },
+                },
+                startedAt: true,
+                status: true,
+              },
+            },
             mechanicId: true,
             status: true,
           },
@@ -413,7 +428,7 @@ describe('seed of a request through to a job', () => {
       },
     });
 
-  it("sends the requester's two requests to the staff's garage: one waiting, one confirmed with the mechanic's job", async () => {
+  it("sends the requester's two requests to the staff's garage: one waiting, one confirmed with the mechanic's job in work", async () => {
     expect(seed('test').status).toBe(0);
 
     const mechanic = await prisma.mechanic.findFirstOrThrow({
@@ -437,7 +452,19 @@ describe('seed of a request through to a job', () => {
         ...common,
         bookings: [
           {
-            job: { mechanicId: mechanic.id, status: 'to_do' },
+            job: {
+              mechanicId: mechanic.id,
+              stages: [
+                { actorRole: 'mechanic', fromStatus: null, toStatus: 'to_do' },
+                {
+                  actorRole: 'mechanic',
+                  fromStatus: 'to_do',
+                  toStatus: 'in_work',
+                },
+              ],
+              startedAt: expect.any(Date),
+              status: 'in_work',
+            },
             mechanicId: mechanic.id,
             status: 'confirmed',
           },
