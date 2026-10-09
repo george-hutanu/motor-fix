@@ -1,15 +1,18 @@
 import { describe, it } from "vitest";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const DIR = fileURLToPath(new URL("../../../.github/ISSUE_TEMPLATE/", import.meta.url));
+// The forms live in the private specs clone (motor-fix-specs), which CI does
+// not check out; the public repository keeps only a config that points there.
+const DIR = fileURLToPath(new URL("../../../specs/.github/ISSUE_TEMPLATE/", import.meta.url));
+const CODE_DIR = fileURLToPath(new URL("../../../.github/ISSUE_TEMPLATE/", import.meta.url));
 const FORMS = { story: "story", task: "task", bug: "bug", "tech-debt": "tech debt", decision: "decision" };
 const read = (name) => readFileSync(`${DIR}${name}`, "utf8");
 const topLevel = (text, key) => text.match(new RegExp(`^${key}:\\s*(.*)$`, "m"))?.[1];
 
 // @traces 1017-FR-005
-describe("the issue forms", () => {
+describe.skipIf(!existsSync(DIR))("the issue forms in the specs clone", () => {
   for (const [file, type] of Object.entries(FORMS)) {
     describe(`${file}.yml`, () => {
       it("exists with a name and a description", () => {
@@ -33,5 +36,15 @@ describe("the issue forms", () => {
 
   it("turns blank issues off", () => {
     assert.match(read("config.yml"), /^blank_issues_enabled: false$/m);
+  });
+});
+
+// @traces 1017-FR-005
+describe("the public repository's issue templates", () => {
+  it("hold only a config that turns blank issues off and points at the private tracker", () => {
+    assert.deepEqual(readdirSync(CODE_DIR), ["config.yml"]);
+    const text = readFileSync(`${CODE_DIR}config.yml`, "utf8");
+    assert.match(text, /^blank_issues_enabled: false$/m);
+    assert.match(text, /url: https:\/\/github\.com\/george-hutanu\/motor-fix-specs\/issues$/m);
   });
 });

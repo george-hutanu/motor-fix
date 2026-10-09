@@ -88,12 +88,13 @@ describe("idempotence", () => {
     assert.equal(st1.state, "open");
   });
 
-  it("does not add Closes # twice to the open PR", async () => {
+  it("does not add the Closes line twice to the open PR", async () => {
     const gh = await bootstrapped();
     await importInto(gh);
     await importInto(gh);
     const body = gh.state.pulls.get(50).body;
-    assert.equal(body.match(/Closes #\d+/g).length, 1);
+    assert.equal(body.match(/Closes george-hutanu\/motor-fix-specs#\d+/g).length, 1);
+    assert.doesNotMatch(body, /Closes #\d/);
   });
 
   it("leaves a merged PR's body untouched", async () => {

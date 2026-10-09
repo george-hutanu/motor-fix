@@ -1,6 +1,9 @@
 // A small GitHub client for the tracker scripts: REST under the repository,
 // GraphQL, pacing of content-creating requests under GitHub's secondary
 // limits (500 an hour), and the waits GitHub asks for when it throttles.
+// A relative REST path resolves under the issue repository (repos.mjs).
+
+import { ISSUE_REPO, OWNER } from "./repos.mjs";
 
 const API = "https://api.github.com";
 export const PACE_MS = 7200;
@@ -22,8 +25,8 @@ export function githubClient({
   fetchImpl = fetch,
   sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
   now = Date.now,
-  owner = "george-hutanu",
-  repo = "motor-fix",
+  owner = OWNER,
+  repo = ISSUE_REPO,
   maxWaitS = 120,
   log,
 }) {

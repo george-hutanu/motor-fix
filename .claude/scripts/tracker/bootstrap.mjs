@@ -1,20 +1,23 @@
-// Sets up the MotorFix GitHub Project, its fields, views, labels and
-// milestones, and writes its number into the issue forms. Every run
+// Sets up the MotorFix GitHub Project, its fields and views, links it to the
+// issue and code repositories, makes the labels and milestones in the private
+// issue repository (repos.mjs) and writes its number into the issue forms. Every run
 // reconciles: it creates what is missing, reports what differs and changes
 // nothing a person may have set by hand.
 //
 //   node .claude/scripts/tracker/bootstrap.mjs [--dry-run]
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { isEntryPoint } from "../lib/entry.mjs";
 import { GitHubError, githubClient } from "./github.mjs";
+import { CODE_REPO, ISSUE_REPO, OWNER } from "./repos.mjs";
 import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
-const OWNER = "george-hutanu";
-const REPO = "motor-fix";
 const PROJECT_TITLE = "MotorFix";
-const FORMS_DIR = fileURLToPath(new URL("../../../.github/ISSUE_TEMPLATE/", import.meta.url));
+// The issue forms live in the specs clone (motor-fix-specs), beside the issues.
+const FORMS_DIR = fileURLToPath(new URL("../../../specs/.github/ISSUE_TEMPLATE/", import.meta.url));
+/** The repositories the Project is linked to: issues from the first, pull requests from the second. */
+export const LINKED_REPOS = [ISSUE_REPO, CODE_REPO];
 const DEFAULT_STATUS = ["Todo", "In Progress", "Done"];
 
 const EPICS = Array.from({ length: 17 }, (_, i) => `EP-${i + 1}`);
@@ -94,14 +97,14 @@ export const CHECKLIST = [
   "- Each EP-<n> view: group by Status.",
   "- Roadmap view: dates Started and Merged at, zoom Month.",
   '- Duplicate the Roadmap view as "Plan": dates Planned start and Planned end, zoom Quarter.',
-  "- Workflows: turn on Auto-add to project for george-hutanu/motor-fix with is:issue.",
+  `- Workflows: turn on Auto-add to project for ${OWNER}/${ISSUE_REPO} with is:issue.`,
   "- Workflows: keep Item closed and Pull request merged setting Status to Done.",
   "- Insights: add a chart of items by Status for each Epic, and one of Done over time.",
   "- Settings: keep the Project's visibility private.",
 ];
 
 const Q = {
-  projects: `query Projects { viewer { id login projectsV2(first: 100) { nodes { id number title } } } repository(owner: "${OWNER}", name: "${REPO}") { id } }`,
+  projects: `query Projects { viewer { id login projectsV2(first: 100) { nodes { id number title } } } issues: repository(owner: "${OWNER}", name: "${ISSUE_REPO}") { id } code: repository(owner: "${OWNER}", name: "${CODE_REPO}") { id } }`,
   state: `query ProjectState($id: ID!) { node(id: $id) { ... on ProjectV2 { id number title readme
     repositories(first: 5) { nodes { nameWithOwner } } statusUpdates(first: 1) { totalCount } items { totalCount }
     fields(first: 50) { nodes { ... on ProjectV2SingleSelectField { id name dataType options { id name color } } ... on ProjectV2IterationField { id name dataType } ... on ProjectV2Field { id name dataType } } }
@@ -127,7 +130,7 @@ const Q = {
 /** The MotorFix Project ({id, number}) and the ids it is created and linked with; project is null when it does not exist. */
 export async function findProject(github) {
   const data = await github.graphql(Q.projects);
-  return { project: data.viewer.projectsV2.nodes.find((p) => p.title === PROJECT_TITLE) ?? null, ownerId: data.viewer.id, repositoryId: data.repository.id };
+  return { project: data.viewer.projectsV2.nodes.find((p) => p.title === PROJECT_TITLE) ?? null, ownerId: data.viewer.id, repositoryIds: { [ISSUE_REPO]: data.issues.id, [CODE_REPO]: data.code.id } };
 }
 
 /** The Project's readme, links, counts, fields (with option ids) and views. */
@@ -189,10 +192,12 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
   let state = project ? await projectState(github, project.id) : EMPTY_STATE;
   const projectId = project?.id;
 
-  if (state.repositories.includes(`${OWNER}/${REPO}`)) present("link", `${OWNER}/${REPO}`);
-  else {
-    await write(Q.linkRepo, { projectId, repositoryId: found.repositoryId });
-    created("link", `${OWNER}/${REPO}`);
+  for (const repo of LINKED_REPOS) {
+    if (state.repositories.includes(`${OWNER}/${repo}`)) present("link", `${OWNER}/${repo}`);
+    else {
+      await write(Q.linkRepo, { projectId, repositoryId: found.repositoryIds[repo] });
+      created("link", `${OWNER}/${repo}`);
+    }
   }
   if (state.readme === SCHEMA.readme) present("readme");
   else {
@@ -273,6 +278,7 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
   }
 
   if (!project) out("forms", "would write", "the Project number, once it exists");
+  else if (!existsSync(formsDir)) out("forms", "skipped", `no ${formsDir} (clone the specs repo: node .claude/scripts/specs-repo.mjs ensure)`);
   else {
     const line = `projects: ["${OWNER}/${project.number}"]`;
     const changed = [];

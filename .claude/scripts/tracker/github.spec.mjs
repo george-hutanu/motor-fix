@@ -27,11 +27,11 @@ const client = (clock, answers, extra = {}) => {
 // @traces 1017-FR-013
 // @traces 1017-FR-014
 describe("requests", () => {
-  it("sends the bearer token and GitHub's headers to the repository path", async () => {
+  it("sends the bearer token and GitHub's headers to the issue repository path", async () => {
     const clock = fakeClock();
     const { github, calls } = client(clock, [json([{ name: "bug" }])]);
     assert.deepEqual(await github.rest("GET", "labels?per_page=100"), [{ name: "bug" }]);
-    assert.equal(calls[0].url, "https://api.github.com/repos/george-hutanu/motor-fix/labels?per_page=100");
+    assert.equal(calls[0].url, "https://api.github.com/repos/george-hutanu/motor-fix-specs/labels?per_page=100");
     const h = calls[0].init.headers;
     assert.equal(h.Authorization, `Bearer ${TOKEN}`);
     assert.equal(h.Accept, "application/vnd.github+json");

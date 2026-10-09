@@ -205,8 +205,33 @@ describe("a full import", () => {
   it("adds a Closes line to an open story's open PR and leaves a merged one alone", async () => {
     const gh = await bootstrapped();
     await importInto(gh);
-    assert.equal(gh.state.pulls.get(50).body, `Opening hours.\nCloses #${issueOf(gh, "ST-2").number}`);
+    assert.equal(gh.state.pulls.get(50).body, `Opening hours.\nCloses george-hutanu/motor-fix-specs#${issueOf(gh, "ST-2").number}`);
     assert.equal(gh.state.pulls.get(40).body, "Fixes the loop.");
+  });
+
+  it("fills the template's empty cross-repository Closes line in place", async () => {
+    const gh = await bootstrapped({ pulls: [{ number: 50, body: "## Notion story\n\nCloses george-hutanu/motor-fix-specs#\n\n## Notes" }] });
+    await importInto(gh);
+    assert.equal(gh.state.pulls.get(50).body, `## Notion story\n\nCloses george-hutanu/motor-fix-specs#${issueOf(gh, "ST-2").number}\n\n## Notes`);
+  });
+
+  // motor-fix is public: issues, labels and milestones go to motor-fix-specs,
+  // and the one write to motor-fix is the Closes line on a PR body.
+  it("never writes an issue, label or milestone to the public code repository", async () => {
+    const gh = await bootstrapped();
+    await importInto(gh);
+    const rest = gh.writes().filter((r) => r.path !== "/graphql");
+    assert.ok(rest.some((r) => r.repo === "motor-fix-specs" && /\/issues$/.test(r.path)));
+    const toCode = rest.filter((r) => r.repo !== "motor-fix-specs");
+    assert.ok(toCode.length > 0);
+    for (const r of toCode) {
+      assert.equal(r.repo, "motor-fix");
+      assert.equal(r.method, "PATCH");
+      assert.match(r.path, /^\/repos\/george-hutanu\/motor-fix\/pulls\/\d+$/);
+      assert.deepEqual(Object.keys(r.body), ["body"]);
+      const added = r.body.body.replace("Opening hours.", "").trim();
+      assert.match(added, /^Closes george-hutanu\/motor-fix-specs#\d+$/);
+    }
   });
 
   it("writes nothing from a Notion page body: every issue body is the marker and links", async () => {

@@ -42,13 +42,13 @@ const EPICS = Array.from({ length: 17 }, (_, i) => `EP-${i + 1}`);
 // @traces 1017-FR-004
 // @traces 1017-FR-014
 describe("a first run on a fresh account", () => {
-  it("creates the Project, links the repository, writes the README and posts one status update", async () => {
+  it("creates the Project, links the issue and code repositories, writes the README and posts one status update", async () => {
     const gh = fakeGitHub();
     const r = await run(gh);
     assert.equal(r.exit, 0);
     assert.equal(gh.state.projects.length, 1);
     assert.equal(project(gh).title, "MotorFix");
-    assert.deepEqual(project(gh).repositories, ["george-hutanu/motor-fix"]);
+    assert.deepEqual(project(gh).repositories, ["george-hutanu/motor-fix-specs", "george-hutanu/motor-fix"]);
     assert.equal(project(gh).readme, SCHEMA.readme);
     assert.equal(project(gh).statusUpdates.length, 1);
     assert.equal(project(gh).statusUpdates[0].status, "ON_TRACK");
@@ -100,6 +100,20 @@ describe("a first run on a fresh account", () => {
       gh.state.milestones.map((m) => m.title),
       ["1 - Launch", "2 - Soon after", "3 - Later"],
     );
+  });
+
+  it("makes its labels and milestones in the private issue repository only", async () => {
+    const gh = fakeGitHub();
+    await run(gh);
+    const rest = gh.writes().filter((r) => r.path !== "/graphql");
+    assert.ok(rest.length > 0);
+    for (const r of rest) assert.match(r.path, /^\/repos\/george-hutanu\/motor-fix-specs\/(labels|milestones)$/);
+  });
+
+  it("skips the forms when the specs clone has no forms folder", async () => {
+    const r = await run(fakeGitHub(), { formsDir: join(tmpdir(), "no-such-forms-dir") });
+    assert.equal(r.exit, 0);
+    assert.ok(r.lines.some((l) => /^forms\s+skipped/.test(l)));
   });
 
   it("writes the Project number into the issue forms, after their labels", async () => {
@@ -282,7 +296,7 @@ describe("the owner's checklist", () => {
   it("fits fifteen lines, one setting each, and holds only what the API cannot set", async () => {
     assert.ok(CHECKLIST.length >= 7 && CHECKLIST.length <= 15, `${CHECKLIST.length} lines`);
     const text = CHECKLIST.join("\n");
-    for (const needle of [/Board.*group by Status/i, /Table.*sort.*Priority/i, /EP-.*group by Status/i, /Roadmap.*Started.*Merged at/i, /Roadmap.*Planned start.*Planned end/i, /auto-add.*is:issue/i, /Insights/i, /private/i]) {
+    for (const needle of [/Board.*group by Status/i, /Table.*sort.*Priority/i, /EP-.*group by Status/i, /Roadmap.*Started.*Merged at/i, /Roadmap.*Planned start.*Planned end/i, /auto-add.*george-hutanu\/motor-fix-specs .*is:issue/i, /Insights/i, /private/i]) {
       assert.match(text, needle);
     }
     assert.doesNotMatch(text, /filter|create (the )?field|option/i);

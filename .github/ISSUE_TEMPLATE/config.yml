@@ -1,5 +1,7 @@
+# Work is tracked in the private george-hutanu/motor-fix-specs repository and
+# the MotorFix Project; this public repository takes no issues of its own.
 blank_issues_enabled: false
 contact_links:
-  - name: Product documentation
-    url: https://app.notion.com/p/3ee607bff0d281cf862ddedbb3cf123e
-    about: Architecture, decisions, build briefs and designs stay in Notion.
+  - name: Tracker (private)
+    url: https://github.com/george-hutanu/motor-fix-specs/issues
+    about: Stories, tasks, bugs, tech debt and decisions are filed in the private tracker repository.

@@ -13,8 +13,8 @@ _(fill in: what this PR does and why, in two or three sentences)_
 
 _(fill in: the story link, e.g. https://app.notion.com/p/… (ST-n))_
 
-<!-- The GitHub issue this PR closes, once the tracker is the GitHub Project; leave the line as it is until then. -->
-Closes #
+<!-- The tracker issue (private george-hutanu/motor-fix-specs) this PR closes when it merges into main; leave the line as it is until the tracker is the GitHub Project. -->
+Closes george-hutanu/motor-fix-specs#
 
 ## Spec folder
 

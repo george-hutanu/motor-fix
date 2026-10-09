@@ -291,17 +291,28 @@ describe('the Closes line under Notion story', () => {
 
   it('sits in the template under the story link', () => {
     expect(template).toMatch(
-      /## Notion story\n\n_\(fill in: the story link[^\n]*\n\n<!--[^\n]*-->\nCloses #\n/,
+      /## Notion story\n\n_\(fill in: the story link[^\n]*\n\n<!--[^\n]*-->\nCloses george-hutanu\/motor-fix-specs#\n/,
     );
   });
 
   for (const [name, change] of [
-    ['filled in', (b: string) => b.replace(/^Closes #$/m, 'Closes #12')],
+    [
+      'filled in',
+      (b: string) =>
+        b.replace(
+          /^Closes george-hutanu\/motor-fix-specs#$/m,
+          'Closes george-hutanu/motor-fix-specs#12',
+        ),
+    ],
     ['left empty', (b: string) => b],
-    ['removed', (b: string) => b.replace(/^Closes #\n/m, '')],
+    [
+      'removed',
+      (b: string) =>
+        b.replace(/^Closes george-hutanu\/motor-fix-specs#\n/m, ''),
+    ],
   ] as const) {
     it(`passes a ready and a draft body with the line ${name}`, () => {
-      expect(template).toMatch(/^Closes #$/m);
+      expect(template).toMatch(/^Closes george-hutanu\/motor-fix-specs#$/m);
       expect(ready(change(filled()))).toEqual([]);
       expect(draft(change(template))).toEqual([]);
     });

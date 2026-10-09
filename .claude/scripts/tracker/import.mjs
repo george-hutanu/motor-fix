@@ -1,5 +1,6 @@
 // Copies the Notion backlog into the MotorFix GitHub Project, one way: an
-// issue per story and epic, its Project fields, sub-issues, dependencies and
+// issue per story and epic in the private motor-fix-specs (repos.mjs), its
+// Project fields, sub-issues, dependencies and
 // a Closes line on an open story's PR. Every run replans from what GitHub
 // holds, so an interrupted lap continues where it stopped.
 //
@@ -10,10 +11,13 @@ import { isEntryPoint } from "../lib/entry.mjs";
 import { NotionError, notionClient, notionToken } from "../lib/notion.mjs";
 import { findProject, projectState } from "./bootstrap.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
+import { CODE_REPO, closesLine, ISSUE_REPO, OWNER, pullPath } from "./repos.mjs";
 import { readTracker } from "./notion-read.mjs";
 import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
-const PULL = /^https:\/\/github\.com\/george-hutanu\/motor-fix\/pull\/(\d+)/;
+// The template's empty closing line, cross-repository or the older same-repository form.
+const PLACEHOLDER = new RegExp(`^Closes (?:${OWNER}/${ISSUE_REPO})?#[ \\t]*$`, "m");
+const PULL = new RegExp(`^https://github\\.com/${OWNER}/${CODE_REPO}/pull/(\\d+)`);
 const STATUSES = ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"];
 const EPIC_STATUS = { "To do": "To do", "In progress": "Implementing", Done: "Done" };
 const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
@@ -339,19 +343,20 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
   for (const plan of plans.filter((p) => p.pr && p.state === "open")) {
     let pull;
     try {
-      pull = await github.rest("GET", `pulls/${plan.pr}`);
+      pull = await github.rest("GET", pullPath(plan.pr));
     } catch (error) {
       if (!(error instanceof GitHubError && error.type === "404")) throw error;
       warnings.push(`${plan.key} names PR #${plan.pr}, which GitHub does not have; no Closes line`);
       continue;
     }
     const number = issue.get(plan.key)?.number;
-    if (pull.state !== "open" || (number && new RegExp(`^Closes #${number}\\b`, "m").test(pull.body ?? ""))) continue;
+    if (pull.state !== "open" || (number && new RegExp(`^${closesLine(number)}\\b`, "m").test(pull.body ?? ""))) continue;
     step("pr-closes", plan.key, async () => {
-      const line = `Closes #${issue.get(plan.key).number}`;
+      // The only text the import writes into the public code repository.
+      const line = closesLine(issue.get(plan.key).number);
       const body = pull.body ?? "";
-      const next = /^Closes #\s*$/m.test(body) ? body.replace(/^Closes #\s*$/m, line) : `${body}${body ? "\n" : ""}${line}`;
-      await github.rest("PATCH", `pulls/${plan.pr}`, { body: next });
+      const next = PLACEHOLDER.test(body) ? body.replace(PLACEHOLDER, line) : `${body}${body ? "\n" : ""}${line}`;
+      await github.rest("PATCH", pullPath(plan.pr), { body: next });
       return `PR #${plan.pr}`;
     });
   }

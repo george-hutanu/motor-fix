@@ -36,6 +36,8 @@ export function fakeGitHub(seed = {}) {
     subIssues: new Map(),
     blockedBy: new Map(),
     nextNumber: 1,
+    // Pull requests of the issue repo itself, which its issue list also returns.
+    specsPulls: seed.specsPulls ?? [],
   };
   const requests = [];
 
@@ -75,7 +77,7 @@ export function fakeGitHub(seed = {}) {
     for (const f of p.fields ?? []) field(f, made);
     for (const v of p.views ?? []) made.views.push({ id: nextId("PVTV"), filter: null, visibleFieldIds: [], ...v });
     for (let i = 0; i < (p.itemCount ?? 0); i++) made.items.push({ id: nextId("PVTI"), number: null, values: {} });
-    if (p.linked) made.repositories.push("george-hutanu/motor-fix");
+    if (p.linked) made.repositories.push("george-hutanu/motor-fix-specs", "george-hutanu/motor-fix");
   }
   for (const i of seed.issues ?? []) addIssue(i);
   for (const pr of seed.pulls ?? []) {
@@ -90,9 +92,18 @@ export function fakeGitHub(seed = {}) {
   const milestoneOf = (number) => (number == null ? null : state.milestones.find((m) => m.number === number) ?? null);
 
   function restAnswer(method, path, query, body) {
-    const repo = path.match(/^\/repos\/george-hutanu\/motor-fix\/(.*)$/)?.[1];
-    if (repo === undefined) return json({ message: "Not Found" }, 404);
+    // Issues, labels and milestones exist in the private issue repo only; the
+    // public code repo answers its pull requests and nothing else.
+    const [, name, repo] = path.match(/^\/repos\/george-hutanu\/([^/]+)\/(.*)$/) ?? [];
     let m;
+    if (name === "motor-fix") {
+      if (!(m = repo.match(/^pulls\/(\d+)$/))) return json({ message: "Not Found" }, 404);
+      const pr = state.pulls.get(Number(m[1]));
+      if (!pr) return json({ message: "Not Found" }, 404);
+      if (method === "PATCH") pr.body = body.body;
+      return json(pr);
+    }
+    if (name !== "motor-fix-specs") return json({ message: "Not Found" }, 404);
     if (repo === "labels" && method === "GET") return json(state.labels);
     if (repo === "labels" && method === "POST") {
       if (state.labels.some((l) => l.name === body.name)) return json({ message: "Validation Failed" }, 422);
@@ -106,10 +117,9 @@ export function fakeGitHub(seed = {}) {
       return json(made, 201);
     }
     if (repo === "issues" && method === "GET") {
-      const all = [
-        ...state.issues,
-        ...[...state.pulls.values()].map((p) => ({ number: p.number, title: `PR ${p.number}`, body: p.body, pull_request: {}, labels: [], assignees: [] })),
-      ].sort((a, b) => a.number - b.number);
+      const all = [...state.issues, ...state.specsPulls.map((number) => ({ number, title: `PR ${number}`, body: "", pull_request: {}, labels: [], assignees: [] }))].sort(
+        (a, b) => a.number - b.number,
+      );
       const per = Number(query.get("per_page") ?? 30);
       const page = Number(query.get("page") ?? 1);
       const slice = all.slice((page - 1) * per, page * per);
@@ -148,12 +158,6 @@ export function fakeGitHub(seed = {}) {
       state.blockedBy.set(Number(m[1]), list);
       return json(issueBy(m[1]), 201);
     }
-    if ((m = repo.match(/^pulls\/(\d+)$/))) {
-      const pr = state.pulls.get(Number(m[1]));
-      if (!pr) return json({ message: "Not Found" }, 404);
-      if (method === "PATCH") pr.body = body.body;
-      return json(pr);
-    }
     return json({ message: "Not Found" }, 404);
   }
 
@@ -169,7 +173,8 @@ export function fakeGitHub(seed = {}) {
     Probe: () => (state.scoped ? { viewer: { login: state.login, projectsV2: { totalCount: state.projects.length } } } : { errors: [{ type: "INSUFFICIENT_SCOPES", message: "Your token has not been granted the required scopes." }] }),
     Projects: () => ({
       viewer: { id: "U_owner", login: state.login, projectsV2: { nodes: state.projects.map(({ id, number, title }) => ({ id, number, title })) } },
-      repository: { id: "R_repo" },
+      issues: { id: "R_specs" },
+      code: { id: "R_code" },
     }),
     CreateProject: (v) => ({ createProjectV2: { projectV2: (({ id, number }) => ({ id, number }))(project({ title: v.title })) } }),
     ProjectState: (v) => {
@@ -191,7 +196,7 @@ export function fakeGitHub(seed = {}) {
       };
     },
     LinkRepo: (v) => {
-      projectById(v.projectId).repositories.push("george-hutanu/motor-fix");
+      projectById(v.projectId).repositories.push(`george-hutanu/${{ R_specs: "motor-fix-specs", R_code: "motor-fix" }[v.repositoryId]}`);
       return { linkProjectV2ToRepository: { repository: { id: v.repositoryId } } };
     },
     SetReadme: (v) => {
@@ -272,7 +277,7 @@ export function fakeGitHub(seed = {}) {
       const data = answer(body.variables ?? {});
       return json(data.errors ? data : { data });
     }
-    requests.push({ method, path: parsed.pathname, query: parsed.search, body, headers: init.headers });
+    requests.push({ method, path: parsed.pathname, repo: parsed.pathname.match(/^\/repos\/[^/]+\/([^/]+)/)?.[1], query: parsed.search, body, headers: init.headers });
     return restAnswer(method, parsed.pathname, parsed.searchParams, body);
   }
 
