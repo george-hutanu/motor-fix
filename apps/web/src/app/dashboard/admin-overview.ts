@@ -27,12 +27,14 @@ export class AdminOverview {
       activeDriversMonthStart,
       garagesApprovedThisMonth,
       garagesListed,
+      observabilityUrl,
     } = value;
     return {
       activeDrivers,
       activeDriversMonthStart,
       garagesApprovedThisMonth,
       garagesListed,
+      observabilityUrl,
     };
   });
 }

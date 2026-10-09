@@ -25,6 +25,9 @@ jobs:
       # Only whether the key is set; the key itself reaches the upload step
       # alone.
       FARO_SOURCEMAPS: ${{ secrets.FARO_SOURCEMAP_API_KEY != '' }}
+      # Whether the dashboards can be pushed; the token itself reaches the
+      # push step alone.
+      GRAFANA: ${{ secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != '' }}
     outputs:
       web: ${{ steps.web.outputs.digest }}
       api: ${{ steps.api.outputs.digest }}
@@ -117,6 +120,36 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-mcp:${{ github.sha }}
           cache-from: type=gha,scope=api
+      # The dashboards in the repository replace Grafana's by uid, before
+      # anything deploys: a refused push stops the release here. Skipped until
+      # the owner sets the token and the stack's address.
+      - name: Skip the dashboards
+        if: env.GRAFANA != 'true'
+        env:
+          NO_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN == '' }}
+          NO_URL: ${{ vars.GRAFANA_URL == '' }}
+        run: |
+          missing=""
+          [ "$NO_TOKEN" = "true" ] && missing="GRAFANA_SA_TOKEN"
+          [ "$NO_URL" = "true" ] && missing="${missing:+$missing and }GRAFANA_URL"
+          echo "::notice::The dashboards are not pushed for this release: $missing not set."
+      - name: Push the dashboards
+        if: env.GRAFANA == 'true'
+        env:
+          GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
+          GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+        # Grafana's answer goes to /dev/null, so a refusal logs only curl's
+        # status line and never the request; a Grafana that hangs fails the
+        # step after a minute, not the 6 h default.
+        run: |
+          for f in infra/observability/grafana/dashboards/*.json; do
+            jq -n --slurpfile d "$f" --arg m "release ${GITHUB_SHA}" \
+              '{dashboard: $d[0], overwrite: true, message: $m}' |
+            curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/dashboards/db" \
+              -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
+              --data-binary @- > /dev/null
+            echo "pushed $f"
+          done
 
   staging:
     needs: images
@@ -137,6 +170,7 @@ jobs:
       RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
       RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
       KEY_NAME: release-staging-${{ github.run_id }}-${{ github.run_attempt }}
+      GRAFANA: ${{ secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -146,6 +180,21 @@ jobs:
       - name: Deploy and wait for /health/ready
         # exec: the runner's cancel signals reach node, not a waiting shell.
         run: exec node scripts/railway-deploy.ts staging
+      # Marks the deploy on every dashboard (tags deploy and env:staging); a
+      # release without the token skips it (the images job named what is
+      # missing), and a refused annotation only warns: the deploy has happened. A shell check, not an `if:`, so the job carries no condition.
+      - name: Annotate the deploy
+        env:
+          GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
+          GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+        run: |
+          [ "$GRAFANA" = "true" ] || exit 0
+          jq -n --arg sha "${GITHUB_SHA}" --argjson t "$(date +%s000)" \
+            '{text: $sha, tags: ["deploy", "env:staging"], time: $t}' |
+          curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
+            -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
+            --data-binary @- > /dev/null ||
+            echo "::warning::Grafana refused the deploy annotation; the release goes on without it"
       # The end-to-end run signs in as the seed accounts, and only a reset used
       # to seed staging, so an account added since the last one was missing.
       # The seed only adds what is missing. Staging's Postgres has no public
@@ -222,6 +271,7 @@ jobs:
       RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
       RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
       RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
+      GRAFANA: ${{ secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -230,3 +280,18 @@ jobs:
       - name: Deploy the staging-proven digests and wait for /health/ready
         # exec: the runner's cancel signals reach node, not a waiting shell.
         run: exec node scripts/railway-deploy.ts production
+      # Marks the deploy on every dashboard (tags deploy and env:production); a
+      # release without the token skips it (the images job named what is
+      # missing), and a refused annotation only warns: the deploy has happened. A shell check, not an `if:`, so the job carries no condition.
+      - name: Annotate the deploy
+        env:
+          GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
+          GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+        run: |
+          [ "$GRAFANA" = "true" ] || exit 0
+          jq -n --arg sha "${GITHUB_SHA}" --argjson t "$(date +%s000)" \
+            '{text: $sha, tags: ["deploy", "env:production"], time: $t}' |
+          curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
+            -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
+            --data-binary @- > /dev/null ||
+            echo "::warning::Grafana refused the deploy annotation; the release goes on without it"

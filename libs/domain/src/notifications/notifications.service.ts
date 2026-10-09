@@ -25,6 +25,7 @@ import type {
   Prisma,
   PrismaClient,
 } from '../generated/prisma/client';
+import { countNotification, countQuote } from '../metrics/product-counters';
 
 export const NOTIFICATIONS_QUEUE = 'notifications';
 export const NOTIFICATIONS_CONFIG = Symbol('NOTIFICATIONS_CONFIG');
@@ -105,7 +106,7 @@ const settled = (params: Prisma.InputJsonObject): Prisma.InputJsonObject =>
 
 // The only messages that go to a listing draft rather than an account.
 const DRAFT_KINDS = ['LISTING_CONTINUE_LINK', 'LISTING_REMINDER'] as const;
-export type DraftKind = (typeof DRAFT_KINDS)[number];
+type DraftKind = (typeof DRAFT_KINDS)[number];
 
 const send = (id: string): NextJob => ({
   data: { id },
@@ -153,6 +154,10 @@ export class NotificationsService {
       );
       if (!written) continue;
       await this.announce(written.bell);
+      countNotification('in-app');
+      // The one path a quote takes today; it moves to the quoting use case
+      // once there is one.
+      if (input.kind === 'QUOTE_RECEIVED') countQuote();
       for (const next of written.next) await this.queue(next);
       queued += written.next.length;
     }

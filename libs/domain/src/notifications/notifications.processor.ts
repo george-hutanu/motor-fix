@@ -30,6 +30,7 @@ import type {
   Notification,
   PrismaClient,
 } from '../generated/prisma/client';
+import { countEmail, countNotification } from '../metrics/product-counters';
 
 interface NotificationJob {
   name: string;
@@ -279,7 +280,9 @@ export class NotificationsProcessor {
       await this.service.fail(rows, 'template_failed', false);
       return;
     }
-    return this.deliver(rows, to, mail, attemptsMade);
+    const delivered = await this.deliver(rows, to, mail, attemptsMade);
+    if (delivered) countEmail(name);
+    return delivered;
   }
 
   // Sending may have been switched off, or the address changed, since the
@@ -358,6 +361,7 @@ export class NotificationsProcessor {
         data: { lastSuccessAt: this.now() },
         where: { id: { in: sent } },
       });
+      countNotification('push');
       return this.sent([row], null);
     }
     if (results.includes('retry') && attemptsMade < RETRY_MINUTES.length) {

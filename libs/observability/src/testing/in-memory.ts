@@ -1,6 +1,11 @@
+import { metrics } from '@opentelemetry/api';
 import type { InstrumentationModuleDefinition } from '@opentelemetry/instrumentation';
 import { InMemoryLogRecordExporter } from '@opentelemetry/sdk-logs';
-import { MetricReader } from '@opentelemetry/sdk-metrics';
+import {
+  type DataPoint,
+  MeterProvider,
+  MetricReader,
+} from '@opentelemetry/sdk-metrics';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace-node';
 
 import { startedInstrumentations } from '../setup/start';
@@ -22,6 +27,35 @@ export function inMemory() {
     metricReader: new ManualMetricReader(),
     spanExporter: new InMemorySpanExporter(),
   };
+}
+
+// Metrics only, for a spec that counts what a use case records without
+// starting the rest of telemetry: the global meter reads into the reader
+// returned.
+export function countedMetrics(): MetricReader {
+  const reader = new ManualMetricReader();
+  metrics.setGlobalMeterProvider(new MeterProvider({ readers: [reader] }));
+  return reader;
+}
+
+// A counter's running total over the data points whose labels include
+// `labels`: a spec reads it before and after the action it counts.
+export async function counterTotal(
+  reader: MetricReader,
+  name: string,
+  labels: Record<string, string> = {},
+): Promise<number> {
+  const { resourceMetrics } = await reader.collect();
+  return resourceMetrics.scopeMetrics
+    .flatMap((scope) => scope.metrics)
+    .filter((metric) => metric.descriptor.name === name)
+    .flatMap((metric) => metric.dataPoints as DataPoint<number>[])
+    .filter((point) =>
+      Object.entries(labels).every(
+        ([key, value]) => point.attributes[key] === value,
+      ),
+    )
+    .reduce((total, point) => total + point.value, 0);
 }
 
 // Jest loads modules through its own registry, which the instrumentations'

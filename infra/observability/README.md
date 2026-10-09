@@ -58,13 +58,36 @@ the release uploads them to Faro for the commit when the secret
 `FARO_SOURCEMAP_STACK_ID`; without the secret both steps are skipped and
 the release goes on.
 
-## Dashboards and alerts as code
+## Dashboards
 
-- `infra/observability/dashboards/` — dashboard JSON.
-- `infra/observability/alerts/` — alert rules.
+`infra/observability/grafana/dashboards/` holds one JSON file per dashboard, named by its uid:
 
-They are imported or provisioned into Grafana Cloud by the stories that add them; a
-change made only in the Grafana UI is lost.
+| uid | Shows |
+|---|---|
+| `motorfix-overview` | a row per service (api, worker, web, mcp, postgres, redis): up, rate, error %, p95, CPU, heap, release; Grafana Cloud usage beside the free-tier limits |
+| `motorfix-api`, `motorfix-worker`, `motorfix-web`, `motorfix-mcp` | requests by route template, outside calls by host, the Node runtime, error logs and slow traces; the worker's jobs and outbox age |
+| `motorfix-postgres`, `motorfix-redis` | the data-store readings (`motorfix_pg_*`, `motorfix_redis_*`) |
+| `motorfix-queues` | every queue's waiting count, oldest waiting age, failures and job outcomes |
+| `motorfix-web-vitals` | the browser's LCP, INP, CLS, TTFB and FCP by route, release and viewport class, and browser errors (Faro, in Loki) |
+| `motorfix-product` | the seven product counters (`motorfix_*_total` in `libs/domain/src/metrics/`) per hour and per day |
+
+Every dashboard picks the environment with its `env` variable, reads its
+data sources through variables (never by name), and shows the deploy
+annotations for that environment. Error panels link to the service's logs
+and traces. `node scripts/dashboard-check.ts` (CI Checks job) holds them to
+these rules.
+
+The release pushes every file through Grafana's dashboard HTTP API, by uid,
+after the images are built and before staging deploys ("Push the
+dashboards"), and writes an annotation tagged `deploy` and `env:<environment>`
+with the release sha after each deploy ("Annotate the deploy"). Both use the
+secret `GRAFANA_SA_TOKEN` (a Grafana service account token, Editor) and the
+repository variable `GRAFANA_URL` (the stack's address, which the api also
+reads to link the admin panel to the overview). Without either, both are
+skipped with a notice and the release goes on. A change made only in the
+Grafana UI is overwritten by the next release: edit the JSON instead.
+
+Alert rules go in `infra/observability/alerts/`; ST-880 adds them.
 
 ## Inventory
 

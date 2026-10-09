@@ -11,6 +11,7 @@ import { refusal } from '../../auth/sign-up.service';
 import { brandAnswer } from '../../garages/brand-answer';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { countSearch } from '../../metrics/product-counters';
 import { garagesInArea, type InArea } from '../area/search-area';
 
 const PAGE = 20;
@@ -121,6 +122,7 @@ export class GarageSearchService {
     }
     const items = rows.slice(0, PAGE).map((item) => placed(item, area));
     const last = items.at(-1);
+    countFirstPage(cursor, items.length);
     return {
       counts: { doesNotTake, worksOn },
       items,
@@ -193,4 +195,9 @@ export class GarageSearchService {
       ...brandAnswer(brands, { brandNote, refusalPhrase }),
     }));
   }
+}
+
+// One search per first page; the pages after it are the same search.
+function countFirstPage(cursor: string | undefined, found: number) {
+  if (cursor === undefined) countSearch(found > 0 ? 'results' : 'none');
 }

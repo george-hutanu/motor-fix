@@ -1,4 +1,6 @@
 // @traces 195-FR-002 195-FR-005 195-FR-010 195-FR-011 539-FR-001 539-FR-002
+
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -494,6 +496,34 @@ describe('when Brevo fails', () => {
     expect(logged).not.toContain('secret-token');
     warn.mockRestore();
     error.mockRestore();
+  });
+});
+
+// @traces 879-FR-009 879-FR-011
+describe('counting the e-mails Brevo accepted', () => {
+  const reader = countedMetrics();
+  const emailsSent = () => counterTotal(reader, 'motorfix_emails_sent_total');
+
+  it('counts an accepted e-mail once and a refused one not at all', async () => {
+    const andrei = await account('andrei');
+    const maria = await account('maria');
+    const before = await emailsSent();
+
+    mock.answer({ status: 400 });
+    await sendJob((await quote(andrei, 'evt-refused')).id);
+    expect(await emailsSent()).toBe(before);
+
+    await sendJob((await quote(maria, 'evt-accepted')).id);
+    expect(mock.emails()).toHaveLength(2);
+    expect(await emailsSent()).toBe(before + 1);
+  });
+
+  it('counts nothing while Brevo asks for a retry', async () => {
+    const andrei = await account('andrei');
+    const before = await emailsSent();
+    mock.answer({ status: 503 });
+    await sendJob((await quote(andrei, 'evt-retry')).id).catch(() => undefined);
+    expect(await emailsSent()).toBe(before);
   });
 });
 
