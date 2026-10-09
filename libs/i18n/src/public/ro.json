@@ -200,7 +200,6 @@
         },
         "rar_authorisation": {
           "hint": "Toate paginile, scanate sau fotografiate lizibil",
-          "hintMobile": "Toate paginile, scanate sau fotografiate lizibil",
           "label": "Autorizația tehnică RAR"
         }
       },

@@ -1,44 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsString, MaxLength, Min } from 'class-validator';
 
 import { DOCUMENT_KINDS, type DocumentKind } from './legal-documents';
+import {
+  ConfirmPhotoDto,
+  PhotoUploadAddressDto,
+  PhotoUploadRequestDto,
+} from '../listing-photos/listing-photos.dto';
 
-export class DocumentUploadRequestDto {
-  @ApiProperty({ example: 'application/pdf' })
-  @IsString()
-  @MaxLength(100)
-  contentType!: string;
+// The same upload as a listing photo's, under names of their own.
+export class DocumentUploadRequestDto extends PhotoUploadRequestDto {}
 
-  @ApiProperty({ description: 'Bytes', minimum: 1 })
-  @IsInt()
-  @Min(1)
-  size!: number;
-}
+export class DocumentUploadAddressDto extends PhotoUploadAddressDto {}
 
-export class DocumentUploadAddressDto {
-  @ApiProperty({ description: 'Where the browser posts the form' })
-  url!: string;
-
-  @ApiProperty({
-    additionalProperties: { type: 'string' },
-    description: 'Form fields to send before the file',
-    type: 'object',
-  })
-  fields!: Record<string, string>;
-
-  @ApiProperty({ description: 'The key to confirm once uploaded' })
-  key!: string;
-
-  @ApiProperty({ format: 'date-time' })
-  expiresAt!: string;
-}
-
-export class ConfirmDocumentPageDto {
-  @ApiProperty({ description: 'The key the upload address gave' })
-  @IsString()
-  @MaxLength(200)
-  key!: string;
-}
+export class ConfirmDocumentPageDto extends ConfirmPhotoDto {}
 
 export class DraftDocumentDto {
   @ApiProperty({ enum: DOCUMENT_KINDS })

@@ -193,7 +193,6 @@
         },
         "rar_authorisation": {
           "hint": "All pages, as a readable scan or photo",
-          "hintMobile": "All pages, as a readable scan or photo",
           "label": "RAR technical authorisation"
         }
       },

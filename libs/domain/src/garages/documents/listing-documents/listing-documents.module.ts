@@ -10,7 +10,6 @@ export class ListingDocumentsModule {
   static register(garages: DynamicModule): DynamicModule {
     return {
       controllers: [ListingDocumentsController],
-      exports: [ListingDocumentsService],
       imports: [garages],
       module: ListingDocumentsModule,
       providers: [ListingDocumentsService],

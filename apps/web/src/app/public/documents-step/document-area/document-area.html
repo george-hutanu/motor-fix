@@ -21,11 +21,7 @@
         {{ 'public.listing.documents.kinds.onrc_certificate.hint' | t }}
       }
     } @else {
-      @if (mobile()) {
-        {{ 'public.listing.documents.kinds.rar_authorisation.hintMobile' | t }}
-      } @else {
-        {{ 'public.listing.documents.kinds.rar_authorisation.hint' | t }}
-      }
+      {{ 'public.listing.documents.kinds.rar_authorisation.hint' | t }}
     }
   </p>
   <div

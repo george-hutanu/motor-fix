@@ -8906,7 +8906,7 @@
         "properties": {
           "contentType": {
             "type": "string",
-            "example": "application/pdf"
+            "example": "image/jpeg"
           },
           "size": {
             "type": "number",
