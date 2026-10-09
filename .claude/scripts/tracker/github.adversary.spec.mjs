@@ -90,7 +90,7 @@ describe("rate-limit waits", () => {
   it("ignores a Retry-After that is an HTTP date by failing, not by hanging or sleeping NaN", async () => {
     const clock = fakeClock();
     const { github } = client(clock, [json({}, 429, { "retry-after": "Wed, 21 Oct 2026 07:28:00 GMT" })]);
-    await assert.rejects(github.rest("GET", "labels"), GitHubError).catch(() => {});
+    await assert.rejects(github.rest("GET", "labels"), GitHubError);
     assert.ok(clock.waits.every((w) => Number.isFinite(w)));
   });
 });

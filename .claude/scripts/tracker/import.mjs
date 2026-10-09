@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../lib/entry.mjs";
 import { NotionError, notionClient, notionToken } from "../lib/notion.mjs";
 import { findProject, projectState } from "./bootstrap.mjs";
-import { GitHubError, githubClient } from "./github.mjs";
+import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import { readTracker } from "./notion-read.mjs";
 import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
@@ -147,7 +147,8 @@ const ADD_ITEM = "mutation AddItem($projectId: ID!, $contentId: ID!) { addProjec
 /** Every Project item: its id, issue number and field values by name. */
 async function projectItems(github, id) {
   const items = [];
-  for (let after = null, more = true; more; ) {
+  for (let after = null, more = true, count = 0; more; ) {
+    if (++count > MAX_PAGES) throw new GitHubError("pages", `the Project's items: more than ${MAX_PAGES} pages`);
     const page = (await github.graphql(ITEMS, { id, after })).node.items;
     for (const node of page.nodes) {
       const values = {};
@@ -253,6 +254,8 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
       const byHand = !byMark || found.body?.includes(ADOPTED);
       const change = {};
       if (!byHand && found.title !== plan.title) change.title = plan.title;
+      // A story that later gains a PR or a Feature gets its line in the body.
+      if (!byHand && found.body !== plan.body) change.body = plan.body;
       const have = found.labels.map((l) => l.name);
       const haveLower = lower(have);
       if (!byHand && plan.labels.some((l) => !haveLower.has(l.toLowerCase()))) change.labels = [...have, ...plan.labels.filter((l) => !haveLower.has(l.toLowerCase()))];

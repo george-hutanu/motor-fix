@@ -100,7 +100,7 @@ export async function readTracker(client) {
     }
   }
   if (unassigned.length) {
-    const reason = ownerId ? "is not the owner" : "cannot be matched: the workspace has more than one person";
+    const reason = ownerId ? "is not the owner" : `cannot be matched: the workspace has ${persons.length ? "more than one person" : "no person"}`;
     warnings.push(`${unassigned.length} item(s) left unassigned: the assignee ${reason} (first: ${unassigned[0]})`);
   }
   return { stories, epics, warnings, skippedRows };

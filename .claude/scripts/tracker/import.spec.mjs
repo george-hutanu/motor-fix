@@ -8,7 +8,7 @@ import { notionClient } from "../lib/notion.mjs";
 import { reconcile } from "./bootstrap.mjs";
 import { fakeGitHub } from "./fixtures/github.mjs";
 import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
-import { githubClient } from "./github.mjs";
+import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import { issuePlans, runImport } from "./import.mjs";
 import { readTracker } from "./notion-read.mjs";
 
@@ -279,6 +279,41 @@ describe("running it again", () => {
     await importInto(gh);
     assert.equal(issueOf(gh, "ST-1").title, "ST-1 Driver signs in");
     assert.equal(issueOf(gh, "ST-7").state, "open");
+  });
+
+  it("stops reading Project items whose cursor never ends after the page cap", async () => {
+    const gh = await bootstrapped();
+    let pagesRead = 0;
+    const fetchImpl = async (url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : null;
+      if (body?.query?.startsWith("query Items")) {
+        pagesRead++;
+        const page = { totalCount: 1, pageInfo: { hasNextPage: true, endCursor: "same" }, nodes: [] };
+        return new Response(JSON.stringify({ data: { node: { items: page } } }), { status: 200 });
+      }
+      return gh.fetchImpl(url, init);
+    };
+    const from = gh.writes().length;
+    await assert.rejects(importInto(gh, { fetchImpl }), (e) => e instanceof GitHubError && e.type === "pages");
+    assert.equal(pagesRead, MAX_PAGES);
+    assert.equal(nonGets(gh, from).length, 0);
+  });
+
+  it("gives a story that later gains a Feature its line, and the next run writes nothing", async () => {
+    const gh = await bootstrapped();
+    await importInto(gh);
+    const t = await tracker();
+    t.stories.find((s) => s.key === "ST-7").feature = "f0000000-0000-0000-0000-000000000007";
+    const from = gh.writes().length;
+    await importInto(gh, { tracker: t });
+    const writes = nonGets(gh, from);
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].method, "PATCH");
+    assert.deepEqual(Object.keys(writes[0].body), ["body"]);
+    assert.match(issueOf(gh, "ST-7").body, /\nFeature: https:\/\/app\.notion\.com\/p\/f0000000000000000000000000000007$/);
+    const again = gh.writes().length;
+    await importInto(gh, { tracker: t });
+    assert.equal(gh.writes().length, again);
   });
 
   it("adopts an issue filed by hand under the story's key, adding only the marker and links", async () => {

@@ -53,6 +53,14 @@ describe("readTracker", () => {
     assert.match(about[0], /more than one person/);
   });
 
+  it("says the workspace has no person when it lists only bots", async () => {
+    const { tracker } = await read({ users: [{ object: "user", id: "eeeeeeee-0000-0000-0000-000000000003", type: "bot", name: "Integration" }] });
+    const about = tracker.warnings.filter((w) => /assign/i.test(w));
+    assert.equal(about.length, 1);
+    assert.match(about[0], /has no person/);
+    assert.doesNotMatch(about[0], /more than one/);
+  });
+
   it("keeps the date part of a datetime and drops an assignee who is not the owner", async () => {
     const { tracker } = await read();
     const st2 = byKey(tracker.stories, "ST-2");

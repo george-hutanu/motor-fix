@@ -2,7 +2,7 @@ import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 
 import { fakeClock } from "./fixtures/github.mjs";
-import { GitHubError, githubClient, PACE_MS } from "./github.mjs";
+import { GitHubError, githubClient, MAX_PAGES, PACE_MS } from "./github.mjs";
 
 const TOKEN = "ghp_SECRET_never_print_me";
 const json = (data, status = 200, headers = {}) =>
@@ -205,6 +205,17 @@ describe("hostile answers", () => {
   it("fails a 200 that is not JSON with a GitHubError", async () => {
     const { github } = client(fakeClock(), [html(200)]);
     await assert.rejects(github.rest("GET", "labels"), (e) => e instanceof GitHubError && e.type === "parse");
+  });
+
+  it("stops a Link rel=next that keeps pointing at the same page after the page cap", async () => {
+    const { github, calls } = client(fakeClock(), [json([1], 200, { link: '<https://api.github.com/repos/george-hutanu/motor-fix/issues?page=2>; rel="next"' })]);
+    await assert.rejects(github.pages("issues"), (e) => e instanceof GitHubError && e.type === "pages");
+    assert.equal(calls.length, MAX_PAGES);
+  });
+
+  it("fails a GraphQL 200 with an empty body with a GitHubError, not a TypeError", async () => {
+    const { github } = client(fakeClock(), [new Response("", { status: 200 })]);
+    await assert.rejects(github.graphql("query Q { a }"), (e) => e instanceof GitHubError && e.type === "parse");
   });
 
   it("waits a minute on a secondary rate limit 403 with no Retry-After and quota left", async () => {

@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { CHECKLIST, reconcile, SCHEMA } from "./bootstrap.mjs";
 import { fakeGitHub } from "./fixtures/github.mjs";
-import { githubClient } from "./github.mjs";
+import { GitHubError, githubClient } from "./github.mjs";
 
 const TOKEN = "ghp_SECRET_never_print_me";
 const TODAY = new Date("2026-10-09T12:00:00Z");
@@ -119,20 +119,22 @@ describe("bootstrap against odd states", () => {
     assert.deepEqual(readdirSync(dir), ["story.yml"]);
   });
 
-  it("stops with exit 1 and no further write when the API fails midway, without the token", async () => {
+  it("stops with a GitHubError and no further write when the API fails midway, without the token", async () => {
     const gh = fakeGitHub();
-    let writes = 0;
+    let attempts = 0;
+    const sent = [];
     const fetchImpl = async (url, init) => {
       const body = init?.body ? JSON.parse(init.body) : null;
-      if (body?.query?.includes("mutation")) {
-        writes++;
-        if (writes >= 2) return new Response(JSON.stringify({ message: `boom ${TOKEN}` }), { status: 500 });
-      }
+      const mutation = body?.query?.match(/^\s*mutation\s+(\w+)/)?.[1];
+      if (mutation) sent.push(mutation);
+      else if (init?.method && init.method !== "GET" && !body?.query) sent.push(`${init.method} ${new URL(url).pathname}`);
+      if (/^\s*mutation\b/.test(body?.query ?? "") && ++attempts >= 2) return new Response(JSON.stringify({ message: `boom ${TOKEN}` }), { status: 500 });
       return gh.fetchImpl(url, init);
     };
-    const r = await run(gh, { fetchImpl }).catch((e) => ({ exit: 1, lines: [String(e.message)], thrown: true }));
-    assert.equal(r.exit, 1);
-    assert.ok(!r.lines.some((l) => l.includes(TOKEN)));
+    await assert.rejects(run(gh, { fetchImpl }), (e) => e instanceof GitHubError && e.type === "500" && !e.message.includes(TOKEN));
+    // The first mutation went through; the second failed, was retried once, and nothing was sent after it.
+    assert.deepEqual(sent, ["CreateProject", "LinkRepo", "LinkRepo"]);
+    assert.equal(gh.writes().length, 1);
   });
 
   it("exposes the Status options in the order To do, Planning, Implementing, Blocked, QA, Done", () => {

@@ -13,7 +13,7 @@ import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
 const OWNER = "george-hutanu";
 const REPO = "motor-fix";
-export const PROJECT_TITLE = "MotorFix";
+const PROJECT_TITLE = "MotorFix";
 const FORMS_DIR = fileURLToPath(new URL("../../../.github/ISSUE_TEMPLATE/", import.meta.url));
 const DEFAULT_STATUS = ["Todo", "In Progress", "Done"];
 
@@ -130,6 +130,7 @@ function nextMonday(today) {
 }
 
 const sameNames = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 export async function reconcile(github, { today = new Date(), formsDir = FORMS_DIR, log = console.log, dryRun = false } = {}) {
   const lines = [];
@@ -218,7 +219,9 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
       if (want.filter) await write(Q.setViewFilter, { viewId: made?.createProjectV2View.projectV2View.id, filter: want.filter });
       created("view", detail);
     } else if (have.layout !== want.layout) differs("view", `${want.name}: ${have.layout}, not ${want.layout}`);
-    else if (want.filter && have.filter !== want.filter) {
+    else if (!sameSet(have.fieldNames, want.fields.filter(fieldId))) {
+      differs("view", `${want.name}: fields ${have.fieldNames.join(", ") || "none"}, not ${want.fields.filter(fieldId).join(", ")}`);
+    } else if (want.filter && have.filter !== want.filter) {
       await write(Q.setViewFilter, { viewId: have.id, filter: want.filter });
       created("view", detail, "updated");
     } else present("view", detail);

@@ -154,6 +154,20 @@ describe("a Project someone changed by hand", () => {
     assert.ok(ops(gh, "SetOptions").every((r) => r.body.variables.fieldId !== fieldNamed(gh, "Priority").id));
   });
 
+  it("reports a view whose visible fields differ without changing them, and exits 2", async () => {
+    const gh = fakeGitHub();
+    const dir = formsDir();
+    await run(gh, { formsDir: dir });
+    const board = project(gh).views.find((v) => v.name === "Board");
+    board.visibleFieldIds = [fieldNamed(gh, "Title").id, fieldNamed(gh, "Status").id];
+    const before = gh.writes().length;
+    const r = await run(gh, { formsDir: dir });
+    assert.equal(r.exit, 2);
+    assert.ok(r.lines.some((l) => /^view\s+differs\s+Board: fields Title, Status, not Title, Priority, Type, Epic, Ready to work \(not changed\)$/.test(l)));
+    assert.equal(gh.writes().length, before);
+    assert.deepEqual(board.visibleFieldIds, [fieldNamed(gh, "Title").id, fieldNamed(gh, "Status").id]);
+  });
+
   it("leaves GitHub's default Status options alone once the Project holds items", async () => {
     const gh = fakeGitHub({ projects: [{ title: "MotorFix", linked: true, itemCount: 3 }] });
     const r = await run(gh);

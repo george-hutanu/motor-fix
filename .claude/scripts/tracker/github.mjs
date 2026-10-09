@@ -7,6 +7,8 @@ export const PACE_MS = 7200;
 const SERVER_RETRY_MS = 2000;
 const SECONDARY_WAIT_MS = 60_000;
 const MAX_THROTTLES = 5;
+/** The most pages one list is followed through: a Link or cursor that never ends stops here. */
+export const MAX_PAGES = 50;
 
 export class GitHubError extends Error {
   constructor(type, message) {
@@ -108,7 +110,8 @@ export function githubClient({
   /** Every page of a REST list, following the Link header. */
   async function pages(path) {
     const all = [];
-    for (let next = path; next; ) {
+    for (let next = path, page = 0; next; ) {
+      if (++page > MAX_PAGES) throw new GitHubError("pages", scrub(`GET ${path}: more than ${MAX_PAGES} pages`));
       const { data, response } = await send("GET", next, undefined, false);
       all.push(...data);
       next = response.headers.get("link")?.match(/<([^>]+)>;\s*rel="next"/)?.[1];
@@ -121,6 +124,7 @@ export function githubClient({
     if (data?.errors?.length) {
       throw new GitHubError(data.errors[0].type ?? "GRAPHQL", scrub(data.errors.map((e) => `${e.type ?? "error"}: ${e.message}`).join("; ")));
     }
+    if (!data?.data) throw new GitHubError("parse", scrub(`POST /graphql: ${data === null ? "an empty answer" : "an answer with no data"}`));
     return data.data;
   }
 
