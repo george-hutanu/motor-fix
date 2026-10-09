@@ -344,6 +344,7 @@ enum VerificationReopenReason {
   @@map("verification_reopen_reason")
 }
 
+// TODO: the decision story adds the closed states.
 enum GarageReportStatus {
   open
 

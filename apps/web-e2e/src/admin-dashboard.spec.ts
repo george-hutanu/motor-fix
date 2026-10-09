@@ -114,8 +114,8 @@ test.describe('the admin dashboard @seeded', () => {
       await page.setViewportSize({ height, width });
       await signInAsAdmin(page);
 
-      // The seed leaves two files waiting; a report spec running beside this
-      // one may reopen a third for a few seconds.
+      // The seed leaves two files waiting; garage-report.spec.ts, running
+      // beside this one, may reopen a third for a few seconds.
       await expect(
         page.getByText(
           /^MotorFix · București · [23] service‑uri așteaptă verificarea$/,

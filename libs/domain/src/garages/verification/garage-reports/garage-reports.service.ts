@@ -29,7 +29,7 @@ import {
   VerificationService,
 } from '../verification.service';
 
-export interface GarageReportsOptions {
+interface GarageReportsOptions {
   // The web app's address, for the alert's link; unset, no admin is told.
   webUrl?: string;
 }

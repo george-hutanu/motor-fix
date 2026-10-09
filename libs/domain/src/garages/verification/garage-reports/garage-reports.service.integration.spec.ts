@@ -38,7 +38,7 @@ type Notify = jest.Mock<
 >;
 let notify: Notify;
 
-const service = () =>
+const service = (options: { webUrl?: string } = { webUrl: WEB }) =>
   new GarageReportsService(
     prisma,
     new VerificationService(new AuditService(), outbox, {
@@ -47,7 +47,7 @@ const service = () =>
     new AuditService(),
     outbox,
     { notify } as unknown as NotificationsService,
-    { webUrl: WEB },
+    options,
   );
 
 const person = (
@@ -263,6 +263,16 @@ describe('a driver reports an approved garage', () => {
 
     expect(await prisma.garageReport.count({ where: { id } })).toBe(1);
     expect((await fileOf(dinamo.file?.id ?? '')).status).toBe('in_review');
+  });
+
+  it('keeps the report and tells no admin when the web address is unset', async () => {
+    const { id } = await service({}).report(ana, dinamo.id, {
+      text: TEXT,
+    });
+
+    expect(await prisma.garageReport.count({ where: { id } })).toBe(1);
+    expect((await fileOf(dinamo.file?.id ?? '')).status).toBe('in_review');
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it('counts the report', async () => {

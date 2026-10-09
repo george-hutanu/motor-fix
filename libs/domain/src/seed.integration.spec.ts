@@ -270,7 +270,7 @@ describe('seed', () => {
       }),
     ).toBe(2);
     expect(await prisma.verificationFile.count()).toBe(10);
-    expect(await prisma.verificationCheck.count()).toBe(16);
+    expect(await prisma.verificationCheck.count()).toBe(80);
   });
 
   it('gives each waiting file its 8 checks, none run yet', async () => {
