@@ -54,16 +54,16 @@ describe('the dashboard view lists', () => {
   it('lists the driver views in menu order, each with its address, labels and capability', () => {
     expect(DASHBOARDS.driver.views).toEqual([
       {
-        body: DriverHome,
         label: 'shell.frame.nav.dashboard',
+        load: expect.any(Function),
         path: '',
         tab: 'shell.frame.tab.dashboard',
         title: 'shell.frame.title.driver.dashboard',
       },
       {
-        body: RequestsView,
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
+        load: expect.any(Function),
         path: 'requests',
         tab: 'shell.frame.tab.requests',
         title: 'shell.frame.title.driver.requests',
@@ -111,6 +111,17 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 097-FR-001
+  // The driver's home and request list load with their view, so the first
+  // page any visitor opens does not carry them (the initial bundle budget).
+  it('loads the driver home and the request list only when their view opens', async () => {
+    const [home, requests] = DASHBOARDS.driver.views;
+
+    expect(home.body).toBeUndefined();
+    expect(requests.body).toBeUndefined();
+    expect(await home.load?.()).toBe(DriverHome);
+    expect(await requests.load?.()).toBe(RequestsView);
+  });
+
   it('gives the garage and admin dashboards their addresses in menu order', () => {
     expect(DASHBOARDS.garage.views.map((view) => view.path)).toEqual([
       '',

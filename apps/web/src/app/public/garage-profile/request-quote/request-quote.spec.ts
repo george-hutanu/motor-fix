@@ -369,7 +369,10 @@ describe('the quote request dialog', () => {
     await settle();
 
     expect(button('Trimite')?.disabled).toBe(true);
-    expect(text()).toContain('Fără conexiune');
+    // Nothing is queued: the line promises no send, only that Trimite comes back.
+    expect(text()).toContain(
+      'Fără conexiune. O poți trimite după ce revii online.',
+    );
 
     online.mockReturnValue(true);
     window.dispatchEvent(new Event('online'));
@@ -486,6 +489,20 @@ describe('the garage picker', () => {
     expect(text()).toContain('Poți alege cel mult 5 service‑uri');
   });
 
+  it('words the limit in English as FR-006 does', async () => {
+    const five = ['A', 'B', 'C', 'D', 'E'].map((letter) =>
+      candidate(`g-${letter}`, `Atelier ${letter}`),
+    );
+    await open({ candidates: five, language: 'en' });
+
+    for (const letter of ['A', 'B', 'C', 'D', 'E']) {
+      tick(`Atelier ${letter}`).click();
+      await settle();
+    }
+
+    expect(text()).toContain('You can pick at most 5 garages.');
+  });
+
   it('names a car brand the garage does not take under the car and holds Trimite', async () => {
     await open({ garage: { ...GARAGE, worksOn: [] } });
 
@@ -546,6 +563,49 @@ describe('the garage picker', () => {
     await press();
 
     expect(text()).toContain('Service Auto Militari nu primește cereri acum.');
+  });
+
+  const back = () =>
+    [...panel().querySelectorAll('a')].some(
+      (a) => a.textContent?.trim() === 'Înapoi la căutare',
+    );
+
+  // FR-007: the way back follows the reason, whichever garage it names.
+  it('offers the way back to the search when a picked garage stopped taking requests', async () => {
+    await open({ candidates: [candidate('g-berceni', 'Atelier Berceni')] });
+    send.mockRejectedValueOnce(
+      refusal(400, {
+        code: 'garage_cannot_receive',
+        garageId: 'g-berceni',
+        garageName: 'Atelier Berceni',
+        reason: 'not_taking_requests',
+        status: 400,
+      }),
+    );
+    tick('Atelier Berceni').click();
+    await settle();
+    type('Scârțâie la frânare');
+    await press();
+
+    expect(back()).toBe(true);
+  });
+
+  it('keeps the way back away when the profile’s garage does not do the jobs', async () => {
+    await open();
+    send.mockRejectedValueOnce(
+      refusal(400, {
+        code: 'garage_cannot_receive',
+        garageId: GARAGE.id,
+        garageName: GARAGE.name,
+        reason: 'jobs',
+        status: 400,
+      }),
+    );
+    type('Scârțâie la frânare');
+    await press();
+
+    expect(text()).toContain('Service Auto Militari');
+    expect(back()).toBe(false);
   });
 
   it('offers the way back to the search when the profile’s garage stopped taking requests', async () => {

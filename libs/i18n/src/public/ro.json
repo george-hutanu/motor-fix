@@ -441,7 +441,7 @@
     "noCar": "Adaugă mai întâi o mașină, ca service‑ul să știe la ce lucrează.",
     "noJobs": "Service‑ul nu și‑a trecut încă lucrările. Descrie ce are mașina.",
     "noPlace": "Alege un loc ca să vezi și alte service‑uri din apropiere.",
-    "offline": "Fără conexiune. Cererea pleacă după ce revii online.",
+    "offline": "Fără conexiune. O poți trimite după ce revii online.",
     "pickerLead": "Poți trimite aceeași cerere și altor service‑uri din apropiere, până la 5.",
     "pickPlace": "Alege locul",
     "problem": {

@@ -4,10 +4,8 @@ import type { Routes } from '@angular/router';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
-import { DriverHome } from './driver-home/driver-home';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view/push-view';
-import { RequestsView } from './requests-view/requests-view';
 import { garageOf, Session } from './session';
 import { SettingsView } from './settings-view/settings-view';
 import { View } from './view/view';
@@ -22,6 +20,8 @@ export interface DashboardView {
   path: string;
   // The view's body, once its story has built one.
   body?: Type<unknown>;
+  // ...or its loader, for a body the first page must not carry.
+  load?: () => Promise<Type<unknown>>;
   label: string;
   tab: string;
   // The header's own title and the line under it; absent, the label is the title.
@@ -123,13 +123,15 @@ export const DASHBOARDS: Record<
     views: [
       {
         ...HOME,
-        body: DriverHome,
+        load: () =>
+          import('./driver-home/driver-home').then((m) => m.DriverHome),
         title: 'shell.frame.title.driver.dashboard',
       },
       {
-        body: RequestsView,
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
+        load: () =>
+          import('./requests-view/requests-view').then((m) => m.RequestsView),
         path: 'requests',
         tab: 'shell.frame.tab.requests',
         title: 'shell.frame.title.driver.requests',
@@ -227,12 +229,14 @@ export const allowedViews = (
 // The area guard has loaded the session before these match. A view owns its
 // sub-paths, so its epic can add pages under it; a refused or unknown view
 // falls through to `**`, which sends it to the dashboard view.
-const body = ({ body, push, staff }: DashboardView) =>
-  body ?? (staff ? SettingsView : push ? PushView : View);
+const body = ({ body, load, push, staff }: DashboardView) =>
+  load
+    ? { loadComponent: load }
+    : { component: body ?? (staff ? SettingsView : push ? PushView : View) };
 
 export const dashboardRoutes = (area: Area): Routes => [
   {
-    component: body(DASHBOARDS[area].views[0]),
+    ...body(DASHBOARDS[area].views[0]),
     data: { area, view: DASHBOARDS[area].views[0] },
     path: '',
     pathMatch: 'full',
@@ -250,7 +254,7 @@ export const dashboardRoutes = (area: Area): Routes => [
           ).includes(view);
         },
       ],
-      children: [{ component: body(view), data: { area, view }, path: '**' }],
+      children: [{ ...body(view), data: { area, view }, path: '**' }],
       path: view.path,
     })),
   { path: '**', redirectTo: '' },

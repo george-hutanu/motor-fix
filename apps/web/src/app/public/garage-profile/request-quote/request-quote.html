@@ -139,7 +139,7 @@
         </p>
         @if (unreceivable(); as refused) {
           <p class="error" role="alert">{{ refusedLine() }}</p>
-          @if (refused.garageId === garage.id) {
+          @if (refused.reason === 'not_taking_requests') {
             <a class="back" [routerLink]="backToSearch()" [queryParams]="backQuery()" (click)="task.close('cancelled')">{{ 'public.requestQuote.backToSearch' | t }}</a>
           }
         }
