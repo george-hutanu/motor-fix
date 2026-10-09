@@ -20,6 +20,19 @@ const view = (page: Page) => page.getByRole('dialog');
 // screen, can have no box of its own.
 const backdrop = (page: Page) =>
   view(page).locator('[data-slot="viewer-backdrop"]');
+// Layout boxes, not the drawn ones: the tiles' entrance animation scales
+// them for a moment, which moves nothing around them.
+const boxes = (page: Page) =>
+  tiles(page).evaluateAll((items) =>
+    (items as HTMLElement[]).map(
+      ({ offsetHeight, offsetLeft, offsetTop, offsetWidth }) => ({
+        offsetHeight,
+        offsetLeft,
+        offsetTop,
+        offsetWidth,
+      }),
+    ),
+  );
 const insideView = (page: Page) =>
   page.evaluate(
     () =>
@@ -184,17 +197,13 @@ test.describe('the photos of a garage profile @seeded', () => {
     await page.goto(`/ro/garages/${slug}`, { waitUntil: 'domcontentloaded' });
     await hydrated(page);
     await expect(tiles(page)).toHaveCount(3);
-    const before = await tiles(page).evaluateAll((items) =>
-      items.map((item) => item.getBoundingClientRect().toJSON()),
-    );
+    const before = await boxes(page);
 
     await expect.poll(() => held.length).toBeGreaterThan(0);
     await page.unroute((url) => /\.(thumb|display)$/.test(url.pathname));
     for (const release of held) await release();
     await expect(tiles(page).first()).toHaveAttribute('data-loaded', 'true');
-    const after = await tiles(page).evaluateAll((items) =>
-      items.map((item) => item.getBoundingClientRect().toJSON()),
-    );
+    const after = await boxes(page);
 
     expect(after).toEqual(before);
   });
