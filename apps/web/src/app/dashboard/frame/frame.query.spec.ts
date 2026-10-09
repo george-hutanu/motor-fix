@@ -52,6 +52,18 @@ describe("the Panou address keeps the admin's choice", () => {
     expect(address()).toBe('/app/admin');
   });
 
+  it('writes the city before the period, whichever was chosen first', async () => {
+    const { element, harness } = await renderAdmin();
+
+    radios(element)[2].click();
+    await settleAdmin(harness);
+    select(element).value = 'cluj-napoca';
+    select(element).dispatchEvent(new Event('change'));
+    await settleAdmin(harness);
+
+    expect(address()).toBe('/app/admin?city=cluj-napoca&period=7d');
+  });
+
   it.each([
     ['an unknown period', '/app/admin?period=week'],
     ['a city in capitals', '/app/admin?city=Cluj-Napoca'],

@@ -272,9 +272,15 @@ export class Frame implements OnInit {
   }
 
   private writeChoice(choice: FiltersChoice, replaceUrl: boolean) {
+    // The whole query is written again so the city always comes before the
+    // period, whichever was chosen first: one choice, one address.
+    const {
+      city: _city,
+      period: _period,
+      ...rest
+    } = this.address().queryParams;
     void this.router.navigate([this.base()], {
-      queryParams: queryOf(choice),
-      queryParamsHandling: 'merge',
+      queryParams: { ...rest, ...queryOf(choice) },
       replaceUrl,
     });
   }
