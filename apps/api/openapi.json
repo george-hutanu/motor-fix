@@ -2973,6 +2973,63 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url": {
+      "get": {
+        "operationId": "LegalDocumentsController_pageAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "n",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentPageAddressDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "not_admin: the garage's own staff"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such file, document or page"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/listing-drafts": {
       "post": {
         "operationId": "ListingDraftsController_create",
@@ -8084,6 +8141,23 @@
           "kind",
           "name",
           "email"
+        ]
+      },
+      "DocumentPageAddressDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Signed for 5 minutes, opens inline"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
         ]
       },
       "CreateListingDraftDto": {

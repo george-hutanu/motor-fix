@@ -21,6 +21,9 @@ import { AdminOverviewControllerGrowth$Params } from '../fn/admin/admin-overview
 import { adminOverviewControllerOverview } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { DocumentPageAddressDto } from '../models/document-page-address-dto';
+import { legalDocumentsControllerPageAddress } from '../fn/admin/legal-documents-controller-page-address';
+import { LegalDocumentsControllerPageAddress$Params } from '../fn/admin/legal-documents-controller-page-address';
 import { PlatformRuleChangeDto } from '../models/platform-rule-change-dto';
 import { platformRuleChangesControllerApprove } from '../fn/admin/platform-rule-changes-controller-approve';
 import { PlatformRuleChangesControllerApprove$Params } from '../fn/admin/platform-rule-changes-controller-approve';
@@ -147,6 +150,31 @@ export class AdminService extends BaseService {
   adminOverviewControllerGrowth(params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Promise<AdminGrowthDto> {
     const resp = this.adminOverviewControllerGrowth$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminGrowthDto>): AdminGrowthDto => r.body);
+  }
+
+  /** Path part for operation `legalDocumentsControllerPageAddress()` */
+  static readonly LegalDocumentsControllerPageAddressPath = '/api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `legalDocumentsControllerPageAddress()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  legalDocumentsControllerPageAddress$Response(params: LegalDocumentsControllerPageAddress$Params, context?: HttpContext): Promise<StrictHttpResponse<DocumentPageAddressDto>> {
+    const obs = legalDocumentsControllerPageAddress(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `legalDocumentsControllerPageAddress$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  legalDocumentsControllerPageAddress(params: LegalDocumentsControllerPageAddress$Params, context?: HttpContext): Promise<DocumentPageAddressDto> {
+    const resp = this.legalDocumentsControllerPageAddress$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DocumentPageAddressDto>): DocumentPageAddressDto => r.body);
   }
 
   /** Path part for operation `verificationChecksControllerRecord()` */

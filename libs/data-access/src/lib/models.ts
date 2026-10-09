@@ -37,6 +37,7 @@ export type { CourtesyCarDto } from './models/courtesy-car-dto';
 export type { CreateCarDto } from './models/create-car-dto';
 export type { CreateListingDraftDto } from './models/create-listing-draft-dto';
 export type { CreateQuoteRequestDto } from './models/create-quote-request-dto';
+export type { DocumentPageAddressDto } from './models/document-page-address-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
 export type { DraftDocumentDto } from './models/draft-document-dto';

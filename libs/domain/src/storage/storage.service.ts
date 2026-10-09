@@ -269,16 +269,14 @@ export class StorageService implements OnApplicationShutdown {
   }
 
   // Null when nothing is stored at the key.
-  metadataOf(key: string): Promise<Record<string, string> | null> {
-    return this.s3
-      .send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
-      .then(
-        (head) => head.Metadata ?? {},
-        (error: unknown) => {
-          if (statusOf(error) === 404) return null;
-          throw error;
-        },
-      );
+  async metadataOf(key: string): Promise<Record<string, string> | null> {
+    const head = await this.head(key);
+    return head && (head.Metadata ?? {});
+  }
+
+  // Null when nothing is stored at the key or it was stored without a type.
+  async contentTypeOf(key: string): Promise<string | null> {
+    return (await this.head(key))?.ContentType ?? null;
   }
 
   derivedKey(key: string, copy: FileCopy): string {
@@ -347,6 +345,15 @@ export class StorageService implements OnApplicationShutdown {
           throw error;
         },
       );
+  }
+
+  private head(key: string) {
+    return this.s3
+      .send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+      .catch((error: unknown) => {
+        if (statusOf(error) === 404) return null;
+        throw error;
+      });
   }
 
   private async firstBytes(key: string): Promise<Uint8Array> {

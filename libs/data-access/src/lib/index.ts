@@ -43,6 +43,7 @@ export type { CourtesyCarDto } from './models/courtesy-car-dto';
 export type { CreateCarDto } from './models/create-car-dto';
 export type { CreateListingDraftDto } from './models/create-listing-draft-dto';
 export type { CreateQuoteRequestDto } from './models/create-quote-request-dto';
+export type { DocumentPageAddressDto } from './models/document-page-address-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
 export type { DraftDocumentDto } from './models/draft-document-dto';
@@ -277,6 +278,8 @@ export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerO
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
+export type { LegalDocumentsControllerPageAddress$Params as LegalDocumentsControllerPageAddress$Params } from './fn/admin/legal-documents-controller-page-address';
+export { legalDocumentsControllerPageAddress as legalDocumentsControllerPageAddress } from './fn/admin/legal-documents-controller-page-address';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';

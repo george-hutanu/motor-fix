@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 98,
+    "count": 99,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -422,6 +422,16 @@
       "dashboard": "motorfix-api",
       "alerts": "none",
       "reason": "ST-880 adds the alerts; a page left in storage after a failed delete logs one warning with the draft id and key",
+      "story": "ST-206"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-documents",
+      "source": "libs/domain/src/garages/documents/legal-documents/legal-documents.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/documents/:documentId/pages/:n/download-url",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "ST-880 adds the alerts; each issued address writes one open entry in the history and counts motorfix_documents_opened_total",
       "story": "ST-206"
     },
     {
