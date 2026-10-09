@@ -31,8 +31,13 @@ interface Person {
   status?: 'suspended';
   // A verified number, for the sign-in by WhatsApp code.
   phone?: string;
-  // The seeded garage this account works at, and how.
-  at?: { garage: string; as: 'owner' | 'receptionist' | 'mechanic' };
+  // The seeded garage this account works at, and how; a mechanic may also
+  // answer quote requests.
+  at?: {
+    garage: string;
+    as: 'owner' | 'receptionist' | 'mechanic';
+    answersQuotes?: true;
+  };
 }
 
 const GARAGES = [
@@ -168,6 +173,13 @@ const PEOPLE: Person[] = [
     roles: ['mechanic'],
   },
   {
+    at: { answersQuotes: true, as: 'mechanic', garage: 'atelier-test' },
+    email: 'mecanic-oferte@example.test',
+    lastRole: 'mechanic',
+    name: 'Radu Oferte',
+    roles: ['mechanic'],
+  },
+  {
     email: 'admin@example.test',
     lastRole: 'admin',
     name: 'Admin MotorFix',
@@ -241,8 +253,8 @@ function link(db: Client, id: string, at: NonNullable<Person['at']>) {
   const garage = '(SELECT id FROM garage WHERE slug = $2)';
   return at.as === 'mechanic'
     ? db.query(
-        `INSERT INTO mechanic (id, account_id, garage_id, name) SELECT gen_random_uuid(), $1, ${garage}, name FROM account WHERE id = $1`,
-        [id, at.garage],
+        `INSERT INTO mechanic (id, account_id, garage_id, name, can_answer_quotes) SELECT gen_random_uuid(), $1, ${garage}, name, $3 FROM account WHERE id = $1`,
+        [id, at.garage, at.answersQuotes ?? false],
       )
     : db.query(
         `INSERT INTO garage_member (account_id, garage_id, role) VALUES ($1, ${garage}, $3::garage_member_role)`,
@@ -443,9 +455,15 @@ async function requests(db: Client) {
 }
 
 // The oil service ticked for Dacia on the listed Bucharest garages that take
-// it, and shown on Service Auto Militari's price list, so its profile offers
-// a job and a request finds the others near it.
+// it and on the staff's garage, and shown on Service Auto Militari's price
+// list, so its profile offers a job and a request finds the others near it.
 async function quoteable(db: Client) {
+  await db.query(
+    `INSERT INTO garage_brand (garage_id, brand_id, stance, petrol, diesel, hybrid, electric, updated_at)
+     SELECT g.id, b.id, 'works_on', true, true, true, true, now()
+     FROM garage g, brand b WHERE g.slug = 'atelier-test' AND b.key = 'dacia'
+     ON CONFLICT DO NOTHING`,
+  );
   await db.query(
     `INSERT INTO garage_brand_job (garage_id, brand_id, job_type_id)
      SELECT gb.garage_id, gb.brand_id, j.id
@@ -454,7 +472,7 @@ async function quoteable(db: Client) {
      JOIN brand b ON b.id = gb.brand_id AND b.key = 'dacia'
      JOIN job_type j ON j.key = 'oil-service'
      WHERE gb.stance = 'works_on'
-       AND g.slug IN ('service-auto-militari', 'atelier-berceni', 'auto-pipera')
+       AND g.slug IN ('service-auto-militari', 'atelier-berceni', 'auto-pipera', 'atelier-test')
      ON CONFLICT DO NOTHING`,
   );
   await db.query(

@@ -15,12 +15,18 @@ export interface GarageRequestsControllerList$Params {
  * The nextCursor of the previous page
  */
   cursor?: string;
+
+/**
+ * waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page
+ */
+  status?: 'waiting' | 'closed';
 }
 
 export function garageRequestsControllerList(http: HttpClient, rootUrl: string, params?: GarageRequestsControllerList$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageRequestListDto>> {
   const rb = new RequestBuilder(rootUrl, garageRequestsControllerList.PATH, 'get');
   if (params) {
     rb.query('cursor', params.cursor, {});
+    rb.query('status', params.status, {});
   }
 
   return http.request(

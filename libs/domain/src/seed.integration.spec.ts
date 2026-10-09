@@ -118,6 +118,11 @@ describe('seed', () => {
         roles: ['garage'],
         status: 'active',
       },
+      'mecanic-oferte@example.test': {
+        lastRole: 'mechanic',
+        roles: ['mechanic'],
+        status: 'active',
+      },
       'mecanic@example.test': {
         lastRole: 'mechanic',
         roles: ['mechanic'],
@@ -375,13 +380,12 @@ describe('seed of the listed garages', () => {
   it('changes nothing in the listed garages when run twice', async () => {
     expect(seed('test').status).toBe(0);
     const once = await listed();
+    const brands = await prisma.garageBrand.count();
 
     expect(seed('test').status).toBe(0);
 
     expect(await listed()).toEqual(once);
-    expect(await prisma.garageBrand.count()).toBe(
-      once.reduce((n, g) => n + g.brands.length, 0),
-    );
+    expect(await prisma.garageBrand.count()).toBe(brands);
   });
 });
 
@@ -442,6 +446,37 @@ describe('seed of a request through to a job', () => {
         recipients: [{ garage: { slug: 'atelier-test' }, status: 'quoted' }],
         status: 'booked',
       },
+    ]);
+  });
+
+  // @traces 343-live-quote-requests-FR-005
+  it("gives the staff's garage a mechanic who may answer quotes beside one who may not, and the oil service ticked for Dacia", async () => {
+    expect(seed('test').status).toBe(0);
+
+    const mechanics = await prisma.mechanic.findMany({
+      select: { account: { select: { email: true } }, canAnswerQuotes: true },
+      where: { garage: { slug: 'atelier-test' } },
+    });
+    expect(
+      mechanics
+        .map((m) => [m.account?.email ?? '', m.canAnswerQuotes] as const)
+        .sort(([a], [b]) => (a < b ? -1 : 1)),
+    ).toEqual([
+      ['mecanic-oferte@example.test', true],
+      ['mecanic@example.test', false],
+    ]);
+    const oil = await prisma.jobType.findUniqueOrThrow({
+      where: { key: 'oil-service' },
+    });
+    const ticked = await prisma.garageBrandJob.findMany({
+      select: {
+        garageBrand: { select: { brand: { select: { key: true } } } },
+        jobTypeId: true,
+      },
+      where: { garageBrand: { garage: { slug: 'atelier-test' } } },
+    });
+    expect(ticked).toEqual([
+      { garageBrand: { brand: { key: 'dacia' } }, jobTypeId: oil.id },
     ]);
   });
 

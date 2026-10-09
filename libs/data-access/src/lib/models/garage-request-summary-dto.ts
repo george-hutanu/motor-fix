@@ -5,14 +5,29 @@ import { CarSnapshotDto } from '../models/car-snapshot-dto';
 import { DriverNameDto } from '../models/driver-name-dto';
 import { GarageQuoteDto } from '../models/garage-quote-dto';
 import { GarageRecipientDto } from '../models/garage-recipient-dto';
-import { RequestJobDto } from '../models/request-job-dto';
+import { GarageRequestJobDto } from '../models/garage-request-job-dto';
 export interface GarageRequestSummaryDto {
   car: CarSnapshotDto;
+
+  /**
+   * Set with closedReason
+   */
+  closedAt: string | null;
+
+  /**
+   * Set on the rows of a closed read
+   */
+  closedReason: ('expired' | 'garage_suspended' | 'cancelled' | 'account_closed' | 'accepted_elsewhere') | null;
   createdAt: string;
+
+  /**
+   * The description's first line
+   */
+  descriptionLine: string | null;
   driver: DriverNameDto;
   expiresAt: string;
   id: string;
-  jobs: Array<RequestJobDto>;
+  jobs: Array<GarageRequestJobDto>;
   quote: (GarageQuoteDto & {
 }) | null;
   recipient: GarageRecipientDto;

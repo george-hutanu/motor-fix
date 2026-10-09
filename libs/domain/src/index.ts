@@ -73,6 +73,7 @@ export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push/push-config';
+export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
 export { QuotesModule } from './quotes/quotes.module';
 export { SearchModule } from './search/search.module';
