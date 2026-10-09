@@ -8,6 +8,7 @@ import {
   type PlatformRulesOptions,
   PlatformRulesService,
 } from './platform-rules.service';
+import { PlatformStatusController } from './platform-status/platform-status.controller';
 import { AUDIT_PORT } from '../../audit/audit.port';
 import { AuditService } from '../../audit/audit.service';
 
@@ -20,7 +21,11 @@ export class PlatformRulesModule {
     notifications: DynamicModule,
   ): DynamicModule {
     return {
-      controllers: [PlatformRulesController, PlatformRuleChangesController],
+      controllers: [
+        PlatformRulesController,
+        PlatformRuleChangesController,
+        PlatformStatusController,
+      ],
       // Other modules (the reviews story) read reviewPolicy() from here.
       exports: [PlatformRulesService],
       imports: [notifications],

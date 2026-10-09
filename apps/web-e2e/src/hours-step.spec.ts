@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { ready, settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 const step = (page: Page) => page.locator('mf-hours-step');
@@ -92,7 +92,7 @@ test.describe('step 5 of list your garage, the hours and facilities', () => {
       await kept(page, 'courtesy_car');
 
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await settled(page);
 
       await byDay(page);
       await expect(select(page, 'mon-0-open')).toHaveValue('08:30');
@@ -133,7 +133,7 @@ test.describe('step 5 of list your garage, the hours and facilities', () => {
     await kept(page, 'waiting_area');
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await settled(page);
     await expect(select(page, 'weekdays-close')).toHaveValue('17:00');
     await expect(
       step(page).locator('[data-row="weekdays"] .error'),

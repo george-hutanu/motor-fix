@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -39,7 +40,7 @@ for (const { capabilities, landing, path, role } of PANELS) {
           route.fulfill({ json: { publicKey: null } }),
         );
         await page.goto(path);
-        await page.waitForLoadState('networkidle');
+        await settled(page);
         await expect(
           page.getByRole('heading', { name: 'Notificări pe acest dispozitiv' }),
         ).toBeVisible();

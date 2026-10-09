@@ -703,6 +703,7 @@ describe('the review policy', () => {
         production: false,
         webUrl: 'https://motorfix.test',
       },
+      {} as never,
     ).reviewPolicy();
 
   it('follows the stored value at every call, in both directions', async () => {

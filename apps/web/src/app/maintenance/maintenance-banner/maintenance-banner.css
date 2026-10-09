@@ -1,0 +1,19 @@
+:host {
+  display: block;
+}
+
+div {
+  border-block-end: 1px solid var(--mf-amber-ink);
+  background: var(--mf-amber-tint);
+  color: var(--mf-amber-ink);
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: calc(var(--mf-space-2) + var(--mf-safe-top))
+    calc(var(--mf-space-4) + var(--mf-safe-right)) var(--mf-space-2)
+    calc(var(--mf-space-4) + var(--mf-safe-left));
+  text-align: center;
+  text-transform: uppercase;
+}

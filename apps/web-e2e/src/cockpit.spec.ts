@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The page opens in Romanian, the default language.
@@ -156,7 +157,7 @@ test('changes theme with the device at once, keeping what was typed', async ({
 }) => {
   await open(page, 'dark');
   // Typed before hydration, the value is wiped when the client takes over the server's input.
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   const input = page.locator('input.spartan-input').first();
   await input.fill('Dacia Logan 2015');
   await expect(input).toHaveValue('Dacia Logan 2015');
@@ -301,7 +302,7 @@ test('never shows a text key while the page wakes up, however slow the scripts',
   await expect(
     page.getByRole('button', { exact: true, name: SAMPLE_TEXT.openDialog }),
   ).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 
   expect(
     await page.evaluate(

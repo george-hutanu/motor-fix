@@ -41,6 +41,20 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
   },
+  // The admins' way in, kept open during maintenance; no language prefix.
+  {
+    canMatch: [publicTexts],
+    children: [
+      {
+        loadComponent: () =>
+          import('./admin-sign-in/admin-sign-in').then((m) => m.AdminSignIn),
+        path: '',
+      },
+    ],
+    data: { tabBar: false },
+    loadComponent: publicFrame,
+    path: 'admin',
+  },
   ...(['driver', 'garage', 'admin'] as const).map((area) => ({
     canMatch: [areaGuard(area)],
     children: dashboardRoutes(area),

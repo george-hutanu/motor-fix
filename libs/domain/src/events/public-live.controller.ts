@@ -17,7 +17,7 @@ import {
 import type { Request, Response } from 'express';
 
 import { LiveHub } from './live/live.hub';
-import { Public } from '../auth/actor.guard';
+import { OpenInMaintenance, Public } from '../auth/actor.guard';
 import { clientOf } from '../auth/attempts';
 import { PRISMA } from '../auth/prisma';
 import { refusal } from '../auth/sign-up.service';
@@ -29,6 +29,7 @@ import type { PrismaClient } from '../generated/prisma/client';
 // more about a garage than its page does.
 @ApiTags('live')
 @Controller()
+@OpenInMaintenance()
 export class PublicLiveController {
   constructor(
     private readonly hub: LiveHub,

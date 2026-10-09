@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import {
   AccountsService,
+  MAINTENANCE,
+  type Maintenance,
   StorageService,
   signAccessToken,
 } from '@motor-fix/domain';
@@ -236,6 +238,7 @@ afterAll(async () => {
     `UPDATE platform_rule SET value = 'false'::jsonb
      WHERE key = 'maintenance_mode'`,
   );
+  await app.get<Maintenance>(MAINTENANCE, { strict: false }).set(false);
   await clearRequests();
   await db.end();
   await api.stop();

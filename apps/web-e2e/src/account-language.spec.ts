@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 const driver = {
@@ -96,7 +97,7 @@ test('the account language opens the dashboard, and nothing is saved for it', as
   await expect(
     page.getByRole('button', { exact: true, name: 'Sign out' }),
   ).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   expect(saved).toEqual([]);
 });
 
@@ -109,7 +110,7 @@ test('a signed-out switch stays on the device and sends nothing', async ({
   });
   await page.goto('/ro');
   await expect(languageSwitch(page, 'Limba')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 
   await languageSwitch(page, 'Limba')
     .getByRole('button', { name: 'EN' })
@@ -117,7 +118,7 @@ test('a signed-out switch stays on the device and sends nothing', async ({
 
   await expect(page).toHaveURL(/\/en\/?$/);
   await expect(languageSwitch(page, 'Language')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   expect(changes).toEqual([]);
   expect(await page.evaluate(() => localStorage.getItem('mf.lang'))).toBe('en');
 });

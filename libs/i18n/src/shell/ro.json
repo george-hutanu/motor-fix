@@ -260,6 +260,12 @@
       "other": "{count} de actualizări noi"
     }
   },
+  "maintenance": {
+    "adminLink": "Administrator? Intră în cont",
+    "banner": "Mentenanță activă",
+    "heading": "Mentenanță",
+    "message": "MotorFix este în mentenanță. Revenim în curând."
+  },
   "notFound": {
     "home": "Înapoi la pagina principală",
     "text": "Adresa nu duce la nicio pagină MotorFix.",

@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -11,7 +12,7 @@ const bar = (page: Page) =>
 
 async function open(page: Page, path: string) {
   await page.goto(path);
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 test.describe('the public tab bar on a 375 px phone', () => {

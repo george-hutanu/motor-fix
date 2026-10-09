@@ -24,3 +24,4 @@ export { InvitesService } from './services/invites.service';
 export { VerificationDocumentsService } from './services/verification-documents.service';
 export { ListingDraftsService } from './services/listing-drafts.service';
 export { LiveService } from './services/live.service';
+export { PlatformService } from './services/platform.service';

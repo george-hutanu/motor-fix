@@ -1,12 +1,8 @@
-import {
-  type APIRequestContext,
-  type Browser,
-  expect,
-  type Page,
-} from '@playwright/test';
+import { type Browser, expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { restore } from './platform-rules.js';
 
 const MAINTENANCE = 'Mod mentenanță';
 
@@ -15,30 +11,6 @@ const MAINTENANCE = 'Mod mentenanță';
 async function settled(page: Page) {
   await page.goto('/app/admin/settings');
   await expect(maintenance(page)).toBeVisible();
-}
-
-async function accessToken(request: APIRequestContext) {
-  const res = await request.post('/api/v1/auth/sign-in', {
-    data: { email: ACCOUNTS.admin, password: PASSWORD, remember: false },
-  });
-  expect(res.ok()).toBe(true);
-  return ((await res.json()) as { accessToken: string }).accessToken;
-}
-
-// Maintenance goes back off, so the suite can run twice against one database.
-async function restore(request: APIRequestContext) {
-  const headers = { Authorization: `Bearer ${await accessToken(request)}` };
-  const read = await request.get('/api/v1/admin/platform-rules', { headers });
-  const { rules } = (await read.json()) as {
-    rules: { key: string; value: unknown }[];
-  };
-  const seen = rules.find((r) => r.key === 'maintenance_mode')?.value;
-  if (seen === false) return;
-  const saved = await request.patch(
-    '/api/v1/admin/platform-rules/maintenance_mode',
-    { data: { seen, value: false }, headers },
-  );
-  expect(saved.ok()).toBe(true);
 }
 
 async function openSettings(page: Page) {

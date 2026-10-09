@@ -1,1 +1,8 @@
-<router-outlet />
+@if (status.showPage()) {
+  <mf-maintenance-page />
+} @else if (status.maintenance() && status.isAdmin()) {
+  <mf-maintenance-banner />
+}
+<div class="screen" [hidden]="status.showPage()" [attr.inert]="status.showPage() ? '' : null">
+  <router-outlet />
+</div>

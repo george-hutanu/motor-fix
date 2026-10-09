@@ -6,6 +6,7 @@ import { PlatformRulesModule } from './platform-rules.module';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
+import { MAINTENANCE, type Maintenance } from '../../auth/maintenance';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
@@ -48,7 +49,12 @@ beforeAll(async () => {
   await app.init();
 });
 
+// Every switch here leaves the fast store holding maintenance on.
+const maintenanceOff = () =>
+  app.get<Maintenance>(MAINTENANCE, { strict: false }).set(false);
+
 afterAll(async () => {
+  await maintenanceOff();
   await app.close();
   await prisma.$disconnect();
 });
@@ -59,6 +65,7 @@ beforeEach(async () => {
     data: { updatedAt: null, updatedBy: null, value: false },
     where: { key: 'maintenance_mode' },
   });
+  await maintenanceOff();
 });
 
 const bearer = (accountId: string, role: Role) =>

@@ -4205,6 +4205,27 @@
           "admin"
         ]
       }
+    },
+    "/api/v1/platform-status": {
+      "get": {
+        "operationId": "PlatformStatusController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
     }
   },
   "info": {
@@ -9499,6 +9520,18 @@
         "required": [
           "key",
           "reason"
+        ]
+      },
+      "PlatformStatusDto": {
+        "type": "object",
+        "properties": {
+          "maintenance": {
+            "type": "boolean",
+            "description": "The platform is in maintenance"
+          }
+        },
+        "required": [
+          "maintenance"
         ]
       }
     }
