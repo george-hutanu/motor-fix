@@ -4,7 +4,7 @@ import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
-import request from 'supertest';
+import request, { type Response } from 'supertest';
 
 import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
@@ -219,7 +219,7 @@ describe('POST /garages/:id/reports the body', () => {
   it('counts a 4-byte emoji as one character', async () => {
     const id = await approvedGarage();
 
-    const res = await post(id, { text: '🔧'.repeat(20) }, driver);
+    const res = await post(id, { text: '🔧'.repeat(1000) }, driver);
 
     expect(res.status).toBe(201);
   });
@@ -311,13 +311,13 @@ describe('POST /garages/:id/reports the answer', () => {
 
   it('answers 429 too_many_reports on the sixth garage in a day', async () => {
     const statuses: number[] = [];
-    let last: { body: { code?: string } } = { body: {} };
+    let last: Response | undefined;
     for (let n = 0; n < 6; n += 1) {
       last = await post(await approvedGarage(), { text: TEXT }, driver);
-      statuses.push((last as unknown as { status: number }).status);
+      statuses.push(last.status);
     }
 
-    expect([statuses, last.body.code]).toEqual([
+    expect([statuses, last?.body.code]).toEqual([
       [201, 201, 201, 201, 201, 429],
       'too_many_reports',
     ]);
