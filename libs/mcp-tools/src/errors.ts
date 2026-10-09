@@ -52,6 +52,10 @@ const MESSAGES: Record<string, Record<Language, string>> = {
     en: 'No single mechanic of this garage has that name. Ask which of the listed mechanics was meant.',
     ro: 'Niciun mecanic al service-ului nu are exact acest nume. Întreabă la care dintre mecanicii din listă te referi.',
   },
+  no_mechanic: {
+    en: 'No mechanic',
+    ro: 'Fără mecanic',
+  },
   not_found: {
     en: 'Not found.',
     ro: 'Nu a fost găsit.',

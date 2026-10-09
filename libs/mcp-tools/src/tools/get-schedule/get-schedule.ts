@@ -26,6 +26,7 @@ export const getSchedule = defineTool({
   description:
     "Shows the garage's bookings from one day to another (at most 7 days; today when no day is given), in start order: the car, the jobs, the mechanic, the lift and the state, with the minutes left to confirm a booking still awaiting the garage. Grouped by mechanic and by lift. Filter by lift or by mechanicId.",
   async handler(actor, input, ctx) {
+    const language = actor.language ?? 'ro';
     const schedule = await ctx.garage.schedule.list(actor, input);
     const { entries } = schedule;
     return {
@@ -35,7 +36,7 @@ export const getSchedule = defineTool({
         (e) => e.mechanic?.id ?? null,
         (e) => ({
           id: e.mechanic?.id ?? null,
-          name: e.mechanic?.name ?? 'unassigned',
+          name: e.mechanic?.name ?? text('no_mechanic', language),
         }),
       ),
       ...(schedule.lifts && {
@@ -46,7 +47,7 @@ export const getSchedule = defineTool({
         ),
       }),
       ...(entries.length === 0 && {
-        note: text('empty_schedule', actor.language ?? 'ro'),
+        note: text('empty_schedule', language),
       }),
     };
   },

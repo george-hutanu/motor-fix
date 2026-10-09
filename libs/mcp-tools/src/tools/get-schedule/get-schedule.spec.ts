@@ -120,6 +120,15 @@ describe('get_schedule', () => {
     expect(result.structuredContent).toMatchObject({ code: 'validation' });
   });
 
+  it('names the group with no mechanic in the account’s language', async () => {
+    const list = () => scheduleOf({ entries: [entry('b-1')] });
+    const nameOf = (r: Awaited<ReturnType<typeof call>>) =>
+      (r.structuredContent as { byMechanic: { name: string }[] }).byMechanic[0]
+        .name;
+    expect(nameOf(await call({}, list(), 'ro'))).toBe('Fără mecanic');
+    expect(nameOf(await call({}, list(), 'en'))).toBe('No mechanic');
+  });
+
   it('groups the entries by mechanic and by lift, by id only', async () => {
     const list = scheduleOf({
       entries: [
@@ -136,7 +145,7 @@ describe('get_schedule', () => {
       ],
       byMechanic: [
         { bookingIds: ['b-1', 'b-3'], id: 'mechanic-1', name: 'Vlad Stan' },
-        { bookingIds: ['b-2'], id: null, name: 'unassigned' },
+        { bookingIds: ['b-2'], id: null, name: 'Fără mecanic' },
       ],
       lifts: true,
     });

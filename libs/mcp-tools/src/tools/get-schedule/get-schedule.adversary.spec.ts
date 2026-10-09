@@ -196,7 +196,7 @@ describe('get_schedule answers', () => {
       byLift: { lift: number; bookingIds: string[] }[];
     };
     expect(byMechanic).toEqual([
-      { bookingIds: ['b-1', 'b-2', 'b-3'], id: null, name: 'unassigned' },
+      { bookingIds: ['b-1', 'b-2', 'b-3'], id: null, name: 'Fără mecanic' },
     ]);
     expect(byLift).toEqual([{ bookingIds: ['b-1', 'b-2', 'b-3'], lift: 1 }]);
   });
