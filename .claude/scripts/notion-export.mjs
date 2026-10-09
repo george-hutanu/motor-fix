@@ -498,6 +498,7 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
         if (!existsSync(file)) create.push(path);
         else if (readFileSync(file, "utf8") !== content) update.push(path);
       }
+      for (const path of assets.keys()) if (!existsSync(join(docs, path))) create.push(path);
       if (indexChanged) (prev ? update : create).push("index.json");
       return { code: 0, report: { ok: true, dryRun: true, create: create.sort(), update: update.sort(), delete: stale } };
     }

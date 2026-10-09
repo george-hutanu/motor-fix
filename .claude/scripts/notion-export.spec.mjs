@@ -228,7 +228,10 @@ describe('--dry-run', () => {
     const r = await exportDocs(['--dry-run']);
     assert.equal(r.code, 0);
     assert.equal(r.report.dryRun, true);
-    assert.deepEqual([...r.report.create].sort(), EXPORTED.filter((p) => p.endsWith('.md')).concat('index.json').sort().filter((p) => p !== 'overview/index.files/diagram.png'));
+    // Every hosted file is listed: a dry run downloads nothing, so it cannot
+    // know that big.zip will be refused for its size.
+    const files = ['overview/index.files/diagram.png', 'overview/vision.files/big.zip'];
+    assert.deepEqual([...r.report.create].sort(), EXPORTED.filter((p) => p.endsWith('.md')).concat('index.json', ...files).sort());
     assert.deepEqual(tree(), ['README.md']);
     assert.ok(!fx.calls.some((c) => c.url.startsWith(FILE_HOST)), 'a dry run downloads nothing');
 
