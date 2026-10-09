@@ -315,11 +315,13 @@ jobs:
         include:
           - app: web
             target: web
+            build-args: APP=web
             context: .
             file: Dockerfile
           # worker and mcp build the same node-app stage with another APP.
           - app: api
             target: node-app
+            build-args: APP=api
             context: .
             file: Dockerfile
           # The identity server's image: Keycloak with the realm baked in.
@@ -334,7 +336,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
-          build-args: APP=${{ matrix.app }}
+          build-args: ${{ matrix.build-args }}
           target: ${{ matrix.target }}
           push: false
           cache-from: type=gha,scope=${{ matrix.app }}

@@ -78,12 +78,17 @@ else; *address* is a public or internal address; *name* is a plain value.
    from the app's own.
 3. Set the variables:
 
-   On the api and the MCP server:
+   On the api and the MCP server (the same six on both, as the Build brief
+   lists them):
 
    | Variable | Kind | What it is |
    | --- | --- | --- |
    | `MCP_URL` | address | The MCP server's public address, ending in `/mcp` |
    | `ASSISTANT_ISSUER` | address | The realm's public address (`<keycloak>/realms/motorfix-assistants`) |
+   | `ASSISTANT_TRUSTED_DOMAINS` | name | Left unset unless a further host is trusted |
+   | `ASSISTANT_BROKER_CLIENT_ID` | name | Keycloak's client at the api |
+   | `ASSISTANT_BROKER_CLIENT_SECRET` | secret | Generated once; the same value on Keycloak |
+   | `ASSISTANT_BROKER_REDIRECT_URI` | address | `<issuer>/broker/motorfix/endpoint` |
 
    On the MCP server only:
 
@@ -92,11 +97,6 @@ else; *address* is a public or internal address; *name* is a plain value.
    | `DATABASE_URL` | secret | The app's staging database, as the api has it |
    | `APP_ENV` | name | `staging` |
    | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_PROTOCOL` | address, secret, name | Grafana Cloud, as the api has them |
-
-   On the api only: `ASSISTANT_BROKER_CLIENT_ID` (name),
-   `ASSISTANT_BROKER_CLIENT_SECRET` (secret) and
-   `ASSISTANT_BROKER_REDIRECT_URI` (address,
-   `<issuer>/broker/motorfix/endpoint`).
 
    On Keycloak:
 

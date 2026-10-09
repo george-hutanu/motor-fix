@@ -9,6 +9,8 @@ import {
 import { ISSUER_SETTINGS, type IssuerSettings } from './auth.verifier';
 import { setIssuerUp } from '../metrics/metrics';
 
+// Fixed rather than configurable: the alerts' 5-minute windows and the
+// dashboard assume a sample a minute, each probe settled within 10 s.
 const EVERY_MS = 60_000;
 const TIMEOUT_MS = 10_000;
 
@@ -25,10 +27,11 @@ export class IssuerProbe implements OnModuleInit, OnModuleDestroy {
     @Inject(ISSUER_SETTINGS) private readonly settings: IssuerSettings,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit() {
     this.timer = setInterval(() => void this.probe(), EVERY_MS);
     this.timer.unref();
-    await this.probe();
+    // Not awaited: a hanging identity server must not hold the boot.
+    void this.probe();
   }
 
   onModuleDestroy() {
@@ -45,9 +48,12 @@ export class IssuerProbe implements OnModuleInit, OnModuleDestroy {
       await res.body?.cancel();
       if (!res.ok) failure = `HTTP ${res.status}`;
     } catch (error) {
+      // The error's code or name only: its message may carry the address,
+      // credentials included.
+      const { cause, name } = error as Error & { cause?: { code?: string } };
       failure = abort.signal.aborted
         ? `no answer within ${TIMEOUT_MS / 1000} s`
-        : (error as Error).message;
+        : (cause?.code ?? name);
     } finally {
       clearTimeout(timeout);
     }
@@ -55,7 +61,7 @@ export class IssuerProbe implements OnModuleInit, OnModuleDestroy {
     setIssuerUp(up);
     if (up === this.last) return;
     this.last = up;
-    const host = new URL(url).host;
+    const host = URL.parse(url)?.host ?? 'unparsable issuer';
     if (up) this.logger.log({ host, issuer: 'up' });
     else this.logger.warn({ host, issuer: 'down', reason: failure });
   }

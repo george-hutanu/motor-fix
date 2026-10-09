@@ -66,7 +66,7 @@ class LiveController {
 }
 
 @Module({})
-export class McpModule implements NestModule, OnModuleDestroy {
+class McpModule implements NestModule, OnModuleDestroy {
   constructor(
     @Inject(PRISMA) private readonly prisma: ReturnType<typeof createPrisma>,
   ) {}

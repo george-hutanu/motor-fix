@@ -301,7 +301,9 @@ export function servicesFor(
   environment: string,
   env: Record<string, string | undefined> = process.env,
 ): Service[] {
-  const settings = ENVIRONMENTS[environment];
+  const settings = Object.hasOwn(ENVIRONMENTS, environment)
+    ? ENVIRONMENTS[environment]
+    : undefined;
   if (!settings)
     throw new Error('usage: railway-deploy.ts <staging|production>');
   return settings.services.flatMap((name) => {

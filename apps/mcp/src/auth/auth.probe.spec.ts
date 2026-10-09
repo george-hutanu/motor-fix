@@ -115,8 +115,9 @@ describe('the identity server probe', () => {
       .mockImplementation(async () => new Response('{}'));
     const checker = probe();
 
-    await checker.onModuleInit();
+    checker.onModuleInit();
     expect(fetched).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(0);
     await jest.advanceTimersByTimeAsync(60_000);
     expect(fetched).toHaveBeenCalledTimes(2);
 

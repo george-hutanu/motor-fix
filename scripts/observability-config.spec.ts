@@ -74,6 +74,6 @@ describe('the MCP server and its identity server', () => {
       (e: { kind: string; name: string }) =>
         e.kind === 'outside-service' && e.name === 'keycloak',
     );
-    expect(keycloak.alerts).toContain(rule?.uid);
+    expect(keycloak.alerts).toEqual([rule?.uid, 'mcp-issuer-unreachable']);
   });
 });

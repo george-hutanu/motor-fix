@@ -254,11 +254,9 @@ describe('the identity server gauge', () => {
     };
   }
 
-  it('says nothing before the first probe has answered', async () => {
+  it('says nothing before the first probe, then 1 while the identity server answers and 0 once it does not', async () => {
     expect((await issuerUp()).values).toEqual([]);
-  });
 
-  it('reads 1 while the identity server answers and 0 once it does not', async () => {
     setIssuerUp(true);
     expect(await issuerUp()).toEqual({
       environment: 'staging',
