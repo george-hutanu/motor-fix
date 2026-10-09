@@ -156,6 +156,20 @@ describe('get_schedule', () => {
     ).toEqual(['b-1', 'b-2', 'b-3']);
   });
 
+  it('groups a booking with no lift yet under a null lift when the garage schedules lifts', async () => {
+    const list = scheduleOf({
+      entries: [entry('b-1', { lift: 2 }), entry('b-2', { lift: null })],
+    });
+    const result = await call({}, list);
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      byLift: [
+        { bookingIds: ['b-1'], lift: 2 },
+        { bookingIds: ['b-2'], lift: null },
+      ],
+    });
+  });
+
   it('groups by mechanic only when the garage schedules without lifts', async () => {
     const { lift: _lift, ...unlifted } = entry('b-1', { mechanic: vlad });
     const list = scheduleOf({ entries: [unlifted as Entry], lifts: false });

@@ -42,8 +42,8 @@ export const getSchedule = defineTool({
       ...(schedule.lifts && {
         byLift: grouped(
           entries,
-          (e) => e.lift,
-          (e) => ({ lift: e.lift }),
+          (e) => e.lift ?? null,
+          (e) => ({ lift: e.lift ?? null }),
         ),
       }),
       ...(entries.length === 0 && {
@@ -60,7 +60,12 @@ export const getSchedule = defineTool({
   name: 'get_schedule',
   outputSchema: {
     byLift: z
-      .array(z.object({ bookingIds: z.array(z.string()), lift: z.number() }))
+      .array(
+        z.object({
+          bookingIds: z.array(z.string()),
+          lift: z.number().nullable(),
+        }),
+      )
       .optional(),
     byMechanic: z.array(
       z.object({
