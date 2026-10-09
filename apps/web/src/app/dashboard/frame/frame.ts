@@ -55,7 +55,6 @@ import { type Area, allowedViews, type Counts, DASHBOARDS } from '../views';
 
 type Role = MeDto['role'];
 
-// The chips' order, whatever order the account holds its roles in.
 // The Panou address's choice; anything else in it is the default.
 const choiceOf = (query: Params): FiltersChoice => {
   const { city, period } = query;
@@ -75,6 +74,7 @@ const queryOf = ({ city, period }: FiltersChoice) => ({
   period: period === 'default' ? null : period,
 });
 
+// The chips' order, whatever order the account holds its roles in.
 const ROLES: readonly { role: Role; label: string }[] = [
   { label: 'shell.frame.roles.driver', role: 'driver' },
   { label: 'shell.frame.roles.garage', role: 'garage' },

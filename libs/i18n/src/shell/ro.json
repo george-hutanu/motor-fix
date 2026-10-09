@@ -68,7 +68,6 @@
       },
       "filters": {
         "apply": "Aplică",
-        "close": "Închide",
         "label": "Filtre: {city}, {period}",
         "title": "Filtre"
       },

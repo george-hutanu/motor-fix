@@ -67,7 +67,6 @@
       },
       "filters": {
         "apply": "Apply",
-        "close": "Close",
         "label": "Filters: {city}, {period}",
         "title": "Filters"
       },
