@@ -52,14 +52,15 @@
                   <span class="label">{{ 'garage.jobs.steps.field' | t }}</span>
                   <input
                     hlmInput
-                    maxlength="120"
+                    maxlength="80"
                     [value]="editing()?.text ?? ''"
                     [attr.aria-invalid]="editing()?.problem || null"
+                    [attr.aria-describedby]="editing()?.problem ? 'rename-hint' : null"
                     (input)="typeRename($event)"
                   />
                 </label>
                 @if (editing()?.problem) {
-                  <p class="hint">{{ 'garage.jobs.steps.length' | t }}</p>
+                  <p class="hint" id="rename-hint" role="alert">{{ 'garage.jobs.steps.length' | t }}</p>
                 }
                 <div class="actions">
                   <button hlmBtn type="submit">
@@ -125,14 +126,15 @@
             <span class="label">{{ 'garage.jobs.steps.field' | t }}</span>
             <input
               hlmInput
-              maxlength="120"
+              maxlength="80"
               [value]="adding() ?? ''"
               [attr.aria-invalid]="addProblem() || null"
+              [attr.aria-describedby]="addProblem() ? 'add-hint' : null"
               (input)="typeAdd($event)"
             />
           </label>
           @if (addProblem()) {
-            <p class="hint">{{ 'garage.jobs.steps.length' | t }}</p>
+            <p class="hint" id="add-hint" role="alert">{{ 'garage.jobs.steps.length' | t }}</p>
           }
           <div class="actions">
             <button hlmBtn type="submit">

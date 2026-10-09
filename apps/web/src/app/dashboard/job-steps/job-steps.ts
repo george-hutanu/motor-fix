@@ -103,13 +103,13 @@ export class JobSteps {
   );
   // Ticks sent, by step, until a read shows them and the queue holds none.
   private readonly ticked = signal<Record<string, boolean>>({});
+  private held = new Set<string>();
   protected readonly menuFor = signal<string | null>(null);
   protected readonly editing = signal<Editing | null>(null);
   protected readonly adding = signal<string | null>(null);
   protected readonly addProblem = signal(false);
   private addKey = '';
   protected readonly problem = signal<string | null>(null);
-  protected readonly max = STEPS_MAX;
 
   protected readonly writable = computed(() => {
     const job = this.job();
@@ -125,8 +125,24 @@ export class JobSteps {
     void this.i18n.enter('garage');
     // A fresh read is the truth for every tick the queue no longer holds.
     effect(() => {
-      this.view.value();
+      this.view.reads();
       untracked(() => this.settleTicks());
+    });
+    // A tick the queue lets go of, answered or given up, is read again.
+    effect(() => {
+      const now = new Set(
+        this.waiting
+          .actions()
+          .map((a) => a.url)
+          .filter((url) =>
+            url.startsWith(`/api/v1/garage/jobs/${this.id}/steps/`),
+          ),
+      );
+      untracked(() => {
+        const left = [...this.held].some((url) => !now.has(url));
+        this.held = now;
+        if (left) this.view.reload();
+      });
     });
     effect(() => {
       if (this.view.gone()) untracked(() => this.task.close());
