@@ -17,7 +17,7 @@ const byKey = (list, key) => list.find((r) => r.key === key);
 describe("readTracker", () => {
   it("builds a story from its properties, keeping them all for the issue body", async () => {
     const { tracker } = await read();
-    const { properties, lastEdited, ...st1 } = byKey(tracker.stories, "ST-1");
+    const { properties, lastEdited, created, ...st1 } = byKey(tracker.stories, "ST-1");
     assert.equal(properties["User story"].rich_text[0].plain_text, SECRET);
     assert.equal(lastEdited, null);
     assert.deepEqual(st1, {
@@ -43,14 +43,14 @@ describe("readTracker", () => {
     });
   });
 
-  it("leaves every item unassigned with one warning when the workspace has two people", async () => {
+  it("assigns every item to the owner, with one warning naming the assignees it could not match", async () => {
     const { tracker } = await read({
       users: [
         { object: "user", id: "aaaaaaaa-0000-0000-0000-000000000001", type: "person", name: "George" },
         { object: "user", id: "dddddddd-0000-0000-0000-000000000002", type: "person", name: "Guest" },
       ],
     });
-    assert.ok(tracker.stories.every((s) => s.assignee === null));
+    assert.ok(tracker.stories.every((s) => s.assignee === "george-hutanu"));
     const about = tracker.warnings.filter((w) => /assign/i.test(w));
     assert.equal(about.length, 1);
     assert.match(about[0], /more than one person/);
@@ -64,12 +64,12 @@ describe("readTracker", () => {
     assert.doesNotMatch(about[0], /more than one/);
   });
 
-  it("keeps the date part of a datetime and drops an assignee who is not the owner", async () => {
+  it("keeps the date part of a datetime and gives the owner an item assigned to someone it cannot match", async () => {
     const { tracker } = await read();
     const st2 = byKey(tracker.stories, "ST-2");
     assert.equal(st2.started, "2026-10-01");
     assert.equal(st2.pr, "https://github.com/george-hutanu/motor-fix/pull/50");
-    assert.equal(st2.assignee, null);
+    assert.equal(st2.assignee, "george-hutanu");
     assert.ok(tracker.warnings.some((w) => w.includes("ST-2") && /assignee/i.test(w)));
   });
 
@@ -94,7 +94,7 @@ describe("readTracker", () => {
 
   it("builds an epic with its release, track, timeline and blocking epics", async () => {
     const { tracker } = await read();
-    const { properties, lastEdited, ...ep2 } = byKey(tracker.epics, "EP-2");
+    const { properties, lastEdited, created, ...ep2 } = byKey(tracker.epics, "EP-2");
     assert.ok(properties.Goal);
     assert.deepEqual(ep2, {
       id: tracker.epics.find((e) => e.key === "EP-2").id,

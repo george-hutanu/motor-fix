@@ -19,10 +19,10 @@ export async function readTracker(client) {
   const ownerId = persons.length === 1 ? persons[0].id : null;
   const unassigned = [];
   const assignee = (key, ids) => {
-    if (!ids.length) return null;
-    if (ids[0] === ownerId) return OWNER_LOGIN;
+    // The repository has one person: an item nobody holds is theirs.
+    if (!ids.length || ids[0] === ownerId) return OWNER_LOGIN;
     unassigned.push(key);
-    return null;
+    return OWNER_LOGIN;
   };
 
   const epicPages = await client.query(EPICS);
@@ -36,6 +36,7 @@ export async function readTracker(client) {
       key,
       properties: p.properties,
       lastEdited: p.last_edited_time ?? null,
+      created: p.created_time?.slice(0, 10) ?? null,
       title: readProp(p, "Epic").trim(),
       status: readProp(p, "Status"),
       priority: readProp(p, "Priority"),
@@ -55,6 +56,7 @@ export async function readTracker(client) {
       key,
       properties: p.properties,
       lastEdited: p.last_edited_time ?? null,
+      created: p.created_time?.slice(0, 10) ?? null,
       title: readProp(p, "Story").trim(),
       type: readProp(p, "Issue type"),
       status: readProp(p, "Status"),
@@ -107,7 +109,7 @@ export async function readTracker(client) {
   }
   if (unassigned.length) {
     const reason = ownerId ? "is not the owner" : `cannot be matched: the workspace has ${persons.length ? "more than one person" : "no person"}`;
-    warnings.push(`${unassigned.length} item(s) left unassigned: the assignee ${reason} (first: ${unassigned[0]})`);
+    warnings.push(`${unassigned.length} item(s) assigned to ${OWNER_LOGIN}: the Notion assignee ${reason} (first: ${unassigned[0]})`);
   }
   return { stories, epics, warnings, skippedRows, users };
 }

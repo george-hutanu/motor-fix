@@ -50,8 +50,64 @@ const titled = (key, title) => {
 };
 const lower = (names) => new Set(names.map((n) => n.toLowerCase()));
 const dated = (fields, entries) => {
-  for (const [name, value] of entries) if (value !== null && value !== undefined) fields[name] = value;
+  for (const [name, value] of entries) if (value !== null && value !== undefined && value !== "") fields[name] = value;
   return fields;
+};
+
+/** A Project text field holds a line, not a page: longer values are cut (the body keeps them whole). */
+export const TEXT_MAX = 1000;
+
+/** A Notion property as plain data: text, a number, a checkbox, a date's { start, end }, or a list for a multi-select, relation or rollup. */
+export function plainValue(prop) {
+  if (!prop?.type) return null;
+  const v = prop[prop.type];
+  switch (prop.type) {
+    case "title":
+    case "rich_text":
+      return (v ?? []).map((t) => t.plain_text ?? t.text?.content ?? "").join("").trim() || null;
+    case "number":
+      return typeof v === "number" ? v : null;
+    case "url":
+    case "email":
+    case "phone_number":
+      return v || null;
+    case "select":
+    case "status":
+      return v?.name ?? null;
+    case "multi_select":
+      return (v ?? []).map((o) => o.name);
+    case "relation":
+      return (v ?? []).map((r) => r.id);
+    case "checkbox":
+      return v === true;
+    case "date":
+      return v?.start ? { start: v.start.slice(0, 10), end: v.end?.slice(0, 10) ?? null } : null;
+    case "place":
+      return v ? v.name || v.address || [v.lat, v.lon].filter((x) => x != null).join(", ") || null : null;
+    case "rollup":
+      if (v?.type === "number") return v.number;
+      if (v?.type === "date") return plainValue({ type: "date", date: v.date });
+      return (v?.array ?? []).flatMap((item) => plainValue(item) ?? []).filter((x) => x !== "" && x !== null);
+    default:
+      return null;
+  }
+}
+
+/** A value for a Project text field: lists joined, one line, no Notion address, at most TEXT_MAX characters. */
+const textOf = (value) => {
+  if (value === null || value === undefined) return null;
+  const list = Array.isArray(value) ? value : [value];
+  const one = withoutNotion(list.map((x) => (typeof x === "object" ? x.start : String(x))).join(", "))
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!one) return null;
+  return one.length > TEXT_MAX ? `${one.slice(0, TEXT_MAX - 1)}…` : one;
+};
+const firstOf = (value) => (Array.isArray(value) ? (value[0] ?? null) : value);
+const numberOf = (value) => (typeof firstOf(value) === "number" ? firstOf(value) : null);
+const dateOf = (value, end = false) => {
+  const d = firstOf(value);
+  return d && typeof d === "object" ? (end ? d.end : d.start) : null;
 };
 
 /** What each story and epic should be on GitHub, in import order, and what Notion held that could not be mapped. */
@@ -106,6 +162,15 @@ export function issuePlans(tracker) {
     };
     return r.content ? { ...parts, ...page(r, head) } : parts;
   };
+  /** A property of the record, read whole when its content is in (Notion cuts long values short in a query). */
+  const of = (r, name) => plainValue(r.content?.properties?.[name] ?? r.properties?.[name]);
+  const features = (r, name = "Feature") => of(r, name) ?? [];
+  /** The features' names, known once the page naming them has been read; null until then. */
+  const featureText = (r, name) => {
+    const ids = features(r, name);
+    const named = ids.map((id) => ctx.titleOf(id)).filter(Boolean);
+    return ids.length && named.length === ids.length ? textOf(named) : null;
+  };
   const statusOf = new Map(tracker.stories.map((s) => [s.key, s.status]));
   /** The blockers that are imported items other than the item itself; the rest are warned and dropped. */
   const linkable = (r) =>
@@ -145,18 +210,37 @@ export function issuePlans(tracker) {
       parent: epic ?? null,
       blockers,
       pr: pr ? Number(pr[1]) : null,
-      fields: dated({ Status: status }, [
-        ["Priority", s.priority],
-        ["Work type", type],
-        ["Epic", epic],
-        ["Ready to work", ready ? "Yes" : "No"],
-        ["Started", s.started],
-        ["QA from", s.qaFrom],
-        ["Merged at", s.mergedAt],
-        ["Story points", s.points],
-        ["Planned start", s.plannedStart],
-        ["Planned end", s.plannedEnd],
-      ]),
+      featureIds: features(s),
+      get fields() {
+        return dated({ Status: status }, [
+          ["Priority", s.priority],
+          ["Work type", type],
+          ["Epic", epic],
+          ["Ready to work", ready ? "Yes" : "No"],
+          ["Started", s.started],
+          ["QA from", s.qaFrom],
+          ["Merged at", s.mergedAt],
+          ["Story points", s.points],
+          ["Planned start", s.plannedStart],
+          ["Planned end", s.plannedEnd],
+          ["Role", s.role],
+          ["Release", firstOf(of(s, "Fix version")) ?? epicByKey.get(epic)?.release],
+          ["Area", textOf(s.labels)],
+          ["Component", textOf(of(s, "Component"))],
+          ["Feature", featureText(s)],
+          ["Design", textOf(of(s, "Design"))],
+          ["Design boards", textOf(of(s, "Design boards"))],
+          ["PR", pr ? pr[0] : null],
+          ["Session", textOf(of(s, "Session"))],
+          ["User story", textOf(of(s, "User story"))],
+          ["Took", textOf(of(s, "Took"))],
+          ["Place", textOf(of(s, "Place"))],
+          ["Date", dateOf(of(s, "Date"))],
+          ["Work start", dateOf(of(s, "Work"))],
+          ["Work end", dateOf(of(s, "Work"), true)],
+          ["Created", s.created],
+        ]);
+      },
     };
   });
 
@@ -177,13 +261,27 @@ export function issuePlans(tracker) {
       parent: null,
       blockers: linkable(e),
       pr: null,
-      fields: dated({ Status: status }, [
-        ["Priority", e.priority],
-        ["Work type", "Epic"],
-        ["Epic", e.key],
-        ["Planned start", e.plannedStart],
-        ["Planned end", e.plannedEnd],
-      ]),
+      featureIds: features(e, "Features"),
+      get fields() {
+        return dated({ Status: status }, [
+          ["Priority", e.priority],
+          ["Work type", "Epic"],
+          ["Epic", e.key],
+          ["Planned start", e.plannedStart],
+          ["Planned end", e.plannedEnd],
+          ["Track", e.track],
+          ["Release", e.release],
+          ["Story points", numberOf(of(e, "Story points"))],
+          ["Story count", numberOf(of(e, "Story count"))],
+          ["Weeks", numberOf(of(e, "Weeks"))],
+          ["Feature", featureText(e, "Features")],
+          ["Design", textOf(of(e, "Design"))],
+          ["Design boards", textOf(of(e, "Design boards"))],
+          ["Goal", textOf(of(e, "Goal"))],
+          ["Done when", textOf(of(e, "Done when"))],
+          ["Created", e.created],
+        ]);
+      },
     };
   });
 
@@ -198,7 +296,8 @@ export function issuePlans(tracker) {
 }
 
 const ITEMS = `query Items($id: ID!, $after: String) { node(id: $id) { ... on ProjectV2 { items(first: 100, after: $after) { totalCount pageInfo { hasNextPage endCursor }
-  nodes { id content { ... on Issue { number } } fieldValues(first: 30) { nodes {
+  nodes { id content { ... on Issue { number } } fieldValues(first: 50) { nodes {
+    ... on ProjectV2ItemFieldTextValue { text field { ... on ProjectV2FieldCommon { name } } }
     ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2FieldCommon { name } } }
     ... on ProjectV2ItemFieldDateValue { date field { ... on ProjectV2FieldCommon { name } } }
     ... on ProjectV2ItemFieldNumberValue { number field { ... on ProjectV2FieldCommon { name } } } } } } } } } }`;
@@ -212,7 +311,7 @@ async function projectItems(github, id) {
     const page = (await github.graphql(ITEMS, { id, after })).node.items;
     for (const node of page.nodes) {
       const values = {};
-      for (const v of node.fieldValues.nodes) if (v.field) values[v.field.name] = v.name ?? v.date ?? v.number;
+      for (const v of node.fieldValues.nodes) if (v.field) values[v.field.name] = v.name ?? v.date ?? v.number ?? v.text;
       items.push({ id: node.id, number: node.content?.number ?? null, values });
     }
     more = page.pageInfo.hasNextPage;
@@ -240,7 +339,7 @@ function missingSetup({ plans, labels, milestones, fields }) {
   const parts = [
     ["labels", [...new Set(plans.flatMap((p) => p.labels))].filter((x) => !labelNames.has(x.toLowerCase()))],
     ["milestones", absent(plans.map((p) => p.milestone).filter(Boolean), milestones)],
-    ["fields", absent(plans.flatMap((p) => Object.keys(p.fields)), new Set(fieldNames.keys()))],
+    ["fields", absent(plans.flatMap((p) => [...Object.keys(p.fields), ...(p.featureIds?.length ? ["Feature"] : [])]), new Set(fieldNames.keys()))],
     [
       "options",
       absent(
@@ -404,7 +503,9 @@ export async function runImport({
               ? { singleSelectOptionId: field.options.find((o) => o.name === value).id }
               : field.dataType === "NUMBER"
                 ? { number: value }
-                : { date: value };
+                : field.dataType === "TEXT"
+                  ? { text: value }
+                  : { date: value };
         });
         await github.graphql(setFieldsMutation(differing.length), variables);
         return differing.map(([name]) => name).join(", ");
@@ -508,30 +609,57 @@ export async function runImport({
     out("bodies", `${ready.length} pages, ${ready.reduce((n, p) => n + p.body.length, 0).toLocaleString("en-US")} characters; ${files} too long for an issue, kept whole under tracker/`);
   };
 
-  // The reader: pages in import order, each one's turn released as soon as it is read.
-  const turn = plans.map(() => deferred());
+  // The reader: pages the cache answers first (at once), then the rest in import order; each page is ready to write as soon as it is read.
+  const ready = plans.map(() => false);
+  let readError = null;
+  let wake = deferred();
+  const woken = () => {
+    const was = wake;
+    wake = deferred();
+    was.resolve();
+  };
   let read = 0;
   let fetched = 0;
   let writtenPages = 0;
   let stopReading = false;
   const status = (extra = {}) => progress({ read, total, written: writtenPages, lap, ...extra });
+  const order = [...plans.keys()];
+  if (load?.cached) {
+    const quick = (i) => plans[i].body !== null || plans[i].record.content || load.cached(plans[i].record);
+    const first = new Set(order.filter(quick));
+    order.splice(0, order.length, ...first, ...order.filter((i) => !first.has(i)));
+  }
   const reading = (async () => {
-    for (const [i, plan] of plans.entries()) {
+    for (const i of order) {
       if (stopReading) return;
+      const plan = plans[i];
       try {
         if (plan.body === null) {
           if (load && !plan.record.content && (await load(plan.record))) fetched++;
           plan.render();
         }
       } catch (error) {
-        for (const d of turn.slice(i)) d.reject(error);
+        readError = error;
+        woken();
         return;
       }
       read++;
       status({ key: plan.key, event: "read" });
-      turn[i].resolve();
+      ready[i] = true;
+      woken();
     }
   })();
+  /** The first page in import order that is read and not yet written, waiting for the reader when none is; null when all are done. */
+  const taken = plans.map(() => false);
+  const nextPage = async () => {
+    for (;;) {
+      const i = taken.findIndex((t, j) => !t && ready[j]);
+      if (i !== -1) return i;
+      if (taken.every(Boolean)) return null;
+      if (readError) throw readError;
+      await wake.promise;
+    }
+  };
   const stop = async () => {
     stopReading = true;
     await reading;
@@ -587,8 +715,9 @@ export async function runImport({
 
   const all = [];
   let parts = 0;
-  for (const [i, plan] of plans.entries()) {
-    await turn[i].promise;
+  for (let i = await nextPage(); i !== null; i = await nextPage()) {
+    const plan = plans[i];
+    taken[i] = true;
     if (plan.gaps.length) {
       incomplete.add(plan.key);
       parts += plan.gaps.length;

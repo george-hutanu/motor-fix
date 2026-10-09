@@ -135,10 +135,15 @@ export async function fetchFile(url, { fetchImpl = fetch, sleep = (ms) => new Pr
 export function pageLoader(client, tracker, { cache = null, store = null, download = fetchFile, refresh = false, log = () => {} } = {}) {
   const known = new Set([...tracker.stories, ...tracker.epics].map((p) => p.id));
   tracker.titles ??= new Map();
-  return async (page) => {
+  /** The cached content when it still serves (the page not edited since, its files all stored), else null. */
+  const usable = (page) => {
     const cached = !refresh && cache?.get(page.id);
+    return cached && cached.lastEdited === page.lastEdited && stored(cached, store) ? cached : null;
+  };
+  const load = async (page) => {
+    const cached = usable(page);
     let read = false;
-    if (cached && cached.lastEdited === page.lastEdited && stored(cached, store)) {
+    if (cached) {
       page.content = cached.content;
     } else {
       page.content = await readPage(client, page, { store, download, known, log });
@@ -148,6 +153,9 @@ export function pageLoader(client, tracker, { cache = null, store = null, downlo
     for (const [id, title] of Object.entries(page.content.titles ?? {})) tracker.titles.set(id, title);
     return read;
   };
+  /** Whether `load(page)` would be answered from the cache, without asking Notion: the import reads those pages first. */
+  load.cached = (page) => Boolean(usable(page));
+  return load;
 }
 
 /** Reads every story's and epic's content (pageLoader); returns the number of pages read from Notion. */

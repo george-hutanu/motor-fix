@@ -23,6 +23,9 @@ export const LINKED_REPOS = [ISSUE_REPO, CODE_REPO];
 const DEFAULT_STATUS = ["Todo", "In Progress", "Done"];
 
 const EPICS = Array.from({ length: 17 }, (_, i) => `EP-${i + 1}`);
+const ROLES = ["Visitor", "Driver", "Garage", "Mechanic", "Admin", "System"];
+const TRACKS = ["Platform", "Driver side", "Garage side", "Admin", "Whole team"];
+const RELEASES = ["1 - Launch", "2 - Soon after", "3 - Later"];
 const select = (name, options) => ({ name, dataType: "SINGLE_SELECT", options: options.map(([n, color = "GRAY"]) => ({ name: n, color, description: "" })) });
 const plain = (dataType) => (name) => ({ name, dataType });
 const label = (color) => (name) => ({ name, color, description: "" });
@@ -60,6 +63,13 @@ export const SCHEMA = {
     ...["Started", "QA from", "Merged at", "Planned start", "Planned end"].map(plain("DATE")),
     plain("NUMBER")("Story points"),
     plain("ITERATION")("Sprint"),
+    // Every other Notion property has a field of its own too (data-model.md, "Property → GitHub").
+    select("Role", ROLES.map((r) => [r])),
+    select("Track", TRACKS.map((t) => [t])),
+    select("Release", RELEASES.map((r, i) => [r, ["RED", "ORANGE", "GRAY"][i]])),
+    ...["Area", "Component", "Feature", "Design", "Design boards", "PR", "Session", "User story", "Took", "Place", "Goal", "Done when"].map(plain("TEXT")),
+    ...["Date", "Work start", "Work end", "Created"].map(plain("DATE")),
+    ...["Story count", "Weeks"].map(plain("NUMBER")),
   ],
   views: [
     { name: "Board", layout: "BOARD_LAYOUT", fields: ["Title", "Priority", "Work type", "Epic", "Ready to work"] },
@@ -76,11 +86,11 @@ export const SCHEMA = {
   labels: [
     ...["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "epic"].map(label("1d76db")),
     ...["front end", "backend", "real-time", "outside service", "legal", "design", "data"].map((a) => label("0e8a16")(`area: ${a}`)),
-    ...["Visitor", "Driver", "Garage", "Mechanic", "Admin", "System"].map((r) => label("fbca04")(`role: ${r}`)),
-    ...["Platform", "Driver side", "Garage side", "Admin", "Whole team"].map((t) => label("c5def5")(`track: ${t}`)),
+    ...ROLES.map((r) => label("fbca04")(`role: ${r}`)),
+    ...TRACKS.map((t) => label("c5def5")(`track: ${t}`)),
     ...EPICS.map(label("5319e7")),
   ],
-  milestones: ["1 - Launch", "2 - Soon after", "3 - Later"],
+  milestones: RELEASES,
   readme: [
     "# MotorFix",
     "",
@@ -109,7 +119,7 @@ const Q = {
   projects: `query Projects { viewer { id login projectsV2(first: 100) { nodes { id number title } } } issues: repository(owner: "${OWNER}", name: "${ISSUE_REPO}") { id } code: repository(owner: "${OWNER}", name: "${CODE_REPO}") { id } }`,
   state: `query ProjectState($id: ID!) { node(id: $id) { ... on ProjectV2 { id number title readme
     repositories(first: 5) { nodes { nameWithOwner } } statusUpdates(first: 1) { totalCount } items { totalCount }
-    fields(first: 50) { nodes { ... on ProjectV2SingleSelectField { id name dataType options { id name color } } ... on ProjectV2IterationField { id name dataType } ... on ProjectV2Field { id name dataType } } }
+    fields(first: 100) { nodes { ... on ProjectV2SingleSelectField { id name dataType options { id name color } } ... on ProjectV2IterationField { id name dataType } ... on ProjectV2Field { id name dataType } } }
     views(first: 50) { nodes { id name layout filter fields(first: 30) { nodes { ... on ProjectV2FieldCommon { id name } } } } } } } }`,
   createProject: "mutation CreateProject($ownerId: ID!, $title: String!) { createProjectV2(input: { ownerId: $ownerId, title: $title }) { projectV2 { id number } } }",
   linkRepo:

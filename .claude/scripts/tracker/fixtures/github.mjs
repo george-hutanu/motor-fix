@@ -166,6 +166,7 @@ export function fakeGitHub(seed = {}) {
     if (f.dataType === "SINGLE_SELECT") return { name: f.options.find((o) => o.id === value.singleSelectOptionId)?.name, field: { name: f.name } };
     if (f.dataType === "DATE") return { date: value.date, field: { name: f.name } };
     if (f.dataType === "NUMBER") return { number: value.number, field: { name: f.name } };
+    if (f.dataType === "TEXT") return { text: value.text, field: { name: f.name } };
     return {};
   };
 

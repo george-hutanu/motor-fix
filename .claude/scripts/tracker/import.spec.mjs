@@ -9,7 +9,7 @@ import { reconcile } from "./bootstrap.mjs";
 import { fakeGitHub } from "./fixtures/github.mjs";
 import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
-import { issuePlans, runImport } from "./import.mjs";
+import { issuePlans, plainValue, runImport, TEXT_MAX } from "./import.mjs";
 import { refToken } from "./notion-markdown.mjs";
 import { fetchFile, folderCache, folderStore, loadContent, pageLoader } from "./notion-content.mjs";
 import { reporter } from "./progress.mjs";
@@ -53,7 +53,7 @@ const itemValues = (gh, key) => {
   return Object.fromEntries(
     Object.entries(item.values).map(([fid, v]) => {
       const f = p.fields.find((x) => x.id === fid);
-      return [f.name, v.singleSelectOptionId ? f.options.find((o) => o.id === v.singleSelectOptionId).name : (v.date ?? v.number)];
+      return [f.name, v.singleSelectOptionId ? f.options.find((o) => o.id === v.singleSelectOptionId).name : (v.date ?? v.number ?? v.text)];
     }),
   );
 };
@@ -90,6 +90,11 @@ describe("issuePlans", () => {
       "Story points": 3,
       "Planned start": "2026-10-12",
       "Planned end": "2026-10-16",
+      Role: "Driver",
+      Release: "1 - Launch",
+      Area: "front end",
+      "User story": SECRET,
+      Took: SECRET,
     });
   });
 
@@ -144,7 +149,7 @@ describe("issuePlans", () => {
     assert.equal(ep1.title, "EP-1 Foundations");
     assert.deepEqual(ep1.labels, ["epic", "track: Platform"]);
     assert.equal(ep1.milestone, "1 - Launch");
-    assert.deepEqual(ep1.fields, { Status: "Implementing", Priority: "Highest", "Work type": "Epic", Epic: "EP-1", "Planned start": "2026-10-12", "Planned end": "2026-12-04" });
+    assert.deepEqual(ep1.fields, { Status: "Implementing", Priority: "Highest", "Work type": "Epic", Epic: "EP-1", "Planned start": "2026-10-12", "Planned end": "2026-12-04", Track: "Platform", Release: "1 - Launch", Goal: SECRET, "Done when": SECRET});
     assert.deepEqual(plans.find((p) => p.key === "EP-2").blockers, ["EP-1"]);
     assert.equal(plans.find((p) => p.key === "EP-3").state, "closed");
     assert.equal(plans.find((p) => p.key === "EP-2").fields.Status, "To do");
@@ -181,7 +186,22 @@ describe("a full import", () => {
     assert.equal(imported.length, 12);
     assert.match(imported[0].title, /^ST-2 /);
     assert.equal(gh.state.projects[0].items.length, 12);
-    assert.deepEqual(itemValues(gh, "ST-2"), { Status: "Implementing", Priority: "Urgent", "Work type": "Task", Epic: "EP-2", "Ready to work": "No", Started: "2026-10-01" });
+    assert.deepEqual(itemValues(gh, "ST-2"), {
+      Status: "Implementing",
+      Priority: "Urgent",
+      "Work type": "Task",
+      Epic: "EP-2",
+      "Ready to work": "No",
+      Started: "2026-10-01",
+      Role: "Garage",
+      Release: "2 - Soon after",
+      Area: "backend",
+      PR: "https://github.com/george-hutanu/motor-fix/pull/50",
+      "User story": SECRET,
+      Took: SECRET,
+    });
+    // Every issue is assigned, and every epic's stories carry it three ways: label, Epic field, sub-issue.
+    assert.ok(gh.state.issues.every((i) => i.assignees.some((a) => a.login === "george-hutanu")));
     assert.ok(lines.at(-1).startsWith("done"));
   });
 
@@ -626,14 +646,19 @@ describe("reading and writing together", () => {
     const t = await readTracker(client);
     const inner = pageLoader(client, t, { cache });
     const load = async (page) => {
-      await new Promise((r) => setTimeout(r, 5));
-      events.push(`read ${page.key}`);
+      const fromNotion = !inner.cached(page);
+      if (fromNotion) await new Promise((r) => setTimeout(r, 5));
+      events.push(`${fromNotion ? "read" : "cache"} ${page.key}`);
       return inner(page);
     };
-    return { t, load };
+    load.cached = inner.cached;
+    return { t, load, client };
   }
-  const watching = (gh, events) => (url, init = {}) => {
-    if (init.method === "POST" && /\/issues$/.test(url)) events.push("create");
+  const watching = (gh, events, delay = 0) => async (url, init = {}) => {
+    if (init.method === "POST" && /\/issues$/.test(url)) {
+      if (delay) await new Promise((r) => setTimeout(r, delay));
+      events.push(`create ${JSON.parse(init.body).title.split(" ")[0]}`);
+    }
     return gh.fetchImpl(url, init);
   };
 
@@ -644,8 +669,39 @@ describe("reading and writing together", () => {
     const { exit } = await importInto(gh, { tracker: t, load, fetchImpl: watching(gh, events) });
     assert.equal(exit, 0);
     const lastRead = events.findLastIndex((e) => e.startsWith("read "));
-    assert.ok(events.indexOf("create") < lastRead, events.join(", "));
-    assert.equal(events.filter((e) => e === "create").length, 12);
+    assert.ok(events.findIndex((e) => e.startsWith("create")) < lastRead, events.join(", "));
+    assert.equal(events.filter((e) => e.startsWith("create")).length, 12);
+  });
+
+  it("serves cached pages without asking Notion, reads them first and writes them while the rest are read", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cache-"));
+    dirs.push(dir);
+    // An earlier run cached the epics only, which come after the open stories in import order.
+    const before = await streaming([], folderCache(dir));
+    for (const e of before.t.epics) await before.load(e);
+    const events = [];
+    const { t, load } = await streaming(events, folderCache(dir));
+    const gh = await bootstrapped();
+    const { exit, lines } = await importInto(gh, { tracker: t, load, fetchImpl: watching(gh, events) });
+    assert.equal(exit, 0);
+    const epics = t.epics.map((e) => e.key);
+    assert.deepEqual(events.filter((e) => e.startsWith("cache")).map((e) => e.split(" ")[1]).sort(), [...epics].sort());
+    assert.ok(!events.some((e) => e.startsWith("read EP-")), events.join(", "));
+    // The cached epics are all read before the first story is asked of Notion, and the first issue written is one of them.
+    assert.ok(events.findIndex((e) => e.startsWith("read ")) > events.findLastIndex((e) => e.startsWith("cache ")));
+    assert.match(events.find((e) => e.startsWith("create")), /^create EP-/);
+    assert.ok(lines.includes(`read      notion: 12 pages' content, ${12 - epics.length} read from Notion, the rest from the cache`), lines.filter((l) => l.startsWith("read")).join("\n"));
+  });
+
+  it("keeps reading while a slow writer works, so the reader runs ahead", async () => {
+    const events = [];
+    const { t, load } = await streaming(events);
+    const gh = await bootstrapped();
+    const { exit } = await importInto(gh, { tracker: t, load, fetchImpl: watching(gh, events, 40) });
+    assert.equal(exit, 0);
+    const third = events.filter((e) => e.startsWith("create"))[2];
+    const readsBefore = events.slice(0, events.indexOf(third)).filter((e) => e.startsWith("read ")).length;
+    assert.ok(readsBefore >= 8, `only ${readsBefore} pages read before the third issue was written: ${events.join(", ")}`);
   });
 
   it("stops reading when the budget ends a lap, and the next lap resumes from GitHub and the cache", async () => {
@@ -680,5 +736,83 @@ describe("reading and writing together", () => {
     assert.equal(progressLines.length, 12 + steps);
     assert.ok(text.every((x) => x.endsWith("\n") && !x.includes("\r")));
     assert.ok(progressLines.some((x) => /^progress  read \d+\/12 · written \d+\/12 · step 1\/\d \(create\) · (ST|EP)-\d+ · lap 2\n$/.test(x)), progressLines.slice(0, 3).join(""));
+  });
+});
+
+// @traces 1017-FR-009
+describe("every property in a field of its own", () => {
+  const rich = (text) => ({ type: "rich_text", rich_text: [{ plain_text: text }] });
+  it("reads each Notion property type as plain data", () => {
+    assert.equal(plainValue(rich(" a b ")), "a b");
+    assert.equal(plainValue({ type: "number", number: 4 }), 4);
+    assert.deepEqual(plainValue({ type: "date", date: { start: "2026-10-04T22:05:00.000+00:00", end: "2026-10-05T00:26:00.000+00:00" } }), { start: "2026-10-04", end: "2026-10-05" });
+    assert.deepEqual(plainValue({ type: "multi_select", multi_select: [{ name: "x" }, { name: "y" }] }), ["x", "y"]);
+    assert.deepEqual(plainValue({ type: "rollup", rollup: { type: "array", array: [{ type: "select", select: { name: "Platform" } }, { type: "url", url: null }] } }), ["Platform"]);
+    assert.equal(plainValue({ type: "rollup", rollup: { type: "number", number: 12 } }), 12);
+    assert.equal(plainValue({ type: "place", place: { name: "Cluj" } }), "Cluj");
+    assert.equal(plainValue({ type: "checkbox", checkbox: true }), true);
+  });
+
+  it("fills the Project fields from rollups, date ranges, relations and long text, cut short and with no Notion address", async () => {
+    const t = await tracker();
+    const st1 = t.stories.find((s) => s.key === "ST-1");
+    const epic = t.epics.find((e) => e.key === "EP-1");
+    st1.created = "2026-09-01";
+    const props = st1.content.properties;
+    props.Work = { type: "date", date: { start: "2026-10-04T22:05:00.000+00:00", end: "2026-10-05T00:26:00.000+00:00" } };
+    props.Design = { type: "rollup", rollup: { type: "array", array: [{ type: "url", url: "https://claude.ai/artifact/abc" }] } };
+    props["Design boards"] = { type: "rollup", rollup: { type: "array", array: [rich("Desktop: Home | Mobile: Home")] } };
+    props.Component = { type: "rollup", rollup: { type: "array", array: [{ type: "select", select: { name: "Garage account" } }] } };
+    props.Session = { type: "select", select: { name: "F4" } };
+    props.Took = rich(`see https://www.notion.so/abc123 ${"x".repeat(2000)}`);
+    epic.content.properties.Weeks = { type: "number", number: 6 };
+    epic.content.properties["Story count"] = { type: "rollup", rollup: { type: "number", number: 5 } };
+    t.titles.set(st1.feature, "Sign in");
+    const { plans } = issuePlans(t);
+    const f = plans.find((p) => p.key === "ST-1").fields;
+    assert.equal(f["Work start"], "2026-10-04");
+    assert.equal(f["Work end"], "2026-10-05");
+    assert.equal(f.Design, "https://claude.ai/artifact/abc");
+    assert.equal(f["Design boards"], "Desktop: Home | Mobile: Home");
+    assert.equal(f.Component, "Garage account");
+    assert.equal(f.Session, "F4");
+    assert.equal(f.Feature, "Sign in");
+    assert.equal(f.Created, "2026-09-01");
+    assert.equal(f.Took.length, TEXT_MAX);
+    assert.ok(!/notion\.so/.test(f.Took));
+    const e = plans.find((p) => p.key === "EP-1").fields;
+    assert.equal(e.Weeks, 6);
+    assert.equal(e["Story count"], 5);
+  });
+
+  it("refuses to write until the bootstrap has made every field the plans use", async () => {
+    const gh = await bootstrapped();
+    const p = gh.state.projects[0];
+    p.fields = p.fields.filter((f) => f.name !== "Took");
+    const { exit, lines } = await importInto(gh);
+    assert.equal(exit, 1);
+    assert.match(lines.at(-1), /^failed\s+run bootstrap first: missing fields .*Took/);
+    assert.equal(gh.state.issues.length, 0);
+  });
+});
+
+// @traces 1017-FR-010
+describe("stories attached to their epic", () => {
+  it("links a story written in an earlier lap, before its epic had an issue, once the epic exists", async () => {
+    const gh = await bootstrapped();
+    const one = await importInto(gh, { budget: 3 });
+    assert.equal(one.exit, 3);
+    const early = gh.state.issues.map((i) => i.body.match(/<!-- motorfix:(\S+) -->/)[1]);
+    assert.ok(early.some((k) => k.startsWith("ST-")) && !early.some((k) => k.startsWith("EP-")), early.join(","));
+    const two = await importInto(gh);
+    assert.equal(two.exit, 0);
+    const p = gh.state.projects[0];
+    for (const key of ["ST-1", "ST-3", "ST-5", "ST-7", "ST-8"]) {
+      const issue = issueOf(gh, key);
+      assert.ok(issue.labels.some((l) => l.name === "EP-1"), `${key} label`);
+      assert.equal(itemValues(gh, key).Epic, "EP-1", `${key} field`);
+      assert.ok((gh.state.subIssues.get(issueOf(gh, "EP-1").number) ?? []).includes(issue.id), `${key} sub-issue`);
+    }
+    assert.ok(p.items.length === 12);
   });
 });
