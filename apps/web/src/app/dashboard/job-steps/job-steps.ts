@@ -8,7 +8,6 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import type { EventKind } from '@motor-fix/contracts';
 import {
   GarageJobsService,
   type JobDto,
@@ -18,21 +17,10 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
+import { JOB_KINDS, jobNames, jobStage } from '../jobs';
 import { liveResource } from '../live';
 import { Session } from '../session';
 import { Waiting } from '../waiting';
-
-const STEP_KINDS: readonly EventKind[] = [
-  'job.step_done',
-  'job.step_undone',
-  'job.steps_changed',
-  'job.started',
-  'job.paused',
-  'job.resumed',
-  'job.done',
-  'job.reopened',
-  'job.mechanic_changed',
-];
 
 const STEPS_MAX = 20;
 const PROVISIONAL = 'new:';
@@ -93,7 +81,7 @@ export class JobSteps {
 
   protected readonly view = liveResource(
     () => this.api.garageJobsControllerGet({ id: this.id }),
-    STEP_KINDS,
+    JOB_KINDS,
     () => this.id,
   );
   protected readonly job = computed(() => this.view.value());
@@ -162,12 +150,11 @@ export class JobSteps {
   }
 
   protected names(job: JobDto) {
-    const english = this.i18n.language() === 'en';
-    return job.jobs.map((j) => (english ? j.nameEn : j.nameRo)).join(', ');
+    return jobNames(job, this.i18n.language());
   }
 
   protected stage(job: JobDto) {
-    return `garage.jobs.stage.${job.status}`;
+    return jobStage(job);
   }
 
   protected tick(step: JobStepDto) {
