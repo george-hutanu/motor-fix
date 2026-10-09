@@ -305,6 +305,7 @@ export class PhotoViewer {
     this.fallback = fallback;
     const ref = this.dialog.open(this.view(), {
       ariaLabelledBy: `${this.ids.title} ${this.ids.counter}`,
+      ariaModal: true,
       autoFocus: 'first-tabbable',
       disableClose: true,
       hasBackdrop: false,

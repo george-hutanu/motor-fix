@@ -276,6 +276,12 @@ describe('the photo viewer', () => {
     expect(document.querySelectorAll('.cdk-focus-trap-anchor').length).toBe(2);
   });
 
+  it('tells a screen reader the page behind it is out of reach', async () => {
+    await open(0);
+
+    expect(view()?.getAttribute('aria-modal')).toBe('true');
+  });
+
   it('blocks the page scroll behind it while open', async () => {
     // jsdom lays nothing out, and the CDK only blocks a page taller than the window.
     jest
