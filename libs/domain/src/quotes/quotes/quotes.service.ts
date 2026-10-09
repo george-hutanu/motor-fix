@@ -4,6 +4,7 @@ import {
   type SendQuoteDto,
 } from '@motor-fix/contracts';
 import {
+  HttpException,
   HttpStatus,
   Inject,
   Injectable,
@@ -11,6 +12,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { type QuoteSendOutcome, recordQuoteSend } from './quotes.metrics';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -38,6 +40,7 @@ interface Target {
   driver_id: string;
   car_brand: string;
   garage_status: string;
+  request_created_at: Date;
 }
 
 const ANSWERING = new Set(['garage', 'receptionist', 'mechanic']);
@@ -81,6 +84,17 @@ function judge(target: Target) {
   if (!['sent', 'quoted'].includes(target.request_status)) throw notOpen();
 }
 
+// A refusal's outcome: the two conflicts by name, any other client error
+// (400, 403, 404) as refused; a server error is not a send's outcome.
+function outcomeOf(error: unknown): QuoteSendOutcome | null {
+  if (!(error instanceof HttpException)) return null;
+  const body = error.getResponse() as { code?: string };
+  if (body.code === 'already_answered') return 'already_answered';
+  if (body.code === 'request_not_open') return 'request_not_open';
+  const status = error.getStatus();
+  return status >= 400 && status < 500 ? 'refused' : null;
+}
+
 const isUniqueViolation = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError &&
   error.code === 'P2002';
@@ -90,7 +104,7 @@ const isUniqueViolation = (error: unknown) =>
 // written together or not at all.
 @Injectable()
 export class QuotesService {
-  private readonly logger = new Logger(QuotesService.name);
+  private readonly logger = new Logger('Quotes');
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
@@ -103,15 +117,38 @@ export class QuotesService {
     key: string,
     dto: SendQuoteDto,
   ): Promise<GarageQuoteDto> {
+    try {
+      const { created, quote, requestedAt } = await this.persist(
+        actor,
+        key,
+        dto,
+      );
+      // A replayed key answers the first send again; it is not a new one.
+      if (created) {
+        const minutes =
+          (quote.sentAt.getTime() - requestedAt.getTime()) / 60_000;
+        recordQuoteSend('sent', minutes);
+        this.logger.log(`quote ${quote.id} for request ${dto.requestId}: sent`);
+      }
+      return quoteOf(quote);
+    } catch (error) {
+      const outcome = outcomeOf(error);
+      if (outcome) {
+        recordQuoteSend(outcome);
+        this.logger.warn(`quote - for request ${dto.requestId}: ${outcome}`);
+      }
+      throw error;
+    }
+  }
+
+  private async persist(actor: Actor, key: string, dto: SendQuoteDto) {
     const garageId = actor.garageId;
     if (!ANSWERING.has(actor.role) || !garageId) throw new NotFoundException();
     assertBody(dto);
     try {
-      const { created, quote } = await this.prisma.$transaction((tx) =>
+      return await this.prisma.$transaction((tx) =>
         this.store(tx, actor, garageId, key, dto),
       );
-      if (created) this.logger.log(`quote sent: ${quote.id}`);
-      return quoteOf(quote);
     } catch (error) {
       // The one quote per garage and request, kept by the database.
       if (isUniqueViolation(error)) throw alreadyAnswered();
@@ -125,11 +162,16 @@ export class QuotesService {
     garageId: string,
     key: string,
     dto: SendQuoteDto,
-  ): Promise<{ created: boolean; quote: Quote & { jobs: QuoteJob[] } }> {
+  ): Promise<{
+    created: boolean;
+    quote: Quote & { jobs: QuoteJob[] };
+    requestedAt: Date;
+  }> {
     const [target] = await tx.$queryRaw<Target[]>`
       SELECT rr.id AS recipient_id, rr.status::text AS recipient_status,
              qr.status::text AS request_status, qr.driver_id, qr.car_brand,
-             g.status::text AS garage_status
+             g.status::text AS garage_status,
+             qr.created_at AS request_created_at
       FROM request_recipient rr
       JOIN quote_request qr ON qr.id = rr.request_id
       JOIN garage g ON g.id = rr.garage_id
@@ -148,11 +190,12 @@ export class QuotesService {
       include: { jobs: true },
       where: { garageId_idempotencyKey: { garageId, idempotencyKey: key } },
     });
-    if (sent) return { created: false, quote: sent };
+    const requestedAt = target.request_created_at;
+    if (sent) return { created: false, quote: sent, requestedAt };
     judge(target);
     const quote = await this.write(tx, actor, garageId, key, dto, target);
     await this.announce(tx, actor, garageId, dto, target, quote);
-    return { created: true, quote };
+    return { created: true, quote, requestedAt };
   }
 
   // The quote with one row per asked job, included when the garage ticked
