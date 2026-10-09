@@ -120,7 +120,7 @@ const TIMELINES = {
 const EPIC_TITLES = { 1: "Foundations", 2: "Garage side", 3: "Old launch", 17: "Observability" };
 
 /** A fetch that answers the Notion API from the backlog above, and every request it saw. */
-export function fakeNotion({ failOn } = {}) {
+export function fakeNotion({ failOn, users } = {}) {
   const requests = [];
   const ok = (data) => new Response(JSON.stringify(data), { status: 200, headers: { "content-type": "application/json" } });
   const list = (results) => ok({ object: "list", results, has_more: false, next_cursor: null });
@@ -142,10 +142,12 @@ export function fakeNotion({ failOn } = {}) {
       return list(found);
     }
     if (path === "/users") {
-      return list([
-        { object: "user", id: OWNER, type: "person", name: "George" },
-        { object: "user", id: "cccccccc-0000-0000-0000-000000000001", type: "bot", name: "Integration" },
-      ]);
+      return list(
+        users ?? [
+          { object: "user", id: OWNER, type: "person", name: "George" },
+          { object: "user", id: "cccccccc-0000-0000-0000-000000000001", type: "bot", name: "Integration" },
+        ],
+      );
     }
     return new Response(JSON.stringify({ code: "object_not_found", message: "no fake" }), { status: 404 });
   }

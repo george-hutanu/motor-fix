@@ -40,6 +40,19 @@ describe("readTracker", () => {
     });
   });
 
+  it("leaves every item unassigned with one warning when the workspace has two people", async () => {
+    const { tracker } = await read({
+      users: [
+        { object: "user", id: "aaaaaaaa-0000-0000-0000-000000000001", type: "person", name: "George" },
+        { object: "user", id: "dddddddd-0000-0000-0000-000000000002", type: "person", name: "Guest" },
+      ],
+    });
+    assert.ok(tracker.stories.every((s) => s.assignee === null));
+    const about = tracker.warnings.filter((w) => /assign/i.test(w));
+    assert.equal(about.length, 1);
+    assert.match(about[0], /more than one person/);
+  });
+
   it("keeps the date part of a datetime and drops an assignee who is not the owner", async () => {
     const { tracker } = await read();
     const st2 = byKey(tracker.stories, "ST-2");

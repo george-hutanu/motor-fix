@@ -15,10 +15,11 @@ export async function readTracker(client) {
   const warnings = [];
   const persons = (await client.request("GET", "/users")).results.filter((u) => u.type === "person");
   const ownerId = persons.length === 1 ? persons[0].id : null;
+  const unassigned = [];
   const assignee = (key, ids) => {
     if (!ids.length) return null;
     if (ids[0] === ownerId) return OWNER_LOGIN;
-    warnings.push(`${key}: the assignee is not the owner; left unassigned`);
+    unassigned.push(key);
     return null;
   };
 
@@ -97,6 +98,10 @@ export async function readTracker(client) {
         }
       }
     }
+  }
+  if (unassigned.length) {
+    const reason = ownerId ? "is not the owner" : "cannot be matched: the workspace has more than one person";
+    warnings.push(`${unassigned.length} item(s) left unassigned: the assignee ${reason} (first: ${unassigned[0]})`);
   }
   return { stories, epics, warnings, skippedRows };
 }
