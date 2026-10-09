@@ -11,7 +11,9 @@ import { openApiDocument } from './bootstrap';
 const api = apiBoot();
 
 // @traces 365-FR-013
+// @traces 206-FR-005
 const PUBLIC = [
+  'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000',
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/auth/assistant/authorize',
   'GET /api/v1/auth/oauth/apple',
@@ -53,6 +55,8 @@ const PUBLIC = [
   'POST /api/v1/invites/check',
   'POST /api/v1/listing-drafts',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/continue-link',
+  'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000',
+  'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000/upload-url',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/upload-url',
   'POST /api/v1/notification-preferences/unsubscribe',

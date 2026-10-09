@@ -10,6 +10,14 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { ContinueLinkSentDto } from '../models/continue-link-sent-dto';
+import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
+import { DraftDocumentDto } from '../models/draft-document-dto';
+import { listingDocumentsControllerConfirm } from '../fn/listing-drafts/listing-documents-controller-confirm';
+import { ListingDocumentsControllerConfirm$Params } from '../fn/listing-drafts/listing-documents-controller-confirm';
+import { listingDocumentsControllerRemove } from '../fn/listing-drafts/listing-documents-controller-remove';
+import { ListingDocumentsControllerRemove$Params } from '../fn/listing-drafts/listing-documents-controller-remove';
+import { listingDocumentsControllerUploadAddress } from '../fn/listing-drafts/listing-documents-controller-upload-address';
+import { ListingDocumentsControllerUploadAddress$Params } from '../fn/listing-drafts/listing-documents-controller-upload-address';
 import { ListingDraftCreatedDto } from '../models/listing-draft-created-dto';
 import { ListingDraftDto } from '../models/listing-draft-dto';
 import { ListingDraftSavedDto } from '../models/listing-draft-saved-dto';
@@ -236,6 +244,81 @@ export class ListingDraftsService extends BaseService {
    */
   listingPhotosControllerRemove(params: ListingPhotosControllerRemove$Params, context?: HttpContext): Promise<void> {
     const resp = this.listingPhotosControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `listingDocumentsControllerUploadAddress()` */
+  static readonly ListingDocumentsControllerUploadAddressPath = '/api/v1/listing-drafts/{id}/documents/{kind}/upload-url';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingDocumentsControllerUploadAddress()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingDocumentsControllerUploadAddress$Response(params: ListingDocumentsControllerUploadAddress$Params, context?: HttpContext): Promise<StrictHttpResponse<DocumentUploadAddressDto>> {
+    const obs = listingDocumentsControllerUploadAddress(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingDocumentsControllerUploadAddress$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingDocumentsControllerUploadAddress(params: ListingDocumentsControllerUploadAddress$Params, context?: HttpContext): Promise<DocumentUploadAddressDto> {
+    const resp = this.listingDocumentsControllerUploadAddress$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DocumentUploadAddressDto>): DocumentUploadAddressDto => r.body);
+  }
+
+  /** Path part for operation `listingDocumentsControllerConfirm()` */
+  static readonly ListingDocumentsControllerConfirmPath = '/api/v1/listing-drafts/{id}/documents/{kind}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingDocumentsControllerConfirm()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingDocumentsControllerConfirm$Response(params: ListingDocumentsControllerConfirm$Params, context?: HttpContext): Promise<StrictHttpResponse<DraftDocumentDto>> {
+    const obs = listingDocumentsControllerConfirm(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingDocumentsControllerConfirm$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingDocumentsControllerConfirm(params: ListingDocumentsControllerConfirm$Params, context?: HttpContext): Promise<DraftDocumentDto> {
+    const resp = this.listingDocumentsControllerConfirm$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DraftDocumentDto>): DraftDocumentDto => r.body);
+  }
+
+  /** Path part for operation `listingDocumentsControllerRemove()` */
+  static readonly ListingDocumentsControllerRemovePath = '/api/v1/listing-drafts/{id}/documents/{kind}/{key}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingDocumentsControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingDocumentsControllerRemove$Response(params: ListingDocumentsControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = listingDocumentsControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingDocumentsControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingDocumentsControllerRemove(params: ListingDocumentsControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.listingDocumentsControllerRemove$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 

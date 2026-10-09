@@ -10,6 +10,7 @@ import {
   emailConfig,
   GaragesModule,
   HealthModule,
+  ListingDocumentsModule,
   ListingPhotosModule,
   NotificationsModule,
   oauthSettings,
@@ -86,6 +87,7 @@ export class AppModule {
         PlacesModule.register(placesConfig(env.APP_ENV, process.env)),
         garages,
         ListingPhotosModule.register({ redisUrl: env.REDIS_URL }, garages),
+        ListingDocumentsModule.register(garages),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
         PlatformRulesModule.register(
           { production: env.APP_ENV === 'production', webUrl: email.webUrl },

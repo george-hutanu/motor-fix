@@ -18,6 +18,10 @@ import {
   hoursComplete,
 } from '@motor-fix/contracts/garage-hours';
 import {
+  declarationDone,
+  documentDone,
+} from '@motor-fix/contracts/legal-documents';
+import {
   detailsComplete,
   isDetailsSection,
   isMechanicsSection,
@@ -43,6 +47,7 @@ import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { brandsOf } from '../brands-section';
 import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
+import { DocumentsStep } from '../documents-step/documents-step';
 import { DraftKeeper } from '../draft/draft-keeper';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
@@ -76,6 +81,7 @@ const STALL_MS = 3000;
   imports: [
     BrandsStep,
     DetailsStep,
+    DocumentsStep,
     GaragePreview,
     HlmButton,
     HlmInput,
@@ -132,6 +138,17 @@ export class ListYourGarage {
   protected readonly mechanics = computed(() => {
     const section: unknown = this.kept()['4'];
     return isMechanicsSection(section) ? section : {};
+  });
+  protected readonly documents = computed(
+    () => (this.keeper.draft().data as ListingDraftData).documents ?? {},
+  );
+  protected readonly declaration = computed(() => {
+    const { declaredAt, declaredByName } = this.keeper.draft()
+      .data as ListingDraftData;
+    return {
+      ...(declaredAt !== undefined && { declaredAt }),
+      ...(declaredByName !== undefined && { declaredByName }),
+    };
   });
   protected readonly photos = computed(
     () => (this.keeper.draft().data as ListingDraftData).files ?? [],
@@ -226,12 +243,13 @@ export class ListYourGarage {
   );
   protected readonly verified = computed(() => {
     const { cui, rarNumber } = this.stored();
+    const data = this.keeper.draft().data as ListingDraftData;
     return completedCount([
       isValidCui(cui),
       rarNumber.length >= RAR_NUMBER_MIN,
-      false,
-      false,
-      false,
+      documentDone(data, 'onrc_certificate'),
+      documentDone(data, 'rar_authorisation'),
+      declarationDone(data),
     ]);
   });
 

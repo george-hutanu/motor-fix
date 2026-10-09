@@ -201,6 +201,7 @@ describe('the list your garage page', () => {
     expect(sections[0].querySelector('#listing-email')).not.toBeNull();
     expect(sections[0].querySelector('mf-details-step')).not.toBeNull();
     expect(sections[5].querySelector('#listing-cui')).not.toBeNull();
+    expect(sections[5].querySelector('mf-documents-step')).not.toBeNull();
     expect(
       sections.slice(1, 5).map((s) => [...s.children].map((c) => c.tagName)),
     ).toEqual([
@@ -1178,10 +1179,20 @@ describe('the verification step', () => {
       const { page } = await open(path);
 
       const section = step6(page);
-      const texts = [...section.querySelectorAll('p:not(.error), label')].map(
-        text,
-      );
+      const texts = [...section.querySelectorAll('p:not(.error), label')]
+        .filter((each) => !each.closest('mf-documents-step'))
+        .map(text);
       expect(texts).toEqual([intro, cui, rar, hint, count, note]);
+      const documents = section.querySelector('mf-documents-step') as Element;
+      expect(
+        rarInput(page).compareDocumentPosition(documents) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        documents.compareDocumentPosition(
+          section.querySelector('.count') as Element,
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(text(section.querySelector('label[for="listing-cui"]'))).toBe(cui);
       expect(text(section.querySelector('label[for="listing-rar"]'))).toBe(rar);
       expect(cuiInput(page).maxLength).toBe(40);
@@ -1195,11 +1206,15 @@ describe('the verification step', () => {
     },
   );
 
-  it('offers no look-up: no button, no company name, no register result', async () => {
+  it('offers no look-up: no button outside the document uploads, no company name, no register result', async () => {
     const { page } = await open('/ro/list-your-garage');
 
     const section = step6(page);
-    expect(section.querySelectorAll('button, a')).toHaveLength(0);
+    expect(
+      [...section.querySelectorAll('button, a')].filter(
+        (each) => !each.closest('mf-documents-step'),
+      ),
+    ).toHaveLength(0);
     expect(text(section)).not.toMatch(
       /Verifică firma|Caută în registrul RAR|CAEN/,
     );
@@ -1360,6 +1375,108 @@ describe('the verification step', () => {
 });
 
 // @traces 040-FR-006
+const PAGE =
+  'legal_document/7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00/00000000-0000-4000-8000-000000000001';
+const declared = {
+  declaredAt: '2026-10-09T08:00:00.000Z',
+  declaredByName: 'Ion Popescu',
+};
+const allFive = {
+  ...declared,
+  documents: {
+    onrc_certificate: { pages: [PAGE] },
+    rar_authorisation: { pages: [PAGE.replace(/1$/, '2')] },
+  },
+  steps: { '6': { cui: '18547290', rarNumber: 'AB123' } },
+};
+
+describe('the counter of five', () => {
+  const tickBox = (page: HTMLElement) =>
+    step6(page).querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+  const nameInput = (page: HTMLElement) =>
+    page.querySelector<HTMLInputElement>(
+      '#listing-declared-name',
+    ) as HTMLInputElement;
+
+  // @traces 206-FR-010
+  // @traces 206-FR-017
+  it.each([
+    ['/ro/list-your-garage', '5 din 5 completate'],
+    ['/en/list-your-garage', '5 of 5 completed'],
+  ])(
+    '%s reads %s with both fields, both documents and the declaration',
+    async (path, count) => {
+      seed({ data: allFive });
+
+      const { page } = await open(path);
+
+      expect(counter(page)).toBe(count);
+      expect(
+        step6(page).querySelector('.count')?.getAttribute('aria-live'),
+      ).toBe('polite');
+      expect(tickBox(page).checked).toBe(true);
+      expect(nameInput(page).value).toBe('Ion Popescu');
+    },
+  );
+
+  // @traces 206-FR-010
+  it('counts each document from its first page, the issue date not needed', async () => {
+    seed({
+      data: {
+        documents: { onrc_certificate: { pages: [PAGE] } },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(counter(page)).toBe('1 din 5 completate');
+  });
+
+  // @traces 206-FR-009
+  // @traces 206-FR-010
+  it('counts the declaration only once ticked with a full name, and stops when unticked', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    tickBox(page).click();
+    harness.detectChanges();
+    expect(counter(page)).toBe('0 din 5 completate');
+
+    fillIn(harness, nameInput(page), 'I');
+    expect(counter(page)).toBe('0 din 5 completate');
+
+    fillIn(harness, nameInput(page), 'Ion Popescu');
+    expect(counter(page)).toBe('1 din 5 completate');
+
+    tickBox(page).click();
+    harness.detectChanges();
+    expect(counter(page)).toBe('0 din 5 completate');
+  });
+
+  // @traces 206-FR-006
+  it('keeps the tick and the name in the browser copy', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      tickBox(page).click();
+      fillIn(harness, nameInput(page), ' Ion Popescu ');
+      await jest.advanceTimersByTimeAsync(1_100);
+      expect(stored()?.data).toEqual({
+        declaredAt: expect.any(String),
+        declaredByName: 'Ion Popescu',
+      });
+
+      tickBox(page).click();
+      harness.detectChanges();
+      await jest.advanceTimersByTimeAsync(1_100);
+      expect(stored()?.data).toEqual({ declaredByName: 'Ion Popescu' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('the brands step in the draft', () => {
   const daciaChip = (page: HTMLElement) =>
     [...page.querySelectorAll<HTMLButtonElement>('.chips button')].find((c) =>

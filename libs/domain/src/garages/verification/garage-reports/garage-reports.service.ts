@@ -43,10 +43,10 @@ const BRIEF_MAX = 120;
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
 
+// Only the refusals that share a status: a 404 or a 429 on this route already
+// reads from the request-duration metric, and each label costs a series.
 const OUTCOME: Record<string, GarageReportOutcome> = {
   garage_already_reported: 'already_reported',
-  not_found: 'not_found',
-  too_many_reports: 'too_many',
   verification_transition_refused: 'refused',
 };
 

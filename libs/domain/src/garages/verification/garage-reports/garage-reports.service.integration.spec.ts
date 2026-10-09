@@ -405,12 +405,10 @@ describe('refusals', () => {
 
     it('refuses a sixth within 24 hours', async () => {
       await fiveAt(new Date(Date.now() - 23 * 3_600_000));
-      const before = await reports('too_many');
 
       expect(
         await refusal(service().report(ana, dinamo.id, { text: TEXT })),
       ).toEqual({ code: 'too_many_reports', status: 429 });
-      expect(await reports('too_many')).toBe(before + 1);
       expect((await fileOf(dinamo.file?.id ?? '')).status).toBe('approved');
     });
 
@@ -438,7 +436,6 @@ describe('refusals', () => {
       await prisma.garageMember.create({
         data: { accountId: staff, garageId: dinamo.id, role },
       });
-      const before = await reports('not_found');
 
       expect(
         await refusal(
@@ -451,7 +448,6 @@ describe('refusals', () => {
           ),
         ),
       ).toEqual({ code: 'not_found', status: 404 });
-      expect(await reports('not_found')).toBe(before + 1);
     },
   );
 

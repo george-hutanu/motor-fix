@@ -1,9 +1,13 @@
+import { DOCUMENT_KINDS } from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import {
   countApproval,
+  countDeclarationSigned,
+  countDocumentOpened,
+  countDocumentUploaded,
   countEmail,
   countGarageReport,
   countGarageSignUp,
@@ -28,8 +32,6 @@ const STEP_ACTIONS = [
 const GARAGE_REPORT_OUTCOMES = [
   'created',
   'already_reported',
-  'too_many',
-  'not_found',
   'refused',
 ] as const;
 
@@ -47,6 +49,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 // @traces 879-FR-009 879-FR-010 879-FR-011
 // @traces 424-FR-017
 // @traces 312-FR-016
+// @traces 206-FR-016
 describe('the product counters', () => {
   it.each([
     [
@@ -135,6 +138,19 @@ describe('the product counters', () => {
           { outcome },
         ] as const,
     ),
+    ...DOCUMENT_KINDS.flatMap((kind) => [
+      [
+        () => countDocumentUploaded(kind),
+        'motorfix_documents_uploaded_total',
+        { kind },
+      ] as const,
+      [
+        () => countDocumentOpened(kind),
+        'motorfix_documents_opened_total',
+        { kind },
+      ] as const,
+    ]),
+    [() => countDeclarationSigned(), 'motorfix_declarations_signed_total', {}],
   ] as const)('counts one %#: %s', async (count, name, labels) => {
     const before = await total(name, labels);
 
@@ -160,6 +176,11 @@ describe('the product counters', () => {
     GARAGE_REPORT_OUTCOMES.forEach((outcome) => {
       countGarageReport(outcome);
     });
+    DOCUMENT_KINDS.forEach((kind) => {
+      countDocumentUploaded(kind);
+      countDocumentOpened(kind);
+    });
+    countDeclarationSigned();
 
     const { resourceMetrics } = await memory.metricReader.collect();
     const series = resourceMetrics.scopeMetrics

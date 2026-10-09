@@ -1,0 +1,146 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.area {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+  padding: var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+}
+.area.done {
+  border-color: var(--mf-green);
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mf-space-1) var(--mf-space-2);
+}
+h4 {
+  margin: 0;
+  font-size: var(--mf-size-body);
+  overflow-wrap: anywhere;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.hint,
+.state,
+.file {
+  color: var(--mf-text-secondary);
+}
+.state-done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-1);
+  color: var(--mf-text);
+  font-size: var(--mf-size-small);
+  font-weight: 600;
+}
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--mf-green);
+}
+.drop {
+  display: grid;
+  justify-items: start;
+  gap: var(--mf-space-2);
+  padding: var(--mf-space-3);
+  border: 2px dashed var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-text-secondary);
+}
+.drop.over {
+  border-style: solid;
+  border-color: var(--mf-focus);
+}
+.release {
+  font-weight: 600;
+  color: var(--mf-text);
+}
+.error {
+  color: var(--mf-red);
+  overflow-wrap: anywhere;
+}
+ol {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.page {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+  min-width: 0;
+  padding: var(--mf-space-2);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-bg);
+  cursor: grab;
+}
+.label {
+  display: grid;
+  gap: var(--mf-space-1);
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+.name {
+  font-weight: 600;
+}
+.file,
+.state {
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+}
+progress {
+  width: 100%;
+}
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1);
+}
+.tools button {
+  min-height: var(--mf-tap);
+  min-width: var(--mf-tap);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font: inherit;
+  cursor: pointer;
+}
+.retry {
+  padding: 0 var(--mf-space-2);
+}
+.tools button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}
+.cdk-drag-placeholder {
+  opacity: 0.4;
+  outline: 2px dashed var(--mf-text-secondary);
+  outline-offset: 2px;
+}
+.announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

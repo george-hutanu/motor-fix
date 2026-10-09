@@ -1,8 +1,12 @@
 import { expect, type Page } from '@playwright/test';
 
-import { settled } from './accounts.js';
+import { ownMap, settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
+
+// The place step's map draws the app's empty style: no outside tiles or WebGL
+// render moving the page after a jump has landed.
+test.beforeEach(({ context }) => ownMap(context));
 
 const steps = (page: Page, name: 'Pași' | 'Steps') =>
   page.getByRole('navigation', { name });
@@ -183,12 +187,26 @@ test.describe('on a desktop', () => {
       await open(page, '/ro/list-your-garage');
       await fill(page);
 
+      // Read where the heading is the moment the click has been handled: an
+      // instant jump has landed by then, a smooth one has not yet moved.
+      await page.evaluate(() =>
+        addEventListener(
+          'click',
+          () => {
+            const top = document
+              .querySelectorAll('section h2')[5]
+              .getBoundingClientRect().top;
+            (window as { landed?: boolean }).landed =
+              top >= 0 && top < innerHeight;
+          },
+          { once: true },
+        ),
+      );
       await entry(page, 'Verificare').click();
-      const y = await page.evaluate(() => scrollY);
 
-      // Layout above the target can still settle after the jump and move the
-      // page a little; a smooth scroll would be thousands of pixels short.
-      expect(Math.abs((await still(page)) - y)).toBeLessThan(200);
+      expect(
+        await page.evaluate(() => (window as { landed?: boolean }).landed),
+      ).toBe(true);
       await expect(sections(page).nth(5)).toBeInViewport();
     });
   });
@@ -317,8 +335,7 @@ test.describe('on a phone', () => {
     await bar(page).click();
     await entry(page, 'Fotografii și adresă').click();
     await expect(sections(page).nth(4)).toBeFocused();
-    // The focus lands before the smooth scroll starts; two equal reads at the
-    // top would end still() early.
+    // The jump may start after the focus lands: wait for it to begin, then settle.
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
     const y = await still(page);
     const below = async () =>

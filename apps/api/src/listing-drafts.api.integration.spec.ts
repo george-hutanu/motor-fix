@@ -173,7 +173,7 @@ describe('the listing draft routes', () => {
     expect(sent).not.toHaveBeenCalled();
   });
 
-  it('documents exactly the draft and photo operations, and none that finds a draft by address', () => {
+  it('documents exactly the draft, photo and document operations, and none that finds a draft by address', () => {
     const operations = Object.entries(openApiDocument(app).paths).flatMap(
       ([path, item]) =>
         Object.entries(item)
@@ -182,14 +182,26 @@ describe('the listing draft routes', () => {
     );
 
     expect(operations.sort()).toEqual([
+      'DELETE /api/v1/listing-drafts/{id}/documents/{kind}/{key}',
       'DELETE /api/v1/listing-drafts/{id}/photos/{key}',
       'GET /api/v1/listing-drafts/current',
       'GET /api/v1/listing-drafts/{id}/photos',
       'PATCH /api/v1/listing-drafts/{id}',
       'POST /api/v1/listing-drafts',
       'POST /api/v1/listing-drafts/{id}/continue-link',
+      'POST /api/v1/listing-drafts/{id}/documents/{kind}',
+      'POST /api/v1/listing-drafts/{id}/documents/{kind}/upload-url',
       'POST /api/v1/listing-drafts/{id}/photos',
       'POST /api/v1/listing-drafts/{id}/photos/upload-url',
     ]);
+  });
+
+  it("tags the admin's document page address apart, so the web's first download carries no client for it until a screen calls it", () => {
+    const op =
+      openApiDocument(app).paths[
+        '/api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url'
+      ]?.get;
+
+    expect(op?.tags).toEqual(['verification-documents']);
   });
 });

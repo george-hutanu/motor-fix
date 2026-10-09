@@ -1,3 +1,4 @@
+import type { DocumentKind } from '@motor-fix/contracts';
 import { type Counter, metrics } from '@opentelemetry/api';
 
 // The product's key numbers, one counter each; a process that never starts
@@ -15,12 +16,7 @@ export type JobStepAction =
   | 'removed'
   | 'ticked'
   | 'unticked';
-export type GarageReportOutcome =
-  | 'created'
-  | 'already_reported'
-  | 'too_many'
-  | 'not_found'
-  | 'refused';
+export type GarageReportOutcome = 'created' | 'already_reported' | 'refused';
 
 // Looked up on every count, never cached: a counter kept from before the
 // meter provider is registered would stay a no-op for the life of the
@@ -80,6 +76,27 @@ export function countRequestReceived(outcome: 'built' | 'muted' | 'skipped') {
     'motorfix_request_received_total',
     'Garages a new request was announced to, by outcome',
   ).add(1, { outcome });
+}
+
+export function countDocumentUploaded(kind: DocumentKind) {
+  counter(
+    'motorfix_documents_uploaded_total',
+    'Document pages confirmed on listing drafts, by kind',
+  ).add(1, { kind });
+}
+
+export function countDeclarationSigned() {
+  counter(
+    'motorfix_declarations_signed_total',
+    'Listing declarations signed',
+  ).add(1);
+}
+
+export function countDocumentOpened(kind: DocumentKind) {
+  counter(
+    'motorfix_documents_opened_total',
+    'Document pages opened by an admin, by kind',
+  ).add(1, { kind });
 }
 
 export function countQuoteReceived(outcome: 'built' | 'muted') {

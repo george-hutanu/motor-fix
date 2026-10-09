@@ -6,6 +6,8 @@ import {
   OBSERVABILITY_URL,
 } from './admin-overview.controller';
 import { GarageDetailsService } from './details/garage-details.service';
+import { LegalDocumentsController } from './documents/legal-documents/legal-documents.controller';
+import { LegalDocumentsService } from './documents/legal-documents/legal-documents.service';
 import { GarageBrandsController } from './garage-brands/garage-brands.controller';
 import { GarageBrandsService } from './garage-brands/garage-brands.service';
 import { GarageSettingsController } from './garage-settings/garage-settings.controller';
@@ -65,6 +67,7 @@ export class GaragesModule {
         GarageReportsController,
         GarageSettingsController,
         InvitesController,
+        LegalDocumentsController,
         ListingDraftsController,
         PublicGaragesController,
         VerificationChecksController,
@@ -91,6 +94,7 @@ export class GaragesModule {
           useValue: { webUrl: email.webUrl },
         },
         GarageSettingsService,
+        LegalDocumentsService,
         ListingDraftsService,
         {
           inject: [AUTH_REDIS],
