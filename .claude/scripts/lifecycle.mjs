@@ -179,7 +179,7 @@ function context(io, flags, did) {
   if (!ctx.feature) throw new Stop("no feature", "no active feature: .specify/feature.json or specs/<branch>/spec.md");
   // A feature.json still on the last feature would send this branch's Notion
   // events and log lines to that feature's story: point it at the branch's own.
-  const own = /^(\d{3})-/.exec(ctx.branch)?.[1];
+  const own = /^(\d{3,})-/.exec(ctx.branch)?.[1];
   if (own && own !== ctx.feature.num) {
     const dir = `specs/${ctx.branch}`;
     if (!existsSync(join(io.repo, dir, "spec.md")))
