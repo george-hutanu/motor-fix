@@ -1,7 +1,9 @@
 import {
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+  PUBLIC_IMAGE_URL_MINUTES,
   type PublicGarageBrandDto,
   type PublicGarageDto,
+  type PublicGaragePhotoDto,
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
@@ -18,6 +20,8 @@ import { AUTH_REDIS } from '../../auth/attempts';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { responseRateOf } from '../../insights/response-stats/response-stats';
+import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
 
 // The one scope of every read a visitor can reach: spread into the `where`
@@ -56,10 +60,12 @@ return 1`;
 export class PublicGaragesService {
   private readonly logger = new Logger('PublicGarages');
   private redisDown = false;
+  private storageDown = false;
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUTH_REDIS) private readonly redis: Redis,
+    private readonly storage: StorageService,
   ) {}
 
   // A garage never approved answers exactly as a slug nobody holds.
@@ -158,7 +164,21 @@ export class PublicGaragesService {
         paymentCard: true,
         paymentCash: true,
         paymentTransfer: true,
+        photos: {
+          orderBy: { position: 'asc' },
+          select: { fileKey: true, height: true, id: true, width: true },
+        },
+        // The jobs a request from the profile can ask for: those of the
+        // visible prices, in the price list's order.
+        prices: {
+          orderBy: [{ position: 'asc' }, { id: 'asc' }],
+          select: {
+            jobType: { select: { id: true, nameEn: true, nameRo: true } },
+          },
+          where: { jobType: { status: 'approved' }, visible: true },
+        },
         refusalPhrase: true,
+        responseStats: { select: { lifetimeRequests: true, rate: true } },
         serviceRadiusKm: true,
         slug: true,
         verificationFiles: {
@@ -187,6 +207,9 @@ export class PublicGaragesService {
       paymentCard,
       paymentCash,
       paymentTransfer,
+      photos,
+      prices,
+      responseStats,
       serviceRadiusKm,
       slug: held,
       verificationFiles,
@@ -199,11 +222,15 @@ export class PublicGaragesService {
       name,
       slug: held,
       ...brandAnswerWithFuels(brands, texts),
+      jobTypes: [
+        ...new Map(prices.map(({ jobType }) => [jobType.id, jobType])).values(),
+      ],
       paymentMethods: {
         card: paymentCard,
         cash: paymentCash,
         transfer: paymentTransfer,
       },
+      photos: await this.photos(photos),
       ...(facilities.length > 0 && {
         courtesyCar: {
           paid: courtesyCarPaid,
@@ -221,10 +248,59 @@ export class PublicGaragesService {
       ...present({ businessKind }),
       ...(knownFor?.trim() ? { description: knownFor } : {}),
       rating: null,
+      responseRate: responseRateOf(responseStats),
       reviewCount: 0,
       verifiedAt: verifiedAt?.toISOString() ?? null,
       ...(inContext ? { brand: inContext } : {}),
     };
+  }
+
+  // A row the worker has sized has its copies. An unsized one is asked of its
+  // thumbnail, which also carries the size; without one it is not ready yet.
+  private async photos(
+    rows: {
+      fileKey: string;
+      height: number | null;
+      id: string;
+      width: number | null;
+    }[],
+  ): Promise<PublicGaragePhotoDto[]> {
+    const answered = await Promise.all(
+      rows.map(async ({ fileKey, id, ...size }) => {
+        const thumb = this.storage.derivedKey(fileKey, 'thumb');
+        let { height, width } = size;
+        if (width === null) {
+          const meta = await this.storage.metadataOf(thumb).then(
+            (found) => {
+              this.storageDown = false;
+              return found;
+            },
+            (error) => {
+              if (!this.storageDown) {
+                this.logger.warn(`photo copies unreadable: ${String(error)}`);
+                this.storageDown = true;
+              }
+              return null;
+            },
+          );
+          if (!meta) return null;
+          width = Number(meta['width']) || null;
+          height = Number(meta['height']) || null;
+        }
+        const [thumbnailUrl, displayUrl] = await Promise.all(
+          [thumb, this.storage.derivedKey(fileKey, 'display')].map((key) =>
+            this.storage.createDownloadUrl(
+              key,
+              undefined,
+              'inline',
+              PUBLIC_IMAGE_URL_MINUTES,
+            ),
+          ),
+        );
+        return { displayUrl, id, thumbnailUrl, ...present({ height, width }) };
+      }),
+    );
+    return answered.filter((photo) => photo !== null);
   }
 
   // Retired brands answer too: a garage may still hold one.

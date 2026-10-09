@@ -55,6 +55,13 @@ function build(jobs: unknown = queue) {
   processor.now = () => NOW;
 }
 
+// What the quote fan-out puts in a QUOTE_RECEIVED.
+const QUOTE = {
+  garage: 'Atelier Dinamo',
+  link: 'https://motorfix.test/app/driver/requests/r-1',
+  range: '450–600',
+};
+
 const row = (data: Partial<Prisma.NotificationUncheckedCreateInput> = {}) =>
   prisma.notification.create({
     data: {
@@ -63,6 +70,7 @@ const row = (data: Partial<Prisma.NotificationUncheckedCreateInput> = {}) =>
       createdAt: minutesAgo(10),
       eventId: randomUUID(),
       kind: 'QUOTE_RECEIVED',
+      params: QUOTE,
       status: 'queued',
       ...data,
     },

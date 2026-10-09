@@ -171,6 +171,116 @@
               }
             }
           ]
+        },
+        {
+          "uid": "mcp-issuer-unreachable",
+          "title": "MCP cannot reach its identity server",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "mcp"
+          },
+          "annotations": {
+            "summary": "The MCP server has not reached its identity server's discovery document for 5 minutes; assistants cannot sign in or refresh ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-mcp"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (mcp_issuer_up{job=~\"(.+/)?mcp\"})",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "mcp-down",
+          "title": "MCP server down on staging",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "mcp"
+          },
+          "annotations": {
+            "summary": "The staging MCP server has reported nothing for 5 minutes after reporting in the last 24 hours: it is down.",
+            "dashboard_uid": "motorfix-mcp"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 86400,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (count_over_time(mcp_issuer_up{job=~\"(.+/)?mcp\", deployment_environment=\"staging\"}[24h])) unless max by (deployment_environment) (count_over_time(mcp_issuer_up{job=~\"(.+/)?mcp\", deployment_environment=\"staging\"}[5m]))",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }

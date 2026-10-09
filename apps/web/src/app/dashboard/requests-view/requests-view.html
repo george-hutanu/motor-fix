@@ -1,0 +1,32 @@
+@if (rows(); as list) {
+  @if (list.length) {
+    <ul class="rows">
+      @for (row of list; track row.id) {
+        <li data-request>
+          <p class="car">{{ row.car }}</p>
+          <p class="what">{{ row.what }}</p>
+          <p class="meta">
+            <span class="status">{{ row.status }}</span>
+            <span aria-hidden="true">·</span>
+            <time>{{ row.when }}</time>
+          </p>
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="empty">
+      <p>{{ 'driver.requests.empty' | t }}</p>
+      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.home.newRequest' | t }}</a>
+    </div>
+  }
+} @else if (list.failed()) {
+  <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+  <button hlmBtn variant="secondary" type="button" (click)="list.reload()">
+    {{ 'driver.requests.retry' | t }}
+  </button>
+} @else {
+  <div class="rows" aria-busy="true">
+    <div class="skeleton" aria-hidden="true"></div>
+    <div class="skeleton" aria-hidden="true"></div>
+  </div>
+}

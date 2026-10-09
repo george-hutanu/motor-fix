@@ -4,6 +4,11 @@
 export interface JobStepDto {
   customerLabel: string | null;
   doneAt: string | null;
+
+  /**
+   * The account that ticked it
+   */
+  doneBy: string | null;
   id: string;
   label: string;
   position: number;

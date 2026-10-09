@@ -118,9 +118,19 @@ describe('seed', () => {
         roles: ['garage'],
         status: 'active',
       },
+      'mecanic-oferte@example.test': {
+        lastRole: 'mechanic',
+        roles: ['mechanic'],
+        status: 'active',
+      },
       'mecanic@example.test': {
         lastRole: 'mechanic',
         roles: ['mechanic'],
+        status: 'active',
+      },
+      'militari@example.test': {
+        lastRole: 'garage',
+        roles: ['garage'],
         status: 'active',
       },
       'receptie@example.test': {
@@ -179,6 +189,10 @@ describe('seed', () => {
     const switcher = by('comutare@example.test')?.memberships[0];
     expect(switcher?.role).toBe('owner');
     expect(switcher?.garageId).not.toBe(owner?.garageId);
+    // A garage of its own, so a test that reads its inbox shares no owner.
+    const militari = by('militari@example.test')?.memberships[0];
+    expect(militari?.role).toBe('owner');
+    expect(militari?.garageId).not.toBe(owner?.garageId);
   });
 
   it('gives every account the test password as an argon2id hash', async () => {
@@ -366,17 +380,17 @@ describe('seed of the listed garages', () => {
   it('changes nothing in the listed garages when run twice', async () => {
     expect(seed('test').status).toBe(0);
     const once = await listed();
+    const brands = await prisma.garageBrand.count();
 
     expect(seed('test').status).toBe(0);
 
     expect(await listed()).toEqual(once);
-    expect(await prisma.garageBrand.count()).toBe(
-      once.reduce((n, g) => n + g.brands.length, 0),
-    );
+    expect(await prisma.garageBrand.count()).toBe(brands);
   });
 });
 
 // @traces 220-FR-012
+// @traces 424-FR-018
 describe('seed of a request through to a job', () => {
   const chain = () =>
     prisma.quoteRequest.findMany({
@@ -384,7 +398,21 @@ describe('seed of a request through to a job', () => {
       select: {
         bookings: {
           select: {
-            job: { select: { mechanicId: true, status: true } },
+            job: {
+              select: {
+                mechanicId: true,
+                stages: {
+                  orderBy: { at: 'asc' },
+                  select: {
+                    actorRole: true,
+                    fromStatus: true,
+                    toStatus: true,
+                  },
+                },
+                startedAt: true,
+                status: true,
+              },
+            },
             mechanicId: true,
             status: true,
           },
@@ -400,7 +428,7 @@ describe('seed of a request through to a job', () => {
       },
     });
 
-  it("sends the requester's two requests to the staff's garage: one waiting, one confirmed with the mechanic's job", async () => {
+  it("sends the requester's two requests to the staff's garage: one waiting, one confirmed with the mechanic's job in work", async () => {
     expect(seed('test').status).toBe(0);
 
     const mechanic = await prisma.mechanic.findFirstOrThrow({
@@ -424,7 +452,19 @@ describe('seed of a request through to a job', () => {
         ...common,
         bookings: [
           {
-            job: { mechanicId: mechanic.id, status: 'to_do' },
+            job: {
+              mechanicId: mechanic.id,
+              stages: [
+                { actorRole: 'mechanic', fromStatus: null, toStatus: 'to_do' },
+                {
+                  actorRole: 'mechanic',
+                  fromStatus: 'to_do',
+                  toStatus: 'in_work',
+                },
+              ],
+              startedAt: expect.any(Date),
+              status: 'in_work',
+            },
             mechanicId: mechanic.id,
             status: 'confirmed',
           },
@@ -433,6 +473,37 @@ describe('seed of a request through to a job', () => {
         recipients: [{ garage: { slug: 'atelier-test' }, status: 'quoted' }],
         status: 'booked',
       },
+    ]);
+  });
+
+  // @traces 343-FR-005
+  it("gives the staff's garage a mechanic who may answer quotes beside one who may not, and the oil service ticked for Dacia", async () => {
+    expect(seed('test').status).toBe(0);
+
+    const mechanics = await prisma.mechanic.findMany({
+      select: { account: { select: { email: true } }, canAnswerQuotes: true },
+      where: { garage: { slug: 'atelier-test' } },
+    });
+    expect(
+      mechanics
+        .map((m) => [m.account?.email ?? '', m.canAnswerQuotes] as const)
+        .sort(([a], [b]) => (a < b ? -1 : 1)),
+    ).toEqual([
+      ['mecanic-oferte@example.test', true],
+      ['mecanic@example.test', false],
+    ]);
+    const oil = await prisma.jobType.findUniqueOrThrow({
+      where: { key: 'oil-service' },
+    });
+    const ticked = await prisma.garageBrandJob.findMany({
+      select: {
+        garageBrand: { select: { brand: { select: { key: true } } } },
+        jobTypeId: true,
+      },
+      where: { garageBrand: { garage: { slug: 'atelier-test' } } },
+    });
+    expect(ticked).toEqual([
+      { garageBrand: { brand: { key: 'dacia' } }, jobTypeId: oil.id },
     ]);
   });
 

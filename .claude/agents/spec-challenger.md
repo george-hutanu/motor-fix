@@ -15,7 +15,7 @@ report where that fails.
 The invoking prompt names a feature directory. Read:
 
 - `specs/<feature>/spec.md` — the whole thing, twice
-- `specs/<feature>/context.md` when present — the Notion space's recorded
+- `specs/<feature>/context.md` when present — the documentation's recorded
   decisions and constraints; a spec that contradicts one is your first finding
 - `.specify/memory/constitution.md`, Principle I
 

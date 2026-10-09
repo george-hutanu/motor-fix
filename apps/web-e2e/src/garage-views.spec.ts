@@ -22,6 +22,13 @@ const VIEWS = [
     'Programările pe zile, pe mecanici și pe elevatoare',
   ],
   [
+    'Lucrări',
+    'Lucrări',
+    '/app/garage/jobs',
+    'Lucrări',
+    'Lucrările confirmate, de azi încolo',
+  ],
+  [
     'Mecanici',
     'Mecanici',
     '/app/garage/team',
@@ -65,6 +72,16 @@ const VIEWS = [
   ],
 ] as const;
 
+// Cereri de ofertă carries the number of waiting requests once there are any:
+// its text then ends in it, and its name says it.
+const COUNTED = ['Cereri de ofertă', 'Cereri', 'Requests'];
+const shown = (label: string) =>
+  COUNTED.includes(label) ? new RegExp(`^${label}\\s*\\d*$`) : label;
+const named = (label: string) =>
+  COUNTED.includes(label)
+    ? new RegExp(`^${label}(, \\d+ (în așteptare|waiting))?$`)
+    : label;
+
 const title = (page: Page) => page.getByRole('heading', { level: 1 });
 const line = (page: Page) => page.locator('header .line');
 const language = (page: Page) =>
@@ -105,7 +122,7 @@ test.describe('garage views @seeded', () => {
     await expect(page.locator('aside .eyebrow')).toHaveText('CONT SERVICE');
     await expect(line(page)).toHaveText('Atelier Test');
     await expect(menu.getByRole('link')).toHaveText(
-      VIEWS.map(([entry]) => entry),
+      VIEWS.map(([entry]) => shown(entry)),
     );
     await expect(menu.getByRole('link', { name: 'Asistent AI' })).toHaveCount(
       0,
@@ -114,7 +131,7 @@ test.describe('garage views @seeded', () => {
       ...VIEWS.slice(1),
       VIEWS[0],
     ]) {
-      await menu.getByRole('link', { exact: true, name: entry }).click();
+      await menu.getByRole('link', { name: named(entry) }).click();
       await expect(page).toHaveURL(address);
       await expect(title(page)).toHaveText(text);
       await expect(line(page)).toHaveText(under);
@@ -141,9 +158,11 @@ test.describe('garage views @seeded', () => {
     await mark(page);
     const bar = page.getByRole('navigation', { name: 'Panou service' });
 
-    await expect(bar.getByRole('link')).toHaveText(VIEWS.map(([, tab]) => tab));
+    await expect(bar.getByRole('link')).toHaveText(
+      VIEWS.map(([, tab]) => shown(tab)),
+    );
     for (const [, tab, address, text] of [...VIEWS.slice(1), VIEWS[0]]) {
-      await bar.getByRole('link', { exact: true, name: tab }).click();
+      await bar.getByRole('link', { name: named(tab) }).click();
       await expect(page).toHaveURL(address);
       await expect(title(page)).toHaveText(text);
       expect(await marked(page)).toBe(1);
@@ -180,8 +199,9 @@ test.describe('garage views @seeded', () => {
     await expect(page.locator('aside .eyebrow')).toHaveText('GARAGE ACCOUNT');
     await expect(bar.getByRole('link')).toHaveText([
       'Home',
-      'Requests',
+      shown('Requests'),
       'Schedule',
+      'Jobs',
       'Team',
       'Prices',
       'Reviews',

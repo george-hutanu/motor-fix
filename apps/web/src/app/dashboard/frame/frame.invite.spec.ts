@@ -3,10 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
-import { type MeDto, NotificationsService } from '@motor-fix/data-access';
+import {
+  GarageRequestsService,
+  type MeDto,
+  NotificationsService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
-import { Subject } from 'rxjs';
+import { NEVER, Subject } from 'rxjs';
 
 import { Frame } from './frame';
 import { Live } from '../live';
@@ -54,8 +58,20 @@ async function render(role: string, capabilities: string[]) {
           close: jest.fn(),
           events: new Subject<LiveMessage>(),
           offline: signal(false),
+          on: () => NEVER,
           open: jest.fn(),
           resync: new Subject<void>(),
+          state: signal('open'),
+        },
+      },
+      {
+        provide: GarageRequestsService,
+        useValue: {
+          garageRequestsControllerList: async () => ({
+            items: [],
+            nextCursor: null,
+            total: 0,
+          }),
         },
       },
       {

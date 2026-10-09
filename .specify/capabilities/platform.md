@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -64,6 +64,9 @@ features:
   - 976-integration-specs-under-load
   - 977-worktree-cleanup
   - 887-precompact-fr-wording
+  - 1016-mcp-staging
+  - 1018-notion-docs-to-specs
+  - 1026-diataxis-docs
 ---
 
 # Capability: Platform
@@ -180,13 +183,13 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 516-FR-001 — On every merge into `main` the pipeline MUST run every check on every project, build one image per app tagged with the commit SHA, push it to GitHub's container registry, migrate and deploy staging, wait for `/health/ready`, run the end-to-end suite against staging, and then promote to production with no manual approval. The staging wait for `/health/ready` is limited to 5 minutes; on expiry the run fails and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
+### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite against staging, and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
-_From 516-production-release-queue._
+_From 1016-mcp-staging._
 
-### 516-FR-002 — Once staging and its end-to-end suite pass, the pipeline MUST deploy the same image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes.
+### 000-FR-014 — (replaces 516-FR-002) Once staging and its end-to-end suite pass, the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
-_From 516-production-release-queue._
+_From 1016-mcp-staging._
 
 ### 516-FR-003 — Staging deploys and production deploys MUST each run one at a time, in commit order, and a deploy already running MUST NOT be cancelled by a newer commit: the newer one waits, and of several waiting only the latest proven commit runs next. There MUST be no path that deploys a branch or an unproven commit to production.
 
@@ -196,9 +199,9 @@ _From 516-production-release-queue._
 
 _From 421-monorepo-platform._
 
-### 421-FR-032 — One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is built but not deployed.
+### 000-FR-002 — (replaces 421-FR-032) One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is deployed to staging only. A second Dockerfile, `infra/keycloak/Dockerfile`, MUST build the `keycloak` image: the public image `quay.io/keycloak/keycloak:26.8`, one `COPY` of `infra/keycloak/realm-motorfix-assistants.json` into Keycloak's import folder, the start command `start --import-realm --features=cimd,resource-indicators --proxy-headers=xforwarded --http-enabled=true` and the JVM heap cap (FR-006); the `images` job builds and pushes it like the others and hands its digest to the staging job next to the `mcp` digest.
 
-_From 421-monorepo-platform._
+_From 1016-mcp-staging._
 
 ### 421-FR-033 — Automatic dependency-update pull requests MUST be switched on.
 
@@ -1026,9 +1029,9 @@ _From 784-impossible-level-date._
 
 _From 784-impossible-level-date._
 
-### 815-FR-001 — motor-fix MUST NOT track `specs/` (`.gitignore` names `/specs/`); `specs/` in every checkout is a clone of george-hutanu/motor-fix-specs on `trunk`, not a submodule.
+### 1018-FR-002 — In every motor-fix checkout and worktree the specs clone MUST live at `<checkout>/.motor-fix-specs/`, ignored by git (`.gitignore` entries `/.motor-fix-specs/` and `/specs`, no trailing slash, so the link itself is ignored) and by Docker (`.dockerignore`), and `<checkout>/specs` MUST be a relative symlink (target `.motor-fix-specs/specs` or `.motor-fix-specs`, never an absolute path) that makes `specs/<NNN-slug>/...` resolve unchanged: to `.motor-fix-specs/specs` when the clone's own checked-out trunk has a top-level `specs/` directory (its layout), to `.motor-fix-specs` otherwise, so a clone not yet brought onto a moved `origin/trunk` keeps resolving (FR-003). `specs-repo.mjs` MUST export the clone's location and the docs location for other scripts.
 
-_From 815-specs-private-repo._
+_From 1018-notion-docs-to-specs._
 
 ### 815-FR-002 — `.claude/scripts/specs-repo.mjs ensure` MUST clone the private repository into `specs/` when it is missing or empty, adopt a non-repository `specs/` without losing a local file or change, and fast-forward an existing clone; `--soft` never fails (npm `prepare`, SessionStart).
 
@@ -1042,9 +1045,9 @@ _From 815-specs-private-repo._
 
 _From 815-specs-private-repo._
 
-### 815-FR-005 — The lifecycle gate MUST refuse to stop while the specs clone has commits not pushed to `trunk`.
+### 1018-FR-005 — Every script and hook that reads the clone's own git state or its trunk paths — the identity hook's clone check, the lifecycle gate's unpushed-specs refusal, `lifecycle.mjs` (its specs commit paths and diff), `worktree-remove.mjs`'s specs backup and the QA packet's report lookup on trunk — MUST resolve the clone through the location `specs-repo.mjs` exports and MUST work in both layouts, taking feature paths relative to `specs/` as today.
 
-_From 815-specs-private-repo._
+_From 1018-notion-docs-to-specs._
 
 ### 815-FR-006 — The PR tester's packet MUST read the feature's `tasks.md`, `spec.md` and lap reports from the private repository's `trunk`.
 
@@ -1344,9 +1347,9 @@ _From 893-folder-rules._
 
 _From 893-folder-rules._
 
-### 960-FR-001 — Constitution II MUST state that the only requirement id allowed in source is a line comment in a test file (a file named `*.spec.*` or `*.test.*`) of the form `// @traces` followed by one or more feature-qualified requirement ids (`NNN-FR-NNN`), separated by single spaces — the whole line matching `^\s*// @traces( \d{3}-FR-\d{3})+\s*$`; a line that misses the grammar is not the form and none of its ids count — and that a requirement id, feature number, task id or ticket key anywhere else (test titles, other comments, non-test code) stays forbidden.
+### 1018-FR-018 — The traceability grammar MUST accept a feature number of three or more digits wherever it reads a feature folder (`NNN-slug`) or a feature-qualified requirement id (`<feature>-FR-NNN`): the `// @traces` line (`^\s*// @traces( \d{3,}-FR-\d{3})+\s*$`), the trace matrix, the capability specs and their Spec Delta, status, impact and retro evidence; the requirement number stays three digits, and a longer feature number is read whole, never as its last three digits.
 
-_From 960-traces-id-form._
+_From 1018-notion-docs-to-specs._
 
 ### 960-FR-002 — The amendment MUST be versioned 1.11.0 (MINOR), with its Sync Impact Report first in the header, every earlier report (1.10.0 down to 1.0.0, 1.8.3 included) kept, and the Governance footer's version and Last Amended date updated.
 
@@ -1480,10 +1483,6 @@ _From 977-worktree-cleanup._
 
 _From 977-worktree-cleanup._
 
-### 977-FR-003 — After the refusals, the removal MUST back up the worktree's specs clone: anything uncommitted or ahead of `origin/trunk` is committed and pushed through `specs-repo.mjs commit` with the message `chore(specs): backfill <worktree name> before removal`; when that fails, the difference from `origin/trunk` (uncommitted changes included) is written to `<main checkout>/.work/worktree-backfill/<YYYY-MM-DD>/<worktree name>-<HHMMSS>.specs.patch`; a clone on a branch other than `trunk` goes straight to that patch. A plain `specs/` folder that is not a clone is copied whole beside the patches (`<worktree name>-<HHMMSS>.specs/`). A worktree with no specs folder, or an empty one, skips this with the result saying so.
-
-_From 977-worktree-cleanup._
-
 ### 977-FR-004 — The removal MUST save the worktree's uncommitted product changes, tracked and untracked but not ignored, as `<worktree name>-<HHMMSS>.product.patch` in the same folder, a patch that applies on the branch's head; a clean tree writes no file and the result says so.
 
 _From 977-worktree-cleanup._
@@ -1516,6 +1515,154 @@ _From 977-worktree-cleanup._
 
 _From 977-worktree-cleanup._
 
+### 000-FR-003 — The deploy script MUST take its service list per environment: staging `api`, `worker`, `web`, `keycloak`, `mcp` in that order; production `api`, `worker`, `web`. Each service reads `RAILWAY_SERVICE_<NAME>` and `IMAGE_<NAME>` as today, with one replica for `keycloak` and `mcp` on staging.
+
+_From 1016-mcp-staging._
+
+### 000-FR-004 — The health check path MUST be a property of each service: `/health/ready` for `api`, `worker`, `web`; `/health/live` for `mcp`; `/realms/master` for `keycloak` (Railway refuses a path with a `.` or a `-`; Keycloak opens its port only after the realm import), checked on the service's public port. The health timeout, the region and the restore on failure or cancel stay as they are (516-FR-001, 516-FR-005).
+
+_From 1016-mcp-staging; path modified by 1021-keycloak-health-path and 1022-keycloak-health-hyphen._
+
+### 000-FR-006 — The Keycloak image MUST cap the JVM heap through Keycloak's own heap variable set in the Dockerfile, without a per-service setting; the value is chosen in the plan with headroom for the realm import, and a test asserts the Dockerfile sets it.
+
+_From 1016-mcp-staging._
+
+### 000-FR-007 — When `RAILWAY_SERVICE_MCP` or `RAILWAY_SERVICE_KEYCLOAK` is empty on staging, the deploy script MUST skip that service alone, print one GitHub workflow notice naming the variable and that the service was not deployed, deploy every other service and exit 0. A set id with a missing `IMAGE_<NAME>` MUST fail naming the variable, as for every service today.
+
+_From 1016-mcp-staging._
+
+### 000-FR-008 — `infra/keycloak/README.md`'s Railway section MUST describe what the release does (the image, the health paths, the skip) and what the owner does once by hand: create the two services and set their ids on the GitHub staging environment, create Keycloak's own database and role in the staging PostgreSQL, and set, per service, every variable this feature needs — `api` and `mcp`: `MCP_URL`, `ASSISTANT_ISSUER`, `ASSISTANT_TRUSTED_DOMAINS`, `ASSISTANT_BROKER_CLIENT_ID`, `ASSISTANT_BROKER_CLIENT_SECRET`, `ASSISTANT_BROKER_REDIRECT_URI`; `mcp`: `DATABASE_URL` (the staging PostgreSQL, as `api`), `APP_ENV` and the three `OTEL_EXPORTER_OTLP_*` variables as on the other services; `keycloak`: the realm placeholders of the README's table without `ASSISTANT_ALLOW_HTTP`, `KC_DB=postgres`, `KC_DB_URL`, `KC_DB_USERNAME`, `KC_DB_PASSWORD`, `KC_HOSTNAME`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` (removed after the first sign-in) — each marked as a secret the owner generates without printing, an address, or a name to copy; and the live connection check (Claude and ChatGPT, one read tool each) recorded on ST-1016 and ST-365.
+
+_From 1016-mcp-staging._
+
+### 000-FR-009 — No file, script, workflow or log of this feature MUST hold, print or read a secret value, a Railway service or environment id or a staging address (the project id `release.yml` already holds for `railway ssh` stays); only variable names appear (881-FR-012, 421-FR-022). `.env.example` already lists every variable name used here and gains none.
+
+_From 1016-mcp-staging._
+
+### 000-FR-013 — The deploy script's specs MUST cover the per-environment lists, the health path per service, the skip with its notice and the unchanged production list; the inventory script's spec MUST cover discovery across several service lists; the gauge's probe, its two values and its log line MUST be covered by the MCP server's colocated specs; the Keycloak Dockerfile MUST build in CI's Docker build job or an equivalent check so a broken `COPY` fails a PR.
+
+_From 1016-mcp-staging._
+
+### 1026-FR-004 — The specs repo root MUST hold exactly: `README.md` (the map for people: what each folder is, how to add a page), `llms.txt` (the agents' entry), `AGENTS.md` (how agents read and write the repo: where each kind goes, the front-matter rule, the lint, `llms.txt --write`, relative links, no Notion URLs), `.gitignore`, `.github/` (issue forms and the lint workflow), `scripts/` (the lint and its tests), `docs/`, `specs/` (every `NNN-slug` feature folder, unchanged) and `tracker/` (a README only, reserved for ST-1017's import, which writes `tracker/<KEY>/` for oversize issue bodies and files).
+
+_From 1026-diataxis-docs._
+
+### 1018-FR-003 — `specs-repo.mjs ensure` MUST migrate an existing old-layout clone at `<checkout>/specs/` in place and without data loss: rename it to `.motor-fix-specs/` and link `specs` to the clone root first (so `specs/<NNN-slug>` resolves after every step), then, when trunk has moved, bring it onto the moved trunk so that modified tracked files follow their renamed paths and unpushed commits stay ahead of trunk, sweep any `NNN-*` folder an unpushed commit added at the clone root into `specs/` as one commit, move every untracked or ignored file left at an old root feature path to `specs/<feature>/`, and only then repoint the symlink to `.motor-fix-specs/specs`. A step that fails MUST stop the migration with a non-zero exit naming the step; a failed rebase MUST be aborted, leaving the old-layout clone at `.motor-fix-specs/` linked at its root and every file where it was. A second run with nothing to do MUST change nothing. Two `ensure` runs in one checkout MUST serialise on an exclusive lock file in the checkout; the second waits, then finds nothing to do. `commit` MUST run the same migration first when trunk has moved since the clone was last brought up to date; `status` MUST never write and reports `layout: pending` instead.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-004 — `ensure` MUST refuse, naming both paths, when `specs` exists as a real folder or a foreign symlink beside an existing `.motor-fix-specs/`, and MUST still adopt a plain `specs/` folder that is not a clone (as it does today) into the new location.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-006 — `specs-repo.mjs migrate-trunk` MUST perform the trunk move as a separate, owner-run step: `--dry-run` MUST list every folder it would move and every file it would add and push nothing; the real run MUST require an explicit confirmation flag, refuse before any change when trunk has already moved or the clone is dirty or unpushed, refuse in both modes, naming it, any root entry that is neither an `NNN-*` folder nor on the keep list (`.github/`, `.gitignore`, `README.md`), move every feature folder with `git mv`, add the README and `docs/README.md`, commit and push to trunk, and print the next step (run the export). The commit is made on a temporary local branch and trunk is updated by the push alone; a failed push leaves the remote unchanged, deletes the temporary branch, exits non-zero naming the step, and leaves the clone as it was, so the command can be run again.
+
+_From 1018-notion-docs-to-specs._
+
+### 1026-FR-026 — No documentation content MAY land in motor-fix (public): its harness specs MUST use synthetic fixtures, and the one-off migration script that produced the organised result MUST live in `specs/1026-diataxis-docs/` as the feature's record, not under `.claude/scripts/`.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-020 — `/speckit-context` and `org-researcher` MUST read documentation from `llms.txt` and `docs/` by the Diátaxis paths (features under `docs/reference/features/`, decisions under `docs/explanation/decisions/`, architecture under `docs/explanation/` and `docs/reference/`), cite `docs/<path>`, and keep taking the story, its comments, epic and siblings from the tracker, resolving a story's Feature relation (a Notion page id) through `docs/index.json`; `spec-reviewer` MUST read the same documentation from the repo. Every line offering Notion as a documentation fallback (the `(fallback until docs/ exists)` tag and its sentences) MUST be removed from these three definitions.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-022 — `speckit-notion-sync plan` MUST write a new epic's execution plan under `docs/reference/build-plans/ep-<n>-<kebab title>.md` with the page front matter, regenerate `llms.txt` with the lint's `--write`, and commit and push both to `trunk` in one commit; it MUST NOT create a Notion plan page; the build timeline is unchanged.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-023 — AGENTS.md, CLAUDE.local.md and the constitution MUST name the specs repo's `docs/` by its Diátaxis areas and `llms.txt` as the agents' entry wherever they named `docs/`, `docs/execution-plans/` or the export; CLAUDE.local.md MUST NOT grow past `.specify/context-baseline.json`; the constitution change MUST be a patch bump (v1.11.2 → v1.11.3) with a Sync Impact Report naming the lines, no rule added, removed or reworded, and the constitution card updated so `constitution-card.spec.mjs` passes.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-018 — After the reorganisation, `docs/index.json` MUST keep the shape `{ "exported": <ISO date of the frozen export>, "files": { "<notionId>": "<newPath>" } }`, MUST hold every Notion id the frozen export's `index.json` held, each mapped to the page's new relative path (the first page when a page was split, chosen so that a feature id maps to its feature page), or to `null` for a skipped pointer page, so ST-1017's import keeps resolving a story's Feature link; the lint MUST check that every non-null path resolves.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-001 — The organised documentation MUST be produced from the frozen Notion export (142 pages with `title`, `notion_id`, `notion_url`, `last_edited` front matter and its `index.json`), the design mock read once through the Artifact tool, and, for this migration only, one read of the Notion API for the 10 lost heading-level-4 texts and for the story/epic keys behind tracker URLs; nothing else; the raw export MUST never be committed or pushed to any repository, and the only thing pushed to the specs repo MUST be the organised result.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-002 — The specs repo (george-hutanu/motor-fix-specs, `trunk`) MUST be the only documentation source for motor-fix once this feature is merged: no motor-fix skill, agent, instruction file or constitution line MAY name the Notion space or a Notion page as a place to read documentation. The Notion tracker (stories, their comments, epics, build timelines) stays where ST-1017 leaves it and is out of this feature's scope.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-003 — Every exported page's body content MUST be present in the organised `docs/` (merged, split or moved, never dropped), the 10 heading-level-4 blocks the export lost MUST be recovered into their pages, and the 3 pointer pages the export skipped MUST be accounted for in the migration record (where each went, or why it has no page). A page that duplicates another page's content as a linked view (the 9 `untitled` area-view pages) is not dropped content: it counts as present through the page it duplicates, and the record names that page. A migration record in the feature folder MUST list, per Notion page id, its new path or paths and any content decision taken.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-005 — `docs/` MUST hold four Diátaxis folders, `tutorials/`, `how-to/`, `reference/` and `explanation/`, plus `index.json` (FR-018) and nothing else at its level. Each page's front-matter `kind` MUST equal the folder it sits under.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-006 — `docs/reference/` MUST hold: `features/<area>/mf-<nn>-<slug>.md` (lower-case file name; the `id` stays `MF-nn`), one file per feature page (59, one per MF-nn row of the export's features table), grouped by product area; the glossary; the sample world; the data model split into one file per section; the technology stack; the sequence diagrams; `build-plans/` holding each epic's execution plan as one file; the page layout guide; the delivery roadmap; and `design/` (FR-013).
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-007 — `docs/explanation/` MUST hold the product overview, the architecture views, the ideas, the gaps, and `decisions/` holding one ADR file per decision: architecture A01–A44, to-decide T01–T12, owner decisions OD-01–OD-27, the review-round decisions by their ids (R1–R4, F, S, R6-T, U, V, W, X, Y), a defaults-applied page, a still-open page, and `index.md` listing every decision with its id, title and status.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-008 — Content the export holds that teaches a path end to end (onboarding, running the stack, a first story) MUST land under `tutorials/`, and task-shaped content (how to run QA, how to file a decision, how to add a page) under `how-to/`; where the export holds no such content, the pages the story names are written fresh from motor-fix's own instructions: tutorials "start on the project" and "your first story end to end"; how-tos "run a story through spec-kit", "release", "set a secret", "add observability", "run the tracker import" and "write a doc". A how-to or tutorial names a secret or environment variable by its name only, never by a value.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-009 — `llms.txt` MUST hold one line per Markdown page under `docs/` (design board HTML files and `index.json` excepted) in the form `<relative path>: <summary>`, where the summary is the page's front-matter `summary`, grouped under one heading per Diátaxis folder, and nothing else; it MUST be generated from the pages (FR-016), never written by hand.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-010 — Every Markdown page under `docs/` MUST open with YAML front matter holding exactly these fields: `id` (stable, unique across the repo, never changed once published: `MF-07`, `A12`, `OD-03`, `board-mobile-home`, or a slug for a page with no existing id), `title`, `kind` (`tutorial`, `how-to`, `reference` or `explanation`), `summary` (one sentence), `status` (`current`, `superseded` or `draft`), `updated` (ISO date `YYYY-MM-DD`; the export's `last_edited` on migration), `related` (a list of ids, possibly empty) and `supersedes` (an id or empty). No `notion_id` or `notion_url` field survives.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-011 — Every page MUST cover one topic and stay small ("small" is measured as at most 400 lines): a page longer than 400 lines MUST be split by section into pages that reference each other in `related` (the data model, the decisions page and the overview are the known cases). Diagrams MUST be Mermaid blocks or plain text, never images, except an image the export downloaded that has no text equivalent, which stays next to its page.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-012 — Every link in a page MUST be a relative path that resolves to a file in the repo (an optional `#heading` anchor included), or an external URL that is not a Notion URL. No `notion.so`, `notion.site` or `app.notion.com` URL MAY remain anywhere in the repo outside `specs/` feature folders. A story or epic pointer (`ST-<n>`, `EP-<n>`) MUST link to the matching GitHub issue of george-hutanu/motor-fix-specs when one exists and MUST stay as plain key text otherwise.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-013 — `docs/reference/design/` MUST hold the design mock "MotorFix — App Mock" (artifact `EoPWH9MHmuY5Jfw7vTWTHr`, v22) as files: `canvas.json`, the 35 board HTML files unchanged, one Markdown page per board (front matter as FR-010, `kind: reference`, the canvas page it belongs to — Desktop, Dashboards, Mobile, Copy 5 variants, Earlier directions —, a prose description of what the board shows and its states, and a relative link to its HTML file; the canvas page is stated in the body, since FR-010's eight front-matter fields are fixed) and `index.md` listing every board by canvas page with the mock version and the artifact URL labelled as the live view. A machine-readable board list (`index.json` in that folder: board id, title, canvas page, Markdown path, HTML path) MUST exist for ST-1017's import.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-014 — Every Design and Design-boards reference in the documentation MUST point at the board's Markdown page in the repo copy; the artifact URL MAY appear only as the secondary live-view link on the design index and on `speckit-design-check`'s `Checked` line.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-015 — The specs repo MUST hold `scripts/docs-lint.mjs`, a Node script with no dependencies outside Node's standard library, that exits non-zero, printing one line per finding with the file path and the defect, when: a Markdown page under `docs/` lacks front matter or a required field, or holds an invalid `kind`, `status` or `updated` (`YYYY-MM-DD` only), an `id` another page also carries, or a `related`/`supersedes` id no page carries; a relative link (image links included) does not resolve to a file, or its anchor to a heading in that file (anchors follow GitHub's heading-slug rule); a Notion URL appears in any file outside `specs/`; `llms.txt` lacks a page, names a page that does not exist, or carries a summary that differs from the page's; or a board named in the design index has no HTML or Markdown file. It MUST exit zero and print nothing else when none is found.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-016 — `docs-lint.mjs --write` MUST regenerate `llms.txt` from the pages' front matter (FR-009) and exit zero; a plain run right after MUST pass. The lint MUST have `node:test` tests under `scripts/` covering each finding kind, the clean case and `--write`, runnable with `node --test scripts/*.test.mjs`.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-017 — The specs repo MUST hold a GitHub workflow that runs the lint's tests and the lint on every push and pull request to `trunk`, so a defect shows as a failed check; it MUST need no secret.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-019 — This feature MUST NOT push to the `1017-github-project-tracker` branch or edit `.claude/scripts/tracker/import.mjs` on `main`; instead it MUST leave in `specs/1026-diataxis-docs/` a proposed patch for the import (emit the Design link to the repo copy from the design index; a check that no issue body links an old docs path or a Notion URL) and a one-paragraph note of the final import pass Chief runs after the merge.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-021 — `speckit-design-check` MUST read a story's Design and Design boards pointers to their board pages under `docs/reference/design/` (through the feature page's links, or the board list of FR-013), cite them under `Checked`, treat the artifact as an optional live view, and no longer read the mock or any documentation from Notion; the story's Design and Design boards values still come from the tracker (they are pointers), resolved to the repo copy.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-024 — `.claude/scripts/notion-export.mjs`, `.claude/scripts/notion-export/` (the render module and its fixtures), `notion-export.spec.mjs`, `notion-export.adversary.spec.mjs`, `notion-export-download.adversary.spec.mjs` and `render.spec.mjs` MUST be removed from motor-fix, together with every line, npm script, permission entry or instruction that names them; the harness spec that fails when the Notion space is named as a documentation source MUST drop its `(fallback until docs/ exists)` exemption and keep failing on the space's name in the rewired files (this feature's records excepted).
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-025 — `specs-repo.mjs commit` MUST accept, besides `docs/…` and the feature folders, the root entries `README.md`, `llms.txt`, `AGENTS.md`, `.gitignore`, `scripts/…`, `.github/…` and `tracker/…`, and MUST keep refusing any other root path and any path that normalises outside the clone; `migrate-trunk`'s keep list is unchanged (the move already happened), but its README templates and hints stop naming `notion-export`.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-027 — Each rewiring in FR-020 to FR-025 MUST have a harness spec (vitest, `npm run test:harness`) written before the change that fails on the previous wording or behaviour and passes after; `node .claude/scripts/doctor.mjs` MUST pass on the branch.
+
+_From 1026-diataxis-docs._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -1545,3 +1692,25 @@ _From 977-worktree-cleanup._
 - `464-FR-007` — superseded by `977-FR-010` (2026-10-08)
 - `974-FR-003` — superseded by `977-FR-007` (2026-10-08)
 - `623-FR-002` — superseded by `887-FR-001` (2026-10-08)
+
+- `516-FR-001` — superseded by `000-FR-001` (2026-10-09)
+- `516-FR-002` — superseded by `000-FR-014` (2026-10-09)
+- `421-FR-032` — superseded by `000-FR-002` (2026-10-09)
+
+- `815-FR-001` — superseded by `1018-FR-002` (2026-10-09)
+- `815-FR-005` — superseded by `1018-FR-005` (2026-10-09)
+- `977-FR-003` — superseded by `1018-FR-005` (2026-10-09)
+- `960-FR-001` — superseded by `1018-FR-018` (2026-10-09)
+
+- `1018-FR-008` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-009` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-010` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-011` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-012` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-013` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-001` — superseded by `1026-FR-004` (2026-10-09)
+- `1018-FR-007` — superseded by `1026-FR-026` (2026-10-09)
+- `1018-FR-014` — superseded by `1026-FR-020` (2026-10-09)
+- `1018-FR-015` — superseded by `1026-FR-022` (2026-10-09)
+- `1018-FR-016` — superseded by `1026-FR-023` (2026-10-09)
+- `1018-FR-017` — superseded by `1026-FR-018` (2026-10-09)

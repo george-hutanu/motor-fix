@@ -82,6 +82,7 @@
       "garage": {
         "dashboard": "Here you will see what is happening in your garage today.",
         "history": "Here you will see who changed what in your garage.",
+        "jobs": "Here you will see the garage’s jobs.",
         "prices": "Here you will see the price ranges per job.",
         "profile": "Here you will edit your garage profile.",
         "requests": "Here you will see drivers' quote requests and answer with a quote.",
@@ -117,6 +118,7 @@
       "garage": {
         "assistant": "AI assistant",
         "history": "Change history",
+        "jobs": "Jobs",
         "prices": "Prices",
         "profile": "Garage profile",
         "requests": "Quote requests",
@@ -143,6 +145,7 @@
       },
       "garage": {
         "history": "Who changed what and when",
+        "jobs": "Confirmed jobs, from today on",
         "prices": "The ranges drivers see on your profile",
         "profile": "This is how drivers see you on the map",
         "requests": "Answer within the hour to show up first for the driver.",
@@ -160,6 +163,7 @@
       "dashboard": "Home",
       "garages": "Garages",
       "history": "History",
+      "jobs": "Jobs",
       "overview": "Dashboard",
       "prices": "Prices",
       "profile": "Profile",
@@ -185,6 +189,7 @@
       "garage": {
         "assistant": "Your AI assistant",
         "history": "Change history",
+        "jobs": "Jobs",
         "prices": "Prices",
         "profile": "Garage profile",
         "requests": "Quote requests",

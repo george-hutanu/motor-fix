@@ -1,0 +1,55 @@
+:host {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 6px var(--mf-space-4);
+  align-items: start;
+  padding: var(--mf-space-3) var(--mf-space-2);
+  border-top: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  min-width: 0;
+  transition: background-color 200ms;
+}
+:host:hover {
+  background: var(--mf-panel-raised);
+}
+p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.name {
+  font-weight: 700;
+}
+.car,
+.when {
+  font-size: var(--mf-size-small);
+}
+.car,
+.mechanic,
+time,
+.mark {
+  color: var(--mf-text-secondary);
+}
+.jobs {
+  display: block;
+  font-weight: 600;
+}
+.mark {
+  font-weight: 400;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+@media (max-width: 900px) {
+  :host {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

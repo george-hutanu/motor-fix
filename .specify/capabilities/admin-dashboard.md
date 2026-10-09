@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -9,6 +9,7 @@ features:
   - 261-maintenance-mode
   - 001-admin-recent-accounts
   - 260-rule-off-confirm
+  - 384-response-rate
 ---
 
 # Capability: Admin dashboard
@@ -368,6 +369,38 @@ _From 260-rule-off-confirm._
 ### 260-FR-016 — The seed MUST hold a second admin account, so the end-to-end suite can ask as one admin and approve as another.
 
 _From 260-rule-off-confirm._
+
+### 384-FR-001 — The system MUST compute, for every approved garage, a public response rate over the garage's REQUEST_RECIPIENT rows created (the moment the request reached the garage, `request_recipient.created_at`) in the last RESPONSE_RATE_PERIOD_DAYS (30) days before the job's start instant (one `now` taken when the attempt's processor starts), counting all hours of every day. Counted rows exclude: a recipient whose request is `closed` with `closed_reason` `cancelled` or `account_closed` while the recipient never answered (status `closed`); a recipient with status `closed` for any reason (a suspension closed it); and a recipient with status `waiting` created less than RESPONSE_RATE_WINDOW_HOURS (24) hours before the job's start instant.
+
+_From 384-response-rate._
+
+### 384-FR-002 — A counted row is answered within a day when its status is `quoted` or `declined` and `answered_at` − the recipient's `created_at` ≤ RESPONSE_RATE_WINDOW_HOURS hours. A `quoted`/`declined` row with no `answered_at` counts as not answered. Every other counted row (`waiting` 24 hours or older, `expired`, or `quoted`/`declined` later than 24 hours) counts as not answered. An undone decline returns the row to `waiting`, so it counts as not answered unless answered again.
+
+_From 384-response-rate._
+
+### 384-FR-003 — The rate MUST be answered-within-a-day ÷ counted, expressed as a whole percent rounded down (11 of 12 → 91; 46 of 50 → 92; 0 of 5 → 0; 5 of 5 → 100); with 0 counted rows there is no rate.
+
+_From 384-response-rate._
+
+### 384-FR-004 — The system MUST store per garage one GARAGE_RESPONSE_STATS row: `garage_id`, `requests_30d` (counted rows), `answered_within_day_30d`, `lifetime_requests` (all REQUEST_RECIPIENT rows of the garage, ever, no exclusion: `closed` rows count toward the 10 too), `rate` (null when `requests_30d` is 0), `computed_at`; PostgreSQL is the only copy (Principle VI). No audit history: it is a computed figure.
+
+_From 384-response-rate._
+
+### 384-FR-005 — The job MUST run every night at 01:00 Europe/Bucharest in the existing `insights` queue as its own job name, beside `platform-daily`, with 3 attempts and exponential backoff from 60 seconds; each garage's row and its event are written in one transaction of their own, so a failed attempt never leaves a garage with a partial write, keeps the last stored value of every garage it had not reached, and the retry (the same computation) writes only what still differs; the final failed attempt writes one error log line with the job id (876-FR-007, the existing `logFinalFailure`), an earlier failed attempt none. The three constants RESPONSE_RATE_PERIOD_DAYS, RESPONSE_RATE_WINDOW_HOURS and RESPONSE_RATE_MIN_REQUESTS MUST be read from one module.
+
+_From 384-response-rate._
+
+### 384-FR-006 — The job MUST write only the garages whose stored figures (`requests_30d`, `answered_within_day_30d`, `lifetime_requests`, `rate`) differ from the stored row, inserting a row for a garage with none, and MUST emit `response_stats.updated` (object id = garageId, audience `public:garage:{garageId}`) through the outbox, in the same transaction as the write, once per garage whose shown value (FR-008's state and rate) changed; a write with no change to the shown value emits nothing. `response_stats.updated` is already listed in the contracts library's event kinds (`libs/contracts/src/events.ts`).
+
+_From 384-response-rate._
+
+### 384-FR-010 — Observability ships with the change: the job reports through the worker's existing `motorfix_jobs_total` and `motorfix_job_duration_seconds` by queue and job name (876-FR-009) and logs, per run, the count of garages computed and written at info level with the job id and no garage id; the `insights` queue's entry in `infra/observability/inventory.json` names the new job, its panel on `motorfix-queues` and its alert or the reason there is none; `node scripts/observability-inventory.ts` passes.
+
+_From 384-response-rate._
+
+### 384-FR-011 — Tests MUST cover, in Jest with fixtures on real PostgreSQL: within 24 hours, 25 hours across a Sunday, a decline, an undone decline, an expiry, a cancellation before answer, a fresh waiting request (left out) and a 30-hour waiting one (counted against), a suspension-closed recipient, 9 and 10 lifetime requests, 10+ lifetime with none in 30 days, rounding down (11/12 → 91), the unchanged garage not written and no event, the changed garage's event in the write's transaction, the profile answer's `responseRate` in each of the three states, and the job's retry setting; in Playwright: a garage seeded with 12 requests, 11 answered within a day, the job run, and the profile reading "Răspunde la 91% din cereri într-o zi" in Romanian, at the four sizes, light and dark, with no sideways scroll at 320 px.
+
+_From 384-response-rate._
 
 ## Retired
 

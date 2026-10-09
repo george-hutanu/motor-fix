@@ -8,6 +8,11 @@ export interface RequestSummaryDto {
   closedAt: string | null;
   closedReason: ('expired' | 'cancelled' | 'booking_lapsed' | 'booking_cancelled' | 'no_show' | 'account_closed') | null;
   createdAt: string;
+
+  /**
+   * As the driver wrote it; the list shows its first line when there is no job
+   */
+  description: string | null;
   expiresAt: string;
   id: string;
   jobs: Array<RequestJobDto>;

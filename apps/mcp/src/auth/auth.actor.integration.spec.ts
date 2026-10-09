@@ -50,6 +50,7 @@ const tools = [
 const ctx: ToolContext = {
   accounts: loader,
   featureOn: async () => true,
+  garage: {} as ToolContext['garage'],
   maintenance: { on: async () => false },
 };
 

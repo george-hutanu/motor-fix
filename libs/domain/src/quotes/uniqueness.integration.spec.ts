@@ -85,6 +85,7 @@ describe('the one-of rules under concurrent writes', () => {
             expiresAt: new Date(Date.now() + 7 * 24 * HOUR),
             fromBani: 30_000,
             garageId,
+            idempotencyKey: crypto.randomUUID(),
             recipientId: recipient.id,
             requestId: request.id,
             slot: new Date(Date.now() + 24 * HOUR),

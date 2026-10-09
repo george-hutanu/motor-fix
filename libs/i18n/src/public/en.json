@@ -28,6 +28,17 @@
     "failed": "We could not load the garage",
     "loading": "Loading the profile",
     "mobileArea": "Mobile mechanic · {km} area",
+    "newGarage": "New on MotorFix",
+    "photos": {
+      "alt": "Photo {n} of {total} · {garage}",
+      "close": "Close",
+      "counter": "{n} / {total}",
+      "failed": "This photo could not be loaded",
+      "label": "Photos",
+      "next": "Next",
+      "previous": "Previous"
+    },
+    "rate": "Answers {rate}% of requests within a day",
     "refuses": "Does not work on {brand}",
     "retry": "Try again",
     "reviews": {
@@ -391,6 +402,64 @@
     "apple": "Continue with Apple",
     "google": "Continue with Google",
     "or": "or"
+  },
+  "requestQuote": {
+    "addCar": "Add a car",
+    "backToSearch": "Back to search",
+    "button": "Request a quote",
+    "candidatesFailed": "We could not load the garages nearby.",
+    "cannotReceive": {
+      "brand": "{garage} does not work on {brand}.",
+      "fuel": "{garage} does not work on {fuel} for {brand}.",
+      "jobs": "{garage} does not do the jobs asked for on {brand}.",
+      "not_taking_requests": "{garage} is not taking requests right now."
+    },
+    "car": "Car",
+    "carRefused": {
+      "brand": "Does not work on {brand}",
+      "fuel": "Does not work on {fuel} for {brand}"
+    },
+    "carsFailed": "We could not load your cars.",
+    "chooseCar": "Choose the car",
+    "close": "Close",
+    "comesToYou": "Comes to you",
+    "description": "What is happening with the car",
+    "descriptionHint": "With no job chosen, write at least 10 characters.",
+    "field": {
+      "description_needed": "Write at least 10 characters or choose a job.",
+      "too_short": "Write at least 10 characters"
+    },
+    "fuelWord": {
+      "diesel": "diesel",
+      "electric": "electric",
+      "hybrid": "hybrid",
+      "petrol": "petrol"
+    },
+    "garages": "Who gets it",
+    "jobs": "Which jobs",
+    "limit": "You can pick at most 5 garages.",
+    "loadingCars": "Loading your cars",
+    "loadingGarages": "Looking for garages nearby",
+    "noCandidates": "No other garage nearby can take this car.",
+    "noCar": "Add a car first, so the garage knows what it is working on.",
+    "noJobs": "This garage has not listed its jobs yet. Describe what the car needs.",
+    "noPlace": "Choose a place to see other garages nearby too.",
+    "offline": "No connection. You can send it once you are back online.",
+    "pickerLead": "You can send the same request to other garages nearby, up to 5.",
+    "pickPlace": "Choose the place",
+    "problem": {
+      "garage_cannot_receive": "A garage you chose cannot take the request.",
+      "too_many_requests": "You already sent 20 requests today. Try again tomorrow."
+    },
+    "retry": "Try again",
+    "seeRequests": "See My requests",
+    "sentMany": {
+      "one": "Sent to {count} garage.",
+      "other": "Sent to {count} garages."
+    },
+    "sentOne": "Sent to {garage}.",
+    "submit": "Send",
+    "title": "Request a quote"
   },
   "signIn": {
     "brand": "MotorFix",

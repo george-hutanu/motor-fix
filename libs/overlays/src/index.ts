@@ -42,6 +42,7 @@ export { FieldError, TaskDone, TaskError, TaskSubmit } from './form/form-parts';
 export { Overlays } from './overlays';
 export {
   injectOverlayTask,
+  OVERLAY_TASK,
   type OverlayOptions,
   type OverlayResult,
   type OverlayShape,

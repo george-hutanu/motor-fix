@@ -8,6 +8,13 @@ type SearchOutcome = 'results' | 'none';
 export type SignInMethod = 'password' | 'phone' | 'google' | 'apple';
 type ApprovalOutcome = 'approved' | 'rejected';
 export type NotificationChannel = 'push' | 'in-app';
+export type JobStepAction =
+  | 'added'
+  | 'renamed'
+  | 'reordered'
+  | 'removed'
+  | 'ticked'
+  | 'unticked';
 
 // Looked up on every count, never cached: a counter kept from before the
 // meter provider is registered would stay a no-op for the life of the
@@ -53,4 +60,25 @@ export function countNotification(channel: NotificationChannel) {
     'motorfix_notifications_sent_total',
     'Notifications delivered, by channel',
   ).add(1, { channel });
+}
+
+export function countJobStep(action: JobStepAction) {
+  counter(
+    'motorfix_job_steps_total',
+    "Changes to a job's steps, by action",
+  ).add(1, { action });
+}
+
+export function countRequestReceived(outcome: 'built' | 'muted' | 'skipped') {
+  counter(
+    'motorfix_request_received_total',
+    'Garages a new request was announced to, by outcome',
+  ).add(1, { outcome });
+}
+
+export function countQuoteReceived(outcome: 'built' | 'muted') {
+  counter(
+    'motorfix_quote_received_total',
+    'Sent quotes announced to their driver, by outcome',
+  ).add(1, { outcome });
 }

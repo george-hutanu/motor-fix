@@ -54,17 +54,24 @@ export default defineConfig({
       ? /@mailbox|@openid|@assistants|@reset/
       : /@seeded|@mailbox|@openid|@assistants|@reset/
     : undefined,
-  // The platform rules and maintenance flows switch maintenance on, which
-  // refuses every non-admin call platform-wide: they run alone, one file after
-  // the other, after everything else.
+  // The photo flows add an approved garage, which Home's counts would take
+  // in: they run after everything else. The platform rules and maintenance
+  // flows switch maintenance on, which refuses every non-admin call
+  // platform-wide: they run alone, one file after the other, last.
   projects: [
     {
       name: 'chromium',
-      testIgnore: /(platform-rules|maintenance)\.spec\.ts$/,
+      testIgnore: /(platform-rules|garage-photos|maintenance)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       dependencies: ['chromium'],
+      name: 'garage-photos',
+      testMatch: /garage-photos\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      dependencies: ['garage-photos'],
       name: 'platform-rules',
       testMatch: /platform-rules\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },

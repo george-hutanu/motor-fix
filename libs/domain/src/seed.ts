@@ -31,8 +31,13 @@ interface Person {
   status?: 'suspended';
   // A verified number, for the sign-in by WhatsApp code.
   phone?: string;
-  // The seeded garage this account works at, and how.
-  at?: { garage: string; as: 'owner' | 'receptionist' | 'mechanic' };
+  // The seeded garage this account works at, and how; a mechanic may also
+  // answer quote requests.
+  at?: {
+    garage: string;
+    as: 'owner' | 'receptionist' | 'mechanic';
+    answersQuotes?: true;
+  };
 }
 
 const GARAGES = [
@@ -137,6 +142,15 @@ const PEOPLE: Person[] = [
     name: 'Maria Stan',
     roles: ['driver'],
   },
+  // The owner of a listed garage that takes quote requests, so a test can
+  // read what a driver sent it without touching the shared garage account.
+  {
+    at: { as: 'owner', garage: 'service-auto-militari' },
+    email: 'militari@example.test',
+    lastRole: 'garage',
+    name: 'Ion Militaru',
+    roles: ['garage'],
+  },
   {
     at: { as: 'owner', garage: 'atelier-test' },
     email: 'service@example.test',
@@ -156,6 +170,13 @@ const PEOPLE: Person[] = [
     email: 'mecanic@example.test',
     lastRole: 'mechanic',
     name: 'Vlad Stan',
+    roles: ['mechanic'],
+  },
+  {
+    at: { answersQuotes: true, as: 'mechanic', garage: 'atelier-test' },
+    email: 'mecanic-oferte@example.test',
+    lastRole: 'mechanic',
+    name: 'Radu Oferte',
     roles: ['mechanic'],
   },
   {
@@ -232,8 +253,8 @@ function link(db: Client, id: string, at: NonNullable<Person['at']>) {
   const garage = '(SELECT id FROM garage WHERE slug = $2)';
   return at.as === 'mechanic'
     ? db.query(
-        `INSERT INTO mechanic (id, account_id, garage_id, name) SELECT gen_random_uuid(), $1, ${garage}, name FROM account WHERE id = $1`,
-        [id, at.garage],
+        `INSERT INTO mechanic (id, account_id, garage_id, name, can_answer_quotes) SELECT gen_random_uuid(), $1, ${garage}, name, $3 FROM account WHERE id = $1`,
+        [id, at.garage, at.answersQuotes ?? false],
       )
     : db.query(
         `INSERT INTO garage_member (account_id, garage_id, role) VALUES ($1, ${garage}, $3::garage_member_role)`,
@@ -357,10 +378,10 @@ async function send(
 ) {
   const request = await db.query<{ id: string }>(
     `INSERT INTO quote_request (id, driver_id, car_id, car_brand, car_model, car_year, car_fuel, car_engine,
-                                description, status, created_at, expires_at)
+                                description, status, created_at, expires_at, idempotency_key)
      VALUES (gen_random_uuid(), $1, $2, 'Dacia', 'Logan', 2018, 'petrol', '1.0 TCe',
              'Scârțâie la frânare', $3::quote_request_status,
-             now() - make_interval(hours => $4), now() + interval '7 days')
+             now() - make_interval(hours => $4), now() + interval '7 days', gen_random_uuid()::text)
      RETURNING id`,
     [who.driverId, who.carId, booked ? 'booked' : 'sent', hours],
   );
@@ -389,9 +410,10 @@ async function book(
 ) {
   const quote = await db.query<{ id: string; slot: Date }>(
     `INSERT INTO quote (id, request_id, recipient_id, garage_id, from_bani, to_bani, duration_minutes,
-                        slot, status, accepted_at, expires_at)
+                        slot, status, accepted_at, expires_at, idempotency_key)
      VALUES (gen_random_uuid(), $1, $2, $3, 45000, 60000, 90,
-             now() + interval '2 days', 'accepted', now(), now() + interval '7 days')
+             now() + interval '2 days', 'accepted', now(), now() + interval '7 days',
+             gen_random_uuid()::text)
      RETURNING id, slot`,
     [sent.requestId, sent.recipientId, who.garageId],
   );
@@ -410,10 +432,21 @@ async function book(
       who.mechanic,
     ],
   );
-  await db.query(
-    `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status)
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'to_do')`,
+  // Started by its mechanic, so QA can tick its steps.
+  const job = await db.query<{ id: string }>(
+    `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status, started_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'in_work', now())
+     RETURNING id`,
     [booking.rows[0]?.id, who.garageId, who.carId, who.driverId, who.mechanic],
+  );
+  await db.query(
+    `INSERT INTO job_stage_entry (id, job_id, from_status, to_status, actor_id, actor_role, at)
+     SELECT gen_random_uuid(), $1, s.from_status::job_status, s.to_status::job_status,
+            m.account_id, 'mechanic'::audit_actor_role, now() + s.n * interval '1 millisecond'
+     FROM mechanic m,
+          (VALUES (NULL, 'to_do', 0), ('to_do', 'in_work', 1)) AS s(from_status, to_status, n)
+     WHERE m.id = $2`,
+    [job.rows[0]?.id, who.mechanic],
   );
 }
 
@@ -431,6 +464,40 @@ async function requests(db: Client) {
   if (!who) return;
   await send(db, who, 2, false);
   await book(db, who, await send(db, who, 1, true));
+}
+
+// The oil service ticked for Dacia on the listed Bucharest garages that take
+// it and on the staff's garage, and shown on Service Auto Militari's price
+// list, so its profile offers a job and a request finds the others near it.
+async function quoteable(db: Client) {
+  await db.query(
+    `INSERT INTO garage_brand (garage_id, brand_id, stance, petrol, diesel, hybrid, electric, updated_at)
+     SELECT g.id, b.id, 'works_on', true, true, true, true, now()
+     FROM garage g, brand b WHERE g.slug = 'atelier-test' AND b.key = 'dacia'
+     ON CONFLICT DO NOTHING`,
+  );
+  await db.query(
+    `INSERT INTO garage_brand_job (garage_id, brand_id, job_type_id)
+     SELECT gb.garage_id, gb.brand_id, j.id
+     FROM garage_brand gb
+     JOIN garage g ON g.id = gb.garage_id
+     JOIN brand b ON b.id = gb.brand_id AND b.key = 'dacia'
+     JOIN job_type j ON j.key = 'oil-service'
+     WHERE gb.stance = 'works_on'
+       AND g.slug IN ('service-auto-militari', 'atelier-berceni', 'auto-pipera', 'atelier-test')
+     ON CONFLICT DO NOTHING`,
+  );
+  await db.query(
+    `INSERT INTO garage_price (id, garage_id, job_type_id, from_bani, to_bani, duration_minutes, position, updated_at, updated_by)
+     SELECT gen_random_uuid(), g.id, j.id, 25000, 40000, 60, 0, now(), a.id
+     FROM garage g
+     JOIN job_type j ON j.key = 'oil-service'
+     JOIN account a ON a.email = 'militari@example.test'
+     WHERE g.slug = 'service-auto-militari'
+       AND NOT EXISTS (
+         SELECT 1 FROM garage_price p WHERE p.garage_id = g.id AND p.job_type_id = j.id
+       )`,
+  );
 }
 
 async function seed(db: Client, secret: string) {
@@ -486,6 +553,7 @@ async function seed(db: Client, secret: string) {
      ON CONFLICT (file_id, kind) DO NOTHING`,
   );
   await requests(db);
+  await quoteable(db);
   // The checks a test run may switch off; production refused the seed above.
   await db.query(
     `INSERT INTO platform_rule (id, key, value, default_value)

@@ -4,6 +4,10 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import {
   AccountLoader,
   type createPrisma,
+  DaySheetService,
+  GarageFiguresService,
+  GarageRequestsService,
+  GarageScheduleService,
   MAINTENANCE,
   type MaintenanceReader,
   PRISMA,
@@ -76,6 +80,12 @@ export class TransportController {
             where: { garageId_key: { garageId, key } },
           })
         )?.enabled ?? true,
+      garage: {
+        daySheet: new DaySheetService(prisma),
+        figures: new GarageFiguresService(prisma),
+        requests: new GarageRequestsService(prisma),
+        schedule: new GarageScheduleService(prisma),
+      },
       maintenance,
     };
   }

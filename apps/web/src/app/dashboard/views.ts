@@ -2,7 +2,6 @@ import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 import { AdminPanel } from './admin-panel/admin-panel';
-import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view/push-view';
@@ -13,13 +12,17 @@ import { View } from './view/view';
 export type Area = 'driver' | 'garage' | 'admin';
 
 // The numbers a dashboard's menu entries carry, while known.
-export type Counts = Partial<Record<'garagesWaiting', number>>;
+export type Counts = Partial<
+  Record<'garagesWaiting' | 'requestsWaiting', number>
+>;
 
 // `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
 export interface DashboardView {
   path: string;
   // The view's body, once its story has built one.
   body?: Type<unknown>;
+  // ...or its loader, for a body the first page must not carry.
+  load?: () => Promise<Type<unknown>>;
   label: string;
   tab: string;
   // The header's own title and the line under it; absent, the label is the title.
@@ -78,9 +81,10 @@ export const DASHBOARDS: Record<
         tab: 'shell.frame.tab.garages',
       },
       {
-        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
+        load: () =>
+          import('./admin-users/admin-users').then((m) => m.AdminUsers),
         path: 'users',
         tab: 'shell.frame.tab.users',
       },
@@ -119,10 +123,17 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.driver',
     tag: 'shell.frame.area.driver',
     views: [
-      { ...HOME, title: 'shell.frame.title.driver.dashboard' },
+      {
+        ...HOME,
+        load: () =>
+          import('./driver-home/driver-home').then((m) => m.DriverHome),
+        title: 'shell.frame.title.driver.dashboard',
+      },
       {
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
+        load: () =>
+          import('./requests-view/requests-view').then((m) => m.RequestsView),
         path: 'requests',
         tab: 'shell.frame.tab.requests',
         title: 'shell.frame.title.driver.requests',
@@ -175,10 +186,25 @@ export const DASHBOARDS: Record<
       {
         ...HOME,
         empty: 'shell.frame.coming.garage.dashboard',
+        load: () =>
+          import('./garage-requests/garage-home/garage-home').then(
+            (m) => m.GarageHome,
+          ),
         title: 'shell.frame.bar.garage',
       },
-      garageView('requests', 'garage.requests'),
+      {
+        ...garageView('requests', 'garage.requests'),
+        counter: 'requestsWaiting',
+        load: () =>
+          import(
+            './garage-requests/garage-requests-view/garage-requests-view'
+          ).then((m) => m.GarageRequestsView),
+      },
       garageView('schedule', 'garage.schedule'),
+      {
+        ...garageView('jobs', 'garage.own_jobs'),
+        load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),
+      },
       { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
       garageView('prices', 'garage.prices'),
       garageView('reviews', 'garage.reviews'),
@@ -220,12 +246,14 @@ export const allowedViews = (
 // The area guard has loaded the session before these match. A view owns its
 // sub-paths, so its epic can add pages under it; a refused or unknown view
 // falls through to `**`, which sends it to the dashboard view.
-const body = ({ body, push, staff }: DashboardView) =>
-  body ?? (staff ? SettingsView : push ? PushView : View);
+const body = ({ body, load, push, staff }: DashboardView) =>
+  load
+    ? { loadComponent: load }
+    : { component: body ?? (staff ? SettingsView : push ? PushView : View) };
 
 export const dashboardRoutes = (area: Area): Routes => [
   {
-    component: body(DASHBOARDS[area].views[0]),
+    ...body(DASHBOARDS[area].views[0]),
     data: { area, view: DASHBOARDS[area].views[0] },
     path: '',
     pathMatch: 'full',
@@ -243,7 +271,7 @@ export const dashboardRoutes = (area: Area): Routes => [
           ).includes(view);
         },
       ],
-      children: [{ component: body(view), data: { area, view }, path: '**' }],
+      children: [{ ...body(view), data: { area, view }, path: '**' }],
       path: view.path,
     })),
   { path: '**', redirectTo: '' },

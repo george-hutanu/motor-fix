@@ -63,11 +63,16 @@ export function caller(
   };
 }
 
+const unused = async (): Promise<never> => {
+  throw new Error('not stubbed in this spec');
+};
+
 export function context(
   overrides: Partial<{
     features: Record<string, boolean>;
     maintenance: boolean;
     account: LoadedAccount;
+    garage: Partial<ToolContext['garage']>;
   }> = {},
 ): ToolContext {
   return {
@@ -76,6 +81,13 @@ export function context(
         overrides.account ?? account({ roles: ['driver'] }),
     },
     featureOn: async (_garageId, key) => overrides.features?.[key] ?? true,
+    garage: {
+      daySheet: { get: unused },
+      figures: { get: unused },
+      requests: { inbox: unused },
+      schedule: { list: unused },
+      ...overrides.garage,
+    },
     maintenance: { on: async () => overrides.maintenance ?? false },
   };
 }

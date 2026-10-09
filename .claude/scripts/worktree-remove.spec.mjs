@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -222,6 +222,36 @@ describe('backup', () => {
     const cmds = f.cmds();
     assert.ok(!cmds.some((c) => /test-services|worktree remove|branch -D|worktree prune/.test(c)), cmds.join('\n'));
     assert.equal(existsSync(wt), true);
+  });
+
+  // @traces 1018-FR-005
+  it('backs up the clone at .motor-fix-specs, writing its patch from there', () => {
+    rmSync(join(wt, 'specs'), { recursive: true });
+    const clone = join(wt, '.motor-fix-specs');
+    mkdirSync(join(clone, '.git'), { recursive: true });
+    symlinkSync('.motor-fix-specs', join(wt, 'specs'));
+    const f = fake([[`git -C ${clone} diff --binary --cached origin/trunk`, { stdout: 'diff --git a/x b/x\n+moved\n' }]]);
+    const o = opts(f, { commitSpecs: () => ({ ok: false, error: 'push refused' }) });
+    const result = removeWorktree(wt, o.options);
+    assert.equal(result.removed, true, JSON.stringify(result));
+    const file = join(backfill(), `${BRANCH}-140509.specs.patch`);
+    assert.equal(result.backup.specs, `patch ${file}`);
+    assert.equal(readFileSync(file, 'utf8'), 'diff --git a/x b/x\n+moved\n');
+    assert.ok(f.cmds().includes(`git -C ${clone} add -A`));
+  });
+
+  it('copies a plain specs folder whole, and the folder a specs link points at rather than the link', () => {
+    rmSync(join(wt, 'specs'), { recursive: true });
+    mkdirSync(join(wt, 'plain', '200-x'), { recursive: true });
+    writeFileSync(join(wt, 'plain', '200-x', 'spec.md'), '# x\n');
+    symlinkSync('plain', join(wt, 'specs'));
+    const f = fake();
+    const o = opts(f);
+    const result = removeWorktree(wt, o.options);
+    assert.equal(result.removed, true, JSON.stringify(result));
+    const copy = result.backup.specs.replace(/^copy /, '');
+    assert.equal(readFileSync(join(copy, '200-x', 'spec.md'), 'utf8'), '# x\n');
+    assert.deepEqual(o.commits, []);
   });
 
   it('skips the specs backup for a worktree with no specs clone, and says so', () => {

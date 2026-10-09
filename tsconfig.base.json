@@ -46,6 +46,12 @@
         "./libs/contracts/src/price-range.ts"
       ],
       "@motor-fix/contracts/problem": ["./libs/contracts/src/problem.ts"],
+      "@motor-fix/contracts/quote-limits": [
+        "./libs/contracts/src/quote-limits.ts"
+      ],
+      "@motor-fix/contracts/request-status": [
+        "./libs/contracts/src/request-status.ts"
+      ],
       "@motor-fix/contracts/search-place": [
         "./libs/contracts/src/search-place.ts"
       ],
@@ -68,6 +74,9 @@
       "@motor-fix/overlays": ["./libs/overlays/src/index.ts"],
       "@motor-fix/ui-cockpit": ["./libs/ui-cockpit/src/index.ts"],
       "@motor-fix/ui-cockpit/email": ["./libs/ui-cockpit/src/email.ts"],
+      "@motor-fix/ui-cockpit/photo-viewer": [
+        "./libs/ui-cockpit/src/photo-viewer.ts"
+      ],
       "@motor-fix/ui-cockpit/sample": ["./libs/ui-cockpit/src/sample.ts"]
     },
     "resolveJsonModule": true,

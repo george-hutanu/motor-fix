@@ -1,5 +1,6 @@
 import type {
   CarSnapshotDto,
+  GarageCloseReason,
   GarageRefDto,
   QuoteDto,
   RequestJobDto,
@@ -8,11 +9,14 @@ import { BadRequestException } from '@nestjs/common';
 
 import { PAGE_SIZE } from './quotes-config';
 import type {
+  Booking,
   Garage,
+  GarageStatus,
   JobType,
   Quote,
   QuoteJob,
   QuoteRequest,
+  RecipientStatus,
   RequestJob,
 } from '../generated/prisma/client';
 
@@ -47,6 +51,45 @@ export const jobsOf = (
     nameRo: job.jobType.nameRo,
     position: job.position,
   }));
+
+// The description's first line, or null when there is none.
+export function firstLine(text: string | null): string | null {
+  return text?.split(/\r?\n/, 1)[0].trim() || null;
+}
+
+const BOOKED = new Set(['booked', 'in_work', 'done']);
+const BOOKING_ENDED = new Set([
+  'booking_lapsed',
+  'booking_cancelled',
+  'no_show',
+]);
+
+// The request's own close, as a garage reads it; null when it names none.
+function requestCloseOf(
+  request: Pick<QuoteRequest, 'status' | 'closedReason'>,
+  ownQuoteAccepted: boolean,
+): GarageCloseReason | null {
+  const reason = request.status === 'closed' ? request.closedReason : null;
+  if (reason === 'cancelled' || reason === 'account_closed') return reason;
+  const tookAnother =
+    BOOKED.has(request.status) || BOOKING_ENDED.has(reason ?? '');
+  return tookAnother && !ownQuoteAccepted ? 'accepted_elsewhere' : null;
+}
+
+// Why a request closed for one garage, tried in GARAGE_CLOSE_REASONS' order;
+// a close no rule names reads as account_closed.
+export function closeReasonOf(
+  recipient: RecipientStatus,
+  request: Pick<QuoteRequest, 'status' | 'closedReason'>,
+  garage: GarageStatus,
+  ownQuoteAccepted: boolean,
+): GarageCloseReason {
+  if (recipient === 'expired') return 'expired';
+  if (recipient === 'closed' && garage === 'suspended') {
+    return 'garage_suspended';
+  }
+  return requestCloseOf(request, ownQuoteAccepted) ?? 'account_closed';
+}
 
 export const garageRef = (garage: Garage): GarageRefDto => ({
   id: garage.id,
@@ -112,3 +155,47 @@ export async function assertCursor(
 }
 
 export const PAGE_TAKE = PAGE_SIZE + 1;
+
+export const invalidInput = (message: string) =>
+  new BadRequestException({ code: 'validation', message });
+
+// A booking as a garage's day reads it: the car as the driver described it
+// and the jobs the garage quoted, named in the reader's language.
+export const bookedInclude = {
+  quote: {
+    include: {
+      jobs: {
+        include: { requestJob: { include: { jobType: true } } },
+        where: { included: true },
+      },
+    },
+  },
+  request: true,
+} as const;
+
+type BookedRow = Booking & {
+  quote: Quote & {
+    jobs: (QuoteJob & { requestJob: RequestJob & { jobType: JobType } })[];
+  };
+  request: QuoteRequest;
+};
+
+export function bookedOf(row: BookedRow, language: 'ro' | 'en' = 'ro') {
+  return {
+    car: {
+      brand: row.request.carBrand,
+      model: row.request.carModel,
+      year: row.request.carYear,
+    },
+    durationMinutes: row.durationMinutes,
+    id: row.id,
+    jobs: row.quote.jobs
+      .map((job) => job.requestJob)
+      .sort((a, b) => a.position - b.position)
+      .map((job) =>
+        language === 'en' ? job.jobType.nameEn : job.jobType.nameRo,
+      ),
+    startsAt: row.startsAt.toISOString(),
+    state: row.status,
+  };
+}
