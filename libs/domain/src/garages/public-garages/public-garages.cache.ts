@@ -5,14 +5,14 @@ import { recordProfileCache } from './public-garages.metrics';
 // drop advances the garage's generation first, so a read that began before it
 // never writes its older answer back; the generation expires with the
 // profile it guards. A drop Redis refuses throws, so the relay leaves the
-// event unrelayed and retries it. The `v2` in the keys is the answer's
+// event unrelayed and retries it. The `v4` in the keys is the answer's
 // shape: a change to the DTO bumps it, so no older shape is read back.
 export const PROFILE_SECONDS = 600;
 export const NO_BRAND = '-';
-export const profileKey = (garageId: string) => `garage-profile:v2:${garageId}`;
-export const slugKey = (slug: string) => `garage-profile-slug:v2:${slug}`;
+export const profileKey = (garageId: string) => `garage-profile:v4:${garageId}`;
+export const slugKey = (slug: string) => `garage-profile-slug:v4:${slug}`;
 export const generationKey = (garageId: string) =>
-  `garage-profile-gen:v2:${garageId}`;
+  `garage-profile-gen:v4:${garageId}`;
 
 export interface ProfileDropper {
   del(key: string): Promise<unknown>;

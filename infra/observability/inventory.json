@@ -108,7 +108,7 @@
       "source": "libs/domain/src/insights/insights.module.ts",
       "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "reason": "two nightly jobs, platform-daily and response-stats, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; no alert: a missed night leaves the last figures in place and the next night recounts, and ST-880 adds the queue alerts",
       "story": "ST-881"
     },
     {

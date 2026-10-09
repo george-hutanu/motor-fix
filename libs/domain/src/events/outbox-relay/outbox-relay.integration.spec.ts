@@ -455,12 +455,12 @@ describe('dropping the cached public profile', () => {
     await new OutboxRelay(prisma, redis).relay();
 
     expect(redis.dropped).toEqual([
-      `INCR garage-profile-gen:v2:${a}`,
-      `EXPIRE garage-profile-gen:v2:${a} 600`,
-      `DEL garage-profile:v2:${a}`,
-      `INCR garage-profile-gen:v2:${b}`,
-      `EXPIRE garage-profile-gen:v2:${b} 600`,
-      `DEL garage-profile:v2:${b}`,
+      `INCR garage-profile-gen:v4:${a}`,
+      `EXPIRE garage-profile-gen:v4:${a} 600`,
+      `DEL garage-profile:v4:${a}`,
+      `INCR garage-profile-gen:v4:${b}`,
+      `EXPIRE garage-profile-gen:v4:${b} 600`,
+      `DEL garage-profile:v4:${b}`,
     ]);
     expect((await drops()) - before).toBe(2);
   });

@@ -74,6 +74,9 @@
       "@motor-fix/overlays": ["./libs/overlays/src/index.ts"],
       "@motor-fix/ui-cockpit": ["./libs/ui-cockpit/src/index.ts"],
       "@motor-fix/ui-cockpit/email": ["./libs/ui-cockpit/src/email.ts"],
+      "@motor-fix/ui-cockpit/photo-viewer": [
+        "./libs/ui-cockpit/src/photo-viewer.ts"
+      ],
       "@motor-fix/ui-cockpit/sample": ["./libs/ui-cockpit/src/sample.ts"]
     },
     "resolveJsonModule": true,

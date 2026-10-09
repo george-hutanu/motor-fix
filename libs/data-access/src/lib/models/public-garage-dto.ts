@@ -6,7 +6,9 @@ import { CourtesyCarDto } from '../models/courtesy-car-dto';
 import { PaymentMethodsDto } from '../models/payment-methods-dto';
 import { PublicBrandDto } from '../models/public-brand-dto';
 import { PublicGarageBrandDto } from '../models/public-garage-brand-dto';
+import { PublicGaragePhotoDto } from '../models/public-garage-photo-dto';
 import { PublicJobTypeDto } from '../models/public-job-type-dto';
+import { ResponseRateDto } from '../models/response-rate-dto';
 export interface PublicGarageDto {
 
   /**
@@ -51,10 +53,16 @@ export interface PublicGarageDto {
   paymentMethods: PaymentMethodsDto;
 
   /**
+   * In the owner's order; empty when no photo is ready to be seen
+   */
+  photos: Array<PublicGaragePhotoDto>;
+
+  /**
    * Out of 5, one decimal; null until reviews exist
    */
   rating: number | null;
   refusalPhrase: string | null;
+  responseRate: ResponseRateDto;
   reviewCount: number;
 
   /**

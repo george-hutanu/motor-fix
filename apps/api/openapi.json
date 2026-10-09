@@ -8334,6 +8334,29 @@
           "fuels"
         ]
       },
+      "ResponseRateDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "new: under 10 requests ever; none: no request counted in 30 days",
+            "enum": [
+              "new",
+              "rate",
+              "none"
+            ]
+          },
+          "rate": {
+            "type": "number",
+            "description": "Percent answered within a day; only in the rate state",
+            "maximum": 100,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
       "PublicGarageBrandDto": {
         "type": "object",
         "properties": {
@@ -8383,6 +8406,40 @@
           "id",
           "nameRo",
           "nameEn"
+        ]
+      },
+      "PublicGaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy (400 px), signed for an hour",
+            "format": "uri"
+          },
+          "displayUrl": {
+            "type": "string",
+            "description": "The display copy (1,600 px), signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "thumbnailUrl",
+          "displayUrl"
         ]
       },
       "PublicGarageDto": {
@@ -8469,6 +8526,9 @@
             "type": "number",
             "minimum": 0
           },
+          "responseRate": {
+            "$ref": "#/components/schemas/ResponseRateDto"
+          },
           "brand": {
             "description": "Only when the read named a catalogue brand",
             "allOf": [
@@ -8494,6 +8554,13 @@
             "items": {
               "$ref": "#/components/schemas/PublicJobTypeDto"
             }
+          },
+          "photos": {
+            "description": "In the owner's order; empty when no photo is ready to be seen",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicGaragePhotoDto"
+            }
           }
         },
         "required": [
@@ -8507,8 +8574,10 @@
           "verifiedAt",
           "rating",
           "reviewCount",
+          "responseRate",
           "paymentMethods",
-          "jobTypes"
+          "jobTypes",
+          "photos"
         ]
       },
       "RecordVerificationCheckDto": {
