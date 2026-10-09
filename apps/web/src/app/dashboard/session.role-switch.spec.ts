@@ -7,6 +7,7 @@ const account = (role: 'garage' | 'driver') =>
   ({
     capabilities: [],
     email: 'mihai@example.ro',
+    garageAccess: [],
     garageId: role === 'garage' ? 'garage-1' : null,
     id: 'account-1',
     landing: role === 'garage' ? '/app/garage' : '/app/driver',

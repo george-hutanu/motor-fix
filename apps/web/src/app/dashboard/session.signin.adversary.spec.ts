@@ -6,6 +6,7 @@ import { Session } from './session';
 const account = {
   capabilities: [],
   email: 'andrei@example.ro',
+  garageAccess: [],
   garageId: null,
   id: 'account-1',
   landing: '/app/driver',

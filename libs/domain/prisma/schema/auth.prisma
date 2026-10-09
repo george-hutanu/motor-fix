@@ -61,6 +61,14 @@ model Account {
   reminders               Reminder[]
   cars                    Car[]
   consents                AccountConsent[]
+  quoteRequests           QuoteRequest[]
+  declinedRecipients      RequestRecipient[]       @relation("RecipientDeclinedBy")
+  bookings                Booking[]                @relation("BookingDriver")
+  confirmedBookings       Booking[]                @relation("BookingConfirmedBy")
+  cancelledBookings       Booking[]                @relation("BookingCancelledBy")
+  noShowBookings          Booking[]                @relation("BookingNoShowRecordedBy")
+  jobs                    Job[]                    @relation("JobDriver")
+  jobStageEntries         JobStageEntry[]          @relation("JobStageActor")
 
   @@index([createdAt(sort: Desc), id(sort: Desc)])
   @@map("account")

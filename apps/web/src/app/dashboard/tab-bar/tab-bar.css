@@ -23,7 +23,7 @@
 nav {
   display: flex;
   overflow-x: auto;
-  padding: 6px 8px max(14px, var(--mf-safe-bottom));
+  padding: 8px 8px max(16px, var(--mf-safe-bottom));
 }
 a {
   display: flex;
@@ -31,10 +31,10 @@ a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 66px;
   min-height: 48px;
-  padding: 0 6px;
+  padding: 0 8px;
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-label);
   font-weight: 700;
@@ -56,7 +56,7 @@ a {
 .chip {
   min-width: 18px;
   height: 18px;
-  padding: 0 5px;
+  padding: 0 4px;
   border-radius: 9px;
   background: var(--mf-amber);
   color: var(--mf-on-amber);

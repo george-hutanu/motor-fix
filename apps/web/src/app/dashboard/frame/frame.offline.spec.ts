@@ -16,6 +16,7 @@ import { dashboardRoutes } from '../views';
 const me = {
   capabilities: [],
   email: null,
+  garageAccess: [],
   garageId: null,
   id: 'account-1',
   landing: '/app/driver',

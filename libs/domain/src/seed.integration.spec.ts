@@ -98,6 +98,11 @@ describe('seed', () => {
         roles: ['admin'],
         status: 'active',
       },
+      'cerere@example.test': {
+        lastRole: 'driver',
+        roles: ['driver'],
+        status: 'active',
+      },
       'comutare@example.test': {
         lastRole: 'garage',
         roles: ['driver', 'garage'],
@@ -152,7 +157,10 @@ describe('seed', () => {
     const phones = (await seeded()).filter((a) => a.phone);
     expect(
       phones.map((a) => [a.email, a.phone, a.phoneVerifiedAt !== null]),
-    ).toEqual([['doua-roluri@example.test', '+40700000101', true]]);
+    ).toEqual([
+      ['cerere@example.test', '+40700000102', true],
+      ['doua-roluri@example.test', '+40700000101', true],
+    ]);
   });
 
   it('links the garage staff to one seeded garage', async () => {
@@ -365,6 +373,76 @@ describe('seed of the listed garages', () => {
     expect(await prisma.garageBrand.count()).toBe(
       once.reduce((n, g) => n + g.brands.length, 0),
     );
+  });
+});
+
+// @traces 220-FR-012
+describe('seed of a request through to a job', () => {
+  const chain = () =>
+    prisma.quoteRequest.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: {
+        bookings: {
+          select: {
+            job: { select: { mechanicId: true, status: true } },
+            mechanicId: true,
+            status: true,
+          },
+        },
+        car: { select: { plate: true } },
+        driver: { select: { email: true } },
+        jobs: { select: { jobType: { select: { key: true } } } },
+        quotes: { select: { status: true } },
+        recipients: {
+          select: { garage: { select: { slug: true } }, status: true },
+        },
+        status: true,
+      },
+    });
+
+  it("sends the requester's two requests to the staff's garage: one waiting, one confirmed with the mechanic's job", async () => {
+    expect(seed('test').status).toBe(0);
+
+    const mechanic = await prisma.mechanic.findFirstOrThrow({
+      where: { account: { email: 'mecanic@example.test' } },
+    });
+    const requests = await chain();
+    const common = {
+      car: { plate: 'B101QAT' },
+      driver: { email: 'cerere@example.test' },
+      jobs: [{ jobType: { key: 'oil-service' } }],
+    };
+    expect(requests).toEqual([
+      {
+        ...common,
+        bookings: [],
+        quotes: [],
+        recipients: [{ garage: { slug: 'atelier-test' }, status: 'waiting' }],
+        status: 'sent',
+      },
+      {
+        ...common,
+        bookings: [
+          {
+            job: { mechanicId: mechanic.id, status: 'to_do' },
+            mechanicId: mechanic.id,
+            status: 'confirmed',
+          },
+        ],
+        quotes: [{ status: 'accepted' }],
+        recipients: [{ garage: { slug: 'atelier-test' }, status: 'quoted' }],
+        status: 'booked',
+      },
+    ]);
+  });
+
+  it('adds no second request when run twice', async () => {
+    expect(seed('test').status).toBe(0);
+    const once = await chain();
+
+    expect(seed('test').status).toBe(0);
+
+    expect(await chain()).toEqual(once);
   });
 });
 
