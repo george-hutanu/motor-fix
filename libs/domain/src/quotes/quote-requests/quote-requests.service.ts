@@ -197,9 +197,12 @@ export class QuoteRequestsService {
     requireCapability(actor, 'driver.requests');
     try {
       assertShape(dto);
-      const id = await this.store(actor, key, dto);
-      recordSend('sent', dto.garageIds.length);
-      this.logger.log(`quote request sent: ${id}`);
+      const { created, id } = await this.store(actor, key, dto);
+      // A replayed key answers the first send again; it is not a new one.
+      if (created) {
+        recordSend('sent', dto.garageIds.length);
+        this.logger.log(`quote request sent: ${id}`);
+      }
       return this.requests.get(actor, id);
     } catch (error) {
       const outcome = outcomeOf(error);
@@ -219,7 +222,7 @@ export class QuoteRequestsService {
         select: { id: true },
         where: { driverId_idempotencyKey: { driverId, idempotencyKey: key } },
       });
-      if (sent) return sent.id;
+      if (sent) return { created: false, id: sent.id };
       const car = await tx.car.findFirst({
         include: { brand: { select: { name: true } } },
         where: { id: dto.carId, ownerId: driverId, removedAt: null },
@@ -295,7 +298,7 @@ export class QuoteRequestsService {
         payload: { driverId, garageIds: dto.garageIds, requestId: request.id },
         subjectId: request.id,
       });
-      return request.id;
+      return { created: true, id: request.id };
     });
   }
 

@@ -299,6 +299,7 @@ describe('the idempotency key', () => {
     const key = randomUUID();
 
     const first = await send(body, auth, key);
+    const between = await sentCounts();
     const second = await send(
       { ...body, description: 'Alt text complet' },
       auth,
@@ -309,6 +310,8 @@ describe('the idempotency key', () => {
     expect(second.body).toEqual(first.body);
     expect(await rows()).toEqual({ jobs: 2, recipients: 1, requests: 1 });
     expect(await created()).toHaveLength(1);
+    // The replay is not counted as a second send.
+    expect(await sentCounts()).toEqual(between);
   });
 
   it('creates a second request under a different key', async () => {

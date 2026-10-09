@@ -18,7 +18,9 @@ import {
   Validators,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import type { GarageCannotReceiveProblem } from '@motor-fix/contracts';
 import {
+  CANNOT_RECEIVE_REASONS,
   type CannotReceiveReason,
   REQUEST_DESCRIPTION_MAX,
   REQUEST_DESCRIPTION_MIN_WITHOUT_JOBS,
@@ -67,6 +69,12 @@ const CANNOT_RECEIVE: Record<CannotReceiveReason, string> = {
   jobs: 'public.requestQuote.cannotReceive.jobs',
   not_taking_requests: 'public.requestQuote.cannotReceive.not_taking_requests',
 };
+
+// A reason this build does not know reads as the garage not taking requests.
+const knownReason = (reason: unknown): CannotReceiveReason =>
+  (CANNOT_RECEIVE_REASONS as readonly unknown[]).includes(reason)
+    ? (reason as CannotReceiveReason)
+    : 'not_taking_requests';
 
 interface Unreceivable {
   garageId: string;
@@ -309,10 +317,7 @@ export class RequestQuote {
   private refused(failure: unknown) {
     this.unreceivable.set(null);
     if (!(failure instanceof HttpErrorResponse)) return;
-    const body = failure.error as Partial<Unreceivable> & {
-      code?: string;
-      garageName?: string;
-    };
+    const body = failure.error as Partial<GarageCannotReceiveProblem> | null;
     if (body?.code !== 'garage_cannot_receive' || !body.garageId) return;
     const { garageId } = body;
     const listed = this.nearby().find((g) => g.id === garageId)?.name;
@@ -323,7 +328,7 @@ export class RequestQuote {
     this.unreceivable.set({
       garageId,
       name,
-      reason: body.reason ?? 'not_taking_requests',
+      reason: knownReason(body.reason),
     });
     const ticked = this.form.controls.garageIds.value;
     if (ticked.includes(garageId))

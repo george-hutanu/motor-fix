@@ -35,8 +35,14 @@ const trimmedOrNull = ({ value }: { value: unknown }) => {
   return trimmed === '' ? null : trimmed;
 };
 
+// Ids compare in lower case, so one id given twice in another case is a repeat.
+const lowerIds = ({ value }: { value: unknown }) =>
+  Array.isArray(value)
+    ? value.map((id) => (typeof id === 'string' ? id.toLowerCase() : id))
+    : value;
+
 const commaList = ({ value }: { value: unknown }) =>
-  typeof value === 'string' ? value.split(',') : value;
+  lowerIds({ value: typeof value === 'string' ? value.split(',') : value });
 
 export class CreateQuoteRequestDto {
   @ApiProperty({ format: 'uuid' })
@@ -49,6 +55,7 @@ export class CreateQuoteRequestDto {
     isArray: true,
     type: String,
   })
+  @Transform(lowerIds)
   @IsArray()
   @ArrayMinSize(1)
   @ArrayUnique()
@@ -65,6 +72,7 @@ export class CreateQuoteRequestDto {
   sources!: RequestSource[];
 
   @ApiProperty({ format: 'uuid', isArray: true, type: String })
+  @Transform(lowerIds)
   @IsArray()
   @ArrayUnique()
   @IsUUID('all', { each: true })

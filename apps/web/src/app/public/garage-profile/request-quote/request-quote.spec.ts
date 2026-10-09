@@ -509,6 +509,23 @@ describe('the garage picker', () => {
     expect(send.mock.calls[1][0].body.garageIds).toEqual([GARAGE.id]);
   });
 
+  it('reads a refusal reason it does not know as the garage not taking requests', async () => {
+    await open();
+    send.mockRejectedValueOnce(
+      refusal(400, {
+        code: 'garage_cannot_receive',
+        garageId: GARAGE.id,
+        garageName: GARAGE.name,
+        reason: 'closed_for_holidays',
+        status: 400,
+      }),
+    );
+    type('Scârțâie la frânare');
+    await press();
+
+    expect(text()).toContain('Service Auto Militari nu primește cereri acum.');
+  });
+
   it('offers the way back to the search when the profile’s garage stopped taking requests', async () => {
     await open();
     send.mockRejectedValueOnce(
