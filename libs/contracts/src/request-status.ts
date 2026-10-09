@@ -82,6 +82,40 @@ export const REQUEST_CLOSED_REASONS = [
 ] as const;
 export type RequestClosedReason = (typeof REQUEST_CLOSED_REASONS)[number];
 
+// Why a garage's request closed for it, tried in this order; a close that
+// matches none reads as account_closed's "Request closed".
+export const GARAGE_CLOSE_REASONS = [
+  'expired',
+  'garage_suspended',
+  'cancelled',
+  'account_closed',
+  'accepted_elsewhere',
+] as const;
+export type GarageCloseReason = (typeof GARAGE_CLOSE_REASONS)[number];
+
+export const GARAGE_CLOSE_REASON_LABELS: Record<
+  'ro' | 'en',
+  Record<GarageCloseReason, string>
+> = {
+  en: {
+    accepted_elsewhere: 'The customer accepted another quote',
+    account_closed: 'Request closed',
+    cancelled: 'Request cancelled by the customer',
+    expired: 'Request expired',
+    garage_suspended: 'Garage suspended',
+  },
+  ro: {
+    accepted_elsewhere: 'Clientul a acceptat altă ofertă',
+    account_closed: 'Cerere închisă',
+    cancelled: 'Cerere anulată de client',
+    expired: 'Cerere expirată',
+    garage_suspended: 'Service suspendat',
+  },
+};
+
+export const GARAGE_REQUEST_FILTERS = ['waiting', 'closed'] as const;
+export type GarageRequestFilter = (typeof GARAGE_REQUEST_FILTERS)[number];
+
 export const REQUEST_SOURCES = [
   'search',
   'map',

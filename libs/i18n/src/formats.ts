@@ -273,3 +273,55 @@ export function relativeTime(
   }
   return JUST_NOW[language];
 }
+
+// Fixed for the same reason as the months: "joi" takes no stop.
+const WEEKDAYS_SHORT: Record<Language, readonly string[]> = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  ro: ['dum.', 'lun.', 'mar.', 'mie.', 'joi', 'vin.', 'sâm.'],
+};
+const YESTERDAY: Record<Language, string> = { en: 'yesterday', ro: 'ieri' };
+
+// Romanian puts "de" between a number from 20 on and its noun.
+const de = (count: number) => (count >= 20 ? 'de ' : '');
+
+const AGO: Record<
+  Language,
+  { minutes(count: number): string; hours(count: number): string }
+> = {
+  en: {
+    hours: (n) => `${n} ${n === 1 ? 'hour' : 'hours'} ago`,
+    minutes: (n) => `${n} min ago`,
+  },
+  ro: {
+    hours: (n) => `acum ${n} ${de(n)}${n === 1 ? 'oră' : 'ore'}`,
+    minutes: (n) => `acum ${n} ${de(n)}min`,
+  },
+};
+
+// A request's age on a garage's list: seconds, minutes and hours under a day;
+// then yesterday or the day itself, with the Bucharest time.
+export function requestAge(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const elapsed = now.getTime() - date.getTime();
+  if (elapsed < MINUTE) return JUST_NOW[language];
+  if (elapsed < 60 * MINUTE) {
+    return AGO[language].minutes(Math.floor(elapsed / MINUTE));
+  }
+  if (elapsed < 24 * 60 * MINUTE) {
+    return AGO[language].hours(Math.floor(elapsed / (60 * MINUTE)));
+  }
+  const day = bucharestDay(date);
+  const today = bucharestDay(now);
+  const start = Date.UTC(day.year, day.month - 1, day.day);
+  const time = clock.format(date);
+  if (Date.UTC(today.year, today.month - 1, today.day) - start === DAY_MS) {
+    return `${YESTERDAY[language]}, ${time}`;
+  }
+  const weekday = WEEKDAYS_SHORT[language][new Date(start).getUTCDay()];
+  return `${weekday}, ${day.day} ${MONTHS_SHORT[language][day.month - 1]}, ${time}`;
+}

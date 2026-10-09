@@ -1910,6 +1910,19 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "waiting",
+                "closed"
+              ]
+            }
           }
         ],
         "responses": {
@@ -6424,6 +6437,40 @@
           "booking"
         ]
       },
+      "GarageRequestJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          },
+          "offered": {
+            "type": "boolean",
+            "description": "The garage ticked this job for the request's car brand"
+          }
+        },
+        "required": [
+          "id",
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "position",
+          "offered"
+        ]
+      },
       "DriverNameDto": {
         "type": "object",
         "properties": {
@@ -6595,12 +6642,6 @@
           "car": {
             "$ref": "#/components/schemas/CarSnapshotDto"
           },
-          "jobs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RequestJobDto"
-            }
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6608,6 +6649,35 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageRequestJobDto"
+            }
+          },
+          "descriptionLine": {
+            "type": "string",
+            "description": "The description's first line",
+            "nullable": true
+          },
+          "closedReason": {
+            "type": "string",
+            "description": "Set on the rows of a closed read",
+            "enum": [
+              "expired",
+              "garage_suspended",
+              "cancelled",
+              "account_closed",
+              "accepted_elsewhere"
+            ],
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set with closedReason"
           },
           "driver": {
             "$ref": "#/components/schemas/DriverNameDto"
@@ -6629,9 +6699,12 @@
           "id",
           "status",
           "car",
-          "jobs",
           "createdAt",
           "expiresAt",
+          "jobs",
+          "descriptionLine",
+          "closedReason",
+          "closedAt",
           "driver",
           "recipient",
           "quote"
@@ -6864,12 +6937,6 @@
               "closed"
             ]
           },
-          "jobs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RequestJobDto"
-            }
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6877,6 +6944,35 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageRequestJobDto"
+            }
+          },
+          "descriptionLine": {
+            "type": "string",
+            "description": "The description's first line",
+            "nullable": true
+          },
+          "closedReason": {
+            "type": "string",
+            "description": "Set on the rows of a closed read",
+            "enum": [
+              "expired",
+              "garage_suspended",
+              "cancelled",
+              "account_closed",
+              "accepted_elsewhere"
+            ],
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set with closedReason"
           },
           "recipient": {
             "$ref": "#/components/schemas/GarageRecipientDto"
@@ -6913,9 +7009,12 @@
         "required": [
           "id",
           "status",
-          "jobs",
           "createdAt",
           "expiresAt",
+          "jobs",
+          "descriptionLine",
+          "closedReason",
+          "closedAt",
           "recipient",
           "quote",
           "driver",

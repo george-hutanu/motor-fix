@@ -49,7 +49,7 @@ describe('the garage inbox read', () => {
     const r = await inbox();
     const owner = garageActor(r.t.owner, r.t.garage.id);
 
-    const all = await service.list(owner, {});
+    const all = await service.inbox(owner, {});
 
     expect(ids(all)).toEqual([
       r.waiting.id,
@@ -71,7 +71,7 @@ describe('the garage inbox read', () => {
     const r = await inbox();
     const owner = garageActor(r.t.owner, r.t.garage.id);
 
-    const page = await service.list(owner, { status });
+    const page = await service.inbox(owner, { status });
 
     expect(ids(page)).toEqual(expected.map((key) => r[key].id));
     expect(page.total).toBe(expected.length);
@@ -83,6 +83,14 @@ describe('the garage inbox read', () => {
     const request = await prisma.quoteRequest.findUniqueOrThrow({
       include: { car: true, jobs: true },
       where: { id: r.waiting.id },
+    });
+    // A sent request carries its car's brand name, as sending snapshots it.
+    const brand = await prisma.brand.findUniqueOrThrow({
+      where: { id: request.car.brandId },
+    });
+    await prisma.quoteRequest.update({
+      data: { carBrand: brand.name },
+      where: { id: request.id },
     });
     const offered = await world.jobType('Plăcuțe frână', 'Brake pads');
     await prisma.requestJob.create({

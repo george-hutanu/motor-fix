@@ -4,7 +4,7 @@ import {
   OmitType,
   PickType,
 } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
+import { IsIn, IsOptional, IsUUID } from 'class-validator';
 
 import { FUELS } from './plate';
 import {
@@ -16,6 +16,10 @@ import {
   type CancelledBySide,
   DECLINE_REASON_CODES,
   type DeclineReasonCode,
+  GARAGE_CLOSE_REASONS,
+  GARAGE_REQUEST_FILTERS,
+  type GarageCloseReason,
+  type GarageRequestFilter,
   QUOTE_STATUSES,
   type QuoteStatus,
   RECIPIENT_STATUSES,
@@ -38,6 +42,17 @@ export class ListQueryDto {
   @IsOptional()
   @IsUUID()
   cursor?: string;
+}
+
+export class GarageRequestsQueryDto extends ListQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page',
+    enum: GARAGE_REQUEST_FILTERS,
+  })
+  @IsOptional()
+  @IsIn(GARAGE_REQUEST_FILTERS)
+  status?: GarageRequestFilter;
 }
 
 // The car as it was when the request was sent; never the plate.
@@ -79,6 +94,13 @@ export class RequestJobDto {
 
   @ApiProperty()
   position!: number;
+}
+
+export class GarageRequestJobDto extends RequestJobDto {
+  @ApiProperty({
+    description: "The garage ticked this job for the request's car brand",
+  })
+  offered!: boolean;
 }
 
 export class GarageRefDto {
@@ -323,10 +345,29 @@ export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
   'id',
   'status',
   'car',
-  'jobs',
   'createdAt',
   'expiresAt',
 ] as const) {
+  @ApiProperty({ type: [GarageRequestJobDto] })
+  jobs!: GarageRequestJobDto[];
+
+  @ApiProperty({
+    description: "The description's first line",
+    nullable: true,
+    type: String,
+  })
+  descriptionLine!: string | null;
+
+  @ApiProperty({
+    description: 'Set on the rows of a closed read',
+    enum: GARAGE_CLOSE_REASONS,
+    nullable: true,
+  })
+  closedReason!: GarageCloseReason | null;
+
+  @ApiProperty({ ...NULLABLE_TIME, description: 'Set with closedReason' })
+  closedAt!: string | null;
+
   @ApiProperty({ type: DriverNameDto })
   driver!: DriverNameDto;
 

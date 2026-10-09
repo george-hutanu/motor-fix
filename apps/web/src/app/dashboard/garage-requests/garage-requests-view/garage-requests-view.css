@@ -1,0 +1,30 @@
+:host {
+  display: block;
+  margin: var(--mf-space-4);
+  min-width: 0;
+}
+.end {
+  display: block;
+  height: 1px;
+}
+.closed-heading {
+  margin: 0;
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.closed {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+li[data-closed] {
+  color: var(--mf-text-secondary);
+}

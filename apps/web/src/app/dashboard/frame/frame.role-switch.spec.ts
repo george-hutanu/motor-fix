@@ -5,6 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
 import {
   AdminService,
+  GarageRequestsService,
   type MeDto,
   NotificationsService,
 } from '@motor-fix/data-access';
@@ -60,6 +61,7 @@ async function render(
     on: () => NEVER,
     open: jest.fn(),
     resync: new Subject<void>(),
+    state: signal('open'),
   };
   const session = {
     current,
@@ -87,6 +89,16 @@ async function render(
         provide: AdminService,
         useValue: {
           adminOverviewControllerOverview: async () => ({ garagesWaiting: 0 }),
+        },
+      },
+      {
+        provide: GarageRequestsService,
+        useValue: {
+          garageRequestsControllerList: async () => ({
+            items: [],
+            nextCursor: null,
+            total: 0,
+          }),
         },
       },
       {
