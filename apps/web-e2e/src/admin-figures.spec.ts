@@ -42,7 +42,7 @@ test.describe('the admin figures by period and city @seeded', () => {
   }) => {
     await page.setViewportSize({ height: 800, width: 1280 });
     await signInAsAdmin(page);
-    await expect(line(page)).toHaveText(/^\s*MotorFix · Toată țara ·/);
+    await expect(line(page)).toHaveText(/^\s*MotorFix · Toată țara\s+·/);
 
     await page.getByRole('radio', { name: 'Ultimele 7 zile' }).check();
     await page
@@ -112,7 +112,7 @@ test.describe('the admin figures by period and city @seeded', () => {
     await page.goto('/app/admin?city=timisoara&period=30d');
 
     await expect(page).toHaveURL('/app/admin?period=30d');
-    await expect(line(page)).toHaveText(/^\s*MotorFix · Toată țara ·/);
+    await expect(line(page)).toHaveText(/^\s*MotorFix · Toată țara\s+·/);
     await expect(
       page.getByRole('radio', { name: 'Ultimele 30 de zile' }),
     ).toBeChecked();
@@ -124,7 +124,7 @@ test.describe('the admin figures by period and city @seeded', () => {
     await inEnglish(page);
     await page.goto('/app/admin?city=bucuresti&period=7d');
 
-    await expect(line(page)).toHaveText(/^\s*MotorFix · Bucharest ·/);
+    await expect(line(page)).toHaveText(/^\s*MotorFix · Bucharest\s+·/);
     await expect(
       page.getByRole('radio', { name: 'Last 7 days' }),
     ).toBeChecked();
