@@ -19,9 +19,11 @@ import {
   phoneConfig,
   placesConfig,
   pushConfig,
+  QuotesModule,
   SearchModule,
   StorageModule,
   verificationConfig,
+  WorkshopModule,
 } from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
 
@@ -75,6 +77,8 @@ export class AppModule {
         CarsModule,
         CatalogueModule,
         SearchModule,
+        QuotesModule,
+        WorkshopModule,
         PlacesModule.register(placesConfig(env.APP_ENV, process.env)),
         garages,
         ListingPhotosModule.register({ redisUrl: env.REDIS_URL }, garages),
