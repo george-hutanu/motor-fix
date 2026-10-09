@@ -315,6 +315,9 @@ test.describe('on a phone', () => {
     await bar(page).click();
     await entry(page, 'Fotografii și adresă').click();
     await expect(sections(page).nth(4)).toBeFocused();
+    // The focus lands before the smooth scroll starts; two equal reads at the
+    // top would end still() early.
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
     const y = await still(page);
     const below = async () =>
       (await sections(page).nth(4).boundingBox())!.y >=
