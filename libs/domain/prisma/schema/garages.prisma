@@ -74,6 +74,10 @@ model Garage {
   seatAddress                String?                  @map("seat_address") @db.VarChar(200)
   latitude                   Float?
   longitude                  Float?
+  // The town of the address or seat, for the admin's figures by city; admin
+  // only, as the seat is. CHECKs in the migration: a slug key, both or neither.
+  cityKey                    String?                  @map("city_key") @db.VarChar(80)
+  cityName                   String?                  @map("city_name") @db.VarChar(80)
   serviceRadiusKm            Int?                     @map("service_radius_km") @db.SmallInt
   photos                     GaragePhoto[]
   // The payment methods step 5 ticks; at least one is the step's rule, not
@@ -86,6 +90,7 @@ model Garage {
   courtesyCarPaid            Boolean                  @default(false) @map("courtesy_car_paid")
   courtesyCarPricePerDayBani Int?                     @map("courtesy_car_price_per_day_bani")
 
+  @@index([cityKey])
   @@map("garage")
 }
 

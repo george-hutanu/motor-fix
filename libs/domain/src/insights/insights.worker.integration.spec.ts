@@ -52,6 +52,7 @@ describe('the daily snapshot', () => {
     expect(await prisma.platformDaily.findMany()).toEqual([
       {
         activeDrivers: 0,
+        city: 'all',
         day: new Date('2026-11-10'),
         garagesApprovedThisMonth: 1,
         garagesListed: 1,

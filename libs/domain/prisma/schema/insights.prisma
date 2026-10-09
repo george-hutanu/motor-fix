@@ -1,13 +1,17 @@
 // insights module models
 
 // The platform figures as they stood on one Europe/Bucharest day, written by
-// the night job; the month's first row is the start of its deltas.
+// the night job for the whole country (`all`) and for each city with a listed
+// garage; the month's first row is the start of its deltas. Only the `all`
+// row counts active drivers.
 model PlatformDaily {
-  day                      DateTime @id @db.Date
+  day                      DateTime @db.Date
+  city                     String   @default("all") @db.VarChar(80)
   garagesListed            Int      @map("garages_listed")
   garagesApprovedThisMonth Int      @map("garages_approved_this_month")
-  activeDrivers            Int      @map("active_drivers")
+  activeDrivers            Int?     @map("active_drivers")
   writtenAt                DateTime @map("written_at") @db.Timestamptz(3)
 
+  @@id([day, city])
   @@map("platform_daily")
 }

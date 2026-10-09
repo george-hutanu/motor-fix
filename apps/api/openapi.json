@@ -1719,7 +1719,37 @@
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "city",
+            "required": false,
+            "in": "query",
+            "description": "A key from the overview's cities, or all",
+            "schema": {
+              "maxLength": 80,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "default": "all",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "default",
+              "type": "string",
+              "enum": [
+                "default",
+                "today",
+                "7d",
+                "30d",
+                "month",
+                "12m"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1730,6 +1760,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "validation_failed: an unknown city or period"
           },
           "404": {
             "description": "not_found: not an admin"
@@ -1748,7 +1781,20 @@
     "/api/v1/admin/growth": {
       "get": {
         "operationId": "AdminOverviewController_growth",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "city",
+            "required": false,
+            "in": "query",
+            "description": "A key from the overview's cities, or all",
+            "schema": {
+              "maxLength": 80,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "default": "all",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1759,6 +1805,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "validation_failed: an unknown city"
           },
           "404": {
             "description": "not_found: not an admin"
@@ -4898,6 +4947,12 @@
           "lng": {
             "type": "number",
             "example": 26.1207
+          },
+          "locality": {
+            "type": "string",
+            "description": "The town or city, when the provider knows it",
+            "example": "București",
+            "maxLength": 80
           }
         },
         "required": [
@@ -4921,12 +4976,41 @@
           "items"
         ]
       },
+      "AdminCityDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "cluj-napoca",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cluj-Napoca"
+          },
+          "garages": {
+            "type": "integer",
+            "description": "Garages approved and listed now in the city",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "garages"
+        ]
+      },
       "AdminOverviewDto": {
         "type": "object",
         "properties": {
           "garagesWaiting": {
             "type": "integer",
-            "description": "Verification files submitted or in review",
+            "description": "Verification files submitted or in review, on the whole platform",
+            "minimum": 0
+          },
+          "cityGaragesWaiting": {
+            "type": "integer",
+            "description": "Verification files submitted or in review of garages in the chosen city; only with a city",
             "minimum": 0
           },
           "garagesListed": {
@@ -4948,13 +5032,31 @@
             "type": "integer",
             "description": "Active drivers on the 1st of the current month, absent when that night was not recorded",
             "minimum": 0
+          },
+          "garagesApprovedInPeriod": {
+            "type": "integer",
+            "description": "Listed garages first approved in the chosen period; only with a period",
+            "minimum": 0
+          },
+          "activeDriversPeriodStart": {
+            "type": "integer",
+            "description": "Active drivers on the first day of the chosen period, absent for today, a city or a night not recorded",
+            "minimum": 0
+          },
+          "cities": {
+            "description": "The whole country first, then every city with a listed garage, most garages first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCityDto"
+            }
           }
         },
         "required": [
           "garagesWaiting",
           "garagesListed",
           "garagesApprovedThisMonth",
-          "activeDrivers"
+          "activeDrivers",
+          "cities"
         ]
       },
       "AdminGrowthMonthDto": {
