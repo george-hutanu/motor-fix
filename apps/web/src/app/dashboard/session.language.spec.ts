@@ -10,6 +10,7 @@ function account(language: 'ro' | 'en'): MeDto {
     city: null,
     email: 'andrei@example.ro',
     emailConfirmed: true,
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing: '/app/driver',

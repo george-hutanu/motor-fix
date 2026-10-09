@@ -36,6 +36,7 @@ const me = (role: Role, roles: Role[]) =>
   ({
     capabilities: [],
     email: null,
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing: LANDING[role],

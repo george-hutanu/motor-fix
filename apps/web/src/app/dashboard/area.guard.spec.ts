@@ -20,6 +20,7 @@ function me(landing: string): MeDto {
   return {
     capabilities: [],
     email: null,
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing,

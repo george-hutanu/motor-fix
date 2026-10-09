@@ -43,6 +43,7 @@ model JobType {
   // The garage that proposed it while listing; null for the shipped jobs.
   proposedByGarageId String?       @map("proposed_by_garage_id") @db.Uuid
   proposedBy         Garage?       @relation(fields: [proposedByGarageId], references: [id], onDelete: SetNull)
+  requestJobs        RequestJob[]
 
   @@index([proposedByGarageId])
   @@map("job_type")

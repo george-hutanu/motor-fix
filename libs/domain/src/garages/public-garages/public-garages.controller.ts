@@ -1,5 +1,5 @@
-import { PublicGarageDto } from '@motor-fix/contracts';
-import { Controller, Get, Param } from '@nestjs/common';
+import { PublicGarageDto, PublicGarageQueryDto } from '@motor-fix/contracts';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiGoneResponse,
   ApiNotFoundResponse,
@@ -20,7 +20,10 @@ export class PublicGaragesController {
   @ApiOkResponse({ type: PublicGarageDto })
   @ApiNotFoundResponse({ description: 'not_found: never approved, or unknown' })
   @ApiGoneResponse({ description: 'gone: suspended' })
-  bySlug(@Param('slug') slug: string): Promise<PublicGarageDto> {
-    return this.garages.bySlug(slug);
+  bySlug(
+    @Param('slug') slug: string,
+    @Query() query: PublicGarageQueryDto,
+  ): Promise<PublicGarageDto> {
+    return this.garages.bySlug(slug, query.brand);
   }
 }

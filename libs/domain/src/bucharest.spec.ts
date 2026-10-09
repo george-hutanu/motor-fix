@@ -1,4 +1,4 @@
-import { atLocal, localDay, monthStart } from './bucharest';
+import { addLocalDays, atLocal, localDay, monthStart } from './bucharest';
 
 describe('monthStart', () => {
   it.each([
@@ -18,5 +18,41 @@ describe('monthStart', () => {
     expect(atLocal(monthStart(localDay(now)), 0)).toEqual(
       new Date('2026-10-31T22:00:00Z'),
     );
+  });
+});
+
+// @traces 220-FR-001
+describe('addLocalDays', () => {
+  it('keeps the Bucharest wall clock across the autumn clock change', () => {
+    // 21 October, 10:15:30.250 in Bucharest (UTC+3).
+    const sent = new Date('2026-10-21T07:15:30.250Z');
+
+    const expires = addLocalDays(sent, 7);
+
+    // 28 October, 10:15:30.250 in Bucharest (UTC+2): 169 hours later.
+    expect(expires).toEqual(new Date('2026-10-28T08:15:30.250Z'));
+    expect(expires.getTime() - sent.getTime()).toBe(169 * 3_600_000);
+  });
+
+  it('keeps the Bucharest wall clock across the spring clock change', () => {
+    const sent = new Date('2026-03-25T21:59:00.000Z');
+
+    const expires = addLocalDays(sent, 7);
+
+    expect(expires).toEqual(new Date('2026-04-01T20:59:00.000Z'));
+    expect(expires.getTime() - sent.getTime()).toBe(167 * 3_600_000);
+  });
+
+  it('moves across a month and a year end on the same local day count', () => {
+    const sent = new Date('2026-12-28T22:30:00.000Z');
+
+    expect(localDay(addLocalDays(sent, 7))).toBe('2027-01-05');
+    expect(addLocalDays(sent, 7)).toEqual(new Date('2027-01-04T22:30:00.000Z'));
+  });
+
+  it('adds whole days of 24 hours when no clock change lies between', () => {
+    const sent = new Date('2026-11-10T09:00:00.000Z');
+
+    expect(addLocalDays(sent, 2)).toEqual(new Date('2026-11-12T09:00:00.000Z'));
   });
 });

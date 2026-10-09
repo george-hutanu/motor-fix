@@ -1,7 +1,36 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Allow, IsOptional } from 'class-validator';
 
-import { GarageBrandAnswerDto, PublicBrandDto } from './garage-brands.dto';
+import {
+  BrandRefDto,
+  GarageBrandAnswerDto,
+  PublicBrandDto,
+} from './garage-brands.dto';
 import { CourtesyCarDto, PaymentMethodsDto } from './garage-settings.dto';
+import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
+
+const STANCES = ['works_on', 'does_not_take'] as const;
+
+// The brand a visitor came for, and whether the garage takes it.
+export class PublicGarageBrandDto extends BrandRefDto {
+  @ApiProperty({
+    description: 'does_not_take also when the garage never named the brand',
+    enum: STANCES,
+  })
+  stance!: (typeof STANCES)[number];
+}
+
+// Any brand value is accepted: one that names no catalogue brand reads as
+// none, so a shared link never fails.
+export class PublicGarageQueryDto {
+  @ApiPropertyOptional({
+    description: "A catalogue brand's slug; anything else reads as none",
+    example: 'dacia',
+  })
+  @IsOptional()
+  @Allow()
+  brand?: string;
+}
 
 // A garage as anyone may read it: only an approved one is ever returned.
 export class PublicGarageDto extends GarageBrandAnswerDto {
@@ -29,6 +58,40 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     minimum: 1,
   })
   serviceRadiusKm?: number;
+
+  @ApiPropertyOptional({ enum: BUSINESS_KINDS })
+  businessKind?: BusinessKind;
+
+  @ApiPropertyOptional({
+    description: 'The line the garage wrote about itself, as written',
+    maxLength: 160,
+  })
+  description?: string;
+
+  @ApiProperty({
+    description: 'When MotorFix last verified the garage',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  verifiedAt!: string | null;
+
+  @ApiProperty({
+    description: 'Out of 5, one decimal; null until reviews exist',
+    format: 'double',
+    nullable: true,
+    type: Number,
+  })
+  rating!: number | null;
+
+  @ApiProperty({ minimum: 0 })
+  reviewCount!: number;
+
+  @ApiPropertyOptional({
+    description: 'Only when the read named a catalogue brand',
+    type: PublicGarageBrandDto,
+  })
+  brand?: PublicGarageBrandDto;
 
   @ApiProperty({ type: [PublicBrandDto] })
   declare worksOn: PublicBrandDto[];

@@ -1,0 +1,111 @@
+@if (unknown()) {
+  <mf-gone missing />
+} @else if (removed()) {
+  <mf-gone />
+} @else if (garage(); as garage) {
+  @if (garage.brand; as brand) {
+    <a
+      class="back"
+      [routerLink]="['/', i18n.language(), 'garages']"
+      [queryParams]="{ brand: brand.slug }"
+    >
+      <span aria-hidden="true">‹</span>
+      {{ 'public.garageProfile.backBrand' | t: { brand: brand.name } }}
+    </a>
+  } @else {
+    <a class="back" [routerLink]="['/', i18n.language()]">
+      <span aria-hidden="true">‹</span>
+      {{ 'public.garageProfile.backHome' | t }}
+    </a>
+  }
+  <header class="head">
+    <div class="text">
+      <div class="chips">
+        @if (garage.brand; as brand) {
+          @let stance =
+            (brand.stance === 'works_on'
+              ? 'public.garageProfile.works'
+              : 'public.garageProfile.refuses'
+            ) | t: { brand: brand.name };
+          <mf-lamp
+            class="chip"
+            [state]="brand.stance === 'works_on' ? 'green' : 'red'"
+            [label]="stance"
+            [mfLiveChange]="brand.stance"
+            [mfLiveChangeSay]="stance"
+          />
+        }
+        <span class="chip badge">
+          <span class="check" aria-hidden="true">✓</span>
+          {{ 'public.garageProfile.badge' | t }}
+        </span>
+      </div>
+      <h1>{{ garage.name }}</h1>
+      @if (garage.businessKind === 'mobile' && garage.serviceRadiusKm) {
+        <p class="place">
+          {{
+            'public.garageProfile.mobileArea'
+              | t: { km: (garage.serviceRadiusKm | km) }
+          }}
+        </p>
+      }
+      @if (garage.description) {
+        <p class="description">{{ garage.description }}</p>
+      }
+      @if (garage.verifiedAt) {
+        <p class="verified">
+          <svg class="shield" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.3-7.5 9.5-4.3-1.2-7.5-4.9-7.5-9.5V6z" /><path d="M8.5 12l2.5 2.5 4.5-5" /></svg>
+          {{
+            'public.garageProfile.verified'
+              | t: { date: (garage.verifiedAt | day) }
+          }}
+        </p>
+      }
+    </div>
+    <div
+      class="dial"
+      [mfLiveChange]="garage.rating"
+      [mfLiveChangeSay]="ratingSaid()"
+    >
+      <mf-rating-dial size="large" [value]="garage.rating" />
+      <div class="reviews">
+        @if (garage.reviewCount > 0) {
+          {{ 'public.garageProfile.reviews' | t: { count: garage.reviewCount } }}
+        } @else {
+          {{ 'shell.gauge.none' | t }}
+        }
+      </div>
+    </div>
+  </header>
+  <div class="sections">
+    <section data-slot="photos"></section>
+    <section data-slot="brands"></section>
+    <section data-slot="mechanics"></section>
+    <section data-slot="prices"></section>
+    <section data-slot="reviews"></section>
+    <section data-slot="where"></section>
+  </div>
+} @else if (profile.error()) {
+  <div class="failed" role="alert">
+    <p>{{ 'public.garageProfile.failed' | t }}</p>
+    <button
+      type="button"
+      class="spartan-button spartan-button-variant-default"
+      (click)="profile.reload()"
+    >
+      {{ 'public.garageProfile.retry' | t }}
+    </button>
+  </div>
+} @else {
+  <div
+    class="loading"
+    role="status"
+    aria-busy="true"
+    [attr.aria-label]="'public.garageProfile.loading' | t"
+  >
+    <span class="skeleton line short"></span>
+    <span class="skeleton line title"></span>
+    <span class="skeleton line"></span>
+    <span class="skeleton dial-shape"></span>
+  </div>
+}

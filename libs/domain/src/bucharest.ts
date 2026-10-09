@@ -55,3 +55,11 @@ export function atLocal(day: string, hour: number): Date {
 }
 
 export const monthStart = (day: string) => `${day.slice(0, 8)}01`;
+
+// `at` plus `n` calendar days at the same Bucharest wall-clock time, so a
+// week that spans a clock change is 167 or 169 hours long.
+export function addLocalDays(at: Date, n: number): Date {
+  const offset = (ms: number) => local(new Date(ms)).offsetMinutes * 60_000;
+  const wall = at.getTime() + offset(at.getTime()) + n * DAY;
+  return new Date(wall - offset(wall - offset(wall)));
+}

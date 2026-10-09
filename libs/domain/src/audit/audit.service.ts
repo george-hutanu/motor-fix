@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
-import type { AuditChange, AuditEntry, AuditPort } from './audit.port';
+import {
+  type AuditChange,
+  type AuditEntry,
+  type AuditPort,
+  recordedRole,
+} from './audit.port';
 import { Prisma } from '../generated/prisma/client';
 
 // The changes a driver's short history shows: price, time, stage, mechanic.
@@ -12,6 +17,7 @@ const KEY_CHANGES = new Set([
   'job.eta_at',
   'booking.starts_at',
   'booking.mechanic_id',
+  'booking.cancel_reason',
 ]);
 
 // JSON with object keys sorted, so equal content compares equal whatever the key order.
@@ -40,7 +46,7 @@ export class AuditService implements AuditPort {
         action: entry.action,
         actorId: entry.actorId,
         actorName: await this.actorName(tx, entry),
-        actorRole: entry.actorRole === 'garage' ? 'owner' : entry.actorRole,
+        actorRole: recordedRole(entry.actorRole),
         assistantGrantId: entry.assistantGrantId,
         carId: entry.carId,
         field: entry.field,

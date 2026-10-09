@@ -12,7 +12,7 @@ import {
   type MeDto,
   PlacesService,
 } from '@motor-fix/data-access';
-import { I18n } from '@motor-fix/i18n';
+import { I18n, LanguageChoice } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -213,19 +213,16 @@ describe('Home', () => {
     expect(text()).toContain('PostgreSQL: necunoscut · Redis: necunoscut');
   });
 
-  it('has the language switch in its header, and EN turns the page English', async () => {
+  // The switch itself is the site bar's, in the public frame.
+  it('turns the page English when English is picked', async () => {
     await render();
 
-    const en = [
-      ...page().querySelectorAll('header [role="group"] button'),
-    ].find((b) => b.textContent?.trim() === 'EN') as HTMLButtonElement;
-    en.click();
+    await TestBed.inject(LanguageChoice).pick('en');
     await new Promise((resolve) => setTimeout(resolve));
     await settle();
 
     expect(text()).toContain('version unknown');
     expect(text()).toContain('PostgreSQL: unknown · Redis: unknown');
-    expect(en.getAttribute('aria-pressed')).toBe('true');
   });
 });
 

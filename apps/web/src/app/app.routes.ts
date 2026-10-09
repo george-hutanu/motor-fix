@@ -15,10 +15,13 @@ import { dashboardRoutes } from './dashboard/views';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
 import { signedInToDashboard } from './public/account.guard';
-import { PublicFrame } from './public/frame/frame';
 import { Placeholder } from './public/placeholder/placeholder';
 
 const frame = () => import('./dashboard/frame/frame').then((m) => m.Frame);
+// On demand, like every other page: the site bar keeps it out of the first
+// download's budget.
+const publicFrame = () =>
+  import('./public/frame/frame').then((m) => m.PublicFrame);
 
 const placeholder = (path: string, title: string) => ({
   component: Placeholder,
@@ -33,8 +36,8 @@ export const routes: Routes = [
   {
     canMatch: [toLanguageAddress, publicTexts],
     children: [{ component: Home, path: '' }],
-    component: PublicFrame,
     data: { tabBar: false },
+    loadComponent: publicFrame,
     path: '',
     pathMatch: 'full',
   },
@@ -78,7 +81,13 @@ export const routes: Routes = [
         path: 'sign-in/return',
       },
       placeholder('garages', 'public.placeholder.garages'),
-      placeholder('garages/:garage', 'public.placeholder.garages'),
+      {
+        loadComponent: () =>
+          import('./public/garage-profile/garage-profile').then(
+            (m) => m.GarageProfile,
+          ),
+        path: 'garages/:garage',
+      },
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
       {
         loadComponent: () =>
@@ -116,7 +125,7 @@ export const routes: Routes = [
         canActivate: [signedInToDashboard],
       },
     ],
-    component: PublicFrame,
+    loadComponent: publicFrame,
     path: ':lang',
   },
   { component: NotFound, path: '**' },

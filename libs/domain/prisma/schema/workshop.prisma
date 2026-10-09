@@ -1,0 +1,73 @@
+// workshop module models: the work on a confirmed booking. Only the workshop
+// module writes them; the moves between stages are in
+// src/workshop/transitions.ts.
+
+enum JobStatus {
+  to_do
+  in_work
+  paused
+  done
+  cancelled
+
+  @@map("job_status")
+}
+
+model Job {
+  id             String          @id @default(uuid()) @db.Uuid
+  bookingId      String          @unique @map("booking_id") @db.Uuid
+  garageId       String          @map("garage_id") @db.Uuid
+  carId          String          @map("car_id") @db.Uuid
+  driverId       String          @map("driver_id") @db.Uuid
+  mechanicId     String?         @map("mechanic_id") @db.Uuid
+  status         JobStatus       @default(to_do)
+  startedAt      DateTime?       @map("started_at") @db.Timestamptz(3)
+  pausedAt       DateTime?       @map("paused_at") @db.Timestamptz(3)
+  finishedAt     DateTime?       @map("finished_at") @db.Timestamptz(3)
+  handedOverAt   DateTime?       @map("handed_over_at") @db.Timestamptz(3)
+  etaAt          DateTime?       @map("eta_at") @db.Timestamptz(3)
+  finalPriceBani Int?            @map("final_price_bani")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  booking        Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  garage         Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  car            Car             @relation(fields: [carId], references: [id], onDelete: NoAction)
+  driver         Account         @relation("JobDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  mechanic       Mechanic?       @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+  steps          JobStep[]
+  stages         JobStageEntry[]
+
+  @@index([garageId, createdAt(sort: Desc)])
+  @@index([mechanicId])
+  @@map("job")
+}
+
+model JobStep {
+  id            String    @id @default(uuid()) @db.Uuid
+  jobId         String    @map("job_id") @db.Uuid
+  position      Int
+  label         String
+  // The words the driver sees, when they differ from the garage's own.
+  customerLabel String?   @map("customer_label")
+  doneAt        DateTime? @map("done_at") @db.Timestamptz(3)
+  job           Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, position])
+  @@map("job_step")
+}
+
+// When each stage began and who moved it: the tracker's history.
+model JobStageEntry {
+  id         String         @id @default(uuid()) @db.Uuid
+  jobId      String         @map("job_id") @db.Uuid
+  fromStatus JobStatus?     @map("from_status")
+  toStatus   JobStatus      @map("to_status")
+  actorId    String?        @map("actor_id") @db.Uuid
+  actorRole  AuditActorRole @map("actor_role")
+  // The garage's own words for the driver.
+  text       String?
+  at         DateTime       @default(now()) @db.Timestamptz(3)
+  job        Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  actor      Account?       @relation("JobStageActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, at])
+  @@map("job_stage_entry")
+}

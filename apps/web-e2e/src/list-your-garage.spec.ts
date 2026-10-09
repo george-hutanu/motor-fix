@@ -36,6 +36,25 @@ async function still(page: Page) {
   return y;
 }
 
+// The site bar stays on top of every public page; nothing of the form's may
+// slide under it, so the element's middle is the element's own.
+async function uncovered(page: Page, selector: string) {
+  return page.locator(selector).evaluate((el) => {
+    const site = document.querySelector('mf-public-frame > header');
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(
+      r.left + r.width / 2,
+      r.top + Math.min(r.height, 44) / 2,
+    );
+    return (
+      site !== null &&
+      r.top >= site.getBoundingClientRect().bottom - 1 &&
+      hit !== null &&
+      el.contains(hit)
+    );
+  });
+}
+
 async function scrollTo(page: Page, n: number) {
   await sections(page)
     .nth(n - 1)
@@ -88,6 +107,18 @@ test.describe('the list your garage page', () => {
 
 test.describe('on a desktop', () => {
   test.use({ viewport: { height: 720, width: 1280 } });
+
+  test('keeps the step list and the preview under the site bar while the page scrolls', async ({
+    page,
+  }) => {
+    await open(page, '/ro/list-your-garage');
+    await fill(page);
+
+    await scrollTo(page, 3);
+    await still(page);
+    expect(await uncovered(page, 'nav[aria-label="Pași"]')).toBe(true);
+    expect(await uncovered(page, 'aside mf-garage-preview')).toBe(true);
+  });
 
   test('starts at step 1, keeps the list in view and follows the section on screen', async ({
     page,
@@ -205,6 +236,17 @@ test.describe('on a phone', () => {
     await scrollTo(page, 3);
     await expect(bar(page)).toHaveText('3 / 6 · Prețuri');
     await expect(bar(page)).toBeInViewport();
+  });
+
+  test('keeps the step bar under the site bar while the page scrolls', async ({
+    page,
+  }) => {
+    await open(page, '/ro/list-your-garage');
+    await fill(page);
+
+    await scrollTo(page, 3);
+    await still(page);
+    expect(await uncovered(page, 'nav > button[aria-expanded]')).toBe(true);
   });
 
   test('opens the list, jumps to step 5 and closes', async ({ page }) => {

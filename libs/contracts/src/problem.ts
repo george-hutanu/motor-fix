@@ -13,6 +13,12 @@ export interface Problem {
   retryAfterSeconds?: number;
   title?: string;
   type?: string;
+  // A refused move (`invalid_transition`): what was moved, the status it is
+  // in, the status asked for, or the one-of rule a write would break.
+  entity?: string;
+  currentStatus?: string;
+  to?: string;
+  rule?: string;
 }
 
 export interface FieldProblem {

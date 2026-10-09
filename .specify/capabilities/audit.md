@@ -6,6 +6,7 @@ features:
   - 391-audit-history-api
   - 164-admin-audit-log
   - 365-mcp-oauth
+  - 220-requests-quotes-bookings
 ---
 
 # Capability: Audit history
@@ -46,9 +47,9 @@ _From 390-audit-history._
 
 _From 390-audit-history._
 
-### 390-FR-009 — Each entry MUST carry `is_key_change` and `internal` flags. `internal` is given by the caller. `is_key_change` is decided by the writer alone, from `subject_type.field`: `quote.from_bani`, `quote.to_bani` (a quote's range), `job.final_price_bani` (the final price and its correction), `booking.starts_at` (the start, and a move), `job.eta_at` (the estimated finish), `job.status` (the stage), `booking.mechanic_id` (a change of mechanic). A cancellation is added when its column is named.
+### 220-FR-018 — (Replaces 390-FR-009.) Each audit entry MUST carry `is_key_change` and `internal` flags. `internal` is given by the caller. `is_key_change` is decided by the writer alone, from `subject_type.field`: `quote.from_bani`, `quote.to_bani` (a quote's range), `job.final_price_bani` (the final price and its correction), `booking.starts_at` (the start, and a move), `job.eta_at` (the estimated finish), `job.status` (the stage), `booking.mechanic_id` (a change of mechanic), and `booking.cancel_reason` (a cancellation, set once when a booking is cancelled).
 
-_From 390-audit-history._
+_From 220-requests-quotes-bookings._
 
 ### 390-FR-010 — Each entry MAY carry a kind and a text (an optional reason or note); display text is not stored.
 
@@ -157,3 +158,7 @@ _From 164-admin-audit-log._
 ### 365-FR-011 — Each tool call MUST carry one request id on the actor, and the audit writer MUST store it in a new optional `request_id` column of the activity log next to `via_assistant` and `assistant_grant_id`. (D11; brief Request id)
 
 _From 365-mcp-oauth._
+
+## Retired
+
+- `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
