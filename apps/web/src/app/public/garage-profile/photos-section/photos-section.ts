@@ -16,7 +16,7 @@ import {
   PhotoViewer,
   type ViewerLabels,
   type ViewerPhoto,
-} from '@motor-fix/ui-cockpit';
+} from '@motor-fix/ui-cockpit/photo-viewer';
 
 // The garage's photos on its profile: the first one large, the rest as tiles,
 // each opening the full-screen view. A photo whose address has expired is read
@@ -31,6 +31,9 @@ import {
 })
 export class PhotosSection {
   readonly garage = input.required<PublicGarageDto>();
+  // How many reads the host has made: a re-read equal to the last one keeps
+  // the same garage object, and only this says it has come back.
+  readonly reads = input(0);
   readonly reread = output();
 
   private readonly i18n = inject(I18n);
@@ -63,13 +66,13 @@ export class PhotosSection {
   // will come.
   private readonly retried = new Map<string, string>();
   private readonly failed = linkedSignal({
-    computation: ({ photos }) =>
+    computation: ({ garage: { photos } }) =>
       new Set(
         photos
           .filter((photo) => this.retried.get(photo.id) === photo.displayUrl)
           .map((photo) => photo.id),
       ),
-    source: this.garage,
+    source: () => ({ garage: this.garage(), reads: this.reads() }),
   });
 
   protected readonly photos = computed<ViewerPhoto[]>(() => {

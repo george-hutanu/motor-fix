@@ -40,11 +40,13 @@ const GARAGE: PublicGarageDto = {
     data-slot="photos"
     mf-photos-section
     [garage]="garage()"
+    [reads]="reads()"
     (reread)="rereads = rereads + 1"
   ></section>`,
 })
 class Host {
   readonly garage = signal(GARAGE);
+  readonly reads = signal(1);
   rereads = 0;
 }
 
@@ -263,6 +265,24 @@ describe('the photos section kept live', () => {
     ).toBe(
       'Fotografie 2 din 3 · Atelier Dinamo · Fotografia nu s‑a putut încărca',
     );
+    await closeView();
+  });
+
+  it('shows the placeholder when the re-read returns the very same profile', async () => {
+    tiles()[1].click();
+    await settle();
+    viewImage()?.dispatchEvent(new Event('error'));
+    await settle();
+
+    fixture.componentInstance.reads.update((n) => n + 1);
+    await settle();
+
+    expect(fixture.componentInstance.rereads).toBe(1);
+    expect(
+      view()
+        ?.querySelector('[data-slot="viewer-stage"]')
+        ?.getAttribute('data-failed'),
+    ).toBe('true');
     await closeView();
   });
 

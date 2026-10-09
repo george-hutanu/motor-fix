@@ -79,7 +79,7 @@
     </div>
   </header>
   <div class="sections">
-    <section data-slot="photos" mf-photos-section [garage]="garage" (reread)="profile.reload()"></section>
+    <section data-slot="photos" mf-photos-section [garage]="garage" [reads]="profile.reads()" (reread)="profile.reload()"></section>
     <section data-slot="brands"></section>
     <section data-slot="mechanics"></section>
     <section data-slot="prices"></section>
