@@ -309,7 +309,9 @@ export function planMerge(repo, feature) {
       // The replacement takes the base's place in the document, so the reading
       // order of a capability stays the order its behaviour was built in.
       const pattern = new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^### )[\\s\\S])*`, "m");
-      text = text.replace(pattern, renderRequirement(token, declared.get(by) ?? "", feature) + "\n");
+      // A function, so a `$` pattern in the requirement text is written as is.
+      const replacement = `${renderRequirement(token, declared.get(by) ?? "", feature)}\n`;
+      text = text.replace(pattern, () => replacement);
       modified.push({ base, token });
     }
 
