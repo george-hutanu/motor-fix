@@ -10,7 +10,6 @@ import type { ListingDraftData } from '@motor-fix/contracts';
 import {
   CERTIFICATE_WINDOW_DAYS,
   DECLARED_NAME_MAX,
-  DECLARED_NAME_MIN,
   DOCUMENT_KINDS,
   type DocumentKind,
   type DraftDocuments,
@@ -94,8 +93,7 @@ export class DocumentsStep {
     this.typedName.set(value);
     const name = value.trim();
     const { declaredByName: _, ...rest } = this.declaration();
-    const whole =
-      name.length >= DECLARED_NAME_MIN && name.length <= DECLARED_NAME_MAX;
+    const whole = nameError(name, true, true) === null;
     this.declaration.set(whole ? { ...rest, declaredByName: name } : rest);
   }
 

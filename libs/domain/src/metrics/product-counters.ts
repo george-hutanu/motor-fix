@@ -16,7 +16,7 @@ export type JobStepAction =
   | 'removed'
   | 'ticked'
   | 'unticked';
-export type RequestReceivedOutcome = 'built' | 'muted' | 'skipped';
+type RequestReceivedOutcome = 'built' | 'muted' | 'skipped';
 
 // Looked up on every count, never cached: a counter kept from before the
 // meter provider is registered would stay a no-op for the life of the
