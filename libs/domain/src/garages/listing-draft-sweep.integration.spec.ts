@@ -141,6 +141,35 @@ describe('the clean-up', () => {
     ).resolves.toBe(0);
   });
 
+  // @traces 206-FR-011
+  it('deletes the document pages with the files, and never those of a sent draft', async () => {
+    const old = await draft(daysAgo(90), {
+      data: {
+        documents: {
+          onrc_certificate: { issuedOn: '2026-06-01', pages: ['legal/c1'] },
+          rar_authorisation: { pages: ['legal/r1', 'legal/r2'] },
+        },
+        files: ['listing/a.jpg'],
+      },
+    });
+    await draft(daysAgo(120), {
+      data: { documents: { rar_authorisation: { pages: ['legal/sent'] } } },
+      status: 'submitted',
+    });
+
+    await sweep.cleanUp(NOW);
+
+    expect(deleted.sort()).toEqual([
+      'legal/c1',
+      'legal/r1',
+      'legal/r2',
+      'listing/a.jpg',
+    ]);
+    await expect(
+      prisma.listingDraft.findUnique({ where: { id: old.id } }),
+    ).resolves.toBeNull();
+  });
+
   it('keeps a draft changed since and a sent one', async () => {
     const changed = await draft(daysAgo(89));
     const submitted = await draft(daysAgo(120), { status: 'submitted' });

@@ -146,6 +146,11 @@
     },
     "cui": "Company tax ID",
     "cuiInvalid": "Invalid tax ID",
+    "declaration": {
+      "name": "Your full name",
+      "nameShort": "Write your full name",
+      "text": "I declare the details are true and that I legally represent this garage."
+    },
     "details": {
       "kind": "Kind of business",
       "kinds": {
@@ -168,6 +173,38 @@
       "phoneHint": "Not shown on your page. We only use it to reach you.",
       "phoneNeeded": "Add a phone number",
       "phoneRomanian": "We only take Romanian numbers for now"
+    },
+    "documents": {
+      "choose": "Choose files",
+      "done": "Uploaded",
+      "drop": "Drop the file here",
+      "earlier": "Move page {n} earlier",
+      "emailFirst": "Add an e-mail at step 1 to upload documents",
+      "failed": "Could not upload the file. Try again.",
+      "full": "At most 10 files per document",
+      "heading": "Documents",
+      "issuedOn": "Certificate issue date",
+      "issuedOnOld": "The certificate must be issued in the last 30 days",
+      "kinds": {
+        "onrc_certificate": {
+          "hint": "Issued in the last 30 days, showing the workshop address",
+          "hintMobile": "Issued in the last 30 days, showing the registered seat",
+          "label": "ONRC company certificate"
+        },
+        "rar_authorisation": {
+          "hint": "All pages, as a readable scan or photo",
+          "label": "RAR technical authorisation"
+        }
+      },
+      "later": "Move page {n} later",
+      "page": "Page {n}",
+      "place": "Page {n} of {m}",
+      "refused": "Only PDF, JPG or PNG, up to 10 MB",
+      "release": "Let go to add the files",
+      "remove": "Remove page {n}",
+      "retry": "Retry",
+      "uploaded": "Page {n} uploaded",
+      "waiting": "Uploads when the connection returns"
     },
     "done": "complete",
     "email": "E-mail",

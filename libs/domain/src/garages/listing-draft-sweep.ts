@@ -18,14 +18,27 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const daysBefore = (now: Date, days: number) =>
   new Date(now.getTime() - days * DAY_MS);
 
-const filesOf = (data: unknown): string[] => {
-  const files = (data as { files?: unknown } | null)?.files;
-  return Array.isArray(files)
-    ? files.filter((key): key is string => typeof key === 'string')
+const strings = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((key): key is string => typeof key === 'string')
     : [];
+
+// Every storage key a draft holds: its photos and its document pages.
+const keysOf = (data: unknown): string[] => {
+  const draft = data as { files?: unknown; documents?: unknown } | null;
+  const documents =
+    typeof draft?.documents === 'object' && draft.documents !== null
+      ? Object.values(draft.documents)
+      : [];
+  return [
+    ...strings(draft?.files),
+    ...documents.flatMap((document) =>
+      strings((document as { pages?: unknown } | null)?.pages),
+    ),
+  ];
 };
 
-// Once a day: drafts untouched for 90 days go, photos included, and the
+// Once a day: drafts untouched for 90 days go, photos and documents included, and the
 // open ones untouched for 3 days get their one reminder. A draft that fails
 // is logged by its id alone and left for the next day.
 export class ListingDraftSweep implements DailyTask {
@@ -121,7 +134,7 @@ export class ListingDraftSweep implements DailyTask {
       select: { data: true },
       where: { id: draft.id },
     });
-    for (const key of filesOf(row?.data)) {
+    for (const key of keysOf(row?.data)) {
       await this.storage.deleteWithCopies(key);
     }
     await this.prisma.listingDraft.deleteMany({

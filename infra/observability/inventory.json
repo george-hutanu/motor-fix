@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 97,
+    "count": 101,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -459,6 +459,53 @@
       "alerts": "none",
       "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); ST-880 adds the alerts",
       "story": "ST-424"
+    },
+    {
+      "kind": "endpoint",
+      "name": "listing-documents",
+      "source": "libs/domain/src/garages/documents/listing-documents/listing-documents.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/listing-drafts/:id/documents/:kind, /upload-url and /:key",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "ST-880 adds the alerts; a page left in storage after a failed delete logs one warning with the draft id and key",
+      "story": "ST-206"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-documents",
+      "source": "libs/domain/src/garages/documents/legal-documents/legal-documents.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/documents/:documentId/pages/:n/download-url",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "ST-880 adds the alerts; each issued address writes one open entry in the history and counts motorfix_documents_opened_total",
+      "story": "ST-206"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_documents_uploaded_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each confirmed document page by kind (onrc_certificate, rar_authorisation); ST-880 adds the alerts",
+      "story": "ST-206"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_declarations_signed_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each signed declaration; ST-880 adds the alerts",
+      "story": "ST-206"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_documents_opened_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each time an admin opens a document page, by kind; ST-880 adds the alerts",
+      "story": "ST-206"
     }
   ]
 }

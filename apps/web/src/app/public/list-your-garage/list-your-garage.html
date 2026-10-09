@@ -113,6 +113,15 @@
                 <p id="listing-rar-hint" class="hint">{{ 'public.listing.rarHint' | t }}</p>
                 <p id="listing-rar-error" class="error" role="status" aria-live="polite">{{ rarError() ? ('public.listing.rarShort' | t) : '' }}</p>
               </div>
+              <mf-documents-step
+                [draftId]="keeper.draft().draftId"
+                [token]="keeper.draft().token"
+                [kind]="details().businessKind"
+                [documents]="documents()"
+                (documentsChange)="keeper.documents($event)"
+                [declaration]="declaration()"
+                (declarationChange)="keeper.declaration($event)"
+              />
               <p class="note count" role="status" aria-live="polite">{{ 'public.listing.verifyCount' | t: { n: verified() } }}</p>
               <p class="note">{{ 'public.listing.verifyNote' | t }}</p>
             }

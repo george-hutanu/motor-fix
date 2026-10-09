@@ -173,6 +173,8 @@ export type { InvitesControllerCheck$Params as InvitesControllerCheck$Params } f
 export { invitesControllerCheck as invitesControllerCheck } from './fn/invites/invites-controller-check';
 export type { InvitesControllerAccept$Params as InvitesControllerAccept$Params } from './fn/invites/invites-controller-accept';
 export { invitesControllerAccept as invitesControllerAccept } from './fn/invites/invites-controller-accept';
+export type { LegalDocumentsControllerPageAddress$Params as LegalDocumentsControllerPageAddress$Params } from './fn/verification-documents/legal-documents-controller-page-address';
+export { legalDocumentsControllerPageAddress as legalDocumentsControllerPageAddress } from './fn/verification-documents/legal-documents-controller-page-address';
 export type { ListingDraftsControllerCreate$Params as ListingDraftsControllerCreate$Params } from './fn/listing-drafts/listing-drafts-controller-create';
 export { listingDraftsControllerCreate as listingDraftsControllerCreate } from './fn/listing-drafts/listing-drafts-controller-create';
 export type { ListingDraftsControllerCurrent$Params as ListingDraftsControllerCurrent$Params } from './fn/listing-drafts/listing-drafts-controller-current';
@@ -189,6 +191,12 @@ export type { ListingPhotosControllerConfirm$Params as ListingPhotosControllerCo
 export { listingPhotosControllerConfirm as listingPhotosControllerConfirm } from './fn/listing-drafts/listing-photos-controller-confirm';
 export type { ListingPhotosControllerRemove$Params as ListingPhotosControllerRemove$Params } from './fn/listing-drafts/listing-photos-controller-remove';
 export { listingPhotosControllerRemove as listingPhotosControllerRemove } from './fn/listing-drafts/listing-photos-controller-remove';
+export type { ListingDocumentsControllerUploadAddress$Params as ListingDocumentsControllerUploadAddress$Params } from './fn/listing-drafts/listing-documents-controller-upload-address';
+export { listingDocumentsControllerUploadAddress as listingDocumentsControllerUploadAddress } from './fn/listing-drafts/listing-documents-controller-upload-address';
+export type { ListingDocumentsControllerConfirm$Params as ListingDocumentsControllerConfirm$Params } from './fn/listing-drafts/listing-documents-controller-confirm';
+export { listingDocumentsControllerConfirm as listingDocumentsControllerConfirm } from './fn/listing-drafts/listing-documents-controller-confirm';
+export type { ListingDocumentsControllerRemove$Params as ListingDocumentsControllerRemove$Params } from './fn/listing-drafts/listing-documents-controller-remove';
+export { listingDocumentsControllerRemove as listingDocumentsControllerRemove } from './fn/listing-drafts/listing-documents-controller-remove';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

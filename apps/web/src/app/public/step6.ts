@@ -1,4 +1,8 @@
 import {
+  DECLARED_NAME_MAX,
+  DECLARED_NAME_MIN,
+} from '@motor-fix/contracts/legal-documents';
+import {
   isValidCui,
   RAR_NUMBER_MIN,
 } from '@motor-fix/contracts/listing-verification';
@@ -28,6 +32,17 @@ export const cuiError = (cui: string, left: boolean): 'cuiInvalid' | null =>
 
 export const rarError = (rar: string, left: boolean): 'rarShort' | null =>
   left && rar !== '' && rar.length < RAR_NUMBER_MIN ? 'rarShort' : null;
+
+// A tick asks for the declarer's full name, told once the field was left.
+export function nameError(
+  name: string,
+  ticked: boolean,
+  left: boolean,
+): 'nameShort' | null {
+  const length = name.trim().length;
+  const whole = length >= DECLARED_NAME_MIN && length <= DECLARED_NAME_MAX;
+  return ticked && left && !whole ? 'nameShort' : null;
+}
 
 export const completedCount = (done: Five): number =>
   done.filter(Boolean).length;
