@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 85,
+    "count": 87,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -235,6 +235,25 @@
       "alerts": "none",
       "reason": "counts the public profile cache by outcome (hit, miss, drop); ST-879 adds the dashboard, ST-880 the alerts",
       "story": "ST-307"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_quote_requests_sent_total",
+      "source": "libs/domain/src/quotes/quote-requests/quote-requests.metrics.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "counts quote requests sent by outcome (sent with its recipients, cannot_receive, limit, invalid), with one log line per send naming the outcome and the request id; no agreed alert threshold yet; ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-221"
+    },
+    {
+      "kind": "product-counter",
+      "name": "quote-requests",
+      "source": "libs/domain/src/quotes/quote-requests/quote-requests.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quote-requests and /api/v1/quote-requests/garages",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the send and the picker's read are traced and timed by the API's HTTP instrumentation; ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-221"
     },
     {
       "kind": "product-counter",

@@ -127,6 +127,10 @@ export type { GarageRequestsControllerList$Params as GarageRequestsControllerLis
 export { garageRequestsControllerList as garageRequestsControllerList } from './fn/garage-requests/garage-requests-controller-list';
 export type { GarageRequestsControllerGet$Params as GarageRequestsControllerGet$Params } from './fn/garage-requests/garage-requests-controller-get';
 export { garageRequestsControllerGet as garageRequestsControllerGet } from './fn/garage-requests/garage-requests-controller-get';
+export type { QuoteRequestsControllerSend$Params as QuoteRequestsControllerSend$Params } from './fn/quote-requests/quote-requests-controller-send';
+export { quoteRequestsControllerSend as quoteRequestsControllerSend } from './fn/quote-requests/quote-requests-controller-send';
+export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControllerCandidates$Params } from './fn/quote-requests/quote-requests-controller-candidates';
+export { quoteRequestsControllerCandidates as quoteRequestsControllerCandidates } from './fn/quote-requests/quote-requests-controller-candidates';
 export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params } from './fn/garage-jobs/garage-jobs-controller-list';
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';

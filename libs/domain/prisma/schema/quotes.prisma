@@ -106,27 +106,30 @@ enum BookingCancelReason {
 // The car is copied when the request is sent, so editing the car later
 // changes nothing here. The plate is never copied.
 model QuoteRequest {
-  id           String               @id @default(uuid()) @db.Uuid
-  driverId     String               @map("driver_id") @db.Uuid
-  carId        String               @map("car_id") @db.Uuid
-  carBrand     String               @map("car_brand")
-  carModel     String               @map("car_model")
-  carYear      Int                  @map("car_year")
-  carFuel      Fuel                 @map("car_fuel")
-  carEngine    String?              @map("car_engine")
-  description  String?
-  status       QuoteRequestStatus   @default(sent)
-  closedReason RequestClosedReason? @map("closed_reason")
-  closedAt     DateTime?            @map("closed_at") @db.Timestamptz(3)
-  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  expiresAt    DateTime             @map("expires_at") @db.Timestamptz(3)
-  driver       Account              @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  car          Car                  @relation(fields: [carId], references: [id], onDelete: NoAction)
-  jobs         RequestJob[]
-  recipients   RequestRecipient[]
-  quotes       Quote[]
-  bookings     Booking[]
+  id             String               @id @default(uuid()) @db.Uuid
+  driverId       String               @map("driver_id") @db.Uuid
+  carId          String               @map("car_id") @db.Uuid
+  carBrand       String               @map("car_brand")
+  carModel       String               @map("car_model")
+  carYear        Int                  @map("car_year")
+  carFuel        Fuel                 @map("car_fuel")
+  carEngine      String?              @map("car_engine")
+  description    String?
+  status         QuoteRequestStatus   @default(sent)
+  closedReason   RequestClosedReason? @map("closed_reason")
+  closedAt       DateTime?            @map("closed_at") @db.Timestamptz(3)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt      DateTime             @map("expires_at") @db.Timestamptz(3)
+  // One per send the driver means; a repeat answers the first request.
+  idempotencyKey String               @map("idempotency_key")
+  driver         Account              @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  car            Car                  @relation(fields: [carId], references: [id], onDelete: NoAction)
+  jobs           RequestJob[]
+  recipients     RequestRecipient[]
+  quotes         Quote[]
+  bookings       Booking[]
 
+  @@unique([driverId, idempotencyKey])
   @@index([driverId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("quote_request")
 }

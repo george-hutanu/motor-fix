@@ -4,8 +4,11 @@ import type {
 } from '../generated/prisma/enums';
 
 // The limits and durations of requests, quotes and bookings. A day is a
-// Bucharest calendar day (addLocalDays), an hour a real hour.
-export const REQUEST_MAX_GARAGES = 5;
+// Bucharest calendar day (addLocalDays), an hour a real hour. The garages a
+// request goes to are also the web picker's limit, so that one lives in the
+// contracts.
+export { REQUEST_MAX_GARAGES } from '@motor-fix/contracts';
+export const REQUEST_DAILY_LIMIT = 20;
 export const REQUEST_VALIDITY_DAYS = 7;
 export const QUOTE_VALIDITY_DAYS = 7;
 export const REQUEST_REMINDER_DAYS: readonly number[] = [2, 5];

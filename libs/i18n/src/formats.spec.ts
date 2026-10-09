@@ -13,6 +13,7 @@ import {
   formatNum,
   formatPct,
   formatRating,
+  relativeTime,
 } from './formats';
 
 const MISSING = '—';
@@ -401,4 +402,35 @@ describe('formatMonthYear', () => {
       expect(formatMonthYear(value, 'en')).toBe(MISSING);
     },
   );
+});
+
+// @traces 221-FR-014
+describe('relativeTime', () => {
+  const now = new Date('2026-10-09T10:00:00Z');
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
+  const MIN = 60_000;
+
+  it('says a few seconds for under a minute', () => {
+    expect(relativeTime(ago(5_000), 'ro', now)).toBe('acum câteva secunde');
+    expect(relativeTime(ago(59_000), 'en', now)).toBe('a few seconds ago');
+  });
+
+  it('counts minutes, hours and days', () => {
+    expect(relativeTime(ago(5 * MIN), 'ro', now)).toBe('acum 5 minute');
+    expect(relativeTime(ago(5 * MIN), 'en', now)).toBe('5 minutes ago');
+    expect(relativeTime(ago(3 * 60 * MIN), 'en', now)).toBe('3 hours ago');
+    expect(relativeTime(ago(2 * 24 * 60 * MIN), 'ro', now)).toBe('acum 2 zile');
+  });
+
+  it('gives the day itself after a week', () => {
+    expect(relativeTime('2026-09-20T10:00:00Z', 'en', now)).toBe('20 Sep 2026');
+  });
+
+  it('reads a time a little ahead of the clock as just now', () => {
+    expect(relativeTime(ago(-2_000), 'en', now)).toBe('a few seconds ago');
+  });
+
+  it('answers the missing mark for what is not a time', () => {
+    expect(relativeTime('ieri', 'ro', now)).toBe(MISSING);
+  });
 });

@@ -107,6 +107,7 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
         expiresAt: new Date(
           createdAt.getTime() + REQUEST_VALIDITY_DAYS * 24 * HOUR,
         ),
+        idempotencyKey: randomUUID(),
         status,
         ...(closed && { closedAt: createdAt, closedReason: 'cancelled' }),
       },
