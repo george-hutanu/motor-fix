@@ -470,6 +470,38 @@ describe('changes made by someone else', () => {
     },
   );
 
+  it('keeps what someone else changed when its own refused write is put back', async () => {
+    const { element, settle } = await render();
+    let refuse: ((error: unknown) => void) | undefined;
+    api['jobStepsControllerRemove'].mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          refuse = reject;
+        }),
+    );
+    menu(element, 2)?.click();
+    await settle();
+    item('Șterge')?.click();
+    await settle();
+    expect(rows(element)).toHaveLength(2);
+
+    current = job({ steps: [step(1), step(2), step(3), step(4)] });
+    events.next({
+      at: '2026-10-09T07:00:00.000Z',
+      id: 'job-1',
+      kind: 'job.steps_changed',
+    });
+    await wait(400);
+    await settle();
+    expect(rows(element)).toHaveLength(4);
+
+    refuse?.(refused(409, 'job_closed', 'Lucrarea e închisă'));
+    await wait(0);
+    await settle();
+
+    expect(rows(element)).toHaveLength(4);
+  });
+
   it('ignores the steps of another job', async () => {
     const { settle } = await render();
 

@@ -34,7 +34,7 @@ const STEP_KINDS: readonly EventKind[] = [
   'job.mechanic_changed',
 ];
 
-export const STEPS_MAX = 20;
+const STEPS_MAX = 20;
 const PROVISIONAL = 'new:';
 const CLOSED = new Set<JobDto['status']>(['done', 'cancelled']);
 const WRITERS = new Set(['garage', 'mechanic']);
@@ -296,12 +296,14 @@ export class JobSteps {
     send: () => Promise<unknown>,
   ) {
     const before = this.steps();
+    const changed = change(before);
     this.problem.set(null);
-    this.steps.set(change(before));
+    this.steps.set(changed);
     try {
       await send();
     } catch (error) {
-      this.steps.set(before);
+      // A re-read meanwhile already shows the steps as they are.
+      if (this.steps() === changed) this.steps.set(before);
       this.problem.set(problemKey(error));
     }
   }

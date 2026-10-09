@@ -21,7 +21,7 @@ const rows = (panel: Locator) => panel.locator('[data-step]');
 
 // Leaves the seeded job with no steps, whatever an earlier run left.
 async function clear(panel: Locator) {
-  while ((await rows(panel).count()) > 0) {
+  for (let n = 0; n < 20 && (await rows(panel).count()) > 0; n++) {
     await rows(panel).first().locator('button[aria-haspopup]').click();
     await panel.page().getByRole('button', { name: 'Șterge' }).click();
   }

@@ -46,7 +46,7 @@ const CLOSED: readonly JobStatus[] = ['done', 'cancelled'];
 // Positions move out of the way first, so no two steps ever share one.
 const ASIDE = 1000;
 
-export const stepOf = (step: JobStep): JobStepDto => ({
+const stepOf = (step: JobStep): JobStepDto => ({
   customerLabel: step.customerLabel,
   doneAt: step.doneAt?.toISOString() ?? null,
   doneBy: step.doneById,
@@ -75,8 +75,6 @@ const by = (actor: Actor, job: LockedJob) => ({
   garageId: job.garage_id,
   jobId: job.id,
 });
-
-const missingStep = () => new NotFoundException();
 
 // A job's steps, written by the owner or the job's own mechanic. Each write
 // locks the job's row, so writes to one job run one after the other, and
@@ -310,7 +308,7 @@ export class JobStepsService {
 
   private async step(tx: Tx, jobId: string, stepId: string) {
     const step = await tx.jobStep.findFirst({ where: { id: stepId, jobId } });
-    if (!step) throw missingStep();
+    if (!step) throw new NotFoundException();
     return step;
   }
 
