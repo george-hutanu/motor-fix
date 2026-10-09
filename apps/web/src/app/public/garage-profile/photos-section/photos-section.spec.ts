@@ -159,6 +159,17 @@ describe('the photos section', () => {
     expect(third.dataset['failed']).toBe('false');
     expect(imageOf(third)).not.toBeNull();
   });
+
+  it('names a failed tile as a photo that could not load', async () => {
+    imageOf(tiles()[1]).dispatchEvent(new Event('error'));
+    await settle();
+
+    expect(
+      tiles()[1].querySelector('.placeholder')?.getAttribute('aria-label'),
+    ).toBe(
+      'Fotografie 2 din 3 · Atelier Dinamo · Fotografia nu s‑a putut încărca',
+    );
+  });
 });
 
 describe('opening a photo from the section', () => {
@@ -233,6 +244,25 @@ describe('the photos section kept live', () => {
       ?.click();
     await settle();
     expect(viewImage()?.getAttribute('src')).toBe('https://s/3.display');
+    await closeView();
+  });
+
+  it('shows the placeholder when the re-read brings back the same address', async () => {
+    tiles()[1].click();
+    await settle();
+    viewImage()?.dispatchEvent(new Event('error'));
+    await settle();
+
+    await show({ photos: [photo(1), photo(2), photo(3)] });
+
+    expect(fixture.componentInstance.rereads).toBe(1);
+    const stage = view()?.querySelector('[data-slot="viewer-stage"]');
+    expect(stage?.getAttribute('data-failed')).toBe('true');
+    expect(
+      stage?.querySelector('.placeholder')?.getAttribute('aria-label'),
+    ).toBe(
+      'Fotografie 2 din 3 · Atelier Dinamo · Fotografia nu s‑a putut încărca',
+    );
     await closeView();
   });
 

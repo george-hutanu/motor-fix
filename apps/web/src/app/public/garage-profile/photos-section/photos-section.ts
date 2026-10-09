@@ -57,10 +57,18 @@ export class PhotosSection {
   protected readonly loaded = signal(new Set<string>());
   protected readonly broken = signal(new Set<string>());
   // One re-read per photo for the page's life: with the profile cache down
-  // every re-read signs a fresh address, so a reset would loop forever.
-  private readonly retried = new Set<string>();
+  // every re-read signs a fresh address, so a reset would loop forever. It
+  // keeps the address that failed: a re-read that brings the same one back
+  // (the profile cache still holds it) gives up at once, as no second error
+  // will come.
+  private readonly retried = new Map<string, string>();
   private readonly failed = linkedSignal({
-    computation: () => new Set<string>(),
+    computation: ({ photos }) =>
+      new Set(
+        photos
+          .filter((photo) => this.retried.get(photo.id) === photo.displayUrl)
+          .map((photo) => photo.id),
+      ),
     source: this.garage,
   });
 
@@ -77,6 +85,7 @@ export class PhotosSection {
     close: this.i18n.t('public.garageProfile.photos.close'),
     counter: (n, total) =>
       this.i18n.t('public.garageProfile.photos.counter', { n, total }),
+    failed: this.i18n.t('public.garageProfile.photos.failed'),
     next: this.i18n.t('public.garageProfile.photos.next'),
     previous: this.i18n.t('public.garageProfile.photos.previous'),
   }));
@@ -99,8 +108,9 @@ export class PhotosSection {
   }
 
   protected viewFailed(id: string): void {
-    if (!this.retried.has(id)) {
-      this.retried.add(id);
+    const photo = this.garage().photos.find((p) => p.id === id);
+    if (photo && !this.retried.has(id)) {
+      this.retried.set(id, photo.displayUrl);
       this.reread.emit();
     } else {
       this.failed.update((ids) => new Set(ids).add(id));

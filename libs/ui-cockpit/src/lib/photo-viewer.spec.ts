@@ -45,6 +45,7 @@ class Host {
   readonly labels = {
     close: 'Close',
     counter: (n: number, total: number) => `${n} / ${total}`,
+    failed: 'Could not load',
     next: 'Next',
     previous: 'Previous',
   };
@@ -389,6 +390,17 @@ describe('the photo viewer after the list changes', () => {
     await settle();
 
     expect(fixture.componentInstance.failures).toEqual(['p-2']);
+  });
+
+  it('names the placeholder of a photo its host gave up on', async () => {
+    fixture.componentInstance.photos.update((photos) =>
+      photos.map((photo, i) => (i === 1 ? { ...photo, failed: true } : photo)),
+    );
+    await open(1);
+
+    expect(
+      view()?.querySelector('.placeholder')?.getAttribute('aria-label'),
+    ).toBe(`${THREE[1]?.alt} · Could not load`);
   });
 
   it('takes its view off the page when its host removes it while open', async () => {

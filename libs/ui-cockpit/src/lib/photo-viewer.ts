@@ -31,6 +31,8 @@ export interface ViewerPhoto {
 export interface ViewerLabels {
   close: string;
   counter: (n: number, total: number) => string;
+  /** Read after the photo's own name when it could not load. */
+  failed: string;
   next: string;
   previous: string;
 }
@@ -181,7 +183,7 @@ const dark = (target: EventTarget | null) =>
                 <svg
                   class="placeholder"
                   role="img"
-                  [attr.aria-label]="photo.alt"
+                  [attr.aria-label]="photo.alt + ' · ' + labels().failed"
                   fill="none"
                   height="48"
                   stroke="currentColor"
