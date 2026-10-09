@@ -131,6 +131,16 @@ describe('the dashboard view lists', () => {
     expect(await requests.load?.()).toBe(RequestsView);
   });
 
+  // @traces 163-FR-008
+  // The admin Panou carries the figures' choice; it loads with its view, so
+  // the first page any visitor opens stays inside the initial bundle budget.
+  it('loads the admin Panou only when its view opens', async () => {
+    const [home] = DASHBOARDS.admin.views;
+
+    expect(home.body).toBeUndefined();
+    expect(await home.load?.()).toBe(AdminPanel);
+  });
+
   // @traces 343-FR-006
   // @traces 343-FR-007
   it('loads the garage Panou and Cereri de ofertă only when their view opens', async () => {
@@ -171,8 +181,8 @@ describe('the dashboard view lists', () => {
   it('lists the admin views with their labels, capabilities, release marks and counter', () => {
     expect(DASHBOARDS.admin.views).toEqual([
       {
-        body: AdminPanel,
         label: 'shell.frame.nav.dashboard',
+        load: expect.any(Function),
         path: '',
         tab: 'shell.frame.tab.overview',
       },
