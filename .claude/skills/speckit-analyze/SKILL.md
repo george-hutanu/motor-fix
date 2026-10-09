@@ -75,7 +75,7 @@ Run `python3 .specify/scripts/python/check_prerequisites.py --json --require-spe
 - SPEC = FEATURE_DIR/spec.md
 - PLAN = FEATURE_DIR/plan.md
 - TASKS = FEATURE_DIR/tasks.md
-- CONTEXT = FEATURE_DIR/context.md (optional — the owner's Notion space, as /speckit-context read it)
+- CONTEXT = FEATURE_DIR/context.md (optional — the specs repo's `docs/`, as /speckit-context read it)
 - CHECKLISTS = FEATURE_DIR/checklists/*.md (optional — reviewer-owned)
 - CODE = `git diff --name-only <merge-base>..HEAD` plus the working tree, so a
   task's claimed completion can be checked against files that actually changed

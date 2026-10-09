@@ -224,7 +224,7 @@ describe('migrate-trunk refusals', () => {
     assert.ok(text.startsWith('readme\n'), text);
     assert.match(text, /## Layout/);
     assert.equal(git(clone(), 'rev-list', '--count', `HEAD~1..HEAD`), '1');
-    assert.match(git(clone(), 'log', '-1', '--format=%s'), /^chore\(specs\): move the feature folders under specs\/ and add docs\/$/);
+    assert.match(git(clone(), 'log', '-1', '--format=%s'), /^chore\(specs\): move the feature folders under specs\/$/);
   });
 
   // @traces 1018-FR-006

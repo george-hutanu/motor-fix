@@ -24,8 +24,8 @@ turn, answering every interactive gate itself. It commits and pushes one
 Conventional Commit per slice to the feature's draft PR, stops only on the Hard
 Stops in `.claude/skills/speckit-auto/SKILL.md`, and logs to `auto-run.md`.
 
-`/speckit-context` reads the specs repo's `docs/` (feature page, architecture,
-decisions) and the tracker (story, epic); the latest source wins.
+`/speckit-context` reads the specs repo's `llms.txt`, then `docs/` (features,
+architecture, decisions) and the tracker (story, epic); the latest wins.
 
 Other entry points: `/speckit-assess-*` for raw ideas that aren't ready for a
 spec, `/speckit-bug-{assess,fix,test}` for bug reports, `/speckit-converge` to
@@ -37,7 +37,7 @@ feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
 
 ## Gates
 
-Constitution v1.11.2 (`.specify/memory/constitution.md`) maps each rule to its
+Constitution v1.11.3 (`.specify/memory/constitution.md`) maps each rule to its
 check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |

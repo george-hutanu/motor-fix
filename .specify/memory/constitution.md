@@ -1,5 +1,21 @@
 <!--
-Sync Impact Report (v1.11.2)
+Sync Impact Report (v1.11.3)
+- Version change: 1.11.2 → 1.11.3 (PATCH: Additional Constraints names the
+  specs repo's Diátaxis paths and `llms.txt` as the architecture source, the
+  Notion pages frozen and the export retired; no rule added, removed or
+  redefined)
+- Source: ST-1026 (organise motor-fix-specs by Diátaxis, agent-first).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line
+  - ✅ CLAUDE.local.md — the version line and the `/speckit-context` entry
+  - ✅ AGENTS.md — "Product and stack", "Specs live in their own repo", Plans
+  - ✅ .claude/skills/speckit-context, speckit-design-check,
+    speckit-notion-sync (plan); .claude/agents/org-researcher.md,
+    spec-reviewer.md — read `llms.txt` and the Diátaxis paths, no Notion
+    fallback
+  - ✅ .claude/scripts/docs-source.spec.mjs — keeps them agreeing
+
+Previous report (v1.11.2)
 - Version change: 1.11.1 → 1.11.2 (PATCH: Principle II's `@traces` grammar
   names a feature number of three or more digits, `\d{3,}`, now that feature
   numbers reached four digits; the requirement number stays three digits; no
@@ -279,7 +295,7 @@ Previous report (v1.1.0)
     Nx, biome.json (project-local edits; re-apply after `specify integration
     upgrade`)
   - ✅ CLAUDE.local.md, AGENTS.md — stack and gate tables
-- Follow-up TODOs: none in this file. Notion's To-decide items T1–T10 stay open
+- Follow-up TODOs: none in this file. Notion's To-decide items T01–T12 stay open
   by design (Additional Constraints).
 -->
 
@@ -461,11 +477,13 @@ tester, or with a passed PR left unmerged is not finished.
 - Every outside integration (ANAF, ONRC, RAR registers, WhatsApp, PDF) has a
   by-hand route, so no outside party can block a launch.
 - Personal data stays in an EU region.
-- The Architecture section of the product documentation, exported to the
-  specs repo's `docs/` (`.motor-fix-specs/docs/`), is the source of truth for
+- The architecture documentation in the specs repo (`.motor-fix-specs/`:
+  `llms.txt` first, then `docs/explanation/architecture/`,
+  `docs/explanation/decisions/` and `docs/reference/stack.md`), its only
+  source since the Notion pages froze, is the source of truth for
   the choices it marks Proposed (Prisma, BullMQ, server-sent events, PostGIS,
   signed uploads, and the rest); each is confirmed or replaced per feature in
-  `/speckit-plan`, citing the `docs/` file. Its To-decide items (T1–T10: hosting, maps, e-mail,
+  `/speckit-plan`, citing the `docs/` file. Its To-decide items (T01–T12, among them hosting, maps, e-mail,
   PWA or store apps, register automation, live video, scheduling component,
   OAuth for assistants, analytics, retention) are open: a plan that depends on
   one records it as `[NEEDS CLARIFICATION]` instead of assuming an answer.
@@ -587,4 +605,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.11.2 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-09
+**Version**: 1.11.3 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-09

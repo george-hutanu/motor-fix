@@ -161,8 +161,8 @@ epic or a plan, whether run through spec-kit or by hand.
   refresh is logged after its finish, in `notion-sync.md` or the merged
   PR's finish comment (`notion-ready.mjs check -`).
 - **Plans:** one build-timeline database per epic under Delivery › Plans in
-  Notion, and its execution plan as a file in the specs repo's
-  `docs/execution-plans/` (`speckit-notion-sync plan`).
+  Notion, and its build plan as a file in the specs repo's
+  `docs/reference/build-plans/` (`speckit-notion-sync plan`).
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
   `after_specify`, `before_plan`, `before_implement`), and so do
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
@@ -248,9 +248,12 @@ motor-fix is public and does not track the specs (`.gitignore`:
 worktree, holds its own clone of the private `george-hutanu/motor-fix-specs`
 at `.motor-fix-specs/` (`cloneDir`), on `trunk`; never a submodule. Its
 `specs/` holds the feature folders and `specs` in the checkout links to it;
-its `docs/` holds the product documentation, exported from Notion by
-`node .claude/scripts/notion-export.mjs` (`--check` finds gaps), with
-`docs/index.json` mapping each Notion id to its file.
+its `docs/` holds the product documentation, organised by Diátaxis
+(`tutorials/`, `how-to/`, `reference/`, `explanation/`, decisions one file
+each in `explanation/decisions/`), the repo its only source; `llms.txt` at
+its root lists every page with its summary, so an agent reads it first, and
+`docs/index.json` maps each old Notion id to its file. Its
+`scripts/docs-lint.mjs` checks the pages and runs in its CI.
 `node .claude/scripts/specs-repo.mjs ensure` clones, adopts, moves an older
 clone at `specs/` into place or fast-forwards it (npm `prepare` and
 SessionStart run it `--soft`); `commit "<message>" -- <feature>` (or a
@@ -350,8 +353,8 @@ the axe checks in the QA sweep (`.claude/scripts/pr-test/sweep.mjs`) and
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The
 product and architecture documentation lives in the specs repo's
-`.motor-fix-specs/docs/` (exported from Notion; the backlog stays in the
-tracker) — Architecture > Technology stack and Architecture decisions are the
+`.motor-fix-specs/docs/` (start at its `llms.txt`; the backlog stays in the
+tracker) — `docs/reference/stack.md` and `docs/explanation/decisions/` are the
 source for anything the constitution does not fix.
 
 - Given: Angular (standalone, signals) + Spartan UI (brain primitives, helm

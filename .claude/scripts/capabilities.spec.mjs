@@ -482,6 +482,34 @@ describe('merging a delta into the living capability', () => {
     });
   }
 
+  for (const [label, line] of [
+    ['supersedes', '- **Modifies**: `' + T('001', '009') + '` → `FR-006`'],
+    ['retires', '- **Removes**: `' + T('001', '009') + '` — gone'],
+  ]) {
+    it(`keeps the earlier tombstones when it ${label} the capability's last requirement`, () => {
+      const dir = fixture({
+        '.specify/capabilities/cli-tasks.md': capability('cli-tasks', {
+          features: ['001-x'],
+          requirements: [
+            [T('001', '004'), 'lists tasks'],
+            [T('001', '009'), 'creates the data directory'],
+          ],
+          retired: [[T('000', '001'), 'superseded by ' + B('001', '004') + ' (2026-01-01)']],
+        }),
+        'specs/002-fixture/spec.md': spec([['FR-006', 'creates it on demand']], ['### Capability: `cli-tasks`', '', line].join('\n')),
+      });
+      try {
+        const [plan] = planMerge(dir, feature(dir));
+        const parsed = parseCapability(plan.text);
+        assert.deepEqual([...parsed.retired.keys()].sort(), [T('000', '001'), T('001', '009')]);
+        assert.equal(plan.text.match(/^## Retired$/gm).length, 1);
+        assert.ok(parsed.requirements.has(T('001', '004')));
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
   it('keeps a superseded requirement in its original position', () => {
     // Reading order is the order the behaviour was built in. A replacement
     // appended to the end would scatter one command's rules across the file.
