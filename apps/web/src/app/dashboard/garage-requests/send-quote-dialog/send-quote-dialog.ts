@@ -37,6 +37,7 @@ import {
   TaskError,
   TaskSubmit,
   taskSave,
+  toProblem,
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
@@ -49,7 +50,8 @@ export interface SendQuoteData {
 export type SendQuoteResult = 'sent' | 'refused';
 
 const MESSAGES = 'garage.quotes.send';
-const STEP_MINUTES = 15;
+// The slot picker's grid; the duration's is the quote's shortest duration.
+const SLOT_STEP_MINUTES = 15;
 const WIDE_FACTOR = 3;
 const SUBJECT_MAX = 60;
 
@@ -83,7 +85,7 @@ const duration = (g: AbstractControl): ValidationErrors | null => {
   };
   if (hours === null || Number.isNaN(hours)) return { required: true };
   const total = hours * 60 + Number(minutes);
-  if (!Number.isInteger(hours) || total % STEP_MINUTES !== 0)
+  if (!Number.isInteger(hours) || total % QUOTE_DURATION_MIN_MINUTES !== 0)
     return { duration_step: true };
   if (total < QUOTE_DURATION_MIN_MINUTES) return { duration_min: true };
   return total > QUOTE_DURATION_MAX_MINUTES ? { duration_max: true } : null;
@@ -92,7 +94,8 @@ const duration = (g: AbstractControl): ValidationErrors | null => {
 const slot = (g: AbstractControl): ValidationErrors | null => {
   const { day, time } = g.value as { day: string; time: string };
   if (!day || !time) return { required: true };
-  if (Number(time.slice(3, 5)) % STEP_MINUTES !== 0) return { slot_step: true };
+  if (Number(time.slice(3, 5)) % SLOT_STEP_MINUTES !== 0)
+    return { slot_step: true };
   return Date.parse(bucharestInstant(day, time)) <= Date.now()
     ? { past: true }
     : null;
@@ -145,8 +148,8 @@ function nextQuarter(): string {
     .split(':')
     .map(Number);
   const next = Math.min(
-    Math.ceil((hh * 60 + mm + 1) / STEP_MINUTES) * STEP_MINUTES,
-    24 * 60 - STEP_MINUTES,
+    Math.ceil((hh * 60 + mm + 1) / SLOT_STEP_MINUTES) * SLOT_STEP_MINUTES,
+    24 * 60 - SLOT_STEP_MINUTES,
   );
   return `${String(Math.floor(next / 60)).padStart(2, '0')}:${String(next % 60).padStart(2, '0')}`;
 }
@@ -336,20 +339,21 @@ export class SendQuoteDialog {
     return this.i18n.t('shell.form.field.invalid');
   }
 
-  // The included jobs' brand rows summed; a job with no row leaves the price
-  // empty, and one with no duration or an open top leaves that part empty.
+  // The included jobs' brand rows summed; a job with no row adds nothing, an
+  // open top leaves the top empty, and the duration sums the rows that have one.
   private prefill(request: GarageRequestDto) {
-    const offered = request.jobs.filter((job) => job.offered);
-    const prices = offered.map((job) => job.price);
-    if (!offered.length || prices.some((p) => p === null)) return;
-    const rows = prices as NonNullable<(typeof prices)[number]>[];
-    const sum = (values: (number | null)[]) =>
-      values.some((v) => v === null)
-        ? null
-        : (values as number[]).reduce((a, b) => a + b, 0);
-    const from = sum(rows.map((r) => r.fromBani));
-    const to = sum(rows.map((r) => r.toBani));
-    const minutes = sum(rows.map((r) => r.durationMinutes));
+    const rows = request.jobs.flatMap((job) =>
+      job.offered && job.price ? [job.price] : [],
+    );
+    if (!rows.length) return;
+    const total = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const from = total(rows.map((r) => r.fromBani));
+    const tops = rows.map((r) => r.toBani);
+    const to = tops.includes(null) ? null : total(tops as number[]);
+    const durations = rows.flatMap((r) =>
+      r.durationMinutes === null ? [] : [r.durationMinutes],
+    );
+    const minutes = durations.length ? total(durations) : null;
     this.form.patchValue({
       durationMinutes:
         minutes === null
@@ -381,10 +385,10 @@ export class SendQuoteDialog {
   private refused(failure: unknown) {
     if (!(failure instanceof HttpErrorResponse) || failure.status !== 409)
       return;
-    const body = failure.error as { code?: string; detail?: string } | null;
-    const key = `${MESSAGES}.problem.${body?.code ?? ''}`;
+    const { code, detail } = toProblem(failure);
+    const key = `${MESSAGES}.problem.${code}`;
     const said = this.i18n.t(key);
-    toast(said !== key ? said : (body?.detail ?? this.i18n.t(key)));
+    toast(said !== key ? said : (detail ?? said));
     this.task.close('refused');
   }
 }

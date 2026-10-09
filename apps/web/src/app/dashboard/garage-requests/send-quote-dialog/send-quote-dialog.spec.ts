@@ -97,9 +97,13 @@ async function settle() {
 
 async function open(
   request: GarageRequestDto = detail(),
-  { language = 'ro' }: { language?: 'ro' | 'en' } = {},
+  {
+    language = 'ro',
+    readFails = false,
+  }: { language?: 'ro' | 'en'; readFails?: boolean } = {},
 ) {
   read = jest.fn(async () => request);
+  if (readFails) read.mockRejectedValueOnce(new Error('network'));
   send = jest.fn(async () => QUOTE);
   TestBed.configureTestingModule({
     providers: [
@@ -299,6 +303,63 @@ describe('the send-quote dialog: what it names and starts with', () => {
     expect(field('Preț de la (lei)').value).toBe('600');
     expect(field('până la (lei)').value).toBe('900');
     expect(field('Ore').value).toBe('');
+  });
+
+  it('sums the jobs that have a price row, a job with none adding nothing', async () => {
+    await open(
+      detail({
+        jobs: [
+          job(),
+          job({
+            id: 'rj-3',
+            jobTypeId: 'job-oil',
+            nameRo: 'Schimb ulei',
+            position: 1,
+            price: null,
+          }),
+        ],
+      }),
+    );
+
+    expect(field('Preț de la (lei)').value).toBe('700');
+    expect(field('până la (lei)').value).toBe('1000');
+    expect(field('Ore').value).toBe('2');
+  });
+
+  it('sums the durations it has when one job’s row has none', async () => {
+    await open(
+      detail({
+        jobs: [
+          job(),
+          job({
+            id: 'rj-3',
+            jobTypeId: 'job-oil',
+            nameRo: 'Schimb ulei',
+            position: 1,
+            price: { durationMinutes: null, fromBani: 20_000, toBani: 30_000 },
+          }),
+        ],
+      }),
+    );
+
+    expect(field('Preț de la (lei)').value).toBe('900');
+    expect(field('până la (lei)').value).toBe('1300');
+    expect(field('Ore').value).toBe('2');
+    expect(field<HTMLSelectElement>('Minute').value).toBe('0');
+  });
+
+  it('says the read failed and reads again on Încearcă din nou', async () => {
+    await open(detail(), { readFails: true });
+
+    expect(panel().querySelector('p[role="alert"]')).not.toBeNull();
+    expect(field('Preț de la (lei)')).toBeNull();
+
+    button('Încearcă din nou')?.click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(panel().querySelector('p[role="alert"]')).toBeNull();
+    expect(field('Preț de la (lei)').value).toBe('700');
   });
 
   it('starts empty when the price list has no row for the job', async () => {
