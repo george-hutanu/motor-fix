@@ -77,7 +77,7 @@ else in the documentation is **context**, never a requirement:
   Clarifications**, labelled as this command's own proposal, and left for
   `/speckit-clarify` or the user to accept or reject.
 - A finding that depends on an open decision (a numbered open decision, or
-  T1–T10) is recorded as a Gap and a Proposed Clarification, never answered.
+  T01–T12) is recorded as a Gap and a Proposed Clarification, never answered.
 - This command MUST NOT edit `spec.md`, `plan.md`, or `tasks.md`. It writes
   `context.md` and nothing else.
 
@@ -245,7 +245,7 @@ confidence of `high | medium | low`, and exactly one kind:
   security rule, release.
 - `prior-art` — a sibling story already Done or In progress, or something the
   mock already shows. Say which.
-- `open` — depends on an undecided item (a numbered open decision, T1–T10, or
+- `open` — depends on an undecided item (a numbered open decision, T01–T12, or
   a Proposed choice the plan must confirm). Each produces a Gap and a Proposed
   Clarification.
 - `contradiction` — conflicts with `spec.md` as written. These are the payload

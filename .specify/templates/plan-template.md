@@ -63,7 +63,7 @@ Gates from the motor-fix Constitution (v1.1.0) — evaluate in order:
 - [ ] **VI. PostgreSQL Is the Truth**: nothing only in Redis; every state
   change saved with its outbox event in the same transaction.
 - [ ] **Notion choices**: each Proposed choice this plan relies on cites its
-  Notion Architecture page; each To-decide item (T1–T10) it touches is marked
+  Notion Architecture page; each To-decide item (T01–T12) it touches is marked
   `[NEEDS CLARIFICATION]`, not assumed.
 
 ## Project Structure
