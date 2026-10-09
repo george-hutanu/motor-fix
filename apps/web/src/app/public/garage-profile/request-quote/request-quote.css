@@ -1,0 +1,150 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.field > label,
+legend {
+  font-weight: 700;
+}
+fieldset {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+  margin-bottom: var(--mf-space-2);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+select {
+  min-height: var(--mf-tap);
+}
+textarea {
+  resize: vertical;
+}
+.lead,
+.note {
+  color: var(--mf-text-secondary);
+}
+.note,
+.counter {
+  font-size: var(--mf-size-small);
+}
+.error {
+  color: var(--mf-red-ink);
+  font-size: var(--mf-size-small);
+}
+.error:empty {
+  display: none;
+}
+.under {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+}
+.counter {
+  flex: none;
+  color: var(--mf-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.counter.full {
+  color: var(--mf-red-ink);
+}
+ul {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+  min-width: 0;
+  cursor: pointer;
+}
+.choice input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.choice input:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}
+.choice input:disabled {
+  cursor: default;
+}
+.name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.where {
+  margin-left: auto;
+  flex: none;
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.skeleton-list {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.skeleton {
+  display: block;
+  height: 20px;
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-panel-raised);
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  color: var(--mf-amber-ink);
+}
+.done {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.sent {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  font-weight: 700;
+}
+.dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--mf-green);
+}
+.names {
+  padding-left: calc(12px + var(--mf-space-2));
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions.start {
+  justify-content: flex-start;
+}
+.actions button,
+.actions a {
+  white-space: normal;
+}

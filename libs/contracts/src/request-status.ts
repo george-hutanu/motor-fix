@@ -114,3 +114,19 @@ export const BOOKING_CANCEL_REASONS = [
   'driver_account_closed',
 ] as const;
 export type BookingCancelReasonCode = (typeof BOOKING_CANCEL_REASONS)[number];
+
+// Plain values the browser reads too, kept out of the DTO file and its
+// server imports.
+// The garages one request goes to, the profile's included.
+export const REQUEST_MAX_GARAGES = 5;
+export const REQUEST_DESCRIPTION_MAX = 1000;
+// A request with no job switched on says what is wrong in at least this many.
+export const REQUEST_DESCRIPTION_MIN_WITHOUT_JOBS = 10;
+
+export const CANNOT_RECEIVE_REASONS = [
+  'brand',
+  'fuel',
+  'jobs',
+  'not_taking_requests',
+] as const;
+export type CannotReceiveReason = (typeof CANNOT_RECEIVE_REASONS)[number];

@@ -232,12 +232,17 @@ export class RequestSummaryDto {
 
   @ApiProperty()
   quotesCount!: number;
+
+  @ApiProperty({
+    description:
+      'As the driver wrote it; the list shows its first line when there is no job',
+    nullable: true,
+    type: String,
+  })
+  description!: string | null;
 }
 
 export class RequestDto extends RequestSummaryDto {
-  @ApiProperty({ nullable: true, type: String })
-  description!: string | null;
-
   @ApiProperty({ type: [RecipientDto] })
   recipients!: RecipientDto[];
 

@@ -238,3 +238,38 @@ export function calendarNames(language: Language) {
     monthsShort: [...MONTHS_SHORT[language]],
   };
 }
+
+const JUST_NOW: Record<Language, string> = {
+  en: 'a few seconds ago',
+  ro: 'acum câteva secunde',
+};
+const RELATIVE: Record<Language, Intl.RelativeTimeFormat> = {
+  en: new Intl.RelativeTimeFormat(LOCALES.en, { numeric: 'always' }),
+  ro: new Intl.RelativeTimeFormat(LOCALES.ro, { numeric: 'always' }),
+};
+const MINUTE = 60_000;
+const STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
+  ['day', 24 * 60 * MINUTE],
+  ['hour', 60 * MINUTE],
+  ['minute', MINUTE],
+];
+
+// How long ago a moment was: "acum 5 minute", "3 hours ago"; under a minute
+// (or a little ahead of the clock) a few seconds, and from a week on the day
+// itself.
+export function relativeTime(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const elapsed = now.getTime() - date.getTime();
+  if (elapsed >= 7 * 24 * 60 * MINUTE) return formatDay(date, language);
+  for (const [unit, size] of STEPS) {
+    if (elapsed >= size) {
+      return RELATIVE[language].format(-Math.floor(elapsed / size), unit);
+    }
+  }
+  return JUST_NOW[language];
+}

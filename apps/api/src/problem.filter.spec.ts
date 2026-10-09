@@ -275,3 +275,31 @@ describe('ProblemFilter', () => {
     expect(span?.events).toEqual([]);
   });
 });
+
+// @traces 221-FR-007
+describe('a garage that cannot receive a request', () => {
+  it('carries the garage and the reason, and nothing else the body holds', () => {
+    const res = send(
+      new HttpException(
+        {
+          code: 'garage_cannot_receive',
+          garageId: '0f1e2d3c-0000-4000-8000-000000000002',
+          garageName: 'Atelier Dinamo',
+          message: 'Atelier Dinamo cannot take this request',
+          ownerPhone: '+40722000000',
+          reason: 'brand',
+        },
+        400,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'garage_cannot_receive',
+      garageId: '0f1e2d3c-0000-4000-8000-000000000002',
+      garageName: 'Atelier Dinamo',
+      reason: 'brand',
+      status: 400,
+    });
+    expect(res.body).not.toHaveProperty('ownerPhone');
+  });
+});

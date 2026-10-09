@@ -158,6 +158,15 @@ export class PublicGaragesService {
         paymentCard: true,
         paymentCash: true,
         paymentTransfer: true,
+        // The jobs a request from the profile can ask for: those of the
+        // visible prices, in the price list's order.
+        prices: {
+          orderBy: [{ position: 'asc' }, { id: 'asc' }],
+          select: {
+            jobType: { select: { id: true, nameEn: true, nameRo: true } },
+          },
+          where: { jobType: { status: 'approved' }, visible: true },
+        },
         refusalPhrase: true,
         serviceRadiusKm: true,
         slug: true,
@@ -187,6 +196,7 @@ export class PublicGaragesService {
       paymentCard,
       paymentCash,
       paymentTransfer,
+      prices,
       serviceRadiusKm,
       slug: held,
       verificationFiles,
@@ -199,6 +209,9 @@ export class PublicGaragesService {
       name,
       slug: held,
       ...brandAnswerWithFuels(brands, texts),
+      jobTypes: [
+        ...new Map(prices.map(({ jobType }) => [jobType.id, jobType])).values(),
+      ],
       paymentMethods: {
         card: paymentCard,
         cash: paymentCash,
