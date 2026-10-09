@@ -58,22 +58,72 @@ Keycloak refuses ChatGPT's client document: ChatGPT publishes
 client registration, which the realm allows for its hosts. Claude Code and
 Claude Desktop use their client documents.
 
-## Railway, set up by hand
+## Railway: staging only
 
-The staging and production identity server is a Railway service created by
-hand, not by `scripts/railway-deploy.ts`:
+Staging only: production runs neither the identity server nor the MCP server.
+The release workflow builds this folder's `Dockerfile` (Keycloak with the
+realm baked in) and `scripts/railway-deploy.ts` deploys both services after
+the api, worker and web, each waiting for its health check: Keycloak's is the
+realm's discovery document, the MCP server's is `/health/live`. Until the
+owner has created a service and set its id, the release skips it with a
+notice.
 
-1. A service from the image `quay.io/keycloak/keycloak:26.8` with the start
-   command `start --import-realm --features=cimd,resource-indicators
-   --hostname=<public address> --proxy-headers=xforwarded --http-enabled=true`,
-   a PostgreSQL database of its own (`KC_DB=postgres`, `KC_DB_URL`,
-   `KC_DB_USERNAME`, `KC_DB_PASSWORD`) and a bootstrap admin
-   (`KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD`) removed after
-   the first sign-in.
-2. This folder's realm file in the image's import folder (a volume or a
-   one-line Dockerfile `COPY`), and the placeholders above set on the
-   service, without `ASSISTANT_ALLOW_HTTP`.
-3. The api and the MCP server given the matching `ASSISTANT_*`, `MCP_URL` and
-   `ASSISTANT_ISSUER`.
-4. A connection from Claude and from ChatGPT on staging, recorded on the
-   story page.
+Every value below is set by the owner on Railway or GitHub; this file holds
+names only. A row marked *secret* is generated and never pasted anywhere
+else; *address* is a public or internal address; *name* is a plain value.
+
+1. Create two services in the staging environment from an empty image: `mcp`
+   and `keycloak` (target port 8080, a public domain on each).
+2. In the staging PostgreSQL, create a database and a role for Keycloak, apart
+   from the app's own.
+3. Set the variables:
+
+   On the api and the MCP server:
+
+   | Variable | Kind | What it is |
+   | --- | --- | --- |
+   | `MCP_URL` | address | The MCP server's public address, ending in `/mcp` |
+   | `ASSISTANT_ISSUER` | address | The realm's public address (`<keycloak>/realms/motorfix-assistants`) |
+
+   On the MCP server only:
+
+   | Variable | Kind | What it is |
+   | --- | --- | --- |
+   | `DATABASE_URL` | secret | The app's staging database, as the api has it |
+   | `APP_ENV` | name | `staging` |
+   | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_PROTOCOL` | address, secret, name | Grafana Cloud, as the api has them |
+
+   On the api only: `ASSISTANT_BROKER_CLIENT_ID` (name),
+   `ASSISTANT_BROKER_CLIENT_SECRET` (secret) and
+   `ASSISTANT_BROKER_REDIRECT_URI` (address,
+   `<issuer>/broker/motorfix/endpoint`).
+
+   On Keycloak:
+
+   | Variable | Kind | What it is |
+   | --- | --- | --- |
+   | `KC_DB` | name | `postgres` |
+   | `KC_DB_URL` | address | The Keycloak database from step 2, as a JDBC address |
+   | `KC_DB_USERNAME`, `KC_DB_PASSWORD` | name, secret | The role from step 2 |
+   | `KC_HOSTNAME` | address | Keycloak's public address |
+   | `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` | name, secret | The first admin, removed after the first sign-in |
+   | `MCP_URL` | address | As on the api |
+   | `PUBLIC_WEB_URL` | address | The staging web app |
+   | `API_INTERNAL_URL` | address | The api on Railway's private network |
+   | `ASSISTANT_BROKER_CLIENT_ID`, `ASSISTANT_BROKER_CLIENT_SECRET` | name, secret | The same values as the api |
+   | `ASSISTANT_TRUSTED_DOMAINS` | name | Left unset unless a further host is trusted |
+
+   `ASSISTANT_ALLOW_HTTP` is not set on staging: it is for development and CI only.
+4. On the GitHub `staging` environment, set the variables
+   `RAILWAY_SERVICE_MCP` and `RAILWAY_SERVICE_KEYCLOAK` to the two services'
+   ids. The next release deploys both.
+5. Sign in to Keycloak's admin console once with the bootstrap admin, create a
+   permanent admin, then remove the bootstrap one.
+6. Import `infra/observability/alerts/mcp.json` into Grafana Cloud: it carries
+   `mcp-down` and `mcp-issuer-unreachable` for these two services.
+7. Connect Claude and ChatGPT to the staging MCP server and record the result
+   on the story pages.
+
+Known limit: the realm is imported only when it does not exist yet. A change
+to `realm-motorfix-assistants.json` reaches staging through the admin console
+(or by deleting the realm before a release), never by the release alone.
