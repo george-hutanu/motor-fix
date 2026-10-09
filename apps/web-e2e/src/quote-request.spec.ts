@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { PASSWORD, ready, signIn } from './accounts.js';
+import { hydrated, PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The seeded driver with a Dacia Logan, and the owner of Service Auto
@@ -33,6 +33,10 @@ const sideways = (page: Page) =>
 const dialog = (page: Page, name: string | RegExp) =>
   page.getByRole('dialog', { name });
 
+// The dialog's car picker: exact, as "Ce se întâmplă cu mașina" holds the word too.
+const car = (quote: ReturnType<typeof dialog>) =>
+  quote.getByRole('combobox', { exact: true, name: 'Mașina' });
+
 // @seeded: a driver sends a request from a garage's profile against the real API.
 // @traces 221-SC-001 221-SC-002 221-SC-007 221-FR-003
 test.describe('a quote request from a garage profile @seeded', () => {
@@ -41,10 +45,11 @@ test.describe('a quote request from a garage profile @seeded', () => {
     request,
   }) => {
     await signedInDriver(page);
-    await page.goto(PROFILE);
+    // A click before hydration is lost: the button answers once Angular has it.
+    await hydrated(page, PROFILE);
     await page.getByRole('button', { name: 'Cere ofertă' }).click();
     const quote = dialog(page, 'Cere ofertă');
-    await expect(quote.getByLabel('Mașina')).toContainText('Dacia Logan');
+    await expect(car(quote)).toContainText('Dacia Logan');
     await quote.getByRole('switch', { name: OIL }).click();
 
     const sent = page.waitForResponse(
@@ -80,7 +85,8 @@ test.describe('a quote request from a garage profile @seeded', () => {
   test('asks a visitor to sign in over the dialog, then shows their car with nothing lost', async ({
     page,
   }) => {
-    await ready(page, PROFILE);
+    // The profile holds a live stream, so networkidle never comes.
+    await hydrated(page, PROFILE);
     await page.getByRole('button', { name: 'Cere ofertă' }).click();
 
     // The cars read is refused for a visitor; the sign-in gate opens over the
@@ -89,7 +95,7 @@ test.describe('a quote request from a garage profile @seeded', () => {
 
     await expect(page).toHaveURL(PROFILE);
     const quote = dialog(page, 'Cere ofertă');
-    await expect(quote.getByLabel('Mașina')).toContainText('Dacia Logan');
+    await expect(car(quote)).toContainText('Dacia Logan');
     await expect(quote.getByRole('switch', { name: OIL })).toBeVisible();
   });
 
@@ -101,10 +107,12 @@ test.describe('a quote request from a garage profile @seeded', () => {
     test(`the dialog fits a ${width} px phone, ${scheme}, ${language}, with no sideways scroll`, async ({
       page,
     }) => {
+      // Signed in at the desktop size, where the header carries Autentificare
+      // (a phone's header folds it into Cont), then narrowed.
+      await signedInDriver(page);
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ height: 800, width });
-      await signedInDriver(page);
-      await page.goto(PROFILE.replace('/ro/', `/${language}/`));
+      await hydrated(page, PROFILE.replace('/ro/', `/${language}/`));
       const name = language === 'ro' ? 'Cere ofertă' : 'Request a quote';
       await page.getByRole('button', { name }).click();
       const quote = dialog(page, name);
