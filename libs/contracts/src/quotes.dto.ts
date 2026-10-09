@@ -4,9 +4,29 @@ import {
   OmitType,
   PickType,
 } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsDivisibleBy,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 
 import { FUELS } from './plate';
+import {
+  QUOTE_DURATION_MAX_MINUTES,
+  QUOTE_DURATION_MIN_MINUTES,
+  QUOTE_LEI_MAX,
+  QUOTE_LEI_MIN,
+  QUOTE_NOTE_MAX,
+} from './quote-limits';
 import {
   BOOKING_CANCEL_REASONS,
   BOOKING_STATUSES,
@@ -47,7 +67,7 @@ export class ListQueryDto {
 export class GarageRequestsQueryDto extends ListQueryDto {
   @ApiPropertyOptional({
     description:
-      'waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page',
+      'waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits, newest quote first',
     enum: GARAGE_REQUEST_FILTERS,
   })
   @IsOptional()
@@ -101,6 +121,28 @@ export class GarageRequestJobDto extends RequestJobDto {
     description: "The garage ticked this job for the request's car brand",
   })
   offered!: boolean;
+}
+
+// The garage's price-list row for a job: the car's brand row, else its
+// default row.
+export class GarageRequestJobPriceDto {
+  @ApiProperty({ description: 'Lower end of the price, in bani' })
+  fromBani!: number;
+
+  @ApiProperty({
+    description: 'Upper end of the price, in bani; null when open-ended',
+    nullable: true,
+    type: Number,
+  })
+  toBani!: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  durationMinutes!: number | null;
+}
+
+export class GarageRequestDetailJobDto extends GarageRequestJobDto {
+  @ApiProperty({ nullable: true, type: GarageRequestJobPriceDto })
+  price!: GarageRequestJobPriceDto | null;
 }
 
 export class GarageRefDto {
@@ -388,6 +430,9 @@ export class GarageRequestDto extends OmitType(GarageRequestSummaryDto, [
   @ApiProperty({ type: GarageCarDto })
   car!: GarageCarDto;
 
+  @ApiProperty({ type: [GarageRequestDetailJobDto] })
+  declare jobs: GarageRequestDetailJobDto[];
+
   @ApiProperty({ nullable: true, type: String })
   description!: string | null;
 
@@ -404,4 +449,61 @@ export class GarageRequestListDto {
 
   @ApiProperty()
   total!: number;
+}
+
+const trimmedOrNull = ({ value }: { value: unknown }) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
+
+// A garage's answer to a request: a price range in whole lei, how long the
+// work takes and when the car can come in.
+export class SendQuoteDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  requestId!: string;
+
+  @ApiProperty({ maximum: QUOTE_LEI_MAX, minimum: QUOTE_LEI_MIN })
+  @IsInt()
+  @Min(QUOTE_LEI_MIN)
+  @Max(QUOTE_LEI_MAX)
+  fromLei!: number;
+
+  @ApiProperty({ maximum: QUOTE_LEI_MAX, minimum: QUOTE_LEI_MIN })
+  @IsInt()
+  @Min(QUOTE_LEI_MIN)
+  @Max(QUOTE_LEI_MAX)
+  toLei!: number;
+
+  @ApiProperty({
+    maximum: QUOTE_DURATION_MAX_MINUTES,
+    minimum: QUOTE_DURATION_MIN_MINUTES,
+    multipleOf: QUOTE_DURATION_MIN_MINUTES,
+  })
+  @IsInt()
+  @Min(QUOTE_DURATION_MIN_MINUTES)
+  @Max(QUOTE_DURATION_MAX_MINUTES)
+  @IsDivisibleBy(QUOTE_DURATION_MIN_MINUTES)
+  durationMinutes!: number;
+
+  @ApiProperty({
+    description: 'The proposed start, with its offset; later than now',
+    format: 'date-time',
+  })
+  @IsISO8601({ strict: true })
+  @Matches(/(Z|[+-]\d{2}:\d{2})$/)
+  slot!: string;
+
+  @ApiPropertyOptional({
+    description: 'Whitespace alone is no note',
+    maxLength: QUOTE_NOTE_MAX,
+    nullable: true,
+    type: String,
+  })
+  @Transform(trimmedOrNull)
+  @IsOptional()
+  @IsString()
+  @Length(1, QUOTE_NOTE_MAX)
+  note?: string | null;
 }

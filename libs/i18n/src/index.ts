@@ -21,6 +21,7 @@ export {
   formatNum,
   formatPct,
   formatRating,
+  formatSlot,
   relativeTime,
   requestAge,
 } from './formats';

@@ -190,6 +190,8 @@ model Quote {
   withdrawnAt     DateTime?        @map("withdrawn_at") @db.Timestamptz(3)
   acceptedAt      DateTime?        @map("accepted_at") @db.Timestamptz(3)
   expiresAt       DateTime         @map("expires_at") @db.Timestamptz(3)
+  // The send's Idempotency-Key, unique per garage.
+  idempotencyKey  String           @map("idempotency_key")
   request         QuoteRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   recipient       RequestRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
   garage          Garage           @relation(fields: [garageId], references: [id], onDelete: Cascade)
@@ -197,6 +199,7 @@ model Quote {
   booking         Booking?
 
   @@unique([requestId, garageId])
+  @@unique([garageId, idempotencyKey])
   @@index([garageId, sentAt(sort: Desc)])
   @@map("quote")
 }

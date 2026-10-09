@@ -181,6 +181,7 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
         expiresAt: new Date(Date.now() + QUOTE_VALIDITY_DAYS * 24 * HOUR),
         fromBani: 45_000,
         garageId,
+        idempotencyKey: randomUUID(),
         recipientId: to.id,
         requestId,
         slot: new Date(Date.now() + 48 * HOUR),

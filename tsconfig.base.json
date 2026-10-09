@@ -49,6 +49,9 @@
         "./libs/contracts/src/price-range.ts"
       ],
       "@motor-fix/contracts/problem": ["./libs/contracts/src/problem.ts"],
+      "@motor-fix/contracts/quote-limits": [
+        "./libs/contracts/src/quote-limits.ts"
+      ],
       "@motor-fix/contracts/request-status": [
         "./libs/contracts/src/request-status.ts"
       ],

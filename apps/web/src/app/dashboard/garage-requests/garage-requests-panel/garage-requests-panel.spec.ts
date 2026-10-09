@@ -35,7 +35,7 @@ async function render(
   live = fakeLive();
   let call = 0;
   list = jest.fn(async ({ status }: { status: string }) => {
-    if (status === 'closed') return listOf([]);
+    if (status !== 'waiting') return listOf([]);
     const answer = waiting[Math.min(call++, waiting.length - 1)];
     if (answer instanceof Error) throw answer;
     return answer;

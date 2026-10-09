@@ -4,6 +4,8 @@ import { GarageRequestsController } from './garage-requests/garage-requests.cont
 import { GarageRequestsService } from './garage-requests/garage-requests.service';
 import { QuoteRequestsController } from './quote-requests/quote-requests.controller';
 import { QuoteRequestsService } from './quote-requests/quote-requests.service';
+import { QuotesController } from './quotes/quotes.controller';
+import { QuotesService } from './quotes/quotes.service';
 import { RequestsController } from './requests/requests.controller';
 import { RequestsService } from './requests/requests.service';
 import { AUDIT_PORT } from '../audit/audit.port';
@@ -16,11 +18,13 @@ import { AuditService } from '../audit/audit.service';
     RequestsController,
     GarageRequestsController,
     QuoteRequestsController,
+    QuotesController,
   ],
   providers: [
     RequestsService,
     GarageRequestsService,
     QuoteRequestsService,
+    QuotesService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

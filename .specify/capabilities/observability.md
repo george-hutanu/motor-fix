@@ -16,6 +16,7 @@ features:
   - 343-live-quote-requests
   - 374-assistant-requests
   - 1016-mcp-staging
+  - 344-send-quote
 ---
 
 # Capability: Observability
@@ -451,6 +452,10 @@ _From 1016-mcp-staging._
 ### 000-FR-012 — `infra/observability/inventory.json` MUST list `mcp` and `keycloak` as `railway-service` entries (`source` `scripts/railway-deploy.ts`, `dashboard` `motorfix-mcp`, `alerts` the two new uids, `story` ST-1016), and `node scripts/observability-inventory.ts` MUST pass against the changed deploy script (its service discovery reads the union of every service list in the deploy script). The existing `outside-service` `keycloak` entry stays.
 
 _From 1016-mcp-staging._
+
+### 344-FR-018 — Observability: the endpoint is listed in `infra/observability/inventory.json` with its route duration metric; the send (a product action) MUST emit one counter of quotes sent by outcome (`sent`, `refused`, `already_answered`, `request_not_open`; `refused` counts the refusals the service raises, 400 low-above-high or past slot, 403 and 404, while a body the validation pipe refuses and a missing `Idempotency-Key` are counted by the route's own 4xx metric) and one histogram of the response time (`answered_at` − `created_at`, in minutes, no identifiers) on the `motorfix-product` dashboard; the consumer of FR-016 is listed with one counter of QUOTE_RECEIVED messages built per outcome (`built`, `muted`) on the `motorfix-queues` dashboard; one structured log line per send with the quote id, the request id and the outcome (never the range, the note or the driver); no alert (no agreed threshold; ST-880 adds alert rules). The PR's Observability section names them.
+
+_From 344-send-quote._
 
 ## Retired
 

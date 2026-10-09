@@ -155,6 +155,25 @@ describe('Cererile mele', () => {
     expect(rows(element)).toHaveLength(1);
   });
 
+  // @traces 344-FR-015
+  it('reads the list again when a garage sends a quote', async () => {
+    const { element, settle } = await render([
+      [row()],
+      [row({ quotesCount: 1, status: 'quoted' })],
+    ]);
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'quote-1',
+      kind: 'quote.sent',
+    });
+    await wait(400);
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(text(rows(element)[0])).toContain('Ofertă');
+  });
+
   it('offers a retry when the first read fails, and shows the list after it', async () => {
     const { element, settle } = await render([new Error('down'), [row()]]);
 

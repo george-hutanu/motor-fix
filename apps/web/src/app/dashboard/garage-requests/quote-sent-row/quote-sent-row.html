@@ -1,0 +1,20 @@
+@let request = row();
+<p class="who">
+  <span class="name">{{ request.driver.shortName }} </span>
+  <span class="car">{{ request.car.brand }} {{ request.car.model }} · {{ request.car.year }} </span>
+</p>
+<p class="jobs">
+  @if (jobs().length) {
+    {{ jobs().join(' · ') }}
+  } @else {
+    {{ request.descriptionLine }}
+  }
+</p>
+<p class="offer">
+  <span class="range">{{ range() }} </span>
+  <time class="slot" [attr.datetime]="request.quote?.slot">{{ slot() }}</time>
+</p>
+<p class="status">
+  <span class="lamp" aria-hidden="true"></span>
+  <span>{{ 'garage.quotes.sentList.waiting' | t }}</span>
+</p>

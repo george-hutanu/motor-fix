@@ -25,6 +25,7 @@ features:
   - 260-rule-off-confirm
   - 343-live-quote-requests
   - 312-report-garage
+  - 344-send-quote
 ---
 
 # Capability: Notifications
@@ -576,6 +577,10 @@ _From 343-live-quote-requests._
 ### 343-FR-014 — A person who muted REQUEST_RECEIVED on every channel MUST get no message and keeps the bell row (an `in_app` row is always written, 194-FR); the row still appears on their dashboard. The mute MUST be the same per-type, per-garage, per-channel choice ST-198 stores (no new preference), so the reminders story reads it as "mute covers the reminders" without a new switch.
 
 _From 343-live-quote-requests._
+
+### 344-FR-016 — `quote.sent` MUST have one registered consumer in the notifications worker which, per event, builds one QUOTE_RECEIVED through the existing notification service for the request's driver, subject the quote, on the channels the catalogue allows (e-mail, push, WhatsApp), honouring the driver's per-type, per-channel mute (198), with push falling back to e-mail for a person with no device (196-FR-007); parameters are the garage's name and the range in lei, never the note, the driver's data or the plate. The job id derives from the event id so a second relay builds nothing twice (257-FR-005). QUOTE_RECEIVED MUST gain its single-quote templates in Romanian and English for e-mail, push, WhatsApp and the bell, passing the template check (195-FR-009): push and bell "Ofertă nouă de la {garage}: {range} lei" / "New quote from {garage}: {range} lei", e-mail with a link to the driver's request; the grouped template stays.
+
+_From 344-send-quote._
 
 ## Retired
 

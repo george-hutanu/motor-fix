@@ -17,9 +17,9 @@ export interface GarageRequestsControllerList$Params {
   cursor?: string;
 
 /**
- * waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page
+ * waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits, newest quote first
  */
-  status?: 'waiting' | 'closed';
+  status?: 'waiting' | 'closed' | 'quoted';
 }
 
 export function garageRequestsControllerList(http: HttpClient, rootUrl: string, params?: GarageRequestsControllerList$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageRequestListDto>> {

@@ -106,10 +106,11 @@ interface LiveRows<T> {
 
 // A list that keeps the person's place: while it is not at its top, new rows
 // that sort before the rows shown wait behind the pill; rows shown update in
-// place, and rows gone from the re-read leave.
+// place, and rows gone from the re-read leave. `atTop` sees the re-read, so a
+// list may also show at once what the person just did.
 export function liveRows<T extends { id: string }>(
   shown: Signal<readonly T[] | undefined>,
-  atTop: () => boolean,
+  atTop: (next: readonly T[]) => boolean,
 ): LiveRows<T> {
   const state = linkedSignal<
     readonly T[] | undefined,
@@ -117,7 +118,7 @@ export function liveRows<T extends { id: string }>(
   >({
     computation: (next = [], previous) => {
       const before = previous?.value.rows ?? [];
-      if (before.length === 0 || atTop()) return { held: [], rows: next };
+      if (before.length === 0 || atTop(next)) return { held: [], rows: next };
       const known = new Set(before.map((row) => row.id));
       const first = next.findIndex((row) => known.has(row.id));
       const cut = first === -1 ? 0 : first;
@@ -218,11 +219,12 @@ export class LiveAnchor {
 
 // On a value that changes live: a short highlight (none with reduced motion),
 // and `mfLiveChangeSay`, when given, is announced politely. Nothing happens
-// when the value first shows.
+// when the value first shows, unless `mfLiveChangeNew` says it just arrived.
 @Directive({ selector: '[mfLiveChange]' })
 export class LiveChange {
   readonly mfLiveChange = input<unknown>();
   readonly mfLiveChangeSay = input<string>();
+  readonly mfLiveChangeNew = input(false);
 
   constructor() {
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -242,7 +244,7 @@ export class LiveChange {
       this.mfLiveChange();
       if (first) {
         first = false;
-        return;
+        if (!untracked(this.mfLiveChangeNew)) return;
       }
       untracked(() => {
         const say = this.mfLiveChangeSay();

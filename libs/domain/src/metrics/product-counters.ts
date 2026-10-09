@@ -15,7 +15,6 @@ export type JobStepAction =
   | 'removed'
   | 'ticked'
   | 'unticked';
-export type RequestReceivedOutcome = 'built' | 'muted' | 'skipped';
 export type GarageReportOutcome =
   | 'created'
   | 'already_reported'
@@ -76,10 +75,17 @@ export function countJobStep(action: JobStepAction) {
   ).add(1, { action });
 }
 
-export function countRequestReceived(outcome: RequestReceivedOutcome) {
+export function countRequestReceived(outcome: 'built' | 'muted' | 'skipped') {
   counter(
     'motorfix_request_received_total',
     'Garages a new request was announced to, by outcome',
+  ).add(1, { outcome });
+}
+
+export function countQuoteReceived(outcome: 'built' | 'muted') {
+  counter(
+    'motorfix_quote_received_total',
+    'Sent quotes announced to their driver, by outcome',
   ).add(1, { outcome });
 }
 

@@ -157,6 +157,15 @@
       "story": "ST-343"
     },
     {
+      "kind": "queue",
+      "name": "quote-received",
+      "source": "libs/domain/src/notifications/quote-received/quote-received.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counted by motorfix_quote_received_total (built, muted) on motorfix-queues and motorfix-product; BullMQ's queue metrics cover depth and failures; no agreed threshold yet, ST-880 adds the alerts",
+      "story": "ST-344"
+    },
+    {
       "kind": "outside-service",
       "name": "brevo",
       "host": "api.brevo.com",
@@ -313,6 +322,24 @@
       "story": "ST-343"
     },
     {
+      "kind": "product-counter",
+      "name": "motorfix_quotes_sent_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts quotes garages send by outcome (sent, refused, already_answered, request_not_open; refused covers the service's own 400, 403 and 404, the validation pipe's 400s show in the route metric) and records motorfix_quote_response_minutes (request created to quote sent) with no identifiers, with one Quotes log line per send naming the quote id, the request id and the outcome; no agreed threshold yet, ST-880 adds the alert rules",
+      "story": "ST-344"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_quote_received_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counts each sent quote announced to its driver by outcome (built, muted), with the fan-out's log line naming the quote id; also on motorfix-product; no agreed threshold yet, ST-880 adds the alert rules",
+      "story": "ST-344"
+    },
+    {
       "kind": "endpoint",
       "name": "quote-requests",
       "source": "libs/domain/src/quotes/quote-requests/quote-requests.controller.ts",
@@ -321,6 +348,16 @@
       "alerts": "none",
       "reason": "ST-880 adds the alerts",
       "story": "ST-221"
+    },
+    {
+      "kind": "endpoint",
+      "name": "quotes",
+      "source": "libs/domain/src/quotes/quotes/quotes.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quotes",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "one log line per send naming the quote id, the request id and the outcome; the send counter and response-time histogram are the motorfix_quotes_sent_total entry; no agreed threshold yet, ST-880 adds the alerts",
+      "story": "ST-344"
     },
     {
       "kind": "product-counter",
