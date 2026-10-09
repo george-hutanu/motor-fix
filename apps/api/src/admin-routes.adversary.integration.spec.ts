@@ -95,21 +95,15 @@ describe('the admin overview count', () => {
     expect(await waiting(admin)).toBe(first + 1);
   });
 
-  it('answers only the documented fields, whatever the query string', async () => {
+  // The overview takes `city` and `period` only; the global pipe
+  // refuses any other field, so a forged count never reaches the answer.
+  it('refuses a query field it does not take, answering no figure', async () => {
     const res = await request(app.getHttpServer())
       .get(`${URL}?garagesWaiting=999&role=driver`)
       .set('Authorization', bearer(await account('admin'), 'admin'));
 
-    expect(res.status).toBe(200);
-    expect(res.body.garagesWaiting).not.toBe(999);
-    expect(
-      Object.keys(res.body).filter((k) => k !== 'activeDriversMonthStart'),
-    ).toEqual([
-      'garagesWaiting',
-      'activeDrivers',
-      'garagesApprovedThisMonth',
-      'garagesListed',
-    ]);
+    expect([res.status, res.body?.code]).toEqual([400, 'validation_failed']);
+    expect(res.body).not.toHaveProperty('garagesWaiting');
   });
 });
 

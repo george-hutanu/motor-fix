@@ -1,0 +1,144 @@
+@if (request(); as request) {
+  <div class="about">
+    <p class="subject">{{ subject() }}</p>
+    <p class="mechanic">
+      {{ 'garage.quotes.send.mechanic' | t: { mechanic: ('garage.requests.anyMechanic' | t) } }}
+    </p>
+    @if (leftOut(); as jobs) {
+      <p class="left-out">{{ 'garage.quotes.send.notOffered' | t: { jobs } }}</p>
+    }
+  </div>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <fieldset class="body" [disabled]="sending()">
+      <div class="prices">
+        <div class="field">
+          <label for="mf-send-quote-from">{{ 'garage.quotes.send.from' | t }}</label>
+          <input
+            hlmInput
+            id="mf-send-quote-from"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            step="1"
+            formControlName="fromLei"
+            aria-describedby="mf-send-quote-from-error"
+            (keydown.enter)="enter($event)"
+          />
+          <p class="error" id="mf-send-quote-from-error">{{ message(form.controls.fromLei) }}</p>
+        </div>
+        <div class="field">
+          <label for="mf-send-quote-to">{{ 'garage.quotes.send.to' | t }}</label>
+          <input
+            hlmInput
+            id="mf-send-quote-to"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            step="1"
+            formControlName="toLei"
+            aria-describedby="mf-send-quote-to-error"
+            (keydown.enter)="enter($event)"
+          />
+          <p class="error" id="mf-send-quote-to-error">{{ message(form.controls.toLei) }}</p>
+        </div>
+      </div>
+      @if (wide()) {
+        <p class="warning" role="status">{{ 'garage.quotes.send.wide' | t }}</p>
+      }
+      <fieldset class="group" formGroupName="durationMinutes">
+        <legend>{{ 'garage.quotes.send.duration' | t }}</legend>
+        <div class="pair">
+          <div class="field">
+            <label for="mf-send-quote-hours">{{ 'garage.quotes.send.hours' | t }}</label>
+            <input
+              hlmInput
+              id="mf-send-quote-hours"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              formControlName="hours"
+              aria-describedby="mf-send-quote-duration-error"
+              (keydown.enter)="enter($event)"
+            />
+          </div>
+          <div class="field">
+            <label for="mf-send-quote-minutes">{{ 'garage.quotes.send.minutes' | t }}</label>
+            <select hlmInput id="mf-send-quote-minutes" formControlName="minutes" aria-describedby="mf-send-quote-duration-error">
+              <option value="0">0</option>
+              <option value="15">15</option>
+              <option value="30">30</option>
+              <option value="45">45</option>
+            </select>
+          </div>
+        </div>
+        <p class="error" id="mf-send-quote-duration-error">{{ message(duration) }}</p>
+      </fieldset>
+      <fieldset class="group" formGroupName="slot">
+        <legend>{{ 'garage.quotes.send.slot' | t }}</legend>
+        <div class="pair">
+          <div class="field">
+            <label for="mf-send-quote-day">{{ 'garage.quotes.send.day' | t }}</label>
+            <input
+              hlmInput
+              id="mf-send-quote-day"
+              type="date"
+              [min]="today"
+              formControlName="day"
+              aria-describedby="mf-send-quote-slot-error"
+              (keydown.enter)="enter($event)"
+            />
+          </div>
+          <div class="field">
+            <label for="mf-send-quote-time">{{ 'garage.quotes.send.time' | t }}</label>
+            <input
+              hlmInput
+              id="mf-send-quote-time"
+              type="time"
+              step="900"
+              [attr.min]="minTime()"
+              formControlName="time"
+              aria-describedby="mf-send-quote-slot-error"
+              (keydown.enter)="enter($event)"
+            />
+          </div>
+        </div>
+        <p class="error" id="mf-send-quote-slot-error">{{ message(slot) }}</p>
+      </fieldset>
+      <div class="field">
+        <label for="mf-send-quote-note">{{ 'garage.quotes.send.note' | t }}</label>
+        <textarea
+          hlmInput
+          id="mf-send-quote-note"
+          rows="3"
+          formControlName="note"
+          aria-describedby="mf-send-quote-note-error"
+        ></textarea>
+        <div class="under">
+          <p class="error" id="mf-send-quote-note-error">{{ message(form.controls.note) }}</p>
+          <p class="counter" [class.full]="noteLength() > noteMax">{{ noteLength() }}/{{ noteMax }}</p>
+        </div>
+      </div>
+      <p class="hint">{{ 'garage.quotes.send.hint' | t }}</p>
+    </fieldset>
+    <mf-task-error [save]="save" />
+    @if (!online()) {
+      <p class="error" role="status">{{ 'garage.quotes.send.offline' | t }}</p>
+    }
+    <div class="actions">
+      <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'garage.quotes.send.cancel' | t }}</button>
+      <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="blocked()">{{ 'garage.quotes.send.submit' | t }}</button>
+    </div>
+  </form>
+} @else if (failed()) {
+  <p class="error" role="alert">{{ 'shell.form.problem.error' | t }}</p>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="load()">{{ 'garage.quotes.send.retry' | t }}</button>
+  </div>
+} @else {
+  <div class="skeleton-list" role="status" aria-busy="true" [attr.aria-label]="'garage.quotes.send.loading' | t">
+    <span class="skeleton line"></span>
+    <span class="skeleton line"></span>
+    <span class="skeleton line"></span>
+  </div>
+}

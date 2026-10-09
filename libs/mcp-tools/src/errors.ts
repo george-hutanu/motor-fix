@@ -6,6 +6,9 @@ export type Language = 'ro' | 'en';
 export interface ToolError {
   code: string;
   message: string;
+  // What a use case adds for the assistant to act on, e.g. the garage's
+  // mechanics beside `mechanic_not_found`.
+  [detail: string]: unknown;
 }
 
 const MESSAGES: Record<string, Record<Language, string>> = {
@@ -21,6 +24,22 @@ const MESSAGES: Record<string, Record<Language, string>> = {
     en: 'The person did not allow this assistant to read their MotorFix data.',
     ro: 'Persoana nu a permis acestui asistent să citească datele sale din MotorFix.',
   },
+  empty_day_sheet: {
+    en: 'This mechanic has no jobs on this day.',
+    ro: 'Mecanicul nu are lucrări în această zi.',
+  },
+  empty_requests: {
+    en: 'There are no quote requests here.',
+    ro: 'Nu există cereri de ofertă aici.',
+  },
+  empty_schedule: {
+    en: 'There are no bookings in this period.',
+    ro: 'Nu sunt programări în această perioadă.',
+  },
+  empty_stats: {
+    en: 'There was no activity in this period.',
+    ro: 'Nu a fost nicio activitate în această perioadă.',
+  },
   internal_error: {
     en: 'Something went wrong. Try again later.',
     ro: 'Ceva nu a mers. Încearcă din nou mai târziu.',
@@ -28,6 +47,14 @@ const MESSAGES: Record<string, Record<Language, string>> = {
   maintenance: {
     en: 'MotorFix is under maintenance; changes are paused. Reading still works.',
     ro: 'MotorFix este în mentenanță; modificările sunt oprite. Citirea funcționează în continuare.',
+  },
+  mechanic_not_found: {
+    en: 'No single mechanic of this garage has that name. Ask which of the listed mechanics was meant.',
+    ro: 'Niciun mecanic al service-ului nu are exact acest nume. Întreabă la care dintre mecanicii din listă te referi.',
+  },
+  no_mechanic: {
+    en: 'No mechanic',
+    ro: 'Fără mecanic',
   },
   not_found: {
     en: 'Not found.',
@@ -53,9 +80,17 @@ const CONNECTION_CODES = new Set(['P1001', 'P1002', 'P1017']);
 
 const logger = new Logger('McpTools');
 
-export function refusal(code: string, language: Language): ToolError {
-  return { code, message: MESSAGES[code]?.[language] ?? FALLBACK[language] };
+export function text(key: string, language: Language): string {
+  return MESSAGES[key]?.[language] ?? FALLBACK[language];
 }
+
+export function refusal(code: string, language: Language): ToolError {
+  return { code, message: text(code, language) };
+}
+
+// The keys of an exception body a tool's refusal may carry: anything else a
+// use case puts there stays on the server.
+const DETAILS = new Set(['mechanics']);
 
 export function toolError(error: unknown, language: Language): ToolError {
   if (error instanceof HttpException) {
@@ -68,11 +103,14 @@ export function toolError(error: unknown, language: Language): ToolError {
       typeof own.code === 'string'
         ? own.code
         : codeForStatus(error.getStatus());
+    const details = Object.fromEntries(
+      Object.entries(own).filter(([key]) => DETAILS.has(key)),
+    );
     // A use case states its refusal in English; until its code has a
     // Romanian text here, Romanian gets the general one.
     if (!MESSAGES[code] && language === 'en' && typeof own.message === 'string')
-      return { code, message: own.message };
-    return refusal(code, language);
+      return { ...details, code, message: own.message };
+    return { ...details, ...refusal(code, language) };
   }
   if (databaseDown(error)) return refusal('service_unavailable', language);
   logger.error(error);

@@ -41,16 +41,22 @@ model Job {
 }
 
 model JobStep {
-  id            String    @id @default(uuid()) @db.Uuid
-  jobId         String    @map("job_id") @db.Uuid
-  position      Int
-  label         String
+  id             String    @id @default(uuid()) @db.Uuid
+  jobId          String    @map("job_id") @db.Uuid
+  position       Int
+  label          String
   // The words the driver sees, when they differ from the garage's own.
-  customerLabel String?   @map("customer_label")
-  doneAt        DateTime? @map("done_at") @db.Timestamptz(3)
-  job           Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  customerLabel  String?   @map("customer_label")
+  doneAt         DateTime? @map("done_at") @db.Timestamptz(3)
+  // Who ticked it; cleared with done_at.
+  doneById       String?   @map("done_by") @db.Uuid
+  // The add's Idempotency-Key, so a resent add is the same step.
+  idempotencyKey String?   @map("idempotency_key")
+  job            Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  doneBy         Account?  @relation("JobStepDoneBy", fields: [doneById], references: [id], onDelete: SetNull)
 
   @@unique([jobId, position])
+  @@unique([jobId, idempotencyKey])
   @@map("job_step")
 }
 

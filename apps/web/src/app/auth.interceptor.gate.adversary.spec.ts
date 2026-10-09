@@ -13,9 +13,11 @@ import { firstValueFrom } from 'rxjs';
 
 import { authInterceptor } from './auth.interceptor';
 import { Session } from './dashboard/session';
+import { PlatformStatus } from './maintenance/platform-status';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 let controller: HttpTestingController | undefined;
+const platformStatus = { on: () => undefined };
 
 function setup(
   token: string | null,
@@ -37,6 +39,7 @@ function setup(
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       { provide: Session, useValue: session },
+      { provide: PlatformStatus, useValue: platformStatus },
       { provide: SignInDialog, useValue: { gate } },
       { provide: PLATFORM_ID, useValue: 'browser' },
     ],

@@ -70,7 +70,10 @@ describe('the MCP server and its identity server', () => {
     expect(rule).toBeDefined();
     const keycloak = JSON.parse(
       read('infra', 'observability', 'inventory.json'),
-    ).entries.find((e: { name: string }) => e.name === 'keycloak');
-    expect(keycloak.alerts).toEqual([rule?.uid]);
+    ).entries.find(
+      (e: { kind: string; name: string }) =>
+        e.kind === 'outside-service' && e.name === 'keycloak',
+    );
+    expect(keycloak.alerts).toEqual([rule?.uid, 'mcp-issuer-unreachable']);
   });
 });

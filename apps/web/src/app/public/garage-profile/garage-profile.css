@@ -77,7 +77,8 @@ h1 {
 
 .place,
 .description,
-.verified {
+.verified,
+.rate {
   margin: 0;
   color: var(--mf-text-secondary);
 }
@@ -89,6 +90,11 @@ h1 {
 
 .verified {
   max-width: 38em;
+}
+
+.rate svg {
+  margin-inline-end: var(--mf-space-1);
+  vertical-align: -3px;
 }
 
 .shield {

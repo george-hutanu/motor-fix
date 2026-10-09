@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 type Language = 'ro' | 'en';
@@ -48,7 +49,7 @@ async function openCockpit(page: Page, language: Language = 'ro') {
     }),
   ).toBeVisible();
   // Hydrated: the remembered language and the click handlers are in.
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 // The cockpit reached from Home, so one Back too many leaves it.

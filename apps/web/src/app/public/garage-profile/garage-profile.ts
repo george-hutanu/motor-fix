@@ -24,16 +24,19 @@ import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
 import { Gone } from './gone/gone';
+import { PhotosSection } from './photos-section/photos-section';
+import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
 import { publicLiveResource } from '../live';
 
 // What can change on a garage's page: the garage, its reviews, its
-// verification, prices, mechanics and facilities.
+// verification, prices, mechanics, facilities and response figures.
 const KINDS = EVENT_KINDS.filter(
   (kind) =>
     /^(garage|review|price_list|mechanic|facility)\./.test(kind) ||
-    kind === 'verification.decided',
+    kind === 'verification.decided' ||
+    kind === 'response_stats.updated',
 );
 
 const GONE = [404, 410];
@@ -45,7 +48,9 @@ const GONE = [404, 410];
     KmPipe,
     Lamp,
     LiveChange,
+    PhotosSection,
     RatingDial,
+    RequestQuoteButton,
     RouterLink,
     TranslatePipe,
   ],
@@ -90,6 +95,16 @@ export class GarageProfile {
           value: formatRating(rating, this.i18n.language()),
         })
       : this.i18n.t('shell.gauge.none');
+  });
+  // Empty when the garage has had no request to count lately: no line.
+  protected readonly rateSaid = computed(() => {
+    const response = this.garage()?.responseRate;
+    if (response?.state === 'rate' && response.rate !== undefined) {
+      return this.i18n.t('public.garageProfile.rate', { rate: response.rate });
+    }
+    return response?.state === 'new'
+      ? this.i18n.t('public.garageProfile.newGarage')
+      : '';
   });
   protected readonly removed = computed(
     () => this.profile.gone() && this.status() === 410,

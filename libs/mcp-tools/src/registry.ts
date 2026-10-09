@@ -10,8 +10,12 @@ import {
   actorOf,
   type Capability,
   capabilitiesOf,
+  type DaySheetService,
+  type GarageFiguresService,
+  type GarageRequestsService,
+  type GarageScheduleService,
   type LoadedAccount,
-  type Maintenance,
+  type MaintenanceReader,
   type Role,
 } from '@motor-fix/domain';
 import { type ZodRawShape, z } from 'zod';
@@ -36,7 +40,13 @@ export interface ToolContext {
   accounts: { activeAccount(id: string): Promise<LoadedAccount> };
   // A garage with no row for the key has the feature on.
   featureOn(garageId: string, key: string): Promise<boolean>;
-  maintenance: Maintenance;
+  garage: {
+    daySheet: Pick<DaySheetService, 'get'>;
+    figures: Pick<GarageFiguresService, 'get'>;
+    requests: Pick<GarageRequestsService, 'inbox'>;
+    schedule: Pick<GarageScheduleService, 'list'>;
+  };
+  maintenance: MaintenanceReader;
 }
 
 export interface ToolDefinition<In extends ZodRawShape = ZodRawShape> {
@@ -151,10 +161,15 @@ export async function callTool(
       return failure(refusal('maintenance', language));
     const input = z.object(tool.inputSchema).safeParse(args ?? {});
     if (!input.success) return failure(refusal('validation', language));
-    const output = await tool.handler(actor, input.data, ctx);
+    const answer = await tool.handler(actor, input.data, ctx);
+    // The declared output is all that leaves: a field a read grows later is
+    // dropped here rather than handed to the assistant.
+    const output = (
+      tool.outputSchema ? z.object(tool.outputSchema).parse(answer) : answer
+    ) as Record<string, unknown>;
     return {
       content: [{ text: JSON.stringify(output), type: 'text' }],
-      structuredContent: output as Record<string, unknown>,
+      structuredContent: output,
     };
   } catch (error) {
     return failure(toolError(error, language));
@@ -179,9 +194,15 @@ export function register(
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: await visibleTools(tools, caller, ctx),
   }));
-  server.setRequestHandler(CallToolRequestSchema, ({ params }) =>
-    observe(params.name, () =>
+  server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
+    const result = await observe(params.name, () =>
       callTool(tools, caller, ctx, params.name, params.arguments),
-    ),
-  );
+    );
+    // The client checks structuredContent against a declared output even on
+    // an error, so such a tool's refusal travels in its text alone.
+    const declared = tools.find((t) => t.name === params.name)?.outputSchema;
+    if (!(result.isError && declared)) return result;
+    const { structuredContent: _refusal, ...text } = result;
+    return text;
+  });
 }

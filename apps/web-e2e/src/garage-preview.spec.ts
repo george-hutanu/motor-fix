@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 const preview = (page: Page) => page.locator('mf-garage-preview');
@@ -13,7 +14,7 @@ async function open(page: Page, path = '/ro/list-your-garage') {
   await page.goto(path);
   // A field typed in before hydration is wiped when the client takes over.
   await expect(chip(page, 'BMW')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 async function labour(scope: Locator, from: string, to: string) {

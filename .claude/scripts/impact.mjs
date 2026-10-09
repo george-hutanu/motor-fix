@@ -86,7 +86,7 @@ export function main(argv, repo) {
   const positional = argv.filter((a) => !a.startsWith("--"));
   const named = positional.find((a) => a.startsWith("specs/"));
   const feature = named
-    ? { dir: join(repo, named), name: basename(named), num: basename(named).match(/^(\d{3})-/)?.[1] ?? "000" }
+    ? { dir: join(repo, named), name: basename(named), num: basename(named).match(/^(\d{3,})-/)?.[1] ?? "000" }
     : activeFeature(repo);
 
   if (!feature || !existsSync(join(feature.dir, "spec.md"))) {

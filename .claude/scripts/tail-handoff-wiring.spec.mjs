@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The hand-off and the finish log are prose in skills. These checks keep it
@@ -52,7 +52,11 @@ describe('the hand-off', () => {
     const agents = read('AGENTS.md');
     assert.match(agents, /tail agent/);
     assert.match(agents, /NEXT: tail #<n>/);
-    execFileSync('git', ['check-ignore', '--no-index', '-q', 'specs/901-x/handoff.md'], { cwd: root });
+    // specs is a link into .motor-fix-specs (a folder in CI), which git will not look past:
+    // the public repo ignores specs whole, and the clone's own .gitignore the note.
+    execFileSync('git', ['check-ignore', '--no-index', '-q', 'specs'], { cwd: root });
+    const clone = join(root, '.motor-fix-specs');
+    if (existsSync(join(clone, '.git'))) execFileSync('git', ['check-ignore', '--no-index', '-q', 'specs/901-x/handoff.md'], { cwd: clone });
   });
 });
 

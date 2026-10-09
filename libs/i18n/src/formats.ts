@@ -238,3 +238,121 @@ export function calendarNames(language: Language) {
     monthsShort: [...MONTHS_SHORT[language]],
   };
 }
+
+const JUST_NOW: Record<Language, string> = {
+  en: 'a few seconds ago',
+  ro: 'acum câteva secunde',
+};
+const RELATIVE: Record<Language, Intl.RelativeTimeFormat> = {
+  en: new Intl.RelativeTimeFormat(LOCALES.en, { numeric: 'always' }),
+  ro: new Intl.RelativeTimeFormat(LOCALES.ro, { numeric: 'always' }),
+};
+const MINUTE = 60_000;
+const STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
+  ['day', 24 * 60 * MINUTE],
+  ['hour', 60 * MINUTE],
+  ['minute', MINUTE],
+];
+
+// How long ago a moment was: "acum 5 minute", "3 hours ago"; under a minute
+// (or a little ahead of the clock) a few seconds, and from a week on the day
+// itself.
+export function relativeTime(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const elapsed = now.getTime() - date.getTime();
+  if (elapsed >= 7 * 24 * 60 * MINUTE) return formatDay(date, language);
+  for (const [unit, size] of STEPS) {
+    if (elapsed >= size) {
+      return RELATIVE[language].format(-Math.floor(elapsed / size), unit);
+    }
+  }
+  return JUST_NOW[language];
+}
+
+// Fixed for the same reason as the months: "joi" takes no stop.
+const WEEKDAYS_SHORT: Record<Language, readonly string[]> = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  ro: ['dum.', 'lun.', 'mar.', 'mie.', 'joi', 'vin.', 'sâm.'],
+};
+const YESTERDAY: Record<Language, string> = { en: 'yesterday', ro: 'ieri' };
+
+// Romanian puts "de" between a number from 20 on and its noun.
+const de = (count: number) => (count >= 20 ? 'de ' : '');
+
+const AGO: Record<
+  Language,
+  { minutes(count: number): string; hours(count: number): string }
+> = {
+  en: {
+    hours: (n) => `${n} ${n === 1 ? 'hour' : 'hours'} ago`,
+    minutes: (n) => `${n} min ago`,
+  },
+  ro: {
+    hours: (n) => `acum ${n} ${de(n)}${n === 1 ? 'oră' : 'ore'}`,
+    minutes: (n) => `acum ${n} ${de(n)}min`,
+  },
+};
+
+// A request's age on a garage's list: seconds, minutes and hours under a day;
+// then yesterday or the day itself, with the Bucharest time.
+export function requestAge(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const elapsed = now.getTime() - date.getTime();
+  if (elapsed < MINUTE) return JUST_NOW[language];
+  if (elapsed < 60 * MINUTE) {
+    return AGO[language].minutes(Math.floor(elapsed / MINUTE));
+  }
+  if (elapsed < 24 * 60 * MINUTE) {
+    return AGO[language].hours(Math.floor(elapsed / (60 * MINUTE)));
+  }
+  return dayAndTime(date, language, now, { [-1]: YESTERDAY[language] });
+}
+
+const TODAY: Record<Language, string> = { en: 'today', ro: 'azi' };
+const TOMORROW: Record<Language, string> = { en: 'tomorrow', ro: 'mâine' };
+
+// A proposed start: today or tomorrow with the Bucharest time, else the
+// weekday and the day: "mâine, 09:00", "joi, 15 oct., 14:00".
+export function formatSlot(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  return dayAndTime(date, language, now, {
+    0: TODAY[language],
+    1: TOMORROW[language],
+  });
+}
+
+// "<word>, 14:00" for a Bucharest day `named` has a word for (by days from
+// today), else "joi, 15 oct., 14:00".
+function dayAndTime(
+  date: Date,
+  language: Language,
+  now: Date,
+  named: Record<number, string>,
+): string {
+  const day = bucharestDay(date);
+  const today = bucharestDay(now);
+  const start = Date.UTC(day.year, day.month - 1, day.day);
+  const time = clock.format(date);
+  const offset = Math.round(
+    (start - Date.UTC(today.year, today.month - 1, today.day)) / DAY_MS,
+  );
+  const word = named[offset];
+  if (word) return `${word}, ${time}`;
+  const weekday = WEEKDAYS_SHORT[language][new Date(start).getUTCDay()];
+  return `${weekday}, ${day.day} ${MONTHS_SHORT[language][day.month - 1]}, ${time}`;
+}

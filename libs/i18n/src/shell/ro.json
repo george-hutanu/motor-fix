@@ -61,9 +61,35 @@
   "frame": {
     "addCar": "Adaugă o mașină",
     "admin": {
+      "city": {
+        "all": "Toată țara",
+        "bucuresti": "București",
+        "label": "Oraș"
+      },
+      "filters": {
+        "apply": "Aplică",
+        "label": "Filtre: {city}, {period}",
+        "title": "Filtre"
+      },
       "label": "ADMINISTRATOR",
       "none": "niciun service nu așteaptă verificarea",
-      "place": "MotorFix · București",
+      "period": {
+        "7d": "Ultimele 7 zile",
+        "12m": "Ultimele 12 luni",
+        "30d": "Ultimele 30 de zile",
+        "default": "Implicit",
+        "label": "Perioadă",
+        "line": {
+          "7d": "în ultimele 7 zile",
+          "12m": "în ultimele 12 luni",
+          "30d": "în ultimele 30 de zile",
+          "month": "luna asta",
+          "today": "azi"
+        },
+        "month": "Luna aceasta",
+        "today": "Azi"
+      },
+      "place": "MotorFix · {city}",
       "waiting": {
         "few": "{count} service‑uri așteaptă verificarea",
         "one": "1 service așteaptă verificarea",
@@ -84,6 +110,7 @@
       "garage": {
         "dashboard": "Aici vei vedea ce se întâmplă azi în service.",
         "history": "Aici vei vedea cine a schimbat ce în service.",
+        "jobs": "Aici vei vedea lucrările service‑ului.",
         "prices": "Aici vei vedea intervalele de preț pe lucrări.",
         "profile": "Aici vei edita profilul service‑ului.",
         "requests": "Aici vei vedea cererile de ofertă ale șoferilor și vei răspunde cu o ofertă.",
@@ -119,6 +146,7 @@
       "garage": {
         "assistant": "Asistent AI",
         "history": "Istoric modificări",
+        "jobs": "Lucrări",
         "prices": "Prețuri",
         "profile": "Profilul service‑ului",
         "requests": "Cereri de ofertă",
@@ -145,6 +173,7 @@
       },
       "garage": {
         "history": "Cine a schimbat ce și când",
+        "jobs": "Lucrările confirmate, de azi încolo",
         "prices": "Intervalele pe care le văd șoferii pe profilul tău",
         "profile": "Așa te văd șoferii pe hartă",
         "requests": "Răspunde în mai puțin de o oră ca să apari primul la șofer.",
@@ -162,6 +191,7 @@
       "dashboard": "Panou",
       "garages": "Service‑uri",
       "history": "Istoric",
+      "jobs": "Lucrări",
       "overview": "Panou",
       "prices": "Prețuri",
       "profile": "Profil",
@@ -187,6 +217,7 @@
       "garage": {
         "assistant": "Asistentul tău AI",
         "history": "Istoric modificări",
+        "jobs": "Lucrări",
         "prices": "Prețuri",
         "profile": "Profilul service‑ului",
         "requests": "Cereri de ofertă",
@@ -228,6 +259,12 @@
       "one": "{count} actualizare nouă",
       "other": "{count} de actualizări noi"
     }
+  },
+  "maintenance": {
+    "adminLink": "Administrator? Intră în cont",
+    "banner": "Mentenanță activă",
+    "heading": "Mentenanță",
+    "message": "MotorFix este în mentenanță. Revenim în curând."
   },
   "notFound": {
     "home": "Înapoi la pagina principală",

@@ -8,10 +8,10 @@ import {
   EVENT_PORT,
   JsonLogger,
   MAINTENANCE,
-  maintenanceOff,
   outbox,
   PRISMA,
   requestContext,
+  storedMaintenance,
 } from '@motor-fix/domain';
 import { catalogue, type ToolDefinition } from '@motor-fix/mcp-tools';
 import {
@@ -36,6 +36,7 @@ import express, {
 import { McpActorService } from './auth/auth.actor';
 import { AssistantGrants } from './auth/auth.grants';
 import { BearerAuth } from './auth/auth.middleware';
+import { IssuerProbe } from './auth/auth.probe';
 import { ISSUER_SETTINGS, TokenVerifier } from './auth/auth.verifier';
 import { recordRequest } from './metrics/metrics';
 import {
@@ -65,7 +66,7 @@ class LiveController {
 }
 
 @Module({})
-export class McpModule implements NestModule, OnModuleDestroy {
+class McpModule implements NestModule, OnModuleDestroy {
   constructor(
     @Inject(PRISMA) private readonly prisma: ReturnType<typeof createPrisma>,
   ) {}
@@ -89,11 +90,16 @@ export class McpModule implements NestModule, OnModuleDestroy {
         },
         { provide: AUDIT_PORT, useClass: AuditService },
         { provide: EVENT_PORT, useValue: outbox },
-        { provide: MAINTENANCE, useValue: maintenanceOff },
+        {
+          inject: [PRISMA],
+          provide: MAINTENANCE,
+          useFactory: storedMaintenance,
+        },
         { provide: MCP_TOOLS, useValue: tools },
         AccountLoader,
         AssistantGrants,
         BearerAuth,
+        IssuerProbe,
         McpActorService,
         TokenVerifier,
       ],

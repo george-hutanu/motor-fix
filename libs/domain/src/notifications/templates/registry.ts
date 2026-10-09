@@ -5,7 +5,8 @@ import { GENERIC, GENERIC_GROUPED } from './generic';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
 import { NEWS } from './news';
 import { PUSH_TEST } from './push-test';
-import { QUOTE_RECEIVED_GROUPED } from './quote-received';
+import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
+import { REQUEST_RECEIVED } from './request-received';
 import { SIGN_IN_CODE } from './sign-in-code';
 import {
   STAFF_INVITE_MECHANIC,
@@ -29,7 +30,9 @@ export const TEMPLATES: Registry = {
   LISTING_REMINDER,
   NEWS,
   PUSH_TEST,
+  QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
+  REQUEST_RECEIVED,
   SIGN_IN_CODE,
   'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
   'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,

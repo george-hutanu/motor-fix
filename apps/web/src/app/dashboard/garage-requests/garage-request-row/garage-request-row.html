@@ -1,0 +1,33 @@
+@let request = row();
+<p class="who">
+  <span class="name">{{ request.driver.shortName }} </span>
+  <span class="car">{{ request.car.brand }} {{ request.car.model }} · {{ request.car.year }} </span>
+</p>
+<p class="jobs">
+  @for (job of jobs(); track job.id; let last = $last) {
+    <span>{{ job.name }}</span>
+    @if (!job.offered) {
+      <span class="mark"> · {{ 'garage.requests.notOffered' | t }}</span>
+    }
+    @if (!last) {
+      <span> · </span>
+    }
+  } @empty {
+    <span>{{ request.descriptionLine }}</span>
+  }
+</p>
+@if (reason(); as said) {
+  <p class="when">
+    <span class="reason"> {{ said }}</span>
+  </p>
+} @else {
+  <p class="when">
+    <span class="mechanic"> {{ 'garage.requests.anyMechanic' | t }} </span>
+    <time [attr.datetime]="request.createdAt">{{ age() }}</time>
+  </p>
+}
+@if (canSend()) {
+  <div class="actions">
+    <button hlmBtn type="button" (click)="send()">{{ 'garage.quotes.send.title' | t }}</button>
+  </div>
+}

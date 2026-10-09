@@ -4,8 +4,12 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import {
   AccountLoader,
   type createPrisma,
+  DaySheetService,
+  GarageFiguresService,
+  GarageRequestsService,
+  GarageScheduleService,
   MAINTENANCE,
-  type Maintenance,
+  type MaintenanceReader,
   PRISMA,
 } from '@motor-fix/domain';
 import {
@@ -64,7 +68,7 @@ export class TransportController {
     @Inject(ISSUER_SETTINGS) settings: IssuerSettings,
     @Inject(PRISMA) prisma: Prisma,
     accounts: AccountLoader,
-    @Inject(MAINTENANCE) maintenance: Maintenance,
+    @Inject(MAINTENANCE) maintenance: MaintenanceReader,
   ) {
     this.metadataUrl = metadataUrlOf(settings.mcpUrl);
     this.toolNames = tools.map((t) => t.name);
@@ -76,6 +80,12 @@ export class TransportController {
             where: { garageId_key: { garageId, key } },
           })
         )?.enabled ?? true,
+      garage: {
+        daySheet: new DaySheetService(prisma),
+        figures: new GarageFiguresService(prisma),
+        requests: new GarageRequestsService(prisma),
+        schedule: new GarageScheduleService(prisma),
+      },
       maintenance,
     };
   }

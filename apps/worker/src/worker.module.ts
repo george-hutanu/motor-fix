@@ -10,7 +10,10 @@ import {
   NotificationsModule,
   OutboxRelayModule,
   phoneConfig,
+  placesConfig,
   pushConfig,
+  QUOTE_RECEIVED_CONSUMER,
+  REQUEST_RECEIVED_CONSUMER,
   RemindersModule,
   reminderDayMs,
   StorageModule,
@@ -30,7 +33,8 @@ class WorkerModule {}
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
 // WhatsApp, runs the monthly news, the daily reminders, the listing draft
-// sweep, the listing photos' copies and the nightly platform figures, and
+// sweep, the listing photos' copies and the nightly platform figures (placing
+// the garages with no city first), and
 // reads the data stores for their figures.
 export function workerModule(
   env: Env<(typeof WORKER_ENV)[number]>,
@@ -54,7 +58,11 @@ export function workerModule(
       }),
       StorageModule.register(env),
       OutboxRelayModule.register({
-        consumers: [NEWS_CONSUMER],
+        consumers: [
+          NEWS_CONSUMER,
+          QUOTE_RECEIVED_CONSUMER,
+          REQUEST_RECEIVED_CONSUMER,
+        ],
         databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,
       }),
@@ -68,6 +76,8 @@ export function workerModule(
       ListingPhotosWorkerModule.register({ redisUrl: env.REDIS_URL }),
       InsightsModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
+        // Places the garages with no city before the night's figures.
+        places: placesConfig(env.APP_ENV, process.env),
         redisUrl: env.REDIS_URL,
       }),
       DataStoreMetricsModule.register({

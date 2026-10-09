@@ -134,7 +134,7 @@ describe('the admin routes', () => {
 });
 
 describe('the admin overview', () => {
-  it('answers an admin the garages waiting and the platform figures, every one a count', async () => {
+  it('answers an admin the garages waiting and the platform figures, every one a count, and the cities to choose', async () => {
     const res = await call(
       'get',
       '/api/v1/admin/overview',
@@ -152,11 +152,20 @@ describe('the admin overview', () => {
     expect(fields).toEqual(expect.arrayContaining(required));
     expect(
       fields.filter(
-        (f) => !required.includes(f) && f !== 'activeDriversMonthStart',
+        (f) =>
+          !required.includes(f) &&
+          f !== 'activeDriversMonthStart' &&
+          f !== 'cities',
       ),
     ).toEqual([]);
-    for (const value of Object.values(res.body)) {
+    const { cities, ...counts } = res.body;
+    for (const value of Object.values(counts)) {
       expect(Number.isInteger(value) && (value as number) >= 0).toBe(true);
+    }
+    expect(cities[0]).toMatchObject({ key: 'all' });
+    for (const city of cities) {
+      expect(Object.keys(city).sort()).toEqual(['garages', 'key', 'name']);
+      expect(Number.isInteger(city.garages) && city.garages >= 0).toBe(true);
     }
   });
 

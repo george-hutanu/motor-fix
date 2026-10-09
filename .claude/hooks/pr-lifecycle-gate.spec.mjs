@@ -1,6 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -57,6 +58,41 @@ describe('PR lifecycle gate — what it refuses', () => {
       assert.equal(specsUnpushed(dir), 0);
       mkdirSync(join(dir, 'specs'));
       assert.equal(specsUnpushed(dir), 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1018-FR-005
+  it('counts unpushed specs commits in the clone at .motor-fix-specs, linked or not, and in an old clone at specs/', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-specs-'));
+    const g = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const cloneWithOneCommit = (at) => {
+      g(dir, 'init', '-q', '--bare', '-b', 'trunk', `${at}.git`);
+      g(dir, 'clone', '-q', `${at}.git`, at);
+      const clone = join(dir, at);
+      g(clone, 'checkout', '-q', '-b', 'trunk');
+      writeFileSync(join(clone, 'a.md'), 'a\n');
+      g(clone, 'add', '-A');
+      g(clone, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'a');
+      g(clone, 'push', '-q', 'origin', 'trunk');
+      writeFileSync(join(clone, 'b.md'), 'b\n');
+      g(clone, 'add', '-A');
+      g(clone, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'b');
+    };
+    try {
+      cloneWithOneCommit('.motor-fix-specs');
+      assert.equal(specsUnpushed(dir), 1);
+      symlinkSync('.motor-fix-specs', join(dir, 'specs'));
+      assert.equal(specsUnpushed(dir), 1);
+      const old = mkdtempSync(join(tmpdir(), 'gate-specs-old-'));
+      try {
+        execFileSync('git', ['init', '-q', '--bare', '-b', 'trunk', join(old, 'r.git')]);
+        execFileSync('git', ['clone', '-q', join(old, 'r.git'), join(old, 'specs')], { stdio: 'ignore' });
+        assert.equal(specsUnpushed(old), 0);
+      } finally {
+        rmSync(old, { recursive: true, force: true });
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

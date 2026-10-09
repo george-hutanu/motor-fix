@@ -1,6 +1,6 @@
 import { expect, type Page, type Route } from '@playwright/test';
 
-import { ownMap, ready } from './accounts.js';
+import { ownMap, ready, settled } from './accounts.js';
 import { COLLECTOR, test } from './fixtures.js';
 
 const STEFAN = {
@@ -151,7 +151,7 @@ test.describe('step 5 of list your garage, the place step', () => {
     await noSidewaysScroll(page);
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await settled(page);
     await expect(address(page)).toHaveValue(STEFAN.label);
     await expect(pin(page)).toBeVisible();
     await kept(
@@ -208,7 +208,7 @@ test.describe('step 5 of list your garage, the place step', () => {
     await noSidewaysScroll(page);
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await settled(page);
     await expect(step(page).getByLabel('Sediul înregistrat')).toBeVisible();
     await expect(radius(page)).toHaveValue('35');
   });

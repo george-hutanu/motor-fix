@@ -6,7 +6,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { AuditService, createPrisma } from '@motor-fix/domain';
 import { databaseTurn } from '@motor-fix/domain/testing';
 import { catalogue, defineTool } from '@motor-fix/mcp-tools';
-import type { INestApplication } from '@nestjs/common';
+import { type INestApplication, Logger } from '@nestjs/common';
 
 import {
   TEST_MCP_URL,
@@ -77,6 +77,39 @@ const newAccount = () =>
     },
   });
 
+// An owner of a garage with one mechanic and nothing booked yet.
+async function newOwner() {
+  const garage = await prisma.garage.create({
+    data: {
+      name: 'Atelier Dinamo',
+      slug: `atelier-${Date.now()}-${Math.random()}`,
+      status: 'approved',
+    },
+  });
+  const account = await prisma.account.create({
+    data: {
+      language: 'ro',
+      lastRole: 'garage',
+      name: 'Mihai Dobre',
+      roles: { create: [{ role: 'garage' }] },
+    },
+  });
+  await prisma.garageMember.create({
+    data: { accountId: account.id, garageId: garage.id, role: 'owner' },
+  });
+  await prisma.mechanic.create({
+    data: { garageId: garage.id, name: 'Vlad Stan' },
+  });
+  return account;
+}
+
+const GARAGE_READS: [string, Record<string, unknown>][] = [
+  ['list_quote_requests', {}],
+  ['get_schedule', {}],
+  ['get_day_sheet', { mechanic: 'Vlad' }],
+  ['get_stats', {}],
+];
+
 const tokenFor = (accountId: string) =>
   realm.sign({ claims: { motorfix_account_id: accountId } });
 
@@ -134,6 +167,65 @@ describe('the MCP endpoint', () => {
       language: 'ro',
       roles: ['driver'],
     });
+    await client.close();
+  });
+
+  // @traces 374-FR-001 374-FR-011
+  it('lists the garage reads to an owner and answers each through the real services', async () => {
+    const { id } = await newOwner();
+    const client = await connect(await tokenFor(id));
+
+    const { tools } = await client.listTools();
+    const answers = [];
+    for (const [name, args] of GARAGE_READS)
+      answers.push(await client.callTool({ arguments: args, name }));
+
+    expect(tools.map((t) => t.name).sort()).toEqual(
+      ['get_my_account', ...GARAGE_READS.map(([name]) => name)].sort(),
+    );
+    for (const answer of answers) {
+      expect(answer.isError).toBeFalsy();
+      expect(answer.structuredContent).toHaveProperty('note');
+    }
+    await client.close();
+  });
+
+  // @traces 374-FR-003 374-FR-006
+  it('drops the lift and the day sheet when the garage switches them off', async () => {
+    const { id } = await newOwner();
+    const { garageId } = await prisma.garageMember.findFirstOrThrow({
+      where: { accountId: id },
+    });
+    await prisma.garageFeature.createMany({
+      data: [
+        { enabled: false, garageId, key: 'lift_schedule' },
+        { enabled: false, garageId, key: 'day_sheets' },
+      ],
+    });
+    const client = await connect(await tokenFor(id));
+
+    const { tools } = await client.listTools();
+    const sheet = await client.callTool({
+      arguments: { mechanic: 'Vlad' },
+      name: 'get_day_sheet',
+    });
+    const lift = await client.callTool({
+      arguments: { lift: 1 },
+      name: 'get_schedule',
+    });
+    const schedule = await client.callTool({
+      arguments: {},
+      name: 'get_schedule',
+    });
+
+    expect(tools.map((t) => t.name)).not.toContain('get_day_sheet');
+    const codeOf = (answer: typeof sheet) =>
+      JSON.parse((answer.content as { text: string }[])[0].text).code;
+    expect(codeOf(sheet)).toBe('not_found');
+    expect(codeOf(lift)).toBe('validation');
+    expect(schedule.isError).toBeFalsy();
+    expect(schedule.structuredContent).toMatchObject({ lifts: false });
+    expect(schedule.structuredContent).not.toHaveProperty('byLift');
     await client.close();
   });
 
@@ -271,6 +363,85 @@ describe('what the MCP endpoint reports', () => {
         tool: 'unknown',
       },
     ]);
+    await client.close();
+  });
+
+  // @traces 374-FR-014
+  it('observes each garage read under its own tool name', async () => {
+    const observed = jest.spyOn(metrics, 'observeToolCall');
+    const { id } = await newOwner();
+    const client = await connect(await tokenFor(id));
+
+    for (const [name, args] of GARAGE_READS)
+      await client.callTool({ arguments: args, name });
+
+    expect(observed.mock.calls.map(([call]) => call.tool)).toEqual(
+      GARAGE_READS.map(([name]) => name),
+    );
+    for (const [call] of observed.mock.calls)
+      expect(Object.keys(call).sort()).toEqual([
+        'accountId',
+        'clientId',
+        'requestId',
+        'tool',
+      ]);
+    await client.close();
+  });
+
+  // @traces 374-FR-014
+  it('logs each garage read as one line with its outcome and no input', async () => {
+    const lines = jest.spyOn(Logger.prototype, 'log');
+    const { id } = await newOwner();
+    const client = await connect(await tokenFor(id));
+
+    for (const [name, args] of GARAGE_READS)
+      await client.callTool({ arguments: args, name });
+    await client.callTool({
+      arguments: { from: 'not-a-day' },
+      name: 'get_schedule',
+    });
+
+    const logged = lines.mock.calls
+      .map(([line]) => line as Record<string, unknown>)
+      .filter((line) => typeof line === 'object' && line && 'tool' in line);
+    expect(logged.map(({ outcome, tool }) => [tool, outcome])).toEqual([
+      ...GARAGE_READS.map(([name]) => [name, 'ok']),
+      ['get_schedule', 'refused'],
+    ]);
+    for (const line of logged)
+      expect(Object.keys(line).sort()).toEqual([
+        'accountId',
+        'clientId',
+        'ms',
+        'outcome',
+        'requestId',
+        'tool',
+      ]);
+    expect(JSON.stringify(logged)).not.toMatch(/Vlad|not-a-day|\+40|plate/i);
+    await client.close();
+  });
+
+  // @traces 374-FR-012
+  it('still answers the four reads for a suspended garage', async () => {
+    const { id } = await newOwner();
+    const { garageId } = await prisma.garageMember.findFirstOrThrow({
+      where: { accountId: id },
+    });
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: garageId },
+    });
+    const client = await connect(await tokenFor(id));
+
+    const { tools } = await client.listTools();
+    const answers = [];
+    for (const [name, args] of GARAGE_READS)
+      answers.push(await client.callTool({ arguments: args, name }));
+
+    expect(tools.map((t) => t.name)).toEqual(
+      expect.arrayContaining(GARAGE_READS.map(([name]) => name)),
+    );
+    for (const answer of answers) expect(answer.isError).toBeFalsy();
     await client.close();
   });
 

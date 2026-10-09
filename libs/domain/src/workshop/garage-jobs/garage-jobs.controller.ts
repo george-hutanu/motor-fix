@@ -1,10 +1,12 @@
-import { JobDto, JobListDto, ListQueryDto } from '@motor-fix/contracts';
+import { JobDto, JobListDto, JobListQueryDto } from '@motor-fix/contracts';
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -20,19 +22,24 @@ export class GarageJobsController {
 
   @Get()
   @ApiOkResponse({ type: JobListDto })
+  @ApiOperation({
+    summary:
+      'The garage’s jobs by booking start, from a Bucharest day (today by default), with every job still in work or paused',
+  })
   @ApiBadRequestResponse({ description: 'validation_failed; invalid_cursor' })
   @ApiNotFoundResponse({ description: 'not_found: not garage staff' })
   list(
     @CurrentActor() actor: Actor,
-    @Query() query: ListQueryDto,
+    @Query() query: JobListQueryDto,
   ): Promise<JobListDto> {
-    return this.jobs.list(actor, query.cursor);
+    return this.jobs.list(actor, query);
   }
 
   @Get(':id')
   @ApiOkResponse({ type: JobDto })
   @ApiBadRequestResponse({ description: 'validation_failed' })
-  @ApiNotFoundResponse({ description: 'not_found: not the caller’s job' })
+  @ApiForbiddenResponse({ description: 'forbidden: another mechanic’s job' })
+  @ApiNotFoundResponse({ description: 'not_found: not the garage’s job' })
   get(
     @CurrentActor() actor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,

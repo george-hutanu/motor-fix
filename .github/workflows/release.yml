@@ -33,6 +33,7 @@ jobs:
       api: ${{ steps.api.outputs.digest }}
       worker: ${{ steps.worker.outputs.digest }}
       mcp: ${{ steps.mcp.outputs.digest }}
+      keycloak: ${{ steps.keycloak.outputs.digest }}
     # web and api write the layer cache PRs read (a PR can only read caches
     # written on main); worker and mcp build the api's node-app stage, so they
     # read its scope and write none.
@@ -120,6 +121,14 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-mcp:${{ github.sha }}
           cache-from: type=gha,scope=api
+      # The identity server, deployed to staging only.
+      - id: keycloak
+        uses: docker/build-push-action@v7
+        with:
+          context: infra/keycloak
+          file: infra/keycloak/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}-keycloak:${{ github.sha }}
       # The dashboards in the repository replace Grafana's by uid, before
       # anything deploys: a refused push stops the release here. Skipped until
       # the owner sets the token and the stack's address.
@@ -163,11 +172,17 @@ jobs:
       IMAGE_WEB: ghcr.io/${{ github.repository }}-web@${{ needs.images.outputs.web }}
       IMAGE_API: ghcr.io/${{ github.repository }}-api@${{ needs.images.outputs.api }}
       IMAGE_WORKER: ghcr.io/${{ github.repository }}-worker@${{ needs.images.outputs.worker }}
+      # The MCP and identity servers deploy to staging only; until the owner
+      # sets their ids, the deploy skips them with a notice.
+      IMAGE_MCP: ghcr.io/${{ github.repository }}-mcp@${{ needs.images.outputs.mcp }}
+      IMAGE_KEYCLOAK: ghcr.io/${{ github.repository }}-keycloak@${{ needs.images.outputs.keycloak }}
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
       RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
       RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
       RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
+      RAILWAY_SERVICE_MCP: ${{ vars.RAILWAY_SERVICE_MCP }}
+      RAILWAY_SERVICE_KEYCLOAK: ${{ vars.RAILWAY_SERVICE_KEYCLOAK }}
       RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
       KEY_NAME: release-staging-${{ github.run_id }}-${{ github.run_attempt }}
       GRAFANA: ${{ secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != '' }}
@@ -177,7 +192,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - name: Deploy and wait for /health/ready
+      - name: Deploy and wait for each service's health check
         # exec: the runner's cancel signals reach node, not a waiting shell.
         run: exec node scripts/railway-deploy.ts staging
       # Marks the deploy on every dashboard (tags deploy and env:staging); a

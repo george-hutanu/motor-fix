@@ -61,6 +61,13 @@
           }}
         </p>
       }
+      @if (rateSaid(); as said) {
+        <p class="rate" [mfLiveChange]="said" [mfLiveChangeSay]="said">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+          {{ said }}
+        </p>
+      }
+      <mf-request-quote-button [garage]="garage" />
     </div>
     <div
       class="dial"
@@ -78,7 +85,7 @@
     </div>
   </header>
   <div class="sections">
-    <section data-slot="photos"></section>
+    <section data-slot="photos" mf-photos-section [garage]="garage" [reads]="profile.reads()" (reread)="profile.reload()"></section>
     <section data-slot="brands"></section>
     <section data-slot="mechanics"></section>
     <section data-slot="prices"></section>

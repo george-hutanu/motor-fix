@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 type Language = 'ro' | 'en';
@@ -55,7 +56,7 @@ async function openCockpit(
     await page.addInitScript(() => localStorage.setItem('mf.lang', 'en'));
   await page.goto('/cockpit');
   await expect(opener(page, SHAPES[0], language)).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 const opener = (page: Page, key: string, language: Language = 'ro') =>

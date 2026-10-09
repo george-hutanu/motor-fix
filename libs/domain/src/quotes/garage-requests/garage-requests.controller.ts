@@ -1,7 +1,7 @@
 import {
   GarageRequestDto,
   GarageRequestListDto,
-  ListQueryDto,
+  GarageRequestsQueryDto,
 } from '@motor-fix/contracts';
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import {
@@ -28,9 +28,9 @@ export class GarageRequestsController {
   @ApiNotFoundResponse({ description: 'not_found: may not answer requests' })
   list(
     @CurrentActor() actor: Actor,
-    @Query() query: ListQueryDto,
+    @Query() query: GarageRequestsQueryDto,
   ): Promise<GarageRequestListDto> {
-    return this.requests.list(actor, query.cursor);
+    return this.requests.list(actor, query);
   }
 
   @Get(':id')

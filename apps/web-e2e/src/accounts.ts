@@ -23,7 +23,20 @@ export const ACCOUNTS = {
 // Waits for the page to take clicks: the server-rendered HTML arrives first.
 export async function ready(page: Page, path: string) {
   await page.goto(path);
-  await page.waitForLoadState('networkidle');
+  await settled(page);
+}
+
+// Waits for the page to take clicks. A public page is rendered by the server
+// and opens the public live stream once quiet, a stream that never ends, so
+// networkidle may never come: wait for hydration instead. A dashboard is drawn
+// in the browser alone, with no hydration marker, and keeps networkidle.
+export async function settled(page: Page) {
+  if (new URL(page.url()).pathname.startsWith('/app/')) {
+    await page.waitForLoadState('networkidle');
+    return;
+  }
+  await page.waitForLoadState('load');
+  await page.waitForFunction(() => !document.querySelector('[ngh]'));
 }
 
 // The place step's map reads the app's own empty style: no outside tiles, and

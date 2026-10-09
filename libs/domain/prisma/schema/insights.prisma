@@ -1,13 +1,32 @@
 // insights module models
 
 // The platform figures as they stood on one Europe/Bucharest day, written by
-// the night job; the month's first row is the start of its deltas.
+// the night job for the whole country (`all`) and for each city with a listed
+// garage; the month's first row is the start of its deltas. Only the `all`
+// row counts active drivers.
 model PlatformDaily {
-  day                      DateTime @id @db.Date
+  day                      DateTime @db.Date
+  city                     String   @default("all") @db.VarChar(80)
   garagesListed            Int      @map("garages_listed")
   garagesApprovedThisMonth Int      @map("garages_approved_this_month")
-  activeDrivers            Int      @map("active_drivers")
+  activeDrivers            Int?     @map("active_drivers")
   writtenAt                DateTime @map("written_at") @db.Timestamptz(3)
 
+  @@id([day, city])
   @@map("platform_daily")
+}
+
+// A garage's answers over the last 30 days, written by the night job; the
+// profile reads it and never counts requests itself.
+model GarageResponseStats {
+  garageId             String   @id @map("garage_id") @db.Uuid
+  garage               Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  requests30d          Int      @map("requests_30d")
+  answeredWithinDay30d Int      @map("answered_within_day_30d")
+  lifetimeRequests     Int      @map("lifetime_requests")
+  // CHECK in the migration: 0 to 100. Null when no request counted.
+  rate                 Int?
+  computedAt           DateTime @map("computed_at") @db.Timestamptz(3)
+
+  @@map("garage_response_stats")
 }

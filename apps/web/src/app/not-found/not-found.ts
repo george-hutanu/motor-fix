@@ -19,9 +19,10 @@ import {
 })
 export class NotFound {
   constructor() {
-    // Only the server render provides it; in the browser there is no status to set.
+    // Only the server render provides it; in the browser there is no status to
+    // set. The maintenance page's 503 wins over this one.
     const response = inject(RESPONSE_INIT, { optional: true });
-    if (response) response.status = 404;
+    if (response && response.status !== 503) response.status = 404;
 
     // An address with no known language prefix is Romanian, as the server sent
     // it: undo the remembered language, which is applied after the first render

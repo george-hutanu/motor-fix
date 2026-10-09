@@ -141,6 +141,7 @@ describe('the snapshot at the edges', () => {
     expect(await prisma.platformDaily.findMany()).toEqual([
       {
         activeDrivers: 0,
+        city: 'all',
         day: new Date('2026-11-01'),
         garagesApprovedThisMonth: 1,
         garagesListed: 1,
@@ -173,7 +174,13 @@ describe('the snapshot at the edges', () => {
 describe('the night job schedule', () => {
   const boot = async () => {
     const app = await Test.createTestingModule({
-      imports: [InsightsModule.registerWorker({ databaseUrl, redisUrl })],
+      imports: [
+        InsightsModule.registerWorker({
+          databaseUrl,
+          places: { provider: 'none' },
+          redisUrl,
+        }),
+      ],
     }).compile();
     await app.init();
     return app;
@@ -189,7 +196,7 @@ describe('the night job schedule', () => {
     expect(next.getUTCMinutes()).toBe(0);
   });
 
-  it('queues only the next night when it starts, and runs nothing it missed', async () => {
+  it('queues only the next night of each job when it starts, and runs nothing it missed', async () => {
     const app = await boot();
     const counts = await queue.getJobCounts();
     await app.close();
@@ -197,7 +204,7 @@ describe('the night job schedule', () => {
     expect(counts).toMatchObject({
       active: 0,
       completed: 0,
-      delayed: 1,
+      delayed: 2,
       failed: 0,
       waiting: 0,
     });

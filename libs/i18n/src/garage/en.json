@@ -30,5 +30,110 @@
     "sentLine": "The link is valid for 7 days.",
     "submit": "Send the invite",
     "title": "Invite to the team"
+  },
+  "jobs": {
+    "noMechanic": "No mechanic",
+    "noneToday": "No jobs today",
+    "noSteps": "No steps yet",
+    "panel": {
+      "title": "The job"
+    },
+    "problem": {
+      "forbidden": "Only the owner and the job’s mechanic write its steps.",
+      "job_closed": "The job is closed, its steps no longer change.",
+      "job_not_started": "Start the job first",
+      "not_found": "That step no longer exists.",
+      "too_many_steps": "At most 20 steps"
+    },
+    "retry": "Try again",
+    "stage": {
+      "cancelled": "Cancelled",
+      "done": "Done",
+      "in_work": "In progress",
+      "paused": "Paused",
+      "to_do": "To do"
+    },
+    "steps": {
+      "add": "Add a step",
+      "addSubmit": "Add",
+      "cancel": "Cancel",
+      "cap": "At most 20 steps",
+      "down": "Move down",
+      "field": "Step",
+      "length": "Between 2 and 80 characters",
+      "more": "More for “{step}”",
+      "remove": "Remove",
+      "rename": "Rename",
+      "save": "Save",
+      "title": "Job steps",
+      "up": "Move up"
+    },
+    "stepsDone": "{done} of {total} done"
+  },
+  "quotes": {
+    "send": {
+      "cancel": "Cancel",
+      "day": "Day",
+      "duration": "Duration",
+      "field": {
+        "duration_max": "The longest duration is 5 days",
+        "duration_min": "The shortest duration is 15 minutes",
+        "duration_step": "The duration goes in 15-minute steps",
+        "low_above_high": "The low price cannot be above the high price",
+        "maxlength": "Write at most {requiredLength} characters",
+        "past": "Pick a time in the future",
+        "price_max": "The highest price is 1,000,000 lei",
+        "price_min": "The lowest price is 1 leu",
+        "price_whole": "Enter whole lei",
+        "required": "Required",
+        "slot_step": "The time goes in 15-minute steps"
+      },
+      "from": "Price from (lei)",
+      "hint": "The range covers parts and labour, VAT included, for the customer’s exact car; the final price is set after you see the car.",
+      "hours": "Hours",
+      "loading": "Loading the request",
+      "mechanic": "Preferred mechanic: {mechanic}",
+      "minutes": "Minutes",
+      "note": "Message to the customer",
+      "notOffered": "Not offered: {jobs}",
+      "offline": "You are offline",
+      "problem": {
+        "already_answered": "Someone else already answered this request",
+        "forbidden": "You are not allowed to send quotes",
+        "request_not_open": "The request is no longer open"
+      },
+      "retry": "Try again",
+      "sent": "Quote sent",
+      "slot": "First free slot",
+      "submit": "Send",
+      "time": "Time",
+      "title": "Send a quote",
+      "to": "to (lei)",
+      "wide": "This range is very wide; the driver expects a narrow one."
+    },
+    "sentList": {
+      "empty": "No quotes sent yet.",
+      "heading": "Quotes sent",
+      "loading": "Loading the quotes sent",
+      "waiting": "Waiting for the customer"
+    }
+  },
+  "requests": {
+    "anyMechanic": "any mechanic",
+    "closed": "Closed in the last 24 hours",
+    "counter": {
+      "one": "{count} unanswered",
+      "other": "{count} unanswered"
+    },
+    "empty": "No new requests. We will tell you when one arrives.",
+    "heading": "Quote requests",
+    "loading": "Loading the requests",
+    "notOffered": "not offered",
+    "reconnecting": "Reconnecting…",
+    "retry": "Try again",
+    "seeAll": "See all",
+    "stale": "This list may be out of date",
+    "toast": "New request: {car} · {job}",
+    "toastCar": "New request: {car}"
   }
 }

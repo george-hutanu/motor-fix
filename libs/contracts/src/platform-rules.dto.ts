@@ -113,3 +113,8 @@ export class PlatformRuleChangesDto {
   })
   decided!: PlatformRuleChangeDto[];
 }
+
+export class PlatformStatusDto {
+  @ApiProperty({ description: 'The platform is in maintenance' })
+  maintenance!: boolean;
+}

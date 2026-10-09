@@ -118,6 +118,27 @@ describe('Odometer', () => {
     ).toEqual(['1', '2', '5', '0', '1', '6', '0', '0']);
   });
 
+  it('spaces the digit cells on the 4 px grid', () => {
+    const odometer = readFileSync(
+      join(__dirname, 'odometer.ts'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(odometer).toMatch(/\.mf-odometer-value \{[^}]*gap: 4px;/);
+  });
+
+  it('pads the digit cells on the 4 px grid, the rolling column one cell tall', () => {
+    const odometer = readFileSync(
+      join(__dirname, 'odometer.ts'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(odometer).toMatch(/\.mf-odometer-digit \{[^}]*padding: 4px 0;/);
+    expect(odometer).toMatch(
+      /\.mf-odometer-digit::before \{[^}]*line-height: calc\(1em \+ 8px\);/,
+    );
+  });
+
   it('rolls each digit cell to its digit, and shows the plain digit in forced colours', () => {
     const odometer = readFileSync(
       join(__dirname, 'odometer.ts'),
@@ -128,7 +149,7 @@ describe('Odometer', () => {
 
     expect(odometer).toContain(`content: "${column}";`);
     expect(odometer).toContain(
-      'translate: 0 calc(var(--mf-digit) * -1.4em); transition: translate var(--mf-motion-roll) var(--mf-motion-ease);',
+      'translate: 0 calc(var(--mf-digit) * -1 * (1em + 8px)); transition: translate var(--mf-motion-roll) var(--mf-motion-ease);',
     );
     expect(odometer).toMatch(
       /@media \(forced-colors: active\) \{ \.mf-odometer-digit \{ color: inherit; \} \.mf-odometer-digit::before \{ content: none; \} \}/,

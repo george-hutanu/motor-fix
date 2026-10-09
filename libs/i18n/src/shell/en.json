@@ -60,9 +60,35 @@
   "frame": {
     "addCar": "Add a car",
     "admin": {
+      "city": {
+        "all": "Whole country",
+        "bucuresti": "Bucharest",
+        "label": "City"
+      },
+      "filters": {
+        "apply": "Apply",
+        "label": "Filters: {city}, {period}",
+        "title": "Filters"
+      },
       "label": "ADMINISTRATOR",
       "none": "no garage is waiting for verification",
-      "place": "MotorFix · Bucharest",
+      "period": {
+        "7d": "Last 7 days",
+        "12m": "Last 12 months",
+        "30d": "Last 30 days",
+        "default": "Default",
+        "label": "Period",
+        "line": {
+          "7d": "in the last 7 days",
+          "12m": "in the last 12 months",
+          "30d": "in the last 30 days",
+          "month": "this month",
+          "today": "today"
+        },
+        "month": "This month",
+        "today": "Today"
+      },
+      "place": "MotorFix · {city}",
       "waiting": {
         "one": "1 garage is waiting for verification",
         "other": "{count} garages are waiting for verification"
@@ -82,6 +108,7 @@
       "garage": {
         "dashboard": "Here you will see what is happening in your garage today.",
         "history": "Here you will see who changed what in your garage.",
+        "jobs": "Here you will see the garage’s jobs.",
         "prices": "Here you will see the price ranges per job.",
         "profile": "Here you will edit your garage profile.",
         "requests": "Here you will see drivers' quote requests and answer with a quote.",
@@ -117,6 +144,7 @@
       "garage": {
         "assistant": "AI assistant",
         "history": "Change history",
+        "jobs": "Jobs",
         "prices": "Prices",
         "profile": "Garage profile",
         "requests": "Quote requests",
@@ -143,6 +171,7 @@
       },
       "garage": {
         "history": "Who changed what and when",
+        "jobs": "Confirmed jobs, from today on",
         "prices": "The ranges drivers see on your profile",
         "profile": "This is how drivers see you on the map",
         "requests": "Answer within the hour to show up first for the driver.",
@@ -160,6 +189,7 @@
       "dashboard": "Home",
       "garages": "Garages",
       "history": "History",
+      "jobs": "Jobs",
       "overview": "Dashboard",
       "prices": "Prices",
       "profile": "Profile",
@@ -185,6 +215,7 @@
       "garage": {
         "assistant": "Your AI assistant",
         "history": "Change history",
+        "jobs": "Jobs",
         "prices": "Prices",
         "profile": "Garage profile",
         "requests": "Quote requests",
@@ -225,6 +256,12 @@
       "one": "{count} new update",
       "other": "{count} new updates"
     }
+  },
+  "maintenance": {
+    "adminLink": "Admin? Sign in",
+    "banner": "Maintenance on",
+    "heading": "Maintenance",
+    "message": "MotorFix is down for maintenance. We'll be back soon."
   },
   "notFound": {
     "home": "Back to the home page",

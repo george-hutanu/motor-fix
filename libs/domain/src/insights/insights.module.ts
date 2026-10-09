@@ -13,10 +13,14 @@ import {
 } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 
+import { placeGarages } from './place-garages';
 import { writeSnapshot } from './platform-figures';
+import { writeResponseStats } from './response-stats/response-stats';
 import { createPrisma } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
+import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
+import { type PlacesConfig, providerFor } from '../places/places.module';
 
 export const INSIGHTS_QUEUE = 'insights';
 const INSIGHTS_PRISMA = Symbol('INSIGHTS_PRISMA');
@@ -24,15 +28,20 @@ const INSIGHTS_JOBS = Symbol('INSIGHTS_JOBS');
 const INSIGHTS_WORKER = Symbol('INSIGHTS_WORKER');
 
 const SNAPSHOT = 'platform-daily';
+const RESPONSE_STATS = 'response-stats';
+const NIGHTLY = { pattern: '0 1 * * *', tz: 'Europe/Bucharest' };
 
 interface InsightsOptions {
   databaseUrl: string;
+  // The address look-up that places the garages with no city each night.
+  places: PlacesConfig;
   redisUrl: string;
 }
 
-// One scheduler under a fixed id, so every worker that starts upserts the
-// same one. A missed or failed night is not run again: the deltas then show
-// no line until the next month's first row.
+// One scheduler per job under a fixed id, so every worker that starts
+// upserts the same ones. A missed or failed snapshot is not run again: the
+// deltas then show no line until the next month's first row. The response
+// figures are retried, since every profile shows them.
 @Module({})
 export class InsightsModule
   implements OnApplicationBootstrap, OnApplicationShutdown
@@ -67,9 +76,27 @@ export class InsightsModule
           inject: [INSIGHTS_PRISMA],
           provide: INSIGHTS_WORKER,
           useFactory: (prisma: PrismaClient) => {
+            const places = providerFor(options.places);
             const worker = new Worker(
               INSIGHTS_QUEUE,
-              (job) => inJob(job, () => writeSnapshot(prisma, new Date())),
+              (job) =>
+                inJob(job, async () => {
+                  if (job.name === SNAPSHOT) {
+                    await placeGarages(prisma, places);
+                    return writeSnapshot(prisma, new Date());
+                  }
+                  if (job.name === RESPONSE_STATS) {
+                    const { computed, written } = await writeResponseStats(
+                      prisma,
+                      new Date(),
+                    );
+                    logger.log(
+                      `${RESPONSE_STATS} computed ${computed}, written ${written}`,
+                    );
+                    return;
+                  }
+                  throw new Error(`unknown job ${job.name}`);
+                }),
               {
                 connection: {
                   maxRetriesPerRequest: null,
@@ -78,11 +105,7 @@ export class InsightsModule
                 telemetry: queueTelemetry(),
               },
             );
-            worker.on('failed', (job, error) =>
-              inJob(job, () =>
-                logger.error(`${SNAPSHOT} run failed: ${error.message}`),
-              ),
-            );
+            logFinalFailure(worker, logger);
             observeWorker(worker);
             return worker;
           },
@@ -92,14 +115,19 @@ export class InsightsModule
   }
 
   async onApplicationBootstrap() {
-    await this.jobs.upsertJobScheduler(
-      SNAPSHOT,
-      { pattern: '0 1 * * *', tz: 'Europe/Bucharest' },
-      {
-        name: SNAPSHOT,
-        opts: { attempts: 1, removeOnComplete: true, removeOnFail: 10 },
+    await this.jobs.upsertJobScheduler(SNAPSHOT, NIGHTLY, {
+      name: SNAPSHOT,
+      opts: { attempts: 1, removeOnComplete: true, removeOnFail: 10 },
+    });
+    await this.jobs.upsertJobScheduler(RESPONSE_STATS, NIGHTLY, {
+      name: RESPONSE_STATS,
+      opts: {
+        attempts: 3,
+        backoff: { delay: 60_000, type: 'exponential' },
+        removeOnComplete: true,
+        removeOnFail: 10,
       },
-    );
+    });
   }
 
   async onApplicationShutdown() {

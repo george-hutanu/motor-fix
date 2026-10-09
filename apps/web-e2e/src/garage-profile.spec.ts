@@ -30,7 +30,10 @@ test.describe('the public garage profile @seeded', () => {
   }) => {
     await page.goto('/ro/garages/service-colentina?brand=dacia');
 
-    await expect(page.getByText('Nu lucrează pe Dacia')).toBeVisible();
+    // The lamp; the quote button's note under it says the same.
+    await expect(
+      page.locator('mf-lamp', { hasText: 'Nu lucrează pe Dacia' }),
+    ).toBeVisible();
   });
 
   test('leads home and shows no lamp without a brand in context', async ({

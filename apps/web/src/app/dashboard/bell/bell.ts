@@ -155,8 +155,11 @@ export class BellStore {
     let text = this.i18n.t('shell.bell.new');
     try {
       const page = await this.page();
-      text = page.items.find((n) => n.id === id)?.text ?? text;
+      const row = page.items.find((n) => n.id === id);
       if (this.state() === 'ready') this.merge(page.items);
+      // The requests feed already toasts a new quote request.
+      if (row?.kind === 'REQUEST_RECEIVED') return;
+      text = row?.text ?? text;
     } catch {
       // The toast still says something arrived.
     }

@@ -1024,6 +1024,124 @@
           "url": "/explore?left={\"datasource\":\"${tempo}\",\"queries\":[{\"refId\":\"A\",\"queryType\":\"traceql\",\"query\":\"{resource.service.name=\\\"mcp\\\" && resource.deployment.environment=\\\"$env\\\"}\"}],\"range\":{\"from\":\"${__from}\",\"to\":\"${__to}\"}}"
         }
       ]
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Garage read tools by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 60
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (tool, outcome) (rate(mcp_tool_calls_total{service_name=\"mcp\", deployment_environment=\"$env\", tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats\"}[5m]))",
+          "legendFormat": "{{tool}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Garage read tools p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 68
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (tool, le) (rate(mcp_tool_call_duration_seconds_bucket{service_name=\"mcp\", deployment_environment=\"$env\", tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats\"}[5m])))",
+          "legendFormat": "{{tool}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Identity server reachable",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 68
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "max(mcp_issuer_up{service_name=\"mcp\", deployment_environment=\"$env\"})"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "text": "Unreachable",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Reachable",
+                  "color": "green"
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      }
     }
   ]
 }

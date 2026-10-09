@@ -16,7 +16,12 @@ import {
 } from './place-map';
 import { PlaceStep } from './place-step';
 
-type Suggestion = { label: string; lat: number; lng: number };
+type Suggestion = {
+  label: string;
+  lat: number;
+  lng: number;
+  locality?: string;
+};
 
 const STEFAN: Suggestion = {
   label: 'Strada Ștefan cel Mare 12, Sector 2, București',
@@ -540,5 +545,55 @@ describe('the map on the listing page', () => {
     const css = readFileSync(join(__dirname, 'place-step.css'), 'utf8');
     const map = /(?:^|\n)\.map \{([^}]*)\}/.exec(css)?.[1] ?? '';
     expect(map).toMatch(/isolation:\s*isolate;/);
+  });
+});
+
+// @traces 163-FR-005
+describe('step 5, the town the look-up names', () => {
+  const choose = async (opened: Opened, suggestion: Suggestion) => {
+    search.mockResolvedValue({ items: [suggestion] });
+    await type(opened, `${suggestion.label.slice(0, 12)} ${Math.random()}`);
+    options(opened.step)[0].click();
+    await settle(opened.fixture);
+  };
+
+  it("sends the chosen suggestion's locality with the address", async () => {
+    const opened = await open();
+
+    await choose(opened, { ...STEFAN, locality: 'București' });
+
+    expect(opened.emitted.at(-1)).toEqual({
+      address: STEFAN.label,
+      lat: STEFAN.lat,
+      lng: STEFAN.lng,
+      locality: 'București',
+    });
+  });
+
+  it('drops the locality once the address is typed over', async () => {
+    const opened = await open();
+    await choose(opened, { ...STEFAN, locality: 'București' });
+
+    await type(opened, 'Strada Exemplu 2, Cluj');
+
+    expect(opened.emitted.at(-1)).not.toHaveProperty('locality');
+  });
+
+  it('drops an earlier locality when the next suggestion names none', async () => {
+    const opened = await open();
+    await choose(opened, { ...STEFAN, locality: 'București' });
+
+    await choose(opened, { label: 'Strada Exemplu 9', lat: 46.77, lng: 23.62 });
+
+    expect(opened.emitted.at(-1)).not.toHaveProperty('locality');
+  });
+
+  it('keeps the locality when only the pin moves', async () => {
+    const opened = await open();
+    await choose(opened, { ...STEFAN, locality: 'București' });
+
+    await mapEvent(opened, () => events.dragged({ lat: 44.452, lng: 26.121 }));
+
+    expect(opened.emitted.at(-1)).toMatchObject({ locality: 'București' });
   });
 });

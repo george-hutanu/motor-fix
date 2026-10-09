@@ -3,6 +3,7 @@
 
 import { DriverNameDto } from '../models/driver-name-dto';
 import { GarageCarDto } from '../models/garage-car-dto';
+import { RequestJobDto } from '../models/request-job-dto';
 export interface JobSummaryDto {
   bookingId: string;
   car: GarageCarDto;
@@ -12,8 +13,25 @@ export interface JobSummaryDto {
   finishedAt: string | null;
   handedOverAt: string | null;
   id: string;
+  jobs: Array<RequestJobDto>;
   mechanicId: string | null;
+  mechanicName: string | null;
   pausedAt: string | null;
   startedAt: string | null;
+
+  /**
+   * The booking's start
+   */
+  startsAt: string;
   status: 'to_do' | 'in_work' | 'paused' | 'done' | 'cancelled';
+
+  /**
+   * Steps ticked
+   */
+  stepsDone: number;
+
+  /**
+   * Steps written, 0 to 20
+   */
+  stepsTotal: number;
 }

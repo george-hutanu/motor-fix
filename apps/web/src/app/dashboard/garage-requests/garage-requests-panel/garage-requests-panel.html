@@ -1,0 +1,46 @@
+<section class="panel" [attr.aria-busy]="feed.loading() || null">
+  <header>
+    @if (titled()) {
+      <h2>{{ 'garage.requests.heading' | t }}</h2>
+    }
+    @if (!feed.loading() && !feed.failed() && counter(); as said) {
+      <span class="counter" [mfLiveChange]="feed.total()" [mfLiveChangeSay]="said">{{ said }}</span>
+    }
+  </header>
+  @if (reconnecting()) {
+    <p class="reconnecting" role="status">{{ 'garage.requests.reconnecting' | t }}</p>
+  }
+  @if (live.offline()) {
+    <p class="stale" role="status">{{ 'garage.requests.stale' | t }}</p>
+  }
+  @if (feed.loading()) {
+    <ul class="rows">
+      <li class="skeleton" aria-hidden="true"></li>
+      <li class="skeleton" aria-hidden="true"></li>
+      <li class="skeleton" aria-hidden="true"></li>
+    </ul>
+    <span class="sr-only" role="status">{{ 'garage.requests.loading' | t }}</span>
+  } @else if (feed.failed()) {
+    <div class="problem">
+      <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="feed.reload()">
+        {{ 'garage.requests.retry' | t }}
+      </button>
+    </div>
+  } @else {
+    <mf-live-pill [rows]="list" />
+    @if (list.rows().length) {
+      <ul class="rows" [mfLiveAnchor]="list.rows()">
+        @for (row of list.rows(); track row.id) {
+          <li [mfGarageRequestRow]="row" [now]="now()" [attr.data-live-id]="row.id"></li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">{{ 'garage.requests.empty' | t }}</p>
+    }
+    <ng-content />
+    @if (seeAll()) {
+      <a class="see-all" routerLink="/app/garage/requests">{{ 'garage.requests.seeAll' | t }}</a>
+    }
+  }
+</section>

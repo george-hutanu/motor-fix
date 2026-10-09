@@ -19,7 +19,7 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve, sep } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
-import { commit as specsCommit } from "./specs-repo.mjs";
+import { cloneAt, commit as specsCommit } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
 const TIMEOUT = 120_000;
@@ -139,15 +139,17 @@ export function removeWorktree(target, { admitNoPr = false, admitLiveLock = fals
     restores.push(() => (bytes ? writeFileSync(file, bytes) : rmSync(file, { force: true })));
   };
   try {
-    const specs = join(path, "specs");
-    if (!existsSync(specs) || readdirSync(specs).length === 0) backup.specs = "none";
-    else if (!existsSync(join(specs, ".git"))) {
-      // A plain folder, not a clone: git ignores it, so it is copied whole.
+    const clone = cloneAt(path);
+    const folder = join(path, "specs");
+    if (!clone && (!existsSync(folder) || readdirSync(folder).length === 0)) backup.specs = "none";
+    else if (!clone) {
+      // A plain folder, not a clone: git ignores it, so it is copied whole, from where a link points.
       mkdirSync(dir, { recursive: true });
       const copy = freshFile(dir, stem, "specs", "");
-      cpSync(specs, copy, { recursive: true });
+      cpSync(realpathSync(folder), copy, { recursive: true });
       backup.specs = `copy ${copy}`;
     } else {
+      const specs = clone;
       const onTrunk = run("git", ["-C", specs, "rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim() === "trunk";
       // Only a clone on trunk is pushed; any other branch falls to the patch.
       const pushed = onTrunk ? commitSpecs({ root: path, message: `chore(specs): backfill ${name} before removal` }) : { ok: false, error: "not on trunk" };

@@ -11,11 +11,19 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   NavigationEnd,
+  type Params,
   Router,
   RouterLink,
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
+import {
+  CITY_ALL,
+  CITY_KEY,
+  PERIODS,
+  type Period,
+} from '@motor-fix/contracts/figure-choices';
+import { LOCALITY_MAX } from '@motor-fix/contracts/place-section';
 import type { CarDto, MeDto } from '@motor-fix/data-access';
 import {
   AsWritten,
@@ -30,9 +38,12 @@ import { filter, map } from 'rxjs';
 
 import { segmentsOf } from '../../addresses';
 import { AddCar } from '../add-car/add-car';
+import { AdminFilters } from '../admin-filters/admin-filters';
+import type { FiltersChoice } from '../admin-filters-sheet/admin-filters-sheet';
 import { AdminOverview } from '../admin-overview';
 import { Bell } from '../bell/bell';
 import { EmailBanner } from '../email-banner/email-banner';
+import { GarageRequestsFeed } from '../garage-requests/garage-requests-feed';
 import { initials } from '../initials';
 import { InviteStaff } from '../invite-staff/invite-staff';
 import { Live } from '../live';
@@ -44,6 +55,25 @@ import { DashboardTabBar } from '../tab-bar/tab-bar';
 import { type Area, allowedViews, type Counts, DASHBOARDS } from '../views';
 
 type Role = MeDto['role'];
+
+// The Panou address's choice; anything else in it is the default.
+const choiceOf = (query: Params): FiltersChoice => {
+  const { city, period } = query;
+  return {
+    city:
+      typeof city === 'string' &&
+      CITY_KEY.test(city) &&
+      city.length <= LOCALITY_MAX
+        ? city
+        : CITY_ALL,
+    period: PERIODS.includes(period) ? (period as Period) : 'default',
+  };
+};
+// The address of a choice: the defaults are left out.
+const queryOf = ({ city, period }: FiltersChoice) => ({
+  city: city === CITY_ALL ? null : city,
+  period: period === 'default' ? null : period,
+});
 
 // The chips' order, whatever order the account holds its roles in.
 const ROLES: readonly { role: Role; label: string }[] = [
@@ -58,6 +88,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
 // name, the two sign-outs) stays on top as the account band.
 @Component({
   imports: [
+    AdminFilters,
     AsWritten,
     Bell,
     ClockPipe,
@@ -71,7 +102,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
     RouterOutlet,
     TranslatePipe,
   ],
-  providers: [AdminOverview],
+  providers: [AdminOverview, GarageRequestsFeed],
   selector: 'mf-frame',
   styleUrl: './frame.css',
   templateUrl: './frame.html',
@@ -96,11 +127,51 @@ export class Frame implements OnInit {
   // Each dashboard has its own frame, so the area at creation is the frame's.
   protected readonly adminOverview =
     this.area() === 'admin' ? inject(AdminOverview) : null;
+  // The header's city: "Toată țara", "București" translated, others as recorded.
+  private readonly cityName = (key: string, recorded?: string) =>
+    key === CITY_ALL || key === 'bucuresti'
+      ? this.i18n.t(`shell.frame.admin.city.${key === CITY_ALL ? 'all' : key}`)
+      : recorded;
+  protected readonly place = computed(() => {
+    const overview = this.adminOverview;
+    if (!overview) return undefined;
+    const key = overview.city();
+    return this.cityName(
+      key,
+      overview.cities().find((c) => c.key === key)?.name,
+    );
+  });
+  protected readonly cities = computed(() => {
+    const listed = (this.adminOverview?.cities() ?? []).filter(
+      (c) => c.key !== CITY_ALL,
+    );
+    return [{ key: CITY_ALL }, ...listed].map(({ key, ...c }) => ({
+      key,
+      name: this.cityName(key, 'name' in c ? c.name : key) ?? key,
+    }));
+  });
+  // The header's count is the city's, read with the city's figures.
+  protected readonly headerLoading = computed(() => {
+    const overview = this.adminOverview;
+    if (!overview) return false;
+    return (
+      overview.loading() ||
+      (overview.city() !== CITY_ALL && overview.figuresLoading())
+    );
+  });
+  private readonly requests =
+    this.area() === 'garage' ? inject(GarageRequestsFeed) : null;
   protected readonly countsLoading = computed(
-    () => this.adminOverview?.loading() ?? false,
+    () =>
+      (this.adminOverview?.loading() ?? false) ||
+      (this.requests?.loading() ?? false),
   );
+  // A count from a failed re-read may be old: none is shown until it reads again.
   protected readonly counts = computed<Counts>(() => ({
     garagesWaiting: this.adminOverview?.waiting(),
+    requestsWaiting: this.requests?.stale()
+      ? undefined
+      : this.requests?.total(),
   }));
   protected readonly roles = computed(() => {
     const held = this.session.shown()?.roles ?? [];
@@ -137,21 +208,24 @@ export class Frame implements OnInit {
       this.garage()?.features,
     ),
   );
-  // ['app', <area>, <view>?, …] of the address on screen.
-  private readonly segments = toSignal(
+  // The address on screen.
+  private readonly address = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
-      map(({ urlAfterRedirects }) =>
-        segmentsOf(this.router.parseUrl(urlAfterRedirects)),
-      ),
+      map(({ urlAfterRedirects }) => this.router.parseUrl(urlAfterRedirects)),
     ),
     // Created while its own navigation runs: router.url is still the old one.
     {
-      initialValue: segmentsOf(
+      initialValue:
         this.router.currentNavigation()?.finalUrl ??
-          this.router.parseUrl(this.router.url),
-      ),
+        this.router.parseUrl(this.router.url),
     },
+  );
+  // ['app', <area>, <view>?, …] of the address on screen.
+  private readonly segments = computed(() => segmentsOf(this.address()));
+  // The admin's "Panou", the one view with a city and a period.
+  protected readonly onPanel = computed(
+    () => !!this.adminOverview && this.segments()[2] === undefined,
   );
   protected readonly open = computed(
     () =>
@@ -169,6 +243,54 @@ export class Frame implements OnInit {
         `/app/${area}` !== this.base() ||
         (view !== undefined && !this.entries().some((v) => v.path === view));
       if (off) untracked(() => void this.router.navigateByUrl(this.base()));
+    });
+    if (this.adminOverview) this.followAddress(this.adminOverview);
+  }
+
+  // Panou's address holds the choice; an unknown one is corrected in place,
+  // and every other view reads the whole country.
+  private followAddress(overview: AdminOverview) {
+    effect(() => {
+      if (!this.onPanel()) {
+        untracked(() => overview.choose(CITY_ALL, 'default'));
+        return;
+      }
+      const query = this.address().queryParams;
+      const choice = choiceOf(query);
+      const written = queryOf(choice);
+      untracked(() => {
+        if (
+          (query['city'] ?? null) !== written.city ||
+          (query['period'] ?? null) !== written.period
+        )
+          this.writeChoice(choice, true);
+        overview.choose(choice.city, choice.period);
+      });
+    });
+    // The server knows no such city: the address drops it.
+    effect(() => {
+      if (!overview.fellBack() || !this.onPanel()) return;
+      untracked(() =>
+        this.writeChoice({ city: CITY_ALL, period: overview.period() }, true),
+      );
+    });
+  }
+
+  protected chooseFigures(choice: FiltersChoice) {
+    this.writeChoice(choice, false);
+  }
+
+  private writeChoice(choice: FiltersChoice, replaceUrl: boolean) {
+    // The whole query is written again so the city always comes before the
+    // period, whichever was chosen first: one choice, one address.
+    const {
+      city: _city,
+      period: _period,
+      ...rest
+    } = this.address().queryParams;
+    void this.router.navigate([this.base()], {
+      queryParams: { ...rest, ...queryOf(choice) },
+      replaceUrl,
     });
   }
 

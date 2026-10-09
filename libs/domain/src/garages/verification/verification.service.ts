@@ -72,9 +72,16 @@ export class VerificationService {
     @Inject(VERIFICATION_CONFIG) private readonly config: VerificationConfig,
   ) {}
 
-  countWaiting(db: Prisma.TransactionClient): Promise<number> {
+  // Every garage on the platform, or only those placed in one city.
+  countWaiting(
+    db: Prisma.TransactionClient,
+    cityKey?: string,
+  ): Promise<number> {
     return db.verificationFile.count({
-      where: { status: { in: ['submitted', 'in_review'] } },
+      where: {
+        status: { in: ['submitted', 'in_review'] },
+        ...(cityKey !== undefined && { garage: { cityKey } }),
+      },
     });
   }
 

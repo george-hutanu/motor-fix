@@ -1910,6 +1910,20 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits, newest quote first",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "waiting",
+                "closed",
+                "quoted"
+              ]
+            }
           }
         ],
         "responses": {
@@ -1981,6 +1995,202 @@
         ]
       }
     },
+    "/api/v1/quote-requests": {
+      "post": {
+        "operationId": "QuoteRequestsController_send",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per send the driver means; a repeat answers the first request",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuoteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field, too_many garages, length_mismatch, a missing description or key; garage_cannot_receive: garageId, garageName and reason"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver, or not the driver’s car"
+          },
+          "429": {
+            "description": "too_many_requests: 20 sent today already"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a quote request to up to five garages",
+        "tags": [
+          "quote-requests"
+        ]
+      }
+    },
+    "/api/v1/quote-requests/garages": {
+      "get": {
+        "operationId": "QuoteRequestsController_candidates",
+        "parameters": [
+          {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
+            "name": "carId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobTypeIds",
+            "required": false,
+            "in": "query",
+            "description": "The jobs switched on, as comma-separated ids",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude",
+            "required": false,
+            "in": "query",
+            "description": "The profile's garage, already in the request",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateGarageListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver, or not the driver’s car"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Up to five more garages near a place that would take the request",
+        "tags": [
+          "quote-requests"
+        ]
+      }
+    },
+    "/api/v1/quotes": {
+      "post": {
+        "operationId": "QuotesController_send",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per send the garage means; a repeat answers the first quote",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageQuoteDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field, fromLei above toLei, a past slot or a missing key"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic who may not answer quotes"
+          },
+          "404": {
+            "description": "not_found: not one of the garage’s requests"
+          },
+          "409": {
+            "description": "already_answered: the garage answered already; request_not_open: the request, the garage’s row or the garage is closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send the garage’s quote for a request",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -1992,6 +2202,17 @@
             "description": "The nextCursor of the previous page",
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "The first day listed, in Bucharest; today when absent",
+            "schema": {
+              "format": "date",
+              "example": "2026-10-09",
               "type": "string"
             }
           }
@@ -2019,6 +2240,7 @@
             "bearer": []
           }
         ],
+        "summary": "The garage’s jobs by booking start, from a Bucharest day (today by default), with every job still in work or paused",
         "tags": [
           "garage-jobs"
         ]
@@ -2051,8 +2273,11 @@
           "400": {
             "description": "validation_failed"
           },
+          "403": {
+            "description": "forbidden: another mechanic’s job"
+          },
           "404": {
-            "description": "not_found: not the caller’s job"
+            "description": "not_found: not the garage’s job"
           }
         },
         "security": [
@@ -2060,6 +2285,303 @@
             "bearer": []
           }
         ],
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps": {
+      "post": {
+        "operationId": "JobStepsController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per step the person means; a repeat answers the first",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobStepTextDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStepDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "too_many_steps; job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a step at the end of the job",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps/order": {
+      "put": {
+        "operationId": "JobStepsController_reorder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderJobStepsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "validation_failed; not_a_permutation"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Put every step of the job in a new order",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps/{stepId}": {
+      "patch": {
+        "operationId": "JobStepsController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stepId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobStepTextDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStepDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a step",
+        "tags": [
+          "garage-jobs"
+        ]
+      },
+      "delete": {
+        "operationId": "JobStepsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stepId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a step; the rest close the gap",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps/{stepId}/done": {
+      "put": {
+        "operationId": "JobStepsController_tick",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stepId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobStepDoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStepDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_not_started; job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tick or untick a step; a repeat changes nothing",
         "tags": [
           "garage-jobs"
         ]
@@ -2120,7 +2642,37 @@
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "city",
+            "required": false,
+            "in": "query",
+            "description": "A key from the overview's cities, or all",
+            "schema": {
+              "maxLength": 80,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "default": "all",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "default",
+              "type": "string",
+              "enum": [
+                "default",
+                "today",
+                "7d",
+                "30d",
+                "month",
+                "12m"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2131,6 +2683,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "validation_failed: an unknown city or period"
           },
           "404": {
             "description": "not_found: not an admin"
@@ -2149,7 +2704,20 @@
     "/api/v1/admin/growth": {
       "get": {
         "operationId": "AdminOverviewController_growth",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "city",
+            "required": false,
+            "in": "query",
+            "description": "A key from the overview's cities, or all",
+            "schema": {
+              "maxLength": 80,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "default": "all",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2160,6 +2728,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "validation_failed: an unknown city"
           },
           "404": {
             "description": "not_found: not an admin"
@@ -3389,6 +3960,27 @@
         ],
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/platform-status": {
+      "get": {
+        "operationId": "PlatformStatusController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "platform"
         ]
       }
     }
@@ -5571,6 +6163,11 @@
           },
           "quotesCount": {
             "type": "number"
+          },
+          "description": {
+            "type": "string",
+            "description": "As the driver wrote it; the list shows its first line when there is no job",
+            "nullable": true
           }
         },
         "required": [
@@ -5582,7 +6179,8 @@
           "expiresAt",
           "closedReason",
           "closedAt",
-          "quotesCount"
+          "quotesCount",
+          "description"
         ]
       },
       "RequestListDto": {
@@ -5931,6 +6529,7 @@
           },
           "description": {
             "type": "string",
+            "description": "As the driver wrote it; the list shows its first line when there is no job",
             "nullable": true
           },
           "recipients": {
@@ -5969,6 +6568,40 @@
           "recipients",
           "quotes",
           "booking"
+        ]
+      },
+      "GarageRequestJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          },
+          "offered": {
+            "type": "boolean",
+            "description": "The garage ticked this job for the request's car brand"
+          }
+        },
+        "required": [
+          "id",
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "position",
+          "offered"
         ]
       },
       "DriverNameDto": {
@@ -6142,12 +6775,6 @@
           "car": {
             "$ref": "#/components/schemas/CarSnapshotDto"
           },
-          "jobs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RequestJobDto"
-            }
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6155,6 +6782,35 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageRequestJobDto"
+            }
+          },
+          "descriptionLine": {
+            "type": "string",
+            "description": "The description's first line",
+            "nullable": true
+          },
+          "closedReason": {
+            "type": "string",
+            "description": "Set on the rows of a closed read",
+            "enum": [
+              "expired",
+              "garage_suspended",
+              "cancelled",
+              "account_closed",
+              "accepted_elsewhere"
+            ],
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set with closedReason"
           },
           "driver": {
             "$ref": "#/components/schemas/DriverNameDto"
@@ -6176,9 +6832,12 @@
           "id",
           "status",
           "car",
-          "jobs",
           "createdAt",
           "expiresAt",
+          "jobs",
+          "descriptionLine",
+          "closedReason",
+          "closedAt",
           "driver",
           "recipient",
           "quote"
@@ -6206,6 +6865,73 @@
           "items",
           "nextCursor",
           "total"
+        ]
+      },
+      "GarageRequestJobPriceDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "number",
+            "description": "Lower end of the price, in bani"
+          },
+          "toBani": {
+            "type": "number",
+            "description": "Upper end of the price, in bani; null when open-ended",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani",
+          "durationMinutes"
+        ]
+      },
+      "GarageRequestDetailJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          },
+          "offered": {
+            "type": "boolean",
+            "description": "The garage ticked this job for the request's car brand"
+          },
+          "price": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageRequestJobPriceDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "position",
+          "offered",
+          "price"
         ]
       },
       "GarageDriverDto": {
@@ -6411,12 +7137,6 @@
               "closed"
             ]
           },
-          "jobs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RequestJobDto"
-            }
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6424,6 +7144,35 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageRequestDetailJobDto"
+            }
+          },
+          "descriptionLine": {
+            "type": "string",
+            "description": "The description's first line",
+            "nullable": true
+          },
+          "closedReason": {
+            "type": "string",
+            "description": "Set on the rows of a closed read",
+            "enum": [
+              "expired",
+              "garage_suspended",
+              "cancelled",
+              "account_closed",
+              "accepted_elsewhere"
+            ],
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set with closedReason"
           },
           "recipient": {
             "$ref": "#/components/schemas/GarageRecipientDto"
@@ -6460,15 +7209,159 @@
         "required": [
           "id",
           "status",
-          "jobs",
           "createdAt",
           "expiresAt",
+          "jobs",
+          "descriptionLine",
+          "closedReason",
+          "closedAt",
           "recipient",
           "quote",
           "driver",
           "car",
           "description",
           "booking"
+        ]
+      },
+      "CreateQuoteRequestDto": {
+        "type": "object",
+        "properties": {
+          "carId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garageIds": {
+            "description": "The garages, in the order the driver ticked them; at most 5",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "description": "Where each garage of garageIds was chosen, one for one",
+            "items": {
+              "type": "string",
+              "enum": [
+                "search",
+                "map",
+                "home",
+                "shared_link",
+                "profile_direct",
+                "saved",
+                "unknown"
+              ]
+            }
+          },
+          "jobTypeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "Trimmed; required, of at least 10 characters, when no job is chosen",
+            "maxLength": 1000,
+            "nullable": true
+          }
+        },
+        "required": [
+          "carId",
+          "garageIds",
+          "sources",
+          "jobTypeIds"
+        ]
+      },
+      "CandidateGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Kilometres from the place; null for a mobile mechanic",
+            "format": "double",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "A mobile mechanic, who comes to the driver"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "distanceKm",
+          "comesToYou"
+        ]
+      },
+      "CandidateGarageListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CandidateGarageDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SendQuoteDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromLei": {
+            "type": "number",
+            "maximum": 1000000,
+            "minimum": 1
+          },
+          "toLei": {
+            "type": "number",
+            "maximum": 1000000,
+            "minimum": 1
+          },
+          "durationMinutes": {
+            "type": "number",
+            "maximum": 7200,
+            "minimum": 15,
+            "multipleOf": 15
+          },
+          "slot": {
+            "type": "string",
+            "description": "The proposed start, with its offset; later than now",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "description": "Whitespace alone is no note",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "requestId",
+          "fromLei",
+          "toLei",
+          "durationMinutes",
+          "slot"
         ]
       },
       "JobSummaryDto": {
@@ -6531,6 +7424,29 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "The booking's start",
+            "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "mechanicName": {
+            "type": "string",
+            "nullable": true
+          },
+          "stepsDone": {
+            "type": "number",
+            "description": "Steps ticked"
+          },
+          "stepsTotal": {
+            "type": "number",
+            "description": "Steps written, 0 to 20"
           }
         },
         "required": [
@@ -6545,7 +7461,12 @@
           "finishedAt",
           "handedOverAt",
           "etaAt",
-          "createdAt"
+          "createdAt",
+          "startsAt",
+          "jobs",
+          "mechanicName",
+          "stepsDone",
+          "stepsTotal"
         ]
       },
       "JobListDto": {
@@ -6593,6 +7514,12 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "doneBy": {
+            "type": "string",
+            "description": "The account that ticked it",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -6600,7 +7527,8 @@
           "position",
           "label",
           "customerLabel",
-          "doneAt"
+          "doneAt",
+          "doneBy"
         ]
       },
       "JobStageEntryDto": {
@@ -6721,6 +7649,29 @@
             "type": "string",
             "format": "date-time"
           },
+          "startsAt": {
+            "type": "string",
+            "description": "The booking's start",
+            "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "mechanicName": {
+            "type": "string",
+            "nullable": true
+          },
+          "stepsDone": {
+            "type": "number",
+            "description": "Steps ticked"
+          },
+          "stepsTotal": {
+            "type": "number",
+            "description": "Steps written, 0 to 20"
+          },
           "finalPriceBani": {
             "type": "number",
             "nullable": true
@@ -6751,9 +7702,58 @@
           "handedOverAt",
           "etaAt",
           "createdAt",
+          "startsAt",
+          "jobs",
+          "mechanicName",
+          "stepsDone",
+          "stepsTotal",
           "finalPriceBani",
           "steps",
           "stages"
+        ]
+      },
+      "JobStepTextDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Trimmed, 2 to 80 characters",
+            "maxLength": 80,
+            "minLength": 2
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "ReorderJobStepsDto": {
+        "type": "object",
+        "properties": {
+          "stepIds": {
+            "description": "Every step of the job, once each, in the new order",
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "stepIds"
+        ]
+      },
+      "JobStepDoneDto": {
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "boolean",
+            "description": "true ticks the step, false unticks it"
+          }
+        },
+        "required": [
+          "done"
         ]
       },
       "PlaceSuggestionDto": {
@@ -6770,6 +7770,12 @@
           "lng": {
             "type": "number",
             "example": 26.1207
+          },
+          "locality": {
+            "type": "string",
+            "description": "The town or city, when the provider knows it",
+            "example": "București",
+            "maxLength": 80
           }
         },
         "required": [
@@ -6793,12 +7799,41 @@
           "items"
         ]
       },
+      "AdminCityDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "cluj-napoca",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cluj-Napoca"
+          },
+          "garages": {
+            "type": "integer",
+            "description": "Garages approved and listed now in the city",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "garages"
+        ]
+      },
       "AdminOverviewDto": {
         "type": "object",
         "properties": {
           "garagesWaiting": {
             "type": "integer",
-            "description": "Verification files submitted or in review",
+            "description": "Verification files submitted or in review, on the whole platform",
+            "minimum": 0
+          },
+          "cityGaragesWaiting": {
+            "type": "integer",
+            "description": "Verification files submitted or in review of garages in the chosen city; only with a city",
             "minimum": 0
           },
           "garagesListed": {
@@ -6821,6 +7856,23 @@
             "description": "Active drivers on the 1st of the current month, absent when that night was not recorded",
             "minimum": 0
           },
+          "garagesApprovedInPeriod": {
+            "type": "integer",
+            "description": "Listed garages first approved in the chosen period; only with a period",
+            "minimum": 0
+          },
+          "activeDriversPeriodStart": {
+            "type": "integer",
+            "description": "Active drivers on the first day of the chosen period, absent for today, a city or a night not recorded",
+            "minimum": 0
+          },
+          "cities": {
+            "description": "The whole country first, then every city with a listed garage, most garages first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCityDto"
+            }
+          },
           "observabilityUrl": {
             "type": "string",
             "description": "The MotorFix overview dashboard in Grafana for this API's environment, absent when Grafana is not configured",
@@ -6831,7 +7883,8 @@
           "garagesWaiting",
           "garagesListed",
           "garagesApprovedThisMonth",
-          "activeDrivers"
+          "activeDrivers",
+          "cities"
         ]
       },
       "AdminGrowthMonthDto": {
@@ -7404,6 +8457,29 @@
           "fuels"
         ]
       },
+      "ResponseRateDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "new: under 10 requests ever; none: no request counted in 30 days",
+            "enum": [
+              "new",
+              "rate",
+              "none"
+            ]
+          },
+          "rate": {
+            "type": "number",
+            "description": "Percent answered within a day; only in the rate state",
+            "maximum": 100,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
       "PublicGarageBrandDto": {
         "type": "object",
         "properties": {
@@ -7433,6 +8509,60 @@
           "name",
           "slug",
           "stance"
+        ]
+      },
+      "PublicJobTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "PublicGaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy (400 px), signed for an hour",
+            "format": "uri"
+          },
+          "displayUrl": {
+            "type": "string",
+            "description": "The display copy (1,600 px), signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "thumbnailUrl",
+          "displayUrl"
         ]
       },
       "PublicGarageDto": {
@@ -7519,6 +8649,9 @@
             "type": "number",
             "minimum": 0
           },
+          "responseRate": {
+            "$ref": "#/components/schemas/ResponseRateDto"
+          },
           "brand": {
             "description": "Only when the read named a catalogue brand",
             "allOf": [
@@ -7537,6 +8670,20 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "jobTypes": {
+            "description": "The jobs of the visible price list, in its order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicJobTypeDto"
+            }
+          },
+          "photos": {
+            "description": "In the owner's order; empty when no photo is ready to be seen",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicGaragePhotoDto"
+            }
           }
         },
         "required": [
@@ -7550,7 +8697,10 @@
           "verifiedAt",
           "rating",
           "reviewCount",
-          "paymentMethods"
+          "responseRate",
+          "paymentMethods",
+          "jobTypes",
+          "photos"
         ]
       },
       "RecordVerificationCheckDto": {
@@ -8022,6 +9172,18 @@
         "required": [
           "key",
           "reason"
+        ]
+      },
+      "PlatformStatusDto": {
+        "type": "object",
+        "properties": {
+          "maintenance": {
+            "type": "boolean",
+            "description": "The platform is in maintenance"
+          }
+        },
+        "required": [
+          "maintenance"
         ]
       }
     }

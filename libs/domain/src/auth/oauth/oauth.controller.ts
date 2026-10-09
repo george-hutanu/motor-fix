@@ -31,7 +31,7 @@ import {
 import type { CookieOptions, Request, Response } from 'express';
 
 import { FLOW_TTL_S, OAuthService, type Outcome } from './oauth.service';
-import { Public } from '../actor.guard';
+import { OpenInMaintenance, Public } from '../actor.guard';
 import { cookieOf, JsonOnly, keep } from '../auth.controller';
 
 const FLOW = 'mf_oauth';
@@ -50,6 +50,7 @@ const PENDING_FLAGS: CookieOptions = { ...SCOPE, sameSite: 'lax' };
 @ApiTags('auth')
 @Controller('auth')
 @Public()
+@OpenInMaintenance()
 export class OauthController {
   constructor(private readonly oauth: OAuthService) {}
 

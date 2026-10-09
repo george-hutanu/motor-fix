@@ -29,7 +29,12 @@ coverage/
 # vitest 5 writes its run reports under <root>/.vitest; the harness root is .claude/
 .claude/.vitest/
 
-# Specs live in the private george-hutanu/motor-fix-specs: specs/ is its clone
-# (.claude/scripts/specs-repo.mjs), never tracked here. Its own .gitignore keeps
-# QA screenshots and the local hand-off notes out of it.
-/specs/
+# Specs live in the private george-hutanu/motor-fix-specs: .motor-fix-specs/ is
+# its clone and specs a link into it (.claude/scripts/specs-repo.mjs), never
+# tracked here. Its own .gitignore keeps QA screenshots and the local hand-off
+# notes out of it.
+/.motor-fix-specs/
+/.motor-fix-specs.lock
+/.specs-link-*
+/.specs-adopt
+/specs

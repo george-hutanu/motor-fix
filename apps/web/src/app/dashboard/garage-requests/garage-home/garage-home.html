@@ -1,0 +1,7 @@
+@if (draft()) {
+  <p>{{ 'shell.frame.verification' | t }}</p>
+} @else if (feed.visible()) {
+  <mf-garage-requests-panel [limit]="4" />
+} @else {
+  <p>{{ 'shell.frame.coming.garage.dashboard' | t }}</p>
+}
