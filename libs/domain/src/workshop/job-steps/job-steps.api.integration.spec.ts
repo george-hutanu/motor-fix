@@ -442,7 +442,7 @@ describe('ticking a step', () => {
     expect(refused.status).toBe(403);
   });
 
-  // SC-004: the change, its audit entry and its event are one write.
+  // The change, its audit entry and its event are one write.
   it('leaves no tick, audit entry or event when the event cannot be written', async () => {
     const s = await setting('in_work');
     const [, id] = await five(s);
