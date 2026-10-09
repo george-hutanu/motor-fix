@@ -39,7 +39,7 @@ export const listQuoteRequests = defineTool({
   },
   name: 'list_quote_requests',
   // The car carries no plate and the driver only a short name; the garage's
-  // own answer and quote stay as the dashboard row has them.
+  // answer and quote only by their id and status: their free text stays out.
   outputSchema: {
     items: z.array(
       z.object({
@@ -62,8 +62,8 @@ export const listQuoteRequests = defineTool({
             notOffered: z.boolean(),
           }),
         ),
-        quote: z.looseObject({ id: z.string(), status: z.string() }).nullable(),
-        recipient: z.looseObject({ status: z.string() }),
+        quote: z.object({ id: z.string(), status: z.string() }).nullable(),
+        recipient: z.object({ status: z.string() }),
         status: z.string(),
       }),
     ),

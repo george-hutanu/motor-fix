@@ -154,6 +154,7 @@ describe('list_quote_requests', () => {
             { id: 'job-1', name: 'Oil change', notOffered: false },
             { id: 'job-2', name: 'Brake pads', notOffered: true },
           ],
+          recipient: { status: 'waiting' },
         },
       ],
       nextCursor: null,
