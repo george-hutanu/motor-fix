@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -13,6 +13,7 @@ features:
   - 365-mcp-oauth
   - 879-dashboards
   - 397-listing-ticks
+  - 374-assistant-requests
 ---
 
 # Capability: Observability
@@ -428,6 +429,10 @@ _From 879-dashboards._
 ### 397-FR-013 — The new endpoint MUST be listed with its telemetry in `infra/observability/inventory.json` (the API's request metrics and logs cover it; no new dashboard panel or alert, with the reason stated), as every new endpoint is.
 
 _From 397-listing-ticks._
+
+### 374-FR-014 — Observability: every call of the four tools is counted in the existing `mcp_tool_calls_total{tool,outcome}` and `mcp_tool_call_duration_seconds{tool}` with the tool name from the catalogue (a closed set), logged as one `McpToolCall` line (tool, outcome, duration, request id; no input, no user text, no phone or plate) and traced as the `mcp.tool <name>` span; the MCP dashboard (`infra/observability/grafana/dashboards/motorfix-mcp.json`) gets a panel for the garage read tools (calls and refusals by tool, p95 by tool); the `mcp-tool-errors` alert covers them (an alert on a single tool's error rate is added only if the existing one cannot see it); `infra/observability/inventory.json` lists the four tools as a product action with their dashboard and alert, and `scripts/observability-inventory.ts` passes. (AGENTS.md observability rule; 365-FR-015)
+
+_From 374-assistant-requests._
 
 ## Retired
 

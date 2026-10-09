@@ -1,4 +1,10 @@
-import { addLocalDays, atLocal, localDay, monthStart } from './bucharest';
+import {
+  addLocalDays,
+  atLocal,
+  localDay,
+  monthStart,
+  weekStart,
+} from './bucharest';
 
 describe('monthStart', () => {
   it.each([
@@ -17,6 +23,26 @@ describe('monthStart', () => {
     expect(localDay(now)).toBe('2026-11-01');
     expect(atLocal(monthStart(localDay(now)), 0)).toEqual(
       new Date('2026-10-31T22:00:00Z'),
+    );
+  });
+});
+
+// @traces 374-FR-009
+describe('weekStart', () => {
+  it.each([
+    ['2026-10-05', '2026-10-05'],
+    ['2026-10-09', '2026-10-05'],
+    ['2026-10-11', '2026-10-05'],
+    ['2026-10-25', '2026-10-19'],
+    ['2026-10-26', '2026-10-26'],
+    ['2027-01-03', '2026-12-28'],
+  ])('gives the Monday of the week of %s', (day, monday) => {
+    expect(weekStart(day)).toBe(monday);
+  });
+
+  it('starts the week of the autumn clock change at midnight in Bucharest, summer time', () => {
+    expect(atLocal(weekStart('2026-10-25'), 0)).toEqual(
+      new Date('2026-10-18T21:00:00Z'),
     );
   });
 });

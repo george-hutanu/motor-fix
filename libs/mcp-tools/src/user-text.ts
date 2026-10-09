@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 type UserTextAuthor = 'driver' | 'garage' | 'mechanic' | 'admin';
 
 interface UserText {
@@ -11,3 +13,10 @@ interface UserText {
 export function userText(author: UserTextAuthor, text: string): UserText {
   return { author, kind: 'user_text', text };
 }
+
+// How a userText field reads in a tool's output schema.
+export const userTextOutput = z.object({
+  author: z.enum(['driver', 'garage', 'mechanic', 'admin']),
+  kind: z.literal('user_text'),
+  text: z.string(),
+});
