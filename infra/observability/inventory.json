@@ -157,6 +157,15 @@
       "story": "ST-343"
     },
     {
+      "kind": "queue",
+      "name": "quote-received",
+      "source": "libs/domain/src/notifications/quote-received/quote-received.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "no agreed threshold yet; ST-880 adds the alerts",
+      "story": "ST-344"
+    },
+    {
       "kind": "outside-service",
       "name": "brevo",
       "host": "api.brevo.com",
