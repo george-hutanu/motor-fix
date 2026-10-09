@@ -42,7 +42,7 @@
         "strict"
       ],
       "description": "Pin gh to the george-hutanu account for the session (GH_TOKEN via CLAUDE_ENV_FILE, resolved per command, never written out) and report when git author, committer or credential pinning has drifted from george-hutanu <hutanugeorge40@gmail.com>",
-      "fingerprint": "748e89020d6e"
+      "fingerprint": "90a16292d535"
     },
     {
       "id": "pre:bash:guard",
@@ -157,7 +157,7 @@
         "strict"
       ],
       "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head, unless it was handed off to a tail agent), or with a ready PR whose checks and agent review passed but that is not merged",
-      "fingerprint": "2fd5368b29c5"
+      "fingerprint": "668a6251d0bb"
     },
     {
       "id": "stop:telemetry",

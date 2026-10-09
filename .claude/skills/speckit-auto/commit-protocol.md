@@ -10,8 +10,9 @@ commit, to the feature's own branch only (`git push`, upstream set when the
 branch was created, so the draft PR follows the work). Never `--force`, never
 `main`. Never merge mid-run: the tail agent merges, on green CI only.
 
-`.specify/` and `.claude/` are tracked here; `specs/` is not. It is a clone
-of the private george-hutanu/motor-fix-specs (branch `trunk`), so the artifact
+`.specify/` and `.claude/` are tracked here; `specs/` is not. It links into
+`.motor-fix-specs/`, a clone of the private george-hutanu/motor-fix-specs
+(branch `trunk`), so the artifact
 phases commit what they wrote there, as `docs(specs): ST-<n> …` (or
 `chore(specs): …` for logs), with
 `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>` (it

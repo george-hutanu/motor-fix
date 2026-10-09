@@ -15,7 +15,8 @@
 // title: `feature`, `bug`, `tech debt`, `performance`, `documentation`,
 // `tests` or `tooling`, and `breaking` when the title carries a `!`.
 //
-// specs/ is its own repository (motor-fix-specs, .claude/scripts/specs-repo.mjs):
+// The specs clone (.motor-fix-specs, linked at specs) is its own repository
+// (motor-fix-specs, .claude/scripts/specs-repo.mjs):
 // a commit there that is not pushed to trunk is refused like one on the branch,
 // since the feature's records no longer ride in its PR.
 //
@@ -49,6 +50,7 @@ import { join } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { branchFeatureDir } from "../scripts/lib/feature.mjs";
 import { ghSync } from "../scripts/lib/gh-rest.mjs";
+import { cloneAt } from "../scripts/specs-repo.mjs";
 
 const IN_DEVELOPMENT = "in development";
 const DRAFT_LABELS = new Set(["planning", IN_DEVELOPMENT]);
@@ -266,10 +268,12 @@ export function readPr(branch, cwd, opts = {}) {
   }
 }
 
-/** Commits in the specs clone that origin/trunk does not have; 0 when there is no clone to read. */
+/** Commits in the specs clone (.motor-fix-specs, or an old one at specs/) that origin/trunk does not have; 0 when there is no clone to read. */
 export function specsUnpushed(cwd) {
+  const clone = cloneAt(cwd);
+  if (!clone) return 0;
   try {
-    return Number(git(join(cwd, "specs"), ["rev-list", "--count", "origin/trunk..HEAD"])) || 0;
+    return Number(git(clone, ["rev-list", "--count", "origin/trunk..HEAD"])) || 0;
   } catch {
     return 0;
   }

@@ -107,10 +107,18 @@ function contents(gh, repo, path, ref, raw = true) {
   return res.code === 0 ? { text: res.stdout } : { error: reason(res) };
 }
 
-/** The FR ids on tasks.md lines naming a changed file, with their text from spec.md; { lines } or { note }. */
-/** A file of the feature's folder in the specs repository: `feature` is `specs/<branch>`. */
-const specsFile = (gh, feature, path, raw = true) => contents(gh, SPECS_SLUG, `${feature.replace(/^specs\//, "")}${path}`, TRUNK, raw);
+/**
+ * A file of the feature's folder in the specs repository: `feature` is `specs/<branch>`. A moved trunk keeps
+ * it under specs/, an old one at the root, so a 404 at the first is asked again at the second.
+ */
+// TODO: drop the old-layout fallback once every checkout and trunk have migrated.
+function specsFile(gh, feature, path, raw = true) {
+  const name = `${feature.replace(/^specs\//, "")}${path}`;
+  const moved = contents(gh, SPECS_SLUG, `specs/${name}`, TRUNK, raw);
+  return moved.error && /404|not found/i.test(moved.error) ? contents(gh, SPECS_SLUG, name, TRUNK, raw) : moved;
+}
 
+/** The FR ids on tasks.md lines naming a changed file, with their text from spec.md; { lines } or { note }. */
 function requirements(gh, feature, paths) {
   const tasks = specsFile(gh, feature, "/tasks.md");
   if (tasks.error) return { note: `${feature}/tasks.md not found on ${SPECS_SLUG} ${TRUNK} (${tasks.error})` };

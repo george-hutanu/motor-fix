@@ -254,7 +254,7 @@ export function main(argv, repo, out = {}) {
   // `specs/HEAD~5` and the run died on "no feature to read".
   const named = argv.find((a, i) => !a.startsWith("--") && argv[i - 1] !== "--since");
   const feature = named
-    ? { dir: join(repo, named), name: basename(named), num: basename(named).match(/^(\d{3})-/)?.[1] ?? "000", level: featureLevel(repo, join(repo, named)) }
+    ? { dir: join(repo, named), name: basename(named), num: basename(named).match(/^(\d{3,})-/)?.[1] ?? "000", level: featureLevel(repo, join(repo, named)) }
     : activeFeature(repo);
 
   if (!feature || !existsSync(join(feature.dir, "spec.md"))) {
