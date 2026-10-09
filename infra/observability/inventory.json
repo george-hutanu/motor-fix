@@ -229,6 +229,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_garage_profile_cache_total",
+      "source": "libs/domain/src/garages/public-garages/public-garages.metrics.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "counts the public profile cache by outcome (hit, miss, drop); ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-307"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_searches_total",
       "source": "libs/domain/src/search/garage-search/garage-search.service.ts",
       "dashboard": "motorfix-product",

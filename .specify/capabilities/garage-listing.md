@@ -19,6 +19,7 @@ features:
   - 959-map-fits-circle
   - 945-map-error-listener
   - 397-listing-ticks
+  - 307-public-garage-profile
 ---
 
 # Capability: Garage listing
@@ -557,9 +558,9 @@ _From 111-garage-address-map._
 
 _From 111-garage-address-map._
 
-### 111-FR-015 — The public garage read (`GET /api/v1/garages/:slug`, `PublicGarageDto`) MUST carry `address` (string or null), `latitude` and `longitude` (numbers or null, both set or both null; the plan's contract names them flat) for a garage whose `business_kind` is not `mobile`, and `serviceRadiusKm` (integer or null) with `address`, `latitude` and `longitude` all null (absent) for a mobile mechanic, whatever the row holds; a garage with no place yet carries null in all of them. The brand-first search's item (042-FR-012, 042-FR-013) is unchanged: the pins of the results map are MF-10's.
+### 307-FR-002 — The answer MUST add to today's fields: `description` (the one line the garage wrote about itself, as written, in both languages; omitted when empty), `verifiedAt` (the decision time of the garage's latest approved verification file, else the garage's `approvedAt`, an ISO-8601 instant; null when neither exists), `rating` (one decimal or null) and `reviewCount` (a whole number, 0 until reviews exist), the garage's `businessKind` (`mobile` or a fixed kind) and, for a mobile mechanic, `serviceRadiusKm` with the 20 km default filled in.
 
-_From 111-garage-address-map._
+_From 307-public-garage-profile._
 
 ### 111-FR-016 — No public shape of the API MUST carry the registered seat [X20c]: no DTO reachable from a `@Public()` route, read or list, has a property for `seat_address` (in any spelling), and the public garage read of a mobile mechanic has no position (the seat is the position). `seat_address` is read only by the garage's own staff and MotorFix admins through the later dashboard and admin stories, which are not this one. A test MUST read the generated OpenAPI document and fail on any property whose name contains `seat` in a schema reachable from the responses of the routes in the public routes list, and the public routes list MUST gain `GET /api/v1/places`.
 
@@ -737,5 +738,6 @@ _From 397-listing-ticks._
 
 - `111-FR-003` — superseded by `959-FR-004` (2026-10-08)
 
+- `111-FR-015` — superseded by `307-FR-002` (2026-10-08)
 - `112-FR-006` — superseded by `397-FR-002` (2026-10-08)
 - `040-FR-006` — superseded by `397-FR-006` (2026-10-08)

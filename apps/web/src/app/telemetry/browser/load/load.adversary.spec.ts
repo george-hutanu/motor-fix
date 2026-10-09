@@ -5,7 +5,7 @@ import { startFaro } from '../faro';
 
 jest.mock('../faro', () => ({ startFaro: jest.fn() }));
 
-const router = {} as Router;
+const router = { navigated: true } as Router;
 
 function pageWith(meta: string): Document {
   const doc = document.implementation.createHTMLDocument('MotorFix');

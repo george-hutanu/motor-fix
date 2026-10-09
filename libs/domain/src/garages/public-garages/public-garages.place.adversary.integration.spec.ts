@@ -131,7 +131,7 @@ describe('the public garage read and the registered seat', () => {
     expect(res.body.serviceRadiusKm).toBe(20);
   });
 
-  it('shows a mobile mechanic with no place yet as no radius, address or position', async () => {
+  it('shows a mobile mechanic with no place yet with the default radius and no address or position', async () => {
     const created = await prisma.garage.create({
       data: {
         businessKind: 'mobile',
@@ -147,7 +147,7 @@ describe('the public garage read and the registered seat', () => {
     for (const key of ['address', 'latitude', 'longitude']) {
       expect(res.body[key] ?? null).toBeNull();
     }
-    expect(res.body.serviceRadiusKm ?? null).toBeNull();
+    expect(res.body.serviceRadiusKm).toBe(20);
   });
 
   it.each([

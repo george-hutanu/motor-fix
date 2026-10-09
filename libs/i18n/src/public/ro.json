@@ -21,6 +21,27 @@
     "required": "Bifează pentru a continua.",
     "terms": "Termenii de utilizare"
   },
+  "garageProfile": {
+    "backBrand": "Service‑uri pentru {brand}",
+    "backHome": "Acasă",
+    "badge": "Verificat · autorizație RAR",
+    "failed": "Nu am putut încărca service‑ul",
+    "loading": "Se încarcă profilul",
+    "mobileArea": "Mecanic mobil · zonă de {km}",
+    "refuses": "Nu lucrează pe {brand}",
+    "retry": "Încearcă din nou",
+    "reviews": {
+      "few": "{count} recenzii",
+      "one": "{count} recenzie",
+      "other": "{count} de recenzii"
+    },
+    "verified": "Firmă activă și autorizație tehnică RAR, verificate de MotorFix. Ultima verificare: {date}.",
+    "works": "Lucrează pe {brand}"
+  },
+  "gone": {
+    "home": "Mergi la pagina principală",
+    "title": "Acest service nu mai este disponibil"
+  },
   "home": {
     "car": "Mașina ta",
     "count": {
@@ -474,6 +495,14 @@
     "signIn": "Intră în cont",
     "submit": "Creează contul",
     "title": "Cont nou"
+  },
+  "siteBar": {
+    "account": "Cont",
+    "find": "Găsește un mecanic",
+    "home": "MotorFix, pagina principală",
+    "list": "Înscrie‑ți service‑ul",
+    "nav": "Meniul site‑ului",
+    "signIn": "Autentificare"
   },
   "tabs": {
     "account": "Cont",

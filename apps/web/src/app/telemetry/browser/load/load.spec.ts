@@ -1,11 +1,18 @@
-import type { Router } from '@angular/router';
+import {
+  type Event,
+  NavigationEnd,
+  NavigationStart,
+  type Router,
+} from '@angular/router';
+import { Subject } from 'rxjs';
 
 import { loadTelemetry } from './load';
 import { startFaro } from '../faro';
 
 jest.mock('../faro', () => ({ startFaro: jest.fn() }));
 
-const router = {} as Router;
+// A page whose first navigation has finished.
+const router = { navigated: true } as Router;
 
 function pageWith(meta?: string): Document {
   const doc = document.implementation.createHTMLDocument('MotorFix');
@@ -70,6 +77,25 @@ describe('loadTelemetry', () => {
     } finally {
       Reflect.deleteProperty(window, 'requestIdleCallback');
     }
+  });
+
+  it('starts only once the first navigation has finished, so the page is named by its route', async () => {
+    const events = new Subject<Event>();
+    const loading = { events, navigated: false } as unknown as Router;
+
+    const done = loadTelemetry(
+      loading,
+      pageWith(
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">',
+      ),
+    );
+    events.next(new NavigationStart(1, '/ro'));
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(startFaro).not.toHaveBeenCalled();
+
+    events.next(new NavigationEnd(1, '/ro', '/ro'));
+    await done;
+    expect(startFaro).toHaveBeenCalledTimes(1);
   });
 
   it('swallows a failure to start, leaving the page alone', async () => {

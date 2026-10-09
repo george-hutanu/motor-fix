@@ -11,12 +11,18 @@ import { PublicGarageDto } from '../../models/public-garage-dto';
 
 export interface PublicGaragesControllerBySlug$Params {
   slug: string;
+
+/**
+ * A catalogue brand's slug; anything else reads as none
+ */
+  brand?: string;
 }
 
 export function publicGaragesControllerBySlug(http: HttpClient, rootUrl: string, params: PublicGaragesControllerBySlug$Params, context?: HttpContext): Observable<StrictHttpResponse<PublicGarageDto>> {
   const rb = new RequestBuilder(rootUrl, publicGaragesControllerBySlug.PATH, 'get');
   if (params) {
     rb.path('slug', params.slug, {});
+    rb.query('brand', params.brand, {});
   }
 
   return http.request(
