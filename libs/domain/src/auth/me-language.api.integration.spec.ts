@@ -267,6 +267,7 @@ describe('the city from Setări on who am I', () => {
       'city',
       'email',
       'emailConfirmed',
+      'garageAccess',
       'garageId',
       'id',
       'landing',

@@ -3526,6 +3526,72 @@
           "language"
         ]
       },
+      "GaragePermissionsDto": {
+        "type": "object",
+        "properties": {
+          "canMoveBookings": {
+            "type": "boolean"
+          },
+          "canAnswerQuotes": {
+            "type": "boolean"
+          },
+          "canRecordFinalPrice": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "canMoveBookings",
+          "canAnswerQuotes",
+          "canRecordFinalPrice"
+        ]
+      },
+      "GarageAccessDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved",
+              "suspended"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "description": "The role at this garage",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/GaragePermissionsDto"
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "The garage’s feature switches by key; a missing key is on"
+          }
+        },
+        "required": [
+          "garageId",
+          "name",
+          "status",
+          "role",
+          "permissions",
+          "features"
+        ]
+      },
       "MeDto": {
         "type": "object",
         "properties": {
@@ -3585,6 +3651,13 @@
             "format": "uuid",
             "nullable": true
           },
+          "garageAccess": {
+            "description": "The garages the account works at; empty with none",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageAccessDto"
+            }
+          },
           "capabilities": {
             "description": "What the role in use may do",
             "type": "array",
@@ -3611,6 +3684,7 @@
           "roles",
           "role",
           "garageId",
+          "garageAccess",
           "capabilities",
           "landing"
         ]
