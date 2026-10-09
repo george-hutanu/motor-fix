@@ -30,13 +30,14 @@ async function countResponseStats(db: PrismaClient, now: Date) {
     SELECT g.id AS "garageId",
       count(r.id) FILTER (WHERE counted)::int AS "requests30d",
       count(r.id) FILTER (
-        WHERE counted AND r.answered_at <= r.created_at + ${window}::interval
+        WHERE counted AND r.status IN ('quoted', 'declined')
+          AND r.answered_at <= r.created_at + ${window}::interval
       )::int AS "answeredWithinDay30d",
       count(r.id)::int AS "lifetimeRequests"
     FROM garage g
     LEFT JOIN LATERAL (
       SELECT r.*, r.status <> 'closed' AND r.created_at > ${since}
-        AND (r.answered_at IS NOT NULL OR r.created_at <= ${settled}) AS counted
+        AND NOT (r.status = 'waiting' AND r.created_at > ${settled}) AS counted
       FROM request_recipient r
       WHERE r.garage_id = g.id
     ) r ON true

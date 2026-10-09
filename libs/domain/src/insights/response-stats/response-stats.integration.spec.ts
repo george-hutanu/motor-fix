@@ -234,6 +234,20 @@ describe('which requests count', () => {
     });
   });
 
+  it('reads the status first: a young waiting row with an answer time is left out, a young quoted row without one counts against', async () => {
+    const g = await world.garage('Atelier Dinamo');
+    await arrived(g.id, hoursAgo(5), 'waiting', 1);
+    await arrived(g.id, hoursAgo(5), 'quoted');
+    await arrived(g.id, hoursAgo(72), 'waiting', 1);
+
+    await writeResponseStats(prisma, NOW);
+
+    expect(await stats(g.id)).toMatchObject({
+      answeredWithinDay30d: 0,
+      requests30d: 2,
+    });
+  });
+
   it('counts a request that expired at day 7 as not answered', async () => {
     const g = await world.garage('Atelier Dinamo');
     await arrived(g.id, hoursAgo(24 * 8), 'expired');
