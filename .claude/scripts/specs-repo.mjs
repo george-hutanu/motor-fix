@@ -25,7 +25,7 @@
 //   node .claude/scripts/specs-repo.mjs status [--root <checkout>]
 //   node .claude/scripts/specs-repo.mjs migrate-trunk --dry-run | --yes [--root <checkout>]
 //       the one-off trunk move (owner-run): every feature folder under specs/
-//       with git mv, README.md and docs/README.md added, pushed to trunk.
+//       with git mv, README.md added, pushed to trunk.
 //
 // The clone takes the checkout's repo-local author and credential helper
 // (.husky/identity.sh), so it commits and pushes as george-hutanu. In GitHub
@@ -80,15 +80,6 @@ The private records of [motor-fix](https://github.com/george-hutanu/motor-fix).
 
 Each motor-fix checkout clones this repository to \`.motor-fix-specs/\` and links
 \`specs\` to \`.motor-fix-specs/specs\` (\`node .claude/scripts/specs-repo.mjs ensure\`).
-`;
-
-const DOCS_README = `# docs
-
-The product documentation, organised by Diátaxis: \`tutorials/\`, \`how-to/\`,
-\`reference/\` and \`explanation/\`. Every page opens with front matter (\`id\`,
-\`title\`, \`kind\`, \`summary\`, \`status\`, \`updated\`, \`related\`, \`supersedes\`);
-\`llms.txt\` at the root lists them. Edit the files here, then run
-\`node scripts/docs-lint.mjs --write\`.
 `;
 
 function git(cwd, args, extraEnv = {}) {
@@ -491,7 +482,7 @@ function migrateHeld({ root, dryRun }) {
   const unknown = entries.filter((n) => !KEEP.includes(n) && !FEATURE.test(n));
   if (unknown.length) return { ok: false, error: `unexpected at the trunk root, move or remove it first: ${unknown.join(", ")}` };
   const move = entries.filter((n) => FEATURE.test(n));
-  if (dryRun) return { ok: true, dryRun: true, move, add: ["README.md", "docs/README.md"] };
+  if (dryRun) return { ok: true, dryRun: true, move, add: ["README.md"] };
 
   const temp = `migrate-trunk-${Date.now()}`;
   const back = () => {
@@ -508,7 +499,6 @@ function migrateHeld({ root, dryRun }) {
       return { ok: false, step: "move", error: `git mv ${name}: ${r.err}` };
     }
   }
-  mkdirSync(join(clone, "docs"), { recursive: true });
   // An existing README is the owner's: it is kept, with the layout section added only when it lacks one.
   const readme = join(clone, "README.md");
   if (!existsSync(readme)) writeFileSync(readme, README);
@@ -516,9 +506,8 @@ function migrateHeld({ root, dryRun }) {
     const text = readFileSync(readme, "utf8");
     if (!text.includes("specs/<NNN-slug>/")) writeFileSync(readme, `${text.trimEnd()}\n\n## Layout\n\n${README.split("\n").slice(4).join("\n")}`);
   }
-  if (!existsSync(join(clone, "docs", "README.md"))) writeFileSync(join(clone, "docs", "README.md"), DOCS_README);
-  git(clone, ["add", "README.md", "docs/README.md"]);
-  const c = git(clone, ["commit", "-q", "-m", "chore(specs): move the feature folders under specs/ and add docs/"]);
+  git(clone, ["add", "README.md"]);
+  const c = git(clone, ["commit", "-q", "-m", "chore(specs): move the feature folders under specs/"]);
   if (c.code !== 0) {
     back();
     return { ok: false, step: "commit", error: `commit: ${c.err || c.out}` };

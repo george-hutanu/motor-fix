@@ -45,7 +45,8 @@ full.
    - In the feature's file: the `Design boards` line under `## Facts`, the
      Build brief's `### Screens` and `### States and errors`, "States and edge
      cases" and anything marked *Not designed*.
-   - In the epic's file: the `## Design` table (canvas page, board, what to look at).
+   - In `docs/reference/design/index.md`: the board list (canvas page, board),
+     for a board the feature's file names without a page link.
    - On the story in the tracker: the `Design` and `Design boards` properties
      (they roll up from the epic), when the feature's file has none.
 3. **Read the boards from `docs/reference/design/`.** Each board the feature

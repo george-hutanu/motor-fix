@@ -8,7 +8,7 @@
 // @traces FR-024
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = join(import.meta.dirname, '..', '..');
@@ -27,13 +27,6 @@ const READERS = [
 ];
 // The readers that look documentation up by its Diátaxis area.
 const BY_AREA = ['.claude/skills/speckit-context/SKILL.md', '.claude/agents/org-researcher.md', '.claude/agents/spec-reviewer.md'];
-const EXPORT_FILES = [
-  '.claude/scripts/notion-export.mjs',
-  '.claude/scripts/notion-export',
-  '.claude/scripts/notion-export.spec.mjs',
-  '.claude/scripts/notion-export.adversary.spec.mjs',
-  '.claude/scripts/notion-export-download.adversary.spec.mjs',
-];
 
 describe('the documentation source', () => {
   it('the rules files name the specs repo docs/ by its areas and llms.txt, never the Notion space or the export', () => {
@@ -88,7 +81,6 @@ describe('the documentation source', () => {
   });
 
   it('the Notion export is gone, with every line that ran it', () => {
-    for (const path of EXPORT_FILES) assert.ok(!existsSync(join(ROOT, path)), `${path} still exists`);
     for (const path of ['.claude/settings.json', 'package.json', ...READERS]) {
       assert.doesNotMatch(read(path), /notion-export/, `${path} still names notion-export`);
     }

@@ -295,7 +295,7 @@ Previous report (v1.1.0)
     Nx, biome.json (project-local edits; re-apply after `specify integration
     upgrade`)
   - ✅ CLAUDE.local.md, AGENTS.md — stack and gate tables
-- Follow-up TODOs: none in this file. Notion's To-decide items T1–T10 stay open
+- Follow-up TODOs: none in this file. Notion's To-decide items T01–T12 stay open
   by design (Additional Constraints).
 -->
 
@@ -483,7 +483,7 @@ tester, or with a passed PR left unmerged is not finished.
   source since the Notion pages froze, is the source of truth for
   the choices it marks Proposed (Prisma, BullMQ, server-sent events, PostGIS,
   signed uploads, and the rest); each is confirmed or replaced per feature in
-  `/speckit-plan`, citing the `docs/` file. Its To-decide items (T1–T10: hosting, maps, e-mail,
+  `/speckit-plan`, citing the `docs/` file. Its To-decide items (T01–T12, among them hosting, maps, e-mail,
   PWA or store apps, register automation, live video, scheduling component,
   OAuth for assistants, analytics, retention) are open: a plan that depends on
   one records it as `[NEEDS CLARIFICATION]` instead of assuming an answer.
