@@ -315,6 +315,8 @@ test.describe('on a phone', () => {
     await bar(page).click();
     await entry(page, 'Fotografii și adresă').click();
     await expect(sections(page).nth(4)).toBeFocused();
+    // The jump may start after the focus lands: wait for it to begin, then settle.
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
     const y = await still(page);
     const below = async () =>
       (await sections(page).nth(4).boundingBox())!.y >=
