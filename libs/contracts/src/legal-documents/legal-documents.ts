@@ -15,7 +15,7 @@ export const DECLARED_NAME_MAX = 80;
 
 // Pages are storage keys in page order; `issuedOn` is YYYY-MM-DD. A type,
 // not an interface, so it stays assignable to Prisma's JSON values.
-export type DraftDocument = {
+type DraftDocument = {
   pages: string[];
   issuedOn?: string;
 };
@@ -34,7 +34,12 @@ function dayOf(date: string): number {
   if (!match) return Number.NaN;
   const [year, month, day] = [match[1], match[2], match[3]].map(Number);
   const at = Date.UTC(year, month - 1, day);
-  return new Date(at).getUTCDate() === day ? at : Number.NaN;
+  const back = new Date(at);
+  return back.getUTCFullYear() === year &&
+    back.getUTCMonth() === month - 1 &&
+    back.getUTCDate() === day
+    ? at
+    : Number.NaN;
 }
 
 export const isCalendarDate = (value: unknown): value is string =>

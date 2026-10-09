@@ -283,7 +283,7 @@ describe('attaching the documents when the listing is sent', () => {
   it('fails a second attach for the same file', async () => {
     await attach(draftData());
 
-    await expect(attach(draftData())).rejects.toThrow();
+    await expect(attach(draftData())).rejects.toMatchObject({ code: 'P2002' });
 
     expect(await rows()).toHaveLength(2);
     expect(await events()).toHaveLength(2);
