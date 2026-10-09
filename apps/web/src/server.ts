@@ -33,7 +33,11 @@ const faro = faroUrl();
 // Read raw, not through readEnv: the build and the dev server import this
 // file without the runtime environment readEnv requires (see below).
 const collector = faro
-  ? { url: faro, version: process.env['RELEASE_SHA'] || 'dev' }
+  ? {
+      environment: process.env['APP_ENV'] || 'development',
+      url: faro,
+      version: process.env['RELEASE_SHA'] || 'dev',
+    }
   : undefined;
 const angularApp = new AngularNodeAppEngine({
   allowedHosts: publicUrl ? [publicUrl.hostname] : undefined,

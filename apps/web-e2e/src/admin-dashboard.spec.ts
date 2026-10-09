@@ -1,3 +1,4 @@
+// @traces 879-FR-019
 import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
@@ -56,7 +57,11 @@ const smallestText = (page: Page) =>
     ),
   );
 
-const stubAdmin = async (page: Page, language: 'ro' | 'en') => {
+const stubAdmin = async (
+  page: Page,
+  language: 'ro' | 'en',
+  figures: object = FIGURES,
+) => {
   await page.route('**/api/v1/auth/refresh', (route) =>
     route.fulfill({ json: { accessToken: 'stubbed' } }),
   );
@@ -77,7 +82,7 @@ const stubAdmin = async (page: Page, language: 'ro' | 'en') => {
     }),
   );
   await page.route('**/api/v1/admin/overview', (route) =>
-    route.fulfill({ json: FIGURES }),
+    route.fulfill({ json: figures }),
   );
 };
 
@@ -412,6 +417,49 @@ test.describe('the platform figures', () => {
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });
   }
+
+  const GRAFANA =
+    'https://stack.grafana.invalid/d/motorfix-overview?var-env=test';
+  for (const [device, width, height, language, name] of [
+    [
+      'a 320 px phone',
+      320,
+      640,
+      'ro',
+      'Observabilitate, se deschide într‑o filă nouă',
+    ],
+    ['a desktop', 1280, 800, 'en', 'Observability, opens in a new tab'],
+  ] as const) {
+    test(`links to the observability dashboards in a new tab on ${device}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height, width });
+      await stubAdmin(page, language, {
+        ...FIGURES,
+        observabilityUrl: GRAFANA,
+      });
+
+      await page.goto('/app/admin');
+      const link = panel(page).getByRole('link', { exact: true, name });
+
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', GRAFANA);
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+    });
+  }
+
+  test('shows no observability link when the overview carries none', async ({
+    page,
+  }) => {
+    await stubAdmin(page, 'ro');
+
+    await page.goto('/app/admin');
+    await expect(tiles(page)).toHaveCount(6);
+
+    await expect(panel(page).getByRole('link')).toHaveCount(0);
+  });
 });
 
 const GROWTH = {

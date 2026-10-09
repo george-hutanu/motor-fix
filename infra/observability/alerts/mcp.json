@@ -19,7 +19,7 @@
           },
           "annotations": {
             "summary": "More than 20 MCP calls were refused at sign-in in 5 minutes ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "mcp"
+            "dashboard_uid": "motorfix-mcp"
           },
           "data": [
             {
@@ -74,7 +74,7 @@
           },
           "annotations": {
             "summary": "More than 20% of MCP tool calls failed over 10 minutes, with at least 10 calls ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "mcp"
+            "dashboard_uid": "motorfix-mcp"
           },
           "data": [
             {
@@ -129,7 +129,7 @@
           },
           "annotations": {
             "summary": "The MCP server failed to fetch the identity server signing keys in the last 5 minutes; sign-ins fail once cached keys expire ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "mcp"
+            "dashboard_uid": "motorfix-mcp"
           },
           "data": [
             {

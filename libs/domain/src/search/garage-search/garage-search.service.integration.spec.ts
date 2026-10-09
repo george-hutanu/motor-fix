@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
 
 import { GarageSearchService } from './garage-search.service';
@@ -13,6 +14,9 @@ type Stance = 'works_on' | 'does_not_take';
 type Status = 'approved' | 'draft' | 'suspended';
 type Page = Awaited<ReturnType<GarageSearchService['forBrand']>>;
 
+const reader = countedMetrics();
+const searches = (outcome: string) =>
+  counterTotal(reader, 'motorfix_searches_total', { outcome });
 const { prisma } = fixtures();
 const search = new GarageSearchService(prisma);
 serialDatabase(databaseUrl);
@@ -93,6 +97,27 @@ const tamper = (cursor: string, change: Record<string, unknown>) =>
       ...change,
     }),
   ).toString('base64url');
+
+// @traces 879-FR-009
+describe('counting searches', () => {
+  it('counts a first page with garages as results, an empty one as none, and no later page or refused search', async () => {
+    const [results, none] = [await searches('results'), await searches('none')];
+
+    await search.forBrand(dacia);
+    await search.forBrand(randomUUID()).catch(() => undefined);
+    for (let i = 0; i < 21; i++) {
+      await garage(`Garage ${String(i).padStart(2, '0')}`, {
+        stance: 'works_on',
+      });
+    }
+    const first = await search.forBrand(dacia);
+    expect(first.nextCursor).not.toBeNull();
+    await search.forBrand(dacia, first.nextCursor ?? undefined);
+
+    expect(await searches('results')).toBe(results + 1);
+    expect(await searches('none')).toBe(none + 1);
+  });
+});
 
 describe('GarageSearchService.forBrand', () => {
   it('lists the approved garages that take the brand first, then the rest with their answer', async () => {

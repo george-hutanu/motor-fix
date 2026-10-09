@@ -6820,6 +6820,11 @@
             "type": "integer",
             "description": "Active drivers on the 1st of the current month, absent when that night was not recorded",
             "minimum": 0
+          },
+          "observabilityUrl": {
+            "type": "string",
+            "description": "The MotorFix overview dashboard in Grafana for this API's environment, absent when Grafana is not configured",
+            "format": "uri"
           }
         },
         "required": [

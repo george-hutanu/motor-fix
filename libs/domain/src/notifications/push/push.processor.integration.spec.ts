@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import type { OutsideChannel } from '@motor-fix/contracts';
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { generateVAPIDKeys } from 'web-push';
@@ -171,6 +172,36 @@ const test = (accountId: string, eventId = 'e1') =>
     recipients: [accountId],
     subjectId: accountId,
   });
+
+const reader = countedMetrics();
+const counted = async () => ({
+  emails: await counterTotal(reader, 'motorfix_emails_sent_total', {
+    template: 'TEST_MESSAGE',
+  }),
+  pushes: await counterTotal(reader, 'motorfix_notifications_sent_total', {
+    channel: 'push',
+  }),
+});
+
+// @traces 879-FR-009
+describe('counting what the processor sends', () => {
+  it('counts one e-mail by its template and one push per row a device took, none for a refused one', async () => {
+    const ana = await person('ana', { devices: ['laptop', 'phone'] });
+    const ion = await person('ion', { devices: ['old'] });
+    answers.set('/old', 410);
+    const before = await counted();
+
+    await test(ana);
+    await drain(ana);
+    await test(ion);
+    await drain(ion);
+
+    expect(await counted()).toEqual({
+      emails: before.emails + 2,
+      pushes: before.pushes + 1,
+    });
+  });
+});
 
 describe('routing to push', () => {
   it('writes one push row for a person with two devices and sends to both', async () => {

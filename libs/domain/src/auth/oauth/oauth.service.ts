@@ -26,6 +26,7 @@ import {
 import type { ProviderSettings } from './providers';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
+import { countSignIn } from '../../metrics/product-counters';
 import { AccountsService } from '../accounts.service';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { AUTH_REDIS } from '../attempts';
@@ -364,10 +365,13 @@ export class OAuthService {
       return { result: 'maintenance' };
     }
     if (link) await this.link(account.id, role, provider, person.subject);
-    return {
-      issued: await this.signIns.openSession(account.id, role, flow.remember),
-      result: 'signed-in',
-    };
+    const issued = await this.signIns.openSession(
+      account.id,
+      role,
+      flow.remember,
+    );
+    countSignIn(provider);
+    return { issued, result: 'signed-in' };
   }
 
   // The account of the provider identity, else the one holding the e-mail the

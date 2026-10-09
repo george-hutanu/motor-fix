@@ -1,4 +1,5 @@
 import { CURRENT_CONSENT, type OAuthProvider } from '@motor-fix/contracts';
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import request from 'supertest';
 
 import {
@@ -148,6 +149,30 @@ describe('starting the flow', () => {
 
     expect(one.flow).not.toBe(two.flow);
   });
+});
+
+const reader = countedMetrics();
+const signIns = (method: OAuthProvider) =>
+  counterTotal(reader, 'motorfix_sign_ins_total', { method });
+
+// @traces 879-FR-009
+describe('counting provider sign-ins', () => {
+  it.each(['google', 'apple'] as const)(
+    'counts a %s sign-in under its provider',
+    async (provider) => {
+      await existing(`count-${provider}@example.test`);
+      const before = await signIns(provider);
+
+      const res = await continueWith(provider, {
+        email: `count-${provider}@example.test`,
+        email_verified: true,
+        sub: `${provider}-count`,
+      });
+
+      expect(outcome(res).result).toBe('signed-in');
+      expect(await signIns(provider)).toBe(before + 1);
+    },
+  );
 });
 
 describe('a person with an account', () => {

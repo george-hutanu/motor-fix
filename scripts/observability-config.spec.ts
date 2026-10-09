@@ -35,11 +35,12 @@ describe('observability configuration', () => {
     );
   });
 
+  // @traces 879-FR-016
   it('the README fixes where dashboards and alerts live and the free-tier budget', () => {
     const readme = read('infra', 'observability', 'README.md');
 
     for (const fact of [
-      'infra/observability/dashboards/',
+      'infra/observability/grafana/dashboards/',
       'infra/observability/alerts/',
       '10k active series',
       '50 GB a month',
