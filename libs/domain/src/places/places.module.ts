@@ -12,7 +12,7 @@ import {
 } from './providers/places.provider';
 import { AUTH_REDIS } from '../auth/attempts';
 
-type PlacesConfig =
+export type PlacesConfig =
   | { provider: 'geoapify'; apiKey: string }
   | { provider: 'fake' }
   | { provider: 'none' };
@@ -33,7 +33,7 @@ const NONE: PlacesProvider = {
   search: async () => ({ unavailable: 'not_configured' }),
 };
 
-function providerFor(config: PlacesConfig): PlacesProvider {
+export function providerFor(config: PlacesConfig): PlacesProvider {
   const logger = new Logger('Places');
   if (config.provider === 'none') {
     logger.warn('address search off: GEOAPIFY_API_KEY is not set');

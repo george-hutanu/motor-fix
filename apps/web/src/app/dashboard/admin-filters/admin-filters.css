@@ -1,0 +1,94 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.wide {
+  display: none;
+}
+/* Phones: one button, 16 px, its text cut short rather than scrolled. */
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  font: inherit;
+  font-size: max(16px, 1rem);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  cursor: pointer;
+}
+.filter span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filter svg {
+  flex: none;
+}
+.filter:focus-visible,
+select:focus-visible,
+.segments label:has(input:focus-visible) {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+@media (min-width: 768px) {
+  .filter {
+    display: none;
+  }
+  .wide {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--mf-space-2);
+  }
+  select {
+    min-height: var(--mf-tap);
+    padding: 0 var(--mf-space-2);
+    font: inherit;
+    font-size: var(--mf-size-small);
+    color: var(--mf-text);
+    background: var(--mf-bg);
+    border: 1px solid var(--mf-line-strong);
+    border-radius: var(--mf-radius-control);
+  }
+  .segments {
+    display: flex;
+    flex-wrap: wrap;
+    border: 1px solid var(--mf-line-strong);
+    border-radius: var(--mf-radius-control);
+    overflow: hidden;
+  }
+  .segments label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--mf-tap);
+    padding: 0 var(--mf-space-3);
+    font-size: var(--mf-size-small);
+    color: var(--mf-text-secondary);
+    cursor: pointer;
+  }
+  .segments label + label {
+    border-left: 1px solid var(--mf-line);
+  }
+  /* The radio covers its segment: a press anywhere on it is the radio's. */
+  .segments input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .segments label:has(input:checked) {
+    color: var(--mf-on-amber);
+    background: var(--mf-amber);
+    font-weight: 700;
+  }
+}

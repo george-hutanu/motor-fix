@@ -58,6 +58,10 @@ import { SAMPLE_GARAGES } from './sample-text';
       display: grid;
       gap: var(--mf-space-2);
     }
+    /* The typeface sample, read as body text: never under 16 px. */
+    main > p.mf-label {
+      font-size: var(--mf-size-body);
+    }
   `,
   template: `
     <main>

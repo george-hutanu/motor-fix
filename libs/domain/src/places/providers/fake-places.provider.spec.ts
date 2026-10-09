@@ -15,7 +15,12 @@ describe('the stand-in address search', () => {
     expect(first.items.length).toBeLessThanOrEqual(5);
     for (const item of first.items) {
       expect(inRomania(item.lat, item.lng)).toBe(true);
-      expect(Object.keys(item).sort()).toEqual(['label', 'lat', 'lng']);
+      expect(Object.keys(item).sort()).toEqual([
+        'label',
+        'lat',
+        'lng',
+        'locality',
+      ]);
     }
   });
 
@@ -39,6 +44,7 @@ describe('the stand-in address search', () => {
           label: 'Bulevardul Florilor 7, București',
           lat: 44.4268,
           lng: 26.1025,
+          locality: 'București',
         },
       ],
     });

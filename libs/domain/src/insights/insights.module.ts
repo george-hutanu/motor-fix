@@ -13,12 +13,14 @@ import {
 } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 
+import { placeGarages } from './place-garages';
 import { writeSnapshot } from './platform-figures';
 import { writeResponseStats } from './response-stats/response-stats';
 import { createPrisma } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
+import { type PlacesConfig, providerFor } from '../places/places.module';
 
 export const INSIGHTS_QUEUE = 'insights';
 const INSIGHTS_PRISMA = Symbol('INSIGHTS_PRISMA');
@@ -31,6 +33,8 @@ const NIGHTLY = { pattern: '0 1 * * *', tz: 'Europe/Bucharest' };
 
 interface InsightsOptions {
   databaseUrl: string;
+  // The address look-up that places the garages with no city each night.
+  places: PlacesConfig;
   redisUrl: string;
 }
 
@@ -72,11 +76,13 @@ export class InsightsModule
           inject: [INSIGHTS_PRISMA],
           provide: INSIGHTS_WORKER,
           useFactory: (prisma: PrismaClient) => {
+            const places = providerFor(options.places);
             const worker = new Worker(
               INSIGHTS_QUEUE,
               (job) =>
                 inJob(job, async () => {
                   if (job.name === SNAPSHOT) {
+                    await placeGarages(prisma, places);
                     return writeSnapshot(prisma, new Date());
                   }
                   if (job.name === RESPONSE_STATS) {

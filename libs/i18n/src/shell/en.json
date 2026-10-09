@@ -60,9 +60,35 @@
   "frame": {
     "addCar": "Add a car",
     "admin": {
+      "city": {
+        "all": "Whole country",
+        "bucuresti": "Bucharest",
+        "label": "City"
+      },
+      "filters": {
+        "apply": "Apply",
+        "label": "Filters: {city}, {period}",
+        "title": "Filters"
+      },
       "label": "ADMINISTRATOR",
       "none": "no garage is waiting for verification",
-      "place": "MotorFix · Bucharest",
+      "period": {
+        "7d": "Last 7 days",
+        "12m": "Last 12 months",
+        "30d": "Last 30 days",
+        "default": "Default",
+        "label": "Period",
+        "line": {
+          "7d": "in the last 7 days",
+          "12m": "in the last 12 months",
+          "30d": "in the last 30 days",
+          "month": "this month",
+          "today": "today"
+        },
+        "month": "This month",
+        "today": "Today"
+      },
+      "place": "MotorFix · {city}",
       "waiting": {
         "one": "1 garage is waiting for verification",
         "other": "{count} garages are waiting for verification"

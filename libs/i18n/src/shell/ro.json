@@ -61,9 +61,35 @@
   "frame": {
     "addCar": "Adaugă o mașină",
     "admin": {
+      "city": {
+        "all": "Toată țara",
+        "bucuresti": "București",
+        "label": "Oraș"
+      },
+      "filters": {
+        "apply": "Aplică",
+        "label": "Filtre: {city}, {period}",
+        "title": "Filtre"
+      },
       "label": "ADMINISTRATOR",
       "none": "niciun service nu așteaptă verificarea",
-      "place": "MotorFix · București",
+      "period": {
+        "7d": "Ultimele 7 zile",
+        "12m": "Ultimele 12 luni",
+        "30d": "Ultimele 30 de zile",
+        "default": "Implicit",
+        "label": "Perioadă",
+        "line": {
+          "7d": "în ultimele 7 zile",
+          "12m": "în ultimele 12 luni",
+          "30d": "în ultimele 30 de zile",
+          "month": "luna asta",
+          "today": "azi"
+        },
+        "month": "Luna aceasta",
+        "today": "Azi"
+      },
+      "place": "MotorFix · {city}",
       "waiting": {
         "few": "{count} service‑uri așteaptă verificarea",
         "one": "1 service așteaptă verificarea",

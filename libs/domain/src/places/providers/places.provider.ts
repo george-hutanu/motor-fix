@@ -2,6 +2,8 @@ export interface PlaceSuggestion {
   label: string;
   lat: number;
   lng: number;
+  // The town or city the address is in, as the provider names it.
+  locality?: string;
 }
 
 // Why the search could not answer: a status, `timeout`, `network`,
