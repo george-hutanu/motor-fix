@@ -96,8 +96,11 @@ describe('reading a garage by its public slug', () => {
       id: approved.id,
       name: 'Atelier Dinamo',
       paymentMethods: { card: false, cash: false, transfer: false },
+      rating: null,
       refusalPhrase: null,
+      reviewCount: 0,
       slug: approved.slug,
+      verifiedAt: null,
       worksOn: [],
     });
   });
@@ -122,12 +125,17 @@ describe('reading a garage by its public slug', () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort()).toEqual([
       'brandNote',
+      'businessKind',
+      'description',
       'doesNotTake',
       'id',
       'name',
       'paymentMethods',
+      'rating',
       'refusalPhrase',
+      'reviewCount',
       'slug',
+      'verifiedAt',
       'worksOn',
     ]);
     expect(JSON.stringify(res.body)).not.toContain('722123456');
@@ -418,3 +426,337 @@ describe('reading a garage by its public slug', () => {
     expect(res.body.id).toBe(hidden.id);
   });
 });
+
+const readWith = (slug: string, query: Record<string, string>) =>
+  request(app.getHttpServer()).get(`/garages/${slug}`).query(query);
+
+const catalogueBrand = (name: string, active = true) => {
+  const slug = `${name.toLowerCase()}-${randomUUID()}`;
+  return prisma.brand.create({
+    data: { active, key: slug, name, popularity: null, slug },
+  });
+};
+
+const approvedFile = (garageId: string, decidedAt: Date) =>
+  prisma.verificationFile.create({
+    data: { decidedAt, garageId, status: 'approved' },
+  });
+
+// @traces 307-FR-001 307-FR-002
+describe('what the profile says about the garage', () => {
+  it('carries the line the garage wrote about itself, as written', async () => {
+    const approved = await prisma.garage.create({
+      data: {
+        businessKind: 'company',
+        knownFor: 'Specializați pe Dacia și VW.',
+        name: 'Service Auto Militari',
+        slug: `militari-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body).toMatchObject({
+      businessKind: 'company',
+      description: 'Specializați pe Dacia și VW.',
+      rating: null,
+      reviewCount: 0,
+    });
+  });
+
+  it('leaves the description out when the garage wrote none', async () => {
+    const approved = await prisma.garage.create({
+      data: {
+        knownFor: '   ',
+        name: 'Fără descriere',
+        slug: `gol-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('description');
+    expect(res.body).not.toHaveProperty('businessKind');
+  });
+
+  it('dates the verification by the latest approved file', async () => {
+    const approved = await garage('approved');
+    await prisma.garage.update({
+      data: { approvedAt: new Date('2025-03-01T10:00:00.000Z') },
+      where: { id: approved.id },
+    });
+    await approvedFile(approved.id, new Date('2026-01-15T09:30:00.000Z'));
+    await prisma.verificationFile.create({
+      data: {
+        decidedAt: new Date('2026-05-01T09:30:00.000Z'),
+        garageId: approved.id,
+        status: 'rejected',
+      },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body.verifiedAt).toBe('2026-01-15T09:30:00.000Z');
+  });
+
+  it('keeps the approval date while an approved file is reopened into review', async () => {
+    const approved = await garage('approved');
+    await prisma.garage.update({
+      data: { approvedAt: new Date('2026-02-02T08:00:00.000Z') },
+      where: { id: approved.id },
+    });
+    await prisma.verificationFile.create({
+      data: {
+        decidedAt: new Date('2026-02-02T08:00:00.000Z'),
+        garageId: approved.id,
+        reopenedAt: new Date('2026-04-01T08:00:00.000Z'),
+        status: 'in_review',
+      },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.status).toBe(200);
+    expect(res.body.verifiedAt).toBe('2026-02-02T08:00:00.000Z');
+  });
+
+  it('answers a null verification date when the garage holds neither', async () => {
+    const approved = await garage('approved');
+
+    expect((await read(approved.slug)).body.verifiedAt).toBeNull();
+  });
+
+  it('fills in the 20 km area of a mobile mechanic that set none', async () => {
+    const approved = await prisma.garage.create({
+      data: {
+        businessKind: 'mobile',
+        mobileLegalForm: 'pfa',
+        name: 'Mecanic Mobil Ilfov',
+        slug: `mobil-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body).toMatchObject({
+      businessKind: 'mobile',
+      serviceRadiusKm: 20,
+    });
+  });
+
+  // @traces 307-FR-001
+  it('answers 404 for a slug holding a control character', async () => {
+    const res = await read('service%07auto');
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('not_found');
+  });
+
+  // @traces 307-FR-005
+  it('shows only public fields, with or without a brand, for a workshop and a mobile mechanic', async () => {
+    const dacia = await catalogueBrand('Dacia');
+    const fixed = await prisma.garage.create({
+      data: {
+        address: 'Bulevardul Iuliu Maniu 100, București',
+        businessKind: 'company',
+        knownFor: 'Frâne și suspensii',
+        latitude: 44.4339,
+        longitude: 26.0161,
+        name: 'Service Auto Militari',
+        phone: '+40722123456',
+        slug: `militari-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+    const mobile = await prisma.garage.create({
+      data: {
+        businessKind: 'mobile',
+        latitude: 44.5,
+        longitude: 26.1,
+        mobileLegalForm: 'pfa',
+        name: 'Mecanic Mobil Ilfov',
+        phone: '+40722123457',
+        seatAddress: 'Strada Sediului 3, Otopeni',
+        serviceRadiusKm: 25,
+        slug: `mobil-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+    for (const [slug, seat] of [
+      [fixed.slug, false],
+      [mobile.slug, true],
+    ] as const) {
+      const queries: Record<string, string>[] = [{}, { brand: dacia.slug }];
+      for (const query of queries) {
+        const res = await readWith(slug, query);
+
+        expect(res.status).toBe(200);
+        expectPublicOnly(res.body, seat);
+      }
+    }
+  });
+
+  // @traces 307-FR-019
+  it('writes nothing when a visitor reads a profile', async () => {
+    const approved = await garage('approved');
+    const before = await Promise.all([
+      prisma.outboxEvent.count(),
+      prisma.activityLog.count(),
+    ]);
+
+    await read(approved.slug);
+    await readWith(approved.slug, { brand: 'dacia' });
+
+    expect(
+      await Promise.all([
+        prisma.outboxEvent.count(),
+        prisma.activityLog.count(),
+      ]),
+    ).toEqual(before);
+  });
+});
+
+// @traces 307-FR-003
+describe('reading a profile with a brand in context', () => {
+  async function garageWith(
+    rows: { brandId: string; stance: 'works_on' | 'does_not_take' }[],
+  ) {
+    const approved = await garage('approved');
+    for (const { brandId, stance } of rows) {
+      const fuels = stance === 'works_on';
+      await prisma.garageBrand.create({
+        data: {
+          brandId,
+          diesel: fuels,
+          electric: fuels,
+          garageId: approved.id,
+          hybrid: fuels,
+          petrol: fuels,
+          stance,
+        },
+      });
+    }
+    return approved;
+  }
+
+  it('says the garage works on a brand it marked so', async () => {
+    const dacia = await catalogueBrand('Dacia');
+    const approved = await garageWith([
+      { brandId: dacia.id, stance: 'works_on' },
+    ]);
+
+    const res = await readWith(approved.slug, { brand: dacia.slug });
+
+    expect(res.status).toBe(200);
+    expect(res.body.brand).toEqual({
+      id: dacia.id,
+      name: 'Dacia',
+      slug: dacia.slug,
+      stance: 'works_on',
+    });
+  });
+
+  it('says the garage does not take a brand it refused or never named', async () => {
+    const bmw = await catalogueBrand('BMW');
+    const audi = await catalogueBrand('Audi');
+    const approved = await garageWith([
+      { brandId: bmw.id, stance: 'does_not_take' },
+    ]);
+
+    const refused = await readWith(approved.slug, { brand: bmw.slug });
+    const unnamed = await readWith(approved.slug, { brand: audi.slug });
+
+    expect(refused.body.brand).toMatchObject({
+      slug: bmw.slug,
+      stance: 'does_not_take',
+    });
+    expect(unnamed.body.brand).toMatchObject({
+      slug: audi.slug,
+      stance: 'does_not_take',
+    });
+  });
+
+  it('answers for a retired brand too', async () => {
+    const lada = await catalogueBrand('Lada', false);
+    const approved = await garageWith([
+      { brandId: lada.id, stance: 'works_on' },
+    ]);
+
+    const res = await readWith(approved.slug, { brand: lada.slug });
+
+    expect(res.body.brand).toMatchObject({
+      name: 'Lada',
+      stance: 'works_on',
+    });
+  });
+
+  it.each([
+    ['an unknown brand', 'nu-exista'],
+    ['a blank brand', '   '],
+    ['an empty brand', ''],
+    ['an over-long brand', 'd'.repeat(61)],
+    ['a brand holding a control character', 'da\u0007cia'],
+  ])('answers 200 with no brand for %s, never 400', async (_, value) => {
+    await catalogueBrand('Dacia');
+    const approved = await garage('approved');
+
+    const res = await readWith(approved.slug, { brand: value });
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('brand');
+  });
+
+  it('answers 200 with no brand when the brand is given twice', async () => {
+    const approved = await garage('approved');
+
+    const res = await request(app.getHttpServer()).get(
+      `/garages/${approved.slug}?brand=dacia&brand=bmw`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('brand');
+  });
+});
+
+const PUBLIC_FIELDS = new Set([
+  'address',
+  'brand',
+  'brandNote',
+  'businessKind',
+  'courtesyCar',
+  'description',
+  'doesNotTake',
+  'id',
+  'latitude',
+  'longitude',
+  'name',
+  'paymentMethods',
+  'rating',
+  'refusalPhrase',
+  'reviewCount',
+  'serviceRadiusKm',
+  'slug',
+  'verifiedAt',
+  'worksOn',
+]);
+
+// A mobile mechanic's position is its owner's seat, so it never leaves.
+function expectPublicOnly(body: Record<string, unknown>, mobile: boolean) {
+  expect(Object.keys(body).filter((key) => !PUBLIC_FIELDS.has(key))).toEqual(
+    [],
+  );
+  const hidden = ['phone', 'cui', 'seatAddress'];
+  if (mobile) hidden.push('address', 'latitude', 'longitude');
+  for (const key of hidden) expect(body).not.toHaveProperty(key);
+  if (!mobile) {
+    expect(body).toMatchObject({
+      address: 'Bulevardul Iuliu Maniu 100, București',
+      latitude: 44.4339,
+      longitude: 26.0161,
+    });
+  }
+}

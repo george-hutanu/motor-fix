@@ -1,18 +1,121 @@
+/* The site bar's height, fixed, so a page's own sticky parts (the listing's step bar and preview) rest under it rather than slide beneath it. */
 :host {
+  --public-site-bar: calc(var(--mf-tap) + 2 * var(--mf-space-1) + 1px);
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  overflow-x: clip;
 }
 main {
   flex: 1 0 auto;
 }
-.top {
-  display: none;
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  box-sizing: border-box;
+  height: var(--public-site-bar);
+  padding: var(--mf-space-1) var(--mf-space-4);
+  border-bottom: 1px solid var(--mf-line);
+  background: color-mix(in srgb, var(--mf-bg) 74%, transparent);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(160%) blur(18px);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bar {
+    background: var(--mf-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: 44px;
+  margin-right: auto;
+  color: var(--mf-text);
+  text-decoration: none;
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-body);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* Two 44 px languages side by side, never wrapped under one another. */
+mf-language-switch {
+  flex: none;
+}
+/* A 320 px phone holds the wordmark, both languages and the account button on one row. */
+@media (max-width: 359.98px) {
+  .bar {
+    gap: var(--mf-space-2);
+  }
+  .logo {
+    letter-spacing: 0.08em;
+  }
+  .logo svg {
+    display: none;
+  }
 }
 @media (min-width: 768px) {
-  .top {
+  .bar {
+    padding-inline: var(--mf-space-8);
+  }
+}
+.logo svg {
+  color: var(--mf-amber);
+  flex: none;
+}
+.links {
+  display: none;
+}
+.links a,
+.links button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--mf-space-3);
+  border: 0;
+  background: none;
+  color: var(--mf-text-secondary);
+  font: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.links a:hover,
+.links button:hover {
+  color: var(--mf-text);
+}
+.links .list {
+  border: 1px solid var(--mf-line-strong);
+  border-radius: 10px;
+  color: var(--mf-text);
+}
+.account {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--mf-line);
+  border-radius: 50%;
+  background: none;
+  color: var(--mf-text);
+  cursor: pointer;
+}
+@media (min-width: 640px) {
+  .links {
     display: flex;
-    justify-content: flex-end;
-    padding: var(--mf-space-3) var(--mf-space-4) 0;
+    align-items: center;
+    gap: var(--mf-space-1);
+  }
+  .account {
+    display: none;
   }
 }

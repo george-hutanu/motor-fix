@@ -1,6 +1,10 @@
 import type { EventKind } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 
+import {
+  dropProfiles,
+  type ProfileDropper,
+} from '../../garages/public-garages/public-garages.cache';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { type LivePublisher, publishLive } from '../live/live.hub';
 
@@ -50,7 +54,7 @@ export class OutboxRelay {
 
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly redis: LivePublisher,
+    private readonly redis: LivePublisher & ProfileDropper,
     private readonly consumers: readonly EventConsumer[] = [],
   ) {}
 
@@ -147,6 +151,9 @@ export class OutboxRelay {
 
   private async hand(row: Row) {
     const id = String(row.id);
+    // The cached profile goes first, so a page re-reading on the event never
+    // gets the answer from before it.
+    await dropProfiles(this.redis, row.audience);
     await publishLive(
       this.redis,
       {
