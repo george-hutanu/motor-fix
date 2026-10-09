@@ -48,8 +48,8 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, HlmSwitch } from '@motor-fix/ui-cockpit';
 
+import { sentLine } from './sent-line';
 import { type Place, PlaceStore } from '../../../home/place/place-store';
-import { sentLine } from '../request-quote-button/request-quote-button';
 
 export interface RequestQuoteData {
   garage: PublicGarageDto;
@@ -63,6 +63,14 @@ export interface RequestQuoteData {
 type Nearby = 'idle' | 'loading' | 'ready' | 'failed' | 'no-place';
 
 // The line that names why a garage cannot take the request.
+// The fuel as a word inside a sentence: "motorină", "diesel".
+const FUEL_WORDS: Record<CarDto['fuel'], string> = {
+  diesel: 'public.requestQuote.fuelWord.diesel',
+  electric: 'public.requestQuote.fuelWord.electric',
+  hybrid: 'public.requestQuote.fuelWord.hybrid',
+  petrol: 'public.requestQuote.fuelWord.petrol',
+};
+
 const CANNOT_RECEIVE: Record<CannotReceiveReason, string> = {
   brand: 'public.requestQuote.cannotReceive.brand',
   fuel: 'public.requestQuote.cannotReceive.fuel',
@@ -126,7 +134,6 @@ export class RequestQuote {
   protected readonly nearbyState = signal<Nearby>('idle');
   protected readonly limitHit = signal(false);
   protected readonly unreceivable = signal<Unreceivable | null>(null);
-  protected readonly cannotReceive = CANNOT_RECEIVE;
   private reads = 0;
 
   // With no job switched on, the description says what is wrong.
@@ -185,6 +192,38 @@ export class RequestQuote {
     },
   );
   protected readonly length = computed(() => this.typed().length);
+
+  private readonly chosenCar = computed(
+    () => this.cars()?.find((car) => car.id === this.carId()) ?? null,
+  );
+
+  // The profile garage's own red lamp for the chosen car, before any send.
+  protected readonly carRefused = computed(() => {
+    const car = this.chosenCar();
+    if (!car) return null;
+    const brand = this.garage.worksOn.find((b) => b.id === car.brandId);
+    if (!brand)
+      return this.i18n.t('public.requestQuote.carRefused.brand', {
+        brand: car.brandName,
+      });
+    if (brand.fuels.includes(car.fuel)) return null;
+    return this.i18n.t('public.requestQuote.carRefused.fuel', {
+      brand: car.brandName,
+      fuel: this.i18n.t(FUEL_WORDS[car.fuel]),
+    });
+  });
+
+  // A garage the server refused, named with the car's brand and fuel.
+  protected readonly refusedLine = computed(() => {
+    const refused = this.unreceivable();
+    if (!refused) return '';
+    const car = this.chosenCar();
+    return this.i18n.t(CANNOT_RECEIVE[refused.reason], {
+      brand: car?.brandName ?? '',
+      fuel: car ? this.i18n.t(FUEL_WORDS[car.fuel]) : '',
+      garage: refused.name,
+    });
+  });
 
   constructor() {
     this.form.controls.description.updateValueAndValidity();

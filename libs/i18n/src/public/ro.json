@@ -406,12 +406,16 @@
     "button": "Cere ofertă",
     "candidatesFailed": "Nu am putut încărca service‑urile din apropiere.",
     "cannotReceive": {
-      "brand": "{garage} nu lucrează pe marca mașinii.",
-      "fuel": "{garage} nu lucrează pe combustibilul mașinii.",
-      "jobs": "{garage} nu face lucrările alese.",
+      "brand": "{garage} nu lucrează pe {brand}.",
+      "fuel": "{garage} nu lucrează pe {fuel} la {brand}.",
+      "jobs": "{garage} nu face lucrările cerute la {brand}.",
       "not_taking_requests": "{garage} nu primește cereri acum."
     },
     "car": "Mașina",
+    "carRefused": {
+      "brand": "Nu lucrează pe {brand}",
+      "fuel": "Nu lucrează pe {fuel} la {brand}"
+    },
     "carsFailed": "Nu am putut încărca mașinile tale.",
     "chooseCar": "Alege mașina",
     "close": "Închide",
@@ -421,6 +425,12 @@
     "field": {
       "description_needed": "Scrie cel puțin 10 caractere sau alege o lucrare.",
       "too_short": "Scrie cel puțin 10 caractere"
+    },
+    "fuelWord": {
+      "diesel": "motorină",
+      "electric": "electric",
+      "hybrid": "hibrid",
+      "petrol": "benzină"
     },
     "garages": "Către cine trimiți",
     "jobs": "Ce lucrări vrei",

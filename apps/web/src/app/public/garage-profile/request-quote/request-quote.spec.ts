@@ -37,7 +37,7 @@ const GARAGE: PublicGarageDto = {
   reviewCount: 0,
   slug: 'service-auto-militari',
   verifiedAt: null,
-  worksOn: [],
+  worksOn: [{ fuels: ['petrol'], id: 'b-1', name: 'Dacia', slug: 'dacia' }],
 };
 
 const car = (id: string, model: string, year: number): CarDto => ({
@@ -125,6 +125,7 @@ async function open(
     place?: typeof BUCHAREST | null;
     source?: RequestQuoteData['source'];
     language?: 'ro' | 'en';
+    garage?: PublicGarageDto;
   } = {},
 ) {
   list = jest.fn(async () => ({ items: options.cars ?? [LOGAN] }));
@@ -153,7 +154,7 @@ async function open(
     RequestQuote,
     {
       data: {
-        garage: GARAGE,
+        garage: options.garage ?? GARAGE,
         sent: onSent,
         source: options.source ?? 'profile_direct',
       },
@@ -485,6 +486,27 @@ describe('the garage picker', () => {
     expect(text()).toContain('Poți alege cel mult 5 service‑uri');
   });
 
+  it('names a car brand the garage does not take under the car and holds Trimite', async () => {
+    await open({ garage: { ...GARAGE, worksOn: [] } });
+
+    expect(text()).toContain('Nu lucrează pe Dacia');
+    expect(button('Trimite')?.disabled).toBe(true);
+  });
+
+  it('names a fuel the garage does not take for the brand and holds Trimite', async () => {
+    await open({ cars: [{ ...LOGAN, fuel: 'diesel' }] });
+
+    expect(text()).toContain('Nu lucrează pe motorină la Dacia');
+    expect(button('Trimite')?.disabled).toBe(true);
+  });
+
+  it('lets a car the garage takes be sent', async () => {
+    await open();
+
+    expect(text()).not.toContain('Nu lucrează pe');
+    expect(button('Trimite')?.disabled).toBe(false);
+  });
+
   it('unticks a garage that cannot receive and names the reason', async () => {
     await open({ candidates: [candidate('g-berceni', 'Atelier Berceni')] });
     send.mockRejectedValueOnce(
@@ -503,7 +525,7 @@ describe('the garage picker', () => {
 
     expect(tick('Atelier Berceni').checked).toBe(false);
     expect(text()).toContain(
-      'Atelier Berceni nu lucrează pe combustibilul mașinii.',
+      'Atelier Berceni nu lucrează pe benzină la Dacia.',
     );
     await press();
     expect(send.mock.calls[1][0].body.garageIds).toEqual([GARAGE.id]);

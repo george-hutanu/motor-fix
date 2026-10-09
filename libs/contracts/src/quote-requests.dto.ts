@@ -112,6 +112,9 @@ export class CandidateGaragesQueryDto extends NearQueryDto {
     format: 'uuid',
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toLowerCase() : value,
+  )
   @IsUUID()
   exclude?: string;
 }

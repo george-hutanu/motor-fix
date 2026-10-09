@@ -314,6 +314,20 @@ describe('the idempotency key', () => {
     expect(await sentCounts()).toEqual(between);
   });
 
+  it('stores one request when the same key is sent twice at once', async () => {
+    const { auth, body } = await scene();
+    const key = randomUUID();
+
+    const [first, second] = await Promise.all([
+      send(body, auth, key),
+      send(body, auth, key),
+    ]);
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(second.body.id).toBe(first.body.id);
+    expect((await rows()).requests).toBe(1);
+  });
+
   it('creates a second request under a different key', async () => {
     const { auth, body } = await scene();
 
@@ -383,6 +397,15 @@ describe('the daily limit', () => {
     expect(res.status).toBe(429);
     expect(res.body.code).toBe('too_many_requests');
     expect(await rows()).toEqual(before);
+  });
+
+  it('lets one of two 20th requests sent at once through and refuses the other', async () => {
+    const { auth, body, car, driver } = await scene();
+    await sentToday(driver, car.id, 19);
+
+    const answers = await Promise.all([send(body, auth), send(body, auth)]);
+
+    expect(answers.map((res) => res.status).sort()).toEqual([201, 429]);
   });
 
   it('does not count yesterday’s requests', async () => {

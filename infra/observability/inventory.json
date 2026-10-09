@@ -242,7 +242,7 @@
       "source": "libs/domain/src/quotes/quote-requests/quote-requests.metrics.ts",
       "dashboard": "none",
       "alerts": "none",
-      "reason": "counts quote requests sent by outcome (sent with its recipients, cannot_receive, limit, invalid), with one log line per send naming the outcome and the request id; no agreed alert threshold yet; ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "counts quote requests sent by outcome (sent with its recipients, cannot_receive, limit, invalid — invalid counts the use case's own refusals, not the validation pipe's or a missing Idempotency-Key), with one log line per send naming the outcome and the request id; no agreed alert threshold yet; ST-879 adds the dashboard, ST-880 the alerts",
       "story": "ST-221"
     },
     {

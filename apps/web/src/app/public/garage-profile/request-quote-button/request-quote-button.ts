@@ -14,14 +14,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { Session } from '../../../dashboard/session';
 import type { RequestQuoteData } from '../request-quote/request-quote';
-
-// "Trimis către Service Auto Militari." or "Trimis către 3 service-uri."
-export function sentLine(i18n: I18n, request: RequestDto) {
-  const names = request.recipients.map((r) => r.garage.name);
-  return names.length === 1
-    ? i18n.t('public.requestQuote.sentOne', { garage: names[0] })
-    : i18n.t('public.requestQuote.sentMany', { count: names.length });
-}
+import { sentLine } from '../request-quote/sent-line';
 
 // The profile's "Cere ofertă": opens the request dialog for the garage and,
 // once a request went, says where. A visitor or a driver sees it; a garage-side

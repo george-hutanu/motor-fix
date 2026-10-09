@@ -398,12 +398,16 @@
     "button": "Request a quote",
     "candidatesFailed": "We could not load the garages nearby.",
     "cannotReceive": {
-      "brand": "{garage} does not work on the car’s brand.",
-      "fuel": "{garage} does not work on the car’s fuel.",
-      "jobs": "{garage} does not do the jobs chosen.",
+      "brand": "{garage} does not work on {brand}.",
+      "fuel": "{garage} does not work on {fuel} for {brand}.",
+      "jobs": "{garage} does not do the jobs asked for on {brand}.",
       "not_taking_requests": "{garage} is not taking requests right now."
     },
     "car": "Car",
+    "carRefused": {
+      "brand": "Does not work on {brand}",
+      "fuel": "Does not work on {fuel} for {brand}"
+    },
     "carsFailed": "We could not load your cars.",
     "chooseCar": "Choose the car",
     "close": "Close",
@@ -413,6 +417,12 @@
     "field": {
       "description_needed": "Write at least 10 characters or choose a job.",
       "too_short": "Write at least 10 characters"
+    },
+    "fuelWord": {
+      "diesel": "diesel",
+      "electric": "electric",
+      "hybrid": "hybrid",
+      "petrol": "petrol"
     },
     "garages": "Who gets it",
     "jobs": "Which jobs",

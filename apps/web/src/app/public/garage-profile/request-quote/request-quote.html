@@ -37,6 +37,9 @@
           }
         </select>
         <mf-field-error id="mf-quote-car-error" [save]="save" [control]="form.controls.carId" />
+        @if (carRefused(); as line) {
+          <p class="error" role="status">{{ line }}</p>
+        }
       </div>
       <fieldset>
         <legend>{{ 'public.requestQuote.jobs' | t }}</legend>
@@ -135,7 +138,7 @@
           }
         </p>
         @if (unreceivable(); as refused) {
-          <p class="error" role="alert">{{ cannotReceive[refused.reason] | t: { garage: refused.name } }}</p>
+          <p class="error" role="alert">{{ refusedLine() }}</p>
           @if (refused.garageId === garage.id) {
             <a class="back" [routerLink]="backToSearch()" [queryParams]="backQuery()" (click)="task.close('cancelled')">{{ 'public.requestQuote.backToSearch' | t }}</a>
           }
@@ -146,7 +149,7 @@
         <p class="error" role="status">{{ 'public.requestQuote.offline' | t }}</p>
       }
       <div class="actions">
-        <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="!online()">{{ 'public.requestQuote.submit' | t }}</button>
+        <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="!online() || !!carRefused()">{{ 'public.requestQuote.submit' | t }}</button>
       </div>
     </form>
   }
