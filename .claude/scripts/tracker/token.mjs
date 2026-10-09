@@ -1,6 +1,8 @@
 // The token for the tracker scripts. It needs the project scope, which the
 // session's own GH_TOKEN lacks, so it comes from GH_PROJECT_TOKEN or from a gh
 // login kept in its own config directory.
+import { homedir } from "node:os";
+
 import { spawnRun } from "../lib/gh-rest.mjs";
 import { GitHubError } from "./github.mjs";
 
@@ -10,7 +12,7 @@ const REFRESH = "gh auth refresh -h github.com -u george-hutanu -s project,read:
 
 export function projectToken({ env = process.env, run = (file, args, opts) => spawnRun({ env: opts.env })(file, args) } = {}) {
   if (env.GH_PROJECT_TOKEN?.trim()) return env.GH_PROJECT_TOKEN.trim();
-  const dir = `${env.HOME}/.config/gh-motorfix`;
+  const dir = `${env.HOME?.trim() || homedir()}/.config/gh-motorfix`;
   const { GH_TOKEN, GITHUB_TOKEN, ...rest } = env;
   const r = run("gh", ["auth", "token"], { env: { ...rest, GH_CONFIG_DIR: dir } });
   const token = r.code === 0 ? r.stdout.trim() : "";

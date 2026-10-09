@@ -175,6 +175,13 @@ describe("a Project someone changed by hand", () => {
     assert.equal(gh.state.labels.filter((l) => l.name === "EP-1").length, 1);
     assert.ok(!gh.requests.some((r) => r.method === "POST" && r.path.endsWith("/labels") && r.body.name === "EP-1"));
   });
+
+  it("reuses ep-1 for EP-1, since GitHub label names ignore case, and says so", async () => {
+    const gh = fakeGitHub({ labels: ["ep-1"] });
+    const r = await run(gh);
+    assert.ok(!gh.requests.some((q) => q.method === "POST" && q.path.endsWith("/labels") && q.body.name.toLowerCase() === "ep-1"));
+    assert.ok(r.lines.some((l) => /^label\s+present\s+EP-1 \(as ep-1\)$/.test(l)));
+  });
 });
 
 describe("a dry run", () => {

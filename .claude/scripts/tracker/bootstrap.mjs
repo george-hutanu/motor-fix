@@ -224,9 +224,11 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
     } else present("view", detail);
   }
 
-  const labels = new Set((await github.pages("labels?per_page=100")).map((l) => l.name));
+  // GitHub label names are case-insensitive: an existing "ep-1" is EP-1.
+  const labels = new Map((await github.pages("labels?per_page=100")).map((l) => [l.name.toLowerCase(), l.name]));
   for (const want of SCHEMA.labels) {
-    if (labels.has(want.name)) present("label", want.name);
+    const have = labels.get(want.name.toLowerCase());
+    if (have) present("label", have === want.name ? want.name : `${want.name} (as ${have})`);
     else {
       if (!dryRun) await github.rest("POST", "labels", want);
       created("label", want.name);
@@ -273,7 +275,7 @@ async function main() {
   const dryRun = process.argv.includes("--dry-run");
   try {
     const github = githubClient({ token: projectToken() });
-    await assertProjectScope(github);
+    console.log(`${"token".padEnd(9)} ${await assertProjectScope(github)}, project scope`);
     process.exitCode = (await reconcile(github, { dryRun })).exit;
   } catch (error) {
     if (!(error instanceof TokenError || error instanceof GitHubError)) throw error;

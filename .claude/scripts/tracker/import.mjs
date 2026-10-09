@@ -13,19 +13,25 @@ import { GitHubError, githubClient } from "./github.mjs";
 import { readTracker } from "./notion-read.mjs";
 import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
-const OWNER = "george-hutanu";
 const PULL = /^https:\/\/github\.com\/george-hutanu\/motor-fix\/pull\/(\d+)/;
 const STATUSES = ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"];
 const EPIC_STATUS = { "To do": "To do", "In progress": "Implementing", Done: "Done" };
 const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
 const KINDS = ["create", "adopt", "update", "add-item", "set-fields", "close", "reopen", "sub-issue", "blocked-by", "pr-closes"];
 const MARKER = /<!-- motorfix:((?:ST|EP)-\d+) -->/;
+// Set on an issue filed by hand and adopted: its title and labels stay the person's.
+const ADOPTED = "<!-- motorfix:adopted -->";
 
 const notionUrl = (id) => `https://app.notion.com/p/${id.replaceAll("-", "")}`;
 const keyNumber = (key) => Number(key.split("-")[1]);
 // A bare @name in a public issue title would notify that GitHub user.
 const quiet = (title) => title.replace(/(^|\s)(@[\w-]+)/g, "$1`$2`");
-const titled = (key, title) => (new RegExp(`^${key}\\b`).test(title) ? quiet(title) : `${key} ${quiet(title)}`);
+const titled = (key, title) => {
+  const one = (title ?? "").replace(/\s+/g, " ").trim();
+  if (!one) return key;
+  return new RegExp(`^${key}\\b`).test(one) ? quiet(one) : `${key} ${quiet(one)}`;
+};
+const lower = (names) => new Set(names.map((n) => n.toLowerCase()));
 const dated = (fields, entries) => {
   for (const [name, value] of entries) if (value !== null && value !== undefined) fields[name] = value;
   return fields;
@@ -41,31 +47,47 @@ export function issuePlans(tracker) {
   }
   const epicByKey = new Map(tracker.epics.map((e) => [e.key, e]));
   const statusOf = new Map(tracker.stories.map((s) => [s.key, s.status]));
+  /** The blockers that are imported items other than the item itself; the rest are warned and dropped. */
+  const linkable = (r) =>
+    r.blockers.filter((b) => {
+      if (b !== r.key && seen.has(b)) return true;
+      warnings.push(`${r.key} is blocked by ${b}, ${b === r.key ? "itself" : "which is not imported"}; not linked`);
+      return false;
+    });
 
   const stories = tracker.stories.map((s) => {
-    const [epic, ...others] = s.epics;
-    if (others.length) warnings.push(`${s.key} has ${s.epics.length} epics (${s.epics.join(", ")}); imported under ${epic}`);
+    const [named, ...others] = s.epics;
+    if (others.length) warnings.push(`${s.key} has ${s.epics.length} epics (${s.epics.join(", ")}); imported under ${named}`);
+    const epic = named && epicByKey.has(named) ? named : undefined;
+    if (named && !epic) warnings.push(`${s.key} is under ${named}, which is not imported; no parent, EP label or Epic field`);
     let status = s.status;
     if (!STATUSES.includes(status)) {
       warnings.push(`${s.key} has Status "${status}", not a tracker status; imported as To do`);
       status = "To do";
     }
-    const ready = status === "To do" && s.blockers.every((b) => statusOf.get(b) === "Done");
+    let type = s.type;
+    if (!type?.trim()) {
+      warnings.push(`${s.key} has no Issue type; imported as Story`);
+      type = "Story";
+    }
+    const blockers = linkable(s);
+    const ready = status === "To do" && blockers.every((b) => statusOf.get(b) === "Done");
     const pr = s.pr?.match(PULL);
+    if (s.pr && !pr) warnings.push(`${s.key} has a PR value that is not a motor-fix pull request URL; not published`);
     return {
       key: s.key,
       title: titled(s.key, s.title),
-      body: [`<!-- motorfix:${s.key} -->`, `Notion: ${notionUrl(s.id)}`, ...(s.feature ? [`Feature: ${notionUrl(s.feature)}`] : []), ...(s.pr ? [`PR: ${s.pr}`] : [])].join("\n"),
-      labels: [`type: ${s.type.toLowerCase()}`, ...(epic ? [epic] : []), ...s.labels.map((l) => `area: ${l}`), ...(s.role ? [`role: ${s.role}`] : [])],
+      body: [`<!-- motorfix:${s.key} -->`, `Notion: ${notionUrl(s.id)}`, ...(s.feature ? [`Feature: ${notionUrl(s.feature)}`] : []), ...(pr ? [`PR: ${pr[0]}`] : [])].join("\n"),
+      labels: [`type: ${type.toLowerCase()}`, ...(epic ? [epic] : []), ...s.labels.map((l) => `area: ${l}`), ...(s.role ? [`role: ${s.role}`] : [])],
       milestone: epicByKey.get(epic)?.release ?? null,
       assignee: s.assignee,
       state: status === "Done" ? "closed" : "open",
       parent: epic ?? null,
-      blockers: s.blockers,
+      blockers,
       pr: pr ? Number(pr[1]) : null,
       fields: dated({ Status: status }, [
         ["Priority", s.priority],
-        ["Type", s.type],
+        ["Type", type],
         ["Epic", epic],
         ["Ready to work", ready ? "Yes" : "No"],
         ["Started", s.started],
@@ -93,7 +115,7 @@ export function issuePlans(tracker) {
       assignee: e.assignee,
       state: status === "Done" ? "closed" : "open",
       parent: null,
-      blockers: e.blockers,
+      blockers: linkable(e),
       pr: null,
       fields: dated({ Status: status }, [
         ["Priority", e.priority],
@@ -152,8 +174,10 @@ function setFieldsMutation(count) {
 function missingSetup({ plans, labels, milestones, fields }) {
   const absent = (list, have) => [...new Set(list)].filter((x) => !have.has(x));
   const fieldNames = new Map(fields.map((f) => [f.name, f]));
+  // GitHub label names are case-insensitive: an "ep-1" label serves "EP-1".
+  const labelNames = lower([...labels]);
   const parts = [
-    ["labels", absent(plans.flatMap((p) => p.labels), labels)],
+    ["labels", [...new Set(plans.flatMap((p) => p.labels))].filter((x) => !labelNames.has(x.toLowerCase()))],
     ["milestones", absent(plans.map((p) => p.milestone).filter(Boolean), milestones)],
     ["fields", absent(plans.flatMap((p) => Object.keys(p.fields)), new Set(fieldNames.keys()))],
     [
@@ -224,20 +248,24 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
         issue.set(plan.key, made);
         return `→ #${made.number}`;
       });
-    } else if (!byMark) {
-      adopted++;
-      step("adopt", plan.key, async () => {
-        await github.rest("PATCH", `issues/${found.number}`, { body: found.body ? `${plan.body}\n\n${found.body}` : plan.body });
-        return `#${found.number}`;
-      });
     } else {
+      // A hand-filed issue keeps its title and labels; the import owns the rest.
+      const byHand = !byMark || found.body?.includes(ADOPTED);
       const change = {};
-      if (found.title !== plan.title) change.title = plan.title;
+      if (!byHand && found.title !== plan.title) change.title = plan.title;
       const have = found.labels.map((l) => l.name);
-      if (plan.labels.some((l) => !have.includes(l))) change.labels = [...new Set([...have, ...plan.labels])];
+      const haveLower = lower(have);
+      if (!byHand && plan.labels.some((l) => !haveLower.has(l.toLowerCase()))) change.labels = [...have, ...plan.labels.filter((l) => !haveLower.has(l.toLowerCase()))];
       if ((found.milestone?.title ?? null) !== plan.milestone) change.milestone = plan.milestone ? milestoneNumber.get(plan.milestone) : null;
       if (plan.assignee && !found.assignees.some((a) => a.login === plan.assignee)) change.assignees = [plan.assignee];
-      if (Object.keys(change).length) {
+      if (!byMark) {
+        adopted++;
+        const body = [plan.body, ADOPTED, ...(found.body ? ["", found.body] : [])].join("\n");
+        step("adopt", plan.key, async () => {
+          await github.rest("PATCH", `issues/${found.number}`, { body, ...change });
+          return `#${found.number}`;
+        });
+      } else if (Object.keys(change).length) {
         step("update", plan.key, async () => {
           await github.rest("PATCH", `issues/${found.number}`, change);
           return `#${found.number} ${Object.keys(change).join(", ")}`;
@@ -306,7 +334,14 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
     }
   }
   for (const plan of plans.filter((p) => p.pr && p.state === "open")) {
-    const pull = await github.rest("GET", `pulls/${plan.pr}`);
+    let pull;
+    try {
+      pull = await github.rest("GET", `pulls/${plan.pr}`);
+    } catch (error) {
+      if (!(error instanceof GitHubError && error.type === "404")) throw error;
+      warnings.push(`${plan.key} names PR #${plan.pr}, which GitHub does not have; no Closes line`);
+      continue;
+    }
     const number = issue.get(plan.key)?.number;
     if (pull.state !== "open" || (number && new RegExp(`^Closes #${number}\\b`, "m").test(pull.body ?? ""))) continue;
     step("pr-closes", plan.key, async () => {
@@ -337,7 +372,7 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
   let ran = 0;
   for (const s of steps) {
     if (ran === budget) {
-      out("stopped", `after ${steps[ran - 1].key} (${ran} of ${steps.length.toLocaleString("en-US")} steps, budget ${budget} reached)`);
+      out("stopped", `${ran ? `after ${steps[ran - 1].key}` : "before the first step"} (${ran} of ${steps.length.toLocaleString("en-US")} steps, budget ${budget} reached)`);
       out("continue", `node .claude/scripts/tracker/import.mjs --budget ${budget}`);
       return 3;
     }
@@ -351,7 +386,8 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
     }
     ran++;
   }
-  out("done", `${plans.length} items; 0 steps left`);
+  // Warnings are reported above and never change the exit: every step ran.
+  out("done", `${plans.length} items; 0 steps left; ${github.stats.content} content requests`);
   return 0;
 }
 
@@ -375,7 +411,7 @@ async function main(argv = process.argv.slice(2)) {
     const notion = notionToken(fileURLToPath(new URL("../../../", import.meta.url)));
     if (!notion) throw new NotionError("no token", "No Notion token: set NOTION_TOKEN or put it in .env");
     const github = githubClient({ token: projectToken(), log: console.log });
-    await assertProjectScope(github);
+    console.log(`${"token".padEnd(9)} ${await assertProjectScope(github)}, project scope`);
     const tracker = await readTracker(notionClient({ token: notion }));
     process.exitCode = await runImport({ github, tracker, dryRun: argv.includes("--dry-run"), budget, maxItems });
   } catch (error) {

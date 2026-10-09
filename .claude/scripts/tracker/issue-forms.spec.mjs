@@ -25,6 +25,8 @@ describe("the issue forms", () => {
 
       // The Project's number exists only after the bootstrap's first live run,
       // which inserts the key; an unresolvable value would break the form.
+      // TODO: until the owner's live `node .claude/scripts/tracker/bootstrap.mjs`
+      // (quickstart.md §3) writes `projects:` into the forms, this assertion never runs.
       it("names the Project by number once the bootstrap has written the key", () => {
         const projects = topLevel(read(`${file}.yml`), "projects");
         if (projects !== undefined) assert.match(projects, /^\["george-hutanu\/\d+"\]$/);

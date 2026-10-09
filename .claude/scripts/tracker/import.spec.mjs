@@ -354,3 +354,113 @@ describe("guards", () => {
     assert.ok(lines.some((l) => /bootstrap/.test(l)));
   });
 });
+
+// @traces 1017-FR-007
+// @traces 1017-FR-011
+// @traces 1017-FR-012
+describe("Notion data the import cannot map as typed", () => {
+  const planned = async (mut) => {
+    const t = await tracker();
+    mut(t);
+    return issuePlans(t);
+  };
+  const st = (r, key = "ST-1") => r.plans.find((p) => p.key === key);
+
+  it("collapses whitespace in a title and gives a blank one the key alone", async () => {
+    const r = await planned((t) => {
+      t.stories[0].title = "  Driver\n signs\tin  ";
+      t.epics[0].title = " \n ";
+    });
+    assert.equal(st(r).title, "ST-1 Driver signs in");
+    assert.equal(st(r, "EP-1").title, "EP-1");
+  });
+
+  it("drops a blocker that is not imported, or the item itself, with a warning", async () => {
+    const r = await planned((t) => {
+      t.stories[0].blockers = ["ST-999", "ST-1"];
+    });
+    assert.deepEqual(st(r).blockers, []);
+    assert.ok(r.warnings.some((w) => /ST-1 is blocked by ST-999, which is not imported/.test(w)));
+    assert.ok(r.warnings.some((w) => /ST-1 is blocked by ST-1, itself/.test(w)));
+  });
+
+  it("gives a story under an epic that is not imported no parent, EP label or Epic field", async () => {
+    const r = await planned((t) => {
+      t.stories[0].epics = ["EP-99"];
+    });
+    assert.equal(st(r).parent, null);
+    assert.ok(!st(r).labels.some((l) => /^EP-/.test(l)));
+    assert.equal(st(r).fields.Epic, undefined);
+    assert.ok(r.warnings.some((w) => /ST-1 is under EP-99, which is not imported/.test(w)));
+  });
+
+  it("imports an empty Issue type as Story with a warning", async () => {
+    const r = await planned((t) => {
+      t.stories[0].type = null;
+    });
+    assert.equal(st(r).fields.Type, "Story");
+    assert.ok(st(r).labels.includes("type: story"));
+    assert.ok(r.warnings.some((w) => /ST-1 has no Issue type/.test(w)));
+  });
+
+  it("publishes only the matched pull request URL and warns about any other PR value", async () => {
+    const r = await planned((t) => {
+      t.stories[0].pr = "https://github.com/george-hutanu/motor-fix/pull/50/files?private=notes";
+      t.stories[1].pr = "ask Ana about https://example.com/x";
+    });
+    assert.match(st(r).body, /\nPR: https:\/\/github\.com\/george-hutanu\/motor-fix\/pull\/50$/);
+    assert.ok(!st(r, "ST-2").body.includes("PR:"));
+    assert.ok(r.warnings.some((w) => /ST-2 has a PR value that is not a motor-fix pull request URL/.test(w)));
+  });
+
+  it("finishes with exit 0 when there are warnings, since every step ran", async () => {
+    const gh = await bootstrapped();
+    const t = await tracker();
+    t.stories[0].status = "Someday";
+    const { exit, lines } = await importInto(gh, { tracker: t });
+    assert.ok(lines.some((l) => /^warn\s+ST-1 has Status "Someday"/.test(l)));
+    assert.equal(exit, 0);
+    assert.match(lines.at(-1), /^done\s+12 items; 0 steps left; \d+ content requests$/);
+  });
+
+  it("warns and skips the Closes line when Notion names a PR GitHub does not have", async () => {
+    const gh = await bootstrapped();
+    const t = await tracker();
+    t.stories.find((s) => s.key === "ST-2").pr = "https://github.com/george-hutanu/motor-fix/pull/77";
+    const { exit, lines } = await importInto(gh, { tracker: t });
+    assert.equal(exit, 0);
+    assert.ok(lines.some((l) => /^warn\s+ST-2 names PR #77, which GitHub does not have/.test(l)));
+  });
+
+  it("says it stopped before the first step at budget 0", async () => {
+    const gh = await bootstrapped();
+    const { exit, lines } = await importInto(gh, { budget: 0 });
+    assert.equal(exit, 3);
+    assert.ok(lines.some((l) => /^stopped\s+before the first step \(0 of \d+ steps, budget 0 reached\)$/.test(l)));
+  });
+
+  it("gives an adopted issue its milestone and assignee in the adopting PATCH, so the next run writes nothing", async () => {
+    const gh = await bootstrapped({ issues: [{ number: 5, title: "ST-1 by hand", labels: ["mine"] }] });
+    const from = gh.writes().length;
+    await importInto(gh);
+    const adopt = nonGets(gh, from).find((w) => w.method === "PATCH" && w.path.endsWith("/issues/5"));
+    assert.equal(adopt.body.assignees[0], "george-hutanu");
+    assert.ok(adopt.body.milestone);
+    const after = gh.writes().length;
+    const again = await importInto(gh);
+    assert.equal(again.exit, 0);
+    assert.equal(gh.writes().length, after);
+    const issue = gh.state.issues.find((i) => i.number === 5);
+    assert.equal(issue.title, "ST-1 by hand");
+    assert.deepEqual(issue.labels.map((l) => l.name), ["mine"]);
+  });
+
+  it("takes an existing ep-1 label for EP-1 and does not update it on the next run", async () => {
+    const gh = await bootstrapped({ labels: ["ep-1"] });
+    const { exit } = await importInto(gh);
+    assert.equal(exit, 0);
+    const after = gh.writes().length;
+    await importInto(gh);
+    assert.equal(gh.writes().length, after);
+  });
+});

@@ -26,6 +26,8 @@ libs/domain/src/generated/
 apps/web-e2e/test-output/
 coverage/
 .claude/worktrees/
+# vitest 5 writes its run reports under <root>/.vitest; the harness root is .claude/
+.claude/.vitest/
 
 # Specs live in the private george-hutanu/motor-fix-specs: specs/ is its clone
 # (.claude/scripts/specs-repo.mjs), never tracked here. Its own .gitignore keeps

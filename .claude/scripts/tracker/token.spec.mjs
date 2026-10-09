@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import assert from "node:assert/strict";
+import { homedir } from "node:os";
 
 import { githubClient } from "./github.mjs";
 import { fakeGitHub } from "./fixtures/github.mjs";
@@ -35,6 +36,17 @@ describe("projectToken", () => {
       () => projectToken({ env: { HOME: "/home/me" }, run }),
       (e) => e instanceof TokenError && e.message.includes("GH_PROJECT_TOKEN") && e.message.includes("/home/me/.config/gh-motorfix"),
     );
+  });
+});
+
+describe("projectToken without HOME", () => {
+  it("looks in the user's home directory, never in undefined", () => {
+    let seen;
+    assert.throws(
+      () => projectToken({ env: {}, run: (_f, _a, o) => ((seen = o.env.GH_CONFIG_DIR), { code: 1, stdout: "", stderr: "" }) }),
+      (e) => e instanceof TokenError && !e.message.includes("undefined") && e.message.includes(`${homedir()}/.config/gh-motorfix`),
+    );
+    assert.equal(seen, `${homedir()}/.config/gh-motorfix`);
   });
 });
 

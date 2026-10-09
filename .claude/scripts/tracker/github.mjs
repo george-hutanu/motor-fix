@@ -5,6 +5,8 @@
 const API = "https://api.github.com";
 export const PACE_MS = 7200;
 const SERVER_RETRY_MS = 2000;
+const SECONDARY_WAIT_MS = 60_000;
+const MAX_THROTTLES = 5;
 
 export class GitHubError extends Error {
   constructor(type, message) {
@@ -27,23 +29,33 @@ export function githubClient({
   const stats = { content: 0 };
   let lastContent = Number.NEGATIVE_INFINITY;
 
-  const urlOf = (path) => (path.startsWith("http") ? path : path.startsWith("/") ? `${API}${path}` : `${API}/repos/${owner}/${repo}/${path}`);
+  /** The URL for a path; an absolute URL only on api.github.com, so the token never goes elsewhere. */
+  function urlOf(path) {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(path)) {
+      if (!path.startsWith(`${API}/`)) throw new GitHubError("host", `refused to follow ${new URL(path).origin}: only ${API} is called`);
+      return path;
+    }
+    return path.startsWith("/") ? `${API}${path}` : `${API}/repos/${owner}/${repo}/${path}`;
+  }
 
   /** The wait GitHub asks for in ms, or null when the response is no rate limit. */
-  function throttleWait(response) {
+  function throttleWait(response, data) {
     if (response.status !== 403 && response.status !== 429) return null;
     const after = response.headers.get("retry-after");
     if (after !== null && /^\d+$/.test(after.trim())) return Number(after) * 1000;
     if (response.headers.get("x-ratelimit-remaining") === "0") {
       return Math.max(0, Number(response.headers.get("x-ratelimit-reset")) * 1000 - now());
     }
+    // A secondary limit without Retry-After: GitHub's docs say wait at least a minute.
+    if (after === null && /secondary rate limit/i.test(data?.message ?? "")) return SECONDARY_WAIT_MS;
     return null;
   }
 
   async function send(method, path, body, content) {
     const label = `${method} ${path}`;
+    const url = urlOf(path);
     if (content) stats.content++;
-    for (let serverRetried = false; ; ) {
+    for (let serverRetried = false, throttles = 0; ; ) {
       if (content) {
         const wait = lastContent + PACE_MS - now();
         if (wait > 0) await sleep(wait);
@@ -51,7 +63,7 @@ export function githubClient({
       }
       let response;
       try {
-        response = await fetchImpl(urlOf(path), {
+        response = await fetchImpl(url, {
           method,
           headers: {
             Authorization: `Bearer ${token}`,
@@ -66,10 +78,17 @@ export function githubClient({
         throw new GitHubError("network", scrub(`${label}: ${error?.message ?? error}`));
       }
       const text = await response.text();
-      const data = text ? JSON.parse(text) : null;
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        // An HTML error page from a proxy: no data, and the status decides.
+        if (response.ok) throw new GitHubError("parse", scrub(`${label}: ${response.status}, the answer is not JSON`));
+      }
       if (response.ok) return { data, response };
-      const wait = throttleWait(response);
+      const wait = throttleWait(response, data);
       if (wait !== null) {
+        if (++throttles > MAX_THROTTLES) throw new GitHubError("rate limit", scrub(`${label}: ${response.status}, still throttled after ${MAX_THROTTLES} waits`));
         if (wait > maxWaitS * 1000) throw new GitHubError("rate limit", scrub(`${label}: ${response.status}, GitHub asks to wait ${Math.ceil(wait / 1000)} s (over ${maxWaitS} s)`));
         if (wait > 10_000) log?.(`wait      ${Math.ceil(wait / 1000)}s`);
         await sleep(wait);

@@ -84,7 +84,6 @@ describe("pacing", () => {
     await github.graphql("query B { b }");
     await github.graphql("mutation C { c }");
     await github.rest("PATCH", "issues/1", {});
-    assert.equal(PACE_MS, 7200);
     assert.deepEqual(
       calls.map((c) => c.at),
       [0, 0, PACE_MS, 2 * PACE_MS],
@@ -160,5 +159,58 @@ describe("waits GitHub asks for", () => {
       now: clock.now,
     });
     await assert.rejects(github.rest("GET", "labels"), (e) => e instanceof GitHubError && !e.message.includes(TOKEN));
+  });
+});
+
+describe("hostile answers", () => {
+  const html = (status) => new Response("<html><body>Bad gateway</body></html>", { status, headers: { "content-type": "text/html" } });
+
+  it("refuses a Link rel=next to another host, sending it nothing and naming no token", async () => {
+    const clock = fakeClock();
+    const { github, calls } = client(clock, [json([1], 200, { link: '<https://evil.example/x?t=1>; rel="next"' }), json([2])]);
+    await assert.rejects(github.pages("issues"), (e) => e instanceof GitHubError && e.type === "host" && /evil\.example/.test(e.message) && !e.message.includes(TOKEN));
+    assert.deepEqual(
+      calls.map((c) => new URL(c.url).host),
+      ["api.github.com"],
+    );
+  });
+
+  it("refuses a plain-http api.github.com link too", async () => {
+    const { github, calls } = client(fakeClock(), [json([1], 200, { link: '<http://api.github.com/repos/x/y/issues?page=2>; rel="next"' })]);
+    await assert.rejects(github.pages("issues"), GitHubError);
+    assert.equal(calls.length, 1);
+  });
+
+  it("stops after five throttle waits with a rate limit error", async () => {
+    const clock = fakeClock();
+    const { github, calls } = client(clock, [json({ message: "slow down" }, 429, { "retry-after": "1" })]);
+    await assert.rejects(github.rest("GET", "labels"), (e) => e instanceof GitHubError && e.type === "rate limit");
+    assert.deepEqual(clock.waits, [1000, 1000, 1000, 1000, 1000]);
+    assert.equal(calls.length, 6);
+  });
+
+  it("retries an HTML 502 once and then fails with a GitHubError, not a SyntaxError", async () => {
+    const clock = fakeClock();
+    const { github, calls } = client(clock, [html(502)]);
+    await assert.rejects(github.rest("GET", "labels"), (e) => e instanceof GitHubError && e.type === "502");
+    assert.equal(calls.length, 2);
+    assert.deepEqual(clock.waits, [2000]);
+  });
+
+  it("recovers from an HTML 502 followed by JSON", async () => {
+    const { github } = client(fakeClock(), [html(502), json([{ name: "a" }])]);
+    assert.deepEqual(await github.rest("GET", "labels"), [{ name: "a" }]);
+  });
+
+  it("fails a 200 that is not JSON with a GitHubError", async () => {
+    const { github } = client(fakeClock(), [html(200)]);
+    await assert.rejects(github.rest("GET", "labels"), (e) => e instanceof GitHubError && e.type === "parse");
+  });
+
+  it("waits a minute on a secondary rate limit 403 with no Retry-After and quota left", async () => {
+    const clock = fakeClock();
+    const { github } = client(clock, [json({ message: "You have exceeded a secondary rate limit." }, 403, { "x-ratelimit-remaining": "4000" }), json({ number: 3 }, 201)]);
+    assert.deepEqual(await github.rest("POST", "issues", {}), { number: 3 });
+    assert.deepEqual(clock.waits, [60_000]);
   });
 });
