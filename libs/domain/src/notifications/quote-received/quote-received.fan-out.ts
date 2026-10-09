@@ -63,7 +63,12 @@ export class QuoteReceivedFanOut {
       where: { id: payload.quoteId },
     });
     // Withdrawn or answered before the message went out: nothing to tell.
-    if (quote?.status !== 'waiting') return;
+    if (quote?.status !== 'waiting') {
+      this.logger.log(
+        `quote ${payload.quoteId} not announced: ${quote?.status ?? 'missing'}`,
+      );
+      return;
+    }
     const range = `${baniToLei(quote.fromBani)}–${baniToLei(quote.toBani)}`;
     const queued = await this.notifications.notify({
       eventId,

@@ -1,6 +1,9 @@
 @if (request(); as request) {
   <div class="about">
     <p class="subject">{{ subject() }}</p>
+    <p class="mechanic">
+      {{ 'garage.quotes.send.mechanic' | t: { mechanic: ('garage.requests.anyMechanic' | t) } }}
+    </p>
     @if (leftOut(); as jobs) {
       <p class="left-out">{{ 'garage.quotes.send.notOffered' | t: { jobs } }}</p>
     }

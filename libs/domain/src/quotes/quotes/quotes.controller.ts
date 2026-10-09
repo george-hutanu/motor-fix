@@ -1,4 +1,8 @@
-import { GarageQuoteDto, SendQuoteDto } from '@motor-fix/contracts';
+import {
+  GarageQuoteDto,
+  QUOTE_IDEMPOTENCY_KEY_MAX,
+  SendQuoteDto,
+} from '@motor-fix/contracts';
 import {
   Body,
   Controller,
@@ -27,7 +31,6 @@ import type { Actor } from '../../auth/policy';
 import { refusal } from '../../auth/sign-up.service';
 
 const KEY = 'Idempotency-Key';
-const KEY_MAX = 200;
 
 @ApiTags('quotes')
 @ApiBearerAuth()
@@ -65,11 +68,11 @@ export class QuotesController {
     @Headers(KEY) key: string | undefined,
     @Body() body: SendQuoteDto,
   ): Promise<GarageQuoteDto> {
-    if (!key || key.length > KEY_MAX) {
+    if (!key || key.length > QUOTE_IDEMPOTENCY_KEY_MAX) {
       throw refusal(
         HttpStatus.BAD_REQUEST,
         'validation_failed',
-        `Idempotency-Key must hold 1 to ${KEY_MAX} characters`,
+        `Idempotency-Key must hold 1 to ${QUOTE_IDEMPOTENCY_KEY_MAX} characters`,
         [{ code: 'required', field: 'idempotency-key' }],
       );
     }

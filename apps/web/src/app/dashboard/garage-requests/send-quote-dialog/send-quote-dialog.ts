@@ -359,7 +359,7 @@ export class SendQuoteDialog {
         minutes === null
           ? {}
           : { hours: Math.floor(minutes / 60), minutes: String(minutes % 60) },
-      fromLei: from === null ? null : baniToLei(from),
+      fromLei: baniToLei(from),
       toLei: to === null ? null : baniToLei(to),
     });
     if (this.duration.invalid && minutes !== null)

@@ -232,7 +232,7 @@ describe('the send-quote dialog: what it names and starts with', () => {
     expect(field<HTMLTextAreaElement>('Mesaj pentru client').value).toBe('');
   });
 
-  it('holds the fields, the hint and the buttons in order, with no mechanic field', async () => {
+  it('holds the fields, the hint and the buttons in order, with the preferred mechanic as a line, not a field', async () => {
     await open();
 
     const names = [...panel().querySelectorAll('label, legend')].map((n) =>
@@ -252,7 +252,11 @@ describe('the send-quote dialog: what it names and starts with', () => {
     );
     expect(button('Renunță')).toBeDefined();
     expect(button('Trimite')).toBeDefined();
-    expect(text()).not.toContain('Mecanic');
+    expect(names.some((name) => /mecanic/i.test(name ?? ''))).toBe(false);
+    expect(panel().querySelector('select[id*="mechanic"]')).toBeNull();
+    expect(panel().querySelector('.about .mechanic')?.textContent?.trim()).toBe(
+      'Mecanic preferat: orice mecanic',
+    );
     expect(text()).toContain('0/500');
   });
 
@@ -408,6 +412,7 @@ describe('the send-quote dialog: what it names and starts with', () => {
     );
     expect(text()).toContain('Vlad P. · Front brakes');
     expect(text()).toContain('Not offered: Gearbox');
+    expect(text()).toContain('Preferred mechanic: any mechanic');
     expect(field('Price from (lei)').value).toBe('700');
     expect(field('to (lei)').value).toBe('1000');
     expect(field('Message to the customer')).toBeTruthy();

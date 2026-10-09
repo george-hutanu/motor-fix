@@ -92,6 +92,7 @@
       "hint": "The range covers parts and labour, VAT included, for the customer’s exact car; the final price is set after you see the car.",
       "hours": "Hours",
       "loading": "Loading the request",
+      "mechanic": "Preferred mechanic: {mechanic}",
       "minutes": "Minutes",
       "note": "Message to the customer",
       "notOffered": "Not offered: {jobs}",

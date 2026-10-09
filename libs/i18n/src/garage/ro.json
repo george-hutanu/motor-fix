@@ -92,6 +92,7 @@
       "hint": "Intervalul acoperă piese și manoperă, cu TVA, pentru mașina exactă a clientului; prețul final se stabilește după ce vezi mașina.",
       "hours": "Ore",
       "loading": "Se încarcă cererea",
+      "mechanic": "Mecanic preferat: {mechanic}",
       "minutes": "Minute",
       "note": "Mesaj pentru client",
       "notOffered": "Nu face: {jobs}",
