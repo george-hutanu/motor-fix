@@ -14,7 +14,7 @@ import type { Actor } from '../../../auth/policy';
 
 // The service decides who may open a page, not `@Requires`: the garage's own
 // staff are answered 403, where the guard would answer every non-admin 404.
-@ApiTags('admin')
+@ApiTags('verification-documents')
 @ApiBearerAuth()
 @Controller('admin/verification-files')
 export class LegalDocumentsController {

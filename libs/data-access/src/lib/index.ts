@@ -185,6 +185,7 @@ export { GarageJobsService } from './services/garage-jobs.service';
 export { PlacesService } from './services/places.service';
 export { GaragesService } from './services/garages.service';
 export { InvitesService } from './services/invites.service';
+export { VerificationDocumentsService } from './services/verification-documents.service';
 export { ListingDraftsService } from './services/listing-drafts.service';
 export { LiveService } from './services/live.service';
 
@@ -282,8 +283,6 @@ export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerO
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
-export type { LegalDocumentsControllerPageAddress$Params as LegalDocumentsControllerPageAddress$Params } from './fn/admin/legal-documents-controller-page-address';
-export { legalDocumentsControllerPageAddress as legalDocumentsControllerPageAddress } from './fn/admin/legal-documents-controller-page-address';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
@@ -362,6 +361,8 @@ export type { InvitesControllerCheck$Params as InvitesControllerCheck$Params } f
 export { invitesControllerCheck as invitesControllerCheck } from './fn/invites/invites-controller-check';
 export type { InvitesControllerAccept$Params as InvitesControllerAccept$Params } from './fn/invites/invites-controller-accept';
 export { invitesControllerAccept as invitesControllerAccept } from './fn/invites/invites-controller-accept';
+export type { LegalDocumentsControllerPageAddress$Params as LegalDocumentsControllerPageAddress$Params } from './fn/verification-documents/legal-documents-controller-page-address';
+export { legalDocumentsControllerPageAddress as legalDocumentsControllerPageAddress } from './fn/verification-documents/legal-documents-controller-page-address';
 export type { ListingDraftsControllerCreate$Params as ListingDraftsControllerCreate$Params } from './fn/listing-drafts/listing-drafts-controller-create';
 export { listingDraftsControllerCreate as listingDraftsControllerCreate } from './fn/listing-drafts/listing-drafts-controller-create';
 export type { ListingDraftsControllerCurrent$Params as ListingDraftsControllerCurrent$Params } from './fn/listing-drafts/listing-drafts-controller-current';

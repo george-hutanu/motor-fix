@@ -195,4 +195,13 @@ describe('the listing draft routes', () => {
       'POST /api/v1/listing-drafts/{id}/photos/upload-url',
     ]);
   });
+
+  it("tags the admin's document page address apart, so the web's first download carries no client for it until a screen calls it", () => {
+    const op =
+      openApiDocument(app).paths[
+        '/api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url'
+      ]?.get;
+
+    expect(op?.tags).toEqual(['verification-documents']);
+  });
 });
