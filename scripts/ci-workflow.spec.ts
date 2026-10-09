@@ -41,7 +41,7 @@ const gh = (ref: string) => `\${{ ${ref} }}`;
 const DOCS_ONLY = "needs.changes.outputs.docs-only != 'true'";
 
 describe('ci workflow', () => {
-  it('runs six jobs, so a PR holds at most seven runners', () => {
+  it('runs six jobs, so a PR holds at most eight runners', () => {
     expect(jobIds).toEqual([
       'changes',
       'checks',
@@ -52,7 +52,26 @@ describe('ci workflow', () => {
     ]);
     expect(
       [...job('docker').matchAll(/^ +- app: (\S+)$/gm)].map((m) => m[1]),
-    ).toEqual(['web', 'api']);
+    ).toEqual(['web', 'api', 'keycloak']);
+  });
+
+  it('builds the keycloak image from its own folder, the others from the root', () => {
+    const block = job('docker');
+    const row = (app: string) => {
+      const at = block.indexOf(`- app: ${app}\n`);
+      const next = block.indexOf('- app: ', at + 1);
+      return block.slice(at, next < 0 ? block.indexOf('steps:') : next);
+    };
+
+    expect(setting(row('web'), 'context')).toBe('.');
+    expect(setting(row('web'), 'file')).toBe('Dockerfile');
+    expect(setting(row('api'), 'context')).toBe('.');
+    expect(setting(row('api'), 'file')).toBe('Dockerfile');
+    expect(setting(row('keycloak'), 'context')).toBe('infra/keycloak');
+    expect(setting(row('keycloak'), 'file')).toBe('infra/keycloak/Dockerfile');
+    const build = block.slice(block.indexOf('docker/build-push-action'));
+    expect(setting(build, 'context')).toBe(gh('matrix.context'));
+    expect(setting(build, 'file')).toBe(gh('matrix.file'));
   });
 
   it('installs the workspace in three jobs only', () => {

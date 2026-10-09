@@ -408,7 +408,7 @@ decisions are the source for anything the constitution does not fix.
   deleted worktrees; neither fails on Docker. By hand,
   `node scripts/test-services.ts down [<worktree>] [--volumes]` stops one
   stack (the current checkout's by default).
-- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
+- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most eight
   of the free plan's 20 concurrent runners: Checks (one runner and one
   install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
   and Compose stack, where `docker-compose.yml` boots and creates the bucket;
@@ -416,7 +416,7 @@ decisions are the source for anything the constitution does not fix.
   (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright `web-e2e`,
   four workers, servers started in the job; a test that passes only on a
   retry fails), Docker build (`web`, `node-app`, reading the layer cache that
-  `release.yml` writes on `main`), then `CI OK`, which
+  `release.yml` writes on `main`, and `keycloak`), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the Changes and `CI OK` jobs; the

@@ -14,6 +14,7 @@ features:
   - 879-dashboards
   - 397-listing-ticks
   - 374-assistant-requests
+  - 1016-mcp-staging
 ---
 
 # Capability: Observability
@@ -433,6 +434,18 @@ _From 397-listing-ticks._
 ### 374-FR-014 — Observability: every call of the four tools is counted in the existing `mcp_tool_calls_total{tool,outcome}` and `mcp_tool_call_duration_seconds{tool}` with the tool name from the catalogue (a closed set), logged as one `McpToolCall` line (tool, outcome, duration, request id; no input, no user text, no phone or plate) and traced as the `mcp.tool <name>` span; the MCP dashboard (`infra/observability/grafana/dashboards/motorfix-mcp.json`) gets a panel for the garage read tools (calls and refusals by tool, p95 by tool); the `mcp-tool-errors` alert covers them (an alert on a single tool's error rate is added only if the existing one cannot see it); `infra/observability/inventory.json` lists the four tools as a product action with their dashboard and alert, and `scripts/observability-inventory.ts` passes. (AGENTS.md observability rule; 365-FR-015)
 
 _From 374-assistant-requests._
+
+### 000-FR-010 — The MCP server MUST report a gauge, 1 when the identity server's discovery document at `ASSISTANT_ISSUER` answered the last probe and 0 otherwise, probed at start and then every 60 seconds, a probe not answered within 10 seconds counting as failed, no sample reported before the first answer, and carrying the same resource attributes as its other metrics; a failed probe is logged once per state change with the reason and no token or secret, and never changes how calls are answered (365-FR-003 keeps the 503 on a failed key fetch).
+
+_From 1016-mcp-staging._
+
+### 000-FR-011 — `infra/observability/alerts/mcp.json` MUST gain two rules on that gauge, "MCP server down" when the gauge for `deployment_environment="staging"` had samples in the last 24 hours and none in the last 5 minutes, and "identity server unreachable" when it has been 0 for 5 minutes; `motorfix-mcp` MUST gain one panel showing the gauge.
+
+_From 1016-mcp-staging._
+
+### 000-FR-012 — `infra/observability/inventory.json` MUST list `mcp` and `keycloak` as `railway-service` entries (`source` `scripts/railway-deploy.ts`, `dashboard` `motorfix-mcp`, `alerts` the two new uids, `story` ST-1016), and `node scripts/observability-inventory.ts` MUST pass against the changed deploy script (its service discovery reads the union of every service list in the deploy script). The existing `outside-service` `keycloak` entry stays.
+
+_From 1016-mcp-staging._
 
 ## Retired
 

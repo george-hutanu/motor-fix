@@ -169,8 +169,12 @@ function outsideServices(text: string): [string, string][] {
 function railwayServices(root: string): string[] {
   const path = join(root, RAILWAY);
   const deploy = existsSync(path) ? readFileSync(path, 'utf8') : '';
-  const services = /services:\s*\[([^\]]*)\]/.exec(deploy)?.[1] ?? '';
-  return [...services.matchAll(/['"]([^'"]+)['"]/g)].map((match) => match[1]);
+  // Every environment's list: staging deploys services production does not.
+  const lists = [...deploy.matchAll(/services:\s*\[([^\]]*)\]/g)];
+  const names = lists.flatMap(([, list]) =>
+    [...list.matchAll(/['"]([^'"]+)['"]/g)].map((match) => match[1]),
+  );
+  return [...new Set(names)];
 }
 
 function discover(root: string): Found[] {

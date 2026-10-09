@@ -1,12 +1,20 @@
+import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { join } from 'node:path';
 
-import { API_PRE_DEPLOY, deploy, type Service } from './railway-deploy.ts';
+import {
+  API_PRE_DEPLOY,
+  deploy,
+  type Service,
+  servicesFor,
+} from './railway-deploy.ts';
 
 type Call = { query: string; variables: Record<string, unknown> };
 
 const services: Service[] = [
   {
+    healthcheckPath: '/health/ready',
     id: 'svc-api',
     image: 'ghcr.io/x/api@sha256:new',
     name: 'api',
@@ -14,6 +22,7 @@ const services: Service[] = [
     replicas: 2,
   },
   {
+    healthcheckPath: '/health/live',
     id: 'svc-web',
     image: 'ghcr.io/x/web@sha256:new',
     name: 'web',
@@ -123,7 +132,7 @@ describe('railway deploy', () => {
       {
         environmentId: 'env-1',
         input: {
-          healthcheckPath: '/health/ready',
+          healthcheckPath: '/health/live',
           healthcheckTimeout: 300,
           numReplicas: 2,
           region: 'europe-west4-drams3a',
@@ -522,5 +531,310 @@ describe('railway deploy with a project token', () => {
 
     await expect(run('bearer')).rejects.toThrow('Not Authorized');
     expect(seen.every((h) => !h.project)).toBe(true);
+  });
+});
+
+const ALL = {
+  IMAGE_API: 'img/api@sha256:a',
+  IMAGE_KEYCLOAK: 'img/keycloak@sha256:k',
+  IMAGE_MCP: 'img/mcp@sha256:m',
+  IMAGE_WEB: 'img/web@sha256:w',
+  IMAGE_WORKER: 'img/worker@sha256:r',
+  RAILWAY_SERVICE_API: 'svc-api',
+  RAILWAY_SERVICE_KEYCLOAK: 'svc-keycloak',
+  RAILWAY_SERVICE_MCP: 'svc-mcp',
+  RAILWAY_SERVICE_WEB: 'svc-web',
+  RAILWAY_SERVICE_WORKER: 'svc-worker',
+};
+
+const REALM_HEALTH = '/realms/motorfix-assistants';
+
+describe('the services each environment deploys', () => {
+  let notices: string[];
+
+  beforeEach(() => {
+    notices = [];
+    jest.spyOn(console, 'log').mockImplementation((line: string) => {
+      notices.push(line);
+    });
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const names = (list: Service[]) => list.map((s) => s.name);
+
+  it('deploys the identity server, then the MCP server, after the three apps on staging', () => {
+    const list = servicesFor('staging', ALL);
+
+    expect(names(list)).toEqual(['api', 'worker', 'web', 'keycloak', 'mcp']);
+    expect(list.map((s) => [s.name, s.healthcheckPath, s.replicas])).toEqual([
+      ['api', '/health/ready', 1],
+      ['worker', '/health/ready', 1],
+      ['web', '/health/ready', 1],
+      ['keycloak', REALM_HEALTH, 1],
+      ['mcp', '/health/live', 1],
+    ]);
+    expect(list.find((s) => s.name === 'mcp')).toMatchObject({
+      id: 'svc-mcp',
+      image: 'img/mcp@sha256:m',
+    });
+    expect(list.find((s) => s.name === 'api')?.preDeploy).toEqual(
+      API_PRE_DEPLOY,
+    );
+    expect(list.find((s) => s.name === 'mcp')?.preDeploy).toBeUndefined();
+    expect(notices).toEqual([]);
+  });
+
+  it('keeps production to the three apps, api and web on two replicas', () => {
+    const read: string[] = [];
+    const env = new Proxy(ALL as Record<string, string>, {
+      get(target, key: string) {
+        read.push(key);
+        return target[key];
+      },
+    });
+
+    const list = servicesFor('production', env);
+
+    expect(list.map((s) => [s.name, s.replicas])).toEqual([
+      ['api', 2],
+      ['worker', 1],
+      ['web', 2],
+    ]);
+    expect(read.filter((k) => /MCP|KEYCLOAK/.test(k))).toEqual([]);
+    expect(notices).toEqual([]);
+  });
+
+  it('refuses an environment it does not know', () => {
+    expect(() => servicesFor('preview', ALL)).toThrow(
+      'usage: railway-deploy.ts <staging|production>',
+    );
+  });
+
+  it('skips both new services with a notice each before the owner has created them', () => {
+    const {
+      RAILWAY_SERVICE_MCP: _m,
+      RAILWAY_SERVICE_KEYCLOAK: _k,
+      ...env
+    } = ALL;
+
+    expect(names(servicesFor('staging', env))).toEqual([
+      'api',
+      'worker',
+      'web',
+    ]);
+    expect(notices).toEqual([
+      '::notice::RAILWAY_SERVICE_KEYCLOAK is not set; keycloak was not deployed for this release.',
+      '::notice::RAILWAY_SERVICE_MCP is not set; mcp was not deployed for this release.',
+    ]);
+  });
+
+  it('treats an empty id as not set', () => {
+    const env = { ...ALL, RAILWAY_SERVICE_MCP: '' };
+
+    expect(names(servicesFor('staging', env))).toEqual([
+      'api',
+      'worker',
+      'web',
+      'keycloak',
+    ]);
+    expect(notices).toEqual([
+      '::notice::RAILWAY_SERVICE_MCP is not set; mcp was not deployed for this release.',
+    ]);
+  });
+
+  it('fails when a new service has its id but no image', () => {
+    const { IMAGE_MCP: _i, ...env } = ALL;
+
+    expect(() => servicesFor('staging', env)).toThrow(
+      'missing environment variable IMAGE_MCP',
+    );
+  });
+
+  it.each(['API', 'WORKER', 'WEB'])(
+    'still fails when RAILWAY_SERVICE_%s is missing',
+    (app) => {
+      const env: Record<string, string> = { ...ALL };
+      delete env[`RAILWAY_SERVICE_${app}`];
+
+      expect(() => servicesFor('staging', env)).toThrow(
+        `missing environment variable RAILWAY_SERVICE_${app}`,
+      );
+    },
+  );
+});
+
+describe('a staging release whose identity server fails its health check', () => {
+  let server: Server;
+  let calls: Call[];
+
+  beforeEach(async () => {
+    calls = [];
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    server = createServer((req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        const call = JSON.parse(body) as Call;
+        calls.push(call);
+        const id = String(call.variables['id']);
+        res.end(
+          JSON.stringify({
+            data: answer(call, () =>
+              id === 'dep-svc-keycloak' ? 'FAILED' : 'SUCCESS',
+            ),
+          }),
+        );
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+  });
+
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  it('restores the three apps, never starts the MCP server, and sends each health path', async () => {
+    await expect(
+      deploy({
+        endpoint: `http://localhost:${(server.address() as AddressInfo).port}`,
+        environmentId: 'env-1',
+        limitMs: 200,
+        pollMs: 5,
+        services: servicesFor('staging', ALL),
+        token: 't',
+      }),
+    ).rejects.toThrow('keycloak: deployment FAILED');
+
+    const updates = calls
+      .filter((c) => c.query.includes('serviceInstanceUpdate'))
+      .map((c) => c.variables);
+    const deploys = updates.filter(
+      (u) => 'healthcheckPath' in (u['input'] as object),
+    );
+    expect(
+      deploys.map((u) => [
+        u['serviceId'],
+        (u['input'] as { healthcheckPath: string }).healthcheckPath,
+      ]),
+    ).toEqual([
+      ['svc-api', '/health/ready'],
+      ['svc-worker', '/health/ready'],
+      ['svc-web', '/health/ready'],
+      ['svc-keycloak', REALM_HEALTH],
+    ]);
+    const restored = updates
+      .filter((u) => !('healthcheckPath' in (u['input'] as object)))
+      .map((u) => u['serviceId'])
+      .sort();
+    expect(restored).toEqual([
+      'svc-api',
+      'svc-keycloak',
+      'svc-web',
+      'svc-worker',
+    ]);
+    expect(calls.some((c) => c.variables['serviceId'] === 'svc-mcp')).toBe(
+      false,
+    );
+  });
+});
+
+const keycloak = (file: string) =>
+  readFileSync(join(__dirname, '..', 'infra', 'keycloak', file), 'utf8');
+
+describe('the keycloak image', () => {
+  const dockerfile = keycloak('Dockerfile');
+
+  it('is Keycloak 26.8 with the realm in its import folder and a small heap', () => {
+    expect(dockerfile).toMatch(/^FROM quay\.io\/keycloak\/keycloak:26\.8$/m);
+    expect(dockerfile).toMatch(
+      /^COPY realm-motorfix-assistants\.json \/opt\/keycloak\/data\/import\/$/m,
+    );
+    expect(dockerfile).toMatch(/^ENV JAVA_OPTS_KC_HEAP="-Xms128m -Xmx512m"$/m);
+  });
+
+  it('starts behind the proxy, imports the realm and takes its address from the environment', () => {
+    const cmd = dockerfile.match(/^CMD (\[.*\])$/m)?.[1];
+
+    expect(cmd && JSON.parse(cmd)).toEqual([
+      'start',
+      '--import-realm',
+      '--features=cimd,resource-indicators',
+      '--proxy-headers=xforwarded',
+      '--http-enabled=true',
+    ]);
+    expect(dockerfile).not.toContain('--hostname');
+  });
+
+  // The realm's own endpoint: Keycloak opens its port only once the import
+  // has finished, and a failed import stops the server.
+  it('is checked at the endpoint of the realm it imports', () => {
+    const { realm } = JSON.parse(
+      keycloak('realm-motorfix-assistants.json'),
+    ) as {
+      realm: string;
+    };
+
+    expect(REALM_HEALTH).toBe(`/realms/${realm}`);
+    expect(
+      servicesFor('staging', ALL).find((s) => s.name === 'keycloak')
+        ?.healthcheckPath,
+    ).toBe(REALM_HEALTH);
+  });
+});
+
+describe('the keycloak README', () => {
+  const readme = keycloak('README.md');
+
+  it.each([
+    'MCP_URL',
+    'ASSISTANT_ISSUER',
+    'ASSISTANT_TRUSTED_DOMAINS',
+    'ASSISTANT_BROKER_CLIENT_ID',
+    'ASSISTANT_BROKER_CLIENT_SECRET',
+    'ASSISTANT_BROKER_REDIRECT_URI',
+    'PUBLIC_WEB_URL',
+    'API_INTERNAL_URL',
+    'DATABASE_URL',
+    'APP_ENV',
+    'OTEL_EXPORTER_OTLP_ENDPOINT',
+    'OTEL_EXPORTER_OTLP_HEADERS',
+    'OTEL_EXPORTER_OTLP_PROTOCOL',
+    'KC_DB',
+    'KC_DB_URL',
+    'KC_DB_USERNAME',
+    'KC_DB_PASSWORD',
+    'KC_HOSTNAME',
+    'KC_BOOTSTRAP_ADMIN_USERNAME',
+    'KC_BOOTSTRAP_ADMIN_PASSWORD',
+    'RAILWAY_SERVICE_MCP',
+    'RAILWAY_SERVICE_KEYCLOAK',
+  ])('names %s for the staging setup', (name) => {
+    const setup = readme.slice(readme.indexOf('## Railway'));
+
+    expect(setup).toMatch(new RegExp(`\`${name}\``));
+  });
+
+  it('leaves ASSISTANT_ALLOW_HTTP off staging', () => {
+    const setup = readme.slice(readme.indexOf('## Railway'));
+    const lines = setup
+      .split('\n')
+      .filter((l) => l.includes('ASSISTANT_ALLOW_HTTP'));
+
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.every((l) => /not set|never|without/i.test(l))).toBe(true);
+  });
+
+  it('holds names only: no digest, Railway address or id', () => {
+    expect(readme).not.toMatch(/sha256|railway\.app|[0-9a-f]{8}-[0-9a-f]{4}/);
+  });
+
+  it('says production gets neither service', () => {
+    const setup = readme.slice(readme.indexOf('## Railway'));
+
+    expect(setup).toMatch(/[Ss]taging only/);
   });
 });
