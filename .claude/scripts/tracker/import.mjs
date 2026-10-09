@@ -435,6 +435,8 @@ export async function runImport({
   const existing = new Set(issue.keys());
   const adopted = plans.filter((p) => existing.has(p.key) && !byMarker.has(p.key)).length;
   const incomplete = new Set();
+  // Pages whose steps a transient failure ended this lap: linked only where their issue exists.
+  const skipped = new Set();
   // The body as written: references resolved to the issues known now, a hand-filed issue's own text kept after ADOPTED.
   const written = new Map();
   const bodyOf = (plan, current) => {
@@ -496,7 +498,7 @@ export async function runImport({
     let item = found ? itemOf.get(found.number) : undefined;
     if (!item) {
       step("add-item", async () => {
-        const made = await github.graphql(ADD_ITEM, { projectId: project.id, contentId: issue.get(plan.key).node_id });
+        const made = await github.graphql(ADD_ITEM, { projectId: project.id, contentId: issue.get(plan.key).node_id }, { idempotent: true });
         item = { id: made.addProjectV2ItemById.item.id, values: {} };
       });
     }
@@ -516,7 +518,7 @@ export async function runImport({
                   ? { text: value }
                   : { date: value };
         });
-        await github.graphql(setFieldsMutation(differing.length), variables);
+        await github.graphql(setFieldsMutation(differing.length), variables, { idempotent: true });
         return differing.map(([name]) => name).join(", ");
       });
     }
@@ -527,7 +529,7 @@ export async function runImport({
   async function lateSteps(report) {
     const steps = [];
     const step = (kind, key, run) => steps.push({ kind, key, run });
-    const ok = (key) => !incomplete.has(key) && plans.find((p) => p.key === key)?.body !== null;
+    const ok = (key) => !incomplete.has(key) && !skipped.has(key) && plans.find((p) => p.key === key)?.body !== null;
     for (const plan of plans) {
       if (!ok(plan.key)) continue;
       const current = issue.get(plan.key)?.state ?? "open";
@@ -558,7 +560,7 @@ export async function runImport({
       return found ? (await github.pages(`issues/${found.number}/${path}`)).map((i) => i.id) : [];
     };
     // An end that will not exist (a page left behind with no issue yet) is not linked this run.
-    const absent = (key) => incomplete.has(key) && !issue.has(key);
+    const absent = (key) => (incomplete.has(key) || skipped.has(key)) && !issue.has(key);
     const children = new Map();
     for (const plan of plans.filter((p) => p.parent)) {
       if (absent(plan.key) || absent(plan.parent)) continue;
@@ -566,7 +568,7 @@ export async function runImport({
       if (issue.has(plan.key) && children.get(plan.parent).includes(issue.get(plan.key).id)) continue;
       step("sub-issue", plan.key, async () => {
         const parent = issue.get(plan.parent).number;
-        await github.rest("POST", `issues/${parent}/sub_issues`, { sub_issue_id: issue.get(plan.key).id });
+        await github.rest("POST", `issues/${parent}/sub_issues`, { sub_issue_id: issue.get(plan.key).id }, { idempotent: true });
         return `under #${parent}`;
       });
     }
@@ -576,13 +578,13 @@ export async function runImport({
       for (const blocker of plan.blockers) {
         if (absent(blocker) || (issue.has(blocker) && have.includes(issue.get(blocker).id))) continue;
         step("blocked-by", plan.key, async () => {
-          await github.rest("POST", `issues/${issue.get(plan.key).number}/dependencies/blocked_by`, { issue_id: issue.get(blocker).id });
+          await github.rest("POST", `issues/${issue.get(plan.key).number}/dependencies/blocked_by`, { issue_id: issue.get(blocker).id }, { idempotent: true });
           return blocker;
         });
       }
     }
     for (const plan of plans.filter((p) => p.pr && p.state === "open")) {
-      if (incomplete.has(plan.key)) continue;
+      if (incomplete.has(plan.key) || absent(plan.key)) continue;
       let pull;
       try {
         pull = await github.rest("GET", pullPath(plan.pr));
@@ -702,25 +704,41 @@ export async function runImport({
     out("continue", `node .claude/scripts/tracker/import.mjs --budget ${budget}`);
     return 3;
   };
-  /** Runs steps within the budget: true when all ran, else the exit code. */
-  const runSteps = async (steps) => {
+  /**
+   * Runs steps within the budget: true when all ran (or a transient failure
+   * ended the page's steps), else the exit code. A network error, timeout or
+   * 5xx that outlasted the client's retries ends that page's steps (`page`),
+   * or that one step; the run goes on and ends with exit 3, since the next lap
+   * replans from GitHub. Any other GitHub refusal stops the run (exit 1).
+   */
+  const runSteps = async (steps, { page = false } = {}) => {
     for (const [j, s] of steps.entries()) {
       if (ran >= budget) return stopped();
       status({ key: s.key, event: "step", step: j + 1, steps: steps.length, kind: s.kind });
+      ran++;
       try {
         const detail = await s.run();
         out(s.kind, `${s.key}${detail ? ` ${detail}` : ""}`);
       } catch (error) {
         if (!(error instanceof GitHubError)) throw error;
-        await stop();
-        out("failed", `${s.key} ${s.kind}: ${error.message}`);
-        return 1;
+        if (!error.transient) {
+          await stop();
+          out("failed", `${s.key} ${s.kind}: ${error.message}`);
+          return 1;
+        }
+        transient.push(`${s.key} ${s.kind}`);
+        out("retry", `${s.key} ${s.kind}: ${error.message}; ${page ? "the page's other steps wait for" : "tried again on"} the next lap`);
+        if (page) {
+          skipped.add(s.key);
+          return true;
+        }
+        continue;
       }
-      ran++;
       last = s.key;
     }
     return true;
   };
+  const transient = [];
 
   const all = [];
   let parts = 0;
@@ -739,9 +757,9 @@ export async function runImport({
       continue;
     }
     if (steps.length && (plan.file || hasFiles(plan.record))) await publish(plan.file ? [plan.file] : [], plan.key);
-    const result = await runSteps(steps);
+    const result = await runSteps(steps, { page: true });
     if (result !== true) return result;
-    writtenPages++;
+    if (!skipped.has(plan.key)) writtenPages++;
   }
   await reading;
   if (load) out("read", `notion: ${read} pages' content, ${fetched} read from Notion, the rest from the cache`);
@@ -766,6 +784,11 @@ export async function runImport({
   });
   const result = await runSteps(late);
   if (result !== true) return result;
+  if (transient.length) {
+    out("stopped", `after network errors on ${transient.length} step(s) (${transient.slice(0, 3).join(", ")}${transient.length > 3 ? ", …" : ""}); the next lap replans them from GitHub`);
+    out("continue", `node .claude/scripts/tracker/import.mjs${Number.isFinite(budget) ? ` --budget ${budget}` : ""}`);
+    return 3;
+  }
   if (parts) {
     out("failed", `${parts} part(s) of Notion pages left behind: ${incomplete.size} page(s) not written, the other ${plans.length - incomplete.size} written`);
     return 1;

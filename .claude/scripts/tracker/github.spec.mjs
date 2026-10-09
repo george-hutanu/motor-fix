@@ -249,6 +249,33 @@ describe("a request that stalls", () => {
     assert.equal(write.calls.length, 1);
   });
 
+  it("sends an idempotent write again after a dropped connection: a PATCH, a field set, an add", async () => {
+    const drop = () => Promise.reject(new TypeError("fetch failed"));
+    const patch = client(fakeClock(), [drop, drop, json({ number: 10 })]);
+    assert.deepEqual(await patch.github.rest("PATCH", "issues/10", { body: "x" }), { number: 10 });
+    assert.equal(patch.calls.length, 3);
+    const fields = client(fakeClock(), [drop, json({ data: { f0: {} } })]);
+    assert.deepEqual(await fields.github.graphql("mutation SetFields { x }", {}, { idempotent: true }), { f0: {} });
+    assert.equal(fields.calls.length, 2);
+    // The first add landed but its answer was lost: the second meets 422 and that is success.
+    const add = client(fakeClock(), [drop, json({ message: "Sub-issue already exists" }, 422)]);
+    assert.equal(await add.github.rest("POST", "issues/1/sub_issues", { sub_issue_id: 2 }, { idempotent: true }), null);
+    assert.equal(add.calls.length, 2);
+    // A 422 on the first try is a real refusal.
+    const refused = client(fakeClock(), [json({ message: "Validation Failed" }, 422)]);
+    await assert.rejects(refused.github.rest("POST", "issues/1/sub_issues", {}, { idempotent: true }), (e) => e.type === "422" && !e.transient);
+  });
+
+  it("never sends a create or a plain mutation twice after a dropped connection", async () => {
+    const drop = () => Promise.reject(new TypeError("fetch failed"));
+    const create = client(fakeClock(), [drop, json({ number: 1 })]);
+    await assert.rejects(create.github.rest("POST", "issues", { title: "x" }), (e) => e.type === "network" && e.transient);
+    assert.equal(create.calls.length, 1);
+    const mutation = client(fakeClock(), [drop, json({ data: {} })]);
+    await assert.rejects(mutation.github.graphql("mutation M { x }", {}), (e) => e.transient);
+    assert.equal(mutation.calls.length, 1);
+  });
+
   it("tries a 5xx three times, honouring Retry-After", async () => {
     const clock = fakeClock();
     const { github, calls } = client(clock, [json({}, 502, { "retry-after": "3" }), json({}, 500), json({ ok: 1 })]);

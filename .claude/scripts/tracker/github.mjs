@@ -25,6 +25,11 @@ export class GitHubError extends Error {
     super(message);
     this.type = type;
   }
+
+  /** A failure that a later try may not meet: no answer, a dropped connection or a server error. */
+  get transient() {
+    return this.type === "network" || this.type === "timeout" || /^5\d\d$/.test(this.type);
+  }
 }
 
 /** `work(signal)` raced against a timer that aborts it: a stalled socket cannot hang the run. */
@@ -81,11 +86,18 @@ export function githubClient({
     return null;
   }
 
-  async function send(method, path, body, content) {
+  /**
+   * `idempotent`: a write that is safe to send again (a PATCH, a field set, an
+   * add that GitHub refuses with 422 once it holds it), so a network error, a
+   * timeout or a 5xx is tried TRIES times like a read. A 422 to a try after one
+   * whose answer was lost means the earlier try landed.
+   */
+  async function send(method, path, body, content, idempotent = !content) {
     const label = `${method} ${path}`;
     if (body !== undefined && NOTION_ADDRESS.test(JSON.stringify(body))) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
     const url = urlOf(path);
     if (content) stats.content++;
+    let lost = false;
     for (let failures = 0, throttles = 0; ; ) {
       if (content) {
         const wait = lastContent + PACE_MS - now();
@@ -113,7 +125,8 @@ export function githubClient({
         const timedOut = error instanceof GitHubError;
         const failure = timedOut ? error : new GitHubError("network", scrub(`${label}: ${error?.message ?? error}`));
         // A write that timed out may have landed: only a read (or a GraphQL query) is sent again; a resumed run replans from GitHub.
-        if (content || ++failures >= TRIES) throw failure;
+        if (!idempotent || ++failures >= TRIES) throw failure;
+        lost = true;
         await sleep(SERVER_RETRY_MS * 2 ** (failures - 1));
         continue;
       }
@@ -125,6 +138,7 @@ export function githubClient({
         if (response.ok) throw new GitHubError("parse", scrub(`${label}: ${response.status}, the answer is not JSON`));
       }
       if (response.ok) return { data, response };
+      if (lost && content && idempotent && response.status === 422) return { data: null, response };
       const wait = throttleWait(response, data);
       if (wait !== null) {
         if (++throttles > MAX_THROTTLES) throw new GitHubError("rate limit", scrub(`${label}: ${response.status}, still throttled after ${MAX_THROTTLES} waits`));
@@ -134,7 +148,8 @@ export function githubClient({
         continue;
       }
       // A write that failed with a 5xx may still have landed: it is sent once more at most, a read up to TRIES times.
-      if (response.status >= 500 && ++failures < (content ? 2 : TRIES)) {
+      if (response.status >= 500 && ++failures < (content && !idempotent ? 2 : TRIES)) {
+        lost = true;
         const after = response.headers.get("retry-after");
         await sleep(after !== null && /^\d+$/.test(after.trim()) ? Math.min(Number(after), maxWaitS) * 1000 : SERVER_RETRY_MS * 2 ** (failures - 1));
         continue;
@@ -143,7 +158,9 @@ export function githubClient({
     }
   }
 
-  const rest = async (method, path, body) => (await send(method, path, body, method !== "GET")).data;
+  /** A REST call; a PATCH is idempotent, a POST only when the caller says so (`{ idempotent: true }`). */
+  const rest = async (method, path, body, { idempotent = method === "GET" || method === "PATCH" } = {}) =>
+    (await send(method, path, body, method !== "GET", idempotent)).data;
 
   /** Every page of a REST list, following the Link header. */
   async function pages(path) {
@@ -157,8 +174,9 @@ export function githubClient({
     return all;
   }
 
-  async function graphql(query, variables) {
-    const { data } = await send("POST", "/graphql", { query, variables }, /^\s*mutation\b/.test(query));
+  async function graphql(query, variables, { idempotent = false } = {}) {
+    const mutation = /^\s*mutation\b/.test(query);
+    const { data } = await send("POST", "/graphql", { query, variables }, mutation, !mutation || idempotent);
     if (data?.errors?.length) {
       throw new GitHubError(data.errors[0].type ?? "GRAPHQL", scrub(data.errors.map((e) => `${e.type ?? "error"}: ${e.message}`).join("; ")));
     }

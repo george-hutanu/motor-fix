@@ -842,3 +842,54 @@ describe("stories attached to their epic", () => {
     assert.ok(p.items.length === 12);
   });
 });
+
+// @traces 1017-FR-013
+describe("a dropped connection mid-run", () => {
+  /** A fetch that drops every attempt at the matching write `times` times, then lets it through. */
+  const dropping = (gh, match, times = Infinity) => {
+    let left = times;
+    return async (url, init = {}) => {
+      if (left > 0 && match(url, init)) {
+        left--;
+        throw new TypeError("fetch failed");
+      }
+      return gh.fetchImpl(url, init);
+    };
+  };
+
+  it("sends an update again after a dropped connection and finishes", async () => {
+    const gh = await bootstrapped();
+    await importInto(gh);
+    const st1 = issueOf(gh, "ST-1");
+    st1.body = `${st1.body}\nedited`;
+    const { exit, lines } = await importInto(gh, { fetchImpl: dropping(gh, (url, init) => init.method === "PATCH" && url.endsWith(`/issues/${st1.number}`), 1) });
+    assert.equal(exit, 0, lines.join("\n"));
+    assert.ok(lines.some((l) => /^update\s+ST-1 /.test(l)));
+  });
+
+  it("ends only that page's steps when a create keeps failing, writes the others and exits 3; the next lap finishes", async () => {
+    const gh = await bootstrapped();
+    const isSt1 = (url, init) => init.method === "POST" && url.endsWith("/issues") && JSON.parse(init.body).title.startsWith("ST-1 ");
+    const one = await importInto(gh, { fetchImpl: dropping(gh, isSt1) });
+    assert.equal(one.exit, 3, one.lines.join("\n"));
+    assert.ok(one.lines.some((l) => /^retry\s+ST-1 create: .*fetch failed; the page's other steps wait for the next lap$/.test(l)));
+    assert.match(one.lines.at(-2), /^stopped\s+after network errors on 1 step\(s\) \(ST-1 create\)/);
+    assert.match(one.lines.at(-1), /^continue\s+node \.claude\/scripts\/tracker\/import\.mjs$/);
+    assert.equal(issueOf(gh, "ST-1"), undefined);
+    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 11);
+    assert.ok(!one.lines.some((l) => /^(sub-issue|blocked-by|pr-closes|close)\s+ST-1\b/.test(l)));
+    const two = await importInto(gh);
+    assert.equal(two.exit, 0, two.lines.join("\n"));
+    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 12);
+    assert.ok((gh.state.subIssues.get(issueOf(gh, "EP-1").number) ?? []).includes(issueOf(gh, "ST-1").id));
+  });
+
+  it("still stops the run on a refusal that is not transient", async () => {
+    const gh = await bootstrapped();
+    const refuse = async (url, init = {}) =>
+      init.method === "POST" && url.endsWith("/issues") ? new Response(JSON.stringify({ message: "Validation Failed" }), { status: 422 }) : gh.fetchImpl(url, init);
+    const { exit, lines } = await importInto(gh, { fetchImpl: refuse });
+    assert.equal(exit, 1);
+    assert.match(lines.at(-1), /^failed\s+\S+ create: POST issues: 422 Validation Failed$/);
+  });
+});
