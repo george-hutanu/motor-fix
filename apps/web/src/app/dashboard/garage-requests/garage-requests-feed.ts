@@ -45,6 +45,10 @@ export class GarageRequestsFeed {
     () => this.read('closed'),
     CHANGES,
   );
+  private readonly quotedRows = liveResource(
+    () => this.read('quoted'),
+    CHANGES,
+  );
   // Arrived while the tab was in view, not yet shown as a toast.
   private readonly arrived = new Set<string>();
   private readonly toasted = new Set<string>();
@@ -57,6 +61,14 @@ export class GarageRequestsFeed {
     () => this.shown(this.waiting.value())?.nextCursor,
   );
   readonly closed = computed(() => this.shown(this.closedRows.value())?.items);
+  // The requests answered with a quote still waiting for the driver.
+  readonly quoted = computed(() => this.shown(this.quotedRows.value())?.items);
+  readonly quotedNextCursor = computed(
+    () => this.shown(this.quotedRows.value())?.nextCursor,
+  );
+  readonly quotedLoading = computed(
+    () => this.allowed() && this.quotedRows.isLoading(),
+  );
   readonly loading = computed(() => this.allowed() && this.waiting.isLoading());
   // The first read failed and there is nothing to show.
   readonly failed = computed(
@@ -100,14 +112,18 @@ export class GarageRequestsFeed {
   reload() {
     this.waiting.reload();
     this.closedRows.reload();
+    this.quotedRows.reload();
   }
 
-  // A further page of waiting rows, for the view's scroll.
-  page(cursor: string): Promise<GarageRequestListDto> {
-    return this.api.garageRequestsControllerList({ cursor, status: 'waiting' });
+  // A further page of waiting or quoted rows, for the view's scroll.
+  page(
+    cursor: string,
+    status: 'waiting' | 'quoted' = 'waiting',
+  ): Promise<GarageRequestListDto> {
+    return this.api.garageRequestsControllerList({ cursor, status });
   }
 
-  private read(status: 'waiting' | 'closed') {
+  private read(status: 'waiting' | 'closed' | 'quoted') {
     return this.allowed()
       ? this.api.garageRequestsControllerList({ status })
       : Promise.resolve(null);

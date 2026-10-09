@@ -108,6 +108,12 @@
       "title": "Send a quote",
       "to": "to (lei)",
       "wide": "This range is very wide; the driver expects a narrow one."
+    },
+    "sentList": {
+      "empty": "No quotes sent yet.",
+      "heading": "Quotes sent",
+      "loading": "Loading the quotes sent",
+      "waiting": "Waiting for the customer"
     }
   },
   "requests": {

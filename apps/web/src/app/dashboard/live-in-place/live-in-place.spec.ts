@@ -281,6 +281,40 @@ describe('LiveChange', () => {
 });
 
 @Component({
+  imports: [LiveChange],
+  template: `<p [mfLiveChange]="1" [mfLiveChangeNew]="arrived">new</p>`,
+})
+class Arriving {
+  arrived = true;
+}
+
+// @traces 344-FR-015
+describe('LiveChange on a row that arrived live', () => {
+  it('highlights it when it first shows', () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: REDUCED_MOTION, useValue: signal(false) }],
+    });
+    const fixture = TestBed.createComponent(Arriving);
+    fixture.detectChanges();
+
+    const p = (fixture.nativeElement as HTMLElement).querySelector('p');
+    expect(p?.classList.contains('mf-live-changed')).toBe(true);
+  });
+
+  it('does not when it was there before', () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: REDUCED_MOTION, useValue: signal(false) }],
+    });
+    const fixture = TestBed.createComponent(Arriving);
+    fixture.componentInstance.arrived = false;
+    fixture.detectChanges();
+
+    const p = (fixture.nativeElement as HTMLElement).querySelector('p');
+    expect(p?.classList.contains('mf-live-changed')).toBe(false);
+  });
+});
+
+@Component({
   imports: [LiveAnchor, LivePill],
   template: `
     <mf-live-pill [rows]="list" />

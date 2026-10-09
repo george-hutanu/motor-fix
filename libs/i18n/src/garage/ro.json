@@ -108,6 +108,12 @@
       "title": "Trimite oferta",
       "to": "până la (lei)",
       "wide": "Intervalul este foarte larg; șoferul așteaptă un interval strâns."
+    },
+    "sentList": {
+      "empty": "Nicio ofertă trimisă încă.",
+      "heading": "Oferte trimise",
+      "loading": "Se încarcă ofertele trimise",
+      "waiting": "Așteaptă răspunsul clientului"
     }
   },
   "requests": {

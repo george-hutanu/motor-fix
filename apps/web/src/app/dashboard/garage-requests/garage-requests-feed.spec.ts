@@ -10,7 +10,13 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 
-import { fakeLive, listOf, requestRow, wait } from './garage-requests.testing';
+import {
+  fakeLive,
+  listOf,
+  quotedRow,
+  requestRow,
+  wait,
+} from './garage-requests.testing';
 import { GarageRequestsFeed } from './garage-requests-feed';
 import { Live } from '../live';
 import { Session } from '../session';
@@ -38,29 +44,35 @@ async function settle() {
   }
 }
 
-// `waiting` and `closed` answer in turn, the last answer repeating.
+// Each filter answers in turn, the last answer repeating.
 async function start(
   {
     capabilities = OWNER,
     closed = [listOf([])],
+    quoted = [listOf([])],
     waiting = [listOf([requestRow()])],
   }: {
     capabilities?: string[];
     closed?: Answer[];
+    quoted?: Answer[];
     waiting?: Answer[];
   } = {},
   language: 'ro' | 'en' = 'ro',
 ) {
   live = fakeLive();
   me = signal<MeDto | null>(account(capabilities));
-  const calls = { closed: 0, waiting: 0 };
-  list = jest.fn(async ({ status }: { status: 'waiting' | 'closed' }) => {
-    const answers = status === 'closed' ? closed : waiting;
-    const answer = answers[Math.min(calls[status]++, answers.length - 1)];
-    if (answer instanceof Error || answer instanceof HttpErrorResponse)
-      throw answer;
-    return answer;
-  });
+  const answers = { closed, quoted, waiting };
+  const calls = { closed: 0, quoted: 0, waiting: 0 };
+  list = jest.fn(
+    async ({ cursor, status }: { cursor?: string; status: Filter }) => {
+      if (cursor) return listOf([quotedRow({ id: `after-${cursor}` })]);
+      const answer =
+        answers[status][Math.min(calls[status]++, answers[status].length - 1)];
+      if (answer instanceof Error || answer instanceof HttpErrorResponse)
+        throw answer;
+      return answer;
+    },
+  );
   TestBed.configureTestingModule({
     providers: [
       GarageRequestsFeed,
@@ -78,8 +90,12 @@ async function start(
   return feed;
 }
 
-const reads = (status: 'waiting' | 'closed') =>
-  list.mock.calls.filter(([params]) => params?.status === status);
+type Filter = 'waiting' | 'closed' | 'quoted';
+
+const reads = (status: Filter) =>
+  list.mock.calls.filter(
+    ([params]) => params?.status === status && !params.cursor,
+  );
 
 const created = async (id: string) => {
   live.emit('request.created', id);
@@ -340,5 +356,88 @@ describe('GarageRequestsFeed: who may see the requests', () => {
     expect(reads('waiting')).toHaveLength(1);
     expect(feed.visible()).toBe(true);
     expect(feed.total()).toBe(1);
+  });
+});
+
+// @traces 344-FR-014
+// @traces 344-FR-015
+describe('GarageRequestsFeed: the quotes sent', () => {
+  it('reads the quoted rows with the quoted filter, newest sent first as the server sends them', async () => {
+    const feed = await start({
+      quoted: [
+        listOf([quotedRow({ id: 'req-q2' }), quotedRow({ id: 'req-q1' })], {
+          nextCursor: 'q-2',
+          total: 25,
+        }),
+      ],
+    });
+
+    expect(reads('quoted')).toHaveLength(1);
+    expect(reads('quoted')[0][0]).toEqual({ status: 'quoted' });
+    expect(feed.quoted()?.map((r) => r.id)).toEqual(['req-q2', 'req-q1']);
+    expect(feed.quotedNextCursor()).toBe('q-2');
+    expect(feed.quotedLoading()).toBe(false);
+  });
+
+  it('says it is loading until the first quoted read answers', async () => {
+    const feed = await start({
+      quoted: [new Promise<GarageRequestListDto>(() => undefined) as never],
+    });
+
+    expect(feed.quotedLoading()).toBe(true);
+    expect(feed.quoted()).toBeUndefined();
+  });
+
+  it('moves a sent request from the waiting rows to the quoted ones on quote.sent, counters included', async () => {
+    const feed = await start({
+      quoted: [listOf([]), listOf([quotedRow({ id: 'req-1' })])],
+      waiting: [listOf([requestRow()], { total: 1 }), listOf([])],
+    });
+    expect(feed.total()).toBe(1);
+
+    live.emit('quote.sent', 'quote-1');
+    await wait(400);
+    await settle();
+
+    expect(reads('waiting')).toHaveLength(2);
+    expect(reads('closed')).toHaveLength(2);
+    expect(reads('quoted')).toHaveLength(2);
+    expect(feed.rows()).toEqual([]);
+    expect(feed.total()).toBe(0);
+    expect(feed.quoted()?.map((r) => r.id)).toEqual(['req-1']);
+  });
+
+  it('reads them again with the other lists on reload', async () => {
+    const feed = await start();
+
+    feed.reload();
+    await settle();
+
+    expect(reads('quoted')).toHaveLength(2);
+  });
+
+  it('reads a further page of quoted rows from a cursor', async () => {
+    const feed = await start();
+
+    const page = await feed.page('q-2', 'quoted');
+
+    expect(list).toHaveBeenLastCalledWith({ cursor: 'q-2', status: 'quoted' });
+    expect(page.items.map((r) => r.id)).toEqual(['after-q-2']);
+  });
+
+  it('still reads further waiting pages by default', async () => {
+    const feed = await start();
+
+    await feed.page('c-2');
+
+    expect(list).toHaveBeenLastCalledWith({ cursor: 'c-2', status: 'waiting' });
+  });
+
+  it('makes no quoted call for a session without the requests capability', async () => {
+    const feed = await start({ capabilities: ['garage.own_jobs'] });
+
+    expect(list).not.toHaveBeenCalled();
+    expect(feed.quoted()).toBeUndefined();
+    expect(feed.quotedLoading()).toBe(false);
   });
 });

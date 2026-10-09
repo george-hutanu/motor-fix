@@ -218,11 +218,12 @@ export class LiveAnchor {
 
 // On a value that changes live: a short highlight (none with reduced motion),
 // and `mfLiveChangeSay`, when given, is announced politely. Nothing happens
-// when the value first shows.
+// when the value first shows, unless `mfLiveChangeNew` says it just arrived.
 @Directive({ selector: '[mfLiveChange]' })
 export class LiveChange {
   readonly mfLiveChange = input<unknown>();
   readonly mfLiveChangeSay = input<string>();
+  readonly mfLiveChangeNew = input(false);
 
   constructor() {
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -242,7 +243,7 @@ export class LiveChange {
       this.mfLiveChange();
       if (first) {
         first = false;
-        return;
+        if (!untracked(this.mfLiveChangeNew)) return;
       }
       untracked(() => {
         const say = this.mfLiveChangeSay();

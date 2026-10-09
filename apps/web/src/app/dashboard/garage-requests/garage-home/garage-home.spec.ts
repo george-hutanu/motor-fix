@@ -51,7 +51,7 @@ async function render(
   } = {},
 ) {
   list = jest.fn(({ status: filter }: { status: string }) =>
-    filter === 'closed' ? Promise.resolve(listOf([])) : answer(),
+    filter === 'waiting' ? answer() : Promise.resolve(listOf([])),
   );
   const me = signal(account(capabilities, status));
   TestBed.configureTestingModule({

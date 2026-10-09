@@ -13,6 +13,7 @@ import {
   formatNum,
   formatPct,
   formatRating,
+  formatSlot,
   relativeTime,
   requestAge,
 } from './formats';
@@ -494,5 +495,44 @@ describe('requestAge', () => {
 
   it('answers the missing mark for what is not a time', () => {
     expect(requestAge('ieri', 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 344-FR-014
+describe('formatSlot', () => {
+  // 13:00 in Bucharest, a Friday.
+  const now = new Date('2026-10-09T10:00:00Z');
+
+  it('says today with the Bucharest time on the same Bucharest day', () => {
+    expect(formatSlot('2026-10-09T13:00:00Z', 'ro', now)).toBe('azi, 16:00');
+    expect(formatSlot('2026-10-09T13:00:00Z', 'en', now)).toBe('today, 16:00');
+  });
+
+  it('says tomorrow on the next Bucharest day, even when UTC is still today', () => {
+    expect(formatSlot('2026-10-10T06:00:00Z', 'ro', now)).toBe('mâine, 09:00');
+    expect(formatSlot('2026-10-10T06:00:00Z', 'en', now)).toBe(
+      'tomorrow, 09:00',
+    );
+    expect(formatSlot('2026-10-09T21:30:00Z', 'ro', now)).toBe('mâine, 00:30');
+  });
+
+  it('names the weekday and the day from the day after tomorrow on', () => {
+    expect(formatSlot('2026-10-15T11:00:00Z', 'ro', now)).toBe(
+      'joi, 15 oct., 14:00',
+    );
+    expect(formatSlot('2026-10-15T11:00:00Z', 'en', now)).toBe(
+      'Thu, 15 Oct, 14:00',
+    );
+  });
+
+  it('reads the wall clock across the change to winter time', () => {
+    // 25 October 2026: Bucharest goes from UTC+3 to UTC+2.
+    expect(formatSlot('2026-10-26T07:00:00Z', 'ro', now)).toBe(
+      'lun., 26 oct., 09:00',
+    );
+  });
+
+  it.each(notNumbers)('shows a dash for %p', (value) => {
+    expect(formatSlot(value, 'ro', now)).toBe(MISSING);
   });
 });
