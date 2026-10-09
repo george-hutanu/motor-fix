@@ -16,6 +16,7 @@ import {
   newCode,
 } from './phone-sign-in';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { countSignIn } from '../../metrics/product-counters';
 import { type Brevo, BrevoError } from '../../notifications/brevo/brevo';
 import {
   PHONE_CONFIG,
@@ -153,7 +154,13 @@ export class PhoneSignInService {
     if (!found.admin && (await this.maintenance.on())) {
       throw this.underMaintenance();
     }
-    return this.sessions.openSession(found.id, found.role, remember);
+    const issued = await this.sessions.openSession(
+      found.id,
+      found.role,
+      remember,
+    );
+    countSignIn('phone');
+    return issued;
   }
 
   // The number's current code when `code` is it; otherwise the refusal, a

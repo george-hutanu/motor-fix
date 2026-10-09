@@ -15,8 +15,11 @@ import type { PrismaClient } from '../generated/prisma/client';
 // Whether the platform is in maintenance: the platform rule of that name.
 export const MAINTENANCE = Symbol('MAINTENANCE');
 
-export interface Maintenance {
+export interface MaintenanceReader {
   on(): Promise<boolean>;
+}
+
+export interface Maintenance extends MaintenanceReader {
   set(on: boolean): Promise<void>;
 }
 
@@ -42,11 +45,7 @@ export class MaintenanceFlag implements Maintenance {
   async on(): Promise<boolean> {
     const kept = await this.cache(() => this.redis.get(KEY));
     if (kept === '1' || kept === '0') return kept === '1';
-    const rule = await this.prisma.platformRule.findUnique({
-      select: { value: true },
-      where: { key: KEY },
-    });
-    const on = rule?.value === true;
+    const on = await ruleOn(this.prisma);
     if (kept === null) await this.cache(() => this.fill(on));
     return on;
   }
@@ -80,6 +79,19 @@ export class MaintenanceFlag implements Maintenance {
     }
   }
 }
+
+const ruleOn = async (prisma: PrismaClient) =>
+  (
+    await prisma.platformRule.findUnique({
+      select: { value: true },
+      where: { key: KEY },
+    })
+  )?.value === true;
+
+// The stored rule alone, read on every call, for an app with no Redis (MCP).
+export const storedMaintenance = (prisma: PrismaClient): MaintenanceReader => ({
+  on: () => ruleOn(prisma),
+});
 
 let refusals:
   | ReturnType<ReturnType<typeof metrics.getMeter>['createCounter']>

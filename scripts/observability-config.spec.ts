@@ -35,11 +35,12 @@ describe('observability configuration', () => {
     );
   });
 
+  // @traces 879-FR-016
   it('the README fixes where dashboards and alerts live and the free-tier budget', () => {
     const readme = read('infra', 'observability', 'README.md');
 
     for (const fact of [
-      'infra/observability/dashboards/',
+      'infra/observability/grafana/dashboards/',
       'infra/observability/alerts/',
       '10k active series',
       '50 GB a month',
@@ -50,5 +51,26 @@ describe('observability configuration', () => {
     ]) {
       expect(readme).toContain(fact);
     }
+  });
+});
+
+describe('the MCP server and its identity server', () => {
+  it('alerts on failed signing-key fetches and lists that alert for the identity server', () => {
+    const rules = JSON.parse(
+      read('infra', 'observability', 'alerts', 'mcp.json'),
+    ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+      uid: string;
+      data: { model: { expr?: string } }[];
+    }[];
+    const rule = rules.find((r) =>
+      r.data.some((d) =>
+        /mcp_key_fetches_total\{[^}]*outcome="error"/.test(d.model.expr ?? ''),
+      ),
+    );
+    expect(rule).toBeDefined();
+    const keycloak = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find((e: { name: string }) => e.name === 'keycloak');
+    expect(keycloak.alerts).toEqual([rule?.uid]);
   });
 });

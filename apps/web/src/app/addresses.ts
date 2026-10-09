@@ -82,6 +82,12 @@ export const cockpitTexts: CanMatchFn = async () => {
   return true;
 };
 
+// The assistant connect page's texts, before it renders its status line.
+export const assistantTexts: CanMatchFn = async () => {
+  await inject(I18n).enter('assistant');
+  return true;
+};
+
 // The server cannot read the device's memory, so `/` stays Romanian there; the
 // browser goes on to the address of the remembered or current language. The
 // first page is the server's `/`: it hydrates where it is, so a tap made before

@@ -40,4 +40,13 @@
     }
   </div>
 }
+@if (observability(); as link) {
+  <a
+    class="observability"
+    [href]="link.url"
+    target="_blank"
+    rel="noopener noreferrer"
+    [attr.aria-label]="link.label"
+  >{{ link.name }}</a>
+}
 <mf-admin-growth />

@@ -5,6 +5,7 @@ import { AdminGrowth } from '../admin-growth/admin-growth';
 import { AdminOverview } from '../admin-overview';
 
 type Figures = NonNullable<ReturnType<AdminOverview['figures']>>;
+type Figure = Exclude<keyof Figures, 'observabilityUrl'>;
 
 interface Tile {
   label: string;
@@ -45,6 +46,13 @@ export class AdminPanel {
   private readonly i18n = inject(I18n);
   protected readonly tip = signal<string | null>(null);
 
+  protected readonly observability = computed(() => {
+    const url = this.overview.figures()?.observabilityUrl;
+    if (!url) return undefined;
+    const name = this.t('observability');
+    return { label: this.t('observabilityNewTab', { name }), name, url };
+  });
+
   protected readonly tiles = computed(() => {
     const figures = this.overview.figures();
     const loading = this.overview.loading() && !this.overview.failed();
@@ -52,7 +60,7 @@ export class AdminPanel {
       const label = this.t(key);
       if (!line) return this.missing(label, 'soon', this.t('soon'));
       if (figures)
-        return this.value(label, figures[key as keyof Figures], line(figures));
+        return this.value(label, figures[key as Figure], line(figures));
       if (loading) return { label, name: label, state: 'loading' };
       return this.missing(label, 'failed', this.t('unavailable'));
     });

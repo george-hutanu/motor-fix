@@ -10,6 +10,8 @@ features:
   - 877-web-health-grafana
   - 878-data-store-metrics
   - 916-otlp-log-masking-coverage
+  - 365-mcp-oauth
+  - 879-dashboards
   - 397-listing-ticks
 ---
 
@@ -43,9 +45,9 @@ _From 875-observability-stack._
 
 _From 875-observability-stack._
 
-### 875-FR-007 — `infra/observability/README.md` MUST state where dashboards and alert rules live as code, the Grafana Cloud free-tier limits, the expected usage, the 20% production trace sampling, the low-cardinality rule for metric labels (no user, request or record ids as labels) and the $0 cost.
+### 879-FR-016 — `infra/observability/README.md` MUST name the dashboards folder, the ten uids, the push and annotation steps and their secret and variable (names only), and that a change made only in Grafana's UI is overwritten by the next release.
 
-_From 875-observability-stack._
+_From 879-dashboards._
 
 ### 875-FR-008 — No observability service, environment or volume MUST exist on Railway for this epic, and no Grafana Cloud value MUST be committed, read or printed by this work.
 
@@ -115,9 +117,9 @@ _From 876-otel-instrumentation._
 
 _From 881-observability-current._
 
-### 881-FR-002 — The inventory committed by this feature MUST list what the code holds today: apps `api`, `mcp`, `web`, `web-e2e`, `worker`; Railway services `api`, `worker`, `web`; queues `insights`, `reminders`, `notifications`, `news`; outside services Brevo (e-mail, `api.brevo.com`), the S3 object store, the Web Push service, Google sign-in (`accounts.google.com`), Apple sign-in (`appleid.apple.com`), PostgreSQL and Redis; product counters: none yet (the worker's job and queue metrics and the runtime metrics from 876-FR-009/010 are listed under their apps, not as product counters); endpoint count equal to the operation count of `apps/api/openapi.json` at merge (63 at specification time). Every entry says `"none"` for dashboard and alerts with the reason that ST-879 (dashboards) and ST-880 (alerts) add them.
+### 879-FR-012 — `infra/observability/inventory.json` MUST list each counter as a `product-counter` entry (`source` the file that increments it, `dashboard` `motorfix-product`, `alerts` `"none"` with the reason that ST-880 adds them, `story` ST-879), and every existing entry whose `"none"` reason named this story MUST point at its dashboard uid as the Clarifications table says (apps and Railway services at their service's dashboard; queues at `motorfix-queues`; PostgreSQL and Redis at theirs; an outside service at the dashboard of the service that calls it; grafana-faro at `motorfix-web-vitals`); `web-e2e` and `openfreemap` stay `"none"` with their own reasons. `node scripts/observability-inventory.ts` MUST pass.
 
-_From 881-observability-current._
+_From 879-dashboards._
 
 ### 924-FR-001 — The check (`scripts/observability-inventory.ts`) MUST discover from the code, without reading any environment variable: every directory under `apps/`; every service name in `scripts/railway-deploy.ts`; every queue name from `new Queue(…)`, `registerQueue(…)` and an outbox consumer's `queue:` in non-test, non-generated source under `libs/` and `apps/`, resolving a name given as an exported constant; every outside host whose `https://<host>` begins a string literal (single-quoted, double-quoted or template) in that code, except hosts under the reserved TLDs `.example`, `.test`, `.invalid`, `.localhost`; and every known SDK client (`S3Client`, `web-push`) in that code. Every matcher (hosts, queues, exported constants, SDK clients) MUST read the file with its comments (`//` line, `/* */` block, `/** */` doc comments) removed and its string literals kept as written, so nothing inside a comment is discovered; a link that does not begin its string literal (prose) MUST NOT be discovered as a host. A `'` or `"` string ends at its unescaped closing quote or at the end of the line (`\` escapes the next character); a template literal may span lines and is one literal, `${…}` included. `libs/data-access/`, `libs/domain/src/generated/`, `*.spec.ts`, `*.testing.ts` and test stubs are not scanned. A `new Queue(<identifier>)` whose identifier is not an exported string constant is skipped. Product counters, PostgreSQL and Redis are hand-listed, not discovered. It MUST fail (non-zero exit) naming each discovered item the inventory does not list (kind, name, file) and each stale inventory entry (a discovered kind the check no longer discovers, or a hand-listed entry whose `source` path no longer exists); `--root <dir>` runs it against another tree; with nothing wrong it MUST print one summary line and exit zero.
 
@@ -339,6 +341,90 @@ _From 916-otlp-log-masking-coverage._
 
 _From 916-otlp-log-masking-coverage._
 
+### 365-FR-015 — The server MUST record its metrics (requests by outcome, tool calls by tool and outcome, authentication failures by reason, tool-call duration), one log line per call with no token and no user text, and traces through the existing telemetry (the request id is a trace attribute); metric labels come from closed sets only (tool name, outcome, failure reason; never an account, client or token); the identity server's key fetch has its own success/failure counter so an outage is visible while cached keys still serve; the Grafana dashboard gets an MCP panel and an alert on authentication-failure spikes and tool-error rate; `infra/observability/inventory.json` lists the MCP endpoint, the identity server's key fetch (outside call) and the three assistant endpoints of the API. (D17; AGENTS.md observability rule)
+
+_From 365-mcp-oauth._
+
+### 879-FR-001 — The repository MUST hold one JSON file per dashboard under `infra/observability/grafana/dashboards/`, with the uids `motorfix-overview`, `motorfix-api`, `motorfix-worker`, `motorfix-web`, `motorfix-mcp`, `motorfix-postgres`, `motorfix-redis`, `motorfix-queues`, `motorfix-web-vitals` and `motorfix-product`, each with a title starting "MotorFix".
+
+_From 879-dashboards._
+
+### 879-FR-002 — Every dashboard MUST carry an `env` templating variable whose values come from the environment attribute of the signals, with no environment name written into any query, title or link, and every panel MUST filter by it, so one dashboard serves staging and production.
+
+_From 879-dashboards._
+
+### 879-FR-003 — Every dashboard MUST reference its datasources only by uid or by a dashboard datasource variable, never by display name, so the same file loads in Grafana Cloud and in the local `otel-lgtm` stack with its variables set.
+
+_From 879-dashboards._
+
+### 879-FR-004 — Every dashboard MUST show the deploy annotations (tag `deploy` and the selected `env`) over its time range.
+
+_From 879-dashboards._
+
+### 879-FR-005 — The overview dashboard MUST show one row per service — api, worker, web, mcp, postgres, redis — with up/down, request (or operation) rate, error %, p95 latency, CPU, memory and the deployed release sha (the service version resource attribute) for the four apps, and for the two data stores the figures ST-878 exports (PostgreSQL: up, connections, transactions/s; Redis: up, memory, commands hit ratio), since a managed store reports no request, CPU or release signal, where error % is 5xx responses over all responses, p95 latency and rates use a 5-minute window, and up means the service's `target_info` series is present (OTLP push yields no `up` series; data stores: `motorfix_datastore_up` reads 1), down means it reads 0, and no series in the last 5 minutes shows "No data", never down, and one Grafana Cloud usage row with active metric series, log volume and trace volume for the period beside the free-tier limits.
+
+_From 879-dashboards._
+
+### 879-FR-006 — Every panel of the overview and of the service dashboards that shows errors MUST carry data links to the service's logs (Loki, filtered by service and `env`) and traces (Tempo, filtered by service and `env`) for the panel's time range.
+
+_From 879-dashboards._
+
+### 879-FR-007 — The service dashboards MUST show, per service, what the capability spec's signals allow: API and MCP requests by route template with rate, errors and duration and the outside calls they make; worker jobs by queue, name and outcome with duration, failures and the outbox's oldest pending age; web server renders by route template with errors and the ready state; the Node runtime (event-loop lag, heap, GC, CPU) on each of the four; PostgreSQL's up, connections against maximum, transactions, deadlocks, waiting locks, database size and slow statements; Redis's up, memory against maximum, clients, keys, hit rate and evictions; every inventoried queue's waiting count, oldest waiting age and failed count; the browser's LCP, INP, CLS, TTFB and FCP by route template and viewport class and browser errors.
+
+_From 879-dashboards._
+
+### 879-FR-008 — The product dashboard MUST show searches, sign-ins, garage sign-ups, garage approvals, quotes, e-mails sent and notifications sent, each per hour and per day for the selected `env`, computed from the product counters alone (no panel queries the database); "per hour" and "per day" mean the counter's increase over the trailing 1 h and trailing 24 h at the dashboard's current time, not calendar buckets.
+
+_From 879-dashboards._
+
+### 879-FR-009 — The domain lib MUST report seven OpenTelemetry counters, incremented once per successful action in the use case that performs it (never by reading the database): `motorfix_searches_total{outcome}` (results | none), `motorfix_sign_ins_total{method}` (password | phone | google | apple), `motorfix_garage_sign_ups_total` (incremented where a garage listing draft is created until a use case creates garage accounts), `motorfix_garage_approvals_total{outcome}` (approved | rejected), `motorfix_quotes_total` (incremented where the quote-received notification is sent until a quote use case exists), `motorfix_emails_sent_total{template}` and `motorfix_notifications_sent_total{channel}` (push | in-app).
+
+_From 879-dashboards._
+
+### 879-FR-010 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from the fixed sets of FR-009 (876-FR-011), and the series the seven counters add per instance MUST stay under 50, asserted by a unit test as ST-878 did for its figures.
+
+_From 879-dashboards._
+
+### 879-FR-011 — With telemetry off the counters MUST be no-ops with no behaviour change to the use cases (876-FR-014); each counter MUST have a colocated test that runs the action with a metrics reader attached and asserts the increment and its labels, and a failed action (a refused sign-in, a search that throws) MUST count nothing.
+
+_From 879-dashboards._
+
+### 879-FR-012 — `infra/observability/inventory.json` MUST list each counter as a `product-counter` entry (`source` the file that increments it, `dashboard` `motorfix-product`, `alerts` `"none"` with the reason that ST-880 adds them, `story` ST-879), and every existing entry whose `"none"` reason named this story MUST point at its dashboard uid as the Clarifications table says (apps and Railway services at their service's dashboard; queues at `motorfix-queues`; PostgreSQL and Redis at theirs; an outside service at the dashboard of the service that calls it; grafana-faro at `motorfix-web-vitals`); `web-e2e` and `openfreemap` stay `"none"` with their own reasons. `node scripts/observability-inventory.ts` MUST pass.
+
+_From 879-dashboards._
+
+### 879-FR-013 — The release workflow MUST push every file under the dashboards folder to Grafana Cloud through Grafana's dashboard HTTP API, overwriting by uid, after the images are built and before the staging deploy, using the secret `GRAFANA_SA_TOKEN` and the repository variable `GRAFANA_URL`; when the secret or the variable is not set the step MUST be skipped with a notice naming the missing one and the release MUST go on, as the Faro source-map steps do. A refused push MUST fail the step without printing the token.
+
+_From 879-dashboards._
+
+### 879-FR-014 — After each successful environment deploy (staging; production), the release MUST write one Grafana annotation tagged `deploy` and `env:<environment>` whose text is the release sha, through the same token; unset token: skipped as in FR-013.
+
+_From 879-dashboards._
+
+### 879-FR-015 — A dashboard check MUST run in CI's Checks job beside the inventory check and locally from the repository root, failing with the file and the rule for: invalid JSON, missing `uid` or `title`, a datasource referenced by display name or without a uid or variable, the literal `staging` or `production` in a query, title or link, no `env` variable, no `deploy` annotation, a uid no inventory entry lists, a title not starting "MotorFix", a file that is a symbolic link or holds no JSON object, or an overview with no row titled for one of the services FR-005 names. It MUST have a colocated spec with a fixture per rule and MUST pass on this repository.
+
+_From 879-dashboards._
+
+### 879-FR-016 — `infra/observability/README.md` MUST name the dashboards folder, the ten uids, the push and annotation steps and their secret and variable (names only), and that a change made only in Grafana's UI is overwritten by the next release.
+
+_From 879-dashboards._
+
+### 879-FR-017 — `libs/contracts` MUST read an optional `GRAFANA_URL` (an absolute http(s) URL; malformed → startup fails naming the variable, printing no value), listed by name in `.env.example` with a comment; unset means no link.
+
+_From 879-dashboards._
+
+### 879-FR-018 — The admin overview answer (`AdminOverviewDto`, the `admin.garages`-guarded endpoint) MUST gain an optional field holding the MotorFix overview dashboard URL for the API's own environment (`GRAFANA_URL` joined to the overview dashboard path with the `env` variable preselected to `APP_ENV`), present only when `GRAFANA_URL` is set; no other endpoint MUST carry it, and the generated client is regenerated from the OpenAPI document.
+
+_From 879-dashboards._
+
+### 879-FR-019 — The admin panel MUST show, when the field is present, one full-width link below the figure tiles and above the growth block, labelled "Observabilitate" (ro) / "Observability" (en), styled as the panel's tiles with the Cockpit tokens only, opening the URL in a new tab (`target="_blank"`, `rel="noopener noreferrer"`) with an accessible name that says it opens in a new tab; absent field → no link rendered. At 320 px nothing scrolls sideways, in light and dark.
+
+_From 879-dashboards._
+
+### 879-FR-020 — No Grafana credential, token or header MUST reach the browser or any response; Grafana's own sign-in protects the dashboards.
+
+_From 879-dashboards._
+
 ### 397-FR-013 — The new endpoint MUST be listed with its telemetry in `infra/observability/inventory.json` (the API's request metrics and logs cover it; no new dashboard panel or alert, with the reason stated), as every new endpoint is.
 
 _From 397-listing-ticks._
@@ -346,3 +432,6 @@ _From 397-listing-ticks._
 ## Retired
 
 - `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
+
+- `875-FR-007` — superseded by `879-FR-016` (2026-10-08)
+- `881-FR-002` — superseded by `879-FR-012` (2026-10-08)

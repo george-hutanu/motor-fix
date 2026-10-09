@@ -40,6 +40,7 @@ const KINDS = [
   'queue',
   'outside-service',
   'product-counter',
+  'endpoint',
 ];
 const REQUIRED = ['kind', 'name', 'source', 'dashboard', 'alerts', 'story'];
 const METHODS = new Set([

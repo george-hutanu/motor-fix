@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { keepSeededLanguage, savedLanguage } from './seeded-language.js';
 
 // [entry in the menu, tab in the bar, address, title, the line under it]
 const VIEWS = [
@@ -70,13 +71,14 @@ const language = (page: Page) =>
   page.getByRole('group', { name: /^(Limba|Language)$/ });
 
 async function signedIn(page: Page, email: string) {
+  await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email);
   await expect(page).toHaveURL('/app/garage');
-  // The account's language is shared with specs running beside this one.
+  // Romanian whatever an earlier run left saved on the shared account.
   await language(page).getByRole('button', { exact: true, name: 'RO' }).click();
   await expect(title(page)).toHaveText('Panou service');
 }
@@ -154,6 +156,7 @@ test.describe('garage views @seeded', () => {
   // @traces 097-FR-003 097-FR-006 097-FR-010
   test('the dashboard turns English without a reload and back, with no sideways scroll at 320 px', async ({
     page,
+    request,
   }) => {
     await signedIn(page, ACCOUNTS.garage);
     await page.setViewportSize({ height: 700, width: 320 });
@@ -162,10 +165,18 @@ test.describe('garage views @seeded', () => {
       name: /^(Panou service|Garage dashboard)$/,
     });
 
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/v1/me') &&
+        response.request().method() === 'PATCH',
+    );
     await language(page)
       .getByRole('button', { exact: true, name: 'EN' })
       .click();
     await expect(title(page)).toHaveText('Garage dashboard');
+    await saved;
+    // The owner is shared with every worker: the page turns, the account not.
+    expect(await savedLanguage(request, ACCOUNTS.garage)).toBe('ro');
     await expect(page.locator('aside .eyebrow')).toHaveText('GARAGE ACCOUNT');
     await expect(bar.getByRole('link')).toHaveText([
       'Home',

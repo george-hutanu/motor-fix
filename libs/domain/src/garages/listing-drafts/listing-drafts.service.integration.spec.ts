@@ -1,3 +1,4 @@
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
 
 import { DRAFT_MAX_BYTES } from './listing-drafts';
@@ -10,6 +11,8 @@ import {
   fixtures,
 } from '../../notifications/notifications.testing';
 
+const reader = countedMetrics();
+const signUps = () => counterTotal(reader, 'motorfix_garage_sign_ups_total');
 const { prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
@@ -96,6 +99,16 @@ describe('creating a draft', () => {
     expect(await prisma.listingDraft.count()).toBe(1);
     expect(String(error.mock.calls[0]?.[0])).toContain(created.id);
     error.mockRestore();
+  });
+
+  // @traces 879-FR-009
+  it('counts one garage sign-up per draft created, and none for a refused one', async () => {
+    const before = await signUps();
+
+    await service.create(body());
+    await refusalOf(service.create(body({ email: 'not-an-email' })));
+
+    expect(await signUps()).toBe(before + 1);
   });
 
   it('answers the saved draft with the time it was saved', async () => {

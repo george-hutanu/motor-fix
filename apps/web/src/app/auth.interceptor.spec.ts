@@ -102,6 +102,30 @@ describe('authInterceptor', () => {
     call.flush({});
   });
 
+  // @traces 365-FR-014
+  it('sends the token with the assistant approval, a signed-in call under auth', () => {
+    const { http, server } = setup('abc');
+
+    http.post('/api/v1/auth/assistant/approve', {}).subscribe();
+    const call = server.expectOne('/api/v1/auth/assistant/approve');
+
+    expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
+    call.flush({});
+  });
+
+  it.each(['/api/v1/auth/assistant/token', '/api/v1/auth/assistant/authorize'])(
+    'sends no token to the identity server call %s',
+    (url) => {
+      const { http, server } = setup('abc');
+
+      http.post(url, {}).subscribe({ error: () => undefined });
+      const call = server.expectOne(url);
+
+      expect(call.request.headers.has('Authorization')).toBe(false);
+      call.flush({});
+    },
+  );
+
   it('sends nothing extra when nobody is signed in', () => {
     const { http, server } = setup(null);
 

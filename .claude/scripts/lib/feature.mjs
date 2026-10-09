@@ -211,7 +211,7 @@ export function activeFeature(repo) {
     if (!dir) return null;
     const abs = isAbsolute(dir) ? dir : join(repo, dir);
     if (!existsSync(join(abs, "spec.md"))) return null;
-    const m = basename(abs).match(/^(\d{3})-/);
+    const m = basename(abs).match(/^(\d{3,})-/);
     if (!m) return null;
     return { dir: abs, name: basename(abs), num: m[1], level: featureLevel(repo, abs) };
   };

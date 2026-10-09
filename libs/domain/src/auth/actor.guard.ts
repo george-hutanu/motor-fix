@@ -2,8 +2,6 @@ import {
   type CanActivate,
   createParamDecorator,
   type ExecutionContext,
-  HttpException,
-  HttpStatus,
   Inject,
   Injectable,
   SetMetadata,
@@ -12,6 +10,8 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
 import { verifyAccessToken } from './access-token';
+import { AccountLoader, actorOf, signInRequired } from './account-loader';
+import type { AssistantBroker } from './assistant/assistant.service';
 import type { Capability } from './capabilities';
 import {
   MAINTENANCE,
@@ -20,8 +20,6 @@ import {
 } from './maintenance';
 import type { OAuthSettings } from './oauth/providers';
 import { type Actor, requireCapability, roleInUse } from './policy';
-import { PRISMA } from './prisma';
-import type { PrismaClient } from '../generated/prisma/client';
 
 export const AUTH_OPTIONS = Symbol('AUTH_OPTIONS');
 
@@ -32,6 +30,8 @@ export interface AuthOptions {
   tokenSecret: string;
   // Sign-in with Google and Apple; a provider left out is not offered.
   oauth?: OAuthSettings;
+  // Sign-in for AI assistants through the identity server; off when unset.
+  assistant?: AssistantBroker;
 }
 
 const REQUIRES = 'auth:requires';
@@ -54,16 +54,10 @@ export const CurrentActor = createParamDecorator(
     context.switchToHttp().getRequest<WithActor>().actor,
 );
 
-const signInRequired = () =>
-  new HttpException(
-    { code: 'sign_in_required', message: 'Sign in to continue' },
-    HttpStatus.UNAUTHORIZED,
-  );
-
 @Injectable()
 export class ActorGuard implements CanActivate {
   constructor(
-    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    private readonly accounts: AccountLoader,
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly reflector: Reflector,
@@ -110,41 +104,10 @@ export class ActorGuard implements CanActivate {
       ? verifyAccessToken(token, this.options.tokenSecret)
       : null;
     if (!claims) throw signInRequired();
-    const account = await this.activeAccount(claims.accountId);
+    const account = await this.accounts.activeAccount(claims.accountId);
     const roles = account.roles.map((r) => r.role);
     const role = roleInUse(claims.role, account.lastRole, roles);
     if (!role) throw signInRequired();
-    const membership = account.memberships.find(
-      (m) =>
-        (role === 'garage' && m.role === 'owner') ||
-        (role === 'receptionist' && m.role === 'receptionist'),
-    );
-    const mechanic = role === 'mechanic' ? account.mechanic : null;
-    return {
-      accountId: account.id,
-      garageId: membership?.garageId ?? mechanic?.garageId ?? null,
-      permissions: {
-        canAnswerQuotes: mechanic?.canAnswerQuotes ?? false,
-        canMoveBookings: mechanic?.canMoveBookings ?? false,
-        canRecordFinalPrice: mechanic?.canRecordFinalPrice ?? false,
-      },
-      role,
-      roles,
-    };
-  }
-
-  private async activeAccount(id: string) {
-    const account = await this.prisma.account.findUnique({
-      include: { mechanic: true, memberships: true, roles: true },
-      where: { id },
-    });
-    if (!account || account.status === 'deleted') throw signInRequired();
-    if (account.status === 'suspended') {
-      throw new HttpException(
-        { code: 'account_suspended', message: 'This account is suspended' },
-        HttpStatus.FORBIDDEN,
-      );
-    }
-    return account;
+    return actorOf(account, role);
   }
 }

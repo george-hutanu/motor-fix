@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
-import { MaintenanceFlag } from './maintenance';
+import { MaintenanceFlag, storedMaintenance } from './maintenance';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 
@@ -102,6 +102,18 @@ describe('reading the maintenance switch', () => {
     jest.spyOn(prisma.platformRule, 'findUnique').mockResolvedValue(null);
 
     expect(await flag.on()).toBe(false);
+  });
+});
+
+describe('reading the stored rule alone', () => {
+  it('follows the stored rule on every call and never touches the fast store', async () => {
+    await redis.set(KEY, '1');
+    const reader = storedMaintenance(prisma);
+
+    expect(await reader.on()).toBe(false);
+    await stored(true);
+    expect(await reader.on()).toBe(true);
+    expect(await redis.get(KEY)).toBe('1');
   });
 });
 

@@ -74,6 +74,9 @@ async function bell(
   accountId: string,
   options: {
     ago?: number;
+    // The moment `ago` counts back from; a batch shares one so a slow insert
+    // cannot make a later row newer than an earlier one.
+    from?: number;
     channel?: 'in_app' | 'email';
     kind?: string;
     params?: Record<string, unknown>;
@@ -84,7 +87,7 @@ async function bell(
     data: {
       accountId,
       channel: options.channel ?? 'in_app',
-      createdAt: new Date(Date.now() - (options.ago ?? 0)),
+      createdAt: new Date((options.from ?? Date.now()) - (options.ago ?? 0)),
       eventId: randomUUID(),
       kind: options.kind ?? 'TEST_MESSAGE',
       params: (options.params ?? {}) as object,
@@ -110,8 +113,9 @@ describe('the bell list', () => {
     const andrei = await account('andrei');
     const other = await account('other');
     const ids: string[] = [];
+    const from = Date.now();
     for (let i = 0; i < 25; i++)
-      ids.push(await bell(andrei, { ago: i * 1000 }));
+      ids.push(await bell(andrei, { ago: i * 1000, from }));
     await bell(other);
 
     const first = await get('/notifications', andrei).expect(200);

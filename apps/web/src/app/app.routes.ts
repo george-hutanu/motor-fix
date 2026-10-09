@@ -3,6 +3,7 @@ import type { Routes } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 
 import {
+  assistantTexts,
   cockpitTexts,
   languageAddress,
   languageRoot,
@@ -60,6 +61,14 @@ export const routes: Routes = [
     loadComponent: frame,
     path: `app/${area}`,
   })),
+  // Outside the area frames: any role connects an assistant.
+  {
+    canMatch: [assistantTexts],
+    loadComponent: () =>
+      import('./assistant/connect/connect').then((m) => m.Connect),
+    path: 'app/assistant/connect',
+    title: () => inject(I18n).t('assistant.connecting'),
+  },
   {
     canMatch: [cockpitTexts],
     loadComponent: () =>

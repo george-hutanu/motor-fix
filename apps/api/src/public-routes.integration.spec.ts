@@ -10,8 +10,10 @@ import { openApiDocument } from './bootstrap';
 
 const api = apiBoot();
 
+// @traces 365-FR-013
 const PUBLIC = [
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/00000000-0000-4000-8000-000000000000',
+  'GET /api/v1/auth/assistant/authorize',
   'GET /api/v1/auth/oauth/apple',
   'GET /api/v1/auth/oauth/google',
   'GET /api/v1/auth/oauth/google/callback',
@@ -32,6 +34,7 @@ const PUBLIC = [
   'GET /health/live',
   'GET /health/ready',
   'PATCH /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000',
+  'POST /api/v1/auth/assistant/token',
   'POST /api/v1/auth/confirm-email',
   'POST /api/v1/auth/confirm-email/resend',
   'POST /api/v1/auth/oauth/apple/callback',

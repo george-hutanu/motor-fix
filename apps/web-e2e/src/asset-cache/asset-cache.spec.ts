@@ -1,5 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -11,29 +16,54 @@ import { cacheAssets, isHashedAsset } from './asset-cache.js';
 import { test } from '../fixtures.js';
 
 const hits = new Map<string, number>();
+// Requests the server holds unanswered, with who to tell when one arrives.
+const held: ServerResponse[] = [];
+let arrived: () => void = () => {};
 let server: Server;
 let origin: string;
 
 const script = (name: string) =>
   `window.ran = (window.ran || []).concat('${name}');`;
 
+const servePage = (path: string, res: ServerResponse) => {
+  const sources = decodeURIComponent(path.slice('/page/'.length)).split(',');
+  res.writeHead(200, {
+    'cache-control': 'no-store',
+    'content-type': 'text/html',
+  });
+  res.end(
+    `<!doctype html><body>${sources
+      .map((src) => `<script src="${src}"></script>`)
+      .join('')}</body>`,
+  );
+};
+
+const serveScript = (
+  path: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+) => {
+  const body = script(path);
+  const zipped = /gzip/.test(String(req.headers['accept-encoding']));
+  res.writeHead(200, {
+    'cache-control': 'no-store',
+    'content-type': 'text/javascript',
+    ...(zipped ? { 'content-encoding': 'gzip' } : {}),
+  });
+  res.end(zipped ? gzipSync(body) : body);
+};
+
 test.beforeAll(async () => {
   server = createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
     hits.set(path, (hits.get(path) ?? 0) + 1);
     if (path.startsWith('/page/')) {
-      const sources = decodeURIComponent(path.slice('/page/'.length)).split(
-        ',',
-      );
-      res.writeHead(200, {
-        'cache-control': 'no-store',
-        'content-type': 'text/html',
-      });
-      res.end(
-        `<!doctype html><body>${sources
-          .map((src) => `<script src="${src}"></script>`)
-          .join('')}</body>`,
-      );
+      servePage(path, res);
+      return;
+    }
+    if (path.startsWith('/held-')) {
+      held.push(res);
+      arrived();
       return;
     }
     if (path.startsWith('/missing-')) {
@@ -41,20 +71,14 @@ test.beforeAll(async () => {
       res.end('gone');
       return;
     }
-    const body = script(path);
-    const zipped = /gzip/.test(String(req.headers['accept-encoding']));
-    res.writeHead(200, {
-      'cache-control': 'no-store',
-      'content-type': 'text/javascript',
-      ...(zipped ? { 'content-encoding': 'gzip' } : {}),
-    });
-    res.end(zipped ? gzipSync(body) : body);
+    serveScript(path, req, res);
   });
   await new Promise<void>((done) => server.listen(0, done));
   origin = `http://localhost:${(server.address() as AddressInfo).port}`;
 });
 
 test.afterAll(async () => {
+  for (const res of held.splice(0)) res.end();
   await new Promise<void>((done) => server.close(() => done()));
 });
 
@@ -149,6 +173,30 @@ test.describe('the asset cache', () => {
     expect(hits.get('/plain.js')).toBe(2);
     expect(hits.get('/plain-DDDD4444.mjs')).toBe(2);
     expect(hits.get(`/page/${encodeURIComponent(sources.join(','))}`)).toBe(2);
+  });
+
+  test('lets its context close while a fetch is still in flight', async ({
+    browser,
+  }) => {
+    const escaped: unknown[] = [];
+    const record = (reason: unknown) => escaped.push(reason);
+    process.on('unhandledRejection', record);
+    try {
+      const tab = await cachedPage(browser);
+      const fetching = new Promise<void>((done) => {
+        arrived = done;
+      });
+      await tab.goto(page('/held-GGGG7777.js'), { waitUntil: 'commit' });
+      await fetching;
+      await tab.context().close();
+      for (const res of held.splice(0)) res.end();
+      // Node reports an unhandled rejection once the microtasks have run.
+      await new Promise(setImmediate);
+    } finally {
+      process.off('unhandledRejection', record);
+    }
+
+    expect(escaped).toEqual([]);
   });
 
   test("gives way to a test's own stub", async ({ browser }) => {
