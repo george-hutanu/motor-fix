@@ -1,4 +1,4 @@
-<mf-garage-requests-panel [more]="more()">
+<mf-garage-requests-panel [more]="more()" [titled]="false">
   <span #end class="end" aria-hidden="true"></span>
   @if (feed.closed()?.length) {
     <h3 class="closed-heading">{{ 'garage.requests.closed' | t }}</h3>

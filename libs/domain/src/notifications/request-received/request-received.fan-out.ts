@@ -1,10 +1,10 @@
 import type { EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { metrics } from '@opentelemetry/api';
 import type { Job, JobsOptions } from 'bullmq';
 
 import { loadGarageAccess } from '../../events/garage-access';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { countRequestReceived } from '../../metrics/product-counters';
 import { firstLine } from '../../quotes/reads';
 import type { EmailConfig } from '../email-config';
 import {
@@ -35,21 +35,6 @@ export const REQUEST_RECEIVED_CONSUMER = {
 export interface RequestCreatedEvent {
   id: string;
   payload: { requestId: string };
-}
-
-type Outcome = 'built' | 'muted' | 'skipped';
-
-let garages:
-  | ReturnType<ReturnType<typeof metrics.getMeter>['createCounter']>
-  | undefined;
-
-function count(outcome: Outcome) {
-  garages ??= metrics
-    .getMeter('motorfix')
-    .createCounter('motorfix_request_received_total', {
-      description: 'Garages a new request was announced to, by outcome',
-    });
-  garages.add(1, { outcome });
 }
 
 // A request with no job is named by its description's first line, cut short
@@ -112,7 +97,7 @@ export class RequestReceivedFanOut {
         recipient.garage.status === 'suspended' ||
         recipient.status !== 'waiting'
       ) {
-        count('skipped');
+        countRequestReceived('skipped');
         continue;
       }
       const staff = await this.staff(recipient.garageId);
@@ -129,7 +114,7 @@ export class RequestReceivedFanOut {
       }
       told += staff.length;
       // Nothing queued: everyone who may answer muted it, or nobody may.
-      count(queued > 0 ? 'built' : 'muted');
+      countRequestReceived(queued > 0 ? 'built' : 'muted');
     }
     this.logger.log(`request ${payload.requestId} announced to ${told} staff`);
   }

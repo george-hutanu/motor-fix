@@ -47,6 +47,8 @@ const AGE_TICK_MS = 60_000;
 export class GarageRequestsPanel {
   readonly limit = input<number | undefined>(undefined);
   readonly more = input<readonly GarageRequestSummaryDto[]>([]);
+  // The requests page already says it in its title.
+  readonly titled = input(true);
   protected readonly feed = inject(GarageRequestsFeed);
   protected readonly live = inject(Live);
   private readonly i18n = inject(I18n);

@@ -305,6 +305,13 @@ describe('the closed rows of the last day', () => {
     expect(closedRows(element)).toHaveLength(0);
     expect(element.querySelector('.closed-heading')).toBeNull();
   });
+
+  it('leaves the page title to the page and repeats no heading of its own', async () => {
+    const { element } = await render({});
+
+    expect(element.querySelector('.panel h2')).toBeNull();
+    expect(text(element.querySelector('.counter'))).toBe('45 fără răspuns');
+  });
 });
 
 // @traces 343-FR-016

@@ -13,14 +13,14 @@ export const REQUEST_RECEIVED: Template = {
       button: { label: 'Open the requests', link: 'link' },
       lines: ['A driver asks for a quote: {car}, {job}.'],
       reason:
-        'You get this e-mail because you answer quote requests for your garage on MotorFix.',
+        'You get this e‑mail because you answer quote requests for your garage on MotorFix.',
       subject: 'New request: {car}',
     },
     ro: {
       button: { label: 'Deschide cererile', link: 'link' },
       lines: ['Un șofer cere o ofertă: {car}, {job}.'],
       reason:
-        'Primești acest e-mail pentru că răspunzi la cererile de ofertă ale service-ului tău pe MotorFix.',
+        'Primești acest e‑mail pentru că răspunzi la cererile de ofertă ale service‑ului tău pe MotorFix.',
       subject: 'Cerere nouă: {car}',
     },
   },

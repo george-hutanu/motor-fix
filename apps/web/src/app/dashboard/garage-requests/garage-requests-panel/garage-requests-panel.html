@@ -1,6 +1,8 @@
 <section class="panel" [attr.aria-busy]="feed.loading() || null">
   <header>
-    <h2>{{ 'garage.requests.heading' | t }}</h2>
+    @if (titled()) {
+      <h2>{{ 'garage.requests.heading' | t }}</h2>
+    }
     @if (!feed.loading() && !feed.failed() && counter(); as said) {
       <span class="counter" [mfLiveChange]="feed.total()" [mfLiveChangeSay]="said">{{ said }}</span>
     }
