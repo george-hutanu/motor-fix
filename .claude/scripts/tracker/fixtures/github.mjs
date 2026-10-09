@@ -216,6 +216,8 @@ export function fakeGitHub(seed = {}) {
       return { createProjectV2Field: { projectV2Field: { id: made.id } } };
     },
     CreateView: (v) => {
+      if (v.layout === "ROADMAP_LAYOUT" && v.fieldIds !== undefined)
+        return { errors: [{ type: "UNPROCESSABLE", message: "Roadmap views do not support visible fields." }] };
       const made = { id: nextId("PVTV"), name: v.name, layout: v.layout, filter: null, visibleFieldIds: v.fieldIds ?? [] };
       projectById(v.projectId).views.push(made);
       return { createProjectV2View: { projectV2View: { id: made.id } } };

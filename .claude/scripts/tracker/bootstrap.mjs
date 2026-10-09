@@ -63,7 +63,7 @@ export const SCHEMA = {
       layout: "TABLE_LAYOUT",
       fields: ["Title", "Status", "Priority", "Work type", "Epic", "Ready to work", "Story points", "Started", "Merged at", "Assignees", "Labels", "Milestone"],
     },
-    { name: "Roadmap", layout: "ROADMAP_LAYOUT", fields: ["Title", "Status", "Epic"] },
+    { name: "Roadmap", layout: "ROADMAP_LAYOUT", fields: [] },
     { name: "Blocked", layout: "TABLE_LAYOUT", filter: "status:Blocked", fields: ["Title", "Priority", "Work type", "Epic", "Assignees"] },
     { name: "My work", layout: "TABLE_LAYOUT", filter: "assignee:@me -status:Done", fields: ["Title", "Status", "Priority", "Work type", "Epic"] },
     ...EPICS.map((e) => ({ name: e, layout: "BOARD_LAYOUT", filter: `epic:"${e}"`, fields: ["Title", "Priority", "Work type", "Ready to work"] })),
@@ -118,6 +118,9 @@ const Q = {
     "mutation CreateField($projectId: ID!, $dataType: ProjectV2CustomFieldType!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!], $iteration: ProjectV2IterationFieldConfigurationInput) { createProjectV2Field(input: { projectId: $projectId, dataType: $dataType, name: $name, singleSelectOptions: $options, iterationConfiguration: $iteration }) { projectV2Field { ... on ProjectV2FieldCommon { id } } } }",
   createView:
     "mutation CreateView($projectId: ID!, $name: String!, $layout: ProjectV2ViewLayout!, $fieldIds: [ID!]) { createProjectV2View(input: { projectId: $projectId, name: $name, layout: $layout, configuration: { visibleFieldIds: $fieldIds } }) { projectV2View { id } } }",
+  // A roadmap takes no visible fields: GitHub refuses any configuration for one.
+  createRoadmapView:
+    "mutation CreateView($projectId: ID!, $name: String!, $layout: ProjectV2ViewLayout!) { createProjectV2View(input: { projectId: $projectId, name: $name, layout: $layout }) { projectV2View { id } } }",
   setViewFilter: "mutation SetViewFilter($viewId: ID!, $filter: String!) { updateProjectV2View(input: { viewId: $viewId, filter: $filter }) { projectV2View { id } } }",
 };
 
@@ -235,11 +238,14 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
     const have = state.views.find((v) => v.name === want.name);
     const detail = `${want.name} (${want.layout}${want.filter ? `, filter ${want.filter}` : ""})`;
     if (!have) {
-      const made = await write(Q.createView, { projectId, name: want.name, layout: want.layout, fieldIds: want.fields.map(fieldId).filter(Boolean) });
+      const made =
+        want.layout === "ROADMAP_LAYOUT"
+          ? await write(Q.createRoadmapView, { projectId, name: want.name, layout: want.layout })
+          : await write(Q.createView, { projectId, name: want.name, layout: want.layout, fieldIds: want.fields.map(fieldId).filter(Boolean) });
       if (want.filter) await write(Q.setViewFilter, { viewId: made?.createProjectV2View.projectV2View.id, filter: want.filter });
       created("view", detail);
     } else if (have.layout !== want.layout) differs("view", `${want.name}: ${have.layout}, not ${want.layout}`);
-    else if (!sameSet(have.fieldNames, want.fields.filter(fieldId))) {
+    else if (want.layout !== "ROADMAP_LAYOUT" && !sameSet(have.fieldNames, want.fields.filter(fieldId))) {
       differs("view", `${want.name}: fields ${have.fieldNames.join(", ") || "none"}, not ${want.fields.filter(fieldId).join(", ")}`);
     } else if (want.filter && have.filter !== want.filter) {
       await write(Q.setViewFilter, { viewId: have.id, filter: want.filter });

@@ -166,6 +166,39 @@ describe("field names", () => {
   });
 });
 
+describe("views", () => {
+  it("creates a roadmap without visible fields, which GitHub refuses for one", async () => {
+    const gh = fakeGitHub();
+    const r = await run(gh);
+    assert.equal(r.exit, 0);
+    const roadmaps = ops(gh, "CreateView").filter((q) => q.body.variables.layout === "ROADMAP_LAYOUT");
+    assert.equal(roadmaps.length, 1);
+    assert.equal(roadmaps[0].body.variables.fieldIds, undefined);
+    assert.ok(SCHEMA.views.filter((v) => v.layout === "ROADMAP_LAYOUT").every((v) => v.fields.length === 0));
+  });
+
+  it("finishes a Project whose run stopped after the Board and Table views, then changes nothing", async () => {
+    const gh = fakeGitHub();
+    await run(gh);
+    const p = project(gh);
+    p.views = p.views.filter((v) => v.name === "Board" || v.name === "Table");
+    gh.state.labels.length = 0;
+    gh.state.milestones.length = 0;
+    const before = ops(gh, "CreateView").length;
+    const r = await run(gh);
+    assert.equal(r.exit, 0);
+    assert.deepEqual(
+      p.views.map((v) => v.name).sort(),
+      SCHEMA.views.map((v) => v.name).sort(),
+    );
+    assert.equal(ops(gh, "CreateView").length - before, SCHEMA.views.length - 2);
+    assert.equal(ops(gh, "CreateField").length, SCHEMA.fields.length - 1);
+    const writes = gh.writes().length;
+    assert.equal((await run(gh)).exit, 0);
+    assert.equal(gh.writes().length, writes);
+  });
+});
+
 describe("a Project someone changed by hand", () => {
   it("reports a drifted option and a view's layout without changing them, and exits 2", async () => {
     const gh = fakeGitHub({
