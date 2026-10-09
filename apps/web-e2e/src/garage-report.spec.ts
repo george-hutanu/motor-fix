@@ -48,8 +48,8 @@ test.describe('a report of a garage from its profile @seeded', () => {
     );
     garageId = rows[0]?.id as string;
     await db.query(
-      `INSERT INTO verification_file (garage_id, status, opened_at, decided_at)
-       VALUES ($1, 'approved', now(), now())`,
+      `INSERT INTO verification_file (id, garage_id, status, opened_at, decided_at)
+       VALUES (gen_random_uuid(), $1, 'approved', now(), now())`,
       [garageId],
     );
   });

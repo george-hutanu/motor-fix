@@ -115,10 +115,11 @@ test.describe('the admin dashboard @seeded', () => {
       await signInAsAdmin(page);
 
       // The seed leaves two files waiting; garage-report.spec.ts, running
-      // beside this one, may reopen a third for a few seconds.
+      // beside this one, may reopen a third for a few seconds. A regular
+      // expression is tested against the raw text, line breaks included.
       await expect(
         page.getByText(
-          /^MotorFix · București · [23] service‑uri așteaptă verificarea$/,
+          /MotorFix\s+·\s+București\s+·\s+[23]\s+service‑uri\s+așteaptă\s+verificarea/,
         ),
       ).toBeVisible();
       await expect(
