@@ -26,6 +26,9 @@ async function render(
     answer?: 'sent' | 'gone' | 'cancelled';
     // Who the sign-in gate signs in, or false when it is cancelled.
     signsIn?: Role | false;
+    // Who a session renewed on the tap belongs to: a page opened by its
+    // address, by someone signed in, has not loaded the session yet.
+    restores?: Role;
     language?: 'ro' | 'en';
   } = {},
 ) {
@@ -46,7 +49,11 @@ async function render(
         provide: Session,
         useValue: {
           current,
-          load: jest.fn(async () => null),
+          load: jest.fn(async () => {
+            if (!current() && options.restores)
+              current.set({ role: options.restores });
+            return current();
+          }),
           renew: jest.fn(async () => true),
           roleHint: signal(options.hint ?? null),
         },
@@ -175,6 +182,24 @@ describe('the link to report a garage, for a visitor', () => {
     await press(host);
 
     expect(open).not.toHaveBeenCalled();
+    expect(link(host)).toBeNull();
+  });
+
+  it('opens the report task with no sign-in for a driver whose session loads on the tap', async () => {
+    const host = await render({ hint: 'driver', restores: 'driver' });
+
+    await press(host);
+
+    expect(gate).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens nothing and goes away when the session that loads is not a driver', async () => {
+    const host = await render({ restores: 'garage' });
+
+    await press(host);
+
+    expect([gate.mock.calls.length, open.mock.calls.length]).toEqual([0, 0]);
     expect(link(host)).toBeNull();
   });
 

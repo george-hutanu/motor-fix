@@ -19,39 +19,36 @@ async function send(page: Page) {
   ).toBeVisible();
 }
 
-// Each test reports a garage of its own, approved with a file, so no seeded
-// garage is reopened and its rows go with it. A deployed address, whose run
-// has no DATABASE_URL, skips it.
+// The tests report a listed garage no other spec names, and put its file back
+// after each: a garage of their own would change the counts Home shows to the
+// specs running beside them. A deployed address, whose run has no
+// DATABASE_URL, skips them.
 test.describe('a report of a garage from its profile @seeded', () => {
   test.skip(
     !process.env['DATABASE_URL'],
     'writes its garage straight to PostgreSQL, which needs DATABASE_URL',
   );
+  const slug = 'atelier-drumul-taberei';
   let db: Client;
-  let slug: string;
   let garageId: string;
+  let since: Date;
 
   test.beforeAll(async () => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
     await db.connect();
-  });
-
-  test.beforeEach(async () => {
-    slug = `e2e-raport-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const { rows } = await db.query<{ id: string }>(
-      `INSERT INTO garage (id, name, slug, status, approved_at, business_kind,
-         service_radius_km, known_for)
-       VALUES (gen_random_uuid(), 'Service Raportat E2E', $1, 'approved', now(),
-         'mobile', 25, 'Diagnoză la domiciliu')
-       RETURNING id`,
+      'SELECT id FROM garage WHERE slug = $1',
       [slug],
     );
     garageId = rows[0]?.id as string;
-    await db.query(
-      `INSERT INTO verification_file (id, garage_id, status, opened_at, decided_at)
-       VALUES (gen_random_uuid(), $1, 'approved', now(), now())`,
-      [garageId],
-    );
+  });
+
+  test.beforeEach(async () => {
+    since = (
+      await db.query<{ now: Date }>(
+        "SELECT clock_timestamp() - interval '1 millisecond' AS now",
+      )
+    ).rows[0]?.now as Date;
   });
 
   test.afterEach(async () => {
@@ -60,7 +57,15 @@ test.describe('a report of a garage from its profile @seeded', () => {
          SELECT 'garage.reported:' || id FROM garage_report WHERE garage_id = $1)`,
       [garageId],
     );
-    await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
+    await db.query('DELETE FROM garage_report WHERE garage_id = $1', [
+      garageId,
+    ]);
+    await db.query(
+      `UPDATE verification_file SET status = 'approved', reopen_reason = NULL,
+         reopened_at = NULL, reopened_by = NULL
+       WHERE garage_id = $1`,
+      [garageId],
+    );
   });
 
   test.afterAll(async () => {
@@ -113,8 +118,8 @@ test.describe('a report of a garage from its profile @seeded', () => {
     expect(garage.rows[0]?.status).toBe('approved');
     const events = await db.query<{ kind: string }>(
       `SELECT kind FROM outbox_event
-       WHERE payload->>'garageId' = $1 ORDER BY kind`,
-      [garageId],
+       WHERE payload->>'garageId' = $1 AND created_at >= $2 ORDER BY kind`,
+      [garageId, since],
     );
     expect(events.rows.map(({ kind }) => kind)).toEqual([
       'garage.reported',
@@ -122,8 +127,8 @@ test.describe('a report of a garage from its profile @seeded', () => {
     ]);
     const audit = await db.query<{ subject_type: string }>(
       `SELECT subject_type FROM activity_log
-       WHERE garage_id = $1 ORDER BY subject_type`,
-      [garageId],
+       WHERE garage_id = $1 AND at >= $2 ORDER BY subject_type`,
+      [garageId, since],
     );
     expect(audit.rows.map(({ subject_type }) => subject_type)).toEqual([
       'garage_report',

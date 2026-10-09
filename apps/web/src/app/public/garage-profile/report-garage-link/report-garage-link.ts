@@ -39,12 +39,12 @@ export class ReportGarageLink {
   });
 
   protected async open() {
-    if (!this.session.current()) {
-      if (!(await this.signIn.gate())) return;
-      if (this.session.current()?.role !== 'driver') {
-        this.outcome.set('hidden');
-        return;
-      }
+    // A page opened by its address has not loaded the session yet: someone
+    // signed in is not asked to sign in again.
+    if (!(await this.session.load()) && !(await this.signIn.gate())) return;
+    if (this.session.current()?.role !== 'driver') {
+      this.outcome.set('hidden');
+      return;
     }
     // Loaded on the first tap: the task stays out of the page's bundle.
     const { ReportGarage } = await import('../report-garage/report-garage');
