@@ -4,25 +4,34 @@ import {
   ActivatedRoute,
   NavigationEnd,
   Router,
+  RouterLink,
   RouterOutlet,
 } from '@angular/router';
-import { TranslatePipe } from '@motor-fix/i18n';
+import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 import { filter } from 'rxjs';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { PublicTabBar } from '../tab-bar/tab-bar';
 
-// Full height, so the sticky bar sits at the bottom of a short page too. On
-// wider screens, where there is no tab bar, a top bar holds "Autentificare"
-// until the public header exists.
+// Full height, so the sticky tab bar sits at the bottom of a short page too.
+// The site bar on top is the same on every public page: its links show from
+// 640 px; narrower, an account button stands in for them beside the language
+// switch, and the tab bar does the rest.
 @Component({
-  imports: [RouterOutlet, PublicTabBar, TranslatePipe],
+  imports: [
+    LanguageSwitch,
+    RouterLink,
+    RouterOutlet,
+    PublicTabBar,
+    TranslatePipe,
+  ],
   selector: 'mf-public-frame',
   styleUrl: './frame.css',
   templateUrl: './frame.html',
 })
 export class PublicFrame {
   protected readonly signIn = inject(SignInDialog);
+  protected readonly i18n = inject(I18n);
   // `/` turns this off: its server render is for search engines (ST-287).
   protected readonly tabBar =
     inject(ActivatedRoute).snapshot.data['tabBar'] !== false;

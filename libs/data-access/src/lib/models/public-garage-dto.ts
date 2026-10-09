@@ -5,18 +5,30 @@ import { BrandRefDto } from '../models/brand-ref-dto';
 import { CourtesyCarDto } from '../models/courtesy-car-dto';
 import { PaymentMethodsDto } from '../models/payment-methods-dto';
 import { PublicBrandDto } from '../models/public-brand-dto';
+import { PublicGarageBrandDto } from '../models/public-garage-brand-dto';
 export interface PublicGarageDto {
 
   /**
    * A workshop only.
    */
   address?: string;
+
+  /**
+   * Only when the read named a catalogue brand
+   */
+  brand?: PublicGarageBrandDto;
   brandNote: string | null;
+  businessKind?: 'company' | 'pfa' | 'ii' | 'mobile';
 
   /**
    * Absent when the garage does not list one; a price only when paid
    */
   courtesyCar?: CourtesyCarDto;
+
+  /**
+   * The line the garage wrote about itself, as written
+   */
+  description?: string;
   doesNotTake: Array<BrandRefDto>;
   id: string;
 
@@ -31,12 +43,23 @@ export interface PublicGarageDto {
   longitude?: number;
   name: string;
   paymentMethods: PaymentMethodsDto;
+
+  /**
+   * Out of 5, one decimal; null until reviews exist
+   */
+  rating: number | null;
   refusalPhrase: string | null;
+  reviewCount: number;
 
   /**
    * A mobile mechanic only: how far from its base it travels.
    */
   serviceRadiusKm?: number;
   slug: string;
+
+  /**
+   * When MotorFix last verified the garage
+   */
+  verifiedAt: string | null;
   worksOn: Array<PublicBrandDto>;
 }

@@ -81,7 +81,7 @@ const robots = () =>
 const LANDMARKS = 'header, main, nav, footer, aside, section[aria-label]';
 
 // One main, at the top level, holding Home; every other part of the frame in a
-// landmark of its own.
+// landmark of its own, the site bar holding sign-in and the language switch.
 function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
   const root = harness.fixture.nativeElement as HTMLElement;
   const mains = root.querySelectorAll('main');
@@ -89,7 +89,6 @@ function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
   const main = mains[0];
   expect(main.parentElement?.closest(LANDMARKS)).toBeNull();
   expect(main.querySelector('h1')?.textContent).toContain('MotorFix');
-  expect(main.querySelector('[role="group"]')).not.toBeNull();
   expect(main.textContent).toContain('PostgreSQL');
 
   const frame = root.querySelector('mf-public-frame');
@@ -103,6 +102,7 @@ function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
   const banners = frame?.querySelectorAll(':scope > header') ?? [];
   expect(banners).toHaveLength(1);
   expect(banners[0].querySelector('button')?.textContent).toContain(signIn);
+  expect(banners[0].querySelector('[role="group"]')).not.toBeNull();
 }
 
 beforeEach(() => {
@@ -364,5 +364,16 @@ describe('alternates', () => {
       ro: `${ORIGIN}/ro/garages/atelier-dinamo`,
       'x-default': `${ORIGIN}/ro/garages/atelier-dinamo`,
     });
+  });
+});
+
+describe('public frame', () => {
+  // The site bar grew the frame; loaded on demand, it stays out of the first
+  // download, whose budget the production build enforces.
+  it.each(['', ':lang'])('loads the frame of "%s" on demand', (path) => {
+    const route = routes.find((r) => r.path === path);
+
+    expect(route?.loadComponent).toBeDefined();
+    expect(route?.component).toBeUndefined();
   });
 });
