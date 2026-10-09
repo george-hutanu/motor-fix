@@ -283,3 +283,27 @@ describe('checkPrBody on a draft PR', () => {
     expect(draft(body)).toEqual(['Missing section: "## Agent review".']);
   });
 });
+
+// @traces 1017-github-project-tracker-FR-006
+describe('the Closes line under Notion story', () => {
+  const draft = (body: string) =>
+    checkPrBody({ body, draft: true, template, title: 'WIP' });
+
+  it('sits in the template under the story link', () => {
+    expect(template).toMatch(
+      /## Notion story\n\n_\(fill in: the story link[^\n]*\n\n<!--[^\n]*-->\nCloses #\n/,
+    );
+  });
+
+  for (const [name, change] of [
+    ['filled in', (b: string) => b.replace(/^Closes #$/m, 'Closes #12')],
+    ['left empty', (b: string) => b],
+    ['removed', (b: string) => b.replace(/^Closes #\n/m, '')],
+  ] as const) {
+    it(`passes a ready and a draft body with the line ${name}`, () => {
+      expect(template).toMatch(/^Closes #$/m);
+      expect(ready(change(filled()))).toEqual([]);
+      expect(draft(change(template))).toEqual([]);
+    });
+  }
+});

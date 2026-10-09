@@ -1,0 +1,16 @@
+name: Story
+description: A piece of product behaviour for a driver, garage, mechanic or admin.
+labels: ["type: story"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What and why
+      description: The behaviour and who needs it. Link the Notion feature page if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: done-when
+    attributes:
+      label: Done when
+      description: The checks that show it works.

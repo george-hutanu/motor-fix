@@ -13,6 +13,9 @@ _(fill in: what this PR does and why, in two or three sentences)_
 
 _(fill in: the story link, e.g. https://app.notion.com/p/… (ST-n))_
 
+<!-- The GitHub issue this PR closes, once the tracker is the GitHub Project; leave the line as it is until then. -->
+Closes #
+
 ## Spec folder
 
 _(fill in: specs/NNN-slug in motor-fix-specs, or N/A and why)_

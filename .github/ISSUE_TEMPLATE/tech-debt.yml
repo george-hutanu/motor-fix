@@ -1,0 +1,16 @@
+name: Tech debt
+description: Code that works but costs more to change than it should.
+labels: ["type: tech debt"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why it matters
+    validations:
+      required: true

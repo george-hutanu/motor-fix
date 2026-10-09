@@ -1,0 +1,14 @@
+name: Task
+description: Work that ships no product behaviour on its own: tooling, setup, a chore.
+labels: ["type: task"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What to do
+    validations:
+      required: true
+  - type: textarea
+    id: done-when
+    attributes:
+      label: Done when
