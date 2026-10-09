@@ -8,6 +8,7 @@ import { BadRequestException } from '@nestjs/common';
 
 import { PAGE_SIZE } from './quotes-config';
 import type {
+  Booking,
   Garage,
   JobType,
   Quote,
@@ -112,3 +113,47 @@ export async function assertCursor(
 }
 
 export const PAGE_TAKE = PAGE_SIZE + 1;
+
+export const invalidInput = (message: string) =>
+  new BadRequestException({ code: 'validation', message });
+
+// A booking as a garage's day reads it: the car as the driver described it
+// and the jobs the garage quoted, named in the reader's language.
+export const bookedInclude = {
+  quote: {
+    include: {
+      jobs: {
+        include: { requestJob: { include: { jobType: true } } },
+        where: { included: true },
+      },
+    },
+  },
+  request: true,
+} as const;
+
+type BookedRow = Booking & {
+  quote: Quote & {
+    jobs: (QuoteJob & { requestJob: RequestJob & { jobType: JobType } })[];
+  };
+  request: QuoteRequest;
+};
+
+export function bookedOf(row: BookedRow, language: 'ro' | 'en' = 'ro') {
+  return {
+    car: {
+      brand: row.request.carBrand,
+      model: row.request.carModel,
+      year: row.request.carYear,
+    },
+    durationMinutes: row.durationMinutes,
+    id: row.id,
+    jobs: row.quote.jobs
+      .map((job) => job.requestJob)
+      .sort((a, b) => a.position - b.position)
+      .map((job) =>
+        language === 'en' ? job.jobType.nameEn : job.jobType.nameRo,
+      ),
+    startsAt: row.startsAt.toISOString(),
+    state: row.status,
+  };
+}

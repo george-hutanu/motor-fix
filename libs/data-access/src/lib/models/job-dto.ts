@@ -5,6 +5,7 @@ import { DriverNameDto } from '../models/driver-name-dto';
 import { GarageCarDto } from '../models/garage-car-dto';
 import { JobStageEntryDto } from '../models/job-stage-entry-dto';
 import { JobStepDto } from '../models/job-step-dto';
+import { RequestJobDto } from '../models/request-job-dto';
 export interface JobDto {
   bookingId: string;
   car: GarageCarDto;
@@ -15,10 +16,27 @@ export interface JobDto {
   finishedAt: string | null;
   handedOverAt: string | null;
   id: string;
+  jobs: Array<RequestJobDto>;
   mechanicId: string | null;
+  mechanicName: string | null;
   pausedAt: string | null;
   stages: Array<JobStageEntryDto>;
   startedAt: string | null;
+
+  /**
+   * The booking's start
+   */
+  startsAt: string;
   status: 'to_do' | 'in_work' | 'paused' | 'done' | 'cancelled';
   steps: Array<JobStepDto>;
+
+  /**
+   * Steps ticked
+   */
+  stepsDone: number;
+
+  /**
+   * Steps written, 0 to 20
+   */
+  stepsTotal: number;
 }

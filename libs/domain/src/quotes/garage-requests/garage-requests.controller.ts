@@ -30,7 +30,7 @@ export class GarageRequestsController {
     @CurrentActor() actor: Actor,
     @Query() query: ListQueryDto,
   ): Promise<GarageRequestListDto> {
-    return this.requests.list(actor, query.cursor);
+    return this.requests.list(actor, { cursor: query.cursor });
   }
 
   @Get(':id')

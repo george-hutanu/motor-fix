@@ -57,6 +57,21 @@ export function quotesApp() {
     return auth ? call.set('Authorization', auth) : call;
   };
 
+  // A write, its body sent as JSON.
+  const send = (
+    method: 'post' | 'patch' | 'put' | 'delete',
+    path: string,
+    auth: string,
+    body?: object,
+    headers: Record<string, string> = {},
+  ) => {
+    const call = request(app.getHttpServer())
+      [method](path)
+      .set('Authorization', auth)
+      .set(headers);
+    return body ? call.send(body) : call;
+  };
+
   // A JSON body as written; the key header only when one is given.
   const post = (path: string, body: unknown, auth?: string, key?: string) => {
     const call = request(app.getHttpServer()).post(path);
@@ -101,5 +116,5 @@ export function quotesApp() {
     };
   }
 
-  return { bearer, get, post, team, world };
+  return { bearer, get, post, send, team, world };
 }
