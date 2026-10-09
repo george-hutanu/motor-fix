@@ -72,7 +72,7 @@ export class AdminGrowth {
 
   constructor() {
     void this.i18n.enter('admin');
-    // Read at once and again for every city chosen (163-FR-010).
+    // Read at once and again for every city chosen.
     effect(() => {
       this.city();
       untracked(() => void this.read());

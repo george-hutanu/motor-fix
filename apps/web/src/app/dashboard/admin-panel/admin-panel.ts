@@ -17,7 +17,7 @@ interface Tile {
 
 // The figures with no data behind them yet show "în curând" until their
 // stories ship them.
-// In a chosen period the lines count from its start (163-FR-011); `today`
+// In a chosen period the lines count from its start; `today`
 // has no active-drivers line, its start row being the same day.
 const inPeriod = (f: Figures) => f.period !== 'default';
 const sinceStart = (now: number, start: number | undefined) =>

@@ -1,6 +1,6 @@
 import { CITY_ALL, type Period } from '@motor-fix/contracts';
 
-import { periodRange } from './periods';
+import { monthsBack, periodRange } from './periods';
 import { addDays, atLocal, localDay, monthStart } from '../bucharest';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
@@ -140,10 +140,7 @@ export async function readGrowth(
   city: string = CITY_ALL,
 ) {
   const current = monthStart(localDay(now));
-  const [year, month] = current.split('-').map(Number);
-  const starts = [...Array(12).keys()].map((i) =>
-    new Date(Date.UTC(year, month - 12 + i, 1)).toISOString().slice(0, 10),
-  );
+  const starts = [...Array(12).keys()].map((i) => monthsBack(current, 11 - i));
   const closing = starts.slice(1);
   const [rows, live] = await Promise.all([
     db.platformDaily.findMany({

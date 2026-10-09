@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 
-import { PLACE_GARAGES_PER_NIGHT, placeGarages } from './place-garages';
+import { placeGarages } from './place-garages';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 import { FakePlaces } from '../places/providers/fake-places.provider';
@@ -99,8 +99,7 @@ describe('the nightly placing of garages with no city', () => {
     expect(texts).toEqual([]);
   });
 
-  it(`places at most ${PLACE_GARAGES_PER_NIGHT} a night, the listed ones first, then the oldest`, async () => {
-    expect(PLACE_GARAGES_PER_NIGHT).toBe(25);
+  it('places at most 25 a night, the listed ones first, then the oldest', async () => {
     const old = new Date('2026-01-01T00:00:00Z');
     for (let i = 0; i < 25; i += 1) {
       await garage({ address: `Strada Veche ${i}`, createdAt: old });
@@ -166,6 +165,39 @@ describe('the nightly placing of garages with no city', () => {
       });
     },
   );
+
+  it('asks for a garage never asked before ahead of the ones it could not place', async () => {
+    const old = new Date('2026-01-01T00:00:00Z');
+    for (let i = 0; i < 25; i += 1) {
+      await garage({ address: `Strada Nicaieri ${i}`, createdAt: old });
+    }
+    const { provider, texts } = asked((q) =>
+      q.startsWith('Strada Nicaieri')
+        ? { items: [] }
+        : {
+            items: [
+              { label: 'x', lat: 46.8, lng: 23.6, locality: 'Cluj-Napoca' },
+            ],
+          },
+    );
+    await placeGarages(prisma, provider);
+    const fresh = await garage({
+      address: 'Strada Nouă 1',
+      createdAt: new Date('2026-10-01T00:00:00Z'),
+    });
+    texts.length = 0;
+
+    await expect(placeGarages(prisma, provider)).resolves.toEqual({
+      placed: 1,
+      unplaced: 24,
+    });
+
+    expect(texts[0]).toBe('Strada Nouă 1');
+    await expect(cityOfGarage(fresh.id)).resolves.toEqual({
+      cityKey: 'cluj-napoca',
+      cityName: 'Cluj-Napoca',
+    });
+  });
 
   it('stops asking once the look-up is down, and counts what it did not place', async () => {
     await garage();

@@ -8,17 +8,19 @@ import type {
   PlacesProvider,
 } from '../places/providers/places.provider';
 
-export const PLACE_GARAGES_PER_NIGHT = 25;
+const PLACE_GARAGES_PER_NIGHT = 25;
 
 const logger = new Logger('Insights');
 
 // Gives a city to the garages saved before the address carried one, a few a
 // night so the look-up's free quota holds: the listed ones first, then the
-// oldest. One the look-up cannot place is asked again the next night; once
-// the look-up is down, the rest wait for the next night too.
+// oldest, and the ones never asked before the ones it could not place, so
+// those never hold the rest back. Once the look-up is down, the rest wait
+// for the next night.
 export async function placeGarages(db: PrismaClient, provider: PlacesProvider) {
   const garages = await db.garage.findMany({
     orderBy: [
+      { cityLookedUpAt: { nulls: 'first', sort: 'asc' } },
       { approvedAt: { nulls: 'last', sort: 'asc' } },
       { createdAt: 'asc' },
     ],
@@ -46,12 +48,14 @@ export async function placeGarages(db: PrismaClient, provider: PlacesProvider) {
       seconds,
     );
     const city = cityOf(answer.items[0]?.locality);
-    if (!city) continue;
     await db.garage.update({
-      data: { cityKey: city.key, cityName: city.name },
+      data: {
+        cityLookedUpAt: new Date(),
+        ...(city && { cityKey: city.key, cityName: city.name }),
+      },
       where: { id },
     });
-    placed += 1;
+    if (city) placed += 1;
   }
   const unplaced = garages.length - placed;
   logger.log(`placed ${placed}, unplaced ${unplaced}`);

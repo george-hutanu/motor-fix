@@ -23,6 +23,7 @@ import {
   PERIODS,
   type Period,
 } from '@motor-fix/contracts/figure-choices';
+import { LOCALITY_MAX } from '@motor-fix/contracts/place-section';
 import type { CarDto, MeDto } from '@motor-fix/data-access';
 import {
   AsWritten,
@@ -55,12 +56,14 @@ import { type Area, allowedViews, type Counts, DASHBOARDS } from '../views';
 type Role = MeDto['role'];
 
 // The chips' order, whatever order the account holds its roles in.
-// The Panou address's choice; anything else in it is the default (163-FR-009).
+// The Panou address's choice; anything else in it is the default.
 const choiceOf = (query: Params): FiltersChoice => {
   const { city, period } = query;
   return {
     city:
-      typeof city === 'string' && CITY_KEY.test(city) && city.length <= 80
+      typeof city === 'string' &&
+      CITY_KEY.test(city) &&
+      city.length <= LOCALITY_MAX
         ? city
         : CITY_ALL,
     period: PERIODS.includes(period) ? (period as Period) : 'default',
@@ -236,7 +239,7 @@ export class Frame implements OnInit {
   }
 
   // Panou's address holds the choice; an unknown one is corrected in place,
-  // and every other view reads the whole country (163-FR-009).
+  // and every other view reads the whole country.
   private followAddress(overview: AdminOverview) {
     effect(() => {
       if (!this.onPanel()) {
