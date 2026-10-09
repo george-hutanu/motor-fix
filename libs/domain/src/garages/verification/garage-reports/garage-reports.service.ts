@@ -169,7 +169,7 @@ export class GarageReportsService {
       );
     }
     const earlier = await tx.garageReport.count({
-      where: { verificationFileId: file.id },
+      where: { status: 'open', verificationFileId: file.id },
     });
     if (file.status === 'approved') {
       await this.verification.reopen(tx, SYSTEM, file.id, 'garage_report');
