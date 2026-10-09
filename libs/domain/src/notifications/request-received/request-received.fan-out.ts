@@ -5,6 +5,7 @@ import type { Job, JobsOptions } from 'bullmq';
 
 import { loadGarageAccess } from '../../events/garage-access';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { firstLine } from '../../quotes/reads';
 import type { EmailConfig } from '../email-config';
 import {
   NOTIFICATIONS_CONFIG,
@@ -96,13 +97,13 @@ export class RequestReceivedFanOut {
     });
     if (!request) return;
     const [first] = request.jobs;
-    const described = request.description?.trim().split('\n')[0].trim() ?? '';
+    const described = firstLine(request.description?.trim() || null);
     const jobName = (language: string) =>
       first
         ? language === 'en'
           ? first.jobType.nameEn
           : first.jobType.nameRo
-        : described.slice(0, JOB_NAME_LENGTH);
+        : (described ?? '').slice(0, JOB_NAME_LENGTH);
     const car = `${request.carBrand} ${request.carModel}`;
     const link = `${this.config.webUrl}/app/garage/requests`;
     let told = 0;
@@ -127,6 +128,7 @@ export class RequestReceivedFanOut {
         });
       }
       told += staff.length;
+      // Nothing queued: everyone who may answer muted it, or nobody may.
       count(queued > 0 ? 'built' : 'muted');
     }
     this.logger.log(`request ${payload.requestId} announced to ${told} staff`);
