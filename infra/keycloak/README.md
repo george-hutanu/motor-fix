@@ -63,8 +63,9 @@ Claude Desktop use their client documents.
 Staging only: production runs neither the identity server nor the MCP server.
 The release workflow builds this folder's `Dockerfile` (Keycloak with the
 realm baked in) and `scripts/railway-deploy.ts` deploys both services after
-the api, worker and web, each waiting for its health check: Keycloak's is the
-realm's discovery document, the MCP server's is `/health/live`. Until the
+the api, worker and web, each waiting for its health check: Keycloak's is `/realms/master`, which
+answers only once the realm import has finished (Railway refuses a path with
+a `.` or a `-`), the MCP server's is `/health/live`. Until the
 owner has created a service and set its id, the release skips it with a
 notice.
 
