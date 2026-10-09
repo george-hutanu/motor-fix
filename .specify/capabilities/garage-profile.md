@@ -1,8 +1,9 @@
 ---
 capability: garage-profile
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 307-public-garage-profile
+  - 384-response-rate
 ---
 
 # Capability: Garage profile
@@ -82,6 +83,18 @@ _From 307-public-garage-profile._
 ### 307-FR-019 — The story MUST write nothing: no view count (another story's), no audit entry, no event, no search log.
 
 _From 307-public-garage-profile._
+
+### 384-FR-007 — The public profile read (`GET /api/v1/garages/{slug}`) MUST carry `responseRate`: `{ state: 'new' }` when the garage has no stats row or `lifetime_requests` < RESPONSE_RATE_MIN_REQUESTS (10); `{ state: 'rate', rate: <0..100> }` when `lifetime_requests` ≥ 10 and `requests_30d` > 0; `{ state: 'none' }` when `lifetime_requests` ≥ 10 and `requests_30d` = 0. The answer's cached copy carries it like every other field (307-FR-006); the relay's drop on `response_stats.updated` keeps it current; the cache key's shape version is bumped since the answer's shape changed.
+
+_From 384-response-rate._
+
+### 384-FR-008 — The profile header MUST show, in the text column after the verification line and before the request button, in the same small style as the verification line (same font size, weight and colour token as `.verified`'s text, which the PR QA type measurement compares): for state `rate`, "Răspunde la {rate}% din cereri într-o zi" / "Answers {rate}% of requests within a day"; for state `new`, "Nou pe MotorFix" / "New on MotorFix"; for state `none`, nothing. The texts live in the public texts for both languages; the line is plain text, never colour alone; an in-place change is announced politely without moving focus (307-FR-016).
+
+_From 384-response-rate._
+
+### 384-FR-009 — The open profile MUST re-read its answer when `response_stats.updated` for its garage arrives on the public live stream it already joins (307-FR-017), with no polling of its own.
+
+_From 384-response-rate._
 
 ## Retired
 
