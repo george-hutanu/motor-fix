@@ -385,8 +385,10 @@ describe('writing only what changed', () => {
   });
 
   it('keeps each garage whole when a write fails, and the retry writes only what still differs', async () => {
-    const kept = await world.garage('Atelier Dinamo');
-    const refused = await world.garage('Service Titan');
+    const [kept, refused] = [
+      await world.garage('Atelier Dinamo'),
+      await world.garage('Service Titan'),
+    ].sort((a, b) => a.id.localeCompare(b.id));
     await answeredOf(kept.id, 10, 10);
     await answeredOf(refused.id, 10, 10);
     await prisma.$executeRawUnsafe(
@@ -407,14 +409,13 @@ describe('writing only what changed', () => {
       );
       await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS refuse_event()');
     }
-    const keptRow = await stats(kept.id);
-    const keptEvents = (await events()).filter((e) => e.subjectId === kept.id);
+    expect(await stats(kept.id)).not.toBeNull();
     expect(await stats(refused.id)).toBeNull();
-    expect(keptEvents).toHaveLength(keptRow ? 1 : 0);
+    expect((await events()).map((e) => e.subjectId)).toEqual([kept.id]);
 
     const retry = await writeResponseStats(prisma, NOW);
 
-    expect(retry).toEqual({ computed: 2, written: keptRow ? 1 : 2 });
+    expect(retry).toEqual({ computed: 2, written: 1 });
     expect((await events()).map((e) => e.subjectId).sort()).toEqual(
       [kept.id, refused.id].sort(),
     );

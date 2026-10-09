@@ -42,7 +42,8 @@ async function countResponseStats(db: PrismaClient, now: Date) {
       WHERE r.garage_id = g.id
     ) r ON true
     WHERE g.status = 'approved'
-    GROUP BY g.id`;
+    GROUP BY g.id
+    ORDER BY g.id`;
   return rows.map((row) => ({
     ...row,
     rate:
