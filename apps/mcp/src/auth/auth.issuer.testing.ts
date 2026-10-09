@@ -19,10 +19,15 @@ interface Key {
   jwk: JWK;
 }
 
-async function newKey(kid: string = randomUUID()): Promise<Key> {
-  const { privateKey, publicKey } = await generateKeyPair('RS256', {
-    extractable: true,
-  });
+type KeyPair = Awaited<ReturnType<typeof generateKeyPair>>;
+
+const keyPair = () => generateKeyPair('RS256', { extractable: true });
+
+async function newKey(
+  kid: string = randomUUID(),
+  pair?: KeyPair,
+): Promise<Key> {
+  const { privateKey, publicKey } = pair ?? (await keyPair());
   return {
     jwk: { ...(await exportJWK(publicKey)), alg: 'RS256', kid, use: 'sig' },
     kid,
@@ -44,6 +49,9 @@ interface SignOptions {
 // a count of the requests made to it, and tokens it signs.
 export async function testIssuer(audience = TEST_MCP_URL) {
   let keys = [await newKey()];
+  // One pair for every unpublished key: generating an RSA key per token is
+  // slow enough to time a loop of them out on a busy runner.
+  let stranger: KeyPair | undefined;
   const keyRequests: IncomingHttpHeaders[] = [];
   const server: Server = createServer((req, res) => {
     keyRequests.push({ ...req.headers, url: req.url });
@@ -70,8 +78,9 @@ export async function testIssuer(audience = TEST_MCP_URL) {
     };
     for (const name of options.omit ?? []) delete claims[name];
     const published = keys[keys.length - 1] as Key;
+    if (options.unpublished) stranger ??= await keyPair();
     const key = options.unpublished
-      ? await newKey()
+      ? await newKey(randomUUID(), stranger)
       : options.forged
         ? await newKey(published.kid)
         : published;

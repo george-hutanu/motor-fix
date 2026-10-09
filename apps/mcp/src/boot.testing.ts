@@ -3,8 +3,9 @@ import type { AddressInfo } from 'node:net';
 
 import { createMcpApp } from './mcp.module';
 
-// Nothing here reaches the database or the identity server: both are only
-// contacted by an authenticated call.
+// Nothing here reaches the database, which only an authenticated call
+// contacts. The identity server probe does run, against a closed port: it logs
+// the server down once and changes nothing a spec reads.
 export async function bootMcp() {
   const app = await createMcpApp({
     databaseUrl: 'postgresql://127.0.0.1:1/unused',

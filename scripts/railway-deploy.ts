@@ -7,14 +7,17 @@
 //   node scripts/railway-deploy.ts <staging|production>
 //
 // Reads RAILWAY_API_TOKEN, RAILWAY_ENVIRONMENT_ID, RAILWAY_SERVICE_<APP> and
-// IMAGE_<APP> for APP in API, WORKER, WEB. RAILWAY_TOKEN_KIND=project sends
-// the token as a project token; unset, a bearer token Railway refuses is
-// retried once as a project token.
+// IMAGE_<APP> for each service of the environment: API, WORKER, WEB, and on
+// staging only KEYCLOAK and MCP. An unset RAILWAY_SERVICE_KEYCLOAK or
+// RAILWAY_SERVICE_MCP skips that service with a notice, until the owner has
+// created it. RAILWAY_TOKEN_KIND=project sends the token as a project token;
+// unset, a bearer token Railway refuses is retried once as a project token.
 
 export interface Service {
   name: string;
   id: string;
   image: string;
+  healthcheckPath: string;
   replicas: number;
   preDeploy?: string[];
 }
@@ -182,7 +185,7 @@ interface Touched {
 async function deployOne(options: Options, entry: Touched) {
   const { service } = entry;
   await update(options, service.id, {
-    healthcheckPath: '/health/ready',
+    healthcheckPath: service.healthcheckPath,
     healthcheckTimeout: HEALTH_TIMEOUT_S,
     numReplicas: service.replicas,
     ...(service.preDeploy && { preDeployCommand: service.preDeploy }),
@@ -259,21 +262,73 @@ export async function deploy(options: Options) {
   }
 }
 
-const REPLICAS: Record<string, Record<string, number>> = {
-  production: { api: 2, web: 2, worker: 1 },
-  staging: { api: 1, web: 1, worker: 1 },
+// Production is the three apps; the identity server and the MCP server run on
+// staging only, in that order, after the api they both call.
+const ENVIRONMENTS: Record<
+  string,
+  { services: string[]; replicas: Record<string, number> }
+> = {
+  production: {
+    replicas: { api: 2, web: 2 },
+    services: ['api', 'worker', 'web'],
+  },
+  staging: {
+    replicas: {},
+    services: ['api', 'worker', 'web', 'keycloak', 'mcp'],
+  },
 };
 
-function required(name: string): string {
-  const value = process.env[name];
+// Keycloak is healthy once its realm answers; the MCP server's readiness
+// would wait on the identity server, so Railway checks its liveness.
+const HEALTH_PATH: Record<string, string> = {
+  keycloak: '/realms/motorfix-assistants/.well-known/openid-configuration',
+  mcp: '/health/live',
+};
+
+// Created by the owner after the first release that carries them.
+const OPTIONAL = new Set(['keycloak', 'mcp']);
+
+function required(
+  name: string,
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const value = env[name];
   if (!value) throw new Error(`missing environment variable ${name}`);
   return value;
 }
 
-async function main() {
-  const replicas = REPLICAS[process.argv[2] ?? ''];
-  if (!replicas)
+export function servicesFor(
+  environment: string,
+  env: Record<string, string | undefined> = process.env,
+): Service[] {
+  const settings = Object.hasOwn(ENVIRONMENTS, environment)
+    ? ENVIRONMENTS[environment]
+    : undefined;
+  if (!settings)
     throw new Error('usage: railway-deploy.ts <staging|production>');
+  return settings.services.flatMap((name) => {
+    const id = `RAILWAY_SERVICE_${name.toUpperCase()}`;
+    if (OPTIONAL.has(name) && !env[id]) {
+      console.log(
+        `::notice::${id} is not set; ${name} was not deployed for this release.`,
+      );
+      return [];
+    }
+    return [
+      {
+        healthcheckPath: HEALTH_PATH[name] ?? '/health/ready',
+        id: required(id, env),
+        image: required(`IMAGE_${name.toUpperCase()}`, env),
+        name,
+        replicas: settings.replicas[name] ?? 1,
+        ...(name === 'api' && { preDeploy: API_PRE_DEPLOY }),
+      },
+    ];
+  });
+}
+
+async function main() {
+  const services = servicesFor(process.argv[2] ?? '');
   // A cancelled run gets SIGINT, then SIGTERM a few seconds later. Both stay
   // handled for the whole run, so the second does not kill the restore.
   const cancel = new AbortController();
@@ -291,13 +346,7 @@ async function main() {
     // start) decides; this limit only stops a run whose deployment never ends.
     limitMs: 20 * 60_000,
     pollMs: 5_000,
-    services: ['api', 'worker', 'web'].map((name) => ({
-      id: required(`RAILWAY_SERVICE_${name.toUpperCase()}`),
-      image: required(`IMAGE_${name.toUpperCase()}`),
-      name,
-      replicas: replicas[name] ?? 1,
-      ...(name === 'api' && { preDeploy: API_PRE_DEPLOY }),
-    })),
+    services,
     signal: cancel.signal,
     token: required('RAILWAY_API_TOKEN'),
     ...(process.env['RAILWAY_TOKEN_KIND'] === 'project' && {
