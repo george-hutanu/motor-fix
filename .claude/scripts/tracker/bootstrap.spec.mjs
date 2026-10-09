@@ -36,11 +36,11 @@ const fieldNamed = (gh, name) => project(gh).fields.find((f) => f.name === name)
 const optionNames = (gh, name) => fieldNamed(gh, name).options.map((o) => o.name);
 const EPICS = Array.from({ length: 17 }, (_, i) => `EP-${i + 1}`);
 
-// @traces 1017-github-project-tracker-FR-001
-// @traces 1017-github-project-tracker-FR-002
-// @traces 1017-github-project-tracker-FR-003
-// @traces 1017-github-project-tracker-FR-004
-// @traces 1017-github-project-tracker-FR-014
+// @traces 1017-FR-001
+// @traces 1017-FR-002
+// @traces 1017-FR-003
+// @traces 1017-FR-004
+// @traces 1017-FR-014
 describe("a first run on a fresh account", () => {
   it("creates the Project, links the repository, writes the README and posts one status update", async () => {
     const gh = fakeGitHub();
@@ -190,7 +190,7 @@ describe("a dry run", () => {
   });
 });
 
-// @traces 1017-github-project-tracker-FR-003
+// @traces 1017-FR-003
 describe("the owner's checklist", () => {
   it("fits fifteen lines, one setting each, and holds only what the API cannot set", async () => {
     assert.ok(CHECKLIST.length >= 7 && CHECKLIST.length <= 15, `${CHECKLIST.length} lines`);

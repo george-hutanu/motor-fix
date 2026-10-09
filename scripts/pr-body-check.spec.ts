@@ -284,7 +284,7 @@ describe('checkPrBody on a draft PR', () => {
   });
 });
 
-// @traces 1017-github-project-tracker-FR-006
+// @traces 1017-FR-006
 describe('the Closes line under Notion story', () => {
   const draft = (body: string) =>
     checkPrBody({ body, draft: true, template, title: 'WIP' });

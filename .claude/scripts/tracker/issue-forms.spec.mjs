@@ -8,7 +8,7 @@ const FORMS = { story: "story", task: "task", bug: "bug", "tech-debt": "tech deb
 const read = (name) => readFileSync(`${DIR}${name}`, "utf8");
 const topLevel = (text, key) => text.match(new RegExp(`^${key}:\\s*(.*)$`, "m"))?.[1];
 
-// @traces 1017-github-project-tracker-FR-005
+// @traces 1017-FR-005
 describe("the issue forms", () => {
   for (const [file, type] of Object.entries(FORMS)) {
     describe(`${file}.yml`, () => {

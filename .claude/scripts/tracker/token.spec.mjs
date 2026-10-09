@@ -7,7 +7,7 @@ import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
 const SECRET = "ghp_SECRET_never_print_me";
 
-// @traces 1017-github-project-tracker-FR-014
+// @traces 1017-FR-014
 describe("projectToken", () => {
   it("takes GH_PROJECT_TOKEN without running gh", () => {
     const calls = [];

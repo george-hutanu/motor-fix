@@ -24,8 +24,8 @@ const client = (clock, answers, extra = {}) => {
   return { ...f, github: githubClient({ token: TOKEN, fetchImpl: f.fetchImpl, sleep: clock.sleep, now: clock.now, ...extra }) };
 };
 
-// @traces 1017-github-project-tracker-FR-013
-// @traces 1017-github-project-tracker-FR-014
+// @traces 1017-FR-013
+// @traces 1017-FR-014
 describe("requests", () => {
   it("sends the bearer token and GitHub's headers to the repository path", async () => {
     const clock = fakeClock();
