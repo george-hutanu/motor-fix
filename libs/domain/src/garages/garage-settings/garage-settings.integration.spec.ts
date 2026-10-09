@@ -17,6 +17,8 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { UNUSED_STORAGE } from '../../storage/s3-test-store';
+import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
 
 const redisUrl = redisUrlFor(3);
@@ -41,6 +43,7 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
+      StorageModule.register(UNUSED_STORAGE),
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
       }),

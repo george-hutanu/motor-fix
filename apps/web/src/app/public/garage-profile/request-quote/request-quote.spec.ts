@@ -36,6 +36,7 @@ const GARAGE: PublicGarageDto = {
   jobTypes: [OIL, PADS],
   name: 'Service Auto Militari',
   paymentMethods: { card: false, cash: false, transfer: false },
+  photos: [],
   rating: null,
   refusalPhrase: null,
   reviewCount: 0,

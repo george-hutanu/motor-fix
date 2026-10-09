@@ -105,6 +105,7 @@ export type { ProvidersDto } from './models/providers-dto';
 export type { PublicBrandDto } from './models/public-brand-dto';
 export type { PublicGarageBrandDto } from './models/public-garage-brand-dto';
 export type { PublicGarageDto } from './models/public-garage-dto';
+export type { PublicGaragePhotoDto } from './models/public-garage-photo-dto';
 export type { PublicHolidayDto } from './models/public-holiday-dto';
 export type { PublicJobTypeDto } from './models/public-job-type-dto';
 export type { PushKeyDto } from './models/push-key-dto';

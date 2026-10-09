@@ -21,6 +21,7 @@ const FIXED: PublicGarageDto = {
   longitude: 26.01,
   name: 'Service Auto Militari',
   paymentMethods: { card: false, cash: false, transfer: false },
+  photos: [],
   rating: null,
   refusalPhrase: null,
   reviewCount: 0,
