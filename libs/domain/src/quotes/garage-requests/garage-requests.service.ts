@@ -92,6 +92,34 @@ const bookingOf = (booking: Booking): GarageBookingDto => ({
   status: booking.status,
 });
 
+export type InboxStatus = 'waiting' | 'quoted' | 'declined' | 'accepted';
+
+export interface InboxQuery {
+  cursor?: string;
+  status?: InboxStatus;
+}
+
+// A row of the assistant's inbox: the dashboard's row, the driver's own words,
+// and which asked jobs the garage does not list for the car's brand.
+export type InboxItem = Omit<GarageRequestSummaryDto, 'jobs'> & {
+  description: string | null;
+  jobs: (GarageRequestSummaryDto['jobs'][number] & { notOffered: boolean })[];
+};
+
+export interface InboxPage {
+  items: InboxItem[];
+  nextCursor: string | null;
+  total: number;
+}
+
+// `accepted` is a quoted recipient whose quote the driver took.
+function statusWhere(garageId: string, status?: InboxStatus) {
+  if (!status) return {};
+  if (status === 'accepted')
+    return { quotes: { some: { garageId, status: 'accepted' as const } } };
+  return { recipients: { some: { garageId, status } } };
+}
+
 // The requests sent to the actor's garage. The driver is a short name until
 // the garage's quote is accepted (then the desk may call them), and the car
 // has no plate until the booking is confirmed.
@@ -99,15 +127,46 @@ const bookingOf = (booking: Booking): GarageBookingDto => ({
 export class GarageRequestsService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  async list(actor: Actor, cursor?: string): Promise<GarageRequestListDto> {
+  async list(actor: Actor, query: InboxQuery): Promise<GarageRequestListDto> {
+    const { rows, total } = await this.rows(actor, query);
+    return page(rows, total, summaryOf);
+  }
+
+  async inbox(actor: Actor, query: InboxQuery): Promise<InboxPage> {
+    const { garageId, rows, total } = await this.rows(actor, query);
+    const offered = await this.prisma.garageBrandJob.findMany({
+      select: { brandId: true, jobTypeId: true },
+      where: { garageId },
+    });
+    const has = new Set(offered.map((o) => `${o.brandId}/${o.jobTypeId}`));
+    return page(rows, total, (row) => {
+      const summary = summaryOf(row);
+      return {
+        ...summary,
+        description: row.description,
+        jobs: summary.jobs.map((job) => ({
+          ...job,
+          notOffered: !has.has(`${row.car.brandId}/${job.jobTypeId}`),
+        })),
+      };
+    });
+  }
+
+  private async rows(actor: Actor, query: InboxQuery) {
     const garageId = this.garageOf(actor);
-    const where = { recipients: { some: { garageId } } };
-    const from = await assertCursor(cursor, (id) =>
+    const where = {
+      recipients: { some: { garageId } },
+      ...statusWhere(garageId, query.status),
+    };
+    const from = await assertCursor(query.cursor, (id) =>
       this.prisma.quoteRequest.findFirst({ where: { ...where, id } }),
     );
     const [rows, total] = await Promise.all([
       this.prisma.quoteRequest.findMany({
-        include: summaryInclude(garageId),
+        include: {
+          ...summaryInclude(garageId),
+          car: { select: { brandId: true } },
+        },
         orderBy: NEWEST_FIRST,
         take: PAGE_TAKE,
         where,
@@ -115,7 +174,7 @@ export class GarageRequestsService {
       }),
       this.prisma.quoteRequest.count({ where }),
     ]);
-    return page(rows, total, summaryOf);
+    return { garageId, rows, total };
   }
 
   async get(actor: Actor, id: string): Promise<GarageRequestDto> {
