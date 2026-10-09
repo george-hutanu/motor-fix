@@ -9,6 +9,16 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { AssistantApprovalDto } from '../models/assistant-approval-dto';
+import { assistantControllerApprove } from '../fn/auth/assistant-controller-approve';
+import { AssistantControllerApprove$Params } from '../fn/auth/assistant-controller-approve';
+import { assistantControllerAuthorize } from '../fn/auth/assistant-controller-authorize';
+import { AssistantControllerAuthorize$Params } from '../fn/auth/assistant-controller-authorize';
+import { assistantControllerToken$Json } from '../fn/auth/assistant-controller-token-json';
+import { AssistantControllerToken$Json$Params } from '../fn/auth/assistant-controller-token-json';
+import { assistantControllerToken$XWwwFormUrlencoded } from '../fn/auth/assistant-controller-token-x-www-form-urlencoded';
+import { AssistantControllerToken$XWwwFormUrlencoded$Params } from '../fn/auth/assistant-controller-token-x-www-form-urlencoded';
+import { AssistantTokensDto } from '../models/assistant-tokens-dto';
 import { authControllerRefresh } from '../fn/auth/auth-controller-refresh';
 import { AuthControllerRefresh$Params } from '../fn/auth/auth-controller-refresh';
 import { authControllerSignIn } from '../fn/auth/auth-controller-sign-in';
@@ -209,6 +219,103 @@ export class AuthService extends BaseService {
   authControllerSignOut(params?: AuthControllerSignOut$Params, context?: HttpContext): Promise<void> {
     const resp = this.authControllerSignOut$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `assistantControllerAuthorize()` */
+  static readonly AssistantControllerAuthorizePath = '/api/v1/auth/assistant/authorize';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantControllerAuthorize()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantControllerAuthorize$Response(params: AssistantControllerAuthorize$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = assistantControllerAuthorize(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantControllerAuthorize$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantControllerAuthorize(params: AssistantControllerAuthorize$Params, context?: HttpContext): Promise<void> {
+    const resp = this.assistantControllerAuthorize$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `assistantControllerApprove()` */
+  static readonly AssistantControllerApprovePath = '/api/v1/auth/assistant/approve';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantControllerApprove()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  assistantControllerApprove$Response(params: AssistantControllerApprove$Params, context?: HttpContext): Promise<StrictHttpResponse<AssistantApprovalDto>> {
+    const obs = assistantControllerApprove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantControllerApprove$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  assistantControllerApprove(params: AssistantControllerApprove$Params, context?: HttpContext): Promise<AssistantApprovalDto> {
+    const resp = this.assistantControllerApprove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AssistantApprovalDto>): AssistantApprovalDto => r.body);
+  }
+
+  /** Path part for operation `assistantControllerToken()` */
+  static readonly AssistantControllerTokenPath = '/api/v1/auth/assistant/token';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantControllerToken$XWwwFormUrlencoded()` instead.
+   *
+   * This method sends `application/x-www-form-urlencoded` and handles request body of type `application/x-www-form-urlencoded`.
+   */
+  assistantControllerToken$XWwwFormUrlencoded$Response(params: AssistantControllerToken$XWwwFormUrlencoded$Params, context?: HttpContext): Promise<StrictHttpResponse<AssistantTokensDto>> {
+    const obs = assistantControllerToken$XWwwFormUrlencoded(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantControllerToken$XWwwFormUrlencoded$Response()` instead.
+   *
+   * This method sends `application/x-www-form-urlencoded` and handles request body of type `application/x-www-form-urlencoded`.
+   */
+  assistantControllerToken$XWwwFormUrlencoded(params: AssistantControllerToken$XWwwFormUrlencoded$Params, context?: HttpContext): Promise<AssistantTokensDto> {
+    const resp = this.assistantControllerToken$XWwwFormUrlencoded$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AssistantTokensDto>): AssistantTokensDto => r.body);
+  }
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantControllerToken$Json()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  assistantControllerToken$Json$Response(params: AssistantControllerToken$Json$Params, context?: HttpContext): Promise<StrictHttpResponse<AssistantTokensDto>> {
+    const obs = assistantControllerToken$Json(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantControllerToken$Json$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  assistantControllerToken$Json(params: AssistantControllerToken$Json$Params, context?: HttpContext): Promise<AssistantTokensDto> {
+    const resp = this.assistantControllerToken$Json$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AssistantTokensDto>): AssistantTokensDto => r.body);
   }
 
   /** Path part for operation `oauthControllerProviders()` */

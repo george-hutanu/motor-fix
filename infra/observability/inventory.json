@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 85,
+    "count": 88,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -18,9 +18,12 @@
       "name": "mcp",
       "source": "apps/mcp",
       "dashboard": "motorfix-mcp",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
-      "story": "ST-881"
+      "alerts": [
+        "mcp-auth-failures",
+        "mcp-tool-errors"
+      ],
+      "reason": "reports mcp_requests_total{outcome}, mcp_tool_calls_total{tool,outcome}, mcp_auth_failures_total{reason}, mcp_tool_call_duration_seconds{tool} and mcp_key_fetches_total{outcome}, one McpToolCall log line per tool call and an mcp.tool <name> span; a new assistant grant is an audit row and an assistant_grant.created event",
+      "story": "ST-365"
     },
     {
       "kind": "app",
@@ -226,6 +229,17 @@
       "alerts": "none",
       "reason": "the browser's collector; ST-880 adds the alerts",
       "story": "ST-877"
+    },
+    {
+      "kind": "outside-service",
+      "name": "keycloak",
+      "source": "apps/mcp/src/auth/auth.verifier.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-key-fetch-failures"
+      ],
+      "reason": "the identity server signing-key fetch, host read from ASSISTANT_ISSUER; counted in mcp_key_fetches_total{outcome} on the mcp dashboard; a failed fetch fires mcp-key-fetch-failures, and calls answer 503 (not counted as sign-in failures)",
+      "story": "ST-365"
     },
     {
       "kind": "product-counter",

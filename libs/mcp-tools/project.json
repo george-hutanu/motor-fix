@@ -1,0 +1,15 @@
+{
+  "// targets": "to see all targets run: nx show project mcp-tools --web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "mcp-tools",
+  "projectType": "library",
+  "sourceRoot": "libs/mcp-tools/src",
+  "tags": [],
+  "targets": {
+    "test:mutation": {},
+    "typecheck": {
+      "cache": true,
+      "command": "tsc --noEmit -p libs/mcp-tools/tsconfig.lib.json && tsc --noEmit -p libs/mcp-tools/tsconfig.spec.json"
+    }
+  }
+}

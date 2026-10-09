@@ -1,17 +1,16 @@
-import type { AddressInfo } from 'node:net';
+import type { INestApplication } from '@nestjs/common';
 
-import { createServer } from './server';
+import { bootMcp } from './boot.testing';
 
 describe('mcp server under odd requests', () => {
-  const server = createServer();
+  let app: INestApplication;
   let base: string;
 
   beforeAll(async () => {
-    await new Promise<void>((resolve) => server.listen(0, resolve));
-    base = `http://localhost:${(server.address() as AddressInfo).port}`;
+    ({ app, base } = await bootMcp());
   });
 
-  afterAll(() => new Promise((resolve) => server.close(resolve)));
+  afterAll(() => app.close());
 
   it('answers live as JSON', async () => {
     const res = await fetch(`${base}/health/live`);
@@ -47,6 +46,7 @@ describe('mcp server under odd requests', () => {
     '/health/live/extra',
     '/health/%6Cive/x',
     '/api/v1/health/live',
+    '/api/v1/me',
     '/%E2%9C%93',
   ])('answers 404 for %s', async (path) => {
     const res = await fetch(`${base}${path}`);
@@ -69,5 +69,16 @@ describe('mcp server under odd requests', () => {
     });
 
     expect((await fetch(`${base}/health/live`)).status).toBe(200);
+  });
+
+  it('refuses an MCP body past the JSON limit without reading a token', async () => {
+    const res = await fetch(`${base}/mcp`, {
+      body: JSON.stringify({ padding: 'x'.repeat(2_000_000) }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+    });
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
   });
 });

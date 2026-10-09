@@ -9,6 +9,7 @@ export const AREAS = [
   'mechanic',
   'admin',
   'cockpit',
+  'assistant',
 ] as const;
 export type Area = (typeof AREAS)[number];
 

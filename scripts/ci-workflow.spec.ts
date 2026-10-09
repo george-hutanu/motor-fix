@@ -172,7 +172,10 @@ describe('ci workflow', () => {
 
     expect(service).toMatch(/image: grafana\/otel-lgtm:\d+\.\d+\.\d+\n/);
     expect(service).toMatch(/profiles: \[observability\]/);
-    expect(compose.match(/profiles:/g)).toHaveLength(1);
+    expect(compose.match(/profiles: .*/g)).toEqual([
+      'profiles: [assistants]',
+      'profiles: [observability]',
+    ]);
   });
 
   it.each([

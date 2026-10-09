@@ -5,6 +5,7 @@ features:
   - 390-audit-history
   - 391-audit-history-api
   - 164-admin-audit-log
+  - 365-mcp-oauth
   - 220-requests-quotes-bookings
 ---
 
@@ -153,6 +154,10 @@ _From 164-admin-audit-log._
 ### 164-FR-004 — A guard test MUST take every `admin/*` route and method from the API's own route list (the OpenAPI document, as the admin routes test does), call each `POST`, `PUT`, `PATCH` or `DELETE` route once, one call at a time (so the count is the call's own), as a seeded admin with a known-good request from a table keyed by `METHOD /path`, and fail, naming every such route, when the call answered anything but 2xx (with its status), when the number of entries whose `actor_id` is that admin did not grow across that one call (counted before and after each call), or when the table holds no request for the route. Each `GET` route is called the same way and MUST leave the count unchanged; a later `GET` that is one of the audit capability's two logged reads is marked as such in the table by the story that adds it, and must then add exactly one entry. After this story the test names no route; a route added later joins the test without the test being edited beyond its fixture table.
 
 _From 164-admin-audit-log._
+
+### 365-FR-011 — Each tool call MUST carry one request id on the actor, and the audit writer MUST store it in a new optional `request_id` column of the activity log next to `via_assistant` and `assistant_grant_id`. (D11; brief Request id)
+
+_From 365-mcp-oauth._
 
 ## Retired
 

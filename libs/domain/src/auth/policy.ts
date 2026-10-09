@@ -13,6 +13,12 @@ export interface Actor {
   roles: Role[];
   garageId: string | null;
   permissions: Permissions;
+  // Set only when an AI assistant acts for the account.
+  via?: 'assistant';
+  assistantGrantId?: string;
+  requestId?: string;
+  scopes?: ('motorfix.read' | 'motorfix.act')[];
+  language?: 'ro' | 'en';
 }
 
 const FALLBACK: Role[] = [
