@@ -181,9 +181,14 @@ test.describe('the public garage profile @seeded', () => {
 // A mobile mechanic of this file's own, written straight to PostgreSQL: it
 // holds no brand rows, so no other spec's brand counts move while it lives.
 // Its suspension commits with its event, as the admin's does, and the
-// worker's relay carries it to the open page.
+// worker's relay carries it to the open page. No route suspends a garage yet,
+// so a deployed address, whose run has no DATABASE_URL, skips it.
 // @traces 307-FR-013 307-FR-017 307-FR-018
 test.describe('a mobile mechanic, then suspended @seeded', () => {
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its garage and the suspension straight to PostgreSQL, which needs DATABASE_URL',
+  );
   test.describe.configure({ mode: 'serial' });
   const slug = `e2e-mobil-${Date.now().toString(36)}`;
   let db: Client;
