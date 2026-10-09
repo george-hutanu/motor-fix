@@ -130,7 +130,8 @@ export class PlaceStep {
 
   protected type(event: Event) {
     const typed = (event.target as HTMLInputElement).value;
-    const { address: _, ...rest } = this.value();
+    // A typed address is no longer the suggestion the town came with.
+    const { address: _, locality: __, ...rest } = this.value();
     this.value.set(typed ? { ...rest, address: typed } : rest);
     const q = typed.trim();
     // Spaces around the text asked last change nothing to ask.
@@ -162,13 +163,19 @@ export class PlaceStep {
     }
   }
 
-  protected choose({ label, lat, lng }: PlaceSuggestionDto) {
+  protected choose({ label, lat, lng, locality }: PlaceSuggestionDto) {
     clearTimeout(this.timer);
     this.asked++;
     this.close();
     // The draft refuses a longer address, so a longer label is cut to fit.
     const address = label.slice(0, ADDRESS_MAX);
-    this.value.update((value) => ({ ...value, address, lat, lng }));
+    this.value.update(({ locality: _, ...value }) => ({
+      ...value,
+      address,
+      lat,
+      lng,
+      ...(locality && { locality }),
+    }));
   }
 
   protected keys(event: KeyboardEvent) {

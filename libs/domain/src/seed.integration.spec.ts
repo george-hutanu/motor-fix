@@ -319,6 +319,28 @@ describe('seed of the listed garages', () => {
     }
   });
 
+  // @traces 163-FR-005
+  it('places six listed garages in București and two in Cluj-Napoca, for the figures by city', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const cities = await prisma.garage.groupBy({
+      _count: { _all: true },
+      by: ['cityKey', 'cityName'],
+      orderBy: { cityKey: 'asc' },
+      where: { status: 'approved' },
+    });
+    expect(
+      cities.map(({ _count, cityKey, cityName }) => [
+        cityKey,
+        cityName,
+        _count._all,
+      ]),
+    ).toEqual([
+      ['bucuresti', 'București', 6],
+      ['cluj-napoca', 'Cluj-Napoca', 2],
+    ]);
+  });
+
   // An earlier spec file can leave a brand behind under the seed's name; this
   // spec's own beforeEach must clear it, or the seed skips Dacia.
   describe('after another spec left a brand named Dacia', () => {

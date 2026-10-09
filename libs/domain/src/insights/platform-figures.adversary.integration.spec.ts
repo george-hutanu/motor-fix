@@ -174,7 +174,13 @@ describe('the snapshot at the edges', () => {
 describe('the night job schedule', () => {
   const boot = async () => {
     const app = await Test.createTestingModule({
-      imports: [InsightsModule.registerWorker({ databaseUrl, redisUrl })],
+      imports: [
+        InsightsModule.registerWorker({
+          databaseUrl,
+          places: { provider: 'none' },
+          redisUrl,
+        }),
+      ],
     }).compile();
     await app.init();
     return app;
