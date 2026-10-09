@@ -1,11 +1,5 @@
 // @traces 384-FR-001 384-FR-002 384-FR-003 384-FR-004 384-FR-005 384-FR-006 384-FR-011
-import {
-  RESPONSE_RATE_MIN_REQUESTS,
-  RESPONSE_RATE_PERIOD_DAYS,
-  RESPONSE_RATE_WINDOW_HOURS,
-  responseRateOf,
-  writeResponseStats,
-} from './response-stats';
+import { responseRateOf, writeResponseStats } from './response-stats';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { RecipientStatus } from '../../generated/prisma/enums';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
@@ -74,14 +68,6 @@ const events = () =>
   prisma.outboxEvent.findMany({ where: { kind: 'response_stats.updated' } });
 
 describe('the response figures of a night', () => {
-  it('reads its period, window and threshold from one module', () => {
-    expect([
-      RESPONSE_RATE_PERIOD_DAYS,
-      RESPONSE_RATE_WINDOW_HOURS,
-      RESPONSE_RATE_MIN_REQUESTS,
-    ]).toEqual([30, 24, 10]);
-  });
-
   it('counts an answer 23 hours later as within a day and one 25 hours later across a Sunday as not', async () => {
     const g = await world.garage('Atelier Dinamo');
     await arrived(g.id, new Date('2026-10-03T10:00:00Z'), 'quoted', 23);

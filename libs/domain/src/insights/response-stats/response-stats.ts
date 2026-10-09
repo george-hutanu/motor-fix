@@ -3,9 +3,9 @@ import type { ResponseRateDto } from '@motor-fix/contracts';
 import { outbox } from '../../events/event.port';
 import type { PrismaClient } from '../../generated/prisma/client';
 
-export const RESPONSE_RATE_PERIOD_DAYS = 30;
-export const RESPONSE_RATE_WINDOW_HOURS = 24;
-export const RESPONSE_RATE_MIN_REQUESTS = 10;
+const RESPONSE_RATE_PERIOD_DAYS = 30;
+const RESPONSE_RATE_WINDOW_HOURS = 24;
+const RESPONSE_RATE_MIN_REQUESTS = 10;
 
 const HOUR = 3_600_000;
 
