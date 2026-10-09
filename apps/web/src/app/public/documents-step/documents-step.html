@@ -30,3 +30,24 @@
     }
   </mf-document-area>
 }
+<label class="choice">
+  <input #tickBox type="checkbox" [checked]="ticked()" (change)="tick(tickBox.checked)" />
+  <span>{{ 'public.listing.declaration.text' | t }}</span>
+</label>
+<div class="field">
+  <label for="listing-declared-name">{{ 'public.listing.declaration.name' | t }}</label>
+  <input
+    #declarer
+    hlmInput
+    id="listing-declared-name"
+    type="text"
+    autocomplete="name"
+    [maxLength]="nameMax"
+    [value]="name()"
+    [attr.aria-describedby]="nameError() ? 'listing-declared-name-error' : null"
+    [attr.aria-invalid]="nameError() ? 'true' : null"
+    (input)="typeName(declarer.value)"
+    (blur)="leaveName()"
+  />
+  <p id="listing-declared-name-error" class="error" role="status" aria-live="polite">{{ nameError() ? ('public.listing.declaration.nameShort' | t) : '' }}</p>
+</div>

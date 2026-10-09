@@ -142,6 +142,19 @@ export class DraftKeeper {
     this.later();
   }
 
+  // The declaration's tick and the declarer's name; an absent one leaves no key.
+  declaration(
+    declaration: Pick<ListingDraftData, 'declaredAt' | 'declaredByName'>,
+  ) {
+    const {
+      declaredAt: _at,
+      declaredByName: _name,
+      ...data
+    } = this.draft().data as ListingDraftData;
+    this.change({ data: { ...data, ...declaration } });
+    this.later();
+  }
+
   leaveEmail() {
     const email = this.checked(false);
     if (email === null) return;

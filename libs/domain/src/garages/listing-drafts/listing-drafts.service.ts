@@ -1,5 +1,7 @@
 import {
   type ContinueLinkSentDto,
+  DECLARED_NAME_MAX,
+  DECLARED_NAME_MIN,
   DOCUMENT_KINDS,
   type DraftDocuments,
   EMAIL_PATTERN,
@@ -34,7 +36,10 @@ import type {
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
-import { countGarageSignUp } from '../../metrics/product-counters';
+import {
+  countDeclarationSigned,
+  countGarageSignUp,
+} from '../../metrics/product-counters';
 import type { EmailConfig } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { INVITE_EMAIL } from '../staff-invite/staff-invite.service';
@@ -83,6 +88,22 @@ function checkedData(data: unknown): Prisma.InputJsonObject {
       'The draft data is not valid',
     );
   }
+  if (data.declaredByName !== undefined) {
+    const name = data.declaredByName.trim();
+    if (name.length < DECLARED_NAME_MIN || name.length > DECLARED_NAME_MAX) {
+      throw refusal(
+        HttpStatus.BAD_REQUEST,
+        'validation_failed',
+        'The declarer name must have 2 to 80 characters',
+        [{ code: 'invalid', field: 'declaredByName' }],
+      );
+    }
+    return checkedSize({ ...data, declaredByName: name });
+  }
+  return checkedSize(data);
+}
+
+function checkedSize(data: ListingDraftData): Prisma.InputJsonObject {
   if (Buffer.byteLength(JSON.stringify(data)) > DRAFT_MAX_BYTES) {
     throw refusal(
       HttpStatus.PAYLOAD_TOO_LARGE,
@@ -163,12 +184,19 @@ function heldDocuments(
   return next;
 }
 
+// The time of the tick is the server's: set by the save that adds it, kept
+// by one that keeps it, gone with it. The browser only says whether it is on.
+function declaredAt(stored: string | undefined, ticked: boolean, at: Date) {
+  if (!ticked) return undefined;
+  return stored ?? at.toISOString();
+}
+
 async function withHeldKeys(
   tx: Prisma.TransactionClient,
   id: string,
   data: Prisma.InputJsonObject,
   at: Date,
-): Promise<Prisma.InputJsonObject> {
+): Promise<{ data: Prisma.InputJsonObject; signed: boolean }> {
   await tx.$queryRaw`SELECT id FROM listing_draft WHERE id = ${id}::uuid FOR UPDATE`;
   const row = await tx.listingDraft.findUniqueOrThrow({ where: { id } });
   const stored = isListingDraftData(row.data) ? row.data : {};
@@ -179,10 +207,16 @@ async function withHeldKeys(
     sent.documents ?? {},
     bucharestDate(at),
   );
+  const { declaredAt: ticked, ...rest } = data;
+  const declared = declaredAt(stored.declaredAt, Boolean(ticked), at);
   return {
-    ...data,
-    ...(files.length > 0 && { files }),
-    ...(Object.keys(documents).length > 0 && { documents }),
+    data: {
+      ...rest,
+      ...(files.length > 0 && { files }),
+      ...(Object.keys(documents).length > 0 && { documents }),
+      ...(declared && { declaredAt: declared }),
+    },
+    signed: declared !== undefined && stored.declaredAt === undefined,
   };
 }
 
@@ -228,9 +262,11 @@ export class ListingDraftsService {
     const webUrl = this.webUrl();
     const browser = newToken();
     const at = this.now();
+    const { declaredAt: sentAt, ...rest } = data;
+    const declared = declaredAt(undefined, Boolean(sentAt), at);
     const draft = await this.prisma.listingDraft.create({
       data: {
-        data,
+        data: { ...rest, ...(declared && { declaredAt: declared }) },
         email,
         language: body.language,
         step: body.step,
@@ -243,6 +279,7 @@ export class ListingDraftsService {
     // The one garage onboarding action today; it moves to the use case that
     // creates a garage account once there is one.
     countGarageSignUp();
+    if (declared) countDeclarationSigned();
     const send = await this.issueSaved(draft, webUrl);
     return { ...saved(draft), token: browser.token, ...linkResult(send) };
   }
@@ -270,6 +307,7 @@ export class ListingDraftsService {
     const webUrl = moved ? this.webUrl() : '';
     const browser = newToken();
     const at = this.now();
+    let signed = false;
     const next = await this.prisma.$transaction(async (tx) => {
       if (moved) {
         // The hour's links stay counted, under hashes no key matches, so a
@@ -298,9 +336,11 @@ export class ListingDraftsService {
           },
         });
       }
+      const held = await withHeldKeys(tx, id, data, at);
+      signed = held.signed;
       return tx.listingDraft.update({
         data: {
-          data: await withHeldKeys(tx, id, data, at),
+          data: held.data,
           email,
           language: body.language,
           step: body.step,
@@ -309,6 +349,7 @@ export class ListingDraftsService {
         where: { id },
       });
     });
+    if (signed) countDeclarationSigned();
     if (!moved) return saved(next);
     const send = await this.issueSaved(next, webUrl);
     return { ...saved(next), token: browser.token, ...linkResult(send) };

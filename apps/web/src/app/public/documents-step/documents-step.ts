@@ -6,8 +6,11 @@ import {
   model,
   signal,
 } from '@angular/core';
+import type { ListingDraftData } from '@motor-fix/contracts';
 import {
   CERTIFICATE_WINDOW_DAYS,
+  DECLARED_NAME_MAX,
+  DECLARED_NAME_MIN,
   DOCUMENT_KINDS,
   type DocumentKind,
   type DraftDocuments,
@@ -17,6 +20,9 @@ import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput } from '@motor-fix/ui-cockpit';
 
 import { DocumentArea } from './document-area/document-area';
+import { nameError } from '../step6';
+
+type Declaration = Pick<ListingDraftData, 'declaredAt' | 'declaredByName'>;
 
 // The device's calendar date `days` before today, as YYYY-MM-DD.
 function localDate(days = 0): string {
@@ -26,9 +32,9 @@ function localDate(days = 0): string {
   return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
 }
 
-// Step 6's documents, under the CUI and RAR fields: one area per kind, and
-// the certificate's issue date once it has a page. It keeps the draft's
-// `documents` and leaves saving them to the page.
+// Step 6's documents, under the CUI and RAR fields: one area per kind, the
+// certificate's issue date once it has a page, then the declaration. It keeps
+// the draft's `documents` and declaration and leaves saving them to the page.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DocumentArea, HlmInput, TranslatePipe],
@@ -41,6 +47,7 @@ export class DocumentsStep {
   readonly token = input<string>();
   readonly kind = input<string>();
   readonly documents = model<DraftDocuments>({});
+  readonly declaration = model<Declaration>({});
 
   protected readonly kinds = DOCUMENT_KINDS;
   protected readonly mobile = computed(() => this.kind() === 'mobile');
@@ -60,6 +67,41 @@ export class DocumentsStep {
     if (!value || issuedWithinWindow(value, localDate())) return false;
     return this.left() || value === this.stored();
   });
+
+  // The tick's time is the server's; the one set here only says it is on.
+  protected readonly ticked = computed(() =>
+    Boolean(this.declaration().declaredAt),
+  );
+  protected readonly nameMax = DECLARED_NAME_MAX;
+  // What was typed, until the draft holds it: a name too short is not kept.
+  private readonly typedName = signal<string | null>(null);
+  private readonly nameLeft = signal(false);
+  protected readonly name = computed(
+    () => this.typedName() ?? this.declaration().declaredByName ?? '',
+  );
+  protected readonly nameError = computed(() =>
+    nameError(this.name(), this.ticked(), this.nameLeft()),
+  );
+
+  protected tick(on: boolean) {
+    const { declaredAt: _, ...rest } = this.declaration();
+    this.declaration.set(
+      on ? { ...rest, declaredAt: new Date().toISOString() } : rest,
+    );
+  }
+
+  protected typeName(value: string) {
+    this.typedName.set(value);
+    const name = value.trim();
+    const { declaredByName: _, ...rest } = this.declaration();
+    const whole =
+      name.length >= DECLARED_NAME_MIN && name.length <= DECLARED_NAME_MAX;
+    this.declaration.set(whole ? { ...rest, declaredByName: name } : rest);
+  }
+
+  protected leaveName() {
+    this.nameLeft.set(true);
+  }
 
   protected pagesOf(kind: DocumentKind): string[] {
     return this.documents()[kind]?.pages ?? [];

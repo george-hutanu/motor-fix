@@ -1014,3 +1014,135 @@ describe('the documents of a draft', () => {
     expect(refused.body).toMatchObject({ code: 'draft_submitted' });
   });
 });
+
+describe('the declaration of a draft', () => {
+  const FIRST = new Date('2026-10-09T08:00:00Z');
+  const LATER = new Date('2026-10-09T09:15:00Z');
+  const realNow = service.now;
+  afterAll(() => {
+    service.now = realNow;
+  });
+  const signed = () =>
+    counterTotal(reader, 'motorfix_declarations_signed_total');
+
+  const save = (
+    draft: { id: string; token: string },
+    data: Record<string, unknown>,
+  ) =>
+    service.save(
+      draft.id,
+      draft.token,
+      body({ data: { ...body().data, ...data }, step: 6 }),
+    );
+
+  const declarationOf = async (id: string) => {
+    const row = await prisma.listingDraft.findUniqueOrThrow({ where: { id } });
+    const { declaredAt, declaredByName } = row.data as Record<string, unknown>;
+    return { declaredAt, declaredByName };
+  };
+
+  // @traces 206-documents-declaration-FR-006
+  // @traces 206-documents-declaration-FR-009
+  it('stamps the server time on the save that adds the tick, whatever the browser sent, and counts it once', async () => {
+    service.now = () => FIRST;
+    const draft = await service.create(body());
+    const before = await signed();
+
+    await save(draft, {
+      declaredAt: '1999-01-01T00:00:00.000Z',
+      declaredByName: 'Ion Popescu',
+    });
+
+    expect(await declarationOf(draft.id)).toEqual({
+      declaredAt: FIRST.toISOString(),
+      declaredByName: 'Ion Popescu',
+    });
+    expect(await signed()).toBe(before + 1);
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('keeps the stored time on a save that keeps the tick, and counts nothing more', async () => {
+    service.now = () => FIRST;
+    const draft = await service.create(body());
+    await save(draft, { declaredAt: 'ticked', declaredByName: 'Ion Popescu' });
+    const before = await signed();
+
+    service.now = () => LATER;
+    await save(draft, {
+      declaredAt: LATER.toISOString(),
+      declaredByName: 'Ion Popescu',
+    });
+
+    expect(await declarationOf(draft.id)).toMatchObject({
+      declaredAt: FIRST.toISOString(),
+    });
+    expect(await signed()).toBe(before);
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('clears the time on a save that drops the tick, and stamps anew on the next tick', async () => {
+    service.now = () => FIRST;
+    const draft = await service.create(body());
+    await save(draft, { declaredAt: 'ticked', declaredByName: 'Ion Popescu' });
+
+    await save(draft, { declaredByName: 'Ion Popescu' });
+    expect(await declarationOf(draft.id)).toEqual({
+      declaredAt: undefined,
+      declaredByName: 'Ion Popescu',
+    });
+
+    service.now = () => LATER;
+    await save(draft, { declaredAt: 'ticked', declaredByName: 'Ion Popescu' });
+    expect(await declarationOf(draft.id)).toMatchObject({
+      declaredAt: LATER.toISOString(),
+    });
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('stamps a new draft that arrives ticked with the server time', async () => {
+    service.now = () => FIRST;
+    const before = await signed();
+
+    const draft = await service.create(
+      body({ data: { declaredAt: '1999-01-01T00:00:00.000Z' } }),
+    );
+
+    expect(await declarationOf(draft.id)).toMatchObject({
+      declaredAt: FIRST.toISOString(),
+    });
+    expect(await signed()).toBe(before + 1);
+  });
+
+  // @traces 206-documents-declaration-FR-009
+  it('keeps the name trimmed', async () => {
+    const draft = await service.create(body());
+
+    await save(draft, { declaredByName: '  Ion Popescu  ' });
+
+    expect(await declarationOf(draft.id)).toMatchObject({
+      declaredByName: 'Ion Popescu',
+    });
+  });
+
+  // @traces 206-documents-declaration-FR-009
+  it.each([
+    ['over 80 characters', 'a'.repeat(81)],
+    ['one character once trimmed', '  I  '],
+    ['blank', '    '],
+  ])('refuses a name %s, and changes nothing', async (_, name) => {
+    const draft = await service.create(body());
+    const before = await signed();
+
+    const refused = await refusalOf(
+      save(draft, { declaredAt: 'ticked', declaredByName: name }),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ code: 'validation_failed' });
+    expect(await declarationOf(draft.id)).toEqual({
+      declaredAt: undefined,
+      declaredByName: undefined,
+    });
+    expect(await signed()).toBe(before);
+  });
+});

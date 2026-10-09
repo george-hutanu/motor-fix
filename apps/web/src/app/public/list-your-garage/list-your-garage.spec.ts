@@ -1375,6 +1375,108 @@ describe('the verification step', () => {
 });
 
 // @traces 040-FR-006
+const PAGE =
+  'legal_document/7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00/00000000-0000-4000-8000-000000000001';
+const declared = {
+  declaredAt: '2026-10-09T08:00:00.000Z',
+  declaredByName: 'Ion Popescu',
+};
+const allFive = {
+  ...declared,
+  documents: {
+    onrc_certificate: { pages: [PAGE] },
+    rar_authorisation: { pages: [PAGE.replace(/1$/, '2')] },
+  },
+  steps: { '6': { cui: '18547290', rarNumber: 'AB123' } },
+};
+
+describe('the counter of five', () => {
+  const tickBox = (page: HTMLElement) =>
+    step6(page).querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+  const nameInput = (page: HTMLElement) =>
+    page.querySelector<HTMLInputElement>(
+      '#listing-declared-name',
+    ) as HTMLInputElement;
+
+  // @traces 206-documents-declaration-FR-010
+  // @traces 206-documents-declaration-FR-017
+  it.each([
+    ['/ro/list-your-garage', '5 din 5 completate'],
+    ['/en/list-your-garage', '5 of 5 completed'],
+  ])(
+    '%s reads %s with both fields, both documents and the declaration',
+    async (path, count) => {
+      seed({ data: allFive });
+
+      const { page } = await open(path);
+
+      expect(counter(page)).toBe(count);
+      expect(
+        step6(page).querySelector('.count')?.getAttribute('aria-live'),
+      ).toBe('polite');
+      expect(tickBox(page).checked).toBe(true);
+      expect(nameInput(page).value).toBe('Ion Popescu');
+    },
+  );
+
+  // @traces 206-documents-declaration-FR-010
+  it('counts each document from its first page, the issue date not needed', async () => {
+    seed({
+      data: {
+        documents: { onrc_certificate: { pages: [PAGE] } },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(counter(page)).toBe('1 din 5 completate');
+  });
+
+  // @traces 206-documents-declaration-FR-009
+  // @traces 206-documents-declaration-FR-010
+  it('counts the declaration only once ticked with a full name, and stops when unticked', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    tickBox(page).click();
+    harness.detectChanges();
+    expect(counter(page)).toBe('0 din 5 completate');
+
+    fillIn(harness, nameInput(page), 'I');
+    expect(counter(page)).toBe('0 din 5 completate');
+
+    fillIn(harness, nameInput(page), 'Ion Popescu');
+    expect(counter(page)).toBe('1 din 5 completate');
+
+    tickBox(page).click();
+    harness.detectChanges();
+    expect(counter(page)).toBe('0 din 5 completate');
+  });
+
+  // @traces 206-documents-declaration-FR-006
+  it('keeps the tick and the name in the browser copy', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      tickBox(page).click();
+      fillIn(harness, nameInput(page), ' Ion Popescu ');
+      await jest.advanceTimersByTimeAsync(1_100);
+      expect(stored()?.data).toEqual({
+        declaredAt: expect.any(String),
+        declaredByName: 'Ion Popescu',
+      });
+
+      tickBox(page).click();
+      harness.detectChanges();
+      await jest.advanceTimersByTimeAsync(1_100);
+      expect(stored()?.data).toEqual({ declaredByName: 'Ion Popescu' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('the brands step in the draft', () => {
   const daciaChip = (page: HTMLElement) =>
     [...page.querySelectorAll<HTMLButtonElement>('.chips button')].find((c) =>

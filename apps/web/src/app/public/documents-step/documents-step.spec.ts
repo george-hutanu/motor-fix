@@ -7,7 +7,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import type { DraftDocuments } from '@motor-fix/contracts';
+import type { DraftDocuments, ListingDraftData } from '@motor-fix/contracts';
 import { I18n } from '@motor-fix/i18n';
 
 import { DocumentsStep } from './documents-step';
@@ -29,8 +29,11 @@ const daysAgo = (days: number) => {
   return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
 };
 
+type Declaration = Pick<ListingDraftData, 'declaredAt' | 'declaredByName'>;
+
 interface Options {
   draftId?: string;
+  declaration?: Declaration;
   documents?: DraftDocuments;
   kind?: string;
   language?: 'ro' | 'en';
@@ -38,6 +41,7 @@ interface Options {
 
 async function open({
   draftId = DRAFT,
+  declaration = {},
   documents = {},
   kind = 'company',
   language = 'ro',
@@ -53,6 +57,7 @@ async function open({
   fixture.componentRef.setInput('token', draftId ? TOKEN : undefined);
   fixture.componentRef.setInput('kind', kind);
   fixture.componentRef.setInput('documents', documents);
+  fixture.componentRef.setInput('declaration', declaration);
   const http = TestBed.inject(HttpTestingController);
   const step = fixture.nativeElement as HTMLElement;
   const settle = async () => {
@@ -655,5 +660,141 @@ describe('the certificate issue date', () => {
       'Certificatul trebuie să fie emis în ultimele 30 de zile',
     );
     expect(documentsOf(opened).onrc_certificate?.issuedOn).toBe(daysAgo(40));
+  });
+});
+
+describe('the declaration', () => {
+  const box = (step: HTMLElement) =>
+    step.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+  const nameField = (step: HTMLElement) =>
+    step.querySelector<HTMLInputElement>(
+      '#listing-declared-name',
+    ) as HTMLInputElement;
+  const nameErrorText = (step: HTMLElement) =>
+    text(step.querySelector('#listing-declared-name-error'));
+  const declarationOf = ({ fixture }: Opened) =>
+    fixture.componentInstance.declaration();
+
+  async function tick(opened: Opened) {
+    box(opened.step).click();
+    await opened.settle();
+  }
+
+  async function typeName(opened: Opened, value: string) {
+    const input = nameField(opened.step);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await opened.settle();
+  }
+
+  async function leaveName(opened: Opened) {
+    nameField(opened.step).dispatchEvent(new Event('blur'));
+    await opened.settle();
+  }
+
+  // @traces 206-documents-declaration-FR-009
+  it.each([
+    [
+      'ro' as const,
+      'Declar că datele sunt reale și că reprezint legal acest service.',
+      'Numele și prenumele tău',
+    ],
+    [
+      'en' as const,
+      'I declare the details are true and that I legally represent this garage.',
+      'Your full name',
+    ],
+  ])(
+    'in %s, asks under the documents for the tick and the full name',
+    async (language, sentence, label) => {
+      const { step } = await open({ language });
+
+      const tickBox = box(step);
+      expect(tickBox.checked).toBe(false);
+      expect(text(tickBox.closest('label'))).toBe(sentence);
+      expect(
+        authorisation(step).compareDocumentPosition(tickBox) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        text(step.querySelector('label[for="listing-declared-name"]')),
+      ).toBe(label);
+      expect(nameField(step).maxLength).toBe(80);
+      expect(nameField(step).getAttribute('autocomplete')).toBe('name');
+    },
+  );
+
+  // @traces 206-documents-declaration-FR-009
+  it('marks the declaration when ticked and clears it when unticked', async () => {
+    const opened = await open();
+
+    await tick(opened);
+    expect(declarationOf(opened).declaredAt).toEqual(expect.any(String));
+
+    await tick(opened);
+    expect(declarationOf(opened)).toEqual({});
+  });
+
+  // @traces 206-documents-declaration-FR-009
+  it('keeps the name trimmed once it has 2 to 80 characters, and none shorter, showing what was typed', async () => {
+    const opened = await open();
+
+    await typeName(opened, '  Ion Popescu ');
+    expect(declarationOf(opened)).toEqual({ declaredByName: 'Ion Popescu' });
+    expect(nameField(opened.step).value).toBe('  Ion Popescu ');
+
+    await typeName(opened, ' I ');
+    expect(declarationOf(opened)).toEqual({});
+    expect(nameField(opened.step).value).toBe(' I ');
+  });
+
+  // @traces 206-documents-declaration-FR-009
+  it('asks for the full name of a tick only once the field is left, and clears it when the name is whole', async () => {
+    const opened = await open();
+    await tick(opened);
+    await typeName(opened, 'I');
+    expect(nameErrorText(opened.step)).toBe('');
+    expect(nameField(opened.step).getAttribute('aria-invalid')).toBeNull();
+
+    await leaveName(opened);
+    expect(nameErrorText(opened.step)).toBe('Scrie numele tău complet');
+    expect(nameField(opened.step).getAttribute('aria-invalid')).toBe('true');
+    expect(nameField(opened.step).getAttribute('aria-describedby')).toBe(
+      'listing-declared-name-error',
+    );
+    expect(
+      opened.step
+        .querySelector('#listing-declared-name-error')
+        ?.closest('[aria-live="polite"]'),
+    ).not.toBeNull();
+
+    await typeName(opened, 'Ion');
+    expect(nameErrorText(opened.step)).toBe('');
+  });
+
+  // @traces 206-documents-declaration-FR-009
+  it('opens a kept declaration ticked, with its name and its time', async () => {
+    const declaration = {
+      declaredAt: '2026-10-09T08:00:00.000Z',
+      declaredByName: 'Ion Popescu',
+    };
+    const opened = await open({ declaration });
+
+    expect(box(opened.step).checked).toBe(true);
+    expect(nameField(opened.step).value).toBe('Ion Popescu');
+    await typeName(opened, 'Ion Popescu-Ionescu');
+    expect(declarationOf(opened)).toEqual({
+      declaredAt: '2026-10-09T08:00:00.000Z',
+      declaredByName: 'Ion Popescu-Ionescu',
+    });
+  });
+
+  // @traces 206-documents-declaration-FR-015
+  it('gives the tick a target of the full tap height', async () => {
+    const { step } = await open();
+
+    expect(box(step).closest('label')?.classList).toContain('choice');
   });
 });

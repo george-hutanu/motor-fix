@@ -23,3 +23,26 @@ h3 {
   color: var(--mf-red);
   overflow-wrap: anywhere;
 }
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+  min-width: 0;
+  cursor: pointer;
+}
+.choice input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.choice input:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}
+.choice span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

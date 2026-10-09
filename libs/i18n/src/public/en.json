@@ -146,6 +146,11 @@
     },
     "cui": "Company tax ID",
     "cuiInvalid": "Invalid tax ID",
+    "declaration": {
+      "name": "Your full name",
+      "nameShort": "Write your full name",
+      "text": "I declare the details are true and that I legally represent this garage."
+    },
     "details": {
       "kind": "Kind of business",
       "kinds": {

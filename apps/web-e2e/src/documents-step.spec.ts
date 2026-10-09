@@ -38,6 +38,11 @@ const keys = (section: Locator) =>
   pages(section).evaluateAll((items) =>
     items.map((item) => item.getAttribute('data-key')),
   );
+const counter = (page: Page) => page.locator('p.count');
+const declarationBox = (page: Page) =>
+  step(page).getByRole('checkbox', {
+    name: 'Declar că datele sunt reale și că reprezint legal acest service.',
+  });
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 // Every button of the step is at least 44 px each way.
@@ -86,8 +91,10 @@ test.describe('step 6 of list your garage, the documents', () => {
   // @traces 206-documents-declaration-FR-008
   // @traces 206-documents-declaration-FR-015
   // @traces 206-documents-declaration-FR-017
+  // @traces 206-documents-declaration-FR-009
+  // @traces 206-documents-declaration-FR-010
   for (const [size, width, height] of SIZES) {
-    test(`on ${size}: a PDF certificate with its date and two authorisation photos, reordered, one removed, kept after a reload`, async ({
+    test(`on ${size}: a PDF certificate with its date and two authorisation photos, reordered, one removed, the declaration signed, five of five kept after a reload`, async ({
       page,
     }) => {
       test.slow();
@@ -152,6 +159,20 @@ test.describe('step 6 of list your garage, the documents', () => {
       expect((await removed).ok()).toBe(true);
       await expect(pages(authorisation(page))).toHaveCount(1);
 
+      await page.locator('#listing-cui').fill('18547290');
+      await page.locator('#listing-rar').fill('AB123');
+      await expect(counter(page)).toHaveText('4 din 5 completate');
+      await declarationBox(page).check();
+      await expect(counter(page)).toHaveText('4 din 5 completate');
+      const name = step(page).getByLabel('Numele și prenumele tău');
+      await name.fill('I');
+      await name.blur();
+      await expect(step(page)).toContainText('Scrie numele tău complet');
+      await name.fill('Ion Popescu');
+      await expect(step(page)).not.toContainText('Scrie numele tău complet');
+      await expect(counter(page)).toHaveText('5 din 5 completate');
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+
       const saved = page.waitForResponse(
         (res) =>
           res.request().method() === 'PATCH' &&
@@ -169,6 +190,11 @@ test.describe('step 6 of list your garage, the documents', () => {
       await expect(
         step(page).getByLabel('Data emiterii certificatului'),
       ).toHaveValue(localDate(2));
+      await expect(declarationBox(page)).toBeChecked();
+      await expect(
+        step(page).getByLabel('Numele și prenumele tău'),
+      ).toHaveValue('Ion Popescu');
+      await expect(counter(page)).toHaveText('5 din 5 completate');
     });
   }
 

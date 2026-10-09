@@ -119,6 +119,8 @@
                 [kind]="details().businessKind"
                 [documents]="documents()"
                 (documentsChange)="keeper.documents($event)"
+                [declaration]="declaration()"
+                (declarationChange)="keeper.declaration($event)"
               />
               <p class="note count" role="status" aria-live="polite">{{ 'public.listing.verifyCount' | t: { n: verified() } }}</p>
               <p class="note">{{ 'public.listing.verifyNote' | t }}</p>

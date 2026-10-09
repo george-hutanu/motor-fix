@@ -153,6 +153,11 @@
     },
     "cui": "CUI‑ul firmei",
     "cuiInvalid": "CUI invalid",
+    "declaration": {
+      "name": "Numele și prenumele tău",
+      "nameShort": "Scrie numele tău complet",
+      "text": "Declar că datele sunt reale și că reprezint legal acest service."
+    },
     "details": {
       "kind": "Tipul afacerii",
       "kinds": {
