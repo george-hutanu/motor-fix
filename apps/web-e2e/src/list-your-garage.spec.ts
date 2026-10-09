@@ -185,9 +185,10 @@ test.describe('on a desktop', () => {
 
       await entry(page, 'Verificare').click();
       const y = await page.evaluate(() => scrollY);
-      await page.waitForTimeout(50);
 
-      expect(await page.evaluate(() => scrollY)).toBe(y);
+      // Layout above the target can still settle after the jump and move the
+      // page a little; a smooth scroll would be thousands of pixels short.
+      expect(Math.abs((await still(page)) - y)).toBeLessThan(200);
       await expect(sections(page).nth(5)).toBeInViewport();
     });
   });
