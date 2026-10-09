@@ -641,8 +641,48 @@ describe("the feature document index", () => {
     assert.equal(docsIndex(clone).size, 0);
     mkdirSync(join(clone, "docs", "features"), { recursive: true });
     writeFileSync(join(clone, "docs", "features", "sign-in.md"), "# Sign in");
-    writeFileSync(join(clone, "docs", "index.json"), JSON.stringify({ "f0000000-0000-0000-0000-000000000001": "features/sign-in.md", f2: "features/missing.md" }));
+    writeFileSync(join(clone, "docs", "index.json"), JSON.stringify({ files: { "f0000000-0000-0000-0000-000000000001": "features/sign-in.md", f2: "features/missing.md" } }));
     assert.deepEqual([...docsIndex(clone)], [["f0000000000000000000000000000001", "docs/features/sign-in.md"]]);
+    writeFileSync(join(clone, "docs", "index.json"), JSON.stringify({ "f0000000-0000-0000-0000-000000000001": "features/sign-in.md" }));
+    assert.equal(docsIndex(clone).size, 0, "only the files map is read");
+    writeFileSync(join(clone, "docs", "index.json"), JSON.stringify({ files: { "f0000000-0000-0000-0000-000000000001": "features/sign-in.md" } }));
+    assert.deepEqual([...docsIndex(clone)], [["f0000000000000000000000000000001", "docs/features/sign-in.md"]]);
+  });
+
+  it("reads the Diataxis index's files map and leaves a page with no file out", async () => {
+    const { docsIndex } = await import("./import.mjs");
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const clone = mkdtempSync(join(tmpdir(), "clone-"));
+    dirs.push(clone);
+    mkdirSync(join(clone, "docs", "reference", "features"), { recursive: true });
+    writeFileSync(join(clone, "docs", "reference", "features", "sign-in.md"), "# Sign in");
+    writeFileSync(join(clone, "docs", "index.json"), JSON.stringify({ exported: "2026-10-09T16:59:20.061Z", files: { f1: "docs/reference/features/sign-in.md", f2: null } }));
+    assert.deepEqual([...docsIndex(clone)], [["f1", "docs/reference/features/sign-in.md"]]);
+  });
+
+  it("maps a board's title to its page in docs/reference/design/", async () => {
+    const { designIndex } = await import("./import.mjs");
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const clone = mkdtempSync(join(tmpdir(), "clone-"));
+    dirs.push(clone);
+    assert.equal(designIndex(clone).size, 0);
+    mkdirSync(join(clone, "docs", "reference", "design"), { recursive: true });
+    writeFileSync(join(clone, "docs", "reference", "design", "results.md"), "# Results");
+    const boards = [
+      { id: "results", title: "Results + map", md: "docs/reference/design/results.md", html: "docs/reference/design/Results.dc.html" },
+      { id: "gone", title: "Gone", md: "docs/reference/design/gone.md", html: "docs/reference/design/Gone.dc.html" },
+    ];
+    writeFileSync(join(clone, "docs", "reference", "design", "index.json"), JSON.stringify(boards));
+    assert.deepEqual([...designIndex(clone)], [["results + map", "docs/reference/design/results.md"]]);
+  });
+
+  it("names a body line that still links Notion or a retired docs/ path", async () => {
+    const { staleLinks } = await import("./import.mjs");
+    assert.deepEqual(staleLinks("[ok](docs/reference/features/a.md)\nsee docs/index.json"), []);
+    assert.deepEqual(staleLinks(`plan: docs/execution-plans/ep-1.md\nhttps://www.${"notion"}.so/x`), [
+      "still links an old path (docs/execution-plans)",
+      "still links a Notion URL",
+    ]);
   });
 
   it("finds the specs clone where specs-repo.mjs says, else .motor-fix-specs, else specs/", async () => {
@@ -823,6 +863,26 @@ describe("every property in a field of its own", () => {
     const e = plans.find((p) => p.key === "EP-1").fields;
     assert.equal(e.Weeks, 6);
     assert.equal(e["Story count"], 5);
+  });
+
+  it("points Design at the repository's mock home and each board at its page, only where Notion names a design", async () => {
+    const t = await tracker();
+    const [st1, other] = t.stories;
+    const props = st1.content.properties;
+    props.Design = { type: "rollup", rollup: { type: "array", array: [{ type: "url", url: "https://claude.ai/artifact/abc" }] } };
+    props["Design boards"] = { type: "rollup", rollup: { type: "array", array: [rich("Home, Lost board")] } };
+    for (const k of ["Design", "Design boards"]) {
+      delete other.content.properties[k];
+      delete other.properties?.[k];
+    }
+    t.design = new Map([["home", "docs/reference/design/main.md"]]);
+    const { plans } = issuePlans(t);
+    const f = plans.find((p) => p.key === st1.key).fields;
+    assert.match(f.Design, /docs\/reference\/design\/index\.md$/);
+    assert.match(f["Design boards"], /docs\/reference\/design\/main\.md.*Lost board/);
+    const g = plans.find((p) => p.key === other.key).fields;
+    assert.equal(g.Design ?? null, null);
+    assert.equal(g["Design boards"] ?? null, null);
   });
 
   it("writes only fields the bootstrap makes, never one of GitHub's own", async () => {

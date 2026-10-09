@@ -111,6 +111,20 @@ const carriedBy = (names) => (name, prop) => {
   return text.replace(/\s+/g, " ").trim().length <= TEXT_MAX;
 };
 
+const DESIGN_INDEX = "docs/reference/design/index.json";
+const DESIGN_HOME = "docs/reference/design/index.md";
+const boardKey = (name) => String(name).replace(/^.*›\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
+/** Old documentation paths the Diátaxis move retired. */
+const OLD_DOC_PATH = /\bdocs\/(?!(?:tutorials|how-to|reference|explanation)\/|index\.json\b)[\w.-]+/;
+const NOTION_URL = /https?:\/\/(?:[\w-]+\.)*notion\.(?:so|com|site)\b/i;
+/** What in an issue body still points at Notion or an old docs/ path, one line each. */
+export function staleLinks(body) {
+  return String(body ?? "")
+    .split("\n")
+    .filter((line) => NOTION_URL.test(line) || OLD_DOC_PATH.test(line))
+    .map((line) => `still links ${NOTION_URL.test(line) ? "a Notion URL" : `an old path (${OLD_DOC_PATH.exec(line)[0]})`}`);
+}
+
 /** A value for a Project text field: lists joined, one line, no Notion address, at most TEXT_MAX characters. */
 const textOf = (value) => {
   if (value === null || value === undefined) return null;
@@ -185,10 +199,24 @@ export function issuePlans(tracker) {
     const path = tracker.docs?.get(plainId(id));
     return path ? fileUrl(path) : null;
   };
+  /** Design: where Notion names one, the mock's home in the specs repository once it is there, else Notion's value. */
+  const designText = (r) => {
+    const v = textOf(of(r, "Design"));
+    return v && tracker.design?.size ? fileUrl(DESIGN_HOME) : v;
+  };
+  /** Design boards: each named board's page in the specs repository, a board it lacks by name. */
+  const boardsText = (r) => {
+    const v = of(r, "Design boards");
+    if (!tracker.design?.size || v === null || v === undefined) return textOf(v);
+    const names = (Array.isArray(v) ? v : [v]).flatMap((x) => String(x).split(/\s*[,;\n]\s*/)).filter(Boolean);
+    return textOf(names.map((n) => tracker.design.get(boardKey(n)) ?? n));
+  };
   /** The body (with reference tokens), what could not be carried, and the file a too-long page is kept in. */
   const page = (r, head, carried) => {
     if (!r.content) return { body: head.join("\n"), gaps: ["the page's content was not read"], file: null };
-    const { body, gaps } = renderPage({ properties: r.properties, content: r.content }, ctx, { head: [head.join("\n")], carried });
+    const rendered = renderPage({ properties: r.properties, content: r.content }, ctx, { head: [head.join("\n")], carried });
+    const { body } = rendered;
+    const gaps = [...rendered.gaps, ...staleLinks(body)];
     if (body.length <= BODY_LIMIT) return { body, gaps, file: null };
     const path = `tracker/${r.key}/issue.md`;
     const rest = body.slice(head.join("\n").length).trimStart();
@@ -279,8 +307,8 @@ export function issuePlans(tracker) {
           ["Area", textOf(s.labels)],
           ["Component", textOf(of(s, "Component"))],
           ["Feature", featureText(s)],
-          ["Design", textOf(of(s, "Design"))],
-          ["Design boards", textOf(of(s, "Design boards"))],
+          ["Design", designText(s)],
+          ["Design boards", boardsText(s)],
           ["PR", pr ? pr[0] : null],
           ["Session", textOf(of(s, "Session"))],
           ["User story", textOf(of(s, "User story"))],
@@ -327,8 +355,8 @@ export function issuePlans(tracker) {
           ["Story count", numberOf(of(e, "Story count"))],
           ["Weeks", numberOf(of(e, "Weeks"))],
           ["Feature", featureText(e, "Features")],
-          ["Design", textOf(of(e, "Design"))],
-          ["Design boards", textOf(of(e, "Design boards"))],
+          ["Design", designText(e)],
+          ["Design boards", boardsText(e)],
           ["Goal", textOf(of(e, "Goal"))],
           ["Done when", textOf(of(e, "Done when"))],
           ["Created in Notion", e.created],
@@ -1043,18 +1071,30 @@ function flag(argv, name, fallback) {
 
 /**
  * Notion page id (no dashes) → repository path of its document, from the
- * docs/index.json ST-1018 writes into the specs repository; empty until then.
+ * docs/index.json in the specs repository ({ exported, files }); a page with
+ * no file of its own maps to null and is left out.
  */
 export function docsIndex(clone) {
   const file = join(clone, "docs", "index.json");
   if (!existsSync(file)) return new Map();
   const data = JSON.parse(readFileSync(file, "utf8"));
-  const entries = Array.isArray(data) ? data.map((d) => [d.notionId ?? d.id, d.path]) : Object.entries(data.pages ?? data);
+  const entries = Object.entries(data?.files ?? {});
   return new Map(
     entries
       .filter(([id, path]) => id && typeof path === "string" && existsSync(join(clone, path.startsWith("docs/") ? path : `docs/${path}`)))
       .map(([id, path]) => [plainId(id), path.startsWith("docs/") ? path : `docs/${path}`]),
   );
+}
+
+/**
+ * The mock's boards in the specs repository: lower-cased title → the
+ * board page's path, from docs/reference/design/index.json; empty without it.
+ */
+export function designIndex(clone) {
+  const file = join(clone, DESIGN_INDEX);
+  if (!existsSync(file)) return new Map();
+  const boards = JSON.parse(readFileSync(file, "utf8"));
+  return new Map((Array.isArray(boards) ? boards : []).filter((b) => b.title && b.md && existsSync(join(clone, b.md))).map((b) => [boardKey(b.title), b.md]));
 }
 
 /** The lap this run is, counted in the cache folder until a run ends `done`; a dry run is lap 0 and counts nothing. */
@@ -1095,6 +1135,7 @@ async function main(argv = process.argv.slice(2)) {
     const tracker = await readTracker(client);
     tracker.features = await featureTitles(client, tracker);
     tracker.docs = docsIndex(clone);
+    tracker.design = designIndex(clone);
     const store = folderStore(clone);
     const cacheDir = join(homedir(), ".cache", "motorfix-tracker");
     const lap = nextLap(cacheDir, dryRun);
