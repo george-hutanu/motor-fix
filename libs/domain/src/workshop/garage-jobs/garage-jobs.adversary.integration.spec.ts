@@ -104,9 +104,12 @@ describe('GET /garage/jobs as each caller', () => {
     expect(ids(list)).toEqual([s.fixerJob.id]);
     expect(list.body.total).toBe(1);
     expect((await get(`/garage/jobs/${s.fixerJob.id}`, auth)).status).toBe(200);
-    for (const other of [s.handJob, s.unassigned, s.elsewhere]) {
-      expect((await get(`/garage/jobs/${other.id}`, auth)).status).toBe(404);
+    for (const other of [s.handJob, s.unassigned]) {
+      expect((await get(`/garage/jobs/${other.id}`, auth)).status).toBe(403);
     }
+    expect((await get(`/garage/jobs/${s.elsewhere.id}`, auth)).status).toBe(
+      404,
+    );
   });
 
   it('gives a mechanic without the permission their own job too', async () => {
@@ -117,10 +120,12 @@ describe('GET /garage/jobs as each caller', () => {
 
     expect(ids(list)).toEqual([s.handJob.id]);
     expect((await get(`/garage/jobs/${s.handJob.id}`, auth)).status).toBe(200);
-    expect((await get(`/garage/jobs/${s.fixerJob.id}`, auth)).status).toBe(404);
+    expect((await get(`/garage/jobs/${s.fixerJob.id}`, auth)).status).toBe(403);
   });
 
-  it('answers 404 not 403 to a mechanic reading another mechanic’s job', async () => {
+  // 424-FR-002 (Architecture decision A34) turned the 404 into a 403.
+  // @traces 424-FR-002
+  it('answers 403, and nothing of the job, to a mechanic reading another mechanic’s job', async () => {
     const s = await setting();
 
     const res = await get(
@@ -128,8 +133,10 @@ describe('GET /garage/jobs as each caller', () => {
       bearer(s.dinamo.answering, 'mechanic'),
     );
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('forbidden');
     expect(JSON.stringify(res.body)).not.toContain(s.handJob.id);
+    expect(JSON.stringify(res.body)).not.toContain(PLATE);
   });
 
   it('lists nothing for a mechanic with no job', async () => {
@@ -288,19 +295,24 @@ describe('GET /garage/jobs cursor and query', () => {
     expect(res.status).toBe(400);
   });
 
-  it('pages 20 at a time, newest first, and the last page has no next cursor', async () => {
+  // @traces 424-FR-011
+  it('pages 20 at a time, by booking start, and the last page has no next cursor', async () => {
     const s = await setting();
+    const startsAt = (minutes: number) =>
+      new Date(Date.now() + 48 * 3_600_000 + minutes * 60_000);
     const mine: string[] = [];
     for (let i = 0; i < 20; i++) {
       const chain = await world.chain(s.andrei, s.militari.garage.id);
-      mine.push(
-        (
-          await world.job(chain.booking.id, 'to_do', {
-            createdAt: new Date(Date.now() + (i + 1) * 1000),
-          })
-        ).id,
-      );
+      await prisma.booking.update({
+        data: { startsAt: startsAt(i) },
+        where: { id: chain.booking.id },
+      });
+      mine.push((await world.job(chain.booking.id, 'to_do')).id);
     }
+    await prisma.booking.update({
+      data: { startsAt: startsAt(60) },
+      where: { id: s.elsewhere.bookingId },
+    });
     const auth = bearer(s.militari.owner, 'garage');
 
     const first = await get('/garage/jobs', auth);
@@ -312,9 +324,9 @@ describe('GET /garage/jobs cursor and query', () => {
 
     expect(first.body.total).toBe(21);
     expect(first.body.items).toHaveLength(20);
-    expect(ids(first)).toEqual([...mine].reverse());
+    expect(ids(first)).toEqual(mine);
     expect(again.body).toEqual(first.body);
-    expect(first.body.nextCursor).toBe(mine[0]);
+    expect(first.body.nextCursor).toBe(mine[19]);
     expect(ids(last)).toEqual([s.elsewhere.id]);
     expect(last.body.nextCursor).toBeNull();
   });

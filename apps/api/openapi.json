@@ -1845,6 +1845,17 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "The first day listed, in Bucharest; today when absent",
+            "schema": {
+              "format": "date",
+              "example": "2026-10-09",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1870,6 +1881,7 @@
             "bearer": []
           }
         ],
+        "summary": "The garage’s jobs by booking start, from a Bucharest day (today by default), with every job still in work or paused",
         "tags": [
           "garage-jobs"
         ]
@@ -1902,8 +1914,11 @@
           "400": {
             "description": "validation_failed"
           },
+          "403": {
+            "description": "forbidden: another mechanic’s job"
+          },
           "404": {
-            "description": "not_found: not the caller’s job"
+            "description": "not_found: not the garage’s job"
           }
         },
         "security": [
@@ -1911,6 +1926,303 @@
             "bearer": []
           }
         ],
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps": {
+      "post": {
+        "operationId": "JobStepsController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per step the person means; a repeat answers the first",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobStepTextDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStepDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "too_many_steps; job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a step at the end of the job",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps/order": {
+      "put": {
+        "operationId": "JobStepsController_reorder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderJobStepsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "validation_failed; not_a_permutation"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Put every step of the job in a new order",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps/{stepId}": {
+      "patch": {
+        "operationId": "JobStepsController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stepId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobStepTextDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStepDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a step",
+        "tags": [
+          "garage-jobs"
+        ]
+      },
+      "delete": {
+        "operationId": "JobStepsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stepId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a step; the rest close the gap",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/steps/{stepId}/done": {
+      "put": {
+        "operationId": "JobStepsController_tick",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stepId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobStepDoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStepDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: the desk, or a mechanic not on this job"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job, or not its step"
+          },
+          "409": {
+            "description": "job_not_started; job_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tick or untick a step; a repeat changes nothing",
         "tags": [
           "garage-jobs"
         ]
@@ -6297,6 +6609,29 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "The booking's start",
+            "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "mechanicName": {
+            "type": "string",
+            "nullable": true
+          },
+          "stepsDone": {
+            "type": "number",
+            "description": "Steps ticked"
+          },
+          "stepsTotal": {
+            "type": "number",
+            "description": "Steps written, 0 to 20"
           }
         },
         "required": [
@@ -6311,7 +6646,12 @@
           "finishedAt",
           "handedOverAt",
           "etaAt",
-          "createdAt"
+          "createdAt",
+          "startsAt",
+          "jobs",
+          "mechanicName",
+          "stepsDone",
+          "stepsTotal"
         ]
       },
       "JobListDto": {
@@ -6359,6 +6699,12 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "doneBy": {
+            "type": "string",
+            "description": "The account that ticked it",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -6366,7 +6712,8 @@
           "position",
           "label",
           "customerLabel",
-          "doneAt"
+          "doneAt",
+          "doneBy"
         ]
       },
       "JobStageEntryDto": {
@@ -6487,6 +6834,29 @@
             "type": "string",
             "format": "date-time"
           },
+          "startsAt": {
+            "type": "string",
+            "description": "The booking's start",
+            "format": "date-time"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "mechanicName": {
+            "type": "string",
+            "nullable": true
+          },
+          "stepsDone": {
+            "type": "number",
+            "description": "Steps ticked"
+          },
+          "stepsTotal": {
+            "type": "number",
+            "description": "Steps written, 0 to 20"
+          },
           "finalPriceBani": {
             "type": "number",
             "nullable": true
@@ -6517,9 +6887,58 @@
           "handedOverAt",
           "etaAt",
           "createdAt",
+          "startsAt",
+          "jobs",
+          "mechanicName",
+          "stepsDone",
+          "stepsTotal",
           "finalPriceBani",
           "steps",
           "stages"
+        ]
+      },
+      "JobStepTextDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Trimmed, 2 to 80 characters",
+            "maxLength": 80,
+            "minLength": 2
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "ReorderJobStepsDto": {
+        "type": "object",
+        "properties": {
+          "stepIds": {
+            "description": "Every step of the job, once each, in the new order",
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "stepIds"
+        ]
+      },
+      "JobStepDoneDto": {
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "boolean",
+            "description": "true ticks the step, false unticks it"
+          }
+        },
+        "required": [
+          "done"
         ]
       },
       "PlaceSuggestionDto": {

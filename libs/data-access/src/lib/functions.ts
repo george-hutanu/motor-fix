@@ -131,6 +131,16 @@ export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';
 export { garageJobsControllerGet as garageJobsControllerGet } from './fn/garage-jobs/garage-jobs-controller-get';
+export type { JobStepsControllerAdd$Params as JobStepsControllerAdd$Params } from './fn/garage-jobs/job-steps-controller-add';
+export { jobStepsControllerAdd as jobStepsControllerAdd } from './fn/garage-jobs/job-steps-controller-add';
+export type { JobStepsControllerReorder$Params as JobStepsControllerReorder$Params } from './fn/garage-jobs/job-steps-controller-reorder';
+export { jobStepsControllerReorder as jobStepsControllerReorder } from './fn/garage-jobs/job-steps-controller-reorder';
+export type { JobStepsControllerRemove$Params as JobStepsControllerRemove$Params } from './fn/garage-jobs/job-steps-controller-remove';
+export { jobStepsControllerRemove as jobStepsControllerRemove } from './fn/garage-jobs/job-steps-controller-remove';
+export type { JobStepsControllerRename$Params as JobStepsControllerRename$Params } from './fn/garage-jobs/job-steps-controller-rename';
+export { jobStepsControllerRename as jobStepsControllerRename } from './fn/garage-jobs/job-steps-controller-rename';
+export type { JobStepsControllerTick$Params as JobStepsControllerTick$Params } from './fn/garage-jobs/job-steps-controller-tick';
+export { jobStepsControllerTick as jobStepsControllerTick } from './fn/garage-jobs/job-steps-controller-tick';
 export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';

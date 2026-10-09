@@ -410,10 +410,21 @@ async function book(
       who.mechanic,
     ],
   );
-  await db.query(
-    `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status)
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'to_do')`,
+  // Started by its mechanic, so QA can tick its steps.
+  const job = await db.query<{ id: string }>(
+    `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status, started_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'in_work', now())
+     RETURNING id`,
     [booking.rows[0]?.id, who.garageId, who.carId, who.driverId, who.mechanic],
+  );
+  await db.query(
+    `INSERT INTO job_stage_entry (id, job_id, from_status, to_status, actor_id, actor_role, at)
+     SELECT gen_random_uuid(), $1, s.from_status::job_status, s.to_status::job_status,
+            m.account_id, 'mechanic'::audit_actor_role, now() + s.n * interval '1 millisecond'
+     FROM mechanic m,
+          (VALUES (NULL, 'to_do', 0), ('to_do', 'in_work', 1)) AS s(from_status, to_status, n)
+     WHERE m.id = $2`,
+    [job.rows[0]?.id, who.mechanic],
   );
 }
 

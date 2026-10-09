@@ -15,6 +15,17 @@ import { garageJobsControllerList } from '../fn/garage-jobs/garage-jobs-controll
 import { GarageJobsControllerList$Params } from '../fn/garage-jobs/garage-jobs-controller-list';
 import { JobDto } from '../models/job-dto';
 import { JobListDto } from '../models/job-list-dto';
+import { JobStepDto } from '../models/job-step-dto';
+import { jobStepsControllerAdd } from '../fn/garage-jobs/job-steps-controller-add';
+import { JobStepsControllerAdd$Params } from '../fn/garage-jobs/job-steps-controller-add';
+import { jobStepsControllerRemove } from '../fn/garage-jobs/job-steps-controller-remove';
+import { JobStepsControllerRemove$Params } from '../fn/garage-jobs/job-steps-controller-remove';
+import { jobStepsControllerRename } from '../fn/garage-jobs/job-steps-controller-rename';
+import { JobStepsControllerRename$Params } from '../fn/garage-jobs/job-steps-controller-rename';
+import { jobStepsControllerReorder } from '../fn/garage-jobs/job-steps-controller-reorder';
+import { JobStepsControllerReorder$Params } from '../fn/garage-jobs/job-steps-controller-reorder';
+import { jobStepsControllerTick } from '../fn/garage-jobs/job-steps-controller-tick';
+import { JobStepsControllerTick$Params } from '../fn/garage-jobs/job-steps-controller-tick';
 
 @Injectable({ providedIn: 'root' })
 export class GarageJobsService extends BaseService {
@@ -26,6 +37,10 @@ export class GarageJobsService extends BaseService {
   static readonly GarageJobsControllerListPath = '/api/v1/garage/jobs';
 
   /**
+   * The garage’s jobs by booking start, from a Bucharest day (today by default), with every job still in work or paused.
+   *
+   *
+   *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `garageJobsControllerList()` instead.
    *
@@ -37,6 +52,10 @@ export class GarageJobsService extends BaseService {
   }
 
   /**
+   * The garage’s jobs by booking start, from a Bucharest day (today by default), with every job still in work or paused.
+   *
+   *
+   *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `garageJobsControllerList$Response()` instead.
    *
@@ -70,6 +89,171 @@ export class GarageJobsService extends BaseService {
   garageJobsControllerGet(params: GarageJobsControllerGet$Params, context?: HttpContext): Promise<JobDto> {
     const resp = this.garageJobsControllerGet$Response(params, context);
     return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStepsControllerAdd()` */
+  static readonly JobStepsControllerAddPath = '/api/v1/garage/jobs/{id}/steps';
+
+  /**
+   * Add a step at the end of the job.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStepsControllerAdd()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerAdd$Response(params: JobStepsControllerAdd$Params, context?: HttpContext): Promise<StrictHttpResponse<JobStepDto>> {
+    const obs = jobStepsControllerAdd(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Add a step at the end of the job.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStepsControllerAdd$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerAdd(params: JobStepsControllerAdd$Params, context?: HttpContext): Promise<JobStepDto> {
+    const resp = this.jobStepsControllerAdd$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobStepDto>): JobStepDto => r.body);
+  }
+
+  /** Path part for operation `jobStepsControllerReorder()` */
+  static readonly JobStepsControllerReorderPath = '/api/v1/garage/jobs/{id}/steps/order';
+
+  /**
+   * Put every step of the job in a new order.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStepsControllerReorder()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerReorder$Response(params: JobStepsControllerReorder$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = jobStepsControllerReorder(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Put every step of the job in a new order.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStepsControllerReorder$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerReorder(params: JobStepsControllerReorder$Params, context?: HttpContext): Promise<void> {
+    const resp = this.jobStepsControllerReorder$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `jobStepsControllerRemove()` */
+  static readonly JobStepsControllerRemovePath = '/api/v1/garage/jobs/{id}/steps/{stepId}';
+
+  /**
+   * Remove a step; the rest close the gap.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStepsControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStepsControllerRemove$Response(params: JobStepsControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = jobStepsControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Remove a step; the rest close the gap.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStepsControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStepsControllerRemove(params: JobStepsControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.jobStepsControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `jobStepsControllerRename()` */
+  static readonly JobStepsControllerRenamePath = '/api/v1/garage/jobs/{id}/steps/{stepId}';
+
+  /**
+   * Rename a step.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStepsControllerRename()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerRename$Response(params: JobStepsControllerRename$Params, context?: HttpContext): Promise<StrictHttpResponse<JobStepDto>> {
+    const obs = jobStepsControllerRename(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Rename a step.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStepsControllerRename$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerRename(params: JobStepsControllerRename$Params, context?: HttpContext): Promise<JobStepDto> {
+    const resp = this.jobStepsControllerRename$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobStepDto>): JobStepDto => r.body);
+  }
+
+  /** Path part for operation `jobStepsControllerTick()` */
+  static readonly JobStepsControllerTickPath = '/api/v1/garage/jobs/{id}/steps/{stepId}/done';
+
+  /**
+   * Tick or untick a step; a repeat changes nothing.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStepsControllerTick()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerTick$Response(params: JobStepsControllerTick$Params, context?: HttpContext): Promise<StrictHttpResponse<JobStepDto>> {
+    const obs = jobStepsControllerTick(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Tick or untick a step; a repeat changes nothing.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStepsControllerTick$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStepsControllerTick(params: JobStepsControllerTick$Params, context?: HttpContext): Promise<JobStepDto> {
+    const resp = this.jobStepsControllerTick$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobStepDto>): JobStepDto => r.body);
   }
 
 }

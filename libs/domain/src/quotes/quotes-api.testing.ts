@@ -57,6 +57,21 @@ export function quotesApp() {
     return auth ? call.set('Authorization', auth) : call;
   };
 
+  // A write, its body sent as JSON.
+  const send = (
+    method: 'post' | 'patch' | 'put' | 'delete',
+    path: string,
+    auth: string,
+    body?: object,
+    headers: Record<string, string> = {},
+  ) => {
+    const call = request(app.getHttpServer())
+      [method](path)
+      .set('Authorization', auth)
+      .set(headers);
+    return body ? call.send(body) : call;
+  };
+
   // A garage with its owner, a receptionist, a mechanic who may answer
   // quotes and one who may not.
   async function team(name: string) {
@@ -93,5 +108,5 @@ export function quotesApp() {
     };
   }
 
-  return { bearer, get, team, world };
+  return { bearer, get, send, team, world };
 }
