@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { notionClient } from "../lib/notion.mjs";
-import { reconcile } from "./bootstrap.mjs";
+import { reconcile, RESERVED_FIELD_NAMES, SCHEMA } from "./bootstrap.mjs";
 import { fakeGitHub } from "./fixtures/github.mjs";
 import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
@@ -777,12 +777,38 @@ describe("every property in a field of its own", () => {
     assert.equal(f.Component, "Garage account");
     assert.equal(f.Session, "F4");
     assert.equal(f.Feature, "Sign in");
-    assert.equal(f.Created, "2026-09-01");
+    assert.equal(f["Created in Notion"], "2026-09-01");
     assert.equal(f.Took.length, TEXT_MAX);
     assert.ok(!/notion\.so/.test(f.Took));
     const e = plans.find((p) => p.key === "EP-1").fields;
     assert.equal(e.Weeks, 6);
     assert.equal(e["Story count"], 5);
+  });
+
+  it("writes only fields the bootstrap makes, never one of GitHub's own", async () => {
+    const reserved = new Set(RESERVED_FIELD_NAMES.map((n) => n.toLowerCase()));
+    const schema = new Set(SCHEMA.fields.map((f) => f.name));
+    const t = await tracker();
+    for (const r of [...t.stories, ...t.epics]) r.created = "2026-09-01";
+    const names = new Set(issuePlans(t).plans.flatMap((p) => Object.keys(p.fields)));
+    assert.ok(names.has("Created in Notion"));
+    for (const name of names) {
+      assert.ok(schema.has(name), `${name} is not in the bootstrap's schema`);
+      if (name !== "Status") assert.ok(!reserved.has(name.toLowerCase()), `${name} is a GitHub field`);
+    }
+  });
+
+  it("refuses a field of the right name that is one of GitHub's own, before any write", async () => {
+    const gh = await bootstrapped();
+    const p = gh.state.projects[0];
+    const mine = p.fields.find((f) => f.name === "Created in Notion");
+    mine.dataType = "CREATED";
+    const t = await tracker();
+    for (const r of [...t.stories, ...t.epics]) r.created = "2026-09-01";
+    const { exit, lines } = await importInto(gh, { tracker: t });
+    assert.equal(exit, 1);
+    assert.match(lines.at(-1), /^failed\s+run bootstrap first: missing writable fields Created in Notion \(CREATED\)/);
+    assert.equal(gh.state.issues.length, 0);
   });
 
   it("refuses to write until the bootstrap has made every field the plans use", async () => {

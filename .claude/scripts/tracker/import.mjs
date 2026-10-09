@@ -32,6 +32,8 @@ const PULL = new RegExp(`^https://github\\.com/${OWNER}/${CODE_REPO}/pull/(\\d+)
 const STATUSES = ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"];
 const EPIC_STATUS = { "To do": "To do", "In progress": "Implementing", Done: "Done" };
 const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
+// The field types set-fields writes; GitHub's own fields (CREATED, TITLE, …) take no value.
+const WRITABLE = new Set(["SINGLE_SELECT", "DATE", "NUMBER", "TEXT"]);
 const KINDS = ["create", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "blocked-by", "pr-closes"];
 const MARKER = /<!-- motorfix:((?:ST|EP)-\d+) -->/;
 // Set on an issue filed by hand and adopted: its title and labels stay the person's.
@@ -238,7 +240,7 @@ export function issuePlans(tracker) {
           ["Date", dateOf(of(s, "Date"))],
           ["Work start", dateOf(of(s, "Work"))],
           ["Work end", dateOf(of(s, "Work"), true)],
-          ["Created", s.created],
+          ["Created in Notion", s.created],
         ]);
       },
     };
@@ -279,7 +281,7 @@ export function issuePlans(tracker) {
           ["Design boards", textOf(of(e, "Design boards"))],
           ["Goal", textOf(of(e, "Goal"))],
           ["Done when", textOf(of(e, "Done when"))],
-          ["Created", e.created],
+          ["Created in Notion", e.created],
         ]);
       },
     };
@@ -340,6 +342,13 @@ function missingSetup({ plans, labels, milestones, fields }) {
     ["labels", [...new Set(plans.flatMap((p) => p.labels))].filter((x) => !labelNames.has(x.toLowerCase()))],
     ["milestones", absent(plans.map((p) => p.milestone).filter(Boolean), milestones)],
     ["fields", absent(plans.flatMap((p) => [...Object.keys(p.fields), ...(p.featureIds?.length ? ["Feature"] : [])]), new Set(fieldNames.keys()))],
+    // A field of the name that the import cannot write (one of GitHub's own, such as Created) is as good as missing.
+    [
+      "writable fields",
+      [...new Set(plans.flatMap((p) => Object.keys(p.fields)))]
+        .filter((name) => fieldNames.has(name) && !WRITABLE.has(fieldNames.get(name).dataType))
+        .map((name) => `${name} (${fieldNames.get(name).dataType})`),
+    ],
     [
       "options",
       absent(

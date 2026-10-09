@@ -48,6 +48,11 @@ export const RESERVED_FIELD_NAMES = [
   "Iteration",
   "Tracks",
   "Tracked by",
+  // Item dates GitHub keeps itself (dataType CREATED, UPDATED, CLOSED).
+  "Created",
+  "Updated",
+  "Closed",
+  "Issue type",
 ];
 
 export const SCHEMA = {
@@ -68,7 +73,7 @@ export const SCHEMA = {
     select("Track", TRACKS.map((t) => [t])),
     select("Release", RELEASES.map((r, i) => [r, ["RED", "ORANGE", "GRAY"][i]])),
     ...["Area", "Component", "Feature", "Design", "Design boards", "PR", "Session", "User story", "Took", "Place", "Goal", "Done when"].map(plain("TEXT")),
-    ...["Date", "Work start", "Work end", "Created"].map(plain("DATE")),
+    ...["Date", "Work start", "Work end", "Created in Notion"].map(plain("DATE")),
     ...["Story count", "Weeks"].map(plain("NUMBER")),
   ],
   views: [
