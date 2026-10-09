@@ -557,3 +557,237 @@ describe('step 5, the facilities', () => {
     ]);
   });
 });
+
+const payChips = (step: HTMLElement) => [
+  ...step.querySelectorAll<HTMLButtonElement>('.payments button'),
+];
+const payChip = (step: HTMLElement, name: string) => {
+  const found = payChips(step).find((c) => text(c).startsWith(name));
+  if (!found) throw new Error(`no payment chip ${name}`);
+  return found;
+};
+const radio = (step: HTMLElement, label: string) =>
+  [...step.querySelectorAll('label')]
+    .find((l) => text(l) === label)
+    ?.querySelector<HTMLInputElement>('input[type="radio"]') ?? null;
+const price = (step: HTMLElement) =>
+  step.querySelector<HTMLInputElement>('input[name="courtesyPrice"]');
+const statuses = (step: HTMLElement) =>
+  [...step.querySelectorAll('[role="status"]')].map(text);
+const describedBy = (step: HTMLElement, field: HTMLElement | null) => {
+  const id = field?.getAttribute('aria-describedby');
+  return id ? step.querySelector(`[id="${id}"]`) : null;
+};
+
+async function choosePaid(fixture: Fixture, step: HTMLElement) {
+  await click(fixture, chip(step, 'Mașină la schimb'));
+  await click(fixture, radio(step, 'Contra cost'));
+}
+
+describe('step 5, the payment methods', () => {
+  it('shows a payment heading after the facilities and three chips, none ticked', async () => {
+    const { step } = await open();
+
+    const heading = [...step.querySelectorAll('h3')].find(
+      (h) => text(h) === 'Plată',
+    );
+    expect(heading).toBeDefined();
+    expect(
+      step.querySelector('.facilities')!.compareDocumentPosition(heading!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(payChips(step).map(text)).toEqual([
+      'Numerar',
+      'Card',
+      'Transfer bancar',
+    ]);
+    for (const c of payChips(step)) {
+      expect(c.type).toBe('button');
+      expect(c.getAttribute('aria-pressed')).toBe('false');
+    }
+  });
+
+  it('ticks two methods, telling the state by more than colour, and unticks on a second tap', async () => {
+    const { fixture, step } = await open();
+
+    await click(fixture, payChip(step, 'Transfer bancar'));
+    await click(fixture, payChip(step, 'Numerar'));
+
+    expect(fixture.componentInstance.value().payments).toEqual([
+      'cash',
+      'transfer',
+    ]);
+    const cash = payChip(step, 'Numerar');
+    expect(cash.getAttribute('aria-pressed')).toBe('true');
+    expect(cash.querySelector('mf-lamp')?.getAttribute('data-state')).toBe(
+      'green',
+    );
+    expect(text(cash)).not.toBe('Numerar');
+
+    await click(fixture, payChip(step, 'Numerar'));
+    expect(fixture.componentInstance.value().payments).toEqual(['transfer']);
+  });
+
+  it('says a payment method is needed while none is ticked', async () => {
+    const { fixture, step } = await open();
+
+    expect(statuses(step)).toContain('Alege cel puțin o modalitate de plată');
+    const error = step.querySelector(
+      `#${payChip(step, 'Card').getAttribute('aria-describedby')}`,
+    );
+    expect(error?.classList).toContain('error');
+    expect(text(error as HTMLElement)).toBe(
+      'Alege cel puțin o modalitate de plată',
+    );
+
+    await click(fixture, payChip(step, 'Card'));
+    expect(statuses(step)).not.toContain(
+      'Alege cel puțin o modalitate de plată',
+    );
+  });
+
+  it('changes the chips and keeps the ticks when the language changes', async () => {
+    const { fixture, i18n, step } = await open();
+    await click(fixture, payChip(step, 'Card'));
+
+    await i18n.use('en');
+    await settle(fixture);
+
+    expect(payChips(step).map((c) => text(c).split(' you')[0])).toEqual([
+      'Cash',
+      'Card',
+      'Bank transfer',
+    ]);
+    expect(payChip(step, 'Card').getAttribute('aria-pressed')).toBe('true');
+    expect(fixture.componentInstance.value().payments).toEqual(['card']);
+  });
+});
+
+describe('step 5, the courtesy car', () => {
+  it('offers free or paid under the ticked chip, free by default, with no price field', async () => {
+    const { fixture, step } = await open();
+    expect(radio(step, 'Gratuită')).toBeNull();
+
+    await click(fixture, chip(step, 'Mașină la schimb'));
+
+    const free = radio(step, 'Gratuită');
+    const paid = radio(step, 'Contra cost');
+    expect(free?.checked).toBe(true);
+    expect(paid?.checked).toBe(false);
+    expect(free?.name).toBe(paid?.name);
+    expect(price(step)).toBeNull();
+    expect(fixture.componentInstance.value().courtesyCar).toEqual({
+      paid: false,
+    });
+  });
+
+  it('shows the price per day in lei once paid and keeps it as bani', async () => {
+    const { fixture, step } = await open();
+    await choosePaid(fixture, step);
+
+    const field = price(step);
+    expect(field).not.toBeNull();
+    expect(text(field!.closest('label'))).toContain('Preț pe zi');
+    expect(text(field!.closest('label'))).toContain('lei');
+    await type(fixture, field, '120');
+
+    expect(fixture.componentInstance.value().courtesyCar).toEqual({
+      paid: true,
+      pricePerDayBani: 12_000,
+    });
+  });
+
+  it('drops the price when switched back to free', async () => {
+    const { fixture, step } = await open();
+    await choosePaid(fixture, step);
+    await type(fixture, price(step), '120');
+
+    await click(fixture, radio(step, 'Gratuită'));
+
+    expect(price(step)).toBeNull();
+    expect(fixture.componentInstance.value().courtesyCar).toEqual({
+      paid: false,
+    });
+  });
+
+  it('removes the choice and the price from the step and the value when the chip is unticked', async () => {
+    const { fixture, step } = await open();
+    await choosePaid(fixture, step);
+    await type(fixture, price(step), '120');
+
+    await click(fixture, chip(step, 'Mașină la schimb'));
+
+    expect(radio(step, 'Contra cost')).toBeNull();
+    expect(price(step)).toBeNull();
+    expect(fixture.componentInstance.value()).not.toHaveProperty('courtesyCar');
+  });
+
+  it('shows a field error tied to the price while paid has no price', async () => {
+    const { fixture, step } = await open();
+    await choosePaid(fixture, step);
+
+    const error = describedBy(step, price(step));
+    expect(error?.getAttribute('role')).toBe('status');
+    expect(text(error)).not.toBe('');
+  });
+
+  it('shows a field error for a price over 2,000 lei and clears it for a price in range', async () => {
+    const { fixture, step } = await open();
+    await choosePaid(fixture, step);
+
+    await type(fixture, price(step), '2001');
+    expect(describedBy(step, price(step))?.getAttribute('role')).toBe('status');
+
+    await type(fixture, price(step), '2000');
+    expect(describedBy(step, price(step))).toBeNull();
+  });
+
+  it.each([
+    ['0', '0'],
+    ['2001', '2001'],
+  ])(
+    'keeps a %s lei price out of the value, still shown with its error, so paid stays chosen',
+    async (typed, shown) => {
+      const { fixture, step } = await open();
+      await choosePaid(fixture, step);
+
+      await type(fixture, price(step), typed);
+
+      expect(fixture.componentInstance.value().courtesyCar).toEqual({
+        paid: true,
+      });
+      expect(price(step)?.value).toBe(shown);
+      expect(radio(step, 'Contra cost')?.checked).toBe(true);
+      expect(describedBy(step, price(step))?.getAttribute('role')).toBe(
+        'status',
+      );
+
+      // The parent hands the value back, as the draft does: the typed price stays.
+      fixture.componentInstance.value.set({
+        ...fixture.componentInstance.value(),
+      });
+      await settle(fixture);
+      expect(price(step)?.value).toBe(shown);
+
+      await type(fixture, price(step), '120');
+      expect(fixture.componentInstance.value().courtesyCar).toEqual({
+        paid: true,
+        pricePerDayBani: 12_000,
+      });
+      expect(describedBy(step, price(step))).toBeNull();
+    },
+  );
+
+  it('keeps the choice and the typed price when the language changes', async () => {
+    const { fixture, i18n, step } = await open();
+    await choosePaid(fixture, step);
+    await type(fixture, price(step), '120');
+
+    await i18n.use('en');
+    await settle(fixture);
+
+    expect(radio(step, 'Paid')?.checked).toBe(true);
+    expect(text(price(step)!.closest('label'))).toContain('Price per day');
+    expect(price(step)?.value).toBe('120');
+  });
+});

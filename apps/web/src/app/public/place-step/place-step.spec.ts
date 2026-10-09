@@ -410,6 +410,18 @@ describe('step 5, the place', () => {
       'Harta nu s‑a putut încărca',
     );
   });
+
+  // @traces 945-FR-004
+  it('clears the notice once the loaded map renders again without an error', async () => {
+    const opened = await open();
+    await mapEvent(opened, () => events.failed());
+
+    await mapEvent(opened, () => events.recovered());
+
+    expect(text(opened.step.querySelector('.map-area'))).not.toContain(
+      'Harta nu s‑a putut încărca',
+    );
+  });
 });
 
 describe('step 5 for a mobile mechanic', () => {

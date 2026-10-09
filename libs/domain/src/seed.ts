@@ -155,6 +155,13 @@ const PEOPLE: Person[] = [
     name: 'Admin MotorFix',
     roles: ['admin'],
   },
+  // A second admin, for the rules that need another admin to approve.
+  {
+    email: 'admin2@example.test',
+    lastRole: 'admin',
+    name: 'Mihai Ionescu',
+    roles: ['admin'],
+  },
   {
     at: { as: 'owner', garage: 'service-dobre' },
     email: 'doua-roluri@example.test',
@@ -309,6 +316,21 @@ async function seed(db: Client, secret: string) {
   }
   for (const garage of LISTED) await list(db, garage);
   for (const person of PEOPLE) await add(db, person, secret);
+  // The day the suspended driver was suspended, as an admin's change records
+  // it; added apart from the account so a database seeded before has it too.
+  await db.query(
+    `INSERT INTO activity_log (id, at, action, subject_type, subject_id, field,
+       old_value, new_value, actor_role, actor_name)
+     SELECT gen_random_uuid(), '2026-10-02T10:00:00Z', 'update', 'account', a.id,
+       'status', '"active"'::jsonb, '"suspended"'::jsonb, 'admin', 'Admin MotorFix'
+     FROM account a
+     WHERE a.email = 'suspendat@example.test'
+       AND NOT EXISTS (
+         SELECT 1 FROM activity_log l
+         WHERE l.subject_type = 'account' AND l.subject_id = a.id
+           AND l.field = 'status' AND l.new_value = '"suspended"'::jsonb
+       )`,
+  );
   for (const { garage, status } of WAITING) {
     await db.query(
       `INSERT INTO verification_file (id, garage_id, status)

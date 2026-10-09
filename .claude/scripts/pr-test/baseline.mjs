@@ -111,12 +111,27 @@ export function chooseBaseline({ gh, repo, pr, head, base, run, explicit, prefer
     }
     return null;
   };
+  const compareStatus = (from, to) => {
+    const cmp = gh(["api", `repos/${repo}/compare/${from}...${to}`]);
+    return cmp.code === 0 ? parseJson(cmp.stdout)?.status : null;
+  };
+  // A run of a commit on the base, and first one the PR head also has: main as the PR sees it, so its layout
+  // findings are the ones the PR inherited. A newer commit of main the PR lacks is the fallback.
   const baseRuns = () => {
     if (!base) return null;
+    const later = [];
     for (const r of candidates.filter((c) => c.pr !== pr && !tried.has(c.databaseId))) {
-      const cmp = gh(["api", `repos/${repo}/compare/${base}...${r.sha}`]);
-      const status = cmp.code === 0 ? parseJson(cmp.stdout)?.status : null;
+      const status = compareStatus(base, r.sha);
       if (status !== "behind" && status !== "identical") continue;
+      const inHead = compareStatus(r.sha, head);
+      if (inHead !== "ahead" && inHead !== "identical") {
+        later.push(r);
+        continue;
+      }
+      const got = attempt(r);
+      if (got) return got;
+    }
+    for (const r of later.filter((c) => !tried.has(c.databaseId))) {
       const got = attempt(r);
       if (got) return got;
     }
@@ -285,7 +300,14 @@ export function visualOutcome({ meta, shots, web }) {
     ? []
     : Object.entries(shots)
         .filter(([, v]) => v.status === "changed")
-        .map(([name, v]) => ({ kind: "visual", severity: "medium", title: `Unintended visual change: ${name}, ${v.regions.length} region${v.regions.length === 1 ? "" : "s"}`, evidence: v.diff, key: `visual|${name}` }));
+        .map(([name, v]) => ({
+          kind: "visual",
+          severity: "medium",
+          title: `Unintended visual change: ${name}, ${v.regions.length} region${v.regions.length === 1 ? "" : "s"}`,
+          evidence: v.diff,
+          key: `visual|${name}`,
+          steps: [`Compare ${name} with the baseline run ${meta.run} of ${short(meta.sha)}`, `See the changed regions in ${v.diff}`],
+        }));
   return { notes, findings, visual: { baseline: meta, shots } };
 }
 

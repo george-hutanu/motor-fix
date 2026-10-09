@@ -15,11 +15,13 @@
 // with other SQL (the worktree changed branch), is recreated before the
 // migrations run. `docker compose -p <project> down -v` removes them.
 //
-//   node scripts/test-services.ts down [<worktree>]
+//   node scripts/test-services.ts down [<worktree>] [--volumes]
 //
 // Stops that worktree's stack (the current checkout's by default), keeping its
 // volumes, and prints `{"project","stopped"[,"reason"]}`. `lifecycle.mjs merge`
-// runs it for the merged branch's worktree.
+// runs it for the merged branch's worktree. `--volumes` removes the volumes
+// too, and any left labelled with the project (`worktree-remove.mjs` does this
+// before it removes a worktree).
 //
 //   node scripts/test-services.ts sweep
 //
@@ -363,7 +365,24 @@ const stopStack = (project: string, volumes: boolean) =>
     ...(volumes ? ['-v'] : []),
   ]).error;
 
-function down(worktree: string) {
+// Volumes a down left behind (a stack whose compose run failed half-way)
+// still carry the project label.
+function removeVolumes(project: string) {
+  const listed = tryRun('docker', [
+    'volume',
+    'ls',
+    '-q',
+    '--filter',
+    `label=com.docker.compose.project=${project}`,
+  ]);
+  if (listed.error) return listed.error;
+  const ids = listed.stdout.split('\n').filter(Boolean);
+  return ids.length
+    ? tryRun('docker', ['volume', 'rm', ...ids]).error
+    : undefined;
+}
+
+function down(worktree: string, volumes = false) {
   const project = composeProject(worktree);
   if (!dockerUp()) {
     console.error(`test-services: docker unavailable, ${project} not stopped`);
@@ -372,7 +391,9 @@ function down(worktree: string) {
     );
     return;
   }
-  const error = stopStack(project, false);
+  const error =
+    stopStack(project, volumes) ??
+    (volumes ? removeVolumes(project) : undefined);
   if (error) console.error(`test-services: ${project} not stopped: ${error}`);
   console.log(
     JSON.stringify(
@@ -476,19 +497,24 @@ function currentCheckout(): string {
 
 const usage = [
   'Usage: node scripts/test-services.ts <base-ref>',
-  '       node scripts/test-services.ts down [<worktree>]',
+  '       node scripts/test-services.ts down [<worktree>] [--volumes]',
   '       node scripts/test-services.ts sweep',
 ].join('\n');
 
 if (process.argv[1]?.endsWith('test-services.ts')) {
   const [command, ...rest] = process.argv.slice(2);
   if (command === 'down' || command === 'sweep') {
-    if (rest.length > (command === 'down' ? 1 : 0)) {
+    const volumes = command === 'down' && rest.includes('--volumes');
+    const args = rest.filter((arg) => !(volumes && arg === '--volumes'));
+    if (
+      args.length > (command === 'down' ? 1 : 0) ||
+      args.some((arg) => arg.startsWith('--'))
+    ) {
       console.error(usage);
       process.exit(2);
     }
     if (command === 'sweep') sweep();
-    else down(resolve(rest[0] ?? currentCheckout()));
+    else down(resolve(args[0] ?? currentCheckout()), volumes);
     process.exit(0);
   }
   // Anything else is the base ref, alone: a word that names no commit is an

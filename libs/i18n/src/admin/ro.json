@@ -15,8 +15,28 @@
   },
   "platformRules": {
     "alwaysOn": "Mereu active în producție",
+    "approve": "Aprobă",
+    "decided": {
+      "approved": "Aprobată de {name}",
+      "cancelled": "Retrasă de {name}",
+      "refused": "Refuzată de {name}"
+    },
     "line": "Regulile care se aplică tuturor service‑urilor",
     "loadFailed": "Nu am putut încărca regulile",
+    "refuse": "Refuză",
+    "request": {
+      "cancel": "Renunță",
+      "problem": {
+        "change_pending": "O altă cerere pentru această regulă așteaptă deja.",
+        "stale_value": "Regula este deja oprită."
+      },
+      "reason": "Motiv",
+      "reasonHint": "5–300 caractere. Ceilalți administratori îl văd.",
+      "second": "Un alt administrator trebuie să aprobe.",
+      "submit": "Trimite cererea",
+      "title": "Oprești regula „Recenzii doar după o lucrare confirmată”?",
+      "what": "Șoferii conectați vor putea lăsa recenzii și din profilul unui service, fără o lucrare prin MotorFix. Aceste recenzii vor fi marcate „nu prin MotorFix”."
+    },
     "retry": "Reîncearcă",
     "rule": {
       "maintenance_mode": {
@@ -39,6 +59,70 @@
     "saveFailed": "Regula nu a putut fi salvată. Încearcă din nou.",
     "testOnly": "Doar în testare",
     "title": "Setări platformă",
-    "twoAdmins": "Este nevoie de un al doilea administrator."
+    "twoAdmins": "Este nevoie de un al doilea administrator.",
+    "waiting": "Așteaptă aprobarea altui admin",
+    "withdraw": "Retrage cererea"
+  },
+  "users": {
+    "cars": {
+      "count": {
+        "few": "{n} mașini",
+        "one": "{n} mașină",
+        "other": "{n} de mașini"
+      },
+      "none": "fără mașină"
+    },
+    "count": {
+      "age": {
+        "few": "cont de {n} zile",
+        "one": "cont de {n} zi",
+        "other": "cont de {n} de zile"
+      },
+      "requests": {
+        "few": "{n} cereri",
+        "one": "{n} cerere",
+        "other": "{n} de cereri"
+      },
+      "reviews": {
+        "few": "{n} recenzii",
+        "one": "{n} recenzie",
+        "other": "{n} de recenzii"
+      }
+    },
+    "empty": "Niciun cont încă.",
+    "failed": "Lista nu s‑a încărcat.",
+    "loading": "Se încarcă conturile",
+    "more": "Următoarele conturi nu s‑au încărcat.",
+    "recent": "Conturi recente",
+    "retry": "Reîncearcă",
+    "roles": {
+      "admin": "admin",
+      "driver": "șofer",
+      "garage": "service",
+      "mechanic": "mecanic",
+      "receptionist": "recepție"
+    },
+    "state": {
+      "active": "activ",
+      "since": "{state} · din {when}",
+      "suspended": "suspendat"
+    },
+    "totals": {
+      "drivers": {
+        "few": "{n} șoferi activi",
+        "one": "{n} șofer activ",
+        "other": "{n} de șoferi activi"
+      },
+      "garages": {
+        "few": "{n} service‑uri",
+        "one": "{n} service",
+        "other": "{n} de service‑uri"
+      },
+      "mechanics": {
+        "few": "{n} mecanici",
+        "one": "{n} mecanic",
+        "other": "{n} de mecanici"
+      }
+    }
   }
 }

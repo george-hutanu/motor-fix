@@ -17,12 +17,19 @@ import { openApiDocument } from './bootstrap';
 const api = apiBoot();
 
 const KNOWN = [
+  'GET /api/v1/admin/accounts',
+  'GET /api/v1/admin/accounts/summary',
   'GET /api/v1/admin/growth',
   'GET /api/v1/admin/overview',
+  'GET /api/v1/admin/platform-rule-changes',
   'GET /api/v1/admin/platform-rules',
   'PATCH /api/v1/admin/platform-rules/{key}',
   'POST /api/v1/admin/live/test',
   'POST /api/v1/admin/news',
+  'POST /api/v1/admin/platform-rule-changes',
+  'POST /api/v1/admin/platform-rule-changes/{id}/approve',
+  'POST /api/v1/admin/platform-rule-changes/{id}/cancel',
+  'POST /api/v1/admin/platform-rule-changes/{id}/refuse',
   'POST /api/v1/admin/notifications/test',
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}',
 ];

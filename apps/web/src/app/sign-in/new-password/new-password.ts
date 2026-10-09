@@ -18,9 +18,9 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
+import { characters } from '../../characters';
 import { Session } from '../../dashboard/session';
 import type { AuthSwitch } from '../sign-in';
-import { characters } from '../sign-up/sign-up';
 
 type State = 'checking' | 'ready' | 'expired' | 'unreachable';
 

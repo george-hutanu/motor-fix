@@ -1,11 +1,13 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
   - 258-platform-rules-switches
   - 162-growth-12-months
+  - 001-admin-recent-accounts
+  - 260-rule-off-confirm
 ---
 
 # Capability: Admin dashboard
@@ -26,9 +28,9 @@ _From 161-headline-numbers._
 
 _From 160-admin-dashboard-menu._
 
-### 160-FR-006 — The admin dashboard's one view list MUST hold, in this order, "Panou" (`''`), "Service‑uri" (`garages`, capability `admin.garages`), "Utilizatori" (`users`, `admin.users`), "Recenzii raportate" (`reviews`, `admin.reviews`), "Mărci și lucrări" (`catalogue`, `admin.catalogue`), "Asistent AI" (`assistant`, `admin.settings`) and "Setări" (`settings`, `admin.settings`); the side menu (from 768 px), the tab bar (below 768 px) and the routes MUST all read that list, and the tab bar MUST show the short labels "Panou", "Service‑uri", "Utilizatori", "Raportate", "Mărci", "Asistent", "Setări" (English: "Dashboard", "Garages", "Users", "Reported", "Brands", "Assistant", "Settings").
+### 001-FR-006 — The admin "Utilizatori" view (`users`, capability `admin.users`) MUST be released (its "în curând" mark removed) and get its body: the three totals as the body's first line, directly under the view header (the admin frame renders no per-view subtitle; research.md D7), then a two-column grid (the list panel wider than the growth panel, as design.md records) that stacks into one column below 900 px.
 
-_From 160-admin-dashboard-menu._
+_From 001-admin-recent-accounts._
 
 ### 160-FR-008 — The admin frame's header MUST show the line "MotorFix · București · {n} service‑uri așteaptă verificarea" (English "MotorFix · Bucharest · {n} garages are waiting for verification"), where `{n}` is `garagesWaiting` from the overview, written in the language's plural forms: Romanian `one` "1 service așteaptă verificarea", `few` "{n} service‑uri așteaptă verificarea", `other` "{n} de service‑uri așteaptă verificarea", zero "niciun service nu așteaptă verificarea"; English `one` "1 garage is waiting for verification", `other` "{n} garages are waiting for verification", zero "no garage is waiting for verification". The city is the fixed text "București" / "Bucharest" until the period-and-city story (https://app.notion.com/p/3ee607bff0d281bcba2fe16979f909fc) makes it a choice.
 
@@ -130,9 +132,9 @@ _From 258-platform-rules-switches._
 
 _From 258-platform-rules-switches._
 
-### 258-FR-010 — A switch MUST move at once when the admin changes it and send the change with the value the admin saw; on any refusal or failure it MUST go back and show an error line (for 409 `two_admins_required`: that a second admin is needed; for a stale 409: re-read the rules and show the saved state).
+### 260-FR-010 — In the admin's Setări view, switching off a rule that needs two admins MUST NOT send a change; the switch stays where it is and a dialog opens with the title "Oprești regula „Recenzii doar după o lucrare confirmată”?" / "Switch off \"Reviews only after a confirmed job\"?", the text "Șoferii conectați vor putea lăsa recenzii și din profilul unui service, fără o lucrare prin MotorFix. Aceste recenzii vor fi marcate „nu prin MotorFix”. Un alt administrator trebuie să aprobe." / "Signed-in drivers will also be able to review a garage from its profile, without a MotorFix job. Those reviews will be marked \"not through MotorFix\". Another admin has to approve.", a reason field labelled "Motiv" / "Reason" with the range shown, and the buttons "Trimite cererea" / "Send the request" and "Renunță" / "Cancel". Confirming sends the request; cancelling sends nothing. The direct change of that rule to `false` stays refused by the API (258-FR-004) and the view's existing error line for 409 `two_admins_required` remains as the fallback.
 
-_From 258-platform-rules-switches._
+_From 260-rule-off-confirm._
 
 ### 258-FR-011 — When the rules cannot be read, the block MUST show an error line with a way to try again; the rest of the view still shows.
 
@@ -194,9 +196,123 @@ _From 162-growth-12-months._
 
 _From 162-growth-12-months._
 
+### 001-FR-001 — `GET /api/v1/admin/accounts?cursor` MUST answer the accounts whose status is `active` or `suspended` (never `deleted`), newest first by creation time, then id, 20 per page as `{ items, nextCursor }`, with an opaque cursor for the next page (base64url of the last item's creation time and id; the next page holds the items older than it, or as old with a smaller id), so no account is repeated or skipped between two consecutive pages of a list to which accounts are only added; `nextCursor` is null when no account follows the page. A cursor that does not decode (not base64url, or not a valid creation time and id once decoded) MUST answer 400 `invalid_cursor`; a cursor that decodes always answers what follows it, even if its account is gone. The list carries no `total` (A30 is proposed; the view shows none).
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-002 — Each item MUST carry `id`, `name`, `roles` (the account's roles, in the order driver, garage, receptionist, mechanic, admin), `garageName` (the name of the garage of the account's owner or receptionist membership, or of its mechanic card, or null), `carsCount` (the account's cars, for a driver), `status` (`active` or `suspended`), `since` (the time the state began: for `active` the creation time; for `suspended` the time of the last recorded change of the account's status to `suspended` in the activity log, or null when none is recorded; the entry matched is `subjectType: 'account'`, `field: 'status'`, `newValue` `"suspended"`, the way platform-figures matches a garage's approval), `createdAt`, and `count`: `{ kind: 'requests' | 'reviews' | 'age', value }` — `requests` with the driver's number of requests for an account whose first role is driver, `reviews` with the garage's number of reviews for a garage owner, with the number of reviews naming the mechanic for a mechanic, and `age` with the account's age in whole days (rounded down, so an account created today reads 0) for a receptionist, an admin and any account whose creation time is later than now minus 7 × 24 hours, whatever its role. The first role in the order above decides `count` and the source of `garageName` (driver+garage counts `requests`; garage takes the owner membership, receptionist its membership, mechanic its card); `roles` come from the account's roles only. An item MUST NOT carry the e-mail, the phone, a plate or anything else about the person.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-003 — Requests and reviews do not exist on the platform yet (no story has built them): `requests` and `reviews` counts MUST be answered as 0 by the one read that will later count them, so the rows read "0 cereri" / "0 recenzii" until those stories land, and the DTO does not change when they do.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-004 — `GET /api/v1/admin/accounts/summary` MUST answer `{ activeDrivers, garagesListed, mechanics }`: `activeDrivers` and `garagesListed` by the overview's definitions (161-FR-001: driver-role accounts with status `active` whose last activity is within 30 days; garages whose status is `approved`), read through the same platform-figures code, and `mechanics` the number of mechanic cards that carry an account (`accountId` set) at `approved` garages (story ST-1 scenario 1, MF-46 rule 2). The answer MUST be served from a Redis cache (key `admin:accounts:summary`, TTL 60 seconds, the same for every language), the database being read again after it expires and when Redis cannot be reached; the cache never holds the only copy of anything (Constitution VI).
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-005 — Both reads MUST be admin-only through the actor check (ST-160's policy, 161-FR-003): any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`, every error as RFC 9457 problem details with a `code` (A28, contracts/admin-accounts.md); they are not refused by maintenance mode (160-FR-003). The DTOs live in the contracts library and the generated client is regenerated.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-006 — The admin "Utilizatori" view (`users`, capability `admin.users`) MUST be released (its "în curând" mark removed) and get its body: the three totals as the body's first line, directly under the view header (the admin frame renders no per-view subtitle; research.md D7), then a two-column grid (the list panel wider than the growth panel, as design.md records) that stacks into one column below 900 px.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-007 — The subtitle MUST read the three totals joined by " · " (drivers, garages, mechanics), each phrase in its number's plural form (the rules below win; every Romanian "service‑uri" uses U+2011 as FR-013 says) (Romanian `one` "1 șofer activ" / "1 service" / "1 mecanic", `few` "{n} șoferi activi" / "{n} service‑uri" / "{n} mecanici", `other` "{n} de șoferi activi" / "{n} de service‑uri" / "{n} de mecanici"; English `one` "1 active driver" / "1 garage" / "1 mechanic", `other` "{n} active drivers" / "{n} garages" / "{n} mechanics"), numbers grouped by the language (locale-formats: "12.480" / "12,480"). While the totals load the subtitle shows a skeleton line; when the read fails it reads "—" with the overview's info tip (161-FR-007), never 0 and never a number kept from an earlier failed read.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-008 — The panel "Conturi recente" / "Recent accounts" MUST show one row per item: the name over the detail; a lamp and the state; the count right-aligned. The detail MUST read the roles joined by " + " ("șofer", "service", "recepție", "mecanic", "admin" / "driver", "garage", "reception", "mechanic", "admin"), then " · " and, for a driver with no other role, the cars ("1 mașină", "{n} mașini", "fără mașină" / "1 car", "{n} cars", "no car"); for an account with a garage name, that name; for an admin or an account with neither, nothing after the roles.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-009 — The state MUST read, for `active`, a green lamp and "activ · din {month year}" / "active · since {Month year}" from `since` in the language's month names; for `suspended`, a red lamp and "suspendat · din {d mon. yyyy}" / "suspended · since {d Mon yyyy}" from `since`, or "suspendat" / "suspended" alone when `since` is null. The lamp colours are the Cockpit lamp tokens, and the state text is readable without the colour (the word carries the meaning).
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-010 — The count MUST read, by `count.kind`: `requests` "{n} cereri" (`one` "1 cerere", `few` "{n} cereri", `other` "{n} de cereri" / EN "1 request", "{n} requests"); `reviews` "{n} recenzii" (`one` "1 recenzie", `few` "{n} recenzii", `other` "{n} de recenzii" / EN "1 review", "{n} reviews"); `age` "cont de {n} zile" (`one` "cont de 1 zi", `few` "cont de {n} zile", `other` "cont de {n} de zile" / EN "{n}-day-old account", "1-day-old account"); numbers grouped by the language.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-011 — The list MUST load its next page when a sentinel after the last loaded row comes into view (so pages chain without a scroll while the sentinel stays in view), appending the rows below, until `nextCursor` is null; a page load in flight is never doubled. While the first page loads the panel shows skeleton rows; with no account at all it reads "Niciun cont încă." / "No accounts yet."; when the first page fails it shows "Lista nu s-a încărcat" / "The list did not load" with a "Reîncearcă" / "Try again" button (a native button, reachable and activated by keyboard) that reads it again; when a later page fails the loaded rows stay and the same button sits at the foot of the list. The charts load and show whatever the list does.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-012 — The panel "Creștere, ultimele 12 luni" / "Growth, last 12 months" MUST render the overview's growth component (ST-162) unchanged: same read, same labels, latest values, tooltips, loading and failure behaviour.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-013 — On a 320 px phone the view MUST NOT scroll sideways; below 900 px each row is one column (name and detail, then lamp and state, then the count, left-aligned); the lamp, state and count MUST be 12 px or larger; light and dark follow the theme's tokens. Every text MUST exist in Romanian and English in the shared i18n files, a Romanian hyphenated word using U+2011 ("Service‑uri"), and switching the language re-renders the view without a reload or a re-read of the list.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-014 — The two new routes MUST ship their observability in the same change: request count, duration and error metrics by route and status, a structured log line per failure (route and status, never an account's name or cursor), a dashboard panel for the two routes and an alert on their error rate, listed in `infra/observability/inventory.json`; where `infra/observability/dashboards/` and `alerts/` do not exist yet (ST-879, ST-880), the entry records `none` with that reason and the metric and labels to chart, as the plan's Observability section says.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-015 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the newest-first order and the 20-row page; a stable cursor across an insert between pages; 400 for a cursor that does not decode; a `deleted` account left out; each role's detail and count (driver with and without cars, owner, mechanic, receptionist, admin, driver-and-garage); the 7-day age rule; a suspended account with and without a recorded suspension time; the absence of e-mail, phone and plate in every item; the three totals, the 60-second cache (a changed count within the window not shown, shown after it); 404 for each non-admin role, 401 without a token, 403 suspended; and the inventory check. A Playwright end-to-end test opens "Utilizatori" as the seeded admin, reads the subtitle, the seeded rows (the suspended driver red, the driver-and-garage row, the mechanic's garage name), scrolls to load a second page (the list stubbed in the browser with 25 rows, since the end-to-end suite also runs against a deployed address), and reads the two charts, on a phone and a desktop, in both languages; a non-admin opening the address lands on their own dashboard.
+
+_From 001-admin-recent-accounts._
+### 260-FR-001 — The system MUST keep platform rule change requests on the server, each with the rule key, the old and the new value, the reason, who asked and when, who decided and when, and a status among `requested`, `approved`, `refused` and `cancelled`. At most one request per rule MUST be in `requested` at a time, enforced by the database (a partial unique index), the losing insert answering 409 `change_pending`. The row MUST store the asker's and the decider's first names at write time; the asker and decider ids are kept without a foreign key, as the rule's last changer is, so a deleted account's request still shows its stored name.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-002 — An admin MUST be able to ask to switch off a rule that needs two admins, sending only the rule key and a reason of 5–300 characters after trimming (no seen value, no `Idempotency-Key`). The checks run in this order: 404 when the key is unknown, test-only in production, or does not need two admins; 400 `validation_failed` when the reason is missing or out of range; 409 `stale_value` when the rule's current value is not `true`; 409 `change_pending` when a request for the rule already waits. The rule's value MUST NOT change on a request.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-003 — An admin other than the asker MUST be able to approve or refuse a waiting request by its id. The asker MUST get 403 `own_request`. A request that is no longer `requested` MUST answer 409 `already_decided`, naming in its detail the admin who decided (or withdrew) and how. An unknown id MUST answer 404.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-004 — The asker MUST be able to withdraw their own waiting request, being recorded as its decider; another admin MUST get 403 `not_requester`; a request no longer `requested` MUST answer 409 `already_decided`.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-005 — An approval MUST, in one transaction: set the request to `approved` with the approver and the time; set the rule's value to `false` with the approver as who changed it last; write the request's decision audit entry and the rule's change audit entry; record `platform_rule.change_decided` and `platform_rule.changed`. A refusal or a withdrawal MUST, in one transaction, set the status, write its audit entry and record `platform_rule.change_decided`; the rule's value MUST stay as it is. Two decisions on the same request MUST serialise so that exactly one is saved.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-006 — A request MUST, in one transaction, write the request row, its audit entry (actor the asker, action `create`, subject the request, kind `platform_rule.change_requested`, the rule key, old `true`, new `false` and the reason) and record `platform_rule.change_requested`. A decision's audit entry MUST be action `update`, subject the request, field `status`, old `requested`, new `approved`, `refused` or `cancelled`, actor the admin who decided or withdrew.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-009 — An admin MUST be able to list a rule's requests: the waiting one, if any, and the last 5 others newest first by decision time (`decided_at`), each with its status, reason, the asker's first name and time, and the decider's first name and time when decided. The list, the request, the decision and the withdrawal routes MUST be admin-only: 404 for every other role, 401 without a session, as every `admin/*` route; the admin-route guard test's list of known routes gains them, its guard loop unchanged.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-011 — While a request waits, the rule line MUST show the switch on and disabled, the mark "Așteaptă aprobarea altui admin" / "Waiting for another admin's approval", and a card with the asker's first name, the time (in the admin's language and Europe/Bucharest) and the reason. For an admin other than the asker the card MUST carry "Aprobă" / "Approve" and "Refuză" / "Refuse"; for the asker, "Retrage cererea" / "Withdraw the request". A button in flight MUST ignore a second press; on a refusal of the call the view MUST re-read and show an error line (for 409 `already_decided` and `change_pending`: no error line, the re-read shows the saved state). While the first read of the requests is in flight the rule line shows no waiting card and no history, and the switch keeps its last known state; when that read fails the view shows the existing rules error line and no card (a waiting request is then not shown, and the API still refuses a direct change).
+
+_From 260-rule-off-confirm._
+
+### 260-FR-012 — Under the rule line the view MUST show the last decided or withdrawn requests from the list (FR-009) as one line each: "Aprobată de {name} · {time}" / "Approved by {name} · {time}", "Refuzată de {name} · {time}" / "Refused by {name} · {time}", "Retrasă de {name} · {time}" / "Withdrawn by {name} · {time}", each with its reason; nothing when there are none.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-013 — The `admin` module MUST expose one in-process read, `reviewPolicy()`, from the rule's current value: `{ mode: 'job_only' }` while `reviews_only_after_confirmed_job` is `true`; `{ mode: 'profile_allowed', source: 'profile' }` while it is `false`. It is read from the database at each call and exposes no HTTP route; the reviews stories call it.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-014 — Switching the rule back on, and every other rule's change, MUST keep working with one admin through the existing change (258-FR-004); the test-only rules and maintenance take no requests.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-015 — The dialog, the waiting card and the history lines MUST read at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways scroll; the dialog MUST be operable by keyboard, trap focus while open and return focus to the switch when closed; every text MUST live in the shared i18n files. The waiting state MUST be conveyed by text and not by colour alone; a live region MUST announce "waiting" and each decision to assistive technology when the live message re-reads the state; the dialog's reason field MUST name its range and its error through `aria-describedby`; every button and the switch MUST have a touch target of at least 44 × 44 px at 320 px and 390 px.
+
+_From 260-rule-off-confirm._
+
+### 260-FR-016 — The seed MUST hold a second admin account, so the end-to-end suite can ask as one admin and approve as another.
+
+_From 260-rule-off-confirm._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
 - `160-FR-002` — superseded by `161-FR-003` (2026-10-07)
 - `160-FR-011` — superseded by `161-FR-007` (2026-10-07)
 - `160-FR-014` — superseded by `161-FR-011` (2026-10-07)
+
+- `160-FR-006` — superseded by `001-FR-006` (2026-10-08)
+- `258-FR-010` — superseded by `260-FR-010` (2026-10-08)

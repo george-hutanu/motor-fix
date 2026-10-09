@@ -17,6 +17,8 @@ features:
   - 229-location-or-address
   - 113-garage-live-preview
   - 959-map-fits-circle
+  - 945-map-error-listener
+  - 397-listing-ticks
 ---
 
 # Capability: Garage listing
@@ -169,9 +171,9 @@ _From 040-garage-brand-stance._
 
 _From 040-garage-brand-stance._
 
-### 040-FR-006 — The step's values MUST be the `brands` section of the listing draft (stored as the draft's step 2, `steps['2']` in ST-114's shape): the marked brands by id with their stance, the note and the phrase; a brand switched off is absent. They are kept with the rest of the form and restored with it; nothing is written to the garage's tables from the form until the listing is sent (the sending story writes the rows through the same function as FR-008).
+### 397-FR-006 — The step-2 section (`steps['2']`) MUST carry, on each `works_on` brand, an optional `fuels` list of the ticked kinds; an absent `fuels` key means all four, while `fuels: []` means all four unticked (so a kept draft from before this story shows every taken brand fully ticked); a brand tapped to refused or off loses its `fuels`, and tapped back to taken starts at all four. The step-2 guard the draft envelope runs MUST become a real guard for this shape (today step 2 is any record): a `fuels` with an unknown kind, a duplicate, or on a `does_not_take` brand is refused with 400 and the stable validation code; a section without `fuels` is accepted.
 
-_From 040-garage-brand-stance._
+_From 397-listing-ticks._
 
 ### 040-FR-007 — Switching the language MUST change every text of the step and keep every chip's state and both texts.
 
@@ -257,9 +259,9 @@ _From 112-opening-hours._
 
 _From 112-opening-hours._
 
-### 112-FR-006 — The step MUST show "Facilități pentru clienți" / "Facilities for customers" with three toggle chips, "Mașină la schimb" / "Courtesy car", "Preluare și predare" / "Pick-up and drop-off", "Sală de așteptare" / "Waiting area" (`courtesy_car`, `pickup_dropoff`, `waiting_area`), each a button with `aria-pressed`, the state told by text or shape as well as colour, and the hint "Șoferii pot filtra după ele. Bifează doar ce oferi mereu, nu „uneori”." / "Drivers can filter by these. Tick only what you always offer, not \"sometimes\"." under them; a ticked courtesy car leaves a place under its chip for ST-397's choice and adds nothing else.
+### 397-FR-002 — When the `courtesy_car` facility is ticked, step 5 MUST show under its chip a choice "Gratuită" / "Free" or "Contra cost" / "Paid" (one radio group, free the default) and, when paid is chosen, a field "Preț pe zi" / "Price per day" in whole lei with the unit shown; the field is the shared whole-lei input and holds bani. Unticking the chip MUST remove the choice and the price from the step and from the draft.
 
-_From 112-opening-hours._
+_From 397-listing-ticks._
 
 ### 112-FR-007 — The step's values MUST be this story's keys of the draft's step 5 section (`steps['5']`, ST-114's shape): `hours` (seven days to intervals), `closedDays` (date and optional note), `facilities` (the ticked keys), typed in the shared contracts library and checked on save like step 6's section (an unknown facility, a malformed time or date, a third interval or an 81-character note is refused with 400; a section without these keys, or with other stories' keys beside them, is accepted). They are kept with the rest of the form, restored with it on reload and through the continue link, and MUST write nothing to the garage tables, the audit history or the outbox while there is no account (114-FR-018).
 
@@ -659,6 +661,66 @@ _From 959-map-fits-circle._
 
 _From 959-map-fits-circle._
 
+### 945-FR-001 — Once the map has loaded, a MapLibre error MUST NOT remove the map or reject the opener: the map stays usable, and `show()` keeps placing the pin, drawing the circle and framing the view on it exactly as before the error.
+
+_From 945-map-error-listener._
+
+### 945-FR-002 — Once the map has loaded, the listener that tears the map down on a pre-load error MUST no longer be listening, and a later error MUST reach only the post-load error path, which still calls the step's `failed()` once per error, unchanged.
+
+_From 945-map-error-listener._
+
+### 945-FR-003 — An error raised before the map has loaded MUST still remove the map exactly once and reject the opener with that error, and a `load` that arrives afterwards MUST be ignored.
+
+_From 945-map-error-listener._
+
+### 945-FR-004 — Once the map has loaded and a later error has shown the step's "the map could not be loaded" notice (111-FR-004), the first render after it that settles (MapLibre `idle`) with no error of its own MUST report a recovery, and the step MUST then hide the notice; while no error has been reported, no recovery is reported. (Folds in ST-942, map-down.)
+
+_From 945-map-error-listener._
+
+### 397-FR-001 — Step 5 of "List your garage" MUST show, after the facilities, a heading "Plată" / "Payment" with three toggle chips "Numerar" / "Cash", "Card" / "Card", "Transfer bancar" / "Bank transfer" (`cash`, `card`, `transfer`), each a button with `aria-pressed`, the state told by text or shape as well as colour, as the facility chips are. A new draft has none ticked.
+
+_From 397-listing-ticks._
+
+### 397-FR-003 — The step-5 section of the draft (`steps['5']`) MUST gain two optional keys beside ST-112's and ST-111's: `payments` (the ticked keys, each of `cash`, `card`, `transfer` at most once) and `courtesyCar` (`{ paid: boolean, pricePerDayBani?: integer }`), typed in the shared contracts library and checked by the step-5 guard the draft envelope already runs, on the server and in the browser alike: an unknown payment key, a duplicate, a `courtesyCar` with another key, a non-integer price, or a price outside 100–200,000 bani is refused with 400 and the draft's stable validation code; a section without these keys is accepted (a kept draft from before this story opens with nothing ticked and the courtesy car free). The price must also be a multiple of 100 bani. A `courtesyCar` while the section's facilities lack `courtesy_car` is accepted and ignored (the guard checks shape only).
+
+_From 397-listing-ticks._
+
+### 397-FR-004 — Step 5 MUST count as complete only when at least one payment method is ticked and, when the courtesy car is ticked and paid, a price of 1–2,000 lei is given (free needs no price); the step shows the missing piece as a field error in the person's language, and the listing cannot be sent while it is missing (the submit story reads the same completeness function).
+
+_From 397-listing-ticks._
+
+### 397-FR-005 — Under every brand chip marked taken (`works_on`) step 2 MUST show four toggle ticks "Benzină" / "Petrol", "Diesel" / "Diesel", "Hibrid" / "Hybrid", "Electric" / "Electric" (`petrol`, `diesel`, `hybrid`, `electric`), all ticked when the brand becomes taken; each is a button with `aria-pressed` whose accessible name carries the brand and the fuel. A refused or unmarked brand shows none.
+
+_From 397-listing-ticks._
+
+### 397-FR-007 — When every fuel of a taken brand is unticked, the step MUST show under that brand, politely announced to assistive technology, "Nu vei primi cereri pentru <brand>" / "You will not receive requests for <brand>"; saving and completing the step stay allowed.
+
+_From 397-listing-ticks._
+
+### 397-FR-008 — The garage MUST store `payment_cash`, `payment_card`, `payment_transfer` (booleans, false until written), `courtesy_car_paid` (boolean, false until written) and `courtesy_car_price_per_day_bani` (integer or empty), with the database refusing a price without `paid`, a `paid` without a price, a price outside 100–200,000 bani and a price that is not a multiple of 100. The fuel ticks stay the four existing columns of `GARAGE_BRAND` (039-FR-014), unchanged.
+
+_From 397-listing-ticks._
+
+### 397-FR-009 — The system MUST own one function that writes a garage's payment methods and courtesy car from the step-5 section, for the submit story to run inside its transaction beside `writeGarageHours`: the three flags from `payments`, and `courtesy_car_paid` and the price from `courtesyCar` only when the section's facilities hold `courtesy_car` (otherwise false and empty); a section that breaks FR-003 or FR-004 is refused whole. And the brands write for the submit story MUST, after setting a brand's stance from the step-2 section, apply its `fuels` (absent = all four). No route calls either in this story; both are tested on a real database. The form MUST write nothing to the garage tables, the audit history or the outbox while there is no account (114-FR-018).
+
+_From 397-listing-ticks._
+
+### 397-FR-011 — The system MUST serve `PATCH /api/v1/garages/:garageId` to the garage's owner, with a body holding either or both of `paymentMethods` (`{ cash, card, transfer }`, all three booleans, at least one true) and `courtesyCar` (`{ paid, pricePerDayBani? }`: a price of 100–200,000 bani in whole lei required when paid, refused when free, and the whole key refused when the garage does not list the `courtesy_car` facility). It answers only `{ paymentMethods, courtesyCar }` as now stored; 400 `validation_failed` with the field named for a body that breaks a rule, 401 `sign_in_required` with no session, 403 `forbidden` for this garage's receptionist or mechanic, 404 `not_found` for anyone else (another garage's staff, a driver, an admin). The write runs in one transaction with the garage row locked, records one history entry per changed field (actor, role, field, old and new value) and one `garage.updated` event whose `fields` name `payment_methods` and/or `courtesy_car` for what changed; a body that changes nothing writes no entry and no event. Changing these needs no new approval and notifies nobody.
+
+_From 397-listing-ticks._
+
+### 397-FR-012 — The public read of a garage (`GET /api/v1/garages/:slug`) MUST carry the three payment flags, the courtesy car (`paid`, `pricePerDayBani` when paid; absent when the facility is not listed) and each taken brand's four fuel ticks, so an open profile refreshed by `garage.updated` reads the new values; showing them on the profile screens is the profile story's.
+
+_From 397-listing-ticks._
+
+### 397-FR-014 — Every label, hint, warning and error of the two steps MUST exist in Romanian and English; switching the language keeps every tick and the typed price. The ticks and the field MUST obey the page's phone layout rules (108-FR-011): no sideways scroll at 320 px, 44 px targets, text at least 12 px, light and dark, a ticked state told by more than colour.
+
+_From 397-listing-ticks._
+
+### 397-FR-015 — Tests MUST cover, in Jest: the two section guards (good and bad shapes, a section without the keys), the completeness rule of step 5, and the fuel defaults of the step (a missing `fuels` versus `[]`, a price not a multiple of 100, a `courtesyCar` without the facility); on real PostgreSQL and Redis: the write functions (flags and price written, price empty when free, nothing written from a bad section; fuels applied after the stance, all four when absent), the brands endpoint with `fuels` (set, unchanged when absent, refused on a refused brand, the history entries and `brand_fuels`), the PATCH endpoint (each rule of FR-011, the history entry and the event in the same transaction, nothing on an unchanged body, 401/403/404), and the public read carrying the values. A Playwright end-to-end test MUST, at a phone width, take Dacia, untick electric, tick cash and card, tick the courtesy car as paid at 120 lei a day, reload and check everything is back; sending and approving the garage and checking the profile data belong to the submit story's end-to-end test, which this story's write functions make possible.
+
+_From 397-listing-ticks._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -674,3 +736,6 @@ _From 959-map-fits-circle._
 - `109-FR-016` — superseded by `917-FR-001` (2026-10-08)
 
 - `111-FR-003` — superseded by `959-FR-004` (2026-10-08)
+
+- `112-FR-006` — superseded by `397-FR-002` (2026-10-08)
+- `040-FR-006` — superseded by `397-FR-006` (2026-10-08)

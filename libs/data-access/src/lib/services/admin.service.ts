@@ -9,12 +9,30 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { adminAccountsControllerList } from '../fn/admin/admin-accounts-controller-list';
+import { AdminAccountsControllerList$Params } from '../fn/admin/admin-accounts-controller-list';
+import { adminAccountsControllerSummary } from '../fn/admin/admin-accounts-controller-summary';
+import { AdminAccountsControllerSummary$Params } from '../fn/admin/admin-accounts-controller-summary';
+import { AdminAccountsPageDto } from '../models/admin-accounts-page-dto';
+import { AdminAccountsSummaryDto } from '../models/admin-accounts-summary-dto';
 import { AdminGrowthDto } from '../models/admin-growth-dto';
 import { adminOverviewControllerGrowth } from '../fn/admin/admin-overview-controller-growth';
 import { AdminOverviewControllerGrowth$Params } from '../fn/admin/admin-overview-controller-growth';
 import { adminOverviewControllerOverview } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { PlatformRuleChangeDto } from '../models/platform-rule-change-dto';
+import { platformRuleChangesControllerApprove } from '../fn/admin/platform-rule-changes-controller-approve';
+import { PlatformRuleChangesControllerApprove$Params } from '../fn/admin/platform-rule-changes-controller-approve';
+import { platformRuleChangesControllerCancel } from '../fn/admin/platform-rule-changes-controller-cancel';
+import { PlatformRuleChangesControllerCancel$Params } from '../fn/admin/platform-rule-changes-controller-cancel';
+import { platformRuleChangesControllerList } from '../fn/admin/platform-rule-changes-controller-list';
+import { PlatformRuleChangesControllerList$Params } from '../fn/admin/platform-rule-changes-controller-list';
+import { platformRuleChangesControllerRefuse } from '../fn/admin/platform-rule-changes-controller-refuse';
+import { PlatformRuleChangesControllerRefuse$Params } from '../fn/admin/platform-rule-changes-controller-refuse';
+import { platformRuleChangesControllerRequest } from '../fn/admin/platform-rule-changes-controller-request';
+import { PlatformRuleChangesControllerRequest$Params } from '../fn/admin/platform-rule-changes-controller-request';
+import { PlatformRuleChangesDto } from '../models/platform-rule-changes-dto';
 import { PlatformRuleDto } from '../models/platform-rule-dto';
 import { platformRulesControllerChange } from '../fn/admin/platform-rules-controller-change';
 import { PlatformRulesControllerChange$Params } from '../fn/admin/platform-rules-controller-change';
@@ -29,6 +47,56 @@ import { VerificationChecksControllerRecord$Params } from '../fn/admin/verificat
 export class AdminService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `adminAccountsControllerList()` */
+  static readonly AdminAccountsControllerListPath = '/api/v1/admin/accounts';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminAccountsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerList$Response(params?: AdminAccountsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountsPageDto>> {
+    const obs = adminAccountsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminAccountsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerList(params?: AdminAccountsControllerList$Params, context?: HttpContext): Promise<AdminAccountsPageDto> {
+    const resp = this.adminAccountsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountsPageDto>): AdminAccountsPageDto => r.body);
+  }
+
+  /** Path part for operation `adminAccountsControllerSummary()` */
+  static readonly AdminAccountsControllerSummaryPath = '/api/v1/admin/accounts/summary';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminAccountsControllerSummary()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerSummary$Response(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountsSummaryDto>> {
+    const obs = adminAccountsControllerSummary(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminAccountsControllerSummary$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerSummary(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<AdminAccountsSummaryDto> {
+    const resp = this.adminAccountsControllerSummary$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountsSummaryDto>): AdminAccountsSummaryDto => r.body);
   }
 
   /** Path part for operation `adminOverviewControllerOverview()` */
@@ -154,6 +222,131 @@ export class AdminService extends BaseService {
   platformRulesControllerChange(params: PlatformRulesControllerChange$Params, context?: HttpContext): Promise<PlatformRuleDto> {
     const resp = this.platformRulesControllerChange$Response(params, context);
     return resp.then((r: StrictHttpResponse<PlatformRuleDto>): PlatformRuleDto => r.body);
+  }
+
+  /** Path part for operation `platformRuleChangesControllerList()` */
+  static readonly PlatformRuleChangesControllerListPath = '/api/v1/admin/platform-rule-changes';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `platformRuleChangesControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerList$Response(params: PlatformRuleChangesControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<PlatformRuleChangesDto>> {
+    const obs = platformRuleChangesControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `platformRuleChangesControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerList(params: PlatformRuleChangesControllerList$Params, context?: HttpContext): Promise<PlatformRuleChangesDto> {
+    const resp = this.platformRuleChangesControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PlatformRuleChangesDto>): PlatformRuleChangesDto => r.body);
+  }
+
+  /** Path part for operation `platformRuleChangesControllerRequest()` */
+  static readonly PlatformRuleChangesControllerRequestPath = '/api/v1/admin/platform-rule-changes';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `platformRuleChangesControllerRequest()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  platformRuleChangesControllerRequest$Response(params: PlatformRuleChangesControllerRequest$Params, context?: HttpContext): Promise<StrictHttpResponse<PlatformRuleChangeDto>> {
+    const obs = platformRuleChangesControllerRequest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `platformRuleChangesControllerRequest$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  platformRuleChangesControllerRequest(params: PlatformRuleChangesControllerRequest$Params, context?: HttpContext): Promise<PlatformRuleChangeDto> {
+    const resp = this.platformRuleChangesControllerRequest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PlatformRuleChangeDto>): PlatformRuleChangeDto => r.body);
+  }
+
+  /** Path part for operation `platformRuleChangesControllerApprove()` */
+  static readonly PlatformRuleChangesControllerApprovePath = '/api/v1/admin/platform-rule-changes/{id}/approve';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `platformRuleChangesControllerApprove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerApprove$Response(params: PlatformRuleChangesControllerApprove$Params, context?: HttpContext): Promise<StrictHttpResponse<PlatformRuleChangeDto>> {
+    const obs = platformRuleChangesControllerApprove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `platformRuleChangesControllerApprove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerApprove(params: PlatformRuleChangesControllerApprove$Params, context?: HttpContext): Promise<PlatformRuleChangeDto> {
+    const resp = this.platformRuleChangesControllerApprove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PlatformRuleChangeDto>): PlatformRuleChangeDto => r.body);
+  }
+
+  /** Path part for operation `platformRuleChangesControllerRefuse()` */
+  static readonly PlatformRuleChangesControllerRefusePath = '/api/v1/admin/platform-rule-changes/{id}/refuse';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `platformRuleChangesControllerRefuse()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerRefuse$Response(params: PlatformRuleChangesControllerRefuse$Params, context?: HttpContext): Promise<StrictHttpResponse<PlatformRuleChangeDto>> {
+    const obs = platformRuleChangesControllerRefuse(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `platformRuleChangesControllerRefuse$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerRefuse(params: PlatformRuleChangesControllerRefuse$Params, context?: HttpContext): Promise<PlatformRuleChangeDto> {
+    const resp = this.platformRuleChangesControllerRefuse$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PlatformRuleChangeDto>): PlatformRuleChangeDto => r.body);
+  }
+
+  /** Path part for operation `platformRuleChangesControllerCancel()` */
+  static readonly PlatformRuleChangesControllerCancelPath = '/api/v1/admin/platform-rule-changes/{id}/cancel';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `platformRuleChangesControllerCancel()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerCancel$Response(params: PlatformRuleChangesControllerCancel$Params, context?: HttpContext): Promise<StrictHttpResponse<PlatformRuleChangeDto>> {
+    const obs = platformRuleChangesControllerCancel(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `platformRuleChangesControllerCancel$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRuleChangesControllerCancel(params: PlatformRuleChangesControllerCancel$Params, context?: HttpContext): Promise<PlatformRuleChangeDto> {
+    const resp = this.platformRuleChangesControllerCancel$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PlatformRuleChangeDto>): PlatformRuleChangeDto => r.body);
   }
 
 }

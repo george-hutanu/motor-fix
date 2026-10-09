@@ -73,7 +73,7 @@ describe('seed', () => {
     expect(await seeded()).toHaveLength(0);
   });
 
-  it('adds one account per role, two two-role accounts and a suspended driver', async () => {
+  it('adds one account per role, a second admin, two two-role accounts and a suspended driver', async () => {
     expect(seed('test').status).toBe(0);
 
     const accounts = await seeded();
@@ -89,6 +89,11 @@ describe('seed', () => {
     );
     expect(summary).toEqual({
       'admin@example.test': {
+        lastRole: 'admin',
+        roles: ['admin'],
+        status: 'active',
+      },
+      'admin2@example.test': {
         lastRole: 'admin',
         roles: ['admin'],
         status: 'active',
@@ -408,5 +413,31 @@ describe('seed of the platform rules', () => {
         where: { key: 'skip_rar_check' },
       }),
     ).toMatchObject({ defaultValue: false, value: true });
+  });
+});
+
+describe('seed of the suspension record', () => {
+  const suspensions = async () => {
+    const { id } = await prisma.account.findUniqueOrThrow({
+      where: { email: 'suspendat@example.test' },
+    });
+    return prisma.activityLog.findMany({
+      select: { at: true, field: true, newValue: true, subjectType: true },
+      where: { subjectId: id },
+    });
+  };
+
+  it('records the suspended driver as suspended on 2 October 2026, once', async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    expect(await suspensions()).toEqual([
+      {
+        at: new Date('2026-10-02T10:00:00.000Z'),
+        field: 'status',
+        newValue: 'suspended',
+        subjectType: 'account',
+      },
+    ]);
   });
 });
