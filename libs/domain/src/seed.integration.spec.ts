@@ -449,7 +449,7 @@ describe('seed of a request through to a job', () => {
     ]);
   });
 
-  // @traces 343-live-quote-requests-FR-005
+  // @traces 343-FR-005
   it("gives the staff's garage a mechanic who may answer quotes beside one who may not, and the oil service ticked for Dacia", async () => {
     expect(seed('test').status).toBe(0);
 

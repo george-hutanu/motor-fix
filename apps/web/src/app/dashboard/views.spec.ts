@@ -130,8 +130,8 @@ describe('the dashboard view lists', () => {
     expect(await requests.load?.()).toBe(RequestsView);
   });
 
-  // @traces 343-live-quote-requests-FR-006
-  // @traces 343-live-quote-requests-FR-007
+  // @traces 343-FR-006
+  // @traces 343-FR-007
   it('loads the garage Panou and Cereri de ofertă only when their view opens', async () => {
     const [home, requests] = DASHBOARDS.garage.views;
 
@@ -653,7 +653,7 @@ describe('the dashboard view routes', () => {
   });
 
   // @traces 097-FR-004 097-FR-008
-  // @traces 343-live-quote-requests-FR-006
+  // @traces 343-FR-006
   it('shows the requests panel, not the empty state, on the garage dashboard address of an approved or suspended garage', async () => {
     for (const status of ['approved', 'suspended'] as const) {
       TestBed.resetTestingModule();

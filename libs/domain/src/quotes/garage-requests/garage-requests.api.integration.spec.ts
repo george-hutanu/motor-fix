@@ -176,9 +176,9 @@ async function closedRequest(
   });
 }
 
-// @traces 343-live-quote-requests-FR-001
-// @traces 343-live-quote-requests-FR-002
-// @traces 343-live-quote-requests-FR-018
+// @traces 343-FR-001
+// @traces 343-FR-002
+// @traces 343-FR-018
 describe('GET /garage/requests?status=waiting', () => {
   async function mixed() {
     const andrei = await driver();
@@ -343,8 +343,8 @@ describe('GET /garage/requests?status=waiting', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-003
-// @traces 343-live-quote-requests-FR-005
+// @traces 343-FR-003
+// @traces 343-FR-005
 describe('GET /garage/requests the offered mark and the description line', () => {
   it('marks a job offered only when the garage ticked it for the request’s brand', async () => {
     const andrei = await driver();
@@ -442,9 +442,9 @@ describe('GET /garage/requests the offered mark and the description line', () =>
   });
 });
 
-// @traces 343-live-quote-requests-FR-002
-// @traces 343-live-quote-requests-FR-004
-// @traces 343-live-quote-requests-FR-018
+// @traces 343-FR-002
+// @traces 343-FR-004
+// @traces 343-FR-018
 describe('GET /garage/requests?status=closed', () => {
   it('gives each closed row its reason, tried in order, and its close time', async () => {
     const andrei = await driver();

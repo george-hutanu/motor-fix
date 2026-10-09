@@ -82,7 +82,7 @@ const panel = (element: HTMLElement) =>
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 343-live-quote-requests-FR-006
+// @traces 343-FR-006
 describe('the garage Panou', () => {
   it('replaces the empty state with the requests panel', async () => {
     const element = await render(OWNER);
@@ -126,7 +126,7 @@ describe('the garage Panou', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-015
+// @traces 343-FR-015
 describe('the garage Panou for each role', () => {
   it.each([
     ['the owner', OWNER],

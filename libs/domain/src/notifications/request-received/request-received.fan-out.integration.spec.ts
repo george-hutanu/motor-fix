@@ -180,7 +180,7 @@ const messages = (accountId: string) =>
 const channels = async (accountId: string) =>
   (await messages(accountId)).map((m) => m.channel).sort();
 
-// @traces 343-live-quote-requests-FR-012 343-live-quote-requests-FR-018
+// @traces 343-FR-012 343-FR-018
 describe('telling a garage’s staff about a new request', () => {
   it('builds REQUEST_RECEIVED for the owner, the receptionist and the mechanic who may answer, not the other mechanic', async () => {
     const { answering, garage, owner, receptionist, silent } =
@@ -262,7 +262,7 @@ describe('telling a garage’s staff about a new request', () => {
     expect(await channels(second.owner)).not.toContain('whatsapp');
   });
 
-  // @traces 343-live-quote-requests-FR-014
+  // @traces 343-FR-014
   it('builds nothing outside for a person who muted it at that garage, and keeps the bell row', async () => {
     const { garage, owner, receptionist } = await staffedGarage();
     await withDevice(owner);
@@ -284,7 +284,7 @@ describe('telling a garage’s staff about a new request', () => {
     expect(await channels(receptionist)).toEqual(['email', 'in_app']);
   });
 
-  // @traces 343-live-quote-requests-FR-013
+  // @traces 343-FR-013
   it('sends at once at 23:30 Bucharest time, holding nothing for the morning', async () => {
     const { garage, owner } = await staffedGarage();
     await withDevice(owner);
@@ -378,7 +378,7 @@ describe('telling a garage’s staff about a new request', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-012 343-live-quote-requests-FR-013
+// @traces 343-FR-012 343-FR-013
 describe('what the message says', () => {
   it('carries the car and the first job in the person’s language, and a link to the requests view', async () => {
     const { garage, owner, receptionist } = await staffedGarage();
@@ -437,7 +437,7 @@ describe('what the message says', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-017
+// @traces 343-FR-017
 describe('what the fan-out reports', () => {
   it('counts each garage as built, muted or skipped', async () => {
     const built = await staffedGarage('unu');

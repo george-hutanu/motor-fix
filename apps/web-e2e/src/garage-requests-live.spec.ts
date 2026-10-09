@@ -79,11 +79,11 @@ const count = (label: string | null) =>
 
 // @seeded: a driver's request reaches a signed-in garage without a reload.
 test.describe('a garage’s quote requests, live @seeded', () => {
-  // @traces 343-live-quote-requests-FR-001
-  // @traces 343-live-quote-requests-FR-006
-  // @traces 343-live-quote-requests-FR-007
-  // @traces 343-live-quote-requests-FR-009
-  // @traces 343-live-quote-requests-FR-010
+  // @traces 343-FR-001
+  // @traces 343-FR-006
+  // @traces 343-FR-007
+  // @traces 343-FR-009
+  // @traces 343-FR-010
   test('a new request reaches Panou, its counter, the menu and the bar within seconds, and Cereri de ofertă lists it', async ({
     page,
     request,
@@ -140,7 +140,7 @@ test.describe('a garage’s quote requests, live @seeded', () => {
     ).toBeLessThanOrEqual(390);
   });
 
-  // @traces 343-live-quote-requests-FR-015
+  // @traces 343-FR-015
   test('a mechanic who may not answer quotes sees no requests panel and no Cereri de ofertă', async ({
     page,
   }) => {

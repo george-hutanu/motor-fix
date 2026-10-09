@@ -36,7 +36,7 @@ describe('the request status labels', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-004
+// @traces 343-FR-004
 describe('the reasons a garage’s request closed', () => {
   it('are tried in this order', () => {
     expect(GARAGE_CLOSE_REASONS).toEqual([

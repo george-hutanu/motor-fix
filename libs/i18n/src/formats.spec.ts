@@ -436,7 +436,7 @@ describe('relativeTime', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-008
+// @traces 343-FR-008
 describe('requestAge', () => {
   // 13:00 in Bucharest, a Friday.
   const now = new Date('2026-10-09T10:00:00Z');

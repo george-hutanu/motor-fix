@@ -99,8 +99,8 @@ beforeEach(() => {
 });
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 343-live-quote-requests-FR-001
-// @traces 343-live-quote-requests-FR-009
+// @traces 343-FR-001
+// @traces 343-FR-009
 describe('GarageRequestsFeed: the waiting list', () => {
   it('reads the waiting rows with the waiting filter, and the counter is the server’s total', async () => {
     const feed = await start({
@@ -150,7 +150,7 @@ describe('GarageRequestsFeed: the waiting list', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-010
+// @traces 343-FR-010
 describe('GarageRequestsFeed: the new-request toast', () => {
   it('raises one toast with the car and the first job when a request arrives', async () => {
     await start({
@@ -262,8 +262,8 @@ describe('GarageRequestsFeed: the new-request toast', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-007
-// @traces 343-live-quote-requests-FR-009
+// @traces 343-FR-007
+// @traces 343-FR-009
 describe('GarageRequestsFeed: the closed rows', () => {
   it('reads the closed rows once with the waiting ones, first page only', async () => {
     const feed = await start({
@@ -298,7 +298,7 @@ describe('GarageRequestsFeed: the closed rows', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-015
+// @traces 343-FR-015
 describe('GarageRequestsFeed: who may see the requests', () => {
   it('makes no call for a session without the requests capability', async () => {
     const feed = await start({ capabilities: ['garage.own_jobs'] });

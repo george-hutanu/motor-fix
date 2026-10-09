@@ -88,7 +88,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 343-live-quote-requests-FR-008
+// @traces 343-FR-008
 describe('the requests panel rows', () => {
   it('shows the short name, the car with its year, the jobs, any mechanic and the age, in that order', async () => {
     const created = ago(12 * 60_000);
@@ -200,7 +200,7 @@ describe('the requests panel rows', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-011
+// @traces 343-FR-011
 describe('the requests panel states', () => {
   it('shows three skeleton rows and no counter while the first read is on its way', async () => {
     const { element } = await render([
@@ -298,7 +298,7 @@ describe('the requests panel states', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-009
+// @traces 343-FR-009
 describe('the requests panel kept current', () => {
   it('adds a new request at the top without a reload and announces the counter politely', async () => {
     const { announce, element, settle } = await render([
@@ -324,7 +324,7 @@ describe('the requests panel kept current', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-006
+// @traces 343-FR-006
 describe('the requests panel with a limit', () => {
   const five = Array.from({ length: 5 }, (_, i) =>
     requestRow({ createdAt: ago((i + 1) * 60_000), id: `req-${i + 1}` }),

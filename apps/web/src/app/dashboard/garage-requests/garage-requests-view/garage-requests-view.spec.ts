@@ -142,7 +142,7 @@ const cursors = () =>
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 343-live-quote-requests-FR-007
+// @traces 343-FR-007
 describe('the Cereri de ofertă view', () => {
   it('lists the waiting rows newest first, 20 at first', async () => {
     const { element } = await render();
@@ -217,8 +217,8 @@ describe('the Cereri de ofertă view', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-004
-// @traces 343-live-quote-requests-FR-007
+// @traces 343-FR-004
+// @traces 343-FR-007
 describe('the closed rows of the last day', () => {
   const closed = listOf([
     requestRow({
@@ -284,7 +284,7 @@ describe('the closed rows of the last day', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-016
+// @traces 343-FR-016
 describe('the closed rows’ contrast', () => {
   const root = join(__dirname, '../../../../../../..');
   const viewCss = readFileSync(

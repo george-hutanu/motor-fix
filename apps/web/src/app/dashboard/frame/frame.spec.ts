@@ -1150,8 +1150,8 @@ async function garage(total: number, capabilities = OWNER) {
   return rendered;
 }
 
-// @traces 343-live-quote-requests-FR-001
-// @traces 343-live-quote-requests-FR-007
+// @traces 343-FR-001
+// @traces 343-FR-007
 describe('the requests count on the garage menu and bar', () => {
   afterEach(() => {
     requests = async () => ({ items: [], nextCursor: null, total: 0 });
@@ -1194,7 +1194,7 @@ describe('the requests count on the garage menu and bar', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-015
+// @traces 343-FR-015
 describe('the requests entry for each garage role', () => {
   it.each([
     ['the receptionist', ['garage.requests', 'garage.schedule']],

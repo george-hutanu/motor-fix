@@ -12,7 +12,7 @@ const params = {
   link,
 };
 
-// @traces 343-live-quote-requests-FR-013
+// @traces 343-FR-013
 describe('the new request message to garage staff', () => {
   it('is registered for the garage and passes the template check', () => {
     expect(TEMPLATES[KIND]?.audience).toBe('garage');

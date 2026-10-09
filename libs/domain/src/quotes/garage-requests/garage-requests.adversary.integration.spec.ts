@@ -643,8 +643,8 @@ describe('GET /garage/requests writes nothing', () => {
   });
 });
 
-// @traces 343-live-quote-requests-FR-005
-// @traces 343-live-quote-requests-FR-018
+// @traces 343-FR-005
+// @traces 343-FR-018
 describe('GET /garage/requests?status= as each caller', () => {
   async function waitingAndClosed(s: World) {
     const waiting = await world.request(s.andrei);
