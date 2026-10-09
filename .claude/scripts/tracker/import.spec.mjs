@@ -11,7 +11,8 @@ import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import { issuePlans, runImport } from "./import.mjs";
 import { refToken } from "./notion-markdown.mjs";
-import { fetchFile, folderStore, loadContent } from "./notion-content.mjs";
+import { fetchFile, folderCache, folderStore, loadContent, pageLoader } from "./notion-content.mjs";
+import { reporter } from "./progress.mjs";
 import { readTracker } from "./notion-read.mjs";
 
 const TOKEN = "ghp_SECRET_never_print_me";
@@ -396,17 +397,27 @@ describe("a lap with a budget", () => {
 // @traces 1017-FR-012
 // @traces 1017-FR-013
 describe("guards", () => {
-  it("lists what a page would leave behind and writes nothing, on a dry run too", async () => {
+  it("lists what a page would leave behind and writes nothing on a dry run", async () => {
     const t = await tracker({ blocks: { [storyId(1)]: [{ id: "u1", type: "unsupported", has_children: false, unsupported: {} }] } });
-    for (const dryRun of [true, false]) {
-      const gh = await bootstrapped();
-      const from = gh.writes().length;
-      const { exit, lines } = await importInto(gh, { tracker: t, dryRun });
-      assert.equal(exit, 1);
-      assert.equal(nonGets(gh, from).length, 0);
-      assert.ok(lines.includes("incomplete ST-1 unsupported block u1: not a block the import can render"), lines.join("\n"));
-      assert.ok(lines.some((l) => /^failed\s+1 part\(s\) of Notion pages would be left behind; nothing written$/.test(l)));
-    }
+    const gh = await bootstrapped();
+    const from = gh.writes().length;
+    const { exit, lines } = await importInto(gh, { tracker: t, dryRun: true });
+    assert.equal(exit, 1);
+    assert.equal(nonGets(gh, from).length, 0);
+    assert.ok(lines.includes("incomplete ST-1 unsupported block u1: not a block the import can render"), lines.join("\n"));
+    assert.ok(lines.some((l) => /^failed\s+1 part\(s\) of Notion pages would be left behind; nothing written$/.test(l)));
+  });
+
+  it("never writes a page it cannot carry whole, still writes the others, and exits 1", async () => {
+    const t = await tracker({ blocks: { [storyId(1)]: [{ id: "u1", type: "unsupported", has_children: false, unsupported: {} }] } });
+    const gh = await bootstrapped();
+    const { exit, lines } = await importInto(gh, { tracker: t });
+    assert.equal(exit, 1);
+    assert.equal(issueOf(gh, "ST-1"), undefined);
+    assert.ok(issueOf(gh, "ST-2") && issueOf(gh, "EP-1"));
+    assert.ok(lines.includes("incomplete ST-1 unsupported block u1: not a block the import can render"));
+    assert.match(lines.at(-1), /^failed\s+1 part\(s\) of Notion pages left behind: 1 page\(s\) not written, the other 11 written$/);
+    assert.ok(!lines.some((l) => /^(sub-issue|blocked-by|pr-closes|close|relink)\s+ST-1\b/.test(l)));
   });
 
   it("names a file whose download stalled as incomplete, and writes nothing", async () => {
@@ -604,5 +615,70 @@ describe("the feature document index", () => {
     mkdirSync(join(root, ".motor-fix-specs", ".git"), { recursive: true });
     assert.equal(specsClone(root), join(root, ".motor-fix-specs"));
     assert.equal(specsClone(root, { cloneDir: (r) => join(r, "elsewhere") }), join(root, "elsewhere"));
+  });
+});
+
+// @traces 1017-FR-012
+describe("reading and writing together", () => {
+  /** A tracker with no content yet and a loader that takes a moment per page, logging each read. */
+  async function streaming(events, cache = null) {
+    const client = notionClient({ token: "ntn_x", fetchImpl: fakeNotion({}).fetchImpl, sleep: async () => {} });
+    const t = await readTracker(client);
+    const inner = pageLoader(client, t, { cache });
+    const load = async (page) => {
+      await new Promise((r) => setTimeout(r, 5));
+      events.push(`read ${page.key}`);
+      return inner(page);
+    };
+    return { t, load };
+  }
+  const watching = (gh, events) => (url, init = {}) => {
+    if (init.method === "POST" && /\/issues$/.test(url)) events.push("create");
+    return gh.fetchImpl(url, init);
+  };
+
+  it("writes the first page before the last one is read", async () => {
+    const events = [];
+    const { t, load } = await streaming(events);
+    const gh = await bootstrapped();
+    const { exit } = await importInto(gh, { tracker: t, load, fetchImpl: watching(gh, events) });
+    assert.equal(exit, 0);
+    const lastRead = events.findLastIndex((e) => e.startsWith("read "));
+    assert.ok(events.indexOf("create") < lastRead, events.join(", "));
+    assert.equal(events.filter((e) => e === "create").length, 12);
+  });
+
+  it("stops reading when the budget ends a lap, and the next lap resumes from GitHub and the cache", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cache-"));
+    dirs.push(dir);
+    const gh = await bootstrapped();
+    const first = [];
+    const lap1 = await streaming(first, folderCache(dir));
+    const one = await importInto(gh, { tracker: lap1.t, load: lap1.load, budget: 4 });
+    assert.equal(one.exit, 3);
+    assert.ok(first.length < 12, `read ${first.length} pages in a lap that stopped early`);
+    assert.ok(one.lines.some((l) => /^stopped\s+after (ST|EP)-\d+ \(4 of \d+ steps, budget 4 reached\)$/.test(l)));
+    const lap2 = await streaming([], folderCache(dir));
+    const two = await importInto(gh, { tracker: lap2.t, load: lap2.load });
+    assert.equal(two.exit, 0);
+    const keys = gh.state.issues.map((i) => i.body.match(/<!-- motorfix:(\S+) -->/)?.[1]).filter(Boolean);
+    assert.equal(new Set(keys).size, 12);
+    assert.equal(keys.length, 12);
+    assert.ok(two.lines.some((l) => /^read\s+notion: 12 pages' content, \d+ read from Notion, the rest from the cache$/.test(l)));
+  });
+
+  it("prints one progress line per page read and per write step when not on a terminal", async () => {
+    const { t, load } = await streaming([]);
+    const gh = await bootstrapped();
+    const text = [];
+    const report = reporter({ write: (s) => text.push(s), tty: false, now: () => 0 });
+    const lines = [];
+    const exit = await runImport({ github: clientOf(gh), tracker: t, load, log: (l) => (lines.push(l), report.log(l)), progress: report.progress, lap: 2 });
+    assert.equal(exit, 0);
+    const progressLines = text.filter((x) => x.startsWith("progress"));
+    const steps = lines.filter((l) => /^(create|adopt|update|add-item|set-fields|close|reopen|relink|sub-issue|blocked-by|pr-closes)\s/.test(l)).length;
+    assert.equal(progressLines.length, 12 + steps);
+    assert.ok(text.every((x) => x.endsWith("\n") && !x.includes("\r")));
+    assert.ok(progressLines.some((x) => /^progress  read \d+\/12 · written \d+\/12 · step 1\/\d \(create\) · (ST|EP)-\d+ · lap 2\n$/.test(x)), progressLines.slice(0, 3).join(""));
   });
 });

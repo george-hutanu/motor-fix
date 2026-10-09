@@ -126,29 +126,41 @@ export async function fetchFile(url, { fetchImpl = fetch, sleep = (ms) => new Pr
 }
 
 /**
- * Adds `content` ({ blocks, comments, propFiles, properties, titles }) to each
- * story and epic of `tracker`, and `tracker.titles` (page id → title) for the
- * other pages they name. Returns the number of pages read from Notion.
+ * A reader of one page at a time: it sets the page's `content` ({ blocks,
+ * comments, propFiles, properties, titles, failed }) from the cache when the
+ * page has not been edited since (and its files are all stored), else from
+ * Notion, and adds the titles of the other pages it names to `tracker.titles`.
+ * It answers whether Notion was asked.
  */
-export async function loadContent(client, tracker, { cache = null, store = null, download = fetchFile, refresh = false, log = () => {} } = {}) {
-  const pages = [...tracker.stories, ...tracker.epics];
-  const known = new Set(pages.map((p) => p.id));
+export function pageLoader(client, tracker, { cache = null, store = null, download = fetchFile, refresh = false, log = () => {} } = {}) {
+  const known = new Set([...tracker.stories, ...tracker.epics].map((p) => p.id));
   tracker.titles ??= new Map();
-  let read = 0;
-
-  for (const page of pages) {
+  return async (page) => {
     const cached = !refresh && cache?.get(page.id);
+    let read = false;
     if (cached && cached.lastEdited === page.lastEdited && stored(cached, store)) {
       page.content = cached.content;
     } else {
       page.content = await readPage(client, page, { store, download, known, log });
       cache?.set(page.id, { lastEdited: page.lastEdited, content: page.content });
-      read++;
-      if (read % 50 === 0) log(`${"read".padEnd(9)} notion: ${read} pages' content`);
+      read = true;
     }
     for (const [id, title] of Object.entries(page.content.titles ?? {})) tracker.titles.set(id, title);
-  }
+    return read;
+  };
+}
+
+/** Reads every story's and epic's content (pageLoader); returns the number of pages read from Notion. */
+export async function loadContent(client, tracker, options = {}) {
+  const load = pageLoader(client, tracker, options);
+  let read = 0;
+  for (const page of [...tracker.stories, ...tracker.epics]) if (await load(page)) read++;
   return read;
+}
+
+/** Whether a read page has files of its own stored in the issue repository's clone. */
+export function hasStoredFiles(page) {
+  return Boolean(page.content && filesOf(page.content).some(Boolean));
 }
 
 /**

@@ -3,12 +3,13 @@
 // carries the whole page (every property, every block, every comment, its
 // files), its Project fields, sub-issues, dependencies and a Closes line on
 // an open story's PR. No Notion address is written: links to other stories
-// and epics become #<issue> references. A page the import cannot carry in
-// full stops the run before any write. Every run replans from what GitHub
-// holds, so an interrupted lap continues where it stopped.
+// and epics become #<issue> references. Pages are written while the rest are
+// still being read; a page the import cannot carry in full is never written
+// (listed as `incomplete`, exit 1). Every run replans from what GitHub holds,
+// so an interrupted lap continues where it stopped.
 //
 //   node .claude/scripts/tracker/import.mjs [--dry-run] [--budget <n>] [--max-items <n>] [--refresh]
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,9 +19,10 @@ import { NotionError, notionClient, notionToken } from "../lib/notion.mjs";
 import { findProject, projectState } from "./bootstrap.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import * as specsRepo from "../specs-repo.mjs";
-import { folderCache, folderStore, loadContent } from "./notion-content.mjs";
+import { folderCache, folderStore, hasStoredFiles, pageLoader } from "./notion-content.mjs";
 import { fileUrl, refsOf, renderPage, resolveRefs, withoutNotion } from "./notion-markdown.mjs";
 import { readTracker } from "./notion-read.mjs";
+import { reporter } from "./progress.mjs";
 import { CODE_REPO, closesLine, ISSUE_REPO, OWNER, pullPath, specsClone } from "./repos.mjs";
 import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
@@ -63,11 +65,15 @@ export function issuePlans(tracker) {
   const epicByKey = new Map(tracker.epics.map((e) => [e.key, e]));
   const all = [...tracker.stories, ...tracker.epics];
   const keyById = new Map(all.map((r) => [plainId(r.id), r.key]));
-  const titleById = new Map([...(tracker.titles ?? new Map())].map(([id, t]) => [plainId(id), t]));
-  for (const r of all) titleById.set(plainId(r.id), `${r.key} ${r.title}`);
+  const titleById = new Map(all.map((r) => [plainId(r.id), `${r.key} ${r.title}`]));
+  // Other pages' titles arrive as each page's content is read: looked up at render time.
+  const otherTitle = (id) => {
+    for (const [other, title] of tracker.titles ?? []) if (plainId(other) === plainId(id)) return title;
+    return null;
+  };
   const ctx = {
     keyOf: (id) => keyById.get(plainId(id)) ?? null,
-    titleOf: (id) => titleById.get(plainId(id)) ?? null,
+    titleOf: (id) => titleById.get(plainId(id)) ?? otherTitle(id),
     userOf: (id) => tracker.users?.get(id) ?? null,
     featureLink: (id) => {
       const path = tracker.docs?.get(plainId(id));
@@ -87,6 +93,18 @@ export function issuePlans(tracker) {
       gaps,
       file: { path, text: `# ${titled(r.key, r.title)}\n\n${resolveRefs(rest, () => null)}\n` },
     };
+  };
+  /**
+   * The page's body now when its content is in, else a `render()` the import
+   * calls once the page has been read (body stays null until then).
+   */
+  const rendered = (r, head) => {
+    const parts = { record: r, body: null, gaps: [], file: null };
+    parts.render = function () {
+      Object.assign(this, page(r, head));
+      return this;
+    };
+    return r.content ? { ...parts, ...page(r, head) } : parts;
   };
   const statusOf = new Map(tracker.stories.map((s) => [s.key, s.status]));
   /** The blockers that are imported items other than the item itself; the rest are warned and dropped. */
@@ -119,7 +137,7 @@ export function issuePlans(tracker) {
     return {
       key: s.key,
       title: titled(s.key, s.title),
-      ...page(s, [`<!-- motorfix:${s.key} -->`, ...(pr ? [`PR: ${pr[0]}`] : [])]),
+      ...rendered(s, [`<!-- motorfix:${s.key} -->`, ...(pr ? [`PR: ${pr[0]}`] : [])]),
       labels: [`type: ${type.toLowerCase()}`, ...(epic ? [epic] : []), ...s.labels.map((l) => `area: ${l}`), ...(s.role ? [`role: ${s.role}`] : [])],
       milestone: epicByKey.get(epic)?.release ?? null,
       assignee: s.assignee,
@@ -151,7 +169,7 @@ export function issuePlans(tracker) {
     return {
       key: e.key,
       title: titled(e.key, e.title),
-      ...page(e, [`<!-- motorfix:${e.key} -->`]),
+      ...rendered(e, [`<!-- motorfix:${e.key} -->`]),
       labels: ["epic", ...(e.track ? [`track: ${e.track}`] : [])],
       milestone: e.release ?? null,
       assignee: e.assignee,
@@ -238,10 +256,39 @@ function missingSetup({ plans, labels, milestones, fields }) {
   return parts.length ? parts.map(([what, list]) => `${what} ${list.slice(0, 5).join(", ")}${list.length > 5 ? ", …" : ""}`).join("; ") : null;
 }
 
-export async function runImport({ github, tracker, log = console.log, dryRun = false, budget = Infinity, maxItems = 1200, publish = async () => {} }) {
+/** A promise with its resolve and reject; a rejection nobody awaits is not reported as unhandled. */
+function deferred() {
+  const d = {};
+  d.promise = new Promise((resolve, reject) => Object.assign(d, { resolve, reject }));
+  d.promise.catch(() => {});
+  return d;
+}
+
+/**
+ * Imports the tracker. Pages are read (by `load`, in import order) while the
+ * pages already read are written: each page's create/adopt/update, add-item
+ * and set-fields run as soon as it is read and carried whole; the steps that
+ * need other issues (relink, close/reopen, sub-issue, blocked-by, pr-closes)
+ * run once every page has had its turn. A page that cannot be carried whole is
+ * never written: it is listed as `incomplete`, the others are still written,
+ * and the run exits 1. `--dry-run` reads everything and writes nothing.
+ */
+export async function runImport({
+  github,
+  tracker,
+  log = console.log,
+  dryRun = false,
+  budget = Infinity,
+  maxItems = 1200,
+  publish = async () => {},
+  load = null,
+  hasFiles = () => false,
+  progress = () => {},
+  lap = 1,
+}) {
   const out = (kind, detail) => log(`${kind.padEnd(9)} ${detail}`);
   const { plans, warnings } = issuePlans(tracker);
-  const gaps = plans.flatMap((p) => p.gaps.map((g) => `${p.key} ${g}`));
+  const total = plans.length;
 
   const { project } = await findProject(github);
   if (!project) {
@@ -272,15 +319,14 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
   const itemOf = new Map(items.filter((it) => it.number !== null).map((it) => [it.number, it]));
 
   const issue = new Map();
-  const steps = [];
-  const step = (kind, key, run) => steps.push({ kind, key, run });
-  let adopted = 0;
   for (const plan of plans) {
     const found = byMarker.get(plan.key) ?? byTitle.get(plan.key);
     if (found) issue.set(plan.key, found);
   }
   const planned = new Set(plans.map((p) => p.key));
   const existing = new Set(issue.keys());
+  const adopted = plans.filter((p) => existing.has(p.key) && !byMarker.has(p.key)).length;
+  const incomplete = new Set();
   // The body as written: references resolved to the issues known now, a hand-filed issue's own text kept after ADOPTED.
   const written = new Map();
   const bodyOf = (plan, current) => {
@@ -289,11 +335,14 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
     return at === -1 ? own : `${own}\n${ADOPTED}${withoutNotion(current.slice(at + ADOPTED.length))}`;
   };
 
-  for (const plan of plans) {
+  /** The steps that write the page itself; an unread page (body null) is planned without its body. */
+  function pageSteps(plan) {
+    const steps = [];
+    const step = (kind, run) => steps.push({ kind, key: plan.key, run });
     const byMark = byMarker.get(plan.key);
-    const found = issue.get(plan.key);
+    const found = existing.has(plan.key) ? issue.get(plan.key) : undefined;
     if (!found) {
-      step("create", plan.key, async () => {
+      step("create", async () => {
         const body = bodyOf(plan);
         const made = await github.rest("POST", "issues", {
           title: plan.title,
@@ -312,22 +361,21 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
       const change = {};
       if (!byHand && found.title !== plan.title) change.title = plan.title;
       // The page as it is now, an older body (one with Notion links included) rewritten; a hand-filed issue keeps its own text below.
-      const bodyChanged = byMark && found.body !== bodyOf(plan, found.body);
+      const bodyChanged = byMark && plan.body !== null && found.body !== bodyOf(plan, found.body);
       const have = found.labels.map((l) => l.name);
       const haveLower = lower(have);
       if (!byHand && plan.labels.some((l) => !haveLower.has(l.toLowerCase()))) change.labels = [...have, ...plan.labels.filter((l) => !haveLower.has(l.toLowerCase()))];
       if ((found.milestone?.title ?? null) !== plan.milestone) change.milestone = plan.milestone ? milestoneNumber.get(plan.milestone) : null;
       if (plan.assignee && !found.assignees.some((a) => a.login === plan.assignee)) change.assignees = [plan.assignee];
       if (!byMark) {
-        adopted++;
-        step("adopt", plan.key, async () => {
+        step("adopt", async () => {
           const body = bodyOf(plan, `${ADOPTED}${found.body ? `\n\n${found.body}` : ""}`);
           await github.rest("PATCH", `issues/${found.number}`, { body, ...change });
           written.set(plan.key, body);
           return `#${found.number}`;
         });
       } else if (Object.keys(change).length || bodyChanged) {
-        step("update", plan.key, async () => {
+        step("update", async () => {
           const body = bodyOf(plan, found.body);
           const patch = body === found.body ? change : { ...change, body };
           await github.rest("PATCH", `issues/${found.number}`, patch);
@@ -339,14 +387,14 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
 
     let item = found ? itemOf.get(found.number) : undefined;
     if (!item) {
-      step("add-item", plan.key, async () => {
+      step("add-item", async () => {
         const made = await github.graphql(ADD_ITEM, { projectId: project.id, contentId: issue.get(plan.key).node_id });
         item = { id: made.addProjectV2ItemById.item.id, values: {} };
       });
     }
     const differing = Object.entries(plan.fields).filter(([name, value]) => item?.values[name] !== value);
     if (differing.length) {
-      step("set-fields", plan.key, async () => {
+      step("set-fields", async () => {
         const variables = { projectId: project.id, itemId: item.id };
         differing.forEach(([name, value], i) => {
           const field = fieldByName.get(name);
@@ -362,8 +410,18 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
         return differing.map(([name]) => name).join(", ");
       });
     }
-    const current = found?.state ?? "open";
-    if (current !== plan.state) {
+    return steps;
+  }
+
+  /** The steps that need other issues: planned once every page has had its turn (and, for the plan line, before). */
+  async function lateSteps(report) {
+    const steps = [];
+    const step = (kind, key, run) => steps.push({ kind, key, run });
+    const ok = (key) => !incomplete.has(key) && plans.find((p) => p.key === key)?.body !== null;
+    for (const plan of plans) {
+      if (!ok(plan.key)) continue;
+      const current = issue.get(plan.key)?.state ?? "open";
+      if (current === plan.state) continue;
       const kind = plan.state === "closed" ? "close" : "reopen";
       step(kind, plan.key, async () => {
         const number = issue.get(plan.key).number;
@@ -371,109 +429,208 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
         return `#${number}`;
       });
     }
-  }
-
-  // A body naming an item this run creates is written again once that item has its number.
-  for (const plan of plans) {
-    if (!refsOf(plan.body).some((key) => planned.has(key) && !existing.has(key))) continue;
-    step("relink", plan.key, async () => {
-      const current = written.get(plan.key) ?? issue.get(plan.key).body;
-      const body = bodyOf(plan, current);
-      if (body === current) return "unchanged";
-      const number = issue.get(plan.key).number;
-      await github.rest("PATCH", `issues/${number}`, { body });
-      written.set(plan.key, body);
-      return `#${number}`;
-    });
-  }
-
-  const linked = async (key, path) => {
-    const found = issue.get(key);
-    return found ? (await github.pages(`issues/${found.number}/${path}`)).map((i) => i.id) : [];
-  };
-  const children = new Map();
-  for (const plan of plans.filter((p) => p.parent)) {
-    if (!children.has(plan.parent)) children.set(plan.parent, await linked(plan.parent, "sub_issues"));
-    if (issue.has(plan.key) && children.get(plan.parent).includes(issue.get(plan.key).id)) continue;
-    step("sub-issue", plan.key, async () => {
-      const parent = issue.get(plan.parent).number;
-      await github.rest("POST", `issues/${parent}/sub_issues`, { sub_issue_id: issue.get(plan.key).id });
-      return `under #${parent}`;
-    });
-  }
-  for (const plan of plans.filter((p) => p.blockers.length)) {
-    const have = await linked(plan.key, "dependencies/blocked_by");
-    for (const blocker of plan.blockers) {
-      if (issue.has(blocker) && have.includes(issue.get(blocker).id)) continue;
-      step("blocked-by", plan.key, async () => {
-        await github.rest("POST", `issues/${issue.get(plan.key).number}/dependencies/blocked_by`, { issue_id: issue.get(blocker).id });
-        return blocker;
+    // A body naming an item this run creates is written again once that item has its number.
+    for (const plan of plans) {
+      if (!ok(plan.key) || !refsOf(plan.body).some((key) => planned.has(key) && !existing.has(key))) continue;
+      step("relink", plan.key, async () => {
+        const current = written.get(plan.key) ?? issue.get(plan.key).body;
+        const body = bodyOf(plan, current);
+        if (body === current) return "unchanged";
+        const number = issue.get(plan.key).number;
+        await github.rest("PATCH", `issues/${number}`, { body });
+        written.set(plan.key, body);
+        return `#${number}`;
       });
     }
-  }
-  for (const plan of plans.filter((p) => p.pr && p.state === "open")) {
-    let pull;
-    try {
-      pull = await github.rest("GET", pullPath(plan.pr));
-    } catch (error) {
-      if (!(error instanceof GitHubError && error.type === "404")) throw error;
-      warnings.push(`${plan.key} names PR #${plan.pr}, which GitHub does not have; no Closes line`);
-      continue;
+
+    const linked = async (key, path) => {
+      const found = issue.get(key);
+      return found ? (await github.pages(`issues/${found.number}/${path}`)).map((i) => i.id) : [];
+    };
+    // An end that will not exist (a page left behind with no issue yet) is not linked this run.
+    const absent = (key) => incomplete.has(key) && !issue.has(key);
+    const children = new Map();
+    for (const plan of plans.filter((p) => p.parent)) {
+      if (absent(plan.key) || absent(plan.parent)) continue;
+      if (!children.has(plan.parent)) children.set(plan.parent, await linked(plan.parent, "sub_issues"));
+      if (issue.has(plan.key) && children.get(plan.parent).includes(issue.get(plan.key).id)) continue;
+      step("sub-issue", plan.key, async () => {
+        const parent = issue.get(plan.parent).number;
+        await github.rest("POST", `issues/${parent}/sub_issues`, { sub_issue_id: issue.get(plan.key).id });
+        return `under #${parent}`;
+      });
     }
-    const number = issue.get(plan.key)?.number;
-    if (pull.state !== "open" || (number && new RegExp(`^${closesLine(number)}\\b`, "m").test(pull.body ?? ""))) continue;
-    step("pr-closes", plan.key, async () => {
-      // The only text the import writes into the public code repository.
-      const line = closesLine(issue.get(plan.key).number);
-      const body = pull.body ?? "";
-      const next = PLACEHOLDER.test(body) ? body.replace(PLACEHOLDER, line) : `${body}${body ? "\n" : ""}${line}`;
-      await github.rest("PATCH", pullPath(plan.pr), { body: next });
-      return `PR #${plan.pr}`;
-    });
+    for (const plan of plans.filter((p) => p.blockers.length)) {
+      if (absent(plan.key)) continue;
+      const have = await linked(plan.key, "dependencies/blocked_by");
+      for (const blocker of plan.blockers) {
+        if (absent(blocker) || (issue.has(blocker) && have.includes(issue.get(blocker).id))) continue;
+        step("blocked-by", plan.key, async () => {
+          await github.rest("POST", `issues/${issue.get(plan.key).number}/dependencies/blocked_by`, { issue_id: issue.get(blocker).id });
+          return blocker;
+        });
+      }
+    }
+    for (const plan of plans.filter((p) => p.pr && p.state === "open")) {
+      if (incomplete.has(plan.key)) continue;
+      let pull;
+      try {
+        pull = await github.rest("GET", pullPath(plan.pr));
+      } catch (error) {
+        if (!(error instanceof GitHubError && error.type === "404")) throw error;
+        report(`${plan.key} names PR #${plan.pr}, which GitHub does not have; no Closes line`);
+        continue;
+      }
+      const number = issue.get(plan.key)?.number;
+      if (pull.state !== "open" || (number && new RegExp(`^${closesLine(number)}\\b`, "m").test(pull.body ?? ""))) continue;
+      step("pr-closes", plan.key, async () => {
+        // The only text the import writes into the public code repository.
+        const line = closesLine(issue.get(plan.key).number);
+        const body = pull.body ?? "";
+        const next = PLACEHOLDER.test(body) ? body.replace(PLACEHOLDER, line) : `${body}${body ? "\n" : ""}${line}`;
+        await github.rest("PATCH", pullPath(plan.pr), { body: next });
+        return `PR #${plan.pr}`;
+      });
+    }
+    return steps;
   }
 
-  const counts = Object.fromEntries(KINDS.map((k) => [k, 0]));
-  for (const s of steps) counts[s.kind]++;
+  const counted = (steps) => {
+    const counts = Object.fromEntries(KINDS.map((k) => [k, 0]));
+    for (const s of steps) counts[s.kind]++;
+    return counts;
+  };
+  const planLine = (counts, unread) =>
+    out("plan", `${KINDS.map((k) => `${k} ${counts[k]}`).join(" · ")}${unread ? `; ${unread} pages still to read, their updates and relinks counted as they are read` : ""}`);
+  const bodiesLine = () => {
+    const ready = plans.filter((p) => p.body !== null);
+    const files = ready.filter((p) => p.file).length;
+    out("bodies", `${ready.length} pages, ${ready.reduce((n, p) => n + p.body.length, 0).toLocaleString("en-US")} characters; ${files} too long for an issue, kept whole under tracker/`);
+  };
+
+  // The reader: pages in import order, each one's turn released as soon as it is read.
+  const turn = plans.map(() => deferred());
+  let read = 0;
+  let fetched = 0;
+  let writtenPages = 0;
+  let stopReading = false;
+  const status = (extra = {}) => progress({ read, total, written: writtenPages, lap, ...extra });
+  const reading = (async () => {
+    for (const [i, plan] of plans.entries()) {
+      if (stopReading) return;
+      try {
+        if (plan.body === null) {
+          if (load && !plan.record.content && (await load(plan.record))) fetched++;
+          plan.render();
+        }
+      } catch (error) {
+        for (const d of turn.slice(i)) d.reject(error);
+        return;
+      }
+      read++;
+      status({ key: plan.key, event: "read" });
+      turn[i].resolve();
+    }
+  })();
+  const stop = async () => {
+    stopReading = true;
+    await reading;
+  };
+
   out("read", `notion: ${tracker.stories.length} stories, ${tracker.epics.length} epics (${tracker.skippedRows ?? 0} timeline rows without a story skipped)`);
   out("read", `github: ${listed.length} issues listed, ${byMarker.size} matched by marker, ${adopted} by title; project items ${items.length} of max ${maxItems}`);
-  out("plan", KINDS.map((k) => `${k} ${counts[k]}`).join(" · "));
-  for (const w of [...tracker.warnings, ...warnings]) out("warn", w);
-  const files = plans.map((p) => p.file).filter(Boolean);
-  out("bodies", `${plans.length} pages, ${plans.reduce((n, p) => n + p.body.length, 0).toLocaleString("en-US")} characters; ${files.length} too long for an issue, kept whole under tracker/`);
-  // Nothing is written while any page cannot be carried in full.
-  for (const g of gaps) out("incomplete", g);
-  if (gaps.length) {
-    out("failed", `${gaps.length} part(s) of Notion pages would be left behind; nothing written`);
-    return 1;
+  const lateWarnings = [];
+  let expected = 0;
+  if (!dryRun) {
+    // What is known before the first write: every page's own steps (unread bodies not compared) and the linking steps.
+    const unread = plans.filter((p) => p.body === null).length;
+    const upfront = [...plans.flatMap(pageSteps), ...(await lateSteps((w) => lateWarnings.push(w)))];
+    const counts = counted(upfront);
+    planLine(counts, unread);
+    for (const w of [...tracker.warnings, ...warnings, ...lateWarnings]) out("warn", w);
+    if (!unread) bodiesLine();
+    if (items.length + counts["add-item"] > maxItems) {
+      await stop();
+      out("refused", `the Project would hold ${items.length + counts["add-item"]} items, over --max-items ${maxItems}`);
+      return 2;
+    }
+    expected = upfront.length;
   }
+
+  let ran = 0;
+  let last = null;
+  const stopped = async () => {
+    await stop();
+    out("stopped", `${last ? `after ${last}` : "before the first step"} (${ran} of ${Math.max(expected, ran).toLocaleString("en-US")} steps, budget ${budget} reached)`);
+    out("continue", `node .claude/scripts/tracker/import.mjs --budget ${budget}`);
+    return 3;
+  };
+  /** Runs steps within the budget: true when all ran, else the exit code. */
+  const runSteps = async (steps) => {
+    for (const [j, s] of steps.entries()) {
+      if (ran >= budget) return stopped();
+      status({ key: s.key, event: "step", step: j + 1, steps: steps.length, kind: s.kind });
+      try {
+        const detail = await s.run();
+        out(s.kind, `${s.key}${detail ? ` ${detail}` : ""}`);
+      } catch (error) {
+        if (!(error instanceof GitHubError)) throw error;
+        await stop();
+        out("failed", `${s.key} ${s.kind}: ${error.message}`);
+        return 1;
+      }
+      ran++;
+      last = s.key;
+    }
+    return true;
+  };
+
+  const all = [];
+  let parts = 0;
+  for (const [i, plan] of plans.entries()) {
+    await turn[i].promise;
+    if (plan.gaps.length) {
+      incomplete.add(plan.key);
+      parts += plan.gaps.length;
+      for (const g of plan.gaps) out("incomplete", `${plan.key} ${g}`);
+      continue;
+    }
+    const steps = pageSteps(plan);
+    if (dryRun) {
+      all.push(...steps);
+      continue;
+    }
+    if (steps.length && (plan.file || hasFiles(plan.record))) await publish(plan.file ? [plan.file] : [], plan.key);
+    const result = await runSteps(steps);
+    if (result !== true) return result;
+    writtenPages++;
+  }
+  await reading;
+  if (load) out("read", `notion: ${read} pages' content, ${fetched} read from Notion, the rest from the cache`);
+
   if (dryRun) {
+    all.push(...(await lateSteps((w) => lateWarnings.push(w))));
+    planLine(counted(all), 0);
+    for (const w of [...tracker.warnings, ...warnings, ...lateWarnings]) out("warn", w);
+    bodiesLine();
+    if (parts) {
+      out("failed", `${parts} part(s) of Notion pages would be left behind; nothing written`);
+      return 1;
+    }
     out("titles", `(${plans.length})`);
     for (const p of plans) log(`          ${p.title}`);
     return 0;
   }
-  if (items.length + counts["add-item"] > maxItems) {
-    out("refused", `the Project would hold ${items.length + counts["add-item"]} items, over --max-items ${maxItems}`);
-    return 2;
-  }
 
-  // The files the issues link to (attachments, whole long pages) reach the repository before any issue names them.
-  await publish(files);
-  let ran = 0;
-  for (const s of steps) {
-    if (ran === budget) {
-      out("stopped", `${ran ? `after ${steps[ran - 1].key}` : "before the first step"} (${ran} of ${steps.length.toLocaleString("en-US")} steps, budget ${budget} reached)`);
-      out("continue", `node .claude/scripts/tracker/import.mjs --budget ${budget}`);
-      return 3;
-    }
-    try {
-      const detail = await s.run();
-      out(s.kind, `${s.key}${detail ? ` ${detail}` : ""}`);
-    } catch (error) {
-      if (!(error instanceof GitHubError)) throw error;
-      out("failed", `${s.key} ${s.kind}: ${error.message}`);
-      return 1;
-    }
-    ran++;
+  const seen = new Set(lateWarnings);
+  const late = await lateSteps((w) => {
+    if (!seen.has(w)) out("warn", w);
+  });
+  const result = await runSteps(late);
+  if (result !== true) return result;
+  if (parts) {
+    out("failed", `${parts} part(s) of Notion pages left behind: ${incomplete.size} page(s) not written, the other ${plans.length - incomplete.size} written`);
+    return 1;
   }
   // Warnings are reported above and never change the exit: every step ran.
   out("done", `${plans.length} items; 0 steps left; ${github.stats.content} content requests`);
@@ -504,6 +661,22 @@ export function docsIndex(clone) {
   );
 }
 
+/** The lap this run is, counted in the cache folder until a run ends `done`; a dry run is lap 0 and counts nothing. */
+function nextLap(dir, dryRun, reset = false) {
+  if (dryRun) return 0;
+  const file = join(dir, "lap.json");
+  let lap = 0;
+  try {
+    lap = JSON.parse(readFileSync(file, "utf8")).lap ?? 0;
+  } catch {
+    lap = 0;
+  }
+  const next = reset ? 0 : lap + 1;
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(file, JSON.stringify({ lap: next }));
+  return next;
+}
+
 async function main(argv = process.argv.slice(2)) {
   const budget = flag(argv, "--budget", Infinity);
   const maxItems = flag(argv, "--max-items", 1200);
@@ -515,8 +688,10 @@ async function main(argv = process.argv.slice(2)) {
   try {
     const notion = notionToken(fileURLToPath(new URL("../../../", import.meta.url)));
     if (!notion) throw new NotionError("no token", "No Notion token: set NOTION_TOKEN or put it in .env");
-    const github = githubClient({ token: projectToken(), log: console.log });
-    console.log(`${"token".padEnd(9)} ${await assertProjectScope(github)}, project scope`);
+    const dryRun = argv.includes("--dry-run");
+    const report = reporter({ writing: !dryRun });
+    const github = githubClient({ token: projectToken(), log: report.log });
+    report.log(`${"token".padEnd(9)} ${await assertProjectScope(github)}, project scope`);
     const root = fileURLToPath(new URL("../../../", import.meta.url));
     const clone = specsClone(root, specsRepo);
     if (!existsSync(join(clone, ".git"))) throw new NotionError("no clone", `no clone of ${ISSUE_REPO} at ${clone}: node .claude/scripts/specs-repo.mjs ensure`);
@@ -524,19 +699,20 @@ async function main(argv = process.argv.slice(2)) {
     const tracker = await readTracker(client);
     tracker.docs = docsIndex(clone);
     const store = folderStore(clone);
-    const read = await loadContent(client, tracker, {
-      cache: folderCache(join(homedir(), ".cache", "motorfix-tracker", "pages")),
-      store,
-      refresh: argv.includes("--refresh"),
-      log: console.log,
-    });
-    console.log(`${"read".padEnd(9)} notion: ${read} pages' content read, the rest from the cache`);
+    const cacheDir = join(homedir(), ".cache", "motorfix-tracker");
+    const lap = nextLap(cacheDir, dryRun);
+    const load = pageLoader(client, tracker, { cache: folderCache(join(cacheDir, "pages")), store, refresh: argv.includes("--refresh"), log: report.log });
     const publish = async (files) => {
       for (const f of files) store.write(f.path, f.text);
       const done = specsRepo.commit({ root, message: "docs(tracker): ST-1017 page files for the imported issues", paths: ["tracker"] });
       if (!done.ok) throw new GitHubError("specs", `could not push tracker/ to ${ISSUE_REPO}: ${done.error}`);
     };
-    process.exitCode = await runImport({ github, tracker, dryRun: argv.includes("--dry-run"), budget, maxItems, publish });
+    try {
+      process.exitCode = await runImport({ github, tracker, dryRun, budget, maxItems, publish, load, hasFiles: hasStoredFiles, log: report.log, progress: report.progress, lap });
+    } finally {
+      report.end();
+    }
+    if (!dryRun && process.exitCode === 0) nextLap(cacheDir, dryRun, true);
   } catch (error) {
     if (!(error instanceof TokenError || error instanceof GitHubError || error instanceof NotionError)) throw error;
     console.error(error.message);
