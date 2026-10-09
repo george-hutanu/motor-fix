@@ -450,7 +450,7 @@ describe('moveBooking', () => {
 });
 
 describe('a move that needs its reason', () => {
-  it('will not compile a close without its reason or a cancellation without one', () => {
+  it('will not compile a close, a decline or a cancellation without its reason', () => {
     const event = {
       audience: { driverAccountId: driver, garageIds: [], type: 'request' },
       kind: 'request.cancelled',
@@ -471,6 +471,16 @@ describe('a move that needs its reason', () => {
         event,
         id: '',
         to: 'closed',
+      }),
+      // @ts-expect-error a garage declines only with its reason (decline_reason)
+      moveRecipient(tx, ports, {
+        actor: byGarage(),
+        event: {
+          audience: { driverAccountId: driver, garageId, type: 'quote' },
+          kind: 'request.declined',
+        },
+        id: '',
+        to: 'declined',
       }),
       // @ts-expect-error a booking is cancelled only with its cancellation
       moveBooking(tx, ports, {

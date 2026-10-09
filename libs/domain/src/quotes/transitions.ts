@@ -153,10 +153,18 @@ function recipientColumns(
   return {};
 }
 
+// A decline needs its reason: decline_reason is checked by the database, as
+// closing a request is.
+type RecipientMove =
+  | (Base<Exclude<RecipientStatus, 'declined'>> & {
+      declineReason?: DeclineReason;
+    })
+  | (Base<'declined'> & { declineReason: DeclineReason });
+
 export function moveRecipient(
   tx: Tx,
   ports: TransitionPorts,
-  move: Base<RecipientStatus> & { declineReason?: DeclineReason },
+  move: RecipientMove,
 ) {
   return applyTransition(tx, RECIPIENT, ports, {
     ...move,
