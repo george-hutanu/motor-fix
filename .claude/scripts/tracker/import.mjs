@@ -1,8 +1,9 @@
 // Copies the Notion backlog into the MotorFix GitHub Project, one way: an
-// issue per story and epic in the private motor-fix-specs (repos.mjs) that
+// issue per story, feature and epic in the private motor-fix-specs (repos.mjs) that
 // carries the whole page (every block, every comment, its files; a property
 // only when no issue or Project field holds it), its Project fields, its
-// relationships (parent, blocked by), set as each item is written, and a
+// relationships (story under its feature, feature under its epic, blocked
+// by), set as each item is written, and a
 // Closes line on an open story's PR. No Notion address is written: links to other stories
 // and epics become #<issue> references. Pages are written while the rest are
 // still being read; a page the import cannot carry in full is never written
@@ -35,9 +36,10 @@ const EPIC_STATUS = { "To do": "To do", "In progress": "Implementing", Done: "Do
 const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
 // The field types set-fields writes; GitHub's own fields (CREATED, TITLE, …) take no value.
 const WRITABLE = new Set(["SINGLE_SELECT", "DATE", "NUMBER", "TEXT"]);
-const KINDS = ["create", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "blocked-by", "pr-closes"];
+const KINDS = ["create", "feature", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "move", "blocked-by", "pr-closes"];
 const READERS = 4;
-const MARKER = /<!-- motorfix:((?:ST|EP)-\d+) -->/;
+// A feature's key is its Notion page id: it never looks like a story's or an epic's.
+const MARKER = /<!-- motorfix:((?:ST|EP)-\d+|FEATURE-[0-9a-f]{32}) -->/;
 // Set on an issue filed by hand and adopted: its title and labels stay the person's.
 const ADOPTED = "<!-- motorfix:adopted -->";
 
@@ -45,6 +47,7 @@ const ADOPTED = "<!-- motorfix:adopted -->";
 export const BODY_LIMIT = 60_000;
 const plainId = (id) => String(id).replaceAll("-", "").toLowerCase();
 const keyNumber = (key) => Number(key.split("-")[1]);
+const featureKey = (id) => `FEATURE-${plainId(id)}`;
 // A bare @name in a public issue title would notify that GitHub user.
 const quiet = (title) => title.replace(/(^|\s)(@[\w-]+)/g, "$1`$2`");
 const titled = (key, title) => {
@@ -125,7 +128,37 @@ const dateOf = (value, end = false) => {
   return d && typeof d === "object" ? (end ? d.end : d.start) : null;
 };
 
-/** What each story and epic should be on GitHub, in import order, and what Notion held that could not be mapped. */
+/**
+ * Notion feature page id (no dashes) → its title, for every feature a story's
+ * Feature or an epic's Features names, read before any page's content. A page
+ * Notion will not give is left out (issuePlans names it by its id).
+ */
+export async function featureTitles(client, tracker) {
+  const ids = new Map();
+  for (const [records, name] of [
+    [tracker.stories, "Feature"],
+    [tracker.epics, "Features"],
+  ])
+    for (const r of records) for (const id of plainValue(r.properties?.[name]) ?? []) ids.set(plainId(id), id);
+  const titles = new Map();
+  const queue = [...ids];
+  const reader = async () => {
+    for (let next = queue.shift(); next; next = queue.shift()) {
+      const [plain, id] = next;
+      try {
+        const page = await client.request("GET", `/pages/${id}`);
+        const title = plainValue(Object.values(page?.properties ?? {}).find((p) => p?.type === "title"));
+        if (title) titles.set(plain, title.replace(/\s+/g, " ").trim());
+      } catch (error) {
+        if (!(error instanceof NotionError)) throw error;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: READERS }, reader));
+  return titles;
+}
+
+/** What each story, feature and epic should be on GitHub, in import order, and what Notion held that could not be mapped. */
 export function issuePlans(tracker) {
   const warnings = [];
   const seen = new Map();
@@ -144,7 +177,7 @@ export function issuePlans(tracker) {
   };
   const ctx = {
     keyOf: (id) => keyById.get(plainId(id)) ?? null,
-    titleOf: (id) => titleById.get(plainId(id)) ?? otherTitle(id),
+    titleOf: (id) => titleById.get(plainId(id)) ?? otherTitle(id) ?? tracker.features?.get(plainId(id)) ?? null,
     userOf: (id) => tracker.users?.get(id) ?? null,
   };
   /** The URL of a feature's document in motor-fix-specs docs/ (ST-1018), or null. */
@@ -214,6 +247,8 @@ export function issuePlans(tracker) {
     const blockers = linkable(s);
     const pr = s.pr?.match(PULL);
     if (s.pr && !pr) warnings.push(`${s.key} has a PR value that is not a motor-fix pull request URL; not published`);
+    const featureIds = features(s);
+    if (featureIds.length > 1) warnings.push(`${s.key} has ${featureIds.length} features (${featureIds.map((id) => ctx.titleOf(id) ?? featureKey(id)).join(", ")}); a sub-issue of the first`);
     return {
       key: s.key,
       title: titled(s.key, s.title),
@@ -222,10 +257,12 @@ export function issuePlans(tracker) {
       milestone: epicByKey.get(epic)?.release ?? null,
       assignee: s.assignee,
       state: status === "Done" ? "closed" : "open",
-      parent: epic ?? null,
+      // Under its first feature; a story with no feature sits under its epic.
+      parent: featureIds.length ? featureKey(featureIds[0]) : (epic ?? null),
+      epic: epic ?? null,
       blockers,
       pr: pr ? Number(pr[1]) : null,
-      featureIds: features(s),
+      featureIds,
       get fields() {
         return dated({ Status: status }, [
           ["Priority", s.priority],
@@ -273,6 +310,7 @@ export function issuePlans(tracker) {
       assignee: e.assignee,
       state: status === "Done" ? "closed" : "open",
       parent: null,
+      epic: null,
       blockers: linkable(e),
       pr: null,
       featureIds: features(e, "Features"),
@@ -299,6 +337,52 @@ export function issuePlans(tracker) {
     };
   });
 
+  // One issue per feature a story or an epic names, under the epic that holds most of its stories (an epic's Features counting as one), ties to the lowest EP.
+  const votes = new Map();
+  const vote = (id, epic) => {
+    const plain = plainId(id);
+    if (!votes.has(plain)) votes.set(plain, { id, epics: new Map(), stories: [] });
+    if (epic) votes.get(plain).epics.set(epic, (votes.get(plain).epics.get(epic) ?? 0) + 1);
+    return votes.get(plain);
+  };
+  for (const s of stories) for (const id of s.featureIds) vote(id, s.epic).stories.push(s);
+  for (const e of epics) for (const id of e.featureIds) vote(id, e.key);
+  const featurePlans = [...votes.values()].map(({ id, epics: counts, stories: named }) => {
+    const key = featureKey(id);
+    const [epic] = [...counts].sort(([a, n], [b, m]) => m - n || keyNumber(a) - keyNumber(b)).map(([k]) => k);
+    let name = ctx.titleOf(id) ?? tracker.docs?.get(plainId(id))?.replace(/^.*\//, "").replace(/\.md$/, "");
+    if (!name) {
+      name = `Feature ${plainId(id).slice(0, 8)}`;
+      warnings.push(`${key}: Notion gave no title for the feature page; titled ${name}`);
+    }
+    const link = docLink(id);
+    const state = named.length ? (named.some((s) => s.state === "open") ? "open" : "closed") : (epics.find((e) => e.key === epic)?.state ?? "open");
+    const fields = dated({}, [
+      ["Work type", "Feature"],
+      ["Epic", epic],
+      ["Release", epicByKey.get(epic)?.release],
+    ]);
+    return {
+      key,
+      title: quiet(name.replace(/\s+/g, " ").trim()),
+      record: { id, key },
+      body: [`<!-- motorfix:${key} -->`, ...(link ? [`Docs: ${link}`] : [])].join("\n\n"),
+      gaps: [],
+      file: null,
+      labels: ["type: feature", ...(epic ? [epic] : [])],
+      milestone: null,
+      // Its epic's owner, as every imported issue has someone on it.
+      assignee: epicByKey.get(epic)?.assignee ?? null,
+      state,
+      parent: epic ?? null,
+      epic: null,
+      blockers: [],
+      pr: null,
+      featureIds: [],
+      fields,
+    };
+  });
+
   const rank = (p) => {
     const i = PRIORITIES.indexOf(p.fields.Priority);
     return i === -1 ? PRIORITIES.length : i;
@@ -306,7 +390,8 @@ export function issuePlans(tracker) {
   const byId = (a, b) => keyNumber(a.key) - keyNumber(b.key);
   const open = stories.filter((p) => p.state === "open").sort((a, b) => rank(a) - rank(b) || byId(a, b));
   const done = stories.filter((p) => p.state === "closed").sort(byId);
-  return { plans: [...open, ...epics.sort(byId), ...done], warnings };
+  const byTitle = (a, b) => a.title.localeCompare(b.title) || a.key.localeCompare(b.key);
+  return { plans: [...open, ...epics.sort(byId), ...featurePlans.sort(byTitle), ...done], warnings };
 }
 
 const ITEMS = `query Items($id: ID!, $after: String) { node(id: $id) { ... on ProjectV2 { items(first: 100, after: $after) { totalCount pageInfo { hasNextPage endCursor }
@@ -479,10 +564,11 @@ export async function runImport({
     const found = existing.has(plan.key) ? issue.get(plan.key) : undefined;
     let item = found ? itemOf.get(found.number) : undefined;
     if (!found) {
-      step("create", async () => {
+      step(plan.key.startsWith("FEATURE-") ? "feature" : "create", async () => {
         const body = bodyOf(plan);
         const assignee = plan.assignee ? await userId(plan.assignee) : null;
-        const parent = plan.parent && hasRoom(await linksOf(subIssues, plan.parent, "sub_issues"), plan.key, plan.parent) ? issue.get(plan.parent) : undefined;
+        // Placed under its parent at create when the parent has room; the link steps report it when it has none.
+        const parent = plan.parent && issue.has(plan.parent) && (await linksOf(subIssues, plan.parent, "sub_issues")).length < subIssueMax ? issue.get(plan.parent) : undefined;
         const made = (
           await github.graphql(CREATE_ISSUE, {
             input: {
@@ -587,29 +673,68 @@ export async function runImport({
     }
     return cache.get(key);
   };
-  // GitHub holds at most subIssueMax sub-issues per parent: a story past it carries its epic by label and Epic field only.
-  const leftOut = new Map();
-  const hasRoom = (have, child, parent) => {
-    if (have.length < subIssueMax) return true;
-    if (!leftOut.has(parent)) leftOut.set(parent, new Set());
-    leftOut.get(parent).add(child);
-    return false;
+  // GitHub holds at most subIssueMax sub-issues per parent: an issue past it carries its parent by label and field only (child key → parent key).
+  const noRoom = new Map();
+  // Links planned and not yet run, per parent: the children they bring in and take out, so a move frees its old parent's room before it runs.
+  const pending = new Map();
+  const pendingOf = (parent) => {
+    if (!pending.has(parent)) pending.set(parent, { in: new Set(), out: new Set() });
+    return pending.get(parent);
   };
-  const fullWarnings = () => [...leftOut].map(([parent, children]) => `${parent} holds ${subIssueMax} sub-issues, GitHub's limit: ${children.size} of its stories carry it by label and Epic field only`);
-  const subIssueStep = (child, parent, have) => ({
-    kind: "sub-issue",
+  const planOf = new Map(plans.map((p) => [p.key, p]));
+  const fullWarnings = () => {
+    const full = new Map();
+    for (const [child, parent] of noRoom) full.set(parent, (full.get(parent) ?? 0) + 1);
+    return [...full].map(([parent, n]) =>
+      parent.startsWith("FEATURE-")
+        ? `${planOf.get(parent)?.title} (${parent}) holds ${subIssueMax} sub-issues, GitHub's limit: ${n} of its stories carry it by the Feature field only`
+        : `${parent} holds ${subIssueMax} sub-issues, GitHub's limit: ${n} of its sub-issues carry it by label and Epic field only`,
+    );
+  };
+  const subIssueStep = (child, parent, have, from) => ({
+    kind: from ? "move" : "sub-issue",
     key: child,
     run: async () => {
       const number = issue.get(parent).number;
       const id = issue.get(child).id;
-      // The child's create may have placed it under its parent already.
-      if (have.includes(id)) return `under #${number} at create`;
-      if (!hasRoom(have, child, parent)) return `left out of full #${number}`;
-      await github.rest("POST", `issues/${number}/sub_issues`, { sub_issue_id: id }, { idempotent: true });
-      have.push(id);
-      return `under #${number}`;
+      try {
+        // The child's create may have placed it under its parent already.
+        if (have.includes(id)) return `under #${number} at create`;
+        if (have.length >= subIssueMax) {
+          noRoom.set(child, parent);
+          return `left out of full #${number}`;
+        }
+        // An issue has one parent: replace_parent moves one the import put under its epic before it had features.
+        await github.rest("POST", `issues/${number}/sub_issues`, { sub_issue_id: id, replace_parent: true }, { idempotent: true });
+        for (const [key, ids] of subIssues) if (key !== parent && ids.includes(id)) ids.splice(ids.indexOf(id), 1);
+        have.push(id);
+        noRoom.delete(child);
+        return from ? `from #${issue.get(from).number} to #${number}` : `under #${number}`;
+      } finally {
+        pending.get(parent)?.in.delete(child);
+        if (from) pending.get(from)?.out.delete(child);
+      }
     },
   });
+  /**
+   * Plans the child's link under its parent: nothing when it is there, a move
+   * when it sits under its epic (where the import put stories before
+   * features), and nothing but a noRoom entry when the parent would be full.
+   */
+  const planLink = async (steps, child, parent) => {
+    const have = await linksOf(subIssues, parent, "sub_issues");
+    if (linked(have, child)) return;
+    const epic = planOf.get(child)?.epic;
+    const from = epic && epic !== parent && issue.has(epic) && issue.has(child) && (await linksOf(subIssues, epic, "sub_issues")).includes(issue.get(child).id) ? epic : null;
+    const room = pendingOf(parent);
+    if (have.length + room.in.size - room.out.size >= subIssueMax) {
+      noRoom.set(child, parent);
+      return;
+    }
+    room.in.add(child);
+    if (from) pendingOf(from).out.add(child);
+    steps.push(subIssueStep(child, parent, have, from));
+  };
   const blockedByStep = (blocked, blocker, have) => ({
     kind: "blocked-by",
     key: blocked,
@@ -630,11 +755,9 @@ export async function runImport({
   async function linkSteps(plan) {
     const steps = [];
     const self = plan.key;
-    const families = [...(plan.parent && issue.has(plan.parent) ? [[self, plan.parent]] : []), ...plans.filter((c) => c.parent === self && issue.has(c.key)).map((c) => [c.key, self])];
-    for (const [child, parent] of families) {
-      const have = await linksOf(subIssues, parent, "sub_issues");
-      if (!linked(have, child) && hasRoom(have, child, parent)) steps.push(subIssueStep(child, parent, have));
-    }
+    // Its children first: a story moving from its epic to this feature makes room for the feature under that epic.
+    const families = [...plans.filter((c) => c.parent === self && issue.has(c.key)).map((c) => [c.key, self]), ...(plan.parent && issue.has(plan.parent) ? [[self, plan.parent]] : [])];
+    for (const [child, parent] of families) await planLink(steps, child, parent);
     const pairs = [...plan.blockers.filter((b) => issue.has(b)).map((b) => [self, b]), ...plans.filter((d) => d.blockers.includes(self) && issue.has(d.key)).map((d) => [d.key, self])];
     for (const [blocked, blocker] of pairs) {
       const have = await linksOf(blockedBy, blocked, "dependencies/blocked_by");
@@ -677,8 +800,7 @@ export async function runImport({
     const absent = (key) => (incomplete.has(key) || skipped.has(key)) && !issue.has(key);
     for (const plan of plans.filter((p) => p.parent)) {
       if (absent(plan.key) || absent(plan.parent)) continue;
-      const have = await linksOf(subIssues, plan.parent, "sub_issues");
-      if (!linked(have, plan.key) && hasRoom(have, plan.key, plan.parent)) steps.push(subIssueStep(plan.key, plan.parent, have));
+      await planLink(steps, plan.key, plan.parent);
     }
     for (const plan of plans.filter((p) => p.blockers.length)) {
       if (absent(plan.key)) continue;
@@ -792,11 +914,14 @@ export async function runImport({
     const unread = plans.filter((p) => p.body === null).length;
     const upfront = [...plans.flatMap(pageSteps), ...(await lateSteps((w) => lateWarnings.push(w)))];
     const counts = counted(upfront);
+    // Those steps only count: the room they planned is planned again as each runs.
+    pending.clear();
+    noRoom.clear();
     planLine(counts, unread);
     for (const w of [...tracker.warnings, ...warnings, ...lateWarnings]) out("warn", w);
     if (!unread) bodiesLine();
     // A create puts its issue in the Project, so it adds an item as an add-item does.
-    const adding = counts["add-item"] + counts.create;
+    const adding = counts["add-item"] + counts.create + counts.feature;
     if (items.length + adding > maxItems) {
       await stop();
       out("refused", `the Project would hold ${items.length + adding} items, over --max-items ${maxItems}`);
@@ -968,6 +1093,7 @@ async function main(argv = process.argv.slice(2)) {
     if (!existsSync(join(clone, ".git"))) throw new NotionError("no clone", `no clone of ${ISSUE_REPO} at ${clone}: node .claude/scripts/specs-repo.mjs ensure`);
     const client = notionClient({ token: notion });
     const tracker = await readTracker(client);
+    tracker.features = await featureTitles(client, tracker);
     tracker.docs = docsIndex(clone);
     const store = folderStore(clone);
     const cacheDir = join(homedir(), ".cache", "motorfix-tracker");

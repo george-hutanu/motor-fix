@@ -150,6 +150,10 @@ export function fakeGitHub(seed = {}) {
       const list = state.subIssues.get(Number(m[1])) ?? [];
       if (method === "GET") return json(list.map(issueById));
       if (list.length >= state.subIssueMax) return json({ message: "An error occurred while adding the sub-issue to the parent issue. Parent cannot have more than 100 sub-issues" }, 422);
+      // A sub-issue has one parent: another parent is refused unless replace_parent moves it.
+      const former = [...state.subIssues].find(([n, ids]) => n !== Number(m[1]) && ids.includes(body.sub_issue_id));
+      if (former && body.replace_parent !== true) return json({ message: "An error occurred while adding the sub-issue to the parent issue. Sub issue may only have one parent" }, 422);
+      if (former) state.subIssues.set(former[0], former[1].filter((id) => id !== body.sub_issue_id));
       list.push(body.sub_issue_id);
       state.subIssues.set(Number(m[1]), list);
       return json(issueBy(m[1]), 201);

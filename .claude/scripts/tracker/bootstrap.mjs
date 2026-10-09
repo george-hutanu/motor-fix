@@ -59,7 +59,7 @@ export const SCHEMA = {
   fields: [
     select("Status", [["To do"], ["Planning", "BLUE"], ["Implementing", "YELLOW"], ["Blocked", "RED"], ["QA", "ORANGE"], ["Done", "GREEN"]]),
     select("Priority", [["Urgent", "RED"], ["Highest", "ORANGE"], ["High", "YELLOW"], ["Medium", "BLUE"], ["Low"]]),
-    select("Work type", [["Story"], ["Task"], ["Bug"], ["Tech debt"], ["Decision"], ["Epic"]]),
+    select("Work type", [["Story"], ["Task"], ["Bug"], ["Tech debt"], ["Decision"], ["Epic"], ["Feature"]]),
     select(
       "Epic",
       EPICS.map((e) => [e]),
@@ -88,7 +88,7 @@ export const SCHEMA = {
     ...EPICS.map((e) => ({ name: e, layout: "BOARD_LAYOUT", filter: `epic:"${e}"`, fields: ["Title", "Priority", "Work type"] })),
   ],
   labels: [
-    ...["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "epic"].map(label("1d76db")),
+    ...["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "type: feature", "epic"].map(label("1d76db")),
     ...["front end", "backend", "real-time", "outside service", "legal", "design", "data"].map((a) => label("0e8a16")(`area: ${a}`)),
     ...ROLES.map((r) => label("fbca04")(`role: ${r}`)),
     ...TRACKS.map((t) => label("c5def5")(`track: ${t}`)),
@@ -103,7 +103,7 @@ export const SCHEMA = {
     "- Each imported issue carries its whole page: every property, the build brief or plan, comments (under Notes from Notion) and files (stored in this repository under tracker/).",
     "- File new work with an issue form (Story, Task, Bug, Tech debt, Decision); it lands here by itself.",
     "- An imported issue is titled `ST-<n>` or `EP-<n>` after its old ID; a new one is known by its number.",
-    "- Stories are sub-issues of their epic; Blocked by links are issue dependencies.",
+    "- Stories are sub-issues of their feature, and features (and stories with no feature) of their epic; Blocked by links are issue dependencies.",
     '- Ready to work: Status To do and not blocked by an open issue (filter `status:"To do" -is:blocked`).',
   ].join("\n"),
 };
@@ -258,6 +258,10 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
       await write(Q.setOptions, { fieldId: have.id, options: want.options });
       fieldsCreated = true;
       created("field", detail, "updated");
+    } else if (haveNames.every((n) => names.includes(n)) && sameNames(haveNames, names.filter((n) => haveNames.includes(n)))) {
+      // Options are only missing: added by hand, since the API replaces every option, which clears the field on every item.
+      const missing = names.filter((n) => !haveNames.includes(n));
+      differs("field", `${want.name}: add the option${missing.length > 1 ? "s" : ""} ${missing.join(", ")} in the Project's field settings (the API replaces every option, which clears the field on every item)`);
     } else differs("field", `${want.name}: options ${haveNames.join(", ")}, not ${names.join(", ")}`);
   }
   for (const old of OBSOLETE_FIELDS) {
