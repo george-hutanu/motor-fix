@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { Logger } from '@nestjs/common';
+
+import { outbox } from '../../events/event.port';
 import type { JobStatus } from '../../generated/prisma/enums';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 
@@ -435,6 +438,29 @@ describe('ticking a step', () => {
       done: false,
     });
     expect(refused.status).toBe(403);
+  });
+
+  // SC-004: the change, its audit entry and its event are one write.
+  it('leaves no tick, audit entry or event when the event cannot be written', async () => {
+    const s = await setting('in_work');
+    const [, id] = await five(s);
+    const audited = (await audits(s.job.id)).length;
+    const sent = (await events(s.job.id)).length;
+    jest
+      .spyOn(outbox, 'record')
+      .mockRejectedValueOnce(new Error('outbox down'));
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+
+    const refused = await send('put', `${s.steps}/${id}/done`, s.hand, {
+      done: true,
+    });
+    jest.restoreAllMocks();
+
+    expect(refused.status).toBe(500);
+    const step = await prisma.jobStep.findUniqueOrThrow({ where: { id } });
+    expect([step.doneAt, step.doneById]).toEqual([null, null]);
+    expect(await audits(s.job.id)).toHaveLength(audited);
+    expect(await events(s.job.id)).toHaveLength(sent);
   });
 });
 
