@@ -24,10 +24,10 @@ range (or "working tree"). Gather your own evidence:
   Constraints bind the diff as tightly
   as the spec does
 - the feature page, architecture pages and decisions the spec or `context.md`
-  cites, read from the specs clone's `.motor-fix-specs/docs/` (find a Notion id's
-  file in `docs/index.json`; Read and Grep, never an edit); only while the clone
-  has no `docs/index.json`, read them in Notion instead, the space named in
-  `/speckit-context` (fallback until docs/ exists)
+  cites, read from the specs clone (`.motor-fix-specs/`): `llms.txt` first,
+  then `docs/reference/features/`, `docs/explanation/architecture/` and
+  `docs/explanation/decisions/` (a Notion id's file is in `docs/index.json`;
+  Read and Grep, never an edit)
 - the feature's story in the Notion tracker, **comments included**, when the
   spec links one (Notion read tools only — never a write). The local
   artifacts are as current as the day they were written; the story is current
