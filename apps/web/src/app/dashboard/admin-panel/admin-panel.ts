@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import type { Period } from '@motor-fix/contracts/figure-choices';
 import { formatNum, I18n } from '@motor-fix/i18n';
 
@@ -50,7 +50,7 @@ const TILES: readonly { key: string; line?: (f: Figures) => number | null }[] =
 const MISSING = '—';
 
 @Component({
-  host: { '[attr.aria-busy]': "busy() ? 'true' : null" },
+  host: { '[attr.aria-busy]': "regionBusy() ? 'true' : null" },
   imports: [AdminGrowth],
   selector: 'mf-admin-panel',
   styleUrl: './admin-panel.css',
@@ -66,6 +66,12 @@ export class AdminPanel {
     () =>
       (this.overview.loading() || this.overview.figuresLoading()) &&
       !this.overview.failed(),
+  );
+
+  // The region is busy until every read in it has answered, the growth's too.
+  private readonly growth = viewChild(AdminGrowth);
+  protected readonly regionBusy = computed(
+    () => this.busy() || (this.growth()?.loading() ?? false),
   );
 
   protected readonly observability = computed(() => {

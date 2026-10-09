@@ -11,7 +11,8 @@ export interface FiltersChoice {
 
 export interface FiltersData extends FiltersChoice {
   // Each city with the name to show, "Toată țara" first.
-  cities: readonly { key: string; name: string }[];
+  // Read live, so the cities that arrive after the sheet opened are listed.
+  cities: () => readonly { key: string; name: string }[];
 }
 
 // The phone's filters: the cities above the periods; "Aplică" closes with the

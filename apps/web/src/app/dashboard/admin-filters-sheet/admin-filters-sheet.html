@@ -1,6 +1,6 @@
 <div class="group" role="radiogroup" [attr.aria-label]="'shell.frame.admin.city.label' | t">
   <p class="label" aria-hidden="true">{{ 'shell.frame.admin.city.label' | t }}</p>
-  @for (option of task.data.cities; track option.key) {
+  @for (option of task.data.cities(); track option.key) {
     <label class="option">
       <input type="radio" name="mf-filters-city" [value]="option.key" [checked]="option.key === city()" (change)="city.set(option.key)" />
       {{ option.name }}

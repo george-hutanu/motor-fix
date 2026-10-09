@@ -32,7 +32,7 @@ export class AdminGrowth {
   protected readonly headingId = inject(_IdGenerator).getId('mf-growth-');
 
   protected readonly answer = signal<AdminGrowthDto | undefined>(undefined);
-  protected readonly loading = signal(true);
+  readonly loading = signal(true);
   protected readonly failed = signal(false);
 
   protected readonly title = computed(() => this.i18n.t('admin.growth.title'));

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
@@ -40,7 +40,10 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function open(language: 'ro' | 'en' = 'ro') {
+async function open(
+  language: 'ro' | 'en' = 'ro',
+  cities: () => typeof CITIES = () => CITIES,
+) {
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
   const result: Promise<OverlayResult<FiltersChoice>> =
@@ -48,7 +51,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
       AdminFiltersSheet,
       {
         confirmDiscard: false,
-        data: { cities: CITIES, city: 'bucuresti', period: '7d' },
+        data: { cities, city: 'bucuresti', period: '7d' },
         shape: 'dialog',
         title: 'shell.frame.admin.filters.title',
       },
@@ -98,6 +101,21 @@ describe('the admin filters sheet', () => {
       { checked: false, name: 'Ultimele 30 de zile' },
       { checked: false, name: 'Luna aceasta' },
       { checked: false, name: 'Ultimele 12 luni' },
+    ]);
+  });
+
+  it('lists the cities that arrive after it opened', async () => {
+    const cities = signal(CITIES.slice(0, 1));
+    void open('ro', cities);
+    await settle();
+    expect(options(group('Oraș')).map((o) => o.name)).toEqual(['Toată țara']);
+
+    cities.set(CITIES);
+    await settle();
+    expect(options(group('Oraș')).map((o) => o.name)).toEqual([
+      'Toată țara',
+      'București',
+      'Cluj-Napoca',
     ]);
   });
 

@@ -43,6 +43,8 @@ const RO_LABELS = [
 
 let resync: Subject<void>;
 let answer: () => Promise<Answer>;
+const NO_MONTHS = async () => ({ months: [] });
+let growth: () => Promise<{ months: unknown[] }> = NO_MONTHS;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -71,7 +73,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
       {
         provide: AdminService,
         useValue: {
-          adminOverviewControllerGrowth: async () => ({ months: [] }),
+          adminOverviewControllerGrowth: () => growth(),
           adminOverviewControllerOverview: () => answer(),
         },
       },
@@ -93,13 +95,32 @@ const tile = (element: HTMLElement, label: string) =>
 const text = (t: HTMLElement, part: 'number' | 'line') =>
   t.querySelector(`.${part}`)?.textContent?.trim();
 
-afterEach(() => TestBed.resetTestingModule());
+afterEach(() => {
+  TestBed.resetTestingModule();
+  growth = NO_MONTHS;
+});
 
 const GRAFANA = 'https://stack.grafana.net/d/motorfix-overview?var-env=test';
 const link = (element: HTMLElement) =>
   element.querySelector<HTMLAnchorElement>('mf-admin-panel a.observability');
 
 describe('AdminPanel', () => {
+  // @traces 163-FR-010
+  it('stays busy until the growth read has answered too', async () => {
+    let done: (value: { months: unknown[] }) => void = () => undefined;
+    growth = () => new Promise((resolve) => (done = resolve));
+    answer = async () => FIGURES;
+    const element = await open();
+    const panel = element.querySelector('mf-admin-panel') as HTMLElement;
+
+    expect(text(tile(element, LISTED), 'number')).toBe('214');
+    expect(panel.getAttribute('aria-busy')).toBe('true');
+
+    done({ months: [] });
+    await settle();
+    expect(panel.getAttribute('aria-busy')).toBeNull();
+  });
+
   it('links to the observability dashboards in a new tab, between the tiles and the growth panel', async () => {
     answer = async () => ({ ...FIGURES, observabilityUrl: GRAFANA });
     const element = await open();

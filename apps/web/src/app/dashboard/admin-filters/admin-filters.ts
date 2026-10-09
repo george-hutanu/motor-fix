@@ -55,7 +55,7 @@ export class AdminFilters {
       {
         confirmDiscard: false,
         data: {
-          cities: this.cities(),
+          cities: this.cities,
           city: this.city(),
           period: this.period(),
         },
