@@ -7,6 +7,7 @@ import { Session } from './session';
 const OWNER = {
   capabilities: [],
   email: 'mihai@example.ro',
+  garageAccess: [],
   garageId: 'garage-1',
   id: 'account-1',
   landing: '/app/garage',

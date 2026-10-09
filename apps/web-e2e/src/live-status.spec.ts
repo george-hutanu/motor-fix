@@ -23,6 +23,7 @@ async function openWithUpdate(
         capabilities: [],
         email: 'driver@example.ro',
         emailConfirmed,
+        garageAccess: [],
         garageId: null,
         id: 'driver-1',
         landing: '/app/driver',

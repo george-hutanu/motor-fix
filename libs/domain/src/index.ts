@@ -50,6 +50,8 @@ export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push/push-config';
 export { PlacesModule, placesConfig } from './places/places.module';
+export { QuotesModule } from './quotes/quotes.module';
 export { SearchModule } from './search/search.module';
 export * from './storage/storage.module';
 export { type SignedUpload, StorageService } from './storage/storage.service';
+export { WorkshopModule } from './workshop/workshop.module';

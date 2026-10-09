@@ -47,7 +47,7 @@ import { InviteStaff } from '../invite-staff/invite-staff';
 import { Live } from '../live';
 import { LiveChange } from '../live-in-place/live-in-place';
 import { PushDevice } from '../push-device';
-import { Session } from '../session';
+import { garageOf, Session } from '../session';
 import { SignOutEverywhere } from '../sign-out-everywhere/sign-out-everywhere';
 import { DashboardTabBar } from '../tab-bar/tab-bar';
 import { type Area, allowedViews, type Counts, DASHBOARDS } from '../views';
@@ -185,8 +185,16 @@ export class Frame implements OnInit {
   });
   // When the epic's test update last arrived: it changes this line in place.
   protected readonly lastTest = signal<string | null>(null);
+  // The garage the dashboard is for, only on the garage dashboard.
+  protected readonly garage = computed(() =>
+    this.area() === 'garage' ? garageOf(this.session.shown()) : null,
+  );
   protected readonly entries = computed(() =>
-    allowedViews(this.area(), this.session.shown()?.capabilities ?? []),
+    allowedViews(
+      this.area(),
+      this.session.shown()?.capabilities ?? [],
+      this.garage()?.features,
+    ),
   );
   // The address on screen.
   private readonly address = toSignal(

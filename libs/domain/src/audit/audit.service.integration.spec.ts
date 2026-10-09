@@ -244,6 +244,7 @@ describe('record', () => {
     ]);
   });
 
+  // @traces 220-FR-018
   it.each([
     ['quote', 'from_bani'],
     ['quote', 'to_bani'],
@@ -252,6 +253,7 @@ describe('record', () => {
     ['job', 'eta_at'],
     ['booking', 'starts_at'],
     ['booking', 'mechanic_id'],
+    ['booking', 'cancel_reason'],
   ])('marks %s.%s as a key change', async (subjectType, field) => {
     const subjectId = randomUUID();
 
@@ -269,6 +271,26 @@ describe('record', () => {
 
     expect(await entriesOf(subjectId)).toEqual([
       expect.objectContaining({ isKeyChange: true }),
+    ]);
+  });
+
+  it('does not mark a cancellation note as a key change', async () => {
+    const subjectId = randomUUID();
+
+    await prisma.$transaction((tx) =>
+      audit.record(tx, {
+        ...ion,
+        action: 'update',
+        field: 'cancel_note',
+        newValue: 'Am plecat din oraș',
+        oldValue: null,
+        subjectId,
+        subjectType: 'booking',
+      }),
+    );
+
+    expect(await entriesOf(subjectId)).toEqual([
+      expect.objectContaining({ isKeyChange: false }),
     ]);
   });
 

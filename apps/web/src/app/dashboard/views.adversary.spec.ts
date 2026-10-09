@@ -16,6 +16,7 @@ const me = (landing: string, capabilities: string[]) =>
   ({
     capabilities,
     email: null,
+    garageAccess: [],
     garageId: null,
     id: 'a',
     landing,
@@ -201,9 +202,9 @@ describe('dashboard routing under hostile addresses', () => {
     const { url, element } = await open([], area, address);
     // The query string is kept: only the path is the dashboard's own.
     expect(url().split('?')[0]).toBe(`/app/${area}`);
-    // The driver's dashboard view carries its own title.
+    // The driver's and the garage's dashboard views carry their own titles.
     expect(element.querySelector('h1')?.textContent?.trim()).toBe(
-      area === 'driver' ? 'Panoul tău' : 'Panou',
+      { admin: 'Panou', driver: 'Panoul tău', garage: 'Panou service' }[area],
     );
   });
 

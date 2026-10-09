@@ -20,6 +20,7 @@ const GARAGES = 'Service\u2011uri';
 const DRIVER = {
   capabilities: [],
   email: null,
+  garageAccess: [],
   garageId: null,
   id: 'account-1',
   landing: '/app/driver',
@@ -150,7 +151,6 @@ describe('the public tab bar', () => {
 
   it.each([
     ['/ro/garages', GARAGES],
-    ['/ro/garages/atelier-dinamo', GARAGES],
     ['/ro/mechanics/ion-popescu', 'Mecanic'],
     ['/ro/account', 'Cont'],
   ])('shows a placeholder at %s', async (address, heading) => {
@@ -301,6 +301,17 @@ describe('the public tab bar', () => {
     expect(await focus('checkbox')).toBe(false);
     expect(await focus('radio')).toBe(false);
     expect(await focus('submit')).toBe(false);
+  });
+
+  it('spaces the bar and its tabs on the 4 px grid', () => {
+    const css = styles().replace(/\s+/g, ' ');
+    const nav = /nav \{[^}]*padding: ([^;]+);/.exec(css)?.[1] ?? '';
+    const gap = /a \{[^}]*gap: ([^;]+);/.exec(css)?.[1] ?? '';
+
+    for (const px of `${nav} ${gap}`.matchAll(/(\d+(?:\.\d+)?)px/g)) {
+      expect(Number(px[1]) % 4).toBe(0);
+    }
+    expect(gap).toBe('4px');
   });
 
   it('sits at the bottom, clear of the home indicator, with phone-sized tabs, and only on a phone', async () => {

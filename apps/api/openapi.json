@@ -1664,6 +1664,258 @@
         ]
       }
     },
+    "/api/v1/requests": {
+      "get": {
+        "operationId": "RequestsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed; invalid_cursor"
+          },
+          "404": {
+            "description": "not_found: not a driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/requests/{id}": {
+      "get": {
+        "operationId": "RequestsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not the driver’s request"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/garage/requests": {
+      "get": {
+        "operationId": "GarageRequestsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageRequestListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed; invalid_cursor"
+          },
+          "404": {
+            "description": "not_found: may not answer requests"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garage-requests"
+        ]
+      }
+    },
+    "/api/v1/garage/requests/{id}": {
+      "get": {
+        "operationId": "GarageRequestsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageRequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not sent to this garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garage-requests"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs": {
+      "get": {
+        "operationId": "GarageJobsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed; invalid_cursor"
+          },
+          "404": {
+            "description": "not_found: not garage staff"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}": {
+      "get": {
+        "operationId": "GarageJobsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not the caller’s job"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
     "/api/v1/places": {
       "get": {
         "operationId": "PlacesController_search",
@@ -2345,6 +2597,16 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "A catalogue brand's slug; anything else reads as none",
+            "schema": {
+              "example": "dacia",
               "type": "string"
             }
           }
@@ -3323,6 +3585,72 @@
           "language"
         ]
       },
+      "GaragePermissionsDto": {
+        "type": "object",
+        "properties": {
+          "canMoveBookings": {
+            "type": "boolean"
+          },
+          "canAnswerQuotes": {
+            "type": "boolean"
+          },
+          "canRecordFinalPrice": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "canMoveBookings",
+          "canAnswerQuotes",
+          "canRecordFinalPrice"
+        ]
+      },
+      "GarageAccessDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved",
+              "suspended"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "description": "The role at this garage",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/GaragePermissionsDto"
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "The garage’s feature switches by key; a missing key is on"
+          }
+        },
+        "required": [
+          "garageId",
+          "name",
+          "status",
+          "role",
+          "permissions",
+          "features"
+        ]
+      },
       "MeDto": {
         "type": "object",
         "properties": {
@@ -3382,6 +3710,13 @@
             "format": "uuid",
             "nullable": true
           },
+          "garageAccess": {
+            "description": "The garages the account works at; empty with none",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageAccessDto"
+            }
+          },
           "capabilities": {
             "description": "What the role in use may do",
             "type": "array",
@@ -3408,6 +3743,7 @@
           "roles",
           "role",
           "garageId",
+          "garageAccess",
           "capabilities",
           "landing"
         ]
@@ -4933,6 +5269,1308 @@
           "takers"
         ]
       },
+      "CarSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          },
+          "fuel": {
+            "type": "string",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "engine": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year",
+          "fuel",
+          "engine"
+        ]
+      },
+      "RequestJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "position"
+        ]
+      },
+      "RequestSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "quoted",
+              "booked",
+              "in_work",
+              "done",
+              "closed"
+            ]
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarSnapshotDto"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closedReason": {
+            "type": "string",
+            "enum": [
+              "expired",
+              "cancelled",
+              "booking_lapsed",
+              "booking_cancelled",
+              "no_show",
+              "account_closed"
+            ],
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "quotesCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "car",
+          "jobs",
+          "createdAt",
+          "expiresAt",
+          "closedReason",
+          "closedAt",
+          "quotesCount"
+        ]
+      },
+      "RequestListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total"
+        ]
+      },
+      "GarageRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "RecipientDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "quoted",
+              "declined",
+              "expired",
+              "closed"
+            ]
+          },
+          "answeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "garage",
+          "status",
+          "answeredAt",
+          "createdAt"
+        ]
+      },
+      "QuoteJobDto": {
+        "type": "object",
+        "properties": {
+          "requestJobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "included": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "requestJobId",
+          "included"
+        ]
+      },
+      "QuoteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "fromBani": {
+            "type": "number",
+            "description": "Lower end of the price, in bani"
+          },
+          "toBani": {
+            "type": "number",
+            "description": "Upper end of the price, in bani"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "slot": {
+            "type": "string",
+            "description": "The proposed start",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "accepted",
+              "withdrawn",
+              "expired",
+              "lost",
+              "declined_by_driver"
+            ]
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "withdrawnAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteJobDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "garage",
+          "fromBani",
+          "toBani",
+          "durationMinutes",
+          "slot",
+          "note",
+          "status",
+          "sentAt",
+          "changedAt",
+          "expiresAt",
+          "acceptedAt",
+          "withdrawnAt",
+          "jobs"
+        ]
+      },
+      "BookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "lapsed",
+              "cancelled",
+              "no_show",
+              "completed"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "system"
+            ],
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
+            "enum": [
+              "plans_changed",
+              "found_another_garage",
+              "problem_solved",
+              "no_mechanic_free",
+              "parts_not_available",
+              "closed_that_day",
+              "driver_asked",
+              "other",
+              "garage_suspended",
+              "driver_account_closed"
+            ],
+            "nullable": true
+          },
+          "noShowAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "quoteId",
+          "garage",
+          "startsAt",
+          "durationMinutes",
+          "status",
+          "confirmBy",
+          "confirmedAt",
+          "cancelledAt",
+          "cancelledBySide",
+          "cancelReason",
+          "noShowAt",
+          "completedAt",
+          "createdAt"
+        ]
+      },
+      "RequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "quoted",
+              "booked",
+              "in_work",
+              "done",
+              "closed"
+            ]
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarSnapshotDto"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closedReason": {
+            "type": "string",
+            "enum": [
+              "expired",
+              "cancelled",
+              "booking_lapsed",
+              "booking_cancelled",
+              "no_show",
+              "account_closed"
+            ],
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "quotesCount": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipientDto"
+            }
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteDto"
+            }
+          },
+          "booking": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "car",
+          "jobs",
+          "createdAt",
+          "expiresAt",
+          "closedReason",
+          "closedAt",
+          "quotesCount",
+          "description",
+          "recipients",
+          "quotes",
+          "booking"
+        ]
+      },
+      "DriverNameDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "description": "First name and the last name’s initial"
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
+      "GarageRecipientDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "quoted",
+              "declined",
+              "expired",
+              "closed"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "search",
+              "map",
+              "home",
+              "shared_link",
+              "profile_direct",
+              "saved",
+              "unknown"
+            ]
+          },
+          "answeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "declinedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "declineReason": {
+            "type": "string",
+            "enum": [
+              "fully_booked",
+              "job_not_done",
+              "make_model_engine_not_done",
+              "need_to_see_car"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "source",
+          "answeredAt",
+          "declinedAt",
+          "declineReason"
+        ]
+      },
+      "GarageQuoteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromBani": {
+            "type": "number",
+            "description": "Lower end of the price, in bani"
+          },
+          "toBani": {
+            "type": "number",
+            "description": "Upper end of the price, in bani"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "slot": {
+            "type": "string",
+            "description": "The proposed start",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "accepted",
+              "withdrawn",
+              "expired",
+              "lost",
+              "declined_by_driver"
+            ]
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "withdrawnAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteJobDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fromBani",
+          "toBani",
+          "durationMinutes",
+          "slot",
+          "note",
+          "status",
+          "sentAt",
+          "changedAt",
+          "expiresAt",
+          "acceptedAt",
+          "withdrawnAt",
+          "jobs"
+        ]
+      },
+      "GarageRequestSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "quoted",
+              "booked",
+              "in_work",
+              "done",
+              "closed"
+            ]
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarSnapshotDto"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "driver": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/GarageRecipientDto"
+          },
+          "quote": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageQuoteDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "car",
+          "jobs",
+          "createdAt",
+          "expiresAt",
+          "driver",
+          "recipient",
+          "quote"
+        ]
+      },
+      "GarageRequestListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageRequestSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total"
+        ]
+      },
+      "GarageDriverDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "description": "First name and the last name’s initial"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
+      "GarageCarDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          },
+          "fuel": {
+            "type": "string",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "engine": {
+            "type": "string",
+            "nullable": true
+          },
+          "plate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year",
+          "fuel",
+          "engine"
+        ]
+      },
+      "GarageBookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "lapsed",
+              "cancelled",
+              "no_show",
+              "completed"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "system"
+            ],
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
+            "enum": [
+              "plans_changed",
+              "found_another_garage",
+              "problem_solved",
+              "no_mechanic_free",
+              "parts_not_available",
+              "closed_that_day",
+              "driver_asked",
+              "other",
+              "garage_suspended",
+              "driver_account_closed"
+            ],
+            "nullable": true
+          },
+          "noShowAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "mechanicId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "lift": {
+            "type": "number",
+            "nullable": true
+          },
+          "moveCount": {
+            "type": "number"
+          },
+          "historyShared": {
+            "type": "boolean"
+          },
+          "cancelNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "quoteId",
+          "startsAt",
+          "durationMinutes",
+          "status",
+          "confirmBy",
+          "confirmedAt",
+          "cancelledAt",
+          "cancelledBySide",
+          "cancelReason",
+          "noShowAt",
+          "completedAt",
+          "createdAt",
+          "confirmedBy",
+          "mechanicId",
+          "lift",
+          "moveCount",
+          "historyShared",
+          "cancelNote",
+          "lateCancellation"
+        ]
+      },
+      "GarageRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "quoted",
+              "booked",
+              "in_work",
+              "done",
+              "closed"
+            ]
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/GarageRecipientDto"
+          },
+          "quote": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageQuoteDto"
+              }
+            ]
+          },
+          "driver": {
+            "$ref": "#/components/schemas/GarageDriverDto"
+          },
+          "car": {
+            "$ref": "#/components/schemas/GarageCarDto"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "booking": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageBookingDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "jobs",
+          "createdAt",
+          "expiresAt",
+          "recipient",
+          "quote",
+          "driver",
+          "car",
+          "description",
+          "booking"
+        ]
+      },
+      "JobSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "to_do",
+              "in_work",
+              "paused",
+              "done",
+              "cancelled"
+            ]
+          },
+          "driver": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "car": {
+            "$ref": "#/components/schemas/GarageCarDto"
+          },
+          "mechanicId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "pausedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "handedOverAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "etaAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "status",
+          "driver",
+          "car",
+          "mechanicId",
+          "startedAt",
+          "pausedAt",
+          "finishedAt",
+          "handedOverAt",
+          "etaAt",
+          "createdAt"
+        ]
+      },
+      "JobListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total"
+        ]
+      },
+      "JobStepDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          },
+          "customerLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "doneAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "label",
+          "customerLabel",
+          "doneAt"
+        ]
+      },
+      "JobStageEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromStatus": {
+            "type": "string",
+            "enum": [
+              "to_do",
+              "in_work",
+              "paused",
+              "done",
+              "cancelled"
+            ],
+            "nullable": true
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "to_do",
+              "in_work",
+              "paused",
+              "done",
+              "cancelled"
+            ]
+          },
+          "actorRole": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "owner",
+              "receptionist",
+              "mechanic",
+              "admin",
+              "system"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "fromStatus",
+          "toStatus",
+          "actorRole",
+          "text",
+          "at"
+        ]
+      },
+      "JobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "to_do",
+              "in_work",
+              "paused",
+              "done",
+              "cancelled"
+            ]
+          },
+          "driver": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "car": {
+            "$ref": "#/components/schemas/GarageCarDto"
+          },
+          "mechanicId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "pausedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "handedOverAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "etaAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finalPriceBani": {
+            "type": "number",
+            "nullable": true
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobStepDto"
+            }
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobStageEntryDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "status",
+          "driver",
+          "car",
+          "mechanicId",
+          "startedAt",
+          "pausedAt",
+          "finishedAt",
+          "handedOverAt",
+          "etaAt",
+          "createdAt",
+          "finalPriceBani",
+          "steps",
+          "stages"
+        ]
+      },
       "PlaceSuggestionDto": {
         "type": "object",
         "properties": {
@@ -5629,6 +7267,37 @@
           "fuels"
         ]
       },
+      "PublicGarageBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "stance": {
+            "type": "string",
+            "description": "does_not_take also when the garage never named the brand",
+            "enum": [
+              "works_on",
+              "does_not_take"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "stance"
+        ]
+      },
       "PublicGarageDto": {
         "type": "object",
         "properties": {
@@ -5683,6 +7352,44 @@
             "maximum": 100,
             "minimum": 1
           },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "The line the garage wrote about itself, as written",
+            "maxLength": 160
+          },
+          "verifiedAt": {
+            "type": "string",
+            "description": "When MotorFix last verified the garage",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviews exist",
+            "format": "double",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "brand": {
+            "description": "Only when the read named a catalogue brand",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicGarageBrandDto"
+              }
+            ]
+          },
           "paymentMethods": {
             "$ref": "#/components/schemas/PaymentMethodsDto"
           },
@@ -5703,6 +7410,9 @@
           "id",
           "name",
           "slug",
+          "verifiedAt",
+          "rating",
+          "reviewCount",
           "paymentMethods"
         ]
       },

@@ -98,12 +98,24 @@
     "area": {
       "admin": "Admin",
       "driver": "DRIVER ACCOUNT",
-      "garage": "Garage"
+      "garage": "GARAGE ACCOUNT"
     },
     "bar": {
       "admin": "Admin dashboard",
       "driver": "Driver dashboard",
       "garage": "Garage dashboard"
+    },
+    "coming": {
+      "garage": {
+        "dashboard": "Here you will see what is happening in your garage today.",
+        "history": "Here you will see who changed what in your garage.",
+        "prices": "Here you will see the price ranges per job.",
+        "profile": "Here you will edit your garage profile.",
+        "requests": "Here you will see drivers' quote requests and answer with a quote.",
+        "reviews": "Here you will see drivers' reviews and be able to reply.",
+        "schedule": "Here you will see bookings by day, by mechanic and by lift.",
+        "team": "Here you will see your garage's mechanics and what each one may do."
+      }
     },
     "counter": "{label}, {waiting} waiting",
     "empty": "Nothing here yet.",
@@ -130,11 +142,13 @@
         "settings": "Settings"
       },
       "garage": {
+        "assistant": "AI assistant",
+        "history": "Change history",
         "prices": "Prices",
         "profile": "Garage profile",
         "requests": "Quote requests",
         "reviews": "Reviews",
-        "schedule": "Bookings",
+        "schedule": "Schedule",
         "settings": "Settings",
         "team": "Mechanics"
       }
@@ -153,6 +167,16 @@
     "subtitle": {
       "driver": {
         "settings": "Account details and notifications"
+      },
+      "garage": {
+        "history": "Who changed what and when",
+        "prices": "The ranges drivers see on your profile",
+        "profile": "This is how drivers see you on the map",
+        "requests": "Answer within the hour to show up first for the driver.",
+        "reviews": "What drivers say about your garage",
+        "schedule": "Bookings by day, mechanic and lift",
+        "settings": "Account, notifications and garage features",
+        "team": "Your team and what each one may do"
       }
     },
     "tab": {
@@ -162,6 +186,7 @@
       "cars": "Cars",
       "dashboard": "Home",
       "garages": "Garages",
+      "history": "History",
       "overview": "Dashboard",
       "prices": "Prices",
       "profile": "Profile",
@@ -183,8 +208,20 @@
         "reviews": "My reviews",
         "saved": "Saved garages",
         "settings": "Settings"
+      },
+      "garage": {
+        "assistant": "Your AI assistant",
+        "history": "Change history",
+        "prices": "Prices",
+        "profile": "Garage profile",
+        "requests": "Quote requests",
+        "reviews": "Reviews",
+        "schedule": "Schedule",
+        "settings": "Settings",
+        "team": "Mechanics"
       }
-    }
+    },
+    "verification": "Your profile is being checked."
   },
   "gauge": {
     "none": "No reviews yet",
