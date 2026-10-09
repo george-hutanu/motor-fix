@@ -123,7 +123,6 @@ describe('GET /garage/jobs as each caller', () => {
     expect((await get(`/garage/jobs/${s.fixerJob.id}`, auth)).status).toBe(403);
   });
 
-  // 424-FR-002 (Architecture decision A34) turned the 404 into a 403.
   // @traces 424-FR-002
   it('answers 403, and nothing of the job, to a mechanic reading another mechanic’s job', async () => {
     const s = await setting();

@@ -591,7 +591,7 @@ describe('a closed job and the body', () => {
 
     const res = await add(s.steps, s.owner, 'x');
 
-    expect([400, 409]).toContain(res.status);
+    expect(res.status).toBe(400);
     expect(await written(s.job.id)).toHaveLength(0);
   });
 

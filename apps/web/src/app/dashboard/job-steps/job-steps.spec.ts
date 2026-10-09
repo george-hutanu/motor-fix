@@ -502,6 +502,35 @@ describe('changes made by someone else', () => {
     expect(rows(element)).toHaveLength(4);
   });
 
+  it('reads the job again when a refused write has another one of its own on top', async () => {
+    const { element, settle } = await render();
+    let refuse: ((error: unknown) => void) | undefined;
+    api['jobStepsControllerRename'].mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          refuse = reject;
+        }),
+    );
+    menu(element, 1)?.click();
+    await settle();
+    item('Redenumește')?.click();
+    await settle();
+    type(input(element) as HTMLInputElement, 'Etriere scoase');
+    button(element, 'Salvează')?.click();
+    await settle();
+    menu(element, 2)?.click();
+    await settle();
+    item('Șterge')?.click();
+    await settle();
+
+    refuse?.(refused(409, 'job_closed', 'Lucrarea e închisă'));
+    await wait(0);
+    await settle();
+
+    expect(api['garageJobsControllerGet']).toHaveBeenCalledTimes(2);
+    expect(text(rows(element)[1])).toContain('Pas 2');
+  });
+
   it('ignores the steps of another job', async () => {
     const { settle } = await render();
 

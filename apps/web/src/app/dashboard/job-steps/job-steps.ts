@@ -302,8 +302,13 @@ export class JobSteps {
     try {
       await send();
     } catch (error) {
-      // A re-read meanwhile already shows the steps as they are.
       if (this.steps() === changed) this.steps.set(before);
+      else {
+        // Shown since: a re-read or another write. Back to the last read, and
+        // read again, since an equal re-read would not reset the list.
+        this.steps.set(this.view.value()?.steps ?? []);
+        this.view.reload();
+      }
       this.problem.set(problemKey(error));
     }
   }

@@ -196,6 +196,7 @@ describe('a job’s steps under hostile use', () => {
     });
 
     expect(text(element)).not.toContain('0 din 0');
+    expect(text(element)).toContain('Niciun pas încă');
   });
 
   it('ticks twice quickly and queues the first change only once per press', async () => {
@@ -206,9 +207,9 @@ describe('a job’s steps under hostile use', () => {
     await settle();
 
     const bodies = waiting.add.mock.calls.map((c) => c[1].body.done);
-    expect(bodies[bodies.length - 1]).toBe(
-      ticks(element)[1].getAttribute('aria-pressed') === 'true',
-    );
+    expect(waiting.add).toHaveBeenCalledTimes(2);
+    expect(bodies).toEqual([true, false]);
+    expect(ticks(element)[1].getAttribute('aria-pressed')).toBe('false');
   });
 
   it.each([
