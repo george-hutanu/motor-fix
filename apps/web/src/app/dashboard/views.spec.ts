@@ -149,9 +149,9 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.garages',
       },
       {
-        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
+        load: expect.any(Function),
         path: 'users',
         tab: 'shell.frame.tab.users',
       },
@@ -185,6 +185,12 @@ describe('the dashboard view lists', () => {
         tab: 'shell.frame.tab.settings',
       },
     ]);
+  });
+
+  it('downloads the admin users view when it is opened, not with the first page', async () => {
+    const users = DASHBOARDS.admin.views.find((view) => view.path === 'users');
+
+    await expect(users?.load?.()).resolves.toBe(AdminUsers);
   });
 
   it('names each dashboard for its bar and tags it for its menu', () => {
@@ -235,19 +241,25 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 424-FR-012
-  it('gives every garage role the jobs view, with its body, between the schedule and the team', () => {
-    expect(
-      DASHBOARDS.garage.views.find((view) => view.path === 'jobs'),
-    ).toEqual({
-      body: JobsView,
+  it('gives every garage role the jobs view, with its body, between the schedule and the team', async () => {
+    const jobs = DASHBOARDS.garage.views.find((view) => view.path === 'jobs');
+    expect(jobs).toEqual({
       capability: 'garage.own_jobs',
       empty: 'shell.frame.coming.garage.jobs',
       label: 'shell.frame.nav.garage.jobs',
+      load: expect.any(Function),
       path: 'jobs',
       subtitle: 'shell.frame.subtitle.garage.jobs',
       tab: 'shell.frame.tab.jobs',
       title: 'shell.frame.title.garage.jobs',
     });
+    // Downloaded with the view, not with the first page.
+    await expect(jobs?.load?.()).resolves.toBe(JobsView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'jobs');
+    expect(route?.children?.[0].component).toBeUndefined();
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      JobsView,
+    );
     for (const role of [OWNER, RECEPTIONIST, ['garage.own_jobs']])
       expect(paths('garage', role)).toContain('jobs');
     expect(paths('garage', ['garage.audit_history'])).not.toContain('jobs');

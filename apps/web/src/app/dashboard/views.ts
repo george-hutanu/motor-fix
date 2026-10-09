@@ -2,10 +2,8 @@ import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 import { AdminPanel } from './admin-panel/admin-panel';
-import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
-import { JobsView } from './jobs-view/jobs-view';
 import { PushView } from './push-view/push-view';
 import { garageOf, Session } from './session';
 import { SettingsView } from './settings-view/settings-view';
@@ -21,6 +19,9 @@ export interface DashboardView {
   path: string;
   // The view's body, once its story has built one.
   body?: Type<unknown>;
+  // ...or the body downloaded when the view is opened, out of the first
+  // page's budget.
+  load?: () => Promise<Type<unknown>>;
   label: string;
   tab: string;
   // The header's own title and the line under it; absent, the label is the title.
@@ -79,9 +80,10 @@ export const DASHBOARDS: Record<
         tab: 'shell.frame.tab.garages',
       },
       {
-        body: AdminUsers,
         capability: 'admin.users',
         label: 'shell.frame.nav.admin.users',
+        load: () =>
+          import('./admin-users/admin-users').then((m) => m.AdminUsers),
         path: 'users',
         tab: 'shell.frame.tab.users',
       },
@@ -180,7 +182,10 @@ export const DASHBOARDS: Record<
       },
       garageView('requests', 'garage.requests'),
       garageView('schedule', 'garage.schedule'),
-      { ...garageView('jobs', 'garage.own_jobs'), body: JobsView },
+      {
+        ...garageView('jobs', 'garage.own_jobs'),
+        load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),
+      },
       { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
       garageView('prices', 'garage.prices'),
       garageView('reviews', 'garage.reviews'),
@@ -245,7 +250,11 @@ export const dashboardRoutes = (area: Area): Routes => [
           ).includes(view);
         },
       ],
-      children: [{ component: body(view), data: { area, view }, path: '**' }],
+      children: [
+        view.load
+          ? { data: { area, view }, loadComponent: view.load, path: '**' }
+          : { component: body(view), data: { area, view }, path: '**' },
+      ],
       path: view.path,
     })),
   { path: '**', redirectTo: '' },
