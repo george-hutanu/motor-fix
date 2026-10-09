@@ -410,9 +410,10 @@ async function book(
 ) {
   const quote = await db.query<{ id: string; slot: Date }>(
     `INSERT INTO quote (id, request_id, recipient_id, garage_id, from_bani, to_bani, duration_minutes,
-                        slot, status, accepted_at, expires_at)
+                        slot, status, accepted_at, expires_at, idempotency_key)
      VALUES (gen_random_uuid(), $1, $2, $3, 45000, 60000, 90,
-             now() + interval '2 days', 'accepted', now(), now() + interval '7 days')
+             now() + interval '2 days', 'accepted', now(), now() + interval '7 days',
+             gen_random_uuid()::text)
      RETURNING id, slot`,
     [sent.requestId, sent.recipientId, who.garageId],
   );

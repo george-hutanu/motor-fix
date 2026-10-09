@@ -5,6 +5,7 @@ features:
   - 220-requests-quotes-bookings
   - 221-quote-request
   - 343-live-quote-requests
+  - 344-send-quote
 ---
 
 # Capability: Quotes
@@ -53,13 +54,13 @@ _From 221-quote-request._
 
 _From 220-requests-quotes-bookings._
 
-### 343-FR-002 — `GET /api/v1/garage/requests` MUST accept an optional `status` query, `waiting` or `closed`: `waiting` answers the waiting rows of FR-001, `closed` the garage's closed rows (a recipient `expired` or `closed`, or a recipient still `waiting` on a request no longer `sent` or `quoted`) that closed within the last 24 hours, the close time being the recipient's last status change when it moved, else the request's (each from the per-move audit entries; with no entry, the recipient's creation time); without `status` the read is unchanged. Both answers keep the existing shape `{ items, nextCursor, total }`, 20 a page, newest first by the request's creation time with equal times by id, cursor paging and the existing 400 `invalid_cursor` (220-FR-014); `total` is the count in the caller's scope for that filter. A value outside the two answers 400 `validation_failed` naming `status`. The DTOs stay in the contracts library; the OpenAPI document and the generated client are regenerated.
+### 344-FR-008 — `GET /api/v1/garage/requests` MUST accept a third `status` value, `quoted`: the garage's recipients `quoted` whose quote is `waiting`, newest quote first (`sent_at` descending, equal times by id), with the existing shape, paging and `total` (343-FR-002); each row MUST carry its quote summary (`quote`: the shipped quote summary, id, `fromBani`, `toBani`, `durationMinutes`, `slot`, `sentAt`, `expiresAt`, status); a `waiting` row carries null `quote`, and a `closed` row keeps the quote it had, as shipped (343). A value outside the three answers 400 `validation_failed` naming `status`.
 
-_From 343-live-quote-requests._
+_From 344-send-quote._
 
-### 343-FR-003 — Each garage-side request summary MUST mark, per job, whether the garage does that job on the request's car brand (`offered`: GARAGE_BRAND_JOB has the job type ticked for that brand), so the screen can show "nu faceți" / "not offered" on the others. A request with no jobs has nothing to mark.
+### 344-FR-007 — `GET /api/v1/garage/requests/:id` MUST gain, per job, the garage's pre-fill (`price`: `fromBani`, `toBani` (nullable), `durationMinutes` (nullable), in bani like the price list's own reads, or null when the garage has no row for the job): the GARAGE_PRICE row for the job and the car's brand where one exists, else the job's default row (no brand), else null; a row not `visible` counts the same as a visible one. The shape is unchanged otherwise; the read's policy (343-FR-005) is unchanged.
 
-_From 343-live-quote-requests._
+_From 344-send-quote._
 
 ### 220-FR-014 — Every list endpoint of FR-012 MUST return `{ items, nextCursor, total }` (`total` the count of rows in the caller's scope) with at most PAGE_SIZE (20) items, newest first with equal times ordered by id, `nextCursor` the id of the last item or null on the last page, and MUST answer 400 `invalid_cursor` to a cursor that is not an existing row inside the caller's scope (a cursor that is not a uuid fails validation first: 400 `validation_failed`, FR-015) (391-FR-009, 391-FR-010).
 
@@ -181,9 +182,9 @@ _From 343-live-quote-requests._
 
 _From 343-live-quote-requests._
 
-### 343-FR-008 — A row MUST show, in this order: the driver's short name, the car as "<brand> <model> · <year>", the jobs' names in the person's language joined by " · " (each not offered followed by " · nu faceți" / " · not offered"; the description's first line when there are no jobs), "orice mecanic" / "any mechanic", and the age in Europe/Bucharest in the person's language: "acum câteva secunde" / "a few seconds ago" under one minute, "acum N min" / "N min ago" under an hour, "acum N ore" / "N hours ago" under 24 hours (Romanian agreement: "acum 1 oră", "acum 2 ore", "acum 20 de ore" with "de" from 20 on, likewise "acum 20 de min"; English "1 hour ago"), from 24 hours "ieri, HH:mm" / "yesterday, HH:mm" when the Bucharest date is the day before, else the short weekday, day and month with the time ("lun., 12 oct., 18:05" / "Mon, 12 Oct, 18:05"). Ages MUST refresh at least once a minute while the view is shown. The row has no action in this story: opening, quoting and declining come with their stories.
+### 344-FR-009 — Each waiting row on Panou and in the Cereri de ofertă view MUST show a primary button "Trimite oferta" / "Send a quote" in its actions column for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 343-FR-015), absent for every other reader; it opens the send dialog in the shared overlay (`dialog` shape from 768 px, the bottom sheet under it; 157, 158, 491) for that request.
 
-_From 343-live-quote-requests._
+_From 344-send-quote._
 
 ### 343-FR-009 — The panel, the view and the counters MUST be kept current through the existing live helper (256-FR-002, 257-FR-008), re-reading on `request.created`, `quote.sent`, `request.declined`, `request.decline_undone`, `request.cancelled`, `request.expired` and `quote.accepted` received on the garage's stream, and on the stream's resync; a change MUST show within 5 seconds of the event's commit without a reload, a route change, a closed overlay or moved focus (256-FR-005), the first visible row kept in place (256-FR-008), the changed row highlighted (256-FR-009) and the counter change announced politely (256-FR-010). Rows arriving above a scrolled list are held and counted by the existing pill (256-FR-007). Every kind named here MUST exist in the contracts' event catalogue (257-FR-006); a kind no story records yet costs nothing until it is recorded.
 
@@ -209,6 +210,70 @@ _From 343-live-quote-requests._
 
 _From 343-live-quote-requests._
 
+### 344-FR-001 — `POST /api/v1/quotes` MUST take `requestId` (uuid), `fromLei` and `toLei` (integers, 1 ≤ `fromLei` ≤ `toLei` ≤ 1 000 000), `durationMinutes` (integer, 15 to 7 200, a multiple of 15), `slot` (an ISO date-time with an offset or `Z`, later than now; the 15-minute grid is not enforced here) and an optional `note` (plain text, trimmed, 1 to 500 characters; whitespace alone is no note), DTOs in the contracts library validated at the edge; any other value MUST answer 400 `validation_failed` naming the field (`fromLei` for a low price above the high one). The OpenAPI document and the generated client are regenerated; the route needs a session and joins no public route.
+
+_From 344-send-quote._
+
+### 344-FR-002 — The send MUST be allowed to the owner and the receptionist of a garage that holds a REQUEST_RECIPIENT for the request, and to a mechanic of it with `can_answer_quotes`; a mechanic of that garage without the permission MUST get 403 `forbidden` ("Nu ai dreptul să trimiți oferte" / "You are not allowed to send quotes") and every other caller, another garage's staff included, MUST get 404, nothing written in either case (A31, A34, 220-FR-012). The garage is the actor's garage; the request must be one of its recipients, else 404.
+
+_From 344-send-quote._
+
+### 344-FR-003 — In one transaction that locks the recipient row, the send MUST judge the state and write: one QUOTE (request, recipient, garage, `from_bani` = `fromLei` × 100, `to_bani` = `toLei` × 100, `duration_minutes`, `slot`, `note`, status `waiting`, `sent_at` now, `expires_at` = `sent_at` + 7 days); one QUOTE_JOB per REQUEST_JOB of the request with `included` = the job's `offered` mark (GARAGE_BRAND_JOB ticked for the car's brand, 343-FR-003), none when the request has no jobs; the recipient's move `waiting` → `quoted` with `answered_at` now through the transition service (220-FR-008); the request's move `sent` → `quoted` when it is `sent`, unchanged when already `quoted`; one outbox event `quote.sent` (subject the quote id, payload `{ quoteId, requestId, garageId, driverId }`, audiences `garage:{garageId}` and `account:{driverId}`); and one audit entry (action `create`, subject type `quote`, subject id the quote, the actor, their role, garage scope, new values the range in lei, the duration, the slot and whether the note is set — never the note's text — `via_assistant` when the grant sent it, 390-FR-001..008). A failure anywhere writes nothing.
+
+_From 344-send-quote._
+
+### 344-FR-004 — The send MUST be refused with 409 `already_answered` ("Altcineva a răspuns deja la această cerere" / "Someone else already answered this request") when the garage's recipient is `quoted` or `declined` past its undo window, and with 409 `request_not_open` ("Cererea nu mai este deschisă" / "The request is no longer open") when the request is not `sent` or `quoted`, when the recipient is `expired` or `closed`, or when the garage is `suspended`; a recipient `declined` inside its undo window MUST be treated as `already_answered` too (the undo is the decline story's). Two concurrent sends for the same recipient MUST end with exactly one quote: the row lock and the database's one-quote-per-request-and-garage rule (220-FR-009) make the loser a 409 `already_answered`, never a 500.
+
+_From 344-send-quote._
+
+### 344-FR-005 — The send MUST be idempotent per garage: the `Idempotency-Key` header (required, 1 to 200 characters) is stored on the quote itself (`idempotency_key`, unique with the garage; 221-FR-008's pattern, scoped to the garage because the quote is the garage's), and a second call with the same key from the same garage, whoever the actor, MUST answer the first status and body without writing anything; a refused call (400, 404, 409) stores nothing, so its key stays free. The web app sends the key the form-saving helper issues per dialog opening, and a retry after a network failure reuses it.
+
+_From 344-send-quote._
+
+### 344-FR-006 — The API MUST answer 201 with the quote as the garage reads it, the shipped `GarageQuoteDto`: id, request id, the range in bani (`fromBani`, `toBani`, integer bani, VAT included, as every garage-side read returns money; the screen shows lei), `durationMinutes`, `slot`, `note`, status, `sentAt`, `expiresAt` and the jobs with their `included` flags; errors MUST follow the platform's problem details (421-FR-008) with the codes of FR-001, FR-002 and FR-004 and their Romanian and English messages.
+
+_From 344-send-quote._
+
+### 344-FR-007 — `GET /api/v1/garage/requests/:id` MUST gain, per job, the garage's pre-fill (`price`: `fromBani`, `toBani` (nullable), `durationMinutes` (nullable), in bani like the price list's own reads, or null when the garage has no row for the job): the GARAGE_PRICE row for the job and the car's brand where one exists, else the job's default row (no brand), else null; a row not `visible` counts the same as a visible one. The shape is unchanged otherwise; the read's policy (343-FR-005) is unchanged.
+
+_From 344-send-quote._
+
+### 344-FR-008 — `GET /api/v1/garage/requests` MUST accept a third `status` value, `quoted`: the garage's recipients `quoted` whose quote is `waiting`, newest quote first (`sent_at` descending, equal times by id), with the existing shape, paging and `total` (343-FR-002); each row MUST carry its quote summary (`quote`: the shipped quote summary, id, `fromBani`, `toBani`, `durationMinutes`, `slot`, `sentAt`, `expiresAt`, status); a `waiting` row carries null `quote`, and a `closed` row keeps the quote it had, as shipped (343). A value outside the three answers 400 `validation_failed` naming `status`.
+
+_From 344-send-quote._
+
+### 344-FR-009 — Each waiting row on Panou and in the Cereri de ofertă view MUST show a primary button "Trimite oferta" / "Send a quote" in its actions column for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 343-FR-015), absent for every other reader; it opens the send dialog in the shared overlay (`dialog` shape from 768 px, the bottom sheet under it; 157, 158, 491) for that request.
+
+_From 344-send-quote._
+
+### 344-FR-010 — The dialog MUST be titled "Trimite oferta" / "Send a quote" and, under the title, name the driver's short name and the included jobs' names in the person's language joined by " · " (the description's first line, cut at 60 characters, when the request has no jobs); when some jobs are not offered it MUST show, under that line, "Nu face: <names>" / "Not offered: <names>". It MUST hold, in this order: "Preț de la (lei)" / "Price from (lei)" and "până la (lei)" / "to (lei)" side by side, "Durată" / "Duration" as hours and minutes in 15-minute steps, "Primul loc liber" / "First free slot" as a day and a time (a day picker refusing past days, a time picker in 15-minute steps refusing past times of today, in Europe/Bucharest), an optional "Mesaj pentru client" / "Message to the customer" with a 500-character counter, a hint "Intervalul acoperă piese și manoperă, cu TVA, pentru mașina exactă a clientului; prețul final se stabilește după ce vezi mașina." / "The range covers parts and labour, VAT included, for the customer's exact car; the final price is set after you see the car.", and the buttons "Renunță" / "Cancel" and "Trimite" / "Send". There is no mechanic or lift field.
+
+_From 344-send-quote._
+
+### 344-FR-011 — The dialog MUST pre-fill the price fields with the sum of the included jobs' FR-007 `fromBani` and `toBani`, shown in lei (any included job with a price but no `toLei` leaves the top empty while the bottoms still sum; a job with no price adds nothing) and the duration with the sum of their `durationMinutes` (empty when every included job has none; a sum over 5 days pre-fills as is and FR-012 marks it); the slot and the note start empty. A re-opened dialog starts from the pre-fill again.
+
+_From 344-send-quote._
+
+### 344-FR-012 — Validation in the dialog MUST mirror FR-001: Trimite stays disabled while a price, the duration or the slot is empty or any field is invalid; an empty required field is marked "Obligatoriu" / "Required" on blur; a low price above the high one marks both with "Prețul de la nu poate fi mai mare decât prețul până la" / "The low price cannot be above the high price"; a price outside 1–1 000 000, a duration outside 15 minutes–5 days or off the 15-minute grid, a past slot and a note over 500 characters are marked with their rule; a top more than three times the bottom shows the warning "Intervalul este foarte larg; șoferul așteaptă un interval strâns." / "This range is very wide; the driver expects a narrow one." without disabling Trimite. Enter in a text field sends when the form is valid.
+
+_From 344-send-quote._
+
+### 344-FR-013 — States: while sending, Trimite shows a spinner, every field and Renunță are disabled and the dialog stays open; on 201 it closes with the shared toast "Ofertă trimisă" / "Quote sent"; on 409 it closes and the toast shows the error's message, the lists re-reading at once; on 400 the named field is marked with the message; on any other error or a network failure the dialog stays open with everything typed, shows the shared error line with a retry that reuses the same idempotency key; offline, Trimite is disabled with "Ești offline" / "You are offline".
+
+_From 344-send-quote._
+
+### 344-FR-014 — The Cereri de ofertă view MUST gain, under the waiting panel, a panel "Oferte trimise" / "Quotes sent" listing the `quoted` rows of FR-008 newest first, 20 at a time with the same infinite scroll, each row showing the driver's short name, the car ("<brand> <model> · <year>"), the included jobs' names, the range "650–800 lei", the slot in Europe/Bucharest in the person's language ("mâine, 09:00" / "tomorrow, 09:00" when the Bucharest date is the next day, "azi, 16:00" / "today, 16:00" the same day, else "joi, 15 oct., 14:00" / "Thu, 15 Oct, 14:00") and the status line "Așteaptă răspunsul clientului" / "Waiting for the customer"; with no row it shows "Nicio ofertă trimisă încă." / "No quotes sent yet."; while loading, three skeleton rows. The panel is present for the same readers as the waiting panel (343-FR-006) and has no row action in this story (changing and withdrawing come with their story); it shows the waiting state only, the outcomes being ST-346's.
+
+_From 344-send-quote._
+
+### 344-FR-015 — The waiting panel, the view's counters and the Oferte trimise panel MUST re-read on `quote.sent` through the existing live helper (343-FR-009 already names the kind); a sent quote MUST leave the waiting list and appear under Oferte trimise within 5 seconds of the commit on every staff screen of the garage, without a reload, the first visible row kept in place (256-FR-008) and the changed row highlighted (256-FR-009). `quote.sent` on `account:{driverId}` MUST re-read the driver's request views through the same helper, so the driver's request read shows the quote within 5 seconds; the driver's comparison screen itself is its own story.
+
+_From 344-send-quote._
+
+### 344-FR-019 — Tests MUST cover, before the code (Principle II): in Jest on real PostgreSQL — every FR-001 rule (both prices, low ≤ high, the price bounds, the duration range and grid, the future slot, the note length, the required key) as 400 naming the field; 201 for the owner, the receptionist and the permitted mechanic; 403 for the unpermitted mechanic; 404 for another garage's owner and a request not sent to the garage; the QUOTE, QUOTE_JOB (included flags following the brand's ticks; none for a request with no jobs), recipient and request moves with `answered_at`, `sent_at` and `expires_at`; `quote.sent` and the audit entry in the same transaction and nothing written on a failure; 409 on a second quote, on a declined recipient, on a cancelled, expired and booked request and for a suspended garage; two concurrent sends ending with one quote; the same key answering the first answer; the pre-fill with a brand row, with only a default row, with an open-ended row and with none; the `quoted` filter and its quote summary; the consumer building one QUOTE_RECEIVED for the driver, honouring the mute, the no-device fallback and building once per event; the single templates in both languages. In Jest, web — the button's presence per permission, the dialog's title line and left-out jobs, the pre-fill sums, every FR-012 rule and the wide-range warning, the 15-minute pickers refusing the past, the sending, 201, 409, 400, error and offline states, the Oferte trimise row format and slot wording in both languages and its empty and loading states. End to end (Playwright): the seeded owner sends 650–800 lei, 2 h, tomorrow 09:00 on a waiting request; the row moves to Oferte trimise within 5 seconds; signed in as the driver, the request shows the quote.
+
+_From 344-send-quote._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -217,3 +282,7 @@ _From 343-live-quote-requests._
 
 - `220-FR-012` — superseded by `343-FR-002` (2026-10-09)
 - `220-FR-013` — superseded by `343-FR-003` (2026-10-09)
+
+- `343-FR-002` — superseded by `344-FR-008` (2026-10-09)
+- `343-FR-003` — superseded by `344-FR-007` (2026-10-09)
+- `343-FR-008` — superseded by `344-FR-009` (2026-10-09)

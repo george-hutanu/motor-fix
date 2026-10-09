@@ -1295,7 +1295,7 @@
     {
       "id": 45,
       "type": "row",
-      "title": "Document pages uploaded",
+      "title": "Quotes sent",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -1308,7 +1308,7 @@
     {
       "id": 46,
       "type": "stat",
-      "title": "Document pages uploaded, last hour",
+      "title": "Quotes sent, last hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -1318,6 +1318,261 @@
         "w": 6,
         "x": 0,
         "y": 56
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_quotes_sent_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 47,
+      "type": "stat",
+      "title": "Quotes sent, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 56
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_quotes_sent_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 48,
+      "type": "timeseries",
+      "title": "Quotes sent per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 56
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_quotes_sent_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 49,
+      "type": "timeseries",
+      "title": "Quote response time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 56
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(motorfix_quote_response_minutes_bucket{deployment_environment=\"$env\"}[1h])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(motorfix_quote_response_minutes_bucket{deployment_environment=\"$env\"}[1h])))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 50,
+      "type": "row",
+      "title": "Quotes announced to drivers",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "panels": []
+    },
+    {
+      "id": 51,
+      "type": "stat",
+      "title": "Quotes announced to drivers, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 61
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_quote_received_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 52,
+      "type": "stat",
+      "title": "Quotes announced to drivers, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 61
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_quote_received_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 53,
+      "type": "timeseries",
+      "title": "Quotes announced to drivers per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 61
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_quote_received_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 54,
+      "type": "row",
+      "title": "Document pages uploaded",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "panels": []
+    },
+    {
+      "id": 55,
+      "type": "stat",
+      "title": "Document pages uploaded, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 66
       },
       "targets": [
         {
@@ -1338,7 +1593,7 @@
       }
     },
     {
-      "id": 47,
+      "id": 56,
       "type": "stat",
       "title": "Document pages uploaded, last 24 hours",
       "datasource": {
@@ -1349,7 +1604,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 56
+        "y": 66
       },
       "targets": [
         {
@@ -1370,7 +1625,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 57,
       "type": "timeseries",
       "title": "Document pages uploaded per hour, by kind",
       "datasource": {
@@ -1381,7 +1636,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 56
+        "y": 66
       },
       "targets": [
         {
@@ -1400,7 +1655,7 @@
       }
     },
     {
-      "id": 49,
+      "id": 58,
       "type": "row",
       "title": "Declarations signed",
       "collapsed": false,
@@ -1408,12 +1663,12 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 70
       },
       "panels": []
     },
     {
-      "id": 50,
+      "id": 59,
       "type": "stat",
       "title": "Declarations signed, last hour",
       "datasource": {
@@ -1424,7 +1679,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 61
+        "y": 71
       },
       "targets": [
         {
@@ -1445,7 +1700,7 @@
       }
     },
     {
-      "id": 51,
+      "id": 60,
       "type": "stat",
       "title": "Declarations signed, last 24 hours",
       "datasource": {
@@ -1456,7 +1711,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 61
+        "y": 71
       },
       "targets": [
         {
@@ -1477,7 +1732,7 @@
       }
     },
     {
-      "id": 52,
+      "id": 61,
       "type": "timeseries",
       "title": "Declarations signed per hour",
       "datasource": {
@@ -1488,7 +1743,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 61
+        "y": 71
       },
       "targets": [
         {
@@ -1507,7 +1762,7 @@
       }
     },
     {
-      "id": 53,
+      "id": 62,
       "type": "row",
       "title": "Document pages opened",
       "collapsed": false,
@@ -1515,12 +1770,12 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 75
       },
       "panels": []
     },
     {
-      "id": 54,
+      "id": 63,
       "type": "stat",
       "title": "Document pages opened, last hour",
       "datasource": {
@@ -1531,7 +1786,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 66
+        "y": 76
       },
       "targets": [
         {
@@ -1552,7 +1807,7 @@
       }
     },
     {
-      "id": 55,
+      "id": 64,
       "type": "stat",
       "title": "Document pages opened, last 24 hours",
       "datasource": {
@@ -1563,7 +1818,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 66
+        "y": 76
       },
       "targets": [
         {
@@ -1584,7 +1839,7 @@
       }
     },
     {
-      "id": 56,
+      "id": 65,
       "type": "timeseries",
       "title": "Document pages opened per hour, by kind",
       "datasource": {
@@ -1595,7 +1850,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 66
+        "y": 76
       },
       "targets": [
         {

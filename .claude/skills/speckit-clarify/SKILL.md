@@ -73,16 +73,16 @@ Execution steps:
 
 2. Load `.specify/memory/constitution-card.md` for project principles and the gate behind each. Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.
 
-2a. **IF EXISTS**: Load `FEATURE_DIR/context.md`, the Notion evidence
+2a. **IF EXISTS**: Load `FEATURE_DIR/context.md`, the documentation evidence
    gathered by `/speckit-context`, and mine it before generating a single
    question of your own:
    - Its **Proposed Clarifications** are questions already researched against
-     the owner's Notion space. Promote
+     the specs repo's `docs/`. Promote
      them ahead of anything you
      derive from the spec alone — they carry a cited answer, so asking them is
      cheap and answering them is sound.
    - Its **Contradictions with spec.md** are the highest-value questions
-     available: the spec and Notion disagree, and only the user can
+     available: the spec and the documentation disagree, and only the user can
      say which wins.
    - Its **Decisions** and **Constraints** ANSWER questions rather than raise
      them. A question the digest already settles must not be asked — record the

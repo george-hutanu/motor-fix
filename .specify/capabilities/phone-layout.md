@@ -10,6 +10,7 @@ features:
   - 028-driver-dashboard-views
   - 097-garage-dashboard
   - 343-live-quote-requests
+  - 344-send-quote
 ---
 
 # Capability: Phone layout and installable web app
@@ -178,9 +179,9 @@ _From 028-driver-dashboard-views._
 
 _From 028-driver-dashboard-views._
 
-### 343-FR-007 — The Cereri de ofertă view MUST replace its empty-state placeholder with the waiting rows, newest first, 20 at a time, the next page loading when the list's end comes into view until `nextCursor` is null, and the closed rows of the last 24 hours greyed under the waiting rows loaded so far, each with its FR-004 label; the closed rows come from one `closed` read (its first page, not paged further) made with the first waiting read and re-read on the same events. Its title and subtitle stay as 097-FR-003 gives them. The view's menu entry and bottom tab MUST show the FR-001 count in the counter slot 097-FR-001 reserved, with no number at zero.
+### 344-FR-014 — The Cereri de ofertă view MUST gain, under the waiting panel, a panel "Oferte trimise" / "Quotes sent" listing the `quoted` rows of FR-008 newest first, 20 at a time with the same infinite scroll, each row showing the driver's short name, the car ("<brand> <model> · <year>"), the included jobs' names, the range "650–800 lei", the slot in Europe/Bucharest in the person's language ("mâine, 09:00" / "tomorrow, 09:00" when the Bucharest date is the next day, "azi, 16:00" / "today, 16:00" the same day, else "joi, 15 oct., 14:00" / "Thu, 15 Oct, 14:00") and the status line "Așteaptă răspunsul clientului" / "Waiting for the customer"; with no row it shows "Nicio ofertă trimisă încă." / "No quotes sent yet."; while loading, three skeleton rows. The panel is present for the same readers as the waiting panel (343-FR-006) and has no row action in this story (changing and withdrawing come with their story); it shows the waiting state only, the outcomes being ST-346's.
 
-_From 343-live-quote-requests._
+_From 344-send-quote._
 
 ### 097-FR-002 — Asistent AI MUST carry the release mark, as the driver's does (160‑FR‑007, 028‑FR‑001): absent from the menu, the bar and the routes, its address redirecting to `/app/garage`, with its labels present in both languages ("Asistent AI" / "AI assistant", tab "AI", title "Asistentul tău AI" / "Your AI assistant", the mock's). Istoric modificări MUST read "Istoric modificări" / "Change history", tab "Istoric" / "History"; the tab bar's short labels of the eight others are the existing ones (Panou, Cereri, Program, Mecanici, Prețuri, Recenzii, Profil, Setări).
 
@@ -202,6 +203,10 @@ _From 097-garage-dashboard._
 
 _From 097-garage-dashboard._
 
+### 344-FR-017 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the dialog, the button, the Oferte trimise panel and the toasts MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, every control at least 44 px tall, the warning's and hint's text at a contrast of at least 4.5:1 in both schemes, and the two price fields stacking on a phone rather than overflowing.
+
+_From 344-send-quote._
+
 ## Retired
 
 - `287-FR-006` — superseded by `082-FR-012` (2026-10-04)
@@ -214,3 +219,5 @@ _From 097-garage-dashboard._
 
 - `097-FR-001` — superseded by `343-FR-007` (2026-10-09)
 - `097-FR-004` — superseded by `343-FR-006` (2026-10-09)
+
+- `343-FR-007` — superseded by `344-FR-014` (2026-10-09)

@@ -1,6 +1,6 @@
 ---
 name: org-researcher
-description: Reads the product documentation exported to the specs clone (.motor-fix-specs/docs/, mapped by docs/index.json) — the feature page, the architecture pages and the open decisions — and the story, its comments, epic and sibling stories from the Notion tracker, and writes the cited digest to specs/<feature>/context.md. Read-only outward by construction — no Notion write tool is available to it. Invoked by /speckit-context (first run and --since refresh).
+description: Reads the specs repo's documentation (.motor-fix-specs/llms.txt, then docs/ by its Diátaxis areas) — the feature page, the architecture pages and the decisions — and the story, its comments, epic and sibling stories from the Notion tracker, and writes the cited digest to specs/<feature>/context.md. Read-only outward by construction — no Notion write tool is available to it. Invoked by /speckit-context (first run and --since refresh).
 tools: Read, Write, Grep, Glob, ToolSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-comments, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-tool-access, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-query-data-sources, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-tool-access, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-search, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-fetch, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-comments, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-query-data-sources, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-tool-access, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-search, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-fetch, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-get-comments, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-query-data-sources, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-get-tool-access
 model: sonnet
 ---
@@ -29,13 +29,15 @@ changes when the work runs in a subagent.
   `[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`
   as the whole of `context.md`'s Sources section, put the same line in your
   reply, and stop: no digest, never "nothing found".
-- **`docs/` first, Notion for the tracker.** Read the documentation from
-  `.motor-fix-specs/docs/` with Read, Grep and Glob: find a page's file by its
-  Notion id in `docs/index.json`, and cite `docs/<path>`. Notion gives the
-  story, its comments, its epic and siblings. Only when the clone has no
-  `docs/index.json` read the documentation pages in Notion, and say so in
-  `context.md`. A link that points elsewhere — the design mock included — is
-  recorded, never opened.
+- **`llms.txt` first, then `docs/`; Notion for the tracker only.** Read
+  `.motor-fix-specs/llms.txt` (one `<path>: <summary>` line per page), then open
+  the pages that bear on the feature with Read, Grep and Glob: features under
+  `docs/reference/features/` (a story's Feature id maps to its file in
+  `docs/index.json`), decisions under `docs/explanation/decisions/`,
+  architecture under `docs/explanation/architecture/` and `docs/reference/`.
+  Cite `docs/<path>`. Notion gives the story, its comments, its epic and
+  siblings, never documentation. A link that points elsewhere — the mock's
+  artifact included — is recorded, never opened.
 - **You cannot write to Notion, and that is the point.** No page, comment,
   database or view tool exists in your tool list. If a finding makes you want
   to comment on a page, that is a line in the report, not an action.

@@ -301,10 +301,10 @@ describe('a driver who chose push', () => {
 
   it('falls back to e-mail when the type has no push text', async () => {
     const ana = await person('ana', { devices: ['laptop'] });
-    await choose(ana, 'QUOTE_RECEIVED', 'push');
+    await choose(ana, 'QUOTE_CHANGED', 'push');
     await service.notify({
       eventId: 'q1',
-      kind: 'QUOTE_RECEIVED',
+      kind: 'QUOTE_CHANGED',
       recipients: [ana],
     });
     await drain(ana);

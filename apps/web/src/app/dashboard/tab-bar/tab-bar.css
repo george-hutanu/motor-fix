@@ -4,7 +4,7 @@
   bottom: 0;
   z-index: 10;
   border-top: 1px solid var(--mf-line);
-  background: color-mix(in srgb, var(--mf-bg) 74%, transparent);
+  background: color-mix(in srgb, var(--mf-bg) 90%, transparent);
   -webkit-backdrop-filter: saturate(160%) blur(18px);
   backdrop-filter: saturate(160%) blur(18px);
 }

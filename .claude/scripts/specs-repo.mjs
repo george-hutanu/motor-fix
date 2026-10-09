@@ -25,7 +25,7 @@
 //   node .claude/scripts/specs-repo.mjs status [--root <checkout>]
 //   node .claude/scripts/specs-repo.mjs migrate-trunk --dry-run | --yes [--root <checkout>]
 //       the one-off trunk move (owner-run): every feature folder under specs/
-//       with git mv, README.md and docs/README.md added, pushed to trunk.
+//       with git mv, README.md added, pushed to trunk.
 //
 // The clone takes the checkout's repo-local author and credential helper
 // (.husky/identity.sh), so it commits and pushes as george-hutanu. In GitHub
@@ -75,21 +75,11 @@ const README = `# motor-fix-specs
 The private records of [motor-fix](https://github.com/george-hutanu/motor-fix).
 
 - \`specs/<NNN-slug>/\`: one folder per feature (spec, plan, tasks, run logs).
-- \`docs/\`: the product documentation, exported once from Notion and edited here since.
+- \`docs/\`: the product documentation, organised by Diátaxis; \`llms.txt\` lists it.
 - \`.github/ISSUE_TEMPLATE/\`: the forms for stories, epics and tasks.
 
 Each motor-fix checkout clones this repository to \`.motor-fix-specs/\` and links
 \`specs\` to \`.motor-fix-specs/specs\` (\`node .claude/scripts/specs-repo.mjs ensure\`).
-`;
-
-const DOCS_README = `# docs
-
-The product documentation. \`node .claude/scripts/notion-export.mjs\` (in motor-fix)
-wrote it from the Notion space, one Markdown file per page with its front matter
-(\`title\`, \`notion_id\`, \`notion_url\`, \`last_edited\`); \`index.json\` maps each
-Notion id to its file. \`execution-plans/\` holds the plans written since.
-Edit the files here: the export is re-run only to pick up edits made in Notion
-before it was retired, and it overwrites what it exported.
 `;
 
 function git(cwd, args, extraEnv = {}) {
@@ -399,15 +389,22 @@ function ahead(clone) {
   return r.code === 0 ? Number(r.out) : null;
 }
 
+/** Root files and folders of the clone a commit may name as given; anything else goes under the features folder. */
+const ROOT_FILES = ["README.md", "llms.txt", "AGENTS.md", ".gitignore"];
+const ROOT_DIRS = ["docs", "scripts", ".github", "tracker"];
+
 /**
- * A path given to commit, relative to the clone root: docs/… as given, anything
- * else under the features folder; null when it normalizes outside docs/ or the
- * features folder (`docs/../.git/config`, `../x`, an absolute path).
+ * A path given to commit, relative to the clone root: a root entry (ROOT_FILES,
+ * ROOT_DIRS) as given, anything else under the features folder; null when it
+ * normalizes outside its root entry or the features folder
+ * (`docs/../.git/config`, `../x`, an absolute path).
  */
 function inClone(root, clone, path) {
   if (isAbsolute(path)) return null;
   const norm = posix.normalize(path.replaceAll("\\", "/"));
-  if (path === "docs" || path.startsWith("docs/")) return norm === "docs" || norm.startsWith("docs/") ? norm : null;
+  if (ROOT_FILES.includes(path)) return path;
+  const dir = ROOT_DIRS.find((d) => path === d || path.startsWith(`${d}/`));
+  if (dir) return norm === dir || norm.startsWith(`${dir}/`) ? norm : null;
   if (norm === ".." || norm.startsWith("../")) return null;
   const rel = relative(clone, join(featuresDir(root), norm)) || ".";
   return rel === ".." || rel.startsWith("../") || rel === ".git" || rel.startsWith(".git/") ? null : rel;
@@ -426,7 +423,7 @@ export function commit({ root = process.cwd(), message, paths = [] } = {}) {
   if (branch !== TRUNK) return { ok: false, error: `${CLONE} is on ${branch}: switch it to ${TRUNK} (git -C ${CLONE} switch ${TRUNK})` };
   const targets = paths.map((p) => [p, inClone(root, clone, p)]);
   const outside = targets.filter(([, t]) => t === null).map(([p]) => p);
-  if (outside.length) return { ok: false, error: `outside the feature folders and docs/: ${outside.join(", ")}` };
+  if (outside.length) return { ok: false, error: `outside the feature folders and the root entries: ${outside.join(", ")}` };
   const add = git(clone, ["add", "-A", "--", ...(paths.length ? targets.map(([, t]) => t) : ["."])]);
   if (add.code !== 0) return { ok: false, error: `add: ${add.err}` };
   let committed = false;
@@ -485,7 +482,7 @@ function migrateHeld({ root, dryRun }) {
   const unknown = entries.filter((n) => !KEEP.includes(n) && !FEATURE.test(n));
   if (unknown.length) return { ok: false, error: `unexpected at the trunk root, move or remove it first: ${unknown.join(", ")}` };
   const move = entries.filter((n) => FEATURE.test(n));
-  if (dryRun) return { ok: true, dryRun: true, move, add: ["README.md", "docs/README.md"] };
+  if (dryRun) return { ok: true, dryRun: true, move, add: ["README.md"] };
 
   const temp = `migrate-trunk-${Date.now()}`;
   const back = () => {
@@ -502,7 +499,6 @@ function migrateHeld({ root, dryRun }) {
       return { ok: false, step: "move", error: `git mv ${name}: ${r.err}` };
     }
   }
-  mkdirSync(join(clone, "docs"), { recursive: true });
   // An existing README is the owner's: it is kept, with the layout section added only when it lacks one.
   const readme = join(clone, "README.md");
   if (!existsSync(readme)) writeFileSync(readme, README);
@@ -510,9 +506,8 @@ function migrateHeld({ root, dryRun }) {
     const text = readFileSync(readme, "utf8");
     if (!text.includes("specs/<NNN-slug>/")) writeFileSync(readme, `${text.trimEnd()}\n\n## Layout\n\n${README.split("\n").slice(4).join("\n")}`);
   }
-  if (!existsSync(join(clone, "docs", "README.md"))) writeFileSync(join(clone, "docs", "README.md"), DOCS_README);
-  git(clone, ["add", "README.md", "docs/README.md"]);
-  const c = git(clone, ["commit", "-q", "-m", "chore(specs): move the feature folders under specs/ and add docs/"]);
+  git(clone, ["add", "README.md"]);
+  const c = git(clone, ["commit", "-q", "-m", "chore(specs): move the feature folders under specs/"]);
   if (c.code !== 0) {
     back();
     return { ok: false, step: "commit", error: `commit: ${c.err || c.out}` };
@@ -527,7 +522,7 @@ function migrateHeld({ root, dryRun }) {
   git(clone, ["branch", "-q", "-D", temp]);
   moveLeftovers(clone);
   pointLink(root, `${CLONE}/specs`);
-  return { ok: true, moved: move.length, pushed: true, next: "node .claude/scripts/notion-export.mjs, then node .claude/scripts/notion-export.mjs --check" };
+  return { ok: true, moved: move.length, pushed: true, next: "write docs/ by the Diátaxis layout (tutorials, how-to, reference, explanation), then node scripts/docs-lint.mjs --write in the clone" };
 }
 
 function main(argv) {

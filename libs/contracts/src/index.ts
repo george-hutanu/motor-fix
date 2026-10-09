@@ -43,6 +43,7 @@ export * from './problem';
 export * from './public-holidays.dto';
 export * from './public-live.dto';
 export * from './push-subscriptions.dto';
+export * from './quote-limits';
 export * from './quote-requests.dto';
 export * from './quotes.dto';
 export * from './request-status';

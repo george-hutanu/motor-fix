@@ -75,6 +75,7 @@ export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push/push-config';
+export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-received.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';

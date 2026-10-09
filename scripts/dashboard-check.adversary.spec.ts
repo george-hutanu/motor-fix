@@ -629,6 +629,7 @@ describe('the product dashboard', () => {
       'motorfix_documents_uploaded_total',
       'motorfix_declarations_signed_total',
       'motorfix_documents_opened_total',
+      'motorfix_quote_received_total',
     ]);
   });
 

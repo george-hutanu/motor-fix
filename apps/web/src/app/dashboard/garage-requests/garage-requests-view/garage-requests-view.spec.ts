@@ -14,7 +14,13 @@ import { I18n } from '@motor-fix/i18n';
 import { GarageRequestsView } from './garage-requests-view';
 import { Live } from '../../live';
 import { Session } from '../../session';
-import { fakeLive, listOf, requestRow, wait } from '../garage-requests.testing';
+import {
+  fakeLive,
+  listOf,
+  quotedRow,
+  requestRow,
+  wait,
+} from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 
 // The sentinel's observer, fired by the test.
@@ -56,10 +62,12 @@ async function render(
   {
     closed = listOf([]),
     pages = {},
+    quoted = listOf([]),
     waiting = [listOf(page(1, 20), { nextCursor: 'c-2', total: 45 })],
   }: {
     closed?: GarageRequestListDto;
     pages?: Record<string, GarageRequestListDto>;
+    quoted?: GarageRequestListDto;
     waiting?: GarageRequestListDto[];
   } = {},
   language: 'ro' | 'en' = 'ro',
@@ -73,6 +81,7 @@ async function render(
     async ({ cursor, status }: { cursor?: string; status: string }) => {
       if (status === 'closed') return closed;
       if (cursor) return pages[cursor];
+      if (status === 'quoted') return quoted;
       return waiting[Math.min(first++, waiting.length - 1)];
     },
   );
@@ -109,7 +118,7 @@ async function render(
 const waitingIds = (element: HTMLElement) =>
   [
     ...element.querySelectorAll<HTMLElement>(
-      'li[data-live-id]:not([data-closed])',
+      'mf-garage-requests-panel li[data-live-id]:not([data-closed])',
     ),
   ].map((r) => r.dataset['liveId']);
 const closedRows = (element: HTMLElement) => [
@@ -240,6 +249,59 @@ describe('the Cereri de ofertă view', () => {
   });
 });
 
+// @traces 344-FR-014
+describe('the Oferte trimise panel in the view', () => {
+  it('sits under the waiting panel and its closed rows, with the quoted rows', async () => {
+    const { element } = await render({
+      closed: listOf([requestRow({ closedReason: 'cancelled', id: 'req-c1' })]),
+      quoted: listOf([quotedRow({ id: 'req-q1' })]),
+      waiting: [listOf(page(1, 2))],
+    });
+
+    const waiting = element.querySelector('mf-garage-requests-panel');
+    const sent = element.querySelector('mf-quotes-sent-panel');
+    expect(sent).not.toBeNull();
+    expect(
+      waiting &&
+        sent &&
+        waiting.compareDocumentPosition(sent) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(waiting?.contains(sent)).toBe(false);
+    expect(text(sent?.querySelector('h2'))).toBe('Oferte trimise');
+    expect(
+      [...(sent?.querySelectorAll<HTMLElement>('li[data-live-id]') ?? [])].map(
+        (r) => r.dataset['liveId'],
+      ),
+    ).toEqual(['req-q1']);
+    expect(waitingIds(element)).toEqual(['req-1', 'req-2']);
+  });
+
+  it('moves a sent request from the waiting panel to Oferte trimise on quote.sent', async () => {
+    const { element, settle } = await render({
+      waiting: [listOf(page(1, 2))],
+    });
+    // From here on the server holds req-1 as quoted.
+    list.mockImplementation(async ({ status }: { status: string }) => {
+      if (status === 'closed') return listOf([]);
+      if (status === 'quoted') return listOf([quotedRow({ id: 'req-1' })]);
+      return listOf(page(2, 1));
+    });
+
+    live.emit('quote.sent', 'quote-1');
+    await wait(400);
+    await settle();
+
+    expect(waitingIds(element)).toEqual(['req-2']);
+    const panel = element.querySelector('mf-quotes-sent-panel');
+    expect(
+      [...(panel?.querySelectorAll<HTMLElement>('li[data-live-id]') ?? [])].map(
+        (r) => r.dataset['liveId'],
+      ),
+    ).toEqual(['req-1']);
+  });
+});
+
 // @traces 343-FR-004
 // @traces 343-FR-007
 describe('the closed rows of the last day', () => {
@@ -309,7 +371,9 @@ describe('the closed rows of the last day', () => {
   it('leaves the page title to the page and repeats no heading of its own', async () => {
     const { element } = await render({});
 
-    expect(element.querySelector('.panel h2')).toBeNull();
+    expect(
+      element.querySelector('mf-garage-requests-panel .panel h2'),
+    ).toBeNull();
     expect(text(element.querySelector('.counter'))).toBe('45 fără răspuns');
   });
 });

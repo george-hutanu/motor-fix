@@ -16,7 +16,6 @@ export type JobStepAction =
   | 'removed'
   | 'ticked'
   | 'unticked';
-type RequestReceivedOutcome = 'built' | 'muted' | 'skipped';
 
 // Looked up on every count, never cached: a counter kept from before the
 // meter provider is registered would stay a no-op for the life of the
@@ -71,7 +70,7 @@ export function countJobStep(action: JobStepAction) {
   ).add(1, { action });
 }
 
-export function countRequestReceived(outcome: RequestReceivedOutcome) {
+export function countRequestReceived(outcome: 'built' | 'muted' | 'skipped') {
   counter(
     'motorfix_request_received_total',
     'Garages a new request was announced to, by outcome',
@@ -97,4 +96,11 @@ export function countDocumentOpened(kind: DocumentKind) {
     'motorfix_documents_opened_total',
     'Document pages opened by an admin, by kind',
   ).add(1, { kind });
+}
+
+export function countQuoteReceived(outcome: 'built' | 'muted') {
+  counter(
+    'motorfix_quote_received_total',
+    'Sent quotes announced to their driver, by outcome',
+  ).add(1, { outcome });
 }
