@@ -141,6 +141,7 @@ describe('the snapshot at the edges', () => {
     expect(await prisma.platformDaily.findMany()).toEqual([
       {
         activeDrivers: 0,
+        city: 'all',
         day: new Date('2026-11-01'),
         garagesApprovedThisMonth: 1,
         garagesListed: 1,
@@ -173,7 +174,13 @@ describe('the snapshot at the edges', () => {
 describe('the night job schedule', () => {
   const boot = async () => {
     const app = await Test.createTestingModule({
-      imports: [InsightsModule.registerWorker({ databaseUrl, redisUrl })],
+      imports: [
+        InsightsModule.registerWorker({
+          databaseUrl,
+          places: { provider: 'none' },
+          redisUrl,
+        }),
+      ],
     }).compile();
     await app.init();
     return app;

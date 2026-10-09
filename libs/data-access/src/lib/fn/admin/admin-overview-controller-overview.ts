@@ -10,11 +10,19 @@ import { RequestBuilder } from '../../request-builder';
 import { AdminOverviewDto } from '../../models/admin-overview-dto';
 
 export interface AdminOverviewControllerOverview$Params {
+
+/**
+ * A key from the overview's cities, or all
+ */
+  city?: string;
+  period?: 'default' | 'today' | '7d' | '30d' | 'month' | '12m';
 }
 
 export function adminOverviewControllerOverview(http: HttpClient, rootUrl: string, params?: AdminOverviewControllerOverview$Params, context?: HttpContext): Observable<StrictHttpResponse<AdminOverviewDto>> {
   const rb = new RequestBuilder(rootUrl, adminOverviewControllerOverview.PATH, 'get');
   if (params) {
+    rb.query('city', params.city, {});
+    rb.query('period', params.period, {});
   }
 
   return http.request(

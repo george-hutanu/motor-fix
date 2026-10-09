@@ -8,6 +8,7 @@ features:
   - 162-growth-12-months
   - 001-admin-recent-accounts
   - 260-rule-off-confirm
+  - 163-figures-period-city
   - 384-response-rate
 ---
 
@@ -17,9 +18,9 @@ The admin dashboard's shell, open to admin accounts only: the `admin/*` API surf
 
 ## Requirements
 
-### 161-FR-001 — The admin overview answer (`GET /api/v1/admin/overview`, the route ST-160 serves) MUST carry, beside `garagesWaiting`, the platform figures: `garagesListed` (the number of garages whose status is `approved` now), `garagesApprovedThisMonth` (approved garages whose first approval falls in the current calendar month, Europe/Bucharest), `activeDrivers` (accounts holding the `driver` role, with status `active`, whose last activity is within the last 30 days of the moment of the read), and `activeDriversMonthStart` (the active drivers from the snapshot row of the first day of the current month, or absent when that row does not exist). Every figure is read from the database at each call, as `garagesWaiting` is. The DTO lives in the contracts library and the generated client is regenerated.
+### 163-FR-001 — The overview read (`GET /api/v1/admin/overview`) and the growth read (`GET /api/v1/admin/growth`) MUST accept two optional query parameters: `city` (a city key from the list of FR-003, or `all` for the whole country; the default for both reads is `all`) and, on the overview only, `period` (`default`, `today`, `7d`, `30d`, `month`, `12m`; default `default`); an unknown value answers 400 `validation_failed`. The DTOs live in the contracts library and the generated client is regenerated. Both reads keep the `admin/*` access policy (161-FR-003), and nothing in an answer is personal data.
 
-_From 161-headline-numbers._
+_From 163-figures-period-city._
 
 ### 161-FR-003 — The overview route MUST keep ST-160's access policy: an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; nothing in the answer is personal data, every value is a count.
 
@@ -33,17 +34,17 @@ _From 160-admin-dashboard-menu._
 
 _From 001-admin-recent-accounts._
 
-### 160-FR-008 — The admin frame's header MUST show the line "MotorFix · București · {n} service‑uri așteaptă verificarea" (English "MotorFix · Bucharest · {n} garages are waiting for verification"), where `{n}` is `garagesWaiting` from the overview, written in the language's plural forms: Romanian `one` "1 service așteaptă verificarea", `few` "{n} service‑uri așteaptă verificarea", `other` "{n} de service‑uri așteaptă verificarea", zero "niciun service nu așteaptă verificarea"; English `one` "1 garage is waiting for verification", `other` "{n} garages are waiting for verification", zero "no garage is waiting for verification". The city is the fixed text "București" / "Bucharest" until the period-and-city story (https://app.notion.com/p/3ee607bff0d281bcba2fe16979f909fc) makes it a choice.
+### 163-FR-007 — The admin header MUST show the chosen city in its line in place of the fixed "București" (160-FR-008; "Toată țara" / "Whole country" for `all`), with its waiting count from `cityGaragesWaiting` for a city and `garagesWaiting` for `all`; the "Service‑uri" counter (160-FR-010) MUST keep counting every garage waiting on the platform.
 
-_From 160-admin-dashboard-menu._
+_From 163-figures-period-city._
 
 ### 160-FR-009 — The header MUST show the label "ADMINISTRATOR" (the same word in English) next to the line, and the language switch with RO and EN that every dashboard header carries; switching the language re-renders the line, the label, the menu and the counters in that language without a reload (MF-1).
 
 _From 160-admin-dashboard-menu._
 
-### 160-FR-010 — The menu entry "Service‑uri" and its tab MUST carry a counter equal to `garagesWaiting` when it is above zero, and none when it is zero; the entry's accessible name MUST include the count ("Service‑uri, 4 în așteptare" / "Garages, 4 waiting"). "Recenzii raportate" carries a counter only once it is released (MF-45); no other entry carries one. A count above 99 MUST read "99+" in the chip (the accessible name keeps the full number), so the chip never widens the tab past its 66 px minimum.
+### 163-FR-007 — The admin header MUST show the chosen city in its line in place of the fixed "București" (160-FR-008; "Toată țara" / "Whole country" for `all`), with its waiting count from `cityGaragesWaiting` for a city and `garagesWaiting` for `all`; the "Service‑uri" counter (160-FR-010) MUST keep counting every garage waiting on the platform.
 
-_From 160-admin-dashboard-menu._
+_From 163-figures-period-city._
 
 ### 161-FR-007 — While the first overview read is on its way, each tile MUST show a skeleton in place of its number and line; when a read fails, including a re-read after numbers were shown, every computed tile MUST read "—" with the same info tip "Cifrele nu au putut fi citite" / "The figures could not be read", never 0 and never the last number, until a later read succeeds (ST-160's rule for the counters, applied to the tiles).
 
@@ -69,9 +70,9 @@ _From 161-headline-numbers._
 
 _From 161-headline-numbers._
 
-### 161-FR-005 — The garages tile MUST show `garagesListed` with the line "+{n} luna asta" / "+{n} this month" from `garagesApprovedThisMonth`; the active-drivers tile MUST show `activeDrivers` with the line "{sign}{n} luna asta" / "{sign}{n} this month" where the value is `activeDrivers − activeDriversMonthStart`, written with "+" for zero or more and "−" (U+2212) for less, and no line at all when `activeDriversMonthStart` is absent.
+### 163-FR-011 — In a period other than `default`, the garages tile's line MUST read "+{n} {period}" / "+{n} {period}" from `garagesApprovedInPeriod` with the period's line form ("azi", "în ultimele 7 zile", "în ultimele 30 de zile", "luna asta", "în ultimele 12 luni" / "today", "in the last 7 days", "in the last 30 days", "this month", "in the last 12 months"), and the active-drivers tile's line the change since `activeDriversPeriodStart` with 161-FR-005's sign rule, absent when that figure is absent; the tiles' accessible names (161-FR-013) carry the new lines.
 
-_From 161-headline-numbers._
+_From 163-figures-period-city._
 
 ### 161-FR-006 — Every number in a tile MUST be written through the language's plain-number format ("12.480" in Romanian, "12,480" in English), in the Cockpit digits face the shared gauges use; a change line keeps the same grouping; a percentage, when it exists, follows the percentage format ("92%").
 
@@ -81,9 +82,9 @@ _From 161-headline-numbers._
 
 _From 161-headline-numbers._
 
-### 161-FR-009 — The platform MUST keep a daily snapshot, one row per day keyed by the Europe/Bucharest date of the run (the 01:00 run on the 1st writes the first-of-month row), holding `garagesListed`, `garagesApprovedThisMonth` and `activeDrivers` as FR-001 counts them at the time of the job; the row for a day is written or replaced by the job, never duplicated. Fields for the figures of FR-002 join the row when their entities exist.
+### 163-FR-006 — The daily snapshot (161-FR-009) MUST be keyed by day and city: each night it writes the `all` row and one row per city with at least one approved garage, each holding that city's `garagesListed` and `garagesApprovedThisMonth` as FR-004 counts them and no `activeDrivers` value (only the `all` row holds one); existing rows become `all` rows; the one-schedule rule (161-FR-010) is unchanged. The growth read for a city reads that city's rows with 162-FR-002's month-end rule and computes the current month live for the city.
 
-_From 161-headline-numbers._
+_From 163-figures-period-city._
 
 ### 161-FR-010 — The worker MUST run the snapshot job every night at 01:00 Europe/Bucharest through the worker's existing queue mechanism, once per night across every worker instance (one schedule under a fixed job id); a job that fails is logged, not retried that night, and runs again the next night, and the job never back-fills a missed day.
 
@@ -149,13 +150,13 @@ _From 258-platform-rules-switches._
 
 _From 258-platform-rules-switches._
 
-### 162-FR-001 — An admin MUST be able to read the platform's growth (`GET /api/v1/admin/growth`): twelve entries, one per Europe/Bucharest calendar month ending with the current month, oldest first, each with its month (`"YYYY-MM"`) and, when known, its active drivers and its listed garages as optional fields; a month with no figure omits the field, never 0. Nothing in the answer is personal data; every value is a count. The DTO lives in the contracts library and the generated client is regenerated.
+### 163-FR-001 — The overview read (`GET /api/v1/admin/overview`) and the growth read (`GET /api/v1/admin/growth`) MUST accept two optional query parameters: `city` (a city key from the list of FR-003, or `all` for the whole country; the default for both reads is `all`) and, on the overview only, `period` (`default`, `today`, `7d`, `30d`, `month`, `12m`; default `default`); an unknown value answers 400 `validation_failed`. The DTOs live in the contracts library and the generated client is regenerated. Both reads keep the `admin/*` access policy (161-FR-003), and nothing in an answer is personal data.
 
-_From 162-growth-12-months._
+_From 163-figures-period-city._
 
-### 162-FR-002 — A past month's figures MUST be the daily snapshot's closing values for that month: the row dated the first day of the following month, or, when that row does not exist, the row dated the month's last day; with neither, the month has no value. The current month's figures MUST be computed live at the read, with the same definitions as the overview's `activeDrivers` and `garagesListed` (161-FR-001). The read reconstructs nothing before the first snapshot and writes nothing.
+### 163-FR-006 — The daily snapshot (161-FR-009) MUST be keyed by day and city: each night it writes the `all` row and one row per city with at least one approved garage, each holding that city's `garagesListed` and `garagesApprovedThisMonth` as FR-004 counts them and no `activeDrivers` value (only the `all` row holds one); existing rows become `all` rows; the one-schedule rule (161-FR-010) is unchanged. The growth read for a city reads that city's rows with 162-FR-002's month-end rule and computes the current month live for the city.
 
-_From 162-growth-12-months._
+_From 163-figures-period-city._
 
 ### 162-FR-003 — The growth read MUST follow the `admin/*` access policy (161-FR-003): an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; the route joins the admin-route guard test's list of known routes. A failure inside the read answers the API's standard error body (no partial answer, no figures), which the panel treats as a failed read (FR-008).
 
@@ -308,6 +309,58 @@ _From 260-rule-off-confirm._
 
 _From 260-rule-off-confirm._
 
+### 163-FR-001 — The overview read (`GET /api/v1/admin/overview`) and the growth read (`GET /api/v1/admin/growth`) MUST accept two optional query parameters: `city` (a city key from the list of FR-003, or `all` for the whole country; the default for both reads is `all`) and, on the overview only, `period` (`default`, `today`, `7d`, `30d`, `month`, `12m`; default `default`); an unknown value answers 400 `validation_failed`. The DTOs live in the contracts library and the generated client is regenerated. Both reads keep the `admin/*` access policy (161-FR-003), and nothing in an answer is personal data.
+
+_From 163-figures-period-city._
+
+### 163-FR-002 — With a period other than `default`, the overview MUST compute, over the Europe/Bucharest range the period names (`today` from 00:00 today; `7d` and `30d` the 7 and 30 calendar days ending with today, today included, starting six and twenty-nine days before it; `month` from the 1st of the month; `12m` the 12 calendar months ending with the current one, starting on the 1st of the month eleven months back; each range ends now), `garagesApprovedInPeriod` (garages first approved in the range, counted as 161-FR-001 counts the month's approvals) and `activeDriversPeriodStart` (the active drivers from the snapshot row of the range's first day, absent when that row does not exist and always absent for `today`); `garagesListed`, `garagesWaiting` and `activeDrivers` (30 days ending on the range's last day) stay counts of now; the figures of 161-FR-002 join the period's rules when their entities exist (requests created in the range, the answer rate over the range, bookings confirmed in the range). With `default`, the answer is 161-FR-001's, unchanged.
+
+_From 163-figures-period-city._
+
+### 163-FR-003 — The overview answer MUST carry `cities`: `all` first, then every city with at least one approved garage, each with its key, its display name and its approved-garage count, ordered by that count, highest first, ties by name; a key is the city name's lower-case ASCII slug (`bucuresti`, `cluj-napoca`), stable across languages.
+
+_From 163-figures-period-city._
+
+### 163-FR-004 — With a city other than `all`, every count of garages in the overview and the growth read (`garagesListed`, `garagesApprovedThisMonth`, `garagesApprovedInPeriod`, the charts' listed garages) MUST cover only garages placed in that city, and the overview MUST add `cityGaragesWaiting`, the garages placed in that city waiting for verification, while `garagesWaiting` stays the platform total; `activeDrivers` and the charts' active drivers MUST count only drivers who sent a quote request to a garage in that city within the 30-day window, which is 0 (and `activeDriversMonthStart` / `activeDriversPeriodStart` absent) until quote requests exist on the platform; a city's snapshot rows hold no active-drivers value, so its active-drivers chart has no points. With `all`, every count is the whole platform's.
+
+_From 163-figures-period-city._
+
+### 163-FR-005 — The platform MUST record each garage's city: a workshop's from its address and a mobile mechanic's from its registered seat. The address look-up's suggestion MUST carry its locality, the place step MUST send the chosen suggestion's locality with the address, and the server MUST turn it into a city (key and display name), Bucharest's six sectors and "Bucharest" becoming "București"; a locality that is missing, not text, empty after trimming, longer than 80 characters or with no letter or digit to slug leaves the city unknown and never refuses the save. A garage with an address or seat and no city MUST be placed by the nightly snapshot job before it counts, up to 25 per night, from the look-up's first suggestion for its saved address; one the look-up cannot place keeps no city and is tried again the next night. A garage whose city is not known counts under `all` only.
+
+_From 163-figures-period-city._
+
+### 163-FR-006 — The daily snapshot (161-FR-009) MUST be keyed by day and city: each night it writes the `all` row and one row per city with at least one approved garage, each holding that city's `garagesListed` and `garagesApprovedThisMonth` as FR-004 counts them and no `activeDrivers` value (only the `all` row holds one); existing rows become `all` rows; the one-schedule rule (161-FR-010) is unchanged. The growth read for a city reads that city's rows with 162-FR-002's month-end rule and computes the current month live for the city.
+
+_From 163-figures-period-city._
+
+### 163-FR-007 — The admin header MUST show the chosen city in its line in place of the fixed "București" (160-FR-008; "Toată țara" / "Whole country" for `all`), with its waiting count from `cityGaragesWaiting` for a city and `garagesWaiting` for `all`; the "Service‑uri" counter (160-FR-010) MUST keep counting every garage waiting on the platform.
+
+_From 163-figures-period-city._
+
+### 163-FR-008 — From 768 px the header's city name MUST be a drop-down listing the cities of FR-003 ("Toată țara" first, each city with its name), the current one marked, and a segmented period control to its right with the six periods in order: "Implicit", "Azi", "Ultimele 7 zile", "Ultimele 30 de zile", "Luna aceasta", "Ultimele 12 luni" (English "Default", "Today", "Last 7 days", "Last 30 days", "This month", "Last 12 months"); below 768 px the header MUST show one filter button, whose accessible name names the current city and period, opening the shared bottom sheet (`overlays`) with the same city list and period choice. The drop-down and the sheet are reachable by keyboard, the periods are a radio group, and Escape closes without a change, focus returning to the control that opened it.
+
+_From 163-figures-period-city._
+
+### 163-FR-009 — The chosen city and period MUST live in the page's query string (`?city=<key>&period=<key>`; a default is not written) on the "Panou" route and be applied on its load and reload; leaving "Panou" for another admin view drops the choice, and the shell's header and counter read the whole country there; an unknown city falls back to `all` and an unknown period to `default`, the address corrected to what was applied, with no error shown.
+
+_From 163-figures-period-city._
+
+### 163-FR-010 — Changing a choice MUST re-read the overview and the growth with the new parameters, showing the tiles' skeletons (161-FR-007) and the charts' skeletons (162-FR-008) while the reads are on their way, the rest of the page, the menu and the controls unchanged, the figures region marked busy for assistive technology until the reads settle; only the answer to the latest choice is shown (an older, slower answer is dropped); a failed read keeps 161-FR-007's "—" with the info tip and 162-FR-008's retry; the shell's live re-read (160-FR-012) carries the current choice. With no data for the choice each computed tile reads 0 and each chart "Încă nu sunt date" / "No data yet".
+
+_From 163-figures-period-city._
+
+### 163-FR-011 — In a period other than `default`, the garages tile's line MUST read "+{n} {period}" / "+{n} {period}" from `garagesApprovedInPeriod` with the period's line form ("azi", "în ultimele 7 zile", "în ultimele 30 de zile", "luna asta", "în ultimele 12 luni" / "today", "in the last 7 days", "in the last 30 days", "this month", "in the last 12 months"), and the active-drivers tile's line the change since `activeDriversPeriodStart` with 161-FR-005's sign rule, absent when that figure is absent; the tiles' accessible names (161-FR-013) carry the new lines.
+
+_From 163-figures-period-city._
+
+### 163-FR-012 — Every new text MUST exist in Romanian and English in the shared i18n files (U+2011 in hyphenated Romanian words); city names are shown as recorded except "București" / "Bucharest"; the controls use the Cockpit type tokens (12, 13 and 16 px; headings 20, 24, 32, 40 px), and on a phone their buttons, list items and options are 16 px or larger, labels 12–13 px, the theme's default buttons and tabs (16 px) used as they are; at 320 px the page MUST NOT scroll sideways.
+
+_From 163-figures-period-city._
+
+### 163-FR-013 — Tests MUST cover, against seeded data on a real database: each period's Europe/Bucharest range (the first and last instant of `today`, `7d`, `30d`, `month`, `12m`); the period's approvals and the period-start row with and without a row; city filtering of listed, approved, waiting garages and of the charts; the active-driver city rule (0 while no requests exist; a request to a garage in the city counts the driver once requests exist is the later story's test); a garage with no city under `all` only; the per-city snapshot rows and the `all` row; 400 for an unknown key; 404 for each non-admin role; an unknown city in the address falling back. An end-to-end check, as the seeded admin: pick "Ultimele 7 zile" and a city with seeded data, read the tiles' lines and the header, reload the page and find the choice kept, at a phone (the sheet) and a desktop (the drop-down and the segments), in both languages.
+
+_From 163-figures-period-city._
+
 ### 384-FR-001 — The system MUST compute, for every approved garage, a public response rate over the garage's REQUEST_RECIPIENT rows created (the moment the request reached the garage, `request_recipient.created_at`) in the last RESPONSE_RATE_PERIOD_DAYS (30) days before the job's start instant (one `now` taken when the attempt's processor starts), counting all hours of every day. Counted rows exclude: a recipient whose request is `closed` with `closed_reason` `cancelled` or `account_closed` while the recipient never answered (status `closed`); a recipient with status `closed` for any reason (a suspension closed it); and a recipient with status `waiting` created less than RESPONSE_RATE_WINDOW_HOURS (24) hours before the job's start instant.
 
 _From 384-response-rate._
@@ -349,3 +402,11 @@ _From 384-response-rate._
 
 - `160-FR-006` — superseded by `001-FR-006` (2026-10-08)
 - `258-FR-010` — superseded by `260-FR-010` (2026-10-08)
+
+- `160-FR-008` — superseded by `163-FR-007` (2026-10-09)
+- `160-FR-010` — superseded by `163-FR-007` (2026-10-09)
+- `161-FR-001` — superseded by `163-FR-001` (2026-10-09)
+- `161-FR-005` — superseded by `163-FR-011` (2026-10-09)
+- `161-FR-009` — superseded by `163-FR-006` (2026-10-09)
+- `162-FR-001` — superseded by `163-FR-001` (2026-10-09)
+- `162-FR-002` — superseded by `163-FR-006` (2026-10-09)

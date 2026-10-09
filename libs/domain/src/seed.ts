@@ -314,6 +314,17 @@ async function list(db: Client, garage: (typeof LISTED)[number]) {
       garage.mobile?.radiusKm ?? null,
     ],
   );
+  // The city the address look-up would give: the seeded places lie in
+  // Bucharest, or north of 46° in Cluj-Napoca.
+  const [key, name] =
+    garage.at[0] > 46
+      ? ['cluj-napoca', 'Cluj-Napoca']
+      : ['bucuresti', 'București'];
+  await db.query(
+    `UPDATE garage SET city_key = $2, city_name = $3
+     WHERE slug = $1 AND city_key IS NULL`,
+    [garage.slug, key, name],
+  );
   for (const [brand, stance] of Object.entries(garage.stances)) {
     // A brand a garage does not take is taken for no fuel.
     const fuels = stance === 'works_on';

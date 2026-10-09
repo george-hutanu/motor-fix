@@ -5,6 +5,7 @@ export type { AdminAccountCountDto } from './models/admin-account-count-dto';
 export type { AdminAccountDto } from './models/admin-account-dto';
 export type { AdminAccountsPageDto } from './models/admin-accounts-page-dto';
 export type { AdminAccountsSummaryDto } from './models/admin-accounts-summary-dto';
+export type { AdminCityDto } from './models/admin-city-dto';
 export type { AdminGrowthDto } from './models/admin-growth-dto';
 export type { AdminGrowthMonthDto } from './models/admin-growth-month-dto';
 export type { AdminOverviewDto } from './models/admin-overview-dto';

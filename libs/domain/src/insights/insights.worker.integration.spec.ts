@@ -20,7 +20,13 @@ const queue = new Queue(INSIGHTS_QUEUE, { connection: { url: redisUrl } });
 
 const boot = async (url = databaseUrl) => {
   const app = await Test.createTestingModule({
-    imports: [InsightsModule.registerWorker({ databaseUrl: url, redisUrl })],
+    imports: [
+      InsightsModule.registerWorker({
+        databaseUrl: url,
+        places: { provider: 'fake' },
+        redisUrl,
+      }),
+    ],
   }).compile();
   await app.init();
   return app;
@@ -53,6 +59,7 @@ describe('the daily snapshot', () => {
     expect(await prisma.platformDaily.findMany()).toEqual([
       {
         activeDrivers: 0,
+        city: 'all',
         day: new Date('2026-11-10'),
         garagesApprovedThisMonth: 1,
         garagesListed: 1,
@@ -138,6 +145,38 @@ describe('the night job', () => {
     await app.close();
 
     expect(await prisma.platformDaily.count()).toBe(1);
+  });
+
+  // @traces 163-FR-005 163-FR-006
+  it("places the garages with no city before it writes the night's rows", async () => {
+    await prisma.garage.create({
+      data: {
+        address: 'Strada Exemplu 2, Cluj-Napoca',
+        approvedAt: new Date(),
+        name: 'Service',
+        slug: 'service-unplaced',
+        status: 'approved',
+      },
+    });
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    const job = await queue.add('platform-daily', {});
+    await job.waitUntilFinished(events, 10_000);
+    await events.close();
+    await app.close();
+
+    const rows = await prisma.platformDaily.findMany({
+      orderBy: { city: 'asc' },
+      select: { city: true, garagesListed: true },
+    });
+    expect(rows).toEqual([
+      { city: 'all', garagesListed: 1 },
+      { city: 'cluj-napoca', garagesListed: 1 },
+    ]);
   });
 
   it('logs a failed run and does not try it again', async () => {

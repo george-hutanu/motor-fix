@@ -11,6 +11,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
+import { cityOf } from '../../places/city';
 import { plainText } from '../plain-text';
 
 const refuse = (errors: FieldProblem[]) =>
@@ -74,9 +75,13 @@ export class GaragePlaceService {
     const serviceRadiusKm = mobile
       ? (section.radiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM)
       : null;
+    // Derived from the look-up, not typed, so the history leaves it out.
+    const city = cityOf(section.locality);
     await tx.garage.update({
       data: {
         address: mobile ? null : address,
+        cityKey: city?.key ?? null,
+        cityName: city?.name ?? null,
         latitude: lat,
         longitude: lng,
         seatAddress: mobile ? address : null,

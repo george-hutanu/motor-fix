@@ -46,16 +46,23 @@
       <div class="title">
         <span class="admin-label">{{ 'shell.frame.admin.label' | t }}</span>
         <h1>{{ open().label | t }}</h1>
-        <p class="admin-line" [attr.aria-busy]="overview.loading()">
-          {{ 'shell.frame.admin.place' | t }}
-          @if (overview.loading()) {
+        <p class="admin-line" [attr.aria-busy]="headerLoading()">
+          @if (place(); as city) {
+            {{ 'shell.frame.admin.place' | t: { city } }}
+          } @else {
+            {{ 'shell.frame.admin.place' | t: { city: '' } }}<span class="skeleton" aria-hidden="true"></span>
+          }
+          @if (headerLoading()) {
             · <span class="skeleton" aria-hidden="true"></span>
-          } @else if (overview.waiting(); as count) {
+          } @else if (overview.headerWaiting(); as count) {
             · {{ 'shell.frame.admin.waiting' | t: { count } }}
-          } @else if (overview.waiting() === 0) {
+          } @else if (overview.headerWaiting() === 0) {
             · {{ 'shell.frame.admin.none' | t }}
           }
         </p>
+        @if (onPanel()) {
+          <mf-admin-filters [cities]="cities()" [city]="overview.city()" [period]="overview.period()" (choose)="chooseFigures($event)" />
+        }
       </div>
     } @else {
       <div class="title">

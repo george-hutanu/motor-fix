@@ -24,14 +24,14 @@ const toWholeLei = (bani: unknown) =>
       display: inline-flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 2px;
+      gap: 4px;
       white-space: pre;
     }
     .mf-odometer-digit {
       display: inline-block;
       box-sizing: border-box;
       width: 1.1em;
-      padding: 0.2em 0;
+      padding: 4px 0;
       background: var(--mf-bg);
       border: 1px solid var(--mf-line);
       border-radius: 8px;
@@ -46,9 +46,9 @@ const toWholeLei = (bani: unknown) =>
       position: absolute;
       inset: 0 0 auto;
       color: var(--mf-text);
-      line-height: 1.4em;
+      line-height: calc(1em + 8px);
       white-space: pre;
-      translate: 0 calc(var(--mf-digit) * -1.4em);
+      translate: 0 calc(var(--mf-digit) * -1 * (1em + 8px));
       transition: translate var(--mf-motion-roll) var(--mf-motion-ease);
     }
     @media (forced-colors: active) {

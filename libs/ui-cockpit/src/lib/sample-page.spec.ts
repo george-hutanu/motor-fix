@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 
@@ -64,6 +67,17 @@ describe('CockpitSamplePage', () => {
         p.textContent?.includes(text('romanian')),
       ),
     ).toBe(true);
+  });
+
+  it('sets the label typeface sample at body size, never under 16 px on a phone', () => {
+    const source = readFileSync(
+      join(__dirname, 'sample-page.ts'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(source).toMatch(
+      /main > p\.mf-label \{[^}]*font-size: var\(--mf-size-body\);/,
+    );
   });
 
   it('offers controls that open a dialog, a drawer, a toast and a popover', async () => {
