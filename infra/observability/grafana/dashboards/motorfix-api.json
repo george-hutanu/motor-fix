@@ -745,7 +745,7 @@
     {
       "id": 21,
       "type": "row",
-      "title": "Storage and address look-ups",
+      "title": "Storage, address look-ups and profile cache",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -765,7 +765,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 6,
         "x": 0,
         "y": 41
       },
@@ -795,8 +795,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
+        "w": 6,
+        "x": 6,
         "y": 41
       },
       "targets": [
@@ -825,8 +825,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 12,
         "y": 41
       },
       "targets": [
@@ -844,6 +844,36 @@
         "defaults": {
           "unit": "s"
         },
+        "overrides": []
+      }
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Public profile cache by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (rate(motorfix_garage_profile_cache_total{service_name=\"api\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
         "overrides": []
       }
     },

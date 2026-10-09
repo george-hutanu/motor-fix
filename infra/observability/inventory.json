@@ -213,9 +213,9 @@
       "kind": "product-counter",
       "name": "motorfix_platform_rule_changes_total",
       "source": "libs/domain/src/admin/platform-rules/changes/changes.metrics.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts rule change requests by action (requested, approved, refused, cancelled), with one PlatformRuleChanges log line per step; ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "counts rule change requests by action (requested, approved, refused, cancelled), with one PlatformRuleChanges log line per step; ST-880 adds the alerts",
       "story": "ST-260"
     },
     {
@@ -231,9 +231,9 @@
       "kind": "product-counter",
       "name": "motorfix_garage_profile_cache_total",
       "source": "libs/domain/src/garages/public-garages/public-garages.metrics.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "counts the public profile cache by outcome (hit, miss, drop); ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "counts the public profile cache by outcome (hit, miss, drop); ST-880 adds the alerts",
       "story": "ST-307"
     },
     {
