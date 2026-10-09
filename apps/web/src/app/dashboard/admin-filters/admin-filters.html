@@ -1,0 +1,21 @@
+<div class="wide">
+  <select [attr.aria-label]="'shell.frame.admin.city.label' | t" (change)="chooseCity($any($event.target).value)">
+    @for (option of cities(); track option.key) {
+      <option [value]="option.key" [selected]="option.key === city()">{{ option.name }}</option>
+    }
+  </select>
+  <div class="segments" role="radiogroup" [attr.aria-label]="'shell.frame.admin.period.label' | t">
+    @for (option of periods(); track option.key) {
+      <label>
+        <input type="radio" name="mf-admin-period" [value]="option.key" [checked]="option.key === period()" (change)="choosePeriod(option.key)" />
+        <span>{{ option.name }}</span>
+      </label>
+    }
+  </div>
+</div>
+<button type="button" class="filter" [attr.aria-label]="'shell.frame.admin.filters.label' | t: summary()" (click)="openSheet()">
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+    <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+  </svg>
+  <span>{{ summary().city }} · {{ summary().period }}</span>
+</button>

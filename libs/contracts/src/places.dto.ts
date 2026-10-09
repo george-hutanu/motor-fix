@@ -8,7 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { ADDRESS_MAX, PLACE_SEARCH_MIN } from './place-section';
+import { ADDRESS_MAX, LOCALITY_MAX, PLACE_SEARCH_MIN } from './place-section';
 
 const LANGUAGES = ['ro', 'en'] as const;
 
@@ -39,6 +39,13 @@ export class PlaceSuggestionDto {
 
   @ApiProperty({ example: 26.1207 })
   lng!: number;
+
+  @ApiPropertyOptional({
+    description: 'The town or city, when the provider knows it',
+    example: 'București',
+    maxLength: LOCALITY_MAX,
+  })
+  locality?: string;
 }
 
 export class PlacesResultDto {

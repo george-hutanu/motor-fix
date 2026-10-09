@@ -7,6 +7,7 @@ export const PLACE_SEARCH_MIN = 3;
 export const PLACE_SUGGESTIONS_MAX = 5;
 // Street level: close enough to put the pin on the right gate.
 export const PLACE_ZOOM = 16;
+export const LOCALITY_MAX = 80;
 export const RADIUS_KM = { default: 20, max: 100, min: 1 } as const;
 export const MOBILE_SERVICE_RADIUS_DEFAULT_KM = RADIUS_KM.default;
 
@@ -24,9 +25,11 @@ export interface PlaceSection {
   lat?: number;
   lng?: number;
   radiusKm?: number;
+  // The chosen suggestion's town, for the admin's figures by city.
+  locality?: string;
 }
 
-const KEYS = ['address', 'lat', 'lng', 'radiusKm'];
+const KEYS = ['address', 'lat', 'lng', 'locality', 'radiusKm'];
 
 export const inRomania = (lat: number, lng: number) =>
   lat >= ROMANIA_BOUNDS.latMin &&
@@ -45,11 +48,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 // Shape only, so a half-given place is kept; a position is both or neither.
 export function isPlaceSection(value: unknown): value is PlaceSection {
   if (!isRecord(value)) return false;
-  const { address, lat, lng, radiusKm } = value;
+  const { address, lat, lng, locality, radiusKm } = value;
   return (
     Object.keys(value).every((key) => KEYS.includes(key)) &&
     (address === undefined ||
       (typeof address === 'string' && address.length <= ADDRESS_MAX)) &&
+    (locality === undefined ||
+      (typeof locality === 'string' && locality.length <= LOCALITY_MAX)) &&
     (lat === undefined) === (lng === undefined) &&
     (lat === undefined || Number.isFinite(lat)) &&
     (lng === undefined || Number.isFinite(lng)) &&

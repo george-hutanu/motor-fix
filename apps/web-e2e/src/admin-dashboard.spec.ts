@@ -116,7 +116,7 @@ test.describe('the admin dashboard @seeded', () => {
 
       await expect(
         page.getByText(
-          'MotorFix · București · 2 service‑uri așteaptă verificarea',
+          'MotorFix · Toată țara · 2 service‑uri așteaptă verificarea',
         ),
       ).toBeVisible();
       await expect(
@@ -290,7 +290,7 @@ test.describe('the admin dashboard in English', () => {
 
       await expect(
         page.getByText(
-          'MotorFix · Bucharest · 2 garages are waiting for verification',
+          'MotorFix · Whole country · 2 garages are waiting for verification',
         ),
       ).toBeVisible();
       await expect(
@@ -339,7 +339,9 @@ test('switches the admin header and counter to English without a reload', async 
   await page.setViewportSize({ height: 800, width: 1280 });
   await page.goto('/app/admin');
   await expect(
-    page.getByText('MotorFix · București · 2 service‑uri așteaptă verificarea'),
+    page.getByText(
+      'MotorFix · Toată țara · 2 service‑uri așteaptă verificarea',
+    ),
   ).toBeVisible();
   await page.evaluate(() => {
     (window as unknown as { kept: boolean }).kept = true;
@@ -352,7 +354,7 @@ test('switches the admin header and counter to English without a reload', async 
 
   await expect(
     page.getByText(
-      'MotorFix · Bucharest · 2 garages are waiting for verification',
+      'MotorFix · Whole country · 2 garages are waiting for verification',
     ),
   ).toBeVisible();
   await expect(

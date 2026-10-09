@@ -1,6 +1,7 @@
 import {
   ADDRESS_MAX,
   inRomania,
+  LOCALITY_MAX,
   PLACE_SUGGESTIONS_MAX,
 } from '@motor-fix/contracts/place-section';
 import { Logger } from '@nestjs/common';
@@ -16,16 +17,23 @@ const TIMEOUT_MS = 3000;
 
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 
+// The row's town, when it is text the place section would keep.
+const localityOf = (city: unknown) => {
+  const locality = typeof city === 'string' ? city.trim() : '';
+  return locality.length <= LOCALITY_MAX ? locality : '';
+};
+
 const suggestionOf = (row: unknown): PlaceSuggestion | null => {
   if (typeof row !== 'object' || row === null) return null;
-  const { formatted, lat, lon } = row as Record<string, unknown>;
+  const { city, formatted, lat, lon } = row as Record<string, unknown>;
   const label = typeof formatted === 'string' ? formatted.trim() : '';
   // A label the address field would refuse is no suggestion.
   if (!label || label.length > ADDRESS_MAX) return null;
   if (typeof lat !== 'number' || typeof lon !== 'number') return null;
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !inRomania(lat, lon))
     return null;
-  return { label, lat, lng: lon };
+  const locality = localityOf(city);
+  return { label, lat, lng: lon, ...(locality && { locality }) };
 };
 
 // Geoapify's address autocomplete, asked for Romania only. Its log lines and

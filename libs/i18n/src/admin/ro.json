@@ -7,6 +7,7 @@
     "answerRate": "Rată de răspuns",
     "bookings": "Programări",
     "garagesListed": "Service‑uri listate",
+    "inPeriod": "{sign}{n} {period}",
     "observability": "Observabilitate",
     "observabilityNewTab": "{name}, se deschide într‑o filă nouă",
     "reportedReviews": "Recenzii raportate",

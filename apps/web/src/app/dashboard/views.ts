@@ -1,7 +1,6 @@
 import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
-import { AdminPanel } from './admin-panel/admin-panel';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view/push-view';
@@ -72,7 +71,13 @@ export const DASHBOARDS: Record<
     tag: 'shell.frame.area.admin',
     views: [
       // The admin bar says Dashboard in English, where the others say Home.
-      { ...HOME, body: AdminPanel, tab: 'shell.frame.tab.overview' },
+      // Loaded with its view: the figures' choice stays out of the first page.
+      {
+        ...HOME,
+        load: () =>
+          import('./admin-panel/admin-panel').then((m) => m.AdminPanel),
+        tab: 'shell.frame.tab.overview',
+      },
       {
         capability: 'admin.garages',
         counter: 'garagesWaiting',

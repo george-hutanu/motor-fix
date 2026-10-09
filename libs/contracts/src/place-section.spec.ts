@@ -2,6 +2,7 @@ import {
   ADDRESS_MAX,
   inRomania,
   isPlaceSection,
+  LOCALITY_MAX,
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
   PLACE_SEARCH_MIN,
   PLACE_ZOOM,
@@ -12,6 +13,7 @@ import {
 
 const BUCHAREST = { lat: 44.4268, lng: 26.1025 };
 
+// @traces 163-FR-005
 describe('the place section guard', () => {
   it.each([
     {},
@@ -23,6 +25,8 @@ describe('the place section guard', () => {
     { radiusKm: 1 },
     { radiusKm: 100 },
     { lat: 60, lng: 10 },
+    { address: 'Strada Exemplu 2', ...BUCHAREST, locality: 'Cluj-Napoca' },
+    { locality: 'x'.repeat(LOCALITY_MAX) },
   ])('keeps %j', (section) => {
     expect(isPlaceSection(section)).toBe(true);
   });
@@ -43,6 +47,8 @@ describe('the place section guard', () => {
     ['a radius of 101', { radiusKm: 101 }],
     ['a radius with a fraction', { radiusKm: 12.5 }],
     ['a radius as text', { radiusKm: '20' }],
+    ['a locality too long', { locality: 'x'.repeat(LOCALITY_MAX + 1) }],
+    ['a locality that is not text', { locality: 7 }],
   ])('refuses %s', (_, section) => {
     expect(isPlaceSection(section)).toBe(false);
   });

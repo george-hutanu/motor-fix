@@ -21,6 +21,7 @@ features:
   - 397-listing-ticks
   - 307-public-garage-profile
   - 206-documents-declaration
+  - 163-figures-period-city
 ---
 
 # Capability: Garage listing
