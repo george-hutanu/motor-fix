@@ -4,7 +4,7 @@
       0,
       1fr
     );
-  gap: 6px var(--mf-space-4);
+  gap: 8px var(--mf-space-4);
   align-items: start;
   padding: var(--mf-space-3) var(--mf-space-2);
   border-top: 1px solid var(--mf-line);
