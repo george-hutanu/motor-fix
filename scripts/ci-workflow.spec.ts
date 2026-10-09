@@ -1,4 +1,5 @@
 // @traces 875-FR-005 875-FR-006
+// @traces 879-FR-015
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -91,6 +92,7 @@ describe('ci workflow', () => {
       'Observability inventory',
       'node scripts/observability-inventory.ts',
     ],
+    ['checks', 'Dashboard check', 'node scripts/dashboard-check.ts'],
     ['checks', 'Harness', 'npm run test:harness'],
     ['checks', 'Structure', 'node scripts/structure-check.ts'],
     ['checks', 'Dependency audit', 'npm audit --omit=dev --audit-level=high'],
@@ -170,7 +172,10 @@ describe('ci workflow', () => {
 
     expect(service).toMatch(/image: grafana\/otel-lgtm:\d+\.\d+\.\d+\n/);
     expect(service).toMatch(/profiles: \[observability\]/);
-    expect(compose.match(/profiles:/g)).toHaveLength(1);
+    expect(compose.match(/profiles: .*/g)).toEqual([
+      'profiles: [assistants]',
+      'profiles: [observability]',
+    ]);
   });
 
   it.each([

@@ -31,6 +31,7 @@ import type {
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
+import { countGarageSignUp } from '../../metrics/product-counters';
 import type { EmailConfig } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { INVITE_EMAIL } from '../staff-invite/staff-invite.service';
@@ -169,6 +170,9 @@ export class ListingDraftsService {
         updatedAt: at,
       },
     });
+    // The one garage onboarding action today; it moves to the use case that
+    // creates a garage account once there is one.
+    countGarageSignUp();
     const send = await this.issueSaved(draft, webUrl);
     return { ...saved(draft), token: browser.token, ...linkResult(send) };
   }

@@ -133,6 +133,7 @@
     {
       // Biome reads Angular templates as plain HTML: it cannot see the href that routerLink or a bound [href] writes on these links.
       "includes": [
+        "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
         "apps/web/src/app/dashboard/driver-home/driver-home.html",
         "apps/web/src/app/dashboard/due-date-line/due-date-line.html",
         "apps/web/src/app/dashboard/frame/frame.html",

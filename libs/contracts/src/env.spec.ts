@@ -1,6 +1,8 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
+// @traces 879-FR-017
 import {
   faroUrl,
+  grafanaUrl,
   PLACES_ENV,
   placesApiKey,
   publicWebUrl,
@@ -141,6 +143,31 @@ describe('faroUrl', () => {
     expect(run).toThrow(new Error('FARO_URL must be an absolute http(s) URL'));
     expect(run).not.toThrow(/secret-key|not-a-url/);
   });
+});
+
+describe('grafanaUrl', () => {
+  it('parses the stack URL', () => {
+    expect(grafanaUrl({ GRAFANA_URL: 'https://stack.grafana.net' })).toBe(
+      'https://stack.grafana.net/',
+    );
+  });
+
+  it('returns nothing when unset or empty', () => {
+    expect(grafanaUrl({})).toBeUndefined();
+    expect(grafanaUrl({ GRAFANA_URL: '' })).toBeUndefined();
+  });
+
+  it.each(['stack-secret', 'ftp://stack-secret.grafana.net'])(
+    'names the variable, never the value, for %s',
+    (value) => {
+      const run = () => grafanaUrl({ GRAFANA_URL: value });
+
+      expect(run).toThrow(
+        new Error('GRAFANA_URL must be an absolute http(s) URL'),
+      );
+      expect(run).not.toThrow(/stack-secret/);
+    },
+  );
 });
 
 describe('telemetry', () => {

@@ -1,3 +1,4 @@
+// @traces 879-FR-019
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -19,6 +20,7 @@ interface Answer {
   garagesApprovedThisMonth: number;
   activeDrivers: number;
   activeDriversMonthStart?: number;
+  observabilityUrl?: string;
 }
 
 const FIGURES: Answer = {
@@ -93,7 +95,56 @@ const text = (t: HTMLElement, part: 'number' | 'line') =>
 
 afterEach(() => TestBed.resetTestingModule());
 
+const GRAFANA = 'https://stack.grafana.net/d/motorfix-overview?var-env=test';
+const link = (element: HTMLElement) =>
+  element.querySelector<HTMLAnchorElement>('mf-admin-panel a.observability');
+
 describe('AdminPanel', () => {
+  it('links to the observability dashboards in a new tab, between the tiles and the growth panel', async () => {
+    answer = async () => ({ ...FIGURES, observabilityUrl: GRAFANA });
+    const element = await open();
+
+    const anchor = link(element) as HTMLAnchorElement;
+    expect(anchor.getAttribute('href')).toBe(GRAFANA);
+    expect(anchor.getAttribute('target')).toBe('_blank');
+    expect(anchor.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(anchor.textContent?.trim()).toBe('Observabilitate');
+    expect(anchor.getAttribute('aria-label')).toBe(
+      'Observabilitate, se deschide într‑o filă nouă',
+    );
+    const last = tiles(element).at(-1) as HTMLElement;
+    const growth = element.querySelector('mf-admin-growth') as Node;
+    expect(
+      last.compareDocumentPosition(anchor) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      anchor.compareDocumentPosition(growth) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('names the observability link in English', async () => {
+    answer = async () => ({ ...FIGURES, observabilityUrl: GRAFANA });
+    const element = await open('en');
+
+    const anchor = link(element) as HTMLAnchorElement;
+    expect(anchor.textContent?.trim()).toBe('Observability');
+    expect(anchor.getAttribute('aria-label')).toBe(
+      'Observability, opens in a new tab',
+    );
+  });
+
+  it('shows no observability link when the answer carries none', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    expect(link(element)).toBeNull();
+  });
+
+  it('shows no observability link while the figures load or after they fail', async () => {
+    answer = () => new Promise(() => undefined);
+    expect(link(await open())).toBeNull();
+  });
+
   it('places the growth panel under the six tiles, leaving the tiles as they were', async () => {
     answer = async () => FIGURES;
     const element = await open();

@@ -1,8 +1,18 @@
 import './telemetry';
 
-import { readEnv } from '@motor-fix/contracts/env';
+import { readEnv } from '@motor-fix/contracts';
 
-import { createServer } from './server';
+import { createMcpApp, MCP_ENV } from './mcp.module';
 
-readEnv([]);
-createServer().listen(Number(process.env['PORT'] ?? 3002));
+async function main() {
+  const env = readEnv(MCP_ENV);
+  const app = await createMcpApp({
+    databaseUrl: env.DATABASE_URL,
+    issuer: env.ASSISTANT_ISSUER,
+    mcpUrl: env.MCP_URL,
+  });
+  app.enableShutdownHooks();
+  await app.listen(Number(process.env['PORT'] ?? 3002));
+}
+
+void main();

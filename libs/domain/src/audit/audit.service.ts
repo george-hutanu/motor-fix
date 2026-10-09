@@ -57,6 +57,7 @@ export class AuditService implements AuditPort {
         kind: entry.kind,
         newValue: json(entry.newValue),
         oldValue: json(entry.oldValue),
+        requestId: entry.requestId,
         subjectId: entry.subjectId,
         subjectType: entry.subjectType,
         text: entry.text,

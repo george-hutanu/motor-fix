@@ -1,7 +1,8 @@
-import type { Env, StorageEnv } from '@motor-fix/contracts';
+import { type Env, grafanaUrl, type StorageEnv } from '@motor-fix/contracts';
 import {
   AdminAccountsModule,
   AuthModule,
+  assistantBroker,
   CarsModule,
   CatalogueModule,
   EmailConfirmationModule,
@@ -12,6 +13,7 @@ import {
   ListingPhotosModule,
   NotificationsModule,
   oauthSettings,
+  observabilityUrl,
   PasswordResetModule,
   PhoneSignInModule,
   PlacesModule,
@@ -34,6 +36,7 @@ type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL' | 'AUTH_TOKEN_SECRET'> &
 export class AppModule {
   static register(env: ApiEnv): DynamicModule {
     const auth = AuthModule.register({
+      assistant: assistantBroker(process.env),
       databaseUrl: env.DATABASE_URL,
       oauth: oauthSettings(env.APP_ENV, process.env),
       redisUrl: env.REDIS_URL,
@@ -53,6 +56,7 @@ export class AppModule {
       email,
       notifications,
       verificationConfig(env.APP_ENV, process.env),
+      observabilityUrl(grafanaUrl(process.env), env.APP_ENV),
     );
     return {
       imports: [

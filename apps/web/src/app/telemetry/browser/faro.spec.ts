@@ -44,6 +44,7 @@ beforeEach(async () => {
 
 const start = () =>
   startFaro({
+    environment: 'staging',
     router,
     url: 'https://faro.example/collect/key',
     version: 'abc1234',
@@ -52,11 +53,12 @@ const start = () =>
 const config = () => jest.mocked(initializeFaro).mock.calls[0]?.[0];
 
 describe('startFaro', () => {
-  it('sends to the collector as the web app at its release', () => {
+  // @traces 879-FR-002
+  it('sends to the collector as the web app at its release and environment', () => {
     start();
 
     expect(config()).toMatchObject({
-      app: { name: 'web', version: 'abc1234' },
+      app: { environment: 'staging', name: 'web', version: 'abc1234' },
       url: 'https://faro.example/collect/key',
     });
     expect((globalThis as Record<string, unknown>)['__faroBundleId_web']).toBe(

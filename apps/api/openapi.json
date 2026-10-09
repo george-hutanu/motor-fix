@@ -223,6 +223,155 @@
         ]
       }
     },
+    "/api/v1/auth/assistant/authorize": {
+      "get": {
+        "operationId": "AssistantController_authorize",
+        "parameters": [
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "nonce",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "response_type",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "code"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "client_id",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "To the web connect route"
+          },
+          "400": {
+            "description": "invalid_client, unsupported_response_type, invalid_request"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/assistant/approve": {
+      "post": {
+        "operationId": "AssistantController_approve",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAssistantSignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantApprovalDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request"
+          },
+          "410": {
+            "description": "request_expired"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/assistant/token": {
+      "post": {
+        "operationId": "AssistantController_token",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantTokenDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantTokensDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_grant, unsupported_grant_type"
+          },
+          "401": {
+            "description": "invalid_client"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/providers": {
       "get": {
         "operationId": "OauthController_providers",
@@ -3598,6 +3747,91 @@
           "role"
         ]
       },
+      "ApproveAssistantSignInDto": {
+        "type": "object",
+        "properties": {
+          "request": {
+            "type": "string",
+            "description": "The signed hand-off from the connect page address",
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "request"
+        ]
+      },
+      "AssistantApprovalDto": {
+        "type": "object",
+        "properties": {
+          "redirect": {
+            "type": "string",
+            "description": "The identity server's address, with the code and the state"
+          }
+        },
+        "required": [
+          "redirect"
+        ]
+      },
+      "AssistantTokenDto": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "example": "authorization_code",
+            "maxLength": 64
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "redirect_uri": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "client_id": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "client_secret": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "code_verifier": {
+            "type": "string",
+            "description": "Sent when the identity server uses PKCE; not checked",
+            "maxLength": 512
+          }
+        }
+      },
+      "AssistantTokensDto": {
+        "type": "object",
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "description": "HS256, signed with the client secret"
+          },
+          "access_token": {
+            "type": "string",
+            "description": "The same token as id_token"
+          },
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expires_in": {
+            "type": "number",
+            "example": 300
+          }
+        },
+        "required": [
+          "id_token",
+          "access_token",
+          "token_type",
+          "expires_in"
+        ]
+      },
       "ProvidersDto": {
         "type": "object",
         "properties": {
@@ -6825,6 +7059,11 @@
             "type": "integer",
             "description": "Active drivers on the 1st of the current month, absent when that night was not recorded",
             "minimum": 0
+          },
+          "observabilityUrl": {
+            "type": "string",
+            "description": "The MotorFix overview dashboard in Grafana for this API's environment, absent when Grafana is not configured",
+            "format": "uri"
           }
         },
         "required": [

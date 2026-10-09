@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
 
 import { VerificationService } from './verification.service';
@@ -15,6 +16,9 @@ import {
 
 // @traces 207-FR-001 207-FR-002 207-FR-003 207-FR-004 207-FR-008 207-FR-010
 
+const reader = countedMetrics();
+const approvals = (outcome: string) =>
+  counterTotal(reader, 'motorfix_garage_approvals_total', { outcome });
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
@@ -409,6 +413,27 @@ describe('deciding', () => {
         status: 400,
       });
       expect(await history(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 879-FR-009
+  it.each([
+    ['approved', { outcome: 'approved' as const }, 1],
+    ['rejected', { outcome: 'rejected' as const, reason: REASON }, 1],
+    [
+      'more_requested',
+      { outcome: 'more_requested' as const, reason: REASON },
+      0,
+    ],
+  ])(
+    'counts a %s decision under its outcome only when it is a verdict',
+    async (outcome, decision, times) => {
+      const before = await approvals(outcome);
+      const file = await fileIn('in_review');
+
+      await inTx((tx) => service().decide(tx, ioana, file.id, decision));
+
+      expect(await approvals(outcome)).toBe(before + times);
     },
   );
 

@@ -11,6 +11,8 @@ export interface AuditEntry {
   // Shown to others as the first name; read from the account when absent.
   actorName?: string;
   assistantGrantId?: string;
+  // The call that made the change; set for assistant calls.
+  requestId?: string;
   action: 'create' | 'update' | 'delete' | 'open';
   subjectType: string;
   subjectId: string;
