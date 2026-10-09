@@ -69,4 +69,10 @@ describe('activeFeature on the branch', () => {
     checkout('050-x');
     assert.equal(activeFeature(repo)?.name, '050-x');
   });
+
+  it('resolves a story numbered past 999', () => {
+    spec('1007-x');
+    checkout('1007-x');
+    assert.equal(activeFeature(repo)?.num, '1007');
+  });
 });
