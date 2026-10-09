@@ -185,8 +185,9 @@ test.describe('the response rate on a garage profile @seeded', () => {
     await arrived(ids.rated, 36, 2);
     await runTheNight();
 
+    // The polite announcer says the same text off screen (384-FR-008).
     await expect(
-      page.getByText('Răspunde la 92% din cereri într‑o zi'),
+      page.getByRole('main').getByText('Răspunde la 92% din cereri într‑o zi'),
     ).toBeVisible({ timeout: 15_000 });
     expect(navigations).toBe(0);
   });
