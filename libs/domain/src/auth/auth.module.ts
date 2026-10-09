@@ -7,8 +7,15 @@ import {
 import { APP_GUARD } from '@nestjs/core';
 import { Redis } from 'ioredis';
 
+import { AccountLoader } from './account-loader';
 import { AccountsService } from './accounts.service';
 import { ActorGuard, AUTH_OPTIONS, type AuthOptions } from './actor.guard';
+import { AssistantController } from './assistant/assistant.controller';
+import {
+  ASSISTANT_THROTTLE,
+  AssistantService,
+  assistantThrottle,
+} from './assistant/assistant.service';
 import { Attempts, AUTH_REDIS } from './attempts';
 import { AuthController } from './auth.controller';
 import { MAINTENANCE, maintenanceOff } from './maintenance';
@@ -49,11 +56,13 @@ export class AuthModule implements OnApplicationShutdown {
     return {
       controllers: [
         AuthController,
+        AssistantController,
         OauthController,
         MeController,
         AuditHistoryController,
       ],
       exports: [
+        AccountLoader,
         AccountsService,
         Attempts,
         AUTH_OPTIONS,
@@ -68,8 +77,10 @@ export class AuthModule implements OnApplicationShutdown {
       global: true,
       module: AuthModule,
       providers: [
+        AccountLoader,
         AccountsService,
         ActorGuard,
+        AssistantService,
         { provide: APP_GUARD, useExisting: ActorGuard },
         AuditHistoryService,
         OAuthService,
@@ -86,6 +97,11 @@ export class AuthModule implements OnApplicationShutdown {
           inject: [AUTH_REDIS],
           provide: Attempts,
           useFactory: (redis: Redis) => new Attempts(redis),
+        },
+        {
+          inject: [AUTH_REDIS],
+          provide: ASSISTANT_THROTTLE,
+          useFactory: assistantThrottle,
         },
         { provide: MAINTENANCE, useValue: maintenanceOff },
         { provide: AUDIT_PORT, useClass: AuditService },

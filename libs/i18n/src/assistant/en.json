@@ -1,0 +1,7 @@
+{
+  "connecting": "Connecting your assistant…",
+  "error": {
+    "text": "The connection request has expired or is no longer valid. Go back to your assistant and start connecting again.",
+    "title": "Could not connect your assistant"
+  }
+}

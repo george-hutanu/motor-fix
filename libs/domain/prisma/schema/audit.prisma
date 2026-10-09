@@ -36,6 +36,7 @@ model ActivityLog {
   actorName        String         @map("actor_name")
   viaAssistant     Boolean        @default(false) @map("via_assistant")
   assistantGrantId String?        @map("assistant_grant_id") @db.Uuid
+  requestId        String?        @map("request_id")
   garageId         String?        @map("garage_id") @db.Uuid
   carId            String?        @map("car_id") @db.Uuid
   jobId            String?        @map("job_id") @db.Uuid

@@ -61,6 +61,8 @@ model Account {
   reminders               Reminder[]
   cars                    Car[]
   consents                AccountConsent[]
+  assistantGrants         AssistantGrant[]
+  assistantSignInCodes    AssistantSignInCode[]
   quoteRequests           QuoteRequest[]
   declinedRecipients      RequestRecipient[]       @relation("RecipientDeclinedBy")
   bookings                Booking[]                @relation("BookingDriver")
