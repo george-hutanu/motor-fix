@@ -78,6 +78,16 @@ describe('SignInDialog', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  // @traces 261-FR-012
+  it('opens the dialog over the maintenance page when asked from /admin', async () => {
+    const { dialog, down, open } = setup(null, 'cancelled');
+    down.set(true);
+
+    await dialog.start({ overMaintenance: true });
+
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
   it('opens the dialog over the current screen for a visitor', async () => {
     const { dialog, open } = setup(null, 'cancelled');
 

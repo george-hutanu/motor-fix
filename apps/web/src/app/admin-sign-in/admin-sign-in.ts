@@ -16,7 +16,7 @@ export class AdminSignIn {
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       // A dialog that fails to open leaves the home page as it is.
       inject(SignInDialog)
-        .start()
+        .start({ overMaintenance: true })
         .catch(() => undefined);
     }
   }

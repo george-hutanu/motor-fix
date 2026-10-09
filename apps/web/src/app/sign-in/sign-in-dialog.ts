@@ -29,15 +29,18 @@ export class SignInDialog {
   // At most one sign-in dialog: whoever asks while it is open waits on it.
   private open: Promise<boolean> | null = null;
 
-  async start(): Promise<void> {
+  // overMaintenance: /admin, where admins sign in while the site is down.
+  async start({ overMaintenance = false } = {}): Promise<void> {
     const me = await this.session.load();
     if (me) {
       await this.router.navigateByUrl(me.landing);
       return;
     }
-    // The account read met maintenance: the page it showed stays, no dialog.
-    // Looked up only here, so screens that never ask need no platform client.
-    if (this.injector.get(PlatformStatus).showPage()) return;
+    // Elsewhere, an account read that met maintenance leaves its page, no
+    // dialog. Looked up only here, so screens that never ask need no client.
+    if (!overMaintenance && this.injector.get(PlatformStatus).showPage()) {
+      return;
+    }
     const signedIn = await this.dialog(false);
     // Read either way, so a closed dialog drops the address the area guard kept.
     const kept = this.session.takeReturnTo();

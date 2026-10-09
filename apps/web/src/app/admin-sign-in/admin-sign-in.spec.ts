@@ -29,6 +29,13 @@ describe('AdminSignIn', () => {
     expect(start).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 261-FR-012
+  it('asks for the dialog over the maintenance page too', () => {
+    const { start } = render();
+
+    expect(start).toHaveBeenCalledWith({ overMaintenance: true });
+  });
+
   it('opens no dialog while the page is rendered on the server', () => {
     const { element, start } = render('server');
 
