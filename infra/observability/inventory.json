@@ -196,7 +196,7 @@
       "source": "libs/domain/src/places/providers/geoapify-places.provider.ts",
       "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}; ST-880 the alerts",
+      "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}; ST-880 adds the alerts",
       "story": "ST-111"
     },
     {
@@ -224,7 +224,7 @@
       "source": "apps/web/src/app/telemetry/browser/faro.ts",
       "dashboard": "motorfix-web-vitals",
       "alerts": "none",
-      "reason": "the browser's collector; ST-880 the alerts",
+      "reason": "the browser's collector; ST-880 adds the alerts",
       "story": "ST-877"
     },
     {
