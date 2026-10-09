@@ -13,5 +13,7 @@ export const test = base.extend({
     // The browser telemetry collector: answered here, so nothing leaves.
     await context.route(COLLECTOR, (route) => route.fulfill({ status: 204 }));
     await use(context);
+    // Handlers still answering when the test ends must not outlive it.
+    await context.unrouteAll({ behavior: 'ignoreErrors' });
   },
 });

@@ -12,6 +12,18 @@ export const isHashedAsset = (url: URL, origin: string) =>
   /-[A-Za-z0-9]{8}\.(?:js|css|woff2)$/.test(url.pathname);
 
 async function serveFromCache(route: Route) {
+  try {
+    await answerFromCache(route);
+  } catch {
+    // The page or its context closed, or the test ended, while the asset was
+    // still loading: Playwright's route dispatcher has no catch, so a throw here
+    // fails the run as an error outside any test. Abort the request, as a lost
+    // connection would, and accept that a closed route cannot even be aborted.
+    await route.abort().catch(() => {});
+  }
+}
+
+async function answerFromCache(route: Route) {
   const url = route.request().url();
   let answer = answers.get(url);
   if (!answer) {
