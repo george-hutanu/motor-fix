@@ -319,6 +319,7 @@ describe('get_day_sheet answers', () => {
         },
       }),
     );
+    await client.listTools();
     const empty = await client.callTool({
       arguments: { mechanic: 'Costel' },
       name: 'get_day_sheet',
@@ -329,6 +330,8 @@ describe('get_day_sheet answers', () => {
     });
     expect(empty.isError).toBeFalsy();
     expect(refused.isError).toBe(true);
-    expect(refused.structuredContent).toMatchObject({ mechanics });
+    expect(
+      JSON.parse((refused.content as { text: string }[])[0].text),
+    ).toMatchObject({ code: 'mechanic_not_found', mechanics });
   });
 });

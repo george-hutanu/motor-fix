@@ -194,9 +194,15 @@ export function register(
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: await visibleTools(tools, caller, ctx),
   }));
-  server.setRequestHandler(CallToolRequestSchema, ({ params }) =>
-    observe(params.name, () =>
+  server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
+    const result = await observe(params.name, () =>
       callTool(tools, caller, ctx, params.name, params.arguments),
-    ),
-  );
+    );
+    // The client checks structuredContent against a declared output even on
+    // an error, so such a tool's refusal travels in its text alone.
+    const declared = tools.find((t) => t.name === params.name)?.outputSchema;
+    if (!(result.isError && declared)) return result;
+    const { structuredContent: _refusal, ...text } = result;
+    return text;
+  });
 }

@@ -190,6 +190,45 @@ describe('the MCP endpoint', () => {
     await client.close();
   });
 
+  // @traces 374-FR-003 374-FR-006
+  it('drops the lift and the day sheet when the garage switches them off', async () => {
+    const { id } = await newOwner();
+    const { garageId } = await prisma.garageMember.findFirstOrThrow({
+      where: { accountId: id },
+    });
+    await prisma.garageFeature.createMany({
+      data: [
+        { enabled: false, garageId, key: 'lift_schedule' },
+        { enabled: false, garageId, key: 'day_sheets' },
+      ],
+    });
+    const client = await connect(await tokenFor(id));
+
+    const { tools } = await client.listTools();
+    const sheet = await client.callTool({
+      arguments: { mechanic: 'Vlad' },
+      name: 'get_day_sheet',
+    });
+    const lift = await client.callTool({
+      arguments: { lift: 1 },
+      name: 'get_schedule',
+    });
+    const schedule = await client.callTool({
+      arguments: {},
+      name: 'get_schedule',
+    });
+
+    expect(tools.map((t) => t.name)).not.toContain('get_day_sheet');
+    const codeOf = (answer: typeof sheet) =>
+      JSON.parse((answer.content as { text: string }[])[0].text).code;
+    expect(codeOf(sheet)).toBe('not_found');
+    expect(codeOf(lift)).toBe('validation');
+    expect(schedule.isError).toBeFalsy();
+    expect(schedule.structuredContent).toMatchObject({ lifts: false });
+    expect(schedule.structuredContent).not.toHaveProperty('byLift');
+    await client.close();
+  });
+
   it('opens no session and echoes the request id', async () => {
     const { id } = await newAccount();
 

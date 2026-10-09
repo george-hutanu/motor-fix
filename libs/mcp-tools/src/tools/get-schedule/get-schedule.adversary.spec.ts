@@ -299,6 +299,9 @@ describe('get_schedule answers', () => {
         },
       }),
     );
+    // An assistant lists the tools first, and from then on its client checks
+    // every answer of the tool against the declared output.
+    await client.listTools();
     const empty = await client.callTool({
       arguments: {},
       name: 'get_schedule',
@@ -309,6 +312,8 @@ describe('get_schedule answers', () => {
     });
     expect(empty.isError).toBeFalsy();
     expect(bad.isError).toBe(true);
-    expect(bad.structuredContent).toMatchObject({ code: 'validation' });
+    expect(
+      JSON.parse((bad.content as { text: string }[])[0].text),
+    ).toMatchObject({ code: 'validation' });
   });
 });
