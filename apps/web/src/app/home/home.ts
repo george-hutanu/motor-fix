@@ -25,7 +25,7 @@ import {
   HomeService,
   PlacesService,
 } from '@motor-fix/data-access';
-import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -47,13 +47,7 @@ const report = (error: unknown) =>
     : null;
 
 @Component({
-  imports: [
-    BrandPicker,
-    BrandSearch,
-    LanguageSwitch,
-    RouterLink,
-    TranslatePipe,
-  ],
+  imports: [BrandPicker, BrandSearch, RouterLink, TranslatePipe],
   selector: 'mf-home',
   styleUrl: './home.css',
   templateUrl: './home.html',

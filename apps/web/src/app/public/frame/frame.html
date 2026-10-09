@@ -1,6 +1,16 @@
-<header class="top">
-  <button type="button" class="spartan-button spartan-button-variant-ghost" (click)="signIn.start()">
-    {{ 'public.signInButton' | t }}
+<header class="bar">
+  <a class="logo" [routerLink]="['/', i18n.language()]" [attr.aria-label]="'public.siteBar.home' | t">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5" /><path d="M12 12l4.5-4.5" /><circle cx="12" cy="12" r="1.4" fill="currentColor" /></svg>
+    <span>{{ 'shell.brand' | t }}</span>
+  </a>
+  <nav class="links" [attr.aria-label]="'public.siteBar.nav' | t">
+    <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.find' | t }}</a>
+    <button type="button" (click)="signIn.start()">{{ 'public.siteBar.signIn' | t }}</button>
+    <a class="list" [routerLink]="['/', i18n.language(), 'list-your-garage']">{{ 'public.siteBar.list' | t }}</a>
+  </nav>
+  <mf-language-switch />
+  <button type="button" class="account" [attr.aria-label]="'public.siteBar.account' | t" (click)="signIn.start()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4" /></svg>
   </button>
 </header>
 <main><router-outlet /></main>
