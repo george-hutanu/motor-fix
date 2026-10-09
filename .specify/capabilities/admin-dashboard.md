@@ -247,7 +247,7 @@ _From 261-maintenance-mode._
 
 _From 261-maintenance-mode._
 
-### 261-FR-015 — The MCP app holds no tool and no API client today (it serves only `/health/live`), so the rule holds by absence: there is no tool to call during maintenance and nothing to change. A tool added later MUST pass the API's `maintenance` answer through as a tool error naming maintenance (no flag read in the MCP app) and act on nothing.
+### 261-FR-015 — The MCP app reads the stored maintenance state itself (`storedMaintenance`, the `MAINTENANCE` provider in `apps/mcp/src/mcp.module.ts`), and its tool registry (`libs/mcp-tools/src/registry.ts`) refuses every acting tool while maintenance is on with the `maintenance` tool error, which names maintenance and says reading still works; read tools keep answering and nothing is changed.
 
 _From 261-maintenance-mode._
 
