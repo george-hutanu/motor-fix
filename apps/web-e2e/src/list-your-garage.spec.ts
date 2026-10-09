@@ -1,8 +1,12 @@
 import { expect, type Page } from '@playwright/test';
 
-import { settled } from './accounts.js';
+import { ownMap, settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
+
+// The place step's map draws the app's empty style: no outside tiles or WebGL
+// render moving the page after a jump has landed.
+test.beforeEach(({ context }) => ownMap(context));
 
 const steps = (page: Page, name: 'Pași' | 'Steps') =>
   page.getByRole('navigation', { name });
@@ -183,11 +187,26 @@ test.describe('on a desktop', () => {
       await open(page, '/ro/list-your-garage');
       await fill(page);
 
+      // Read where the heading is the moment the click has been handled: an
+      // instant jump has landed by then, a smooth one has not yet moved.
+      await page.evaluate(() =>
+        addEventListener(
+          'click',
+          () => {
+            const top = document
+              .querySelectorAll('section h2')[5]
+              .getBoundingClientRect().top;
+            (window as { landed?: boolean }).landed =
+              top >= 0 && top < innerHeight;
+          },
+          { once: true },
+        ),
+      );
       await entry(page, 'Verificare').click();
-      const y = await page.evaluate(() => scrollY);
-      await page.waitForTimeout(50);
 
-      expect(await page.evaluate(() => scrollY)).toBe(y);
+      expect(
+        await page.evaluate(() => (window as { landed?: boolean }).landed),
+      ).toBe(true);
       await expect(sections(page).nth(5)).toBeInViewport();
     });
   });
