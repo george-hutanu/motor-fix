@@ -1,7 +1,8 @@
 // Renders a Notion story or epic page as the Markdown of its GitHub issue:
-// every property, every block (sub-pages and inline databases included) and
-// every comment, with no Notion URL left in it. A link to another story or
-// epic becomes a reference token that the import resolves to `#<issue>`.
+// each property no GitHub field carries (as its own section), every block
+// (sub-pages and inline databases included) and every comment, with no
+// Notion URL left in it. A link to another story or epic becomes a reference
+// token that the import resolves to `#<issue>`.
 // It also reports what it could not account for, so the import can refuse
 // to write an incomplete issue.
 import { ISSUE_REPO, OWNER } from "./repos.mjs";
@@ -34,7 +35,7 @@ const STRUCTURE = new Set(["row", "table_of_contents", "breadcrumb", "divider", 
 
 /**
  * `ctx`: `keyOf(pageId)` the tracker key of a page or null, `titleOf(pageId)`,
- * `userOf(userId)`, `featureLink(pageId)` the URL of the feature's document or null.
+ * `userOf(userId)`.
  */
 export function renderer(ctx) {
   const seen = { blocks: new Set(), comments: new Set() };
@@ -296,7 +297,7 @@ export function renderer(ctx) {
       case "unique_id":
         return v ? (v.prefix ? `${v.prefix}-${v.number}` : String(v.number)) : "";
       case "relation":
-        return (v ?? []).map((r) => (ctx.keyOf(r.id) ? refToken(ctx.keyOf(r.id)) : relationText(prop, r.id))).join(", ");
+        return (v ?? []).map((r) => (ctx.keyOf(r.id) ? refToken(ctx.keyOf(r.id)) : relationText(r.id))).join(", ");
       case "formula":
         return v ? scrub(String(v[v.type] ?? (v.type === "date" ? (v.date?.start ?? "") : ""))) : "";
       case "rollup":
@@ -323,51 +324,39 @@ export function renderer(ctx) {
         return v === null || v === undefined ? "" : scrub(JSON.stringify(v));
     }
   }
-  const relationText = (prop, id) => {
+  const relationText = (id) => {
     const title = ctx.titleOf(id);
-    const text = title ? scrub(title) : "(an untitled Notion page)";
-    const link = prop._feature ? ctx.featureLink?.(id) : null;
-    return link ? `[${text}](${link})` : text;
+    return title ? scrub(title) : "(an untitled Notion page)";
   };
 
 
   return { rich, blocks, comments, propText, scrub, seen, gaps };
 }
 
-const LONG = (text) => text.length > 120 || text.includes("\n");
-
 /**
  * The issue body of one tracker page, with references as tokens, and what
- * it could not account for. `page` carries `properties`, and `content`
+ * it could not account for. No Properties table: `carried(name, prop)` names
+ * a property a native issue field or a Project field holds, and it stays out,
+ * as does every relation; any other non-empty property is a `## <name>` section. `page` carries `properties`, and `content`
  * (`blocks`, `comments`, `propFiles`) once the loader has read it.
  */
-export function renderPage(page, ctx, { head = [] } = {}) {
+export function renderPage(page, ctx, { head = [], carried = () => false } = {}) {
   const content = page.content ?? { blocks: [], comments: [] };
   const r = renderer({ ...ctx, failed: content.failed });
   const holder = { _propFiles: content.propFiles ?? {} };
   const properties = content.properties ?? page.properties ?? {};
-  const rows = [];
   const sections = [];
   const accounted = [];
   for (const [name, prop] of Object.entries(properties)) {
-    if (prop.type === "title") {
-      accounted.push(name);
-      continue;
-    }
-    if (prop.type === "relation" && name === "Feature") prop._feature = true;
-    const text = r.propText(prop, holder);
-    if (!text.trim() || prop.type === "button") {
-      accounted.push(name);
-      continue;
-    }
-    if (prop.type === "rich_text" && LONG(text)) sections.push(`## ${name}\n\n${text}`);
-    else rows.push(`| ${name} | ${text.replace(/\|/g, "\\|").replace(/\n/g, "<br>")} |`);
     accounted.push(name);
+    // The title is the issue's; a relation is a GitHub relationship or a field; a property a field carries stays out of the body.
+    if (prop.type === "title" || prop.type === "relation" || prop.type === "button" || carried(name, prop)) continue;
+    const text = r.propText(prop, holder);
+    if (text.trim()) sections.push(`## ${name}\n\n${text}`);
   }
   const body = r.blocks(content.blocks ?? []);
   const notes = r.comments(content.comments ?? []);
   const parts = [...head];
-  if (rows.length) parts.push(["## Properties", "", "| Property | Value |", "| --- | --- |", ...rows].join("\n"));
   parts.push(...sections);
   if (body) parts.push(`## Page\n\n${body}`);
   if (notes.length) parts.push(`## Notes from Notion\n\n${notes.join("\n")}`);

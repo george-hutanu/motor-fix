@@ -59,6 +59,7 @@ function epic(n, e) {
       Track: select(e.track),
       Timeline: date(e.start ?? null, e.end ?? null),
       "Blocked by": relation((e.blockedBy ?? []).map(epicId)),
+      Blocks: relation((e.blocks ?? []).map(epicId)),
       Owner: people([OWNER]),
       Goal: rich(SECRET),
       "Done when": rich(SECRET),
@@ -96,9 +97,9 @@ export const STORIES = [
 ];
 
 export const EPICS = [
-  epic(1, { title: "Foundations", status: "In progress", priority: "Highest", release: "1 - Launch", track: "Platform", start: "2026-10-12", end: "2026-12-04" }),
+  epic(1, { title: "Foundations", status: "In progress", priority: "Highest", release: "1 - Launch", track: "Platform", start: "2026-10-12", end: "2026-12-04", blocks: [2] }),
   epic(2, { title: "Garage side", status: "To do", priority: "High", release: "2 - Soon after", track: "Garage side", start: "2026-12-07", end: "2027-03-05", blockedBy: [1] }),
-  epic(3, { title: "Old launch", status: "Done", priority: "Medium", release: "3 - Later", track: "Driver side", start: "2026-01-05", end: "2026-02-06" }),
+  epic(3, { title: "Old launch", status: "Done", priority: "Medium", release: "3 - Later", track: "Driver side", start: "2026-01-05", end: "2026-02-06", blocks: [17] }),
   epic(17, { title: "Observability", status: "In progress", priority: "High", release: "1 - Launch", track: "Platform" }),
 ];
 

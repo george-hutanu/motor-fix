@@ -66,14 +66,12 @@ const plain = (id) => id.replaceAll("-", "");
 // @traces 1017-FR-010
 // @traces 1017-FR-015
 describe("issuePlans", () => {
-  it("maps a story to its title, a body carrying every property, labels, milestone, assignee and fields", async () => {
+  it("maps a story to its title, labels, milestone, assignee and fields, with no property repeated in the body", async () => {
     const { plans } = issuePlans(await tracker());
     const st1 = plans.find((p) => p.key === "ST-1");
     assert.equal(st1.title, "ST-1 Driver signs in");
-    assert.match(st1.body, /^<!-- motorfix:ST-1 -->\n\n## Properties\n/);
-    for (const row of ["| ID | ST-1 |", "| Issue type | Story |", `| Epic | ${refToken("EP-1")} |`, "| Story points | 3 |", "| Assignee | George |", "| Labels | front end |", "| Role | Driver |", "| Ready to work | No |", `| User story | ${SECRET} |`, `| Took | ${SECRET} |`, "| Feature | (an untitled Notion page) |"]) {
-      assert.ok(st1.body.includes(row), row);
-    }
+    assert.equal(st1.body, "<!-- motorfix:ST-1 -->");
+    assert.ok(!st1.body.includes("## Properties") && !st1.body.includes(SECRET) && !st1.body.includes(refToken("EP-1")));
     assert.deepEqual(st1.gaps, []);
     assert.ok(!/notion\.(so|com|site)/i.test(st1.body));
     assert.deepEqual(st1.labels, ["type: story", "EP-1", "area: front end", "role: Driver"]);
@@ -230,6 +228,7 @@ describe("a full import", () => {
     assert.deepEqual(children("EP-17"), ["ST-6"]);
     assert.deepEqual(gh.state.blockedBy.get(issueOf(gh, "ST-7").number), [issueOf(gh, "ST-1").id]);
     assert.deepEqual(gh.state.blockedBy.get(issueOf(gh, "EP-2").number), [issueOf(gh, "EP-1").id]);
+    assert.deepEqual(gh.state.blockedBy.get(issueOf(gh, "EP-17").number), [issueOf(gh, "EP-3").id]);
   });
 
   it("adds a Closes line to an open story's open PR and leaves a merged one alone", async () => {
@@ -268,11 +267,10 @@ describe("a full import", () => {
     const gh = await bootstrapped();
     await importInto(gh);
     for (const issue of gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body))) {
-      assert.match(issue.body, /^<!-- motorfix:(ST|EP)-\d+ -->\n/);
-      assert.ok(issue.body.includes(SECRET), issue.title);
+      assert.match(issue.body, /^<!-- motorfix:(ST|EP)-\d+ -->(\n|$)/);
+      assert.ok(!issue.body.includes("## Properties"), issue.title);
       assert.ok(!issue.body.includes("\uE000"), "a reference token left unresolved");
     }
-    assert.match(issueOf(gh, "ST-1").body, new RegExp(`\\| Epic \\| #${issueOf(gh, "EP-1").number} \\|`));
     for (const w of gh.requests ?? gh.writes()) assert.ok(!/notion\.(so|com|site)/i.test(JSON.stringify(w.body ?? "")));
   });
 
@@ -355,7 +353,7 @@ describe("running it again", () => {
     assert.equal(nonGets(gh, from).length, 0);
   });
 
-  it("gives a story whose feature document appears its link, and the next run writes nothing", async () => {
+  it("gives a story whose feature document appears its link in the Feature field, and the next run writes nothing", async () => {
     const gh = await bootstrapped();
     await importInto(gh, { tracker: await tracker() });
     const t = await tracker();
@@ -365,9 +363,8 @@ describe("running it again", () => {
     await importInto(gh, { tracker: t });
     const writes = nonGets(gh, from);
     assert.equal(writes.length, 1);
-    assert.equal(writes[0].method, "PATCH");
-    assert.deepEqual(Object.keys(writes[0].body), ["body"]);
-    assert.match(issueOf(gh, "ST-1").body, /\| Feature \| \[\(an untitled Notion page\)\]\(https:\/\/github\.com\/george-hutanu\/motor-fix-specs\/blob\/trunk\/docs\/features\/sign-in\.md\) \|/);
+    assert.equal(writes[0].op, "SetFields");
+    assert.equal(itemValues(gh, "ST-1").Feature, "https://github.com/george-hutanu/motor-fix-specs/blob/trunk/docs/features/sign-in.md");
     const again = gh.writes().length;
     await importInto(gh, { tracker: t });
     assert.equal(gh.writes().length, again);
@@ -377,7 +374,7 @@ describe("running it again", () => {
     const gh = await bootstrapped({ issues: [{ number: 5, title: "ST-1 Driver signs in (by hand)", body: "typed by a person, see https://www.notion.so/x-0123456789abcdef0123456789abcdef", labels: ["type: story"] }] });
     await importInto(gh);
     const adopted = gh.state.issues.find((i) => i.number === 5);
-    assert.match(adopted.body, /^<!-- motorfix:ST-1 -->\n\n## Properties/);
+    assert.match(adopted.body, /^<!-- motorfix:ST-1 -->\n<!-- motorfix:adopted -->/);
     assert.match(adopted.body, /<!-- motorfix:adopted -->\n\ntyped by a person, see \(a Notion page\)$/);
     assert.equal(adopted.title, "ST-1 Driver signs in (by hand)");
     assert.equal(gh.state.issues.filter((i) => /^ST-1\b/.test(i.title)).length, 1);
@@ -478,7 +475,7 @@ describe("guards", () => {
     assert.equal(exit, 0);
     assert.equal(nonGets(gh, from).length, 0);
     assert.ok(lines.some((l) => /^read\s+notion: 8 stories, 4 epics/.test(l)));
-    assert.ok(lines.some((l) => /^plan\s+create 12 · adopt 0 · update 0 · add-item 12 · set-fields 12 · close 2 · reopen 0 · relink \d+ · sub-issue 7 · blocked-by 3 · pr-closes 1$/.test(l)));
+    assert.ok(lines.some((l) => /^plan\s+create 12 · adopt 0 · update 0 · add-item 12 · set-fields 12 · close 2 · reopen 0 · relink \d+ · sub-issue 7 · blocked-by 4 · pr-closes 1$/.test(l)));
     assert.ok(lines.some((l) => /^bodies\s+12 pages, [\d,]+ characters; 0 too long for an issue/.test(l)));
     assert.ok(lines.some((l) => /^titles\s+\(12\)$/.test(l)));
     assert.ok(lines.some((l) => l.trim() === "ST-4 Ask `@alice` about the logs"));
@@ -840,6 +837,39 @@ describe("stories attached to their epic", () => {
       assert.ok((gh.state.subIssues.get(issueOf(gh, "EP-1").number) ?? []).includes(issue.id), `${key} sub-issue`);
     }
     assert.ok(p.items.length === 12);
+  });
+
+  it("links each item to its parent, children, blockers and the items it blocks as it is written, before the lap ends", async () => {
+    const gh = await bootstrapped();
+    // ST-2 ST-5 ST-7 ST-1 (+ ST-7 blocked by it) ST-8 ST-4 ST-6, then EP-1 and its four written stories: 29 steps.
+    const { exit, lines } = await importInto(gh, { budget: 29 });
+    assert.equal(exit, 3);
+    const children = (key) => (gh.state.subIssues.get(issueOf(gh, key).number) ?? []).map((id) => gh.state.issues.find((i) => i.id === id).title.split(" ")[0]).sort();
+    assert.deepEqual(children("EP-1"), ["ST-1", "ST-5", "ST-7", "ST-8"]);
+    assert.deepEqual(gh.state.blockedBy.get(issueOf(gh, "ST-7").number), [issueOf(gh, "ST-1").id]);
+    assert.ok(!issueOf(gh, "EP-2"));
+    assert.ok(lines.some((l) => /^sub-issue\s+ST-8 under #/.test(l)) && !lines.some((l) => /^create\s+EP-2\b/.test(l)));
+    const two = await importInto(gh);
+    assert.equal(two.exit, 0);
+    assert.deepEqual(children("EP-1"), ["ST-1", "ST-3", "ST-5", "ST-7", "ST-8"]);
+    assert.deepEqual(children("EP-2"), ["ST-2"]);
+    for (const [, ids] of [...gh.state.subIssues, ...gh.state.blockedBy]) assert.equal(new Set(ids).size, ids.length, "a link posted twice");
+    const before = gh.writes().length;
+    assert.equal((await importInto(gh)).exit, 0);
+    assert.equal(gh.writes().length, before);
+  });
+
+  it("rewrites a body an earlier run wrote with a Properties table", async () => {
+    const gh = await bootstrapped();
+    await importInto(gh);
+    const fresh = issueOf(gh, "ST-1").body;
+    issueOf(gh, "ST-1").body = `${fresh}\n\n## Properties\n\n| Property | Value |\n| --- | --- |\n| Took | x |`;
+    const from = gh.writes().length;
+    await importInto(gh);
+    const writes = nonGets(gh, from);
+    assert.equal(writes.length, 1);
+    assert.deepEqual(Object.keys(writes[0].body), ["body"]);
+    assert.equal(issueOf(gh, "ST-1").body, fresh);
   });
 });
 

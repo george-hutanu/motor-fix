@@ -1,8 +1,9 @@
 // Copies the Notion backlog into the MotorFix GitHub Project, one way: an
 // issue per story and epic in the private motor-fix-specs (repos.mjs) that
-// carries the whole page (every property, every block, every comment, its
-// files), its Project fields, sub-issues, dependencies and a Closes line on
-// an open story's PR. No Notion address is written: links to other stories
+// carries the whole page (every block, every comment, its files; a property
+// only when no issue or Project field holds it), its Project fields, its
+// relationships (parent, blocked by), set as each item is written, and a
+// Closes line on an open story's PR. No Notion address is written: links to other stories
 // and epics become #<issue> references. Pages are written while the rest are
 // still being read; a page the import cannot carry in full is never written
 // (listed as `incomplete`, exit 1). Every run replans from what GitHub holds,
@@ -95,6 +96,17 @@ export function plainValue(prop) {
   }
 }
 
+// The Notion properties a native issue field (title, labels, assignee, milestone, state, parent, blocked by) or a Project field holds: kept out of the body.
+const STORY_FIELDS = new Set(["ID", "Story", "Issue type", "Status", "Priority", "Epic", "Assignee", "Labels", "Role", "Fix version", "PR", "Feature", "Component", "Design", "Design boards", "Ready to work", "Started", "QA from", "Merged at", "Date", "Work", "Story points", "Session", "User story", "Took", "Place"]);
+const EPIC_FIELDS = new Set(["ID", "Epic", "Status", "Priority", "Owner", "Release", "Track", "Timeline", "Features", "Design", "Design boards", "Goal", "Done when", "Weeks", "Story points", "Story count"]);
+/** A property a field holds whole: one a text field would cut short keeps its section in the body too. */
+const carriedBy = (names) => (name, prop) => {
+  if (!names.has(name)) return false;
+  const v = plainValue(prop);
+  const text = Array.isArray(v) ? v.join(", ") : typeof v === "string" ? v : "";
+  return text.replace(/\s+/g, " ").trim().length <= TEXT_MAX;
+};
+
 /** A value for a Project text field: lists joined, one line, no Notion address, at most TEXT_MAX characters. */
 const textOf = (value) => {
   if (value === null || value === undefined) return null;
@@ -133,15 +145,16 @@ export function issuePlans(tracker) {
     keyOf: (id) => keyById.get(plainId(id)) ?? null,
     titleOf: (id) => titleById.get(plainId(id)) ?? otherTitle(id),
     userOf: (id) => tracker.users?.get(id) ?? null,
-    featureLink: (id) => {
-      const path = tracker.docs?.get(plainId(id));
-      return path ? fileUrl(path) : null;
-    },
+  };
+  /** The URL of a feature's document in motor-fix-specs docs/ (ST-1018), or null. */
+  const docLink = (id) => {
+    const path = tracker.docs?.get(plainId(id));
+    return path ? fileUrl(path) : null;
   };
   /** The body (with reference tokens), what could not be carried, and the file a too-long page is kept in. */
-  const page = (r, head) => {
+  const page = (r, head, carried) => {
     if (!r.content) return { body: head.join("\n"), gaps: ["the page's content was not read"], file: null };
-    const { body, gaps } = renderPage({ properties: r.properties, content: r.content }, ctx, { head: [head.join("\n")] });
+    const { body, gaps } = renderPage({ properties: r.properties, content: r.content }, ctx, { head: [head.join("\n")], carried });
     if (body.length <= BODY_LIMIT) return { body, gaps, file: null };
     const path = `tracker/${r.key}/issue.md`;
     const rest = body.slice(head.join("\n").length).trimStart();
@@ -156,21 +169,22 @@ export function issuePlans(tracker) {
    * The page's body now when its content is in, else a `render()` the import
    * calls once the page has been read (body stays null until then).
    */
-  const rendered = (r, head) => {
+  const rendered = (r, head, fields) => {
+    const carried = carriedBy(fields);
     const parts = { record: r, body: null, gaps: [], file: null };
     parts.render = function () {
-      Object.assign(this, page(r, head));
+      Object.assign(this, page(r, head, carried));
       return this;
     };
-    return r.content ? { ...parts, ...page(r, head) } : parts;
+    return r.content ? { ...parts, ...page(r, head, carried) } : parts;
   };
   /** A property of the record, read whole when its content is in (Notion cuts long values short in a query). */
   const of = (r, name) => plainValue(r.content?.properties?.[name] ?? r.properties?.[name]);
   const features = (r, name = "Feature") => of(r, name) ?? [];
-  /** The features' names, known once the page naming them has been read; null until then. */
+  /** The features' names, each with its document's link when there is one; null until every feature is named or linked. */
   const featureText = (r, name) => {
     const ids = features(r, name);
-    const named = ids.map((id) => ctx.titleOf(id)).filter(Boolean);
+    const named = ids.map((id) => [ctx.titleOf(id), docLink(id)].filter(Boolean).join(" ")).filter(Boolean);
     return ids.length && named.length === ids.length ? textOf(named) : null;
   };
   const statusOf = new Map(tracker.stories.map((s) => [s.key, s.status]));
@@ -204,7 +218,7 @@ export function issuePlans(tracker) {
     return {
       key: s.key,
       title: titled(s.key, s.title),
-      ...rendered(s, [`<!-- motorfix:${s.key} -->`, ...(pr ? [`PR: ${pr[0]}`] : [])]),
+      ...rendered(s, [`<!-- motorfix:${s.key} -->`, ...(pr ? [`PR: ${pr[0]}`] : [])], STORY_FIELDS),
       labels: [`type: ${type.toLowerCase()}`, ...(epic ? [epic] : []), ...s.labels.map((l) => `area: ${l}`), ...(s.role ? [`role: ${s.role}`] : [])],
       milestone: epicByKey.get(epic)?.release ?? null,
       assignee: s.assignee,
@@ -255,7 +269,7 @@ export function issuePlans(tracker) {
     return {
       key: e.key,
       title: titled(e.key, e.title),
-      ...rendered(e, [`<!-- motorfix:${e.key} -->`]),
+      ...rendered(e, [`<!-- motorfix:${e.key} -->`], EPIC_FIELDS),
       labels: ["epic", ...(e.track ? [`track: ${e.track}`] : [])],
       milestone: e.release ?? null,
       assignee: e.assignee,
@@ -375,9 +389,10 @@ function deferred() {
 /**
  * Imports the tracker. Pages are read (by `load`, in import order) while the
  * pages already read are written: each page's create/adopt/update, add-item
- * and set-fields run as soon as it is read and carried whole; the steps that
- * need other issues (relink, close/reopen, sub-issue, blocked-by, pr-closes)
- * run once every page has had its turn. A page that cannot be carried whole is
+ * and set-fields run as soon as it is read and carried whole, followed by its
+ * sub-issue and blocked-by links to every issue that already exists; the steps
+ * that need other issues (relink, close/reopen, pr-closes, and the links whose
+ * other end came later) run once every page has had its turn. A page that cannot be carried whole is
  * never written: it is listed as `incomplete`, the others are still written,
  * and the run exits 1. `--dry-run` reads everything and writes nothing.
  */
@@ -525,6 +540,60 @@ export async function runImport({
     return steps;
   }
 
+  // The links each issue has on GitHub, read once per issue and kept current as the run adds to them: parent key → sub-issue ids, key → blocked-by ids.
+  const subIssues = new Map();
+  const blockedBy = new Map();
+  const linksOf = async (cache, key, path) => {
+    if (!cache.has(key)) {
+      const found = issue.get(key);
+      cache.set(key, found ? (await github.pages(`issues/${found.number}/${path}`)).map((i) => i.id) : []);
+    }
+    return cache.get(key);
+  };
+  const subIssueStep = (child, parent, have) => ({
+    kind: "sub-issue",
+    key: child,
+    run: async () => {
+      const number = issue.get(parent).number;
+      const id = issue.get(child).id;
+      await github.rest("POST", `issues/${number}/sub_issues`, { sub_issue_id: id }, { idempotent: true });
+      have.push(id);
+      return `under #${number}`;
+    },
+  });
+  const blockedByStep = (blocked, blocker, have) => ({
+    kind: "blocked-by",
+    key: blocked,
+    run: async () => {
+      const id = issue.get(blocker).id;
+      await github.rest("POST", `issues/${issue.get(blocked).number}/dependencies/blocked_by`, { issue_id: id }, { idempotent: true });
+      have.push(id);
+      return blocker;
+    },
+  });
+  const linked = (have, key) => issue.has(key) && have.includes(issue.get(key).id);
+
+  /**
+   * The item's relationships whose other end already has an issue, run right
+   * after the item's own steps: its parent and the children that exist, its
+   * blockers and the items it blocks (GitHub shows Blocking from those).
+   */
+  async function linkSteps(plan) {
+    const steps = [];
+    const self = plan.key;
+    const families = [...(plan.parent && issue.has(plan.parent) ? [[self, plan.parent]] : []), ...plans.filter((c) => c.parent === self && issue.has(c.key)).map((c) => [c.key, self])];
+    for (const [child, parent] of families) {
+      const have = await linksOf(subIssues, parent, "sub_issues");
+      if (!linked(have, child)) steps.push(subIssueStep(child, parent, have));
+    }
+    const pairs = [...plan.blockers.filter((b) => issue.has(b)).map((b) => [self, b]), ...plans.filter((d) => d.blockers.includes(self) && issue.has(d.key)).map((d) => [d.key, self])];
+    for (const [blocked, blocker] of pairs) {
+      const have = await linksOf(blockedBy, blocked, "dependencies/blocked_by");
+      if (!linked(have, blocker)) steps.push(blockedByStep(blocked, blocker, have));
+    }
+    return steps;
+  }
+
   /** The steps that need other issues: planned once every page has had its turn (and, for the plan line, before). */
   async function lateSteps(report) {
     const steps = [];
@@ -555,33 +624,17 @@ export async function runImport({
       });
     }
 
-    const linked = async (key, path) => {
-      const found = issue.get(key);
-      return found ? (await github.pages(`issues/${found.number}/${path}`)).map((i) => i.id) : [];
-    };
-    // An end that will not exist (a page left behind with no issue yet) is not linked this run.
+    // What the items' own steps did not link: an end written after the other, or one a network error held back. An end that will not exist is not linked this run.
     const absent = (key) => (incomplete.has(key) || skipped.has(key)) && !issue.has(key);
-    const children = new Map();
     for (const plan of plans.filter((p) => p.parent)) {
       if (absent(plan.key) || absent(plan.parent)) continue;
-      if (!children.has(plan.parent)) children.set(plan.parent, await linked(plan.parent, "sub_issues"));
-      if (issue.has(plan.key) && children.get(plan.parent).includes(issue.get(plan.key).id)) continue;
-      step("sub-issue", plan.key, async () => {
-        const parent = issue.get(plan.parent).number;
-        await github.rest("POST", `issues/${parent}/sub_issues`, { sub_issue_id: issue.get(plan.key).id }, { idempotent: true });
-        return `under #${parent}`;
-      });
+      const have = await linksOf(subIssues, plan.parent, "sub_issues");
+      if (!linked(have, plan.key)) steps.push(subIssueStep(plan.key, plan.parent, have));
     }
     for (const plan of plans.filter((p) => p.blockers.length)) {
       if (absent(plan.key)) continue;
-      const have = await linked(plan.key, "dependencies/blocked_by");
-      for (const blocker of plan.blockers) {
-        if (absent(blocker) || (issue.has(blocker) && have.includes(issue.get(blocker).id))) continue;
-        step("blocked-by", plan.key, async () => {
-          await github.rest("POST", `issues/${issue.get(plan.key).number}/dependencies/blocked_by`, { issue_id: issue.get(blocker).id }, { idempotent: true });
-          return blocker;
-        });
-      }
+      const have = await linksOf(blockedBy, plan.key, "dependencies/blocked_by");
+      for (const blocker of plan.blockers) if (!absent(blocker) && !linked(have, blocker)) steps.push(blockedByStep(plan.key, blocker, have));
     }
     for (const plan of plans.filter((p) => p.pr && p.state === "open")) {
       if (incomplete.has(plan.key) || absent(plan.key)) continue;
@@ -757,7 +810,7 @@ export async function runImport({
       continue;
     }
     if (steps.length && (plan.file || hasFiles(plan.record))) await publish(plan.file ? [plan.file] : [], plan.key);
-    const result = await runSteps(steps, { page: true });
+    const result = await runSteps([...steps, ...(await linkSteps(plan))], { page: true });
     if (result !== true) return result;
     if (!skipped.has(plan.key)) writtenPages++;
   }

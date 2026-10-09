@@ -311,7 +311,7 @@ describe("public repository hygiene", () => {
     const { exit } = await importInto(gh);
     assert.equal(exit, 0);
     const body = gh.state.issues.find((i) => i.number === 3).body;
-    assert.match(body, /^<!-- motorfix:ST-1 -->\n\n## Properties/);
+    assert.equal(body, "<!-- motorfix:ST-1 -->");
     assert.ok(!/notion\./i.test(body));
   });
 

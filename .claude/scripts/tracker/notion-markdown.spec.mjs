@@ -71,28 +71,40 @@ describe("renderPage", () => {
     assert.equal(resolveRefs(refToken("ST-2"), () => null), "ST-2");
   });
 
-  it("puts every non-empty property in a table, long text in its own section, and skips empty ones", () => {
+  it("writes no Properties table: a property a GitHub field carries, a relation or an empty one stays out, any other gets its own section", () => {
+    const properties = {
+      Story: { type: "title", title: [t("Driver signs in")] },
+      Took: { type: "rich_text", rich_text: [t("2 h")] },
+      "User story": { type: "rich_text", rich_text: [t("As a driver\nI want to sign in")] },
+      Place: { type: "place", place: { name: "Garage", lat: 44.4, lon: 26.1 } },
+      Assignee: { type: "people", people: [{ id: "u1" }] },
+      Feature: { type: "relation", relation: [{ id: "f1" }] },
+      Epic: { type: "relation", relation: [{ id: ST2 }] },
+      Blocking: { type: "relation", relation: [{ id: ST2 }] },
+      "Build brief": { type: "rich_text", rich_text: [t("Screens\nand states")] },
+      Design: { type: "url", url: null },
+      Session: { type: "select", select: null },
+      Run: { type: "button", button: {} },
+    };
+    const carried = new Set(["Took", "User story", "Place", "Assignee"]);
+    const { body, gaps } = renderPage({ properties, content: { blocks: [], comments: [] } }, ctx, { head: ["<!-- motorfix:ST-1 -->"], carried: (name) => carried.has(name) });
+    assert.deepEqual(gaps, []);
+    assert.equal(body, "<!-- motorfix:ST-1 -->\n\n## Build brief\n\nScreens\nand states");
+    assert.deepEqual(refsOf(body), []);
+  });
+
+  it("gives every property it is not told a field carries a section of its own, still never a relation", () => {
     const { body, gaps } = render([], {
       properties: {
-        Story: { type: "title", title: [t("Driver signs in")] },
         Took: { type: "rich_text", rich_text: [t("2 h")] },
-        "User story": { type: "rich_text", rich_text: [t("As a driver\nI want to sign in")] },
-        Place: { type: "place", place: { name: "Garage", lat: 44.4, lon: 26.1 } },
-        Assignee: { type: "people", people: [{ id: "u1" }] },
         Date: { type: "date", date: { start: "2026-10-01", end: "2026-10-03" } },
         Feature: { type: "relation", relation: [{ id: "f1" }] },
-        Epic: { type: "relation", relation: [{ id: ST2 }] },
-        Component: { type: "rollup", rollup: { type: "array", array: [{ type: "select", select: { name: "API" } }] } },
-        Design: { type: "url", url: null },
-        Session: { type: "select", select: null },
       },
     });
     assert.deepEqual(gaps, []);
-    for (const row of ["| Took | 2 h |", "| Place | Garage · 44.4, 26.1 |", "| Assignee | George |", "| Date | 2026-10-01 → 2026-10-03 |", "| Feature | Sign-in feature |", `| Epic | ${refToken("ST-2")} |`, "| Component | API |"]) {
-      assert.ok(body.includes(row), row);
-    }
-    assert.ok(body.includes("## User story\n\nAs a driver\nI want to sign in"));
-    assert.ok(!body.includes("| Design |") && !body.includes("| Session |") && !body.includes("| Story |"));
+    assert.ok(!body.includes("## Properties") && !body.includes("|"));
+    assert.ok(body.includes("## Took\n\n2 h") && body.includes("## Date\n\n2026-10-01 → 2026-10-03"));
+    assert.ok(!body.includes("Feature") && !body.includes("Sign-in feature"));
   });
 
   it("collects the page's comments under Notes from Notion and a block's under the block", () => {

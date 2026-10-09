@@ -48,6 +48,18 @@ export async function readTracker(client) {
       assignee: assignee(key, people(readProp(p, "Owner"))),
     };
   });
+  // "Blocks" is the other side of "Blocked by": the epic it names is blocked by this one (GitHub shows Blocking from that).
+  const epicByKey = new Map(epics.map((e) => [e.key, e]));
+  for (const p of epicPages) {
+    for (const name of ["Blocks", "Blocking"]) {
+      if (p.properties?.[name]?.type !== "relation") continue;
+      for (const id of readProp(p, name) ?? []) {
+        const blocked = epicByKey.get(epicKey.get(id));
+        const key = epicKey.get(p.id);
+        if (blocked && !blocked.blockers.includes(key)) blocked.blockers.push(key);
+      }
+    }
+  }
 
   const stories = (await client.query(STORIES)).map((p) => {
     const key = readProp(p, "ID");

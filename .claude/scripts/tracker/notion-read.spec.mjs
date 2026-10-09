@@ -114,6 +114,13 @@ describe("readTracker", () => {
     assert.ok(tracker.warnings.some((w) => w.includes("EP-17") && /Timeline/.test(w)));
   });
 
+  it("turns an epic's Blocks relation into a blocker of the epic it blocks, once", async () => {
+    const { tracker } = await read();
+    assert.deepEqual(byKey(tracker.epics, "EP-17").blockers, ["EP-3"]);
+    assert.deepEqual(byKey(tracker.epics, "EP-2").blockers, ["EP-1"]);
+    assert.deepEqual(byKey(tracker.epics, "EP-1").blockers, []);
+  });
+
   it("asks Notion only for queries, timeline searches and users, and names every user", async () => {
     const { notion, tracker } = await read();
     for (const r of notion.requests) assert.match(r.path, /^(\/data_sources\/[^/]+\/query|\/search|\/users)$/, r.path);
