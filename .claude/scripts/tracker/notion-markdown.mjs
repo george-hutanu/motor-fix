@@ -39,6 +39,10 @@ const STRUCTURE = new Set(["row", "table_of_contents", "breadcrumb", "divider", 
 export function renderer(ctx) {
   const seen = { blocks: new Set(), comments: new Set() };
   const gaps = [];
+  // A file the loader failed to store is reported by name and reason (ctx.failed); else as the part that lacks it.
+  const notStored = (gap) => {
+    if (!ctx.failed?.length) gaps.push(gap);
+  };
   const fileName = (path) => path.split("/").at(-1);
 
   /** Text with every Notion address replaced by a reference, a title or a note. */
@@ -102,7 +106,7 @@ export function renderer(ctx) {
       return b.type === "image" ? `![${name}](${url})` : `[${name}](${url})`;
     }
     if (!b._file) {
-      gaps.push(`${b.type} block ${b.id}: the file was not stored`);
+      notStored(`${b.type} block ${b.id}: the file was not stored`);
       return null;
     }
     const url = fileUrl(b._file);
@@ -124,8 +128,8 @@ export function renderer(ctx) {
     return list.map((c) => {
       seen.comments.add(c.id);
       const who = ctx.userOf(c.created_by?.id) ?? "someone";
-      const files = (c._files ?? []).map((p) => `[${fileName(p)}](${fileUrl(p)})`);
-      if ((c.attachments ?? []).length > (c._files ?? []).length) gaps.push(`comment ${c.id}: an attachment was not stored`);
+      const files = (c._files ?? []).filter(Boolean).map((p) => `[${fileName(p)}](${fileUrl(p)})`);
+      if ((c.attachments ?? []).length > files.length) notStored(`comment ${c.id}: an attachment was not stored`);
       return `- **${who}**, ${String(c.created_time ?? "").slice(0, 10)}: ${indent(rich(c.rich_text), "  ").trimStart()}${files.length ? ` (${files.join(", ")})` : ""}`;
     });
   }
@@ -303,7 +307,7 @@ export function renderer(ctx) {
       case "files": {
         const hosted = (v ?? []).filter((f) => f.type !== "external");
         const paths = page?._propFiles?.[prop.id] ?? [];
-        if (hosted.length && (paths.length < hosted.length || paths.some((p) => !p))) gaps.push(`files property ${prop.id}: a file was not stored`);
+        if (hosted.length && (paths.length < hosted.length || paths.some((p) => !p))) notStored(`files property ${prop.id}: a file was not stored`);
         return [
           ...paths.filter(Boolean).map((p) => `[${fileName(p)}](${fileUrl(p)})`),
           ...(v ?? []).filter((f) => f.type === "external").map((f) => (NOTION_URL.test(f.external.url) ? scrub(f.external.url) : `[${f.name}](${f.external.url})`)),
@@ -338,8 +342,8 @@ const LONG = (text) => text.length > 120 || text.includes("\n");
  * (`blocks`, `comments`, `propFiles`) once the loader has read it.
  */
 export function renderPage(page, ctx, { head = [] } = {}) {
-  const r = renderer(ctx);
   const content = page.content ?? { blocks: [], comments: [] };
+  const r = renderer({ ...ctx, failed: content.failed });
   const holder = { _propFiles: content.propFiles ?? {} };
   const properties = content.properties ?? page.properties ?? {};
   const rows = [];
@@ -367,7 +371,7 @@ export function renderPage(page, ctx, { head = [] } = {}) {
   parts.push(...sections);
   if (body) parts.push(`## Page\n\n${body}`);
   if (notes.length) parts.push(`## Notes from Notion\n\n${notes.join("\n")}`);
-  const gaps = [...r.gaps];
+  const gaps = [...r.gaps, ...(content.failed ?? [])];
   for (const name of Object.keys(properties)) if (!accounted.includes(name)) gaps.push(`property ${name}: not rendered`);
   const walk = (list, out = []) => {
     for (const b of list ?? []) {

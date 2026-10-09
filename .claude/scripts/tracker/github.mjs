@@ -8,6 +8,10 @@ import { ISSUE_REPO, OWNER } from "./repos.mjs";
 const API = "https://api.github.com";
 export const PACE_MS = 7200;
 const SERVER_RETRY_MS = 2000;
+/** Each try of a request, the answer's body included. */
+export const TIMEOUT_MS = 60_000;
+/** Tries of one request on a timeout, a network error or a 5xx. */
+export const TRIES = 3;
 const SECONDARY_WAIT_MS = 60_000;
 const MAX_THROTTLES = 5;
 /** The most pages one list is followed through: a Link or cursor that never ends stops here. */
@@ -23,6 +27,23 @@ export class GitHubError extends Error {
   }
 }
 
+/** `work(signal)` raced against a timer that aborts it: a stalled socket cannot hang the run. */
+async function timed(ms, label, work) {
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new GitHubError("timeout", `${label}: no answer within ${Math.round(ms / 1000)} s`));
+    }, ms);
+  });
+  try {
+    return await Promise.race([work(controller.signal), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function githubClient({
   token,
   fetchImpl = fetch,
@@ -31,6 +52,7 @@ export function githubClient({
   owner = OWNER,
   repo = ISSUE_REPO,
   maxWaitS = 120,
+  timeoutMs = TIMEOUT_MS,
   log,
 }) {
   const scrub = (text) => String(text).replaceAll(token, "[token]");
@@ -64,29 +86,37 @@ export function githubClient({
     if (body !== undefined && NOTION_ADDRESS.test(JSON.stringify(body))) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
     const url = urlOf(path);
     if (content) stats.content++;
-    for (let serverRetried = false, throttles = 0; ; ) {
+    for (let failures = 0, throttles = 0; ; ) {
       if (content) {
         const wait = lastContent + PACE_MS - now();
         if (wait > 0) await sleep(wait);
         lastContent = now();
       }
       let response;
+      let text;
       try {
-        response = await fetchImpl(url, {
-          method,
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "motor-fix-tracker",
-            ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-          },
-          body: body === undefined ? undefined : JSON.stringify(body),
-        });
+        ({ response, text } = await timed(timeoutMs, label, (signal) =>
+          fetchImpl(url, {
+            method,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "motor-fix-tracker",
+              ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+            },
+            body: body === undefined ? undefined : JSON.stringify(body),
+            signal,
+          }).then(async (r) => ({ response: r, text: await r.text() })),
+        ));
       } catch (error) {
-        throw new GitHubError("network", scrub(`${label}: ${error?.message ?? error}`));
+        const timedOut = error instanceof GitHubError;
+        const failure = timedOut ? error : new GitHubError("network", scrub(`${label}: ${error?.message ?? error}`));
+        // A write that timed out may have landed: only a read (or a GraphQL query) is sent again; a resumed run replans from GitHub.
+        if (content || ++failures >= TRIES) throw failure;
+        await sleep(SERVER_RETRY_MS * 2 ** (failures - 1));
+        continue;
       }
-      const text = await response.text();
       let data = null;
       try {
         data = text ? JSON.parse(text) : null;
@@ -103,9 +133,10 @@ export function githubClient({
         await sleep(wait);
         continue;
       }
-      if (response.status >= 500 && !serverRetried) {
-        serverRetried = true;
-        await sleep(SERVER_RETRY_MS);
+      // A write that failed with a 5xx may still have landed: it is sent once more at most, a read up to TRIES times.
+      if (response.status >= 500 && ++failures < (content ? 2 : TRIES)) {
+        const after = response.headers.get("retry-after");
+        await sleep(after !== null && /^\d+$/.test(after.trim()) ? Math.min(Number(after), maxWaitS) * 1000 : SERVER_RETRY_MS * 2 ** (failures - 1));
         continue;
       }
       throw new GitHubError(String(response.status), scrub(`${label}: ${response.status} ${data?.message ?? ""}`.trim()));

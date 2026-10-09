@@ -134,11 +134,14 @@ describe("waits GitHub asks for", () => {
     assert.deepEqual(clock.waits, [2000]);
   });
 
-  it("fails on a second server error", async () => {
+  it("fails a read on a third server error, a write on a second", async () => {
     const clock = fakeClock();
     const { github, calls } = client(clock, [json({ message: "oops" }, 502)]);
     await assert.rejects(github.rest("GET", "labels"), (e) => e instanceof GitHubError && /502/.test(e.message));
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
+    const write = client(fakeClock(), [json({ message: "oops" }, 502)]);
+    await assert.rejects(write.github.rest("POST", "issues", {}), (e) => e instanceof GitHubError && /502/.test(e.message));
+    assert.equal(write.calls.length, 2);
   });
 
   it("does not take a plain 403 for a rate limit", async () => {
@@ -189,12 +192,12 @@ describe("hostile answers", () => {
     assert.equal(calls.length, 6);
   });
 
-  it("retries an HTML 502 once and then fails with a GitHubError, not a SyntaxError", async () => {
+  it("retries an HTML 502 with backoff and then fails with a GitHubError, not a SyntaxError", async () => {
     const clock = fakeClock();
     const { github, calls } = client(clock, [html(502)]);
     await assert.rejects(github.rest("GET", "labels"), (e) => e instanceof GitHubError && e.type === "502");
-    assert.equal(calls.length, 2);
-    assert.deepEqual(clock.waits, [2000]);
+    assert.equal(calls.length, 3);
+    assert.deepEqual(clock.waits, [2000, 4000]);
   });
 
   it("recovers from an HTML 502 followed by JSON", async () => {
@@ -223,5 +226,34 @@ describe("hostile answers", () => {
     const { github } = client(clock, [json({ message: "You have exceeded a secondary rate limit." }, 403, { "x-ratelimit-remaining": "4000" }), json({ number: 3 }, 201)]);
     assert.deepEqual(await github.rest("POST", "issues", {}), { number: 3 });
     assert.deepEqual(clock.waits, [60_000]);
+  });
+});
+
+describe("a request that stalls", () => {
+  const stall = () => new Promise(() => {});
+  it("aborts a read after the timeout and sends it again", async () => {
+    const clock = fakeClock();
+    const { github, calls } = client(clock, [stall, stall, json([{ name: "bug" }])], { timeoutMs: 20 });
+    assert.deepEqual(await github.rest("GET", "labels"), [{ name: "bug" }]);
+    assert.equal(calls.length, 3);
+    assert.ok(calls[0].init.signal.aborted);
+  });
+
+  it("fails a read after three tries, and never sends a write twice", async () => {
+    const clock = fakeClock();
+    const read = client(clock, [stall], { timeoutMs: 20 });
+    await assert.rejects(read.github.rest("GET", "labels"), (e) => e instanceof GitHubError && e.type === "timeout");
+    assert.equal(read.calls.length, 3);
+    const write = client(fakeClock(), [stall], { timeoutMs: 20 });
+    await assert.rejects(write.github.rest("POST", "issues", { title: "x" }), (e) => e instanceof GitHubError && e.type === "timeout");
+    assert.equal(write.calls.length, 1);
+  });
+
+  it("tries a 5xx three times, honouring Retry-After", async () => {
+    const clock = fakeClock();
+    const { github, calls } = client(clock, [json({}, 502, { "retry-after": "3" }), json({}, 500), json({ ok: 1 })]);
+    assert.deepEqual(await github.rest("GET", "labels"), { ok: 1 });
+    assert.equal(calls.length, 3);
+    assert.equal(calls[1].at - calls[0].at, 3000);
   });
 });

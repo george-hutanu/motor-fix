@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 import { notionClient } from "../lib/notion.mjs";
 import { fakeNotion, storyId } from "./fixtures/notion.mjs";
-import { folderCache, folderStore, loadContent, MAX_FILE_BYTES } from "./notion-content.mjs";
+import { FileError, fetchFile, folderCache, folderStore, loadContent, MAX_FILE_BYTES } from "./notion-content.mjs";
 import { renderPage } from "./notion-markdown.mjs";
 import { readTracker } from "./notion-read.mjs";
 
@@ -120,5 +120,67 @@ describe("loadContent", () => {
     const tracker = await readTracker(client);
     await loadContent(client, tracker, { store, download: async () => ({ length: MAX_FILE_BYTES + 1 }) });
     assert.equal(tracker.stories.find((s) => s.key === "ST-1").content.blocks[3]._file, null);
+  });
+});
+
+const stall = () => new Promise(() => {});
+const quick = { sleep: async () => {}, timeoutMs: 20 };
+
+describe("fetchFile", () => {
+  it("aborts a download whose answer never comes and tries again", async () => {
+    const signals = [];
+    let calls = 0;
+    const fetchImpl = (url, init) => {
+      signals.push(init.signal);
+      return ++calls < 3 ? stall() : Promise.resolve(new Response("bytes", { status: 200 }));
+    };
+    assert.equal(String(await fetchFile("https://files.example/x", { ...quick, fetchImpl })), "bytes");
+    assert.equal(calls, 3);
+    assert.ok(signals[0].aborted && signals[1].aborted && !signals[2].aborted);
+  });
+
+  it("aborts a body that stalls after the answer started", async () => {
+    let calls = 0;
+    const fetchImpl = async () => (++calls === 1 ? { ok: true, status: 200, headers: new Headers(), arrayBuffer: stall } : new Response("ok"));
+    assert.equal(String(await fetchFile("https://files.example/x", { ...quick, fetchImpl })), "ok");
+    assert.equal(calls, 2);
+  });
+
+  it("gives up after three tries, naming the timeout and no URL", async () => {
+    let calls = 0;
+    const fetchImpl = () => {
+      calls++;
+      return stall();
+    };
+    await assert.rejects(fetchFile("https://files.example/secret?sig=abc", { ...quick, fetchImpl }), (e) => e instanceof FileError && /timed out .*\(3 tries\)/.test(e.message) && !e.message.includes("sig="));
+    assert.equal(calls, 3);
+  });
+
+  it("retries a 429 or 5xx after Retry-After, and stops at once on a 403", async () => {
+    const waits = [];
+    const answers = [new Response("", { status: 429, headers: { "retry-after": "7" } }), new Response("", { status: 503 }), new Response("done")];
+    const got = await fetchFile("https://files.example/x", { fetchImpl: async () => answers.shift(), sleep: async (ms) => waits.push(ms), timeoutMs: 1000 });
+    assert.equal(String(got), "done");
+    assert.equal(waits[0], 7000);
+    let calls = 0;
+    await assert.rejects(
+      fetchFile("https://files.example/x", { fetchImpl: async () => (calls++, new Response("", { status: 403 })), sleep: async () => {}, timeoutMs: 1000 }),
+      (e) => e instanceof FileError && e.message === "answered 403",
+    );
+    assert.equal(calls, 1);
+  });
+});
+
+describe("a file that cannot be downloaded", () => {
+  it("is reported by name and reason, and its page is read again on the next run", async () => {
+    const root = temp();
+    const cache = folderCache(temp());
+    const download = (url) => (url.includes("shot.png") ? fetchFile(url, { ...quick, fetchImpl: stall }) : Promise.resolve(Buffer.from("x")));
+    const first = await load(CONTENT, { store: folderStore(root), cache, download });
+    const { gaps } = renderPage(first.st1, { keyOf: () => null, titleOf: () => null, userOf: () => null, featureLink: () => null });
+    assert.deepEqual(gaps, ["file shot.png: the answer timed out after 0 s (3 tries)"]);
+    const again = await load(CONTENT, { store: folderStore(root), cache });
+    assert.equal(again.read, 1);
+    assert.deepEqual(again.files, ["https://files.example/a/shot.png?sig=1"]);
   });
 });

@@ -64,11 +64,65 @@ export function folderStore(root) {
   };
 }
 
-/** Downloads a Notion-hosted file. The URL is pre-signed: no token is sent. */
-export async function fetchFile(url, fetchImpl = fetch) {
-  const response = await fetchImpl(url);
-  if (!response.ok) throw new Error(`${response.status}`);
-  return Buffer.from(await response.arrayBuffer());
+/** Each try of a download: the answer must start within this, and the body is given as long again plus a second per 256 KB. */
+export const FILE_TIMEOUT_MS = 60_000;
+export const FILE_TRIES = 3;
+const FILE_BACKOFF_MS = 2000;
+const MAX_RETRY_AFTER_S = 120;
+const RETRIED = (status) => status === 429 || status >= 500;
+
+/** A download that failed for good; `message` is short and names no URL (they are signed). */
+export class FileError extends Error {}
+
+/** Races `work()` against a timer that also aborts `controller`, so a fetch that ignores its signal cannot hang the run either. */
+async function within(ms, what, controller, work) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new FileError(`${what} timed out after ${Math.round(ms / 1000)} s`));
+    }, ms);
+  });
+  try {
+    return await Promise.race([work(), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Downloads a Notion-hosted file. The URL is pre-signed: no token is sent.
+ * Every try is timed out; a timeout, a network error, a 429 or a 5xx is tried
+ * again (FILE_TRIES in all) after a backoff or the Retry-After GitHub-style
+ * seconds; anything else, or the last failure, throws a FileError.
+ */
+export async function fetchFile(url, { fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), timeoutMs = FILE_TIMEOUT_MS, tries = FILE_TRIES } = {}) {
+  let last;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    let wait = FILE_BACKOFF_MS * 2 ** (attempt - 1);
+    try {
+      // One controller per try: a timeout of the answer or of the body aborts the socket.
+      const controller = new AbortController();
+      const response = await within(timeoutMs, "the answer", controller, () => fetchImpl(url, { signal: controller.signal }));
+      if (!response.ok) {
+        last = new FileError(`answered ${response.status}`);
+        if (!RETRIED(response.status)) throw last;
+        const after = String(response.headers?.get?.("retry-after") ?? "").trim();
+        if (/^\d+$/.test(after)) wait = Math.min(Number(after), MAX_RETRY_AFTER_S) * 1000;
+        controller.abort();
+      } else {
+        const size = Number(response.headers?.get?.("content-length")) || 0;
+        if (size > MAX_FILE_BYTES) throw new FileError(`${Math.ceil(size / 1048576)} MB, over the ${MAX_FILE_BYTES / 1048576} MB limit`);
+        const bodyMs = timeoutMs + Math.ceil(size / 262144) * 1000;
+        return Buffer.from(await within(bodyMs, "the download", controller, () => response.arrayBuffer()));
+      }
+    } catch (error) {
+      if (error instanceof FileError && !/timed out/.test(error.message)) throw error;
+      last = error instanceof FileError ? error : new FileError(`network error: ${String(error?.message ?? error).slice(0, 80)}`);
+    }
+    if (attempt < tries) await sleep(wait);
+  }
+  throw new FileError(`${last.message} (${tries} tries)`);
 }
 
 /**
@@ -87,7 +141,7 @@ export async function loadContent(client, tracker, { cache = null, store = null,
     if (cached && cached.lastEdited === page.lastEdited && stored(cached, store)) {
       page.content = cached.content;
     } else {
-      page.content = await readPage(client, page, { store, download, known });
+      page.content = await readPage(client, page, { store, download, known, log });
       cache?.set(page.id, { lastEdited: page.lastEdited, content: page.content });
       read++;
       if (read % 50 === 0) log(`${"read".padEnd(9)} notion: ${read} pages' content`);
@@ -97,39 +151,56 @@ export async function loadContent(client, tracker, { cache = null, store = null,
   return read;
 }
 
-/** Whether every file a cached page names is still in the store. */
+/**
+ * Whether every file a cached page names is still in the store. A file that
+ * was never stored (a download that failed or timed out) makes the page stale
+ * too, so the next run reads that page again and retries its files.
+ */
 function stored(cached, store) {
   if (!store) return true;
-  return filesOf(cached.content).every((path) => store.exists(path));
+  return filesOf(cached.content).every((path) => path && store.exists(path));
 }
 
 function filesOf(content) {
   const paths = Object.values(content.propFiles ?? {}).flat();
   const walk = (blocks) => {
     for (const b of blocks ?? []) {
-      if (b._file) paths.push(b._file);
-      for (const c of b.comments ?? []) paths.push(...(c._files ?? []));
+      const v = b[b.type] ?? {};
+      if (FILE_TYPES.has(b.type) && v.type !== "external" && (v.file?.url || v.file_upload?.url)) paths.push(b._file ?? null);
+      for (const c of b.comments ?? []) paths.push(...attachmentsOf(c));
       walk(b.children);
       for (const r of b.rows ?? []) walk(r.children);
     }
   };
   walk(content.blocks);
-  for (const c of content.comments ?? []) paths.push(...(c._files ?? []));
+  for (const c of content.comments ?? []) paths.push(...attachmentsOf(c));
   return paths;
 }
 
-async function readPage(client, page, { store, download, known }) {
+/** A comment's stored files, with null for each attachment not stored. */
+function attachmentsOf(c) {
+  const files = c._files ?? [];
+  const missing = (c.attachments ?? []).filter((a) => a.file?.url).length - files.filter(Boolean).length;
+  return [...files.filter(Boolean), ...Array(Math.max(0, missing)).fill(null)];
+}
+
+async function readPage(client, page, { store, download, known, log }) {
   const titles = {};
+  const failed = [];
+  /** The stored path, or null; a failure is kept (`file <name>: <reason>`) for the import to report. */
   const save = async (url, id, name) => {
     if (!store) return null;
     const path = `tracker/${page.key}/${short(id)}-${safeName(name)}`;
     if (store.exists(path)) return path;
     try {
       const bytes = await download(url);
-      if (bytes.length > MAX_FILE_BYTES) return null;
+      if (bytes.length > MAX_FILE_BYTES) throw new FileError(`over the ${MAX_FILE_BYTES / 1048576} MB limit`);
       store.write(path, bytes);
       return path;
-    } catch {
+    } catch (error) {
+      const reason = error instanceof FileError ? error.message : `not stored: ${String(error?.message ?? error).slice(0, 80)}`;
+      failed.push(`file ${safeName(name)}: ${reason}`);
+      log(`${"warn".padEnd(9)} ${page.key} file ${safeName(name)}: ${reason}`);
       return null;
     }
   };
@@ -146,8 +217,7 @@ async function readPage(client, page, { store, download, known }) {
       const files = [];
       for (const [i, a] of (c.attachments ?? []).entries()) {
         const url = a.file?.url;
-        const path = url ? await save(url, `${c.id}${i}`, nameOf(url, `attachment-${i}`)) : null;
-        if (path) files.push(path);
+        files.push(url ? await save(url, `${c.id}${i}`, nameOf(url, `attachment-${i}`)) : null);
       }
       c._files = files;
     }
@@ -231,5 +301,5 @@ async function readPage(client, page, { store, download, known }) {
   }
   const blocks = await blocksOf(page.id);
   const pageComments = await comments(page.id);
-  return { properties, blocks, comments: pageComments, propFiles, titles };
+  return { properties, blocks, comments: pageComments, propFiles, titles, failed };
 }

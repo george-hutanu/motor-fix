@@ -11,7 +11,7 @@ import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import { issuePlans, runImport } from "./import.mjs";
 import { refToken } from "./notion-markdown.mjs";
-import { loadContent } from "./notion-content.mjs";
+import { fetchFile, folderStore, loadContent } from "./notion-content.mjs";
 import { readTracker } from "./notion-read.mjs";
 
 const TOKEN = "ghp_SECRET_never_print_me";
@@ -407,6 +407,23 @@ describe("guards", () => {
       assert.ok(lines.includes("incomplete ST-1 unsupported block u1: not a block the import can render"), lines.join("\n"));
       assert.ok(lines.some((l) => /^failed\s+1 part\(s\) of Notion pages would be left behind; nothing written$/.test(l)));
     }
+  });
+
+  it("names a file whose download stalled as incomplete, and writes nothing", async () => {
+    const page = storyId(1);
+    const notion = fakeNotion({ blocks: { [page]: [{ id: "img1", type: "image", has_children: false, image: { type: "file", file: { url: "https://files.example/shot.png?sig=1" }, caption: [] } }] } });
+    const client = notionClient({ token: "ntn_x", fetchImpl: notion.fetchImpl, sleep: async () => {} });
+    const t = await readTracker(client);
+    const root = mkdtempSync(join(tmpdir(), "store-"));
+    dirs.push(root);
+    const stalled = (url) => fetchFile(url, { fetchImpl: () => new Promise(() => {}), sleep: async () => {}, timeoutMs: 20 });
+    await loadContent(client, t, { store: folderStore(root), download: stalled });
+    const gh = await bootstrapped();
+    const from = gh.writes().length;
+    const { exit, lines } = await importInto(gh, { tracker: t, dryRun: true });
+    assert.equal(exit, 1);
+    assert.equal(nonGets(gh, from).length, 0);
+    assert.ok(lines.includes("incomplete ST-1 file shot.png: the answer timed out after 0 s (3 tries)"), lines.join("\n"));
   });
 
   it("keeps a page too long for an issue whole in a file it publishes first, and links it", async () => {
