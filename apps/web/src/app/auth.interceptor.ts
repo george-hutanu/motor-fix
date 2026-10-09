@@ -14,8 +14,11 @@ import { Session } from './dashboard/session';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 // Only the page's own API gets the token; the session calls work by cookie.
+// Approving an assistant is the one auth call made as the signed-in person.
 const carriesToken = (url: string) =>
-  url.startsWith('/api/') && !url.startsWith('/api/v1/auth/');
+  url.startsWith('/api/') &&
+  (!url.startsWith('/api/v1/auth/') ||
+    url === '/api/v1/auth/assistant/approve');
 
 // Signed out is a normal answer to "who am I", never a reason to ask.
 const isWhoAmI = (req: HttpRequest<unknown>) =>

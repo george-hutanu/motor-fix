@@ -1,0 +1,12 @@
+<main>
+  <mf-panel>
+    @if (failed()) {
+      <h1>{{ 'assistant.error.title' | t }}</h1>
+      <p>{{ 'assistant.error.text' | t }}</p>
+    } @else {
+      <div role="status" aria-busy="true">
+        <h1>{{ 'assistant.connecting' | t }}</h1>
+      </div>
+    }
+  </mf-panel>
+</main>

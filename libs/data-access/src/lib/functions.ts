@@ -17,6 +17,14 @@ export type { AuthControllerSignOutEverywhere$Params as AuthControllerSignOutEve
 export { authControllerSignOutEverywhere as authControllerSignOutEverywhere } from './fn/auth/auth-controller-sign-out-everywhere';
 export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';
 export { authControllerSignOut as authControllerSignOut } from './fn/auth/auth-controller-sign-out';
+export type { AssistantControllerAuthorize$Params as AssistantControllerAuthorize$Params } from './fn/auth/assistant-controller-authorize';
+export { assistantControllerAuthorize as assistantControllerAuthorize } from './fn/auth/assistant-controller-authorize';
+export type { AssistantControllerApprove$Params as AssistantControllerApprove$Params } from './fn/auth/assistant-controller-approve';
+export { assistantControllerApprove as assistantControllerApprove } from './fn/auth/assistant-controller-approve';
+export type { AssistantControllerToken$XWwwFormUrlencoded$Params as AssistantControllerToken$XWwwFormUrlencoded$Params } from './fn/auth/assistant-controller-token-x-www-form-urlencoded';
+export { assistantControllerToken$XWwwFormUrlencoded as assistantControllerToken$XWwwFormUrlencoded } from './fn/auth/assistant-controller-token-x-www-form-urlencoded';
+export type { AssistantControllerToken$Json$Params as AssistantControllerToken$Json$Params } from './fn/auth/assistant-controller-token-json';
+export { assistantControllerToken$Json as assistantControllerToken$Json } from './fn/auth/assistant-controller-token-json';
 export type { OauthControllerProviders$Params as OauthControllerProviders$Params } from './fn/auth/oauth-controller-providers';
 export { oauthControllerProviders as oauthControllerProviders } from './fn/auth/oauth-controller-providers';
 export type { OauthControllerPending$Params as OauthControllerPending$Params } from './fn/auth/oauth-controller-pending';

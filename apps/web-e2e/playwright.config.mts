@@ -24,6 +24,10 @@ const OPENID = 'http://127.0.0.1:3026';
 // alike (the preset gives CI one): a GitHub runner has four cores. A deployed
 // address keeps one, so a release does not load staging with parallel sign-ins.
 const WORKERS = 4;
+// The MCP server and the identity server it trusts (Keycloak, compose profile
+// `assistants`) run only when MCP_URL and ASSISTANT_ISSUER are set, as in
+// CI's E2E job; without them the @assistants flows skip.
+const MCP = process.env['MCP_URL'];
 
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
@@ -42,12 +46,13 @@ export default defineConfig({
   // Flows tagged @seeded sign in with the seeded accounts; a deployed address
   // runs them only when it is given their password. Flows tagged @mailbox read
   // the local test mailbox, flows tagged @openid the local stand-in issuer,
-  // and flows tagged @reset need a seeded account the global setup resets,
-  // none of which a deployed address has.
+  // flows tagged @assistants the local identity server, and flows tagged
+  // @reset need a seeded account the global setup resets, none of which a
+  // deployed address has.
   grepInvert: deployed
     ? process.env['E2E_PASSWORD']
-      ? /@mailbox|@openid|@reset/
-      : /@seeded|@mailbox|@openid|@reset/
+      ? /@mailbox|@openid|@assistants|@reset/
+      : /@seeded|@mailbox|@openid|@assistants|@reset/
     : undefined,
   // The platform rules flows switch maintenance on, which refuses every
   // non-admin sign-in platform-wide: they run alone, after everything else.
@@ -102,5 +107,15 @@ export default defineConfig({
           timeout: SERVER_START,
           url: 'http://localhost:4200',
         },
+        ...(MCP
+          ? [
+              {
+                command: 'npx nx run mcp:serve',
+                reuseExistingServer: true,
+                timeout: SERVER_START,
+                url: new URL('/.well-known/oauth-protected-resource', MCP).href,
+              },
+            ]
+          : []),
       ],
 });

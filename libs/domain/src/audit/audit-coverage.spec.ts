@@ -116,6 +116,10 @@ const NOT_CHANGES = new Set([
   'PhoneSignInService.issue',
   'PhoneSignInService.claim',
   'PhoneSignInService.rightCode',
+  // An assistant's sign-in code and its exchange; the grant it leads to is
+  // the audited change.
+  'AssistantService.approve',
+  'AssistantService.exchange',
   // The role in use is a view preference.
   'SignInService.switchRole',
   // A notification's delivery records, not a change to anyone's data.
