@@ -19,3 +19,6 @@ p {
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
 }
+p:focus:not(:focus-visible) {
+  outline: none;
+}

@@ -138,13 +138,36 @@ describe('the link to report a garage', () => {
     );
   });
 
+  // A status region inserted with its text already in it is not announced by
+  // every screen reader, so the empty region waits on the page from the start.
+  it('fills a status line that was already on the page', async () => {
+    const host = await render({ answer: 'sent', role: 'driver' });
+    const before = host.querySelector('[role="status"]');
+    expect(before?.textContent?.trim()).toBe('');
+
+    await press(host);
+
+    expect(host.querySelector('[role="status"]')).toBe(before);
+  });
+
+  it('takes the focus to the thank-you line, since the link it was on is gone', async () => {
+    const host = await render({ answer: 'sent', role: 'driver' });
+    document.body.append(host);
+    link(host)?.focus();
+
+    await press(host);
+
+    expect(document.activeElement).toBe(host.querySelector('[role="status"]'));
+    host.remove();
+  });
+
   it('stays when the task is cancelled', async () => {
     const host = await render({ answer: 'cancelled', role: 'driver' });
 
     await press(host);
 
     expect(link(host)).not.toBeNull();
-    expect(host.querySelector('[role="status"]')).toBeNull();
+    expect(host.querySelector('[role="status"]')?.textContent?.trim()).toBe('');
   });
 
   it('goes away with no message when the garage cannot be reported', async () => {

@@ -1,10 +1,14 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  type ElementRef,
+  Injector,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
@@ -28,6 +32,9 @@ export class ReportGarageLink {
   private readonly overlays = inject(Overlays);
   private readonly session = inject(Session);
   private readonly signIn = inject(SignInDialog);
+  private readonly injector = inject(Injector);
+  private readonly thanks =
+    viewChild.required<ElementRef<HTMLElement>>('thanks');
 
   protected readonly outcome = signal<'sent' | 'hidden' | null>(null);
   private readonly role = computed(
@@ -56,7 +63,13 @@ export class ReportGarageLink {
       shape: 'dialog',
       title: 'public.reportGarage.title',
     });
-    if (result === 'sent') this.outcome.set('sent');
+    if (result === 'sent') {
+      this.outcome.set('sent');
+      // The link that held the focus is gone; the line that replaced it takes it.
+      afterNextRender(() => this.thanks().nativeElement.focus(), {
+        injector: this.injector,
+      });
+    }
     if (result === 'gone') this.outcome.set('hidden');
   }
 }
