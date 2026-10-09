@@ -83,8 +83,8 @@ const rename = (id: string, name: string) =>
   prisma.garage.update({ data: { name }, where: { id } });
 
 const drop = async (id: string) => {
-  await other.incr(`garage-profile-gen:v3:${id}`);
-  await other.del(`garage-profile:v3:${id}`);
+  await other.incr(`garage-profile-gen:v4:${id}`);
+  await other.del(`garage-profile:v4:${id}`);
 };
 
 async function counts() {
@@ -112,17 +112,17 @@ describe('the profile cache', () => {
 
     expect((await read(garage.slug)).status).toBe(200);
 
-    const stored = await other.hget(`garage-profile:v3:${garage.id}`, '-');
+    const stored = await other.hget(`garage-profile:v4:${garage.id}`, '-');
     expect(JSON.parse(stored ?? 'null')).toMatchObject({
       id: garage.id,
       name: 'Service Auto Militari',
     });
-    expect(await other.get(`garage-profile-slug:v3:${garage.slug}`)).toBe(
+    expect(await other.get(`garage-profile-slug:v4:${garage.slug}`)).toBe(
       garage.id,
     );
     for (const key of [
-      `garage-profile:v3:${garage.id}`,
-      `garage-profile-slug:v3:${garage.slug}`,
+      `garage-profile:v4:${garage.id}`,
+      `garage-profile-slug:v4:${garage.slug}`,
     ]) {
       const ttl = await other.ttl(key);
       expect(ttl).toBeGreaterThan(0);
@@ -172,10 +172,10 @@ describe('the profile cache', () => {
     await read(garage.slug, { brand: slug });
 
     expect(
-      (await other.hkeys(`garage-profile:v3:${garage.id}`)).sort(),
+      (await other.hkeys(`garage-profile:v4:${garage.id}`)).sort(),
     ).toEqual(['-', slug].sort());
     const withBrand = JSON.parse(
-      (await other.hget(`garage-profile:v3:${garage.id}`, slug)) ?? 'null',
+      (await other.hget(`garage-profile:v4:${garage.id}`, slug)) ?? 'null',
     );
     expect(withBrand.brand).toMatchObject({ slug, stance: 'does_not_take' });
   });
@@ -197,11 +197,11 @@ describe('the profile cache', () => {
     expect((await read(unknown)).status).toBe(404);
     expect((await read(suspended.slug)).status).toBe(410);
 
-    expect(await other.exists(`garage-profile-slug:v3:${unknown}`)).toBe(0);
+    expect(await other.exists(`garage-profile-slug:v4:${unknown}`)).toBe(0);
     expect(
       await other.exists(
-        `garage-profile-slug:v3:${suspended.slug}`,
-        `garage-profile:v3:${suspended.id}`,
+        `garage-profile-slug:v4:${suspended.slug}`,
+        `garage-profile:v4:${suspended.id}`,
       ),
     ).toBe(0);
   });
@@ -216,7 +216,7 @@ describe('the profile cache', () => {
         const key = String(command.args[0] ?? '');
         if (
           command.name !== 'get' ||
-          !key.startsWith('garage-profile-gen:v3:')
+          !key.startsWith('garage-profile-gen:v4:')
         ) {
           return sent;
         }
@@ -229,7 +229,7 @@ describe('the profile cache', () => {
     expect((await read(garage.slug)).status).toBe(200);
     jest.restoreAllMocks();
 
-    expect(await other.exists(`garage-profile:v3:${garage.id}`)).toBe(0);
+    expect(await other.exists(`garage-profile:v4:${garage.id}`)).toBe(0);
     await rename(garage.id, 'Nume nou');
     expect((await read(garage.slug)).body.name).toBe('Nume nou');
   });

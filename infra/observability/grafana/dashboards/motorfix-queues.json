@@ -254,8 +254,8 @@
             "type": "prometheus",
             "uid": "${prom}"
           },
-          "expr": "sum by (queue, outcome) (rate(motorfix_jobs_total{deployment_environment=\"$env\"}[5m]))",
-          "legendFormat": "{{queue}} {{outcome}}"
+          "expr": "sum by (queue, job_name, outcome) (rate(motorfix_jobs_total{deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "{{queue}} {{job_name}} {{outcome}}"
         }
       ],
       "fieldConfig": {

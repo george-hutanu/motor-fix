@@ -8,6 +8,7 @@ import { PublicBrandDto } from '../models/public-brand-dto';
 import { PublicGarageBrandDto } from '../models/public-garage-brand-dto';
 import { PublicGaragePhotoDto } from '../models/public-garage-photo-dto';
 import { PublicJobTypeDto } from '../models/public-job-type-dto';
+import { ResponseRateDto } from '../models/response-rate-dto';
 export interface PublicGarageDto {
 
   /**
@@ -61,6 +62,7 @@ export interface PublicGarageDto {
    */
   rating: number | null;
   refusalPhrase: string | null;
+  responseRate: ResponseRateDto;
   reviewCount: number;
 
   /**

@@ -103,6 +103,7 @@ describe('reading a garage by its public slug', () => {
       photos: [],
       rating: null,
       refusalPhrase: null,
+      responseRate: { state: 'new' },
       reviewCount: 0,
       slug: approved.slug,
       verifiedAt: null,
@@ -140,6 +141,7 @@ describe('reading a garage by its public slug', () => {
       'photos',
       'rating',
       'refusalPhrase',
+      'responseRate',
       'reviewCount',
       'slug',
       'verifiedAt',
@@ -746,6 +748,7 @@ const PUBLIC_FIELDS = new Set([
   'photos',
   'rating',
   'refusalPhrase',
+  'responseRate',
   'reviewCount',
   'serviceRadiusKm',
   'slug',
@@ -812,5 +815,72 @@ describe('the jobs a profile offers', () => {
     const approved = await garage('approved');
 
     expect((await read(approved.slug)).body.jobTypes).toEqual([]);
+  });
+});
+
+// @traces 384-FR-007
+describe('the response rate a profile carries', () => {
+  const figures = (
+    garageId: string,
+    lifetimeRequests: number,
+    requests30d: number,
+    answeredWithinDay30d: number,
+    rate: number | null,
+  ) =>
+    prisma.garageResponseStats.create({
+      data: {
+        answeredWithinDay30d,
+        computedAt: new Date('2026-10-09T22:00:00Z'),
+        garageId,
+        lifetimeRequests,
+        rate,
+        requests30d,
+      },
+    });
+
+  it('says new for a garage the night has not counted yet', async () => {
+    const approved = await garage('approved');
+
+    expect((await read(approved.slug)).body.responseRate).toEqual({
+      state: 'new',
+    });
+  });
+
+  it('says new below 10 lifetime requests, whatever the rate', async () => {
+    const approved = await garage('approved');
+    await figures(approved.id, 9, 9, 9, 100);
+
+    expect((await read(approved.slug)).body.responseRate).toEqual({
+      state: 'new',
+    });
+  });
+
+  it('carries the rate from 10 lifetime requests on', async () => {
+    const approved = await garage('approved');
+    await figures(approved.id, 12, 12, 11, 91);
+
+    expect((await read(approved.slug)).body.responseRate).toEqual({
+      rate: 91,
+      state: 'rate',
+    });
+  });
+
+  it('carries a rate of 0 as a rate', async () => {
+    const approved = await garage('approved');
+    await figures(approved.id, 10, 5, 0, 0);
+
+    expect((await read(approved.slug)).body.responseRate).toEqual({
+      rate: 0,
+      state: 'rate',
+    });
+  });
+
+  it('says none for 10 or more lifetime requests and none in the last 30 days', async () => {
+    const approved = await garage('approved');
+    await figures(approved.id, 14, 0, 0, null);
+
+    expect((await read(approved.slug)).body.responseRate).toEqual({
+      state: 'none',
+    });
   });
 });
