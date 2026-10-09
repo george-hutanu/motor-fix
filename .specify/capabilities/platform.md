@@ -66,6 +66,7 @@ features:
   - 887-precompact-fr-wording
   - 1016-mcp-staging
   - 1018-notion-docs-to-specs
+  - 1026-diataxis-docs
 ---
 
 # Capability: Platform
@@ -1542,9 +1543,9 @@ _From 1016-mcp-staging._
 
 _From 1016-mcp-staging._
 
-### 1018-FR-001 — After the trunk move, george-hutanu/motor-fix-specs on `trunk` MUST hold exactly two top-level folders, `specs/` (every `NNN-slug` feature folder, moved from the root with `git mv` so `git log --follow` on any moved file reaches its pre-move history) and `docs/` (the exported documentation), and at the root only `.github/` (the issue forms), `.gitignore` and `README.md` (which states the layout and how each folder is written).
+### 1026-FR-004 — The specs repo root MUST hold exactly: `README.md` (the map for people: what each folder is, how to add a page), `llms.txt` (the agents' entry), `AGENTS.md` (how agents read and write the repo: where each kind goes, the front-matter rule, the lint, `llms.txt --write`, relative links, no Notion URLs), `.gitignore`, `.github/` (issue forms and the lint workflow), `scripts/` (the lint and its tests), `docs/`, `specs/` (every `NNN-slug` feature folder, unchanged) and `tracker/` (a README only, reserved for ST-1017's import, which writes `tracker/<KEY>/` for oversize issue bodies and files).
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
 ### 1018-FR-003 — `specs-repo.mjs ensure` MUST migrate an existing old-layout clone at `<checkout>/specs/` in place and without data loss: rename it to `.motor-fix-specs/` and link `specs` to the clone root first (so `specs/<NNN-slug>` resolves after every step), then, when trunk has moved, bring it onto the moved trunk so that modified tracked files follow their renamed paths and unpushed commits stay ahead of trunk, sweep any `NNN-*` folder an unpushed commit added at the clone root into `specs/` as one commit, move every untracked or ignored file left at an old root feature path to `specs/<feature>/`, and only then repoint the symlink to `.motor-fix-specs/specs`. A step that fails MUST stop the migration with a non-zero exit naming the step; a failed rebase MUST be aborted, leaving the old-layout clone at `.motor-fix-specs/` linked at its root and every file where it was. A second run with nothing to do MUST change nothing. Two `ensure` runs in one checkout MUST serialise on an exclusive lock file in the checkout; the second waits, then finds nothing to do. `commit` MUST run the same migration first when trunk has moved since the clone was last brought up to date; `status` MUST never write and reports `layout: pending` instead.
 
@@ -1558,49 +1559,109 @@ _From 1018-notion-docs-to-specs._
 
 _From 1018-notion-docs-to-specs._
 
-### 1018-FR-007 — No documentation content MUST land in motor-fix (public): the export MUST write only under the clone's `docs/`, and the harness tests MUST use synthetic fixtures. No exported file, report line or log MAY contain `NOTION_TOKEN` or a signed Notion file URL (downloaded files are referenced relatively). The specs repo's root `.gitignore` MUST keep ignoring QA screenshots and `handoff.md` under the new paths.
+### 1026-FR-026 — No documentation content MAY land in motor-fix (public): its harness specs MUST use synthetic fixtures, and the one-off migration script that produced the organised result MUST live in `specs/1026-diataxis-docs/` as the feature's record, not under `.claude/scripts/`.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-008 — An export command under `.claude/scripts/` MUST crawl the Notion space from its root page over the Notion API with `NOTION_TOKEN` through the shared client, using only read calls (page, block, database and user GET and database query); it MUST never create, update, move, archive or delete anything in Notion, and a test MUST prove it by recording every call against a fake API.
+### 1026-FR-020 — `/speckit-context` and `org-researcher` MUST read documentation from `llms.txt` and `docs/` by the Diátaxis paths (features under `docs/reference/features/`, decisions under `docs/explanation/decisions/`, architecture under `docs/explanation/` and `docs/reference/`), cite `docs/<path>`, and keep taking the story, its comments, epic and siblings from the tracker, resolving a story's Feature relation (a Notion page id) through `docs/index.json`; `spec-reviewer` MUST read the same documentation from the repo. Every line offering Notion as a documentation fallback (the `(fallback until docs/ exists)` tag and its sentences) MUST be removed from these three definitions.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-009 — The export MUST write `docs/` as: a folder with `index.md` per page that has children, a file per leaf page, a folder per database whose `index.md` holds a Markdown table of every row and its properties plus one file per row that has a body, and a file per linked view holding a link to the canonical database's folder (or its Notion URL when the canonical lies outside the space). A block or property type the renderer does not know MUST become an HTML comment naming the type and be counted in the run report, never dropped silently. File names MUST be slugified titles, disambiguated with a Notion-id suffix on a clash and replaced by the Notion id when the title is empty.
+### 1026-FR-022 — `speckit-notion-sync plan` MUST write a new epic's execution plan under `docs/reference/build-plans/ep-<n>-<kebab title>.md` with the page front matter, regenerate `llms.txt` with the lint's `--write`, and commit and push both to `trunk` in one commit; it MUST NOT create a Notion plan page; the build timeline is unchanged.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-010 — The "MotorFix stories" and "MotorFix epics" databases MUST NOT be exported; each MUST become one pointer file naming the GitHub Project and the issues repository. Every other database in the space (the build timelines, the Work timeline) and every page (the existing execution plans included) MUST be exported at its crawl path. One exclusion list, shared by the export and `--check`, names what under `docs/` the export neither writes nor reports as an orphan: `docs/README.md`, `docs/index.json` and `docs/execution-plans/`.
+### 1026-FR-023 — AGENTS.md, CLAUDE.local.md and the constitution MUST name the specs repo's `docs/` by its Diátaxis areas and `llms.txt` as the agents' entry wherever they named `docs/`, `docs/execution-plans/` or the export; CLAUDE.local.md MUST NOT grow past `.specify/context-baseline.json`; the constitution change MUST be a patch bump (v1.11.2 → v1.11.3) with a Sync Impact Report naming the lines, no rule added, removed or reworded, and the constitution card updated so `constitution-card.spec.mjs` passes.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-011 — Every exported file MUST open with front matter holding `title`, `notion_id`, `notion_url` and `last_edited`; every internal link (child page, `link_to_page`, page mention, or a `notion.so`, `notion.site` or `app.notion.com` URL to a page in the space, with or without `/p/`, a title slug or a query string such as `?pvs=`) MUST be rewritten to a relative path; every Notion-hosted image and file MUST be downloaded next to its page and referenced relatively, except a file over 50 MB, which is not downloaded: the page keeps a plain-text note naming it and its size, the run report lists it, and `--check` does not count it as missing; external URLs MUST be left unchanged.
+### 1026-FR-018 — After the reorganisation, `docs/index.json` MUST keep the shape `{ "exported": <ISO date of the frozen export>, "files": { "<notionId>": "<newPath>" } }`, MUST hold every Notion id the frozen export's `index.json` held, each mapped to the page's new relative path (the first page when a page was split, chosen so that a feature id maps to its feature page), or to `null` for a skipped pointer page, so ST-1017's import keeps resolving a story's Feature link; the lint MUST check that every non-null path resolves.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-012 — The export MUST be idempotent: a run with no change in Notion MUST write no file and report zero changes; a page or row no longer in the crawl MUST have its file removed. `--dry-run` MUST list the files it would create, update and delete and write nothing. `--check` MUST exit non-zero listing every crawled page and database without a file and every file under `docs/` that no crawled page or row explains, and zero when neither exists.
+### 1026-FR-001 — The organised documentation MUST be produced from the frozen Notion export (142 pages with `title`, `notion_id`, `notion_url`, `last_edited` front matter and its `index.json`), the design mock read once through the Artifact tool, and, for this migration only, one read of the Notion API for the 10 lost heading-level-4 texts and for the story/epic keys behind tracker URLs; nothing else; the raw export MUST never be committed or pushed to any repository, and the only thing pushed to the specs repo MUST be the organised result.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-013 — The export MUST write `docs/index.json` mapping every exported page's and database's Notion id to its relative file path, last, so a run that stops early (API failure after retries, exit non-zero) leaves no index and `--check` names what is missing. A missing `NOTION_TOKEN` MUST stop every mode with one line naming it.
+### 1026-FR-002 — The specs repo (george-hutanu/motor-fix-specs, `trunk`) MUST be the only documentation source for motor-fix once this feature is merged: no motor-fix skill, agent, instruction file or constitution line MAY name the Notion space or a Notion page as a place to read documentation. The Notion tracker (stories, their comments, epics, build timelines) stays where ST-1017 leaves it and is out of this feature's scope.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-014 — `/speckit-context` and the `org-researcher` agent MUST read the feature page, the architecture pages and the decisions from the clone's `docs/` and cite file paths, taking the story and its comments from the tracker; `spec-reviewer` MUST read the same from the repo; `speckit-design-check` MUST read the Design and Design boards links and the Build brief's Screens from the feature's exported file. While the clone has no `docs/` (before the trunk move), each MUST say so and read Notion as before.
+### 1026-FR-003 — Every exported page's body content MUST be present in the organised `docs/` (merged, split or moved, never dropped), the 10 heading-level-4 blocks the export lost MUST be recovered into their pages, and the 3 pointer pages the export skipped MUST be accounted for in the migration record (where each went, or why it has no page). A page that duplicates another page's content as a linked view (the 9 `untitled` area-view pages) is not dropped content: it counts as present through the page it duplicates, and the record names that page. A migration record in the feature folder MUST list, per Notion page id, its new path or paths and any content decision taken.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-015 — `speckit-notion-sync plan` MUST write an epic's execution plan created after the move as a Markdown file under `docs/execution-plans/` in the specs repo, committed and pushed to trunk, and MUST NOT create an execution-plan page in Notion; the build timeline is unchanged (ST-1017's).
+### 1026-FR-005 — `docs/` MUST hold four Diátaxis folders, `tutorials/`, `how-to/`, `reference/` and `explanation/`, plus `index.json` (FR-018) and nothing else at its level. Each page's front-matter `kind` MUST equal the folder it sits under.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-016 — AGENTS.md, CLAUDE.local.md and the constitution MUST name the specs repo's `docs/` as the documentation source, and a harness spec MUST fail when the Notion space's name appears in AGENTS.md, CLAUDE.local.md or the constitution, or in a rewired skill or agent definition on any line not tagged `(fallback until docs/ exists)` (the export command and this feature's records excepted).
+### 1026-FR-006 — `docs/reference/` MUST hold: `features/<area>/mf-<nn>-<slug>.md` (lower-case file name; the `id` stays `MF-nn`), one file per feature page (59, one per MF-nn row of the export's features table), grouped by product area; the glossary; the sample world; the data model split into one file per section; the technology stack; the sequence diagrams; `build-plans/` holding each epic's execution plan as one file; the page layout guide; the delivery roadmap; and `design/` (FR-013).
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
 
-### 1018-FR-017 — The clone location exported by `specs-repo.mjs` MUST be what ST-1017's scripts read `.github/ISSUE_TEMPLATE` from, and `docs/index.json` (FR-013) MUST be what maps a story's Notion feature page to its documentation file for its issue.
+### 1026-FR-007 — `docs/explanation/` MUST hold the product overview, the architecture views, the ideas, the gaps, and `decisions/` holding one ADR file per decision: architecture A01–A44, to-decide T01–T12, owner decisions OD-01–OD-27, the review-round decisions by their ids (R1–R4, F, S, R6-T, U, V, W, X, Y), a defaults-applied page, a still-open page, and `index.md` listing every decision with its id, title and status.
 
-_From 1018-notion-docs-to-specs._
+_From 1026-diataxis-docs._
+
+### 1026-FR-008 — Content the export holds that teaches a path end to end (onboarding, running the stack, a first story) MUST land under `tutorials/`, and task-shaped content (how to run QA, how to file a decision, how to add a page) under `how-to/`; where the export holds no such content, the pages the story names are written fresh from motor-fix's own instructions: tutorials "start on the project" and "your first story end to end"; how-tos "run a story through spec-kit", "release", "set a secret", "add observability", "run the tracker import" and "write a doc". A how-to or tutorial names a secret or environment variable by its name only, never by a value.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-009 — `llms.txt` MUST hold one line per Markdown page under `docs/` (design board HTML files and `index.json` excepted) in the form `<relative path>: <summary>`, where the summary is the page's front-matter `summary`, grouped under one heading per Diátaxis folder, and nothing else; it MUST be generated from the pages (FR-016), never written by hand.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-010 — Every Markdown page under `docs/` MUST open with YAML front matter holding exactly these fields: `id` (stable, unique across the repo, never changed once published: `MF-07`, `A12`, `OD-03`, `board-mobile-home`, or a slug for a page with no existing id), `title`, `kind` (`tutorial`, `how-to`, `reference` or `explanation`), `summary` (one sentence), `status` (`current`, `superseded` or `draft`), `updated` (ISO date `YYYY-MM-DD`; the export's `last_edited` on migration), `related` (a list of ids, possibly empty) and `supersedes` (an id or empty). No `notion_id` or `notion_url` field survives.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-011 — Every page MUST cover one topic and stay small ("small" is measured as at most 400 lines): a page longer than 400 lines MUST be split by section into pages that reference each other in `related` (the data model, the decisions page and the overview are the known cases). Diagrams MUST be Mermaid blocks or plain text, never images, except an image the export downloaded that has no text equivalent, which stays next to its page.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-012 — Every link in a page MUST be a relative path that resolves to a file in the repo (an optional `#heading` anchor included), or an external URL that is not a Notion URL. No `notion.so`, `notion.site` or `app.notion.com` URL MAY remain anywhere in the repo outside `specs/` feature folders. A story or epic pointer (`ST-<n>`, `EP-<n>`) MUST link to the matching GitHub issue of george-hutanu/motor-fix-specs when one exists and MUST stay as plain key text otherwise.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-013 — `docs/reference/design/` MUST hold the design mock "MotorFix — App Mock" (artifact `EoPWH9MHmuY5Jfw7vTWTHr`, v22) as files: `canvas.json`, the 35 board HTML files unchanged, one Markdown page per board (front matter as FR-010, `kind: reference`, the canvas page it belongs to — Desktop, Dashboards, Mobile, Copy 5 variants, Earlier directions —, a prose description of what the board shows and its states, and a relative link to its HTML file; the canvas page is stated in the body, since FR-010's eight front-matter fields are fixed) and `index.md` listing every board by canvas page with the mock version and the artifact URL labelled as the live view. A machine-readable board list (`index.json` in that folder: board id, title, canvas page, Markdown path, HTML path) MUST exist for ST-1017's import.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-014 — Every Design and Design-boards reference in the documentation MUST point at the board's Markdown page in the repo copy; the artifact URL MAY appear only as the secondary live-view link on the design index and on `speckit-design-check`'s `Checked` line.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-015 — The specs repo MUST hold `scripts/docs-lint.mjs`, a Node script with no dependencies outside Node's standard library, that exits non-zero, printing one line per finding with the file path and the defect, when: a Markdown page under `docs/` lacks front matter or a required field, or holds an invalid `kind`, `status` or `updated` (`YYYY-MM-DD` only), an `id` another page also carries, or a `related`/`supersedes` id no page carries; a relative link (image links included) does not resolve to a file, or its anchor to a heading in that file (anchors follow GitHub's heading-slug rule); a Notion URL appears in any file outside `specs/`; `llms.txt` lacks a page, names a page that does not exist, or carries a summary that differs from the page's; or a board named in the design index has no HTML or Markdown file. It MUST exit zero and print nothing else when none is found.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-016 — `docs-lint.mjs --write` MUST regenerate `llms.txt` from the pages' front matter (FR-009) and exit zero; a plain run right after MUST pass. The lint MUST have `node:test` tests under `scripts/` covering each finding kind, the clean case and `--write`, runnable with `node --test scripts/*.test.mjs`.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-017 — The specs repo MUST hold a GitHub workflow that runs the lint's tests and the lint on every push and pull request to `trunk`, so a defect shows as a failed check; it MUST need no secret.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-019 — This feature MUST NOT push to the `1017-github-project-tracker` branch or edit `.claude/scripts/tracker/import.mjs` on `main`; instead it MUST leave in `specs/1026-diataxis-docs/` a proposed patch for the import (emit the Design link to the repo copy from the design index; a check that no issue body links an old docs path or a Notion URL) and a one-paragraph note of the final import pass Chief runs after the merge.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-021 — `speckit-design-check` MUST read a story's Design and Design boards pointers to their board pages under `docs/reference/design/` (through the feature page's links, or the board list of FR-013), cite them under `Checked`, treat the artifact as an optional live view, and no longer read the mock or any documentation from Notion; the story's Design and Design boards values still come from the tracker (they are pointers), resolved to the repo copy.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-024 — `.claude/scripts/notion-export.mjs`, `.claude/scripts/notion-export/` (the render module and its fixtures), `notion-export.spec.mjs`, `notion-export.adversary.spec.mjs`, `notion-export-download.adversary.spec.mjs` and `render.spec.mjs` MUST be removed from motor-fix, together with every line, npm script, permission entry or instruction that names them; the harness spec that fails when the Notion space is named as a documentation source MUST drop its `(fallback until docs/ exists)` exemption and keep failing on the space's name in the rewired files (this feature's records excepted).
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-025 — `specs-repo.mjs commit` MUST accept, besides `docs/…` and the feature folders, the root entries `README.md`, `llms.txt`, `AGENTS.md`, `.gitignore`, `scripts/…`, `.github/…` and `tracker/…`, and MUST keep refusing any other root path and any path that normalises outside the clone; `migrate-trunk`'s keep list is unchanged (the move already happened), but its README templates and hints stop naming `notion-export`.
+
+_From 1026-diataxis-docs._
+
+### 1026-FR-027 — Each rewiring in FR-020 to FR-025 MUST have a harness spec (vitest, `npm run test:harness`) written before the change that fails on the previous wording or behaviour and passes after; `node .claude/scripts/doctor.mjs` MUST pass on the branch.
+
+_From 1026-diataxis-docs._
 
 ## Retired
 
@@ -1640,3 +1701,16 @@ _From 1018-notion-docs-to-specs._
 - `815-FR-005` — superseded by `1018-FR-005` (2026-10-09)
 - `977-FR-003` — superseded by `1018-FR-005` (2026-10-09)
 - `960-FR-001` — superseded by `1018-FR-018` (2026-10-09)
+
+- `1018-FR-008` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-009` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-010` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-011` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-012` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-013` — removed by 1026-diataxis-docs (2026-10-09)
+- `1018-FR-001` — superseded by `1026-FR-004` (2026-10-09)
+- `1018-FR-007` — superseded by `1026-FR-026` (2026-10-09)
+- `1018-FR-014` — superseded by `1026-FR-020` (2026-10-09)
+- `1018-FR-015` — superseded by `1026-FR-022` (2026-10-09)
+- `1018-FR-016` — superseded by `1026-FR-023` (2026-10-09)
+- `1018-FR-017` — superseded by `1026-FR-018` (2026-10-09)
