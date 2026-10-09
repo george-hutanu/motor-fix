@@ -359,6 +359,27 @@ describe('an admin opening a page', () => {
     });
   });
 
+  it('reads the document in the transaction that writes its open entry', async () => {
+    const outside: string[] = [];
+    const watched = new Proxy(prisma, {
+      get(target, property, receiver) {
+        if (property === 'legalDocument') outside.push('legalDocument');
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const watchedService = new LegalDocumentsService(
+      watched,
+      new AuditService(),
+      outbox,
+      storage,
+    );
+
+    await watchedService.pageAddress(admin, fileId, onrcId, '1');
+
+    expect(outside).toEqual([]);
+    expect(await opens()).toHaveLength(1);
+  });
+
   it.each(['garage', 'receptionist', 'mechanic'] as const)(
     "refuses the garage's own %s with 403 not_admin and issues nothing",
     async (role) => {

@@ -133,29 +133,33 @@ export class LegalDocumentsService {
     if (!admin && !actor.garageId) throw new NotFoundException();
     if (!isUUID(fileId) || !isUUID(documentId)) throw new NotFoundException();
     const page = PAGE.test(n) ? Number(n) : 0;
-    const document = await this.readable(
-      this.prisma,
-      actor,
-      admin,
-      fileId,
-      documentId,
-    );
-    const { kind } = document;
-    const key = document.pages[page - 1];
-    if (!key) throw new NotFoundException();
-    const contentType = await this.storage.contentTypeOf(key);
-    if (!contentType) throw new NotFoundException();
-    await this.prisma.$transaction((tx) =>
-      this.audit.record(tx, {
-        action: 'open',
-        actorId: actor.accountId,
-        actorRole: actor.role,
-        garageId: document.verificationFile.garageId,
-        kind,
-        newValue: { page },
-        subjectId: document.id,
-        subjectType: 'legal_document',
-      }),
+    // One transaction: the read that resolves the document and its open
+    // entry (FR-014); a page gone from storage rolls both back.
+    const { contentType, key, kind } = await this.prisma.$transaction(
+      async (tx) => {
+        const document = await this.readable(
+          tx,
+          actor,
+          admin,
+          fileId,
+          documentId,
+        );
+        const key = document.pages[page - 1];
+        if (!key) throw new NotFoundException();
+        const contentType = await this.storage.contentTypeOf(key);
+        if (!contentType) throw new NotFoundException();
+        await this.audit.record(tx, {
+          action: 'open',
+          actorId: actor.accountId,
+          actorRole: actor.role,
+          garageId: document.verificationFile.garageId,
+          kind: document.kind,
+          newValue: { page },
+          subjectId: document.id,
+          subjectType: 'legal_document',
+        });
+        return { contentType, key, kind: document.kind };
+      },
     );
     const extension = EXTENSIONS[contentType];
     const expiresAt = new Date(
