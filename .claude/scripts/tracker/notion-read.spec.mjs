@@ -15,9 +15,12 @@ const byKey = (list, key) => list.find((r) => r.key === key);
 // @traces 1017-FR-015
 // @traces 1017-FR-009
 describe("readTracker", () => {
-  it("builds a story from its properties alone", async () => {
+  it("builds a story from its properties, keeping them all for the issue body", async () => {
     const { tracker } = await read();
-    assert.deepEqual(byKey(tracker.stories, "ST-1"), {
+    const { properties, lastEdited, ...st1 } = byKey(tracker.stories, "ST-1");
+    assert.equal(properties["User story"].rich_text[0].plain_text, SECRET);
+    assert.equal(lastEdited, null);
+    assert.deepEqual(st1, {
       id: storyId(1),
       key: "ST-1",
       title: "Driver signs in",
@@ -91,7 +94,9 @@ describe("readTracker", () => {
 
   it("builds an epic with its release, track, timeline and blocking epics", async () => {
     const { tracker } = await read();
-    assert.deepEqual(byKey(tracker.epics, "EP-2"), {
+    const { properties, lastEdited, ...ep2 } = byKey(tracker.epics, "EP-2");
+    assert.ok(properties.Goal);
+    assert.deepEqual(ep2, {
       id: tracker.epics.find((e) => e.key === "EP-2").id,
       key: "EP-2",
       title: "Garage side",
@@ -109,10 +114,10 @@ describe("readTracker", () => {
     assert.ok(tracker.warnings.some((w) => w.includes("EP-17") && /Timeline/.test(w)));
   });
 
-  it("asks Notion only for queries, timeline searches and users, never a page body or a comment", async () => {
+  it("asks Notion only for queries, timeline searches and users, and names every user", async () => {
     const { notion, tracker } = await read();
     for (const r of notion.requests) assert.match(r.path, /^(\/data_sources\/[^/]+\/query|\/search|\/users)$/, r.path);
-    assert.ok(!JSON.stringify(tracker).includes(SECRET));
+    assert.equal(tracker.users.get("aaaaaaaa-0000-0000-0000-000000000001"), "George");
   });
 
   it("fails as a whole when Notion fails midway", async () => {

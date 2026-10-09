@@ -61,10 +61,13 @@ describe("readTracker under hostile data", () => {
     assert.equal(tracker.stories[0].title, "Șofer își găsește atelierul 🔧");
   });
 
-  it("never carries the private page text into the tracker it returns", async () => {
+  it("keeps the page text only in the raw properties, never in a mapped field", async () => {
     const notion = fakeNotion();
     const tracker = await readTracker(clientOver(notion.fetchImpl));
-    assert.ok(!JSON.stringify(tracker).includes(SECRET));
+    for (const item of [...tracker.stories, ...tracker.epics]) {
+      const { properties, ...mapped } = item;
+      assert.ok(!JSON.stringify(mapped).includes(SECRET));
+    }
   });
 
   it("sends only POST queries and search/users reads, whatever the backlog holds", async () => {

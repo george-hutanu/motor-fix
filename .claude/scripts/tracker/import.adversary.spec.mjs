@@ -7,9 +7,10 @@ import { join } from "node:path";
 import { notionClient } from "../lib/notion.mjs";
 import { reconcile } from "./bootstrap.mjs";
 import { fakeClock, fakeGitHub } from "./fixtures/github.mjs";
-import { fakeNotion, SECRET } from "./fixtures/notion.mjs";
+import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { githubClient } from "./github.mjs";
 import { issuePlans, runImport } from "./import.mjs";
+import { loadContent } from "./notion-content.mjs";
 import { readTracker } from "./notion-read.mjs";
 
 const TOKEN = "ghp_SECRET_never_print_me";
@@ -18,8 +19,11 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-async function tracker() {
-  return readTracker(notionClient({ token: "ntn_x", fetchImpl: fakeNotion().fetchImpl, sleep: async () => {} }));
+async function tracker(content = {}) {
+  const client = notionClient({ token: "ntn_x", fetchImpl: fakeNotion(content).fetchImpl, sleep: async () => {} });
+  const t = await readTracker(client);
+  await loadContent(client, t);
+  return t;
 }
 const clientOf = (gh, fetchImpl = gh.fetchImpl, extra = {}) => githubClient({ token: TOKEN, fetchImpl, sleep: async () => {}, now: () => 0, ...extra });
 
@@ -274,20 +278,41 @@ describe("--dry-run", () => {
 });
 
 describe("public repository hygiene", () => {
-  it("sends no private Notion text in any GitHub request body or query", async () => {
+  it("sends no Notion address to GitHub, even from a page full of them", async () => {
+    const link = (url) => ({ type: "text", plain_text: "see", href: url, text: { content: "see", link: { url } } });
+    const t = await tracker({
+      blocks: {
+        [storyId(1)]: [
+          { id: "b1", type: "paragraph", has_children: false, paragraph: { rich_text: [link(`https://www.notion.so/Garage-${storyId(2).replaceAll("-", "")}`), { type: "mention", plain_text: "Old", mention: { type: "page", page: { id: storyId(3) } }, href: "https://www.notion.so/x" }] } },
+          { id: "b2", type: "bookmark", has_children: false, bookmark: { url: "https://acme.notion.site/Secret-0123456789abcdef0123456789abcdef", caption: [] } },
+          { id: "b3", type: "paragraph", has_children: false, paragraph: { rich_text: [{ type: "text", plain_text: "raw https://app.notion.com/p/abc and notion.so", text: { content: "" } }] } },
+        ],
+      },
+    });
     const gh = await bootstrapped();
-    await importInto(gh);
-    const sent = JSON.stringify(gh.requests.map((r) => [r.path, r.query, r.body]));
-    assert.ok(!sent.includes(SECRET));
-    assert.ok(!/User story/.test(sent));
+    const { exit, lines } = await importInto(gh, { tracker: t });
+    assert.equal(exit, 0, lines.filter((l) => /^(incomplete|failed)/.test(l)).join("\n"));
+    assert.ok(!/notion\.(so|com|site)/i.test(JSON.stringify(gh.requests.map((r) => [r.path, r.query, r.body]))));
+    const body = gh.state.issues.find((i) => keyOf(i) === "ST-1").body;
+    const number = (key) => gh.state.issues.find((i) => keyOf(i) === key).number;
+    assert.ok(body.includes(`see (#${number("ST-2")})`), body);
+    assert.ok(body.includes(`#${number("ST-3")}`));
   });
 
-  it("builds an issue body of only the marker and links, even for a hostile title", async () => {
-    const plans = await planOf((t) => {
-      t.stories[0].title = "<script>alert(1)</script>\nUser story: PRIVATE\n---";
-    });
-    const body = plans.find((p) => p.key === "ST-1").body;
-    for (const line of body.split("\n")) assert.match(line, /^(<!-- motorfix:ST-1 -->|Notion: https:\/\/app\.notion\.com\/p\/\w+|Feature: https:\/\/app\.notion\.com\/p\/\w+|PR: https:\/\/\S+)$/);
+  it("refuses a GitHub write that names a Notion address, whatever builds it", async () => {
+    const gh = await bootstrapped();
+    const github = clientOf(gh);
+    await assert.rejects(github.rest("POST", "issues", { title: "x", body: "https://www.notion.so/abc" }), (e) => e.type === "notion");
+    await assert.rejects(github.graphql("mutation X { a }", { body: "app.notion.com" }), (e) => e.type === "notion");
+  });
+
+  it("rewrites an issue an earlier version created with Notion links", async () => {
+    const gh = await bootstrapped({ issues: [{ number: 3, title: "ST-1 Driver signs in", body: "<!-- motorfix:ST-1 -->\nNotion: https://app.notion.com/p/50000000000000000000000000000001", labels: [] }] });
+    const { exit } = await importInto(gh);
+    assert.equal(exit, 0);
+    const body = gh.state.issues.find((i) => i.number === 3).body;
+    assert.match(body, /^<!-- motorfix:ST-1 -->\n\n## Properties/);
+    assert.ok(!/notion\./i.test(body));
   });
 
   it("keeps a newline in a Notion title out of the issue title", async () => {
@@ -450,8 +475,8 @@ describe("degenerate backlogs", () => {
     t.stories = [];
     t.epics = [];
     const from = gh.writes().length;
-    const { exit } = await importInto(gh, { tracker: t });
-    assert.equal(exit, 0);
+    const { exit, lines } = await importInto(gh, { tracker: t });
+    assert.equal(exit, 0, lines.filter((l) => /^(incomplete|failed)/.test(l)).join("\n"));
     assert.equal(gh.writes().length, from);
   });
 

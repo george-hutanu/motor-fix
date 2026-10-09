@@ -10,6 +10,8 @@ import { fakeGitHub } from "./fixtures/github.mjs";
 import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import { issuePlans, runImport } from "./import.mjs";
+import { refToken } from "./notion-markdown.mjs";
+import { loadContent } from "./notion-content.mjs";
 import { readTracker } from "./notion-read.mjs";
 
 const TOKEN = "ghp_SECRET_never_print_me";
@@ -18,9 +20,11 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-async function tracker() {
-  const notion = fakeNotion();
-  return readTracker(notionClient({ token: "ntn_x", fetchImpl: notion.fetchImpl, sleep: async () => {} }));
+async function tracker(content = {}) {
+  const client = notionClient({ token: "ntn_x", fetchImpl: fakeNotion(content).fetchImpl, sleep: async () => {} });
+  const t = await readTracker(client);
+  await loadContent(client, t);
+  return t;
 }
 
 const clientOf = (gh, fetchImpl = gh.fetchImpl) => githubClient({ token: TOKEN, fetchImpl, sleep: async () => {}, now: () => 0 });
@@ -61,11 +65,16 @@ const plain = (id) => id.replaceAll("-", "");
 // @traces 1017-FR-010
 // @traces 1017-FR-015
 describe("issuePlans", () => {
-  it("maps a story to its title, a body of marker and links, labels, milestone, assignee and fields", async () => {
+  it("maps a story to its title, a body carrying every property, labels, milestone, assignee and fields", async () => {
     const { plans } = issuePlans(await tracker());
     const st1 = plans.find((p) => p.key === "ST-1");
     assert.equal(st1.title, "ST-1 Driver signs in");
-    assert.equal(st1.body, `<!-- motorfix:ST-1 -->\nNotion: https://app.notion.com/p/${plain(storyId(1))}\nFeature: https://app.notion.com/p/f0000000000000000000000000000001`);
+    assert.match(st1.body, /^<!-- motorfix:ST-1 -->\n\n## Properties\n/);
+    for (const row of ["| ID | ST-1 |", "| Issue type | Story |", `| Epic | ${refToken("EP-1")} |`, "| Story points | 3 |", "| Assignee | George |", "| Labels | front end |", "| Role | Driver |", "| Ready to work | No |", `| User story | ${SECRET} |`, `| Took | ${SECRET} |`, "| Feature | (an untitled Notion page) |"]) {
+      assert.ok(st1.body.includes(row), row);
+    }
+    assert.deepEqual(st1.gaps, []);
+    assert.ok(!/notion\.(so|com|site)/i.test(st1.body));
     assert.deepEqual(st1.labels, ["type: story", "EP-1", "area: front end", "role: Driver"]);
     assert.equal(st1.milestone, "1 - Launch");
     assert.equal(st1.assignee, "george-hutanu");
@@ -92,7 +101,7 @@ describe("issuePlans", () => {
     assert.equal(st3.fields["Merged at"], "2026-09-21");
     assert.equal(st3.fields["QA from"], "2026-09-20");
     assert.equal(st3.pr, 40);
-    assert.match(st3.body, /\nPR: https:\/\/github\.com\/george-hutanu\/motor-fix\/pull\/40$/);
+    assert.match(st3.body, /^PR: https:\/\/github\.com\/george-hutanu\/motor-fix\/pull\/40$/m);
   });
 
   it("gives a story with no epic no parent, epic label, Epic field or milestone, and quiets a mention", async () => {
@@ -234,15 +243,16 @@ describe("a full import", () => {
     }
   });
 
-  it("writes nothing from a Notion page body: every issue body is the marker and links", async () => {
+  it("carries the page into the issue and writes no Notion address to GitHub", async () => {
     const gh = await bootstrapped();
     await importInto(gh);
     for (const issue of gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body))) {
-      const lines = issue.body.split("\n");
-      assert.match(lines[0], /^<!-- motorfix:(ST|EP)-\d+ -->$/);
-      for (const line of lines.slice(1)) assert.match(line, /^(Notion|Feature|PR): https:\/\/\S+$/);
+      assert.match(issue.body, /^<!-- motorfix:(ST|EP)-\d+ -->\n/);
+      assert.ok(issue.body.includes(SECRET), issue.title);
+      assert.ok(!issue.body.includes("\uE000"), "a reference token left unresolved");
     }
-    assert.ok(!JSON.stringify(gh.state).includes(SECRET));
+    assert.match(issueOf(gh, "ST-1").body, new RegExp(`\\| Epic \\| #${issueOf(gh, "EP-1").number} \\|`));
+    for (const w of gh.requests ?? gh.writes()) assert.ok(!/notion\.(so|com|site)/i.test(JSON.stringify(w.body ?? "")));
   });
 
   it("never prints the token", async () => {
@@ -324,28 +334,30 @@ describe("running it again", () => {
     assert.equal(nonGets(gh, from).length, 0);
   });
 
-  it("gives a story that later gains a Feature its line, and the next run writes nothing", async () => {
+  it("gives a story whose feature document appears its link, and the next run writes nothing", async () => {
     const gh = await bootstrapped();
-    await importInto(gh);
+    await importInto(gh, { tracker: await tracker() });
     const t = await tracker();
-    t.stories.find((s) => s.key === "ST-7").feature = "f0000000-0000-0000-0000-000000000007";
+    t.stories.find((s) => s.key === "ST-1").title = "Driver signs in";
+    t.docs = new Map([["f0000000000000000000000000000001", "docs/features/sign-in.md"]]);
     const from = gh.writes().length;
     await importInto(gh, { tracker: t });
     const writes = nonGets(gh, from);
     assert.equal(writes.length, 1);
     assert.equal(writes[0].method, "PATCH");
     assert.deepEqual(Object.keys(writes[0].body), ["body"]);
-    assert.match(issueOf(gh, "ST-7").body, /\nFeature: https:\/\/app\.notion\.com\/p\/f0000000000000000000000000000007$/);
+    assert.match(issueOf(gh, "ST-1").body, /\| Feature \| \[\(an untitled Notion page\)\]\(https:\/\/github\.com\/george-hutanu\/motor-fix-specs\/blob\/trunk\/docs\/features\/sign-in\.md\) \|/);
     const again = gh.writes().length;
     await importInto(gh, { tracker: t });
     assert.equal(gh.writes().length, again);
   });
 
-  it("adopts an issue filed by hand under the story's key, adding only the marker and links", async () => {
-    const gh = await bootstrapped({ issues: [{ number: 5, title: "ST-1 Driver signs in (by hand)", body: "typed by a person", labels: ["type: story"] }] });
+  it("adopts an issue filed by hand under the story's key, keeping the person's text below the page", async () => {
+    const gh = await bootstrapped({ issues: [{ number: 5, title: "ST-1 Driver signs in (by hand)", body: "typed by a person, see https://www.notion.so/x-0123456789abcdef0123456789abcdef", labels: ["type: story"] }] });
     await importInto(gh);
     const adopted = gh.state.issues.find((i) => i.number === 5);
-    assert.match(adopted.body, /^<!-- motorfix:ST-1 -->\nNotion: /);
+    assert.match(adopted.body, /^<!-- motorfix:ST-1 -->\n\n## Properties/);
+    assert.match(adopted.body, /<!-- motorfix:adopted -->\n\ntyped by a person, see \(a Notion page\)$/);
     assert.equal(adopted.title, "ST-1 Driver signs in (by hand)");
     assert.equal(gh.state.issues.filter((i) => /^ST-1\b/.test(i.title)).length, 1);
   });
@@ -384,6 +396,33 @@ describe("a lap with a budget", () => {
 // @traces 1017-FR-012
 // @traces 1017-FR-013
 describe("guards", () => {
+  it("lists what a page would leave behind and writes nothing, on a dry run too", async () => {
+    const t = await tracker({ blocks: { [storyId(1)]: [{ id: "u1", type: "unsupported", has_children: false, unsupported: {} }] } });
+    for (const dryRun of [true, false]) {
+      const gh = await bootstrapped();
+      const from = gh.writes().length;
+      const { exit, lines } = await importInto(gh, { tracker: t, dryRun });
+      assert.equal(exit, 1);
+      assert.equal(nonGets(gh, from).length, 0);
+      assert.ok(lines.includes("incomplete ST-1 unsupported block u1: not a block the import can render"), lines.join("\n"));
+      assert.ok(lines.some((l) => /^failed\s+1 part\(s\) of Notion pages would be left behind; nothing written$/.test(l)));
+    }
+  });
+
+  it("keeps a page too long for an issue whole in a file it publishes first, and links it", async () => {
+    const long = Array.from({ length: 700 }, (_, i) => ({ id: `p${i}`, type: "paragraph", has_children: false, paragraph: { rich_text: [{ type: "text", plain_text: `${"x".repeat(100)} ${i}`, annotations: {} }] } }));
+    const t = await tracker({ blocks: { [storyId(1)]: long } });
+    const gh = await bootstrapped();
+    const published = [];
+    const { exit } = await importInto(gh, { tracker: t, publish: async (files) => published.push(...files) });
+    assert.equal(exit, 0);
+    assert.deepEqual(published.map((f) => f.path), ["tracker/ST-1/issue.md"]);
+    assert.ok(published[0].text.includes(`${"x".repeat(100)} 699`));
+    const body = issueOf(gh, "ST-1").body;
+    assert.ok(body.length < 65_536);
+    assert.ok(body.includes("all of it is in [tracker/ST-1/issue.md](https://github.com/george-hutanu/motor-fix-specs/blob/trunk/tracker/ST-1/issue.md)"));
+  });
+
   it("prints the plan, its counts and every title on a dry run, and writes nothing", async () => {
     const gh = await bootstrapped();
     const from = gh.writes().length;
@@ -391,8 +430,9 @@ describe("guards", () => {
     assert.equal(exit, 0);
     assert.equal(nonGets(gh, from).length, 0);
     assert.ok(lines.some((l) => /^read\s+notion: 8 stories, 4 epics/.test(l)));
-    assert.ok(lines.some((l) => /^plan\s+create 12 · adopt 0 · update 0 · add-item 12 · set-fields 12 · close 2 · reopen 0 · sub-issue 7 · blocked-by 3 · pr-closes 1$/.test(l)));
-    assert.ok(lines.some((l) => /^titles\s+\(12, the only Notion text that becomes public\)$/.test(l)));
+    assert.ok(lines.some((l) => /^plan\s+create 12 · adopt 0 · update 0 · add-item 12 · set-fields 12 · close 2 · reopen 0 · relink \d+ · sub-issue 7 · blocked-by 3 · pr-closes 1$/.test(l)));
+    assert.ok(lines.some((l) => /^bodies\s+12 pages, [\d,]+ characters; 0 too long for an issue/.test(l)));
+    assert.ok(lines.some((l) => /^titles\s+\(12\)$/.test(l)));
     assert.ok(lines.some((l) => l.trim() === "ST-4 Ask `@alice` about the logs"));
     assert.ok(lines.some((l) => /^warn\s+.*ST-5/.test(l)));
   });
@@ -463,12 +503,12 @@ describe("Notion data the import cannot map as typed", () => {
     assert.ok(r.warnings.some((w) => /ST-1 has no Issue type/.test(w)));
   });
 
-  it("publishes only the matched pull request URL and warns about any other PR value", async () => {
+  it("writes the PR line only for a motor-fix pull request URL and warns about any other PR value", async () => {
     const r = await planned((t) => {
       t.stories[0].pr = "https://github.com/george-hutanu/motor-fix/pull/50/files?private=notes";
       t.stories[1].pr = "ask Ana about https://example.com/x";
     });
-    assert.match(st(r).body, /\nPR: https:\/\/github\.com\/george-hutanu\/motor-fix\/pull\/50$/);
+    assert.match(st(r).body, /^PR: https:\/\/github\.com\/george-hutanu\/motor-fix\/pull\/50$/m);
     assert.ok(!st(r, "ST-2").body.includes("PR:"));
     assert.ok(r.warnings.some((w) => /ST-2 has a PR value that is not a motor-fix pull request URL/.test(w)));
   });
@@ -522,5 +562,30 @@ describe("Notion data the import cannot map as typed", () => {
     const after = gh.writes().length;
     await importInto(gh);
     assert.equal(gh.writes().length, after);
+  });
+});
+
+describe("the feature document index", () => {
+  it("maps a Notion id to its document under docs/ only when the file exists", async () => {
+    const { docsIndex } = await import("./import.mjs");
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const clone = mkdtempSync(join(tmpdir(), "clone-"));
+    dirs.push(clone);
+    assert.equal(docsIndex(clone).size, 0);
+    mkdirSync(join(clone, "docs", "features"), { recursive: true });
+    writeFileSync(join(clone, "docs", "features", "sign-in.md"), "# Sign in");
+    writeFileSync(join(clone, "docs", "index.json"), JSON.stringify({ "f0000000-0000-0000-0000-000000000001": "features/sign-in.md", f2: "features/missing.md" }));
+    assert.deepEqual([...docsIndex(clone)], [["f0000000000000000000000000000001", "docs/features/sign-in.md"]]);
+  });
+
+  it("finds the specs clone where specs-repo.mjs says, else .motor-fix-specs, else specs/", async () => {
+    const { specsClone } = await import("./repos.mjs");
+    const { mkdirSync } = await import("node:fs");
+    const root = mkdtempSync(join(tmpdir(), "root-"));
+    dirs.push(root);
+    assert.equal(specsClone(root), join(root, "specs"));
+    mkdirSync(join(root, ".motor-fix-specs", ".git"), { recursive: true });
+    assert.equal(specsClone(root), join(root, ".motor-fix-specs"));
+    assert.equal(specsClone(root, { cloneDir: (r) => join(r, "elsewhere") }), join(root, "elsewhere"));
   });
 });

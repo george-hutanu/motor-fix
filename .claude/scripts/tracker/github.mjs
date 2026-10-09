@@ -13,6 +13,9 @@ const MAX_THROTTLES = 5;
 /** The most pages one list is followed through: a Link or cursor that never ends stops here. */
 export const MAX_PAGES = 50;
 
+/** Notion is being retired: no address of it may be written to GitHub. */
+const NOTION_ADDRESS = /notion\.(?:so|site|com)/i;
+
 export class GitHubError extends Error {
   constructor(type, message) {
     super(message);
@@ -58,6 +61,7 @@ export function githubClient({
 
   async function send(method, path, body, content) {
     const label = `${method} ${path}`;
+    if (body !== undefined && NOTION_ADDRESS.test(JSON.stringify(body))) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
     const url = urlOf(path);
     if (content) stats.content++;
     for (let serverRetried = false, throttles = 0; ; ) {

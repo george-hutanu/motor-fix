@@ -1,18 +1,27 @@
 // Copies the Notion backlog into the MotorFix GitHub Project, one way: an
-// issue per story and epic in the private motor-fix-specs (repos.mjs), its
-// Project fields, sub-issues, dependencies and
-// a Closes line on an open story's PR. Every run replans from what GitHub
+// issue per story and epic in the private motor-fix-specs (repos.mjs) that
+// carries the whole page (every property, every block, every comment, its
+// files), its Project fields, sub-issues, dependencies and a Closes line on
+// an open story's PR. No Notion address is written: links to other stories
+// and epics become #<issue> references. A page the import cannot carry in
+// full stops the run before any write. Every run replans from what GitHub
 // holds, so an interrupted lap continues where it stopped.
 //
-//   node .claude/scripts/tracker/import.mjs [--dry-run] [--budget <n>] [--max-items <n>]
+//   node .claude/scripts/tracker/import.mjs [--dry-run] [--budget <n>] [--max-items <n>] [--refresh]
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isEntryPoint } from "../lib/entry.mjs";
 import { NotionError, notionClient, notionToken } from "../lib/notion.mjs";
 import { findProject, projectState } from "./bootstrap.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
-import { CODE_REPO, closesLine, ISSUE_REPO, OWNER, pullPath } from "./repos.mjs";
+import * as specsRepo from "../specs-repo.mjs";
+import { folderCache, folderStore, loadContent } from "./notion-content.mjs";
+import { fileUrl, refsOf, renderPage, resolveRefs, withoutNotion } from "./notion-markdown.mjs";
 import { readTracker } from "./notion-read.mjs";
+import { CODE_REPO, closesLine, ISSUE_REPO, OWNER, pullPath, specsClone } from "./repos.mjs";
 import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
 // The template's empty closing line, cross-repository or the older same-repository form.
@@ -21,12 +30,14 @@ const PULL = new RegExp(`^https://github\\.com/${OWNER}/${CODE_REPO}/pull/(\\d+)
 const STATUSES = ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"];
 const EPIC_STATUS = { "To do": "To do", "In progress": "Implementing", Done: "Done" };
 const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
-const KINDS = ["create", "adopt", "update", "add-item", "set-fields", "close", "reopen", "sub-issue", "blocked-by", "pr-closes"];
+const KINDS = ["create", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "blocked-by", "pr-closes"];
 const MARKER = /<!-- motorfix:((?:ST|EP)-\d+) -->/;
 // Set on an issue filed by hand and adopted: its title and labels stay the person's.
 const ADOPTED = "<!-- motorfix:adopted -->";
 
-const notionUrl = (id) => `https://app.notion.com/p/${id.replaceAll("-", "")}`;
+/** GitHub takes 65,536 characters in an issue body; a longer page is kept whole in a file. */
+export const BODY_LIMIT = 60_000;
+const plainId = (id) => String(id).replaceAll("-", "").toLowerCase();
 const keyNumber = (key) => Number(key.split("-")[1]);
 // A bare @name in a public issue title would notify that GitHub user.
 const quiet = (title) => title.replace(/(^|\s)(@[\w-]+)/g, "$1`$2`");
@@ -50,6 +61,33 @@ export function issuePlans(tracker) {
     seen.set(r.key, r.id);
   }
   const epicByKey = new Map(tracker.epics.map((e) => [e.key, e]));
+  const all = [...tracker.stories, ...tracker.epics];
+  const keyById = new Map(all.map((r) => [plainId(r.id), r.key]));
+  const titleById = new Map([...(tracker.titles ?? new Map())].map(([id, t]) => [plainId(id), t]));
+  for (const r of all) titleById.set(plainId(r.id), `${r.key} ${r.title}`);
+  const ctx = {
+    keyOf: (id) => keyById.get(plainId(id)) ?? null,
+    titleOf: (id) => titleById.get(plainId(id)) ?? null,
+    userOf: (id) => tracker.users?.get(id) ?? null,
+    featureLink: (id) => {
+      const path = tracker.docs?.get(plainId(id));
+      return path ? fileUrl(path) : null;
+    },
+  };
+  /** The body (with reference tokens), what could not be carried, and the file a too-long page is kept in. */
+  const page = (r, head) => {
+    if (!r.content) return { body: head.join("\n"), gaps: ["the page's content was not read"], file: null };
+    const { body, gaps } = renderPage({ properties: r.properties, content: r.content }, ctx, { head: [head.join("\n")] });
+    if (body.length <= BODY_LIMIT) return { body, gaps, file: null };
+    const path = `tracker/${r.key}/issue.md`;
+    const rest = body.slice(head.join("\n").length).trimStart();
+    const cut = rest.lastIndexOf("\n", BODY_LIMIT - 1000);
+    return {
+      body: [head.join("\n"), `This page is longer than an issue holds: all of it is in [${path}](${fileUrl(path)}). The start:`, rest.slice(0, cut > 0 ? cut : BODY_LIMIT - 1000)].join("\n\n"),
+      gaps,
+      file: { path, text: `# ${titled(r.key, r.title)}\n\n${resolveRefs(rest, () => null)}\n` },
+    };
+  };
   const statusOf = new Map(tracker.stories.map((s) => [s.key, s.status]));
   /** The blockers that are imported items other than the item itself; the rest are warned and dropped. */
   const linkable = (r) =>
@@ -81,7 +119,7 @@ export function issuePlans(tracker) {
     return {
       key: s.key,
       title: titled(s.key, s.title),
-      body: [`<!-- motorfix:${s.key} -->`, `Notion: ${notionUrl(s.id)}`, ...(s.feature ? [`Feature: ${notionUrl(s.feature)}`] : []), ...(pr ? [`PR: ${pr[0]}`] : [])].join("\n"),
+      ...page(s, [`<!-- motorfix:${s.key} -->`, ...(pr ? [`PR: ${pr[0]}`] : [])]),
       labels: [`type: ${type.toLowerCase()}`, ...(epic ? [epic] : []), ...s.labels.map((l) => `area: ${l}`), ...(s.role ? [`role: ${s.role}`] : [])],
       milestone: epicByKey.get(epic)?.release ?? null,
       assignee: s.assignee,
@@ -113,7 +151,7 @@ export function issuePlans(tracker) {
     return {
       key: e.key,
       title: titled(e.key, e.title),
-      body: `<!-- motorfix:${e.key} -->\nNotion: ${notionUrl(e.id)}`,
+      ...page(e, [`<!-- motorfix:${e.key} -->`]),
       labels: ["epic", ...(e.track ? [`track: ${e.track}`] : [])],
       milestone: e.release ?? null,
       assignee: e.assignee,
@@ -200,9 +238,10 @@ function missingSetup({ plans, labels, milestones, fields }) {
   return parts.length ? parts.map(([what, list]) => `${what} ${list.slice(0, 5).join(", ")}${list.length > 5 ? ", …" : ""}`).join("; ") : null;
 }
 
-export async function runImport({ github, tracker, log = console.log, dryRun = false, budget = Infinity, maxItems = 1200 }) {
+export async function runImport({ github, tracker, log = console.log, dryRun = false, budget = Infinity, maxItems = 1200, publish = async () => {} }) {
   const out = (kind, detail) => log(`${kind.padEnd(9)} ${detail}`);
   const { plans, warnings } = issuePlans(tracker);
+  const gaps = plans.flatMap((p) => p.gaps.map((g) => `${p.key} ${g}`));
 
   const { project } = await findProject(github);
   if (!project) {
@@ -236,21 +275,35 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
   const steps = [];
   const step = (kind, key, run) => steps.push({ kind, key, run });
   let adopted = 0;
+  for (const plan of plans) {
+    const found = byMarker.get(plan.key) ?? byTitle.get(plan.key);
+    if (found) issue.set(plan.key, found);
+  }
+  const planned = new Set(plans.map((p) => p.key));
+  const existing = new Set(issue.keys());
+  // The body as written: references resolved to the issues known now, a hand-filed issue's own text kept after ADOPTED.
+  const written = new Map();
+  const bodyOf = (plan, current) => {
+    const own = resolveRefs(plan.body, (key) => issue.get(key)?.number ?? null);
+    const at = current?.indexOf(ADOPTED) ?? -1;
+    return at === -1 ? own : `${own}\n${ADOPTED}${withoutNotion(current.slice(at + ADOPTED.length))}`;
+  };
 
   for (const plan of plans) {
     const byMark = byMarker.get(plan.key);
-    const found = byMark ?? byTitle.get(plan.key);
-    if (found) issue.set(plan.key, found);
+    const found = issue.get(plan.key);
     if (!found) {
       step("create", plan.key, async () => {
+        const body = bodyOf(plan);
         const made = await github.rest("POST", "issues", {
           title: plan.title,
-          body: plan.body,
+          body,
           labels: plan.labels,
           ...(plan.milestone ? { milestone: milestoneNumber.get(plan.milestone) } : {}),
           assignees: plan.assignee ? [plan.assignee] : [],
         });
         issue.set(plan.key, made);
+        written.set(plan.key, body);
         return `→ #${made.number}`;
       });
     } else {
@@ -258,8 +311,8 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
       const byHand = !byMark || found.body?.includes(ADOPTED);
       const change = {};
       if (!byHand && found.title !== plan.title) change.title = plan.title;
-      // A story that later gains a PR or a Feature gets its line in the body.
-      if (!byHand && found.body !== plan.body) change.body = plan.body;
+      // The page as it is now, an older body (one with Notion links included) rewritten; a hand-filed issue keeps its own text below.
+      const bodyChanged = byMark && found.body !== bodyOf(plan, found.body);
       const have = found.labels.map((l) => l.name);
       const haveLower = lower(have);
       if (!byHand && plan.labels.some((l) => !haveLower.has(l.toLowerCase()))) change.labels = [...have, ...plan.labels.filter((l) => !haveLower.has(l.toLowerCase()))];
@@ -267,15 +320,19 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
       if (plan.assignee && !found.assignees.some((a) => a.login === plan.assignee)) change.assignees = [plan.assignee];
       if (!byMark) {
         adopted++;
-        const body = [plan.body, ADOPTED, ...(found.body ? ["", found.body] : [])].join("\n");
         step("adopt", plan.key, async () => {
+          const body = bodyOf(plan, `${ADOPTED}${found.body ? `\n\n${found.body}` : ""}`);
           await github.rest("PATCH", `issues/${found.number}`, { body, ...change });
+          written.set(plan.key, body);
           return `#${found.number}`;
         });
-      } else if (Object.keys(change).length) {
+      } else if (Object.keys(change).length || bodyChanged) {
         step("update", plan.key, async () => {
-          await github.rest("PATCH", `issues/${found.number}`, change);
-          return `#${found.number} ${Object.keys(change).join(", ")}`;
+          const body = bodyOf(plan, found.body);
+          const patch = body === found.body ? change : { ...change, body };
+          await github.rest("PATCH", `issues/${found.number}`, patch);
+          written.set(plan.key, patch.body ?? found.body);
+          return `#${found.number} ${Object.keys(patch).join(", ")}`;
         });
       }
     }
@@ -314,6 +371,20 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
         return `#${number}`;
       });
     }
+  }
+
+  // A body naming an item this run creates is written again once that item has its number.
+  for (const plan of plans) {
+    if (!refsOf(plan.body).some((key) => planned.has(key) && !existing.has(key))) continue;
+    step("relink", plan.key, async () => {
+      const current = written.get(plan.key) ?? issue.get(plan.key).body;
+      const body = bodyOf(plan, current);
+      if (body === current) return "unchanged";
+      const number = issue.get(plan.key).number;
+      await github.rest("PATCH", `issues/${number}`, { body });
+      written.set(plan.key, body);
+      return `#${number}`;
+    });
   }
 
   const linked = async (key, path) => {
@@ -367,8 +438,16 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
   out("read", `github: ${listed.length} issues listed, ${byMarker.size} matched by marker, ${adopted} by title; project items ${items.length} of max ${maxItems}`);
   out("plan", KINDS.map((k) => `${k} ${counts[k]}`).join(" · "));
   for (const w of [...tracker.warnings, ...warnings]) out("warn", w);
+  const files = plans.map((p) => p.file).filter(Boolean);
+  out("bodies", `${plans.length} pages, ${plans.reduce((n, p) => n + p.body.length, 0).toLocaleString("en-US")} characters; ${files.length} too long for an issue, kept whole under tracker/`);
+  // Nothing is written while any page cannot be carried in full.
+  for (const g of gaps) out("incomplete", g);
+  if (gaps.length) {
+    out("failed", `${gaps.length} part(s) of Notion pages would be left behind; nothing written`);
+    return 1;
+  }
   if (dryRun) {
-    out("titles", `(${plans.length}, the only Notion text that becomes public)`);
+    out("titles", `(${plans.length})`);
     for (const p of plans) log(`          ${p.title}`);
     return 0;
   }
@@ -377,6 +456,8 @@ export async function runImport({ github, tracker, log = console.log, dryRun = f
     return 2;
   }
 
+  // The files the issues link to (attachments, whole long pages) reach the repository before any issue names them.
+  await publish(files);
   let ran = 0;
   for (const s of steps) {
     if (ran === budget) {
@@ -407,6 +488,22 @@ function flag(argv, name, fallback) {
   return Number.isInteger(n) && n > 0 ? n : Number.NaN;
 }
 
+/**
+ * Notion page id (no dashes) → repository path of its document, from the
+ * docs/index.json ST-1018 writes into the specs repository; empty until then.
+ */
+export function docsIndex(clone) {
+  const file = join(clone, "docs", "index.json");
+  if (!existsSync(file)) return new Map();
+  const data = JSON.parse(readFileSync(file, "utf8"));
+  const entries = Array.isArray(data) ? data.map((d) => [d.notionId ?? d.id, d.path]) : Object.entries(data.pages ?? data);
+  return new Map(
+    entries
+      .filter(([id, path]) => id && typeof path === "string" && existsSync(join(clone, path.startsWith("docs/") ? path : `docs/${path}`)))
+      .map(([id, path]) => [plainId(id), path.startsWith("docs/") ? path : `docs/${path}`]),
+  );
+}
+
 async function main(argv = process.argv.slice(2)) {
   const budget = flag(argv, "--budget", Infinity);
   const maxItems = flag(argv, "--max-items", 1200);
@@ -420,8 +517,26 @@ async function main(argv = process.argv.slice(2)) {
     if (!notion) throw new NotionError("no token", "No Notion token: set NOTION_TOKEN or put it in .env");
     const github = githubClient({ token: projectToken(), log: console.log });
     console.log(`${"token".padEnd(9)} ${await assertProjectScope(github)}, project scope`);
-    const tracker = await readTracker(notionClient({ token: notion }));
-    process.exitCode = await runImport({ github, tracker, dryRun: argv.includes("--dry-run"), budget, maxItems });
+    const root = fileURLToPath(new URL("../../../", import.meta.url));
+    const clone = specsClone(root, specsRepo);
+    if (!existsSync(join(clone, ".git"))) throw new NotionError("no clone", `no clone of ${ISSUE_REPO} at ${clone}: node .claude/scripts/specs-repo.mjs ensure`);
+    const client = notionClient({ token: notion });
+    const tracker = await readTracker(client);
+    tracker.docs = docsIndex(clone);
+    const store = folderStore(clone);
+    const read = await loadContent(client, tracker, {
+      cache: folderCache(join(homedir(), ".cache", "motorfix-tracker", "pages")),
+      store,
+      refresh: argv.includes("--refresh"),
+      log: console.log,
+    });
+    console.log(`${"read".padEnd(9)} notion: ${read} pages' content read, the rest from the cache`);
+    const publish = async (files) => {
+      for (const f of files) store.write(f.path, f.text);
+      const done = specsRepo.commit({ root, message: "docs(tracker): ST-1017 page files for the imported issues", paths: ["tracker"] });
+      if (!done.ok) throw new GitHubError("specs", `could not push tracker/ to ${ISSUE_REPO}: ${done.error}`);
+    };
+    process.exitCode = await runImport({ github, tracker, dryRun: argv.includes("--dry-run"), budget, maxItems, publish });
   } catch (error) {
     if (!(error instanceof TokenError || error instanceof GitHubError || error instanceof NotionError)) throw error;
     console.error(error.message);

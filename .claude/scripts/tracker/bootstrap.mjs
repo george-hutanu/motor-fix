@@ -6,16 +6,18 @@
 //
 //   node .claude/scripts/tracker/bootstrap.mjs [--dry-run]
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isEntryPoint } from "../lib/entry.mjs";
 import { GitHubError, githubClient } from "./github.mjs";
-import { CODE_REPO, ISSUE_REPO, OWNER } from "./repos.mjs";
+import * as specsRepo from "../specs-repo.mjs";
+import { CODE_REPO, ISSUE_REPO, OWNER, specsClone } from "./repos.mjs";
 import { assertProjectScope, projectToken, TokenError } from "./token.mjs";
 
 const PROJECT_TITLE = "MotorFix";
 // The issue forms live in the specs clone (motor-fix-specs), beside the issues.
-const FORMS_DIR = fileURLToPath(new URL("../../../specs/.github/ISSUE_TEMPLATE/", import.meta.url));
+const FORMS_DIR = join(specsClone(fileURLToPath(new URL("../../../", import.meta.url)), specsRepo), ".github", "ISSUE_TEMPLATE");
 /** The repositories the Project is linked to: issues from the first, pull requests from the second. */
 export const LINKED_REPOS = [ISSUE_REPO, CODE_REPO];
 const DEFAULT_STATUS = ["Todo", "In Progress", "Done"];
@@ -84,9 +86,9 @@ export const SCHEMA = {
     "",
     "The backlog of MotorFix: one issue per story, task, bug, tech debt or decision, and one parent issue per epic.",
     "",
-    "- Architecture, decisions, build briefs and designs stay in Notion; each imported issue links its Notion page.",
+    "- Each imported issue carries its whole page: every property, the build brief or plan, comments (under Notes from Notion) and files (stored in this repository under tracker/).",
     "- File new work with an issue form (Story, Task, Bug, Tech debt, Decision); it lands here by itself.",
-    "- An imported issue is titled `ST-<n>` or `EP-<n>` after its Notion ID; a new one is known by its number.",
+    "- An imported issue is titled `ST-<n>` or `EP-<n>` after its old ID; a new one is known by its number.",
     "- Stories are sub-issues of their epic; Blocked by links are issue dependencies.",
   ].join("\n"),
 };

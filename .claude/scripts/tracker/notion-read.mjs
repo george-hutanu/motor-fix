@@ -1,6 +1,6 @@
 // Reads the backlog the GitHub import needs from Notion: stories, epics and
-// the epics' build-timeline rows, from their properties alone. Page bodies,
-// comments and free-text properties are never requested.
+// the epics' build-timeline rows, from their properties. Each item keeps its
+// raw properties and last edit; notion-content.mjs reads the page bodies.
 import { readProp } from "../lib/notion.mjs";
 import { STORIES } from "../notion-sync.mjs";
 
@@ -13,7 +13,9 @@ const people = (value) => (value ?? []).map((p) => p.id);
 
 export async function readTracker(client) {
   const warnings = [];
-  const persons = (await client.request("GET", "/users")).results.filter((u) => u.type === "person");
+  const everyone = (await client.request("GET", "/users")).results;
+  const users = new Map(everyone.map((u) => [u.id, u.name ?? null]));
+  const persons = everyone.filter((u) => u.type === "person");
   const ownerId = persons.length === 1 ? persons[0].id : null;
   const unassigned = [];
   const assignee = (key, ids) => {
@@ -32,6 +34,8 @@ export async function readTracker(client) {
     return {
       id: p.id,
       key,
+      properties: p.properties,
+      lastEdited: p.last_edited_time ?? null,
       title: readProp(p, "Epic").trim(),
       status: readProp(p, "Status"),
       priority: readProp(p, "Priority"),
@@ -49,6 +53,8 @@ export async function readTracker(client) {
     return {
       id: p.id,
       key,
+      properties: p.properties,
+      lastEdited: p.last_edited_time ?? null,
       title: readProp(p, "Story").trim(),
       type: readProp(p, "Issue type"),
       status: readProp(p, "Status"),
@@ -103,5 +109,5 @@ export async function readTracker(client) {
     const reason = ownerId ? "is not the owner" : `cannot be matched: the workspace has ${persons.length ? "more than one person" : "no person"}`;
     warnings.push(`${unassigned.length} item(s) left unassigned: the assignee ${reason} (first: ${unassigned[0]})`);
   }
-  return { stories, epics, warnings, skippedRows };
+  return { stories, epics, warnings, skippedRows, users };
 }

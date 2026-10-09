@@ -119,13 +119,19 @@ const TIMELINES = {
 
 const EPIC_TITLES = { 1: "Foundations", 2: "Garage side", 3: "Old launch", 17: "Observability" };
 
-/** A fetch that answers the Notion API from the backlog above, and every request it saw. */
-export function fakeNotion({ failOn, users } = {}) {
+/**
+ * A fetch that answers the Notion API from the backlog above, and every request it saw.
+ * `blocks` (parent id → child blocks), `comments` (block or page id → comments),
+ * `pages` (id → page) and `databases` (id → { title, rows }) add page content;
+ * every page has none by default.
+ */
+export function fakeNotion({ failOn, users, blocks = {}, comments = {}, pages = {}, databases = {}, properties = {} } = {}) {
   const requests = [];
   const ok = (data) => new Response(JSON.stringify(data), { status: 200, headers: { "content-type": "application/json" } });
   const list = (results) => ok({ object: "list", results, has_more: false, next_cursor: null });
   async function fetchImpl(url, init = {}) {
-    const path = new URL(url).pathname.replace(/^\/v1/, "");
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/^\/v1/, "");
     const method = init.method ?? "GET";
     const body = init.body ? JSON.parse(init.body) : {};
     requests.push({ method, path, body });
@@ -141,6 +147,17 @@ export function fakeNotion({ failOn, users } = {}) {
         .filter((d) => d.title[0].plain_text.includes(body.query));
       return list(found);
     }
+    const children = path.match(/^\/blocks\/([^/]+)\/children$/)?.[1];
+    if (children) return list(blocks[children] ?? []);
+    if (path === "/comments") return list(comments[parsed.searchParams.get("block_id")] ?? []);
+    const prop = path.match(/^\/pages\/([^/]+)\/properties\/([^/]+)$/);
+    if (prop && properties[`${prop[1]}/${decodeURIComponent(prop[2])}`]) return list(properties[`${prop[1]}/${decodeURIComponent(prop[2])}`]);
+    const page = path.match(/^\/pages\/([^/]+)$/)?.[1];
+    if (page && pages[page]) return ok(pages[page]);
+    const db = path.match(/^\/databases\/([^/]+)$/)?.[1];
+    if (db && databases[db]) return ok({ object: "database", id: db, data_sources: [{ id: `ds-${db}` }] });
+    const dbRows = Object.entries(databases).find(([id]) => ds === `ds-${id}`);
+    if (dbRows) return list(dbRows[1].rows);
     if (path === "/users") {
       return list(
         users ?? [
