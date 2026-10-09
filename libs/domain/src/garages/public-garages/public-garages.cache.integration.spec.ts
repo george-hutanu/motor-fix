@@ -140,6 +140,24 @@ describe('the profile cache', () => {
     expect((await counts()).hit - before.hit).toBe(1);
   });
 
+  it('counts a slug pointer the garage gave up as one miss, not a hit', async () => {
+    const garage = await approvedGarage();
+    await read(garage.slug);
+    const renamed = `renamed-${randomUUID()}`;
+    await prisma.garage.update({
+      data: { slug: renamed },
+      where: { id: garage.id },
+    });
+    await read(renamed);
+    const before = await counts();
+
+    expect((await read(garage.slug)).status).toBe(404);
+
+    const after = await counts();
+    expect(after.hit - before.hit).toBe(0);
+    expect(after.miss - before.miss).toBe(1);
+  });
+
   it('keeps each brand in context in its own field', async () => {
     const slug = `dacia-${randomUUID()}`;
     await prisma.brand.create({

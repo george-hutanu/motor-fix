@@ -70,7 +70,10 @@ export class PublicGaragesService {
     const cachedId = await this.cache(() => this.redis.get(slugKey(slug)));
     const cached = cachedId && (await this.cached(cachedId, wanted));
     // A slug the garage gave up still points at it until the pointer expires.
-    if (cached && cached.slug === slug) return cached;
+    if (cached && cached.slug === slug) {
+      recordProfileCache('hit');
+      return cached;
+    }
     recordProfileCache('miss');
     const id =
       cachedId ??
@@ -97,7 +100,6 @@ export class PublicGaragesService {
       this.redis.hget(profileKey(id), wanted ?? NO_BRAND),
     );
     if (!text) return undefined;
-    recordProfileCache('hit');
     return JSON.parse(text) as PublicGarageDto;
   }
 
