@@ -1,0 +1,11 @@
+<mf-garage-requests-panel [more]="more()" [titled]="false">
+  <span #end class="end" aria-hidden="true"></span>
+  @if (feed.closed()?.length) {
+    <h3 class="closed-heading">{{ 'garage.requests.closed' | t }}</h3>
+    <ul class="closed">
+      @for (row of feed.closed(); track row.id) {
+        <li [mfGarageRequestRow]="row" [attr.data-live-id]="row.id" data-closed></li>
+      }
+    </ul>
+  }
+</mf-garage-requests-panel>

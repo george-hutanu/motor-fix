@@ -22,6 +22,7 @@ export {
   formatPct,
   formatRating,
   relativeTime,
+  requestAge,
 } from './formats';
 export { I18n, provideI18n } from './i18n';
 export {

@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -9,6 +9,7 @@ features:
   - 461-list-row-labels
   - 028-driver-dashboard-views
   - 097-garage-dashboard
+  - 343-live-quote-requests
 ---
 
 # Capability: Phone layout and installable web app
@@ -177,17 +178,17 @@ _From 028-driver-dashboard-views._
 
 _From 028-driver-dashboard-views._
 
-### 097-FR-001 — The garage dashboard's view list MUST hold ten views in this order, each under `/app/garage/<path>`: Panou (`''`), Cereri de ofertă (`requests`), Programări (`schedule`), Mecanici (`team`), Prețuri (`prices`), Recenzii (`reviews`), Profilul service‑ului (`profile`), Asistent AI (`assistant`), Setări (`settings`), Istoric modificări (`history`). It is the one configuration list the side menu, the bar, the routes and the header read (288‑FR‑001); each entry carries its key (the path), its labels in Romanian and English, its short label, its route, an optional counter slot (Cereri de ofertă, left empty here for the quote‑requests story to fill) and the capability and the feature it needs. Later stories (other roles' menus, feature switches, the view bodies) extend this list, never add their own. Adds `history` (capability `garage.audit_history`) and `assistant` to the eight entries that exist; the others keep their paths, capabilities and labels.
+### 343-FR-007 — The Cereri de ofertă view MUST replace its empty-state placeholder with the waiting rows, newest first, 20 at a time, the next page loading when the list's end comes into view until `nextCursor` is null, and the closed rows of the last 24 hours greyed under the waiting rows loaded so far, each with its FR-004 label; the closed rows come from one `closed` read (its first page, not paged further) made with the first waiting read and re-read on the same events. Its title and subtitle stay as 097-FR-003 gives them. The view's menu entry and bottom tab MUST show the FR-001 count in the counter slot 097-FR-001 reserved, with no number at zero.
 
-_From 097-garage-dashboard._
+_From 343-live-quote-requests._
 
 ### 097-FR-002 — Asistent AI MUST carry the release mark, as the driver's does (160‑FR‑007, 028‑FR‑001): absent from the menu, the bar and the routes, its address redirecting to `/app/garage`, with its labels present in both languages ("Asistent AI" / "AI assistant", tab "AI", title "Asistentul tău AI" / "Your AI assistant", the mock's). Istoric modificări MUST read "Istoric modificări" / "Change history", tab "Istoric" / "History"; the tab bar's short labels of the eight others are the existing ones (Panou, Cereri, Program, Mecanici, Prețuri, Recenzii, Profil, Setări).
 
 _From 097-garage-dashboard._
 
-### 097-FR-004 — Every garage view whose content comes with a later story MUST show, in place of a body, one empty state that says what will appear there, never sample data: Panou — "Aici vei vedea ce se întâmplă azi în service." / "Here you will see what is happening in your garage today."; Cereri de ofertă — "Aici vei vedea cererile de ofertă ale șoferilor și vei răspunde cu o ofertă." / "Here you will see drivers' quote requests and answer with a quote."; Programări — "Aici vei vedea programările pe zile, pe mecanici și pe elevatoare." / "Here you will see bookings by day, by mechanic and by lift."; Mecanici — "Aici vei vedea mecanicii service‑ului și ce poate face fiecare." / "Here you will see your garage's mechanics and what each one may do."; Prețuri — "Aici vei vedea intervalele de preț pe lucrări." / "Here you will see the price ranges per job."; Recenzii — "Aici vei vedea recenziile șoferilor și vei putea răspunde." / "Here you will see drivers' reviews and be able to reply."; Profilul service‑ului — "Aici vei edita profilul service‑ului." / "Here you will edit your garage profile."; Istoric modificări — "Aici vei vedea cine a schimbat ce în service." / "Here you will see who changed what in your garage." Setări keeps the body it has. The empty state is one text per view in the one list (the shared "Nimic aici încă." stays for the views of the other dashboards); the story that builds a view's body replaces it.
+### 343-FR-006 — Panou MUST gain a section "Cereri de ofertă" / "Quote requests" above its empty state, replacing that empty state once the section exists: its heading, the counter "N fără răspuns" / "N unanswered", the four newest waiting rows and, when there are more than four, a link "Vezi toate" / "See all" to the Cereri de ofertă view. The section is present for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 097-FR-005), absent for a mechanic without it, and absent while the garage is `draft` (097-FR-008's line stays).
 
-_From 097-garage-dashboard._
+_From 343-live-quote-requests._
 
 ### 097-FR-006 — The garage the dashboard shows MUST come from `garageAccess`, matched on the session's `garageId`, never from the address: the header line under Panou's title is that garage's name alone, with nothing after it until the stories that deliver the two counts; with no membership, or a session `garageId` that matches no entry, the line is absent and Panou shows its FR‑004 empty state. The aside's account‑type line, under the logo where the driver's "CONT ȘOFER" sits, MUST read "CONT SERVICE" / "GARAGE ACCOUNT" (replaces "Service" / "Garage"; the admin's stays). Shell and menu render at once from the session already loaded by the area guard: no extra call, no skeleton on the header line.
 
@@ -210,3 +211,6 @@ _From 097-garage-dashboard._
 - `288-FR-013` — superseded by `028-FR-002` (2026-10-07)
 
 - `028-FR-002` — superseded by `097-FR-003` (2026-10-08)
+
+- `097-FR-001` — superseded by `343-FR-007` (2026-10-09)
+- `097-FR-004` — superseded by `343-FR-006` (2026-10-09)

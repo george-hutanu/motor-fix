@@ -45,6 +45,11 @@ import { PUSH_SENDER, PushSender } from './push/push';
 import { PUSH_CONFIG, type PushConfig } from './push/push-config';
 import { PushSubscriptionsController } from './push/push-subscriptions/push-subscriptions.controller';
 import { PushSubscriptionsService } from './push/push-subscriptions/push-subscriptions.service';
+import {
+  REQUEST_RECEIVED_QUEUE,
+  type RequestCreatedEvent,
+  RequestReceivedFanOut,
+} from './request-received/request-received.fan-out';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';
@@ -62,6 +67,7 @@ interface NotificationsOptions {
 
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
 const NEWS_WORKER = Symbol('NEWS_WORKER');
+const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
@@ -92,6 +98,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(NEWS_WORKER)
     private readonly newsWorker?: Worker | null,
+    @Optional()
+    @Inject(REQUEST_RECEIVED_WORKER)
+    private readonly requestReceivedWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -232,12 +241,39 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        RequestReceivedFanOut,
+        {
+          inject: [RequestReceivedFanOut],
+          provide: REQUEST_RECEIVED_WORKER,
+          useFactory: (fanOut: RequestReceivedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('RequestReceived').error(
+                'PUBLIC_WEB_URL missing; new request messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<RequestCreatedEvent>(
+              REQUEST_RECEIVED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            return worker;
+          },
+        },
       ],
     };
   }
 
   async onApplicationShutdown() {
     await this.newsWorker?.close();
+    await this.requestReceivedWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
     this.publisher.disconnect();

@@ -4,6 +4,7 @@ updated: 2026-10-09
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
+  - 343-live-quote-requests
 ---
 
 # Capability: Quotes
@@ -52,13 +53,13 @@ _From 221-quote-request._
 
 _From 220-requests-quotes-bookings._
 
-### 220-FR-012 — The API MUST serve, for the capability `driver.requests` (the account's `driver` role): `GET /api/v1/requests` (the actor's own requests, newest first, paged, FR-014) and `GET /api/v1/requests/:id` (one own request with its jobs, its recipients' garage name and status, its quotes with their status, and its booking); for the capability `garage.requests` (the owner, a receptionist, a mechanic with `can_answer_quotes`): `GET /api/v1/garage/requests` (the requests with a recipient row for the actor's garage, newest first, paged) and `GET /api/v1/garage/requests/:id` (one such request with the garage's own recipient row, the garage's own quote, and the booking when it is the garage's); for the capability `garage.own_jobs` (owner, receptionist, mechanic): `GET /api/v1/garage/jobs` (the garage's jobs, newest first, paged; for a mechanic only jobs whose mechanic they are) and `GET /api/v1/garage/jobs/:id` (one such job with its status and times, the driver as in FR-013, the car snapshot of its request with the plate, its steps and its stage entries). Every other caller, a row outside the actor's scope, and a mechanic without `can_answer_quotes` on the requests routes get 404; the routes need a session (the app-wide guard) and join none of the public routes. Each answer type is a DTO in the contracts library; the OpenAPI document and the generated client are regenerated (421-FR-015, 421-FR-016).
+### 343-FR-002 — `GET /api/v1/garage/requests` MUST accept an optional `status` query, `waiting` or `closed`: `waiting` answers the waiting rows of FR-001, `closed` the garage's closed rows (a recipient `expired` or `closed`, or a recipient still `waiting` on a request no longer `sent` or `quoted`) that closed within the last 24 hours, the close time being the recipient's last status change when it moved, else the request's (each from the per-move audit entries; with no entry, the recipient's creation time); without `status` the read is unchanged. Both answers keep the existing shape `{ items, nextCursor, total }`, 20 a page, newest first by the request's creation time with equal times by id, cursor paging and the existing 400 `invalid_cursor` (220-FR-014); `total` is the count in the caller's scope for that filter. A value outside the two answers 400 `validation_failed` naming `status`. The DTOs stay in the contracts library; the OpenAPI document and the generated client are regenerated.
 
-_From 220-requests-quotes-bookings._
+_From 343-live-quote-requests._
 
-### 220-FR-013 — In the garage-side answers the driver MUST appear as first name and surname initial ("Andrei M."; a single-word name as is), the car as its snapshot (brand, model, year, fuel, engine), with the jobs and the description; the driver's phone MUST be present only once a quote of this garage is `accepted` and only for the owner and the receptionist (never a mechanic); the car's plate MUST be present only once the booking is `confirmed`, for the owner, the receptionist and the mechanic whose job it is (a mechanic with `can_answer_quotes` reading a request whose booking is another mechanic's, or has none, sees no plate). The driver-side answers carry no other driver's or garage staff's personal data: a garage appears as its id, name and slug. No log line and no event payload carries the phone, the plate or the description (421-FR-010, 253-FR-005).
+### 343-FR-003 — Each garage-side request summary MUST mark, per job, whether the garage does that job on the request's car brand (`offered`: GARAGE_BRAND_JOB has the job type ticked for that brand), so the screen can show "nu faceți" / "not offered" on the others. A request with no jobs has nothing to mark.
 
-_From 220-requests-quotes-bookings._
+_From 343-live-quote-requests._
 
 ### 220-FR-014 — Every list endpoint of FR-012 MUST return `{ items, nextCursor, total }` (`total` the count of rows in the caller's scope) with at most PAGE_SIZE (20) items, newest first with equal times ordered by id, `nextCursor` the id of the last item or null on the last page, and MUST answer 400 `invalid_cursor` to a cursor that is not an existing row inside the caller's scope (a cursor that is not a uuid fails validation first: 400 `validation_failed`, FR-015) (391-FR-009, 391-FR-010).
 
@@ -152,8 +153,67 @@ _From 221-quote-request._
 
 _From 221-quote-request._
 
+### 343-FR-001 — A *waiting row* MUST be a REQUEST_RECIPIENT of the reader's garage with status `waiting` on a request whose status is `sent` or `quoted`. The two counters (the panel's "N fără răspuns" / "N unanswered" and the number on the Cereri de ofertă menu entry and bottom tab) MUST equal the count of exactly these rows, read with the list, never counted in the browser.
+
+_From 343-live-quote-requests._
+
+### 343-FR-002 — `GET /api/v1/garage/requests` MUST accept an optional `status` query, `waiting` or `closed`: `waiting` answers the waiting rows of FR-001, `closed` the garage's closed rows (a recipient `expired` or `closed`, or a recipient still `waiting` on a request no longer `sent` or `quoted`) that closed within the last 24 hours, the close time being the recipient's last status change when it moved, else the request's (each from the per-move audit entries; with no entry, the recipient's creation time); without `status` the read is unchanged. Both answers keep the existing shape `{ items, nextCursor, total }`, 20 a page, newest first by the request's creation time with equal times by id, cursor paging and the existing 400 `invalid_cursor` (220-FR-014); `total` is the count in the caller's scope for that filter. A value outside the two answers 400 `validation_failed` naming `status`. The DTOs stay in the contracts library; the OpenAPI document and the generated client are regenerated.
+
+_From 343-live-quote-requests._
+
+### 343-FR-003 — Each garage-side request summary MUST mark, per job, whether the garage does that job on the request's car brand (`offered`: GARAGE_BRAND_JOB has the job type ticked for that brand), so the screen can show "nu faceți" / "not offered" on the others. A request with no jobs has nothing to mark.
+
+_From 343-live-quote-requests._
+
+### 343-FR-004 — Each closed row MUST carry its reason, derived on the server and never stored anew: `cancelled` (request `closed` with `closed_reason` `cancelled`), `accepted_elsewhere` (request `booked`, or `closed` with `booking_lapsed`, `booking_cancelled` or `no_show`, with no accepted quote of this garage), `account_closed` (`closed_reason` `account_closed`), `expired` (recipient `expired`), `garage_suspended` (recipient `closed` while the garage is `suspended`); the reasons are one typed set in the contracts library with their Romanian and English labels ("Cerere anulată de client" / "Request cancelled by the customer", "Clientul a acceptat altă ofertă" / "The customer accepted another quote", "Cerere închisă" / "Request closed", "Cerere expirată" / "Request expired", "Service suspendat" / "Garage suspended"), a test failing when a reason lacks a label. Reasons are tried in the order `expired`, `garage_suspended`, `cancelled`, `account_closed`, `accepted_elsewhere`; a close matching none shows `account_closed`'s label "Cerere închisă" / "Request closed".
+
+_From 343-live-quote-requests._
+
+### 343-FR-005 — The reads of FR-002 MUST be open to the owner and the receptionist of the garage and to a mechanic of it with `can_answer_quotes`; every other caller, a mechanic without the permission and another garage's staff MUST get 404 (the existing policy, 220-FR-012); the routes need a session and join no public route. Rows carry the driver as first name and surname initial, the car snapshot (brand, model, year), the jobs in the reader's language, the request's creation time and expiry, and no phone, e-mail, plate or description beyond what 220-FR-013 already gives.
+
+_From 343-live-quote-requests._
+
+### 343-FR-006 — Panou MUST gain a section "Cereri de ofertă" / "Quote requests" above its empty state, replacing that empty state once the section exists: its heading, the counter "N fără răspuns" / "N unanswered", the four newest waiting rows and, when there are more than four, a link "Vezi toate" / "See all" to the Cereri de ofertă view. The section is present for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 097-FR-005), absent for a mechanic without it, and absent while the garage is `draft` (097-FR-008's line stays).
+
+_From 343-live-quote-requests._
+
+### 343-FR-007 — The Cereri de ofertă view MUST replace its empty-state placeholder with the waiting rows, newest first, 20 at a time, the next page loading when the list's end comes into view until `nextCursor` is null, and the closed rows of the last 24 hours greyed under the waiting rows loaded so far, each with its FR-004 label; the closed rows come from one `closed` read (its first page, not paged further) made with the first waiting read and re-read on the same events. Its title and subtitle stay as 097-FR-003 gives them. The view's menu entry and bottom tab MUST show the FR-001 count in the counter slot 097-FR-001 reserved, with no number at zero.
+
+_From 343-live-quote-requests._
+
+### 343-FR-008 — A row MUST show, in this order: the driver's short name, the car as "<brand> <model> · <year>", the jobs' names in the person's language joined by " · " (each not offered followed by " · nu faceți" / " · not offered"; the description's first line when there are no jobs), "orice mecanic" / "any mechanic", and the age in Europe/Bucharest in the person's language: "acum câteva secunde" / "a few seconds ago" under one minute, "acum N min" / "N min ago" under an hour, "acum N ore" / "N hours ago" under 24 hours (Romanian agreement: "acum 1 oră", "acum 2 ore", "acum 20 de ore" with "de" from 20 on, likewise "acum 20 de min"; English "1 hour ago"), from 24 hours "ieri, HH:mm" / "yesterday, HH:mm" when the Bucharest date is the day before, else the short weekday, day and month with the time ("lun., 12 oct., 18:05" / "Mon, 12 Oct, 18:05"). Ages MUST refresh at least once a minute while the view is shown. The row has no action in this story: opening, quoting and declining come with their stories.
+
+_From 343-live-quote-requests._
+
+### 343-FR-009 — The panel, the view and the counters MUST be kept current through the existing live helper (256-FR-002, 257-FR-008), re-reading on `request.created`, `quote.sent`, `request.declined`, `request.decline_undone`, `request.cancelled`, `request.expired` and `quote.accepted` received on the garage's stream, and on the stream's resync; a change MUST show within 5 seconds of the event's commit without a reload, a route change, a closed overlay or moved focus (256-FR-005), the first visible row kept in place (256-FR-008), the changed row highlighted (256-FR-009) and the counter change announced politely (256-FR-010). Rows arriving above a scrolled list are held and counted by the existing pill (256-FR-007). Every kind named here MUST exist in the contracts' event catalogue (257-FR-006); a kind no story records yet costs nothing until it is recorded.
+
+_From 343-live-quote-requests._
+
+### 343-FR-010 — With any garage dashboard route open and the tab visible, a `request.created` for the garage MUST raise one short toast "Cerere nouă: <brand> <model> · <first job>" / "New request: <brand> <model> · <first job>" (the description's first line, cut at 40 characters, when there is no job), through the shared toast, once per event, with no sound; a hidden tab raises none, and the toast is never raised for the other kinds.
+
+_From 343-live-quote-requests._
+
+### 343-FR-011 — States: while the first read is in flight the panel and the view show three skeleton rows and no counter; with no waiting row they show "Nicio cerere nouă. Te anunțăm când apare una." / "No new requests. We will tell you when one arrives." and the counter "0 fără răspuns" / "0 unanswered"; while the live state is `reconnecting` or `polling` a thin banner "Reconectare…" / "Reconnecting…" shows above the list; once offline (the live service's `offline`, 10 seconds without the connection) the last list stays with the line "Lista poate fi veche" / "This list may be out of date". A failed read after a list was shown keeps the list (256-FR-003); a failed first read shows the shared error with a retry.
+
+_From 343-live-quote-requests._
+
+### 343-FR-015 — The web app MUST hide the panel, the menu entry, the tab and the counter from a mechanic whose `garageAccess` permissions lack `canAnswerQuotes`, and from an account with no membership, without a call; the server is the authority (FR-005) and a 404 on the read is treated as "not allowed", showing nothing and no error.
+
+_From 343-live-quote-requests._
+
+### 343-FR-016 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the rows, counters, banner and toast MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, every link at least 44 px tall and the greyed closed rows' text at a contrast of at least 4.5:1 against its background in both schemes; the row's parts wrap on a phone rather than overflow.
+
+_From 343-live-quote-requests._
+
+### 343-FR-018 — Tests MUST cover, before the code (Principle II): in Jest on real PostgreSQL — the `waiting` filter returns only `waiting` recipients of this garage on `sent` or `quoted` requests, newest first, with `total` equal to the rows; the `closed` filter and each FR-004 reason, including a row closed more than 24 hours ago left out, and the suspended garage; the `offered` mark per job; an invalid `status` 400; 404 for a mechanic without `can_answer_quotes` and for another garage's owner; the consumer's recipients (owner, receptionist, permitted mechanic; not an unpermitted mechanic), the per-channel mute, the garage WhatsApp switch, never SMS, the no-device fallback, quiet hours not holding it, the same event building once, and the parameters carrying no plate, phone or description. In Jest, web — the row format and the age wording in both languages, the four-row panel with "Vezi toate" at five, the counters, the toast once per `request.created` and only when visible, the hidden panel and entry for an unpermitted mechanic, the empty, loading, reconnecting and offline states. End to end (Playwright): with the seeded owner's dashboard open, a seeded driver sends a request; the row and both counters update within 5 seconds without a reload; a mechanic without the permission sees no panel and no Cereri entry.
+
+_From 343-live-quote-requests._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
 - `220-FR-010` — superseded by `221-FR-009` (2026-10-09)
 - `220-FR-016` — superseded by `221-FR-018` (2026-10-09)
+
+- `220-FR-012` — superseded by `343-FR-002` (2026-10-09)
+- `220-FR-013` — superseded by `343-FR-003` (2026-10-09)

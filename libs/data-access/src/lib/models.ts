@@ -48,6 +48,7 @@ export type { GarageQuoteDto } from './models/garage-quote-dto';
 export type { GarageRecipientDto } from './models/garage-recipient-dto';
 export type { GarageRefDto } from './models/garage-ref-dto';
 export type { GarageRequestDto } from './models/garage-request-dto';
+export type { GarageRequestJobDto } from './models/garage-request-job-dto';
 export type { GarageRequestListDto } from './models/garage-request-list-dto';
 export type { GarageRequestSummaryDto } from './models/garage-request-summary-dto';
 export type { GarageSearchPageDto } from './models/garage-search-page-dto';

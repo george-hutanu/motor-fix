@@ -37,17 +37,18 @@ describe('servicesFor under hostile input', () => {
       ['api', '/health/ready', true],
       ['worker', '/health/ready', true],
       ['web', '/health/ready', true],
-      ['keycloak', '/realms/motorfix-assistants', true],
+      ['keycloak', '/realms/master', true],
       ['mcp', '/health/live', true],
     ]);
     expect(notices).toEqual([]);
   });
 
-  // Railway refuses a health check path with a dot in it ("Invalid input").
-  it('sends every health check path as letters, digits, slashes, hyphens and underscores only', () => {
+  // Railway refuses a health check path with a dot or a hyphen in it
+  // ("Invalid input"); the paths it accepts hold letters and slashes only.
+  it('sends every health check path as letters, digits and slashes only', () => {
     for (const environment of ['staging', 'production']) {
       for (const { healthcheckPath } of servicesFor(environment, ALL)) {
-        expect(healthcheckPath).toMatch(/^\/[A-Za-z0-9/_-]+$/);
+        expect(healthcheckPath).toMatch(/^\/[A-Za-z0-9/]+$/);
       }
     }
   });

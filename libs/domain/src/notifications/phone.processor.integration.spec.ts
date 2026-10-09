@@ -633,6 +633,11 @@ describe('the garage’s WhatsApp switch', () => {
       eventId: 'req-1',
       garageId,
       kind: 'REQUEST_RECEIVED',
+      params: {
+        car: 'Dacia Logan',
+        job: 'Schimb ulei',
+        link: 'https://motorfix.test/app/garage/requests',
+      },
       recipients: [owner],
     });
 
@@ -654,7 +659,7 @@ describe('the garage’s WhatsApp switch', () => {
     await drain(owner);
     expect(await summary(owner)).toEqual([
       ['email', 'sent', null],
-      ['whatsapp', 'failed', 'template_failed'],
+      ['whatsapp', 'failed', 'template_not_approved'],
     ]);
     expect(mock.emails()).toHaveLength(1);
     error.mockRestore();
