@@ -191,6 +191,31 @@ describe('the Oferte trimise panel kept current', () => {
     expect(rows(element)[2].classList).not.toContain('mf-live-changed');
   });
 
+  it('shows a quote sent from this screen at once on a scrolled page, with no pill', async () => {
+    const shown = sentRows(1, 2);
+    const { element, settle } = await render([
+      listOf(shown),
+      listOf([...sentRows(0, 1), ...shown]),
+    ]);
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 400,
+    });
+
+    try {
+      TestBed.inject(GarageRequestsFeed).sent('req-q0');
+      await settle();
+    } finally {
+      Object.defineProperty(window, 'scrollY', {
+        configurable: true,
+        value: 0,
+      });
+    }
+
+    expect(ids(element)).toEqual(['req-q0', 'req-q1', 'req-q2']);
+    expect(element.querySelector('mf-live-pill button')).toBeNull();
+  });
+
   it('highlights nothing on the first read', async () => {
     const { element } = await render([listOf(sentRows(1, 2))]);
 

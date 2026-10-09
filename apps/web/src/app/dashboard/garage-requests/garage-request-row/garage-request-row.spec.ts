@@ -42,6 +42,7 @@ const me = (role: Role, canAnswerQuotes = false) =>
 
 let open: jest.Mock;
 let reload: jest.Mock;
+let sent: jest.Mock;
 
 async function render(
   account: MeDto,
@@ -53,11 +54,12 @@ async function render(
   const shown = signal(account);
   open = jest.fn(async () => 'cancelled');
   reload = jest.fn();
+  sent = jest.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { current: shown, shown } },
       { provide: Overlays, useValue: { open } },
-      { provide: GarageRequestsFeed, useValue: { reload } },
+      { provide: GarageRequestsFeed, useValue: { reload, sent } },
     ],
   });
   await TestBed.inject(I18n).enter('garage');
@@ -154,5 +156,15 @@ describe('the request row’s Trimite oferta button', () => {
     await settle();
 
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells the lists its quote was sent here, so the row shows at once', async () => {
+    const { element, settle } = await render(me('owner'));
+    open.mockResolvedValueOnce('sent');
+
+    sendButton(element)?.click();
+    await settle();
+
+    expect(sent).toHaveBeenCalledWith('req-1');
   });
 });

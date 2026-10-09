@@ -52,6 +52,8 @@ export class GarageRequestsFeed {
   // Arrived while the tab was in view, not yet shown as a toast.
   private readonly arrived = new Set<string>();
   private readonly toasted = new Set<string>();
+  // Requests answered from this tab, until their quoted row has been shown.
+  private readonly mine = new Set<string>();
 
   // The server's 404: this session may not see the garage's requests.
   readonly visible = computed(() => this.allowed() && !this.waiting.gone());
@@ -113,6 +115,19 @@ export class GarageRequestsFeed {
     this.waiting.reload();
     this.closedRows.reload();
     this.quotedRows.reload();
+  }
+
+  // A quote sent from this tab: re-read now, and show its row even on a
+  // scrolled page, since the person is waiting for it.
+  sent(id: string) {
+    this.mine.add(id);
+    this.reload();
+  }
+
+  // Whether these rows hold a quote sent from this tab; forgets it once shown.
+  showsSent(rows: readonly { id: string }[]) {
+    const found = rows.filter((row) => this.mine.delete(row.id));
+    return found.length > 0;
   }
 
   // A further page of waiting or quoted rows, for the view's scroll.

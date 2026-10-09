@@ -74,6 +74,7 @@ export class GarageRequestRow {
         title: 'garage.quotes.send.title',
       },
     );
-    if (result === 'refused') this.feed?.reload();
+    if (result === 'sent') this.feed?.sent(this.row().id);
+    else if (result === 'refused') this.feed?.reload();
   }
 }

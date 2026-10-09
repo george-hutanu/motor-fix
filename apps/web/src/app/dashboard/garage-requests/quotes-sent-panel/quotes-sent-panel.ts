@@ -62,7 +62,7 @@ export class QuotesSentPanel {
   });
   protected readonly list = liveRows(
     this.all,
-    () => (this.window?.scrollY ?? 0) <= 0,
+    (next) => this.feed.showsSent(next) || (this.window?.scrollY ?? 0) <= 0,
   );
   // Rows of a re-read of the first page that no earlier read held.
   private readonly arrivals = linkedSignal<
