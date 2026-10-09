@@ -13,6 +13,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { authInterceptor } from './auth.interceptor';
 import { Session } from './dashboard/session';
+import { PlatformStatus } from './maintenance/platform-status';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 let controller: HttpTestingController | undefined;
@@ -38,11 +39,13 @@ function setup(
     };
   });
   const gate = jest.fn(() => outcome);
+  const platformStatus = { on: jest.fn() };
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       { provide: Session, useValue: session },
+      { provide: PlatformStatus, useValue: platformStatus },
       { provide: SignInDialog, useValue: { gate } },
       { provide: PLATFORM_ID, useValue: platform },
     ],
@@ -52,6 +55,7 @@ function setup(
     close: () => settle(false),
     gate,
     http: TestBed.inject(HttpClient),
+    platformStatus,
     server: controller,
     session,
     signIn: () => settle(signsIn),
@@ -329,5 +333,55 @@ describe('authInterceptor', () => {
       await expect(answer).rejects.toMatchObject({ status: 401 });
       expect(gate).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('authInterceptor during maintenance', () => {
+  it('shows the maintenance page on a call refused for maintenance, and still fails the call', async () => {
+    const { http, platformStatus, server } = setup('abc');
+
+    const answer = firstValueFrom(http.get('/api/v1/garages'));
+    server
+      .expectOne('/api/v1/garages')
+      .flush(
+        { code: 'maintenance', status: 503 },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+
+    await expect(answer).rejects.toMatchObject({ status: 503 });
+    expect(platformStatus.on).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the page when the call sent again after a renewal is refused for maintenance', async () => {
+    const { http, platformStatus, server } = setup('old');
+
+    const answer = firstValueFrom(http.get('/api/v1/garages'));
+    server.expectOne('/api/v1/garages').flush(null, unauthorized);
+    await tick();
+    server
+      .expectOne('/api/v1/garages')
+      .flush(
+        { code: 'maintenance', status: 503 },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+
+    await expect(answer).rejects.toMatchObject({ status: 503 });
+    expect(platformStatus.on).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [503, 'unavailable'],
+    [500, 'maintenance'],
+    [403, 'forbidden'],
+  ])('leaves the page alone on a %i %s', async (status, code) => {
+    const { http, platformStatus, server } = setup('abc');
+
+    const answer = firstValueFrom(http.get('/api/v1/garages'));
+    server
+      .expectOne('/api/v1/garages')
+      .flush({ code, status }, { status, statusText: code });
+
+    await expect(answer).rejects.toMatchObject({ status });
+    expect(platformStatus.on).not.toHaveBeenCalled();
   });
 });

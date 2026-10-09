@@ -24,12 +24,14 @@ import {
 import type { Request, Response } from 'express';
 
 import { PasswordResetService } from './password-reset.service';
-import { Public } from '../../actor.guard';
+import { OpenInMaintenance, Public } from '../../actor.guard';
 import { JsonOnly, keep } from '../../auth.controller';
 
 @ApiTags('auth')
 @Controller('auth/password-reset')
 @Public()
+// The service refuses a reset from anyone but an admin during maintenance.
+@OpenInMaintenance()
 @UseGuards(JsonOnly)
 export class PasswordResetController {
   constructor(private readonly resets: PasswordResetService) {}

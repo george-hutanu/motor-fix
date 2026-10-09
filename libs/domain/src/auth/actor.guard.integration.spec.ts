@@ -3,12 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { metrics } from '@opentelemetry/api';
 import request from 'supertest';
 
 import { signAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
-import { Public } from './actor.guard';
+import { OpenInMaintenance, Public } from './actor.guard';
 import { AuthModule } from './auth.module';
+import type { Role } from './capabilities';
+import { MAINTENANCE } from './maintenance';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';
@@ -53,13 +56,46 @@ class HalfOpenController {
   }
 }
 
+@Controller('stays')
+@OpenInMaintenance()
+class StaysController {
+  @Get()
+  read() {
+    return { reached: true };
+  }
+}
+
+@Controller('stays-public')
+class StaysPublicController {
+  @Get()
+  @Public()
+  @OpenInMaintenance()
+  read() {
+    return { reached: true };
+  }
+}
+
 let app: INestApplication;
+let maintenance = false;
+const refusals = jest.fn();
 
 beforeAll(async () => {
+  jest.spyOn(metrics, 'getMeter').mockReturnValue({
+    createCounter: () => ({ add: refusals }),
+  } as unknown as ReturnType<typeof metrics.getMeter>);
   const moduleRef = await Test.createTestingModule({
-    controllers: [UnmarkedController, OpenController, HalfOpenController],
+    controllers: [
+      UnmarkedController,
+      OpenController,
+      HalfOpenController,
+      StaysController,
+      StaysPublicController,
+    ],
     imports: [AuthModule.register({ databaseUrl, redisUrl, tokenSecret })],
-  }).compile();
+  })
+    .overrideProvider(MAINTENANCE)
+    .useValue({ on: async () => maintenance, set: async () => undefined })
+    .compile();
   app = moduleRef.createNestApplication();
   await app.init();
 });
@@ -70,6 +106,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  maintenance = false;
+  refusals.mockClear();
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
 });
 
@@ -78,16 +116,23 @@ const get = (path: string, authorization?: string) => {
   return authorization ? call.set('Authorization', authorization) : call;
 };
 
-async function driver(status?: 'suspended') {
+async function signedIn(
+  roles: Role[],
+  role: Role,
+  { now, status }: { now?: number; status?: 'suspended' } = {},
+) {
   const { id } = await accounts.createAccount({
     consent: CURRENT_CONSENT,
-    identity: { method: 'google', subject: `driver-${randomUUID()}` },
+    identity: { method: 'google', subject: `${role}-${randomUUID()}` },
     name: 'Andrei',
-    roles: ['driver'],
+    roles,
   });
   if (status) await prisma.account.update({ data: { status }, where: { id } });
-  return `Bearer ${signAccessToken({ accountId: id, role: 'driver' }, tokenSecret)}`;
+  return `Bearer ${signAccessToken({ accountId: id, role }, tokenSecret, now)}`;
 }
+
+const driver = (status?: 'suspended') =>
+  signedIn(['driver'], 'driver', { status });
 
 describe('the app-wide actor check', () => {
   it('refuses a route that carries no mark at all', async () => {
@@ -121,5 +166,102 @@ describe('the app-wide actor check', () => {
 
     expect(res.status).toBe(403);
     expect(res.body).toMatchObject({ code: 'account_suspended' });
+  });
+});
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function expectMaintenance(res: request.Response) {
+  expect(res.status).toBe(503);
+  expect(res.body).toMatchObject({
+    code: 'maintenance',
+    retryAfterSeconds: 300,
+  });
+}
+
+describe('the actor check while the platform is in maintenance', () => {
+  beforeEach(() => {
+    maintenance = true;
+  });
+
+  it('refuses a visitor on a public route that is not kept open, and counts it', async () => {
+    expectMaintenance(await get('/open'));
+    expectMaintenance(await get('/half-open/open'));
+    expect(refusals).toHaveBeenCalledWith(1, {
+      role: 'visitor',
+      route: '/open',
+    });
+  });
+
+  it('answers maintenance ahead of sign-in for a call with no token', async () => {
+    expectMaintenance(await get('/unmarked'));
+  });
+
+  // The app renews an expired session on a 401, then learns of maintenance.
+  it.each([
+    ['a malformed token', 'Bearer not-a-token'],
+    ['a token signed with another key', 'Bearer eyJhbGciOiJIUzI1NiJ9.e30.x'],
+  ])('asks for sign-in as usual for %s', async (_, authorization) => {
+    const res = await get('/unmarked', authorization);
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ code: 'sign_in_required' });
+  });
+
+  it('asks an admin whose session expired to sign in, so it can renew', async () => {
+    const expired = await signedIn(['admin'], 'admin', {
+      now: Date.now() - DAY,
+    });
+    const res = await get('/unmarked', expired);
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ code: 'sign_in_required' });
+  });
+
+  it('still tells a suspended account so', async () => {
+    const res = await get('/unmarked', await driver('suspended'));
+
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ code: 'account_suspended' });
+  });
+
+  it.each([
+    ['driver', ['driver'], 'driver'],
+    ['garage owner', ['garage'], 'garage'],
+    ['mechanic', ['mechanic'], 'mechanic'],
+  ] as const)(
+    'refuses a %s and counts a signed-in refusal',
+    async (_, roles, role) => {
+      expectMaintenance(
+        await get('/unmarked', await signedIn([...roles], role)),
+      );
+      expect(refusals).toHaveBeenCalledWith(1, {
+        role: 'signed_in',
+        route: '/unmarked',
+      });
+    },
+  );
+
+  it('lets an account holding admin through, whatever role its session is in', async () => {
+    const asAdmin = await signedIn(['admin'], 'admin');
+    const asDriver = await signedIn(['admin', 'driver'], 'driver');
+
+    await get('/unmarked', asAdmin).expect(200, { reached: true });
+    await get('/unmarked', asDriver).expect(200, { reached: true });
+    expect(refusals).not.toHaveBeenCalled();
+  });
+
+  it('lets an admin through a public route too', async () => {
+    await get('/open', await signedIn(['admin'], 'admin')).expect(200);
+  });
+
+  it('treats a route kept open as when maintenance is off', async () => {
+    await get('/stays-public').expect(200, { reached: true });
+    await get('/stays', await driver()).expect(200, { reached: true });
+    const visitor = await get('/stays');
+
+    expect(visitor.status).toBe(401);
+    expect(visitor.body).toMatchObject({ code: 'sign_in_required' });
+    expect(refusals).not.toHaveBeenCalled();
   });
 });

@@ -59,10 +59,13 @@ const changes = (
   );
 
 const rules = () =>
-  new PlatformRulesService(prisma, new AuditService(), outbox, {
-    production: false,
-    webUrl: WEB,
-  });
+  new PlatformRulesService(
+    prisma,
+    new AuditService(),
+    outbox,
+    { production: false, webUrl: WEB },
+    { on: async () => false, set: async () => undefined },
+  );
 
 async function refusal(promise: Promise<unknown>) {
   try {

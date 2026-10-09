@@ -13,6 +13,11 @@ import { verifyAccessToken } from './access-token';
 import { AccountLoader, actorOf, signInRequired } from './account-loader';
 import type { AssistantBroker } from './assistant/assistant.service';
 import type { Capability } from './capabilities';
+import {
+  MAINTENANCE,
+  type Maintenance,
+  maintenanceRefusal,
+} from './maintenance';
 import type { OAuthSettings } from './oauth/providers';
 import { type Actor, requireCapability, roleInUse } from './policy';
 
@@ -31,9 +36,13 @@ export interface AuthOptions {
 
 const REQUIRES = 'auth:requires';
 const PUBLIC = 'auth:public';
+const OPEN_IN_MAINTENANCE = 'auth:maintenance-open';
 
 // Every route needs a signed-in account unless it carries this mark.
 export const Public = () => SetMetadata(PUBLIC, true);
+
+// Answers as usual while the platform is in maintenance.
+export const OpenInMaintenance = () => SetMetadata(OPEN_IN_MAINTENANCE, true);
 
 export const Requires = (capability: Capability) =>
   SetMetadata(REQUIRES, capability);
@@ -50,17 +59,24 @@ export class ActorGuard implements CanActivate {
   constructor(
     private readonly accounts: AccountLoader,
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
+    @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const open = this.reflector.getAllAndOverride<boolean | undefined>(PUBLIC, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (open) return true;
+    const marked = (key: string) =>
+      this.reflector.getAllAndOverride<boolean | undefined>(key, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+    const open = marked(PUBLIC);
     const request = context.switchToHttp().getRequest<WithActor>();
-    const actor = await this.actor(request.header('authorization'));
+    const admin =
+      !marked(OPEN_IN_MAINTENANCE) && (await this.maintenance.on())
+        ? await this.adminOnly(request)
+        : undefined;
+    if (open) return true;
+    const actor = admin ?? (await this.actor(request.header('authorization')));
     const capability = this.reflector.get<Capability | undefined>(
       REQUIRES,
       context.getHandler(),
@@ -68,6 +84,18 @@ export class ActorGuard implements CanActivate {
     if (capability) requireCapability(actor, capability);
     request.actor = actor;
     return true;
+  }
+
+  private async adminOnly(request: WithActor) {
+    const route: string = request.route?.path ?? request.path;
+    const authorization = request.header('authorization');
+    if (!authorization) throw maintenanceRefusal(route, 'visitor');
+    // A token that does not resolve answers as usual, so the app renews it.
+    const actor = await this.actor(authorization);
+    if (!actor.roles.includes('admin')) {
+      throw maintenanceRefusal(route, 'signed_in');
+    }
+    return actor;
   }
 
   private async actor(authorization: string | undefined): Promise<Actor> {

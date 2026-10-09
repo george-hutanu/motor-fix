@@ -13,8 +13,10 @@ import { firstValueFrom } from 'rxjs';
 
 import { authInterceptor } from './auth.interceptor';
 import { Session } from './dashboard/session';
+import { PlatformStatus } from './maintenance/platform-status';
 
 let controller: HttpTestingController | undefined;
+const platformStatus = { on: () => undefined };
 const unauthorized = { status: 401, statusText: 'Unauthorized' };
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -33,6 +35,7 @@ function fakeSession(token: string | null, renew: () => Promise<boolean>) {
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       { provide: Session, useValue: session },
+      { provide: PlatformStatus, useValue: platformStatus },
     ],
   });
   controller = TestBed.inject(HttpTestingController);
@@ -55,6 +58,7 @@ function realSession(token: string | null) {
       provideHttpClientTesting(),
       { provide: AuthService, useValue: api },
       { provide: MeService, useValue: { meControllerMe: jest.fn() } },
+      { provide: PlatformStatus, useValue: platformStatus },
     ],
   });
   controller = TestBed.inject(HttpTestingController);

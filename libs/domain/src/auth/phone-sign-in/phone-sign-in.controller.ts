@@ -27,12 +27,13 @@ import {
 import type { Request, Response } from 'express';
 
 import { PhoneSignInService } from './phone-sign-in.service';
-import { Public } from '../actor.guard';
+import { OpenInMaintenance, Public } from '../actor.guard';
 import { JsonOnly, keep } from '../auth.controller';
 
 @ApiTags('auth')
 @Controller('auth')
 @Public()
+@OpenInMaintenance()
 @UseGuards(JsonOnly)
 export class PhoneSignInController {
   constructor(private readonly phones: PhoneSignInService) {}

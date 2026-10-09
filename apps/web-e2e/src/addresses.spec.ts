@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The href of the first <link> carrying the attribute, in any attribute order.
@@ -88,7 +89,7 @@ test('EN on /ro moves the address to /en with no reload and no new history entry
 }) => {
   await page.goto('/ro/');
   await expect(switchGroup(page, 'Limba')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   const entries = await page.evaluate(() => history.length);
   await page.evaluate(() => {
     (window as unknown as { kept: boolean }).kept = true;
@@ -120,7 +121,7 @@ test('an /en/ address opened with Romanian remembered stays English', async ({
 
   await page.goto('/en/');
   await expect(switchGroup(page, 'Language')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page).toHaveURL(/\/en\/?$/);
@@ -130,6 +131,9 @@ test('an /en/ address opened with Romanian remembered stays English', async ({
 
 test('/ with English remembered goes to /en', async ({ page }) => {
   await page.goto('/ro/');
+  // Once the app has started: starting, it remembers the language it opened in.
+  await expect(switchGroup(page, 'Limba')).toBeVisible();
+  await settled(page);
   await page.evaluate(() => localStorage.setItem('mf.lang', 'en'));
   const errors: string[] = [];
   page.on('console', (message) => {
@@ -140,6 +144,6 @@ test('/ with English remembered goes to /en', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/en\/?$/);
   await expect(switchGroup(page, 'Language')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   expect(errors.filter((e) => /NG0\d+/.test(e))).toEqual([]);
 });

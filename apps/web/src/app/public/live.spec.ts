@@ -184,6 +184,47 @@ describe('PublicLive', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('opens the stream with no query for a view that names nothing', async () => {
+    const live = setUp();
+
+    live.register({});
+    await settle();
+
+    expect(urls()).toEqual(['/api/v1/live/public']);
+    expect(live.state()).toBe('open');
+  });
+
+  it('re-opens with no query when the last view naming something leaves', async () => {
+    const live = setUp();
+    live.register({});
+    const leave = live.register({ garage: 'g-1' });
+    await settle();
+
+    leave();
+    await settle();
+
+    expect(urls()).toEqual([
+      '/api/v1/live/public?garages=g-1',
+      '/api/v1/live/public',
+    ]);
+    expect(signalOf(0).aborted).toBe(true);
+    expect(live.state()).toBe('open');
+  });
+
+  it('closes the stream when the last view that names nothing goes away', async () => {
+    const live = setUp();
+    const leave = live.register({});
+    await settle();
+
+    leave();
+    await settle();
+
+    expect(signalOf(0).aborted).toBe(true);
+    expect(live.state()).toBe('closed');
+    await elapse(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('closes the stream when the last view goes away', async () => {
     const live = setUp();
     const leave = live.register({ garage: 'g-1' });

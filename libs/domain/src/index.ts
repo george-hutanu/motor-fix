@@ -25,7 +25,8 @@ export { EmailConfirmationModule } from './auth/email-confirmation/email-confirm
 export {
   MAINTENANCE,
   type Maintenance,
-  maintenanceOff,
+  type MaintenanceReader,
+  storedMaintenance,
 } from './auth/maintenance';
 export { oauthSettings } from './auth/oauth/providers';
 export { PasswordResetModule } from './auth/password/password-reset/password-reset.module';

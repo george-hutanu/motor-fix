@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 const driver = {
@@ -122,7 +123,7 @@ test.describe('the sign-in gate', () => {
 
     await expect(panel(page)).toBeHidden();
     await expect(page).toHaveURL('/app/driver');
-    await page.waitForLoadState('networkidle');
+    await settled(page);
     expect(saves).toEqual([]);
   });
 });

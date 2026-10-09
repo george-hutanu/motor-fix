@@ -32,7 +32,7 @@ import {
 } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
-import { Public } from './actor.guard';
+import { OpenInMaintenance, Public } from './actor.guard';
 import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
 
@@ -110,6 +110,7 @@ export class AuthController {
   ) {}
 
   @Post('sign-in')
+  @OpenInMaintenance()
   @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SessionDto })
@@ -124,6 +125,7 @@ export class AuthController {
   }
 
   @Post('sign-up')
+  @OpenInMaintenance()
   @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: SessionDto })
@@ -138,6 +140,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @OpenInMaintenance()
   @HttpCode(HttpStatus.OK)
   @ApiBody({ required: false, type: RefreshDto })
   @ApiOkResponse({ type: SessionDto })
@@ -204,6 +207,7 @@ export class AuthController {
   }
 
   @Post('sign-out')
+  @OpenInMaintenance()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   async signOut(
