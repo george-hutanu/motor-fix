@@ -24,6 +24,7 @@ const FIXED: PublicGarageDto = {
   photos: [],
   rating: null,
   refusalPhrase: null,
+  responseRate: { state: 'new' },
   reviewCount: 0,
   slug: 'service-auto-militari',
   verifiedAt: null,

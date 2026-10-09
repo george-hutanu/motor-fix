@@ -11,3 +11,18 @@ model PlatformDaily {
 
   @@map("platform_daily")
 }
+
+// A garage's answers over the last 30 days, written by the night job; the
+// profile reads it and never counts requests itself.
+model GarageResponseStats {
+  garageId             String   @id @map("garage_id") @db.Uuid
+  garage               Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  requests30d          Int      @map("requests_30d")
+  answeredWithinDay30d Int      @map("answered_within_day_30d")
+  lifetimeRequests     Int      @map("lifetime_requests")
+  // CHECK in the migration: 0 to 100. Null when no request counted.
+  rate                 Int?
+  computedAt           DateTime @map("computed_at") @db.Timestamptz(3)
+
+  @@map("garage_response_stats")
+}

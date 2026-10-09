@@ -28,6 +28,7 @@ const GARAGE: PublicGarageDto = {
   photos: [photo(1), photo(2), photo(3)],
   rating: null,
   refusalPhrase: null,
+  responseRate: { state: 'new' },
   reviewCount: 0,
   slug: 'atelier-dinamo',
   verifiedAt: null,

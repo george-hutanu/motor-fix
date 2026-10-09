@@ -1,3 +1,4 @@
+// @traces 384-FR-005 384-FR-010
 import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue, QueueEvents } from 'bullmq';
@@ -89,7 +90,7 @@ describe('the daily snapshot', () => {
 });
 
 describe('the night job', () => {
-  it('is one schedule at 01:00 Europe/Bucharest with one attempt, however many workers start', async () => {
+  it('keeps one schedule per job at 01:00 Europe/Bucharest, however many workers start', async () => {
     const first = await boot();
     const second = await boot();
 
@@ -97,14 +98,31 @@ describe('the night job', () => {
     await first.close();
     await second.close();
 
-    expect(schedulers).toHaveLength(1);
-    expect(schedulers[0]).toMatchObject({
-      key: 'platform-daily',
-      name: 'platform-daily',
-      pattern: '0 1 * * *',
-      tz: 'Europe/Bucharest',
+    expect(schedulers.map((s) => s.key).sort()).toEqual([
+      'platform-daily',
+      'response-stats',
+    ]);
+    for (const scheduler of schedulers) {
+      expect(scheduler).toMatchObject({
+        name: scheduler.key,
+        pattern: '0 1 * * *',
+        tz: 'Europe/Bucharest',
+      });
+    }
+  });
+
+  it('runs the daily snapshot once and the response figures up to three times, a minute apart and doubling', async () => {
+    const app = await boot();
+
+    const snapshot = await queue.getJobScheduler('platform-daily');
+    const figures = await queue.getJobScheduler('response-stats');
+    await app.close();
+
+    expect(snapshot?.template?.opts?.attempts).toBe(1);
+    expect(figures?.template?.opts).toMatchObject({
+      attempts: 3,
+      backoff: { delay: 60_000, type: 'exponential' },
     });
-    expect(schedulers[0].template?.opts?.attempts).toBe(1);
   });
 
   it('writes the day when the job runs', async () => {
@@ -149,6 +167,79 @@ describe('the night job', () => {
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining('platform-daily'),
     );
+    error.mockRestore();
+  });
+  it('writes the response figures when that job runs, logging the counts and no garage', async () => {
+    const info = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const garage = await prisma.garage.create({
+      data: { name: 'Service', slug: 'service-3', status: 'approved' },
+    });
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    const job = await queue.add('response-stats', {});
+    await job.waitUntilFinished(events, 10_000);
+    await events.close();
+    await app.close();
+
+    expect(await prisma.garageResponseStats.count()).toBe(1);
+    expect(await prisma.platformDaily.count()).toBe(0);
+    const lines = info.mock.calls.map(([line]) => String(line));
+    expect(lines).toContainEqual(
+      expect.stringMatching(/computed 1\b.*written 1\b/),
+    );
+    expect(lines.join('\n')).not.toContain(garage.id);
+    info.mockRestore();
+  });
+
+  it('fails a job of a name it does not know', async () => {
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    const job = await queue.add('no-such-job', {});
+    await expect(job.waitUntilFinished(events, 10_000)).rejects.toThrow();
+    await events.close();
+    await app.close();
+
+    expect(await prisma.platformDaily.count()).toBe(0);
+  });
+
+  it('logs the response figures only when their last attempt has failed', async () => {
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const app = await boot('postgresql://nobody@localhost:1/none');
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    // The schedule's three attempts, without its minute of waiting between.
+    const job = await queue.add(
+      'response-stats',
+      {},
+      { attempts: 3, backoff: { delay: 10, type: 'fixed' } },
+    );
+    await expect(job.waitUntilFinished(events, 20_000)).rejects.toThrow();
+    await events.close();
+    await app.close();
+
+    const failed = await queue.getJob(job.id as string);
+    expect(failed?.attemptsMade).toBe(3);
+    const lines = error.mock.calls
+      .map(([line]) => String(line))
+      .filter((line) => line.includes('response-stats'));
+    expect(lines).toEqual([
+      expect.stringMatching(/^insights job response-stats failed: /),
+    ]);
     error.mockRestore();
   });
 });

@@ -28,6 +28,7 @@
     "failed": "Nu am putut încărca service‑ul",
     "loading": "Se încarcă profilul",
     "mobileArea": "Mecanic mobil · zonă de {km}",
+    "newGarage": "Nou pe MotorFix",
     "photos": {
       "alt": "Fotografie {n} din {total} · {garage}",
       "close": "Închide",
@@ -37,6 +38,7 @@
       "next": "Următoarea",
       "previous": "Înapoi"
     },
+    "rate": "Răspunde la {rate}% din cereri într‑o zi",
     "refuses": "Nu lucrează pe {brand}",
     "retry": "Încearcă din nou",
     "reviews": {

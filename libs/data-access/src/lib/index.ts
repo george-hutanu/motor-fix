@@ -133,6 +133,7 @@ export type { RequestJobDto } from './models/request-job-dto';
 export type { RequestListDto } from './models/request-list-dto';
 export type { RequestPlatformRuleChangeDto } from './models/request-platform-rule-change-dto';
 export type { RequestSummaryDto } from './models/request-summary-dto';
+export type { ResponseRateDto } from './models/response-rate-dto';
 export type { SaveListingDraftDto } from './models/save-listing-draft-dto';
 export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';
 export type { SendNewsDto } from './models/send-news-dto';

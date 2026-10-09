@@ -99,6 +99,7 @@ describe('reading a garage by slug, hostilely', () => {
       'photos',
       'rating',
       'refusalPhrase',
+      'responseRate',
       'reviewCount',
       'slug',
       'verifiedAt',

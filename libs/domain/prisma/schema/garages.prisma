@@ -90,6 +90,7 @@ model Garage {
   quotes                     Quote[]
   bookings                   Booking[]
   jobs                       Job[]
+  responseStats              GarageResponseStats?
 
   @@map("garage")
 }
