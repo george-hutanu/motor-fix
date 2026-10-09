@@ -467,7 +467,7 @@ describe('merging a delta into the living capability', () => {
     const dir = build();
     try {
       const [plan] = planMerge(dir, feature(dir));
-      const headings = [...plan.text.matchAll(/^### (\d{3}-FR-\d{3})/gm)].map((m) => m[1]);
+      const headings = [...plan.text.matchAll(/^### (\d{3,}-FR-\d{3})/gm)].map((m) => m[1]);
       assert.deepEqual(headings, [T('002', '006'), T('002', '001')]);
     } finally {
       rmSync(dir, { recursive: true, force: true });

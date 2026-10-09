@@ -93,4 +93,13 @@ describe('trace-matrix tokens', () => {
     const f = matrix(spec, { 'libs/a/src/a.ts': `// @traces ${T('002', '001')}\nexport const a = 1;\n` });
     assert.deepEqual(tagged(f), []);
   });
+  it('reads a harness spec under .claude, and never a worktree copy inside it', () => {
+    const f = matrix(spec, {
+      '.claude/scripts/a.spec.mjs': `// @traces ${T('002', '001')}\nit('a', () => {});\n`,
+      '.claude/worktrees/w/.claude/scripts/b.spec.mjs': `// @traces ${T('002', '002')}\nit('b', () => {});\n`,
+    });
+    const rows = Object.fromEntries(f.requirements.map((r) => [r.fr, r.tests]));
+    assert.deepEqual(rows['FR-001'], ['.claude/scripts/a.spec.mjs']);
+    assert.deepEqual(rows['FR-002'] ?? [], []);
+  });
 });

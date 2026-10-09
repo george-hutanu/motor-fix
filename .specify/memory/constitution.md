@@ -1,5 +1,19 @@
 <!--
-Sync Impact Report (v1.11.1)
+Sync Impact Report (v1.11.2)
+- Version change: 1.11.1 → 1.11.2 (PATCH: Principle II's `@traces` grammar
+  names a feature number of three or more digits, `\d{3,}`, now that feature
+  numbers reached four digits; the requirement number stays three digits; no
+  rule added, removed or redefined)
+- Source: ST-1018 (the first four-digit feature).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ .claude/scripts/lib/traces.mjs, lib/tests.mjs, trace-matrix.mjs,
+    capabilities.mjs, status.mjs, impact.mjs, retro-evidence.mjs — read the
+    longer feature number whole
+  - ✅ .claude/scripts/feature-number.spec.mjs — keeps them agreeing
+
+Previous report (v1.11.1)
 - Version change: 1.11.0 → 1.11.1 (PATCH: the documentation source moves —
   Additional Constraints names the Architecture pages as exported to the
   specs repo's `docs/` instead of the Notion space; no rule added, removed or
@@ -309,7 +323,8 @@ might be useful later" is not a defense.
   or ticket key in code, comments, or test titles — with one exception: a
   test file (`*.spec.*`, `*.test.*`) may carry a whole-line comment
   `// @traces <feature>-FR-<n>` naming one or more requirement ids and nothing
-  else (`^\s*// @traces( \d{3}-FR-\d{3})+\s*$`), which `trace-matrix.mjs`
+  else (`^\s*// @traces( \d{3,}-FR-\d{3})+\s*$`: a feature number of three
+  or more digits, a requirement number of three), which `trace-matrix.mjs`
   reads. An id anywhere else, in non-test code, or on a line that carries
   anything more is still forbidden. The FR → test mapping also lives in
   `tasks.md` and each command's completion report.
@@ -572,4 +587,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.11.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-09
+**Version**: 1.11.2 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-09

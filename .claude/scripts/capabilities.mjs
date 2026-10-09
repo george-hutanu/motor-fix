@@ -66,15 +66,15 @@ export function parseCapability(text) {
       continue;
     }
     if (section === "requirements") {
-      const m = line.match(/^###\s+(\d{3}-FR-\d{3})\s*(?:—|-|:)?\s*(.*)$/);
+      const m = line.match(/^###\s+(\d{3,}-FR-\d{3})\s*(?:—|-|:)?\s*(.*)$/);
       if (m) requirements.set(m[1], m[2].trim());
     } else if (section === "retired") {
-      const m = line.match(/^-\s+`(\d{3}-FR-\d{3})`\s*(?:—|-|:)?\s*(.*)$/);
+      const m = line.match(/^-\s+`(\d{3,}-FR-\d{3})`\s*(?:—|-|:)?\s*(.*)$/);
       if (m) retired.set(m[1], m[2].trim());
     }
   }
   const slug = text.match(/^capability:\s*(\S+)\s*$/m)?.[1] ?? null;
-  const features = [...text.matchAll(/^\s+-\s+(\d{3}-[\w-]+)\s*$/gm)].map((m) => m[1]);
+  const features = [...text.matchAll(/^\s+-\s+(\d{3,}-[\w-]+)\s*$/gm)].map((m) => m[1]);
   return { slug, features, requirements, retired };
 }
 
@@ -149,13 +149,13 @@ export function parseDelta(specText) {
       for (const value of listValues(line)) current.adds.push(...expandRange(value.replace(/`/g, "")));
     } else if (/^[\s-]*\*{0,2}Modifies\*{0,2}\s*:/i.test(line)) {
       for (const value of listValues(line)) {
-        const m = value.match(/`?(\d{3}-FR-\d{3})`?\s*(?:→|->)\s*`?(FR-\d{3})`?/);
+        const m = value.match(/`?(\d{3,}-FR-\d{3})`?\s*(?:→|->)\s*`?(FR-\d{3})`?/);
         if (m) current.modifies.push({ base: m[1], by: m[2] });
         else current.modifies.push({ base: value.replace(/`/g, ""), by: null });
       }
     } else if (/^[\s-]*\*{0,2}Removes\*{0,2}\s*:/i.test(line)) {
       for (const value of listValues(line)) {
-        const m = value.match(/`?(\d{3}-FR-\d{3})`?\s*(?:—|-|:)?\s*(.*)$/);
+        const m = value.match(/`?(\d{3,}-FR-\d{3})`?\s*(?:—|-|:)?\s*(.*)$/);
         if (m) current.removes.push({ base: m[1], why: m[2].trim() });
       }
     }
@@ -375,7 +375,7 @@ function main() {
 
   const resolve = () =>
     target
-      ? { dir: join(repo, target), name: basename(target), num: basename(target).match(/^(\d{3})-/)?.[1] ?? "000" }
+      ? { dir: join(repo, target), name: basename(target), num: basename(target).match(/^(\d{3,})-/)?.[1] ?? "000" }
       : activeFeature(repo);
 
   if (command === "list" || command === undefined) {
