@@ -278,10 +278,13 @@ const ENVIRONMENTS: Record<
   },
 };
 
-// Keycloak is healthy once its realm answers; the MCP server's readiness
+// Keycloak is healthy once its master realm answers: it opens its port only
+// after the realm import. Railway refuses a path with a dot or a hyphen, so
+// not the imported realm's own path, and Keycloak's /health/ready is on its
+// management port, not the one Railway checks. The MCP server's readiness
 // would wait on the identity server, so Railway checks its liveness.
 const HEALTH_PATH: Record<string, string> = {
-  keycloak: '/realms/motorfix-assistants/.well-known/openid-configuration',
+  keycloak: '/realms/master',
   mcp: '/health/live',
 };
 

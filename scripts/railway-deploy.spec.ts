@@ -547,8 +547,7 @@ const ALL = {
   RAILWAY_SERVICE_WORKER: 'svc-worker',
 };
 
-const REALM_HEALTH =
-  '/realms/motorfix-assistants/.well-known/openid-configuration';
+const REALM_HEALTH = '/realms/master';
 
 describe('the services each environment deploys', () => {
   let notices: string[];
@@ -770,16 +769,10 @@ describe('the keycloak image', () => {
     expect(dockerfile).not.toContain('--hostname');
   });
 
-  it('is checked at the discovery document of the realm it imports', () => {
-    const { realm } = JSON.parse(
-      keycloak('realm-motorfix-assistants.json'),
-    ) as {
-      realm: string;
-    };
-
-    expect(REALM_HEALTH).toBe(
-      `/realms/${realm}/.well-known/openid-configuration`,
-    );
+  // The master realm's endpoint: Keycloak opens its port only once the
+  // import has finished, and a failed import stops the server. Railway
+  // refuses the imported realm's own path, whose name has a hyphen.
+  it('is checked at the master realm, a path Railway accepts', () => {
     expect(
       servicesFor('staging', ALL).find((s) => s.name === 'keycloak')
         ?.healthcheckPath,

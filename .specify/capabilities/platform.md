@@ -65,6 +65,7 @@ features:
   - 977-worktree-cleanup
   - 887-precompact-fr-wording
   - 1016-mcp-staging
+  - 1018-notion-docs-to-specs
 ---
 
 # Capability: Platform
@@ -1027,9 +1028,9 @@ _From 784-impossible-level-date._
 
 _From 784-impossible-level-date._
 
-### 815-FR-001 — motor-fix MUST NOT track `specs/` (`.gitignore` names `/specs/`); `specs/` in every checkout is a clone of george-hutanu/motor-fix-specs on `trunk`, not a submodule.
+### 1018-FR-002 — In every motor-fix checkout and worktree the specs clone MUST live at `<checkout>/.motor-fix-specs/`, ignored by git (`.gitignore` entries `/.motor-fix-specs/` and `/specs`, no trailing slash, so the link itself is ignored) and by Docker (`.dockerignore`), and `<checkout>/specs` MUST be a relative symlink (target `.motor-fix-specs/specs` or `.motor-fix-specs`, never an absolute path) that makes `specs/<NNN-slug>/...` resolve unchanged: to `.motor-fix-specs/specs` when the clone's own checked-out trunk has a top-level `specs/` directory (its layout), to `.motor-fix-specs` otherwise, so a clone not yet brought onto a moved `origin/trunk` keeps resolving (FR-003). `specs-repo.mjs` MUST export the clone's location and the docs location for other scripts.
 
-_From 815-specs-private-repo._
+_From 1018-notion-docs-to-specs._
 
 ### 815-FR-002 — `.claude/scripts/specs-repo.mjs ensure` MUST clone the private repository into `specs/` when it is missing or empty, adopt a non-repository `specs/` without losing a local file or change, and fast-forward an existing clone; `--soft` never fails (npm `prepare`, SessionStart).
 
@@ -1043,9 +1044,9 @@ _From 815-specs-private-repo._
 
 _From 815-specs-private-repo._
 
-### 815-FR-005 — The lifecycle gate MUST refuse to stop while the specs clone has commits not pushed to `trunk`.
+### 1018-FR-005 — Every script and hook that reads the clone's own git state or its trunk paths — the identity hook's clone check, the lifecycle gate's unpushed-specs refusal, `lifecycle.mjs` (its specs commit paths and diff), `worktree-remove.mjs`'s specs backup and the QA packet's report lookup on trunk — MUST resolve the clone through the location `specs-repo.mjs` exports and MUST work in both layouts, taking feature paths relative to `specs/` as today.
 
-_From 815-specs-private-repo._
+_From 1018-notion-docs-to-specs._
 
 ### 815-FR-006 — The PR tester's packet MUST read the feature's `tasks.md`, `spec.md` and lap reports from the private repository's `trunk`.
 
@@ -1345,9 +1346,9 @@ _From 893-folder-rules._
 
 _From 893-folder-rules._
 
-### 960-FR-001 — Constitution II MUST state that the only requirement id allowed in source is a line comment in a test file (a file named `*.spec.*` or `*.test.*`) of the form `// @traces` followed by one or more feature-qualified requirement ids (`NNN-FR-NNN`), separated by single spaces — the whole line matching `^\s*// @traces( \d{3}-FR-\d{3})+\s*$`; a line that misses the grammar is not the form and none of its ids count — and that a requirement id, feature number, task id or ticket key anywhere else (test titles, other comments, non-test code) stays forbidden.
+### 1018-FR-018 — The traceability grammar MUST accept a feature number of three or more digits wherever it reads a feature folder (`NNN-slug`) or a feature-qualified requirement id (`<feature>-FR-NNN`): the `// @traces` line (`^\s*// @traces( \d{3,}-FR-\d{3})+\s*$`), the trace matrix, the capability specs and their Spec Delta, status, impact and retro evidence; the requirement number stays three digits, and a longer feature number is read whole, never as its last three digits.
 
-_From 960-traces-id-form._
+_From 1018-notion-docs-to-specs._
 
 ### 960-FR-002 — The amendment MUST be versioned 1.11.0 (MINOR), with its Sync Impact Report first in the header, every earlier report (1.10.0 down to 1.0.0, 1.8.3 included) kept, and the Governance footer's version and Last Amended date updated.
 
@@ -1481,10 +1482,6 @@ _From 977-worktree-cleanup._
 
 _From 977-worktree-cleanup._
 
-### 977-FR-003 — After the refusals, the removal MUST back up the worktree's specs clone: anything uncommitted or ahead of `origin/trunk` is committed and pushed through `specs-repo.mjs commit` with the message `chore(specs): backfill <worktree name> before removal`; when that fails, the difference from `origin/trunk` (uncommitted changes included) is written to `<main checkout>/.work/worktree-backfill/<YYYY-MM-DD>/<worktree name>-<HHMMSS>.specs.patch`; a clone on a branch other than `trunk` goes straight to that patch. A plain `specs/` folder that is not a clone is copied whole beside the patches (`<worktree name>-<HHMMSS>.specs/`). A worktree with no specs folder, or an empty one, skips this with the result saying so.
-
-_From 977-worktree-cleanup._
-
 ### 977-FR-004 — The removal MUST save the worktree's uncommitted product changes, tracked and untracked but not ignored, as `<worktree name>-<HHMMSS>.product.patch` in the same folder, a patch that applies on the branch's head; a clean tree writes no file and the result says so.
 
 _From 977-worktree-cleanup._
@@ -1521,9 +1518,9 @@ _From 977-worktree-cleanup._
 
 _From 1016-mcp-staging._
 
-### 000-FR-004 — The health check path MUST be a property of each service: `/health/ready` for `api`, `worker`, `web`; `/health/live` for `mcp`; `/realms/motorfix-assistants/.well-known/openid-configuration` for `keycloak`, checked on the service's public port. The health timeout, the region and the restore on failure or cancel stay as they are (516-FR-001, 516-FR-005).
+### 000-FR-004 — The health check path MUST be a property of each service: `/health/ready` for `api`, `worker`, `web`; `/health/live` for `mcp`; `/realms/master` for `keycloak` (Railway refuses a path with a `.` or a `-`; Keycloak opens its port only after the realm import), checked on the service's public port. The health timeout, the region and the restore on failure or cancel stay as they are (516-FR-001, 516-FR-005).
 
-_From 1016-mcp-staging._
+_From 1016-mcp-staging; path modified by 1021-keycloak-health-path and 1022-keycloak-health-hyphen._
 
 ### 000-FR-006 — The Keycloak image MUST cap the JVM heap through Keycloak's own heap variable set in the Dockerfile, without a per-service setting; the value is chosen in the plan with headroom for the realm import, and a test asserts the Dockerfile sets it.
 
@@ -1544,6 +1541,66 @@ _From 1016-mcp-staging._
 ### 000-FR-013 — The deploy script's specs MUST cover the per-environment lists, the health path per service, the skip with its notice and the unchanged production list; the inventory script's spec MUST cover discovery across several service lists; the gauge's probe, its two values and its log line MUST be covered by the MCP server's colocated specs; the Keycloak Dockerfile MUST build in CI's Docker build job or an equivalent check so a broken `COPY` fails a PR.
 
 _From 1016-mcp-staging._
+
+### 1018-FR-001 — After the trunk move, george-hutanu/motor-fix-specs on `trunk` MUST hold exactly two top-level folders, `specs/` (every `NNN-slug` feature folder, moved from the root with `git mv` so `git log --follow` on any moved file reaches its pre-move history) and `docs/` (the exported documentation), and at the root only `.github/` (the issue forms), `.gitignore` and `README.md` (which states the layout and how each folder is written).
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-003 — `specs-repo.mjs ensure` MUST migrate an existing old-layout clone at `<checkout>/specs/` in place and without data loss: rename it to `.motor-fix-specs/` and link `specs` to the clone root first (so `specs/<NNN-slug>` resolves after every step), then, when trunk has moved, bring it onto the moved trunk so that modified tracked files follow their renamed paths and unpushed commits stay ahead of trunk, sweep any `NNN-*` folder an unpushed commit added at the clone root into `specs/` as one commit, move every untracked or ignored file left at an old root feature path to `specs/<feature>/`, and only then repoint the symlink to `.motor-fix-specs/specs`. A step that fails MUST stop the migration with a non-zero exit naming the step; a failed rebase MUST be aborted, leaving the old-layout clone at `.motor-fix-specs/` linked at its root and every file where it was. A second run with nothing to do MUST change nothing. Two `ensure` runs in one checkout MUST serialise on an exclusive lock file in the checkout; the second waits, then finds nothing to do. `commit` MUST run the same migration first when trunk has moved since the clone was last brought up to date; `status` MUST never write and reports `layout: pending` instead.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-004 — `ensure` MUST refuse, naming both paths, when `specs` exists as a real folder or a foreign symlink beside an existing `.motor-fix-specs/`, and MUST still adopt a plain `specs/` folder that is not a clone (as it does today) into the new location.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-006 — `specs-repo.mjs migrate-trunk` MUST perform the trunk move as a separate, owner-run step: `--dry-run` MUST list every folder it would move and every file it would add and push nothing; the real run MUST require an explicit confirmation flag, refuse before any change when trunk has already moved or the clone is dirty or unpushed, refuse in both modes, naming it, any root entry that is neither an `NNN-*` folder nor on the keep list (`.github/`, `.gitignore`, `README.md`), move every feature folder with `git mv`, add the README and `docs/README.md`, commit and push to trunk, and print the next step (run the export). The commit is made on a temporary local branch and trunk is updated by the push alone; a failed push leaves the remote unchanged, deletes the temporary branch, exits non-zero naming the step, and leaves the clone as it was, so the command can be run again.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-007 — No documentation content MUST land in motor-fix (public): the export MUST write only under the clone's `docs/`, and the harness tests MUST use synthetic fixtures. No exported file, report line or log MAY contain `NOTION_TOKEN` or a signed Notion file URL (downloaded files are referenced relatively). The specs repo's root `.gitignore` MUST keep ignoring QA screenshots and `handoff.md` under the new paths.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-008 — An export command under `.claude/scripts/` MUST crawl the Notion space from its root page over the Notion API with `NOTION_TOKEN` through the shared client, using only read calls (page, block, database and user GET and database query); it MUST never create, update, move, archive or delete anything in Notion, and a test MUST prove it by recording every call against a fake API.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-009 — The export MUST write `docs/` as: a folder with `index.md` per page that has children, a file per leaf page, a folder per database whose `index.md` holds a Markdown table of every row and its properties plus one file per row that has a body, and a file per linked view holding a link to the canonical database's folder (or its Notion URL when the canonical lies outside the space). A block or property type the renderer does not know MUST become an HTML comment naming the type and be counted in the run report, never dropped silently. File names MUST be slugified titles, disambiguated with a Notion-id suffix on a clash and replaced by the Notion id when the title is empty.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-010 — The "MotorFix stories" and "MotorFix epics" databases MUST NOT be exported; each MUST become one pointer file naming the GitHub Project and the issues repository. Every other database in the space (the build timelines, the Work timeline) and every page (the existing execution plans included) MUST be exported at its crawl path. One exclusion list, shared by the export and `--check`, names what under `docs/` the export neither writes nor reports as an orphan: `docs/README.md`, `docs/index.json` and `docs/execution-plans/`.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-011 — Every exported file MUST open with front matter holding `title`, `notion_id`, `notion_url` and `last_edited`; every internal link (child page, `link_to_page`, page mention, or a `notion.so`, `notion.site` or `app.notion.com` URL to a page in the space, with or without `/p/`, a title slug or a query string such as `?pvs=`) MUST be rewritten to a relative path; every Notion-hosted image and file MUST be downloaded next to its page and referenced relatively, except a file over 50 MB, which is not downloaded: the page keeps a plain-text note naming it and its size, the run report lists it, and `--check` does not count it as missing; external URLs MUST be left unchanged.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-012 — The export MUST be idempotent: a run with no change in Notion MUST write no file and report zero changes; a page or row no longer in the crawl MUST have its file removed. `--dry-run` MUST list the files it would create, update and delete and write nothing. `--check` MUST exit non-zero listing every crawled page and database without a file and every file under `docs/` that no crawled page or row explains, and zero when neither exists.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-013 — The export MUST write `docs/index.json` mapping every exported page's and database's Notion id to its relative file path, last, so a run that stops early (API failure after retries, exit non-zero) leaves no index and `--check` names what is missing. A missing `NOTION_TOKEN` MUST stop every mode with one line naming it.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-014 — `/speckit-context` and the `org-researcher` agent MUST read the feature page, the architecture pages and the decisions from the clone's `docs/` and cite file paths, taking the story and its comments from the tracker; `spec-reviewer` MUST read the same from the repo; `speckit-design-check` MUST read the Design and Design boards links and the Build brief's Screens from the feature's exported file. While the clone has no `docs/` (before the trunk move), each MUST say so and read Notion as before.
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-015 — `speckit-notion-sync plan` MUST write an epic's execution plan created after the move as a Markdown file under `docs/execution-plans/` in the specs repo, committed and pushed to trunk, and MUST NOT create an execution-plan page in Notion; the build timeline is unchanged (ST-1017's).
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-016 — AGENTS.md, CLAUDE.local.md and the constitution MUST name the specs repo's `docs/` as the documentation source, and a harness spec MUST fail when the Notion space's name appears in AGENTS.md, CLAUDE.local.md or the constitution, or in a rewired skill or agent definition on any line not tagged `(fallback until docs/ exists)` (the export command and this feature's records excepted).
+
+_From 1018-notion-docs-to-specs._
+
+### 1018-FR-017 — The clone location exported by `specs-repo.mjs` MUST be what ST-1017's scripts read `.github/ISSUE_TEMPLATE` from, and `docs/index.json` (FR-013) MUST be what maps a story's Notion feature page to its documentation file for its issue.
+
+_From 1018-notion-docs-to-specs._
 
 ## Retired
 
@@ -1578,3 +1635,8 @@ _From 1016-mcp-staging._
 - `516-FR-001` — superseded by `000-FR-001` (2026-10-09)
 - `516-FR-002` — superseded by `000-FR-014` (2026-10-09)
 - `421-FR-032` — superseded by `000-FR-002` (2026-10-09)
+
+- `815-FR-001` — superseded by `1018-FR-002` (2026-10-09)
+- `815-FR-005` — superseded by `1018-FR-005` (2026-10-09)
+- `977-FR-003` — superseded by `1018-FR-005` (2026-10-09)
+- `960-FR-001` — superseded by `1018-FR-018` (2026-10-09)

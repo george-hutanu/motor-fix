@@ -87,7 +87,7 @@
       "alerts": [
         "mcp-issuer-unreachable"
       ],
-      "reason": "staging only; health at the realm's discovery document; the MCP server's mcp_issuer_up probe is the only signal (Keycloak itself sends no telemetry)",
+      "reason": "staging only; health at /realms/master, answering once the realm is imported; the MCP server's mcp_issuer_up probe is the only signal (Keycloak itself sends no telemetry)",
       "story": "ST-1016"
     },
     {

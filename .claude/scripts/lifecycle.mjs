@@ -42,6 +42,7 @@ import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
+import { featuresDir } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
 const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --notion-done; handoff [--restore] [--pr <n>])";
@@ -193,6 +194,8 @@ function context(io, flags, did) {
   ctx.rel = relative(io.repo, ctx.feature.dir);
   // The feature folder as the specs repository names it.
   ctx.specsRel = relative(join(io.repo, "specs"), ctx.feature.dir);
+  // Where git finds those folders: .motor-fix-specs/specs once trunk has moved, the clone root before.
+  ctx.specsGit = relative(io.repo, featuresDir(io.repo)) || "specs";
   ctx.story = `ST-${Number(ctx.feature.num)}`;
   ctx.push = () => {
     ctx.git("push", "-u", "origin", ctx.branch);
@@ -437,7 +440,7 @@ function merge(ctx, flags) {
   const [finish] = ctx.notion([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} --notion-done`);
 
   const log = `${ctx.specsRel}/notion-sync.md`;
-  const lines = ctx.git("-C", "specs", "diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
+  const lines = ctx.git("-C", ctx.specsGit, "diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
   const body = ["## Finish log", "", `Merged as ${sha}.`, ...(hasComment ? ["", readFileSync(commentFile, "utf8").trim()] : []), "", ...lines, ""].join("\n");
   // Commit the log to the specs repository first: a rerun after a failed
   // comment finds no new lines, so it never posts twice. If the comment fails,

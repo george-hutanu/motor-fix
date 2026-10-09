@@ -6,6 +6,7 @@ dist
 .specify
 .worktrees
 specs
+.motor-fix-specs
 coverage
 .env
 apps/web-e2e/test-output

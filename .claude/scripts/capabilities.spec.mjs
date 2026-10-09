@@ -405,6 +405,27 @@ describe('merging a delta into the living capability', () => {
     }
   });
 
+  it('writes a replacement text holding $ patterns literally, never the text around the match', () => {
+    const text = 'matches `^\\d{3,}$`, keeps $& and $\' as written';
+    const dir = fixture({
+      '.specify/capabilities/cli-tasks.md': capability('cli-tasks', {
+        features: ['001-x'],
+        requirements: [[T('001', '004'), 'lists tasks']],
+      }),
+      'specs/002-fixture/spec.md': spec(
+        [['FR-006', text]],
+        ['### Capability: `cli-tasks`', '', '- **Modifies**: `' + T('001', '004') + '` → `FR-006`'].join('\n'),
+      ),
+    });
+    try {
+      const [plan] = planMerge(dir, feature(dir));
+      assert.equal(plan.text.match(/^capability:/gm).length, 1, 'the file is not copied into itself');
+      assert.equal(parseCapability(plan.text).requirements.get(T('002', '006')), text);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('produces a capability holding the new requirement, the replacement and neither original', () => {
     const dir = build();
     try {
@@ -467,7 +488,7 @@ describe('merging a delta into the living capability', () => {
     const dir = build();
     try {
       const [plan] = planMerge(dir, feature(dir));
-      const headings = [...plan.text.matchAll(/^### (\d{3}-FR-\d{3})/gm)].map((m) => m[1]);
+      const headings = [...plan.text.matchAll(/^### (\d{3,}-FR-\d{3})/gm)].map((m) => m[1]);
       assert.deepEqual(headings, [T('002', '006'), T('002', '001')]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
