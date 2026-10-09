@@ -4,7 +4,10 @@
 }
 a[hlmBtn] {
   min-height: var(--mf-tap);
+  max-width: 100%;
   text-decoration: none;
+  /* Until the driver's texts load the label is its key, one unbreakable word. */
+  overflow-wrap: anywhere;
 }
 @media (max-width: 389px) {
   a[hlmBtn] {

@@ -491,6 +491,7 @@ export class Session {
   private lapse() {
     this.lapsed = this.current() ?? this.lapsed;
     this.forget();
+    this.hint(null);
   }
 
   private forget() {

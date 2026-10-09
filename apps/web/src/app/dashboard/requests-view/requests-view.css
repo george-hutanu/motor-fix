@@ -52,3 +52,9 @@ p {
   align-items: flex-start;
   gap: var(--mf-space-3);
 }
+.empty a[hlmBtn] {
+  text-decoration: none;
+  max-width: 100%;
+  /* Until the driver's texts load the label is its key, one unbreakable word. */
+  overflow-wrap: anywhere;
+}

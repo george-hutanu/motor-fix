@@ -53,6 +53,8 @@ async function render(
     answer?: RequestQuoteResult;
     // The role this browser last saw, when the page knows no account.
     hint?: 'driver' | 'garage' | 'mechanic' | null;
+    // The session the hint was written for has since ended.
+    expired?: boolean;
   } = {},
 ) {
   open = jest.fn(
@@ -64,8 +66,13 @@ async function render(
   );
   const role = options.role === undefined ? null : options.role;
   const current = signal<{ role: string } | null>(role ? { role } : null);
+  const roleHint = signal(options.hint ?? null);
   load = jest.fn(async () => null);
-  renew = jest.fn(async () => false);
+  // The cookie's session is gone: the session forgets the role it last saw.
+  renew = jest.fn(async () => {
+    if (options.expired) roleHint.set(null);
+    return !options.expired;
+  });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -76,7 +83,7 @@ async function render(
           current,
           load,
           renew,
-          roleHint: signal(options.hint ?? null),
+          roleHint,
         },
       },
       {
@@ -173,8 +180,26 @@ describe('RequestQuoteButton', () => {
     expect(button(await render({ hint: 'mechanic' }))).toBeNull();
   });
 
-  it('shows for a driver this browser last saw', async () => {
+  it('shows for a driver this browser last saw, asking nobody', async () => {
     expect(button(await render({ hint: 'driver' }))).not.toBeNull();
+    expect(renew).not.toHaveBeenCalled();
+  });
+
+  // Only a garage-side hint is checked: renewing the cookie confirms it, and a
+  // renewal that fails clears it, so a signed-out visitor sees the button.
+  it('checks a garage-side role it last saw against the cookie', async () => {
+    const host = await render({ hint: 'garage' });
+
+    expect(renew).toHaveBeenCalledTimes(1);
+    expect(load).not.toHaveBeenCalled();
+    expect(button(host)).toBeNull();
+  });
+
+  it('shows once the session a garage-side role was seen in has ended', async () => {
+    const host = await render({ expired: true, hint: 'garage' });
+    TestBed.tick();
+
+    expect(button(host)).not.toBeNull();
   });
 
   it('follows the signed-in account over the role last seen', async () => {

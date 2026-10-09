@@ -1,9 +1,11 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
   input,
+  PLATFORM_ID,
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -54,6 +56,20 @@ export class RequestQuoteButton {
     const request = this.sent();
     return request ? sentLine(this.i18n, request) : '';
   });
+
+  constructor() {
+    // A garage-side role last seen may outlive its session (an expired or
+    // cleared cookie): one renewal confirms it, and a failed one clears it.
+    // A visitor or a driver asks nobody.
+    const hint = this.session.roleHint();
+    if (
+      isPlatformBrowser(inject(PLATFORM_ID)) &&
+      !this.session.current() &&
+      hint !== null &&
+      hint !== 'driver'
+    )
+      void this.session.renew();
+  }
 
   protected async open() {
     const source =

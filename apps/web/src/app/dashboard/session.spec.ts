@@ -293,4 +293,15 @@ describe('Session role hint', () => {
     expect(session.roleHint()).toBeNull();
     expect(localStorage.getItem('mf-role')).toBeNull();
   });
+
+  // The cookie can go without a sign-out (it expired, or was cleared).
+  it('forgets the role when a renewal finds the session gone', async () => {
+    localStorage.setItem('mf-role', 'garage');
+    const { session } = setup({ renews: false });
+
+    expect(await session.renew()).toBe(false);
+
+    expect(session.roleHint()).toBeNull();
+    expect(localStorage.getItem('mf-role')).toBeNull();
+  });
 });
