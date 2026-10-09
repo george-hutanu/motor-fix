@@ -92,21 +92,21 @@ const bookingOf = (booking: Booking): GarageBookingDto => ({
   status: booking.status,
 });
 
-export type InboxStatus = 'waiting' | 'quoted' | 'declined' | 'accepted';
+type InboxStatus = 'waiting' | 'quoted' | 'declined' | 'accepted';
 
-export interface InboxQuery {
+interface InboxQuery {
   cursor?: string;
   status?: InboxStatus;
 }
 
 // A row of the assistant's inbox: the dashboard's row, the driver's own words,
 // and which asked jobs the garage does not list for the car's brand.
-export type InboxItem = Omit<GarageRequestSummaryDto, 'jobs'> & {
+type InboxItem = Omit<GarageRequestSummaryDto, 'jobs'> & {
   description: string | null;
   jobs: (GarageRequestSummaryDto['jobs'][number] & { notOffered: boolean })[];
 };
 
-export interface InboxPage {
+interface InboxPage {
   items: InboxItem[];
   nextCursor: string | null;
   total: number;

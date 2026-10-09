@@ -6,7 +6,7 @@ import { addDays, atLocal, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { bookedInclude, bookedOf } from '../../quotes/reads';
 
-export interface DaySheetQuery {
+interface DaySheetQuery {
   mechanic: string;
   day?: string;
 }

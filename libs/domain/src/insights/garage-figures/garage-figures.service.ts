@@ -13,7 +13,7 @@ import {
 import type { PrismaClient } from '../../generated/prisma/client';
 import { invalidInput } from '../../quotes/reads';
 
-export interface FiguresQuery {
+interface FiguresQuery {
   period?: 'week' | 'month';
   from?: string;
   to?: string;

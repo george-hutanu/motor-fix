@@ -6,7 +6,7 @@ import { addDays, atLocal, daysBetween, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { bookedInclude, bookedOf, invalidInput } from '../reads';
 
-export interface ScheduleQuery {
+interface ScheduleQuery {
   from?: string;
   to?: string;
   lift?: number;
