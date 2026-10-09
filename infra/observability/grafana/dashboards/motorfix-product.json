@@ -1006,7 +1006,7 @@
             "uid": "${prom}"
           },
           "expr": "sum by (outcome) (increase(motorfix_quote_requests_sent_total{deployment_environment=\"$env\"}[1h]))",
-          "legendFormat": "{{action}}"
+          "legendFormat": "{{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -1038,7 +1038,7 @@
             "uid": "${prom}"
           },
           "expr": "sum by (outcome) (increase(motorfix_quote_requests_sent_total{deployment_environment=\"$env\"}[1d]))",
-          "legendFormat": "{{action}}"
+          "legendFormat": "{{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -1070,7 +1070,7 @@
             "uid": "${prom}"
           },
           "expr": "sum by (outcome) (increase(motorfix_quote_requests_sent_total{deployment_environment=\"$env\"}[1h]))",
-          "legendFormat": "{{action}}"
+          "legendFormat": "{{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -1113,7 +1113,7 @@
             "uid": "${prom}"
           },
           "expr": "sum by (outcome) (increase(motorfix_request_received_total{deployment_environment=\"$env\"}[1h]))",
-          "legendFormat": "{{action}}"
+          "legendFormat": "{{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -1145,7 +1145,7 @@
             "uid": "${prom}"
           },
           "expr": "sum by (outcome) (increase(motorfix_request_received_total{deployment_environment=\"$env\"}[1d]))",
-          "legendFormat": "{{action}}"
+          "legendFormat": "{{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -1177,7 +1177,7 @@
             "uid": "${prom}"
           },
           "expr": "sum by (outcome) (increase(motorfix_request_received_total{deployment_environment=\"$env\"}[1h]))",
-          "legendFormat": "{{action}}"
+          "legendFormat": "{{outcome}}"
         }
       ],
       "fieldConfig": {
