@@ -87,7 +87,7 @@ export function issuePlans(tracker) {
       pr: pr ? Number(pr[1]) : null,
       fields: dated({ Status: status }, [
         ["Priority", s.priority],
-        ["Type", type],
+        ["Work type", type],
         ["Epic", epic],
         ["Ready to work", ready ? "Yes" : "No"],
         ["Started", s.started],
@@ -119,7 +119,7 @@ export function issuePlans(tracker) {
       pr: null,
       fields: dated({ Status: status }, [
         ["Priority", e.priority],
-        ["Type", "Epic"],
+        ["Work type", "Epic"],
         ["Epic", e.key],
         ["Planned start", e.plannedStart],
         ["Planned end", e.plannedEnd],

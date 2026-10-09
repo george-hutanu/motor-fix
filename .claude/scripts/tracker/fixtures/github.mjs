@@ -6,6 +6,13 @@ const API = "https://api.github.com";
 const json = (data, status = 200, headers = {}) =>
   new Response(data === null ? null : JSON.stringify(data), { status, headers: { "content-type": "application/json", ...headers } });
 
+// The names GitHub refuses for a new field (its built-in fields and the issue Type).
+const RESERVED = new Set(
+  ["Title", "Assignees", "Status", "Labels", "Linked pull requests", "Milestone", "Repository", "Reviewers", "Parent issue", "Sub-issues progress", "Type", "Iteration", "Tracks", "Tracked by"].map((n) =>
+    n.toLowerCase(),
+  ),
+);
+
 const BUILT_IN = [
   { name: "Title", dataType: "TITLE" },
   { name: "Assignees", dataType: "ASSIGNEES" },
@@ -201,6 +208,9 @@ export function fakeGitHub(seed = {}) {
       return { updateProjectV2Field: { projectV2Field: { id: f.id } } };
     },
     CreateField: (v) => {
+      const taken = projectById(v.projectId).fields.some((f) => f.name.toLowerCase() === v.name.toLowerCase());
+      if (taken || RESERVED.has(v.name.toLowerCase()))
+        return { errors: [{ type: "UNPROCESSABLE", message: "Name cannot have a reserved value, Name has already been taken" }] };
       const made = field({ name: v.name, dataType: v.dataType, options: v.options ?? undefined }, projectById(v.projectId));
       if (v.iteration) made.iteration = v.iteration;
       return { createProjectV2Field: { projectV2Field: { id: made.id } } };

@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { CHECKLIST, reconcile, SCHEMA } from "./bootstrap.mjs";
+import { CHECKLIST, RESERVED_FIELD_NAMES, reconcile, SCHEMA } from "./bootstrap.mjs";
 import { fakeGitHub } from "./fixtures/github.mjs";
 import { githubClient } from "./github.mjs";
 
@@ -60,12 +60,12 @@ describe("a first run on a fresh account", () => {
     await run(gh);
     assert.deepEqual(optionNames(gh, "Status"), ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"]);
     assert.deepEqual(optionNames(gh, "Priority"), ["Urgent", "Highest", "High", "Medium", "Low"]);
-    assert.deepEqual(optionNames(gh, "Type"), ["Story", "Task", "Bug", "Tech debt", "Decision", "Epic"]);
+    assert.deepEqual(optionNames(gh, "Work type"), ["Story", "Task", "Bug", "Tech debt", "Decision", "Epic"]);
     assert.deepEqual(optionNames(gh, "Epic"), EPICS);
     assert.deepEqual(optionNames(gh, "Ready to work"), ["Yes", "No"]);
     for (const name of ["Started", "QA from", "Merged at", "Planned start", "Planned end"]) assert.equal(fieldNamed(gh, name).dataType, "DATE", name);
     assert.equal(fieldNamed(gh, "Story points").dataType, "NUMBER");
-    const iteration = fieldNamed(gh, "Iteration");
+    const iteration = fieldNamed(gh, "Sprint");
     assert.equal(iteration.dataType, "ITERATION");
     assert.equal(iteration.iteration.duration, 14);
     assert.equal(iteration.iteration.startDate, "2026-10-12");
@@ -85,7 +85,7 @@ describe("a first run on a fresh account", () => {
       assert.equal(views[key].filter, `epic:"${key}"`);
     }
     const names = (v) => v.visibleFieldIds.map((id) => project(gh).fields.find((f) => f.id === id).name);
-    assert.deepEqual(names(views.Blocked), ["Title", "Priority", "Type", "Epic", "Assignees"]);
+    assert.deepEqual(names(views.Blocked), ["Title", "Priority", "Work type", "Epic", "Assignees"]);
     assert.ok(ops(gh, "CreateView").every((c) => !("filter" in c.body.variables)), "the create input has no filter");
   });
 
@@ -133,6 +133,39 @@ describe("a second run", () => {
   });
 });
 
+describe("field names", () => {
+  it("creates no field under a name GitHub keeps for its own fields", () => {
+    const reserved = new Set(RESERVED_FIELD_NAMES.map((n) => n.toLowerCase()));
+    const created = SCHEMA.fields.filter((f) => f.name !== "Status").map((f) => f.name);
+    assert.deepEqual(
+      created.filter((n) => reserved.has(n.toLowerCase())),
+      [],
+    );
+  });
+
+  it("finishes a Project whose first run stopped on a refused field name, then changes nothing", async () => {
+    const want = (name) => SCHEMA.fields.find((f) => f.name === name);
+    const gh = fakeGitHub({
+      projects: [
+        {
+          title: "MotorFix",
+          linked: true,
+          statusOptions: want("Status").options.map((o) => o.name),
+          fields: [want("Priority")],
+        },
+      ],
+    });
+    const first = await run(gh);
+    assert.equal(first.exit, 0);
+    for (const f of SCHEMA.fields) assert.equal(project(gh).fields.filter((x) => x.name === f.name).length, 1, f.name);
+    assert.equal(ops(gh, "CreateProject").length, 0);
+    const before = gh.writes().length;
+    const second = await run(gh);
+    assert.equal(second.exit, 0);
+    assert.equal(gh.writes().length, before);
+  });
+});
+
 describe("a Project someone changed by hand", () => {
   it("reports a drifted option and a view's layout without changing them, and exits 2", async () => {
     const gh = fakeGitHub({
@@ -163,7 +196,7 @@ describe("a Project someone changed by hand", () => {
     const before = gh.writes().length;
     const r = await run(gh, { formsDir: dir });
     assert.equal(r.exit, 2);
-    assert.ok(r.lines.some((l) => /^view\s+differs\s+Board: fields Title, Status, not Title, Priority, Type, Epic, Ready to work \(not changed\)$/.test(l)));
+    assert.ok(r.lines.some((l) => /^view\s+differs\s+Board: fields Title, Status, not Title, Priority, Work type, Epic, Ready to work \(not changed\)$/.test(l)));
     assert.equal(gh.writes().length, before);
     assert.deepEqual(board.visibleFieldIds, [fieldNamed(gh, "Title").id, fieldNamed(gh, "Status").id]);
   });

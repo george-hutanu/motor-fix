@@ -74,7 +74,7 @@ describe("issuePlans", () => {
     assert.deepEqual(st1.fields, {
       Status: "To do",
       Priority: "Medium",
-      Type: "Story",
+      "Work type": "Story",
       Epic: "EP-1",
       "Ready to work": "Yes",
       "Story points": 3,
@@ -134,7 +134,7 @@ describe("issuePlans", () => {
     assert.equal(ep1.title, "EP-1 Foundations");
     assert.deepEqual(ep1.labels, ["epic", "track: Platform"]);
     assert.equal(ep1.milestone, "1 - Launch");
-    assert.deepEqual(ep1.fields, { Status: "Implementing", Priority: "Highest", Type: "Epic", Epic: "EP-1", "Planned start": "2026-10-12", "Planned end": "2026-12-04" });
+    assert.deepEqual(ep1.fields, { Status: "Implementing", Priority: "Highest", "Work type": "Epic", Epic: "EP-1", "Planned start": "2026-10-12", "Planned end": "2026-12-04" });
     assert.deepEqual(plans.find((p) => p.key === "EP-2").blockers, ["EP-1"]);
     assert.equal(plans.find((p) => p.key === "EP-3").state, "closed");
     assert.equal(plans.find((p) => p.key === "EP-2").fields.Status, "To do");
@@ -171,7 +171,7 @@ describe("a full import", () => {
     assert.equal(imported.length, 12);
     assert.match(imported[0].title, /^ST-2 /);
     assert.equal(gh.state.projects[0].items.length, 12);
-    assert.deepEqual(itemValues(gh, "ST-2"), { Status: "Implementing", Priority: "Urgent", Type: "Task", Epic: "EP-2", "Ready to work": "No", Started: "2026-10-01" });
+    assert.deepEqual(itemValues(gh, "ST-2"), { Status: "Implementing", Priority: "Urgent", "Work type": "Task", Epic: "EP-2", "Ready to work": "No", Started: "2026-10-01" });
     assert.ok(lines.at(-1).startsWith("done"));
   });
 
@@ -433,7 +433,7 @@ describe("Notion data the import cannot map as typed", () => {
     const r = await planned((t) => {
       t.stories[0].type = null;
     });
-    assert.equal(st(r).fields.Type, "Story");
+    assert.equal(st(r).fields["Work type"], "Story");
     assert.ok(st(r).labels.includes("type: story"));
     assert.ok(r.warnings.some((w) => /ST-1 has no Issue type/.test(w)));
   });

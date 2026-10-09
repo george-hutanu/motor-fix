@@ -22,11 +22,31 @@ const select = (name, options) => ({ name, dataType: "SINGLE_SELECT", options: o
 const plain = (dataType) => (name) => ({ name, dataType });
 const label = (color) => (name) => ({ name, color, description: "" });
 
+// Field names GitHub keeps for its own fields (built-in item fields and the
+// organisation issue Type); creating a field with one answers UNPROCESSABLE.
+// Status is the one built-in the schema reuses, by updating its options.
+export const RESERVED_FIELD_NAMES = [
+  "Title",
+  "Assignees",
+  "Status",
+  "Labels",
+  "Linked pull requests",
+  "Milestone",
+  "Repository",
+  "Reviewers",
+  "Parent issue",
+  "Sub-issues progress",
+  "Type",
+  "Iteration",
+  "Tracks",
+  "Tracked by",
+];
+
 export const SCHEMA = {
   fields: [
     select("Status", [["To do"], ["Planning", "BLUE"], ["Implementing", "YELLOW"], ["Blocked", "RED"], ["QA", "ORANGE"], ["Done", "GREEN"]]),
     select("Priority", [["Urgent", "RED"], ["Highest", "ORANGE"], ["High", "YELLOW"], ["Medium", "BLUE"], ["Low"]]),
-    select("Type", [["Story"], ["Task"], ["Bug"], ["Tech debt"], ["Decision"], ["Epic"]]),
+    select("Work type", [["Story"], ["Task"], ["Bug"], ["Tech debt"], ["Decision"], ["Epic"]]),
     select(
       "Epic",
       EPICS.map((e) => [e]),
@@ -34,19 +54,19 @@ export const SCHEMA = {
     select("Ready to work", [["Yes", "GREEN"], ["No"]]),
     ...["Started", "QA from", "Merged at", "Planned start", "Planned end"].map(plain("DATE")),
     plain("NUMBER")("Story points"),
-    plain("ITERATION")("Iteration"),
+    plain("ITERATION")("Sprint"),
   ],
   views: [
-    { name: "Board", layout: "BOARD_LAYOUT", fields: ["Title", "Priority", "Type", "Epic", "Ready to work"] },
+    { name: "Board", layout: "BOARD_LAYOUT", fields: ["Title", "Priority", "Work type", "Epic", "Ready to work"] },
     {
       name: "Table",
       layout: "TABLE_LAYOUT",
-      fields: ["Title", "Status", "Priority", "Type", "Epic", "Ready to work", "Story points", "Started", "Merged at", "Assignees", "Labels", "Milestone"],
+      fields: ["Title", "Status", "Priority", "Work type", "Epic", "Ready to work", "Story points", "Started", "Merged at", "Assignees", "Labels", "Milestone"],
     },
     { name: "Roadmap", layout: "ROADMAP_LAYOUT", fields: ["Title", "Status", "Epic"] },
-    { name: "Blocked", layout: "TABLE_LAYOUT", filter: "status:Blocked", fields: ["Title", "Priority", "Type", "Epic", "Assignees"] },
-    { name: "My work", layout: "TABLE_LAYOUT", filter: "assignee:@me -status:Done", fields: ["Title", "Status", "Priority", "Type", "Epic"] },
-    ...EPICS.map((e) => ({ name: e, layout: "BOARD_LAYOUT", filter: `epic:"${e}"`, fields: ["Title", "Priority", "Type", "Ready to work"] })),
+    { name: "Blocked", layout: "TABLE_LAYOUT", filter: "status:Blocked", fields: ["Title", "Priority", "Work type", "Epic", "Assignees"] },
+    { name: "My work", layout: "TABLE_LAYOUT", filter: "assignee:@me -status:Done", fields: ["Title", "Status", "Priority", "Work type", "Epic"] },
+    ...EPICS.map((e) => ({ name: e, layout: "BOARD_LAYOUT", filter: `epic:"${e}"`, fields: ["Title", "Priority", "Work type", "Ready to work"] })),
   ],
   labels: [
     ...["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "epic"].map(label("1d76db")),
