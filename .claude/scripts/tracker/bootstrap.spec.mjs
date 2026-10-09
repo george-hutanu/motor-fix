@@ -60,7 +60,7 @@ describe("a first run on a fresh account", () => {
     await run(gh);
     assert.deepEqual(optionNames(gh, "Status"), ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"]);
     assert.deepEqual(optionNames(gh, "Priority"), ["Urgent", "Highest", "High", "Medium", "Low"]);
-    assert.deepEqual(optionNames(gh, "Work type"), ["Story", "Task", "Bug", "Tech debt", "Decision", "Epic"]);
+    assert.deepEqual(optionNames(gh, "Work type"), ["Story", "Task", "Bug", "Tech debt", "Decision", "Epic", "Feature"]);
     assert.deepEqual(optionNames(gh, "Epic"), EPICS);
     assert.equal(fieldNamed(gh, "Ready to work"), undefined, "readiness is Status To do and not blocked");
     for (const name of ["Started", "QA from", "Merged at", "Planned start", "Planned end"]) assert.equal(fieldNamed(gh, name).dataType, "DATE", name);
@@ -93,7 +93,7 @@ describe("a first run on a fresh account", () => {
     const gh = fakeGitHub();
     await run(gh);
     const labels = gh.state.labels.map((l) => l.name);
-    for (const name of ["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "epic", "area: front end", "area: data", "role: Driver", "role: System", "track: Platform", "track: Whole team", ...EPICS]) {
+    for (const name of ["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "type: feature", "epic", "area: front end", "area: data", "role: Driver", "role: System", "track: Platform", "track: Whole team", ...EPICS]) {
       assert.ok(labels.includes(name), name);
     }
     assert.deepEqual(
@@ -307,6 +307,17 @@ describe("a Project someone changed by hand", () => {
     assert.deepEqual(optionNames(gh, "Status"), ["Todo", "In Progress", "Done"]);
     assert.ok(r.lines.some((l) => /^field\s+differs\s+Status/.test(l)));
     assert.equal(r.exit, 2);
+  });
+
+  it("asks for a missing option to be added in the Project's settings once it holds items, and changes nothing", async () => {
+    // The API replaces a field's options as a whole, which clears the field on every item; the settings page adds one in place.
+    const old = SCHEMA.fields.find((f) => f.name === "Work type").options.filter((o) => o.name !== "Feature");
+    const gh = fakeGitHub({ projects: [{ title: "MotorFix", linked: true, itemCount: 3, fields: [{ name: "Work type", dataType: "SINGLE_SELECT", options: old }] }] });
+    const r = await run(gh);
+    assert.equal(r.exit, 2);
+    assert.ok(r.lines.some((l) => /^field\s+differs\s+Work type: add the option Feature in the Project's field settings/.test(l)), r.lines.join("\n"));
+    assert.deepEqual(optionNames(gh, "Work type"), old.map((o) => o.name));
+    assert.ok(ops(gh, "SetOptions").every((q) => q.body.variables.fieldId !== fieldNamed(gh, "Work type").id));
   });
 
   it("leaves Status options that are not GitHub's defaults alone", async () => {

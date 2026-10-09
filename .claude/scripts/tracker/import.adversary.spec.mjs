@@ -217,10 +217,10 @@ describe("--max-items", () => {
   it("refuses one past the cap and starts at exactly the cap", async () => {
     const refused = await bootstrapped();
     const from = refused.writes().length;
-    assert.equal((await importInto(refused, { maxItems: 11 })).exit, 2);
+    assert.equal((await importInto(refused, { maxItems: 12 })).exit, 2);
     assert.equal(refused.writes().length, from);
     const exact = await bootstrapped();
-    assert.equal((await importInto(exact, { maxItems: 12 })).exit, 0);
+    assert.equal((await importInto(exact, { maxItems: 13 })).exit, 0);
   });
 
   it("counts items already in the Project toward the cap", async () => {
@@ -241,7 +241,7 @@ describe("--max-items", () => {
   it("does not refuse a rerun that creates nothing at a cap equal to the item count", async () => {
     const gh = await bootstrapped();
     await importInto(gh);
-    assert.equal((await importInto(gh, { maxItems: 12 })).exit, 0);
+    assert.equal((await importInto(gh, { maxItems: 13 })).exit, 0);
   });
 });
 
