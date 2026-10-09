@@ -13,21 +13,13 @@ import {
 
 import { NearQueryDto } from './near.dto';
 import type { Problem } from './problem';
-import { REQUEST_SOURCES, type RequestSource } from './request-status';
-
-// The garages one request goes to, the profile's included.
-export const REQUEST_MAX_GARAGES = 5;
-export const REQUEST_DESCRIPTION_MAX = 1000;
-// A request with no job switched on says what is wrong in at least this many.
-export const REQUEST_DESCRIPTION_MIN_WITHOUT_JOBS = 10;
-
-export const CANNOT_RECEIVE_REASONS = [
-  'brand',
-  'fuel',
-  'jobs',
-  'not_taking_requests',
-] as const;
-export type CannotReceiveReason = (typeof CANNOT_RECEIVE_REASONS)[number];
+import {
+  type CannotReceiveReason,
+  REQUEST_DESCRIPTION_MAX,
+  REQUEST_DESCRIPTION_MIN_WITHOUT_JOBS,
+  REQUEST_SOURCES,
+  type RequestSource,
+} from './request-status';
 
 // The first garage of a send that cannot take it, and why.
 export interface GarageCannotReceiveProblem extends Problem {

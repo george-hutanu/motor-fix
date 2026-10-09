@@ -229,7 +229,9 @@ describe('the garage profile', () => {
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
-    const slots = [...page().querySelectorAll<HTMLElement>('[data-slot]')];
+    const slots = [
+      ...page().querySelectorAll<HTMLElement>('section[data-slot]'),
+    ];
     expect(slots.length).toBeGreaterThan(0);
     for (const slot of slots) expect(slot.textContent?.trim()).toBe('');
   });

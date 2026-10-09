@@ -1,0 +1,158 @@
+@if (save.state() === 'done' && save.result(); as request) {
+  <div class="done" role="status">
+    <p class="sent"><span class="dot" aria-hidden="true"></span>{{ sentLine(request) }}</p>
+    @if (request.recipients.length > 1) {
+      <ul class="names">
+        @for (name of names(request); track $index) {
+          <li>{{ name }}</li>
+        }
+      </ul>
+    }
+  </div>
+  <div class="actions">
+    <a hlmBtn variant="secondary" routerLink="/app/driver/requests" (click)="task.close(request)">{{ 'public.requestQuote.seeRequests' | t }}</a>
+    <button hlmBtn type="button" (click)="task.close(request)">{{ 'public.requestQuote.close' | t }}</button>
+  </div>
+} @else if (carsFailed()) {
+  <p class="error" role="alert">{{ 'public.requestQuote.carsFailed' | t }}</p>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="loadCars()">{{ 'public.requestQuote.retry' | t }}</button>
+  </div>
+} @else if (cars(); as cars) {
+  @if (cars.length === 0) {
+    <p class="lead">{{ 'public.requestQuote.noCar' | t }}</p>
+    <div class="actions">
+      <a hlmBtn routerLink="/app/driver/cars" (click)="task.close('cancelled')">{{ 'public.requestQuote.addCar' | t }}</a>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+      <div class="field">
+        <label for="mf-quote-car">{{ 'public.requestQuote.car' | t }}</label>
+        <select hlmInput id="mf-quote-car" formControlName="carId" aria-describedby="mf-quote-car-error">
+          @if (cars.length > 1) {
+            <option value="">{{ 'public.requestQuote.chooseCar' | t }}</option>
+          }
+          @for (car of cars; track car.id) {
+            <option [value]="car.id">{{ carLabel(car) }}</option>
+          }
+        </select>
+        <mf-field-error id="mf-quote-car-error" [save]="save" [control]="form.controls.carId" />
+      </div>
+      <fieldset>
+        <legend>{{ 'public.requestQuote.jobs' | t }}</legend>
+        @if (garage.jobTypes.length) {
+          <ul class="jobs">
+            @for (job of garage.jobTypes; track job.id) {
+              <li>
+                <div class="choice">
+                  <hlm-switch
+                    [inputId]="'mf-quote-job-' + job.id"
+                    [checked]="jobOn(job.id)"
+                    [aria-label]="jobName(job)"
+                    (checkedChange)="toggleJob(job.id, $event)"
+                  />
+                  <span aria-hidden="true">{{ jobName(job) }}</span>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="note">{{ 'public.requestQuote.noJobs' | t }}</p>
+        }
+      </fieldset>
+      <div class="field">
+        <label for="mf-quote-description">{{ 'public.requestQuote.description' | t }}</label>
+        <textarea
+          hlmInput
+          id="mf-quote-description"
+          rows="4"
+          formControlName="description"
+          [maxLength]="max"
+          aria-describedby="mf-quote-description-hint mf-quote-description-error"
+        ></textarea>
+        <div class="under">
+          <p class="note" id="mf-quote-description-hint">{{ 'public.requestQuote.descriptionHint' | t }}</p>
+          <p class="counter" [class.full]="length() >= max">{{ length() }}/{{ max }}</p>
+        </div>
+        <mf-field-error id="mf-quote-description-error" [save]="save" [control]="form.controls.description" />
+      </div>
+      <fieldset class="picker">
+        <legend>{{ 'public.requestQuote.garages' | t }}</legend>
+        <p class="note">{{ 'public.requestQuote.pickerLead' | t }}</p>
+        <ul class="garages">
+          <li>
+            <label class="choice garage">
+              <input type="checkbox" checked disabled />
+              <span class="name">{{ garage.name }}</span>
+            </label>
+          </li>
+          @if (nearbyState() === 'ready') {
+            @for (other of nearby(); track other.id) {
+              <li>
+                <label class="choice garage">
+                  <input type="checkbox" [checked]="isTicked(other.id)" (change)="tick(other.id, $event)" />
+                  <span class="name">{{ other.name }}</span>
+                  <span class="where">
+                    @if (other.comesToYou) {
+                      {{ 'public.requestQuote.comesToYou' | t }}
+                    } @else if (other.distanceKm !== null) {
+                      {{ other.distanceKm | km }}
+                    }
+                  </span>
+                </label>
+              </li>
+            }
+          }
+        </ul>
+        @switch (nearbyState()) {
+          @case ('loading') {
+            <div class="skeleton-list" role="status" aria-busy="true" [attr.aria-label]="'public.requestQuote.loadingGarages' | t">
+              <span class="skeleton line"></span>
+              <span class="skeleton line"></span>
+            </div>
+          }
+          @case ('ready') {
+            @if (nearby().length === 0) {
+              <p class="note">{{ 'public.requestQuote.noCandidates' | t }}</p>
+            }
+          }
+          @case ('no-place') {
+            <p class="note">{{ 'public.requestQuote.noPlace' | t }}</p>
+            <div class="actions start">
+              <button hlmBtn variant="secondary" type="button" (click)="pickPlace()">{{ 'public.requestQuote.pickPlace' | t }}</button>
+            </div>
+          }
+          @case ('failed') {
+            <p class="error">{{ 'public.requestQuote.candidatesFailed' | t }}</p>
+            <div class="actions start">
+              <button hlmBtn variant="secondary" type="button" (click)="retryNearby()">{{ 'public.requestQuote.retry' | t }}</button>
+            </div>
+          }
+        }
+        <p class="error" aria-live="polite">
+          @if (limitHit()) {
+            {{ 'public.requestQuote.limit' | t }}
+          }
+        </p>
+        @if (unreceivable(); as refused) {
+          <p class="error" role="alert">{{ cannotReceive[refused.reason] | t: { garage: refused.name } }}</p>
+          @if (refused.garageId === garage.id) {
+            <a class="back" [routerLink]="backToSearch()" [queryParams]="backQuery()" (click)="task.close('cancelled')">{{ 'public.requestQuote.backToSearch' | t }}</a>
+          }
+        }
+      </fieldset>
+      <mf-task-error [save]="save" />
+      @if (!online()) {
+        <p class="error" role="status">{{ 'public.requestQuote.offline' | t }}</p>
+      }
+      <div class="actions">
+        <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="!online()">{{ 'public.requestQuote.submit' | t }}</button>
+      </div>
+    </form>
+  }
+} @else {
+  <div class="skeleton-list" role="status" aria-busy="true" [attr.aria-label]="'public.requestQuote.loadingCars' | t">
+    <span class="skeleton line"></span>
+    <span class="skeleton line"></span>
+  </div>
+}

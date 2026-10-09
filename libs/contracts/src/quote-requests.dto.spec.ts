@@ -4,9 +4,11 @@ import { validateSync } from 'class-validator';
 import {
   CandidateGaragesQueryDto,
   CreateQuoteRequestDto,
+} from './quote-requests.dto';
+import {
   REQUEST_DESCRIPTION_MAX,
   REQUEST_DESCRIPTION_MIN_WITHOUT_JOBS,
-} from './quote-requests.dto';
+} from './request-status';
 
 const CAR = '0f1e2d3c-0000-4000-8000-000000000001';
 const G1 = '0f1e2d3c-0000-4000-8000-000000000002';

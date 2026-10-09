@@ -10,8 +10,10 @@ import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
+import { DriverHome } from './driver-home/driver-home';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { Live } from './live';
+import { RequestsView } from './requests-view/requests-view';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
 
@@ -52,12 +54,14 @@ describe('the dashboard view lists', () => {
   it('lists the driver views in menu order, each with its address, labels and capability', () => {
     expect(DASHBOARDS.driver.views).toEqual([
       {
+        body: DriverHome,
         label: 'shell.frame.nav.dashboard',
         path: '',
         tab: 'shell.frame.tab.dashboard',
         title: 'shell.frame.title.driver.dashboard',
       },
       {
+        body: RequestsView,
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
         path: 'requests',
@@ -487,8 +491,8 @@ describe('the dashboard view routes', () => {
   // @traces 097-FR-004
   it('keeps the shared placeholder for a driver view with no empty state of its own', async () => {
     const { element } = await open(
-      '/app/driver/requests',
-      ['driver.requests'],
+      '/app/driver/reviews',
+      ['driver.reviews'],
       'driver',
     );
 

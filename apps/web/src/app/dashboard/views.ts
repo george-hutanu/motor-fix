@@ -4,8 +4,10 @@ import type { Routes } from '@angular/router';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
+import { DriverHome } from './driver-home/driver-home';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view/push-view';
+import { RequestsView } from './requests-view/requests-view';
 import { garageOf, Session } from './session';
 import { SettingsView } from './settings-view/settings-view';
 import { View } from './view/view';
@@ -119,8 +121,13 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.driver',
     tag: 'shell.frame.area.driver',
     views: [
-      { ...HOME, title: 'shell.frame.title.driver.dashboard' },
       {
+        ...HOME,
+        body: DriverHome,
+        title: 'shell.frame.title.driver.dashboard',
+      },
+      {
+        body: RequestsView,
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
         path: 'requests',

@@ -1,0 +1,12 @@
+:host {
+  display: flex;
+  margin: var(--mf-space-4);
+}
+a[hlmBtn] {
+  min-height: var(--mf-tap);
+}
+@media (max-width: 389px) {
+  a[hlmBtn] {
+    width: 100%;
+  }
+}
