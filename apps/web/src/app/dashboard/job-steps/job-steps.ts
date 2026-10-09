@@ -8,6 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { JOB_STEPS_MAX } from '@motor-fix/contracts/request-status';
 import {
   GarageJobsService,
   type JobDto,
@@ -22,7 +23,6 @@ import { liveResource } from '../live';
 import { Session } from '../session';
 import { Waiting } from '../waiting';
 
-const STEPS_MAX = 20;
 const PROVISIONAL = 'new:';
 const CLOSED = new Set<JobDto['status']>(['done', 'cancelled']);
 const WRITERS = new Set(['garage', 'mechanic']);
@@ -108,7 +108,9 @@ export class JobSteps {
   protected readonly doneCount = computed(
     () => this.steps().filter((s) => this.isDone(s)).length,
   );
-  protected readonly full = computed(() => this.steps().length >= STEPS_MAX);
+  protected readonly full = computed(
+    () => this.steps().length >= JOB_STEPS_MAX,
+  );
 
   constructor() {
     void this.i18n.enter('garage');

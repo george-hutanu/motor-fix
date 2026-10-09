@@ -20,7 +20,7 @@ import {
   ListQueryDto,
   RequestJobDto,
 } from './quotes.dto';
-import { JOB_STATUSES, type JobStatus } from './request-status';
+import { JOB_STATUSES, JOB_STEPS_MAX, type JobStatus } from './request-status';
 
 const NULLABLE_TIME = { format: 'date-time', nullable: true, type: String };
 
@@ -152,8 +152,6 @@ export class JobListDto {
   @ApiProperty()
   total!: number;
 }
-
-export const JOB_STEPS_MAX = 20;
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
