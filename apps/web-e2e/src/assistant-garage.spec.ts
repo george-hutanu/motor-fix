@@ -34,7 +34,6 @@ async function inbox(request: APIRequestContext) {
 }
 
 test.describe('the garage assistant reads @assistants', () => {
-  // TODO: drop the skip once MCP is deployed on Railway and staging sets MCP_URL.
   test.skip(
     !MCP_URL || !ISSUER,
     'needs the MCP server and the identity server',
@@ -68,9 +67,8 @@ test.describe('the garage assistant reads @assistants', () => {
       const waiting = (await inbox(request)).items
         .filter(({ recipient }) => recipient.status === 'waiting')
         .map(({ id }) => id);
-      expect(waiting).toEqual(
-        expect.arrayContaining(requests.items.map(({ id }) => id)),
-      );
+      // Both newest first: the same waiting requests in the same order.
+      expect(requests.items.map(({ id }) => id)).toEqual(waiting);
 
       expect(await ask('get_schedule')).toHaveProperty('entries');
       expect(await ask('get_day_sheet', { mechanic: 'Vlad' })).toMatchObject({
