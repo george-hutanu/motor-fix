@@ -304,6 +304,8 @@ describe('writing a job’s steps', () => {
 // @traces 424-FR-001 424-FR-006 424-FR-007
 // @traces 424-FR-008 424-FR-010
 describe('ticking a step', () => {
+  afterEach(() => jest.restoreAllMocks());
+
   it('stores who ticked it and when, and clears both on an untick', async () => {
     const s = await setting('in_work');
     const [, id] = await five(s);
@@ -454,7 +456,6 @@ describe('ticking a step', () => {
     const refused = await send('put', `${s.steps}/${id}/done`, s.hand, {
       done: true,
     });
-    jest.restoreAllMocks();
 
     expect(refused.status).toBe(500);
     const step = await prisma.jobStep.findUniqueOrThrow({ where: { id } });
