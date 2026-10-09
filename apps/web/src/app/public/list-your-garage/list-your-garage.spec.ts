@@ -201,6 +201,7 @@ describe('the list your garage page', () => {
     expect(sections[0].querySelector('#listing-email')).not.toBeNull();
     expect(sections[0].querySelector('mf-details-step')).not.toBeNull();
     expect(sections[5].querySelector('#listing-cui')).not.toBeNull();
+    expect(sections[5].querySelector('mf-documents-step')).not.toBeNull();
     expect(
       sections.slice(1, 5).map((s) => [...s.children].map((c) => c.tagName)),
     ).toEqual([
@@ -1178,10 +1179,20 @@ describe('the verification step', () => {
       const { page } = await open(path);
 
       const section = step6(page);
-      const texts = [...section.querySelectorAll('p:not(.error), label')].map(
-        text,
-      );
+      const texts = [...section.querySelectorAll('p:not(.error), label')]
+        .filter((each) => !each.closest('mf-documents-step'))
+        .map(text);
       expect(texts).toEqual([intro, cui, rar, hint, count, note]);
+      const documents = section.querySelector('mf-documents-step') as Element;
+      expect(
+        rarInput(page).compareDocumentPosition(documents) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        documents.compareDocumentPosition(
+          section.querySelector('.count') as Element,
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(text(section.querySelector('label[for="listing-cui"]'))).toBe(cui);
       expect(text(section.querySelector('label[for="listing-rar"]'))).toBe(rar);
       expect(cuiInput(page).maxLength).toBe(40);
@@ -1195,11 +1206,15 @@ describe('the verification step', () => {
     },
   );
 
-  it('offers no look-up: no button, no company name, no register result', async () => {
+  it('offers no look-up: no button outside the document uploads, no company name, no register result', async () => {
     const { page } = await open('/ro/list-your-garage');
 
     const section = step6(page);
-    expect(section.querySelectorAll('button, a')).toHaveLength(0);
+    expect(
+      [...section.querySelectorAll('button, a')].filter(
+        (each) => !each.closest('mf-documents-step'),
+      ),
+    ).toHaveLength(0);
     expect(text(section)).not.toMatch(
       /Verifică firma|Caută în registrul RAR|CAEN/,
     );

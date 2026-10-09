@@ -176,6 +176,39 @@
       "phoneNeeded": "Adaugă un număr de telefon",
       "phoneRomanian": "Momentan acceptăm doar numere din România"
     },
+    "documents": {
+      "choose": "Alege fișiere",
+      "done": "Încărcat",
+      "drop": "Trage aici fișierul",
+      "earlier": "Mută înainte pagina {n}",
+      "emailFirst": "Adaugă un e‑mail la pasul 1 ca să încarci documente",
+      "failed": "Nu am putut încărca fișierul. Încearcă din nou.",
+      "full": "Cel mult 10 fișiere pe document",
+      "heading": "Documente",
+      "issuedOn": "Data emiterii certificatului",
+      "issuedOnOld": "Certificatul trebuie să fie emis în ultimele 30 de zile",
+      "kinds": {
+        "onrc_certificate": {
+          "hint": "Emis în ultimele 30 de zile, cu adresa atelierului",
+          "hintMobile": "Emis în ultimele 30 de zile, cu sediul social",
+          "label": "Certificat constatator ONRC"
+        },
+        "rar_authorisation": {
+          "hint": "Toate paginile, scanate sau fotografiate lizibil",
+          "hintMobile": "Toate paginile, scanate sau fotografiate lizibil",
+          "label": "Autorizația tehnică RAR"
+        }
+      },
+      "later": "Mută înapoi pagina {n}",
+      "page": "Pagina {n}",
+      "place": "Pagina {n} din {m}",
+      "refused": "Doar PDF, JPG sau PNG, de cel mult 10 MB",
+      "release": "Lasă fișierele aici",
+      "remove": "Șterge pagina {n}",
+      "retry": "Reîncearcă",
+      "uploaded": "Pagina {n} este încărcată",
+      "waiting": "Se încarcă când revine conexiunea"
+    },
     "done": "completat",
     "email": "E‑mail",
     "emailHint": "Îți trimitem un link ca să continui de pe orice dispozitiv.",

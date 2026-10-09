@@ -1,0 +1,32 @@
+<h3>{{ 'public.listing.documents.heading' | t }}</h3>
+@for (each of kinds; track each) {
+  @let pages = pagesOf(each);
+  <mf-document-area
+    [kind]="each"
+    [mobile]="mobile()"
+    [draftId]="draftId()"
+    [token]="token()"
+    [pages]="pages"
+    (pagesChange)="setPages(each, $event)"
+  >
+    @if (each === 'onrc_certificate' && pages.length) {
+      <div class="field">
+        <label for="listing-issued-on">{{ 'public.listing.documents.issuedOn' | t }}</label>
+        <input
+          #date
+          hlmInput
+          id="listing-issued-on"
+          type="date"
+          [min]="earliest"
+          [max]="today"
+          [value]="issuedOn()"
+          [attr.aria-describedby]="dateError() ? 'listing-issued-on-error' : null"
+          [attr.aria-invalid]="dateError() ? 'true' : null"
+          (input)="typeDate(date.value)"
+          (blur)="leaveDate()"
+        />
+        <p id="listing-issued-on-error" class="error" role="status" aria-live="polite">{{ dateError() ? ('public.listing.documents.issuedOnOld' | t) : '' }}</p>
+      </div>
+    }
+  </mf-document-area>
+}

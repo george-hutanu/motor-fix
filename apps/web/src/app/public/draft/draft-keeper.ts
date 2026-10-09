@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import type { ListingDraftData } from '@motor-fix/contracts';
+import type { DraftDocuments, ListingDraftData } from '@motor-fix/contracts';
 import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import { ListingDraftsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -132,6 +132,13 @@ export class DraftKeeper {
   files(keys: string[]) {
     const data = this.draft().data as ListingDraftData;
     this.change({ data: { ...data, files: keys } });
+    this.later();
+  }
+
+  // The legal documents' page keys per kind, and the certificate's date.
+  documents(documents: DraftDocuments) {
+    const data = this.draft().data as ListingDraftData;
+    this.change({ data: { ...data, documents } });
     this.later();
   }
 

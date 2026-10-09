@@ -43,6 +43,7 @@ import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { brandsOf } from '../brands-section';
 import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
+import { DocumentsStep } from '../documents-step/documents-step';
 import { DraftKeeper } from '../draft/draft-keeper';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
@@ -76,6 +77,7 @@ const STALL_MS = 3000;
   imports: [
     BrandsStep,
     DetailsStep,
+    DocumentsStep,
     GaragePreview,
     HlmButton,
     HlmInput,
@@ -133,6 +135,9 @@ export class ListYourGarage {
     const section: unknown = this.kept()['4'];
     return isMechanicsSection(section) ? section : {};
   });
+  protected readonly documents = computed(
+    () => (this.keeper.draft().data as ListingDraftData).documents ?? {},
+  );
   protected readonly photos = computed(
     () => (this.keeper.draft().data as ListingDraftData).files ?? [],
   );

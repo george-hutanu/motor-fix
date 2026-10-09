@@ -1,0 +1,104 @@
+@let count = shown().length;
+@let done = pages().length > 0;
+<div class="area" [attr.data-kind]="kind()" [class.done]="done">
+  <div class="head">
+    <h4>
+      @if (kind() === 'onrc_certificate') {
+        {{ 'public.listing.documents.kinds.onrc_certificate.label' | t }}
+      } @else {
+        {{ 'public.listing.documents.kinds.rar_authorisation.label' | t }}
+      }
+    </h4>
+    @if (done) {
+      <span class="state-done"><span class="dot" aria-hidden="true"></span>{{ 'public.listing.documents.done' | t }}</span>
+    }
+  </div>
+  <p class="hint">
+    @if (kind() === 'onrc_certificate') {
+      @if (mobile()) {
+        {{ 'public.listing.documents.kinds.onrc_certificate.hintMobile' | t }}
+      } @else {
+        {{ 'public.listing.documents.kinds.onrc_certificate.hint' | t }}
+      }
+    } @else {
+      @if (mobile()) {
+        {{ 'public.listing.documents.kinds.rar_authorisation.hintMobile' | t }}
+      } @else {
+        {{ 'public.listing.documents.kinds.rar_authorisation.hint' | t }}
+      }
+    }
+  </p>
+  <div
+    class="drop"
+    [class.over]="over()"
+    (dragenter)="over.set(ready())"
+    (dragover)="$event.preventDefault()"
+    (dragleave)="over.set(false)"
+    (drop)="$event.preventDefault(); ready() && dropFiles($event)"
+  >
+    @if (over()) {
+      <p class="release">{{ 'public.listing.documents.release' | t }}</p>
+    } @else if (ready()) {
+      <p>{{ 'public.listing.documents.drop' | t }}</p>
+    } @else {
+      <p>{{ 'public.listing.documents.emailFirst' | t }}</p>
+    }
+    <input #picker type="file" hidden multiple [accept]="types" [disabled]="!ready()" (change)="choose($event)" />
+    <button hlmBtn variant="secondary" type="button" [disabled]="!ready()" (click)="picker.click()">
+      {{ 'public.listing.documents.choose' | t }}
+    </button>
+  </div>
+  @if (refused()) {
+    <p class="error" role="status">{{ 'public.listing.documents.refused' | t }}</p>
+  }
+  @if (full()) {
+    <p class="error" role="status">{{ 'public.listing.documents.full' | t }}</p>
+  }
+  @if (count) {
+    <ol cdkDropList [cdkDropListData]="shown()" (cdkDropListDropped)="drop($event)">
+      @for (page of shown(); track page.id) {
+        @let i = $index;
+        @let n = i + 1;
+        <li class="page" cdkDrag [attr.data-page]="page.id" [attr.data-key]="page.key ?? null" [attr.data-name]="page.name ?? null">
+          <div class="label">
+            <span class="name">{{ 'public.listing.documents.page' | t: { n: n } }}</span>
+            @if (page.name) {
+              <span class="file">{{ page.name }}</span>
+            }
+            @if (page.status === 'uploading') {
+              <progress max="100" [value]="page.progress ?? 0" [attr.aria-label]="'public.listing.documents.page' | t: { n: n }"></progress>
+            } @else if (page.status === 'waiting') {
+              <span class="state">{{ 'public.listing.documents.waiting' | t }}</span>
+            } @else if (page.status === 'failed') {
+              <span class="error">{{ 'public.listing.documents.failed' | t }}</span>
+            }
+          </div>
+          <div class="tools">
+            @if (page.status === 'failed') {
+              <button type="button" class="retry" (click)="retry(page.id)">{{ 'public.listing.documents.retry' | t }}</button>
+            }
+            <button type="button" data-move="earlier" [disabled]="i === 0" [attr.aria-label]="'public.listing.documents.earlier' | t: { n: n }" (click)="move(i, -1, 'earlier')">
+              <span aria-hidden="true">↑</span>
+            </button>
+            <button type="button" data-move="later" [disabled]="i === count - 1" [attr.aria-label]="'public.listing.documents.later' | t: { n: n }" (click)="move(i, 1, 'later')">
+              <span aria-hidden="true">↓</span>
+            </button>
+            <button type="button" [attr.aria-label]="'public.listing.documents.remove' | t: { n: n }" (click)="remove(page.id)">
+              <span aria-hidden="true">✕</span>
+            </button>
+          </div>
+        </li>
+      }
+    </ol>
+  }
+  <ng-content />
+  <p class="announce" aria-live="polite">
+    @if (announcement(); as said) {
+      @if (said.key === 'place') {
+        {{ 'public.listing.documents.place' | t: said.params }}
+      } @else {
+        {{ 'public.listing.documents.uploaded' | t: said.params }}
+      }
+    }
+  </p>
+</div>
