@@ -9,10 +9,10 @@
 
 | File | Change | Notes |
 |------|--------|-------|
-| `apps/web-e2e/src/asset-cache/asset-cache.ts` | modified | `serveFromCache` wraps the answer in try/catch and aborts the route; abort failure ignored |
-| `apps/web-e2e/src/fixtures.ts` | modified | `unrouteAll({ behavior: 'ignoreErrors' })` after `use(context)` |
+| `apps/web-e2e/src/asset-cache/asset-cache.ts` | modified | `serveFromCache` wraps the answer in try/catch and aborts the route; abort failure ignored; a failure other than a closed context or ended test is logged (QA lap 1) |
+| `apps/web-e2e/src/fixtures.ts` | modified | `unrouteAll({ behavior: 'ignoreErrors' })` after `use(context)`, in the exported `routedContext` |
+| `apps/web-e2e/src/fixtures.spec.ts` | added test | FR-002: `routedContext` removes every handler after `use` (QA lap 1) |
 | `apps/web-e2e/src/asset-cache/asset-cache.spec.ts` | added test | "lets its context close while a fetch is still in flight"; test server split into `servePage`/`serveScript` (Biome complexity) |
-| `.claude/scripts/lib/feature.mjs`, `.claude/scripts/lifecycle.mjs`, `.claude/scripts/lib/feature.spec.mjs` | modified | feature folders numbered 1000+ resolve (`\d{3,}`); needed to run this story's lifecycle at all |
 
 ## Local Verification
 
@@ -22,7 +22,7 @@
 
 ## Deviations from Assessment
 
-- Added the two-regex harness change: the lifecycle could not resolve a 4-digit feature folder.
+- The branch first carried a two-regex harness change so the lifecycle could resolve a 4-digit feature folder. ST-1009 (#313) landed the same change on `main`, and the merge of `main` made those files equal to it, so the PR no longer changes them.
 
 ## Follow-ups
 
