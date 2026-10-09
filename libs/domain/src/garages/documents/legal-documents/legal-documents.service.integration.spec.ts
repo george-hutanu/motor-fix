@@ -394,6 +394,15 @@ describe('an admin opening a page', () => {
     expect(await opens()).toHaveLength(0);
   });
 
+  it('answers 404 for a page gone from storage, with no entry and no address', async () => {
+    store.objects.delete(certificate[0]);
+    const counted = await opened('onrc_certificate');
+
+    expect((await refusalOf(open(admin, '1'))).status).toBe(404);
+    expect(await opens()).toHaveLength(0);
+    expect(await opened('onrc_certificate')).toBe(counted);
+  });
+
   it.each([
     ['an unknown file', () => open(admin, '1', onrcId, randomUUID())],
     ['a malformed file id', () => open(admin, '1', onrcId, 'not-a-uuid')],

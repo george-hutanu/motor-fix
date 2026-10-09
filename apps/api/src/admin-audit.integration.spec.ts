@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import {
+  AccountsService,
+  StorageService,
+  signAccessToken,
+} from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -46,6 +50,13 @@ const FIXTURES: Record<
             [`audit-${randomUUID()}`],
           )
         ).rows[0] as { file: string; id: string };
+        await app
+          .get(StorageService)
+          .putObject(
+            'legal_document/audit/page',
+            Buffer.from('%PDF-1.7'),
+            'application/pdf',
+          );
         return `/api/v1/admin/verification-files/${file}/documents/${id}/pages/1/download-url`;
       },
     },

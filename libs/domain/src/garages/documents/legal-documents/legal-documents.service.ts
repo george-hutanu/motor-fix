@@ -119,7 +119,8 @@ export class LegalDocumentsService {
   }
 
   // The garage's own staff are told they are not admins; anyone else, and
-  // anything unknown, is not found. No address is issued without its entry.
+  // anything unknown, a page gone from storage included, is not found. No
+  // address is issued without its entry.
   async pageAddress(
     actor: Actor,
     fileId: string,
@@ -132,29 +133,31 @@ export class LegalDocumentsService {
     if (!admin && !actor.garageId) throw new NotFoundException();
     if (!isUUID(fileId) || !isUUID(documentId)) throw new NotFoundException();
     const page = PAGE.test(n) ? Number(n) : 0;
-    const { kind, key } = await this.prisma.$transaction(async (tx) => {
-      const document = await this.readable(
-        tx,
-        actor,
-        admin,
-        fileId,
-        documentId,
-      );
-      const stored = document.pages[page - 1];
-      if (!stored) throw new NotFoundException();
-      await this.audit.record(tx, {
+    const document = await this.readable(
+      this.prisma,
+      actor,
+      admin,
+      fileId,
+      documentId,
+    );
+    const { kind } = document;
+    const key = document.pages[page - 1];
+    if (!key) throw new NotFoundException();
+    const contentType = await this.storage.contentTypeOf(key);
+    if (!contentType) throw new NotFoundException();
+    await this.prisma.$transaction((tx) =>
+      this.audit.record(tx, {
         action: 'open',
         actorId: actor.accountId,
         actorRole: actor.role,
         garageId: document.verificationFile.garageId,
-        kind: document.kind,
+        kind,
         newValue: { page },
         subjectId: document.id,
         subjectType: 'legal_document',
-      });
-      return { key: stored, kind: document.kind };
-    });
-    const extension = EXTENSIONS[(await this.storage.contentTypeOf(key)) ?? ''];
+      }),
+    );
+    const extension = EXTENSIONS[contentType];
     const expiresAt = new Date(
       Date.now() + DOWNLOAD_URL_MINUTES * 60_000,
     ).toISOString();
