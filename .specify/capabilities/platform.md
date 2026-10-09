@@ -1521,9 +1521,9 @@ _From 977-worktree-cleanup._
 
 _From 1016-mcp-staging._
 
-### 000-FR-004 — The health check path MUST be a property of each service: `/health/ready` for `api`, `worker`, `web`; `/health/live` for `mcp`; `/realms/motorfix-assistants/.well-known/openid-configuration` for `keycloak`, checked on the service's public port. The health timeout, the region and the restore on failure or cancel stay as they are (516-FR-001, 516-FR-005).
+### 000-FR-004 — The health check path MUST be a property of each service: `/health/ready` for `api`, `worker`, `web`; `/health/live` for `mcp`; `/realms/motorfix-assistants` for `keycloak` (Railway refuses a path with a `.`), checked on the service's public port. The health timeout, the region and the restore on failure or cancel stay as they are (516-FR-001, 516-FR-005).
 
-_From 1016-mcp-staging._
+_From 1016-mcp-staging; path modified by 1021-keycloak-health-path._
 
 ### 000-FR-006 — The Keycloak image MUST cap the JVM heap through Keycloak's own heap variable set in the Dockerfile, without a per-service setting; the value is chosen in the plan with headroom for the realm import, and a test asserts the Dockerfile sets it.
 
