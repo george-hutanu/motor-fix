@@ -5,4 +5,9 @@ export interface PlaceSuggestionDto {
   label: string;
   lat: number;
   lng: number;
+
+  /**
+   * The town or city, when the provider knows it
+   */
+  locality?: string;
 }

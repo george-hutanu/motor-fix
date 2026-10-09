@@ -7,6 +7,7 @@
     "answerRate": "Answer rate",
     "bookings": "Bookings",
     "garagesListed": "Garages listed",
+    "inPeriod": "{sign}{n} {period}",
     "observability": "Observability",
     "observabilityNewTab": "{name}, opens in a new tab",
     "reportedReviews": "Reported reviews",

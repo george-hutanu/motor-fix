@@ -10,11 +10,17 @@ import { RequestBuilder } from '../../request-builder';
 import { AdminGrowthDto } from '../../models/admin-growth-dto';
 
 export interface AdminOverviewControllerGrowth$Params {
+
+/**
+ * A key from the overview's cities, or all
+ */
+  city?: string;
 }
 
 export function adminOverviewControllerGrowth(http: HttpClient, rootUrl: string, params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Observable<StrictHttpResponse<AdminGrowthDto>> {
   const rb = new RequestBuilder(rootUrl, adminOverviewControllerGrowth.PATH, 'get');
   if (params) {
+    rb.query('city', params.city, {});
   }
 
   return http.request(

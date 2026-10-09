@@ -1,13 +1,63 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn, IsOptional, Matches, MaxLength } from 'class-validator';
+
+import { CITY_ALL, CITY_KEY, PERIODS, type Period } from './figure-choices';
+import { LOCALITY_MAX } from './place-section';
+
+export { CITY_ALL, CITY_KEY, PERIODS, type Period } from './figure-choices';
+
+export class AdminGrowthQueryDto {
+  @ApiPropertyOptional({
+    default: CITY_ALL,
+    description: "A key from the overview's cities, or all",
+    maxLength: LOCALITY_MAX,
+    pattern: CITY_KEY.source,
+  })
+  @IsOptional()
+  @Matches(CITY_KEY)
+  @MaxLength(LOCALITY_MAX)
+  city?: string;
+}
+
+export class AdminOverviewQueryDto extends AdminGrowthQueryDto {
+  @ApiPropertyOptional({ default: 'default', enum: PERIODS })
+  @IsOptional()
+  @IsIn(PERIODS)
+  period?: Period;
+}
+
+export class AdminCityDto {
+  @ApiProperty({ example: 'cluj-napoca', pattern: CITY_KEY.source })
+  key!: string;
+
+  @ApiProperty({ example: 'Cluj-Napoca' })
+  name!: string;
+
+  @ApiProperty({
+    description: 'Garages approved and listed now in the city',
+    minimum: 0,
+    type: 'integer',
+  })
+  garages!: number;
+}
 
 // Counted at each call, never stored.
 export class AdminOverviewDto {
   @ApiProperty({
-    description: 'Verification files submitted or in review',
+    description:
+      'Verification files submitted or in review, on the whole platform',
     minimum: 0,
     type: 'integer',
   })
   garagesWaiting!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Verification files submitted or in review of garages in the chosen city; only with a city',
+    minimum: 0,
+    type: 'integer',
+  })
+  cityGaragesWaiting?: number;
 
   @ApiProperty({
     description: 'Garages approved and listed now',
@@ -38,6 +88,29 @@ export class AdminOverviewDto {
     type: 'integer',
   })
   activeDriversMonthStart?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Listed garages first approved in the chosen period; only with a period',
+    minimum: 0,
+    type: 'integer',
+  })
+  garagesApprovedInPeriod?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Active drivers on the first day of the chosen period, absent for today, a city or a night not recorded',
+    minimum: 0,
+    type: 'integer',
+  })
+  activeDriversPeriodStart?: number;
+
+  @ApiProperty({
+    description:
+      'The whole country first, then every city with a listed garage, most garages first',
+    type: [AdminCityDto],
+  })
+  cities!: AdminCityDto[];
 
   @ApiPropertyOptional({
     description:

@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -20,6 +20,7 @@ features:
   - 945-map-error-listener
   - 397-listing-ticks
   - 307-public-garage-profile
+  - 163-figures-period-city
 ---
 
 # Capability: Garage listing

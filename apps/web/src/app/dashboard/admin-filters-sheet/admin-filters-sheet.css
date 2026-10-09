@@ -1,0 +1,39 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+}
+.group {
+  display: flex;
+  flex-direction: column;
+}
+.label {
+  margin: 0 0 var(--mf-space-1);
+  color: var(--mf-text-secondary);
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 700;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+}
+/* Phone list items at 16 px, each a full-width tap target. */
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  font-size: max(16px, 1rem);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.option input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--mf-amber);
+}
+.option input:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
