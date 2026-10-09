@@ -24,6 +24,7 @@ features:
   - 138-notification-switches
   - 260-rule-off-confirm
   - 343-live-quote-requests
+  - 312-report-garage
 ---
 
 # Capability: Notifications
