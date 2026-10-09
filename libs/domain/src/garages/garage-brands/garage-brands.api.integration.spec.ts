@@ -17,6 +17,8 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { UNUSED_STORAGE } from '../../storage/s3-test-store';
+import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
 
 // @traces 040-FR-008 040-FR-009 040-FR-011 040-FR-012
@@ -40,6 +42,7 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
+      StorageModule.register(UNUSED_STORAGE),
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
       }),

@@ -45,6 +45,30 @@ export class PublicJobTypeDto {
   nameEn!: string;
 }
 
+// A garage photo as anyone may see it: two signed addresses, never its key.
+export class PublicGaragePhotoDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({
+    description: 'The thumbnail copy (400 px), signed for an hour',
+    format: 'uri',
+  })
+  thumbnailUrl!: string;
+
+  @ApiProperty({
+    description: 'The display copy (1,600 px), signed for an hour',
+    format: 'uri',
+  })
+  displayUrl!: string;
+
+  @ApiPropertyOptional({ description: 'Upright, when known', minimum: 1 })
+  width?: number;
+
+  @ApiPropertyOptional({ description: 'Upright, when known', minimum: 1 })
+  height?: number;
+}
+
 export class PublicGarageDto extends GarageBrandAnswerDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -124,4 +148,11 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: [PublicJobTypeDto],
   })
   jobTypes!: PublicJobTypeDto[];
+
+  @ApiProperty({
+    description:
+      "In the owner's order; empty when no photo is ready to be seen",
+    type: [PublicGaragePhotoDto],
+  })
+  photos!: PublicGaragePhotoDto[];
 }

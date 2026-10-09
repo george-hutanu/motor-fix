@@ -13,6 +13,15 @@ import type { StorageEnv } from '@motor-fix/contracts';
 export { databaseTurn } from '../auth/database-turn.testing';
 export { PRISMA } from '../auth/prisma';
 
+// For a module that needs storage wired but never reaches it.
+export const UNUSED_STORAGE: StorageEnv = {
+  STORAGE_ACCESS_KEY_ID: 'unused',
+  STORAGE_BUCKET: 'unused',
+  STORAGE_ENDPOINT: 'http://127.0.0.1:9',
+  STORAGE_REGION: 'eu-central-1',
+  STORAGE_SECRET_ACCESS_KEY: 'unused',
+};
+
 interface StoredObject {
   body: Buffer;
   contentType: string;

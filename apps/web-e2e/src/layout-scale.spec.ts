@@ -142,13 +142,17 @@ test.describe('the type scale and the 4 px grid', () => {
   }) => {
     await openAdmin(page, 320);
 
-    expect(
-      offScale(
-        await measure(
-          page.locator('mf-admin-panel .number, mf-admin-growth .latest'),
+    // Polled: a figure read while it is still being rendered has no computed
+    // font size yet and would read as NaN.
+    await expect
+      .poll(async () =>
+        offScale(
+          await measure(
+            page.locator('mf-admin-panel .number, mf-admin-growth .latest'),
+          ),
         ),
-      ),
-    ).toEqual([]);
+      )
+      .toEqual([]);
   });
 
   test('the admin menu chip sits on the grid on a desktop', async ({

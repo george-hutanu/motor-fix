@@ -28,6 +28,15 @@
     "failed": "Nu am putut încărca service‑ul",
     "loading": "Se încarcă profilul",
     "mobileArea": "Mecanic mobil · zonă de {km}",
+    "photos": {
+      "alt": "Fotografie {n} din {total} · {garage}",
+      "close": "Închide",
+      "counter": "{n} / {total}",
+      "failed": "Fotografia nu s‑a putut încărca",
+      "label": "Fotografii",
+      "next": "Următoarea",
+      "previous": "Înapoi"
+    },
     "refuses": "Nu lucrează pe {brand}",
     "retry": "Încearcă din nou",
     "reviews": {

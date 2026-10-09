@@ -8212,6 +8212,40 @@
           "nameEn"
         ]
       },
+      "PublicGaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy (400 px), signed for an hour",
+            "format": "uri"
+          },
+          "displayUrl": {
+            "type": "string",
+            "description": "The display copy (1,600 px), signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "thumbnailUrl",
+          "displayUrl"
+        ]
+      },
       "PublicGarageDto": {
         "type": "object",
         "properties": {
@@ -8321,6 +8355,13 @@
             "items": {
               "$ref": "#/components/schemas/PublicJobTypeDto"
             }
+          },
+          "photos": {
+            "description": "In the owner's order; empty when no photo is ready to be seen",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicGaragePhotoDto"
+            }
           }
         },
         "required": [
@@ -8335,7 +8376,8 @@
           "rating",
           "reviewCount",
           "paymentMethods",
-          "jobTypes"
+          "jobTypes",
+          "photos"
         ]
       },
       "RecordVerificationCheckDto": {
