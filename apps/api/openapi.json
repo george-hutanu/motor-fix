@@ -1915,12 +1915,13 @@
             "name": "status",
             "required": false,
             "in": "query",
-            "description": "waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page",
+            "description": "waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits, newest quote first",
             "schema": {
               "type": "string",
               "enum": [
                 "waiting",
-                "closed"
+                "closed",
+                "quoted"
               ]
             }
           }
@@ -2125,6 +2126,68 @@
         "summary": "Up to five more garages near a place that would take the request",
         "tags": [
           "quote-requests"
+        ]
+      }
+    },
+    "/api/v1/quotes": {
+      "post": {
+        "operationId": "QuotesController_send",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per send the garage means; a repeat answers the first quote",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageQuoteDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field, fromLei above toLei, a past slot or a missing key"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic who may not answer quotes"
+          },
+          "404": {
+            "description": "not_found: not one of the garage’s requests"
+          },
+          "409": {
+            "description": "already_answered: the garage answered already; request_not_open: the request, the garage’s row or the garage is closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send the garage’s quote for a request",
+        "tags": [
+          "quotes"
         ]
       }
     },
@@ -6734,6 +6797,73 @@
           "total"
         ]
       },
+      "GarageRequestJobPriceDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "number",
+            "description": "Lower end of the price, in bani"
+          },
+          "toBani": {
+            "type": "number",
+            "description": "Upper end of the price, in bani; null when open-ended",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani",
+          "durationMinutes"
+        ]
+      },
+      "GarageRequestDetailJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          },
+          "offered": {
+            "type": "boolean",
+            "description": "The garage ticked this job for the request's car brand"
+          },
+          "price": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageRequestJobPriceDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "position",
+          "offered",
+          "price"
+        ]
+      },
       "GarageDriverDto": {
         "type": "object",
         "properties": {
@@ -6948,7 +7078,7 @@
           "jobs": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GarageRequestJobDto"
+              "$ref": "#/components/schemas/GarageRequestDetailJobDto"
             }
           },
           "descriptionLine": {
@@ -7119,6 +7249,49 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "SendQuoteDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromLei": {
+            "type": "number",
+            "maximum": 1000000,
+            "minimum": 1
+          },
+          "toLei": {
+            "type": "number",
+            "maximum": 1000000,
+            "minimum": 1
+          },
+          "durationMinutes": {
+            "type": "number",
+            "maximum": 7200,
+            "minimum": 15,
+            "multipleOf": 15
+          },
+          "slot": {
+            "type": "string",
+            "description": "The proposed start, with its offset; later than now",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "description": "Whitespace alone is no note",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "requestId",
+          "fromLei",
+          "toLei",
+          "durationMinutes",
+          "slot"
         ]
       },
       "JobSummaryDto": {

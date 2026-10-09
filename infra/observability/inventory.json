@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 95,
+    "count": 96,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -321,6 +321,16 @@
       "alerts": "none",
       "reason": "ST-880 adds the alerts",
       "story": "ST-221"
+    },
+    {
+      "kind": "endpoint",
+      "name": "quotes",
+      "source": "libs/domain/src/quotes/quotes/quotes.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quotes",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "one log line per sent quote naming its id; the send counter and its panel come with the rest of ST-344, ST-880 adds the alerts",
+      "story": "ST-344"
     },
     {
       "kind": "product-counter",

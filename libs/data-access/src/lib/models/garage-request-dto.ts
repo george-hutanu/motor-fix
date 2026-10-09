@@ -6,7 +6,7 @@ import { GarageCarDto } from '../models/garage-car-dto';
 import { GarageDriverDto } from '../models/garage-driver-dto';
 import { GarageQuoteDto } from '../models/garage-quote-dto';
 import { GarageRecipientDto } from '../models/garage-recipient-dto';
-import { GarageRequestJobDto } from '../models/garage-request-job-dto';
+import { GarageRequestDetailJobDto } from '../models/garage-request-detail-job-dto';
 export interface GarageRequestDto {
   booking: (GarageBookingDto & {
 }) | null;
@@ -31,7 +31,7 @@ export interface GarageRequestDto {
   driver: GarageDriverDto;
   expiresAt: string;
   id: string;
-  jobs: Array<GarageRequestJobDto>;
+  jobs: Array<GarageRequestDetailJobDto>;
   quote: (GarageQuoteDto & {
 }) | null;
   recipient: GarageRecipientDto;
