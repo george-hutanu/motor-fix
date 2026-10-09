@@ -409,6 +409,21 @@
     "google": "Continuă cu Google",
     "or": "sau"
   },
+  "reportGarage": {
+    "cancel": "Anulează",
+    "count": "{typed} / {max}",
+    "field": "Ce s‑a întâmplat la acest service?",
+    "link": "Raportează service‑ul",
+    "problem": {
+      "garage_already_reported": "Ai raportat deja acest service.",
+      "too_many_reports": "Ai trimis prea multe raportări. Încearcă mai târziu."
+    },
+    "retry": "Încearcă din nou",
+    "rule": "Între 20 și 1000 de caractere.",
+    "send": "Trimite raportarea",
+    "thanks": "Mulțumim. Raportarea a ajuns la echipa MotorFix.",
+    "title": "Ce s‑a întâmplat?"
+  },
   "requestQuote": {
     "addCar": "Adaugă o mașină",
     "backToSearch": "Înapoi la căutare",

@@ -1,0 +1,5 @@
+@if (shown()) {
+  <button type="button" class="link" (click)="open()">{{ 'public.reportGarage.link' | t }}</button>
+} @else if (outcome() === 'sent') {
+  <p role="status">{{ 'public.reportGarage.thanks' | t }}</p>
+}

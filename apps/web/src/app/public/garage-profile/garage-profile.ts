@@ -25,6 +25,7 @@ import { map } from 'rxjs';
 
 import { Gone } from './gone/gone';
 import { PhotosSection } from './photos-section/photos-section';
+import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
@@ -49,6 +50,7 @@ const GONE = [404, 410];
     LiveChange,
     PhotosSection,
     RatingDial,
+    ReportGarageLink,
     RequestQuoteButton,
     RouterLink,
     TranslatePipe,
