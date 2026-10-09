@@ -6,7 +6,7 @@
 import { NotFoundException } from '@nestjs/common';
 
 import { getDaySheet } from './get-day-sheet';
-import { caller, context } from '../../fixtures.testing';
+import { caller, connect, context } from '../../fixtures.testing';
 import { callTool, visibleTools } from '../../registry';
 
 type Sheet = Awaited<
@@ -176,5 +176,42 @@ describe('get_day_sheet', () => {
     expect(ro.isError).toBeFalsy();
     expect(noteOf(ro).length).toBeGreaterThan(0);
     expect(noteOf(ro)).not.toBe(noteOf(en));
+  });
+});
+
+describe('get_day_sheet output schema', () => {
+  it('declares one its answer fits, as the client checks it', async () => {
+    const client = await connect(
+      [getDaySheet],
+      caller({ roles: ['garage'] }, ['motorfix.read']),
+      context({
+        garage: {
+          daySheet: {
+            get: sheetOf({
+              entries: [
+                {
+                  car: { brand: 'Dacia', model: 'Logan', year: 2019 },
+                  durationMinutes: 90,
+                  id: 'b1',
+                  jobs: ['Schimb ulei'],
+                  note: 'Clientul vine cu piesele',
+                  startsAt: '2026-10-10T06:00:00.000Z',
+                  state: 'confirmed',
+                },
+              ] as never,
+              jobCount: 1,
+              totalHours: 1.5,
+            }),
+          },
+        },
+      }),
+    );
+    const { tools } = await client.listTools();
+    expect(tools[0].outputSchema).toBeDefined();
+    const answer = await client.callTool({
+      arguments: { mechanic: 'Costel' },
+      name: 'get_day_sheet',
+    });
+    expect(answer.isError).toBeFalsy();
   });
 });

@@ -6,7 +6,7 @@
 import { BadRequestException } from '@nestjs/common';
 
 import { getSchedule } from './get-schedule';
-import { caller, context } from '../../fixtures.testing';
+import { caller, connect, context } from '../../fixtures.testing';
 import { callTool, visibleTools } from '../../registry';
 
 type Schedule = Awaited<
@@ -171,5 +171,37 @@ describe('get_schedule', () => {
   it('adds no note when there are bookings', async () => {
     const result = await call({}, scheduleOf({ entries: [entry('b-1')] }));
     expect(result.structuredContent).not.toHaveProperty('note');
+  });
+});
+
+describe('get_schedule output schema', () => {
+  it('declares one its answer fits, as the client checks it', async () => {
+    const client = await connect(
+      [getSchedule],
+      caller({ roles: ['garage'] }, ['motorfix.read']),
+      context({
+        garage: {
+          schedule: {
+            list: scheduleOf({
+              entries: [
+                entry('b1', { mechanic: vlad }),
+                entry('b2', {
+                  confirmBy: '2026-10-09T05:00:00.000Z',
+                  minutesLeft: 30,
+                  state: 'awaiting_confirmation',
+                }),
+              ],
+            }),
+          },
+        },
+      }),
+    );
+    const { tools } = await client.listTools();
+    expect(tools[0].outputSchema).toBeDefined();
+    const answer = await client.callTool({
+      arguments: {},
+      name: 'get_schedule',
+    });
+    expect(answer.isError).toBeFalsy();
   });
 });

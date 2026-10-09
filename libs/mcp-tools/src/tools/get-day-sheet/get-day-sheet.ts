@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 import { text } from '../../errors';
 import { defineTool } from '../../registry';
-import { userText } from '../../user-text';
-import { day } from '../day';
+import { userText, userTextOutput } from '../../user-text';
+import { bookedOutput, day } from '../day';
 
 export const getDaySheet = defineTool({
   acts: false,
@@ -29,5 +29,15 @@ export const getDaySheet = defineTool({
     mechanic: z.string().trim().min(1),
   },
   name: 'get_day_sheet',
+  outputSchema: {
+    day: z.string(),
+    entries: z.array(
+      z.object({ ...bookedOutput, note: userTextOutput.nullable() }),
+    ),
+    jobCount: z.number(),
+    mechanic: z.object({ id: z.string(), name: z.string() }),
+    note: z.string().optional(),
+    totalHours: z.number(),
+  },
   roles: ['garage', 'receptionist'],
 });

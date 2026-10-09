@@ -4,7 +4,7 @@
 // @traces 374-FR-010
 // @traces 374-FR-011
 import { listQuoteRequests } from './list-quote-requests';
-import { caller, context } from '../../fixtures.testing';
+import { caller, connect, context } from '../../fixtures.testing';
 import { callTool, visibleTools } from '../../registry';
 
 type Inbox = Awaited<
@@ -181,5 +181,36 @@ describe('list_quote_requests', () => {
   it('adds no note when there are requests', async () => {
     const result = await call({});
     expect(result.structuredContent).not.toHaveProperty('note');
+  });
+});
+
+describe('list_quote_requests output schema', () => {
+  it('declares one its answer fits, as the client checks it', async () => {
+    const client = await connect(
+      [listQuoteRequests],
+      caller({ roles: ['garage'] }, ['motorfix.read']),
+      context({
+        garage: {
+          requests: {
+            inbox: inboxOf([
+              item,
+              {
+                ...item,
+                description: null,
+                id: 'request-2',
+                quote: { id: 'quote-1', status: 'sent' } as never,
+              },
+            ]),
+          },
+        },
+      }),
+    );
+    const { tools } = await client.listTools();
+    expect(tools[0].outputSchema).toBeDefined();
+    const answer = await client.callTool({
+      arguments: {},
+      name: 'list_quote_requests',
+    });
+    expect(answer.isError).toBeFalsy();
   });
 });

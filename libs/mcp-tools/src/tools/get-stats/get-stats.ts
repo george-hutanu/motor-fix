@@ -4,6 +4,16 @@ import { text } from '../../errors';
 import { defineTool } from '../../registry';
 import { day } from '../day';
 
+const counts = {
+  bookings: z.number(),
+  estimatedWorkBani: z.number(),
+  quotesSent: z.number(),
+  quotesWon: z.number(),
+  requests: z.number(),
+  responseTimeMinutes: z.number().nullable(),
+};
+const period = z.object({ from: z.string(), to: z.string() });
+
 export const getStats = defineTool({
   acts: false,
   annotations: { destructiveHint: false, readOnlyHint: true },
@@ -24,5 +34,11 @@ export const getStats = defineTool({
     to: day.optional(),
   },
   name: 'get_stats',
+  outputSchema: {
+    current: z.object(counts),
+    note: z.string().optional(),
+    period,
+    previous: z.object({ ...counts, period }).optional(),
+  },
   roles: ['garage', 'receptionist'],
 });

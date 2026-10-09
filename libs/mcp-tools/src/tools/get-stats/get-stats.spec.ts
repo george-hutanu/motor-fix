@@ -3,7 +3,7 @@
 // @traces 374-FR-007
 // @traces 374-FR-011
 import { getStats } from './get-stats';
-import { caller, context } from '../../fixtures.testing';
+import { caller, connect, context } from '../../fixtures.testing';
 import { callTool, visibleTools } from '../../registry';
 
 type Figures = Awaited<
@@ -117,5 +117,34 @@ describe('get_stats', () => {
     expect(answer(ro).current).toEqual(ZERO);
     expect(answer(ro).note.length).toBeGreaterThan(0);
     expect(answer(ro).note).not.toBe(answer(en).note);
+  });
+});
+
+describe('get_stats output schema', () => {
+  it('declares one its answer fits, as the client checks it', async () => {
+    const client = await connect(
+      [getStats],
+      caller({ roles: ['garage'] }, ['motorfix.read']),
+      context({
+        garage: {
+          figures: {
+            get: figuresOf({
+              current: { ...ZERO, requests: 4, responseTimeMinutes: 12 },
+              previous: {
+                ...ZERO,
+                period: { from: '2026-09-28', to: '2026-10-04' },
+              },
+            }),
+          },
+        },
+      }),
+    );
+    const { tools } = await client.listTools();
+    expect(tools[0].outputSchema).toBeDefined();
+    const answer = await client.callTool({
+      arguments: { compareWithPrevious: true },
+      name: 'get_stats',
+    });
+    expect(answer.isError).toBeFalsy();
   });
 });
