@@ -255,4 +255,28 @@ describe('the photos section kept live', () => {
     expect(fixture.componentInstance.rereads).toBe(2);
     await closeView();
   });
+
+  it('stops reading again after two fresh addresses for the same photo', async () => {
+    tiles()[1].click();
+    await settle();
+    for (const n of [1, 2, 3]) {
+      await show({
+        photos: [
+          photo(1),
+          { ...photo(2), displayUrl: `https://s/2.fresh${n}` },
+          photo(3),
+        ],
+      });
+      viewImage()?.dispatchEvent(new Event('error'));
+      await settle();
+    }
+
+    expect(fixture.componentInstance.rereads).toBe(2);
+    expect(
+      view()
+        ?.querySelector('[data-slot="viewer-stage"]')
+        ?.getAttribute('data-failed'),
+    ).toBe('true');
+    await closeView();
+  });
 });
