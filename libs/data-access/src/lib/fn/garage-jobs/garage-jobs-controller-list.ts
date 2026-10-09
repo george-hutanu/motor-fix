@@ -15,12 +15,18 @@ export interface GarageJobsControllerList$Params {
  * The nextCursor of the previous page
  */
   cursor?: string;
+
+/**
+ * The first day listed, in Bucharest; today when absent
+ */
+  from?: string;
 }
 
 export function garageJobsControllerList(http: HttpClient, rootUrl: string, params?: GarageJobsControllerList$Params, context?: HttpContext): Observable<StrictHttpResponse<JobListDto>> {
   const rb = new RequestBuilder(rootUrl, garageJobsControllerList.PATH, 'get');
   if (params) {
     rb.query('cursor', params.cursor, {});
+    rb.query('from', params.from, {});
   }
 
   return http.request(

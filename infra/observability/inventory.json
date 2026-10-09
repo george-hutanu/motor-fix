@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 90,
+    "count": 95,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -376,6 +376,25 @@
       "alerts": "none",
       "reason": "ST-880 adds the alerts",
       "story": "ST-1"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-job-steps",
+      "source": "libs/domain/src/workshop/job-steps/job-steps.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/steps, /order, /:stepId and /:stepId/done",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "each refusal logs one 'job step refused' line with ids and its code; ST-880 adds the alerts",
+      "story": "ST-424"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_job_steps_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); ST-880 adds the alerts",
+      "story": "ST-424"
     }
   ]
 }

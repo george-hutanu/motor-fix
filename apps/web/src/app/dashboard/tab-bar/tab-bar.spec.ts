@@ -18,7 +18,7 @@ class Blank {}
   template: `<mf-dashboard-tab-bar base="/app/garage" [views]="views" name="shell.frame.bar.garage" />`,
 })
 class Host {
-  readonly views = DASHBOARDS.garage.views.slice(0, 4);
+  readonly views = DASHBOARDS.garage.views.slice(0, 5);
 }
 
 let scrolled: jest.Mock;
@@ -59,12 +59,14 @@ describe('DashboardTabBar', () => {
       'Panou',
       'Cereri',
       'Program',
+      'Lucrări',
       'Mecanici',
     ]);
     expect(tabs(element).map((a) => a.getAttribute('href'))).toEqual([
       '/app/garage',
       '/app/garage/requests',
       '/app/garage/schedule',
+      '/app/garage/jobs',
       '/app/garage/team',
     ]);
   });
@@ -103,7 +105,7 @@ describe('DashboardTabBar', () => {
       block: 'nearest',
       inline: 'nearest',
     });
-    expect(scrolled.mock.contexts.at(-1)).toBe(tabs(element)[3]);
+    expect(scrolled.mock.contexts.at(-1)).toBe(tabs(element)[4]);
   });
 
   it('turns its labels and its name English', async () => {
@@ -115,6 +117,7 @@ describe('DashboardTabBar', () => {
       'Home',
       'Requests',
       'Schedule',
+      'Jobs',
       'Team',
     ]);
     expect(

@@ -55,11 +55,13 @@ describe('the garage dashboard views under odd input', () => {
   afterEach(() => TestBed.resetTestingModule());
 
   // @traces 097-FR-001
-  it('lists ten views in the specified order', () => {
+  // @traces 424-FR-012
+  it('lists eleven views in the specified order', () => {
     expect(paths(DASHBOARDS.garage.views)).toEqual([
       '',
       'requests',
       'schedule',
+      'jobs',
       'team',
       'prices',
       'reviews',
