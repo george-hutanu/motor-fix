@@ -18,6 +18,7 @@ const account = (overrides: Partial<MeDto> = {}) =>
     capabilities: [],
     email: 'andrei@example.test',
     emailConfirmed: false,
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing: '/app/driver',

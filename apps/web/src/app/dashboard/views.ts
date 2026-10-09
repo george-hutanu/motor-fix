@@ -6,7 +6,7 @@ import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view/push-view';
-import { Session } from './session';
+import { garageOf, Session } from './session';
 import { SettingsView } from './settings-view/settings-view';
 import { View } from './view/view';
 
@@ -27,6 +27,10 @@ export interface DashboardView {
   subtitle?: string;
   // Absent: every role of the area sees it.
   capability?: string;
+  // The garage feature switch it needs; absent or on in the switches, shown.
+  feature?: string;
+  // What will appear here, until its story builds the body.
+  empty?: string;
   // The view's body carries this device's push panel.
   push?: boolean;
   // ...and, under it, the person's staff notification choices.
@@ -43,6 +47,17 @@ const HOME: DashboardView = {
   path: '',
   tab: 'shell.frame.tab.dashboard',
 };
+
+// A garage view whose keys all follow its path.
+const garageView = (path: string, capability?: string): DashboardView => ({
+  capability,
+  empty: `shell.frame.coming.garage.${path}`,
+  label: `shell.frame.nav.garage.${path}`,
+  path,
+  subtitle: `shell.frame.subtitle.garage.${path}`,
+  tab: `shell.frame.tab.${path}`,
+  title: `shell.frame.title.garage.${path}`,
+});
 
 // One list per dashboard: the side menu, the tab bar and the routes read it.
 export const DASHBOARDS: Record<
@@ -157,42 +172,23 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.garage',
     tag: 'shell.frame.area.garage',
     views: [
-      HOME,
       {
-        capability: 'garage.requests',
-        label: 'shell.frame.nav.garage.requests',
-        path: 'requests',
-        tab: 'shell.frame.tab.requests',
+        ...HOME,
+        empty: 'shell.frame.coming.garage.dashboard',
+        title: 'shell.frame.bar.garage',
       },
+      garageView('requests', 'garage.requests'),
+      garageView('schedule', 'garage.schedule'),
+      { ...garageView('team', 'garage.team'), feature: 'team_mechanics' },
+      garageView('prices', 'garage.prices'),
+      garageView('reviews', 'garage.reviews'),
+      garageView('profile', 'garage.profile'),
       {
-        capability: 'garage.schedule',
-        label: 'shell.frame.nav.garage.schedule',
-        path: 'schedule',
-        tab: 'shell.frame.tab.schedule',
-      },
-      {
-        capability: 'garage.team',
-        label: 'shell.frame.nav.garage.team',
-        path: 'team',
-        tab: 'shell.frame.tab.team',
-      },
-      {
-        capability: 'garage.prices',
-        label: 'shell.frame.nav.garage.prices',
-        path: 'prices',
-        tab: 'shell.frame.tab.prices',
-      },
-      {
-        capability: 'garage.reviews',
-        label: 'shell.frame.nav.garage.reviews',
-        path: 'reviews',
-        tab: 'shell.frame.tab.reviews',
-      },
-      {
-        capability: 'garage.profile',
-        label: 'shell.frame.nav.garage.profile',
-        path: 'profile',
-        tab: 'shell.frame.tab.profile',
+        label: 'shell.frame.nav.garage.assistant',
+        path: 'assistant',
+        tab: 'shell.frame.tab.ai',
+        title: 'shell.frame.title.garage.assistant',
+        unreleased: true,
       },
       // No capability: every garage role, the mechanic included, has Setări.
       {
@@ -200,8 +196,11 @@ export const DASHBOARDS: Record<
         path: 'settings',
         push: true,
         staff: true,
+        subtitle: 'shell.frame.subtitle.garage.settings',
         tab: 'shell.frame.tab.settings',
+        title: 'shell.frame.title.garage.settings',
       },
+      garageView('history', 'garage.audit_history'),
     ],
   },
 };
@@ -209,11 +208,13 @@ export const DASHBOARDS: Record<
 export const allowedViews = (
   area: Area,
   capabilities: readonly string[],
+  features: Readonly<Record<string, boolean>> = {},
 ): DashboardView[] =>
   DASHBOARDS[area].views.filter(
     (view) =>
       !view.unreleased &&
-      (!view.capability || capabilities.includes(view.capability)),
+      (!view.capability || capabilities.includes(view.capability)) &&
+      !(view.feature && features[view.feature] === false),
   );
 
 // The area guard has loaded the session before these match. A view owns its
@@ -225,6 +226,7 @@ const body = ({ body, push, staff }: DashboardView) =>
 export const dashboardRoutes = (area: Area): Routes => [
   {
     component: body(DASHBOARDS[area].views[0]),
+    data: { area, view: DASHBOARDS[area].views[0] },
     path: '',
     pathMatch: 'full',
   },
@@ -232,13 +234,16 @@ export const dashboardRoutes = (area: Area): Routes => [
     .filter((view) => view.path && !view.unreleased)
     .map((view) => ({
       canMatch: [
-        () =>
-          !view.capability ||
-          (inject(Session).current()?.capabilities ?? []).includes(
-            view.capability,
-          ),
+        () => {
+          const me = inject(Session).current();
+          return allowedViews(
+            area,
+            me?.capabilities ?? [],
+            garageOf(me)?.features,
+          ).includes(view);
+        },
       ],
-      children: [{ component: body(view), path: '**' }],
+      children: [{ component: body(view), data: { area, view }, path: '**' }],
       path: view.path,
     })),
   { path: '**', redirectTo: '' },

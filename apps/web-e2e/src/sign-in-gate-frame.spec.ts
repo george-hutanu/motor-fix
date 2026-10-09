@@ -9,6 +9,7 @@ import { test } from './fixtures.js';
 const driver = {
   capabilities: ['driver.requests', 'driver.cars', 'driver.reviews'],
   email: 'andrei@example.ro',
+  garageAccess: [],
   garageId: null,
   id: 'driver-1',
   landing: '/app/driver',

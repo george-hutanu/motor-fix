@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -216,5 +219,19 @@ describe('DashboardTabBar on the admin dashboard', () => {
     expect(tabs(element)[1]?.getAttribute('aria-label')).toBe(
       'Garages, 1 waiting',
     );
+  });
+});
+
+describe('DashboardTabBar spacing', () => {
+  it('pads and spaces the bar, its tabs and their chips on the 4 px grid', () => {
+    const css = readFileSync(join(__dirname, 'tab-bar.css'), 'utf8');
+    const spacing = [...css.matchAll(/(?:padding|gap): ([^;]+);/g)]
+      .map((m) => m[1])
+      .join(' ');
+
+    expect(spacing).not.toBe('');
+    for (const px of spacing.matchAll(/(\d+(?:\.\d+)?)px/g)) {
+      expect(`${px[0]} ${Number(px[1]) % 4}`).toBe(`${px[0]} 0`);
+    }
   });
 });
