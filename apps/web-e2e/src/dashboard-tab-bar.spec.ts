@@ -228,7 +228,7 @@ test.describe('the bar on the smallest phones', () => {
           };
         }),
       );
-      expect(tabs).toHaveLength(9);
+      expect(tabs).toHaveLength(10);
       expect(tabs.filter((t) => t.cut)).toEqual([]);
       expect(tabs.filter((t) => t.height < 44)).toEqual([]);
       expect(tabs.filter((t) => t.size < 12)).toEqual([]);

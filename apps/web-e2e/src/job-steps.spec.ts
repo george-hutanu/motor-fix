@@ -21,9 +21,14 @@ const rows = (panel: Locator) => panel.locator('[data-step]');
 
 // Leaves the seeded job with no steps, whatever an earlier run left.
 async function clear(panel: Locator) {
-  for (let n = 0; n < 20 && (await rows(panel).count()) > 0; n++) {
+  // Counted once the job is read: its counter, or no steps at all.
+  await expect(
+    panel.getByText(/\d+ din \d+ gata|Niciun pas încă/).first(),
+  ).toBeVisible();
+  for (let left = await rows(panel).count(); left > 0; left--) {
     await rows(panel).first().locator('button.menu-button').click();
     await panel.page().getByRole('button', { name: 'Șterge' }).click();
+    await expect(rows(panel)).toHaveCount(left - 1);
   }
   await expect(panel.getByText('Niciun pas încă')).toBeVisible();
 }

@@ -189,6 +189,7 @@ test.describe('garage views @seeded', () => {
       'Home',
       'Requests',
       'Schedule',
+      'Jobs',
       'Team',
       'Prices',
       'Reviews',
