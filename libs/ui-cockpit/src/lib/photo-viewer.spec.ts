@@ -7,7 +7,7 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { PhotoViewer, type ViewerPhoto } from './photo-viewer';
 import { REDUCED_MOTION } from './reduced-motion';
 
-// @traces 310-FR-007 310-FR-008 310-FR-009 310-FR-010 310-FR-011 310-FR-012
+// @traces 310-FR-007 310-FR-008 310-FR-009 310-FR-010 310-FR-011 310-FR-012 310-FR-014
 
 const THREE: ViewerPhoto[] = [
   {
@@ -335,6 +335,15 @@ describe('the photo viewer', () => {
     expect(source).toMatch(/min-(width|inline-size):\s*44px/);
     expect(source).toMatch(/min-(height|block-size):\s*44px/);
   });
+
+  it('is built from Angular and the Cockpit alone, with no new runtime dependency', () => {
+    const source = readFileSync(join(__dirname, 'photo-viewer.ts'), 'utf8');
+    const modules = [...source.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
+
+    expect(
+      modules.filter((m) => !/^(@angular\/(core|cdk\/.+)|\.\/.+)$/.test(m)),
+    ).toEqual([]);
+  });
 });
 
 describe('the photo viewer after the list changes', () => {
@@ -374,6 +383,14 @@ describe('the photo viewer after the list changes', () => {
     await settle();
 
     expect(fixture.componentInstance.failures).toEqual(['p-2']);
+  });
+
+  it('takes its view off the page when its host removes it while open', async () => {
+    await open(1);
+
+    fixture.destroy();
+
+    expect(view()).toBeNull();
   });
 
   it('gives focus to the fallback the host named when the opener is gone', async () => {

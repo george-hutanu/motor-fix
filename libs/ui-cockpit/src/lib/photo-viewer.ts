@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   Injector,
   inject,
@@ -274,6 +275,9 @@ export class PhotoViewer {
     null;
 
   constructor() {
+    // The dialog is the root's: a host that drops this component must not
+    // leave the overlay over the next page.
+    inject(DestroyRef).onDestroy(() => this.close());
     effect(() => {
       if (this.photos().length === 0) untracked(() => this.close());
     });
@@ -292,8 +296,11 @@ export class PhotoViewer {
     opener: HTMLElement,
     fallback?: () => HTMLElement | undefined,
   ): void {
-    if (this.ref || this.photos().length === 0) return;
-    this.index.set(Math.max(0, Math.min(index, this.photos().length - 1)));
+    const total = this.photos().length;
+    if (total === 0) return;
+    const at = Number.isFinite(index) ? Math.trunc(index) : 0;
+    this.index.set(Math.max(0, Math.min(at, total - 1)));
+    if (this.ref) return;
     this.opener = opener;
     this.fallback = fallback;
     const ref = this.dialog.open(this.view(), {
