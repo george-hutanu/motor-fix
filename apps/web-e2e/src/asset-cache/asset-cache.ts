@@ -21,7 +21,7 @@ async function serveFromCache(route: Route) {
     // connection would, and accept that a closed route cannot even be aborted.
     // Any other failure (a body that could not be read) is named in the log.
     const message = error instanceof Error ? error.message : String(error);
-    if (!/closed|disposed/i.test(message))
+    if (!/closed|disposed|ended/i.test(message))
       console.warn(`asset-cache: aborted ${route.request().url()}: ${message}`);
     await route.abort().catch(() => {});
   }
