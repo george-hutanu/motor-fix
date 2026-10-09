@@ -13,6 +13,8 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { UNUSED_STORAGE } from '../../storage/s3-test-store';
+import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
 import { VerificationService } from '../verification/verification.service';
 
@@ -40,6 +42,7 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
+      StorageModule.register(UNUSED_STORAGE),
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
       }),
@@ -97,6 +100,7 @@ describe('reading a garage by its public slug', () => {
       jobTypes: [],
       name: 'Atelier Dinamo',
       paymentMethods: { card: false, cash: false, transfer: false },
+      photos: [],
       rating: null,
       refusalPhrase: null,
       responseRate: { state: 'new' },
@@ -134,6 +138,7 @@ describe('reading a garage by its public slug', () => {
       'jobTypes',
       'name',
       'paymentMethods',
+      'photos',
       'rating',
       'refusalPhrase',
       'responseRate',
@@ -740,6 +745,7 @@ const PUBLIC_FIELDS = new Set([
   'longitude',
   'name',
   'paymentMethods',
+  'photos',
   'rating',
   'refusalPhrase',
   'responseRate',

@@ -29,6 +29,15 @@
     "loading": "Loading the profile",
     "mobileArea": "Mobile mechanic · {km} area",
     "newGarage": "New on MotorFix",
+    "photos": {
+      "alt": "Photo {n} of {total} · {garage}",
+      "close": "Close",
+      "counter": "{n} / {total}",
+      "failed": "This photo could not be loaded",
+      "label": "Photos",
+      "next": "Next",
+      "previous": "Previous"
+    },
     "rate": "Answers {rate}% of requests within a day",
     "refuses": "Does not work on {brand}",
     "retry": "Try again",

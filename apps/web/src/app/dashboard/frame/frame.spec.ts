@@ -9,6 +9,8 @@ import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   AdminService,
   CarsService,
+  type GarageRequestListDto,
+  GarageRequestsService,
   type MeDto,
   MeService,
   NotificationsService,
@@ -34,6 +36,12 @@ let overview: jest.Mock;
 let waiting = async (): Promise<{ garagesWaiting: number }> => ({
   garagesWaiting: 0,
 });
+let requests = async (): Promise<GarageRequestListDto> => ({
+  items: [],
+  nextCursor: null,
+  total: 0,
+});
+let requestReads: jest.Mock;
 let live: {
   close: jest.Mock;
   events: Subject<LiveMessage>;
@@ -41,6 +49,7 @@ let live: {
   offline: ReturnType<typeof signal<boolean>>;
   open: jest.Mock;
   resync: Subject<void>;
+  state: ReturnType<typeof signal<string>>;
 };
 
 const me = (
@@ -82,8 +91,10 @@ async function render(
       events.pipe(filter((m) => (kinds as readonly string[]).includes(m.kind))),
     open: jest.fn(),
     resync: new Subject(),
+    state: signal('open'),
   };
   overview = jest.fn(() => waiting());
+  requestReads = jest.fn(() => requests());
   const current = signal<MeDto | null>(me(role, landing, capabilities, extra));
   // The account Session keeps on screen behind the gate dialog.
   const kept = signal<MeDto | null>(null);
@@ -120,6 +131,10 @@ async function render(
       {
         provide: AdminService,
         useValue: { adminOverviewControllerOverview: overview },
+      },
+      {
+        provide: GarageRequestsService,
+        useValue: { garageRequestsControllerList: requestReads },
       },
     ],
   });
@@ -1114,5 +1129,104 @@ describe('Frame account buttons', () => {
     expect(rule).toContain('padding: 0 var(--mf-space-3)');
     expect(rule).toContain('font: inherit');
     expect(rule).toContain('font-size: var(--mf-size-body)');
+  });
+});
+
+const requestsEntry = (element: HTMLElement) =>
+  menuLinks(element).find(
+    (a) => a.getAttribute('href') === '/app/garage/requests',
+  );
+const requestsTab = (element: HTMLElement) =>
+  bar(element).find((a) => a.getAttribute('href') === '/app/garage/requests');
+const chip = (link: Element | undefined) =>
+  link?.querySelector('.chip')?.textContent?.trim();
+
+async function garage(total: number, capabilities = OWNER) {
+  requests = async () => ({ items: [], nextCursor: null, total });
+  const rendered = await render(
+    'garage',
+    '/app/garage',
+    capabilities,
+    '/app/garage/schedule',
+    atelier(),
+  );
+  await settle(rendered.harness);
+  await pause(0);
+  await settle(rendered.harness);
+  return rendered;
+}
+
+// @traces 343-FR-001
+// @traces 343-FR-007
+describe('the requests count on the garage menu and bar', () => {
+  afterEach(() => {
+    requests = async () => ({ items: [], nextCursor: null, total: 0 });
+  });
+
+  it('puts the waiting count on the Cereri de ofertă entry and tab, with the count in their names', async () => {
+    const { element } = await garage(3);
+
+    expect(requestReads).toHaveBeenCalledWith({ status: 'waiting' });
+    expect(chip(requestsEntry(element))).toBe('3');
+    expect(chip(requestsTab(element))).toBe('3');
+    expect(requestsEntry(element)?.getAttribute('aria-label')).toBe(
+      'Cereri de ofertă, 3 în așteptare',
+    );
+    expect(element.querySelectorAll('aside nav .chip')).toHaveLength(1);
+  });
+
+  it('shows no number at zero', async () => {
+    const { element } = await garage(0);
+
+    expect(chip(requestsEntry(element))).toBeUndefined();
+    expect(chip(requestsTab(element))).toBeUndefined();
+    expect(requestsEntry(element)?.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('moves the count when a request arrives, without a reload', async () => {
+    const { element, harness } = await garage(1);
+
+    requests = async () => ({ items: [], nextCursor: null, total: 2 });
+    live.events.next({
+      at: '2026-10-09T09:00:00.000Z',
+      id: 'req-2',
+      kind: 'request.created',
+    });
+    await pause(400);
+    await settle(harness);
+
+    expect(chip(requestsEntry(element))).toBe('2');
+    expect(chip(requestsTab(element))).toBe('2');
+  });
+});
+
+// @traces 343-FR-015
+describe('the requests entry for each garage role', () => {
+  it.each([
+    ['the receptionist', ['garage.requests', 'garage.schedule']],
+    [
+      'a mechanic who may answer quotes',
+      ['garage.own_jobs', 'garage.requests'],
+    ],
+  ])('shows %s the entry, the tab and the count', async (_, capabilities) => {
+    const { element } = await garage(2, capabilities);
+
+    expect(chip(requestsEntry(element))).toBe('2');
+    expect(chip(requestsTab(element))).toBe('2');
+  });
+
+  it('shows a mechanic without the permission no entry, no tab and no count, without a call', async () => {
+    const { element } = await garage(2, ['garage.own_jobs']);
+
+    expect(requestsEntry(element)).toBeUndefined();
+    expect(requestsTab(element)).toBeUndefined();
+    expect(element.querySelectorAll('.chip')).toHaveLength(0);
+    expect(requestReads).not.toHaveBeenCalled();
+  });
+
+  it('reads no requests on the driver or admin dashboards', async () => {
+    await render('driver', '/app/driver', ['driver.requests']);
+
+    expect(requestReads).not.toHaveBeenCalled();
   });
 });

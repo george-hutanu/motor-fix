@@ -69,5 +69,24 @@
       "up": "Mută mai sus"
     },
     "stepsDone": "{done} din {total} gata"
+  },
+  "requests": {
+    "anyMechanic": "orice mecanic",
+    "closed": "Închise în ultimele 24 de ore",
+    "counter": {
+      "few": "{count} fără răspuns",
+      "one": "{count} fără răspuns",
+      "other": "{count} fără răspuns"
+    },
+    "empty": "Nicio cerere nouă. Te anunțăm când apare una.",
+    "heading": "Cereri de ofertă",
+    "loading": "Se încarcă cererile",
+    "notOffered": "nu faceți",
+    "reconnecting": "Reconectare…",
+    "retry": "Încearcă din nou",
+    "seeAll": "Vezi toate",
+    "stale": "Lista poate fi veche",
+    "toast": "Cerere nouă: {car} · {job}",
+    "toastCar": "Cerere nouă: {car}"
   }
 }

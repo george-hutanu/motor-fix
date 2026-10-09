@@ -69,5 +69,23 @@
       "up": "Move up"
     },
     "stepsDone": "{done} of {total} done"
+  },
+  "requests": {
+    "anyMechanic": "any mechanic",
+    "closed": "Closed in the last 24 hours",
+    "counter": {
+      "one": "{count} unanswered",
+      "other": "{count} unanswered"
+    },
+    "empty": "No new requests. We will tell you when one arrives.",
+    "heading": "Quote requests",
+    "loading": "Loading the requests",
+    "notOffered": "not offered",
+    "reconnecting": "Reconnecting…",
+    "retry": "Try again",
+    "seeAll": "See all",
+    "stale": "This list may be out of date",
+    "toast": "New request: {car} · {job}",
+    "toastCar": "New request: {car}"
   }
 }

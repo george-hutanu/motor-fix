@@ -24,6 +24,7 @@ import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 import { map } from 'rxjs';
 
 import { Gone } from './gone/gone';
+import { PhotosSection } from './photos-section/photos-section';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
@@ -47,6 +48,7 @@ const GONE = [404, 410];
     KmPipe,
     Lamp,
     LiveChange,
+    PhotosSection,
     RatingDial,
     RequestQuoteButton,
     RouterLink,

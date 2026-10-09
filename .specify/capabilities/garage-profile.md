@@ -3,6 +3,7 @@ capability: garage-profile
 updated: 2026-10-09
 features:
   - 307-public-garage-profile
+  - 310-photo-gallery
   - 384-response-rate
 ---
 
@@ -60,9 +61,9 @@ _From 307-public-garage-profile._
 
 _From 307-public-garage-profile._
 
-### 307-FR-014 — Below the header the page MUST leave the sections other stories fill (brands, facilities, hours and address; prices; photos; reviews; mechanics) as named slots that show nothing until their stories land: a section with no data is hidden, never shown empty.
+### 310-FR-004 — The profile page MUST fill its photos slot with a "Fotografii" / "Photos" section only when the list is not empty: the first photo large and the rest as thumbnails, in the list's order, the large cover tile showing the photo's display copy and every other tile its thumbnail copy, each at a fixed geometry so the layout holds before the images arrive (the cover tile twice the basis of the others, every tile `clamp(220px, 28vw, 340px)` tall, as `design.md` fixes them). Photos below the fold MUST load lazily; the first photo MUST load eagerly.
 
-_From 307-public-garage-profile._
+_From 310-photo-gallery._
 
 ### 307-FR-015 — The page MUST show skeletons for the header and each section while the read is open; on 404, the "Pagina nu există" / "This page does not exist" view with a link to Home (the existing not-found view); on 410, the "no longer available" view, "Acest service nu mai este disponibil" / "This garage is no longer available" with a link to Home; the server answers the page with status 404 and 410 for those two views, 200 otherwise; on any other failure, an error block "Nu am putut încărca service-ul" / "We could not load the garage" with "Încearcă din nou" / "Try again" that repeats the read.
 
@@ -84,6 +85,62 @@ _From 307-public-garage-profile._
 
 _From 307-public-garage-profile._
 
+### 310-FR-001 — The public profile read MUST answer the garage's photos as a list in the owner's order (ascending position), each entry carrying a thumbnail address and a full-screen address, both signed download addresses valid for 60 minutes, plus the width and height of the photo as seen upright when they are known. The answer MUST never carry a storage key, bucket name or path; a test fails on any of them in the response.
+
+_From 310-photo-gallery._
+
+### 310-FR-002 — A photo whose copies are not yet in storage MUST be left out of the list (a row with a known width is trusted to have its copies; only a row whose width is still null is checked against the thumbnail copy's metadata at read time, which also supplies its width and height), and a garage whose list is empty MUST answer an empty list (never an absent field), so the page hides the section.
+
+_From 310-photo-gallery._
+
+### 310-FR-003 — The thumbnail address MUST serve the upload story's thumbnail copy (at most 400 px on its long side) and the full-screen address its display copy (at most 1,600 px, the original's format for PNG and WebP, JPEG otherwise); nothing is resized or re-encoded at read time. The read MUST never serve the original upload.
+
+_From 310-photo-gallery._
+
+### 310-FR-004 — The profile page MUST fill its photos slot with a "Fotografii" / "Photos" section only when the list is not empty: the first photo large and the rest as thumbnails, in the list's order, the large cover tile showing the photo's display copy and every other tile its thumbnail copy, each at a fixed geometry so the layout holds before the images arrive (the cover tile twice the basis of the others, every tile `clamp(220px, 28vw, 340px)` tall, as `design.md` fixes them). Photos below the fold MUST load lazily; the first photo MUST load eagerly.
+
+_From 310-photo-gallery._
+
+### 310-FR-005 — While the profile is being read the section MUST show grey tiles in the final layout, and a tile whose image fails to load MUST show a neutral placeholder tile while the others still show.
+
+_From 310-photo-gallery._
+
+### 310-FR-006 — Every tile MUST be reachable with Tab, carry the alt text "Fotografie {n} din {total} · {garage}" / "Photo {n} of {total} · {garage}" in the page's language, and open the full-screen view on that photo with Enter, Space or a click.
+
+_From 310-photo-gallery._
+
+### 310-FR-007 — The full-screen view MUST be a Cockpit component built on the Spartan dialog (CDK overlay): modal, over the page, showing the chosen photo's display copy on a full-screen backdrop in the theme's page colour (dark in the dark theme) with the garage's name, "{n} / {total}", previous, next and close controls, and the same alt text as the tile. It MUST trap focus and block scrolling of the page behind it while open, name itself to assistive technology with the garage's name and "{n} / {total}" (announced again when the photo changes), give previous, next and close a touch target of at least 44 px, and show a grey surface in the photo's place while its display copy loads.
+
+_From 310-photo-gallery._
+
+### 310-FR-008 — In the view the left and right arrow keys MUST move to the previous and next photo without wrapping; on a touch screen a horizontal swipe (a pointer move of at least 50 px with |dx| > |dy|) MUST do the same; Esc, the close control or a tap on the backdrop (a pointer down and up on the backdrop element itself, moving less than the swipe threshold) MUST close it, and a tap on the image does nothing. Closing MUST leave the page at the scroll position it had and return keyboard focus to the tile that opened the view.
+
+_From 310-photo-gallery._
+
+### 310-FR-009 — The view MUST preload the next and previous photos' display copies: when it shows photo n, requests for photos n-1 and n+1 (where they exist) have been started, and MUST honour the visitor's reduced-motion setting (no slide or fade when it is set).
+
+_From 310-photo-gallery._
+
+### 310-FR-010 — When `garage.updated` arrives on the profile's `public:garage:{garageId}` subscription the section MUST re-read with the profile (the existing live re-read) and show the new order or set; a view open on a photo MUST stay on that photo when it is still in the list (matched by its id), else show the photo at the same index clamped to the new length, and close when the list is empty. When the tile that opened the view is gone after a re-read, closing returns focus to the section's first remaining tile.
+
+_From 310-photo-gallery._
+
+### 310-FR-011 — When an image in the open view fails to load (an expired address among the causes), the page MUST re-read the profile once and retry that photo from the fresh address; a second failure shows the placeholder and the other photos stay reachable. No more than one re-read per failure.
+
+_From 310-photo-gallery._
+
+### 310-FR-012 — The section and the view MUST show the same photos and texts in Romanian and English, at 320 px and 390 px phones, tablet and desktop, light and dark, with no horizontal scroll at 320 px; the thumbnails wrap or scroll inside the section, never the page.
+
+_From 310-photo-gallery._
+
+### 310-FR-013 — The read MUST stay within the profile's existing cache and live-update rules: the cached answer carries the addresses and is dropped on `garage.updated` as today; the cache's answer shape version is bumped so no older shape without photos is read back. The read performs no write, emits no event and records no audit history.
+
+_From 310-photo-gallery._
+
+### 310-FR-014 — Nothing in this story uploads, reorders or deletes photos (110 and the owner's later dashboard story), and job photos (MF-22) are out of scope; the only new front-end code is the section and the Cockpit viewer, with no new runtime dependency (Principle I, III).
+
+_From 310-photo-gallery._
+
 ### 384-FR-007 — The public profile read (`GET /api/v1/garages/{slug}`) MUST carry `responseRate`: `{ state: 'new' }` when the garage has no stats row or `lifetime_requests` < RESPONSE_RATE_MIN_REQUESTS (10); `{ state: 'rate', rate: <0..100> }` when `lifetime_requests` ≥ 10 and `requests_30d` > 0; `{ state: 'none' }` when `lifetime_requests` ≥ 10 and `requests_30d` = 0. The answer's cached copy carries it like every other field (307-FR-006); the relay's drop on `response_stats.updated` keeps it current; the cache key's shape version is bumped since the answer's shape changed.
 
 _From 384-response-rate._
@@ -99,3 +156,5 @@ _From 384-response-rate._
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
+
+- `307-FR-014` — superseded by `310-FR-004` (2026-10-09)

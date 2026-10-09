@@ -148,6 +148,15 @@
       "story": "ST-881"
     },
     {
+      "kind": "queue",
+      "name": "request-received",
+      "source": "libs/domain/src/notifications/request-received/request-received.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "no agreed threshold yet; ST-880 adds the alerts",
+      "story": "ST-343"
+    },
+    {
       "kind": "outside-service",
       "name": "brevo",
       "host": "api.brevo.com",
@@ -293,6 +302,15 @@
       "alerts": "none",
       "reason": "counts quote requests sent by outcome (sent with its recipients, cannot_receive, limit, invalid — invalid counts the use case's own refusals, not the validation pipe's or a missing Idempotency-Key), with one log line per send naming the outcome and the request id; ST-880 adds the alert rules",
       "story": "ST-221"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_request_received_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each garage a new request reaches by outcome (built, muted, skipped), with one log line per event naming the request id and how many staff it reached; no agreed threshold yet, ST-880 adds the alert rules",
+      "story": "ST-343"
     },
     {
       "kind": "endpoint",

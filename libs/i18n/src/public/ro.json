@@ -29,6 +29,15 @@
     "loading": "Se încarcă profilul",
     "mobileArea": "Mecanic mobil · zonă de {km}",
     "newGarage": "Nou pe MotorFix",
+    "photos": {
+      "alt": "Fotografie {n} din {total} · {garage}",
+      "close": "Închide",
+      "counter": "{n} / {total}",
+      "failed": "Fotografia nu s‑a putut încărca",
+      "label": "Fotografii",
+      "next": "Următoarea",
+      "previous": "Înapoi"
+    },
     "rate": "Răspunde la {rate}% din cereri într‑o zi",
     "refuses": "Nu lucrează pe {brand}",
     "retry": "Încearcă din nou",

@@ -14,6 +14,7 @@ import {
   formatPct,
   formatRating,
   relativeTime,
+  requestAge,
 } from './formats';
 
 const MISSING = '—';
@@ -432,5 +433,66 @@ describe('relativeTime', () => {
 
   it('answers the missing mark for what is not a time', () => {
     expect(relativeTime('ieri', 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 343-FR-008
+describe('requestAge', () => {
+  // 13:00 in Bucharest, a Friday.
+  const now = new Date('2026-10-09T10:00:00Z');
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+
+  it('says a few seconds under a minute, and for a time a little ahead of the clock', () => {
+    expect(requestAge(ago(30_000), 'ro', now)).toBe('acum câteva secunde');
+    expect(requestAge(ago(59_000), 'en', now)).toBe('a few seconds ago');
+    expect(requestAge(ago(-2_000), 'ro', now)).toBe('acum câteva secunde');
+  });
+
+  it('counts minutes under an hour, with "de" from 20 on in Romanian', () => {
+    expect(requestAge(ago(MIN), 'ro', now)).toBe('acum 1 min');
+    expect(requestAge(ago(5 * MIN), 'ro', now)).toBe('acum 5 min');
+    expect(requestAge(ago(19 * MIN), 'ro', now)).toBe('acum 19 min');
+    expect(requestAge(ago(20 * MIN), 'ro', now)).toBe('acum 20 de min');
+    expect(requestAge(ago(59 * MIN), 'ro', now)).toBe('acum 59 de min');
+    expect(requestAge(ago(5 * MIN), 'en', now)).toBe('5 min ago');
+  });
+
+  it('counts hours under a day, agreeing in number', () => {
+    expect(requestAge(ago(HOUR), 'ro', now)).toBe('acum 1 oră');
+    expect(requestAge(ago(2 * HOUR), 'ro', now)).toBe('acum 2 ore');
+    expect(requestAge(ago(19 * HOUR), 'ro', now)).toBe('acum 19 ore');
+    expect(requestAge(ago(20 * HOUR), 'ro', now)).toBe('acum 20 de ore');
+    expect(requestAge(ago(HOUR), 'en', now)).toBe('1 hour ago');
+    expect(requestAge(ago(3 * HOUR), 'en', now)).toBe('3 hours ago');
+  });
+
+  it('says yesterday with the Bucharest time from a day on, when the Bucharest date is the day before', () => {
+    expect(requestAge('2026-10-08T06:30:00Z', 'ro', now)).toBe('ieri, 09:30');
+    expect(requestAge('2026-10-08T06:30:00Z', 'en', now)).toBe(
+      'yesterday, 09:30',
+    );
+  });
+
+  it('gives the short weekday, day, month and time before yesterday', () => {
+    expect(requestAge('2026-10-05T15:05:00Z', 'ro', now)).toBe(
+      'lun., 5 oct., 18:05',
+    );
+    expect(requestAge('2026-10-05T15:05:00Z', 'en', now)).toBe(
+      'Mon, 5 Oct, 18:05',
+    );
+  });
+
+  it('reads the calendar day in Bucharest, not in UTC', () => {
+    // 23:30 on Thursday 8 October, read at midnight starting Saturday 10.
+    const midnight = new Date('2026-10-09T21:00:00Z');
+    expect(requestAge('2026-10-08T20:30:00Z', 'ro', midnight)).toBe(
+      'joi, 8 oct., 23:30',
+    );
+  });
+
+  it('answers the missing mark for what is not a time', () => {
+    expect(requestAge('ieri', 'ro', now)).toBe(MISSING);
   });
 });

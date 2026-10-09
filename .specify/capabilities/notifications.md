@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 194-email-sending
   - 195-message-templates
@@ -23,6 +23,7 @@ features:
   - 806-requeue-sweep-batched
   - 138-notification-switches
   - 260-rule-off-confirm
+  - 343-live-quote-requests
 ---
 
 # Capability: Notifications
@@ -562,6 +563,18 @@ _From 138-notification-switches._
 ### 260-FR-008 — On a request, the system MUST queue one ADMIN_RULE_APPROVAL_NEEDED notification for every admin account other than the asker (none when the asker is the only admin), carrying the asker's first name, the rule's name and the reason, with a link to the admin's Setări; the reason is user text and MUST be rendered as escaped plain text in the e-mail and the push; the type's catalogue entry MUST narrow to e-mail and push (muteable in the admin section, its urgency unchanged). The system MUST carry the type's e-mail and push texts in Romanian and English. No notification is sent on a decision or a withdrawal.
 
 _From 260-rule-off-confirm._
+
+### 343-FR-012 — `request.created` MUST have one registered consumer in the notifications worker which, per event, builds REQUEST_RECEIVED through the existing notification service for every recipient garage of the request: to the garage's owner(s), receptionist(s) and mechanics with `can_answer_quotes` (the existing staff lists), with the garage as the message's garage so each person's own mute for that garage applies per channel (198-FR-009), on the channels the catalogue allows (e-mail, push, WhatsApp; never SMS), WhatsApp only while the garage's `whatsapp` feature is on (392-FR-005), with push falling back to e-mail for a person with no device (196-FR-007). Parameters are the car's brand and model and the first job's name (or the description's first line, cut at 40 characters), never the plate, the phone or the whole description; the subject is the request. The job id derives from the event id so a second relay builds nothing twice (257-FR-005), and a garage that is `suspended` or no longer holds a `waiting` recipient for the request at build time gets nothing.
+
+_From 343-live-quote-requests._
+
+### 343-FR-013 — REQUEST_RECEIVED MUST stay `urgent` in the catalogue (built in quiet hours it goes at once, 196-FR-012 holding only non-urgent types) and MUST have its templates in Romanian and English for e-mail, push, WhatsApp and the bell, passing the template check (195-FR-009): push "Cerere nouă: {car} · {job}", bell the same line, e-mail with a link to the Cereri de ofertă view, WhatsApp the approved template's name with `car` and `job` as its parameters.
+
+_From 343-live-quote-requests._
+
+### 343-FR-014 — A person who muted REQUEST_RECEIVED on every channel MUST get no message and keeps the bell row (an `in_app` row is always written, 194-FR); the row still appears on their dashboard. The mute MUST be the same per-type, per-garage, per-channel choice ST-198 stores (no new preference), so the reminders story reads it as "mute covers the reminders" without a new switch.
+
+_From 343-live-quote-requests._
 
 ## Retired
 

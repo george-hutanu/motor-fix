@@ -33,6 +33,7 @@ import { AddCar } from '../add-car/add-car';
 import { AdminOverview } from '../admin-overview';
 import { Bell } from '../bell/bell';
 import { EmailBanner } from '../email-banner/email-banner';
+import { GarageRequestsFeed } from '../garage-requests/garage-requests-feed';
 import { initials } from '../initials';
 import { InviteStaff } from '../invite-staff/invite-staff';
 import { Live } from '../live';
@@ -71,7 +72,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
     RouterOutlet,
     TranslatePipe,
   ],
-  providers: [AdminOverview],
+  providers: [AdminOverview, GarageRequestsFeed],
   selector: 'mf-frame',
   styleUrl: './frame.css',
   templateUrl: './frame.html',
@@ -96,11 +97,19 @@ export class Frame implements OnInit {
   // Each dashboard has its own frame, so the area at creation is the frame's.
   protected readonly adminOverview =
     this.area() === 'admin' ? inject(AdminOverview) : null;
+  private readonly requests =
+    this.area() === 'garage' ? inject(GarageRequestsFeed) : null;
   protected readonly countsLoading = computed(
-    () => this.adminOverview?.loading() ?? false,
+    () =>
+      (this.adminOverview?.loading() ?? false) ||
+      (this.requests?.loading() ?? false),
   );
+  // A count from a failed re-read may be old: none is shown until it reads again.
   protected readonly counts = computed<Counts>(() => ({
     garagesWaiting: this.adminOverview?.waiting(),
+    requestsWaiting: this.requests?.stale()
+      ? undefined
+      : this.requests?.total(),
   }));
   protected readonly roles = computed(() => {
     const held = this.session.shown()?.roles ?? [];

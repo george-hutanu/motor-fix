@@ -9,6 +9,7 @@ import {
   countJobStep,
   countNotification,
   countQuote,
+  countRequestReceived,
   countSearch,
   countSignIn,
 } from './product-counters';
@@ -106,6 +107,14 @@ describe('the product counters', () => {
           () => countJobStep(action),
           'motorfix_job_steps_total',
           { action },
+        ] as const,
+    ),
+    ...(['built', 'muted', 'skipped'] as const).map(
+      (outcome) =>
+        [
+          () => countRequestReceived(outcome),
+          'motorfix_request_received_total',
+          { outcome },
         ] as const,
     ),
   ] as const)('counts one %#: %s', async (count, name, labels) => {

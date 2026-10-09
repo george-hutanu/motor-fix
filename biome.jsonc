@@ -98,6 +98,20 @@
   },
   "overrides": [
     {
+      // Biome reads Angular templates as plain HTML: it cannot see the photo tiles' bound [alt] or the placeholder's bound [attr.aria-label].
+      "includes": [
+        "apps/web/src/app/public/garage-profile/photos-section/photos-section.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off",
+            "useAltText": "off"
+          }
+        }
+      }
+    },
+    {
       // Biome reads Angular templates as plain HTML: it cannot see these comboboxes' [attr.aria-*] bindings, and it flags the ARIA combobox (a ul listbox whose options are reached by aria-activedescendant, never focused).
       "includes": [
         "apps/web/src/app/dashboard/add-car/add-car.html",
@@ -138,6 +152,7 @@
         "apps/web/src/app/dashboard/due-date-line/due-date-line.html",
         "apps/web/src/app/dashboard/frame/frame.html",
         "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
+        "apps/web/src/app/dashboard/garage-requests/garage-requests-panel/garage-requests-panel.html",
         "apps/web/src/app/dashboard/requests-view/requests-view.html",
         "apps/web/src/app/not-found/not-found.html",
         "apps/web/src/app/public/frame/frame.html",

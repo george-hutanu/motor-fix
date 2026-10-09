@@ -148,6 +148,30 @@ describe('Bell', () => {
     expect(store.items().map((n) => n.id)).toEqual(['new']);
   });
 
+  it('leaves a new quote request’s toast to the requests feed, and still lists it', async () => {
+    const { fixture, store } = await render(0);
+    await store.load();
+    api.bellControllerList.mockResolvedValue({
+      items: [
+        row('new', {
+          kind: 'REQUEST_RECEIVED',
+          text: 'Cerere nouă: Dacia Logan · Frâne față',
+        }),
+      ],
+      nextCursor: null,
+    });
+
+    events.next({
+      at: '2026-10-05T08:00:00.000Z',
+      id: 'new',
+      kind: 'notification.created',
+    });
+    await settle(fixture);
+
+    expect(toast).not.toHaveBeenCalled();
+    expect(store.items().map((n) => n.id)).toEqual(['new']);
+  });
+
   it('keeps the rows already loaded when a new one joins the top', async () => {
     const { fixture, store } = await render(0, [row('a'), row('b')]);
     await store.load();

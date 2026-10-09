@@ -642,3 +642,75 @@ describe('GET /garage/requests writes nothing', () => {
     ).toEqual(rows);
   });
 });
+
+// @traces 343-FR-005
+// @traces 343-FR-018
+describe('GET /garage/requests?status= as each caller', () => {
+  async function waitingAndClosed(s: World) {
+    const waiting = await world.request(s.andrei);
+    await world.recipient(waiting.id, s.dinamo.garage.id);
+    const closed = await world.request(s.andrei);
+    await world.recipient(closed.id, s.dinamo.garage.id, 'expired');
+    return { closed, waiting };
+  }
+
+  it.each([
+    ['owner', 'garage'],
+    ['receptionist', 'receptionist'],
+    ['answering', 'mechanic'],
+  ] as const)('gives the %s both lists', async (who, role) => {
+    const s = await setting();
+    const rows = await waitingAndClosed(s);
+    const auth = bearer(s.dinamo[who], role);
+
+    const waiting = await get('/garage/requests?status=waiting', auth);
+    const closed = await get('/garage/requests?status=closed', auth);
+
+    expect(waiting.status).toBe(200);
+    expect(ids(waiting)).toEqual([rows.waiting.id]);
+    expect(closed.status).toBe(200);
+    expect(ids(closed)).toEqual([rows.closed.id]);
+  });
+
+  it('answers 404 never 403 to the mechanic without the permission, an account with no garage and a driver', async () => {
+    const s = await setting();
+    await waitingAndClosed(s);
+    const loner = await world.account('Ion Singur', ['garage']);
+
+    for (const auth of [
+      bearer(s.dinamo.plain, 'mechanic'),
+      bearer(loner, 'garage'),
+      bearer(s.andrei, 'driver'),
+    ]) {
+      for (const status of ['waiting', 'closed']) {
+        const res = await get(`/garage/requests?status=${status}`, auth);
+        expect(res.status).toBe(404);
+        expect(res.body.items).toBeUndefined();
+        expect(JSON.stringify(res.body)).not.toContain(DESCRIPTION);
+      }
+    }
+  });
+
+  it('gives another garage’s owner none of this garage’s rows', async () => {
+    const s = await setting();
+    await waitingAndClosed(s);
+    const auth = bearer(s.militari.owner, 'garage');
+
+    for (const status of ['waiting', 'closed']) {
+      const res = await get(`/garage/requests?status=${status}`, auth);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ items: [], nextCursor: null, total: 0 });
+    }
+  });
+
+  it('answers 401 sign_in_required to a visitor on both lists', async () => {
+    const s = await setting();
+    await waitingAndClosed(s);
+
+    for (const status of ['waiting', 'closed']) {
+      const res = await get(`/garage/requests?status=${status}`);
+      expect(res.status).toBe(401);
+      expect(res.body.code).toBe('sign_in_required');
+    }
+  });
+});
