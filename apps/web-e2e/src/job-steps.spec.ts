@@ -5,13 +5,18 @@ import { test } from './fixtures.js';
 
 const STEPS = ['Mașina pe elevator', 'Etriere demontate', 'Probă pe drum'];
 
+// Signs in at the width the site bar shows its button at, then opens the job
+// at the page's own size.
 async function openJob(page: Page, email: string, landing: string) {
+  const size = page.viewportSize();
+  await page.setViewportSize({ height: 900, width: 1280 });
   await ready(page, '/ro');
   await page
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   await signIn(page, email);
   await expect(page).toHaveURL(landing);
+  if (size) await page.setViewportSize(size);
   await page.goto('/app/garage/jobs');
   await page.locator('[data-job]', { hasText: 'B101QAT' }).first().click();
   return page.getByRole('dialog');
@@ -39,6 +44,8 @@ test.describe('a job’s steps @seeded', () => {
     browser,
     page,
   }) => {
+    // Two browsers, each signing in: more than one page's time.
+    test.setTimeout(60_000);
     await page.setViewportSize({ height: 900, width: 1280 });
     const owner = await openJob(page, ACCOUNTS.garage, '/app/garage');
     await clear(owner);
