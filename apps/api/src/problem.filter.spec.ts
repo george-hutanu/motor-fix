@@ -157,6 +157,44 @@ describe('ProblemFilter', () => {
     expect(res.body).not.toHaveProperty('inviteId');
   });
 
+  // @traces 220-FR-015
+  it('keeps the entity, current status, asked status and rule of a refused move', () => {
+    const res = send(
+      new HttpException(
+        {
+          code: 'invalid_transition',
+          currentStatus: 'confirmed',
+          entity: 'booking',
+          rule: 'one_booking_per_quote',
+          to: 'awaiting_confirmation',
+        },
+        409,
+      ),
+    );
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toMatchObject({
+      code: 'invalid_transition',
+      currentStatus: 'confirmed',
+      entity: 'booking',
+      rule: 'one_booking_per_quote',
+      status: 409,
+      to: 'awaiting_confirmation',
+    });
+  });
+
+  it('drops a refused move member that is not a string', () => {
+    const res = send(
+      new HttpException(
+        { code: 'invalid_transition', currentStatus: 3, entity: { a: 1 } },
+        409,
+      ),
+    );
+
+    expect(res.body).not.toHaveProperty('currentStatus');
+    expect(res.body).not.toHaveProperty('entity');
+  });
+
   it('keeps the field errors an exception carries', () => {
     const errors = [{ code: 'email_taken', field: 'email' }];
     const res = send(

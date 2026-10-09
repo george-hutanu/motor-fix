@@ -1,6 +1,10 @@
 import type { Role } from '../auth/capabilities';
 import type { Prisma } from '../generated/prisma/client';
 
+// A garage acting as itself is recorded as its owner.
+export const recordedRole = (role: Role | 'system') =>
+  role === 'garage' ? 'owner' : role;
+
 export interface AuditEntry {
   actorId: string | null;
   actorRole: Role | 'system';

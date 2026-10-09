@@ -1,10 +1,11 @@
 ---
 capability: audit
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 390-audit-history
   - 391-audit-history-api
   - 164-admin-audit-log
+  - 220-requests-quotes-bookings
 ---
 
 # Capability: Audit history
@@ -45,9 +46,9 @@ _From 390-audit-history._
 
 _From 390-audit-history._
 
-### 390-FR-009 — Each entry MUST carry `is_key_change` and `internal` flags. `internal` is given by the caller. `is_key_change` is decided by the writer alone, from `subject_type.field`: `quote.from_bani`, `quote.to_bani` (a quote's range), `job.final_price_bani` (the final price and its correction), `booking.starts_at` (the start, and a move), `job.eta_at` (the estimated finish), `job.status` (the stage), `booking.mechanic_id` (a change of mechanic). A cancellation is added when its column is named.
+### 220-FR-018 — (Replaces 390-FR-009.) Each audit entry MUST carry `is_key_change` and `internal` flags. `internal` is given by the caller. `is_key_change` is decided by the writer alone, from `subject_type.field`: `quote.from_bani`, `quote.to_bani` (a quote's range), `job.final_price_bani` (the final price and its correction), `booking.starts_at` (the start, and a move), `job.eta_at` (the estimated finish), `job.status` (the stage), `booking.mechanic_id` (a change of mechanic), and `booking.cancel_reason` (a cancellation, set once when a booking is cancelled).
 
-_From 390-audit-history._
+_From 220-requests-quotes-bookings._
 
 ### 390-FR-010 — Each entry MAY carry a kind and a text (an optional reason or note); display text is not stored.
 
@@ -152,3 +153,7 @@ _From 164-admin-audit-log._
 ### 164-FR-004 — A guard test MUST take every `admin/*` route and method from the API's own route list (the OpenAPI document, as the admin routes test does), call each `POST`, `PUT`, `PATCH` or `DELETE` route once, one call at a time (so the count is the call's own), as a seeded admin with a known-good request from a table keyed by `METHOD /path`, and fail, naming every such route, when the call answered anything but 2xx (with its status), when the number of entries whose `actor_id` is that admin did not grow across that one call (counted before and after each call), or when the table holds no request for the route. Each `GET` route is called the same way and MUST leave the count unchanged; a later `GET` that is one of the audit capability's two logged reads is marked as such in the table by the story that adds it, and must then add exactly one entry. After this story the test names no route; a route added later joins the test without the test being edited beyond its fixture table.
 
 _From 164-admin-audit-log._
+
+## Retired
+
+- `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
