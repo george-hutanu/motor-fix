@@ -144,7 +144,7 @@ describe('four-digit feature numbers', () => {
 
   it('trace-matrix counts a four-digit feature', () => {
     const repo = repoWith({ 'specs/1018-fixture/tasks.md': '- [X] T001 sort (FR-001)\n' });
-    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs', 'lib/traces.mjs']) {
+    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs', 'lib/tests.mjs', 'lib/traces.mjs']) {
       const to = join(repo, '.claude', 'scripts', rel);
       mkdirSync(dirname(to), { recursive: true });
       cpSync(join(root, '.claude', 'scripts', rel), to);

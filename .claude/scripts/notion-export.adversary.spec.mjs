@@ -603,8 +603,10 @@ describe('runs after the first', () => {
   it('a dry run after a full run lists nothing and a dry run before it matches what the run then creates', async () => {
     const d = await exportDocs(['--dry-run']);
     const r = await exportDocs();
-    const written = tree().filter((p) => p !== 'README.md' && !p.includes('.files/'));
-    assert.deepEqual([...d.report.create].sort(), written);
+    // A dry run downloads nothing, so it also lists big.zip, which the real
+    // run refuses for its size.
+    const written = tree().filter((p) => p !== 'README.md');
+    assert.deepEqual([...d.report.create].sort(), [...written, 'overview/vision.files/big.zip'].sort());
     assert.equal(r.report.created, tree().length - 2);
     const again = await exportDocs(['--dry-run']);
     assert.deepEqual(again.report, { ok: true, dryRun: true, create: [], update: [], delete: [] });
