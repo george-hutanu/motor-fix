@@ -18,11 +18,9 @@ import {
   type ViewerPhoto,
 } from '@motor-fix/ui-cockpit';
 
-const MAX_REREADS = 2;
-
 // The garage's photos on its profile: the first one large, the rest as tiles,
 // each opening the full-screen view. A photo whose address has expired is read
-// again once through the profile; a second failure shows the placeholder.
+// again through the profile once; if it fails again it shows the placeholder.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.aria-label]': 'label()' },
@@ -58,10 +56,9 @@ export class PhotosSection {
   // Keyed by address, so a re-read with fresh addresses loads them again.
   protected readonly loaded = signal(new Set<string>());
   protected readonly broken = signal(new Set<string>());
-  // One re-read per address, and at most two per photo: with the profile
-  // cache down every re-read signs a fresh address, which would loop forever.
+  // One re-read per photo for the page's life: with the profile cache down
+  // every re-read signs a fresh address, so a reset would loop forever.
   private readonly retried = new Set<string>();
-  private readonly rereads = new Map<string, number>();
   private readonly failed = linkedSignal({
     computation: () => new Set<string>(),
     source: this.garage,
@@ -102,12 +99,8 @@ export class PhotosSection {
   }
 
   protected viewFailed(id: string): void {
-    const address = this.garage().photos.find((p) => p.id === id)?.displayUrl;
-    const key = `${id} ${address}`;
-    const count = this.rereads.get(id) ?? 0;
-    if (!this.retried.has(key) && count < MAX_REREADS) {
-      this.retried.add(key);
-      this.rereads.set(id, count + 1);
+    if (!this.retried.has(id)) {
+      this.retried.add(id);
       this.reread.emit();
     } else {
       this.failed.update((ids) => new Set(ids).add(id));

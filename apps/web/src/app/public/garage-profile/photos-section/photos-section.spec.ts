@@ -236,30 +236,12 @@ describe('the photos section kept live', () => {
     await closeView();
   });
 
-  it('retries a photo again once a re-read has brought fresh addresses', async () => {
+  it('shows the placeholder when the photo fails again from the fresh address', async () => {
     tiles()[1].click();
     await settle();
-    viewImage()?.dispatchEvent(new Event('error'));
-    await settle();
-
-    await show({
-      photos: [
-        photo(1),
-        { ...photo(2), displayUrl: 'https://s/2.fresh' },
-        photo(3),
-      ],
-    });
-    viewImage()?.dispatchEvent(new Event('error'));
-    await settle();
-
-    expect(fixture.componentInstance.rereads).toBe(2);
-    await closeView();
-  });
-
-  it('stops reading again after two fresh addresses for the same photo', async () => {
-    tiles()[1].click();
-    await settle();
-    for (const n of [1, 2, 3]) {
+    for (const n of [1, 2]) {
+      viewImage()?.dispatchEvent(new Event('error'));
+      await settle();
       await show({
         photos: [
           photo(1),
@@ -267,11 +249,11 @@ describe('the photos section kept live', () => {
           photo(3),
         ],
       });
-      viewImage()?.dispatchEvent(new Event('error'));
-      await settle();
     }
+    viewImage()?.dispatchEvent(new Event('error'));
+    await settle();
 
-    expect(fixture.componentInstance.rereads).toBe(2);
+    expect(fixture.componentInstance.rereads).toBe(1);
     expect(
       view()
         ?.querySelector('[data-slot="viewer-stage"]')

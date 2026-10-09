@@ -59,6 +59,7 @@ return 1`;
 export class PublicGaragesService {
   private readonly logger = new Logger('PublicGarages');
   private redisDown = false;
+  private storageDown = false;
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
@@ -265,10 +266,19 @@ export class PublicGaragesService {
         const thumb = this.storage.derivedKey(fileKey, 'thumb');
         let { height, width } = size;
         if (width === null) {
-          const meta = await this.storage.metadataOf(thumb).catch((error) => {
-            this.logger.warn(`photo copies unreadable: ${String(error)}`);
-            return null;
-          });
+          const meta = await this.storage.metadataOf(thumb).then(
+            (found) => {
+              this.storageDown = false;
+              return found;
+            },
+            (error) => {
+              if (!this.storageDown) {
+                this.logger.warn(`photo copies unreadable: ${String(error)}`);
+                this.storageDown = true;
+              }
+              return null;
+            },
+          );
           if (!meta) return null;
           width = Number(meta['width']) || null;
           height = Number(meta['height']) || null;

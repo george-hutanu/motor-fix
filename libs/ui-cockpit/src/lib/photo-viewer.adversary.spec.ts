@@ -158,11 +158,17 @@ describe('the photo viewer under hostile use', () => {
     expect(image()?.getAttribute('src')).toBe('https://s/3');
   });
 
-  it('does not open on a fractional or not-a-number index', async () => {
+  it('opens on the first photo for a not-a-number index', async () => {
     await open(Number.NaN);
 
-    expect(text()).toMatch(/^.*[123] \/ 3/);
+    expect(text()).toContain('1 / 3');
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+  });
+
+  it('opens on the whole photo below a fractional index', async () => {
+    await open(1.7);
+
+    expect(text()).toContain('2 / 3');
   });
 
   it('opens nothing for an empty list', async () => {
