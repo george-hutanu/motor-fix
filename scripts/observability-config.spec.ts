@@ -52,3 +52,24 @@ describe('observability configuration', () => {
     }
   });
 });
+
+describe('the MCP server and its identity server', () => {
+  it('alerts on failed signing-key fetches and lists that alert for the identity server', () => {
+    const rules = JSON.parse(
+      read('infra', 'observability', 'alerts', 'mcp.json'),
+    ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+      uid: string;
+      data: { model: { expr?: string } }[];
+    }[];
+    const rule = rules.find((r) =>
+      r.data.some((d) =>
+        /mcp_key_fetches_total\{[^}]*outcome="error"/.test(d.model.expr ?? ''),
+      ),
+    );
+    expect(rule).toBeDefined();
+    const keycloak = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find((e: { name: string }) => e.name === 'keycloak');
+    expect(keycloak.alerts).toEqual([rule?.uid]);
+  });
+});

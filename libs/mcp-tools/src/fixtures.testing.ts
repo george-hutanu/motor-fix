@@ -15,7 +15,7 @@ import {
 } from './registry';
 import { userText } from './user-text';
 
-export interface AccountShape {
+interface AccountShape {
   roles: Role[];
   garageId?: string;
   mechanic?: { canAnswerQuotes?: boolean };

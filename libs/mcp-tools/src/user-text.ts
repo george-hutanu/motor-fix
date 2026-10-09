@@ -1,6 +1,6 @@
-export type UserTextAuthor = 'driver' | 'garage' | 'mechanic' | 'admin';
+type UserTextAuthor = 'driver' | 'garage' | 'mechanic' | 'admin';
 
-export interface UserText {
+interface UserText {
   kind: 'user_text';
   author: UserTextAuthor;
   text: string;

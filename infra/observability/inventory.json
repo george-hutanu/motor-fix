@@ -235,8 +235,10 @@
       "name": "keycloak",
       "source": "apps/mcp/src/auth/auth.verifier.ts",
       "dashboard": "mcp",
-      "alerts": "none",
-      "reason": "the identity server's signing-key fetch, host read from ASSISTANT_ISSUER; counted in mcp_key_fetches_total{outcome} on the mcp dashboard; an outage shows as invalid sign-ins in mcp-auth-failures once cached keys expire",
+      "alerts": [
+        "mcp-key-fetch-failures"
+      ],
+      "reason": "the identity server signing-key fetch, host read from ASSISTANT_ISSUER; counted in mcp_key_fetches_total{outcome} on the mcp dashboard; a failed fetch fires mcp-key-fetch-failures, and calls answer 503 (not counted as sign-in failures)",
       "story": "ST-365"
     }
   ]
