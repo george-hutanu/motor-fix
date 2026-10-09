@@ -415,6 +415,16 @@
       "story": "ST-424"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-reports",
+      "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:id/reports",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "each refusal logs one line with the garage id and its code; ST-880 adds the alerts",
+      "story": "ST-312"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_garage_reports_total",
       "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.service.ts",

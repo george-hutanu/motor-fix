@@ -1,18 +1,19 @@
 import type { Template } from '../templates';
 
-// A driver reported a listed garage and its verification file went back to
-// review. `text` is the report as written; `brief` is it cut to fit a push.
+// A driver reported a listed garage: its file is reopened, or the report
+// joins a file an admin already holds. `text` is the report as written;
+// `brief` is it cut to fit a push.
 export const ADMIN_GARAGE_REPORTED: Template = {
   audience: 'admin',
   bell: {
-    en: 'A driver reported {garage}. Its verification file is back in review.',
-    ro: 'Un șofer a raportat {garage}. Dosarul de verificare e din nou în analiză.',
+    en: 'A driver reported {garage}. Open its verification file to see the report.',
+    ro: 'Un șofer a raportat {garage}. Deschide dosarul de verificare ca să vezi raportarea.',
   },
   email: {
     en: {
       button: { label: 'Open the dashboard', link: 'dashboard' },
       lines: [
-        'A driver reported {garage}. Its verification file is back in review.',
+        'A driver reported {garage}. Open its verification file to see the report.',
         'What they wrote: {text}',
       ],
       reason:
@@ -22,7 +23,7 @@ export const ADMIN_GARAGE_REPORTED: Template = {
     ro: {
       button: { label: 'Deschide panoul', link: 'dashboard' },
       lines: [
-        'Un șofer a raportat {garage}. Dosarul de verificare e din nou în analiză.',
+        'Un șofer a raportat {garage}. Deschide dosarul de verificare ca să vezi raportarea.',
         'Ce a scris: {text}',
       ],
       reason:
