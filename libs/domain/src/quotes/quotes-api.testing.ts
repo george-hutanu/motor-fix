@@ -72,6 +72,14 @@ export function quotesApp() {
     return body ? call.send(body) : call;
   };
 
+  // A JSON body as written; the key header only when one is given.
+  const post = (path: string, body: unknown, auth?: string, key?: string) => {
+    const call = request(app.getHttpServer()).post(path);
+    if (auth) call.set('Authorization', auth);
+    if (key !== undefined) call.set('Idempotency-Key', key);
+    return call.send(body as object);
+  };
+
   // A garage with its owner, a receptionist, a mechanic who may answer
   // quotes and one who may not.
   async function team(name: string) {
@@ -108,5 +116,5 @@ export function quotesApp() {
     };
   }
 
-  return { bearer, get, send, team, world };
+  return { bearer, get, post, send, team, world };
 }

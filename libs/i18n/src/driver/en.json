@@ -51,6 +51,9 @@
     },
     "retry": "Try again"
   },
+  "home": {
+    "newRequest": "New request"
+  },
   "notifications": {
     "alwaysSent": "Always sent: booking confirmed, new time proposed by the garage, booking cancelled or lapsed, car ready.",
     "consent": {
@@ -82,5 +85,9 @@
       }
     },
     "title": "Notifications"
+  },
+  "requests": {
+    "empty": "No requests yet",
+    "retry": "Try again"
   }
 }

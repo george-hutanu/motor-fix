@@ -6,6 +6,7 @@ import { CourtesyCarDto } from '../models/courtesy-car-dto';
 import { PaymentMethodsDto } from '../models/payment-methods-dto';
 import { PublicBrandDto } from '../models/public-brand-dto';
 import { PublicGarageBrandDto } from '../models/public-garage-brand-dto';
+import { PublicJobTypeDto } from '../models/public-job-type-dto';
 export interface PublicGarageDto {
 
   /**
@@ -31,6 +32,11 @@ export interface PublicGarageDto {
   description?: string;
   doesNotTake: Array<BrandRefDto>;
   id: string;
+
+  /**
+   * The jobs of the visible price list, in its order; empty without one
+   */
+  jobTypes: Array<PublicJobTypeDto>;
 
   /**
    * A workshop only.

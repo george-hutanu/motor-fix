@@ -10,9 +10,11 @@ import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
+import { DriverHome } from './driver-home/driver-home';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
+import { RequestsView } from './requests-view/requests-view';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
 
@@ -54,6 +56,7 @@ describe('the dashboard view lists', () => {
     expect(DASHBOARDS.driver.views).toEqual([
       {
         label: 'shell.frame.nav.dashboard',
+        load: expect.any(Function),
         path: '',
         tab: 'shell.frame.tab.dashboard',
         title: 'shell.frame.title.driver.dashboard',
@@ -61,6 +64,7 @@ describe('the dashboard view lists', () => {
       {
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
+        load: expect.any(Function),
         path: 'requests',
         tab: 'shell.frame.tab.requests',
         title: 'shell.frame.title.driver.requests',
@@ -108,6 +112,17 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 097-FR-001
+  // The driver's home and request list load with their view, so the first
+  // page any visitor opens does not carry them (the initial bundle budget).
+  it('loads the driver home and the request list only when their view opens', async () => {
+    const [home, requests] = DASHBOARDS.driver.views;
+
+    expect(home.body).toBeUndefined();
+    expect(requests.body).toBeUndefined();
+    expect(await home.load?.()).toBe(DriverHome);
+    expect(await requests.load?.()).toBe(RequestsView);
+  });
+
   it('gives the garage and admin dashboards their addresses in menu order', () => {
     expect(DASHBOARDS.garage.views.map((view) => view.path)).toEqual([
       '',
@@ -522,8 +537,8 @@ describe('the dashboard view routes', () => {
   // @traces 097-FR-004
   it('keeps the shared placeholder for a driver view with no empty state of its own', async () => {
     const { element } = await open(
-      '/app/driver/requests',
-      ['driver.requests'],
+      '/app/driver/reviews',
+      ['driver.reviews'],
       'driver',
     );
 

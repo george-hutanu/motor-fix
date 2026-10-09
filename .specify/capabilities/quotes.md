@@ -1,8 +1,9 @@
 ---
 capability: quotes
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 220-requests-quotes-bookings
+  - 221-quote-request
 ---
 
 # Capability: Quotes
@@ -11,9 +12,9 @@ The request flow's shared data: a driver's quote request to several garages, the
 
 ## Requirements
 
-### 220-FR-001 — The system MUST store a QUOTE_REQUEST with: id, driver (account), car, car snapshot copied at creation (brand name, model, year, fuel, engine; editing the car later changes nothing on the request), description (optional text), status (FR-002), `created_at`, `expires_at` (= `created_at` + REQUEST_VALIDITY_DAYS: the same Bucharest wall-clock time that many calendar days later, stored UTC), `closed_reason` and `closed_at` (both only when `closed`), and the time of each status change in a status history that the audit history provides (FR-011); one REQUEST_JOB per requested job (request, job type, position), a request holding at least one job or a description; one REQUEST_RECIPIENT per garage (FR-004). Money is integer bani; every time column is a timestamp with time zone in UTC.
+### 221-FR-008 — The send MUST be idempotent per driver: a QUOTE_REQUEST stores the key (a new column, unique with the driver), and a second call with the same key and driver MUST answer the same status and body as the first without writing anything; a different key creates a new request. The replay is by key alone: a second call with the same key and a different body still answers the first answer and writes nothing. A refused call (400, 404, 429) stores nothing, so its key stays free and a retry with it is judged afresh. The web app sends the key the form-saving helper issues per dialog, and a retry after a network failure reuses it.
 
-_From 220-requests-quotes-bookings._
+_From 221-quote-request._
 
 ### 220-FR-002 — A request's status MUST be one of `sent`, `quoted`, `booked`, `in_work`, `done`, `closed`; `closed_reason` MUST be one of `expired`, `cancelled`, `booking_lapsed`, `booking_cancelled`, `no_show`, `account_closed`, set together with `closed_at` exactly when the request is `closed`, and absent otherwise.
 
@@ -43,9 +44,9 @@ _From 220-requests-quotes-bookings._
 
 _From 220-requests-quotes-bookings._
 
-### 220-FR-010 — One config module of the `quotes` module MUST hold, and every rule MUST read from it: REQUEST_MAX_GARAGES = 5, REQUEST_VALIDITY_DAYS = 7, QUOTE_VALIDITY_DAYS = 7, REQUEST_REMINDER_DAYS = [2, 5], BOOKING_CONFIRM_LAPSE_HOURS = 24, FREE_CANCEL_CUTOFF_HOURS = 2, BOOKING_MAX_MOVES = 2, MOVE_CUTOFF_HOURS = 2, DECLINE_UNDO_MINUTES = 5, PAGE_SIZE = 20, CANCEL_REASONS (driver: `plans_changed`, `found_another_garage`, `problem_solved`, `other`; garage: `no_mechanic_free`, `parts_not_available`, `closed_that_day`, `driver_asked`, `other`), DECLINE_REASONS (`fully_booked`, `job_not_done`, `make_model_engine_not_done`, `need_to_see_car`), No other file of the module repeats one of these values. The time zone for day counting, Europe/Bucharest, is the domain's own (its Bucharest-time helper, shared by every module) and is not repeated here.
+### 221-FR-009 — A driver MUST be able to send at most 20 requests per Bucharest calendar day; the 21st MUST be refused with 429 `too_many_requests` and nothing written. The count MUST read the driver's stored requests of that day in the same transaction as the insert, after locking the driver's account row and after the idempotency look-up (a replay answers its first answer, never 429) (PostgreSQL is the truth; no Redis counter), and the limit MUST be a named constant of the `quotes` config module (220-FR-010).
 
-_From 220-requests-quotes-bookings._
+_From 221-quote-request._
 
 ### 220-FR-011 — Every status change through the transition service MUST, in the caller's transaction, write one audit entry through the existing audit writer (390-FR-001: action `update`, subject type the entity's singular lowercase key (`quote_request`, `request_recipient`, `quote`, `booking`, `job`), subject id, field `status`, old and new value, the actor and role the caller gives, `garage_id`, `car_id` and `job_id` when known) and one outbox event through the existing event port (the kind the caller names from the contracts' event kinds, the subject id, and the audience: the driver's account and the garage, or the garages, concerned). When either write fails, the status change MUST roll back with it. This story emits no event of its own and notifies nobody; it gives later stories the transition service that writes both.
 
@@ -67,10 +68,92 @@ _From 220-requests-quotes-bookings._
 
 _From 220-requests-quotes-bookings._
 
-### 220-FR-016 — The six new endpoints MUST be listed in `infra/observability/inventory.json` (its endpoint count follows `apps/api/openapi.json`; `scripts/observability-inventory.ts` passes); the story adds no service, queue or outside call, so no new dashboard panel or alert is owed, and the PR's Observability section says so.
+### 221-FR-018 — The two new endpoints MUST be listed in `infra/observability/inventory.json`; the send (a product action) MUST emit one counter of requests sent with the outcome (`sent`, `cannot_receive`, `limit`, `invalid`) and the recipients count as a histogram or attribute, its dashboard panel added by the dashboards story (ST-879) while the repository holds no dashboard file (the inventory entry records `dashboard: none` with that reason), and one structured log line per send with the outcome and the request id, never the description, the plate or a phone (SC-006); the PR's Observability section names them and says why no alert is added (no agreed threshold yet) or adds one.
 
-_From 220-requests-quotes-bookings._
+_From 221-quote-request._
 
 ### 220-FR-017 — Tests MUST cover, in Jest on real PostgreSQL where rows are written: every allowed and every refused transition of QUOTE_REQUEST, REQUEST_RECIPIENT, QUOTE, BOOKING and JOB, including quote `waiting` → `declined_by_driver` and the suspension moves (recipient `waiting` → `closed`, quote `waiting` → `withdrawn`); each uniqueness of FR-009 under two concurrent transactions; the quote's field checks of FR-005; the audit entry and the outbox event written in the same transaction and both absent after a rollback; the cancellation key change; 404 for another driver, another garage, a mechanic without `can_answer_quotes`, and a mechanic reading another mechanic's job; no phone or plate before acceptance and confirmation, and the phone never for a mechanic; the page size, order and `invalid_cursor` of FR-014; the label map in Romanian and English covering every status; the constants read from one module. No end-to-end test: the story has no screen.
 
 _From 220-requests-quotes-bookings._
+
+### 221-FR-001 — Sending a quote request MUST be available to a signed-in actor in the `driver` role holding the capability `driver.requests`, for a car that is the actor's own and not removed; a car of another account or a removed one answers 404. A call with no session answers 401 `sign_in_required` (the sign-in gate of FR-003). A caller without the capability (a signed-in account with no `driver.requests`, a garage-role or admin session) gets the capability answer the API already gives, 404; the web app shows Cere ofertă only to a visitor or a driver-role session, never in the garage role. An AI assistant acting through the driver's tools uses the same endpoint and is recorded as such in the audit entry (FR-012).
+
+_From 221-quote-request._
+
+### 221-FR-002 — The garage profile page (ST-307) MUST carry a primary "Cere ofertă" / "Request a quote" button that opens the request dialog for that garage; the dialog MUST be a `dialog` task of the overlays service (158-FR-010) using the shared form-saving helper (159-FR-001..004, 496-FR-001), titled "Cere ofertă" / "Request a quote", with: a Select of the driver's cars, the garage's jobs as switches, a Textarea for the description with a live counter, the garage picker of FR-006, and the main button "Trimite" / "Send". When the page hands over a job selection (the estimate box of ST-356 once it exists), those jobs start switched on; otherwise none is.
+
+_From 221-quote-request._
+
+### 221-FR-003 — The car Select MUST list the driver's cars not removed, "<brand> <model> <year>", the only car preselected when there is one; with no car the dialog MUST show "Adaugă mai întâi o mașină" / "Add a car first" with a link to Mașinile mele and no Trimite button. A visitor who opens the dialog MUST get the sign-in gate (130-FR-004) over it when the cars read answers 401, and after signing in the dialog MUST still hold every chosen value and the refused read is sent again (130-FR-005).
+
+_From 221-quote-request._
+
+### 221-FR-004 — The jobs offered MUST be the distinct job types of the garage's visible price list (every GARAGE_PRICE row marked visible, whatever brand it names, in the list's order), read with the garage's public profile; the driver switches them on and off in the dialog. A request MUST hold at least one job or a description; the description MUST be at most 1,000 characters and at least 10 when no job is switched on; a job type repeated in the call is refused. The dialog disables Trimite and shows the reason under the field until these hold; the API answers 400 `validation_failed` naming the field (`jobTypeIds`, `description`).
+
+_From 221-quote-request._
+
+### 221-FR-005 — `POST /api/v1/quote-requests` MUST take the car id, the garage ids (1 to REQUEST_MAX_GARAGES, no repeats), the job type ids (0 or more, no repeats), the optional description and, per garage, its `source`; it MUST require the `Idempotency-Key` header, 1 to 64 characters, and answer 400 `validation_failed` (field `idempotency-key`) without it. The DTOs live in the contracts library and the OpenAPI document and the generated client are regenerated (421-FR-015, 421-FR-016). The route needs a session and joins no public route (the public-routes test list is unchanged).
+
+_From 221-quote-request._
+
+### 221-FR-006 — The dialog's garage picker MUST start with the profile's garage ticked and MUST list up to five other garages, read through `GET /api/v1/quote-requests/garages` for the chosen car, the switched-on jobs and a place (the driver's shared location or typed address): approved garages that pass FR-007 for that car and those jobs within 25 km of the place, plus mobile mechanics whose service radius covers it, ordered as the garage search orders them (garage-search 043), the profile's garage left out; without a place the picker offers only the profile's garage and says so in one line, with the place picker to add one. The driver MUST be able to tick at most REQUEST_MAX_GARAGES (5) in all; a sixth tick is refused with "Poți alege cel mult 5 service‑uri" / "You can pick at most 5 garages". MotorFix never adds a garage the driver did not tick. The read needs a session and the `driver.requests` capability; it carries only each garage's id, name, slug, distance (none for a mobile mechanic) and whether it comes to the driver. A missing or malformed `carId`, `near` or job id answers 400 `validation_failed`; a car that is not the driver's answers 404; without `near` the read answers an empty list.
+
+_From 221-quote-request._
+
+### 221-FR-007 — The server MUST check routing for every garage of the call, in one query of the use case, never only in the browser: the garage's status is `approved`; GARAGE_BRAND for the car's brand has stance `works_on`; the car's fuel is ticked on that row; and, when the request has jobs, at least one requested job type is ticked in GARAGE_BRAND_JOB for that brand (a request with no job skips this check). A garage id that does not exist is treated as a garage that is not taking requests (`not_taking_requests`), so the answer never tells an existing garage from a missing one. Garages are checked in the order of `garageIds`; the first garage that fails MUST be answered with 400, code `garage_cannot_receive`, carrying `garageId`, `garageName` and `reason` ∈ `brand`, `fuel`, `jobs`, `not_taking_requests` (status not `approved`); nothing is written. The dialog translates the reason in the driver's language naming the garage ("Nu lucrează pe Dacia", "Nu lucrează pe motorină la Dacia", "Nu face lucrările cerute la Dacia", "Service‑ul nu mai primește cereri"), unticks that garage, and for `not_taking_requests` offers "Înapoi la căutare" / "Back to search". On the profile, when the address carries a brand the garage does not work on (ST-307's red lamp), Cere ofertă MUST be disabled with that lamp's text; in the dialog, a chosen car whose brand or fuel the profile's garage does not take shows the same line under the Select and disables Trimite.
+
+_From 221-quote-request._
+
+### 221-FR-008 — The send MUST be idempotent per driver: a QUOTE_REQUEST stores the key (a new column, unique with the driver), and a second call with the same key and driver MUST answer the same status and body as the first without writing anything; a different key creates a new request. The replay is by key alone: a second call with the same key and a different body still answers the first answer and writes nothing. A refused call (400, 404, 429) stores nothing, so its key stays free and a retry with it is judged afresh. The web app sends the key the form-saving helper issues per dialog, and a retry after a network failure reuses it.
+
+_From 221-quote-request._
+
+### 221-FR-009 — A driver MUST be able to send at most 20 requests per Bucharest calendar day; the 21st MUST be refused with 429 `too_many_requests` and nothing written. The count MUST read the driver's stored requests of that day in the same transaction as the insert, after locking the driver's account row and after the idempotency look-up (a replay answers its first answer, never 429) (PostgreSQL is the truth; no Redis counter), and the limit MUST be a named constant of the `quotes` config module (220-FR-010).
+
+_From 221-quote-request._
+
+### 221-FR-010 — A successful send MUST write, in one transaction: one QUOTE_REQUEST (driver, car, car snapshot copied from the car: brand name, model, year, fuel, engine; description; status `sent`; `created_at`; `expires_at` = `created_at` + REQUEST_VALIDITY_DAYS Bucharest days, as 220-FR-001; the idempotency key), one REQUEST_JOB per job type in the order of `jobTypeIds` (position 1..n), one REQUEST_RECIPIENT per garage with status `waiting` and its `source`; the audit entry of FR-012 and the event of FR-011. When any write fails, nothing of the send remains.
+
+_From 221-quote-request._
+
+### 221-FR-011 — The same transaction MUST record one outbox event `request.created` through the existing event port, subject the request id, payload `{ requestId, driverId, garageIds }` and nothing else (no description, no car data), audience the request's driver account and recipient garages (254-FR-001), so `account:{accountId}` refreshes Cererile mele and `garage:{garageId}` the garages' inboxes; the notifications and timers that consume it are later stories'.
+
+_From 221-quote-request._
+
+### 221-FR-012 — The same transaction MUST write one audit entry through the existing audit writer: action `create`, subject type `quote_request`, subject id the request, actor the driver with role `driver` (the assistant grant when the call came through an AI assistant, as 390 records it), `car_id`, and new value the recipients' garage ids and the jobs' type ids; never the description or the plate.
+
+_From 221-quote-request._
+
+### 221-FR-013 — The API MUST answer 201 with the request as the driver reads it (the request DTO of 220-FR-012, with its recipients as garage id, name, slug and status); the dialog MUST then replace its form with the confirmation "Trimis către <garage>." / "Sent to <garage>." for one garage, "Trimis către <n> service‑uri." / "Sent to <n> garages." with the names listed for several, and a link "Vezi Cererile mele" / "See My requests" to the driver's requests view; closing the dialog returns to the profile with the button back. The "răspunde de obicei în aceeași zi" line is added by the response-rate story once a garage has a public rate (Assumptions).
+
+_From 221-quote-request._
+
+### 221-FR-014 — The driver dashboard's Cererile mele view MUST list the driver's requests from `GET /api/v1/requests` newest first: for each, the car ("Dacia Logan 2017"), the jobs' names in the person's language (or the description's first line when there are none), the status label from the contracts' label map (220-FR-003: `sent` → "Trimisă" / "Sent") and the relative time of its creation in the person's language and Europe/Bucharest ("acum câteva secunde" under one minute); with no request an empty state "Nicio cerere încă" / "No requests yet" with a "Cerere nouă" button. The view MUST re-read through the live helper (256-FR-002, 257-FR-008) on `request.created` so a request sent in another tab appears without a reload. Details, filters and the later statuses' content are other stories'.
+
+_From 221-quote-request._
+
+### 221-FR-015 — The driver dashboard's first view MUST show a primary button "Cerere nouă" / "New request" that opens Home (`/<lang>`), where the brand picker and the results lead to a garage profile; Home itself is unchanged.
+
+_From 221-quote-request._
+
+### 221-FR-016 — `source` MUST be stored per recipient: `profile_direct` for the garage whose profile the dialog was opened from, `shared_link` for that garage when the profile's address carries `?src=share`, `search` for every garage ticked in the picker; the API MUST accept only the contracts' source values and MUST refuse a garage id given twice. `home`, `map`, `saved` and `unknown` are not produced by this story. The source is a recorded fact for later statistics, never an input to routing or the limit.
+
+_From 221-quote-request._
+
+### 221-FR-017 — States: while the cars and jobs load, the dialog shows them from the profile's data at once and the picker behind a skeleton; offline, Trimite is disabled with "Fără conexiune" / "No connection" and every typed value stays; while the send is in flight Trimite is disabled and shows the form-saving helper's busy state; a failed send keeps the form and shows the shared error with a retry carrying the same key; a 429 shows "Ai trimis deja 20 de cereri azi. Încearcă mâine." / "You already sent 20 requests today. Try again tomorrow." Every new text MUST exist in Romanian and English, Romanian words joined by a hyphen using U+2011; every control at least 44 px tall; the dialog MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll.
+
+_From 221-quote-request._
+
+### 221-FR-018 — The two new endpoints MUST be listed in `infra/observability/inventory.json`; the send (a product action) MUST emit one counter of requests sent with the outcome (`sent`, `cannot_receive`, `limit`, `invalid`) and the recipients count as a histogram or attribute, its dashboard panel added by the dashboards story (ST-879) while the repository holds no dashboard file (the inventory entry records `dashboard: none` with that reason), and one structured log line per send with the outcome and the request id, never the description, the plate or a phone (SC-006); the PR's Observability section names them and says why no alert is added (no agreed threshold yet) or adds one.
+
+_From 221-quote-request._
+
+### 221-FR-019 — Tests MUST cover, in Jest on real PostgreSQL where rows are written: routing for a refused brand, no brand row, fuel not ticked, some jobs ticked, no job ticked, a suspended garage, a request with no job; idempotency (two calls with one key, one request; a different key, two); six garage ids, zero, and a repeated id refused; `source` stored per recipient as given; an unconfirmed e-mail may send; no job and no description, a 10-character floor, a 1,001-character description, another driver's car (404), a removed car (404), a garage-role actor (404); the 20-a-day limit at the boundary; the audit entry and the outbox event written in the same transaction and both absent after a forced rollback; the candidates read's distance, mobile-mechanic and routing filters; the public-routes list unchanged; the dialog's disabled states and the confirmation texts in both languages; the Cererile mele row and its live re-read. End to end (Playwright): sign in as a seeded driver with a Dacia, open an approved garage's profile, switch on a job, send, read the confirmation, open Cererile mele and see the request as Trimisă; then, as that garage's owner, read it through the garage requests endpoint (the garage inbox screen is another story's).
+
+_From 221-quote-request._
+
+## Retired
+
+- `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
+- `220-FR-010` — superseded by `221-FR-009` (2026-10-09)
+- `220-FR-016` — superseded by `221-FR-018` (2026-10-09)

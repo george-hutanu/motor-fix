@@ -123,6 +123,11 @@ describe('seed', () => {
         roles: ['mechanic'],
         status: 'active',
       },
+      'militari@example.test': {
+        lastRole: 'garage',
+        roles: ['garage'],
+        status: 'active',
+      },
       'receptie@example.test': {
         lastRole: 'receptionist',
         roles: ['receptionist'],
@@ -179,6 +184,10 @@ describe('seed', () => {
     const switcher = by('comutare@example.test')?.memberships[0];
     expect(switcher?.role).toBe('owner');
     expect(switcher?.garageId).not.toBe(owner?.garageId);
+    // A garage of its own, so a test that reads its inbox shares no owner.
+    const militari = by('militari@example.test')?.memberships[0];
+    expect(militari?.role).toBe('owner');
+    expect(militari?.garageId).not.toBe(owner?.garageId);
   });
 
   it('gives every account the test password as an argon2id hash', async () => {

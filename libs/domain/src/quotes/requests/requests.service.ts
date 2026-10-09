@@ -43,6 +43,7 @@ const summaryOf = (row: SummaryRow): RequestSummaryDto => ({
   closedAt: iso(row.closedAt),
   closedReason: row.closedReason,
   createdAt: row.createdAt.toISOString(),
+  description: row.description,
   expiresAt: row.expiresAt.toISOString(),
   id: row.id,
   jobs: jobsOf(row.jobs),
@@ -118,7 +119,6 @@ export class RequestsService {
     return {
       ...summaryOf(row),
       booking: booking ? bookingOf(booking) : null,
-      description: row.description,
       quotes: row.quotes.map((quote) => ({
         ...quoteOf(quote),
         garage: garageRef(quote.garage),

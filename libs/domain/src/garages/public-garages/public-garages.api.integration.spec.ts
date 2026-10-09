@@ -94,6 +94,7 @@ describe('reading a garage by its public slug', () => {
       brandNote: null,
       doesNotTake: [],
       id: approved.id,
+      jobTypes: [],
       name: 'Atelier Dinamo',
       paymentMethods: { card: false, cash: false, transfer: false },
       rating: null,
@@ -129,6 +130,7 @@ describe('reading a garage by its public slug', () => {
       'description',
       'doesNotTake',
       'id',
+      'jobTypes',
       'name',
       'paymentMethods',
       'rating',
@@ -731,6 +733,7 @@ const PUBLIC_FIELDS = new Set([
   'description',
   'doesNotTake',
   'id',
+  'jobTypes',
   'latitude',
   'longitude',
   'name',
@@ -760,3 +763,48 @@ function expectPublicOnly(body: Record<string, unknown>, mobile: boolean) {
     });
   }
 }
+
+// @traces 221-FR-004
+describe('the jobs a profile offers', () => {
+  const jobType = (nameRo: string, nameEn: string) =>
+    prisma.jobType.create({
+      data: { key: `job-${randomUUID()}`, nameEn, nameRo, status: 'approved' },
+    });
+
+  it('lists the distinct jobs of the visible prices in the list’s order', async () => {
+    const approved = await garage('approved');
+    const owner = await account('owner', ['garage']);
+    const oil = await jobType('Schimb ulei', 'Oil change');
+    const brakes = await jobType('Plăcuțe frână', 'Brake pads');
+    const hidden = await jobType('Diagnoză', 'Diagnosis');
+    const dacia = await catalogueBrand('Dacia');
+    const price = (jobTypeId: string, position: number, extra = {}) =>
+      prisma.garagePrice.create({
+        data: {
+          fromBani: 20_000,
+          garageId: approved.id,
+          jobTypeId,
+          position,
+          updatedBy: owner,
+          ...extra,
+        },
+      });
+    await price(brakes.id, 2);
+    await price(oil.id, 1);
+    await price(oil.id, 3, { brandId: dacia.id });
+    await price(hidden.id, 0, { visible: false });
+
+    const res = await read(approved.slug);
+
+    expect(res.body.jobTypes).toEqual([
+      { id: oil.id, nameEn: 'Oil change', nameRo: 'Schimb ulei' },
+      { id: brakes.id, nameEn: 'Brake pads', nameRo: 'Plăcuțe frână' },
+    ]);
+  });
+
+  it('offers no job when the garage lists no price', async () => {
+    const approved = await garage('approved');
+
+    expect((await read(approved.slug)).body.jobTypes).toEqual([]);
+  });
+});

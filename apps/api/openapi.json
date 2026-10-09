@@ -1981,6 +1981,140 @@
         ]
       }
     },
+    "/api/v1/quote-requests": {
+      "post": {
+        "operationId": "QuoteRequestsController_send",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per send the driver means; a repeat answers the first request",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuoteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field, too_many garages, length_mismatch, a missing description or key; garage_cannot_receive: garageId, garageName and reason"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver, or not the driver’s car"
+          },
+          "429": {
+            "description": "too_many_requests: 20 sent today already"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a quote request to up to five garages",
+        "tags": [
+          "quote-requests"
+        ]
+      }
+    },
+    "/api/v1/quote-requests/garages": {
+      "get": {
+        "operationId": "QuoteRequestsController_candidates",
+        "parameters": [
+          {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
+            "name": "carId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobTypeIds",
+            "required": false,
+            "in": "query",
+            "description": "The jobs switched on, as comma-separated ids",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude",
+            "required": false,
+            "in": "query",
+            "description": "The profile's garage, already in the request",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateGarageListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver, or not the driver’s car"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Up to five more garages near a place that would take the request",
+        "tags": [
+          "quote-requests"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -5883,6 +6017,11 @@
           },
           "quotesCount": {
             "type": "number"
+          },
+          "description": {
+            "type": "string",
+            "description": "As the driver wrote it; the list shows its first line when there is no job",
+            "nullable": true
           }
         },
         "required": [
@@ -5894,7 +6033,8 @@
           "expiresAt",
           "closedReason",
           "closedAt",
-          "quotesCount"
+          "quotesCount",
+          "description"
         ]
       },
       "RequestListDto": {
@@ -6243,6 +6383,7 @@
           },
           "description": {
             "type": "string",
+            "description": "As the driver wrote it; the list shows its first line when there is no job",
             "nullable": true
           },
           "recipients": {
@@ -6781,6 +6922,104 @@
           "car",
           "description",
           "booking"
+        ]
+      },
+      "CreateQuoteRequestDto": {
+        "type": "object",
+        "properties": {
+          "carId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garageIds": {
+            "description": "The garages, in the order the driver ticked them; at most 5",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "description": "Where each garage of garageIds was chosen, one for one",
+            "items": {
+              "type": "string",
+              "enum": [
+                "search",
+                "map",
+                "home",
+                "shared_link",
+                "profile_direct",
+                "saved",
+                "unknown"
+              ]
+            }
+          },
+          "jobTypeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "Trimmed; required, of at least 10 characters, when no job is chosen",
+            "maxLength": 1000,
+            "nullable": true
+          }
+        },
+        "required": [
+          "carId",
+          "garageIds",
+          "sources",
+          "jobTypeIds"
+        ]
+      },
+      "CandidateGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Kilometres from the place; null for a mobile mechanic",
+            "format": "double",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "A mobile mechanic, who comes to the driver"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "distanceKm",
+          "comesToYou"
+        ]
+      },
+      "CandidateGarageListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CandidateGarageDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "JobSummaryDto": {
@@ -7854,6 +8093,26 @@
           "stance"
         ]
       },
+      "PublicJobTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameRo",
+          "nameEn"
+        ]
+      },
       "PublicGarageDto": {
         "type": "object",
         "properties": {
@@ -7956,6 +8215,13 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "jobTypes": {
+            "description": "The jobs of the visible price list, in its order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicJobTypeDto"
+            }
           }
         },
         "required": [
@@ -7969,7 +8235,8 @@
           "verifiedAt",
           "rating",
           "reviewCount",
-          "paymentMethods"
+          "paymentMethods",
+          "jobTypes"
         ]
       },
       "RecordVerificationCheckDto": {

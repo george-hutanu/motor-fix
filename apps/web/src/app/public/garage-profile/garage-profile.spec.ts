@@ -21,6 +21,7 @@ const MOBILE: PublicGarageDto = {
   description: 'Diagnoză și reparații la domiciliu',
   doesNotTake: [],
   id: 'g-1',
+  jobTypes: [],
   name: 'Mecanic Mobil Ilfov',
   paymentMethods: { card: false, cash: false, transfer: false },
   rating: null,
@@ -37,6 +38,7 @@ const FIXED: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
   id: 'g-2',
+  jobTypes: [],
   latitude: 44.43,
   longitude: 26.01,
   name: 'Service Auto Militari',
@@ -227,7 +229,9 @@ describe('the garage profile', () => {
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
-    const slots = [...page().querySelectorAll<HTMLElement>('[data-slot]')];
+    const slots = [
+      ...page().querySelectorAll<HTMLElement>('section[data-slot]'),
+    ];
     expect(slots.length).toBeGreaterThan(0);
     for (const slot of slots) expect(slot.textContent?.trim()).toBe('');
   });

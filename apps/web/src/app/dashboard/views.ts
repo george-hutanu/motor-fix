@@ -19,8 +19,7 @@ export interface DashboardView {
   path: string;
   // The view's body, once its story has built one.
   body?: Type<unknown>;
-  // ...or the body downloaded when the view is opened, out of the first
-  // page's budget.
+  // ...or its loader, for a body the first page must not carry.
   load?: () => Promise<Type<unknown>>;
   label: string;
   tab: string;
@@ -122,10 +121,17 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.driver',
     tag: 'shell.frame.area.driver',
     views: [
-      { ...HOME, title: 'shell.frame.title.driver.dashboard' },
+      {
+        ...HOME,
+        load: () =>
+          import('./driver-home/driver-home').then((m) => m.DriverHome),
+        title: 'shell.frame.title.driver.dashboard',
+      },
       {
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
+        load: () =>
+          import('./requests-view/requests-view').then((m) => m.RequestsView),
         path: 'requests',
         tab: 'shell.frame.tab.requests',
         title: 'shell.frame.title.driver.requests',
@@ -227,12 +233,14 @@ export const allowedViews = (
 // The area guard has loaded the session before these match. A view owns its
 // sub-paths, so its epic can add pages under it; a refused or unknown view
 // falls through to `**`, which sends it to the dashboard view.
-const body = ({ body, push, staff }: DashboardView) =>
-  body ?? (staff ? SettingsView : push ? PushView : View);
+const body = ({ body, load, push, staff }: DashboardView) =>
+  load
+    ? { loadComponent: load }
+    : { component: body ?? (staff ? SettingsView : push ? PushView : View) };
 
 export const dashboardRoutes = (area: Area): Routes => [
   {
-    component: body(DASHBOARDS[area].views[0]),
+    ...body(DASHBOARDS[area].views[0]),
     data: { area, view: DASHBOARDS[area].views[0] },
     path: '',
     pathMatch: 'full',
@@ -250,11 +258,7 @@ export const dashboardRoutes = (area: Area): Routes => [
           ).includes(view);
         },
       ],
-      children: [
-        view.load
-          ? { data: { area, view }, loadComponent: view.load, path: '**' }
-          : { component: body(view), data: { area, view }, path: '**' },
-      ],
+      children: [{ ...body(view), data: { area, view }, path: '**' }],
       path: view.path,
     })),
   { path: '**', redirectTo: '' },

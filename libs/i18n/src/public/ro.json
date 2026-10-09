@@ -400,6 +400,65 @@
     "google": "Continuă cu Google",
     "or": "sau"
   },
+  "requestQuote": {
+    "addCar": "Adaugă o mașină",
+    "backToSearch": "Înapoi la căutare",
+    "button": "Cere ofertă",
+    "candidatesFailed": "Nu am putut încărca service‑urile din apropiere.",
+    "cannotReceive": {
+      "brand": "{garage} nu lucrează pe {brand}.",
+      "fuel": "{garage} nu lucrează pe {fuel} la {brand}.",
+      "jobs": "{garage} nu face lucrările cerute la {brand}.",
+      "not_taking_requests": "{garage} nu primește cereri acum."
+    },
+    "car": "Mașina",
+    "carRefused": {
+      "brand": "Nu lucrează pe {brand}",
+      "fuel": "Nu lucrează pe {fuel} la {brand}"
+    },
+    "carsFailed": "Nu am putut încărca mașinile tale.",
+    "chooseCar": "Alege mașina",
+    "close": "Închide",
+    "comesToYou": "Vine la tine",
+    "description": "Ce se întâmplă cu mașina",
+    "descriptionHint": "Fără lucrare aleasă, scrie cel puțin 10 caractere.",
+    "field": {
+      "description_needed": "Scrie cel puțin 10 caractere sau alege o lucrare.",
+      "too_short": "Scrie cel puțin 10 caractere"
+    },
+    "fuelWord": {
+      "diesel": "motorină",
+      "electric": "electric",
+      "hybrid": "hibrid",
+      "petrol": "benzină"
+    },
+    "garages": "Către cine trimiți",
+    "jobs": "Ce lucrări vrei",
+    "limit": "Poți alege cel mult 5 service‑uri.",
+    "loadingCars": "Se încarcă mașinile",
+    "loadingGarages": "Se caută service‑uri din apropiere",
+    "noCandidates": "Niciun alt service din apropiere nu poate lua mașina.",
+    "noCar": "Adaugă mai întâi o mașină, ca service‑ul să știe la ce lucrează.",
+    "noJobs": "Service‑ul nu și‑a trecut încă lucrările. Descrie ce are mașina.",
+    "noPlace": "Alege un loc ca să vezi și alte service‑uri din apropiere.",
+    "offline": "Fără conexiune. O poți trimite după ce revii online.",
+    "pickerLead": "Poți trimite aceeași cerere și altor service‑uri din apropiere, până la 5.",
+    "pickPlace": "Alege locul",
+    "problem": {
+      "garage_cannot_receive": "Un service ales nu poate lua cererea.",
+      "too_many_requests": "Ai trimis deja 20 de cereri azi. Încearcă mâine."
+    },
+    "retry": "Încearcă din nou",
+    "seeRequests": "Vezi Cererile mele",
+    "sentMany": {
+      "few": "Trimis către {count} service‑uri.",
+      "one": "Trimis către {count} service.",
+      "other": "Trimis către {count} de service‑uri."
+    },
+    "sentOne": "Trimis către {garage}.",
+    "submit": "Trimite",
+    "title": "Cere ofertă"
+  },
   "signIn": {
     "brand": "MotorFix",
     "code": {
