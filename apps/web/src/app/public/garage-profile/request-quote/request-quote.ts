@@ -62,7 +62,6 @@ export interface RequestQuoteData {
 
 type Nearby = 'idle' | 'loading' | 'ready' | 'failed' | 'no-place';
 
-// The line that names why a garage cannot take the request.
 // The fuel as a word inside a sentence: "motorină", "diesel".
 const FUEL_WORDS: Record<CarDto['fuel'], string> = {
   diesel: 'public.requestQuote.fuelWord.diesel',
@@ -71,6 +70,7 @@ const FUEL_WORDS: Record<CarDto['fuel'], string> = {
   petrol: 'public.requestQuote.fuelWord.petrol',
 };
 
+// The line that names why a garage cannot take the request.
 const CANNOT_RECEIVE: Record<CannotReceiveReason, string> = {
   brand: 'public.requestQuote.cannotReceive.brand',
   fuel: 'public.requestQuote.cannotReceive.fuel',

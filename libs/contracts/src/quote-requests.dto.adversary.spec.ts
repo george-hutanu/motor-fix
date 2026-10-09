@@ -170,4 +170,13 @@ describe('CandidateGaragesQueryDto under hostile input', () => {
   it('refuses an exclude that is not an id', () => {
     expect(query({ carId: CAR, exclude: 'x' })).toContain('exclude');
   });
+
+  it('takes an exclude in upper case and keeps it in lower case', () => {
+    const dto = plainToInstance(CandidateGaragesQueryDto, {
+      carId: CAR,
+      exclude: garage(0).toUpperCase(),
+    });
+    expect(validateSync(dto, options)).toEqual([]);
+    expect(dto.exclude).toBe(garage(0));
+  });
 });
