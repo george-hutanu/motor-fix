@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   HttpStatus,
@@ -6,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { refusal, toolError } from './errors';
+import { refusal, text, toolError } from './errors';
 import { caller, context, fixtureTools } from './fixtures.testing';
 import { callTool } from './registry';
 
@@ -91,6 +92,61 @@ describe('toolError', () => {
       expect([ro.code, en.code]).toEqual([code, code]);
       expect(ro.message).not.toBe(en.message);
     }
+  });
+});
+
+describe('garage read texts', () => {
+  // @traces 374-FR-006
+  it('lists the garage’s mechanics beside an unknown mechanic, worded in the account’s language', () => {
+    const mechanics = [{ id: 'm-1', name: 'Costel Ionescu' }];
+    const unknown = () =>
+      new NotFoundException({
+        code: 'mechanic_not_found',
+        mechanics,
+        message: 'No mechanic of this garage has that name',
+      });
+    const ro = toolError(unknown(), 'ro');
+    const en = toolError(unknown(), 'en');
+    expect(ro).toEqual({
+      code: 'mechanic_not_found',
+      mechanics,
+      message: refusal('mechanic_not_found', 'ro').message,
+    });
+    expect(en).toMatchObject({ code: 'mechanic_not_found', mechanics });
+    expect(ro.message).not.toBe(en.message);
+    expect(ro.message).not.toBe(text('missing', 'ro'));
+  });
+
+  it('passes on only the details a tool names, never any other key of the body', () => {
+    const leaky = new BadRequestException({
+      accountId: 'acc-9',
+      code: 'validation',
+      message: 'bad',
+      phone: '+40712345678',
+      query: 'SELECT 1',
+    });
+    expect(toolError(leaky, 'en')).toEqual(refusal('validation', 'en'));
+  });
+
+  it('keeps Nest’s own status fields out of a refusal', () => {
+    expect(toolError(new NotFoundException(), 'en')).toEqual(
+      refusal('not_found', 'en'),
+    );
+  });
+
+  // @traces 374-FR-011
+  it.each([
+    'empty_requests',
+    'empty_schedule',
+    'empty_day_sheet',
+    'empty_stats',
+  ])('words the %s note in Romanian and English', (key) => {
+    const ro = text(key, 'ro');
+    const en = text(key, 'en');
+    expect(ro.length).toBeGreaterThan(0);
+    expect(en.length).toBeGreaterThan(0);
+    expect(ro).not.toBe(en);
+    expect(ro).not.toBe(text('missing', 'ro'));
   });
 });
 
