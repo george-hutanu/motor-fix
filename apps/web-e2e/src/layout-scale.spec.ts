@@ -2,7 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 import { test } from './fixtures.js';
 
-// The layout rules the PR tester measures (ST-953): text on the Cockpit type
+// The layout rules the PR tester measures: text on the Cockpit type
 // scale, phone text that is read or tapped at 16 px or more, and padding and
 // gaps on the 4 px grid.
 const SCALE = [12, 13, 16, 20, 24, 32, 40];
