@@ -187,7 +187,6 @@ export function issuePlans(tracker) {
     const named = ids.map((id) => [ctx.titleOf(id), docLink(id)].filter(Boolean).join(" ")).filter(Boolean);
     return ids.length && named.length === ids.length ? textOf(named) : null;
   };
-  const statusOf = new Map(tracker.stories.map((s) => [s.key, s.status]));
   /** The blockers that are imported items other than the item itself; the rest are warned and dropped. */
   const linkable = (r) =>
     r.blockers.filter((b) => {
@@ -212,7 +211,6 @@ export function issuePlans(tracker) {
       type = "Story";
     }
     const blockers = linkable(s);
-    const ready = status === "To do" && blockers.every((b) => statusOf.get(b) === "Done");
     const pr = s.pr?.match(PULL);
     if (s.pr && !pr) warnings.push(`${s.key} has a PR value that is not a motor-fix pull request URL; not published`);
     return {
@@ -232,7 +230,6 @@ export function issuePlans(tracker) {
           ["Priority", s.priority],
           ["Work type", type],
           ["Epic", epic],
-          ["Ready to work", ready ? "Yes" : "No"],
           ["Started", s.started],
           ["QA from", s.qaFrom],
           ["Merged at", s.mergedAt],

@@ -410,61 +410,24 @@ describe("rate limits", () => {
 });
 
 describe("Ready to work", () => {
-  const ready = (plans, key) => plans.find((p) => p.key === key).fields["Ready to work"];
-
-  it("is Yes only for To do items with no open blocker", async () => {
-    const plans = await planOf();
-    assert.equal(ready(plans, "ST-1"), "Yes");
-    assert.equal(ready(plans, "ST-7"), "No", "blocked by an open ST-1");
-    assert.equal(ready(plans, "ST-8"), "Yes", "its only story blocker is Done");
-    assert.equal(ready(plans, "ST-2"), "No", "Implementing");
-    assert.equal(ready(plans, "ST-5"), "No", "Blocked");
-    assert.notEqual(ready(plans, "ST-3"), "Yes", "Done");
-  });
-
-  it("turns Yes once the blocker is Done", async () => {
-    const plans = await planOf((t) => {
-      t.stories.find((s) => s.key === "ST-1").status = "Done";
-    });
-    assert.equal(ready(plans, "ST-7"), "Yes");
-  });
-
-  it("stays No for a To do item whose blocker is Blocked, Planning or QA", async () => {
-    for (const status of ["Blocked", "Planning", "QA", "Implementing"]) {
-      const plans = await planOf((t) => {
-        t.stories.find((s) => s.key === "ST-1").status = status;
-      });
-      assert.equal(ready(plans, "ST-7"), "No", status);
-    }
-  });
-
-  it("is never Yes for a To do epic blocked by an epic still in progress, nor for a Done epic", async () => {
-    const plans = await planOf();
-    assert.notEqual(ready(plans, "EP-2"), "Yes");
-    assert.notEqual(ready(plans, "EP-3"), "Yes");
-  });
-
-  it("ignores Notion's own Ready to work checkbox", async () => {
+  it("is never a field the import writes, whatever Notion's checkbox says", async () => {
     const plans = await planOf((t) => {
       const s = t.stories.find((x) => x.key === "ST-7");
       s.ready = true;
       s.readyToWork = true;
     });
-    assert.equal(ready(plans, "ST-7"), "No");
+    for (const p of plans) assert.equal("Ready to work" in p.fields, false, p.key);
+    assert.doesNotMatch(plans.find((p) => p.key === "ST-7").body ?? "", /Ready to work/);
   });
 
-  it("lands in the Project field values, not only the plan", async () => {
+  it("runs on a Project that still has the old field and leaves its values alone", async () => {
     const gh = await bootstrapped();
-    await importInto(gh);
     const p = gh.state.projects[0];
-    const fieldId = p.fields.find((f) => f.name === "Ready to work").id;
-    const yes = (key) => {
-      const n = gh.state.issues.find((i) => keyOf(i) === key).number;
-      const v = p.items.find((it) => it.number === n).values[fieldId];
-      return p.fields.find((f) => f.id === fieldId).options.find((o) => o.id === v.singleSelectOptionId).name;
-    };
-    assert.equal(yes("ST-1"), "Yes");
-    assert.equal(yes("ST-7"), "No");
+    p.fields.push({ id: "F_old", name: "Ready to work", dataType: "SINGLE_SELECT", options: [{ id: "O_y", name: "Yes", color: "GREEN" }, { id: "O_n", name: "No", color: "GRAY" }] });
+    const { exit } = await importInto(gh);
+    assert.equal(exit, 0);
+    assert.ok(p.items.length > 0);
+    assert.ok(p.items.every((it) => !("F_old" in it.values)));
   });
 });
 

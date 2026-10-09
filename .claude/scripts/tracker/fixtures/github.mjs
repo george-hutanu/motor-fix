@@ -221,6 +221,14 @@ export function fakeGitHub(seed = {}) {
       if (v.iteration) made.iteration = v.iteration;
       return { createProjectV2Field: { projectV2Field: { id: made.id } } };
     },
+    DeleteField: (v) => {
+      const p = state.projects.find((x) => x.fields.some((f) => f.id === v.fieldId));
+      if (!p) return { errors: [{ type: "NOT_FOUND", message: "Could not resolve to a node" }] };
+      p.fields = p.fields.filter((f) => f.id !== v.fieldId);
+      for (const w of p.views) w.visibleFieldIds = w.visibleFieldIds.filter((id) => id !== v.fieldId);
+      for (const it of p.items) delete it.values[v.fieldId];
+      return { deleteProjectV2Field: { projectV2Field: { id: v.fieldId } } };
+    },
     CreateView: (v) => {
       if (v.layout === "ROADMAP_LAYOUT" && v.fieldIds !== undefined)
         return { errors: [{ type: "UNPROCESSABLE", message: "Roadmap views do not support visible fields." }] };

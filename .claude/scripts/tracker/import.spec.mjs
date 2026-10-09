@@ -84,7 +84,6 @@ describe("issuePlans", () => {
       Priority: "Medium",
       "Work type": "Story",
       Epic: "EP-1",
-      "Ready to work": "Yes",
       "Story points": 3,
       "Planned start": "2026-10-12",
       "Planned end": "2026-10-16",
@@ -132,12 +131,9 @@ describe("issuePlans", () => {
     assert.ok(warnings.some((w) => w.includes("ST-6") && w.includes("In review")));
   });
 
-  it("is ready to work only when To do with no open blocker", async () => {
+  it("writes no Ready to work field; readiness is Status To do and no open blocked-by", async () => {
     const { plans } = issuePlans(await tracker());
-    const ready = (key) => plans.find((p) => p.key === key).fields["Ready to work"];
-    assert.equal(ready("ST-7"), "No");
-    assert.equal(ready("ST-8"), "Yes");
-    assert.equal(ready("ST-5"), "No");
+    for (const p of plans) assert.equal("Ready to work" in p.fields, false, p.key);
     assert.deepEqual(plans.find((p) => p.key === "ST-7").blockers, ["ST-1"]);
   });
 
@@ -189,7 +185,6 @@ describe("a full import", () => {
       Priority: "Urgent",
       "Work type": "Task",
       Epic: "EP-2",
-      "Ready to work": "No",
       Started: "2026-10-01",
       Role: "Garage",
       Release: "2 - Soon after",

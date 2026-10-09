@@ -64,7 +64,6 @@ export const SCHEMA = {
       "Epic",
       EPICS.map((e) => [e]),
     ),
-    select("Ready to work", [["Yes", "GREEN"], ["No"]]),
     ...["Started", "QA from", "Merged at", "Planned start", "Planned end"].map(plain("DATE")),
     plain("NUMBER")("Story points"),
     plain("ITERATION")("Sprint"),
@@ -77,16 +76,16 @@ export const SCHEMA = {
     ...["Story count", "Weeks"].map(plain("NUMBER")),
   ],
   views: [
-    { name: "Board", layout: "BOARD_LAYOUT", fields: ["Title", "Priority", "Work type", "Epic", "Ready to work"] },
+    { name: "Board", layout: "BOARD_LAYOUT", fields: ["Title", "Priority", "Work type", "Epic"] },
     {
       name: "Table",
       layout: "TABLE_LAYOUT",
-      fields: ["Title", "Status", "Priority", "Work type", "Epic", "Ready to work", "Story points", "Started", "Merged at", "Assignees", "Labels", "Milestone"],
+      fields: ["Title", "Status", "Priority", "Work type", "Epic", "Story points", "Started", "Merged at", "Assignees", "Labels", "Milestone"],
     },
     { name: "Roadmap", layout: "ROADMAP_LAYOUT", fields: [] },
     { name: "Blocked", layout: "TABLE_LAYOUT", filter: "status:Blocked", fields: ["Title", "Priority", "Work type", "Epic", "Assignees"] },
     { name: "My work", layout: "TABLE_LAYOUT", filter: "assignee:@me -status:Done", fields: ["Title", "Status", "Priority", "Work type", "Epic"] },
-    ...EPICS.map((e) => ({ name: e, layout: "BOARD_LAYOUT", filter: `epic:"${e}"`, fields: ["Title", "Priority", "Work type", "Ready to work"] })),
+    ...EPICS.map((e) => ({ name: e, layout: "BOARD_LAYOUT", filter: `epic:"${e}"`, fields: ["Title", "Priority", "Work type"] })),
   ],
   labels: [
     ...["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "epic"].map(label("1d76db")),
@@ -105,8 +104,15 @@ export const SCHEMA = {
     "- File new work with an issue form (Story, Task, Bug, Tech debt, Decision); it lands here by itself.",
     "- An imported issue is titled `ST-<n>` or `EP-<n>` after its old ID; a new one is known by its number.",
     "- Stories are sub-issues of their epic; Blocked by links are issue dependencies.",
+    '- Ready to work: Status To do and not blocked by an open issue (filter `status:"To do" -is:blocked`).',
   ].join("\n"),
 };
+
+// Fields an earlier bootstrap made that the tracker no longer uses. One is
+// deleted only when it is still exactly as bootstrap made it; any other field
+// of that name is someone's own and is kept.
+export const OBSOLETE_FIELDS = [{ name: "Ready to work", dataType: "SINGLE_SELECT", options: ["Yes", "No"] }];
+const obsolete = new Set(OBSOLETE_FIELDS.map((f) => f.name));
 
 export const CHECKLIST = [
   "- Board view: group by Status.",
@@ -136,6 +142,7 @@ const Q = {
     "mutation SetOptions($fieldId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) { updateProjectV2Field(input: { fieldId: $fieldId, singleSelectOptions: $options }) { projectV2Field { ... on ProjectV2SingleSelectField { id } } } }",
   createField:
     "mutation CreateField($projectId: ID!, $dataType: ProjectV2CustomFieldType!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!], $iteration: ProjectV2IterationFieldConfigurationInput) { createProjectV2Field(input: { projectId: $projectId, dataType: $dataType, name: $name, singleSelectOptions: $options, iterationConfiguration: $iteration }) { projectV2Field { ... on ProjectV2FieldCommon { id } } } }",
+  deleteField: "mutation DeleteField($fieldId: ID!) { deleteProjectV2Field(input: { fieldId: $fieldId }) { projectV2Field { ... on ProjectV2FieldCommon { id } } } }",
   createView:
     "mutation CreateView($projectId: ID!, $name: String!, $layout: ProjectV2ViewLayout!, $fieldIds: [ID!]) { createProjectV2View(input: { projectId: $projectId, name: $name, layout: $layout, configuration: { visibleFieldIds: $fieldIds } }) { projectV2View { id } } }",
   // A roadmap takes no visible fields: GitHub refuses any configuration for one.
@@ -253,6 +260,18 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
       created("field", detail, "updated");
     } else differs("field", `${want.name}: options ${haveNames.join(", ")}, not ${names.join(", ")}`);
   }
+  for (const old of OBSOLETE_FIELDS) {
+    const have = state.fields.find((f) => f.name === old.name);
+    if (!have) continue;
+    if (have.dataType !== old.dataType || !sameNames(have.options?.map((o) => o.name) ?? [], old.options)) {
+      out("field", "kept", `${old.name} (${have.dataType}; not the one bootstrap made, delete it in the UI if unused)`);
+    } else if (dryRun) out("field", "would remove", old.name);
+    else {
+      await github.graphql(Q.deleteField, { fieldId: have.id });
+      fieldsCreated = true;
+      out("field", "removed", old.name);
+    }
+  }
   if (fieldsCreated && !dryRun) state = await projectState(github, projectId);
 
   const fieldId = (name) => state.fields.find((f) => f.name === name)?.id;
@@ -267,7 +286,7 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
       if (want.filter) await write(Q.setViewFilter, { viewId: made?.createProjectV2View.projectV2View.id, filter: want.filter });
       created("view", detail);
     } else if (have.layout !== want.layout) differs("view", `${want.name}: ${have.layout}, not ${want.layout}`);
-    else if (want.layout !== "ROADMAP_LAYOUT" && !sameSet(have.fieldNames, want.fields.filter(fieldId))) {
+    else if (want.layout !== "ROADMAP_LAYOUT" && !sameSet(have.fieldNames.filter((n) => !obsolete.has(n)), want.fields.filter(fieldId))) {
       differs("view", `${want.name}: fields ${have.fieldNames.join(", ") || "none"}, not ${want.fields.filter(fieldId).join(", ")}`);
     } else if (want.filter && have.filter !== want.filter) {
       await write(Q.setViewFilter, { viewId: have.id, filter: want.filter });
