@@ -226,6 +226,19 @@ describe("a full import", () => {
     assert.deepEqual(gh.state.blockedBy.get(issueOf(gh, "EP-17").number), [issueOf(gh, "EP-3").id]);
   });
 
+  it("leaves a story out of a full epic's sub-issues, with a warning, and the run still ends done", async () => {
+    // GitHub holds at most 100 sub-issues per parent; the fake holds 3, and EP-1 has five stories.
+    const gh = await bootstrapped({ subIssueMax: 3 });
+    const first = await importInto(gh, { subIssueMax: 3 });
+    assert.equal(first.exit, 0);
+    assert.equal((gh.state.subIssues.get(issueOf(gh, "EP-1").number) ?? []).length, 3);
+    assert.ok(first.lines.some((l) => /^warn\s+EP-1 holds 3 sub-issues, GitHub's limit: \d+ of its stories carry it by label and Epic field only$/.test(l)));
+    assert.ok(!first.lines.some((l) => /^failed\s/.test(l)));
+    const again = await importInto(gh, { subIssueMax: 3 });
+    assert.equal(again.exit, 0);
+    assert.ok(!again.lines.some((l) => /^sub-issue\s/.test(l)));
+  });
+
   it("adds a Closes line to an open story's open PR and leaves a merged one alone", async () => {
     const gh = await bootstrapped();
     await importInto(gh);

@@ -410,6 +410,7 @@ export async function runImport({
   hasFiles = () => false,
   progress = () => {},
   lap = 1,
+  subIssueMax = 100,
 }) {
   const out = (kind, detail) => log(`${kind.padEnd(9)} ${detail}`);
   const { plans, warnings } = issuePlans(tracker);
@@ -481,7 +482,7 @@ export async function runImport({
       step("create", async () => {
         const body = bodyOf(plan);
         const assignee = plan.assignee ? await userId(plan.assignee) : null;
-        const parent = plan.parent ? issue.get(plan.parent) : undefined;
+        const parent = plan.parent && hasRoom(await linksOf(subIssues, plan.parent, "sub_issues"), plan.key, plan.parent) ? issue.get(plan.parent) : undefined;
         const made = (
           await github.graphql(CREATE_ISSUE, {
             input: {
@@ -586,6 +587,15 @@ export async function runImport({
     }
     return cache.get(key);
   };
+  // GitHub holds at most subIssueMax sub-issues per parent: a story past it carries its epic by label and Epic field only.
+  const leftOut = new Map();
+  const hasRoom = (have, child, parent) => {
+    if (have.length < subIssueMax) return true;
+    if (!leftOut.has(parent)) leftOut.set(parent, new Set());
+    leftOut.get(parent).add(child);
+    return false;
+  };
+  const fullWarnings = () => [...leftOut].map(([parent, children]) => `${parent} holds ${subIssueMax} sub-issues, GitHub's limit: ${children.size} of its stories carry it by label and Epic field only`);
   const subIssueStep = (child, parent, have) => ({
     kind: "sub-issue",
     key: child,
@@ -594,6 +604,7 @@ export async function runImport({
       const id = issue.get(child).id;
       // The child's create may have placed it under its parent already.
       if (have.includes(id)) return `under #${number} at create`;
+      if (!hasRoom(have, child, parent)) return `left out of full #${number}`;
       await github.rest("POST", `issues/${number}/sub_issues`, { sub_issue_id: id }, { idempotent: true });
       have.push(id);
       return `under #${number}`;
@@ -622,7 +633,7 @@ export async function runImport({
     const families = [...(plan.parent && issue.has(plan.parent) ? [[self, plan.parent]] : []), ...plans.filter((c) => c.parent === self && issue.has(c.key)).map((c) => [c.key, self])];
     for (const [child, parent] of families) {
       const have = await linksOf(subIssues, parent, "sub_issues");
-      if (!linked(have, child)) steps.push(subIssueStep(child, parent, have));
+      if (!linked(have, child) && hasRoom(have, child, parent)) steps.push(subIssueStep(child, parent, have));
     }
     const pairs = [...plan.blockers.filter((b) => issue.has(b)).map((b) => [self, b]), ...plans.filter((d) => d.blockers.includes(self) && issue.has(d.key)).map((d) => [d.key, self])];
     for (const [blocked, blocker] of pairs) {
@@ -667,7 +678,7 @@ export async function runImport({
     for (const plan of plans.filter((p) => p.parent)) {
       if (absent(plan.key) || absent(plan.parent)) continue;
       const have = await linksOf(subIssues, plan.parent, "sub_issues");
-      if (!linked(have, plan.key)) steps.push(subIssueStep(plan.key, plan.parent, have));
+      if (!linked(have, plan.key) && hasRoom(have, plan.key, plan.parent)) steps.push(subIssueStep(plan.key, plan.parent, have));
     }
     for (const plan of plans.filter((p) => p.blockers.length)) {
       if (absent(plan.key)) continue;
@@ -865,7 +876,7 @@ export async function runImport({
   if (dryRun) {
     all.push(...(await lateSteps((w) => lateWarnings.push(w))));
     planLine(counted(all), 0);
-    for (const w of [...tracker.warnings, ...warnings, ...lateWarnings]) out("warn", w);
+    for (const w of [...tracker.warnings, ...warnings, ...lateWarnings, ...fullWarnings()]) out("warn", w);
     bodiesLine();
     if (parts) {
       out("failed", `${parts} part(s) of Notion pages would be left behind; nothing written`);
@@ -891,6 +902,7 @@ export async function runImport({
     out("failed", `${parts} part(s) of Notion pages left behind: ${incomplete.size} page(s) not written, the other ${plans.length - incomplete.size} written`);
     return 1;
   }
+  for (const w of fullWarnings()) out("warn", w);
   // Warnings are reported above and never change the exit: every step ran.
   out("done", `${plans.length} items; 0 steps left; ${github.stats.content} content requests`);
   return 0;
