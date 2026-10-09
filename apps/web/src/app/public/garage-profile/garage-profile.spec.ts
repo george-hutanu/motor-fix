@@ -26,6 +26,7 @@ const MOBILE: PublicGarageDto = {
   paymentMethods: { card: false, cash: false, transfer: false },
   rating: null,
   refusalPhrase: null,
+  responseRate: { state: 'new' },
   reviewCount: 0,
   serviceRadiusKm: 20,
   slug: 'mecanic-mobil-ilfov',
@@ -45,6 +46,7 @@ const FIXED: PublicGarageDto = {
   paymentMethods: { card: false, cash: false, transfer: false },
   rating: null,
   refusalPhrase: null,
+  responseRate: { state: 'new' },
   reviewCount: 0,
   slug: 'service-auto-militari',
   verifiedAt: null,
@@ -337,6 +339,157 @@ describe('the garage profile with a brand in context', () => {
     await reads[0]?.answer(FIXED);
 
     expect(link(/Acasă/)?.getAttribute('href')).toBe('/ro');
+  });
+});
+
+// @traces 384-FR-008
+describe('the response line in the profile header', () => {
+  const rated = (rate: number) =>
+    ({ rate, state: 'rate' }) as PublicGarageDto['responseRate'];
+  const line = () => page().querySelector<HTMLElement>('.rate');
+  const follows = (a: Element | null, b: Element | null) =>
+    !!a &&
+    !!b &&
+    (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  it('says the rate after the verification line and before the request button', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({ ...MOBILE, responseRate: rated(91) });
+
+    expect(line()?.textContent?.trim()).toBe(
+      'Răspunde la 91% din cereri într‑o zi',
+    );
+    expect(follows(page().querySelector('.verified'), line())).toBe(true);
+    expect(
+      follows(line(), page().querySelector('mf-request-quote-button')),
+    ).toBe(true);
+  });
+
+  it('says the rate in English', async () => {
+    await TestBed.inject(I18n).use('en');
+    await open('/en/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({ ...MOBILE, responseRate: rated(91) });
+
+    expect(line()?.textContent?.trim()).toBe(
+      'Answers 91% of requests within a day',
+    );
+  });
+
+  it('says a rate of 0', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({ ...MOBILE, responseRate: rated(0) });
+
+    expect(line()?.textContent?.trim()).toBe(
+      'Răspunde la 0% din cereri într‑o zi',
+    );
+  });
+
+  it('leads the line with an icon kept from screen readers', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({ ...MOBILE, responseRate: rated(91) });
+
+    const icon = line()?.querySelector('svg');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon?.getAttribute('width')).toBe('16');
+  });
+
+  it('shows the line for a garage with no verification line', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({ ...FIXED, responseRate: rated(75) });
+
+    expect(page().querySelector('.verified')).toBeNull();
+    expect(line()?.textContent?.trim()).toBe(
+      'Răspunde la 75% din cereri într‑o zi',
+    );
+  });
+
+  it('says a garage with too few requests is new on MotorFix', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({ ...MOBILE, responseRate: { state: 'new' } });
+
+    expect(line()?.textContent?.trim()).toBe('Nou pe MotorFix');
+  });
+
+  it('says it in English too', async () => {
+    await TestBed.inject(I18n).use('en');
+    await open('/en/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({ ...MOBILE, responseRate: { state: 'new' } });
+
+    expect(line()?.textContent?.trim()).toBe('New on MotorFix');
+  });
+
+  it('drops the line once the garage has had no request in the last 30 days', async () => {
+    jest.useFakeTimers();
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({ ...MOBILE, responseRate: rated(91) });
+    expect(line()).not.toBeNull();
+
+    messages.next({
+      at: '2026-10-10T01:00:00.000Z',
+      id: 'x',
+      kind: 'response_stats.updated',
+    });
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[1]?.answer({ ...MOBILE, responseRate: { state: 'none' } });
+
+    expect(line()).toBeNull();
+    expect(text()).not.toContain('Nou pe MotorFix');
+  });
+
+  it("sets the line in the verification line's small secondary style, free to wrap", () => {
+    const sheet = css('garage-profile.css');
+    expect(sheet).toMatch(
+      /\.rate[^{]*\{[^}]*color: var\(--mf-text-secondary\)/,
+    );
+    expect(sheet).not.toMatch(/\.rate[^{]*\{[^}]*--mf-size-small/);
+    expect(sheet).not.toMatch(/\.rate[^{]*\{[^}]*nowrap/);
+  });
+});
+
+// @traces 384-FR-009
+describe('the response line kept live', () => {
+  const send = (kind: string) =>
+    messages.next({ at: '2026-10-10T01:00:00.000Z', id: 'x', kind });
+
+  it('reads the profile again when the night changes the response figures', async () => {
+    jest.useFakeTimers();
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+
+    send('response_stats.updated');
+    jest.advanceTimersByTime(300);
+    await settle();
+
+    expect(reads).toHaveLength(2);
+  });
+
+  it('announces a changed rate in place, politely and without moving focus', async () => {
+    jest.useFakeTimers();
+    const announce = jest
+      .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
+      .mockResolvedValue();
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({
+      ...FIXED,
+      responseRate: { rate: 91, state: 'rate' },
+    });
+    const focused = document.activeElement;
+
+    send('response_stats.updated');
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[1]?.answer({
+      ...FIXED,
+      responseRate: { rate: 92, state: 'rate' },
+    });
+
+    expect(text()).toContain('Răspunde la 92% din cereri într‑o zi');
+    expect(announce).toHaveBeenCalledWith(
+      'Răspunde la 92% din cereri într‑o zi',
+      'polite',
+    );
+    expect(document.activeElement).toBe(focused);
   });
 });
 

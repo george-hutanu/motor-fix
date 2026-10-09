@@ -28,6 +28,8 @@
     "failed": "We could not load the garage",
     "loading": "Loading the profile",
     "mobileArea": "Mobile mechanic · {km} area",
+    "newGarage": "New on MotorFix",
+    "rate": "Answers {rate}% of requests within a day",
     "refuses": "Does not work on {brand}",
     "retry": "Try again",
     "reviews": {

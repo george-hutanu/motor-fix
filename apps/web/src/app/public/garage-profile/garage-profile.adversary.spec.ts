@@ -23,6 +23,7 @@ const FIXED: PublicGarageDto = {
   paymentMethods: { card: false, cash: false, transfer: false },
   rating: null,
   refusalPhrase: null,
+  responseRate: { state: 'new' },
   reviewCount: 0,
   slug: 'service-auto-militari',
   verifiedAt: null,
