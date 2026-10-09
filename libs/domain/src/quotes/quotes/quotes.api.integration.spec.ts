@@ -477,6 +477,38 @@ describe('POST /quotes on a request the garage cannot answer', () => {
     expect(await logged()).toBe(before);
   });
 
+  it('answers a repeated key with the first answer once its slot has passed', async () => {
+    const { dinamo, request } = await open();
+    const key = randomUUID();
+    const body = sendBody(request.id, {
+      slot: new Date(Date.now() + 1_500).toISOString(),
+    });
+    const first = await post('/quotes', body, asOwner(dinamo), key);
+    expect(first.status).toBe(201);
+    await new Promise((resolve) => setTimeout(resolve, 1_600));
+
+    const again = await post('/quotes', body, asOwner(dinamo), key);
+
+    expect(again.status).toBe(201);
+    expect(again.body).toEqual(first.body);
+    expect(await prisma.quote.count()).toBe(1);
+  });
+
+  it('answers two sends at once with the same key with the one quote', async () => {
+    const { dinamo, request } = await open();
+    const key = randomUUID();
+
+    const answers = await Promise.all([
+      post('/quotes', sendBody(request.id), asOwner(dinamo), key),
+      post('/quotes', sendBody(request.id), asOwner(dinamo), key),
+    ]);
+
+    expect(answers.map((a) => a.status)).toEqual([201, 201]);
+    expect(answers[1].body).toEqual(answers[0].body);
+    expect(await prisma.quote.count()).toBe(1);
+    expect(await prisma.outboxEvent.count()).toBe(1);
+  });
+
   it('keeps another garage’s use of the same key apart', async () => {
     const { dinamo, request } = await open();
     const militari = await team('Service Militari');

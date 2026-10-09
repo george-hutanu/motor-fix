@@ -144,15 +144,20 @@ export class QuotesService {
   private async persist(actor: Actor, key: string, dto: SendQuoteDto) {
     const garageId = actor.garageId;
     if (!ANSWERING.has(actor.role) || !garageId) throw new NotFoundException();
-    assertBody(dto);
     try {
       return await this.prisma.$transaction((tx) =>
         this.store(tx, actor, garageId, key, dto),
       );
     } catch (error) {
-      // The one quote per garage and request, kept by the database.
-      if (isUniqueViolation(error)) throw alreadyAnswered();
-      throw error;
+      if (!isUniqueViolation(error)) throw error;
+      // The same key sent at once: the other send's quote is the answer.
+      const sent = await this.prisma.quote.findUnique({
+        include: { jobs: true, request: { select: { createdAt: true } } },
+        where: { garageId_idempotencyKey: { garageId, idempotencyKey: key } },
+      });
+      if (!sent) throw alreadyAnswered();
+      const { request, ...quote } = sent;
+      return { created: false, quote, requestedAt: request.createdAt };
     }
   }
 
@@ -192,6 +197,8 @@ export class QuotesService {
     });
     const requestedAt = target.request_created_at;
     if (sent) return { created: false, quote: sent, requestedAt };
+    // After the replay: a repeated key answers even once its slot has passed.
+    assertBody(dto);
     judge(target);
     const quote = await this.write(tx, actor, garageId, key, dto, target);
     await this.announce(tx, actor, garageId, dto, target, quote);
