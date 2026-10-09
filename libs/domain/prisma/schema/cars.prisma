@@ -12,26 +12,28 @@ enum Fuel {
 // The limits are CHECKs in the migration as well; the 20-car limit is counted
 // under the account row's lock, so a removed car frees a place.
 model Car {
-  id             String     @id @default(uuid()) @db.Uuid
-  ownerId        String     @map("owner_id") @db.Uuid
-  brandId        String     @map("brand_id") @db.Uuid
+  id             String         @id @default(uuid()) @db.Uuid
+  ownerId        String         @map("owner_id") @db.Uuid
+  brandId        String         @map("brand_id") @db.Uuid
   model          String
   year           Int
   fuel           Fuel
   engine         String?
-  odometerKm     Int        @map("odometer_km")
+  odometerKm     Int            @map("odometer_km")
   // Private to the owner: never in an event, a log or another's answer.
   plate          String?
-  itpUntil       DateTime?  @map("itp_until") @db.Date
-  rcaUntil       DateTime?  @map("rca_until") @db.Date
-  rovinietaUntil DateTime?  @map("rovinieta_until") @db.Date
-  nextServiceKm  Int?       @map("next_service_km")
-  idempotencyKey String     @map("idempotency_key")
-  removedAt      DateTime?  @map("removed_at") @db.Timestamptz(3)
-  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  owner          Account    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  brand          Brand      @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  itpUntil       DateTime?      @map("itp_until") @db.Date
+  rcaUntil       DateTime?      @map("rca_until") @db.Date
+  rovinietaUntil DateTime?      @map("rovinieta_until") @db.Date
+  nextServiceKm  Int?           @map("next_service_km")
+  idempotencyKey String         @map("idempotency_key")
+  removedAt      DateTime?      @map("removed_at") @db.Timestamptz(3)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  owner          Account        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  brand          Brand          @relation(fields: [brandId], references: [id], onDelete: Restrict)
   reminders      Reminder[]
+  quoteRequests  QuoteRequest[]
+  jobs           Job[]
 
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId, createdAt])
