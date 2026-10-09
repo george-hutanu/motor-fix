@@ -2843,6 +2843,67 @@
         ]
       }
     },
+    "/api/v1/garages/{id}/reports": {
+      "post": {
+        "operationId": "GarageReportsController_report",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGarageReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageReportCreatedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the text holds 20 to 1000 characters"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver, staff of this garage, or no listed garage"
+          },
+          "409": {
+            "description": "garage_already_reported, or verification_transition_refused: no file"
+          },
+          "429": {
+            "description": "too_many_reports: 5 in the last 24 hours"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Report a listed garage; its verification goes back to review",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}": {
       "patch": {
         "operationId": "GarageSettingsController_update",
@@ -7778,6 +7839,37 @@
         "required": [
           "id",
           "emailSent"
+        ]
+      },
+      "CreateGarageReportDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "What happened, stored as written (never trimmed)",
+            "maxLength": 1000,
+            "minLength": 20
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "GarageReportCreatedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt"
         ]
       },
       "PaymentMethodsDto": {
