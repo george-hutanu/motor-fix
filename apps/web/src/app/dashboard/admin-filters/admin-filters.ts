@@ -1,4 +1,11 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  output,
+} from '@angular/core';
 import { PERIODS, type Period } from '@motor-fix/contracts/figure-choices';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
@@ -41,12 +48,24 @@ export class AdminFilters {
     period: this.i18n.t(`shell.frame.admin.period.${this.period()}`),
   }));
 
+  // The last choice made here, until the address it was written to arrives:
+  // a city chosen right after a period keeps that period, and the reverse.
+  private readonly chosen = linkedSignal<FiltersChoice>(() => ({
+    city: this.city(),
+    period: this.period(),
+  }));
+
   protected chooseCity(city: string) {
-    this.choose.emit({ city, period: this.period() });
+    this.emit({ ...this.chosen(), city });
   }
 
   protected choosePeriod(period: Period) {
-    this.choose.emit({ city: this.city(), period });
+    this.emit({ ...this.chosen(), period });
+  }
+
+  private emit(choice: FiltersChoice) {
+    this.chosen.set(choice);
+    this.choose.emit(choice);
   }
 
   protected async openSheet() {
@@ -63,6 +82,6 @@ export class AdminFilters {
         title: 'shell.frame.admin.filters.title',
       },
     );
-    if (chosen !== 'cancelled') this.choose.emit(chosen);
+    if (chosen !== 'cancelled') this.emit(chosen);
   }
 }

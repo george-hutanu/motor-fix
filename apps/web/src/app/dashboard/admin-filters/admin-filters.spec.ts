@@ -126,6 +126,48 @@ describe('the admin filters', () => {
     expect(host.chosen).toEqual([{ city: 'bucuresti', period: '12m' }]);
   });
 
+  // @traces 163-FR-009
+  // The address catches up after each choice; one made before it has must
+  // not undo the other.
+  it('keeps a period just chosen when a city follows before the address has caught up', async () => {
+    const { element, host } = await open();
+
+    radios(element)[5].click();
+    select(element).value = 'cluj-napoca';
+    select(element).dispatchEvent(new Event('change'));
+
+    expect(host.chosen).toEqual([
+      { city: 'bucuresti', period: '12m' },
+      { city: 'cluj-napoca', period: '12m' },
+    ]);
+  });
+
+  it('keeps a city just chosen when a period follows before the address has caught up', async () => {
+    const { element, host } = await open();
+
+    select(element).value = 'cluj-napoca';
+    select(element).dispatchEvent(new Event('change'));
+    radios(element)[5].click();
+
+    expect(host.chosen).toEqual([
+      { city: 'cluj-napoca', period: '7d' },
+      { city: 'cluj-napoca', period: '12m' },
+    ]);
+  });
+
+  it('follows the choice on the address once it changes', async () => {
+    const { element, host } = await open();
+
+    radios(element)[5].click();
+    host.city.set('all');
+    host.period.set('30d');
+    await settle();
+    select(element).value = 'cluj-napoca';
+    select(element).dispatchEvent(new Event('change'));
+
+    expect(host.chosen.at(-1)).toEqual({ city: 'cluj-napoca', period: '30d' });
+  });
+
   it("names the phone's filter button for what is chosen", async () => {
     const { element, host } = await open();
     expect(button(element).getAttribute('aria-label')).toBe(
