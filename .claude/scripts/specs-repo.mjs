@@ -167,7 +167,7 @@ export const docsDir = (root) => join(cloneDir(root), "docs");
 const hasTree = (clone, ref) => git(clone, ["ls-tree", "-d", "--name-only", ref, "specs"]).out === "specs";
 
 /** The clone in use: the new location first, else an old clone at specs/, else null. */
-// TODO(ST-1018): drop the old clone at specs/ once every checkout and trunk have migrated.
+// TODO: drop the old clone at specs/ once every checkout and trunk have migrated.
 export function cloneAt(root) {
   for (const dir of [cloneDir(root), join(root, "specs")]) if (!isLink(dir) && isRepo(dir)) return dir;
   return null;
@@ -191,9 +191,9 @@ export function featuresDir(root) {
 export const trunkMoved = (clone) => hasTree(clone, `origin/${TRUNK}`);
 
 /** Runs `fn` holding the checkout's lock file; a second run waits for the first. */
-function locked(root, fn) {
+function locked(root, fn, waitMs = LOCK_WAIT_MS) {
   const file = join(root, LOCK);
-  const until = Date.now() + LOCK_WAIT_MS;
+  const until = Date.now() + waitMs;
   for (;;) {
     try {
       const fd = openSync(file, "wx");
@@ -202,16 +202,20 @@ function locked(root, fn) {
       break;
     } catch (e) {
       if (e.code !== "EEXIST") return { ok: false, step: "lock", error: `lock ${file}: ${e.message}` };
+      if (Date.now() > until) return { ok: false, step: "lock", error: `another specs-repo run holds ${file}` };
       try {
         // A lock whose owner has died is stale at once; one with no owner recorded, after LOCK_STALE_MS.
         const owner = Number(readFileSync(file, "utf8").trim());
         const dead = Number.isInteger(owner) && owner > 0 && owner !== process.pid && !processAlive(owner);
         if (dead || Date.now() - statSync(file).mtimeMs > LOCK_STALE_MS) {
-          unlinkSync(file);
+          // Renamed aside, not unlinked: of two waiters taking over the same stale lock, one wins the rename.
+          const aside = `${file}.${process.pid}`;
+          renameSync(file, aside);
+          rmSync(aside, { force: true });
           continue;
         }
       } catch {
-        continue;
+        // Gone meanwhile, taken by another waiter, or unreadable: wait, and try again.
       }
       if (Date.now() > until) return { ok: false, step: "lock", error: `another specs-repo run holds ${file}` };
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
@@ -277,9 +281,9 @@ function moveLeftovers(clone) {
   return { moved, kept };
 }
 
-export function ensure({ root = process.cwd(), url = process.env.SPECS_REPO_URL || SPECS_URL, soft = false } = {}) {
+export function ensure({ root = process.cwd(), url = process.env.SPECS_REPO_URL || SPECS_URL, soft = false, lockWaitMs } = {}) {
   if (soft && process.env.GITHUB_ACTIONS === "true") return { ok: true, action: "skipped", warning: "GitHub Actions: a workflow checks out specs with its deploy key" };
-  const result = locked(root, () => ensureHeld({ root, url }));
+  const result = locked(root, () => ensureHeld({ root, url }), lockWaitMs);
   return !result.ok && soft ? { ok: true, action: "skipped", warning: result.error, ...(result.step ? { step: result.step } : {}) } : result;
 }
 
@@ -315,6 +319,7 @@ function ensureHeld({ root, url }) {
   }
 
   applyIdentity(root, clone);
+  let stashWarning = null;
   const done = (extra = {}) => {
     const warning = [stashWarning, extra.warning].filter(Boolean).join("; ");
     return { ok: true, action, migrated, layout: layout(root), ...(reference ? { reference } : {}), ...extra, ...(warning ? { warning } : {}) };
@@ -327,7 +332,6 @@ function ensureHeld({ root, url }) {
     return done({ action: "kept", warning: `${CLONE} is on ${branch}, not ${TRUNK}: not fast-forwarded` });
   }
 
-  let stashWarning = null;
   if (trunkMoved(clone) && !hasTree(clone, "HEAD")) {
     const r = git(clone, [...REBASE, "rebase", "-q", "--autostash", `origin/${TRUNK}`]);
     if (r.code !== 0) {

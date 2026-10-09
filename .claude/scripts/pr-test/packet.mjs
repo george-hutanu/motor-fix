@@ -111,7 +111,7 @@ function contents(gh, repo, path, ref, raw = true) {
  * A file of the feature's folder in the specs repository: `feature` is `specs/<branch>`. A moved trunk keeps
  * it under specs/, an old one at the root, so a 404 at the first is asked again at the second.
  */
-// TODO(ST-1018): drop the old-layout fallback once every checkout and trunk have migrated.
+// TODO: drop the old-layout fallback once every checkout and trunk have migrated.
 function specsFile(gh, feature, path, raw = true) {
   const name = `${feature.replace(/^specs\//, "")}${path}`;
   const moved = contents(gh, SPECS_SLUG, `specs/${name}`, TRUNK, raw);

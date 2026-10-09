@@ -383,6 +383,26 @@ describe('ensure migrates an existing clone in place', () => {
     assert.equal(existsSync(join(root, '.motor-fix-specs.lock')), false);
   }, 30000);
 
+  it('keeps a clone on another branch as it is, with a warning, and does not throw', () => {
+    ensure({ root, url: remote });
+    git(clone(), 'switch', '-q', '-c', 'other');
+    const r = ensure({ root, url: remote });
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.equal(r.action, 'kept');
+    assert.match(r.warning, /on other, not trunk/);
+  });
+
+  it('gives up on a lock it cannot read once the wait is over, never spinning', () => {
+    ensure({ root, url: remote });
+    mkdirSync(join(root, '.motor-fix-specs.lock'));
+    const started = Date.now();
+    const r = ensure({ root, url: remote, lockWaitMs: 300 });
+    assert.equal(r.ok, false);
+    assert.equal(r.step, 'lock');
+    assert.ok(Date.now() - started < 5000);
+    rmSync(join(root, '.motor-fix-specs.lock'), { recursive: true });
+  });
+
   it('takes over at once a fresh lock whose owner has died', () => {
     ensure({ root, url: remote });
     const lock = join(root, '.motor-fix-specs.lock');

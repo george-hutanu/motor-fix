@@ -282,6 +282,19 @@ describe('--check after an edit', () => {
   });
 });
 
+describe('a downloaded file deleted by hand', () => {
+  it('is named missing by --check and downloaded again by the next export', async () => {
+    await exportDocs();
+    rmSync(join(docs, 'overview/index.files/diagram.png'));
+    const c = await exportDocs(['--check']);
+    assert.equal(c.code, 1);
+    assert.deepEqual(c.report.missing, ['overview/index.files/diagram.png']);
+    const r = await exportDocs();
+    assert.equal(r.code, 0, JSON.stringify(r.report));
+    assert.equal(readFileSync(join(docs, 'overview/index.files/diagram.png'), 'utf8'), 'PNGDATA');
+  });
+});
+
 describe('failures', () => {
   it('an API failure exits non-zero and leaves no index, and --check then says there is none', async () => {
     await exportDocs();

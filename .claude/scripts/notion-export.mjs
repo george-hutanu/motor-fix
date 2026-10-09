@@ -437,7 +437,7 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
     nodes = await crawl({ client, rootPage: rootId, prev, log });
     files = assignPaths(nodes, rootId);
   } catch (error) {
-    const message = error.message ?? String(error);
+    const message = scrubUrls(error.message ?? String(error));
     if (opts.mode === "check") {
       const index = prev ? "ok" : "absent";
       return { code: 1, error: message, report: { ok: false, missing: [], orphans: [], index, error: message } };
@@ -454,7 +454,10 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
       const dir = files[n.id].replace(/\.md$/, ".files");
       for (const { file } of assetNames(n.blocks)) expected.add(`${dir}/${file}`);
     }
-    const missing = Object.values(files).filter((p) => !existsSync(join(docs, p))).sort();
+    // Missing: every page's file, and every file an unchanged page downloaded (a file
+    // over the limit has no path); a changed page's new names only excuse orphans.
+    const kept = [...nodes.values()].flatMap((n) => (n.cached ? Object.values(n.assets ?? {}).map((a) => a.path).filter(Boolean) : []));
+    const missing = [...Object.values(files), ...kept].filter((p) => !existsSync(join(docs, p))).sort();
     const orphans = listFiles(docs).filter((p) => !excluded(p) && !expected.has(p));
     const index = prev ? "ok" : "absent";
     const ok = missing.length === 0 && orphans.length === 0 && index === "ok";
@@ -468,7 +471,8 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
     const moved = !prev || !isDeepStrictEqual(prev.files, files);
     for (const n of nodes.values()) {
       if (!n.cached || !files[n.id]) continue;
-      if (moved || !existsSync(join(docs, files[n.id]))) {
+      const gone = (p) => !existsSync(join(docs, p));
+      if (moved || gone(files[n.id]) || Object.values(n.assets ?? {}).some((a) => a.path && gone(a.path))) {
         n.cached = false;
         n.blocks = await fetchBlocks(client, n.id);
         n.body = n.blocks.length > 0;
