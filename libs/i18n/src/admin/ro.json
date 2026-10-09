@@ -7,6 +7,7 @@
     "answerRate": "Rată de răspuns",
     "bookings": "Programări",
     "garagesListed": "Service‑uri listate",
+    "inPeriod": "{sign}{n} {period}",
     "reportedReviews": "Recenzii raportate",
     "requestsToday": "Cereri de ofertă azi",
     "soon": "în curând",

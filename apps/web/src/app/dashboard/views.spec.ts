@@ -334,9 +334,12 @@ async function open(
       {
         provide: AdminOverview,
         useValue: {
+          city: signal('all'),
           failed: signal(false),
           figures: signal(undefined),
+          figuresLoading: signal(false),
           loading: signal(true),
+          period: signal('default'),
         },
       },
     ],

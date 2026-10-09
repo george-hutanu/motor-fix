@@ -1,8 +1,18 @@
 import { _IdGenerator } from '@angular/cdk/a11y';
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { CITY_ALL } from '@motor-fix/contracts/figure-choices';
 import { type AdminGrowthDto, AdminService } from '@motor-fix/data-access';
 import { calendarNames, formatNum, I18n } from '@motor-fix/i18n';
 import { LineChart } from '@motor-fix/ui-cockpit';
+
+import { AdminOverview } from '../admin-overview';
 
 const FIGURES = ['activeDrivers', 'garagesListed'] as const;
 
@@ -15,6 +25,10 @@ const FIGURES = ['activeDrivers', 'garagesListed'] as const;
 export class AdminGrowth {
   private readonly api = inject(AdminService);
   private readonly i18n = inject(I18n);
+  private readonly overview = inject(AdminOverview, { optional: true });
+  // The chosen city; the whole country where the panel has no overview.
+  private readonly city = computed(() => this.overview?.city() ?? CITY_ALL);
+  private latest = 0;
   protected readonly headingId = inject(_IdGenerator).getId('mf-growth-');
 
   protected readonly answer = signal<AdminGrowthDto | undefined>(undefined);
@@ -58,18 +72,28 @@ export class AdminGrowth {
 
   constructor() {
     void this.i18n.enter('admin');
-    void this.read();
+    // Read at once and again for every city chosen (163-FR-010).
+    effect(() => {
+      this.city();
+      untracked(() => void this.read());
+    });
   }
 
+  // Only the answer to the latest read is shown; an older one is dropped.
   protected async read() {
+    const city = this.city();
+    const read = ++this.latest;
     this.loading.set(true);
     this.failed.set(false);
     try {
-      this.answer.set(await this.api.adminOverviewControllerGrowth());
+      const answer = await this.api.adminOverviewControllerGrowth(
+        city === CITY_ALL ? {} : { city },
+      );
+      if (read === this.latest) this.answer.set(answer);
     } catch {
-      this.failed.set(true);
+      if (read === this.latest) this.failed.set(true);
     } finally {
-      this.loading.set(false);
+      if (read === this.latest) this.loading.set(false);
     }
   }
 }

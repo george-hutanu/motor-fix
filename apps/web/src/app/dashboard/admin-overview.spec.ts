@@ -187,6 +187,7 @@ describe('AdminOverview', () => {
     expect(overview.figures()).toEqual({
       ...FIGURES,
       activeDriversMonthStart: 12168,
+      period: 'default',
     });
   });
 
@@ -195,7 +196,7 @@ describe('AdminOverview', () => {
     const overview = setUp();
     await wait(0);
 
-    expect(overview.figures()).toEqual(FIGURES);
+    expect(overview.figures()).toEqual({ ...FIGURES, period: 'default' });
     expect(overview.figures()?.activeDriversMonthStart).toBeUndefined();
   });
 

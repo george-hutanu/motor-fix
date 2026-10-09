@@ -1,0 +1,19 @@
+<div class="group" role="radiogroup" [attr.aria-label]="'shell.frame.admin.city.label' | t">
+  <p class="label" aria-hidden="true">{{ 'shell.frame.admin.city.label' | t }}</p>
+  @for (option of task.data.cities; track option.key) {
+    <label class="option">
+      <input type="radio" name="mf-filters-city" [value]="option.key" [checked]="option.key === city()" (change)="city.set(option.key)" />
+      {{ option.name }}
+    </label>
+  }
+</div>
+<div class="group" role="radiogroup" [attr.aria-label]="'shell.frame.admin.period.label' | t">
+  <p class="label" aria-hidden="true">{{ 'shell.frame.admin.period.label' | t }}</p>
+  @for (option of periods(); track option.key) {
+    <label class="option">
+      <input type="radio" name="mf-filters-period" [value]="option.key" [checked]="option.key === period()" (change)="period.set(option.key)" />
+      {{ option.name }}
+    </label>
+  }
+</div>
+<button hlmBtn type="button" (click)="apply()">{{ 'shell.frame.admin.filters.apply' | t }}</button>

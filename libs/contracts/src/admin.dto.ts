@@ -1,21 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, Matches, MaxLength } from 'class-validator';
 
+import { CITY_ALL, CITY_KEY, PERIODS, type Period } from './figure-choices';
 import { LOCALITY_MAX } from './place-section';
 
-// `default` keeps each figure's own period; every other one ends today.
-export const PERIODS = [
-  'default',
-  'today',
-  '7d',
-  '30d',
-  'month',
-  '12m',
-] as const;
-export type Period = (typeof PERIODS)[number];
-// The whole country: every garage, a city known or not.
-export const CITY_ALL = 'all';
-export const CITY_KEY = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export { CITY_ALL, CITY_KEY, PERIODS, type Period } from './figure-choices';
 
 export class AdminGrowthQueryDto {
   @ApiPropertyOptional({

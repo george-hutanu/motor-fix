@@ -670,11 +670,11 @@ describe('the admin header', () => {
   });
 
   it.each([
-    [0, 'MotorFix · București · niciun service nu așteaptă verificarea'],
-    [1, 'MotorFix · București · 1 service așteaptă verificarea'],
-    [4, 'MotorFix · București · 4 service‑uri așteaptă verificarea'],
-    [20, 'MotorFix · București · 20 de service‑uri așteaptă verificarea'],
-    [101, 'MotorFix · București · 101 service‑uri așteaptă verificarea'],
+    [0, 'MotorFix · Toată țara · niciun service nu așteaptă verificarea'],
+    [1, 'MotorFix · Toată țara · 1 service așteaptă verificarea'],
+    [4, 'MotorFix · Toată țara · 4 service‑uri așteaptă verificarea'],
+    [20, 'MotorFix · Toată țara · 20 de service‑uri așteaptă verificarea'],
+    [101, 'MotorFix · Toată țara · 101 service‑uri așteaptă verificarea'],
   ])('reads %i waiting in Romanian', async (count, text) => {
     const { element } = await admin(count);
 
@@ -682,9 +682,9 @@ describe('the admin header', () => {
   });
 
   it.each([
-    [0, 'MotorFix · Bucharest · no garage is waiting for verification'],
-    [1, 'MotorFix · Bucharest · 1 garage is waiting for verification'],
-    [5, 'MotorFix · Bucharest · 5 garages are waiting for verification'],
+    [0, 'MotorFix · Whole country · no garage is waiting for verification'],
+    [1, 'MotorFix · Whole country · 1 garage is waiting for verification'],
+    [5, 'MotorFix · Whole country · 5 garages are waiting for verification'],
   ])('reads %i waiting in English', async (count, text) => {
     const { element, harness } = await admin(count);
     await TestBed.inject(I18n).use('en');
@@ -733,7 +733,7 @@ describe('the admin header', () => {
     await settle(harness);
 
     expect(element.querySelector('.admin-line .skeleton')).not.toBeNull();
-    expect(line(element)).toBe('MotorFix · București ·');
+    expect(line(element)).toBe('MotorFix · Toată țara ·');
     expect(element.querySelectorAll('.chip')).toHaveLength(0);
     expect(element.querySelectorAll('aside nav .chip-skeleton')).toHaveLength(
       1,
@@ -749,7 +749,7 @@ describe('the admin header', () => {
   it('hides the count everywhere when the read fails, never showing 0', async () => {
     const { element } = await admin(new Error('offline'));
 
-    expect(line(element)).toBe('MotorFix · București');
+    expect(line(element)).toBe('MotorFix · Toată țara');
     expect(element.querySelector('.admin-line .skeleton')).toBeNull();
     expect(element.querySelectorAll('.chip')).toHaveLength(0);
     expect(element.querySelectorAll('.chip-skeleton')).toHaveLength(0);
@@ -768,7 +768,7 @@ describe('the admin header', () => {
     await settle(harness);
 
     expect(line(element)).toBe(
-      'MotorFix · București · 3 service‑uri așteaptă verificarea',
+      'MotorFix · Toată țara · 3 service‑uri așteaptă verificarea',
     );
     expect(
       garagesEntry(element)?.querySelector('.chip')?.textContent?.trim(),
