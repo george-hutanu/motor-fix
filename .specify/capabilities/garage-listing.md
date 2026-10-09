@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -20,6 +20,7 @@ features:
   - 945-map-error-listener
   - 397-listing-ticks
   - 307-public-garage-profile
+  - 206-documents-declaration
 ---
 
 # Capability: Garage listing
@@ -200,9 +201,9 @@ _From 205-company-rar-check._
 
 _From 205-company-rar-check._
 
-### 205-FR-005 — The step MUST show a counter "{n} din 5 completate" / "{n} of 5 completed" over five items: the CUI, the RAR number, the ONRC certificate, the RAR authorisation and the declaration. This story counts the first two; the other three count 0 until the uploads-and-declaration story (ST-206) supplies them, so the counter reads 0, 1 or 2 here. The counter is one function of five yes/no values, and its change MUST be announced to assistive technology (a polite live region).
+### 206-FR-010 — The counter of 205-FR-005 MUST count five items: the CUI, the RAR number (205), the certificate (at least one confirmed page), the authorisation (at least one confirmed page) and the declaration (FR-009), reading "{n} din 5 completate" / "{n} of 5 completed", announced on change; the done state of the three new items MUST be exported as functions for the sending story, like 110-FR-017.
 
-_From 205-company-rar-check._
+_From 206-documents-declaration._
 
 ### 205-FR-006 — Under the fields the step MUST show the note "Comparăm datele firmei cu registrele publice (ANAF, ONRC, RAR). Documentele le vede doar echipa MotorFix." / "We compare the company details with the public registers (ANAF, ONRC, RAR). Only the MotorFix team sees the documents."
 
@@ -722,6 +723,58 @@ _From 397-listing-ticks._
 
 _From 397-listing-ticks._
 
+### 206-FR-001 — Step 6 MUST show, under the CUI and RAR fields and above the counter, a "Documente" / "Documents" part with two upload areas in this order: the ONRC company certificate ("Certificat constatator ONRC" / "ONRC company certificate", hint "Emis în ultimele 30 de zile, cu adresa atelierului" / "Issued in the last 30 days, showing the workshop address", or "Emis în ultimele 30 de zile, cu sediul social" / "Issued in the last 30 days, showing the registered seat" when the draft's step-1 kind of business is `mobile`, following it live) and the RAR technical authorisation ("Autorizația tehnică RAR" / "RAR technical authorisation", hint "Toate paginile, scanate sau fotografiate lizibil" / "All pages, as a readable scan or photo"). Each area reads "Trage aici fișierul" / "Drop the file here" with a button "Alege fișiere" / "Choose files" opening the device's picker limited to PDF, JPEG and PNG, several at once.
+
+_From 206-documents-declaration._
+
+### 206-FR-002 — Each page MUST be PDF, JPEG or PNG and at most 10 MB (the `legal_document` purpose, 422-FR-001); a document MUST hold at most 10 pages. The form MUST refuse a file of another type or size before asking for an upload address with "Doar PDF, JPG sau PNG, de cel mult 10 MB" / "Only PDF, JPG or PNG, up to 10 MB", and an 11th page with "Cel mult 10 fișiere pe document" / "At most 10 files per document"; the other files of the same drop carry on. The server MUST refuse the same cases on its own: type and size through the storage rules (422-FR-002, 422-FR-005), the 11th page against the draft's current pages of that kind with 422 and a stable code, checked when the upload address is asked for and again, binding, at confirm, which counts and appends in one update and deletes a refused object.
+
+_From 206-documents-declaration._
+
+### 206-FR-003 — The browser MUST ask the API for a signed upload address for a document kind of the draft (`POST /api/v1/listing-drafts/{id}/documents/{kind}/upload-url`, the draft's token in `X-Listing-Token`, the declared type and size), send the file straight to the private store through the shared upload helper (progress, retries, one address renewal, 422-FR-012), and confirm it (`POST /api/v1/listing-drafts/{id}/documents/{kind}`, the key), which appends the page at the end of that document's pages, creating the document in the draft when it is the first page, and answers the document. The API MUST never carry the file's bytes. The address is signed for the storage module's 15 minutes (422-FR-003), its purpose is `legal_document` and its owner id the draft id (422-FR-004). An unknown kind MUST answer 422 with a stable code.
+
+_From 206-documents-declaration._
+
+### 206-FR-004 — The document kinds MUST be one extendable list in the contracts library, shared by the form, the API and the database (`onrc_certificate`, `rar_authorisation`), with the kind's labels and hints in Romanian and English keyed by it, so adding a kind the lawyer names adds a list entry and its texts, not a schema change.
+
+_From 206-documents-declaration._
+
+### 206-FR-005 — Every document endpoint of this story for the draft (upload address, confirm, delete; reordering is the ordinary draft save) MUST be public (no session) and resolve the draft from the token header exactly as the draft endpoints do (114-FR-007): a missing, wrong or foreign token and a deleted draft answer 404 with the same body and touch nothing; a `submitted` draft answers 409 (114-FR-012) and a confirm against it deletes the uploaded object. Responses carry `Cache-Control: no-store` (114-FR-021). These routes add no rate limit of their own: the token, the 10-page cap per kind and the 15-minute address bound abuse, as for the photos (110).
+
+_From 206-documents-declaration._
+
+### 206-FR-006 — The draft MUST hold its documents in its data as `documents`, a map keyed by kind from FR-004's list, each entry with its ordered page keys (`pages`) and, for the certificate, the issue date `issuedOn` (a calendar date); and the declaration as `declaredAt` (the time of the tick, UTC, stamped by the server: a save that adds the declaration gets the server's now, a save that keeps it keeps the stored value whatever the browser sends, a save that drops it clears it) and `declaredByName` (the trimmed name, 2 to 80 characters). The draft envelope MUST accept exactly these keys beside `steps`, `survey` and `files` and refuse any other shape, page key or count with 400 and the draft's stable validation code. The server MUST accept in a save only page keys the draft already holds for that kind, in any order, never a new or foreign key; a held key the save leaves out is kept and added back at the end, so only the delete (FR-008) removes a page. The values are saved with the rest of the draft (114-FR-005) and restored by the browser copy, the server copy and the continue link (114-FR-002, 114-FR-011).
+
+_From 206-documents-declaration._
+
+### 206-FR-007 — The certificate's issue date MUST be asked in a date field "Data emiterii certificatului" / "Certificate issue date" shown under the certificate once it has a page; the form MUST refuse, without keeping it, a date more than 30 days before today or in the future with "Certificatul trebuie să fie emis în ultimele 30 de zile" / "The certificate must be issued in the last 30 days", shown once the field is left and on a restored value that fails; the server MUST refuse with 400 and the draft's validation code a save that sets or changes `issuedOn` to such a date, judged against the Europe/Bucharest calendar date of the save (the form judges against the device's local date), both ends inclusive, and MUST keep accepting a stored date unchanged, so an open draft keeps saving as the date ages. The 30-day rule MUST be one function in the contracts library, taking the issue date and `today` as calendar dates, used by the form and the server. The date is not required for the certificate to count; the admin's documents check judges it.
+
+_From 206-documents-declaration._
+
+### 206-FR-008 — Each page MUST be labelled "Pagina <n>" / "Page <n>" on every device, with its file name as a secondary line on the device that uploaded it, with "Mută înainte" / "Move earlier" and "Mută înapoi" / "Move later" buttons disabled at the ends (keyboard and pointer drag, focus staying on the moved page, the new position announced politely as "Pagina <n> din <m>" / "Page <n> of <m>") and "Șterge" / "Remove", which takes the page out at once, closes the gap, cancels an upload in flight, and deletes the object through `DELETE /api/v1/listing-drafts/{id}/documents/{kind}/{key}` (a key the document does not hold answers 404; the last page removed removes the document and its issue date). A storage delete that fails MUST not keep the page: the key leaves the draft and the orphan is reported in the logs. A page uploading shows its progress bar; a failed one "Nu am putut încărca fișierul. Încearcă din nou." / "Could not upload the file. Try again." with "Reîncearcă" / "Retry"; offline files wait in the page's memory and upload in order when the connection returns, as 110-FR-013; without a server copy the areas read "Adaugă un e-mail la pasul 1 ca să încarci documente" / "Add an e-mail at step 1 to upload documents" and take no files (110-FR-014).
+
+_From 206-documents-declaration._
+
+### 206-FR-009 — Under the documents the step MUST show the declaration checkbox "Declar că datele sunt reale și că reprezint legal acest service." / "I declare the details are true and that I legally represent this garage." and the field "Numele și prenumele tău" / "Your full name"; the tick marks the declaration and the server stamps `declaredAt` on the save that adds it (FR-006); unticking clears it; the declaration is done when ticked and the name has 2 to 80 trimmed characters; a tick with a shorter name shows "Scrie numele tău complet" / "Write your full name" under the field once left.
+
+_From 206-documents-declaration._
+
+### 206-FR-011 — The step MUST write nothing to the garage tables, the audit history or the outbox before the listing is sent (114-FR-018); the draft's document pages stay under the draft's keys, which the clean-up deletes with the draft (114-FR-016: the clean-up MUST delete the document keys as it deletes `files`) and never touches once the draft is `submitted`.
+
+_From 206-documents-declaration._
+
+### 206-FR-015 — The step's layout MUST obey the page's phone rules (108-FR-011, 110-FR-016): no sideways scroll at 320 px, 44 px targets for every button, light and dark theme, 4.5:1 text contrast, drag-over and refusal told by more than colour, progress, refusals, order changes and the counter in a polite live region; every text in Romanian and English, switching the language keeping every value and state (108-FR-009).
+
+_From 206-documents-declaration._
+
+### 206-FR-016 — Every new endpoint (upload address, confirm, delete, admin download address) and the attach operation MUST carry the platform's telemetry (ST-875–881: a span per call, a counter per document uploaded, declaration signed and admin open with the kind, a failure logged with the key and never the e-mail, the token or the signer's name), be listed in `infra/observability/inventory.json` with their dashboard panel and alert, or the reason they have none (the alert rules are ST-880's, as for the 38 entries already listed with `alerts: none`), and in the PR's Observability section.
+
+_From 206-documents-declaration._
+
+### 206-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis with the test store: the type, size and count limits at the upload address and at confirm (a .docx, 14 MB, the 11th page, a non-PDF under a PDF type); the 30-day rule (31 days ago, tomorrow, today, 30 days ago; an unchanged stale date accepted on save); upload addresses refused without a valid draft token and for a `submitted` draft; a save that reorders pages, one with a foreign key refused, one that leaves a held key out keeping it; the delete removing the key and the object; the attach creating the rows, the declaration, the audit entries and the events in one transaction, with no row for a missing document, and refused without the declaration; the admin download address issued to an admin with its `open` audit entry, 403 for the garage's receptionist and mechanic, 404 for a driver and another garage's owner. Unit tests in the web app cover the hints by kind of business, the refusal messages, the page reorder and removal, the issue-date error, the declaration's done state and the counter for all five items. A Playwright end-to-end test MUST, at the sweep's sizes, upload a PDF certificate and two photos of the authorisation, enter a valid date, tick the declaration with a name, read "5 din 5 completate", reload and read the same pages and tick; the admin "open both documents" part waits for ST-116 and ST-302 (Assumptions).
+
+_From 206-documents-declaration._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -741,3 +794,5 @@ _From 397-listing-ticks._
 - `111-FR-015` — superseded by `307-FR-002` (2026-10-08)
 - `112-FR-006` — superseded by `397-FR-002` (2026-10-08)
 - `040-FR-006` — superseded by `397-FR-006` (2026-10-08)
+
+- `205-FR-005` — superseded by `206-FR-010` (2026-10-09)
