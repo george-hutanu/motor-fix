@@ -204,12 +204,20 @@ export function issuePlans(tracker) {
     const v = textOf(of(r, "Design"));
     return v && tracker.design?.size ? fileUrl(DESIGN_HOME) : v;
   };
-  /** Design boards: each named board's page in the specs repository, a board it lacks by name. */
+  /**
+   * Design boards: each named board's page in the specs repository, a board it
+   * lacks by name. Notion joins "<canvas page>: <board>" names with " | "; a
+   * board's own name may hold commas, so a comma splits only a name no board has.
+   */
   const boardsText = (r) => {
     const v = of(r, "Design boards");
     if (!tracker.design?.size || v === null || v === undefined) return textOf(v);
-    const names = (Array.isArray(v) ? v : [v]).flatMap((x) => String(x).split(/\s*[,;\n]\s*/)).filter(Boolean);
-    return textOf(names.map((n) => tracker.design.get(boardKey(n)) ?? n));
+    const board = (n) => tracker.design.get(boardKey(n));
+    const names = (Array.isArray(v) ? v : [v])
+      .flatMap((x) => String(x).split(/\s*[|;\n]\s*/))
+      .filter(Boolean)
+      .flatMap((n) => (board(n) || !n.includes(",") ? [n] : n.split(/\s*,\s*/).filter(Boolean)));
+    return textOf(names.map((n) => (board(n) ? fileUrl(board(n)) : n)));
   };
   /** The body (with reference tokens), what could not be carried, and the file a too-long page is kept in. */
   const page = (r, head, carried) => {
@@ -378,12 +386,14 @@ export function issuePlans(tracker) {
   const featurePlans = [...votes.values()].map(({ id, epics: counts, stories: named }) => {
     const key = featureKey(id);
     const [epic] = [...counts].sort(([a, n], [b, m]) => m - n || keyNumber(a) - keyNumber(b)).map(([k]) => k);
-    let name = ctx.titleOf(id) ?? tracker.docs?.get(plainId(id))?.replace(/^.*\//, "").replace(/\.md$/, "");
+    let name = ctx.titleOf(id) ?? tracker.docTitles?.get(plainId(id)) ?? tracker.docs?.get(plainId(id))?.replace(/^.*\//, "").replace(/\.md$/, "");
     if (!name) {
       name = `Feature ${plainId(id).slice(0, 8)}`;
       warnings.push(`${key}: Notion gave no title for the feature page; titled ${name}`);
     }
     const link = docLink(id);
+    if (!link) warnings.push(`${key}: no document in docs/index.json; its body has no Docs link`);
+    const body = [`<!-- motorfix:${key} -->`, ...(link ? [`Docs: ${link}`] : [])].join("\n\n");
     const state = named.length ? (named.some((s) => s.state === "open") ? "open" : "closed") : (epics.find((e) => e.key === epic)?.state ?? "open");
     const fields = dated({}, [
       ["Work type", "Feature"],
@@ -394,8 +404,8 @@ export function issuePlans(tracker) {
       key,
       title: quiet(name.replace(/\s+/g, " ").trim()),
       record: { id, key },
-      body: [`<!-- motorfix:${key} -->`, ...(link ? [`Docs: ${link}`] : [])].join("\n\n"),
-      gaps: [],
+      body,
+      gaps: staleLinks(body),
       file: null,
       labels: ["type: feature", ...(epic ? [epic] : [])],
       milestone: null,
@@ -1087,14 +1097,33 @@ export function docsIndex(clone) {
 }
 
 /**
- * The mock's boards in the specs repository: lower-cased title → the
- * board page's path, from docs/reference/design/index.json; empty without it.
+ * Notion page id (no dashes) → its document's title: the front matter's
+ * `title:`, else its first `# ` heading; a document with neither, or gone, is left out.
+ */
+export function docTitles(clone, docs) {
+  const titles = new Map();
+  for (const [id, path] of docs ?? []) {
+    const file = join(clone, path);
+    if (!existsSync(file)) continue;
+    const text = readFileSync(file, "utf8");
+    const front = /^---\n([\s\S]*?)\n---/.exec(text)?.[1];
+    const raw = /^title:\s*(.+)$/m.exec(front ?? "")?.[1] ?? /^#\s+(.+)$/m.exec(text)?.[1];
+    const title = raw?.trim().replace(/^(["'])(.*)\1$/, "$2").replace(/\s+/g, " ").trim();
+    if (title) titles.set(id, title);
+  }
+  return titles;
+}
+
+/**
+ * The mock's boards in the specs repository: lower-cased title, and
+ * "<canvas page>: <title>" as Notion names it, → the board page's path, from
+ * docs/reference/design/index.json; empty without it.
  */
 export function designIndex(clone) {
   const file = join(clone, DESIGN_INDEX);
   if (!existsSync(file)) return new Map();
   const boards = JSON.parse(readFileSync(file, "utf8"));
-  return new Map((Array.isArray(boards) ? boards : []).filter((b) => b.title && b.md && existsSync(join(clone, b.md))).map((b) => [boardKey(b.title), b.md]));
+  return new Map((Array.isArray(boards) ? boards : []).filter((b) => b.title && b.md && existsSync(join(clone, b.md))).flatMap((b) => [[boardKey(b.title), b.md], ...(b.canvasPage ? [[boardKey(`${b.canvasPage}: ${b.title}`), b.md]] : [])]));
 }
 
 /** The lap this run is, counted in the cache folder until a run ends `done`; a dry run is lap 0 and counts nothing. */
@@ -1135,6 +1164,7 @@ async function main(argv = process.argv.slice(2)) {
     const tracker = await readTracker(client);
     tracker.features = await featureTitles(client, tracker);
     tracker.docs = docsIndex(clone);
+    tracker.docTitles = docTitles(clone, tracker.docs);
     tracker.design = designIndex(clone);
     const store = folderStore(clone);
     const cacheDir = join(homedir(), ".cache", "motorfix-tracker");

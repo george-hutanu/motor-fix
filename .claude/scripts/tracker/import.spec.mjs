@@ -377,11 +377,11 @@ describe("running it again", () => {
     await importInto(gh, { tracker: await tracker() });
     const t = await tracker();
     t.stories.find((s) => s.key === "ST-1").title = "Driver signs in";
-    t.docs = new Map([["f0000000000000000000000000000001", "docs/features/sign-in.md"]]);
+    t.docs = new Map([["f0000000000000000000000000000001", "docs/reference/features/sign-in.md"]]);
     const from = gh.writes().length;
     await importInto(gh, { tracker: t });
     const writes = nonGets(gh, from);
-    const link = "https://github.com/george-hutanu/motor-fix-specs/blob/trunk/docs/features/sign-in.md";
+    const link = "https://github.com/george-hutanu/motor-fix-specs/blob/trunk/docs/reference/features/sign-in.md";
     assert.equal(writes.length, 2);
     assert.deepEqual(writes.map((w) => w.op ?? w.method).sort(), ["PATCH", "SetFields"]);
     assert.equal(itemValues(gh, "ST-1").Feature, `Sign-in ${link}`);
@@ -669,11 +669,15 @@ describe("the feature document index", () => {
     mkdirSync(join(clone, "docs", "reference", "design"), { recursive: true });
     writeFileSync(join(clone, "docs", "reference", "design", "results.md"), "# Results");
     const boards = [
-      { id: "results", title: "Results + map", md: "docs/reference/design/results.md", html: "docs/reference/design/Results.dc.html" },
+      { id: "results", title: "Results + map", canvasPage: "Desktop (Cockpit)", md: "docs/reference/design/results.md", html: "docs/reference/design/Results.dc.html" },
       { id: "gone", title: "Gone", md: "docs/reference/design/gone.md", html: "docs/reference/design/Gone.dc.html" },
     ];
     writeFileSync(join(clone, "docs", "reference", "design", "index.json"), JSON.stringify(boards));
-    assert.deepEqual([...designIndex(clone)], [["results + map", "docs/reference/design/results.md"]]);
+    // Notion names a board as "<canvas page>: <board>"; either form finds it.
+    assert.deepEqual([...designIndex(clone)], [
+      ["results + map", "docs/reference/design/results.md"],
+      ["desktop (cockpit): results + map", "docs/reference/design/results.md"],
+    ]);
   });
 
   it("names a body line that still links Notion or a retired docs/ path", async () => {
@@ -880,6 +884,19 @@ describe("every property in a field of its own", () => {
     const f = plans.find((p) => p.key === st1.key).fields;
     assert.match(f.Design, /docs\/reference\/design\/index\.md$/);
     assert.match(f["Design boards"], /docs\/reference\/design\/main\.md.*Lost board/);
+    // Notion's own shape: "<canvas page>: <board>" joined by " | ", a board's name holding commas.
+    props["Design boards"] = { type: "rollup", rollup: { type: "array", array: [rich("Desktop (Cockpit): Home | Dashboards (Cockpit): Day sheet · print, PDF, WhatsApp | Mobile (Cockpit): all nine mobile boards")] } };
+    t.design = new Map([
+      ["home", "docs/reference/design/main.md"],
+      ["desktop (cockpit): home", "docs/reference/design/main.md"],
+      ["day sheet · print, pdf, whatsapp", "docs/reference/design/dash-sheet.md"],
+      ["dashboards (cockpit): day sheet · print, pdf, whatsapp", "docs/reference/design/dash-sheet.md"],
+    ]);
+    const boards = issuePlans(t).plans.find((p) => p.key === st1.key).fields["Design boards"];
+    assert.equal(
+      boards,
+      ["main.md", "dash-sheet.md"].map((m) => `https://github.com/george-hutanu/motor-fix-specs/blob/trunk/docs/reference/design/${m}`).join(", ") + ", Mobile (Cockpit): all nine mobile boards",
+    );
     const g = plans.find((p) => p.key === other.key).fields;
     assert.equal(g.Design ?? null, null);
     assert.equal(g["Design boards"] ?? null, null);
@@ -1050,11 +1067,12 @@ const parentsOf = (gh, key) => [...gh.state.subIssues].filter(([, ids]) => ids.i
 describe("features between an epic and its stories", () => {
   it("plans one issue per Notion feature, titled by its name, its body a marker and its document's link", async () => {
     const t = await tracker();
-    t.docs = new Map([[plain(FEATURE), "docs/features/sign-in.md"]]);
+    t.docs = new Map([[plain(FEATURE), "docs/reference/features/sign-in.md"]]);
     const { plans } = issuePlans(t);
     const feature = plans.find((p) => p.key === FEATURE_KEY);
     assert.equal(feature.title, "Sign-in");
-    assert.equal(feature.body, `<!-- motorfix:${FEATURE_KEY} -->\n\nDocs: https://github.com/george-hutanu/motor-fix-specs/blob/trunk/docs/features/sign-in.md`);
+    assert.equal(feature.body, `<!-- motorfix:${FEATURE_KEY} -->\n\nDocs: https://github.com/george-hutanu/motor-fix-specs/blob/trunk/docs/reference/features/sign-in.md`);
+    assert.deepEqual(feature.gaps, []);
     assert.deepEqual(feature.labels, ["type: feature", "EP-1"]);
     assert.deepEqual(feature.fields, { "Work type": "Feature", Epic: "EP-1", Release: "1 - Launch" });
     assert.equal(feature.parent, "EP-1");
@@ -1076,6 +1094,54 @@ describe("features between an epic and its stories", () => {
     const { plans, warnings } = issuePlans(t);
     assert.equal(plans.find((p) => p.key === keyOf(F2)).title, `Feature ${plain(F2).slice(0, 8)}`);
     assert.ok(warnings.some((w) => w.includes(plain(F2)) && /no title/.test(w)));
+  });
+
+  it("titles a feature Notion gives no title by its document's title in the docs index, and warns of one with no document", async () => {
+    const fake = fakeNotion({ pages: { [FEATURE]: featurePage(FEATURE, "Sign-in") } });
+    const client = notionClient({ token: "ntn_x", fetchImpl: fake.fetchImpl, sleep: async () => {} });
+    const t = await readTracker(client);
+    nameFeatures(t, "EP-2", [F2, F3]);
+    t.features = await featureTitles(client, t);
+    t.docs = new Map([
+      [plain(FEATURE), "docs/reference/features/sign-in.md"],
+      [plain(F2), "docs/reference/features/garage/mf-12-quotes.md"],
+    ]);
+    t.docTitles = new Map([[plain(F2), "MF-12 Quotes"]]);
+    const { plans, warnings } = issuePlans(t);
+    const f2 = plans.find((p) => p.key === keyOf(F2));
+    assert.equal(f2.title, "MF-12 Quotes");
+    assert.match(f2.body, /Docs: https:\/\/github\.com\/george-hutanu\/motor-fix-specs\/blob\/trunk\/docs\/reference\/features\/garage\/mf-12-quotes\.md$/);
+    assert.ok(!warnings.some((w) => w.includes(plain(F2))));
+    assert.ok(warnings.some((w) => w.startsWith(`${keyOf(F3)}:`) && /no document in docs\/index\.json/.test(w)));
+    assert.equal(plans.find((p) => p.key === FEATURE_KEY).title, "Sign-in", "Notion's title comes first");
+  });
+
+  it("leaves a feature whose document is at a retired docs/ path unwritten, named as incomplete", async () => {
+    const t = await tracker();
+    t.docs = new Map([[plain(FEATURE), "docs/features/sign-in.md"]]);
+    const feature = issuePlans(t).plans.find((p) => p.key === FEATURE_KEY);
+    assert.deepEqual(feature.gaps, ["still links an old path (docs/features)"]);
+  });
+
+  it("reads each document's title from its front matter, else its first heading", async () => {
+    const { docTitles } = await import("./import.mjs");
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const clone = mkdtempSync(join(tmpdir(), "clone-"));
+    dirs.push(clone);
+    mkdirSync(join(clone, "docs", "reference", "features"), { recursive: true });
+    writeFileSync(join(clone, "docs", "reference", "features", "a.md"), '---\nid: a\ntitle: "MF-1 Sign-in"\nkind: reference\n---\n\n# Other\n');
+    writeFileSync(join(clone, "docs", "reference", "features", "b.md"), "# MF-2  Quotes \n\ntext");
+    writeFileSync(join(clone, "docs", "reference", "features", "c.md"), "no heading");
+    const docs = new Map([
+      ["a1", "docs/reference/features/a.md"],
+      ["b1", "docs/reference/features/b.md"],
+      ["c1", "docs/reference/features/c.md"],
+      ["d1", "docs/reference/features/gone.md"],
+    ]);
+    assert.deepEqual([...docTitles(clone, docs)], [
+      ["a1", "MF-1 Sign-in"],
+      ["b1", "MF-2 Quotes"],
+    ]);
   });
 
   it("puts a feature under the epic holding most of its stories, an epic's Features counting, ties to the lowest EP", async () => {
