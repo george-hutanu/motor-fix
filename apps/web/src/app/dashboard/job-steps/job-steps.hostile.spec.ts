@@ -173,6 +173,46 @@ describe('a job’s steps under hostile use', () => {
     expect(new Set(keys).size).toBe(2);
   });
 
+  it('uses a different key for an add sent before the last one is answered', async () => {
+    const { element, settle } = await render();
+    api['jobStepsControllerAdd'].mockReturnValueOnce(new Promise(() => {}));
+
+    for (const word of ['Primul pas', 'Al doilea']) {
+      button(element, 'Adaugă un pas')?.click();
+      await settle();
+      type(input(element) as HTMLInputElement, word);
+      button(element, 'Adaugă')?.click();
+      await settle();
+    }
+
+    const keys = api['jobStepsControllerAdd'].mock.calls.map(
+      (c) => c[0]['Idempotency-Key'],
+    );
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(2);
+  });
+
+  it('sends a failed add again with its key, and a different text with a new one', async () => {
+    const { element, settle } = await render();
+    api['jobStepsControllerAdd'].mockRejectedValueOnce(
+      new HttpErrorResponse({ status: 0 }),
+    );
+
+    for (const word of ['Primul pas', 'Primul pas', 'Al doilea']) {
+      button(element, 'Adaugă un pas')?.click();
+      await settle();
+      type(input(element) as HTMLInputElement, word);
+      button(element, 'Adaugă')?.click();
+      await settle();
+    }
+
+    const [lost, again, next] = api['jobStepsControllerAdd'].mock.calls.map(
+      (c) => c[0]['Idempotency-Key'],
+    );
+    expect(again).toBe(lost);
+    expect(next).not.toBe(lost);
+  });
+
   it('shows a job with no mechanic and no car plate without breaking', async () => {
     const { element } = await render({
       job: { mechanicId: null, mechanicName: null },

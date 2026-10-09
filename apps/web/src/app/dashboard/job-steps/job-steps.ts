@@ -96,7 +96,8 @@ export class JobSteps {
   protected readonly editing = signal<Editing | null>(null);
   protected readonly adding = signal<string | null>(null);
   protected readonly addProblem = signal(false);
-  private addKey = '';
+  // The last add that failed: the same text goes again with its key.
+  private lostAdd: { key: string; text: string } | null = null;
   protected readonly problem = signal<string | null>(null);
 
   protected readonly writable = computed(() => {
@@ -237,10 +238,7 @@ export class JobSteps {
     );
   }
 
-  // A new key once the last add was answered; after a failed one the same
-  // key goes again, so an add whose answer was lost is never made twice.
   protected startAdd() {
-    this.addKey ||= crypto.randomUUID();
     this.addProblem.set(false);
     this.adding.set('');
   }
@@ -261,7 +259,11 @@ export class JobSteps {
       this.addProblem.set(true);
       return;
     }
-    const key = this.addKey;
+    // Each add has its own key; a failed one sent again keeps its key, so an
+    // add whose answer was lost is never made twice.
+    const key =
+      this.lostAdd?.text === text ? this.lostAdd.key : crypto.randomUUID();
+    this.lostAdd = null;
     const provisional: JobStepDto = {
       customerLabel: text,
       doneAt: null,
@@ -274,16 +276,20 @@ export class JobSteps {
     await this.write(
       (steps) => [...steps, provisional],
       async () => {
-        const step = await this.api.jobStepsControllerAdd({
-          body: { text },
-          'Idempotency-Key': key,
-          id: this.id,
-        });
+        const step = await this.api
+          .jobStepsControllerAdd({
+            body: { text },
+            'Idempotency-Key': key,
+            id: this.id,
+          })
+          .catch((error: unknown) => {
+            this.lostAdd = { key, text };
+            throw error;
+          });
         this.steps.update((steps) => [
           ...steps.filter((s) => s.id !== step.id && s.id !== provisional.id),
           step,
         ]);
-        this.addKey = '';
       },
     );
   }
