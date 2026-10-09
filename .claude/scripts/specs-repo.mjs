@@ -42,6 +42,7 @@ import {
   mkdirSync,
   openSync,
   readdirSync,
+  readFileSync,
   readlinkSync,
   realpathSync,
   renameSync,
@@ -51,9 +52,11 @@ import {
   symlinkSync,
   unlinkSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
+import { processAlive } from "./lib/worktrees.mjs";
 
 export const SPECS_URL = "https://github.com/george-hutanu/motor-fix-specs.git";
 export const SPECS_SLUG = "george-hutanu/motor-fix-specs";
@@ -133,6 +136,27 @@ const isLink = (path) => {
 };
 const linkOf = (path) => (isLink(path) ? readlinkSync(path) : null);
 const OURS = [CLONE, `${CLONE}/specs`];
+const real = (path) => {
+  try {
+    return realpathSync(path);
+  } catch {
+    return null;
+  }
+};
+/** Whether a specs link points into the clone: one of ours as written, or any spelling (absolute, `./`) that resolves to the clone or its specs/. */
+const intoClone = (root, target) => {
+  if (OURS.includes(target)) return true;
+  const at = real(resolve(root, target));
+  return at !== null && OURS.some((t) => real(join(root, t)) === at);
+};
+// A rebase onto the moved trunk replays a commit that added a file to a
+// feature folder; directory-rename detection carries the new file under specs/.
+const REBASE = ["-c", "merge.directoryRenames=true"];
+/** A warning when git could not reapply the autostash after a rebase: the changes sit in the stash, not the tree. */
+const autostashLost = (r) =>
+  /autostash/i.test(`${r.err}\n${r.out}`) && /conflict|stash@|safe in the stash/i.test(`${r.err}\n${r.out}`)
+    ? `the autostash did not reapply cleanly: the uncommitted changes are in the clone's stash (git -C ${CLONE} stash list), not the tree`
+    : null;
 
 /** Where a checkout's clone lives: `<checkout>/.motor-fix-specs`. */
 export const cloneDir = (root) => join(root, CLONE);
@@ -143,6 +167,7 @@ export const docsDir = (root) => join(cloneDir(root), "docs");
 const hasTree = (clone, ref) => git(clone, ["ls-tree", "-d", "--name-only", ref, "specs"]).out === "specs";
 
 /** The clone in use: the new location first, else an old clone at specs/, else null. */
+// TODO(ST-1018): drop the old clone at specs/ once every checkout and trunk have migrated.
 export function cloneAt(root) {
   for (const dir of [cloneDir(root), join(root, "specs")]) if (!isLink(dir) && isRepo(dir)) return dir;
   return null;
@@ -171,12 +196,17 @@ function locked(root, fn) {
   const until = Date.now() + LOCK_WAIT_MS;
   for (;;) {
     try {
-      closeSync(openSync(file, "wx"));
+      const fd = openSync(file, "wx");
+      writeSync(fd, String(process.pid));
+      closeSync(fd);
       break;
     } catch (e) {
       if (e.code !== "EEXIST") return { ok: false, step: "lock", error: `lock ${file}: ${e.message}` };
       try {
-        if (Date.now() - statSync(file).mtimeMs > LOCK_STALE_MS) {
+        // A lock whose owner has died is stale at once; one with no owner recorded, after LOCK_STALE_MS.
+        const owner = Number(readFileSync(file, "utf8").trim());
+        const dead = Number.isInteger(owner) && owner > 0 && owner !== process.pid && !processAlive(owner);
+        if (dead || Date.now() - statSync(file).mtimeMs > LOCK_STALE_MS) {
           unlinkSync(file);
           continue;
         }
@@ -265,7 +295,7 @@ function ensureHeld({ root, url }) {
     if (existsSync(link) || isLink(link)) {
       const target = linkOf(link);
       if (target === null) return refuse("specs is a real folder beside the clone");
-      if (!OURS.includes(target)) return refuse(`specs links to ${target}, not into the clone`);
+      if (!intoClone(root, target)) return refuse(`specs links to ${target}, not into the clone`);
     }
   } else {
     if (!isEmpty(clone)) return refuse(`${CLONE} holds files but no repository`);
@@ -285,7 +315,10 @@ function ensureHeld({ root, url }) {
   }
 
   applyIdentity(root, clone);
-  const done = (extra = {}) => ({ ok: true, action, migrated, layout: layout(root), ...(reference ? { reference } : {}), ...extra });
+  const done = (extra = {}) => {
+    const warning = [stashWarning, extra.warning].filter(Boolean).join("; ");
+    return { ok: true, action, migrated, layout: layout(root), ...(reference ? { reference } : {}), ...extra, ...(warning ? { warning } : {}) };
+  };
   const fetch = git(clone, ["fetch", "-q", "origin"]);
   if (fetch.code !== 0) return { ok: false, step: "fetch", error: `fetch: ${fetch.err}`, migrated };
   const branch = git(clone, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
@@ -294,13 +327,15 @@ function ensureHeld({ root, url }) {
     return done({ action: "kept", warning: `${CLONE} is on ${branch}, not ${TRUNK}: not fast-forwarded` });
   }
 
+  let stashWarning = null;
   if (trunkMoved(clone) && !hasTree(clone, "HEAD")) {
-    const r = git(clone, ["rebase", "-q", "--autostash", `origin/${TRUNK}`]);
+    const r = git(clone, [...REBASE, "rebase", "-q", "--autostash", `origin/${TRUNK}`]);
     if (r.code !== 0) {
       git(clone, ["rebase", "--abort"]);
       if (!isLink(link)) pointLink(root, CLONE);
       return { ok: false, step: "rebase", error: `rebase --autostash onto the moved trunk: ${r.err || r.out}`, migrated };
     }
+    stashWarning = autostashLost(r);
     migrated.push("rebase");
   } else if (action === "updated") {
     const ff = git(clone, ["merge", "--ff-only", "-q", `origin/${TRUNK}`]);
@@ -361,10 +396,18 @@ function ahead(clone) {
   return r.code === 0 ? Number(r.out) : null;
 }
 
-/** A path given to commit, relative to the clone root: docs/… as given, anything else under the features folder. */
+/**
+ * A path given to commit, relative to the clone root: docs/… as given, anything
+ * else under the features folder; null when it normalizes outside docs/ or the
+ * features folder (`docs/../.git/config`, `../x`, an absolute path).
+ */
 function inClone(root, clone, path) {
-  if (path === "docs" || path.startsWith("docs/")) return path;
-  return relative(clone, join(featuresDir(root), path)) || ".";
+  if (isAbsolute(path)) return null;
+  const norm = posix.normalize(path.replaceAll("\\", "/"));
+  if (path === "docs" || path.startsWith("docs/")) return norm === "docs" || norm.startsWith("docs/") ? norm : null;
+  if (norm === ".." || norm.startsWith("../")) return null;
+  const rel = relative(clone, join(featuresDir(root), norm)) || ".";
+  return rel === ".." || rel.startsWith("../") || rel === ".git" || rel.startsWith(".git/") ? null : rel;
 }
 
 export function commit({ root = process.cwd(), message, paths = [] } = {}) {
@@ -378,7 +421,10 @@ export function commit({ root = process.cwd(), message, paths = [] } = {}) {
   }
   const branch = git(clone, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
   if (branch !== TRUNK) return { ok: false, error: `${CLONE} is on ${branch}: switch it to ${TRUNK} (git -C ${CLONE} switch ${TRUNK})` };
-  const add = git(clone, ["add", "-A", "--", ...(paths.length ? paths.map((p) => inClone(root, clone, p)) : ["."])]);
+  const targets = paths.map((p) => [p, inClone(root, clone, p)]);
+  const outside = targets.filter(([, t]) => t === null).map(([p]) => p);
+  if (outside.length) return { ok: false, error: `outside the feature folders and docs/: ${outside.join(", ")}` };
+  const add = git(clone, ["add", "-A", "--", ...(paths.length ? targets.map(([, t]) => t) : ["."])]);
   if (add.code !== 0) return { ok: false, error: `add: ${add.err}` };
   let committed = false;
   if (git(clone, ["diff", "--cached", "--quiet"]).code !== 0) {
@@ -388,15 +434,17 @@ export function commit({ root = process.cwd(), message, paths = [] } = {}) {
   }
   if (ahead(clone) === 0) return { ok: true, committed, pushed: false };
   let last = "";
+  let warning = null;
   for (let i = 0; i < PUSH_TRIES; i++) {
     const p = git(clone, ["push", "-q", "origin", `HEAD:${TRUNK}`]);
-    if (p.code === 0) return { ok: true, committed, pushed: true, tries: i + 1 };
+    if (p.code === 0) return { ok: true, committed, pushed: true, tries: i + 1, ...(warning ? { warning } : {}) };
     last = p.err;
-    const pull = git(clone, ["pull", "-q", "--rebase", "--autostash", "origin", TRUNK]);
+    const pull = git(clone, [...REBASE, "pull", "-q", "--rebase", "--autostash", "origin", TRUNK]);
     if (pull.code !== 0) {
       git(clone, ["rebase", "--abort"]);
       return { ok: false, committed, error: `rebase on ${TRUNK}: ${pull.err || pull.out}` };
     }
+    warning = autostashLost(pull) ?? warning;
   }
   return { ok: false, committed, error: `push refused ${PUSH_TRIES} times: ${last}` };
 }
@@ -427,6 +475,9 @@ function migrateHeld({ root, dryRun }) {
   if (git(clone, ["status", "--porcelain"]).out) return { ok: false, error: `${CLONE} is dirty: commit or move the changes first` };
   if (ahead(clone) !== 0) return { ok: false, error: `${CLONE} has unpushed commits: run specs-repo.mjs commit first` };
   if (git(clone, ["rev-list", "--count", `HEAD..origin/${TRUNK}`]).out !== "0") return { ok: false, error: `${CLONE} is behind ${TRUNK}: run ensure first` };
+  // The link is repointed after the push; anything but a link (or nothing) there would leave trunk moved and the checkout broken.
+  const link = join(root, "specs");
+  if (!isLink(link) && existsSync(link)) return { ok: false, error: `specs is a real folder, not a link to ${CLONE}: run ensure first` };
   const entries = git(clone, ["ls-tree", "--name-only", "HEAD"]).out.split("\n").filter(Boolean);
   const unknown = entries.filter((n) => !KEEP.includes(n) && !FEATURE.test(n));
   if (unknown.length) return { ok: false, error: `unexpected at the trunk root, move or remove it first: ${unknown.join(", ")}` };
@@ -449,8 +500,14 @@ function migrateHeld({ root, dryRun }) {
     }
   }
   mkdirSync(join(clone, "docs"), { recursive: true });
-  writeFileSync(join(clone, "README.md"), README);
-  writeFileSync(join(clone, "docs", "README.md"), DOCS_README);
+  // An existing README is the owner's: it is kept, with the layout section added only when it lacks one.
+  const readme = join(clone, "README.md");
+  if (!existsSync(readme)) writeFileSync(readme, README);
+  else {
+    const text = readFileSync(readme, "utf8");
+    if (!text.includes("specs/<NNN-slug>/")) writeFileSync(readme, `${text.trimEnd()}\n\n## Layout\n\n${README.split("\n").slice(4).join("\n")}`);
+  }
+  if (!existsSync(join(clone, "docs", "README.md"))) writeFileSync(join(clone, "docs", "README.md"), DOCS_README);
   git(clone, ["add", "README.md", "docs/README.md"]);
   const c = git(clone, ["commit", "-q", "-m", "chore(specs): move the feature folders under specs/ and add docs/"]);
   if (c.code !== 0) {

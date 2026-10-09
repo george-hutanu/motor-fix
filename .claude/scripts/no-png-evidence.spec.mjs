@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The PR tester takes a screenshot per viewport, colour scheme and language on
@@ -11,6 +11,16 @@ import { join } from 'node:path';
 
 const root = join(import.meta.dirname, '..', '..');
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+// specs is a link into the clone at .motor-fix-specs (a folder in CI): git
+// will not look past a link, so the public repo is asked about specs itself,
+// which covers everything beneath it, and the clone, when there is one, about
+// the path inside it.
+const clone = join(root, '.motor-fix-specs');
+const ignored = (path) => {
+  assert.equal(git('check-ignore', '--no-index', 'specs').trim(), 'specs', 'specs is not ignored');
+  if (existsSync(join(clone, '.git'))) execFileSync('git', ['check-ignore', '--no-index', '-q', path], { cwd: clone });
+  return path;
+};
 
 describe('QA evidence keeps screenshots out of the repo', () => {
   it('ignores an image written into any pr-review folder', () => {
@@ -19,7 +29,7 @@ describe('QA evidence keeps screenshots out of the repo', () => {
       'specs/434-agent-pr-review/pr-review/pr-21-lap1/shots/home-mobile-light-en.png',
       'specs/052-chart-style/pr-review/lap3/chart.jpg',
     ])
-      assert.equal(git('check-ignore', '--no-index', path).trim(), path, `${path} is not ignored`);
+      assert.equal(ignored(path), path, `${path} is not ignored`);
   });
 
   // the report is kept in the private motor-fix-specs repo, whose own

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -383,6 +383,16 @@ describe('ensure migrates an existing clone in place', () => {
     assert.equal(existsSync(join(root, '.motor-fix-specs.lock')), false);
   }, 30000);
 
+  it('takes over at once a fresh lock whose owner has died', () => {
+    ensure({ root, url: remote });
+    const lock = join(root, '.motor-fix-specs.lock');
+    const dead = spawnSync(process.execPath, ['-e', 'process.pid']).pid;
+    writeFileSync(lock, String(dead));
+    const r = ensure({ root, url: remote });
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.equal(existsSync(lock), false);
+  });
+
   it('status writes nothing and reports a clone left behind a moved trunk as pending', () => {
     ensure({ root, url: remote });
     moveTrunk();
@@ -459,6 +469,30 @@ describe('migrate-trunk', () => {
       assert.match(r.error, /notes\.txt/);
     }
     assert.equal(head(remote), before);
+  });
+
+  it('refuses a real specs folder where the link goes, before it pushes anything', () => {
+    rmSync(join(root, 'specs'));
+    mkdirSync(join(root, 'specs'));
+    const before = head(remote);
+    const r = migrateTrunk({ root, yes: true });
+    assert.equal(r.ok, false);
+    assert.match(r.error, /real folder/);
+    assert.equal(head(remote), before);
+  });
+
+  it('keeps an existing README, adding the layout section only once', () => {
+    const seed = join(tmp, 'seed');
+    git(seed, 'pull', '-q', 'origin', TRUNK);
+    writeFileSync(join(seed, 'README.md'), '# Mine\n\nOwner notes.\n');
+    git(seed, 'add', '-A');
+    git(seed, ...ID, 'commit', '-q', '-m', 'readme');
+    git(seed, 'push', '-q', 'origin', `HEAD:${TRUNK}`);
+    ensure({ root, url: remote });
+    assert.equal(migrateTrunk({ root, yes: true }).ok, true);
+    const text = readFileSync(join(clone(), 'README.md'), 'utf8');
+    assert.match(text, /^# Mine\n\nOwner notes\.\n\n## Layout\n/);
+    assert.equal(text.match(/specs\/<NNN-slug>\//g).length, 1);
   });
 
   it('refuses a dirty clone, an unpushed clone and a trunk that has already moved, before any change', () => {
