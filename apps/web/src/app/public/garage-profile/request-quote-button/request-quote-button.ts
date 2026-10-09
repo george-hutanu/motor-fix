@@ -57,8 +57,10 @@ export class RequestQuoteButton {
   constructor() {
     // Nothing else on a public profile asks who is signed in: without this a
     // garage account that opens the profile by its address would see the
-    // button. The server renders it for a visitor.
-    if (isPlatformBrowser(inject(PLATFORM_ID))) void this.session.load();
+    // button. The server renders it for a visitor. The address names the
+    // page's language, so the account's does not replace it.
+    if (isPlatformBrowser(inject(PLATFORM_ID)))
+      void this.session.load({ keepLanguage: true });
   }
 
   protected async open() {

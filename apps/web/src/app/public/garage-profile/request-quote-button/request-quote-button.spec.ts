@@ -160,7 +160,8 @@ describe('RequestQuoteButton', () => {
   it('asks who is signed in and hides once the account is a garage’s', async () => {
     const host = await render({ loads: 'garage' });
 
-    expect(load).toHaveBeenCalledTimes(1);
+    // The profile's address names its language; the account's does not win.
+    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
     expect(button(host)).toBeNull();
   });
 

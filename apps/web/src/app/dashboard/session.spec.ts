@@ -74,6 +74,20 @@ describe('Session', () => {
     expect(localStorage.getItem('mf.lang')).toBe('en');
   });
 
+  // A public page whose address names its language (/en/garages/…) keeps it.
+  it("keeps the page's language when asked, on a load that only reads the role", async () => {
+    localStorage.setItem('mf.lang', 'ro');
+    const { i18n, session } = setup({ me: account('en') });
+
+    const me = await session.load({ keepLanguage: true });
+    await flush();
+
+    expect(me?.role).toBe('driver');
+    expect(session.current()?.role).toBe('driver');
+    expect(i18n.language()).toBe('ro');
+    expect(localStorage.getItem('mf.lang')).toBe('ro');
+  });
+
   it('lets a tap made while signed in stand on the next load', async () => {
     const { i18n, session } = setup({ me: account('en') });
     await session.load();
