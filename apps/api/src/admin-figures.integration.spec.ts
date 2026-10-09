@@ -15,7 +15,9 @@ let app: INestApplication;
 let db: Client;
 let admin: string;
 
-const account = async (role: 'admin' | 'driver') =>
+const account = async (
+  role: 'admin' | 'driver' | 'garage' | 'receptionist' | 'mechanic',
+) =>
   (
     await app.get(AccountsService).createAccount({
       consent: CURRENT_CONSENT,
@@ -152,14 +154,23 @@ describe('GET /admin/overview with a city and a period', () => {
     expect(res.body.errors).toEqual([{ code: 'unknown', field: 'city' }]);
   });
 
-  it('hides the route from a non-admin, whatever the query', async () => {
-    const res = await get(
-      '/api/v1/admin/overview?city=Bad%20Key&period=week',
-      bearer(await account('driver'), 'driver'),
-    );
+  it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
+    'hides both routes from a %s, whatever the query',
+    async (role) => {
+      const authorization = bearer(await account(role), role);
+      const statuses = [];
+      for (const path of [
+        '/api/v1/admin/overview?city=Bad%20Key&period=week',
+        '/api/v1/admin/overview?city=bucuresti&period=7d',
+        '/api/v1/admin/growth?city=Bad%20Key',
+        '/api/v1/admin/growth?city=bucuresti',
+      ]) {
+        statuses.push((await get(path, authorization)).status);
+      }
 
-    expect(res.status).toBe(404);
-  });
+      expect(statuses).toEqual([404, 404, 404, 404]);
+    },
+  );
 });
 
 describe('GET /admin/growth with a city', () => {
