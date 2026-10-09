@@ -6,12 +6,22 @@ import {
   countApproval,
   countEmail,
   countGarageSignUp,
+  countJobStep,
   countNotification,
   countQuote,
   countSearch,
   countSignIn,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
+
+const STEP_ACTIONS = [
+  'added',
+  'renamed',
+  'reordered',
+  'removed',
+  'ticked',
+  'unticked',
+] as const;
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -25,6 +35,7 @@ const total = (name: string, labels?: Record<string, string>) =>
   counterTotal(memory.metricReader, name, labels);
 
 // @traces 879-FR-009 879-FR-010 879-FR-011
+// @traces 424-FR-017
 describe('the product counters', () => {
   it.each([
     [
@@ -80,6 +91,23 @@ describe('the product counters', () => {
       'motorfix_notifications_sent_total',
       { channel: 'in-app' },
     ],
+    ...(
+      [
+        'added',
+        'renamed',
+        'reordered',
+        'removed',
+        'ticked',
+        'unticked',
+      ] as const
+    ).map(
+      (action) =>
+        [
+          () => countJobStep(action),
+          'motorfix_job_steps_total',
+          { action },
+        ] as const,
+    ),
   ] as const)('counts one %#: %s', async (count, name, labels) => {
     const before = await total(name, labels);
 
@@ -99,6 +127,9 @@ describe('the product counters', () => {
     for (const template of Object.keys(TEMPLATES)) countEmail(template);
     for (const channel of ['push', 'in-app'] as const)
       countNotification(channel);
+    STEP_ACTIONS.forEach((action) => {
+      countJobStep(action);
+    });
 
     const { resourceMetrics } = await memory.metricReader.collect();
     const series = resourceMetrics.scopeMetrics
