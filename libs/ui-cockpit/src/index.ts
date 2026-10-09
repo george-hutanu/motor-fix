@@ -14,6 +14,11 @@ export { Lamp, type LampState } from './lib/lamp';
 export { Layout, type LayoutName } from './lib/layout';
 export { Odometer } from './lib/odometer';
 export { Panel } from './lib/panel';
+export {
+  PhotoViewer,
+  type ViewerLabels,
+  type ViewerPhoto,
+} from './lib/photo-viewer';
 export { provideCockpitTheme } from './lib/provide-cockpit-theme';
 export { RatingDial } from './lib/rating-dial';
 export { REDUCED_MOTION } from './lib/reduced-motion';
