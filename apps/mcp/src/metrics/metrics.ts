@@ -84,6 +84,25 @@ export function recordKeyFetch(outcome: 'ok' | 'error') {
   meter().keyFetches.add(1, { outcome });
 }
 
+// Whether the identity server answered the last probe: no sample before the
+// first one, so a server that has not probed yet is not counted as down.
+let issuerUp: 0 | 1 | undefined;
+let issuerGauge = false;
+
+export function setIssuerUp(up: boolean) {
+  issuerUp = up ? 1 : 0;
+  if (issuerGauge) return;
+  issuerGauge = true;
+  metrics
+    .getMeter('mcp')
+    .createObservableGauge('mcp_issuer_up', {
+      description: 'Whether the identity server answered the last probe',
+    })
+    .addCallback((result) => {
+      if (issuerUp !== undefined) result.observe(issuerUp);
+    });
+}
+
 // A name the client made up never becomes a label.
 export const toolLabel = (name: string, known: readonly string[]) =>
   known.includes(name) ? name : 'unknown';

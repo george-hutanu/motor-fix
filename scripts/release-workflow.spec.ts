@@ -213,4 +213,47 @@ describe('release workflow', () => {
       expect(note).not.toContain('continue-on-error');
     },
   );
+  // The identity server and the MCP server reach staging only: production is
+  // shut down by the owner's decision and promotes neither.
+  it('builds the keycloak image from its own folder and exposes its digest', () => {
+    const block = job('images');
+    const step = image('keycloak');
+
+    expect(setting(block, 'keycloak')).toBe(
+      gh('steps.keycloak.outputs.digest'),
+    );
+    expect(setting(step, 'context')).toBe('infra/keycloak');
+    expect(setting(step, 'file')).toBe('infra/keycloak/Dockerfile');
+    expect(setting(step, 'push')).toBe('true');
+    expect(setting(step, 'tags')).toBe(
+      `ghcr.io/${gh('github.repository')}-keycloak:${gh('github.sha')}`,
+    );
+    expect(block.indexOf('- name: Push the dashboards')).toBeGreaterThan(
+      block.indexOf('- id: keycloak'),
+    );
+  });
+
+  it('gives staging the images and service ids of the MCP and identity servers', () => {
+    const block = job('staging');
+
+    expect(setting(block, 'IMAGE_MCP')).toBe(
+      `ghcr.io/${gh('github.repository')}-mcp@${gh('needs.images.outputs.mcp')}`,
+    );
+    expect(setting(block, 'IMAGE_KEYCLOAK')).toBe(
+      `ghcr.io/${gh('github.repository')}-keycloak@${gh('needs.images.outputs.keycloak')}`,
+    );
+    expect(setting(block, 'RAILWAY_SERVICE_MCP')).toBe(
+      gh('vars.RAILWAY_SERVICE_MCP'),
+    );
+    expect(setting(block, 'RAILWAY_SERVICE_KEYCLOAK')).toBe(
+      gh('vars.RAILWAY_SERVICE_KEYCLOAK'),
+    );
+    expect(block).toContain(
+      "- name: Deploy and wait for each service's health check",
+    );
+  });
+
+  it('never gives production the MCP or identity server', () => {
+    expect(job('production')).not.toMatch(/MCP|KEYCLOAK|keycloak/);
+  });
 });

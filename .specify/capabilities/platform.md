@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-08
+updated: 2026-10-09
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -64,6 +64,7 @@ features:
   - 976-integration-specs-under-load
   - 977-worktree-cleanup
   - 887-precompact-fr-wording
+  - 1016-mcp-staging
 ---
 
 # Capability: Platform
@@ -180,13 +181,13 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 516-FR-001 — On every merge into `main` the pipeline MUST run every check on every project, build one image per app tagged with the commit SHA, push it to GitHub's container registry, migrate and deploy staging, wait for `/health/ready`, run the end-to-end suite against staging, and then promote to production with no manual approval. The staging wait for `/health/ready` is limited to 5 minutes; on expiry the run fails and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
+### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite against staging, and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
-_From 516-production-release-queue._
+_From 1016-mcp-staging._
 
-### 516-FR-002 — Once staging and its end-to-end suite pass, the pipeline MUST deploy the same image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes.
+### 000-FR-014 — (replaces 516-FR-002) Once staging and its end-to-end suite pass, the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
-_From 516-production-release-queue._
+_From 1016-mcp-staging._
 
 ### 516-FR-003 — Staging deploys and production deploys MUST each run one at a time, in commit order, and a deploy already running MUST NOT be cancelled by a newer commit: the newer one waits, and of several waiting only the latest proven commit runs next. There MUST be no path that deploys a branch or an unproven commit to production.
 
@@ -196,9 +197,9 @@ _From 516-production-release-queue._
 
 _From 421-monorepo-platform._
 
-### 421-FR-032 — One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is built but not deployed.
+### 000-FR-002 — (replaces 421-FR-032) One root Dockerfile MUST build a production image for each app, selected by a build argument; the `mcp` image is deployed to staging only. A second Dockerfile, `infra/keycloak/Dockerfile`, MUST build the `keycloak` image: the public image `quay.io/keycloak/keycloak:26.8`, one `COPY` of `infra/keycloak/realm-motorfix-assistants.json` into Keycloak's import folder, the start command `start --import-realm --features=cimd,resource-indicators --proxy-headers=xforwarded --http-enabled=true` and the JVM heap cap (FR-006); the `images` job builds and pushes it like the others and hands its digest to the staging job next to the `mcp` digest.
 
-_From 421-monorepo-platform._
+_From 1016-mcp-staging._
 
 ### 421-FR-033 — Automatic dependency-update pull requests MUST be switched on.
 
@@ -1516,6 +1517,34 @@ _From 977-worktree-cleanup._
 
 _From 977-worktree-cleanup._
 
+### 000-FR-003 — The deploy script MUST take its service list per environment: staging `api`, `worker`, `web`, `keycloak`, `mcp` in that order; production `api`, `worker`, `web`. Each service reads `RAILWAY_SERVICE_<NAME>` and `IMAGE_<NAME>` as today, with one replica for `keycloak` and `mcp` on staging.
+
+_From 1016-mcp-staging._
+
+### 000-FR-004 — The health check path MUST be a property of each service: `/health/ready` for `api`, `worker`, `web`; `/health/live` for `mcp`; `/realms/motorfix-assistants/.well-known/openid-configuration` for `keycloak`, checked on the service's public port. The health timeout, the region and the restore on failure or cancel stay as they are (516-FR-001, 516-FR-005).
+
+_From 1016-mcp-staging._
+
+### 000-FR-006 — The Keycloak image MUST cap the JVM heap through Keycloak's own heap variable set in the Dockerfile, without a per-service setting; the value is chosen in the plan with headroom for the realm import, and a test asserts the Dockerfile sets it.
+
+_From 1016-mcp-staging._
+
+### 000-FR-007 — When `RAILWAY_SERVICE_MCP` or `RAILWAY_SERVICE_KEYCLOAK` is empty on staging, the deploy script MUST skip that service alone, print one GitHub workflow notice naming the variable and that the service was not deployed, deploy every other service and exit 0. A set id with a missing `IMAGE_<NAME>` MUST fail naming the variable, as for every service today.
+
+_From 1016-mcp-staging._
+
+### 000-FR-008 — `infra/keycloak/README.md`'s Railway section MUST describe what the release does (the image, the health paths, the skip) and what the owner does once by hand: create the two services and set their ids on the GitHub staging environment, create Keycloak's own database and role in the staging PostgreSQL, and set, per service, every variable this feature needs — `api` and `mcp`: `MCP_URL`, `ASSISTANT_ISSUER`, `ASSISTANT_TRUSTED_DOMAINS`, `ASSISTANT_BROKER_CLIENT_ID`, `ASSISTANT_BROKER_CLIENT_SECRET`, `ASSISTANT_BROKER_REDIRECT_URI`; `mcp`: `DATABASE_URL` (the staging PostgreSQL, as `api`), `APP_ENV` and the three `OTEL_EXPORTER_OTLP_*` variables as on the other services; `keycloak`: the realm placeholders of the README's table without `ASSISTANT_ALLOW_HTTP`, `KC_DB=postgres`, `KC_DB_URL`, `KC_DB_USERNAME`, `KC_DB_PASSWORD`, `KC_HOSTNAME`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` (removed after the first sign-in) — each marked as a secret the owner generates without printing, an address, or a name to copy; and the live connection check (Claude and ChatGPT, one read tool each) recorded on ST-1016 and ST-365.
+
+_From 1016-mcp-staging._
+
+### 000-FR-009 — No file, script, workflow or log of this feature MUST hold, print or read a secret value, a Railway service or environment id or a staging address (the project id `release.yml` already holds for `railway ssh` stays); only variable names appear (881-FR-012, 421-FR-022). `.env.example` already lists every variable name used here and gains none.
+
+_From 1016-mcp-staging._
+
+### 000-FR-013 — The deploy script's specs MUST cover the per-environment lists, the health path per service, the skip with its notice and the unchanged production list; the inventory script's spec MUST cover discovery across several service lists; the gauge's probe, its two values and its log line MUST be covered by the MCP server's colocated specs; the Keycloak Dockerfile MUST build in CI's Docker build job or an equivalent check so a broken `COPY` fails a PR.
+
+_From 1016-mcp-staging._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -1545,3 +1574,7 @@ _From 977-worktree-cleanup._
 - `464-FR-007` — superseded by `977-FR-010` (2026-10-08)
 - `974-FR-003` — superseded by `977-FR-007` (2026-10-08)
 - `623-FR-002` — superseded by `887-FR-001` (2026-10-08)
+
+- `516-FR-001` — superseded by `000-FR-001` (2026-10-09)
+- `516-FR-002` — superseded by `000-FR-014` (2026-10-09)
+- `421-FR-032` — superseded by `000-FR-002` (2026-10-09)

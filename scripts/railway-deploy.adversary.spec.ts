@@ -6,14 +6,27 @@ import { deploy, type Service } from './railway-deploy.ts';
 type Call = { query: string; variables: Record<string, unknown> };
 
 const services: Service[] = [
-  { id: 'svc-api', image: 'img/api@sha256:new', name: 'api', replicas: 1 },
   {
+    healthcheckPath: '/health/ready',
+    id: 'svc-api',
+    image: 'img/api@sha256:new',
+    name: 'api',
+    replicas: 1,
+  },
+  {
+    healthcheckPath: '/health/ready',
     id: 'svc-worker',
     image: 'img/worker@sha256:new',
     name: 'worker',
     replicas: 1,
   },
-  { id: 'svc-web', image: 'img/web@sha256:new', name: 'web', replicas: 1 },
+  {
+    healthcheckPath: '/health/ready',
+    id: 'svc-web',
+    image: 'img/web@sha256:new',
+    name: 'web',
+    replicas: 1,
+  },
 ];
 
 describe('railway deploy under failure', () => {

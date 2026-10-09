@@ -36,6 +36,7 @@ import express, {
 import { McpActorService } from './auth/auth.actor';
 import { AssistantGrants } from './auth/auth.grants';
 import { BearerAuth } from './auth/auth.middleware';
+import { IssuerProbe } from './auth/auth.probe';
 import { ISSUER_SETTINGS, TokenVerifier } from './auth/auth.verifier';
 import { recordRequest } from './metrics/metrics';
 import {
@@ -65,7 +66,7 @@ class LiveController {
 }
 
 @Module({})
-export class McpModule implements NestModule, OnModuleDestroy {
+class McpModule implements NestModule, OnModuleDestroy {
   constructor(
     @Inject(PRISMA) private readonly prisma: ReturnType<typeof createPrisma>,
   ) {}
@@ -94,6 +95,7 @@ export class McpModule implements NestModule, OnModuleDestroy {
         AccountLoader,
         AssistantGrants,
         BearerAuth,
+        IssuerProbe,
         McpActorService,
         TokenVerifier,
       ],
