@@ -15,7 +15,7 @@ const T = (feature, n) => `${feature}${'-FR-'}${n}`;
 function matrix(specBody, files = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'taskr-trace-'));
   try {
-    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs', 'lib/traces.mjs']) {
+    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs', 'lib/tests.mjs', 'lib/traces.mjs']) {
       const to = join(dir, '.claude', 'scripts', rel);
       mkdirSync(dirname(to), { recursive: true });
       cpSync(join(root, '.claude', 'scripts', rel), to);

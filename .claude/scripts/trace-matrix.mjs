@@ -39,6 +39,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { grandfathered } from "./lib/feature.mjs";
+import { isTestFile, SKIP_DIRS, TEST_ROOTS } from "./lib/tests.mjs";
 import { traceTokens } from "./lib/traces.mjs";
 import { retiredTokens } from "./capabilities.mjs";
 
@@ -50,20 +51,6 @@ const check = args.has("--check");
 const specsDir = join(repo, "specs");
 const exempt = grandfathered(repo);
 
-// Workspace roots that can hold tests, and the directories never worth walking.
-const TEST_ROOTS = ["apps", "libs", "e2e", "scripts", ".claude"];
-const SKIP_DIRS = new Set([
-  "node_modules",
-  "dist",
-  "coverage",
-  ".turbo",
-  ".work",
-  ".worktrees",
-  "worktrees",
-  ".git",
-]);
-// The harness's own specs are `.claude/**/*.spec.mjs`, run by vitest.
-const isTestFile = (name) => /\.(spec|test)\.(?:[cm]?tsx?|[cm]?js)$/.test(name);
 
 // --- gather requirements per feature ---------------------------------------
 const features = [];

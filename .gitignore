@@ -33,4 +33,6 @@ coverage/
 # notes out of it.
 /.motor-fix-specs/
 /.motor-fix-specs.lock
+/.specs-link-*
+/.specs-adopt
 /specs

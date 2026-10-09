@@ -99,13 +99,18 @@ function readIndex(docs) {
   }
 }
 
-/** Every block under a page, nested blocks in `children`; never into a child page or database. */
-async function fetchBlocks(client, blockId) {
+/** Every block under a page, nested blocks in `children`; never into a child page or database. A synced original is read once per page. */
+export async function fetchBlocks(client, blockId, seen = new Set()) {
   const blocks = await client.children(blockId);
   for (const b of blocks) {
     if (!b.has_children || b.type === "child_page" || b.type === "child_database") continue;
     const from = b.type === "synced_block" ? b.synced_block?.synced_from?.block_id : null;
-    b.children = await fetchBlocks(client, from ?? b.id);
+    if (from) {
+      const original = dashed(from);
+      if (seen.has(original)) continue;
+      seen.add(original);
+      b.children = await fetchBlocks(client, original, seen);
+    } else b.children = await fetchBlocks(client, b.id, seen);
   }
   return blocks;
 }

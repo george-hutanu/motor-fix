@@ -217,10 +217,12 @@ describe('migrate-trunk refusals', () => {
   });
 
   // @traces 1018-FR-006
-  it('overwrites an existing root README with the layout text and keeps one commit', () => {
+  it('keeps an existing root README, appends the layout section and keeps one commit', () => {
     const r = migrateTrunk({ root, yes: true });
     assert.equal(r.ok, true, JSON.stringify(r));
-    assert.notEqual(readFileSync(join(clone(), 'README.md'), 'utf8'), 'readme\n');
+    const text = readFileSync(join(clone(), 'README.md'), 'utf8');
+    assert.ok(text.startsWith('readme\n'), text);
+    assert.match(text, /## Layout/);
     assert.equal(git(clone(), 'rev-list', '--count', `HEAD~1..HEAD`), '1');
     assert.match(git(clone(), 'log', '-1', '--format=%s'), /^chore\(specs\): move the feature folders under specs\/ and add docs\/$/);
   });

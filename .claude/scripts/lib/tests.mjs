@@ -15,9 +15,8 @@
 // over file CONTENT, so neither placement needs special handling — only the
 // roots and the filename pattern change.
 //
-// The roots and skip list mirror `trace-matrix.mjs`, which walks the same tree
-// for the same tokens; that file is left alone deliberately, because changing a
-// gate script changes its registry fingerprint.
+// `trace-matrix.mjs` imports the roots, the skip list and the filename test
+// from here, so both walk the same tree.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 

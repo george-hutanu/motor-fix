@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpath
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 
-import { EPICS, EXCLUDED, run } from './notion-export.mjs';
+import { EPICS, EXCLUDED, fetchBlocks, run } from './notion-export.mjs';
 import { STORIES } from './notion-sync.mjs';
 import { FILE_HOST, IDS, space, TOKEN } from './notion-export/fixtures/space.mjs';
 
@@ -332,5 +332,25 @@ describe('failures', () => {
   it('refuses an unknown flag with exit 64', async () => {
     const r = await exportDocs(['--nope']);
     assert.equal(r.code, 64);
+  });
+});
+
+describe('synced blocks', () => {
+  const A = 'a'.repeat(32);
+  const B = 'b'.repeat(32);
+  const synced = (id, from) => ({ id, type: 'synced_block', has_children: true, synced_block: { synced_from: { block_id: from } } });
+
+  it('follows a synced block to its original once, even when the originals point at each other', async () => {
+    const calls = [];
+    const children = { [A]: [synced('c1', B)], [B]: [synced('c2', A)] };
+    const client = { children: async (id) => { calls.push(id); return structuredClone(children[id.replaceAll('-', '')] ?? []); } };
+    const blocks = await fetchBlocks(client, A);
+    assert.equal(blocks.length, 1);
+    assert.ok(calls.length <= 3, `calls: ${calls.join(', ')}`);
+  });
+
+  it('refuses a synced_from id that is not a Notion id', async () => {
+    const client = { children: async () => [synced('c1', '../../x')] };
+    await assert.rejects(fetchBlocks(client, A));
   });
 });
