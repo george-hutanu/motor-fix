@@ -45,18 +45,18 @@ test.describe('the response rate on a garage profile @seeded', () => {
     answeredAfterHours: number | null,
   ) {
     const { rows } = await db.query<{ id: string }>(
-      `INSERT INTO quote_request (driver_id, car_id, car_brand, car_model,
+      `INSERT INTO quote_request (id, driver_id, car_id, car_brand, car_model,
          car_year, car_fuel, created_at, expires_at, idempotency_key)
-       VALUES ($1, $2, 'Dacia', 'Logan', 2018, 'petrol',
+       VALUES (gen_random_uuid(), $1, $2, 'Dacia', 'Logan', 2018, 'petrol',
          now() - make_interval(hours => $3), now() + interval '7 days',
          gen_random_uuid()::text)
        RETURNING id`,
       [driverId, carId, hoursAgo],
     );
     await db.query(
-      `INSERT INTO request_recipient (request_id, garage_id, source, status,
+      `INSERT INTO request_recipient (id, request_id, garage_id, source, status,
          created_at, answered_at)
-       VALUES ($1, $2, 'search', $3, now() - make_interval(hours => $4),
+       VALUES (gen_random_uuid(), $1, $2, 'search', $3, now() - make_interval(hours => $4),
          now() - make_interval(hours => $4) + make_interval(hours => $5))`,
       [
         rows[0]?.id,
@@ -95,14 +95,14 @@ test.describe('the response rate on a garage profile @seeded', () => {
       ids[key] = rows[0]?.id as string;
     }
     const driver = await db.query<{ id: string }>(
-      `INSERT INTO account (name, last_role) VALUES ('Șofer E2E ${tag}', 'driver')
+      `INSERT INTO account (id, name, last_role) VALUES (gen_random_uuid(), 'Șofer E2E ${tag}', 'driver')
        RETURNING id`,
     );
     driverId = driver.rows[0]?.id as string;
     const car = await db.query<{ id: string }>(
-      `INSERT INTO car (owner_id, brand_id, model, year, fuel, odometer_km,
+      `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km,
          idempotency_key)
-       VALUES ($1, (SELECT id FROM brand ORDER BY key LIMIT 1), 'Logan', 2018,
+       VALUES (gen_random_uuid(), $1, (SELECT id FROM brand ORDER BY key LIMIT 1), 'Logan', 2018,
          'petrol', 120000, gen_random_uuid()::text)
        RETURNING id`,
       [driverId],
