@@ -243,6 +243,17 @@
     },
     {
       "kind": "product-counter",
+      "name": "mcp_tool_calls_total{tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats\"}",
+      "source": "libs/mcp-tools/src/catalogue.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-tool-errors"
+      ],
+      "reason": "the four garage read tools count under mcp_tool_calls_total{tool,outcome} and mcp_tool_call_duration_seconds{tool}, one McpToolCall log line and an mcp.tool <name> span per call, like every tool; the existing mcp-tool-errors alert sums every tool; reads write no audit row",
+      "story": "ST-374"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_garage_profile_cache_total",
       "source": "libs/domain/src/garages/public-garages/public-garages.metrics.ts",
       "dashboard": "motorfix-api",
