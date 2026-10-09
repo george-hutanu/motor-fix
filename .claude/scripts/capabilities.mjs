@@ -289,6 +289,9 @@ const renderRequirement = (token, text, feature) =>
  * the new file text and never writes, so `merge` without `--apply` is an honest
  * preview rather than a description of what it intends to do.
  */
+/** A requirement's block: its heading to the next `##` or `###` heading, so the last one never takes `## Retired` with it. */
+const requirementBlock = (base) => new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^#{2,3} )[\\s\\S])*`, "m");
+
 export function planMerge(repo, feature) {
   const specText = readFileSync(join(feature.dir, "spec.md"), "utf8");
   const declared = declaredRequirements(specText);
@@ -308,7 +311,7 @@ export function planMerge(repo, feature) {
       const token = `${feature.num}-${by}`;
       // The replacement takes the base's place in the document, so the reading
       // order of a capability stays the order its behaviour was built in.
-      const pattern = new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^### )[\\s\\S])*`, "m");
+      const pattern = requirementBlock(base);
       // A function, so a `$` pattern in the requirement text is written as is.
       const replacement = `${renderRequirement(token, declared.get(by) ?? "", feature)}\n`;
       text = text.replace(pattern, () => replacement);
@@ -317,7 +320,7 @@ export function planMerge(repo, feature) {
 
     for (const { base, why } of section.removes) {
       if (!cap.requirements.has(base)) continue;
-      const pattern = new RegExp(`^### ${base} —[^\\n]*\\n(?:(?!^### )[\\s\\S])*`, "m");
+      const pattern = requirementBlock(base);
       text = text.replace(pattern, "");
       removed.push({ base, why });
     }
