@@ -24,6 +24,9 @@ async function send(page: Page) {
 // specs running beside them. A deployed address, whose run has no
 // DATABASE_URL, skips them.
 test.describe('a report of a garage from its profile @seeded', () => {
+  // The preset runs tests fully parallel; these share one garage, so they
+  // take turns in one worker.
+  test.describe.configure({ mode: 'default' });
   test.skip(
     !process.env['DATABASE_URL'],
     'writes its garage straight to PostgreSQL, which needs DATABASE_URL',
