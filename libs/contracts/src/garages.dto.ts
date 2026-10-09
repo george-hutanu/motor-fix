@@ -33,6 +33,18 @@ export class PublicGarageQueryDto {
 }
 
 // A garage as anyone may read it: only an approved one is ever returned.
+// A job the garage lists a price for, which a driver can ask it about.
+export class PublicJobTypeDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  nameRo!: string;
+
+  @ApiProperty()
+  nameEn!: string;
+}
+
 export class PublicGarageDto extends GarageBrandAnswerDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -105,4 +117,11 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: CourtesyCarDto,
   })
   courtesyCar?: CourtesyCarDto;
+
+  @ApiProperty({
+    description:
+      'The jobs of the visible price list, in its order; empty without one',
+    type: [PublicJobTypeDto],
+  })
+  jobTypes!: PublicJobTypeDto[];
 }

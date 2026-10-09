@@ -2,6 +2,7 @@ import * as config from './quotes-config';
 import { BookingCancelReason, DeclineReason } from '../generated/prisma/enums';
 
 // @traces 220-FR-010
+// @traces 221-FR-009
 describe('the request, quote and booking limits', () => {
   it('holds every limit and duration in one place', () => {
     expect(config).toMatchObject({
@@ -12,6 +13,7 @@ describe('the request, quote and booking limits', () => {
       MOVE_CUTOFF_HOURS: 2,
       PAGE_SIZE: 20,
       QUOTE_VALIDITY_DAYS: 7,
+      REQUEST_DAILY_LIMIT: 20,
       REQUEST_MAX_GARAGES: 5,
       REQUEST_REMINDER_DAYS: [2, 5],
       REQUEST_VALIDITY_DAYS: 7,

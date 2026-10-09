@@ -16,6 +16,7 @@ const FIXED: PublicGarageDto = {
   brandNote: null,
   doesNotTake: [],
   id: 'g-2',
+  jobTypes: [],
   latitude: 44.43,
   longitude: 26.01,
   name: 'Service Auto Militari',

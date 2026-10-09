@@ -231,3 +231,77 @@ describe('Session tokens', () => {
     expect(session.current()).toBeNull();
   });
 });
+
+// A public page asks nobody who is signed in (each ask renews the cookie): it
+// reads the role this browser last saw instead.
+describe('Session role hint', () => {
+  it('remembers the role of the account it loads', async () => {
+    const { session } = setup();
+
+    await session.load();
+
+    expect(session.roleHint()).toBe('driver');
+    expect(localStorage.getItem('mf-role')).toBe('driver');
+  });
+
+  it('starts from the role a page of this browser saw before', () => {
+    localStorage.setItem('mf-role', 'garage');
+
+    expect(setup().session.roleHint()).toBe('garage');
+  });
+
+  it('ignores a stored value that is not a role', () => {
+    localStorage.setItem('mf-role', 'owner');
+
+    expect(setup().session.roleHint()).toBeNull();
+  });
+
+  it('follows a switch to another of the account’s roles', async () => {
+    const { api, meControllerMe, session } = setup();
+    await session.load();
+    Object.assign(api, {
+      authControllerSwitchRole: jest.fn(() =>
+        Promise.resolve({ accessToken: 'switched' }),
+      ),
+    });
+    meControllerMe.mockImplementationOnce(() =>
+      Promise.resolve({ ...account('ro'), role: 'garage' } as MeDto),
+    );
+
+    await session.switchRole('garage');
+
+    expect(session.roleHint()).toBe('garage');
+    expect(localStorage.getItem('mf-role')).toBe('garage');
+  });
+
+  it('forgets the role at sign-out', async () => {
+    const { session } = setup();
+    await session.load();
+
+    await session.signOut();
+
+    expect(session.roleHint()).toBeNull();
+    expect(localStorage.getItem('mf-role')).toBeNull();
+  });
+
+  it('forgets the role when the load finds nobody signed in', async () => {
+    localStorage.setItem('mf-role', 'garage');
+    const { session } = setup({ me: null, renews: false });
+
+    await session.load();
+
+    expect(session.roleHint()).toBeNull();
+    expect(localStorage.getItem('mf-role')).toBeNull();
+  });
+
+  // The cookie can go without a sign-out (it expired, or was cleared).
+  it('forgets the role when a renewal finds the session gone', async () => {
+    localStorage.setItem('mf-role', 'garage');
+    const { session } = setup({ renews: false });
+
+    expect(await session.renew()).toBe(false);
+
+    expect(session.roleHint()).toBeNull();
+    expect(localStorage.getItem('mf-role')).toBeNull();
+  });
+});

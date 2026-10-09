@@ -57,6 +57,7 @@ describe('GET /requests', () => {
       closedAt: null,
       closedReason: null,
       createdAt: older.createdAt.toISOString(),
+      description: 'Scârțâie la frânare',
       expiresAt: older.expiresAt.toISOString(),
       id: older.id,
       jobs: [

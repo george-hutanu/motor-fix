@@ -376,15 +376,13 @@ describe('Frame', () => {
     expect(name()?.textContent?.trim()).toBe('Ioana Pop');
   });
 
-  it('shows the open view as the title over a plain empty state', async () => {
+  it('shows the open view as the title over its body or a plain empty state', async () => {
     const { element, harness } = await render('driver', '/app/driver', [
       'driver.cars',
     ]);
 
     expect(title(element)).toBe('Panoul tău');
-    expect(element.querySelector('main')?.textContent).toContain(
-      'Nimic aici încă.',
-    );
+    expect(element.querySelector('main mf-driver-home')).not.toBeNull();
     await harness.navigateByUrl('/app/driver/cars');
     await settle(harness);
     expect(title(element)).toBe('Mașinile mele');

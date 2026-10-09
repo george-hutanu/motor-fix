@@ -32,6 +32,9 @@ export function sendProblem(
     | 'rule'
   > & {
     inviteId?: string;
+    garageId?: string;
+    garageName?: string;
+    reason?: string;
   } = {},
 ) {
   if (extensions.retryAfterSeconds !== undefined) {
@@ -91,13 +94,14 @@ export class ProblemFilter implements ExceptionFilter {
       fieldProblems(own.errors),
       // The members beyond the problem shape a refusal carries: the open
       // invite a refused send names, the tries a wrong code has left, and
-      // the wait before a limit lifts, and what a refused move was about.
-      // Nothing else an exception holds leaves.
+      // the wait before a limit lifts, what a refused move was about, and
+      // the garage a refused quote request names. Nothing else an exception
+      // holds leaves.
       {
         ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
         ...attemptsLeft(own.attemptsLeft),
         ...retryAfter(own.retryAfterSeconds),
-        ...refusedMove(own),
+        ...stringMembers(own),
       },
     );
   }
@@ -127,14 +131,23 @@ function detail(message: unknown): string | undefined {
   return Array.isArray(message) ? message.join('; ') : undefined;
 }
 
-const MOVE_MEMBERS = ['entity', 'currentStatus', 'to', 'rule'] as const;
+// The string members of a refused move (`invalid_transition`) and of a
+// garage that cannot receive a request (`garage_cannot_receive`).
+const STRING_MEMBERS = [
+  'entity',
+  'currentStatus',
+  'to',
+  'rule',
+  'garageId',
+  'garageName',
+  'reason',
+] as const;
 
-// The string members of a refused move (`invalid_transition`).
-function refusedMove(
+function stringMembers(
   own: Record<string, unknown>,
-): Pick<Problem, (typeof MOVE_MEMBERS)[number]> {
+): Partial<Record<(typeof STRING_MEMBERS)[number], string>> {
   return Object.fromEntries(
-    MOVE_MEMBERS.filter((key) => typeof own[key] === 'string').map((key) => [
+    STRING_MEMBERS.filter((key) => typeof own[key] === 'string').map((key) => [
       key,
       own[key],
     ]),
