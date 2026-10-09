@@ -325,6 +325,36 @@ describe('writing the steps', () => {
     });
   });
 
+  // @traces 424-FR-014
+  it('shows an added step at once, and drops it with a message when refused', async () => {
+    const { element, settle } = await render();
+    let refuse: ((error: unknown) => void) | undefined;
+    api['jobStepsControllerAdd'].mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          refuse = reject;
+        }),
+    );
+
+    button(element, 'Adaugă un pas')?.click();
+    await settle();
+    type(input(element) as HTMLInputElement, 'Probă pe drum');
+    button(element, 'Adaugă')?.click();
+    await settle();
+
+    expect(rows(element)).toHaveLength(4);
+    expect(text(rows(element)[3])).toContain('Probă pe drum');
+
+    refuse?.(refused(409, 'too_many_steps', 'Cel mult 20 de pași'));
+    await wait(0);
+    await settle();
+
+    expect(rows(element)).toHaveLength(3);
+    expect(text(element.querySelector('[role="alert"]'))).toBe(
+      'Cel mult 20 de pași',
+    );
+  });
+
   it('cancels an add without sending it', async () => {
     const { element, settle } = await render();
 

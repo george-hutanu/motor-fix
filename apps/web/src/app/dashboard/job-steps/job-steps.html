@@ -37,6 +37,7 @@
                 class="tick"
                 [attr.aria-pressed]="isDone(step)"
                 [attr.aria-label]="step.label"
+                [disabled]="provisional(step)"
                 (click)="tick(step)"
               >
                 <span class="box" aria-hidden="true"></span>
@@ -71,12 +72,12 @@
               </form>
             } @else {
               <span class="text">{{ step.label }}</span>
-              @if (sending(step)) {
+              @if (sending(step) || provisional(step)) {
                 <span class="sending">{{ 'shell.form.sending' | t }}</span>
               }
             }
 
-            @if (writable() && editing()?.id !== step.id) {
+            @if (writable() && editing()?.id !== step.id && !provisional(step)) {
               <div class="more">
                 <button
                   type="button"

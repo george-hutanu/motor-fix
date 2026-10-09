@@ -35,6 +35,7 @@ const STEP_KINDS: readonly EventKind[] = [
 ];
 
 export const STEPS_MAX = 20;
+const PROVISIONAL = 'new:';
 const CLOSED = new Set<JobDto['status']>(['done', 'cancelled']);
 const WRITERS = new Set(['garage', 'mechanic']);
 // The refusals this panel words itself; any other is the form's.
@@ -233,8 +234,10 @@ export class JobSteps {
     );
   }
 
+  // A new key once the last add was answered; after a failed one the same
+  // key goes again, so an add whose answer was lost is never made twice.
   protected startAdd() {
-    this.addKey = crypto.randomUUID();
+    this.addKey ||= crypto.randomUUID();
     this.addProblem.set(false);
     this.adding.set('');
   }
@@ -249,29 +252,42 @@ export class JobSteps {
     this.addProblem.set(false);
   }
 
-  // The key stays the same for every try of one step, so a resend after a
-  // lost answer never makes two.
   protected async add() {
     const text = (this.adding() ?? '').trim();
     if (!fits(text)) {
       this.addProblem.set(true);
       return;
     }
-    this.problem.set(null);
-    try {
-      const step = await this.api.jobStepsControllerAdd({
-        body: { text },
-        'Idempotency-Key': this.addKey,
-        id: this.id,
-      });
-      this.steps.update((steps) => [
-        ...steps.filter((s) => s.id !== step.id),
-        step,
-      ]);
-      this.adding.set(null);
-    } catch (error) {
-      this.problem.set(problemKey(error));
-    }
+    const key = this.addKey;
+    const provisional: JobStepDto = {
+      customerLabel: text,
+      doneAt: null,
+      doneBy: null,
+      id: `${PROVISIONAL}${key}`,
+      label: text,
+      position: this.steps().length + 1,
+    };
+    this.adding.set(null);
+    await this.write(
+      (steps) => [...steps, provisional],
+      async () => {
+        const step = await this.api.jobStepsControllerAdd({
+          body: { text },
+          'Idempotency-Key': key,
+          id: this.id,
+        });
+        this.steps.update((steps) => [
+          ...steps.filter((s) => s.id !== step.id && s.id !== provisional.id),
+          step,
+        ]);
+        this.addKey = '';
+      },
+    );
+  }
+
+  // A step shown before the API has answered for it: nothing to tick or move.
+  protected provisional(step: JobStepDto) {
+    return step.id.startsWith(PROVISIONAL);
   }
 
   // Shows the change at once and puts the steps back if it is refused.
