@@ -126,6 +126,23 @@ describe('checkInventory', () => {
     ]);
   });
 
+  it('reads the services of every environment the deploy script lists', () => {
+    put(
+      'scripts/railway-deploy.ts',
+      [
+        'const ENVIRONMENTS = {',
+        "  production: { services: ['api', 'worker'] },",
+        "  staging: { services: ['api', 'worker', 'keycloak', 'mcp'] },",
+        '};',
+      ].join('\n'),
+    );
+    expect(checkInventory(root)).toEqual([
+      'missing railway-service worker (scripts/railway-deploy.ts)',
+      'missing railway-service keycloak (scripts/railway-deploy.ts)',
+      'missing railway-service mcp (scripts/railway-deploy.ts)',
+    ]);
+  });
+
   it('names a queue that is not listed, from a literal or an exported constant', () => {
     put(
       'apps/worker/src/jobs.ts',

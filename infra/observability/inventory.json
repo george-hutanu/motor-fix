@@ -22,7 +22,7 @@
         "mcp-auth-failures",
         "mcp-tool-errors"
       ],
-      "reason": "reports mcp_requests_total{outcome}, mcp_tool_calls_total{tool,outcome}, mcp_auth_failures_total{reason}, mcp_tool_call_duration_seconds{tool} and mcp_key_fetches_total{outcome}, one McpToolCall log line per tool call and an mcp.tool <name> span; a new assistant grant is an audit row and an assistant_grant.created event",
+      "reason": "reports mcp_requests_total{outcome}, mcp_tool_calls_total{tool,outcome}, mcp_auth_failures_total{reason}, mcp_tool_call_duration_seconds{tool}, mcp_key_fetches_total{outcome} and mcp_issuer_up (the IssuerProbe, once a minute), one McpToolCall log line per tool call and an mcp.tool <name> span; a new assistant grant is an audit row and an assistant_grant.created event",
       "story": "ST-365"
     },
     {
@@ -78,6 +78,29 @@
       "alerts": "none",
       "reason": "ST-880 adds the alerts",
       "story": "ST-877"
+    },
+    {
+      "kind": "railway-service",
+      "name": "keycloak",
+      "source": "scripts/railway-deploy.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-issuer-unreachable"
+      ],
+      "reason": "staging only; health at the realm's discovery document; the MCP server's mcp_issuer_up probe is the only signal (Keycloak itself sends no telemetry)",
+      "story": "ST-1016"
+    },
+    {
+      "kind": "railway-service",
+      "name": "mcp",
+      "source": "scripts/railway-deploy.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-down",
+        "mcp-issuer-unreachable"
+      ],
+      "reason": "staging only; health at /health/live; mcp_issuer_up is its liveness series",
+      "story": "ST-1016"
     },
     {
       "kind": "queue",
@@ -245,9 +268,10 @@
       "source": "apps/mcp/src/auth/auth.verifier.ts",
       "dashboard": "motorfix-mcp",
       "alerts": [
-        "mcp-key-fetch-failures"
+        "mcp-key-fetch-failures",
+        "mcp-issuer-unreachable"
       ],
-      "reason": "the identity server signing-key fetch, host read from ASSISTANT_ISSUER; counted in mcp_key_fetches_total{outcome} on the mcp dashboard; a failed fetch fires mcp-key-fetch-failures, and calls answer 503 (not counted as sign-in failures)",
+      "reason": "the identity server signing-key fetch, host read from ASSISTANT_ISSUER; counted in mcp_key_fetches_total{outcome} on the mcp dashboard; a failed fetch fires mcp-key-fetch-failures, and calls answer 503 (not counted as sign-in failures); the IssuerProbe reads its discovery document once a minute into mcp_issuer_up, which fires mcp-issuer-unreachable",
       "story": "ST-365"
     },
     {

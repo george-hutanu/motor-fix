@@ -4,6 +4,7 @@ updated: 2026-10-09
 features:
   - 365-mcp-oauth
   - 374-assistant-requests
+  - 1016-mcp-staging
 ---
 
 # Capability: Assistant access
@@ -127,5 +128,9 @@ _From 374-assistant-requests._
 ### 374-FR-015 — Tests MUST cover, in Jest on real PostgreSQL: each tool's answer equals its dashboard read for the same person (inbox against `GET /api/v1/garage/requests`; day sheet against the mechanic's jobs; schedule and figures against seeded rows); the receptionist holds all four; the mechanic only `list_quote_requests` and only with the permission; another garage's ids answer as not found; the lift field absent and `lift` refused when lifts are off; `get_day_sheet` unlisted and `not_found` when day sheets are off; no phone and no plate in any answer; no audit row and no row changed after a call; the empty-state sentence in both languages; the Bucharest day at a daylight-saving change. In Playwright, with the MCP SDK client signed in as the seeded garage owner, run the four phrases of the mock (as tool calls with the inputs the assistant would derive) and compare each answer with the dashboard's API for the same account. (brief Tests)
 
 _From 374-assistant-requests._
+
+### 000-FR-005 — The MCP server MUST keep answering `GET /health/live` as today (421-FR-012) and MUST NOT gain a `/health/ready`.
+
+_From 1016-mcp-staging._
 
 ## Retired
