@@ -18,6 +18,7 @@ import { AUTH_REDIS } from '../../auth/attempts';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { responseRateOf } from '../../insights/response-stats/response-stats';
 import { brandAnswerWithFuels } from '../brand-answer';
 
 // The one scope of every read a visitor can reach: spread into the `where`
@@ -168,6 +169,7 @@ export class PublicGaragesService {
           where: { jobType: { status: 'approved' }, visible: true },
         },
         refusalPhrase: true,
+        responseStats: { select: { lifetimeRequests: true, rate: true } },
         serviceRadiusKm: true,
         slug: true,
         verificationFiles: {
@@ -197,6 +199,7 @@ export class PublicGaragesService {
       paymentCash,
       paymentTransfer,
       prices,
+      responseStats,
       serviceRadiusKm,
       slug: held,
       verificationFiles,
@@ -234,6 +237,7 @@ export class PublicGaragesService {
       ...present({ businessKind }),
       ...(knownFor?.trim() ? { description: knownFor } : {}),
       rating: null,
+      responseRate: responseRateOf(responseStats),
       reviewCount: 0,
       verifiedAt: verifiedAt?.toISOString() ?? null,
       ...(inContext ? { brand: inContext } : {}),

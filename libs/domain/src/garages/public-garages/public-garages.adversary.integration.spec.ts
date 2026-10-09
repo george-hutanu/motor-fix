@@ -95,6 +95,7 @@ describe('reading a garage by slug, hostilely', () => {
       'paymentMethods',
       'rating',
       'refusalPhrase',
+      'responseRate',
       'reviewCount',
       'slug',
       'verifiedAt',

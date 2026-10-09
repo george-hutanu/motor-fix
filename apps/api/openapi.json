@@ -8062,6 +8062,29 @@
           "fuels"
         ]
       },
+      "ResponseRateDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "new: under 10 requests ever; none: no request counted in 30 days",
+            "enum": [
+              "new",
+              "rate",
+              "none"
+            ]
+          },
+          "rate": {
+            "type": "number",
+            "description": "Percent answered within a day; only in the rate state",
+            "maximum": 100,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
       "PublicGarageBrandDto": {
         "type": "object",
         "properties": {
@@ -8197,6 +8220,9 @@
             "type": "number",
             "minimum": 0
           },
+          "responseRate": {
+            "$ref": "#/components/schemas/ResponseRateDto"
+          },
           "brand": {
             "description": "Only when the read named a catalogue brand",
             "allOf": [
@@ -8235,6 +8261,7 @@
           "verifiedAt",
           "rating",
           "reviewCount",
+          "responseRate",
           "paymentMethods",
           "jobTypes"
         ]
