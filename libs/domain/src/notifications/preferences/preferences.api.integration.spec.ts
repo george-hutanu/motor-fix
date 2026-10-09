@@ -664,7 +664,7 @@ describe('the staff lists a person reads', () => {
     ]);
   });
 
-  it('give an admin one entry with no garage and the eight admin types', async () => {
+  it('give an admin one entry with no garage and the nine admin types', async () => {
     const admin = await account('alina', ['admin']);
     const [entry] = await staffOf(admin, 'admin');
     expect(entry).toMatchObject({
@@ -672,7 +672,7 @@ describe('the staff lists a person reads', () => {
       garageName: null,
       role: 'admin',
     });
-    expect(typesIn(entry)).toHaveLength(8);
+    expect(typesIn(entry)).toHaveLength(9);
     expect(channelsIn(entry, 'ADMIN_OUTAGE_ALERT')).toEqual([
       { channel: 'email', enabled: true, locked: true },
       { channel: 'push', enabled: true, locked: true },

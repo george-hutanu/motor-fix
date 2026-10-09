@@ -78,6 +78,7 @@ const SECTIONS: readonly { key: StaffSectionKey; types: readonly string[] }[] =
         'ADMIN_CATALOGUE_JOB_PENDING',
         'ADMIN_FACILITY_REQUEST',
         'ADMIN_RECHECK_DUE',
+        'ADMIN_GARAGE_REPORTED',
       ],
     },
   ];
