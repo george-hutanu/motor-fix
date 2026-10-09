@@ -99,7 +99,7 @@ export class GarageReportsService {
         ? refusal(
             HttpStatus.CONFLICT,
             'garage_already_reported',
-            'You already reported this garage',
+            'Ai raportat deja acest service.',
           )
         : error;
       const code =
@@ -143,7 +143,7 @@ export class GarageReportsService {
       throw refusal(
         HttpStatus.CONFLICT,
         'garage_already_reported',
-        'You already reported this garage',
+        'Ai raportat deja acest service.',
       );
     }
     const today = await tx.garageReport.count({

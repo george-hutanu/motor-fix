@@ -288,9 +288,15 @@ describe('POST /garages/:id/reports the answer', () => {
 
     const res = await post(id, { text: TEXT }, driver);
 
-    expect([res.status, res.body.code, await count(id)]).toEqual([
+    expect([
+      res.status,
+      res.body.code,
+      res.body.detail,
+      await count(id),
+    ]).toEqual([
       409,
       'garage_already_reported',
+      'Ai raportat deja acest service.',
       1,
     ]);
   });
