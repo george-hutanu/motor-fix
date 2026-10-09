@@ -14,14 +14,15 @@
 // become one pointer each and are never queried. Exit codes: 0 done, 1 failed
 // or --check found a gap, 3 no NOTION_TOKEN, 64 usage. One JSON line on stdout.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync, writeSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, posix, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
 import { isEntryPoint } from "./lib/entry.mjs";
 import { clientLimits, notionClient, notionToken } from "./lib/notion.mjs";
 import { STORIES } from "./notion-sync.mjs";
-import { dashed, frontMatter, notionUrl, renderBlocks, renderProperty } from "./notion-export/render.mjs";
+import { dashed, frontMatter, hosted, notionUrl, renderBlocks, renderProperty } from "./notion-export/render.mjs";
 import { docsDir, layout, SPECS_SLUG } from "./specs-repo.mjs";
 
 /** The space's root page, "MotorFix — Product documentation". */
@@ -53,15 +54,14 @@ export function slugify(title) {
     .replace(/-+$/, "");
 }
 
-/** A Notion-hosted file: a signed URL on S3 or Notion's own hosts. */
-function hosted(url) {
-  try {
-    const u = new URL(url);
-    return /(^|\.)(amazonaws\.com|notion\.so|notion-static\.com)$/.test(u.hostname) && /X-Amz-/i.test(u.search);
-  } catch {
-    return false;
-  }
-}
+// Names a page may not take in its folder, compared case-insensitively (a
+// case-insensitive file system folds `readme.md` onto `README.md`): `index` is
+// a folder page's own file, and at the root every excluded name is the owner's.
+const RESERVED = new Set(["index"]);
+const RESERVED_AT_ROOT = new Set(["index", ...EXCLUDED.map((x) => x.replace(/\/$/, "").replace(/\.[^.]*$/, "").toLowerCase())]);
+
+/** A URL quoted in an error message, replaced: a signed file URL never reaches a report or a log. */
+const scrubUrls = (text) => String(text).replace(/https?:\/\/\S+/g, "<file url>");
 
 function parseArgs(argv) {
   const opts = { mode: "export", root: null };
@@ -130,13 +130,26 @@ function mediaBlocks(blocks) {
       if (MEDIA.has(b.type)) {
         const body = b[b.type] ?? {};
         const url = body.type === "file" ? body.file?.url : body.external?.url;
-        if (url && (body.type === "file" || hosted(url))) out.push({ block: b, url, name: body.name });
+        // Only a signed URL on Notion's own file hosts is fetched; any other
+        // host stays an external link and is never requested.
+        if (url && hosted(url)) out.push({ block: b, url, name: body.name });
       }
       if (b.children) walk(b.children);
     }
   };
   walk(blocks);
   return out;
+}
+
+/** The hosted files of a page with the name each gets in its `.files` folder, unique within it. */
+function assetNames(blocks) {
+  const taken = new Set();
+  return mediaBlocks(blocks).map((m) => {
+    let file = fileName(m.url, m.name);
+    while (taken.has(file)) file = `${file.replace(/(\.[^.]*)?$/, "")}-${taken.size}${file.match(/\.[^.]*$/)?.[0] ?? ""}`;
+    taken.add(file);
+    return { ...m, file };
+  });
 }
 
 const fileName = (url, name) => {
@@ -241,15 +254,36 @@ function assignPaths(nodes, rootId) {
       const base = slugify(c.title) || c.id;
       groups.set(base, [...(groups.get(base) ?? []), c]);
     }
+    const reserved = folder === "" ? RESERVED_AT_ROOT : RESERVED;
+    const taken = new Set();
+    const slugs = new Map();
+    // First every group's plain name, then the suffixed ones, each checked
+    // against every name already taken, so a title that equals a sibling's
+    // suffixed name, or two ids sharing a prefix, never share a file.
     for (const [base, group] of groups) {
       group.sort((a, b) => (a.id < b.id ? -1 : 1));
-      group.forEach((c, i) => {
-        const slug = i === 0 && base !== "index" ? base : `${base}-${c.id.replaceAll("-", "").slice(0, 8)}`;
-        if (isFolder(c)) {
-          files[c.id] = `${folder}${slug}/index.md`;
-          place(c, `${folder}${slug}/`);
-        } else files[c.id] = `${folder}${slug}.md`;
-      });
+      if (!reserved.has(base.toLowerCase())) {
+        slugs.set(group[0].id, base);
+        taken.add(base);
+      }
+    }
+    for (const [base, group] of groups) {
+      for (const c of group) {
+        if (slugs.has(c.id)) continue;
+        const hex = c.id.replaceAll("-", "");
+        let slug = `${base}-${hex.slice(0, 8)}`;
+        if (taken.has(slug)) slug = `${base}-${hex}`;
+        for (let n = 2; taken.has(slug); n++) slug = `${base}-${hex}-${n}`;
+        slugs.set(c.id, slug);
+        taken.add(slug);
+      }
+    }
+    for (const c of children) {
+      const slug = slugs.get(c.id);
+      if (isFolder(c)) {
+        files[c.id] = `${folder}${slug}/index.md`;
+        place(c, `${folder}${slug}/`);
+      } else files[c.id] = `${folder}${slug}.md`;
     }
   };
   files[rootId] = "index.md";
@@ -260,7 +294,7 @@ function assignPaths(nodes, rootId) {
 const cell = (text) => text.replaceAll("|", "\\|").replaceAll("\n", " ");
 
 /** Renders every node that is not cached; downloads its hosted files unless `dry`. */
-async function render({ nodes, files, prev, dry, fetchImpl, report }) {
+async function render({ nodes, files, prev, dry, fetchImpl, report, timeoutMs, scratch }) {
   const out = new Map();
   const assets = new Map();
   for (const n of nodes.values()) {
@@ -271,6 +305,7 @@ async function render({ nodes, files, prev, dry, fetchImpl, report }) {
       resolve: (id) => (files[id] ? posix.relative(posix.dirname(path), files[id]) : null),
       title: (id) => nodes.get(id)?.title || null,
       file: () => null,
+      page: n.url,
     };
     const head = frontMatter({ title: n.title, id: n.id, url: n.url, edited: n.edited });
     if (n.kind === "pointer") {
@@ -301,19 +336,15 @@ async function render({ nodes, files, prev, dry, fetchImpl, report }) {
     } else {
       const dir = path.replace(/\.md$/, ".files");
       const known = prev?.tree?.[n.id]?.assets ?? {};
-      const taken = new Set();
       const map = new Map();
       n.assets = {};
-      for (const { block, url, name } of mediaBlocks(n.blocks)) {
-        let file = fileName(url, name);
-        while (taken.has(file)) file = `${file.replace(/(\.[^.]*)?$/, "")}-${taken.size}${file.match(/\.[^.]*$/)?.[0] ?? ""}`;
-        taken.add(file);
+      for (const { block, url, file } of assetNames(n.blocks)) {
         const rel = `${dir}/${file}`;
         let result;
         if (dry) {
           result = known[file] ?? { path: rel };
           if (result.path) assets.set(result.path, null);
-        } else result = await download(fetchImpl, url, rel, file, report, assets);
+        } else result = await download({ fetchImpl, url, rel, file, report, assets, timeoutMs, scratch });
         n.assets[file] = result;
         map.set(block.id, result.path ? posix.relative(posix.dirname(path), result.path) : { note: result.note });
       }
@@ -324,21 +355,55 @@ async function render({ nodes, files, prev, dry, fetchImpl, report }) {
   return { out, assets };
 }
 
-async function download(fetchImpl, url, rel, file, report, assets) {
+/**
+ * Streams one hosted file into the run's scratch folder (outside docs/, so a
+ * failed run leaves no half file) and records its path; only the path stays in
+ * memory. Bounded by the client's timeout, headers and body alike; an error
+ * names the file, never its signed URL.
+ */
+async function download({ fetchImpl, url, rel, file, report, assets, timeoutMs, scratch }) {
   const tooLarge = (bytes) => {
     report.tooLarge.push({ file: rel, bytes });
     return { note: `${file} (${(bytes / 1048576).toFixed(1)} MB) was not downloaded: it is over the 50 MB limit and stays in Notion.`, bytes };
   };
-  const res = await fetchImpl(url);
-  if (!res.ok) throw new Error(`download of ${rel} failed: ${res.status}`);
+  const signal = AbortSignal.timeout(timeoutMs);
+  const failed = (error) =>
+    new Error(signal.aborted ? `download of ${rel} timed out after ${timeoutMs} ms` : `download of ${rel} failed: ${scrubUrls(error?.message ?? error)}`);
+  let res;
+  try {
+    res = await fetchImpl(url, { signal });
+  } catch (error) {
+    throw failed(error);
+  }
+  if (!res.ok) {
+    await res.body?.cancel?.().catch(() => {});
+    throw new Error(`download of ${rel} failed: ${res.status}`);
+  }
   const length = Number(res.headers.get("content-length"));
   if (length > MAX_FILE_BYTES) {
-    await res.body?.cancel?.();
+    await res.body?.cancel?.().catch(() => {});
     return tooLarge(length);
   }
-  const body = Buffer.from(await res.arrayBuffer());
-  if (body.length > MAX_FILE_BYTES) return tooLarge(body.length);
-  assets.set(rel, body);
+  const temp = join(scratch, `${assets.size}`);
+  const fd = openSync(temp, "w");
+  let bytes = 0;
+  try {
+    for await (const chunk of res.body ?? []) {
+      bytes += chunk.length;
+      if (bytes > MAX_FILE_BYTES) break;
+      writeSync(fd, chunk);
+    }
+  } catch (error) {
+    throw failed(error);
+  } finally {
+    closeSync(fd);
+  }
+  if (bytes > MAX_FILE_BYTES) {
+    rmSync(temp, { force: true });
+    await res.body?.cancel?.().catch(() => {});
+    return tooLarge(bytes);
+  }
+  assets.set(rel, temp);
   return { path: rel };
 }
 
@@ -387,7 +452,7 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
     for (const n of nodes.values()) {
       if (n.cached || !files[n.id] || !n.blocks) continue;
       const dir = files[n.id].replace(/\.md$/, ".files");
-      for (const { url, name } of mediaBlocks(n.blocks)) expected.add(`${dir}/${fileName(url, name)}`);
+      for (const { file } of assetNames(n.blocks)) expected.add(`${dir}/${file}`);
     }
     const missing = Object.values(files).filter((p) => !existsSync(join(docs, p))).sort();
     const orphans = listFiles(docs).filter((p) => !excluded(p) && !expected.has(p));
@@ -397,6 +462,7 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
   }
 
   const dry = opts.mode === "dry-run";
+  const scratch = dry ? null : mkdtempSync(join(tmpdir(), "notion-export-"));
   try {
     // A moved path map invalidates every link: cached pages are fetched and rendered again.
     const moved = !prev || !isDeepStrictEqual(prev.files, files);
@@ -408,7 +474,7 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
         n.body = n.blocks.length > 0;
       }
     }
-    const { out, assets } = await render({ nodes, files, prev, dry, fetchImpl, report });
+    const { out, assets } = await render({ nodes, files, prev, dry, fetchImpl, report, timeoutMs: clientLimits(env).timeoutMs, scratch });
     const expected = new Set([...out.keys(), ...assets.keys()]);
     for (const n of nodes.values()) if (n.cached && files[n.id]) expected.add(files[n.id]);
     const index = { exported: new Date().toISOString(), root: rootId, files, tree: treeOf(nodes) };
@@ -427,6 +493,22 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
       return { code: 0, report: { ok: true, dryRun: true, create: create.sort(), update: update.sort(), delete: stale } };
     }
 
+    // Every write stays under docs/: a symlink anywhere on the way is refused,
+    // never followed (a link inside docs/ could point at any folder).
+    const guard = (path) => {
+      let at = docs;
+      for (const part of path.split("/")) {
+        at = join(at, part);
+        let stat;
+        try {
+          stat = lstatSync(at);
+        } catch {
+          return;
+        }
+        if (stat.isSymbolicLink()) throw new Error(`refusing to write through a symlink: docs/${at.slice(docs.length + 1)}`);
+      }
+    };
+    for (const path of [...out.keys(), ...assets.keys()]) guard(path);
     const write = (path, content) => {
       const file = join(docs, path);
       const before = existsSync(file) ? readFileSync(file) : null;
@@ -438,7 +520,7 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
       else report.created++;
     };
     for (const [path, content] of out) write(path, content);
-    for (const [path, body] of assets) if (body) write(path, body);
+    for (const [path, temp] of assets) if (temp) write(path, readFileSync(temp));
     for (const n of nodes.values()) if (n.cached && files[n.id]) report.unchanged++;
     for (const path of stale) {
       rmSync(join(docs, path));
@@ -449,7 +531,9 @@ export async function run({ argv = [], env = process.env, root = process.cwd(), 
     return { code: 0, report };
   } catch (error) {
     if (!dry) rmSync(join(docs, "index.json"), { force: true });
-    return fail(1, error.message ?? String(error));
+    return fail(1, scrubUrls(error.message ?? String(error)));
+  } finally {
+    if (scratch) rmSync(scratch, { recursive: true, force: true });
   }
 }
 

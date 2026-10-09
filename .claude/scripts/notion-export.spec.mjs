@@ -267,6 +267,21 @@ describe('--check', () => {
   });
 });
 
+describe('--check after an edit', () => {
+  it('expects the deduplicated names render gave two hosted files of one page with the same name', async () => {
+    const image = (k, n) => ({ object: 'block', id: `0000000${n}-0000-4000-8000-000000000000`, type: 'image', has_children: false, image: { type: 'file', file: { url: `${FILE_HOST}/ws/x1/diagram.png?X-Amz-Signature=${k}` }, caption: [] } });
+    fx.edit(IDS.vision2, [image('a', 1), image('b', 2)]);
+    const first = await exportDocs();
+    assert.equal(first.code, 0, JSON.stringify(first.report));
+    assert.equal(tree().filter((p) => /^overview\/vision-[0-9a-f]+\.files\/diagram/.test(p)).length, 2);
+    // Edited again in Notion, so --check works the names out from the blocks, not the index.
+    fx.pages.get(IDS.vision2).page.last_edited_time = '2026-10-06T10:00:00.000Z';
+    const r = await exportDocs(['--check']);
+    assert.equal(r.code, 0, JSON.stringify(r.report));
+    assert.deepEqual(r.report.orphans, []);
+  });
+});
+
 describe('failures', () => {
   it('an API failure exits non-zero and leaves no index, and --check then says there is none', async () => {
     await exportDocs();

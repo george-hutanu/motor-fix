@@ -8,13 +8,40 @@
 const NOTION_HOSTS = /(^|\.)(notion\.so|notion\.site|notion\.com)$/;
 const HEX32 = /[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
-/** A Notion id, dashed. */
+/** A Notion id, dashed. Throws on anything but 32 hex digits, so an id can never become a path. */
 export const dashed = (id) => {
   const hex = String(id).replaceAll("-", "").toLowerCase();
+  if (!/^[0-9a-f]{32}$/.test(hex)) throw new Error(`not a Notion id: ${String(id).slice(0, 40)}`);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+/** A Notion id, dashed, or null when it is not one: a link lookup, never a path. */
+const idOrNull = (id) => {
+  try {
+    return dashed(id);
+  } catch {
+    return null;
+  }
+};
+/** The path a link to this id resolves to, or null (outside the crawl, or no id at all). */
+const lookup = (ctx, id) => {
+  const d = id ? idOrNull(id) : null;
+  return d ? ctx.resolve(d) : null;
 };
 const compact = (id) => String(id).replaceAll("-", "");
 export const notionUrl = (id) => `https://www.notion.so/${compact(id)}`;
+
+const FILE_HOSTS = ["amazonaws.com", "notion.so", "notion-static.com"];
+
+/** A Notion-hosted file: a signed URL on S3 or Notion's own hosts, matched by exact host or a true subdomain. */
+export function hosted(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return FILE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`)) && /X-Amz-/i.test(u.search);
+  } catch {
+    return false;
+  }
+}
 
 /** The page id a notion.so, notion.site or app.notion.com URL points at (the last id in its path), or null. */
 export function notionId(url) {
@@ -29,12 +56,19 @@ export function notionId(url) {
   return ids ? dashed(ids.at(-1)) : null;
 }
 
+/** A Markdown code fence longer than any run of backticks in the text, three at least. */
+function fence(text) {
+  const longest = Math.max(0, ...(String(text).match(/`+/g) ?? []).map((run) => run.length));
+  return "`".repeat(Math.max(3, longest + 1));
+}
+
 // Titles seen while rendering, per ctx: a link_to_page block names its target by
 // ctx.title(id) when the caller has one, else by a title met earlier on the page.
 const seen = new WeakMap();
 const remember = (ctx, id, title) => {
   if (!seen.has(ctx)) seen.set(ctx, new Map());
-  seen.get(ctx).set(dashed(id), title);
+  const d = idOrNull(id);
+  if (d) seen.get(ctx).set(d, title);
 };
 const titleOf = (ctx, id, path) => ctx.title?.(id) ?? seen.get(ctx)?.get(id) ?? path.split("/").pop().replace(/\.md$/, "");
 
@@ -43,8 +77,14 @@ const count = (ctx, type) => {
   return `<!-- notion: ${type} -->`;
 };
 
-/** A link target: a Notion URL inside the crawl becomes its relative path; anything else is kept. */
+/**
+ * A link target: a Notion URL inside the crawl becomes its relative path; a
+ * signed file URL becomes the Notion page that holds it (ctx.page), or null to
+ * drop the link, so neither its signature nor its S3 host is ever written;
+ * anything else is kept.
+ */
 function target(url, ctx) {
+  if (hosted(url)) return ctx.page ?? null;
   const id = notionId(url);
   const path = id ? ctx.resolve(id) : null;
   return path ?? url;
@@ -52,12 +92,14 @@ function target(url, ctx) {
 
 function annotate(text, a = {}) {
   if (!text.trim()) return text;
-  let out = text;
+  // Markers hug the words: `**word **` is not emphasis in Markdown.
+  const [, lead, core, trail] = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
+  let out = core;
   if (a.code) out = `\`${out}\``;
   if (a.bold) out = `**${out}**`;
   if (a.italic) out = `*${out}*`;
   if (a.strikethrough) out = `~~${out}~~`;
-  return out;
+  return `${lead}${out}${trail}`;
 }
 
 /** Rich text as inline Markdown. */
@@ -69,15 +111,17 @@ export function richText(parts = [], ctx) {
         const m = part.mention;
         const id = m[m.type]?.id;
         if (m.type === "page" || m.type === "database") {
-          const path = id ? ctx.resolve(dashed(id)) : null;
+          const path = lookup(ctx, id);
           return `[${part.plain_text}](${path ?? part.href ?? notionUrl(id)})`;
         }
         if (m.type === "date") return part.plain_text;
-        return part.href ? `[${part.plain_text}](${target(part.href, ctx)})` : part.plain_text;
+        const to = part.href ? target(part.href, ctx) : null;
+        return to ? `[${part.plain_text}](${to})` : part.plain_text;
       }
       const text = annotate(part.plain_text ?? part.text?.content ?? "", part.annotations);
       const href = part.href ?? part.text?.link?.url;
-      return href ? `[${text}](${target(href, ctx)})` : text;
+      const to = href ? target(href, ctx) : null;
+      return to ? `[${text}](${to})` : text;
     })
     .join("");
 }
@@ -91,8 +135,10 @@ function media(block, ctx) {
   const caption = richText(body.caption ?? [], ctx);
   const local = ctx.file(block);
   if (local && typeof local === "object") return local.note;
-  if (body.type === "file" && local === null) return count(ctx, `${block.type} without a file`);
-  const src = local ?? body.external?.url ?? "";
+  const remote = body.type === "file" ? body.file?.url : body.external?.url;
+  // A signed file the export did not download is never linked by its URL.
+  if (local === null && (!remote || hosted(remote))) return count(ctx, `${block.type} without a file`);
+  const src = local ?? remote;
   if (block.type === "image") return `![${caption}](${src})`;
   const name = caption || body.name || src.split("/").pop();
   return `[${name}](${src})`;
@@ -127,8 +173,10 @@ function one(block, ctx) {
     }
     case "toggle":
       return `<details>\n<summary>${text()}</summary>\n\n${nested()}\n\n</details>`;
-    case "code":
-      return `\`\`\`${body.language ?? ""}\n${plain(body.rich_text)}\n\`\`\``;
+    case "code": {
+      const code = plain(body.rich_text);
+      return `${fence(code)}${body.language ?? ""}\n${code}\n${fence(code)}`;
+    }
     case "divider":
       return "---";
     case "equation":
@@ -147,14 +195,14 @@ function one(block, ctx) {
       return kids.length ? renderBlocks(kids, ctx).trimEnd() : null;
     case "child_page":
     case "child_database": {
-      const path = ctx.resolve(dashed(block.id));
+      const path = lookup(ctx, block.id);
       remember(ctx, block.id, body.title || "Untitled");
       return `- [${body.title || "Untitled"}](${path ?? notionUrl(block.id)})`;
     }
     case "link_to_page": {
       const id = body.page_id ?? body.database_id;
-      const path = id ? ctx.resolve(dashed(id)) : null;
-      const name = path ? titleOf(ctx, dashed(id), path) : "page";
+      const path = lookup(ctx, id);
+      const name = path ? titleOf(ctx, idOrNull(id), path) : "page";
       return `- [${name}](${path ?? notionUrl(id)})`;
     }
     case "image":
@@ -168,6 +216,7 @@ function one(block, ctx) {
     case "link_preview": {
       const caption = richText(body.caption ?? [], ctx);
       const url = target(body.url, ctx);
+      if (!url) return caption || count(ctx, `${t} of a file left in Notion`);
       return caption ? `[${caption}](${url})` : `<${url}>`;
     }
     case "table_of_contents":
@@ -215,7 +264,7 @@ export function renderProperty(prop, ctx) {
     case "relation":
       return (v ?? [])
         .map(({ id }) => {
-          const path = ctx.resolve(dashed(id));
+          const path = lookup(ctx, id);
           return path ? `[${path.split("/").pop().replace(/\.md$/, "")}](${path})` : notionUrl(id);
         })
         .join(", ");
@@ -232,8 +281,11 @@ export function renderProperty(prop, ctx) {
   }
 }
 
-/** The four front-matter keys, in order; the title double-quoted. */
+// A value that is safe bare in YAML stays bare; anything else is a JSON string,
+// which is a valid YAML double-quoted scalar and cannot break the fence.
+const scalar = (value) => (/^[\w:/.+-]+$/.test(String(value)) ? String(value) : JSON.stringify(String(value)));
+
+/** The four front-matter keys, in order; the title always double-quoted, newlines and quotes escaped. */
 export function frontMatter({ title, id, url, edited }) {
-  const quoted = `"${String(title).replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
-  return `---\ntitle: ${quoted}\nnotion_id: ${dashed(id)}\nnotion_url: ${url}\nlast_edited: ${edited}\n---\n`;
+  return `---\ntitle: ${JSON.stringify(String(title))}\nnotion_id: ${dashed(id)}\nnotion_url: ${scalar(url)}\nlast_edited: ${scalar(edited)}\n---\n`;
 }

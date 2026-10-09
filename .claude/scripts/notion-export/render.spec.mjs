@@ -3,7 +3,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { frontMatter, notionId, renderBlocks, renderProperty, richText } from './render.mjs';
+import { dashed, frontMatter, hosted, notionId, renderBlocks, renderProperty, richText } from './render.mjs';
 
 const A = 'aaaaaaaa-1111-2222-3333-444444444444';
 const B = 'bbbbbbbb-1111-2222-3333-444444444444';
@@ -195,5 +195,20 @@ describe('front matter', () => {
       fm,
       `---\ntitle: "Say \\"hi\\" \\\\ there"\nnotion_id: ${A}\nnotion_url: https://www.notion.so/${compact(A)}\nlast_edited: 2026-10-09T10:00:00.000Z\n---\n`,
     );
+  });
+});
+
+describe('ids and hosts', () => {
+  it('dashes a Notion id and refuses anything that could climb out of docs/', () => {
+    assert.equal(dashed('0123456789ABCDEF0123456789abcdef'), '01234567-89ab-cdef-0123-456789abcdef');
+    for (const bad of ['../../etc/passwd', '0123456789abcdef0123456789abcde', '0123456789abcdef0123456789abcdef/..', '']) assert.throws(() => dashed(bad), /not a Notion id/);
+  });
+
+  it('treats only the exact file hosts or their true subdomains, signed, as Notion-hosted', () => {
+    const q = '?X-Amz-Signature=x';
+    assert.equal(hosted(`https://prod-files-secure.s3.us-west-2.amazonaws.com/a.png${q}`), true);
+    assert.equal(hosted(`https://file.notion.so/a.png${q}`), true);
+    for (const url of [`https://evilamazonaws.com/a.png${q}`, `https://amazonaws.com.evil.example/a.png${q}`, `https://notnotion.so/a.png${q}`, 'https://file.notion.so/a.png'])
+      assert.equal(hosted(url), false, url);
   });
 });
