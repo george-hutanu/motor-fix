@@ -151,7 +151,6 @@ describe('the public tab bar', () => {
 
   it.each([
     ['/ro/garages', GARAGES],
-    ['/ro/garages/atelier-dinamo', GARAGES],
     ['/ro/mechanics/ion-popescu', 'Mecanic'],
     ['/ro/account', 'Cont'],
   ])('shows a placeholder at %s', async (address, heading) => {

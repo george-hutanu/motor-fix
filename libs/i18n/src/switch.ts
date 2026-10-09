@@ -78,8 +78,9 @@ export function provideRememberedLanguage(): EnvironmentProviders {
   selector: 'mf-language-switch',
   styles: `
     :host { display: inline-flex; }
-    button { min-width: 44px; min-height: 44px; padding: 4px 8px; font: inherit; font-size: var(--mf-size-body, 16px); }
-    button[aria-pressed='true'] { font-weight: 700; text-decoration: underline; }
+    div { display: flex; border: 1px solid var(--mf-line); border-radius: var(--mf-radius-control); overflow: hidden; }
+    button { min-width: 44px; min-height: 44px; padding: 4px 8px; font: inherit; font-size: var(--mf-size-body, 16px); color: inherit; background: transparent; border: 0; cursor: pointer; }
+    button[aria-pressed='true'] { font-weight: 700; background: var(--mf-panel-raised); }
   `,
   template: `
     <div role="group" [attr.aria-label]="'shell.language.label' | t">
