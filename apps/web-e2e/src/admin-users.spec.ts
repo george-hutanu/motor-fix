@@ -1,4 +1,5 @@
-import { expect, type Page } from '@playwright/test';
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
@@ -17,16 +18,47 @@ const row = (page: Page, name: string) =>
       has: page.locator('.name', { hasText: new RegExp(`^${name}$`) }),
     });
 
-// Other tests add accounts, so a seeded one may sit past the first page:
-// bring the list's end into view until the row has loaded.
+// The list is newest first and pages as its end comes into view. Bring the
+// end into view, a page at a time, until the row has loaded or the list has
+// truly ended (no sentinel left): no fixed number of tries.
 async function findRow(page: Page, name: string) {
+  const rows = recent(page).locator('li.row');
+  const sentinel = recent(page).locator('.sentinel');
   const found = row(page, name);
-  for (let tries = 0; tries < 15 && (await found.count()) === 0; tries++) {
-    await recent(page).locator('li.row').last().scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
+  await expect(rows.first()).toBeVisible();
+  while ((await found.count()) === 0 && (await sentinel.count()) > 0) {
+    const before = await rows.count();
+    await sentinel.scrollIntoViewIfNeeded();
+    await expect
+      .poll(
+        async () =>
+          (await found.count()) > 0 ||
+          (await sentinel.count()) === 0 ||
+          (await rows.count()) > before,
+      )
+      .toBe(true);
   }
   await expect(found).toHaveCount(1);
   return found;
+}
+
+// A driver of the test's own, signed up just before the view opens: newest
+// first puts it on the first page however many accounts staging holds.
+async function freshDriver(request: APIRequestContext) {
+  const tag = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const name = `Cont Recent ${tag}`;
+  const signUp = await request.post('/api/v1/auth/sign-up', {
+    data: {
+      consent: CURRENT_CONSENT,
+      email: `recent-${tag}@example.test`,
+      language: 'ro',
+      name,
+      password: 'cont-recent-de-test-2026',
+    },
+    headers: { 'x-forwarded-for': `203.0.113.${Date.now() % 250}` },
+  });
+  expect(signUp.status()).toBe(201);
+  return name;
 }
 
 async function signInAsAdmin(page: Page) {
@@ -50,9 +82,11 @@ test.describe('the accounts view @seeded', () => {
     ['a 320 px phone', 320, 640],
     ['a desktop', 1280, 800],
   ] as const) {
-    test(`shows the seeded admin the totals, the accounts and the growth on ${device}`, async ({
+    test(`shows the seeded admin the totals, a new account and the growth on ${device}`, async ({
       page,
+      request,
     }) => {
+      const name = await freshDriver(request);
       await page.setViewportSize({ height, width });
       await signInAsAdmin(page);
       await page.goto('/app/admin/users');
@@ -61,20 +95,17 @@ test.describe('the accounts view @seeded', () => {
         /^[\d.]+ (de )?(șofer activ|șoferi activi) · [\d.]+ (de )?service(‑uri)? · [\d.]+ (de )?mecanici?$/,
       );
 
-      const suspended = await findRow(page, 'Radu Suspendat');
-      await expect(suspended.locator('mf-lamp')).toHaveAttribute(
+      const account = await findRow(page, name);
+      await expect(account.locator('.detail')).toHaveText(
+        'șofer · fără mașină',
+      );
+      await expect(account.locator('mf-lamp')).toHaveAttribute(
         'data-state',
-        'red',
+        'green',
       );
-      await expect(suspended.locator('mf-lamp')).toHaveText(
-        'suspendat · din 2 oct. 2026',
+      await expect(account.locator('mf-lamp')).toHaveText(
+        /^activ · din \p{L}+\.? \d{4}$/u,
       );
-      await expect(
-        (await findRow(page, 'Elena Dobre')).locator('.detail'),
-      ).toHaveText('șofer + service · Service Dobre');
-      await expect(
-        (await findRow(page, 'Vlad Stan')).locator('.detail'),
-      ).toHaveText('mecanic · Atelier Test');
 
       await expect(
         page.getByRole('heading', { name: 'Creștere, ultimele 12 luni' }),
@@ -90,9 +121,11 @@ test.describe('the accounts view @seeded', () => {
     ['a 390 px phone', 390, 844],
     ['a desktop', 1280, 800],
   ] as const) {
-    test(`reads the seeded accounts and the growth in English on ${device}`, async ({
+    test(`reads a new account and the growth in English on ${device}`, async ({
       page,
+      request,
     }) => {
+      const name = await freshDriver(request);
       await page.setViewportSize({ height, width });
       await signInAsAdmin(page);
       // The seeded admin reads Romanian; only the language is changed, the
@@ -112,16 +145,11 @@ test.describe('the accounts view @seeded', () => {
       await expect(
         page.getByRole('heading', { name: 'Recent accounts' }),
       ).toBeVisible();
-      const suspended = await findRow(page, 'Radu Suspendat');
-      await expect(suspended.locator('mf-lamp')).toHaveText(
-        'suspended · since 2 Oct 2026',
+      const account = await findRow(page, name);
+      await expect(account.locator('.detail')).toHaveText('driver · no car');
+      await expect(account.locator('mf-lamp')).toHaveText(
+        /^active · since \p{L}+\.? \d{4}$/u,
       );
-      await expect(
-        (await findRow(page, 'Elena Dobre')).locator('.detail'),
-      ).toHaveText('driver + garage · Service Dobre');
-      await expect(
-        (await findRow(page, 'Vlad Stan')).locator('.detail'),
-      ).toHaveText('mechanic · Atelier Test');
       await expect(
         page.getByRole('heading', { name: 'Growth, last 12 months' }),
       ).toBeVisible();
@@ -169,8 +197,36 @@ const item = (n: number) => ({
   status: 'active',
 });
 
-// Twenty-five accounts, served twenty then five, as the API pages them.
-async function stubAccounts(page: Page, language: 'ro' | 'en') {
+// The rows the seeded accounts used to give, served as the list's one page:
+// a suspended driver, a driver who owns a garage, a mechanic.
+const KINDS = [
+  {
+    ...item(1),
+    name: 'Radu Suspendat',
+    since: '2026-10-02T10:00:00.000Z',
+    status: 'suspended',
+  },
+  {
+    ...item(2),
+    garageName: 'Service Dobre',
+    name: 'Elena Dobre',
+    roles: ['driver', 'garage'],
+  },
+  {
+    ...item(3),
+    garageName: 'Atelier Test',
+    name: 'Vlad Stan',
+    roles: ['mechanic'],
+  },
+];
+
+// Twenty-five accounts, served twenty then five, as the API pages them;
+// or the given items, as one page.
+async function stubAccounts(
+  page: Page,
+  language: 'ro' | 'en',
+  items?: unknown[],
+) {
   await page.route('**/api/v1/auth/refresh', (route) =>
     route.fulfill({ json: { accessToken: 'stubbed' } }),
   );
@@ -208,6 +264,7 @@ async function stubAccounts(page: Page, language: 'ro' | 'en') {
     }),
   );
   await page.route(/\/api\/v1\/admin\/accounts(\?.*)?$/, (route) => {
+    if (items) return route.fulfill({ json: { items, nextCursor: null } });
     const next = new URL(route.request().url()).searchParams.has('cursor');
     const numbers = next
       ? [20, 21, 22, 23, 24]
@@ -253,6 +310,49 @@ test.describe('the accounts view', () => {
         await expect(
           recent(page).locator('li.row').last().locator('.name'),
         ).toHaveText('Cont 24');
+        expect(await sideways(page)).toBeLessThanOrEqual(0);
+      });
+    }
+  }
+
+  for (const [device, width, height] of [
+    ['a 320 px phone', 320, 640],
+    ['a desktop', 1280, 800],
+  ] as const) {
+    for (const [language, suspended, owner, mechanic] of [
+      [
+        'ro',
+        'suspendat · din 2 oct. 2026',
+        'șofer + service · Service Dobre',
+        'mecanic · Atelier Test',
+      ],
+      [
+        'en',
+        'suspended · since 2 Oct 2026',
+        'driver + garage · Service Dobre',
+        'mechanic · Atelier Test',
+      ],
+    ] as const) {
+      test(`reads a suspended account, a garage owner and a mechanic, in ${language} on ${device}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ height, width });
+        await stubAccounts(page, language, KINDS);
+
+        await page.goto('/app/admin/users');
+
+        const radu = await findRow(page, 'Radu Suspendat');
+        await expect(radu.locator('mf-lamp')).toHaveAttribute(
+          'data-state',
+          'red',
+        );
+        await expect(radu.locator('mf-lamp')).toHaveText(suspended);
+        await expect(
+          (await findRow(page, 'Elena Dobre')).locator('.detail'),
+        ).toHaveText(owner);
+        await expect(
+          (await findRow(page, 'Vlad Stan')).locator('.detail'),
+        ).toHaveText(mechanic);
         expect(await sideways(page)).toBeLessThanOrEqual(0);
       });
     }

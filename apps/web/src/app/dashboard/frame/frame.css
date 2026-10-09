@@ -26,8 +26,14 @@ aside nav a[aria-current="page"] {
 .account > button {
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-3);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-chip);
+  background: transparent;
+  color: var(--mf-text);
   font: inherit;
   font-size: var(--mf-size-body);
+  text-align: start;
+  cursor: pointer;
 }
 .account button[aria-busy="true"] {
   cursor: progress;
@@ -93,6 +99,10 @@ header h1 {
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-small);
   overflow-wrap: anywhere;
+}
+/* On a phone the line under the title is read as body text. */
+.line {
+  font-size: var(--mf-size-body);
 }
 /* Read on a phone: 16 px there, the small size from a tablet up. */
 @media (max-width: 767.98px) {
@@ -179,5 +189,8 @@ main {
   }
   aside nav {
     display: flex;
+  }
+  .line {
+    font-size: var(--mf-size-small);
   }
 }

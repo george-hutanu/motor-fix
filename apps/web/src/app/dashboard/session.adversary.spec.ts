@@ -8,6 +8,7 @@ function account(language: string) {
   return {
     capabilities: [],
     email: 'andrei@example.ro',
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing: '/app/driver',

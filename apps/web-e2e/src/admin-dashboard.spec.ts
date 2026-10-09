@@ -70,6 +70,7 @@ const stubAdmin = async (
       json: {
         capabilities: ADMIN_CAPABILITIES,
         email: ACCOUNTS.admin,
+        garageAccess: [],
         garageId: null,
         id: 'admin-1',
         landing: '/app/admin',
@@ -270,6 +271,7 @@ test.describe('the admin dashboard in English', () => {
           json: {
             capabilities: ADMIN_CAPABILITIES,
             email: ACCOUNTS.admin,
+            garageAccess: [],
             garageId: null,
             id: 'admin-1',
             landing: '/app/admin',
@@ -320,6 +322,7 @@ test('switches the admin header and counter to English without a reload', async 
       json: {
         capabilities: ADMIN_CAPABILITIES,
         email: ACCOUNTS.admin,
+        garageAccess: [],
         garageId: null,
         id: 'admin-1',
         landing: '/app/admin',

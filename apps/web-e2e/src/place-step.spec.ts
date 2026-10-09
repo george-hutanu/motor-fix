@@ -1,6 +1,6 @@
 import { expect, type Page, type Route } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { ownMap, ready } from './accounts.js';
 import { COLLECTOR, test } from './fixtures.js';
 
 const STEFAN = {
@@ -36,10 +36,7 @@ async function stub(
     )
       outside.push(hostname);
   });
-  await page.addInitScript(() => {
-    (window as unknown as { __MF_MAP_STYLE: string }).__MF_MAP_STYLE =
-      '/map/empty-style.json';
-  });
+  await ownMap(page);
   await page.route('**/api/v1/places?*', (route: Route) =>
     route.fulfill({
       body: JSON.stringify(answer.body),

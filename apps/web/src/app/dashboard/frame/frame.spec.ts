@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -40,10 +43,16 @@ let live: {
   resync: Subject<void>;
 };
 
-const me = (role: string, landing: string, capabilities: string[]) =>
+const me = (
+  role: string,
+  landing: string,
+  capabilities: string[],
+  extra: Partial<MeDto> = {},
+) =>
   ({
     capabilities,
     email: null,
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing,
@@ -51,6 +60,7 @@ const me = (role: string, landing: string, capabilities: string[]) =>
     name: 'Ioana Pop',
     role,
     roles: [role],
+    ...extra,
   }) as unknown as MeDto;
 
 async function render(
@@ -58,6 +68,7 @@ async function render(
   landing: string,
   capabilities: string[],
   url = landing,
+  extra: Partial<MeDto> = {},
 ) {
   Element.prototype.scrollIntoView = jest.fn();
   signOut = jest.fn(async () => current.set(null));
@@ -73,7 +84,7 @@ async function render(
     resync: new Subject(),
   };
   overview = jest.fn(() => waiting());
-  const current = signal<MeDto | null>(me(role, landing, capabilities));
+  const current = signal<MeDto | null>(me(role, landing, capabilities, extra));
   // The account Session keeps on screen behind the gate dialog.
   const kept = signal<MeDto | null>(null);
   const shown = computed(() => current() ?? kept());
@@ -158,7 +169,31 @@ const OWNER = [
   'garage.prices',
   'garage.profile',
   'garage.feature_switches',
+  'garage.audit_history',
 ];
+
+// The owner's membership of Atelier Test, matched on the session's garage.
+const atelier = (
+  features: Record<string, boolean> = {},
+  name = 'Atelier Test',
+): Partial<MeDto> =>
+  ({
+    garageAccess: [
+      {
+        features,
+        garageId: 'garage-1',
+        name,
+        permissions: {
+          canAnswerQuotes: true,
+          canMoveBookings: true,
+          canRecordFinalPrice: true,
+        },
+        role: 'owner',
+        status: 'approved',
+      },
+    ],
+    garageId: 'garage-1',
+  }) as unknown as Partial<MeDto>;
 
 describe('Frame', () => {
   it('shows the full garage menu to an owner', async () => {
@@ -173,6 +208,7 @@ describe('Frame', () => {
       'Recenzii',
       'Profilul service‑ului',
       'Setări',
+      'Istoric modificări',
     ]);
   });
 
@@ -194,7 +230,7 @@ describe('Frame', () => {
 
     expect(name()).toBe('Ioana Pop');
     expect(menu(element)).toEqual(before);
-    expect(menu(element)).toHaveLength(8);
+    expect(menu(element)).toHaveLength(9);
     expect(title(element)).toBe('Mecanici');
     expect(url()).toBe('/app/garage/team');
 
@@ -285,6 +321,7 @@ describe('Frame', () => {
       'Recenzii',
       'Profil',
       'Setări',
+      'Istoric',
     ]);
     expect(
       element
@@ -448,16 +485,17 @@ describe('Frame', () => {
 
     expect(
       garage.element.querySelector('aside span')?.textContent?.trim(),
-    ).toBe('Garage');
+    ).toBe('GARAGE ACCOUNT');
     expect(menu(garage.element)).toEqual([
       'Dashboard',
       'Quote requests',
-      'Bookings',
+      'Schedule',
       'Mechanics',
       'Prices',
       'Reviews',
       'Garage profile',
       'Settings',
+      'Change history',
     ]);
 
     TestBed.resetTestingModule();
@@ -865,7 +903,7 @@ describe('the driver header', () => {
     expect(bar(element).map((a) => a.textContent?.trim())).not.toContain('AI');
   });
 
-  it('keeps the menu label as the title on the garage dashboard', async () => {
+  it('gives each garage view its own title and line', async () => {
     const { element } = await render(
       'garage',
       '/app/garage',
@@ -874,7 +912,7 @@ describe('the driver header', () => {
     );
 
     expect(title(element)).toBe('Mecanici');
-    expect(subtitle(element)).toBeUndefined();
+    expect(subtitle(element)).toBe('Echipa ta și ce poate face fiecare');
   });
 });
 
@@ -893,11 +931,11 @@ describe('the account block', () => {
     expect(tag()?.textContent?.trim()).toBe('DRIVER ACCOUNT');
   });
 
-  it('leaves the garage and admin account lines as they were', async () => {
+  it('names the garage account and leaves the admin line as it was', async () => {
     const garage = await render('garage', '/app/garage', OWNER);
     expect(
       garage.element.querySelector('aside .eyebrow')?.textContent?.trim(),
-    ).toBe('Service');
+    ).toBe('CONT SERVICE');
 
     TestBed.resetTestingModule();
     const admin = await render('admin', '/app/admin', ['admin.garages']);
@@ -936,5 +974,141 @@ describe('the account block', () => {
     await settle(harness);
 
     expect(initials(element)).toBeNull();
+  });
+});
+
+describe('the garage header', () => {
+  const line = (element: HTMLElement) =>
+    element.querySelector('header .line')?.textContent?.trim();
+  const tag = (element: HTMLElement) =>
+    element.querySelector('aside .eyebrow')?.textContent?.trim();
+
+  // @traces 097-FR-006
+  it('tags the menu CONT SERVICE and names the garage under Panou service', async () => {
+    const { element, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage',
+      atelier(),
+    );
+
+    expect(tag(element)).toBe('CONT SERVICE');
+    expect(title(element)).toBe('Panou service');
+    expect(line(element)).toBe('Atelier Test');
+
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(tag(element)).toBe('GARAGE ACCOUNT');
+    expect(title(element)).toBe('Garage dashboard');
+    expect(line(element)).toBe('Atelier Test');
+  });
+
+  // @traces 097-FR-006
+  it('shows no garage line with no membership, or when the session’s garage matches none', async () => {
+    const none = await render('garage', '/app/garage', OWNER);
+    expect(title(none.element)).toBe('Panou service');
+    expect(line(none.element)).toBeUndefined();
+
+    TestBed.resetTestingModule();
+    const other = await render('garage', '/app/garage', OWNER, '/app/garage', {
+      ...atelier(),
+      garageId: 'another-garage',
+    });
+    expect(line(other.element)).toBeUndefined();
+    expect(other.element.textContent).not.toContain('Atelier Test');
+  });
+
+  // @traces 097-FR-003
+  it('gives each garage view its own title and subtitle, in both languages', async () => {
+    const { element, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/prices',
+      atelier(),
+    );
+
+    expect(title(element)).toBe('Prețuri');
+    expect(line(element)).toBe(
+      'Intervalele pe care le văd șoferii pe profilul tău',
+    );
+    await harness.navigateByUrl('/app/garage/history');
+    await settle(harness);
+    expect(title(element)).toBe('Istoric modificări');
+    expect(line(element)).toBe('Cine a schimbat ce și când');
+
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(title(element)).toBe('Change history');
+    expect(line(element)).toBe('Who changed what and when');
+  });
+
+  // @traces 097-FR-007
+  it('leaves Mecanici out of the menu and the bar while the garage has mechanics switched off', async () => {
+    const { element } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage',
+      atelier({ team_mechanics: false }),
+    );
+
+    expect(menu(element)).not.toContain('Mecanici');
+    expect(bar(element).map((a) => a.textContent?.trim())).not.toContain(
+      'Mecanici',
+    );
+    expect(menu(element)).toContain('Prețuri');
+  });
+
+  // @traces 097-FR-007
+  it('moves off Mecanici when the garage switches it off', async () => {
+    const { current, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/team',
+      atelier(),
+    );
+    expect(url()).toBe('/app/garage/team');
+
+    current.set(
+      me('garage', '/app/garage', OWNER, atelier({ team_mechanics: false })),
+    );
+    await settle(harness);
+
+    expect(url()).toBe('/app/garage');
+  });
+
+  // @traces 097-FR-010
+  it('shows a long garage name as written, marked not to be translated', async () => {
+    const { element } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage',
+      atelier({}, 'Service Auto Foarte Lung Pentru Ecranele Mici Din Centru'),
+    );
+
+    const line = element.querySelector('header .line');
+    expect(line?.textContent?.trim()).toBe(
+      'Service Auto Foarte Lung Pentru Ecranele Mici Din Centru',
+    );
+    expect(line?.getAttribute('translate')).toBe('no');
+  });
+});
+
+describe('Frame account buttons', () => {
+  it('are styled tap targets in body text, padded on the 4 px grid', () => {
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(
+      /\s+/g,
+      ' ',
+    );
+    const rule = /\.account > button \{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(rule).toContain('min-height: var(--mf-tap)');
+    expect(rule).toContain('padding: 0 var(--mf-space-3)');
+    expect(rule).toContain('font: inherit');
+    expect(rule).toContain('font-size: var(--mf-size-body)');
   });
 });

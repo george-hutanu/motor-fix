@@ -1,7 +1,12 @@
 import { DOCUMENT } from '@angular/common';
 import { InjectionToken, inject } from '@angular/core';
 import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
-import type { GeoJSONSource, Map as MapLibre, Marker } from 'maplibre-gl';
+import type {
+  GeoJSONSource,
+  MapEventType,
+  Map as MapLibre,
+  Marker,
+} from 'maplibre-gl';
 
 export interface LatLng {
   lat: number;
@@ -11,6 +16,7 @@ export interface LatLng {
 export interface PlaceMapEvents {
   dragged(at: LatLng): void;
   failed(): void;
+  recovered(): void;
   tapped(at: LatLng): void;
 }
 
@@ -130,19 +136,40 @@ async function openMapLibre(
     new maplibre.NavigationControl({ showCompass: false }),
     'top-right',
   );
+  // A failure before the map loads tears it down; once it has loaded, an
+  // error (one failed tile is enough) is only reported, and the first render
+  // after it that settles with no error of its own reports the recovery.
   await new Promise<void>((resolve, reject) => {
-    map.once('load', () => resolve());
-    map.once('error', ({ error }) => {
+    const loaded = () => {
+      map.off('error', broken);
+      let down = false;
+      let erred = false;
+      map.on('error', () => {
+        down = erred = true;
+        events.failed();
+      });
+      map.on('idle', () => {
+        if (down && !erred) {
+          down = false;
+          events.recovered();
+        }
+        erred = false;
+      });
+      resolve();
+    };
+    const broken = ({ error }: MapEventType['error']) => {
+      map.off('load', loaded);
       map.remove();
       reject(error);
-    });
+    };
+    map.once('error', broken);
+    map.once('load', loaded);
   });
   // Under the test style the e2e suite reads the view off the live map.
   const view = host.ownerDocument.defaultView as
     | (Window & { __MF_MAP?: MapLibre; __MF_MAP_STYLE?: string })
     | null;
   if (view?.__MF_MAP_STYLE) view.__MF_MAP = map;
-  map.on('error', () => events.failed());
   map.on('click', ({ lngLat }) =>
     events.tapped({ lat: lngLat.lat, lng: lngLat.lng }),
   );
