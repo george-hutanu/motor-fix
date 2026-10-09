@@ -123,6 +123,8 @@ def _feature_key(repo_root: Path, value: object) -> str | None:
     while key.startswith("./"):
         key = key[2:]
     key = key.rstrip("/")
+    # The same feature in every specs layout (featuresRoot in feature.mjs): one key.
+    key = re.sub(r"^(?:specs/specs|\.motor-fix-specs/specs)/(?=.)", "specs/", key)
     return key or None
 
 

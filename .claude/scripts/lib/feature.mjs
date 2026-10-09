@@ -18,7 +18,7 @@
 //
 // Usage as a module:  import { activeFeature } from "./lib/feature.mjs"
 // Usage from shell:   node .claude/scripts/lib/feature.mjs   # prints "dir\tnum\tlevel"
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join, basename, isAbsolute } from "node:path";
 
@@ -82,7 +82,48 @@ export function featureKey(repo, dir) {
   const base = typeof repo === "string" && repo !== "" ? `${repo.replaceAll("\\", "/").replace(/\/+$/, "")}/` : null;
   if (base && key.startsWith(base)) key = key.slice(base.length);
   key = key.replace(/^(\.\/)+/, "").replace(/\/+$/, "");
+  // The same feature in every specs layout (see featuresRoot): one key.
+  key = key.replace(/^(?:specs\/specs|\.motor-fix-specs\/specs)\/(?=.)/, "specs/");
   return key === "" ? undefined : key;
+}
+
+const isDir = (path) => {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Where the feature folders sit, relative to the repository. ST-1026 moved
+ * them under motor-fix-specs' own specs/ tree and the clone to
+ * .motor-fix-specs/, with `specs` a link to its specs/: `specs` again. An old
+ * clone still at specs/ holds them at its root before trunk's move (`specs`)
+ * and at specs/specs once it has fast-forwarded past it.
+ */
+// TODO: drop specs/specs once every checkout's clone has moved to .motor-fix-specs (specs-repo.mjs ensure).
+export function featuresRoot(repo) {
+  return isDir(join(repo, "specs", "specs")) ? join("specs", "specs") : "specs";
+}
+
+/**
+ * A feature folder as written — feature.json, $SPECIFY_FEATURE_DIRECTORY, the
+ * branch or a command line; relative or absolute; in either layout — to the
+ * absolute folder in this checkout: as given when `marker` exists in it, else
+ * its NNN-slug name under featuresRoot, else under specs/. As given when none
+ * holds it.
+ */
+export function locateFeature(repo, dir, marker = "") {
+  const abs = isAbsolute(dir) ? dir : join(repo, dir);
+  if (existsSync(join(abs, marker))) return abs;
+  const name = basename(abs);
+  if (!/^\d{3,}-/.test(name)) return abs;
+  for (const root of [featuresRoot(repo), "specs"]) {
+    const candidate = join(repo, root, name);
+    if (existsSync(join(candidate, marker))) return candidate;
+  }
+  return abs;
 }
 
 const readState = (repo) => {
@@ -209,7 +250,7 @@ export function pointTo(state, featureDirectory, { now = Date.now(), existing = 
 export function activeFeature(repo) {
   const fromDir = (dir) => {
     if (!dir) return null;
-    const abs = isAbsolute(dir) ? dir : join(repo, dir);
+    const abs = locateFeature(repo, dir, "spec.md");
     if (!existsSync(join(abs, "spec.md"))) return null;
     const m = basename(abs).match(/^(\d{3,})-/);
     if (!m) return null;
@@ -245,19 +286,20 @@ export function activeFeature(repo) {
 }
 
 /**
- * The specs/ folder a NNN-slug branch names, relative to the repo:
- * `specs/<branch>` when it exists, else the folder with the same number
- * (leading zeros ignored) and the same slug, so branch `83-x` finds
+ * The feature folder a NNN-slug branch names, relative to the repo, under
+ * featuresRoot: `<root>/<branch>` when it exists, else the folder with the same
+ * number (leading zeros ignored) and the same slug, so branch `83-x` finds
  * `specs/083-x`. null when there is none.
  */
 export function branchFeatureDir(repo, branch) {
-  const exact = join("specs", branch);
+  const root = featuresRoot(repo);
+  const exact = join(root, branch);
   if (existsSync(join(repo, exact))) return exact;
   const [, number, slug] = /^(\d+)-(.+)$/.exec(branch) ?? [];
   if (number === undefined) return null;
   let names;
   try {
-    names = readdirSync(join(repo, "specs"));
+    names = readdirSync(join(repo, root));
   } catch {
     return null;
   }
@@ -265,7 +307,7 @@ export function branchFeatureDir(repo, branch) {
     const [, n, s] = /^(\d+)-(.+)$/.exec(name) ?? [];
     return n !== undefined && Number(n) === Number(number) && s === slug;
   });
-  return padded ? join("specs", padded) : null;
+  return padded ? join(root, padded) : null;
 }
 
 /** Feature dirs exempted from the traceability gate (.specify/trace-baseline.json). */

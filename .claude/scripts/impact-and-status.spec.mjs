@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { impactOf, render as renderImpact } from './impact.mjs';
+import { impactOf, main as impactMain, render as renderImpact } from './impact.mjs';
 import { DEFAULT_STALE_DAYS, featureStatus, gatherStatus, render as renderStatus } from './status.mjs';
 
 // Assembled, never spelled out — the traceability matrix scans this file.
@@ -319,6 +319,35 @@ describe('staleness', () => {
       assert.equal(s.lastCommit, null);
       assert.ok(!s.flags.some((f) => /stale/.test(f)));
     } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ST-1026: an old clone at specs/ past trunk's move holds the feature folders at specs/specs.
+describe('the moved specs layout', () => {
+  it('lists the features under specs/specs', () => {
+    const dir = fixture({ 'specs/specs/002-fixture/spec.md': '# Spec\n', 'specs/specs/002-fixture/tasks.md': '- [ ] T001 open\n', 'specs/docs/x.md': '# Doc\n' });
+    try {
+      const features = gatherStatus(dir).features;
+      assert.deepEqual(features.map((f) => f.state), ['in-flight']);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a feature named specs/<feature> from specs/specs/<feature>', () => {
+    const dir = fixture({ 'specs/specs/002-fixture/spec.md': '# Spec\n\n- **FR-001**: does a thing\n' });
+    const errors = [];
+    const error = console.error;
+    const log = console.log;
+    console.error = (m) => errors.push(m);
+    console.log = () => {};
+    try {
+      assert.equal(impactMain(['specs/002-fixture', 'FR-001'], dir), 0, errors.join('\n'));
+    } finally {
+      console.error = error;
+      console.log = log;
       rmSync(dir, { recursive: true, force: true });
     }
   });

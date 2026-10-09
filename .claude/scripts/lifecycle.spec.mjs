@@ -497,6 +497,24 @@ describe('merge', () => {
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`));
   });
 
+  // An old clone still at specs/ that fast-forwarded past ST-1026's move holds
+  // the feature at specs/specs/<feature>; feature.json still names specs/<feature>.
+  it('finds the feature under specs/specs in an old clone past the move and commits its path under the features folder', () => {
+    const clone = join(repo, 'specs');
+    renameSync(featureDir, join(repo, FEATURE));
+    mkdirSync(join(clone, 'specs'));
+    renameSync(join(repo, FEATURE), join(clone, 'specs', FEATURE));
+    for (const args of [['init', '-q', '-b', 'trunk'], ['add', '-A'], ['-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'seed']]) {
+      execFileSync('git', args, { cwd: clone, stdio: 'ignore' });
+    }
+    featureDir = join(clone, 'specs', FEATURE);
+    const h = harness({ answers: [['git -C specs/specs diff -U0 --', diff[1]]] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(`git -C specs/specs diff -U0 -- ${FEATURE}/notion-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`));
+  });
+
   it('passes --no-comment when there is no finish-comment.md', () => {
     const h = harness({ answers: [diff] });
     step(['merge'], h.io);

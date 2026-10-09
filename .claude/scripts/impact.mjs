@@ -17,7 +17,7 @@
 //   node .claude/scripts/impact.mjs FR-004 --json
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { activeFeature } from "./lib/feature.mjs";
+import { activeFeature, locateFeature } from "./lib/feature.mjs";
 import { testsFor } from "./lib/tests.mjs";
 import { loadCapabilities } from "./capabilities.mjs";
 
@@ -86,7 +86,7 @@ export function main(argv, repo) {
   const positional = argv.filter((a) => !a.startsWith("--"));
   const named = positional.find((a) => a.startsWith("specs/"));
   const feature = named
-    ? { dir: join(repo, named), name: basename(named), num: basename(named).match(/^(\d{3,})-/)?.[1] ?? "000" }
+    ? { dir: locateFeature(repo, named, "spec.md"), name: basename(named), num: basename(named).match(/^(\d{3,})-/)?.[1] ?? "000" }
     : activeFeature(repo);
 
   if (!feature || !existsSync(join(feature.dir, "spec.md"))) {
