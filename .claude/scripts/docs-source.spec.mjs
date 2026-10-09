@@ -6,6 +6,7 @@
 // @traces FR-022
 // @traces FR-023
 // @traces FR-024
+// @traces FR-002
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -78,6 +79,20 @@ describe('the documentation source', () => {
     assert.match(plan, /specs-repo\.mjs commit "docs: <EP-n> build plan" -- docs\/reference\/build-plans\/ep-<n>-<slug>\.md llms\.txt/);
     assert.doesNotMatch(body, /docs\/execution-plans\//);
     assert.doesNotMatch(plan, /execution plan` \(a page\)/);
+  });
+
+  it('the plan template cites the docs/ file, and context.md readers describe it as the docs digest, not the Notion space', () => {
+    const template = read('.specify/templates/plan-template.md');
+    assert.doesNotMatch(template.replace(/\s+/g, ' '), /Notion Architecture page|Notion choices/);
+    assert.match(template.replace(/\s+/g, ' '), /cites its `docs\/` file/);
+    for (const path of [
+      '.claude/skills/speckit-plan/SKILL.md',
+      '.claude/skills/speckit-clarify/SKILL.md',
+      '.claude/skills/speckit-analyze/SKILL.md',
+      '.claude/agents/spec-challenger.md',
+    ]) {
+      assert.doesNotMatch(read(path).replace(/\s+/g, ' '), /owner's Notion space|the Notion space's|the Notion evidence/, `${path} still says context.md comes from Notion`);
+    }
   });
 
   it('the Notion export is gone, with every line that ran it', () => {
