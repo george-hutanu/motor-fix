@@ -196,10 +196,11 @@ describe('the Cereri de ofertă view', () => {
     expect(new Set(ids).size).toBe(23);
   });
 
-  it('drops the extra pages when the list is read again', async () => {
+  it('reads as many rows again as were shown when the list is read again', async () => {
     const { element, settle } = await render({
       pages: {
         'c-2': listOf(page(21, 20), { nextCursor: 'c-3', total: 45 }),
+        'c-2b': listOf(page(20, 20), { nextCursor: 'c-3b', total: 46 }),
       },
       waiting: [
         listOf(page(1, 20), { nextCursor: 'c-2', total: 45 }),
@@ -213,7 +214,29 @@ describe('the Cereri de ofertă view', () => {
     await wait(400);
     await settle();
 
-    expect(waitingIds(element)).toEqual(page(0, 20).map((r) => r.id));
+    expect(waitingIds(element)).toEqual(page(0, 40).map((r) => r.id));
+    expect(cursors()).toEqual(['c-2', 'c-2b']);
+  });
+
+  it('drops a row that left the list beyond the first page when the list is read again', async () => {
+    const { element, settle } = await render({
+      pages: {
+        'c-2': listOf(page(21, 20), { nextCursor: 'c-3', total: 45 }),
+        'c-2b': listOf(page(22, 20), { nextCursor: 'c-3b', total: 44 }),
+      },
+      waiting: [
+        listOf(page(1, 20), { nextCursor: 'c-2', total: 45 }),
+        listOf(page(1, 20), { nextCursor: 'c-2b', total: 44 }),
+      ],
+    });
+    await reachEnd(settle);
+
+    live.emit('quote.sent', 'req-21');
+    await wait(400);
+    await settle();
+
+    expect(waitingIds(element)).not.toContain('req-21');
+    expect(waitingIds(element)).toHaveLength(40);
   });
 });
 

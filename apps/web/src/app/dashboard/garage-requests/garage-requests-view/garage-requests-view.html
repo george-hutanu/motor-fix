@@ -4,7 +4,7 @@
     <h3 class="closed-heading">{{ 'garage.requests.closed' | t }}</h3>
     <ul class="closed">
       @for (row of feed.closed(); track row.id) {
-        <li [mfGarageRequestRow]="row" [now]="now()" [attr.data-live-id]="row.id" data-closed></li>
+        <li [mfGarageRequestRow]="row" [attr.data-live-id]="row.id" data-closed></li>
       }
     </ul>
   }

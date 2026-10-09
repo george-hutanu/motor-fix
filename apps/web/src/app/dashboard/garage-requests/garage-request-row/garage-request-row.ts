@@ -22,7 +22,8 @@ export class GarageRequestRow {
   readonly row = input.required<GarageRequestSummaryDto>({
     alias: 'mfGarageRequestRow',
   });
-  readonly now = input.required<Date>();
+  // Closed rows show their reason, not an age, so they need no clock.
+  readonly now = input<Date>();
   private readonly language = inject(I18n).language;
 
   protected readonly jobs = computed(() => {
@@ -34,7 +35,7 @@ export class GarageRequestRow {
     }));
   });
   protected readonly age = computed(() =>
-    requestAge(this.row().createdAt, this.language(), this.now()),
+    requestAge(this.row().createdAt, this.language(), this.now() ?? new Date()),
   );
   protected readonly reason = computed(() => {
     const reason = this.row().closedReason;

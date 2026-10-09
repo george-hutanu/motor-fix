@@ -36,19 +36,16 @@ export class GarageRequestsView {
   private cursor: string | null | undefined;
   private reading = false;
   // Watches the end again once the new rows are drawn, so an end still in view asks once more.
-  private again: () => void = () => undefined;
+  private watchAgain: () => void = () => undefined;
   private readonly injector = inject(Injector);
-  protected readonly now = signal(new Date());
 
   constructor() {
-    // A re-read of the first page starts the list again.
+    // A re-read of the first page reads the further pages again, as many rows
+    // as were shown, so a scrolled list keeps its depth.
     effect(() => {
       this.feed.rows();
       const next = this.feed.nextCursor();
-      untracked(() => {
-        this.more.set([]);
-        this.cursor = next;
-      });
+      untracked(() => void this.again(next));
     });
     if (typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver((entries) => {
@@ -62,12 +59,36 @@ export class GarageRequestsView {
       if (end) observer.observe(end);
       watched = end;
     });
-    this.again = () => {
+    this.watchAgain = () => {
       if (!watched) return;
       observer.unobserve(watched);
       observer.observe(watched);
     };
     inject(DestroyRef).onDestroy(() => observer.disconnect());
+  }
+
+  private async again(first: string | null | undefined) {
+    const shown = this.more().length;
+    this.cursor = first;
+    if (!shown || !first) {
+      this.more.set([]);
+      return;
+    }
+    let cursor: string | null = first;
+    const rows: GarageRequestSummaryDto[] = [];
+    try {
+      while (cursor && rows.length < shown) {
+        const page = await this.feed.page(cursor);
+        if (this.cursor !== first) return;
+        rows.push(...page.items);
+        cursor = page.nextCursor;
+      }
+    } catch {
+      // The rows shown stay; the next re-read or scroll asks again.
+      return;
+    }
+    this.more.set(rows);
+    this.cursor = cursor;
   }
 
   private async next() {
@@ -79,7 +100,9 @@ export class GarageRequestsView {
       if (this.cursor !== cursor) return;
       this.more.update((rows) => [...rows, ...page.items]);
       this.cursor = page.nextCursor;
-      afterNextRender(() => this.again(), { injector: this.injector });
+      afterNextRender(() => this.watchAgain(), {
+        injector: this.injector,
+      });
     } catch {
       // The next time the end comes into view asks again.
     } finally {
