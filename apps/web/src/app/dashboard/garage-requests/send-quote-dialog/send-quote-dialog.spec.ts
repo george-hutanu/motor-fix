@@ -211,7 +211,8 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 344-FR-010, 344-FR-011
+// @traces 344-FR-010
+// @traces 344-FR-011
 describe('the send-quote dialog: what it names and starts with', () => {
   it('reads the request, names the driver and the job under the title and pre-fills the price list’s brand range', async () => {
     await open();
@@ -562,7 +563,8 @@ describe('the send-quote dialog: what it refuses', () => {
   });
 });
 
-// @traces 344-FR-005, 344-FR-013
+// @traces 344-FR-005
+// @traces 344-FR-013
 describe('the send-quote dialog: sending', () => {
   it('sends lei, the duration in minutes and the Bucharest slot with its offset, then closes with Ofertă trimisă', async () => {
     await open();
