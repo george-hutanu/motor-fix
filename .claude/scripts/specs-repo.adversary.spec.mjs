@@ -391,9 +391,9 @@ describe('migrate-trunk', () => {
     assert.equal(git(fresh, 'status', '--porcelain'), '');
   });
 
-  it('keeps the issue forms and the root README, and holds exactly two folders besides them', () => {
+  it('keeps the issue forms and the root README, and holds only specs/ besides them', () => {
     migrateTrunk({ root, yes: true });
-    assert.deepEqual(git(remote, 'ls-tree', '--name-only', TRUNK).split('\n'), ['.github', '.gitignore', 'README.md', 'docs', 'specs']);
+    assert.deepEqual(git(remote, 'ls-tree', '--name-only', TRUNK).split('\n'), ['.github', '.gitignore', 'README.md', 'specs']);
     assert.equal(git(remote, 'show', `${TRUNK}:.github/ISSUE_TEMPLATE/story.yml`), 'name: story');
   });
 

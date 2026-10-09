@@ -439,6 +439,25 @@ describe('ensure migrates an existing clone in place', () => {
     assert.deepEqual([f.ok, f.pushed], [true, true], JSON.stringify(f));
     assert.equal(git(remote, 'show', `${TRUNK}:specs/100-old/x.md`), 'x');
   });
+
+  // @traces FR-025
+  it('commit carries the Diataxis root entries, and refuses anything else at the root', () => {
+    ensure({ root, url: remote });
+    moveTrunk();
+    ensure({ root });
+    const files = ['README.md', 'llms.txt', 'AGENTS.md', '.gitignore', 'scripts/docs-lint.mjs', '.github/workflows/docs-lint.yml', 'tracker/README.md', 'docs/reference/a.md'];
+    for (const f of files) {
+      mkdirSync(dirname(join(clone(), f)), { recursive: true });
+      writeFileSync(join(clone(), f), `${f}\n`);
+    }
+    const r = commit({ root, message: 'docs: organise by Diataxis', paths: files });
+    assert.deepEqual([r.ok, r.committed, r.pushed], [true, true, true], JSON.stringify(r));
+    for (const f of files) assert.equal(git(remote, 'show', `${TRUNK}:${f}`), f);
+    for (const bad of ['.git/config', 'other/x', '../x', 'docs/../.git/config', 'scripts/../.git/config']) {
+      const b = commit({ root, message: 'docs: x', paths: [bad] });
+      assert.equal(b.ok, false, bad);
+    }
+  });
 });
 
 // @traces 1018-FR-001
@@ -470,7 +489,7 @@ describe('migrate-trunk', () => {
   it('--dry-run lists every folder it would move and the files it would add, and pushes nothing', () => {
     const before = head(remote);
     const r = migrateTrunk({ root, dryRun: true });
-    assert.deepEqual(r, { ok: true, dryRun: true, move: ['100-old', '101-more'], add: ['README.md', 'docs/README.md'] });
+    assert.deepEqual(r, { ok: true, dryRun: true, move: ['100-old', '101-more'], add: ['README.md'] });
     assert.equal(head(remote), before);
     assert.equal(layout(root), 'old');
   });
@@ -528,15 +547,16 @@ describe('migrate-trunk', () => {
     assert.match(migrateTrunk({ root: third, dryRun: true }).error, /already moved/);
   });
 
-  it('--yes moves every folder with git mv, adds the two files, pushes, keeps history and repoints the link', () => {
+  it('--yes moves every folder with git mv, adds the README, pushes, keeps history and repoints the link', () => {
     writeFileSync(join(clone(), '100-old', 'handoff.md'), 'note\n');
     const r = migrateTrunk({ root, yes: true });
     assert.equal(r.ok, true, JSON.stringify(r));
     assert.deepEqual([r.moved, r.pushed], [2, true]);
-    assert.match(r.next, /notion-export\.mjs/);
-    assert.deepEqual(git(remote, 'ls-tree', '--name-only', TRUNK).split('\n'), ['.github', '.gitignore', 'README.md', 'docs', 'specs']);
+    assert.match(r.next, /docs-lint\.mjs --write/);
+    assert.doesNotMatch(r.next, /notion-export/);
+    assert.deepEqual(git(remote, 'ls-tree', '--name-only', TRUNK).split('\n'), ['.github', '.gitignore', 'README.md', 'specs']);
     assert.deepEqual(git(remote, 'ls-tree', '--name-only', `${TRUNK}:specs`).split('\n'), ['100-old', '101-more']);
-    assert.match(git(remote, 'show', `${TRUNK}:docs/README.md`), /notion-export/);
+    assert.equal(spawnSync('git', ['cat-file', '-e', `${TRUNK}:docs/README.md`], { cwd: remote }).status === 0, false, 'docs/README.md is not a page: no front matter');
     const fresh = join(tmp, 'fresh');
     git(tmp, 'clone', '-q', remote, fresh);
     assert.match(git(fresh, 'log', '--follow', '--format=%s', '--', 'specs/100-old/spec.md'), /seed/);
