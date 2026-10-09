@@ -4,6 +4,7 @@
 }
 a[hlmBtn] {
   min-height: var(--mf-tap);
+  text-decoration: none;
 }
 @media (max-width: 389px) {
   a[hlmBtn] {

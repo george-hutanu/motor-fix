@@ -33,6 +33,18 @@ const RETURN_TO = 'mf-return-to';
 const PENDING = 'mf-sign-out-pending';
 const CHANNEL = 'mf-session';
 
+// The role this browser last saw signed in, for the public pages, which never
+// ask for the session (each ask renews the cookie). A hint for what they
+// show, never for access.
+const ROLE = 'mf-role';
+const ROLES: readonly string[] = [
+  'driver',
+  'garage',
+  'receptionist',
+  'mechanic',
+  'admin',
+];
+
 // How long a sign-out waits for a language save in flight.
 const SAVE_WAIT_MS = 3_000;
 
@@ -48,6 +60,24 @@ function pending(): SignOut | null {
     return value === 'device' || value === 'everywhere' ? value : null;
   } catch {
     return null;
+  }
+}
+
+function storedRole(): MeDto['role'] | null {
+  try {
+    const value = localStorage.getItem(ROLE);
+    return value && ROLES.includes(value) ? (value as MeDto['role']) : null;
+  } catch {
+    return null;
+  }
+}
+
+function keepRole(role: MeDto['role'] | null) {
+  try {
+    if (role) localStorage.setItem(ROLE, role);
+    else localStorage.removeItem(ROLE);
+  } catch {
+    // No storage: a public page shows what it shows a visitor.
   }
 }
 
@@ -76,6 +106,8 @@ export class Session {
   private readonly language = inject(LanguageChoice);
   private readonly leave = inject(LEAVE);
   readonly current = signal<MeDto | null>(null);
+  // The role this browser last saw signed in, kept across visits.
+  readonly roleHint = signal<MeDto['role'] | null>(storedRole());
   // What the screen shows: the session's account, or, while the sign-in gate
   // is open over the screen, the one a failed renewal forgot. Display only:
   // access is decided on current.
@@ -292,9 +324,7 @@ export class Session {
     return renewing;
   }
 
-  // keepLanguage: a public page whose address names its language reads the
-  // role only, so the account's language does not replace the page's.
-  async load(options: { keepLanguage?: boolean } = {}): Promise<MeDto | null> {
+  async load(): Promise<MeDto | null> {
     const known = this.current();
     if (known) return known;
     if (this.loading) return this.loading;
@@ -304,9 +334,9 @@ export class Session {
       // An answer that arrives after a sign-out restores nothing.
       if (generation !== this.generation) return null;
       // At sign-in the account's language wins over the device's.
-      if (answer && !options.keepLanguage)
-        void this.language.choose(answer.language);
+      if (answer) void this.language.choose(answer.language);
       this.current.set(answer);
+      this.hint(answer?.role ?? null);
       return answer;
     });
     this.loading = loading;
@@ -350,6 +380,7 @@ export class Session {
       if (generation !== this.generation) return null;
       this.switches++;
       this.current.set(answer);
+      this.hint(answer.role);
       return answer;
     } catch (error) {
       // The old token still holds the old role for its last minutes.
@@ -443,6 +474,12 @@ export class Session {
     this.lapsed = null;
     this.kept.set(null);
     this.forget();
+    this.hint(null);
+  }
+
+  private hint(role: MeDto['role'] | null) {
+    this.roleHint.set(role);
+    keepRole(role);
   }
 
   private async ask(): Promise<MeDto | null> {

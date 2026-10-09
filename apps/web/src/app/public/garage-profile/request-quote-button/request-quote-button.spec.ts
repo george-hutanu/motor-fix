@@ -43,6 +43,7 @@ const request = (names: string[]) =>
 
 let open: jest.Mock;
 let load: jest.Mock;
+let renew: jest.Mock;
 
 async function render(
   options: {
@@ -50,8 +51,8 @@ async function render(
     role?: 'driver' | 'garage' | 'mechanic' | 'admin' | null;
     query?: Record<string, string>;
     answer?: RequestQuoteResult;
-    // The account the session's load finds, when it starts unknown.
-    loads?: 'driver' | 'garage' | null;
+    // The role this browser last saw, when the page knows no account.
+    hint?: 'driver' | 'garage' | 'mechanic' | null;
   } = {},
 ) {
   open = jest.fn(
@@ -63,18 +64,20 @@ async function render(
   );
   const role = options.role === undefined ? null : options.role;
   const current = signal<{ role: string } | null>(role ? { role } : null);
-  load = jest.fn(async () => {
-    const found = options.loads ? { role: options.loads } : null;
-    if (found) current.set(found);
-    return found;
-  });
+  load = jest.fn(async () => null);
+  renew = jest.fn(async () => false);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       { provide: Overlays, useValue: { open } },
       {
         provide: Session,
-        useValue: { current, load },
+        useValue: {
+          current,
+          load,
+          renew,
+          roleHint: signal(options.hint ?? null),
+        },
       },
       {
         provide: ActivatedRoute,
@@ -156,20 +159,28 @@ describe('RequestQuoteButton', () => {
     expect(button(await render({ role: 'mechanic' }))).toBeNull();
   });
 
-  // A full load of the profile: nothing else on the page asks who is in.
-  it('asks who is signed in and hides once the account is a garage’s', async () => {
-    const host = await render({ loads: 'garage' });
+  // Asking the server would renew the cookie on every visit to a public page.
+  it('asks nobody who is signed in', async () => {
+    await render();
 
-    // The profile's address names its language; the account's does not win.
-    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
-    expect(button(host)).toBeNull();
+    expect(load).not.toHaveBeenCalled();
+    expect(renew).not.toHaveBeenCalled();
   });
 
-  it('stays for a visitor once the session finds nobody signed in', async () => {
-    const host = await render({ loads: null });
+  it('hides from the start for a garage-side role this browser last saw', async () => {
+    expect(button(await render({ hint: 'garage' }))).toBeNull();
+    TestBed.resetTestingModule();
+    expect(button(await render({ hint: 'mechanic' }))).toBeNull();
+  });
 
-    expect(load).toHaveBeenCalledTimes(1);
-    expect(button(host)).not.toBeNull();
+  it('shows for a driver this browser last saw', async () => {
+    expect(button(await render({ hint: 'driver' }))).not.toBeNull();
+  });
+
+  it('follows the signed-in account over the role last seen', async () => {
+    expect(
+      button(await render({ hint: 'garage', role: 'driver' })),
+    ).not.toBeNull();
   });
 
   it('says where the request went once it is sent, with the link to Cererile mele', async () => {

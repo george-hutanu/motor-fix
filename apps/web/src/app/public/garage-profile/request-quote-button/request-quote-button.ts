@@ -1,11 +1,9 @@
-import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
   input,
-  PLATFORM_ID,
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -40,9 +38,12 @@ export class RequestQuoteButton {
   protected readonly i18n = inject(I18n);
 
   protected readonly sent = signal<RequestDto | null>(null);
+  // A public page asks nobody who is signed in: without a session loaded, the
+  // role this browser last saw decides, so a garage account that opens the
+  // profile by its address does not see the button.
   protected readonly shown = computed(() => {
-    const role = this.session.current()?.role;
-    return role === undefined || role === 'driver';
+    const role = this.session.current()?.role ?? this.session.roleHint();
+    return role === null || role === 'driver';
   });
   // The brand of the page, when the garage does not take it.
   protected readonly refusedBrand = computed(() => {
@@ -53,15 +54,6 @@ export class RequestQuoteButton {
     const request = this.sent();
     return request ? sentLine(this.i18n, request) : '';
   });
-
-  constructor() {
-    // Nothing else on a public profile asks who is signed in: without this a
-    // garage account that opens the profile by its address would see the
-    // button. The server renders it for a visitor. The address names the
-    // page's language, so the account's does not replace it.
-    if (isPlatformBrowser(inject(PLATFORM_ID)))
-      void this.session.load({ keepLanguage: true });
-  }
 
   protected async open() {
     const source =

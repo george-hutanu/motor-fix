@@ -74,20 +74,6 @@ describe('Session', () => {
     expect(localStorage.getItem('mf.lang')).toBe('en');
   });
 
-  // A public page whose address names its language (/en/garages/…) keeps it.
-  it("keeps the page's language when asked, on a load that only reads the role", async () => {
-    localStorage.setItem('mf.lang', 'ro');
-    const { i18n, session } = setup({ me: account('en') });
-
-    const me = await session.load({ keepLanguage: true });
-    await flush();
-
-    expect(me?.role).toBe('driver');
-    expect(session.current()?.role).toBe('driver');
-    expect(i18n.language()).toBe('ro');
-    expect(localStorage.getItem('mf.lang')).toBe('ro');
-  });
-
   it('lets a tap made while signed in stand on the next load', async () => {
     const { i18n, session } = setup({ me: account('en') });
     await session.load();
@@ -243,5 +229,68 @@ describe('Session tokens', () => {
 
     expect(session.token()).toBeNull();
     expect(session.current()).toBeNull();
+  });
+});
+
+// A public page asks nobody who is signed in (each ask renews the cookie): it
+// reads the role this browser last saw instead.
+describe('Session role hint', () => {
+  it('remembers the role of the account it loads', async () => {
+    const { session } = setup();
+
+    await session.load();
+
+    expect(session.roleHint()).toBe('driver');
+    expect(localStorage.getItem('mf-role')).toBe('driver');
+  });
+
+  it('starts from the role a page of this browser saw before', () => {
+    localStorage.setItem('mf-role', 'garage');
+
+    expect(setup().session.roleHint()).toBe('garage');
+  });
+
+  it('ignores a stored value that is not a role', () => {
+    localStorage.setItem('mf-role', 'owner');
+
+    expect(setup().session.roleHint()).toBeNull();
+  });
+
+  it('follows a switch to another of the account’s roles', async () => {
+    const { api, meControllerMe, session } = setup();
+    await session.load();
+    Object.assign(api, {
+      authControllerSwitchRole: jest.fn(() =>
+        Promise.resolve({ accessToken: 'switched' }),
+      ),
+    });
+    meControllerMe.mockImplementationOnce(() =>
+      Promise.resolve({ ...account('ro'), role: 'garage' } as MeDto),
+    );
+
+    await session.switchRole('garage');
+
+    expect(session.roleHint()).toBe('garage');
+    expect(localStorage.getItem('mf-role')).toBe('garage');
+  });
+
+  it('forgets the role at sign-out', async () => {
+    const { session } = setup();
+    await session.load();
+
+    await session.signOut();
+
+    expect(session.roleHint()).toBeNull();
+    expect(localStorage.getItem('mf-role')).toBeNull();
+  });
+
+  it('forgets the role when the load finds nobody signed in', async () => {
+    localStorage.setItem('mf-role', 'garage');
+    const { session } = setup({ me: null, renews: false });
+
+    await session.load();
+
+    expect(session.roleHint()).toBeNull();
+    expect(localStorage.getItem('mf-role')).toBeNull();
   });
 });
