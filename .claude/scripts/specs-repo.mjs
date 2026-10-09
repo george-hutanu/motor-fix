@@ -1,21 +1,31 @@
 #!/usr/bin/env node
-// specs/ is its own repository. motor-fix is public and does not track specs/
-// (.gitignore: /specs/); every checkout, the main one and each worktree, holds
-// its own clone of the private george-hutanu/motor-fix-specs on `trunk` at
-// specs/. Not a submodule: a pointer in motor-fix would conflict across every
-// parallel branch. Features write their own folders, so a rebase on a newer
-// trunk is clean.
+// The specs live in their own repository. motor-fix is public and tracks
+// neither the clone nor its link (.gitignore: /.motor-fix-specs/, /specs);
+// every checkout, the main one and each worktree, holds its own clone of the
+// private george-hutanu/motor-fix-specs on `trunk` at .motor-fix-specs/, and
+// `specs` is a relative symlink into it: to `.motor-fix-specs/specs` once the
+// clone's HEAD has a top-level specs/ tree (the moved layout, docs/ beside
+// it), to `.motor-fix-specs` while the feature folders sit at its root (the
+// old layout). Not a submodule: a pointer in motor-fix would conflict across
+// every parallel branch.
 //
 //   node .claude/scripts/specs-repo.mjs ensure [--soft] [--root <checkout>]
-//       clone specs/ when missing or empty; adopt a specs/ that holds files but
-//       no repository, keeping every local file and change; fast-forward an
-//       existing clone. A linked worktree borrows the main checkout's clone
-//       objects (--reference-if-able, then --dissociate, so it stands alone).
-//       --soft (npm prepare, SessionStart) reports a failure and exits 0.
+//       clone into .motor-fix-specs when missing; adopt a specs/ that holds
+//       files but no repository; move an old clone at specs/ there; fetch and
+//       fast-forward, or, when trunk has moved and the clone has not, rebase
+//       --autostash onto it, move what is left at the clone root under specs/
+//       and repoint the link. A linked worktree borrows the main checkout's
+//       clone objects (--reference-if-able, then --dissociate). One run at a
+//       time per checkout (.motor-fix-specs.lock). --soft (npm prepare,
+//       SessionStart) reports a failure and exits 0.
 //   node .claude/scripts/specs-repo.mjs commit "<message>" [--root <checkout>] [-- <paths…>]
-//       add the paths (relative to specs/, all by default), commit, then push
-//       to trunk, rebasing on a newer trunk and retrying when refused.
+//       add the paths (relative to specs/, or docs/… at the clone root; all
+//       by default), commit, then push to trunk, rebasing on a newer trunk and
+//       retrying when refused. Migrates first when trunk has moved.
 //   node .claude/scripts/specs-repo.mjs status [--root <checkout>]
+//   node .claude/scripts/specs-repo.mjs migrate-trunk --dry-run | --yes [--root <checkout>]
+//       the one-off trunk move (owner-run): every feature folder under specs/
+//       with git mv, README.md and docs/README.md added, pushed to trunk.
 //
 // The clone takes the checkout's repo-local author and credential helper
 // (.husky/identity.sh), so it commits and pushes as george-hutanu. In GitHub
@@ -25,15 +35,60 @@
 // 1 failed, 64 usage.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, realpathSync, renameSync, rmSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import {
+  closeSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readlinkSync,
+  realpathSync,
+  renameSync,
+  rmdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
 
 export const SPECS_URL = "https://github.com/george-hutanu/motor-fix-specs.git";
 export const SPECS_SLUG = "george-hutanu/motor-fix-specs";
 export const TRUNK = "trunk";
+export const CLONE = ".motor-fix-specs";
+const LOCK = ".motor-fix-specs.lock";
+const LOCK_WAIT_MS = 120_000;
+const LOCK_STALE_MS = 10 * 60_000;
 const PUSH_TRIES = 5;
-const USAGE = 'usage: specs-repo.mjs ensure [--soft] [--root <dir>] | commit "<message>" [--root <dir>] [-- <paths…>] | status [--root <dir>]';
+const FEATURE = /^\d{3,}-/;
+const KEEP = [".github", ".gitignore", "README.md"];
+const USAGE =
+  'usage: specs-repo.mjs ensure [--soft] [--root <dir>] | commit "<message>" [--root <dir>] [-- <paths…>] | status [--root <dir>] | migrate-trunk --dry-run|--yes [--root <dir>]';
+
+const README = `# motor-fix-specs
+
+The private records of [motor-fix](https://github.com/george-hutanu/motor-fix).
+
+- \`specs/<NNN-slug>/\`: one folder per feature (spec, plan, tasks, run logs).
+- \`docs/\`: the product documentation, exported once from Notion and edited here since.
+- \`.github/ISSUE_TEMPLATE/\`: the forms for stories, epics and tasks.
+
+Each motor-fix checkout clones this repository to \`.motor-fix-specs/\` and links
+\`specs\` to \`.motor-fix-specs/specs\` (\`node .claude/scripts/specs-repo.mjs ensure\`).
+`;
+
+const DOCS_README = `# docs
+
+The product documentation. \`node .claude/scripts/notion-export.mjs\` (in motor-fix)
+wrote it from the Notion space, one Markdown file per page with its front matter
+(\`title\`, \`notion_id\`, \`notion_url\`, \`last_edited\`); \`index.json\` maps each
+Notion id to its file. \`execution-plans/\` holds the plans written since.
+Edit the files here: the export is re-run only to pick up edits made in Notion
+before it was retired, and it overwrites what it exported.
+`;
 
 function git(cwd, args, extraEnv = {}) {
   const r = spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...extraEnv } });
@@ -69,94 +124,350 @@ function mainCheckout(root) {
 
 const isRepo = (dir) => existsSync(join(dir, ".git"));
 const isEmpty = (dir) => !existsSync(dir) || readdirSync(dir).length === 0;
+const isLink = (path) => {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
+const linkOf = (path) => (isLink(path) ? readlinkSync(path) : null);
+const OURS = [CLONE, `${CLONE}/specs`];
+
+/** Where a checkout's clone lives: `<checkout>/.motor-fix-specs`. */
+export const cloneDir = (root) => join(root, CLONE);
+/** The exported documentation inside the clone. */
+export const docsDir = (root) => join(cloneDir(root), "docs");
+
+/** Whether `ref` in the clone has a top-level specs/ tree. */
+const hasTree = (clone, ref) => git(clone, ["ls-tree", "-d", "--name-only", ref, "specs"]).out === "specs";
+
+/** The clone in use: the new location first, else an old clone at specs/, else null. */
+export function cloneAt(root) {
+  for (const dir of [cloneDir(root), join(root, "specs")]) if (!isLink(dir) && isRepo(dir)) return dir;
+  return null;
+}
+
+/** `none`, `old` (feature folders at the clone root) or `moved` (HEAD has specs/), from the clone's checkout. */
+export function layout(root) {
+  const clone = cloneAt(root);
+  if (!clone) return "none";
+  return hasTree(clone, "HEAD") ? "moved" : "old";
+}
+
+/** The folder the feature folders sit in; specs/ itself when there is no clone. */
+export function featuresDir(root) {
+  const clone = cloneAt(root);
+  if (!clone) return join(root, "specs");
+  return hasTree(clone, "HEAD") ? join(clone, "specs") : clone;
+}
+
+/** Whether origin/trunk, as last fetched, has moved to the specs/ layout. */
+export const trunkMoved = (clone) => hasTree(clone, `origin/${TRUNK}`);
+
+/** Runs `fn` holding the checkout's lock file; a second run waits for the first. */
+function locked(root, fn) {
+  const file = join(root, LOCK);
+  const until = Date.now() + LOCK_WAIT_MS;
+  for (;;) {
+    try {
+      closeSync(openSync(file, "wx"));
+      break;
+    } catch (e) {
+      if (e.code !== "EEXIST") return { ok: false, step: "lock", error: `lock ${file}: ${e.message}` };
+      try {
+        if (Date.now() - statSync(file).mtimeMs > LOCK_STALE_MS) {
+          unlinkSync(file);
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      if (Date.now() > until) return { ok: false, step: "lock", error: `another specs-repo run holds ${file}` };
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+    }
+  }
+  try {
+    return fn();
+  } finally {
+    rmSync(file, { force: true });
+  }
+}
+
+/** Points the specs link at `target`, by a new link renamed over the old one; true when it changed. */
+function pointLink(root, target) {
+  const link = join(root, "specs");
+  if (linkOf(link) === target) return false;
+  const temp = join(root, `.specs-link-${process.pid}`);
+  rmSync(temp, { force: true });
+  symlinkSync(target, temp);
+  renameSync(temp, link);
+  return true;
+}
+
+/** Root-level feature folders git tracks at HEAD, moved under specs/ in one commit. */
+function sweep(clone) {
+  const names = git(clone, ["ls-tree", "-d", "--name-only", "HEAD"]).out.split("\n").filter((n) => FEATURE.test(n));
+  if (!names.length) return { ok: true, moved: 0 };
+  for (const name of names) {
+    // A folder trunk also has under specs/ moves file by file; git mv refuses an existing target folder.
+    const files = existsSync(join(clone, "specs", name)) ? git(clone, ["ls-files", "-z", "--", name]).out.split("\0").filter(Boolean) : [name];
+    for (const file of files) {
+      mkdirSync(dirname(join(clone, "specs", file)), { recursive: true });
+      const r = git(clone, ["mv", "-k", file, `specs/${file}`]);
+      if (r.code !== 0) return { ok: false, error: `git mv ${file}: ${r.err}` };
+    }
+  }
+  const c = git(clone, ["commit", "-q", "-m", `chore(specs): move ${names.length} feature folders under specs/`]);
+  if (c.code !== 0) return { ok: false, error: `commit: ${c.err || c.out}` };
+  return { ok: true, moved: names.length };
+}
+
+/** What git does not track at the clone root's feature folders (handoff notes, reports) moves under specs/; nothing is overwritten. */
+function moveLeftovers(clone) {
+  let moved = 0;
+  const kept = [];
+  const walk = (from, to) => {
+    for (const entry of readdirSync(from, { withFileTypes: true })) {
+      const src = join(from, entry.name);
+      const dest = join(to, entry.name);
+      if (entry.isDirectory()) walk(src, dest);
+      else if (existsSync(dest)) kept.push(relative(clone, src));
+      else {
+        mkdirSync(to, { recursive: true });
+        renameSync(src, dest);
+        moved++;
+      }
+    }
+    if (readdirSync(from).length === 0) rmdirSync(from);
+  };
+  for (const entry of readdirSync(clone, { withFileTypes: true })) {
+    if (entry.isDirectory() && FEATURE.test(entry.name)) walk(join(clone, entry.name), join(clone, "specs", entry.name));
+  }
+  return { moved, kept };
+}
 
 export function ensure({ root = process.cwd(), url = process.env.SPECS_REPO_URL || SPECS_URL, soft = false } = {}) {
-  const specs = join(root, "specs");
-  const fail = (error) => (soft ? { ok: true, action: "skipped", warning: error } : { ok: false, error });
   if (soft && process.env.GITHUB_ACTIONS === "true") return { ok: true, action: "skipped", warning: "GitHub Actions: a workflow checks out specs with its deploy key" };
+  const result = locked(root, () => ensureHeld({ root, url }));
+  return !result.ok && soft ? { ok: true, action: "skipped", warning: result.error, ...(result.step ? { step: result.step } : {}) } : result;
+}
 
-  if (isRepo(specs)) {
-    applyIdentity(root, specs);
-    const fetch = git(specs, ["fetch", "-q", "origin"]);
-    if (fetch.code !== 0) return fail(`fetch: ${fetch.err}`);
-    const branch = git(specs, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
-    if (branch !== TRUNK) return { ok: true, action: "kept", warning: `specs/ is on ${branch}, not ${TRUNK}: not fast-forwarded` };
-    const ff = git(specs, ["merge", "--ff-only", "-q", `origin/${TRUNK}`]);
-    if (ff.code !== 0) return fail(`fast-forward: ${ff.err || ff.out} (run specs-repo.mjs commit to rebase and push)`);
-    return { ok: true, action: "updated" };
+function ensureHeld({ root, url }) {
+  const clone = cloneDir(root);
+  const link = join(root, "specs");
+  const migrated = [];
+  const refuse = (why) => ({ ok: false, error: `${why}: ${link} and ${clone} — move one aside, then run ensure again` });
+  let action = "updated";
+  let reference;
+
+  if (isRepo(clone)) {
+    if (existsSync(link) || isLink(link)) {
+      const target = linkOf(link);
+      if (target === null) return refuse("specs is a real folder beside the clone");
+      if (!OURS.includes(target)) return refuse(`specs links to ${target}, not into the clone`);
+    }
+  } else {
+    if (!isEmpty(clone)) return refuse(`${CLONE} holds files but no repository`);
+    const target = linkOf(link);
+    if (target !== null && !OURS.includes(target)) return refuse(`specs links to ${target}, not into the clone`);
+    if (target !== null) rmSync(link);
+    rmSync(clone, { recursive: true, force: true });
+    if (isRepo(link)) {
+      renameSync(link, clone);
+      pointLink(root, CLONE);
+      migrated.push("link");
+    } else {
+      const made = fresh({ root, url, clone, link });
+      if (!made.ok) return made;
+      ({ action, reference } = made);
+    }
   }
 
+  applyIdentity(root, clone);
+  const done = (extra = {}) => ({ ok: true, action, migrated, layout: layout(root), ...(reference ? { reference } : {}), ...extra });
+  const fetch = git(clone, ["fetch", "-q", "origin"]);
+  if (fetch.code !== 0) return { ok: false, step: "fetch", error: `fetch: ${fetch.err}`, migrated };
+  const branch = git(clone, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
+  if (branch !== TRUNK) {
+    if (!isLink(link)) pointLink(root, hasTree(clone, "HEAD") ? `${CLONE}/specs` : CLONE);
+    return done({ action: "kept", warning: `${CLONE} is on ${branch}, not ${TRUNK}: not fast-forwarded` });
+  }
+
+  if (trunkMoved(clone) && !hasTree(clone, "HEAD")) {
+    const r = git(clone, ["rebase", "-q", "--autostash", `origin/${TRUNK}`]);
+    if (r.code !== 0) {
+      git(clone, ["rebase", "--abort"]);
+      if (!isLink(link)) pointLink(root, CLONE);
+      return { ok: false, step: "rebase", error: `rebase --autostash onto the moved trunk: ${r.err || r.out}`, migrated };
+    }
+    migrated.push("rebase");
+  } else if (action === "updated") {
+    const ff = git(clone, ["merge", "--ff-only", "-q", `origin/${TRUNK}`]);
+    if (ff.code !== 0) return { ok: false, step: "fast-forward", error: `fast-forward: ${ff.err || ff.out} (run specs-repo.mjs commit to rebase and push)`, migrated };
+  }
+
+  if (hasTree(clone, "HEAD")) {
+    const swept = sweep(clone);
+    if (!swept.ok) return { ok: false, step: "sweep", error: swept.error, migrated };
+    if (swept.moved) migrated.push("sweep");
+    const left = moveLeftovers(clone);
+    if (left.moved) migrated.push("move");
+    if (left.kept.length) return done({ warning: `left at the clone root, a file of that name already under specs/: ${left.kept.join(", ")}` });
+  }
+  const hadLink = isLink(link);
+  if (pointLink(root, hasTree(clone, "HEAD") ? `${CLONE}/specs` : CLONE) && hadLink) migrated.push("repoint");
+  return done(action === "adopted" ? { changed: git(clone, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length } : {});
+}
+
+/** A new clone at .motor-fix-specs: cloned, or adopted around the files a plain specs/ holds. */
+function fresh({ root, url, clone, link }) {
   const main = mainCheckout(root);
-  const reference = main && isRepo(join(main, "specs")) ? join(main, "specs") : null;
+  const borrowed = main ? cloneAt(main) : null;
   const auth = identity(root).flatMap(([k, v]) => (k.startsWith("credential.") ? ["-c", `${k}=${v}`] : []));
-  const borrow = reference ? ["--reference-if-able", reference, "--dissociate"] : [];
+  const borrow = borrowed ? ["--reference-if-able", borrowed, "--dissociate"] : [];
+  const reference = borrowed ?? undefined;
 
-  if (isEmpty(specs)) {
-    rmSync(specs, { recursive: true, force: true });
-    const r = git(root, [...auth, "clone", "-q", "-b", TRUNK, ...borrow, url, specs]);
-    if (r.code !== 0) return fail(`clone: ${r.err}`);
-    applyIdentity(root, specs);
-    return { ok: true, action: "cloned", ...(reference ? { reference } : {}) };
+  if (isEmpty(link)) {
+    rmSync(link, { recursive: true, force: true });
+    const r = git(root, [...auth, "clone", "-q", "-b", TRUNK, ...borrow, url, clone]);
+    if (r.code !== 0) {
+      rmSync(clone, { recursive: true, force: true });
+      return { ok: false, step: "clone", error: `clone: ${r.err}` };
+    }
+    return { ok: true, action: "cloned", reference };
   }
 
-  // Adopt: the files stay where they are; the clone's .git moves in beside them.
+  // Adopt: the files stay; the clone's .git moves in beside them, then the folder moves to the clone's place.
   const temp = join(root, ".specs-adopt");
   rmSync(temp, { recursive: true, force: true });
   const r = git(root, [...auth, "clone", "-q", "--no-checkout", "-b", TRUNK, ...borrow, url, temp]);
   if (r.code !== 0) {
     rmSync(temp, { recursive: true, force: true });
-    return fail(`clone: ${r.err}`);
+    return { ok: false, step: "clone", error: `clone: ${r.err}` };
   }
-  renameSync(join(temp, ".git"), join(specs, ".git"));
+  renameSync(join(temp, ".git"), join(link, ".git"));
   rmSync(temp, { recursive: true, force: true });
-  git(specs, ["reset", "-q"]);
-  const missing = git(specs, ["ls-files", "-d", "-z"]).out.split("\0").filter(Boolean);
-  if (missing.length) git(specs, ["checkout", "--", ...missing]);
-  applyIdentity(root, specs);
-  const changed = git(specs, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length;
-  return { ok: true, action: "adopted", changed, ...(reference ? { reference } : {}) };
+  git(link, ["reset", "-q"]);
+  const missing = git(link, ["ls-files", "-d", "-z"]).out.split("\0").filter(Boolean);
+  if (missing.length) git(link, ["checkout", "--", ...missing]);
+  renameSync(link, clone);
+  pointLink(root, CLONE);
+  return { ok: true, action: "adopted", reference };
 }
 
-function ahead(specs) {
-  const r = git(specs, ["rev-list", "--count", `origin/${TRUNK}..HEAD`]);
+function ahead(clone) {
+  const r = git(clone, ["rev-list", "--count", `origin/${TRUNK}..HEAD`]);
   return r.code === 0 ? Number(r.out) : null;
 }
 
+/** A path given to commit, relative to the clone root: docs/… as given, anything else under the features folder. */
+function inClone(root, clone, path) {
+  if (path === "docs" || path.startsWith("docs/")) return path;
+  return relative(clone, join(featuresDir(root), path)) || ".";
+}
+
 export function commit({ root = process.cwd(), message, paths = [] } = {}) {
-  const specs = join(root, "specs");
-  if (!isRepo(specs)) return { ok: false, error: "specs/ is not a clone of motor-fix-specs: run node .claude/scripts/specs-repo.mjs ensure" };
+  let clone = cloneAt(root);
+  if (!clone) return { ok: false, error: `${CLONE} is not a clone of motor-fix-specs: run node .claude/scripts/specs-repo.mjs ensure` };
   if (!message) return { ok: false, error: USAGE };
-  const branch = git(specs, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
-  if (branch !== TRUNK) return { ok: false, error: `specs/ is on ${branch}: switch it to ${TRUNK} (git -C specs switch ${TRUNK})` };
-  const add = git(specs, ["add", "-A", "--", ...(paths.length ? paths : ["."])]);
+  if (clone !== cloneDir(root) || (git(clone, ["fetch", "-q", "origin"]).code === 0 && trunkMoved(clone) && !hasTree(clone, "HEAD"))) {
+    const e = ensure({ root });
+    if (!e.ok) return { ok: false, error: `migrate first: ${e.error}` };
+    clone = cloneDir(root);
+  }
+  const branch = git(clone, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
+  if (branch !== TRUNK) return { ok: false, error: `${CLONE} is on ${branch}: switch it to ${TRUNK} (git -C ${CLONE} switch ${TRUNK})` };
+  const add = git(clone, ["add", "-A", "--", ...(paths.length ? paths.map((p) => inClone(root, clone, p)) : ["."])]);
   if (add.code !== 0) return { ok: false, error: `add: ${add.err}` };
   let committed = false;
-  if (git(specs, ["diff", "--cached", "--quiet"]).code !== 0) {
-    const c = git(specs, ["commit", "-q", "-m", message]);
+  if (git(clone, ["diff", "--cached", "--quiet"]).code !== 0) {
+    const c = git(clone, ["commit", "-q", "-m", message]);
     if (c.code !== 0) return { ok: false, error: `commit: ${c.err || c.out}` };
     committed = true;
   }
-  if (ahead(specs) === 0) return { ok: true, committed, pushed: false };
+  if (ahead(clone) === 0) return { ok: true, committed, pushed: false };
   let last = "";
   for (let i = 0; i < PUSH_TRIES; i++) {
-    const p = git(specs, ["push", "-q", "origin", `HEAD:${TRUNK}`]);
+    const p = git(clone, ["push", "-q", "origin", `HEAD:${TRUNK}`]);
     if (p.code === 0) return { ok: true, committed, pushed: true, tries: i + 1 };
     last = p.err;
-    const pull = git(specs, ["pull", "-q", "--rebase", "--autostash", "origin", TRUNK]);
+    const pull = git(clone, ["pull", "-q", "--rebase", "--autostash", "origin", TRUNK]);
     if (pull.code !== 0) {
-      git(specs, ["rebase", "--abort"]);
+      git(clone, ["rebase", "--abort"]);
       return { ok: false, committed, error: `rebase on ${TRUNK}: ${pull.err || pull.out}` };
     }
   }
   return { ok: false, committed, error: `push refused ${PUSH_TRIES} times: ${last}` };
 }
 
+/** Read-only: no fetch, no write. `pending` when the last fetch saw a moved trunk the clone has not caught up with. */
 export function status({ root = process.cwd() } = {}) {
-  const specs = join(root, "specs");
-  if (!isRepo(specs)) return { ok: true, present: false, files: !isEmpty(specs) };
-  const branch = git(specs, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
-  const dirty = git(specs, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length;
-  return { ok: true, present: true, branch, ahead: ahead(specs), dirty, url: git(specs, ["remote", "get-url", "origin"]).out };
+  const clone = cloneAt(root);
+  if (!clone) return { ok: true, present: false, files: !isEmpty(join(root, "specs")) };
+  const branch = git(clone, ["rev-parse", "--abbrev-ref", "HEAD"]).out;
+  const dirty = git(clone, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length;
+  const shape = hasTree(clone, "HEAD") ? "moved" : trunkMoved(clone) ? "pending" : "old";
+  return { ok: true, present: true, clone, layout: shape, branch, ahead: ahead(clone), dirty, url: git(clone, ["remote", "get-url", "origin"]).out };
+}
+
+/** The one-off trunk move: refuses anything it does not expect, before any change. */
+export function migrateTrunk({ root = process.cwd(), dryRun = false, yes = false } = {}) {
+  if (!dryRun && !yes) return { ok: false, error: USAGE };
+  return locked(root, () => migrateHeld({ root, dryRun }));
+}
+
+function migrateHeld({ root, dryRun }) {
+  const clone = cloneDir(root);
+  if (!isRepo(clone)) return { ok: false, error: `no clone at ${clone}: run node .claude/scripts/specs-repo.mjs ensure first` };
+  const fetch = git(clone, ["fetch", "-q", "origin"]);
+  if (fetch.code !== 0) return { ok: false, step: "fetch", error: `fetch: ${fetch.err}` };
+  if (trunkMoved(clone)) return { ok: false, error: `trunk has already moved to specs/: run node .claude/scripts/specs-repo.mjs ensure` };
+  if (git(clone, ["rev-parse", "--abbrev-ref", "HEAD"]).out !== TRUNK) return { ok: false, error: `${CLONE} is not on ${TRUNK}` };
+  if (git(clone, ["status", "--porcelain"]).out) return { ok: false, error: `${CLONE} is dirty: commit or move the changes first` };
+  if (ahead(clone) !== 0) return { ok: false, error: `${CLONE} has unpushed commits: run specs-repo.mjs commit first` };
+  if (git(clone, ["rev-list", "--count", `HEAD..origin/${TRUNK}`]).out !== "0") return { ok: false, error: `${CLONE} is behind ${TRUNK}: run ensure first` };
+  const entries = git(clone, ["ls-tree", "--name-only", "HEAD"]).out.split("\n").filter(Boolean);
+  const unknown = entries.filter((n) => !KEEP.includes(n) && !FEATURE.test(n));
+  if (unknown.length) return { ok: false, error: `unexpected at the trunk root, move or remove it first: ${unknown.join(", ")}` };
+  const move = entries.filter((n) => FEATURE.test(n));
+  if (dryRun) return { ok: true, dryRun: true, move, add: ["README.md", "docs/README.md"] };
+
+  const temp = `migrate-trunk-${Date.now()}`;
+  const back = () => {
+    git(clone, ["switch", "-q", "-f", TRUNK]);
+    git(clone, ["branch", "-q", "-D", temp]);
+  };
+  const sw = git(clone, ["switch", "-q", "-c", temp]);
+  if (sw.code !== 0) return { ok: false, step: "branch", error: `switch: ${sw.err}` };
+  mkdirSync(join(clone, "specs"), { recursive: true });
+  for (const name of move) {
+    const r = git(clone, ["mv", name, `specs/${name}`]);
+    if (r.code !== 0) {
+      back();
+      return { ok: false, step: "move", error: `git mv ${name}: ${r.err}` };
+    }
+  }
+  mkdirSync(join(clone, "docs"), { recursive: true });
+  writeFileSync(join(clone, "README.md"), README);
+  writeFileSync(join(clone, "docs", "README.md"), DOCS_README);
+  git(clone, ["add", "README.md", "docs/README.md"]);
+  const c = git(clone, ["commit", "-q", "-m", "chore(specs): move the feature folders under specs/ and add docs/"]);
+  if (c.code !== 0) {
+    back();
+    return { ok: false, step: "commit", error: `commit: ${c.err || c.out}` };
+  }
+  const p = git(clone, ["push", "-q", "origin", `HEAD:${TRUNK}`]);
+  if (p.code !== 0) {
+    back();
+    return { ok: false, step: "push", error: `push: ${p.err}` };
+  }
+  git(clone, ["branch", "-f", TRUNK, "HEAD"]);
+  git(clone, ["switch", "-q", TRUNK]);
+  git(clone, ["branch", "-q", "-D", temp]);
+  moveLeftovers(clone);
+  pointLink(root, `${CLONE}/specs`);
+  return { ok: true, moved: move.length, pushed: true, next: "node .claude/scripts/notion-export.mjs, then node .claude/scripts/notion-export.mjs --check" };
 }
 
 function main(argv) {
@@ -169,6 +480,8 @@ function main(argv) {
       break;
     }
     if (a === "--soft") opt.soft = true;
+    else if (a === "--dry-run" && cmd === "migrate-trunk") opt.dryRun = true;
+    else if (a === "--yes" && cmd === "migrate-trunk") opt.yes = true;
     else if (a === "--root") opt.root = rest[++i];
     else if (!a.startsWith("--") && cmd === "commit" && opt.message === undefined) opt.message = a;
     else return { code: 64, out: { ok: false, error: USAGE } };
@@ -177,6 +490,7 @@ function main(argv) {
   if (cmd === "ensure") return { out: ensure(opt) };
   if (cmd === "commit") return opt.message ? { out: commit(opt) } : { code: 64, out: { ok: false, error: USAGE } };
   if (cmd === "status") return { out: status(opt) };
+  if (cmd === "migrate-trunk") return opt.dryRun || opt.yes ? { out: migrateTrunk(opt) } : { code: 64, out: { ok: false, error: USAGE } };
   return { code: 64, out: { ok: false, error: USAGE } };
 }
 

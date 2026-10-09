@@ -34,7 +34,7 @@ describe('speckit-notion-sync', () => {
   it('keeps the finish comment at a fixed, git-ignored path that outlives a retry', () => {
     assert.match(skill, /specs\/<feature>\/finish-comment\.md/);
     assert.match(skill, /absolute path/i);
-    assert.match(readFileSync(join(root, '.gitignore'), 'utf8'), /^\/specs\/$/m); // and specs/.gitignore in motor-fix-specs
+    for (const line of [/^\/\.motor-fix-specs\/$/m, /^\/specs$/m]) assert.match(readFileSync(join(root, '.gitignore'), 'utf8'), line); // and specs/.gitignore in motor-fix-specs
   });
 
   it('is shorter than the connector-only skill', () => {
