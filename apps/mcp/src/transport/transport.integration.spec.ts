@@ -77,6 +77,39 @@ const newAccount = () =>
     },
   });
 
+// An owner of a garage with one mechanic and nothing booked yet.
+async function newOwner() {
+  const garage = await prisma.garage.create({
+    data: {
+      name: 'Atelier Dinamo',
+      slug: `atelier-${Date.now()}-${Math.random()}`,
+      status: 'approved',
+    },
+  });
+  const account = await prisma.account.create({
+    data: {
+      language: 'ro',
+      lastRole: 'garage',
+      name: 'Mihai Dobre',
+      roles: { create: [{ role: 'garage' }] },
+    },
+  });
+  await prisma.garageMember.create({
+    data: { accountId: account.id, garageId: garage.id, role: 'owner' },
+  });
+  await prisma.mechanic.create({
+    data: { garageId: garage.id, name: 'Vlad Stan' },
+  });
+  return account;
+}
+
+const GARAGE_READS: [string, Record<string, unknown>][] = [
+  ['list_quote_requests', {}],
+  ['get_schedule', {}],
+  ['get_day_sheet', { mechanic: 'Vlad' }],
+  ['get_stats', {}],
+];
+
 const tokenFor = (accountId: string) =>
   realm.sign({ claims: { motorfix_account_id: accountId } });
 
@@ -134,6 +167,26 @@ describe('the MCP endpoint', () => {
       language: 'ro',
       roles: ['driver'],
     });
+    await client.close();
+  });
+
+  // @traces 374-FR-001 374-FR-011
+  it('lists the garage reads to an owner and answers each through the real services', async () => {
+    const { id } = await newOwner();
+    const client = await connect(await tokenFor(id));
+
+    const { tools } = await client.listTools();
+    const answers = [];
+    for (const [name, args] of GARAGE_READS)
+      answers.push(await client.callTool({ arguments: args, name }));
+
+    expect(tools.map((t) => t.name).sort()).toEqual(
+      ['get_my_account', ...GARAGE_READS.map(([name]) => name)].sort(),
+    );
+    for (const answer of answers) {
+      expect(answer.isError).toBeFalsy();
+      expect(answer.structuredContent).toHaveProperty('note');
+    }
     await client.close();
   });
 
@@ -271,6 +324,21 @@ describe('what the MCP endpoint reports', () => {
         tool: 'unknown',
       },
     ]);
+    await client.close();
+  });
+
+  // @traces 374-FR-014
+  it('observes each garage read under its own tool name', async () => {
+    const observed = jest.spyOn(metrics, 'observeToolCall');
+    const { id } = await newOwner();
+    const client = await connect(await tokenFor(id));
+
+    for (const [name, args] of GARAGE_READS)
+      await client.callTool({ arguments: args, name });
+
+    expect(observed.mock.calls.map(([call]) => call.tool)).toEqual(
+      GARAGE_READS.map(([name]) => name),
+    );
     await client.close();
   });
 

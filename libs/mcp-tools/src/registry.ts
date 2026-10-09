@@ -10,6 +10,10 @@ import {
   actorOf,
   type Capability,
   capabilitiesOf,
+  type DaySheetService,
+  type GarageFiguresService,
+  type GarageRequestsService,
+  type GarageScheduleService,
   type LoadedAccount,
   type Maintenance,
   type Role,
@@ -36,6 +40,12 @@ export interface ToolContext {
   accounts: { activeAccount(id: string): Promise<LoadedAccount> };
   // A garage with no row for the key has the feature on.
   featureOn(garageId: string, key: string): Promise<boolean>;
+  garage: {
+    daySheet: Pick<DaySheetService, 'get'>;
+    figures: Pick<GarageFiguresService, 'get'>;
+    requests: Pick<GarageRequestsService, 'inbox'>;
+    schedule: Pick<GarageScheduleService, 'list'>;
+  };
   maintenance: Maintenance;
 }
 
