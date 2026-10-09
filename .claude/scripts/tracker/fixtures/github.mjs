@@ -36,6 +36,7 @@ export function fakeGitHub(seed = {}) {
     subIssues: new Map(),
     // GitHub refuses a parent's 101st sub-issue.
     subIssueMax: seed.subIssueMax ?? 100,
+    listLag: seed.listLag ?? 0,
     blockedBy: new Map(),
     nextNumber: 1,
     // Pull requests of the issue repo itself, which its issue list also returns.
@@ -148,7 +149,8 @@ export function fakeGitHub(seed = {}) {
     }
     if ((m = repo.match(/^issues\/(\d+)\/sub_issues$/))) {
       const list = state.subIssues.get(Number(m[1])) ?? [];
-      if (method === "GET") return json(list.map(issueById));
+      // listLag hides the newest links, as a listing taken before another writer filled the parent would.
+      if (method === "GET") return json(list.slice(0, Math.max(0, list.length - (state.listLag ?? 0))).map(issueById));
       if (list.length >= state.subIssueMax) return json({ message: "An error occurred while adding the sub-issue to the parent issue. Parent cannot have more than 100 sub-issues" }, 422);
       // A sub-issue has one parent: another parent is refused unless replace_parent moves it.
       const former = [...state.subIssues].find(([n, ids]) => n !== Number(m[1]) && ids.includes(body.sub_issue_id));
@@ -160,7 +162,8 @@ export function fakeGitHub(seed = {}) {
     }
     if ((m = repo.match(/^issues\/(\d+)\/dependencies\/blocked_by$/))) {
       const list = state.blockedBy.get(Number(m[1])) ?? [];
-      if (method === "GET") return json(list.map(issueById));
+      // listLag hides the newest links, as a listing taken before another writer filled the parent would.
+      if (method === "GET") return json(list.slice(0, Math.max(0, list.length - (state.listLag ?? 0))).map(issueById));
       list.push(body.issue_id);
       state.blockedBy.set(Number(m[1]), list);
       return json(issueBy(m[1]), 201);
@@ -272,6 +275,9 @@ export function fakeGitHub(seed = {}) {
     UserId: (v) => ({ user: { id: `U_${v.login}` } }),
     CreateIssue: ({ input }) => {
       if (input.repositoryId !== "R_specs") return { errors: [{ type: "FORBIDDEN", message: "issues go to the issue repository only" }] };
+      // GitHub makes nothing when the parent is full.
+      const full = input.parentIssueId && state.issues.find((i) => i.node_id === input.parentIssueId);
+      if (full && (state.subIssues.get(full.number) ?? []).length >= state.subIssueMax) return { errors: [{ type: "UNPROCESSABLE", message: "Parent cannot have more than 100 sub-issues" }] };
       const made = addIssue({
         title: input.title,
         body: input.body,
@@ -286,7 +292,6 @@ export function fakeGitHub(seed = {}) {
       });
       if (input.parentIssueId) {
         const parent = state.issues.find((i) => i.node_id === input.parentIssueId);
-        if ((state.subIssues.get(parent.number) ?? []).length >= state.subIssueMax) return { errors: [{ type: "UNPROCESSABLE", message: "Parent cannot have more than 100 sub-issues" }] };
         state.subIssues.set(parent.number, [...(state.subIssues.get(parent.number) ?? []), made.id]);
       }
       return { createIssue: { issue: { id: made.node_id, databaseId: made.id, number: made.number, title: made.title, body: made.body, projectItems: { nodes: placed } } } };

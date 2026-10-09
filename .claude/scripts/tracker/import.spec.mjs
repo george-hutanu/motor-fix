@@ -249,6 +249,21 @@ describe("a full import", () => {
     assert.ok(!again.lines.some((l) => /^sub-issue\s/.test(l)));
   });
 
+  it("makes a story beside a parent that filled up after it was listed, and the run still ends done", async () => {
+    // The listing misses EP-1's newest links, so the import thinks EP-1 has room that GitHub refuses.
+    const gh = await bootstrapped({ subIssueMax: 3 });
+    await importInto(gh, { subIssueMax: 3 });
+    gh.state.listLag = 3;
+    const ep1 = issueOf(gh, "EP-1").number;
+    const story = gh.state.issues.find((i) => (gh.state.subIssues.get(ep1) ?? []).includes(i.id));
+    gh.state.issues.splice(gh.state.issues.indexOf(story), 1);
+    gh.state.subIssues.set(ep1, [...gh.state.subIssues.get(ep1).filter((id) => id !== story.id), -1]);
+    const { exit, lines } = await importInto(gh, { subIssueMax: 3 });
+    assert.equal(exit, 0);
+    assert.ok(!lines.some((l) => /^failed\s/.test(l)));
+    assert.ok(lines.some((l) => /^warn\s+EP-1 holds 3 sub-issues/.test(l)));
+  });
+
   it("adds a Closes line to an open story's open PR and leaves a merged one alone", async () => {
     const gh = await bootstrapped();
     await importInto(gh);

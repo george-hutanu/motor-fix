@@ -36,6 +36,8 @@ const EPIC_STATUS = { "To do": "To do", "In progress": "Implementing", Done: "Do
 const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
 // The field types set-fields writes; GitHub's own fields (CREATED, TITLE, …) take no value.
 const WRITABLE = new Set(["SINGLE_SELECT", "DATE", "NUMBER", "TEXT"]);
+// GitHub refusing a sub-issue because the parent already holds its limit.
+const FULL_PARENT = /cannot have more than \d+ sub-issues/i;
 const KINDS = ["create", "feature", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "move", "blocked-by", "pr-closes"];
 const READERS = 4;
 // A feature's key is its Notion page id: it never looks like a story's or an epic's.
@@ -606,21 +608,32 @@ export async function runImport({
         const body = bodyOf(plan);
         const assignee = plan.assignee ? await userId(plan.assignee) : null;
         // Placed under its parent at create when the parent has room; the link steps report it when it has none.
-        const parent = plan.parent && issue.has(plan.parent) && (await linksOf(subIssues, plan.parent, "sub_issues")).length < subIssueMax ? issue.get(plan.parent) : undefined;
-        const made = (
-          await github.graphql(CREATE_ISSUE, {
-            input: {
-              repositoryId: repositoryIds[ISSUE_REPO],
-              title: plan.title,
-              body,
-              labelIds: plan.labels.map((l) => labelId.get(l.toLowerCase())),
-              ...(plan.milestone ? { milestoneId: milestoneId.get(plan.milestone) } : {}),
-              assigneeIds: assignee ? [assignee] : [],
-              projectV2Ids: [project.id],
-              ...(parent ? { parentIssueId: parent.node_id } : {}),
-            },
-          })
-        ).createIssue.issue;
+        let parent = plan.parent && issue.has(plan.parent) && (await linksOf(subIssues, plan.parent, "sub_issues")).length < subIssueMax ? issue.get(plan.parent) : undefined;
+        const create = async () =>
+          (
+            await github.graphql(CREATE_ISSUE, {
+              input: {
+                repositoryId: repositoryIds[ISSUE_REPO],
+                title: plan.title,
+                body,
+                labelIds: plan.labels.map((l) => labelId.get(l.toLowerCase())),
+                ...(plan.milestone ? { milestoneId: milestoneId.get(plan.milestone) } : {}),
+                assigneeIds: assignee ? [assignee] : [],
+                projectV2Ids: [project.id],
+                ...(parent ? { parentIssueId: parent.node_id } : {}),
+              },
+            })
+          ).createIssue.issue;
+        let made;
+        try {
+          made = await create();
+        } catch (error) {
+          // The parent filled up since its sub-issues were listed: the issue is made beside it instead.
+          if (!parent || !FULL_PARENT.test(error.message)) throw error;
+          noRoom.set(plan.key, plan.parent);
+          parent = undefined;
+          made = await create();
+        }
         issue.set(plan.key, {
           number: made.number,
           id: made.databaseId,
@@ -743,7 +756,13 @@ export async function runImport({
           return `left out of full #${number}`;
         }
         // An issue has one parent: replace_parent moves one the import put under its epic before it had features.
-        await github.rest("POST", `issues/${number}/sub_issues`, { sub_issue_id: id, replace_parent: true }, { idempotent: true });
+        try {
+          await github.rest("POST", `issues/${number}/sub_issues`, { sub_issue_id: id, replace_parent: true }, { idempotent: true });
+        } catch (error) {
+          if (!FULL_PARENT.test(error.message)) throw error;
+          noRoom.set(child, parent);
+          return `left out of full #${number}`;
+        }
         for (const [key, ids] of subIssues) if (key !== parent && ids.includes(id)) ids.splice(ids.indexOf(id), 1);
         have.push(id);
         noRoom.delete(child);
