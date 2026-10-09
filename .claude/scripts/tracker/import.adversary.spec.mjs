@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { notionClient } from "../lib/notion.mjs";
 import { reconcile } from "./bootstrap.mjs";
-import { fakeClock, fakeGitHub } from "./fixtures/github.mjs";
+import { createsIssue, fakeClock, fakeGitHub } from "./fixtures/github.mjs";
 import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { githubClient } from "./github.mjs";
 import { issuePlans, runImport } from "./import.mjs";
@@ -339,7 +339,7 @@ describe("the token never appears in output", () => {
     const gh = await bootstrapped();
     let n = 0;
     const fetchImpl = async (url, init) => {
-      if (init?.method === "POST" && new URL(url).pathname.endsWith("/issues") && ++n === 3) return new Response(JSON.stringify({ message: `echo ${TOKEN}` }), { status: 422 });
+      if (createsIssue(url, init) && ++n === 3) return new Response(JSON.stringify({ message: `echo ${TOKEN}` }), { status: 422 });
       return gh.fetchImpl(url, init);
     };
     const { exit, lines } = await importInto(gh, { fetchImpl });
@@ -361,7 +361,7 @@ describe("rate limits", () => {
     const clock = fakeClock();
     let thrown = false;
     const fetchImpl = async (url, init) => {
-      if (!thrown && init?.method === "POST" && new URL(url).pathname.endsWith("/issues")) {
+      if (!thrown && createsIssue(url, init)) {
         thrown = true;
         return new Response("{}", { status: 403, headers: { "retry-after": "30" } });
       }
@@ -397,7 +397,7 @@ describe("rate limits", () => {
     const gh = await bootstrapped();
     let blocked = true;
     const fetchImpl = async (url, init) => {
-      if (blocked && init?.method === "POST" && new URL(url).pathname.endsWith("/issues")) return new Response("{}", { status: 429, headers: { "retry-after": "9999" } });
+      if (blocked && createsIssue(url, init)) return new Response("{}", { status: 429, headers: { "retry-after": "9999" } });
       return gh.fetchImpl(url, init);
     };
     const { exit, lines } = await importInto(gh, { fetchImpl });

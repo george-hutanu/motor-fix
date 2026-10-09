@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { notionClient } from "../lib/notion.mjs";
 import { reconcile, RESERVED_FIELD_NAMES, SCHEMA } from "./bootstrap.mjs";
-import { fakeGitHub } from "./fixtures/github.mjs";
+import { createdTitle, createsIssue, fakeGitHub } from "./fixtures/github.mjs";
 import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import { issuePlans, plainValue, runImport, TEXT_MAX } from "./import.mjs";
@@ -245,7 +245,8 @@ describe("a full import", () => {
     const gh = await bootstrapped();
     await importInto(gh);
     const rest = gh.writes().filter((r) => r.path !== "/graphql");
-    assert.ok(rest.some((r) => r.repo === "motor-fix-specs" && /\/issues$/.test(r.path)));
+    const creates = gh.writes().filter((r) => r.op === "CreateIssue");
+    assert.ok(creates.length > 0 && creates.every((r) => r.body.variables.input.repositoryId === "R_specs"));
     const toCode = rest.filter((r) => r.repo !== "motor-fix-specs");
     assert.ok(toCode.length > 0);
     for (const r of toCode) {
@@ -279,7 +280,7 @@ describe("a full import", () => {
     const gh = await bootstrapped();
     let throttled = false;
     const fetchImpl = async (url, init = {}) => {
-      if (!throttled && init.method === "POST" && url.endsWith("/issues")) {
+      if (!throttled && createsIssue(url, init)) {
         throttled = true;
         return new Response(JSON.stringify({ message: "secondary rate limit" }), { status: 403, headers: { "retry-after": "1" } });
       }
@@ -470,7 +471,7 @@ describe("guards", () => {
     assert.equal(exit, 0);
     assert.equal(nonGets(gh, from).length, 0);
     assert.ok(lines.some((l) => /^read\s+notion: 8 stories, 4 epics/.test(l)));
-    assert.ok(lines.some((l) => /^plan\s+create 12 · adopt 0 · update 0 · add-item 12 · set-fields 12 · close 2 · reopen 0 · relink \d+ · sub-issue 7 · blocked-by 4 · pr-closes 1$/.test(l)));
+    assert.ok(lines.some((l) => /^plan\s+create 12 · adopt 0 · update 0 · add-item 0 · set-fields 12 · close 2 · reopen 0 · relink \d+ · sub-issue 7 · blocked-by 4 · pr-closes 1$/.test(l)));
     assert.ok(lines.some((l) => /^bodies\s+12 pages, [\d,]+ characters; 0 too long for an issue/.test(l)));
     assert.ok(lines.some((l) => /^titles\s+\(12\)$/.test(l)));
     assert.ok(lines.some((l) => l.trim() === "ST-4 Ask `@alice` about the logs"));
@@ -647,9 +648,9 @@ describe("reading and writing together", () => {
     return { t, load, client };
   }
   const watching = (gh, events, delay = 0) => async (url, init = {}) => {
-    if (init.method === "POST" && /\/issues$/.test(url)) {
+    if (createsIssue(url, init)) {
       if (delay) await new Promise((r) => setTimeout(r, delay));
-      events.push(`create ${JSON.parse(init.body).title.split(" ")[0]}`);
+      events.push(`create ${createdTitle(init).split(" ")[0]}`);
     }
     return gh.fetchImpl(url, init);
   };
@@ -857,8 +858,9 @@ describe("stories attached to their epic", () => {
 
   it("links each item to its parent, children, blockers and the items it blocks as it is written, before the lap ends", async () => {
     const gh = await bootstrapped();
-    // ST-2 ST-5 ST-7 ST-1 (+ ST-7 blocked by it) ST-8 ST-4 ST-6, then EP-1 and its four written stories: 29 steps.
-    const { exit, lines } = await importInto(gh, { budget: 29 });
+    // ST-2 ST-5 ST-7 ST-1 (+ ST-7 blocked by it) ST-8 ST-4 ST-6, then EP-1 and its four written stories: 21 steps
+    // (a create puts its issue in the Project, so each item is a create and a set-fields).
+    const { exit, lines } = await importInto(gh, { budget: 21 });
     assert.equal(exit, 3);
     const children = (key) => (gh.state.subIssues.get(issueOf(gh, key).number) ?? []).map((id) => gh.state.issues.find((i) => i.id === id).title.split(" ")[0]).sort();
     assert.deepEqual(children("EP-1"), ["ST-1", "ST-5", "ST-7", "ST-8"]);
@@ -915,7 +917,7 @@ describe("a dropped connection mid-run", () => {
 
   it("ends only that page's steps when a create keeps failing, writes the others and exits 3; the next lap finishes", async () => {
     const gh = await bootstrapped();
-    const isSt1 = (url, init) => init.method === "POST" && url.endsWith("/issues") && JSON.parse(init.body).title.startsWith("ST-1 ");
+    const isSt1 = (url, init) => createsIssue(url, init) && createdTitle(init).startsWith("ST-1 ");
     const one = await importInto(gh, { fetchImpl: dropping(gh, isSt1) });
     assert.equal(one.exit, 3, one.lines.join("\n"));
     assert.ok(one.lines.some((l) => /^retry\s+ST-1 create: .*fetch failed; the page's other steps wait for the next lap$/.test(l)));
@@ -933,9 +935,9 @@ describe("a dropped connection mid-run", () => {
   it("still stops the run on a refusal that is not transient", async () => {
     const gh = await bootstrapped();
     const refuse = async (url, init = {}) =>
-      init.method === "POST" && url.endsWith("/issues") ? new Response(JSON.stringify({ message: "Validation Failed" }), { status: 422 }) : gh.fetchImpl(url, init);
+      createsIssue(url, init) ? new Response(JSON.stringify({ errors: [{ type: "UNPROCESSABLE", message: "Validation Failed" }] }), { status: 200 }) : gh.fetchImpl(url, init);
     const { exit, lines } = await importInto(gh, { fetchImpl: refuse });
     assert.equal(exit, 1);
-    assert.match(lines.at(-1), /^failed\s+\S+ create: POST issues: 422 Validation Failed$/);
+    assert.match(lines.at(-1), /^failed\s+\S+ create: UNPROCESSABLE: Validation Failed$/);
   });
 });

@@ -104,13 +104,13 @@ export function fakeGitHub(seed = {}) {
       return json(pr);
     }
     if (name !== "motor-fix-specs") return json({ message: "Not Found" }, 404);
-    if (repo === "labels" && method === "GET") return json(state.labels);
+    if (repo === "labels" && method === "GET") return json(state.labels.map((l) => ({ node_id: `LA_${l.name}`, ...l })));
     if (repo === "labels" && method === "POST") {
       if (state.labels.some((l) => l.name === body.name)) return json({ message: "Validation Failed" }, 422);
       state.labels.push({ name: body.name, color: body.color, description: body.description ?? "" });
       return json(state.labels.at(-1), 201);
     }
-    if (repo === "milestones" && method === "GET") return json(state.milestones);
+    if (repo === "milestones" && method === "GET") return json(state.milestones.map((m) => ({ node_id: `MI_${m.number}`, ...m })));
     if (repo === "milestones" && method === "POST") {
       const made = { number: state.milestones.length + 1, title: body.title, state: "open" };
       state.milestones.push(made);
@@ -262,6 +262,27 @@ export function fakeGitHub(seed = {}) {
       }
       return { addProjectV2ItemById: { item: { id: item.id } } };
     },
+    UserId: (v) => ({ user: { id: `U_${v.login}` } }),
+    CreateIssue: ({ input }) => {
+      if (input.repositoryId !== "R_specs") return { errors: [{ type: "FORBIDDEN", message: "issues go to the issue repository only" }] };
+      const made = addIssue({
+        title: input.title,
+        body: input.body,
+        labels: input.labelIds.map((id) => id.slice("LA_".length)),
+        milestone: input.milestoneId ? milestoneOf(Number(input.milestoneId.slice("MI_".length))) : null,
+        assignees: (input.assigneeIds ?? []).map((id) => id.slice("U_".length)),
+      });
+      const placed = (input.projectV2Ids ?? []).map((id) => {
+        const item = { id: nextId("PVTI"), number: made.number, values: {} };
+        projectById(id).items.push(item);
+        return { id: item.id, project: { id } };
+      });
+      if (input.parentIssueId) {
+        const parent = state.issues.find((i) => i.node_id === input.parentIssueId);
+        state.subIssues.set(parent.number, [...(state.subIssues.get(parent.number) ?? []), made.id]);
+      }
+      return { createIssue: { issue: { id: made.node_id, databaseId: made.id, number: made.number, title: made.title, body: made.body, projectItems: { nodes: placed } } } };
+    },
     SetFields: (v) => {
       const p = projectById(v.projectId);
       const item = p.items.find((it) => it.id === v.itemId);
@@ -295,6 +316,19 @@ export function fakeGitHub(seed = {}) {
 
   return { state, requests, writes, fetchImpl };
 }
+
+/** Whether a request creates an issue: GraphQL's createIssue (the import) or a REST POST to /issues. */
+export function createsIssue(url, init = {}) {
+  if (init.method !== "POST") return false;
+  if (new URL(url).pathname === "/graphql") return /^\s*mutation\s+CreateIssue\b/.test(JSON.parse(init.body).query);
+  return new URL(url).pathname.endsWith("/issues");
+}
+
+/** The title an issue-creating request carries. */
+export const createdTitle = (init) => {
+  const body = JSON.parse(init.body);
+  return body.variables?.input?.title ?? body.title;
+};
 
 /** A clock that only moves when the code under test sleeps. */
 export function fakeClock() {

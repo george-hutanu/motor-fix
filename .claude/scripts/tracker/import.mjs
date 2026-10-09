@@ -315,6 +315,10 @@ const ITEMS = `query Items($id: ID!, $after: String) { node(id: $id) { ... on Pr
     ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2FieldCommon { name } } }
     ... on ProjectV2ItemFieldDateValue { date field { ... on ProjectV2FieldCommon { name } } }
     ... on ProjectV2ItemFieldNumberValue { number field { ... on ProjectV2FieldCommon { name } } } } } } } } } }`;
+// One request makes the issue, puts it in the Project and under its epic: three writes in one against GitHub's hourly content limit.
+const CREATE_ISSUE =
+  "mutation CreateIssue($input: CreateIssueInput!) { createIssue(input: $input) { issue { id databaseId number title body projectItems(first: 20) { nodes { id project { id } } } } } }";
+const USER_ID = "query UserId($login: String!) { user(login: $login) { id } }";
 const ADD_ITEM = "mutation AddItem($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) { item { id } } }";
 
 /** Every Project item: its id, issue number and field values by name. */
@@ -411,13 +415,15 @@ export async function runImport({
   const { plans, warnings } = issuePlans(tracker);
   const total = plans.length;
 
-  const { project } = await findProject(github);
+  const { project, repositoryIds } = await findProject(github);
   if (!project) {
     out("failed", "run bootstrap first: no MotorFix Project");
     return 1;
   }
   const state = await projectState(github, project.id);
-  const labels = new Set((await github.pages("labels?per_page=100")).map((l) => l.name));
+  const labelList = await github.pages("labels?per_page=100");
+  const labels = new Set(labelList.map((l) => l.name));
+  const labelId = new Map(labelList.map((l) => [l.name.toLowerCase(), l.node_id]));
   const milestoneList = await github.pages("milestones?state=all&per_page=100");
   const missing = missingSetup({ plans, labels, milestones: new Set(milestoneList.map((m) => m.title)), fields: state.fields });
   if (missing) {
@@ -425,6 +431,12 @@ export async function runImport({
     return 1;
   }
   const milestoneNumber = new Map(milestoneList.map((m) => [m.title, m.number]));
+  const milestoneId = new Map(milestoneList.map((m) => [m.title, m.node_id]));
+  const userIds = new Map();
+  const userId = async (login) => {
+    if (!userIds.has(login)) userIds.set(login, (await github.graphql(USER_ID, { login })).user?.id ?? null);
+    return userIds.get(login);
+  };
   const fieldByName = new Map(state.fields.map((f) => [f.name, f]));
 
   const listed = (await github.pages("issues?state=all&per_page=100")).filter((i) => !i.pull_request);
@@ -464,19 +476,46 @@ export async function runImport({
     const step = (kind, run) => steps.push({ kind, key: plan.key, run });
     const byMark = byMarker.get(plan.key);
     const found = existing.has(plan.key) ? issue.get(plan.key) : undefined;
+    let item = found ? itemOf.get(found.number) : undefined;
     if (!found) {
       step("create", async () => {
         const body = bodyOf(plan);
-        const made = await github.rest("POST", "issues", {
-          title: plan.title,
-          body,
-          labels: plan.labels,
-          ...(plan.milestone ? { milestone: milestoneNumber.get(plan.milestone) } : {}),
-          assignees: plan.assignee ? [plan.assignee] : [],
+        const assignee = plan.assignee ? await userId(plan.assignee) : null;
+        const parent = plan.parent ? issue.get(plan.parent) : undefined;
+        const made = (
+          await github.graphql(CREATE_ISSUE, {
+            input: {
+              repositoryId: repositoryIds[ISSUE_REPO],
+              title: plan.title,
+              body,
+              labelIds: plan.labels.map((l) => labelId.get(l.toLowerCase())),
+              ...(plan.milestone ? { milestoneId: milestoneId.get(plan.milestone) } : {}),
+              assigneeIds: assignee ? [assignee] : [],
+              projectV2Ids: [project.id],
+              ...(parent ? { parentIssueId: parent.node_id } : {}),
+            },
+          })
+        ).createIssue.issue;
+        issue.set(plan.key, {
+          number: made.number,
+          id: made.databaseId,
+          node_id: made.id,
+          title: made.title,
+          body: made.body,
+          state: "open",
+          labels: plan.labels.map((name) => ({ name })),
+          milestone: plan.milestone ? { title: plan.milestone } : null,
+          assignees: assignee ? [{ login: plan.assignee }] : [],
         });
-        issue.set(plan.key, made);
         written.set(plan.key, body);
-        return `→ #${made.number}`;
+        const placed = made.projectItems.nodes.find((n) => n.project.id === project.id);
+        if (placed) item = { id: placed.id, values: {} };
+        else {
+          const added = await github.graphql(ADD_ITEM, { projectId: project.id, contentId: made.id }, { idempotent: true });
+          item = { id: added.addProjectV2ItemById.item.id, values: {} };
+        }
+        if (parent) subIssues.get(plan.parent)?.push(made.databaseId);
+        return `→ #${made.number}${parent ? ` under #${parent.number}` : ""}`;
       });
     } else {
       // A hand-filed issue keeps its title and labels; the import owns the rest.
@@ -508,8 +547,7 @@ export async function runImport({
       }
     }
 
-    let item = found ? itemOf.get(found.number) : undefined;
-    if (!item) {
+    if (found && !item) {
       step("add-item", async () => {
         const made = await github.graphql(ADD_ITEM, { projectId: project.id, contentId: issue.get(plan.key).node_id }, { idempotent: true });
         item = { id: made.addProjectV2ItemById.item.id, values: {} };
@@ -554,6 +592,8 @@ export async function runImport({
     run: async () => {
       const number = issue.get(parent).number;
       const id = issue.get(child).id;
+      // The child's create may have placed it under its parent already.
+      if (have.includes(id)) return `under #${number} at create`;
       await github.rest("POST", `issues/${number}/sub_issues`, { sub_issue_id: id }, { idempotent: true });
       have.push(id);
       return `under #${number}`;
@@ -744,9 +784,11 @@ export async function runImport({
     planLine(counts, unread);
     for (const w of [...tracker.warnings, ...warnings, ...lateWarnings]) out("warn", w);
     if (!unread) bodiesLine();
-    if (items.length + counts["add-item"] > maxItems) {
+    // A create puts its issue in the Project, so it adds an item as an add-item does.
+    const adding = counts["add-item"] + counts.create;
+    if (items.length + adding > maxItems) {
       await stop();
-      out("refused", `the Project would hold ${items.length + counts["add-item"]} items, over --max-items ${maxItems}`);
+      out("refused", `the Project would hold ${items.length + adding} items, over --max-items ${maxItems}`);
       return 2;
     }
     expected = upfront.length;
