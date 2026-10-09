@@ -510,24 +510,24 @@ describe('GET /garage/requests?status=closed', () => {
     expect(res.body.nextCursor).toBeNull();
   });
 
-  it('lists the closed rows newest close first, with no waiting or answered row', async () => {
+  it('lists the closed rows newest first by when they were sent, with no waiting or answered row', async () => {
     const andrei = await driver();
     const dinamo = await team('Atelier Dinamo');
-    const older = await world.request(andrei);
+    const older = await world.request(andrei, { createdAt: ago(10 * HOUR) });
     const olderTo = await world.recipient(
       older.id,
       dinamo.garage.id,
       'expired',
     );
-    await moved('request_recipient', olderTo.id, ago(5 * HOUR), 'expired');
-    // Created first, closed last.
+    await moved('request_recipient', olderTo.id, ago(1 * HOUR), 'expired');
+    // Sent last, closed first.
     const later = await world.request(andrei, { createdAt: ago(2 * HOUR) });
     const laterTo = await world.recipient(
       later.id,
       dinamo.garage.id,
       'expired',
     );
-    await moved('request_recipient', laterTo.id, ago(1 * HOUR), 'expired');
+    await moved('request_recipient', laterTo.id, ago(90 * 60_000), 'expired');
     const waiting = await world.request(andrei);
     await world.recipient(waiting.id, dinamo.garage.id);
     const declined = await world.request(andrei);

@@ -151,7 +151,7 @@ export class GarageRequestsService {
     return page(rows, total, (row) => summaryOf(row, offered));
   }
 
-  // The rows closed for this garage in the last 24 hours, newest close first,
+  // The rows closed for this garage in the last 24 hours, newest first,
   // one page. A recipient has no close column: the close time is its newest
   // status move, else the request's, else when it was sent to the garage.
   private async closed(garageId: string): Promise<GarageRequestListDto> {
@@ -178,7 +178,7 @@ export class GarageRequestsService {
           OR (rr.status = 'waiting' AND qr.status NOT IN ('sent', 'quoted'))
         )
         AND c.closed_at > now() - interval '24 hours'
-      ORDER BY c.closed_at DESC, rr.request_id DESC
+      ORDER BY qr.created_at DESC, qr.id DESC
       LIMIT ${PAGE_SIZE}`;
     if (hits.length === 0) return { items: [], nextCursor: null, total: 0 };
     const [rows, garage] = await Promise.all([
