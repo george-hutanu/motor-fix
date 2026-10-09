@@ -34,5 +34,6 @@ export async function savedLanguage(request: APIRequestContext, email: string) {
   const me = await request.get('/api/v1/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  expect(me.ok()).toBe(true);
   return ((await me.json()) as { language: string }).language;
 }
