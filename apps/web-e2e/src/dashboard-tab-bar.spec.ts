@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -105,7 +106,7 @@ const DASHBOARDS = [
 
 async function open(page: Page, path: string) {
   await page.goto(path);
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 const sideways = (page: Page) =>

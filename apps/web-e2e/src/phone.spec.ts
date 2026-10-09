@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -19,7 +20,7 @@ async function open(page: Page, path: string, role?: string) {
   if (role) await signInAs(page, role, path);
   await page.goto(path);
   await expect(page).toHaveURL(path);
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 const sideways = (page: Page) =>

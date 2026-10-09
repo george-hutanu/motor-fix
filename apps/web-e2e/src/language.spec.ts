@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 const languageSwitch = (page: Page, name: 'Limba' | 'Language') =>
@@ -9,7 +10,7 @@ async function openHome(page: Page) {
   await page.goto('/');
   await expect(languageSwitch(page, 'Limba')).toBeVisible();
   // Hydrated: the remembered language is applied after the first render.
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 test('Home opens in Romanian with RO chosen, and each button is at least 44 px tall', async ({
@@ -87,7 +88,7 @@ test('with storage blocked the app works in Romanian and still switches', async 
   // The address now says English; nothing remembered means `/` is Romanian.
   await page.goto('/');
   await expect(languageSwitch(page, 'Limba')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
   await expect(page.locator('html')).toHaveAttribute('lang', 'ro');
   expect(errors).toEqual([]);
 });
@@ -148,7 +149,7 @@ test.describe('on a 320 px phone', () => {
     release();
 
     await expect(page).toHaveURL(/\/en$/);
-    await page.waitForLoadState('networkidle');
+    await settled(page);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   });
 });

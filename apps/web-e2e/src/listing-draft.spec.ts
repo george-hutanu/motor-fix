@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { ready, settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The link e-mail as the API sent it, read from the test mailbox the local
@@ -65,7 +65,7 @@ test.describe('saving a listing draft @mailbox', () => {
     }
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await settled(page);
     await expect(page.getByLabel('E‑mail')).toHaveValue(email);
   });
 

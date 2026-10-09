@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -14,7 +15,7 @@ const sections = (page: Page) => page.locator('section h2');
 async function open(page: Page, path: string) {
   await page.goto(path);
   await expect(page.locator('h1')).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await settled(page);
 }
 
 // The sections are empty until later stories fill them; give them the height
@@ -98,7 +99,7 @@ test.describe('the list your garage page', () => {
     await page.goto('/ro/list-your-garage');
     await fill(page);
     await page.goto('/ro/list-your-garage#pasul-4');
-    await page.waitForLoadState('networkidle');
+    await settled(page);
 
     await expect(sections(page).nth(3)).toBeInViewport();
     await expect(current(page)).toContainText('Mecanici');

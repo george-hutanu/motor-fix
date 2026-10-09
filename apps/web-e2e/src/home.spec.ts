@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { ready, settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 const picker = (page: Page) =>
@@ -269,7 +269,7 @@ test.describe('the place on Home @seeded', () => {
 
     const nears = nearReads(page);
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await settled(page);
 
     await expect(line(page)).toHaveText(
       /Lângă Strada Exemplu 2, Cluj-Napoca\s*·\s*Schimbă/,
