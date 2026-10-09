@@ -1,0 +1,48 @@
+@if (tiles().length > 0) {
+  @for (tile of tiles(); track tile.id; let i = $index) {
+    <button
+      #button
+      type="button"
+      class="tile"
+      [class.cover]="i === 0"
+      [style.--tile-step]="i"
+      [attr.data-loaded]="loaded().has(tile.src)"
+      [attr.data-failed]="broken().has(tile.src)"
+      (click)="open(i, button)"
+    >
+      @if (broken().has(tile.src)) {
+        <svg
+          class="placeholder"
+          role="img"
+          [attr.aria-label]="tile.alt"
+          fill="none"
+          height="40"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          viewBox="0 0 24 24"
+          width="40"
+        >
+          <rect height="16" rx="2" width="18" x="3" y="4" />
+          <path d="m3 16 5-5 4 4 3-3 6 6M3 3l18 18" />
+        </svg>
+      } @else {
+        <img
+          draggable="false"
+          [alt]="tile.alt"
+          [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+          [src]="tile.src"
+          (error)="mark(broken, tile.src)"
+          (load)="mark(loaded, tile.src)"
+        />
+      }
+    </button>
+  }
+  <mf-photo-viewer
+    [title]="garage().name"
+    [photos]="photos()"
+    [labels]="labels()"
+    (failed)="viewFailed($event.id)"
+  />
+}

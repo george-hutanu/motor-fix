@@ -24,6 +24,7 @@ const MOBILE: PublicGarageDto = {
   jobTypes: [],
   name: 'Mecanic Mobil Ilfov',
   paymentMethods: { card: false, cash: false, transfer: false },
+  photos: [],
   rating: null,
   refusalPhrase: null,
   reviewCount: 0,
@@ -43,6 +44,7 @@ const FIXED: PublicGarageDto = {
   longitude: 26.01,
   name: 'Service Auto Militari',
   paymentMethods: { card: false, cash: false, transfer: false },
+  photos: [],
   rating: null,
   refusalPhrase: null,
   reviewCount: 0,
@@ -133,7 +135,7 @@ const link = (name: RegExp) =>
 const css = (path: string) => readFileSync(join(__dirname, path), 'utf8');
 const lamp = () => page().querySelector<HTMLElement>('mf-lamp');
 
-// @traces 307-FR-008 307-FR-010 307-FR-013 307-FR-014 307-FR-015
+// @traces 307-FR-008 307-FR-010 307-FR-013 307-FR-014 307-FR-015 310-FR-004
 describe('the garage profile', () => {
   it('reads the garage named in the address, with the brand in context', async () => {
     await open('/ro/garages/service-auto-militari?brand=dacia');
@@ -234,6 +236,35 @@ describe('the garage profile', () => {
     ];
     expect(slots.length).toBeGreaterThan(0);
     for (const slot of slots) expect(slot.textContent?.trim()).toBe('');
+  });
+
+  it('fills the photos slot with a tile per photo when the garage has photos', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({
+      ...FIXED,
+      photos: [
+        {
+          displayUrl: 'https://s/a.display',
+          height: 900,
+          id: 'p-1',
+          thumbnailUrl: 'https://s/a.thumb',
+          width: 1200,
+        },
+        {
+          displayUrl: 'https://s/b.display',
+          height: 900,
+          id: 'p-2',
+          thumbnailUrl: 'https://s/b.thumb',
+          width: 1200,
+        },
+      ],
+    });
+
+    const slot = page().querySelector<HTMLElement>(
+      'section[data-slot="photos"]',
+    );
+    expect(slot?.getAttribute('aria-label')).toBe('Fotografii');
+    expect(slot?.querySelectorAll('button img')).toHaveLength(2);
   });
 
   it('shows an error block whose button reads again', async () => {
