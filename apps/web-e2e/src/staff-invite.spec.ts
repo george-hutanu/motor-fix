@@ -1,12 +1,11 @@
 import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
-import { test } from './fixtures.js';
+import { MAILBOX, test } from './fixtures.js';
 
 // The invite e-mail as the API sent it, read from the test mailbox the local
 // run starts (mailbox.mjs); a deployed address has none, so the config leaves
 // out flows tagged @mailbox there.
-const MAILBOX = 'http://127.0.0.1:3025';
 const INVITE_LINK = /https?:\/\/[^\s"<>]+\/invite\/[A-Za-z0-9_-]{43}/;
 // A fake password for the account this test creates; never a real one.
 const NEW_PASSWORD = 'parola-mecanic-de-test';

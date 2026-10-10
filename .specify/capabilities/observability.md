@@ -18,6 +18,7 @@ features:
   - 1016-mcp-staging
   - 344-send-quote
   - 244-analytics-news-consent
+  - 209-status-change-emails
 ---
 
 # Capability: Observability
@@ -461,6 +462,10 @@ _From 344-send-quote._
 ### 244-FR-016 — The three operations (`POST /api/v1/consents`, `POST /api/v1/me/consents`, `GET /api/v1/me/consents`) and the outside call to Plausible MUST ship with their observability in the same PR: the request-duration metric by route for the three routes, one log line per stored record (decision, kind, signed in or not, never the browser id or the account id in clear), a counter of records by decision, a panel on the API dashboard and an entry each in `infra/observability/inventory.json` (the endpoints and the Plausible outside call, which is a browser-side call and says so as its reason), with an alert or the reason there is none.
 
 _From 244-analytics-news-consent._
+
+### 209-FR-014 — Observability: the consumer MUST count the messages it builds per outcome (`built`, `skipped` — no owner or no decision to tell about) in one product counter on the `motorfix-queues` dashboard, log one line per event with the file id, the decision and how many owners it reached (never the note, the address or the e-mail), run inside the worker's existing trace as its own span, and be listed in `infra/observability/inventory.json` as a queue with its counter, dashboard panel and an alert rule on the queue's final job failures; `node scripts/observability-inventory.ts` MUST pass. The PR's Observability section names them.
+
+_From 209-status-change-emails._
 
 ## Retired
 

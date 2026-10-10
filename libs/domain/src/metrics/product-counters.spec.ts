@@ -18,6 +18,7 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countVerificationResult,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 
@@ -52,6 +53,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 // @traces 312-FR-016
 // @traces 206-FR-016
 // @traces 244-FR-016 244-FR-018
+// @traces 209-FR-014
 describe('the product counters', () => {
   it.each([
     [
@@ -132,6 +134,14 @@ describe('the product counters', () => {
           { outcome },
         ] as const,
     ),
+    ...(['built', 'skipped'] as const).map(
+      (outcome) =>
+        [
+          () => countVerificationResult(outcome),
+          'motorfix_verification_result_total',
+          { outcome },
+        ] as const,
+    ),
     ...GARAGE_REPORT_OUTCOMES.map(
       (outcome) =>
         [
@@ -193,6 +203,9 @@ describe('the product counters', () => {
     countDeclarationSigned();
     CONSENT_DECISIONS.forEach((decision) => {
       countConsentRecord(decision);
+    });
+    (['built', 'skipped'] as const).forEach((outcome) => {
+      countVerificationResult(outcome);
     });
 
     const { resourceMetrics } = await memory.metricReader.collect();

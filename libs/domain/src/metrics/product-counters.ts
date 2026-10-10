@@ -78,6 +78,15 @@ export function countRequestReceived(outcome: 'built' | 'muted' | 'skipped') {
   ).add(1, { outcome });
 }
 
+// A verification decision told to the garage's owners, or one with nobody
+// or nothing to tell.
+export function countVerificationResult(outcome: 'built' | 'skipped') {
+  counter(
+    'motorfix_verification_result_total',
+    'Verification decisions told to garage owners, by outcome',
+  ).add(1, { outcome });
+}
+
 export function countDocumentUploaded(kind: DocumentKind) {
   counter(
     'motorfix_documents_uploaded_total',

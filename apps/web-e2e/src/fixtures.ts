@@ -5,6 +5,10 @@ import { cacheAssets } from './asset-cache/asset-cache.js';
 
 const deployed = process.env['BASE_URL'];
 
+// The test mailbox the local run starts (mailbox.mjs), read by the config and
+// the flows tagged @mailbox.
+export const MAILBOX = 'http://127.0.0.1:3025';
+
 // The browser telemetry collector's path (FARO_URL ends in /collect/<key>).
 export const COLLECTOR = /\/collect\/[\w-]+$/;
 

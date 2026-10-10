@@ -1978,18 +1978,125 @@
     {
       "id": 70,
       "type": "row",
+      "title": "Verification results told to owners",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "panels": []
+    },
+    {
+      "id": 71,
+      "type": "stat",
+      "title": "Verification results, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 87
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_verification_result_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 72,
+      "type": "stat",
+      "title": "Verification results, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 87
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_verification_result_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 73,
+      "type": "timeseries",
+      "title": "Verification results per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 87
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_verification_result_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 74,
+      "type": "row",
       "title": "Analytics consent choices",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 85
+        "y": 92
       },
       "panels": []
     },
     {
-      "id": 71,
+      "id": 75,
       "type": "stat",
       "title": "Analytics consent choices, last hour",
       "datasource": {
@@ -2000,7 +2107,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 86
+        "y": 93
       },
       "targets": [
         {
@@ -2021,7 +2128,7 @@
       }
     },
     {
-      "id": 72,
+      "id": 76,
       "type": "stat",
       "title": "Analytics consent choices, last 24 hours",
       "datasource": {
@@ -2032,7 +2139,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 86
+        "y": 93
       },
       "targets": [
         {
@@ -2053,7 +2160,7 @@
       }
     },
     {
-      "id": 73,
+      "id": 77,
       "type": "timeseries",
       "title": "Analytics consent choices per hour, by decision",
       "datasource": {
@@ -2064,7 +2171,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 86
+        "y": 93
       },
       "targets": [
         {
