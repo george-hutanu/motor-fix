@@ -1,11 +1,12 @@
 ---
 capability: garage-profile
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
   - 312-report-garage
   - 384-response-rate
+  - 143-profile-views
 ---
 
 # Capability: Garage profile
@@ -169,6 +170,10 @@ _From 384-response-rate._
 ### 384-FR-009 — The open profile MUST re-read its answer when `response_stats.updated` for its garage arrives on the public live stream it already joins (307-FR-017), with no polling of its own.
 
 _From 384-response-rate._
+
+### 143-FR-008 — The web profile page MUST send one beacon per page load with the source taken from the in-app route the visitor came from (the results list, the results map, Home, the saved list), `shared_link` when the address carries `?src=share` (which the shared link of #363 now adds), else `profile_direct`; the results map has no screen yet and is mapped to `map` when it ships; the page MUST NOT wait for the answer, retry, or show any state for it.
+
+_From 143-profile-views._
 
 ## Retired
 
