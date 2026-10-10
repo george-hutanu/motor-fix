@@ -165,6 +165,15 @@ describe('carryover from earlier retrospectives', () => {
     }
   });
 
+  it('reads the earlier retrospectives under specs/specs in an old clone past the move', () => {
+    const dir = fixture({ 'specs/specs/001-earlier/retrospective.md': '# Retro\n\n- [ ] tighten the store boundary\n', 'specs/specs/002-fixture/spec.md': '# Spec\n' });
+    try {
+      assert.deepEqual(carryover(dir, '002-fixture'), [{ feature: '001-earlier', item: 'tighten the store boundary' }]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('is empty when nothing has been retrospected yet', () => {
     const dir = fixture({ 'specs/002-fixture/spec.md': '# Spec\n' });
     try {
