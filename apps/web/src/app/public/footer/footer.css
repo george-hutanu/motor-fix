@@ -12,6 +12,13 @@ nav {
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-body);
 }
+/* A separator wraps with the item after it, never alone at a line's end. */
+.item {
+  display: inline-flex;
+  align-items: center;
+  column-gap: var(--mf-space-2);
+  white-space: nowrap;
+}
 a,
 button {
   display: inline-flex;

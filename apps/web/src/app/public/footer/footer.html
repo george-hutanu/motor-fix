@@ -1,7 +1,11 @@
 <nav [attr.aria-label]="'consent.footer.label' | t">
   <a [routerLink]="['/', i18n.language(), 'terms']">{{ 'consent.footer.terms' | t }}</a>
-  <span aria-hidden="true">·</span>
-  <a [routerLink]="['/', i18n.language(), 'privacy']">{{ 'consent.footer.privacy' | t }}</a>
-  <span aria-hidden="true">·</span>
-  <button type="button" (click)="settings()">{{ 'consent.footer.settings' | t }}</button>
+  <span class="item">
+    <span aria-hidden="true">·</span>
+    <a [routerLink]="['/', i18n.language(), 'privacy']">{{ 'consent.footer.privacy' | t }}</a>
+  </span>
+  <span class="item">
+    <span aria-hidden="true">·</span>
+    <button type="button" (click)="settings()">{{ 'consent.footer.settings' | t }}</button>
+  </span>
 </nav>
