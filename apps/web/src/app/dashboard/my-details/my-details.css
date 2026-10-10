@@ -61,3 +61,11 @@ input {
 .actions button {
   min-height: 44px;
 }
+
+.tag {
+  align-self: flex-start;
+  padding: 0 var(--mf-space-2);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  font-size: var(--mf-size-small);
+}

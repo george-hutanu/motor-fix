@@ -54,6 +54,7 @@
   },
   "details": {
     "cancel": "Renunță",
+    "changeEmail": "Schimbă e‑mailul",
     "city": "Oraș",
     "edit": "Modifică",
     "email": "E‑mail",
@@ -61,6 +62,7 @@
       "pattern": "Folosește doar litere, cifre și semne obișnuite."
     },
     "name": "Nume",
+    "pending": "În așteptarea confirmării: {address}",
     "phone": "Telefon",
     "phoneLine": "Service‑ul îți vede numărul doar după ce accepți oferta lui.",
     "problem": {
@@ -74,9 +76,26 @@
       "send_failed": "Nu am putut trimite codul. Încearcă din nou puțin mai târziu.",
       "too_many_attempts": "Ai încercat de prea multe ori. Încearcă din nou puțin mai târziu."
     },
+    "resend": "Trimite linkul din nou",
+    "resent": "Am trimis linkul.",
     "save": "Salvează",
     "saved": "Am salvat.",
-    "title": "Datele tale"
+    "title": "Datele tale",
+    "unconfirmed": "Neconfirmat"
+  },
+  "emailChange": {
+    "address": "Adresă de e‑mail nouă",
+    "field": {
+      "pattern": "Scrie o adresă de e‑mail validă."
+    },
+    "problem": {
+      "email_taken": "Adresa e folosită de alt cont.",
+      "email_unchanged": "Aceasta e adresa ta actuală.",
+      "send_failed": "Nu am putut trimite. Încearcă din nou.",
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou mai târziu."
+    },
+    "submit": "Trimite linkul",
+    "title": "Schimbă adresa de e‑mail"
   },
   "home": {
     "newRequest": "Cerere nouă"

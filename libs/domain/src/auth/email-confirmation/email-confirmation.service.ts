@@ -9,6 +9,8 @@ import type { Redis } from 'ioredis';
 
 import {
   ASK_WINDOW_SECONDS,
+  CONFIRMATION_OPTIONS,
+  type ConfirmationOptions,
   confirmLink,
   hashToken,
   LINK_TTL_MS,
@@ -16,20 +18,20 @@ import {
   overLimit,
 } from './email-confirmation';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import { LIVE_CHANNEL } from '../../events/live/live.hub';
-import type { PrismaClient } from '../../generated/prisma/client';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
+import { countAccountChange } from '../../metrics/product-counters';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { AUTH_REDIS } from '../attempts';
+import { Attempts, AUTH_REDIS } from '../attempts';
+import {
+  EmailChangeService,
+  emailTaken,
+} from '../email-change/email-change.service';
 import { PRISMA } from '../prisma';
 
-export const CONFIRMATION_OPTIONS = Symbol('EMAIL_CONFIRMATION_OPTIONS');
-
-export interface ConfirmationOptions {
-  // The web app the link opens; without it no link can be written.
-  webUrl?: string;
-}
-
 const PURPOSE = 'email_confirm';
+const CHANGE = 'email_change';
 
 const refusal = (status: HttpStatus, code: string, message: string) =>
   new HttpException({ code, message }, status);
@@ -48,12 +50,33 @@ const alreadyConfirmed = () =>
     'This e-mail address is already confirmed',
   );
 
+const tooMany = () =>
+  refusal(
+    HttpStatus.TOO_MANY_REQUESTS,
+    'too_many_attempts',
+    'A link was asked for too often; try again later',
+  );
+
 const WINDOWS = ['minute', 'hour'] as const;
 
 const askKey = (window: keyof typeof ASK_WINDOW_SECONDS, accountId: string) =>
   `auth:confirm:${window}:${accountId}`;
 
-// The link that tells MotorFix an account's e-mail reaches its holder.
+type Found = Prisma.AccountTokenGetPayload<{
+  include: {
+    account: {
+      select: {
+        email: true;
+        emailVerifiedAt: true;
+        lastRole: true;
+        status: true;
+      };
+    };
+  };
+}>;
+
+// The link that tells MotorFix an account's e-mail reaches its holder, and
+// the link that moves it to a new address.
 @Injectable()
 export class EmailConfirmationService {
   private readonly logger = new Logger('EmailConfirmation');
@@ -65,6 +88,9 @@ export class EmailConfirmationService {
     private readonly notifications: NotificationsService,
     @Inject(CONFIRMATION_OPTIONS) private readonly options: ConfirmationOptions,
     @Inject(AUTH_REDIS) private readonly redis: Redis,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
+    private readonly changes: EmailChangeService,
+    private readonly attempts: Attempts,
   ) {}
 
   // A new link to the account's address, in its language; older unused
@@ -111,45 +137,135 @@ export class EmailConfirmationService {
 
   async confirm(token: string): Promise<void> {
     const at = this.now();
-    const accountId = await this.prisma.$transaction(async (tx) => {
-      const row = await this.find(tx, token);
-      if (row.account.emailVerifiedAt) return null;
-      if (row.usedAt || row.expiresAt <= at) throw expired();
-      // Of two opens at once, the one that takes the token confirms; the
-      // other finds it taken and answers as for a confirmed address.
-      const { count } = await tx.accountToken.updateMany({
-        data: { usedAt: at },
-        where: { id: row.id, usedAt: null },
+    let done: { accountId: string; email: boolean } | null;
+    try {
+      done = await this.prisma.$transaction(async (tx) => {
+        const row = await this.find(tx, token);
+        return row.purpose === CHANGE
+          ? this.change(tx, row, at)
+          : this.verify(tx, row, at);
       });
-      if (count === 0) return null;
-      await tx.account.update({
-        data: { emailVerifiedAt: at },
-        where: { id: row.accountId },
-      });
-      await this.audit.record(tx, {
-        action: 'update',
-        actorId: row.accountId,
-        actorRole: row.account.lastRole,
-        field: 'email_verified_at',
-        newValue: at.toISOString(),
-        oldValue: null,
-        subjectId: row.accountId,
-        subjectType: 'account',
-      });
-      return row.accountId;
+    } catch (error) {
+      // Another account took the address between the check and the write.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw emailTaken();
+      }
+      throw error;
+    }
+    if (!done) return;
+    if (done.email) countAccountChange('email');
+    await this.announce(done.accountId, at);
+  }
+
+  private async verify(
+    tx: Prisma.TransactionClient,
+    row: Found,
+    at: Date,
+  ): Promise<{ accountId: string; email: false } | null> {
+    if (row.account.emailVerifiedAt) return null;
+    if (row.usedAt || row.expiresAt <= at) throw expired();
+    // Of two opens at once, the one that takes the token confirms; the
+    // other finds it taken and answers as for a confirmed address.
+    const { count } = await tx.accountToken.updateMany({
+      data: { usedAt: at },
+      where: { id: row.id, usedAt: null },
     });
-    if (accountId) await this.announce(accountId, at);
+    if (count === 0) return null;
+    await tx.account.update({
+      data: { emailVerifiedAt: at },
+      where: { id: row.accountId },
+    });
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: row.accountId,
+      actorRole: row.account.lastRole,
+      field: 'email_verified_at',
+      newValue: at.toISOString(),
+      oldValue: null,
+      subjectId: row.accountId,
+      subjectType: 'account',
+    });
+    return { accountId: row.accountId, email: false };
+  }
+
+  // A change link: the account takes the new address, confirmed by the
+  // opening, and its password sign-in follows it.
+  private async change(
+    tx: Prisma.TransactionClient,
+    row: Found,
+    at: Date,
+  ): Promise<{ accountId: string; email: true } | null> {
+    // Opened again after it worked: the address is already the account's.
+    if (row.usedAt && row.account.email === row.email) return null;
+    if (row.usedAt || row.expiresAt <= at) throw expired();
+    if (await this.changes.taken(row.email, row.accountId)) throw emailTaken();
+    const { count } = await tx.accountToken.updateMany({
+      data: { usedAt: at },
+      where: { id: row.id, usedAt: null },
+    });
+    if (count === 0) return null;
+    await tx.account.update({
+      data: { email: row.email, emailVerifiedAt: at },
+      where: { id: row.accountId },
+    });
+    await tx.accountIdentity.updateMany({
+      data: { subject: row.email },
+      where: { accountId: row.accountId, method: 'password' },
+    });
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: row.accountId,
+      actorRole: row.account.lastRole,
+      field: 'email',
+      newValue: row.email,
+      oldValue: row.account.email,
+      subjectId: row.accountId,
+      subjectType: 'account',
+    });
+    await this.events.record(tx, {
+      audience: { accountId: row.accountId, type: 'account' },
+      kind: 'account.updated',
+      payload: { accountId: row.accountId, fields: ['email'] },
+      subjectId: row.accountId,
+    });
+    return { accountId: row.accountId, email: true };
   }
 
   // From the expired page: the link proves its reader got a link for that
   // address, so no sign-in is asked.
   async askAgainByToken(token: string): Promise<void> {
     const row = await this.find(this.prisma, token);
+    if (row.purpose === CHANGE) {
+      // Only the latest change, not yet opened, and for an address still free.
+      const latest = await this.prisma.accountToken.findFirst({
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+        where: { accountId: row.accountId, purpose: CHANGE },
+      });
+      if (
+        row.usedAt ||
+        latest?.id !== row.id ||
+        (await this.changes.taken(row.email, row.accountId))
+      ) {
+        throw expired();
+      }
+      await this.changes.resend(row.accountId, row.email);
+      return;
+    }
     if (row.account.emailVerifiedAt) throw alreadyConfirmed();
     await this.askAgain(row.accountId);
   }
 
+  // A change that waits is sent again first; else the current address.
   async askAgainFor(accountId: string): Promise<void> {
+    const pending = await this.changes.pending(accountId);
+    if (pending) {
+      await this.changes.resend(accountId, pending);
+      return;
+    }
     const account = await this.prisma.account.findUniqueOrThrow({
       select: { email: true, emailVerifiedAt: true },
       where: { id: accountId },
@@ -162,11 +278,15 @@ export class EmailConfirmationService {
       );
     }
     if (account.emailVerifiedAt) throw alreadyConfirmed();
-    await this.askAgain(accountId);
+    await this.askAgain(accountId, true);
   }
 
-  // The token's row, when it still stands for its account's address.
-  private async find(db: Pick<PrismaClient, 'accountToken'>, token: string) {
+  // The token's row, when it still stands for its account's address, or for
+  // the address a change asked for.
+  private async find(
+    db: Pick<PrismaClient, 'accountToken'>,
+    token: string,
+  ): Promise<Found> {
     const row = await db.accountToken.findUnique({
       include: {
         account: {
@@ -182,9 +302,10 @@ export class EmailConfirmationService {
     });
     if (
       !row ||
-      row.purpose !== PURPOSE ||
       row.account.status !== 'active' ||
-      row.account.email !== row.email
+      (row.purpose === PURPOSE
+        ? row.account.email !== row.email
+        : row.purpose !== CHANGE)
     ) {
       throw expired();
     }
@@ -194,13 +315,13 @@ export class EmailConfirmationService {
   // Only a link actually sent counts against the limit. The ask is counted
   // first, so two at once cannot both pass, and taken back when refused or
   // not sent.
-  private async askAgain(accountId: string) {
-    if (!(await this.reserve(accountId))) {
-      throw refusal(
-        HttpStatus.TOO_MANY_REQUESTS,
-        'too_many_attempts',
-        'A link was asked for too often; try again later',
-      );
+  // From the account's own panel the link also counts toward the hourly
+  // limit it shares with e-mail and phone changes.
+  private async askAgain(accountId: string, own = false) {
+    if (!(await this.reserve(accountId))) throw tooMany();
+    if (own && !(await this.attempts.admitContactChange(accountId))) {
+      await this.release(accountId);
+      throw tooMany();
     }
     try {
       await this.issue(accountId);

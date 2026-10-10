@@ -30,6 +30,24 @@
         <div class="row">
           <dt>{{ 'driver.details.email' | t }}</dt>
           <dd>{{ me.email ?? '—' }}</dd>
+          @if (me.email && !me.emailConfirmed && !me.pendingEmail) {
+            <p class="tag">{{ 'driver.details.unconfirmed' | t }}</p>
+          }
+          @if (me.pendingEmail) {
+            <p class="hint">{{ 'driver.details.pending' | t: { address: me.pendingEmail } }}</p>
+          }
+          @if (!editing()) {
+            <div class="actions">
+              @if (me.pendingEmail || (me.email && !me.emailConfirmed)) {
+                <button hlmBtn variant="secondary" type="button" [disabled]="resending()" (click)="resend()">
+                  {{ 'driver.details.resend' | t }}
+                </button>
+              }
+              <button hlmBtn variant="ghost" type="button" (click)="changeEmail()">
+                {{ 'driver.details.changeEmail' | t }}
+              </button>
+            </div>
+          }
         </div>
         <div class="row">
           @if (editing()) {

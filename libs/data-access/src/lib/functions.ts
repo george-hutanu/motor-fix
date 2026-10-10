@@ -57,6 +57,8 @@ export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
+export type { EmailChangeControllerRequest$Params as EmailChangeControllerRequest$Params } from './fn/me/email-change-controller-request';
+export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
 export { meEmailConfirmationControllerAskAgain as meEmailConfirmationControllerAskAgain } from './fn/me/me-email-confirmation-controller-ask-again';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';

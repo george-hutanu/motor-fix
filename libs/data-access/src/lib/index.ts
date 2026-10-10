@@ -50,6 +50,7 @@ export type { DocumentUploadAddressDto } from './models/document-upload-address-
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
 export type { DraftDocumentDto } from './models/draft-document-dto';
 export type { DriverNameDto } from './models/driver-name-dto';
+export type { EmailChangeDto } from './models/email-change-dto';
 export type { GarageAccessDto } from './models/garage-access-dto';
 export type { GarageBookingDto } from './models/garage-booking-dto';
 export type { GarageBrandAnswerDto } from './models/garage-brand-answer-dto';
@@ -107,6 +108,7 @@ export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';
 export type { PaymentMethodsDto } from './models/payment-methods-dto';
+export type { PendingEmailDto } from './models/pending-email-dto';
 export type { PhoneCodeDto } from './models/phone-code-dto';
 export type { PhoneSessionDto } from './models/phone-session-dto';
 export type { PhoneSignInDto } from './models/phone-sign-in-dto';
@@ -250,6 +252,8 @@ export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
+export type { EmailChangeControllerRequest$Params as EmailChangeControllerRequest$Params } from './fn/me/email-change-controller-request';
+export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
 export { meEmailConfirmationControllerAskAgain as meEmailConfirmationControllerAskAgain } from './fn/me/me-email-confirmation-controller-ask-again';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';

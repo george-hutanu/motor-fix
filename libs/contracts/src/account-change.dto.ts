@@ -27,6 +27,12 @@ export class EmailChangeDto {
   email!: string;
 }
 
+// The address a change link went to, shown until its link is opened.
+export class PendingEmailDto {
+  @ApiProperty()
+  pendingEmail!: string;
+}
+
 export class PhoneChangeDto extends PickType(PhoneCodeDto, [
   'phone',
 ] as const) {}

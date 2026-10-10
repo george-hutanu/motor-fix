@@ -233,3 +233,33 @@ describe('ConfirmEmail', () => {
     expect(button(harness, 'Trimite un link nou')).toBeDefined();
   });
 });
+
+// @traces 139-edit-my-details-FR-008
+describe('the link of an e-mail change whose address was taken', () => {
+  it('says another account uses the address and offers no new link', async () => {
+    confirm = jest.fn(async () => {
+      throw problem(409, 'email_taken');
+    });
+
+    const harness = await open();
+
+    expect(text(harness)).toContain('Adresa e folosită deja');
+    expect(text(harness)).toContain(
+      'Alt cont MotorFix folosește acum această adresă',
+    );
+    expect(button(harness, 'Trimite un link nou')).toBeUndefined();
+    expect(resend).not.toHaveBeenCalled();
+  });
+
+  it('says it in English on the English address', async () => {
+    confirm = jest.fn(async () => {
+      throw problem(409, 'email_taken');
+    });
+
+    const harness = await open({ language: 'en' });
+
+    expect(
+      harness.routeNativeElement?.querySelector('h1')?.textContent?.trim(),
+    ).toBe('The address is already in use');
+  });
+});

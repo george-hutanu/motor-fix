@@ -3,8 +3,10 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 
+import { EmailChangeDialog } from './email-change-dialog/email-change-dialog';
 import { MyDetails } from './my-details';
 import { Session } from '../session';
 
@@ -34,6 +36,8 @@ const ANDREI: MeDto = {
 
 let current: ReturnType<typeof signal<MeDto | null>>;
 let update: jest.Mock;
+let askAgain: jest.Mock;
+let open: jest.Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -52,10 +56,19 @@ async function render(
 ) {
   current = signal<MeDto | null>({ ...ANDREI, ...me } as MeDto);
   update = jest.fn(({ body }: { body: unknown }) => answer(body));
+  askAgain = jest.fn(async () => undefined);
+  open = jest.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { current } },
-      { provide: MeService, useValue: { meControllerUpdate: update } },
+      {
+        provide: MeService,
+        useValue: {
+          meControllerUpdate: update,
+          meEmailConfirmationControllerAskAgain: askAgain,
+        },
+      },
+      { provide: Overlays, useValue: { open } },
     ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
@@ -289,5 +302,104 @@ describe('editing the name and the city', () => {
     expect(element.querySelector('[role="alert"]')?.textContent).toBeTruthy();
     expect(toast).not.toHaveBeenCalled();
     expect(current()?.city).toBeNull();
+  });
+});
+
+// @traces 139-edit-my-details-FR-002
+// @traces 139-edit-my-details-FR-010
+describe('the e-mail row', () => {
+  it('opens the e-mail dialog and shows the pending address it answers', async () => {
+    const { element } = await render();
+    open.mockResolvedValueOnce({ pendingEmail: 'andrei.nou@exemplu.ro' });
+
+    button(element, 'Schimbă e‑mailul')?.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(
+      EmailChangeDialog,
+      expect.objectContaining({ shape: 'dialog' }),
+    );
+    expect(current()?.pendingEmail).toBe('andrei.nou@exemplu.ro');
+    expect(element.textContent).toContain(
+      'În așteptarea confirmării: andrei.nou@exemplu.ro',
+    );
+  });
+
+  it('keeps everything as it was when the dialog is cancelled', async () => {
+    const { element } = await render();
+
+    button(element, 'Schimbă e‑mailul')?.click();
+    await settle();
+
+    expect(current()?.pendingEmail).toBeNull();
+    expect(element.textContent).not.toContain('În așteptarea confirmării');
+  });
+
+  it('shows no tag and no resend for a confirmed address with nothing pending', async () => {
+    const { element } = await render();
+
+    expect(element.textContent).not.toContain('Neconfirmat');
+    expect(button(element, 'Trimite linkul din nou')).toBeUndefined();
+  });
+
+  it('tags an unconfirmed address and sends its link again', async () => {
+    const { element } = await render({ emailConfirmed: false });
+
+    expect(element.textContent).toContain('Neconfirmat');
+    button(element, 'Trimite linkul din nou')?.click();
+    await settle();
+
+    expect(askAgain).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith('Am trimis linkul.');
+  });
+
+  it('shows the pending address with its resend, and sends it again', async () => {
+    const { element } = await render({ pendingEmail: 'andrei.nou@exemplu.ro' });
+
+    expect(element.textContent).toContain(
+      'În așteptarea confirmării: andrei.nou@exemplu.ro',
+    );
+    expect(element.textContent).not.toContain('Neconfirmat');
+    button(element, 'Trimite linkul din nou')?.click();
+    await settle();
+
+    expect(askAgain).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith('Am trimis linkul.');
+  });
+
+  it('says why when the link cannot be sent again', async () => {
+    const { element } = await render({ emailConfirmed: false });
+    askAgain.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: { code: 'too_many_attempts', status: 429 },
+        status: 429,
+      }),
+    );
+
+    button(element, 'Trimite linkul din nou')?.click();
+    await settle();
+
+    expect(toast).toHaveBeenCalledWith(
+      'Prea multe încercări. Încearcă din nou mai târziu.',
+    );
+  });
+
+  it('speaks English', async () => {
+    const { element } = await render(
+      { emailConfirmed: false, pendingEmail: 'andrei.nou@exemplu.ro' },
+      'en',
+    );
+
+    expect(element.textContent).toContain(
+      'Waiting for confirmation: andrei.nou@exemplu.ro',
+    );
+    expect(button(element, 'Send the link again')).toBeDefined();
+    expect(button(element, 'Change e-mail')).toBeDefined();
+  });
+
+  it('tags an unconfirmed address in English', async () => {
+    const { element } = await render({ emailConfirmed: false }, 'en');
+
+    expect(element.textContent).toContain('Not confirmed');
   });
 });

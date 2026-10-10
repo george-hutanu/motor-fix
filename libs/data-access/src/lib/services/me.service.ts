@@ -9,6 +9,8 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { emailChangeControllerRequest } from '../fn/me/email-change-controller-request';
+import { EmailChangeControllerRequest$Params } from '../fn/me/email-change-controller-request';
 import { meControllerMe } from '../fn/me/me-controller-me';
 import { MeControllerMe$Params } from '../fn/me/me-controller-me';
 import { meControllerUpdate } from '../fn/me/me-controller-update';
@@ -16,6 +18,7 @@ import { MeControllerUpdate$Params } from '../fn/me/me-controller-update';
 import { MeDto } from '../models/me-dto';
 import { meEmailConfirmationControllerAskAgain } from '../fn/me/me-email-confirmation-controller-ask-again';
 import { MeEmailConfirmationControllerAskAgain$Params } from '../fn/me/me-email-confirmation-controller-ask-again';
+import { PendingEmailDto } from '../models/pending-email-dto';
 
 @Injectable({ providedIn: 'root' })
 export class MeService extends BaseService {
@@ -71,6 +74,31 @@ export class MeService extends BaseService {
   meControllerUpdate(params: MeControllerUpdate$Params, context?: HttpContext): Promise<MeDto> {
     const resp = this.meControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
+  }
+
+  /** Path part for operation `emailChangeControllerRequest()` */
+  static readonly EmailChangeControllerRequestPath = '/api/v1/me/email';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `emailChangeControllerRequest()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  emailChangeControllerRequest$Response(params: EmailChangeControllerRequest$Params, context?: HttpContext): Promise<StrictHttpResponse<PendingEmailDto>> {
+    const obs = emailChangeControllerRequest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `emailChangeControllerRequest$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  emailChangeControllerRequest(params: EmailChangeControllerRequest$Params, context?: HttpContext): Promise<PendingEmailDto> {
+    const resp = this.emailChangeControllerRequest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PendingEmailDto>): PendingEmailDto => r.body);
   }
 
   /** Path part for operation `meEmailConfirmationControllerAskAgain()` */

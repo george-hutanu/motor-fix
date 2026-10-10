@@ -1141,6 +1141,42 @@
         ]
       }
     },
+    "/api/v1/me/email": {
+      "post": {
+        "operationId": "EmailChangeController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingEmailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/auth/confirm-email": {
       "post": {
         "operationId": "EmailConfirmationController_confirm",
@@ -5651,6 +5687,30 @@
         },
         "required": [
           "queued"
+        ]
+      },
+      "EmailChangeDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The new address; trimmed and lower-cased",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "PendingEmailDto": {
+        "type": "object",
+        "properties": {
+          "pendingEmail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pendingEmail"
         ]
       },
       "ConfirmEmailDto": {

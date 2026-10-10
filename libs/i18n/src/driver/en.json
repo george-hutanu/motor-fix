@@ -53,6 +53,7 @@
   },
   "details": {
     "cancel": "Cancel",
+    "changeEmail": "Change e-mail",
     "city": "City",
     "edit": "Edit",
     "email": "E-mail",
@@ -60,6 +61,7 @@
       "pattern": "Use only letters, digits and ordinary signs."
     },
     "name": "Name",
+    "pending": "Waiting for confirmation: {address}",
     "phone": "Phone",
     "phoneLine": "A garage sees your number only after you accept its quote.",
     "problem": {
@@ -73,9 +75,26 @@
       "send_failed": "We could not send the code. Try again a little later.",
       "too_many_attempts": "Too many tries. Try again a little later."
     },
+    "resend": "Send the link again",
+    "resent": "Link sent.",
     "save": "Save",
     "saved": "Saved.",
-    "title": "Your details"
+    "title": "Your details",
+    "unconfirmed": "Not confirmed"
+  },
+  "emailChange": {
+    "address": "New e-mail address",
+    "field": {
+      "pattern": "Enter a valid e-mail address."
+    },
+    "problem": {
+      "email_taken": "Another account uses this address.",
+      "email_unchanged": "This is your current address.",
+      "send_failed": "We could not send it. Try again.",
+      "too_many_attempts": "Too many tries. Try again later."
+    },
+    "submit": "Send the link",
+    "title": "Change the e-mail address"
   },
   "home": {
     "newRequest": "New request"

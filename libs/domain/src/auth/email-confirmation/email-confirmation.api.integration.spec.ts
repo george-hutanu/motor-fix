@@ -20,6 +20,7 @@ import { until } from '../../waits.testing';
 import { signAccessToken } from '../access-token';
 import { AUTH_REDIS } from '../attempts';
 import { AuthModule } from '../auth.module';
+import { EmailChangeService } from '../email-change/email-change.service';
 import { serialDatabase } from '../serial-db.testing';
 
 const redisUrl = redisUrlFor(9);
@@ -495,5 +496,333 @@ describe('with Redis down', () => {
     expect(
       published.filter((m) => m.includes('account.email_confirmed')),
     ).toEqual([]);
+  });
+});
+
+const NEW = 'andrei.nou@example.test';
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// The change's own clock moves with the confirmation's.
+const laterAll = (ms: number) => {
+  later(ms);
+  app.get(EmailChangeService).now = confirmations.now;
+};
+
+beforeEach(() => {
+  app.get(EmailChangeService).now = () => new Date();
+});
+
+const askChange = (accountId: string, email = NEW) =>
+  http()
+    .post('/me/email')
+    .set('Authorization', bearer(accountId))
+    .send({ email });
+
+// The link of the latest change, as queued for the new address.
+async function changeLink(accountId: string): Promise<string> {
+  const rows = await confirmationEmails(accountId);
+  const last = rows
+    .filter((row) => (row.params as { to?: string }).to !== undefined)
+    .at(-1);
+  if (!last) throw new Error('no change link queued');
+  return String((last.params as { link: string }).link);
+}
+
+const changeLinks = async (accountId: string) =>
+  (await confirmationEmails(accountId)).filter(
+    (row) => (row.params as { to?: string }).to !== undefined,
+  );
+
+const accountOf = (id: string) =>
+  prisma.account.findUniqueOrThrow({
+    select: { email: true, emailVerifiedAt: true },
+    where: { id },
+  });
+
+const signInWith = (email: string) =>
+  http()
+    .post('/auth/sign-in')
+    .set('X-Forwarded-For', address())
+    .send({ email, password: PASSWORD });
+
+// @traces 139-edit-my-details-FR-008
+describe('opening the link of an e-mail change', () => {
+  it('sets the new address, confirmed now, and records it with one event', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const before = Date.now();
+
+    const res = await confirm(tokenOf(await changeLink(id))).expect(200);
+
+    expect(res.body).toEqual({ status: 'confirmed' });
+    const saved = await accountOf(id);
+    expect(saved.email).toBe(NEW);
+    expect(saved.emailVerifiedAt?.getTime()).toBeGreaterThanOrEqual(
+      before - 1000,
+    );
+    const entries = await prisma.activityLog.findMany({
+      where: { field: 'email', subjectId: id },
+    });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      actorId: id,
+      newValue: NEW,
+      oldValue: 'andrei@example.test',
+    });
+    const events = await prisma.outboxEvent.findMany({
+      where: { kind: 'account.updated', subjectId: id },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload).toMatchObject({ fields: ['email'] });
+  });
+
+  it('moves the password sign-in to the new address', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+
+    await confirm(tokenOf(await changeLink(id))).expect(200);
+
+    await signInWith(NEW).expect(200);
+    await signInWith('andrei@example.test').expect(401);
+    const identity = await prisma.accountIdentity.findFirstOrThrow({
+      where: { accountId: id, method: 'password' },
+    });
+    expect(identity.subject).toBe(NEW);
+  });
+
+  it('clears the pending address from who am I', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+
+    await confirm(tokenOf(await changeLink(id))).expect(200);
+
+    const me = await http()
+      .get('/me')
+      .set('Authorization', bearer(id))
+      .expect(200);
+    expect(me.body).toMatchObject({
+      email: NEW,
+      emailConfirmed: true,
+      pendingEmail: null,
+    });
+  });
+
+  it('answers confirmed again for a link already used, writing nothing more', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const token = tokenOf(await changeLink(id));
+    await confirm(token).expect(200);
+
+    await confirm(token).expect(200, { status: 'confirmed' });
+
+    expect(
+      await prisma.activityLog.count({
+        where: { field: 'email', subjectId: id },
+      }),
+    ).toBe(1);
+  });
+
+  it('changes once when the same link is opened twice at once', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const token = tokenOf(await changeLink(id));
+
+    const answers = await Promise.all([confirm(token), confirm(token)]);
+
+    expect(answers.map((r) => r.status)).toEqual([200, 200]);
+    expect(
+      await prisma.activityLog.count({
+        where: { field: 'email', subjectId: id },
+      }),
+    ).toBe(1);
+  });
+});
+
+// @traces 139-edit-my-details-FR-009
+describe('a change link that no longer works', () => {
+  it('refuses a link older than 24 hours and keeps the address', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const token = tokenOf(await changeLink(id));
+    laterAll(DAY_MS + 1000);
+
+    const res = await confirm(token).expect(410);
+
+    expect(res.body.code).toBe('link_expired');
+    expect((await accountOf(id)).email).toBe('andrei@example.test');
+  });
+
+  it('accepts a link just inside its 24 hours', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const token = tokenOf(await changeLink(id));
+    laterAll(DAY_MS - 60_000);
+
+    await confirm(token).expect(200);
+  });
+
+  it('refuses a link voided by a newer change', async () => {
+    const { id } = await signUp();
+    await askChange(id, 'prima@example.test').expect(202);
+    const old = tokenOf(await changeLink(id));
+    await askChange(id).expect(202);
+
+    const res = await confirm(old).expect(410);
+
+    expect(res.body.code).toBe('link_expired');
+    expect((await accountOf(id)).email).toBe('andrei@example.test');
+  });
+
+  it('answers 409 email_taken when the address was taken meanwhile, and keeps the old one', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const token = tokenOf(await changeLink(id));
+    await account('altcineva', ['driver'], { email: NEW });
+
+    const res = await confirm(token).expect(409);
+
+    expect(res.body.code).toBe('email_taken');
+    expect((await accountOf(id)).email).toBe('andrei@example.test');
+    expect(
+      await prisma.activityLog.count({
+        where: { field: 'email', subjectId: id },
+      }),
+    ).toBe(0);
+  });
+
+  it.each(['suspended', 'deleted'] as const)(
+    'writes nothing for a %s account',
+    async (status) => {
+      const { id } = await signUp();
+      await askChange(id).expect(202);
+      const token = tokenOf(await changeLink(id));
+      await prisma.account.update({ data: { status }, where: { id } });
+
+      await confirm(token).expect(410);
+
+      expect((await accountOf(id)).email).toBe('andrei@example.test');
+    },
+  );
+
+  it('sends a new link to the same address from the latest expired link and voids it', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const old = tokenOf(await changeLink(id));
+    laterAll(DAY_MS + 1000);
+
+    await resendByToken(old).expect(202);
+
+    const links = await changeLinks(id);
+    expect(links).toHaveLength(2);
+    expect(links[1]?.params).toMatchObject({ to: NEW });
+    const fresh = tokenOf(await changeLink(id));
+    expect(fresh).not.toBe(old);
+    await confirm(old).expect(410);
+    await confirm(fresh).expect(200);
+    expect((await accountOf(id)).email).toBe(NEW);
+  });
+
+  it('sends nothing from a link that is not the latest', async () => {
+    const { id } = await signUp();
+    await askChange(id, 'prima@example.test').expect(202);
+    const old = tokenOf(await changeLink(id));
+    await askChange(id).expect(202);
+
+    const res = await resendByToken(old).expect(410);
+
+    expect(res.body.code).toBe('link_expired');
+    expect(await changeLinks(id)).toHaveLength(2);
+  });
+
+  it('sends nothing when the address was taken meanwhile', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const token = tokenOf(await changeLink(id));
+    await account('altcineva', ['driver'], { email: NEW });
+
+    await resendByToken(token).expect(410);
+
+    expect(await changeLinks(id)).toHaveLength(1);
+  });
+
+  it('sends nothing from a link already used', async () => {
+    const { id } = await signUp();
+    await askChange(id).expect(202);
+    const token = tokenOf(await changeLink(id));
+    await confirm(token).expect(200);
+
+    await resendByToken(token).expect(410);
+
+    expect(await changeLinks(id)).toHaveLength(1);
+  });
+
+  it('counts toward the five links of the hour', async () => {
+    const { id } = await signUp();
+    for (let i = 1; i <= 5; i++) {
+      await askChange(id, `nou${i}@example.test`).expect(202);
+    }
+    const token = tokenOf(await changeLink(id));
+
+    const res = await resendByToken(token).expect(429);
+
+    expect(res.body.code).toBe('too_many_attempts');
+    expect(await changeLinks(id)).toHaveLength(5);
+  });
+});
+
+// @traces 139-edit-my-details-FR-010
+// @traces 139-edit-my-details-FR-012
+describe('asking again from the panel', () => {
+  it('sends a new link to the pending address and voids the older one', async () => {
+    const { id } = await signUp();
+    await confirm(tokenOf(await lastLink(id))).expect(200);
+    await askChange(id).expect(202);
+    const old = tokenOf(await changeLink(id));
+
+    await resendFor(id).expect(202);
+
+    const links = await changeLinks(id);
+    expect(links).toHaveLength(2);
+    expect(links[1]?.params).toMatchObject({ to: NEW });
+    await confirm(old).expect(410);
+    await confirm(tokenOf(await changeLink(id))).expect(200);
+  });
+
+  it('sends to the current unconfirmed address when no change waits', async () => {
+    const id = await unconfirmed();
+
+    await resendFor(id).expect(202);
+
+    const rows = await confirmationEmails(id);
+    expect(rows).toHaveLength(1);
+    expect(
+      (rows[0]?.params as { to?: string } | undefined)?.to,
+    ).toBeUndefined();
+  });
+
+  it('shares the five links of the hour with the change itself', async () => {
+    const { id } = await signUp();
+    await confirm(tokenOf(await lastLink(id))).expect(200);
+    for (let i = 1; i <= 5; i++) {
+      await askChange(id, `nou${i}@example.test`).expect(202);
+    }
+
+    const res = await resendFor(id).expect(429);
+
+    expect(res.body.code).toBe('too_many_attempts');
+    expect(await changeLinks(id)).toHaveLength(5);
+  });
+
+  it('counts a re-send to the current address toward the same five', async () => {
+    const id = await unconfirmed();
+    for (let i = 0; i < 5; i++) {
+      await resendFor(id).expect(202);
+      await redis.del(`auth:confirm:minute:${id}`);
+      await redis.del(`auth:confirm:hour:${id}`);
+    }
+
+    const res = await resendFor(id).expect(429);
+
+    expect(res.body.code).toBe('too_many_attempts');
   });
 });

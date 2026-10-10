@@ -1,0 +1,18 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <div class="field">
+    <label for="mf-email-change">{{ 'driver.emailChange.address' | t }}</label>
+    <input
+      hlmInput
+      id="mf-email-change"
+      type="email"
+      autocomplete="email"
+      formControlName="email"
+      aria-describedby="mf-email-change-error"
+    />
+    <mf-field-error id="mf-email-change-error" [save]="save" [control]="form.controls.email" />
+  </div>
+  <mf-task-error [save]="save" />
+  <button hlmBtn type="submit" [mfTaskSubmit]="save">
+    {{ 'driver.emailChange.submit' | t }}
+  </button>
+</form>

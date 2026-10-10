@@ -15,7 +15,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 import { Session } from '../../dashboard/session';
 import { httpStatus } from '../../http-status';
 
-type State = 'confirming' | 'confirmed' | 'expired' | 'error';
+type State = 'confirming' | 'confirmed' | 'expired' | 'taken' | 'error';
 type Asked = 'sending' | 'sent' | 'tooMany' | 'failed' | 'refused';
 
 // Opened from the confirmation e-mail; no sign-in needed. On the server it
@@ -51,7 +51,14 @@ export class ConfirmEmail implements OnInit {
     } catch (error) {
       const code = httpStatus(error);
       // 400: a link cut short or mistyped is as spent as an expired one.
-      this.state.set(code === 410 || code === 400 ? 'expired' : 'error');
+      // 409: the address a change asked for was taken meanwhile.
+      this.state.set(
+        code === 410 || code === 400
+          ? 'expired'
+          : code === 409
+            ? 'taken'
+            : 'error',
+      );
     }
   }
 
