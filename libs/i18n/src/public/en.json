@@ -63,7 +63,7 @@
       "changePlace": "Change place",
       "label": "RATING",
       "mobile": "Mobile mechanic · comes to you",
-      "noneNear": "No garage within 25 km",
+      "noneNear": "No garage within {km} km",
       "noTaker": "No garage nearby takes {brand} yet"
     },
     "failed": "We could not load the garages",

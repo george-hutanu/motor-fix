@@ -16,7 +16,10 @@ import {
   untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { nearOf } from '@motor-fix/contracts/search-place';
+import {
+  nearOf,
+  SEARCH_RADIUS_DEFAULT_KM,
+} from '@motor-fix/contracts/search-place';
 import {
   type BrandDto,
   BrandsService,
@@ -106,8 +109,9 @@ export class Home {
     () => this.server || this.home.isLoading(),
   );
   protected readonly count = computed(() => {
-    if (this.home.isLoading() || !this.home.hasValue()) return null;
-    const { brand, takers, total } = this.home.value();
+    const answer = this.answer();
+    if (!answer) return null;
+    const { brand, takers, total } = answer;
     return this.i18n.t('public.home.count', {
       brand: brand.name,
       count: total,
@@ -129,7 +133,9 @@ export class Home {
     const answer = this.answer();
     if (!answer || answer.best) return null;
     return answer.total === 0 && this.place()
-      ? this.i18n.t('public.home.dial.noneNear')
+      ? this.i18n.t('public.home.dial.noneNear', {
+          km: SEARCH_RADIUS_DEFAULT_KM,
+        })
       : this.i18n.t('public.home.dial.noTaker', { brand: answer.brand.name });
   });
   protected readonly line = computed(() => {

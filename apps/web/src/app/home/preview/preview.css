@@ -25,11 +25,6 @@ li {
   text-decoration: none;
 }
 
-.row:focus-visible {
-  outline: 2px solid var(--mf-amber-ink);
-  outline-offset: 2px;
-}
-
 mf-lamp,
 .facts {
   font-size: max(12px, var(--mf-size-small));

@@ -65,7 +65,7 @@
       "changePlace": "Schimbă locul",
       "label": "NOTĂ",
       "mobile": "Mecanic mobil · vine la tine",
-      "noneNear": "Niciun service în 25 km",
+      "noneNear": "Niciun service în {km} km",
       "noTaker": "Niciun service din zonă nu primește încă {brand}"
     },
     "failed": "Nu am putut încărca service‑urile",
