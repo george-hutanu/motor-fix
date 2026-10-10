@@ -35,7 +35,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "min by (service) (max_over_time(probe_success{job=~\"motorfix-(web|api)\"}[3m]))",
+                "expr": "label_replace(min by (job) (max_over_time(probe_success{job=~\"motorfix-(web|api)\"}[3m])), \"service\", \"$1\", \"job\", \"motorfix-(.+)\")",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200

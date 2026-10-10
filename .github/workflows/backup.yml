@@ -49,6 +49,9 @@ jobs:
       - name: Check the settings
         id: settings
         run: node scripts/backup.ts settings >> "$GITHUB_OUTPUT"
+      - name: Note the skip
+        if: steps.settings.outputs.skip == 'true'
+        run: echo "::notice title=Backup skipped::$ENVIRONMENT has no RAILWAY_SERVICE_POSTGRES, so no copy was taken"
       - name: Install the Railway CLI
         if: steps.settings.outputs.skip != 'true'
         run: npm install --global @railway/cli@5.63.1

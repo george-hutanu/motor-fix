@@ -91,7 +91,7 @@ describe('the outage rule file', () => {
     expect(a.datasourceUid).toBe('grafanacloud-prom');
     expect(a.model.instant).toBe(true);
     expect(a.model.expr).toBe(
-      'min by (service) (max_over_time(probe_success{job=~"motorfix-(web|api)"}[3m]))',
+      'label_replace(min by (job) (max_over_time(probe_success{job=~"motorfix-(web|api)"}[3m])), "service", "$1", "job", "motorfix-(.+)")',
     );
   });
 

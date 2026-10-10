@@ -467,11 +467,11 @@ _From 209-status-change-emails._
 
 _From 251-monitoring-backups._
 
-### 251-FR-003 — The repo MUST hold, under `infra/observability/alerts/`, one outage alert rule whose `service` label is templated from the check's label, evaluated every 60 s with no pending period (`for: 0s`): a check whose `probe_success` was 0 for every run of the last 3 minutes (3 consecutive failures) fires one alert per check, labelled `outage=true` and `service` = `web` or `api`, and resolves on the first pass. The rule MUST reference only the two checks of FR-002 and route to the MotorFix outage webhook contact point and the admin e-mail contact point. ST-880's threshold rules MUST NOT carry the `outage` label.
+### 251-FR-003 — The repo MUST hold, under `infra/observability/alerts/`, one outage alert rule whose `service` label is named from the check's job (`motorfix-web` gives `web`; Synthetic Monitoring writes the check's own label as `label_service`), evaluated every 60 s with no pending period (`for: 0s`): a check whose `probe_success` was 0 for every run of the last 3 minutes (3 consecutive failures) fires one alert per check, labelled `outage=true` and `service` = `web` or `api`, and resolves on the first pass. The rule MUST reference only the two checks of FR-002 and route to one contact point, `motorfix-outage`, which carries both the MotorFix outage webhook and the admin e-mail. ST-880's threshold rules MUST NOT carry the `outage` label.
 
 _From 251-monitoring-backups._
 
-### 251-FR-004 — `infra/observability/README.md` MUST say how the checks, the rule and the two contact points are imported (by hand, as the existing alert rules), which secret and variable the webhook contact point needs (names only), and that the admin address list on the e-mail contact point is updated by hand when an admin is added or removed.
+### 251-FR-004 — `infra/observability/README.md` MUST say how the checks, the rule and the contact point with its webhook and e-mail are imported (by hand, as the existing alert rules), which secret and variable the webhook needs (names only), and that the admin address list on the e-mail is updated by hand when an admin is added or removed.
 
 _From 251-monitoring-backups._
 

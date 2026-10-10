@@ -90,7 +90,11 @@ describe('the outage rule', () => {
 
   it('reads only the two uptime checks', () => {
     expect(query).toContain('probe_success');
-    expect(query).toContain('by (service)');
+    // Synthetic Monitoring writes a check's own label as label_service, so
+    // the rule groups by job and names the service from it.
+    expect(query).toContain('by (job)');
+    expect(query).toContain('label_replace(');
+    expect(query).toContain('"service", "$1", "job", "motorfix-(.+)"');
     const jobs = query.match(/job=~"([^"]+)"/)?.[1];
     expect(jobs).toBe('motorfix-(web|api)');
   });

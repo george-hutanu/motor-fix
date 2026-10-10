@@ -48,9 +48,17 @@ describe('the nightly backup workflow', () => {
     expect(backup).toContain('node scripts/backup.ts settings');
     const later = stepsAfter(backup, 'node scripts/backup.ts settings');
     expect(later.length).toBeGreaterThan(2);
-    for (const step of later) {
+    const work = later.filter((step) => !step.includes('::notice'));
+    expect(work.length).toBe(later.length - 1);
+    for (const step of work) {
       expect(step).toMatch(/if: .*steps\.settings\.outputs\.skip != 'true'/);
     }
+  });
+
+  it('leaves a notice naming the environment when it skips it', () => {
+    const [notice] = stepsAfter(backup, 'node scripts/backup.ts settings');
+    expect(notice).toMatch(/if: steps\.settings\.outputs\.skip == 'true'/);
+    expect(notice).toMatch(/::notice[^\n]*\$ENVIRONMENT/);
   });
 
   it('pins the Railway CLI and removes its one-off SSH key even on failure', () => {

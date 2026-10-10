@@ -23,7 +23,7 @@ export const ADMIN_OUTAGE_ALERT_DOWN: Template = {
     en: {
       button: button.en,
       lines: [
-        'The {service} check has failed since {at}. Open Grafana to see the alert.',
+        'The {service} check has failed since {at}. The alert and its graph are in Grafana.',
       ],
       reason:
         'You get this e-mail because you are a MotorFix admin and an uptime check failed.',
@@ -32,7 +32,7 @@ export const ADMIN_OUTAGE_ALERT_DOWN: Template = {
     ro: {
       button: button.ro,
       lines: [
-        'Verificarea {service} eșuează de la {at}. Deschide Grafana ca să vezi alerta.',
+        'Verificarea {service} eșuează de la {at}. Alerta și graficul ei sunt în Grafana.',
       ],
       reason:
         'Primești acest e-mail pentru că ești administrator MotorFix și o verificare de disponibilitate a eșuat.',

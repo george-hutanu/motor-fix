@@ -19,6 +19,15 @@ describe('the outage alert', () => {
     ).toEqual([]);
   });
 
+  it('sends the reader nowhere the button does not go: it opens the admin panel', () => {
+    for (const state of ['down', 'back']) {
+      const { email } = TEMPLATES[`${KIND}.${state}`];
+      expect(email?.en?.button.label).toBe('Open the admin panel');
+      expect(email?.en?.lines.join(' ')).not.toMatch(/Open Grafana/);
+      expect(email?.ro?.lines.join(' ')).not.toMatch(/Deschide Grafana/);
+    }
+  });
+
   it('picks the text by the state of the check', () => {
     expect(templateName(KIND, { state: 'down' })).toBe(`${KIND}.down`);
     expect(templateName(KIND, { state: 'back' })).toBe(`${KIND}.back`);
