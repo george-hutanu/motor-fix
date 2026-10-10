@@ -55,6 +55,16 @@ describe("a first run on a fresh account", () => {
     assert.ok(r.lines.some((l) => /^project\s+created\s+MotorFix \(#1\)/.test(l)));
   });
 
+  // @traces 1119-FR-004
+  it("says nothing of an import in the README, the status update or the date fields", async () => {
+    const gh = fakeGitHub();
+    await run(gh);
+    assert.doesNotMatch(project(gh).readme, /import/i);
+    assert.doesNotMatch(project(gh).statusUpdates[0].body, /import/i);
+    const dates = project(gh).fields.filter((f) => f.dataType === "DATE").map((f) => f.name);
+    assert.deepEqual(dates, ["Started", "QA from", "Merged at", "Planned start", "Planned end", "Date", "Work start", "Work end"]);
+  });
+
   it("sets every field with its options in the tracker's order", async () => {
     const gh = fakeGitHub();
     await run(gh);
