@@ -4,6 +4,13 @@
 // tick. Browser-safe: the web app and the API read the same rule.
 
 import { type HoursSection, isHoursSection } from './garage-hours';
+import {
+  DECLARED_NAME_MAX,
+  DOCUMENT_PAGES_MAX,
+  type DraftDocuments,
+  isCalendarDate,
+  isDocumentKind,
+} from './legal-documents/legal-documents';
 import { isStep6Section, type Step6Section } from './listing-verification';
 import { type BrandsSection, isBrandsSection } from './marked-brands';
 import { normalisePhone } from './phone';
@@ -223,6 +230,10 @@ export interface ListingDraftData {
   }>;
   survey?: Record<string, unknown>;
   files?: string[];
+  documents?: DraftDocuments;
+  // Stamped by the server; a value the browser sends only says "ticked".
+  declaredAt?: string;
+  declaredByName?: string;
 }
 
 const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
@@ -237,26 +248,55 @@ const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
 };
 const FILE_KEY = /^[a-z_-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
 
-// The envelope only: an object holding nothing but those three keys.
-export function isListingDraftData(value: unknown): value is ListingDraftData {
-  if (!isRecord(value) || !onlyKeys(value, ['steps', 'survey', 'files']))
-    return false;
-  const { files, steps, survey } = value;
-  if (survey !== undefined && !isRecord(survey)) return false;
-  if (
-    files !== undefined &&
-    !(
-      Array.isArray(files) &&
-      files.every((key) => typeof key === 'string' && FILE_KEY.test(key))
-    )
-  )
-    return false;
-  if (steps === undefined) return true;
+const isFileKey = (key: unknown) =>
+  typeof key === 'string' && FILE_KEY.test(key);
+
+function isDraftDocument(kind: string, value: unknown): boolean {
+  if (!isRecord(value) || !onlyKeys(value, ['pages', 'issuedOn'])) return false;
+  const { issuedOn, pages } = value;
   return (
-    isRecord(steps) &&
-    Object.entries(steps).every(
-      ([key, section]) =>
-        Object.hasOwn(SECTION_GUARDS, key) && SECTION_GUARDS[key](section),
+    Array.isArray(pages) &&
+    pages.length >= 1 &&
+    pages.length <= DOCUMENT_PAGES_MAX &&
+    pages.every(isFileKey) &&
+    new Set(pages).size === pages.length &&
+    optional(
+      issuedOn,
+      (date) => kind === 'onrc_certificate' && isCalendarDate(date),
+    )
+  );
+}
+
+const isDraftDocuments = (value: unknown) =>
+  isRecord(value) &&
+  Object.entries(value).every(
+    ([kind, document]) =>
+      isDocumentKind(kind) && isDraftDocument(kind, document),
+  );
+
+const isSteps = (steps: unknown) =>
+  isRecord(steps) &&
+  Object.entries(steps).every(
+    ([key, section]) =>
+      Object.hasOwn(SECTION_GUARDS, key) && SECTION_GUARDS[key](section),
+  );
+
+const ENVELOPE: Record<string, (value: unknown) => boolean> = {
+  declaredAt: stringUpTo(40),
+  declaredByName: stringUpTo(DECLARED_NAME_MAX),
+  documents: isDraftDocuments,
+  files: (files) => Array.isArray(files) && files.every(isFileKey),
+  steps: isSteps,
+  survey: isRecord,
+};
+
+// The envelope only: an object holding nothing but those keys.
+export function isListingDraftData(value: unknown): value is ListingDraftData {
+  return (
+    isRecord(value) &&
+    Object.entries(value).every(
+      ([key, entry]) =>
+        Object.hasOwn(ENVELOPE, key) && optional(entry, ENVELOPE[key]),
     )
   );
 }

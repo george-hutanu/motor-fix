@@ -18,6 +18,9 @@ import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-cont
 import { GarageInvitesControllerRevoke$Params } from '../fn/garages/garage-invites-controller-revoke';
 import { garageInvitesControllerSend } from '../fn/garages/garage-invites-controller-send';
 import { GarageInvitesControllerSend$Params } from '../fn/garages/garage-invites-controller-send';
+import { GarageReportCreatedDto } from '../models/garage-report-created-dto';
+import { garageReportsControllerReport } from '../fn/garages/garage-reports-controller-report';
+import { GarageReportsControllerReport$Params } from '../fn/garages/garage-reports-controller-report';
 import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
@@ -138,6 +141,39 @@ export class GaragesService extends BaseService {
   garageInvitesControllerRevoke(params: GarageInvitesControllerRevoke$Params, context?: HttpContext): Promise<void> {
     const resp = this.garageInvitesControllerRevoke$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `garageReportsControllerReport()` */
+  static readonly GarageReportsControllerReportPath = '/api/v1/garages/{id}/reports';
+
+  /**
+   * Report a listed garage; its verification goes back to review.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageReportsControllerReport()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageReportsControllerReport$Response(params: GarageReportsControllerReport$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageReportCreatedDto>> {
+    const obs = garageReportsControllerReport(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Report a listed garage; its verification goes back to review.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageReportsControllerReport$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageReportsControllerReport(params: GarageReportsControllerReport$Params, context?: HttpContext): Promise<GarageReportCreatedDto> {
+    const resp = this.garageReportsControllerReport$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageReportCreatedDto>): GarageReportCreatedDto => r.body);
   }
 
   /** Path part for operation `garageSettingsControllerUpdate()` */

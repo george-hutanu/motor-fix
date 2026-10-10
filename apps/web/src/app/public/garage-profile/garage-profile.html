@@ -92,6 +92,7 @@
     <section data-slot="reviews"></section>
     <section data-slot="where"></section>
   </div>
+  <mf-report-garage-link class="report" [garage]="garage" />
 } @else if (profile.error()) {
   <div class="failed" role="alert">
     <p>{{ 'public.garageProfile.failed' | t }}</p>

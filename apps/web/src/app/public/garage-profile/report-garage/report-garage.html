@@ -1,0 +1,31 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <div class="field">
+    <label for="mf-report-garage-text">{{ 'public.reportGarage.field' | t }}</label>
+    <textarea
+      hlmInput
+      id="mf-report-garage-text"
+      rows="5"
+      formControlName="text"
+      [attr.aria-invalid]="save.fieldError(form.controls.text) ? 'true' : null"
+      aria-describedby="mf-report-garage-rule mf-report-garage-error"
+    ></textarea>
+    <div class="under">
+      <p class="hint" id="mf-report-garage-rule">{{ 'public.reportGarage.rule' | t }}</p>
+      <p class="hint count">{{ 'public.reportGarage.count' | t: { typed: count(), max } }}</p>
+    </div>
+    <mf-field-error id="mf-report-garage-error" [save]="save" [control]="form.controls.text" />
+  </div>
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn type="submit" [mfTaskSubmit]="save">
+      @if (retry()) {
+        {{ 'public.reportGarage.retry' | t }}
+      } @else {
+        {{ 'public.reportGarage.send' | t }}
+      }
+    </button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+      {{ 'public.reportGarage.cancel' | t }}
+    </button>
+  </div>
+</form>

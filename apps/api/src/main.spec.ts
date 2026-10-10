@@ -56,6 +56,10 @@ async function run(args: string[], port?: string) {
   }
 }
 
+// The first import compiles main.ts and what it imports, which can take more
+// than Jest's 5 s default on a loaded CI runner.
+jest.setTimeout(30_000);
+
 describe('api entry point', () => {
   beforeEach(() => jest.clearAllMocks());
 

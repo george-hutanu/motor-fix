@@ -554,7 +554,16 @@ async function seed(db: Client, secret: string) {
       [garage, status],
     );
   }
-  // A sent file has one check per kind (submit and resend add them); the seed
+  // A listed garage was approved through a file, which a report reopens.
+  await db.query(
+    `INSERT INTO verification_file (id, garage_id, status, opened_at, decided_at, decided_by)
+     SELECT gen_random_uuid(), g.id, 'approved', g.created_at, g.approved_at, a.id
+     FROM garage g, account a
+     WHERE g.slug = ANY($1) AND a.email = 'admin@example.test'
+       AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
+    [LISTED.map(({ slug }) => slug)],
+  );
+  // A file has one check per kind (submit and resend add them); the seed
   // inserts its files directly, so it adds them the same way.
   await db.query(
     `INSERT INTO verification_check (id, file_id, kind)

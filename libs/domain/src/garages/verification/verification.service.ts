@@ -20,6 +20,7 @@ import type {
   Prisma,
   VerificationFile,
   VerificationFileStatus,
+  VerificationReopenReason,
 } from '../../generated/prisma/client';
 import { countApproval } from '../../metrics/product-counters';
 
@@ -51,9 +52,9 @@ const KIND: Record<Transition, string> = {
 
 const LIVE: VerificationFileStatus[] = ['submitted', 'in_review', 'approved'];
 
-const SYSTEM = { accountId: null, role: 'system' } as const;
+export const SYSTEM = { accountId: null, role: 'system' } as const;
 
-const newestFirst = [
+export const newestFirst = [
   { createdAt: 'desc' },
   { id: 'desc' },
 ] satisfies Prisma.VerificationFileOrderByWithRelationInput[];
@@ -237,6 +238,7 @@ export class VerificationService {
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
     fileId: string,
+    reason?: VerificationReopenReason,
   ): Promise<VerificationFile> {
     trust(actor);
     const before = await this.file(tx, fileId);
@@ -249,15 +251,28 @@ export class VerificationService {
       },
     });
     if (blocking) throw await this.refusalFor(tx, blocking);
-    const file = await this.move(tx, actor, before, 'reopen', {
-      reopenedAt: new Date(),
-      reopenedBy: actor.accountId,
-      status: 'in_review',
-    }).catch((error: unknown) => {
+    const file = await this.move(
+      tx,
+      actor,
+      before,
+      'reopen',
+      {
+        reopenedAt: new Date(),
+        reopenedBy: actor.accountId,
+        reopenReason: reason ?? null,
+        status: 'in_review',
+      },
+      reason,
+    ).catch((error: unknown) => {
       // Another file of the garage went live meanwhile.
       throw taken(error) ? refused('another file is under way') : error;
     });
-    await this.announce(tx, file, 'verification.reopened');
+    await this.announce(
+      tx,
+      file,
+      'verification.reopened',
+      reason ? { reason } : {},
+    );
     return file;
   }
 
@@ -325,7 +340,10 @@ export class VerificationService {
       | 'verification.opened'
       | 'verification.decided'
       | 'verification.reopened',
-    extra: { decision?: Decision['outcome'] } = {},
+    extra: {
+      decision?: Decision['outcome'];
+      reason?: VerificationReopenReason;
+    } = {},
   ) {
     const published = extra.decision === 'approved';
     return this.events.record(tx, {

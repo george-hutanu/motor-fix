@@ -42,6 +42,7 @@ model Garage {
   approvedAt                 DateTime?                @map("approved_at") @db.Timestamptz(3)
   createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
+  reports                    GarageReport[]
   members                    GarageMember[]
   mechanics                  Mechanic[]
   notificationPreferences    NotificationPreference[]
@@ -333,14 +334,69 @@ model VerificationFile {
   previousFileId String?                @unique @map("previous_file_id") @db.Uuid
   reasonCode     String?                @map("reason_code")
   reasonNote     String?                @map("reason_note")
+  declaredAt     DateTime?              @map("declared_at") @db.Timestamptz(3)
+  declaredByName String?                @map("declared_by_name")
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
   garage         Garage                 @relation(fields: [garageId], references: [id], onDelete: Cascade)
   previousFile   VerificationFile?      @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
   nextFile       VerificationFile?      @relation("follows")
   checks         VerificationCheck[]
+  reopenReason   VerificationReopenReason? @map("reopen_reason")
+  reports        GarageReport[]
+  documents      LegalDocument[]
 
   @@index([garageId, createdAt])
   @@map("verification_file")
+}
+
+enum VerificationReopenReason {
+  garage_report
+
+  @@map("verification_reopen_reason")
+}
+
+// TODO: the decision story adds the closed states.
+enum GarageReportStatus {
+  open
+
+  @@map("garage_report_status")
+}
+
+// A driver's report of a garage, attached to the garage's newest verification
+// file. SQL only, in the migration: the text's 20 to 1,000 characters and one
+// open report per reporter and garage.
+model GarageReport {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  garageId           String             @map("garage_id") @db.Uuid
+  verificationFileId String             @map("verification_file_id") @db.Uuid
+  reporterId         String             @map("reporter_id") @db.Uuid
+  text               String
+  status             GarageReportStatus @default(open)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  garage             Garage             @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  verificationFile   VerificationFile   @relation(fields: [verificationFileId], references: [id], onDelete: Cascade)
+  reporter           Account            @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([verificationFileId])
+  @@index([reporterId, createdAt])
+  @@map("garage_report")
+}
+
+// A legal document sent with a listing: its pages are storage keys in page
+// order. The migration holds the 1-10 pages check.
+model LegalDocument {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  verificationFileId String           @map("verification_file_id") @db.Uuid
+  kind               String
+  pages              String[]
+  issuedOn           DateTime?        @map("issued_on") @db.Date
+  status             String           @default("valid")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  verificationFile   VerificationFile @relation(fields: [verificationFileId], references: [id], onDelete: Cascade)
+
+  @@unique([verificationFileId, kind])
+  @@index([verificationFileId])
+  @@map("legal_document")
 }
 
 enum ListingDraftStatus {

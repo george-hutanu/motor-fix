@@ -5,6 +5,7 @@ import {
   AccountsService,
   MAINTENANCE,
   type Maintenance,
+  StorageService,
   signAccessToken,
 } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
@@ -35,6 +36,32 @@ const FIXTURES: Record<
     path: async () =>
       '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
   },
+  'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url':
+    {
+      entries: 1,
+      path: async () => {
+        const { file, id } = (
+          await db.query(
+            `WITH g AS (INSERT INTO garage (id, name, slug)
+               VALUES (gen_random_uuid(), 'Audit', $1) RETURNING id),
+             f AS (INSERT INTO verification_file (id, garage_id)
+               SELECT gen_random_uuid(), id FROM g RETURNING id)
+             INSERT INTO legal_document (verification_file_id, kind, pages)
+             SELECT id, 'rar_authorisation', ARRAY['legal_document/audit/page']
+             FROM f RETURNING verification_file_id AS file, id`,
+            [`audit-${randomUUID()}`],
+          )
+        ).rows[0] as { file: string; id: string };
+        await app
+          .get(StorageService)
+          .putObject(
+            'legal_document/audit/page',
+            Buffer.from('%PDF-1.7'),
+            'application/pdf',
+          );
+        return `/api/v1/admin/verification-files/${file}/documents/${id}/pages/1/download-url`;
+      },
+    },
   'PATCH /api/v1/admin/platform-rules/{key}': {
     body: () => ({ seen: false, value: true }),
     path: async () => {

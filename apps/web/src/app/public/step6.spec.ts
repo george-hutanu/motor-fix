@@ -1,4 +1,10 @@
-import { completedCount, cuiError, rarError, readStep6 } from './step6';
+import {
+  completedCount,
+  cuiError,
+  nameError,
+  rarError,
+  readStep6,
+} from './step6';
 
 describe('reading the verification step from a draft', () => {
   it('reads both values from the step-6 section', () => {
@@ -64,5 +70,27 @@ describe('the step counter', () => {
     expect(
       completedCount(done as [boolean, boolean, boolean, boolean, boolean]),
     ).toBe(n);
+  });
+});
+
+// @traces 206-FR-009
+describe('the declarer name error', () => {
+  it.each(['', ' ', 'I', '  I  ', 'a'.repeat(81)])(
+    'asks for the full name for %p once left, when the declaration is ticked',
+    (name) => {
+      expect(nameError(name, true, true)).toBe('nameShort');
+      expect(nameError(name, true, false)).toBeNull();
+    },
+  );
+
+  it.each(['Io', ' Io ', 'Ion Popescu', 'a'.repeat(80)])(
+    'stays quiet for %p',
+    (name) => {
+      expect(nameError(name, true, true)).toBeNull();
+    },
+  );
+
+  it('stays quiet while the declaration is not ticked', () => {
+    expect(nameError('I', false, true)).toBeNull();
   });
 });

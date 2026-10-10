@@ -76,6 +76,16 @@ describe('the notification catalogue', () => {
     expect(names.length).toBeGreaterThanOrEqual(79);
   });
 
+  // @traces 312-FR-013
+  it('sends the garage report alert on the event, by e-mail and push, and lets an admin mute it', () => {
+    expect(NOTIFICATION_TYPES['ADMIN_GARAGE_REPORTED']).toMatchObject({
+      alwaysSent: false,
+      channels: ['email', 'push'],
+      transactional: false,
+      trigger: 'event',
+    });
+  });
+
   it('gives every type a trigger, channels, its flags, a group and a template key', () => {
     for (const name of names) {
       const type = NOTIFICATION_TYPES[name];

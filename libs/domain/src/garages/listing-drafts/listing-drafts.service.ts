@@ -1,7 +1,12 @@
 import {
   type ContinueLinkSentDto,
+  DECLARED_NAME_MAX,
+  DECLARED_NAME_MIN,
+  DOCUMENT_KINDS,
+  type DraftDocuments,
   EMAIL_PATTERN,
   isListingDraftData,
+  issuedWithinWindow,
   type ListingDraftCreatedDto,
   type ListingDraftData,
   type ListingDraftDto,
@@ -31,7 +36,10 @@ import type {
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
-import { countGarageSignUp } from '../../metrics/product-counters';
+import {
+  countDeclarationSigned,
+  countGarageSignUp,
+} from '../../metrics/product-counters';
 import type { EmailConfig } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { INVITE_EMAIL } from '../staff-invite/staff-invite.service';
@@ -80,6 +88,22 @@ function checkedData(data: unknown): Prisma.InputJsonObject {
       'The draft data is not valid',
     );
   }
+  if (data.declaredByName !== undefined) {
+    const name = data.declaredByName.trim();
+    if (name.length < DECLARED_NAME_MIN || name.length > DECLARED_NAME_MAX) {
+      throw refusal(
+        HttpStatus.BAD_REQUEST,
+        'validation_failed',
+        'The declarer name must have 2 to 80 characters',
+        [{ code: 'invalid', field: 'declaredByName' }],
+      );
+    }
+    return checkedSize({ ...data, declaredByName: name });
+  }
+  return checkedSize(data);
+}
+
+function checkedSize(data: ListingDraftData): Prisma.InputJsonObject {
   if (Buffer.byteLength(JSON.stringify(data)) > DRAFT_MAX_BYTES) {
     throw refusal(
       HttpStatus.PAYLOAD_TOO_LARGE,
@@ -98,23 +122,101 @@ const noSuchPhoto = () =>
     [{ code: 'invalid', field: 'files' }],
   );
 
+const noSuchPage = () =>
+  refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'The draft holds no such document page',
+    [{ code: 'invalid', field: 'documents' }],
+  );
+
+const issuedOutside = () =>
+  refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'The certificate must be issued in the last 30 days',
+    [{ code: 'out_of_range', field: 'documents.onrc_certificate.issuedOn' }],
+  );
+
+// The calendar date the 30-day rule is judged against on the server.
+const bucharestDate = (at: Date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest' }).format(at);
+
 // A save orders the photos the draft holds and nothing more: a key only a
 // confirm added may come in, and one it left out (an older copy of the form)
 // stays, at the end. Only the photo delete takes a key out.
-async function withHeldFiles(
+function heldFiles(held: string[], data: ListingDraftData): string[] {
+  const sent = [...new Set(data.files ?? [])];
+  if (sent.some((key) => !held.includes(key))) throw noSuchPhoto();
+  return [...sent, ...held.filter((key) => !sent.includes(key))];
+}
+
+// The same rule per document kind; a kind the save omits keeps its stored
+// entry. An issue date set or changed must fall in the window, while a
+// stored one is kept as it ages.
+function heldDocuments(
+  held: DraftDocuments,
+  sent: DraftDocuments,
+  today: string,
+): DraftDocuments {
+  const next = { ...held };
+  for (const kind of DOCUMENT_KINDS) {
+    const entry = sent[kind];
+    if (!entry) continue;
+    const stored = held[kind];
+    const keys = stored?.pages ?? [];
+    if (entry.pages.some((key) => !keys.includes(key))) throw noSuchPage();
+    const { issuedOn } = entry;
+    if (
+      issuedOn !== undefined &&
+      issuedOn !== stored?.issuedOn &&
+      !issuedWithinWindow(issuedOn, today)
+    )
+      throw issuedOutside();
+    next[kind] = {
+      ...entry,
+      pages: [
+        ...entry.pages,
+        ...keys.filter((key) => !entry.pages.includes(key)),
+      ],
+    };
+  }
+  return next;
+}
+
+// The time of the tick is the server's: set by the save that adds it, kept
+// by one that keeps it, gone with it. The browser only says whether it is on.
+function declaredAt(stored: string | undefined, ticked: boolean, at: Date) {
+  if (!ticked) return undefined;
+  return stored ?? at.toISOString();
+}
+
+async function withHeldKeys(
   tx: Prisma.TransactionClient,
   id: string,
   data: Prisma.InputJsonObject,
-): Promise<Prisma.InputJsonObject> {
+  at: Date,
+): Promise<{ data: Prisma.InputJsonObject; signed: boolean }> {
   await tx.$queryRaw`SELECT id FROM listing_draft WHERE id = ${id}::uuid FOR UPDATE`;
   const row = await tx.listingDraft.findUniqueOrThrow({ where: { id } });
-  const held = isListingDraftData(row.data) ? (row.data.files ?? []) : [];
-  const sent = [...new Set((data as ListingDraftData).files ?? [])];
-  if (sent.some((key) => !held.includes(key))) throw noSuchPhoto();
-  if (held.length === 0 && sent.length === 0) return data;
+  const stored = isListingDraftData(row.data) ? row.data : {};
+  const sent = data as ListingDraftData;
+  const files = heldFiles(stored.files ?? [], sent);
+  const documents = heldDocuments(
+    stored.documents ?? {},
+    sent.documents ?? {},
+    bucharestDate(at),
+  );
+  const { declaredAt: ticked, ...rest } = data;
+  const declared = declaredAt(stored.declaredAt, Boolean(ticked), at);
   return {
-    ...data,
-    files: [...sent, ...held.filter((key) => !sent.includes(key))],
+    data: {
+      ...rest,
+      ...(files.length > 0 && { files }),
+      ...(Object.keys(documents).length > 0 && { documents }),
+      ...(declared && { declaredAt: declared }),
+    },
+    signed: declared !== undefined && stored.declaredAt === undefined,
   };
 }
 
@@ -153,14 +255,18 @@ export class ListingDraftsService {
   ): Promise<ListingDraftCreatedDto> {
     const email = checkedEmail(body.email);
     const data = checkedData(body.data);
-    // A new draft holds no photo yet: only a confirm adds one.
+    // A new draft holds no photo or page yet: only a confirm adds one.
     if ((data as ListingDraftData).files?.length) throw noSuchPhoto();
+    if (Object.keys((data as ListingDraftData).documents ?? {}).length)
+      throw noSuchPage();
     const webUrl = this.webUrl();
     const browser = newToken();
     const at = this.now();
+    const { declaredAt: sentAt, ...rest } = data;
+    const declared = declaredAt(undefined, Boolean(sentAt), at);
     const draft = await this.prisma.listingDraft.create({
       data: {
-        data,
+        data: { ...rest, ...(declared && { declaredAt: declared }) },
         email,
         language: body.language,
         step: body.step,
@@ -173,6 +279,7 @@ export class ListingDraftsService {
     // The one garage onboarding action today; it moves to the use case that
     // creates a garage account once there is one.
     countGarageSignUp();
+    if (declared) countDeclarationSigned();
     const send = await this.issueSaved(draft, webUrl);
     return { ...saved(draft), token: browser.token, ...linkResult(send) };
   }
@@ -200,6 +307,7 @@ export class ListingDraftsService {
     const webUrl = moved ? this.webUrl() : '';
     const browser = newToken();
     const at = this.now();
+    let signed = false;
     const next = await this.prisma.$transaction(async (tx) => {
       if (moved) {
         // The hour's links stay counted, under hashes no key matches, so a
@@ -228,9 +336,11 @@ export class ListingDraftsService {
           },
         });
       }
+      const held = await withHeldKeys(tx, id, data, at);
+      signed = held.signed;
       return tx.listingDraft.update({
         data: {
-          data: await withHeldFiles(tx, id, data),
+          data: held.data,
           email,
           language: body.language,
           step: body.step,
@@ -239,6 +349,7 @@ export class ListingDraftsService {
         where: { id },
       });
     });
+    if (signed) countDeclarationSigned();
     if (!moved) return saved(next);
     const send = await this.issueSaved(next, webUrl);
     return { ...saved(next), token: browser.token, ...linkResult(send) };

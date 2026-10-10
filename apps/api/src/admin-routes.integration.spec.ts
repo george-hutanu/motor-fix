@@ -23,6 +23,7 @@ const KNOWN = [
   'GET /api/v1/admin/overview',
   'GET /api/v1/admin/platform-rule-changes',
   'GET /api/v1/admin/platform-rules',
+  'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url',
   'PATCH /api/v1/admin/platform-rules/{key}',
   'POST /api/v1/admin/live/test',
   'POST /api/v1/admin/news',

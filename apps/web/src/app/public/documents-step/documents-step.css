@@ -1,0 +1,48 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-3);
+  margin-top: var(--mf-space-3);
+  min-width: 0;
+}
+h3 {
+  margin: 0;
+  font-size: var(--mf-size-body);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+.field input {
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.error {
+  margin: 0;
+  color: var(--mf-red);
+  overflow-wrap: anywhere;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+  min-width: 0;
+  cursor: pointer;
+}
+.choice input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.choice input:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}
+.choice span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

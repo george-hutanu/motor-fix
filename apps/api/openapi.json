@@ -2955,6 +2955,67 @@
         ]
       }
     },
+    "/api/v1/garages/{id}/reports": {
+      "post": {
+        "operationId": "GarageReportsController_report",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGarageReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageReportCreatedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the text holds 20 to 1000 characters"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver, staff of this garage, or no listed garage"
+          },
+          "409": {
+            "description": "garage_already_reported, or verification_transition_refused: no file"
+          },
+          "429": {
+            "description": "too_many_reports: 5 in the last 24 hours"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Report a listed garage; its verification goes back to review",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}": {
       "patch": {
         "operationId": "GarageSettingsController_update",
@@ -3082,6 +3143,63 @@
         ],
         "tags": [
           "invites"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url": {
+      "get": {
+        "operationId": "LegalDocumentsController_pageAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "n",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentPageAddressDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "not_admin: the garage's own staff"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such file, document or page"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "verification-documents"
         ]
       }
     },
@@ -3564,6 +3682,192 @@
           },
           "409": {
             "description": "draft_submitted"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}/documents/{kind}/upload-url": {
+      "post": {
+        "operationId": "ListingDocumentsController_uploadAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUploadAddressDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          },
+          "422": {
+            "description": "document_kind_unknown, document_full, file_type_not_allowed, file_too_large"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}/documents/{kind}": {
+      "post": {
+        "operationId": "ListingDocumentsController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmDocumentPageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftDocumentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted, file_missing"
+          },
+          "422": {
+            "description": "document_kind_unknown, document_full, file_type_mismatch, file_too_large"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}/documents/{kind}/{key}": {
+      "delete": {
+        "operationId": "ListingDocumentsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          },
+          "422": {
+            "description": "document_kind_unknown"
           }
         },
         "tags": [
@@ -8076,6 +8380,37 @@
           "emailSent"
         ]
       },
+      "CreateGarageReportDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "What happened, stored as written (never trimmed)",
+            "maxLength": 1000,
+            "minLength": 20
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "GarageReportCreatedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt"
+        ]
+      },
       "PaymentMethodsDto": {
         "type": "object",
         "properties": {
@@ -8194,6 +8529,23 @@
           "kind",
           "name",
           "email"
+        ]
+      },
+      "DocumentPageAddressDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Signed for 5 minutes, opens inline"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
         ]
       },
       "CreateListingDraftDto": {
@@ -8935,6 +9287,94 @@
         },
         "required": [
           "photos"
+        ]
+      },
+      "DocumentUploadRequestDto": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "example": "image/jpeg"
+          },
+          "size": {
+            "type": "number",
+            "description": "Bytes",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "contentType",
+          "size"
+        ]
+      },
+      "DocumentUploadAddressDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Where the browser posts the form"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Form fields to send before the file"
+          },
+          "key": {
+            "type": "string",
+            "description": "The key to confirm once uploaded"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "fields",
+          "key",
+          "expiresAt"
+        ]
+      },
+      "ConfirmDocumentPageDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key the upload address gave"
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "DraftDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "pages": {
+            "description": "Storage keys in page order",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issuedOn": {
+            "type": "string",
+            "example": "2026-10-01",
+            "format": "date"
+          }
+        },
+        "required": [
+          "kind",
+          "pages"
         ]
       },
       "LiveTestDto": {

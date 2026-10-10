@@ -6,6 +6,8 @@ import {
   OBSERVABILITY_URL,
 } from './admin-overview.controller';
 import { GarageDetailsService } from './details/garage-details.service';
+import { LegalDocumentsController } from './documents/legal-documents/legal-documents.controller';
+import { LegalDocumentsService } from './documents/legal-documents/legal-documents.service';
 import { GarageBrandsController } from './garage-brands/garage-brands.controller';
 import { GarageBrandsService } from './garage-brands/garage-brands.service';
 import { GarageSettingsController } from './garage-settings/garage-settings.controller';
@@ -26,6 +28,11 @@ import {
   INVITE_EMAIL,
   StaffInviteService,
 } from './staff-invite/staff-invite.service';
+import { GarageReportsController } from './verification/garage-reports/garage-reports.controller';
+import {
+  GARAGE_REPORTS_OPTIONS,
+  GarageReportsService,
+} from './verification/garage-reports/garage-reports.service';
 import { VerificationService } from './verification/verification.service';
 import { VerificationChecksController } from './verification/verification-checks/verification-checks.controller';
 import { VerificationChecksService } from './verification/verification-checks/verification-checks.service';
@@ -57,8 +64,10 @@ export class GaragesModule {
         AdminOverviewController,
         GarageBrandsController,
         GarageInvitesController,
+        GarageReportsController,
         GarageSettingsController,
         InvitesController,
+        LegalDocumentsController,
         ListingDraftsController,
         PublicGaragesController,
         VerificationChecksController,
@@ -79,7 +88,13 @@ export class GaragesModule {
         GarageMechanicsService,
         GaragePlaceService,
         GaragePricesService,
+        GarageReportsService,
+        {
+          provide: GARAGE_REPORTS_OPTIONS,
+          useValue: { webUrl: email.webUrl },
+        },
         GarageSettingsService,
+        LegalDocumentsService,
         ListingDraftsService,
         {
           inject: [AUTH_REDIS],

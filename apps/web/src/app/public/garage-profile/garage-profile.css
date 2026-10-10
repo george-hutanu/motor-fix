@@ -125,6 +125,10 @@ h1 {
   display: none;
 }
 
+.report {
+  margin-top: var(--mf-space-6);
+}
+
 .failed {
   display: grid;
   gap: var(--mf-space-3);

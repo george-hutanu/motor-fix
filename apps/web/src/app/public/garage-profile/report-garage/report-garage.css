@@ -1,0 +1,41 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.field > label {
+  font-weight: 700;
+}
+textarea {
+  width: 100%;
+  min-height: calc(var(--mf-tap) * 3);
+  box-sizing: border-box;
+  resize: vertical;
+}
+.under {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.hint {
+  color: var(--mf-text-secondary);
+}
+.count {
+  font-variant-numeric: tabular-nums;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  white-space: normal;
+}
