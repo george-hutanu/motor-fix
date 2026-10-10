@@ -16,7 +16,10 @@ import {
   untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { nearOf } from '@motor-fix/contracts/search-place';
+import {
+  nearOf,
+  SEARCH_RADIUS_DEFAULT_KM,
+} from '@motor-fix/contracts/search-place';
 import {
   type BrandDto,
   BrandsService,
@@ -25,13 +28,14 @@ import {
   HomeService,
   PlacesService,
 } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { formatKm, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
-import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import { RatingDial, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandPicker } from './brand-picker/brand-picker';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { type Place, PlaceStore } from './place/place-store';
+import { HomePreview } from './preview/preview';
 import { Session } from '../dashboard/session';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
@@ -47,7 +51,14 @@ const report = (error: unknown) =>
     : null;
 
 @Component({
-  imports: [BrandPicker, BrandSearch, RouterLink, TranslatePipe],
+  imports: [
+    BrandPicker,
+    BrandSearch,
+    HomePreview,
+    RatingDial,
+    RouterLink,
+    TranslatePipe,
+  ],
   selector: 'mf-home',
   styleUrl: './home.css',
   templateUrl: './home.html',
@@ -98,13 +109,57 @@ export class Home {
     () => this.server || this.home.isLoading(),
   );
   protected readonly count = computed(() => {
-    if (this.home.isLoading() || !this.home.hasValue()) return null;
-    const { brand, takers, total } = this.home.value();
+    const answer = this.answer();
+    if (!answer) return null;
+    const { brand, takers, total } = answer;
     return this.i18n.t('public.home.count', {
       brand: brand.name,
       count: total,
       takers,
       verb: this.i18n.t('public.home.takes', { count: takers }),
+    });
+  });
+
+  protected readonly answer = computed(() =>
+    this.home.isLoading() || !this.home.hasValue()
+      ? undefined
+      : this.home.value(),
+  );
+  protected readonly noneNear = computed(
+    () => this.answer()?.total === 0 && Boolean(this.place()),
+  );
+  // With no taker the dial names nobody: none within reach of the place, or
+  // none of those listed that takes the brand.
+  protected readonly nobody = computed(() => {
+    const answer = this.answer();
+    if (!answer || answer.best) return null;
+    return this.noneNear()
+      ? this.i18n.t('public.home.dial.noneNear', {
+          km: SEARCH_RADIUS_DEFAULT_KM,
+        })
+      : this.i18n.t('public.home.dial.noTaker', { brand: answer.brand.name });
+  });
+  protected readonly line = computed(() => {
+    const best = this.answer()?.best;
+    if (!best) return null;
+    if (best.businessKind === 'mobile') {
+      return this.i18n.t('public.home.dial.mobile');
+    }
+    const parts = [best.city];
+    if (typeof best.distanceKm === 'number') {
+      parts.push(formatKm(best.distanceKm, this.i18n.language()));
+    }
+    return parts.filter(Boolean).join(' · ') || null;
+  });
+  protected readonly announce = computed(() => {
+    const best = this.answer()?.best;
+    if (!best) return this.nobody();
+    return this.i18n.t('public.home.dial.announce', {
+      name: best.name,
+      rating:
+        best.rating === null
+          ? this.i18n.t('public.home.preview.noReviews')
+          : formatRating(best.rating, this.i18n.language()),
     });
   });
 

@@ -12,7 +12,7 @@ import { brandAnswer } from '../../garages/brand-answer';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { countSearch } from '../../metrics/product-counters';
-import { garagesInArea, type InArea } from '../area/search-area';
+import { garagesInArea, groupsOf, placed } from '../area/search-area';
 
 const PAGE = 20;
 const GROUPS = ['works_on', 'other'] as const;
@@ -50,33 +50,6 @@ function decode(cursor: string, brandId: string): Cursor {
     throw invalidCursor();
   }
   return parsed as Cursor;
-}
-
-function groupsOf(
-  brandId: string,
-  area: Map<string, InArea> | undefined,
-): Record<Cursor['g'], Prisma.GarageWhereInput> {
-  const inArea = area && { id: { in: [...area.keys()] } };
-  const takers = { brandId, stance: 'works_on' as const };
-  return {
-    other: { brands: { none: takers }, ...inArea },
-    works_on: { brands: { some: takers }, ...inArea },
-  };
-}
-
-// A mobile mechanic's distance would tell where its seat is; it only says it
-// comes to the place.
-function placed(
-  item: ListedGarageDto,
-  area: Map<string, InArea> | undefined,
-): ListedGarageDto {
-  const found = area?.get(item.id);
-  if (!found) return item;
-  return {
-    ...item,
-    comesToYou: found.mobile,
-    distanceKm: found.mobile ? null : Math.round(found.distanceM / 100) / 10,
-  };
 }
 
 const encode = (cursor: Cursor) =>
