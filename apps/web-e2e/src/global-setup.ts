@@ -1,6 +1,7 @@
 import { Redis } from 'ioredis';
 import { Client } from 'pg';
 
+import { newPhoneBase, PHONE_BASE_VARIABLE } from './fresh-phone.js';
 import { resetGarageOnly } from './garage-only.js';
 import {
   CONSENT_KEYS,
@@ -97,6 +98,8 @@ async function resetAccounts(): Promise<void> {
 // skipped: the api skips its limits then too, and the seeded accounts stay as
 // they are. A store that is set but does not answer stops the run.
 export default async function globalSetup(): Promise<void> {
+  // One start for the run's fresh phone numbers, which every worker reads.
+  process.env[PHONE_BASE_VARIABLE] ??= newPhoneBase();
   await clearRateCounts({
     consent: CONSENT_KEYS,
     draft: DRAFT_KEYS,
