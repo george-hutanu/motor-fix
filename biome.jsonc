@@ -196,6 +196,19 @@
       }
     },
     {
+      // A form with role="search" for the accounts' search landmark: Biome asks for the <search> element, which Angular's DOM schema does not know (NG0304).
+      "includes": [
+        "apps/web/src/app/dashboard/admin-users-filters/admin-users-filters.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
       // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders.
       "includes": [
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
