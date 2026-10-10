@@ -43,6 +43,7 @@ export function fakeGitHub(seed = {}) {
     nextNumber: 1,
     // Pull requests of the issue repo itself, which its issue list also returns.
     specsPulls: seed.specsPulls ?? [],
+    comments: new Map(),
   };
   const requests = [];
 
@@ -82,9 +83,22 @@ export function fakeGitHub(seed = {}) {
     for (const f of p.fields ?? []) field(f, made);
     for (const v of p.views ?? []) made.views.push({ id: nextId("PVTV"), filter: null, visibleFieldIds: [], ...v });
     for (let i = 0; i < (p.itemCount ?? 0); i++) made.items.push({ id: nextId("PVTI"), number: null, values: {} });
+    // Items of seeded issues, their values by field name: { number, values: { Status: "To do", PR: "…" } }.
+    for (const it of p.items ?? []) {
+      const values = {};
+      for (const [name, value] of Object.entries(it.values ?? {})) {
+        const f = made.fields.find((x) => x.name === name);
+        if (!f) throw new Error(`fake GitHub: no field ${name}`);
+        values[f.id] = f.dataType === "SINGLE_SELECT" ? { singleSelectOptionId: f.options.find((o) => o.name === value).id } : f.dataType === "NUMBER" ? { number: value } : f.dataType === "TEXT" ? { text: value } : { date: value };
+      }
+      made.items.push({ id: nextId("PVTI"), number: it.number, values });
+    }
     if (p.linked) made.repositories.push("george-hutanu/motor-fix-specs", "george-hutanu/motor-fix");
   }
   for (const i of seed.issues ?? []) addIssue(i);
+  // Links between seeded issues by number: { blockedBy: { 60: [12] }, subIssues: { 691: [60] } }.
+  for (const [n, list] of Object.entries(seed.blockedBy ?? {})) state.blockedBy.set(Number(n), list.map((b) => 1000 + b));
+  for (const [n, list] of Object.entries(seed.subIssues ?? {})) state.subIssues.set(Number(n), list.map((b) => 1000 + b));
   for (const pr of seed.pulls ?? []) {
     const number = pr.number ?? state.nextNumber;
     state.nextNumber = Math.max(state.nextNumber, number + 1);
@@ -149,6 +163,31 @@ export function fakeGitHub(seed = {}) {
       }
       return json(issue);
     }
+    if ((m = repo.match(/^issues\/(\d+)\/comments$/))) {
+      const issue = issueBy(m[1]);
+      if (!issue) return json({ message: "Not Found" }, 404);
+      const list = state.comments.get(issue.number) ?? [];
+      if (method === "GET") return json(list);
+      list.push({ id: nextId("IC"), body: body.body });
+      state.comments.set(issue.number, list);
+      return json(list.at(-1), 201);
+    }
+    if ((m = repo.match(/^issues\/(\d+)\/labels$/)) && method === "POST") {
+      const issue = issueBy(m[1]);
+      if (!issue) return json({ message: "Not Found" }, 404);
+      for (const name of body.labels) {
+        if (!issue.labels.some((l) => l.name === name)) issue.labels.push({ name });
+        if (!state.labels.some((l) => l.name === name)) state.labels.push({ name, color: "ededed", description: "" });
+      }
+      return json(issue.labels);
+    }
+    if ((m = repo.match(/^issues\/(\d+)\/labels\/(.+)$/)) && method === "DELETE") {
+      const issue = issueBy(m[1]);
+      const name = decodeURIComponent(m[2]);
+      if (!issue?.labels.some((l) => l.name === name)) return json({ message: "Label does not exist" }, 404);
+      issue.labels = issue.labels.filter((l) => l.name !== name);
+      return json(issue.labels);
+    }
     if ((m = repo.match(/^issues\/(\d+)\/sub_issues$/))) {
       const list = state.subIssues.get(Number(m[1])) ?? [];
       // listLag hides the newest links, as a listing taken before another writer filled the parent would.
@@ -182,7 +221,41 @@ export function fakeGitHub(seed = {}) {
     return {};
   };
 
+  /** An issue as IssueDetail and LabelIssues answer it: its Project items with their values. */
+  const summary = (issue) => ({
+    id: issue.node_id,
+    databaseId: issue.id,
+    number: issue.number,
+    title: issue.title,
+    url: `https://github.com/george-hutanu/motor-fix-specs/issues/${issue.number}`,
+    state: issue.state.toUpperCase(),
+    labels: { nodes: issue.labels.map(({ name }) => ({ name })) },
+    projectItems: {
+      nodes: state.projects.flatMap((p) =>
+        p.items
+          .filter((it) => it.number === issue.number)
+          .map((it) => ({ id: it.id, project: { id: p.id }, fieldValues: { nodes: Object.entries(it.values).map(([fid, value]) => valueNode(p.fields.find((f) => f.id === fid), value)) } })),
+      ),
+    },
+  });
+  const detail = (issue) => ({
+    ...summary(issue),
+    blockedBy: { nodes: (state.blockedBy.get(issue.number) ?? []).map(issueById).map(summary) },
+    subIssues: { nodes: (state.subIssues.get(issue.number) ?? []).map(issueById).map(summary) },
+  });
+
   const OPS = {
+    IssueDetail: (v) => {
+      const issue = state.issues.find((i) => i.node_id === v.id);
+      return issue ? { node: detail(issue) } : { errors: [{ type: "NOT_FOUND", message: `Could not resolve to a node with the global id of '${v.id}'` }] };
+    },
+    LabelIssues: (v) => {
+      const open = state.issues.filter((i) => i.state === "open" && i.labels.some((l) => l.name === v.label));
+      const start = v.after ? Number(v.after) : 0;
+      const nodes = open.slice(start, start + 50).map(detail);
+      const end = start + nodes.length;
+      return { repository: { issues: { pageInfo: { hasNextPage: end < open.length, endCursor: String(end) }, nodes } } };
+    },
     Probe: () => (state.scoped ? { viewer: { login: state.login, projectsV2: { totalCount: state.projects.length } } } : { errors: [{ type: "INSUFFICIENT_SCOPES", message: "Your token has not been granted the required scopes." }] }),
     Projects: () => ({
       viewer: { id: "U_owner", login: state.login, projectsV2: { nodes: state.projects.map(({ id, number, title }) => ({ id, number, title })) } },
@@ -335,7 +408,18 @@ export function fakeGitHub(seed = {}) {
   /** The requests that write: every non-GET REST call and every mutation. */
   const writes = () => requests.filter((r) => (r.path === "/graphql" ? r.mutation : r.method !== "GET"));
 
-  return { state, requests, writes, fetchImpl };
+  /** An issue's values in the first Project, by field name. */
+  const itemValues = (number) => {
+    const p = state.projects[0];
+    const item = p.items.find((it) => it.number === Number(number));
+    if (!item) return null;
+    return Object.fromEntries(Object.entries(item.values).map(([fid, value]) => {
+      const node = valueNode(p.fields.find((f) => f.id === fid), value);
+      return [node.field.name, node.name ?? node.date ?? node.number ?? node.text];
+    }));
+  };
+
+  return { state, requests, writes, fetchImpl, itemValues };
 }
 
 /** Whether a request creates an issue: GraphQL's createIssue (the import) or a REST POST to /issues. */

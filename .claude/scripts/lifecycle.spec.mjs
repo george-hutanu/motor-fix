@@ -1110,6 +1110,8 @@ describe('the story: --story, the PR title, feature.json, then the folder number
     fixture();
     mkdirSync(join(repo, 'specs', OTHER), { recursive: true });
     writeFileSync(join(repo, 'specs', OTHER, 'spec.md'), '# Spec\n');
+    // A feature that started on Notion finishes there (1036-FR-013).
+    writeFileSync(join(repo, 'specs', OTHER, 'notion-sync.md'), '# Notion sync\n');
     writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ level: 1, level_for: `specs/${OTHER}`, feature_directory: `specs/${OTHER}` }));
   });
 
@@ -1209,5 +1211,74 @@ describe('the story: --story, the PR title, feature.json, then the folder number
       assert.equal(result.stopped, 'usage', argv.join(' '));
       assert.deepEqual(h.calls, [], argv.join(' '));
     }
+  });
+});
+
+// @traces 1036-FR-013 1036-FR-014
+describe('a feature tracked on GitHub (no notion-sync.md) runs tracker-sync.mjs', () => {
+  const ISSUE = 'https://github.com/george-hutanu/motor-fix-specs/issues/60';
+  let body;
+  beforeEach(() => {
+    fixture();
+    rmSync(join(featureDir, 'notion-sync.md'));
+    writeFileSync(join(featureDir, 'spec.md'), '# Spec\n\n**Story**: ST-696\n');
+    writeFileSync(join(repo, '.claude', 'scripts', 'tracker-sync.mjs'), '// stub\n');
+    body = join(repo, 'body.md');
+    writeFileSync(body, '## Why\n\nfilled\n');
+  });
+  const staged = ['git diff --cached --quiet', { code: 1 }];
+  const tracker = [
+    ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"event":"start","ready":{"review":["ST-40"]}}\n' }],
+    ['node .claude/scripts/tracker-sync.mjs qa', { stdout: `{"event":"qa","issue":60,"url":"${ISSUE}"}\n` }],
+    ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"event":"finish"}\n' }],
+  ];
+
+  it('open runs start and pr through tracker-sync.mjs, never notion-sync.mjs', () => {
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ...tracker] });
+    const result = step(['open', '--title', TITLE], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs pr 141 --story ST-696'));
+    assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
+    assert.deepEqual(result.review, ['ST-40']);
+  });
+
+  it('a failing tracker-sync stops the step with its output and a --tracker-done rerun', () => {
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 64, stderr: 'tracker-sync: bad\n' }]] });
+    const result = step(['open', '--title', TITLE], h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'tracker-sync start');
+    assert.match(result.fix, /tracker-sync: bad/);
+    const done = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    assert.equal(step(['open', '--title', TITLE, '--tracker-done'], done.io).ok, true);
+    assert.ok(!done.calls.some((c) => c.includes('tracker-sync')));
+  });
+
+  it('ready runs qa, commits tracker-sync.md and names the issue in handoff.md', () => {
+    const h = harness({ answers: [staged, ...tracker] });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs qa --pr 141 --story ST-696'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 qa -- ${FEATURE}/tracker-sync.md`), h.calls.join('\n'));
+    const note = readFileSync(join(featureDir, 'handoff.md'), 'utf8');
+    assert.ok(note.includes(`- Tracker: issue ${ISSUE} (ST-696) · events in specs/${FEATURE}/tracker-sync.md`), note);
+    assert.ok(!/Notion/.test(note), note);
+  });
+
+  it('merge runs finish and posts the lines tracker-sync.md gained', () => {
+    let comment = '';
+    const h = harness({
+      answers: [
+        ['git -C specs diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-10 · finish · ST-696 · QA → Done\n+- 2026-10-10 · ready · EP-6 · no change\n' }],
+        ['gh pr comment', (cmd) => { comment = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return {}; }],
+        ...tracker,
+      ],
+    });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs finish --pr 141 --no-comment --story ST-696'), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`git -C specs diff -U0 -- ${FEATURE}/tracker-sync.md`));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`));
+    assert.match(comment, /ready · EP-6/);
   });
 });
