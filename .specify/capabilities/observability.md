@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -17,6 +17,7 @@ features:
   - 374-assistant-requests
   - 1016-mcp-staging
   - 344-send-quote
+  - 209-status-change-emails
 ---
 
 # Capability: Observability
@@ -456,6 +457,10 @@ _From 1016-mcp-staging._
 ### 344-FR-018 — Observability: the endpoint is listed in `infra/observability/inventory.json` with its route duration metric; the send (a product action) MUST emit one counter of quotes sent by outcome (`sent`, `refused`, `already_answered`, `request_not_open`; `refused` counts the refusals the service raises, 400 low-above-high or past slot, 403 and 404, while a body the validation pipe refuses and a missing `Idempotency-Key` are counted by the route's own 4xx metric) and one histogram of the response time (`answered_at` − `created_at`, in minutes, no identifiers) on the `motorfix-product` dashboard; the consumer of FR-016 is listed with one counter of QUOTE_RECEIVED messages built per outcome (`built`, `muted`) on the `motorfix-queues` dashboard; one structured log line per send with the quote id, the request id and the outcome (never the range, the note or the driver); no alert (no agreed threshold; ST-880 adds alert rules). The PR's Observability section names them.
 
 _From 344-send-quote._
+
+### 209-FR-014 — Observability: the consumer MUST count the messages it builds per outcome (`built`, `skipped` — no owner or no decision to tell about) in one product counter on the `motorfix-queues` dashboard, log one line per event with the file id, the decision and how many owners it reached (never the note, the address or the e-mail), run inside the worker's existing trace as its own span, and be listed in `infra/observability/inventory.json` as a queue with its counter, dashboard panel and an alert rule on the queue's final job failures; `node scripts/observability-inventory.ts` MUST pass. The PR's Observability section names them.
+
+_From 209-status-change-emails._
 
 ## Retired
 

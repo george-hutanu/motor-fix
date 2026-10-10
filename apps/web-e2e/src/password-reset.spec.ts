@@ -2,7 +2,7 @@ import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { expect, type Page } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
-import { test } from './fixtures.js';
+import { MAILBOX, test } from './fixtures.js';
 
 // Fake passwords for an account these tests create; never real ones.
 const OLD = 'parola-veche-de-test';
@@ -12,7 +12,6 @@ const NEW = 'parola-noua-de-test';
 // local run starts (mailbox.mjs); a deployed address has none, so the config
 // leaves out flows tagged @mailbox there. The API answers before it issues the
 // link, so this waits for it to land.
-const MAILBOX = 'http://127.0.0.1:3025';
 const RESET_LINK = /https?:\/\/[^\s"<>]+\/reset-password\/[A-Za-z0-9_-]{43}/;
 
 async function lastResetLink(page: Page, email: string): Promise<string> {
