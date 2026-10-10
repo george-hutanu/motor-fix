@@ -1,1 +1,9 @@
-<p>{{ text() | t }}</p>
+@if (state(); as empty) {
+  <mf-empty-state [icon]="empty.icon" [text]="empty.text">
+    @if (empty.action; as label) {
+      <a hlmBtn [routerLink]="['/', language()]">{{ label | t }}</a>
+    }
+  </mf-empty-state>
+} @else {
+  <p>{{ text() | t }}</p>
+}
