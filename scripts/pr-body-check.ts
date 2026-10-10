@@ -6,10 +6,8 @@
 // A draft only needs every heading (its PR opens at the first commit, before
 // anything is tested). A ready PR must also have no "_(fill in: …)_" placeholder,
 // no empty section, no bare N/A, every labelled line, every box ticked, a
-// story link (its issue in george-hutanu/motor-fix-specs; an older PR's link
-// to the retired tracker still passes until #337 merges, motor-fix-specs#1135) and a Conventional title with a scope. A PR
-// opened before the rename keeps its "## Notion story" heading and "Notion in
-// sync" box: both are read as "## Story" and "Tracker in sync". HTML comments are hints
+// story link (its issue in george-hutanu/motor-fix-specs, or N/A and the
+// reason) and a Conventional title with a scope. HTML comments are hints
 // GitHub does not render, so they are removed before judging.
 //
 //   node scripts/pr-body-check.ts                 # PR_BODY, PR_TITLE, PR_DRAFT
@@ -32,7 +30,7 @@ type Wanted = { labels: string[]; boxes: string[] };
 const TEMPLATE_PATH = '.github/pull_request_template.md';
 const TITLE = /^[a-z]+\([^()\s][^()]*\)!?: \S/;
 const STORY_LINK =
-  /https?:\/\/(?:(?:[\w-]+\.)*notion\.(?:so|site|com)\/|github\.com\/george-hutanu\/motor-fix-specs\/issues\/\d+)/;
+  /https?:\/\/github\.com\/george-hutanu\/motor-fix-specs\/issues\/\d+/;
 const BARE_NA = /^N\/?A[\s.:;,—–-]*$/i;
 const HEADING = /^ {0,3}## (.+?)(?:\s+#+)?\s*$/;
 const FENCE = /^\s*(```|~~~)/;
@@ -159,16 +157,6 @@ function sectionProblems(heading: string, text: string, want: Wanted) {
   return problems;
 }
 
-/** A body written before the tracker moved to GitHub, read with today's names. */
-function renamed(body: string | null): string {
-  return (body ?? '')
-    .replace(/^( {0,3}## )Notion story(\s*)$/gim, '$1Story$2')
-    .replace(
-      /^(\s*[-*]\s+\[[ xX]\]\s+)Notion in sync\b/gim,
-      '$1Tracker in sync',
-    );
-}
-
 /** Every way the PR falls short of the template; empty when it passes. */
 export function checkPrBody({
   body,
@@ -177,7 +165,7 @@ export function checkPrBody({
   template,
 }: PrInput): string[] {
   const required = sections(clean(template));
-  const given = sections(clean(renamed(body)));
+  const given = sections(clean(body));
   const names = headings(clean(template));
   const problems: string[] = [];
   for (const heading of names)
