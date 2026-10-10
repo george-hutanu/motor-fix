@@ -47,6 +47,19 @@ function withSection(body: string, heading: string, content: string) {
   );
 }
 
+const NO_STORY_LINK =
+  '"## Story" has no link to the story (its issue in george-hutanu/motor-fix-specs), or N/A and the reason.';
+
+// The retired tracker's name, read from the banned-words list so this file
+// never holds it.
+const bannedWords = (
+  JSON.parse(readFileSync(join(__dirname, 'banned-words.json'), 'utf8')) as {
+    words: string[];
+  }
+).words;
+const [retired] = bannedWords;
+const Retired = retired.charAt(0).toUpperCase() + retired.slice(1);
+
 describe('the pull request template', () => {
   it('has every required section', () => {
     const headings = [...template.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
@@ -254,38 +267,47 @@ describe('checkPrBody on a ready PR', () => {
     expect(ready(filled(), 'fix(web)!: ST-2 breaking')).toEqual([]);
   });
 
-  // @traces 1036-FR-014 1037-FR-009
-  it('wants a tracker issue link, an older link or N/A with a reason in the Story section', () => {
+  // @traces 1036-FR-014 1037-FR-009 1135-FR-002
+  it('wants a tracker issue link or N/A with a reason in the Story section', () => {
     const body = withSection(filled(), 'Story', 'ST-1');
-    expect(ready(body)).toEqual([
-      '"## Story" has no link to the story (its issue in george-hutanu/motor-fix-specs), or N/A and the reason.',
-    ]);
+    expect(ready(body)).toEqual([NO_STORY_LINK]);
     const na = withSection(filled(), 'Story', 'N/A: dependency bump');
     expect(ready(na)).toEqual([]);
-    for (const link of [
-      'https://www.notion.so/motorfix/ST-1-abc',
-      'https://app.notion.com/p/0000000000000000000000000000000a (ST-1)',
-    ])
-      expect(ready(withSection(filled(), 'Story', link))).toEqual([]);
     const otherRepo = withSection(
       filled(),
       'Story',
       'https://github.com/someone/else/issues/1',
     );
-    expect(ready(otherRepo)).toHaveLength(1);
+    expect(ready(otherRepo)).toEqual([NO_STORY_LINK]);
   });
 
-  // @traces 1036-FR-013
-  it('still passes a PR opened before the rename, with its Notion story heading and box', () => {
-    const before = filled()
-      .replace('## Story', '## Notion story')
-      .replace('Tracker in sync', 'Notion in sync');
-    expect(ready(before)).toEqual([]);
+  // @traces 1135-FR-002
+  it('refuses a link to the retired tracker in the Story section', () => {
+    // The cases below name the retired tracker only if it is the list's one word.
+    expect(bannedWords).toHaveLength(1);
+    for (const link of [
+      `https://www.${retired}.so/motorfix/ST-1-abc`,
+      `https://app.${retired}.com/p/0000000000000000000000000000000a (ST-1)`,
+      `https://motorfix.${retired}.site/ST-1`,
+    ])
+      expect(ready(withSection(filled(), 'Story', link))).toEqual([
+        NO_STORY_LINK,
+      ]);
+  });
+
+  // @traces 1135-FR-001 1135-FR-003
+  it('refuses a body still in the form used before the rename', () => {
+    const heading = filled().replace('## Story', `## ${Retired} story`);
+    expect(ready(heading)).toContain('Missing section: "## Story".');
     expect(
-      checkPrBody({ body: before, draft: true, template, title: 'WIP' }),
-    ).toEqual([]);
-    const noLink = withSection(before, 'Notion story', 'ST-1');
-    expect(ready(noLink)).toHaveLength(1);
+      checkPrBody({ body: heading, draft: true, template, title: 'WIP' }),
+    ).toEqual(['Missing section: "## Story".']);
+    const box = filled().replace('Tracker in sync', `${Retired} in sync`);
+    expect(ready(box)).toEqual([
+      expect.stringMatching(
+        /^"## Checklist" is missing its box: "Tracker in sync/,
+      ),
+    ]);
   });
 });
 
