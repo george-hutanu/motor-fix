@@ -1,6 +1,13 @@
 import { EmailChangeDto, PendingEmailDto } from '@motor-fix/contracts';
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { ApiAcceptedResponse, ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiAcceptedResponse,
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+  ApiTooManyRequestsResponse,
+} from '@nestjs/swagger';
 
 import { EmailChangeService } from './email-change.service';
 import { CurrentActor } from '../actor.guard';
@@ -16,6 +23,9 @@ export class EmailChangeController {
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiAcceptedResponse({ type: PendingEmailDto })
+  @ApiConflictResponse({ description: 'email_taken, email_unchanged' })
+  @ApiTooManyRequestsResponse({ description: 'too_many_attempts' })
+  @ApiServiceUnavailableResponse({ description: 'send_failed' })
   request(
     @CurrentActor() actor: Actor,
     @Body() body: EmailChangeDto,

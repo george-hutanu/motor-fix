@@ -136,6 +136,17 @@ describe('the details panel', () => {
     expect(button(element, 'Modifică')).toBeDefined();
   });
 
+  it('puts who sees the phone under the phone row', async () => {
+    const { element } = await render();
+
+    const phoneRow = [...element.querySelectorAll('dt')].find(
+      (dt) => dt.textContent?.trim() === 'Telefon',
+    )?.parentElement;
+    expect(phoneRow?.textContent).toContain(
+      'Service‑ul îți vede numărul doar după ce accepți oferta lui.',
+    );
+  });
+
   it('shows the phone and the city once saved', async () => {
     const { element } = await render({ city: 'Iași', phone: '+40722123456' });
 
@@ -359,6 +370,19 @@ describe('the e-mail row', () => {
 
     expect(askAgain).toHaveBeenCalledTimes(1);
     expect(toast).toHaveBeenCalledWith('Am trimis linkul.');
+  });
+
+  // @traces 139-FR-010
+  it('still tags an unconfirmed address while a change is pending', async () => {
+    const { element } = await render({
+      emailConfirmed: false,
+      pendingEmail: 'andrei.nou@exemplu.ro',
+    });
+
+    expect(element.textContent).toContain('Neconfirmat');
+    expect(element.textContent).toContain(
+      'În așteptarea confirmării: andrei.nou@exemplu.ro',
+    );
   });
 
   it('shows the pending address with its resend, and sends it again', async () => {

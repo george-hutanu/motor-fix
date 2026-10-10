@@ -172,7 +172,7 @@
       "source": "libs/domain/src/notifications/email-config.ts",
       "dashboard": "motorfix-worker",
       "alerts": "none",
-      "reason": "carries e-mail and the WhatsApp sign-in and phone-change codes (ST-139: sent straight from the API, a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as a 502); ST-880 adds the alerts",
+      "reason": "carries e-mail and the WhatsApp sign-in and phone-change codes (ST-139: sent straight from the API, a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as the sign-in's 502 or the phone change's 503 send_failed); ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -476,7 +476,7 @@
       "metric": "http.server.request.duration by http.route PATCH /api/v1/me, POST /api/v1/me/email, /api/v1/me/phone, /api/v1/me/phone/confirm and /api/v1/auth/confirm-email (the change link)",
       "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the brevo entry and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 502; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation; ST-880 adds the alerts",
+      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the brevo entry and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 503 send_failed; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation; ST-880 adds the alerts",
       "story": "ST-139"
     },
     {

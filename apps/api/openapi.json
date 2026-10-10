@@ -1165,6 +1165,15 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "email_taken, email_unchanged"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          },
+          "503": {
+            "description": "send_failed"
           }
         },
         "security": [

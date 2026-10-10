@@ -1,4 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,6 +15,11 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { Session } from '../../dashboard/session';
 import { httpStatus } from '../../http-status';
+
+const problemCode = (error: unknown) =>
+  error instanceof HttpErrorResponse
+    ? (error.error as { code?: string } | null)?.code
+    : undefined;
 
 type State = 'confirming' | 'confirmed' | 'expired' | 'taken' | 'error';
 type Asked = 'sending' | 'sent' | 'tooMany' | 'failed' | 'refused';
@@ -71,12 +77,19 @@ export class ConfirmEmail implements OnInit {
       });
       this.asked.set('sent');
     } catch (error) {
-      const code = httpStatus(error);
-      if (code === 409) this.confirmed();
-      else if (code === 429) this.asked.set('tooMany');
-      else if (code === 410 || code === 400) this.asked.set('refused');
-      else this.asked.set('failed');
+      this.notSent(error);
     }
+  }
+
+  private notSent(error: unknown) {
+    const code = httpStatus(error);
+    // 409 email_taken: the address a change asked for was taken meanwhile.
+    if (code === 409 && problemCode(error) === 'email_taken')
+      this.state.set('taken');
+    else if (code === 409) this.confirmed();
+    else if (code === 429) this.asked.set('tooMany');
+    else if (code === 410 || code === 400) this.asked.set('refused');
+    else this.asked.set('failed');
   }
 
   private confirmed() {

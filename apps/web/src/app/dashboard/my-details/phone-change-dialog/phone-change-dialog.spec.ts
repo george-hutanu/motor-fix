@@ -105,6 +105,19 @@ describe('the phone dialog', () => {
     expect(button('Trimite codul')?.type).toBe('submit');
   });
 
+  it.each(['+400722123456', '+40 0722 123 456'])(
+    'reads 07xx typed after the +40 already there (%s) as +407xx',
+    async (typed) => {
+      await open();
+
+      type(field('Număr de telefon'), typed);
+      button('Trimite codul')?.click();
+      await settle();
+
+      expect(request).toHaveBeenCalledWith({ body: { phone: '+40722123456' } });
+    },
+  );
+
   it('reads a number typed as 07xx as +40 and moves to the code step', async () => {
     await open();
 

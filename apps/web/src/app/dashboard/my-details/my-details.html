@@ -26,6 +26,7 @@
         <div class="row">
           <dt>{{ 'driver.details.phone' | t }}</dt>
           <dd>{{ me.phone ?? '—' }}</dd>
+          <p class="hint">{{ 'driver.details.phoneLine' | t }}</p>
           @if (!editing()) {
             <div class="actions">
               <button hlmBtn variant="ghost" type="button" (click)="changePhone()">
@@ -37,7 +38,7 @@
         <div class="row">
           <dt>{{ 'driver.details.email' | t }}</dt>
           <dd>{{ me.email ?? '—' }}</dd>
-          @if (me.email && !me.emailConfirmed && !me.pendingEmail) {
+          @if (me.email && !me.emailConfirmed) {
             <p class="tag">{{ 'driver.details.unconfirmed' | t }}</p>
           }
           @if (me.pendingEmail) {
@@ -97,7 +98,6 @@
           }
         </div>
       </dl>
-      <p class="hint">{{ 'driver.details.phoneLine' | t }}</p>
       @if (editing()) {
         <mf-task-error [save]="save" />
         <div class="actions">

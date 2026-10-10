@@ -70,17 +70,6 @@
     "pending": "În așteptarea confirmării: {address}",
     "phone": "Telefon",
     "phoneLine": "Service‑ul îți vede numărul doar după ce accepți oferta lui.",
-    "problem": {
-      "code_expired": "Codul a expirat. Cere unul nou.",
-      "code_invalid": "Codul nu e bun. Verifică cifrele și încearcă din nou.",
-      "email_taken": "Adresa e folosită deja de alt cont MotorFix.",
-      "email_unchanged": "Aceasta e deja adresa ta de e‑mail.",
-      "phone_taken": "Numărul e folosit deja de alt cont MotorFix.",
-      "phone_unchanged": "Acesta e deja numărul tău.",
-      "recent_sign_in_required": "Din motive de siguranță, intră din nou în cont, apoi încearcă iar.",
-      "send_failed": "Nu am putut trimite codul. Încearcă din nou puțin mai târziu.",
-      "too_many_attempts": "Ai încercat de prea multe ori. Încearcă din nou puțin mai târziu."
-    },
     "resend": "Trimite linkul din nou",
     "resent": "Am trimis linkul.",
     "save": "Salvează",

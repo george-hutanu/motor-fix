@@ -142,6 +142,16 @@ describe('the phone step', () => {
     expect(phoneCode).toHaveBeenCalledWith('+40722123456', 'en');
   });
 
+  it('reads 07xx typed after the +40 already there as +407xx', async () => {
+    await open('en');
+    type(field('Phone number'), '+40 0722 123 456');
+
+    button('Send the code').click();
+    await settle();
+
+    expect(phoneCode).toHaveBeenCalledWith('+40722123456', 'en');
+  });
+
   it('shows a number that is not possible under the field, and sends nothing', async () => {
     await open();
 

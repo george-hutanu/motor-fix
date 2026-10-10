@@ -4,16 +4,16 @@
     "confirming": "Confirmăm adresa…",
     "error": "Nu am putut confirma adresa acum.",
     "expired": "Linkul a expirat",
-    "expiredLine": "Un link de confirmare merge o singură dată, timp de 72 de ore.",
+    "expiredLine": "Un link de confirmare merge o singură dată: 72 de ore după înregistrare, 24 de ore când îți schimbi adresa.",
     "failed": "Nu am putut trimite linkul. Încearcă din nou.",
     "home": "Mergi la MotorFix",
-    "refused": "Din acest link nu mai putem trimite altul. Intră în cont și apasă „Retrimite”.",
+    "refused": "Din acest link nu mai putem trimite altul. Intră în cont și cere un link nou de acolo.",
     "retry": "Încearcă din nou",
     "sendNew": "Trimite un link nou",
     "sent": "Am trimis un link nou pe e‑mail.",
-    "taken": "Adresa e folosită deja",
+    "taken": "Adresa e folosită de alt cont.",
     "takenLine": "Alt cont MotorFix folosește acum această adresă, așa că nu am putut‑o trece pe contul tău.",
-    "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
+    "tooMany": "Prea multe încercări. Încearcă din nou mai târziu."
   },
   "consent": {
     "after": ".",
