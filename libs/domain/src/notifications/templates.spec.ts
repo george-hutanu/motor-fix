@@ -483,6 +483,41 @@ describe('the bell text', () => {
   });
 });
 
+// @traces 032-notifications-bell-FR-006
+describe('the ITP bell text', () => {
+  const params = { car: 'Dacia Logan', dueOn: '2026-12-10' };
+
+  it('names the car and the day its ITP is due, in each language', () => {
+    expect(bellText('DUE_ITP', 'ro', params)).toBe(
+      'ITP-ul la Dacia Logan expiră pe 10 dec. 2026',
+    );
+    expect(bellText('DUE_ITP', 'en', params)).toBe(
+      'The ITP of your Dacia Logan is due on 10 Dec 2026',
+    );
+  });
+
+  it('writes the day in Bucharest, whatever the hour of the instant', () => {
+    expect(
+      bellText('DUE_ITP', 'en', { ...params, dueOn: '2026-12-09T23:30:00Z' }),
+    ).toBe('The ITP of your Dacia Logan is due on 10 Dec 2026');
+  });
+
+  it('is the generic text when the car or the day is missing', () => {
+    expect(bellText('DUE_ITP', 'ro', { dueOn: '2026-12-10' })).toBe(
+      'Ai o notificare nouă',
+    );
+    expect(bellText('DUE_ITP', 'en', { car: 'Dacia Logan' })).toBe(
+      'You have a new notification',
+    );
+  });
+
+  it('keeps the phone texts it had', () => {
+    expect(render('DUE_ITP', 'sms', 'ro', params)).toBe(
+      'MotorFix: ITP-ul mașinii tale expiră curând. Detalii în aplicație.',
+    );
+  });
+});
+
 describe('the push texts of the test messages', () => {
   it.each([
     ['TEST_MESSAGE', 'en', 'MotorFix test message'],
