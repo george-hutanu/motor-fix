@@ -380,7 +380,17 @@ test.describe('the rating dial near Bucharest @seeded', () => {
     page,
   }) => {
     await ready(page, '/ro');
+    // The tile's own read lands after the click returns: wait for it, so
+    // `reads` holds only the read the new place makes.
+    const brandRead = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === '/api/v1/home' &&
+        url.searchParams.get('brand') === 'dacia'
+      );
+    });
     await tile(page, 'Dacia').click();
+    await brandRead;
     const reads = homeReads(page);
 
     await useLocation(page);
