@@ -1,11 +1,11 @@
 import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
-  IsOptional,
   IsString,
   Length,
   Matches,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
 import { PhoneCodeDto } from './auth.dto';
@@ -54,7 +54,8 @@ export class PasswordChangeDto {
     description: 'Required when the account already has a password',
     maxLength: 1024,
   })
-  @IsOptional()
+  // Left out, not null: a null would reach the check as a password.
+  @ValidateIf((_: object, value: unknown) => value !== undefined)
   @IsString()
   @Length(1, 1024)
   currentPassword?: string;

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 
 import { Logger } from '@nestjs/common';
-import type { Redis } from 'ioredis';
+import type { ChainableCommander, Redis } from 'ioredis';
 
 // The Redis of the attempt limits, which the e-mail confirmation's limit shares.
 export const AUTH_REDIS = Symbol('AUTH_REDIS');
@@ -66,6 +66,16 @@ const keyOf = (kind: Kind, value: string) =>
 const phoneHourKey = (phone: string) => `auth:code:hour:${digest(phone)}`;
 const passwordKey = (accountId: string) => `auth:password:${digest(accountId)}`;
 
+// A counting transaction's replies. One that answers nothing or refuses a
+// command (an EXPIRE refused would leave its key counting for ever) is
+// Redis unavailable, and the limit is skipped.
+const counted = async (counts: ChainableCommander) => {
+  const replies = await counts.exec();
+  if (!replies) throw new Error('transaction answered nothing');
+  for (const [error] of replies) if (error) throw error;
+  return replies;
+};
+
 // Failed sign-ins per e-mail and per address, and sign-ups per address. Redis
 // only counts: when it is unreachable the limits are skipped rather than
 // sign-in or sign-up being refused.
@@ -123,14 +133,10 @@ export class Attempts {
     if (!client) return true;
     try {
       const key = `auth:signup:address:${digest(client)}`;
-      const replies = await this.redis
-        .multi()
-        .incr(key)
-        .expire(key, SIGN_UP_WINDOW_SECONDS, 'NX')
-        .exec();
-      // A refused EXPIRE would leave the key counting for ever.
-      for (const [error] of replies ?? []) if (error) throw error;
-      return Number(replies?.[0]?.[1]) <= SIGN_UP_LIMIT;
+      const replies = await counted(
+        this.redis.multi().incr(key).expire(key, SIGN_UP_WINDOW_SECONDS, 'NX'),
+      );
+      return Number(replies[0]?.[1]) <= SIGN_UP_LIMIT;
     } catch {
       this.unavailable('sign-up');
       return true;
@@ -152,8 +158,7 @@ export class Attempts {
       for (const [key] of keys) {
         counts.incr(key).expire(key, RESET_WINDOW_SECONDS, 'NX');
       }
-      const replies = (await counts.exec()) ?? [];
-      for (const [error] of replies) if (error) throw error;
+      const replies = await counted(counts);
       return keys.every(([, limit], i) => Number(replies[i * 2]?.[1]) <= limit);
     } catch {
       this.unavailable('reset');
@@ -182,8 +187,7 @@ export class Attempts {
       for (const [key, seconds] of keys) {
         counts.incr(key).expire(key, seconds, 'NX');
       }
-      const replies = (await counts.exec()) ?? [];
-      for (const [error] of replies) if (error) throw error;
+      const replies = await counted(counts);
       return keys.every(
         ([, , limit], i) => Number(replies[i * 2]?.[1]) <= limit,
       );
@@ -209,13 +213,10 @@ export class Attempts {
   async admitContactChange(accountId: string): Promise<boolean> {
     try {
       const key = `auth:change:${digest(accountId)}`;
-      const replies = await this.redis
-        .multi()
-        .incr(key)
-        .expire(key, HOUR_SECONDS, 'NX')
-        .exec();
-      for (const [error] of replies ?? []) if (error) throw error;
-      return Number(replies?.[0]?.[1]) <= CONTACT_CHANGE_LIMIT;
+      const replies = await counted(
+        this.redis.multi().incr(key).expire(key, HOUR_SECONDS, 'NX'),
+      );
+      return Number(replies[0]?.[1]) <= CONTACT_CHANGE_LIMIT;
     } catch {
       this.unavailable('contact-change');
       return true;
