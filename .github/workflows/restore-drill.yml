@@ -1,0 +1,32 @@
+name: Restore drill
+
+# By hand, and on the first day of every quarter: restores staging's newest
+# backup into a throwaway PostgreSQL on this runner, checks every table's row
+# count against the backup's manifest, boots the API on it and waits for its
+# readiness. The log ends with each step's seconds, the recovery time the
+# runbook records. A failed run means the backups cannot be trusted.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 1 1,4,7,10 *'
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 240
+    env:
+      BACKUP_S3_BUCKET: ${{ vars.BACKUP_S3_BUCKET }}
+      BACKUP_GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+      AWS_ENDPOINT_URL: ${{ vars.BACKUP_S3_ENDPOINT }}
+      AWS_REGION: ${{ vars.BACKUP_S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Restore, compare and boot
+        run: bash scripts/backup/restore-drill.sh
