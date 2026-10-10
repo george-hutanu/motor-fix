@@ -1,14 +1,53 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsIn } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 
 import { ACCOUNT_ROLES, type AccountRole } from './account-search';
 
 const LANGUAGE = ['ro', 'en'] as const;
 
+const NO_CONTROL = /^\P{Cc}*$/u;
+
+const trimmed = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+
+// Each field is optional; one left out is not changed.
 export class UpdateMeDto {
-  @ApiProperty({ enum: LANGUAGE })
+  @ApiPropertyOptional({ enum: LANGUAGE })
+  @ValidateIf((body) => body.language !== undefined)
   @IsIn(LANGUAGE)
-  language!: (typeof LANGUAGE)[number];
+  language?: (typeof LANGUAGE)[number];
+
+  @ApiPropertyOptional({ description: 'Trimmed', maxLength: 80, minLength: 2 })
+  @ValidateIf((body) => body.name !== undefined)
+  @Transform(trimmed)
+  @IsString()
+  @Length(2, 80)
+  @Matches(NO_CONTROL, { message: 'name must not hold control characters' })
+  name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Trimmed; null or blank saves no city',
+    maxLength: 60,
+    minLength: 2,
+    nullable: true,
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() || null : value,
+  )
+  @IsString()
+  @Length(2, 60)
+  @Matches(NO_CONTROL, { message: 'city must not hold control characters' })
+  city?: string | null;
 }
 
 const GARAGE_STATUS = ['draft', 'approved', 'suspended'] as const;
@@ -74,6 +113,24 @@ export class MeDto {
     type: String,
   })
   city!: string | null;
+
+  @ApiProperty({ description: 'E.164', nullable: true, type: String })
+  phone!: string | null;
+
+  @ApiProperty({
+    description: 'Whether the phone is confirmed; false when there is none',
+  })
+  phoneConfirmed!: boolean;
+
+  @ApiProperty({
+    description: 'The address of an e-mail change waiting for its link',
+    nullable: true,
+    type: String,
+  })
+  pendingEmail!: string | null;
+
+  @ApiProperty({ description: 'Whether the account can sign in by password' })
+  hasPassword!: boolean;
 
   @ApiProperty({ enum: ACCOUNT_ROLES, isArray: true })
   roles!: AccountRole[];

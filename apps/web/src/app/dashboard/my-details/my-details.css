@@ -1,0 +1,81 @@
+:host {
+  display: block;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  margin: var(--mf-space-4);
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  min-width: 0;
+}
+
+h2,
+dl,
+dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  padding: var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+  min-width: 0;
+}
+
+dt {
+  color: var(--mf-text-secondary);
+}
+
+input {
+  width: 100%;
+  min-height: 44px;
+}
+
+.hint {
+  color: var(--mf-text-secondary);
+}
+
+/* Body size on a phone, small beside the value from a tablet up. */
+@media (min-width: 768px) {
+  .hint,
+  .tag {
+    font-size: var(--mf-size-small);
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+
+.actions button {
+  min-height: 44px;
+}
+
+/* A row's action starts where its label and value start. */
+.actions .flush {
+  padding-inline: 0;
+}
+
+.tag {
+  align-self: flex-start;
+  padding: 0 var(--mf-space-2);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}

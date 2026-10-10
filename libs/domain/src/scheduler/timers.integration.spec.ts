@@ -9,10 +9,12 @@ const redisUrl = redisUrlFor(4);
 const queue = new Queue('timers-test', { connection: { url: redisUrl } });
 
 const fired: string[] = [];
+const bySweep: boolean[] = [];
 let overdue: string[] = [];
 const expiry: TimerKind = {
-  fire: async (id) => {
+  fire: async (id, sweep) => {
     fired.push(id);
+    bySweep.push(sweep);
   },
   name: 'request-expiry',
   overdue: async () => overdue,
@@ -25,6 +27,7 @@ afterAll(() => queue.close());
 beforeEach(async () => {
   await queue.obliterate({ force: true });
   fired.length = 0;
+  bySweep.length = 0;
   overdue = [];
   timers = new ObjectTimers(queue, [expiry]);
 });
@@ -70,6 +73,7 @@ describe('a per-object timer', () => {
     await done;
     await worker.close();
     expect(fired).toEqual([id]);
+    expect(bySweep).toEqual([false]);
   });
 
   it('refuses a kind it does not know', async () => {
@@ -85,6 +89,8 @@ describe('the sweep', () => {
     overdue = [lost];
     expect(await timers.sweep(NOW)).toBe(1);
     expect(fired).toEqual([lost]);
+    // A kind counts what the sweep ran apart.
+    expect(bySweep).toEqual([true]);
   });
 
   it('runs every 5 minutes', async () => {

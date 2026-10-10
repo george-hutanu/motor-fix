@@ -217,6 +217,24 @@ export class SignInService {
     this.revokeSessionsLive(account.id, new Date(now));
   }
 
+  // The session family the presented token renews, when it is the account's,
+  // and when that family was opened: its first token, not its latest renewal.
+  async sessionFamily(
+    token: string | undefined,
+    accountId: string,
+  ): Promise<{ familyId: string; openedAt: Date }> {
+    const { row } = await this.renewable(token, Date.now());
+    if (row.accountId !== accountId) throw signInRequired();
+    const first = await this.prisma.refreshToken.aggregate({
+      _min: { createdAt: true },
+      where: { familyId: row.familyId },
+    });
+    return {
+      familyId: row.familyId,
+      openedAt: first._min.createdAt ?? row.createdAt,
+    };
+  }
+
   // Tells the account's open dashboards that their sessions ended, once the
   // change is saved. Only a nudge, the recorded event is the record: not
   // awaited, and a tab that misses it is signed out at its next renewal.

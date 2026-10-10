@@ -3,22 +3,7 @@
 // limits (500 an hour), and the waits GitHub asks for when it throttles.
 // A relative REST path resolves under the issue repository (repos.mjs).
 
-import { NOTION_URL } from "./notion-markdown.mjs";
 import { ISSUE_REPO, OWNER } from "./repos.mjs";
-
-/** Each Notion address in a request's JSON, whole, so one held address cannot stand in for another. */
-const notionAddresses = (json) => (json.match(/[^\s"\\<>()[\]]+/g) ?? []).filter((t) => NOTION_URL.test(t));
-
-/** Whether `json` names a Notion address beyond those `kept` (text GitHub already holds) names. */
-function addsNotion(json, kept) {
-  const held = notionAddresses(JSON.stringify(kept));
-  for (const address of notionAddresses(json)) {
-    const at = held.indexOf(address);
-    if (at === -1) return true;
-    held.splice(at, 1);
-  }
-  return false;
-}
 
 const API = "https://api.github.com";
 export const PACE_MS = 7200;
@@ -105,9 +90,8 @@ export function githubClient({
    * timeout or a 5xx is tried TRIES times like a read. A 422 to a try after one
    * whose answer was lost means the earlier try landed.
    */
-  async function send(method, path, body, content, idempotent = !content, kept = "") {
+  async function send(method, path, body, content, idempotent = !content) {
     const label = `${method} ${path}`;
-    if (body !== undefined && addsNotion(JSON.stringify(body), kept)) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
     const url = urlOf(path);
     if (content) stats.content++;
     let lost = false;
@@ -173,10 +157,9 @@ export function githubClient({
 
   /**
    * A REST call; a PATCH is idempotent, a POST only when the caller says so (`{ idempotent: true }`).
-   * `kept`: text GitHub already holds that the call sends back (a PR body), whose Notion addresses may go back; none may be added.
    */
-  const rest = async (method, path, body, { idempotent = method === "GET" || method === "PATCH", kept = "" } = {}) =>
-    (await send(method, path, body, method !== "GET", idempotent, kept)).data;
+  const rest = async (method, path, body, { idempotent = method === "GET" || method === "PATCH" } = {}) =>
+    (await send(method, path, body, method !== "GET", idempotent)).data;
 
   /** Every page of a REST list, following the Link header. */
   async function pages(path) {

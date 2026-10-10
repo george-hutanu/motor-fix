@@ -1,5 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 
+export const CONFIRMATION_OPTIONS = Symbol('EMAIL_CONFIRMATION_OPTIONS');
+
+export interface ConfirmationOptions {
+  // The web app the link opens; without it no link can be written.
+  webUrl?: string;
+}
+
 export const LINK_TTL_MS = 72 * 60 * 60 * 1000;
 
 // Asks for a new link: at most this many in each window.

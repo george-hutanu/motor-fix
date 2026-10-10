@@ -1,0 +1,187 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "redis",
+      "folder": "MotorFix",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "redis-unreachable",
+          "title": "Redis unreachable",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "redis"
+          },
+          "annotations": {
+            "summary": "Redis has not answered the worker for 5 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-redis"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (motorfix_datastore_up{store=\"redis\"})",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "redis-memory",
+          "title": "Redis memory high",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "redis"
+          },
+          "annotations": {
+            "summary": "Redis has used more than 80% of its maximum memory (or more than 256 MiB when none is set) for 5 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-redis"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (motorfix_redis_memory_used_bytes) / clamp_min(max by (deployment_environment) (motorfix_redis_memory_max_bytes), 335544320)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.8
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "redis-connections",
+          "title": "Redis connections high",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "redis"
+          },
+          "annotations": {
+            "summary": "More than 100 clients have been connected to Redis for 5 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-redis"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (motorfix_redis_clients_connected)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        100
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

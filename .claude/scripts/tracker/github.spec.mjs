@@ -76,6 +76,19 @@ describe("requests", () => {
   });
 });
 
+// @traces 1119-FR-005
+describe("request bodies", () => {
+  it("sends a body that links an outside tracker page unchanged, with no refusal", async () => {
+    const clock = fakeClock();
+    const { github, calls } = client(clock, [json({ number: 7 }, 201)]);
+    const body = { title: "ST-1 import", body: "Was https://www.example.so/Old-story-0123456789abcdef0123456789abcdef and https://app.example.com/p/abc" };
+    assert.deepEqual(await github.rest("POST", "issues", body), { number: 7 });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.method, "POST");
+    assert.deepEqual(JSON.parse(calls[0].init.body), body);
+  });
+});
+
 describe("pacing", () => {
   it("spaces content-creating requests at least the pace apart and leaves reads alone", async () => {
     const clock = fakeClock();

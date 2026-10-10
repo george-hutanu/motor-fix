@@ -1,3 +1,4 @@
+export * from './account-change.dto';
 export * from './account-search';
 export * from './accounts.dto';
 export * from './admin.dto';

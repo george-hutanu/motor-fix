@@ -1,0 +1,50 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+label {
+  font-weight: 700;
+}
+input {
+  width: 100%;
+  min-height: 44px;
+}
+.code {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2em;
+}
+button[type="submit"] {
+  width: 100%;
+  min-height: 54px;
+  white-space: normal;
+}
+.links {
+  display: flex;
+  justify-content: center;
+}
+.link {
+  min-height: var(--mf-tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mf-amber-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.link:disabled {
+  color: var(--mf-text-secondary);
+  cursor: default;
+}
+.link:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}

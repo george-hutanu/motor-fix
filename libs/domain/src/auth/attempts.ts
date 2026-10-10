@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 
 import { Logger } from '@nestjs/common';
-import type { Redis } from 'ioredis';
+import type { ChainableCommander, Redis } from 'ioredis';
 
 // The Redis of the attempt limits, which the e-mail confirmation's limit shares.
 export const AUTH_REDIS = Symbol('AUTH_REDIS');
@@ -15,9 +15,17 @@ const RESET_WINDOW_SECONDS = 60 * 60;
 const RESET_LIMIT = { address: 10, email: 3 } as const;
 const HOUR_SECONDS = 60 * 60;
 const PHONE_CODE_LIMIT = { address: 20, hour: 5, minute: 1 } as const;
+const CONTACT_CHANGE_LIMIT = 5;
+const PASSWORD_LIMIT = 5;
 
 type Kind = keyof typeof LIMIT;
-type Limited = 'sign-in' | 'sign-up' | 'reset' | 'phone-code';
+type Limited =
+  | 'sign-in'
+  | 'sign-up'
+  | 'reset'
+  | 'phone-code'
+  | 'contact-change'
+  | 'password';
 
 // One client however its address is written: an IPv4 address also in its
 // IPv6-mapped form, and an IPv6 address by its /64, which one subscriber
@@ -56,6 +64,18 @@ const digest = (value: string) =>
 const keyOf = (kind: Kind, value: string) =>
   `auth:fail:${kind}:${digest(value)}`;
 const phoneHourKey = (phone: string) => `auth:code:hour:${digest(phone)}`;
+const changeKey = (accountId: string) => `auth:change:${digest(accountId)}`;
+const passwordKey = (accountId: string) => `auth:password:${digest(accountId)}`;
+
+// A counting transaction's replies. One that answers nothing or refuses a
+// command (an EXPIRE refused would leave its key counting for ever) is
+// Redis unavailable, and the limit is skipped.
+const counted = async (counts: ChainableCommander) => {
+  const replies = await counts.exec();
+  if (!replies) throw new Error('transaction answered nothing');
+  for (const [error] of replies) if (error) throw error;
+  return replies;
+};
 
 // Failed sign-ins per e-mail and per address, and sign-ups per address. Redis
 // only counts: when it is unreachable the limits are skipped rather than
@@ -93,7 +113,7 @@ export class Attempts {
           .incr(keyOf('address', client))
           .expire(keyOf('address', client), WINDOW_SECONDS);
       }
-      await counts.exec();
+      await counted(counts);
     } catch {
       this.unavailable('sign-in');
     }
@@ -114,14 +134,10 @@ export class Attempts {
     if (!client) return true;
     try {
       const key = `auth:signup:address:${digest(client)}`;
-      const replies = await this.redis
-        .multi()
-        .incr(key)
-        .expire(key, SIGN_UP_WINDOW_SECONDS, 'NX')
-        .exec();
-      // A refused EXPIRE would leave the key counting for ever.
-      for (const [error] of replies ?? []) if (error) throw error;
-      return Number(replies?.[0]?.[1]) <= SIGN_UP_LIMIT;
+      const replies = await counted(
+        this.redis.multi().incr(key).expire(key, SIGN_UP_WINDOW_SECONDS, 'NX'),
+      );
+      return Number(replies[0]?.[1]) <= SIGN_UP_LIMIT;
     } catch {
       this.unavailable('sign-up');
       return true;
@@ -143,8 +159,7 @@ export class Attempts {
       for (const [key] of keys) {
         counts.incr(key).expire(key, RESET_WINDOW_SECONDS, 'NX');
       }
-      const replies = (await counts.exec()) ?? [];
-      for (const [error] of replies) if (error) throw error;
+      const replies = await counted(counts);
       return keys.every(([, limit], i) => Number(replies[i * 2]?.[1]) <= limit);
     } catch {
       this.unavailable('reset');
@@ -173,8 +188,7 @@ export class Attempts {
       for (const [key, seconds] of keys) {
         counts.incr(key).expire(key, seconds, 'NX');
       }
-      const replies = (await counts.exec()) ?? [];
-      for (const [error] of replies) if (error) throw error;
+      const replies = await counted(counts);
       return keys.every(
         ([, , limit], i) => Number(replies[i * 2]?.[1]) <= limit,
       );
@@ -186,12 +200,69 @@ export class Attempts {
 
   // A code that was never sent does not count toward the number's hour.
   async uncountPhoneCode(phone: string): Promise<void> {
+    await this.uncount(phoneHourKey(phone), 'phone-code');
+  }
+
+  // Counts one e-mail link or phone code for the account's own contact
+  // change; false once it has had its 5 in the hour that began with its first.
+  async admitContactChange(accountId: string): Promise<boolean> {
     try {
-      const key = phoneHourKey(phone);
-      // Should the hour have ended meanwhile, the key still expires.
-      await this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX').exec();
+      const key = changeKey(accountId);
+      const replies = await counted(
+        this.redis.multi().incr(key).expire(key, HOUR_SECONDS, 'NX'),
+      );
+      return Number(replies[0]?.[1]) <= CONTACT_CHANGE_LIMIT;
     } catch {
-      this.unavailable('phone-code');
+      this.unavailable('contact-change');
+      return true;
+    }
+  }
+
+  // A link or code that never left does not count toward the account's hour.
+  async uncountContactChange(accountId: string): Promise<void> {
+    await this.uncount(changeKey(accountId), 'contact-change');
+  }
+
+  // Wrong current passwords at a password change: 5 refuse the next try
+  // until 15 minutes after the last.
+  async passwordBlocked(accountId: string): Promise<boolean> {
+    try {
+      return (
+        Number(await this.redis.get(passwordKey(accountId))) >= PASSWORD_LIMIT
+      );
+    } catch {
+      this.unavailable('password');
+      return false;
+    }
+  }
+
+  async passwordFailed(accountId: string): Promise<void> {
+    try {
+      const key = passwordKey(accountId);
+      await counted(this.redis.multi().incr(key).expire(key, WINDOW_SECONDS));
+    } catch {
+      this.unavailable('password');
+    }
+  }
+
+  async passwordClear(accountId: string): Promise<void> {
+    try {
+      await this.redis.del(passwordKey(accountId));
+    } catch {
+      this.unavailable('password');
+    }
+  }
+
+  // One off an hourly count. Should the hour have ended meanwhile, the key
+  // made at -1 is deleted, or the next hour would admit one more.
+  private async uncount(key: string, what: Limited) {
+    try {
+      const replies = await counted(
+        this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX'),
+      );
+      if (Number(replies[0]?.[1]) < 0) await this.redis.del(key);
+    } catch {
+      this.unavailable(what);
     }
   }
 

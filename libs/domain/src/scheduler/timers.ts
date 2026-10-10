@@ -2,10 +2,11 @@ import type { Job, Queue } from 'bullmq';
 
 // A timer on one object, such as a request's expiry. `fire` checks the
 // object's state before it acts, so a late or repeated timer does nothing;
-// `overdue` names the objects whose time has passed, for the sweep.
+// `overdue` names the objects whose time has passed, for the sweep, and
+// `sweep` tells a kind the sweep ran it rather than its own timer.
 export interface TimerKind {
   name: string;
-  fire(objectId: string): Promise<void>;
+  fire(objectId: string, sweep: boolean): Promise<void>;
   overdue(now: Date): Promise<string[]>;
 }
 
@@ -58,7 +59,7 @@ export class ObjectTimers {
     let ran = 0;
     for (const kind of this.kinds.values()) {
       for (const id of await kind.overdue(now)) {
-        await kind.fire(id);
+        await kind.fire(id, true);
         ran += 1;
       }
     }
@@ -70,7 +71,7 @@ export class ObjectTimers {
       await this.sweep();
       return;
     }
-    await this.kind(job.name).fire(job.data.id ?? '');
+    await this.kind(job.name).fire(job.data.id ?? '', false);
   }
 
   private kind(name: string): TimerKind {

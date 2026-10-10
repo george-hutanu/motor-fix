@@ -16,6 +16,9 @@ export type TransitionEntity =
 export interface TransitionActor {
   accountId: string | null;
   role: Role | 'system';
+  // Set when an assistant made the move for the account, and filed with it.
+  assistantGrantId?: string;
+  requestId?: string;
 }
 
 // The locked row as the database returns it (snake case), with the columns
@@ -50,6 +53,8 @@ export interface Move<S extends string> {
   // The columns the move sets with the status, given the locked row as read
   // from the database (snake case).
   set?: (row: LockedRow) => Record<string, unknown>;
+  // What the audit entry files as the new value; the status by default.
+  newValue?: unknown;
   // The ids the audit entry is filed under, from the locked row.
   scope?: (row: LockedRow) => {
     garageId?: string;
@@ -100,11 +105,15 @@ export async function applyTransition<S extends string>(
     actorId: move.actor.accountId,
     actorRole: move.actor.role,
     field: 'status',
-    newValue: move.to,
+    newValue: move.newValue ?? move.to,
     oldValue: from,
     subjectId: move.id,
     subjectType: spec.entity,
     ...move.scope?.(row),
+    ...(move.actor.assistantGrantId !== undefined && {
+      assistantGrantId: move.actor.assistantGrantId,
+      requestId: move.actor.requestId,
+    }),
   });
   await ports.events.record(tx, {
     ...move.event,

@@ -9,8 +9,11 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { GarageRecipientDto } from '../models/garage-recipient-dto';
 import { GarageRequestDto } from '../models/garage-request-dto';
 import { GarageRequestListDto } from '../models/garage-request-list-dto';
+import { garageRequestsControllerDecline } from '../fn/garage-requests/garage-requests-controller-decline';
+import { GarageRequestsControllerDecline$Params } from '../fn/garage-requests/garage-requests-controller-decline';
 import { garageRequestsControllerGet } from '../fn/garage-requests/garage-requests-controller-get';
 import { GarageRequestsControllerGet$Params } from '../fn/garage-requests/garage-requests-controller-get';
 import { garageRequestsControllerList } from '../fn/garage-requests/garage-requests-controller-list';
@@ -70,6 +73,39 @@ export class GarageRequestsService extends BaseService {
   garageRequestsControllerGet(params: GarageRequestsControllerGet$Params, context?: HttpContext): Promise<GarageRequestDto> {
     const resp = this.garageRequestsControllerGet$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageRequestDto>): GarageRequestDto => r.body);
+  }
+
+  /** Path part for operation `garageRequestsControllerDecline()` */
+  static readonly GarageRequestsControllerDeclinePath = '/api/v1/garage/requests/{id}/decline';
+
+  /**
+   * Decline a request with one of the four reasons.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageRequestsControllerDecline()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageRequestsControllerDecline$Response(params: GarageRequestsControllerDecline$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageRecipientDto>> {
+    const obs = garageRequestsControllerDecline(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Decline a request with one of the four reasons.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageRequestsControllerDecline$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageRequestsControllerDecline(params: GarageRequestsControllerDecline$Params, context?: HttpContext): Promise<GarageRecipientDto> {
+    const resp = this.garageRequestsControllerDecline$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageRecipientDto>): GarageRecipientDto => r.body);
   }
 
 }

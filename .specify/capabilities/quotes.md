@@ -7,6 +7,7 @@ features:
   - 343-live-quote-requests
   - 344-send-quote
   - 030-new-account-empty-states
+  - 345-decline-request
 ---
 
 # Capability: Quotes
@@ -27,9 +28,9 @@ _From 220-requests-quotes-bookings._
 
 _From 220-requests-quotes-bookings._
 
-### 220-FR-004 — A REQUEST_RECIPIENT MUST store: request, garage, status ∈ `waiting`, `quoted`, `declined`, `expired`, `closed`, `source` ∈ `search`, `map`, `home`, `shared_link`, `profile_direct`, `saved`, `unknown`, `answered_at`, `decline_reason` (one of DECLINE_REASONS, only when `declined`), `declined_at` and `declined_by` (account; both only when `declined`, the undo window of DECLINE_UNDO_MINUTES counts from `declined_at`), `reminded_day2_at`, `reminded_day5_at`, `created_at`; one row per (request, garage) (FR-009). `closed` is for a garage that had not answered when the request closed or when the garage was suspended, and MUST be distinguishable from `expired` so the response rate can leave it out.
+### 345-FR-006 — REQUEST_RECIPIENT MUST gain `decline_told_at` (timestamp, null until the decline's window has been handled once, whether a message went, the request was closed or every channel was muted; only ever set when `declined`), cleared together with the other decline columns by the `declined` → `waiting` undo move (220-FR-008); the migration adds it with no backfill.
 
-_From 220-requests-quotes-bookings._
+_From 345-decline-request._
 
 ### 220-FR-005 — A QUOTE MUST store: request, recipient, garage, `from_bani`, `to_bani`, `duration_minutes`, `slot` (the proposed start, timestamp with time zone), `note` (optional), status ∈ `waiting`, `accepted`, `withdrawn`, `expired`, `lost`, `declined_by_driver`, `sent_at`, `changed_at`, `withdrawn_at`, `expires_at` (= `sent_at` + QUOTE_VALIDITY_DAYS, counted as for the request, stored UTC), `accepted_at`; one QUOTE_JOB per requested job (quote, request job, `included` true or false, so the driver sees which jobs the garage left out). The database MUST refuse a quote without `from_bani`, `to_bani`, `slot` or `duration_minutes`, one with `from_bani` ≤ 0, `to_bani` < `from_bani` or `duration_minutes` ≤ 0.
 
@@ -159,17 +160,17 @@ _From 221-quote-request._
 
 _From 343-live-quote-requests._
 
-### 343-FR-002 — `GET /api/v1/garage/requests` MUST accept an optional `status` query, `waiting` or `closed`: `waiting` answers the waiting rows of FR-001, `closed` the garage's closed rows (a recipient `expired` or `closed`, or a recipient still `waiting` on a request no longer `sent` or `quoted`) that closed within the last 24 hours, the close time being the recipient's last status change when it moved, else the request's (each from the per-move audit entries; with no entry, the recipient's creation time); without `status` the read is unchanged. Both answers keep the existing shape `{ items, nextCursor, total }`, 20 a page, newest first by the request's creation time with equal times by id, cursor paging and the existing 400 `invalid_cursor` (220-FR-014); `total` is the count in the caller's scope for that filter. A value outside the two answers 400 `validation_failed` naming `status`. The DTOs stay in the contracts library; the OpenAPI document and the generated client are regenerated.
+### 345-FR-012 — `GET /api/v1/garage/requests?status=closed` MUST also answer the garage's recipients `declined` within the last 24 hours (close time `declined_at`), with the close reason `declined` added to the typed set of 343-FR-004, label "Refuzată" / "Declined", taking precedence over the request's own close reasons (rows stay ordered by close time); the `waiting` read never answers a `declined` recipient (unchanged); the `quoted` read is unchanged. A `declined` row carries its `declineReason` as the shipped `GarageRecipientDto` does.
 
-_From 343-live-quote-requests._
+_From 345-decline-request._
 
 ### 343-FR-003 — Each garage-side request summary MUST mark, per job, whether the garage does that job on the request's car brand (`offered`: GARAGE_BRAND_JOB has the job type ticked for that brand), so the screen can show "nu faceți" / "not offered" on the others. A request with no jobs has nothing to mark.
 
 _From 343-live-quote-requests._
 
-### 343-FR-004 — Each closed row MUST carry its reason, derived on the server and never stored anew: `cancelled` (request `closed` with `closed_reason` `cancelled`), `accepted_elsewhere` (request `booked`, or `closed` with `booking_lapsed`, `booking_cancelled` or `no_show`, with no accepted quote of this garage), `account_closed` (`closed_reason` `account_closed`), `expired` (recipient `expired`), `garage_suspended` (recipient `closed` while the garage is `suspended`); the reasons are one typed set in the contracts library with their Romanian and English labels ("Cerere anulată de client" / "Request cancelled by the customer", "Clientul a acceptat altă ofertă" / "The customer accepted another quote", "Cerere închisă" / "Request closed", "Cerere expirată" / "Request expired", "Service suspendat" / "Garage suspended"), a test failing when a reason lacks a label. Reasons are tried in the order `expired`, `garage_suspended`, `cancelled`, `account_closed`, `accepted_elsewhere`; a close matching none shows `account_closed`'s label "Cerere închisă" / "Request closed".
+### 345-FR-012 — `GET /api/v1/garage/requests?status=closed` MUST also answer the garage's recipients `declined` within the last 24 hours (close time `declined_at`), with the close reason `declined` added to the typed set of 343-FR-004, label "Refuzată" / "Declined", taking precedence over the request's own close reasons (rows stay ordered by close time); the `waiting` read never answers a `declined` recipient (unchanged); the `quoted` read is unchanged. A `declined` row carries its `declineReason` as the shipped `GarageRecipientDto` does.
 
-_From 343-live-quote-requests._
+_From 345-decline-request._
 
 ### 343-FR-005 — The reads of FR-002 MUST be open to the owner and the receptionist of the garage and to a mechanic of it with `can_answer_quotes`; every other caller, a mechanic without the permission and another garage's staff MUST get 404 (the existing policy, 220-FR-012); the routes need a session and join no public route. Rows carry the driver as first name and surname initial, the car snapshot (brand, model, year), the jobs in the reader's language, the request's creation time and expiry, and no phone, e-mail, plate or description beyond what 220-FR-013 already gives.
 
@@ -183,13 +184,13 @@ _From 343-live-quote-requests._
 
 _From 343-live-quote-requests._
 
-### 344-FR-009 — Each waiting row on Panou and in the Cereri de ofertă view MUST show a primary button "Trimite oferta" / "Send a quote" in its actions column for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 343-FR-015), absent for every other reader; it opens the send dialog in the shared overlay (`dialog` shape from 768 px, the bottom sheet under it; 157, 158, 491) for that request.
+### 345-FR-013 — Each waiting row on Panou and in the Cereri de ofertă view MUST show, next to "Trimite oferta", a secondary button "Refuză" / "Decline" for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 343-FR-015), absent for every other reader, on desktop and on the phone layout; it opens the decline dialog in the shared overlay (`dialog` shape from 768 px, the bottom sheet under it; 157, 158, 491) for that request.
 
-_From 344-send-quote._
+_From 345-decline-request._
 
-### 343-FR-009 — The panel, the view and the counters MUST be kept current through the existing live helper (256-FR-002, 257-FR-008), re-reading on `request.created`, `quote.sent`, `request.declined`, `request.decline_undone`, `request.cancelled`, `request.expired` and `quote.accepted` received on the garage's stream, and on the stream's resync; a change MUST show within 5 seconds of the event's commit without a reload, a route change, a closed overlay or moved focus (256-FR-005), the first visible row kept in place (256-FR-008), the changed row highlighted (256-FR-009) and the counter change announced politely (256-FR-010). Rows arriving above a scrolled list are held and counted by the existing pill (256-FR-007). Every kind named here MUST exist in the contracts' event catalogue (257-FR-006); a kind no story records yet costs nothing until it is recorded.
+### 345-FR-016 — The panel, the view and the counters MUST show the decline within 5 seconds of the commit on every staff screen of the garage, through the existing re-read on `request.declined` (343-FR-009, already wired), the first visible row kept in place (256-FR-008) and the changed row highlighted (256-FR-009); the driver's open request views MUST re-read on the window-close `request.declined` received on `account:{driverId}` through the same helper, so the driver's screens show the decline within 5 seconds of the window closing and never before.
 
-_From 343-live-quote-requests._
+_From 345-decline-request._
 
 ### 343-FR-010 — With any garage dashboard route open and the tab visible, a `request.created` for the garage MUST raise one short toast "Cerere nouă: <brand> <model> · <first job>" / "New request: <brand> <model> · <first job>" (the description's first line, cut at 40 characters, when there is no job), through the shared toast, once per event, with no sound; a hidden tab raises none, and the toast is never raised for the other kinds.
 
@@ -275,6 +276,62 @@ _From 344-send-quote._
 
 _From 344-send-quote._
 
+### 345-FR-001 — `POST /api/v1/garage/requests/:id/decline` MUST take the request id in the path and a body `{ reason }` with `reason` one of DECLINE_REASONS (`fully_booked`, `job_not_done`, `make_model_engine_not_done`, `need_to_see_car`), the DTO in the contracts library validated at the edge; a missing, empty or unknown reason MUST answer 400 `validation_failed` naming `reason`, nothing written. The OpenAPI document and the generated client are regenerated; the route needs a session and joins no public route (the public-routes list is unchanged).
+
+_From 345-decline-request._
+
+### 345-FR-002 — The decline MUST be allowed to the owner and the receptionist of a garage that holds a REQUEST_RECIPIENT for the request, and to a mechanic of it with `can_answer_quotes`; a mechanic of that garage without the permission MUST get 403 `forbidden` ("Nu ai dreptul să răspunzi la cereri" / "You are not allowed to answer requests"); every other caller, another garage's staff, a driver, an admin and a request not sent to the garage, MUST get 404; nothing written in either case (344-FR-002's policy, A31/A34). The garage is the actor's garage.
+
+_From 345-decline-request._
+
+### 345-FR-003 — In one transaction that locks the recipient row, the decline MUST move the recipient `waiting` → `declined` through the transition service (220-FR-008) with `decline_reason`, `declined_at` now, `declined_by` the actor's account and `answered_at` now; write the audit entry of 220-FR-011 (action `update`, subject `request_recipient`, field `status`, the actor, their role, `garage_id`, and the reason in the new value; `via_assistant` when the grant made the call, 390-FR-001..008); and record one outbox event `request.declined` (subject the recipient id, payload `{ requestId, garageId, recipientId, driverId, reason }`, audience `garage:{garageId}` only). A failure anywhere writes nothing. The request's own status is unchanged by a decline.
+
+_From 345-decline-request._
+
+### 345-FR-004 — The decline MUST be refused with 409 `already_answered` ("Altcineva a răspuns deja la această cerere" / "Someone else already answered this request") when the garage's recipient is `quoted` or `declined`, and with 409 `request_not_open` ("Cererea nu mai este deschisă" / "The request is no longer open") when the request is not `sent` or `quoted`, when the recipient is `expired` or `closed`, or when the garage is `suspended` (the codes and messages of 344-FR-004). Two concurrent declines, or a decline beside a send, for the same recipient MUST end with exactly one answer: the row lock makes the loser a 409, never a 500.
+
+_From 345-decline-request._
+
+### 345-FR-005 — The API MUST answer 200 with the garage's recipient as the garage reads it (the shipped `GarageRecipientDto`: status, source, `answeredAt`, `declinedAt`, `declineReason`); errors MUST follow the platform's problem details (421-FR-008) with the codes of FR-001, FR-002 and FR-004 and their Romanian and English messages.
+
+_From 345-decline-request._
+
+### 345-FR-007 — The worker MUST run the shipped one-timer-per-object helper on a queue `quote-timers` with the timer kind `decline-window` (job id `decline-window-<recipientId>`, the brief's `decline-window:{recipientId}`; the job carries only the recipient id) and its 5-minute sweep; a consumer of `request.declined` on the worker MUST set that timer at `declined_at` + DECLINE_UNDO_MINUTES for the event's recipient (setting it again replaces it, so a redelivered event is harmless) and MUST ignore an event marked `windowClosed`. The queue joins the worker's own health and metrics as the notifications queue does.
+
+_From 345-decline-request._
+
+### 345-FR-008 — When the timer fires, or the sweep finds a recipient `declined` for at least DECLINE_UNDO_MINUTES with `decline_told_at` null, the job MUST, in one transaction that locks the recipient row, read it afresh and act only when it is still `declined`, its `declined_at` is at least DECLINE_UNDO_MINUTES old and `decline_told_at` is null (one rule for the timer and the sweep); then set `decline_told_at` now, and, when the request is still `sent` or `quoted`, build REQUEST_DECLINED for the driver (FR-009) and record one outbox event `request.declined` (the FR-003 payload plus `windowClosed: true`, audience `account:{driverId}` only). A recipient already told, undone, re-declined with a newer `declined_at`, or on a request no longer open, gets no message, and a told recipient is never told again. When the worker was down at the mark, the sweep sends late, once.
+
+_From 345-decline-request._
+
+### 345-FR-011 — The driver's request read (`GET /api/v1/requests/:id` and every other driver read that carries recipients, through one shared mapping) MUST hide a decline younger than DECLINE_UNDO_MINUTES: such a recipient answers `status` `waiting`, `answeredAt` null and `declineReason` null; from `declined_at` + 5 minutes it answers `declined`, `answeredAt` and `declineReason` (a new nullable field on `RecipientDto`, the reason code; the screens label it). The judgement is made from `declined_at` at read time, never from `decline_told_at`, so a muted driver and a late message see the same thing. `declinedBy` is never exposed to the driver (the shipped rule).
+
+_From 345-decline-request._
+
+### 345-FR-014 — The dialog MUST be titled "De ce refuzați cererea?" / "Why are you declining the request?", name the driver's short name and the car ("Vlad P. · Renault Mégane 2019") under the title, hold exactly four radio options in the order of DECLINE_REASONS with the labels "Suntem ocupați complet" / "We are fully booked", "Nu facem această lucrare" / "We don't do this job", "Nu lucrăm pe această marcă, model sau motor" / "We don't work on this make, model or engine", "Trebuie să vedem mașina mai întâi" / "We need to see the car first" (one map in the contracts library, FR-010), no "other" option and no free text, and the buttons "Renunță" / "Cancel" and "Refuză" / "Decline"; "Refuză" stays disabled until an option is picked. The labels live with the reason map so the garage's dialog, the garage's row and the driver's screens (#60, #262) read one source.
+
+_From 345-decline-request._
+
+### 345-FR-015 — States: while saving, "Refuză" shows a spinner, the options and "Renunță" are disabled and the dialog stays open; on 200 it closes with the shared toast "Cerere refuzată" / "Request declined"; on 409 it closes and the toast shows the error's message, the lists re-reading at once; on 403 or 404 it closes with the error's message; on any other error or a network failure it stays open with the reason still picked and shows the shared error line with a retry; offline, "Refuză" is disabled with "Ești offline" / "You are offline". The greyed declined row under the waiting list reads "Refuzată" / "Declined" as its FR-012 label.
+
+_From 345-decline-request._
+
+### 345-FR-017 — The MCP garage tools MUST gain `decline_quote_request` (`acts: true`, scope `motorfix.act`, capability `garage.requests`, annotations `readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: false`), input `{ requestId: uuid, reason: one of the four }`, running the same use case as the owner's garage actor and answering the recipient's status, `declinedAt` and `declineReason`; its description MUST tell the assistant to confirm the request and the reason with the person before calling; a refused state or actor answers the API's error as the registry maps errors today; the audit entry carries `via_assistant` (221-FR-001's rule for the assistant). The maintenance switch refuses it as every acting tool.
+
+_From 345-decline-request._
+
+### 345-FR-018 — Observability (AGENTS.md): the new endpoint, the `quote-timers` queue and the `decline-window` timer MUST be listed in `infra/observability/inventory.json`; the decline (a product action) MUST emit one counter of declines with the outcome (`declined`, `already_answered`, `request_not_open`, `invalid`) and the reason as an attribute; the window job one counter of windows closed with the outcome (`sent`, `muted` when no channel built a message, `skipped_undone`, `skipped_closed`, `already_told`) and whether the sweep ran it; one structured log line per decline and per window with the recipient id and the outcome, never the description, the plate or a phone. The PR's Observability section names them, the dashboard panel being the dashboards story's while the repository holds no dashboard file, and names the alert for a sweep that keeps finding overdue windows or says why none is added.
+
+_From 345-decline-request._
+
+### 345-FR-019 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the button, the dialog and the declined row MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px and every option and button at least 44 px tall.
+
+_From 345-decline-request._
+
+### 345-FR-020 — Tests MUST cover, before the code (Principle II): in Jest on real PostgreSQL — a missing, empty and unknown reason as 400 naming `reason`; 200 for the owner, the receptionist and the permitted mechanic with `declined_by` each; 403 for the unpermitted mechanic; 404 for another garage's owner, a driver, an admin and a request not sent to the garage; the recipient's move with every column, the audit entry with the reason and the `request.declined` event to the garage audience in one transaction, and nothing written after a forced rollback; 409 `already_answered` on a quoted and on a declined recipient, 409 `request_not_open` on a cancelled, an expired and a booked request, on an `expired` and a `closed` recipient and for a suspended garage; two concurrent declines, and a decline beside a send, ending with one answer; the timer set from the event and the marked event ignored; the window job sending once for a decline 5 minutes old, nothing on a `declined_at` under 5 minutes old, on an undone recipient, on a told recipient, on a closed request, and the sweep sending late once; the driver's mute leaving the recipient told; the driver's read hiding at 4:59 and showing at 5:00 with the reason, never `declinedBy`; the `closed` read listing the declined row within 24 hours with reason `declined` and leaving it out after; the response rate counting a declined recipient as answered; the templates in both languages per channel and the reason map covering every reason; the tool's schema, scope, maintenance refusal and audit mark. In Jest, web — the button's presence per permission on desktop and phone, the dialog's title line and four options, the disabled confirm until picked, the saving, 200, 409, 403, other-error and offline states, the declined row's label in both languages. End to end (Playwright): the seeded owner declines a waiting request with "Trebuie să vedem mașina mai întâi"; the row shows Refuzată and the counter drops within 5 seconds; with `declined_at` moved back 5 minutes (the e2e moves the clock by backdating the row), the driver's request read shows the recipient declined with `need_to_see_car`; the message itself is covered by the worker's integration specs.
+
+_From 345-decline-request._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -290,3 +347,9 @@ _From 344-send-quote._
 
 - `221-FR-014` — superseded by `030-FR-009` (2026-10-10)
 - `221-FR-015` — superseded by `030-FR-002` (2026-10-10)
+
+- `220-FR-004` — superseded by `345-FR-006` (2026-10-10)
+- `343-FR-002` — superseded by `345-FR-012` (2026-10-10)
+- `343-FR-004` — superseded by `345-FR-012` (2026-10-10)
+- `344-FR-009` — superseded by `345-FR-013` (2026-10-10)
+- `343-FR-009` — superseded by `345-FR-016` (2026-10-10)

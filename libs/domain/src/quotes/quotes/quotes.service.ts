@@ -4,7 +4,6 @@ import {
   type SendQuoteDto,
 } from '@motor-fix/contracts';
 import {
-  HttpException,
   HttpStatus,
   Inject,
   Injectable,
@@ -12,7 +11,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { type QuoteSendOutcome, recordQuoteSend } from './quotes.metrics';
+import { recordQuoteSend } from './quotes.metrics';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -25,44 +24,28 @@ import {
   type Quote,
   type QuoteJob,
 } from '../../generated/prisma/client';
+import {
+  ANSWERING,
+  type AnswerTarget,
+  alreadyAnswered,
+  answerOutcomeOf,
+  judgeAnswer,
+} from '../answers';
 import { QUOTE_VALIDITY_DAYS } from '../quotes-config';
 import { quoteOf } from '../reads';
 import { moveRecipient, moveRequest } from '../transitions';
 
 type Tx = Prisma.TransactionClient;
 
-// The garage's row of the request, locked so two sends are judged one
-// after the other.
-interface Target {
-  recipient_id: string;
-  recipient_status: string;
-  request_status: string;
-  driver_id: string;
+interface Target extends AnswerTarget {
   car_brand: string;
-  garage_status: string;
   request_created_at: Date;
 }
-
-const ANSWERING = new Set(['garage', 'receptionist', 'mechanic']);
 
 const invalid = (field: string, code: string, message: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, [
     { code, field },
   ]);
-
-const alreadyAnswered = () =>
-  refusal(
-    HttpStatus.CONFLICT,
-    'already_answered',
-    'Altcineva a răspuns deja la această cerere',
-  );
-
-const notOpen = () =>
-  refusal(
-    HttpStatus.CONFLICT,
-    'request_not_open',
-    'Cererea nu mai este deschisă',
-  );
 
 // What the body must hold beyond its own field rules.
 function assertBody(dto: SendQuoteDto) {
@@ -72,27 +55,6 @@ function assertBody(dto: SendQuoteDto) {
   if (new Date(dto.slot).getTime() <= Date.now()) {
     throw invalid('slot', 'past', 'slot must be later than now');
   }
-}
-
-// A quote waits only on an open request the garage has not answered yet.
-function judge(target: Target) {
-  if (target.garage_status === 'suspended') throw notOpen();
-  if (['quoted', 'declined'].includes(target.recipient_status)) {
-    throw alreadyAnswered();
-  }
-  if (target.recipient_status !== 'waiting') throw notOpen();
-  if (!['sent', 'quoted'].includes(target.request_status)) throw notOpen();
-}
-
-// A refusal's outcome: the two conflicts by name, any other client error
-// (400, 403, 404) as refused; a server error is not a send's outcome.
-function outcomeOf(error: unknown): QuoteSendOutcome | null {
-  if (!(error instanceof HttpException)) return null;
-  const body = error.getResponse() as { code?: string };
-  if (body.code === 'already_answered') return 'already_answered';
-  if (body.code === 'request_not_open') return 'request_not_open';
-  const status = error.getStatus();
-  return status >= 400 && status < 500 ? 'refused' : null;
 }
 
 const isUniqueViolation = (error: unknown) =>
@@ -132,7 +94,7 @@ export class QuotesService {
       }
       return quoteOf(quote);
     } catch (error) {
-      const outcome = outcomeOf(error);
+      const outcome = answerOutcomeOf(error, 'refused');
       if (outcome) {
         recordQuoteSend(outcome);
         this.logger.warn(`quote - for request ${dto.requestId}: ${outcome}`);
@@ -199,7 +161,7 @@ export class QuotesService {
     if (sent) return { created: false, quote: sent, requestedAt };
     // After the replay: a repeated key answers even once its slot has passed.
     assertBody(dto);
-    judge(target);
+    judgeAnswer(target);
     const quote = await this.write(tx, actor, garageId, key, dto, target);
     await this.announce(tx, actor, garageId, dto, target, quote);
     return { created: true, quote, requestedAt };

@@ -1141,6 +1141,51 @@
         ]
       }
     },
+    "/api/v1/me/email": {
+      "post": {
+        "operationId": "EmailChangeController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingEmailDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "email_taken, email_unchanged"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          },
+          "503": {
+            "description": "send_failed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/auth/confirm-email": {
       "post": {
         "operationId": "EmailConfirmationController_confirm",
@@ -1297,6 +1342,136 @@
         },
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "operationId": "PasswordChangeController_change",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Changed or set; every other session ended"
+          },
+          "400": {
+            "description": "weak_password, validation_failed"
+          },
+          "401": {
+            "description": "invalid_credentials, sign_in_required"
+          },
+          "403": {
+            "description": "recent_sign_in_required"
+          },
+          "409": {
+            "description": "email_required"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/me/phone": {
+      "post": {
+        "operationId": "PhoneChangeController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The code went out by WhatsApp"
+          },
+          "409": {
+            "description": "phone_taken, phone_unchanged"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          },
+          "503": {
+            "description": "send_failed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/phone/confirm": {
+      "post": {
+        "operationId": "PhoneChangeController_confirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneConfirmDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_invalid"
+          },
+          "409": {
+            "description": "phone_taken"
+          },
+          "410": {
+            "description": "code_expired"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
         ]
       }
     },
@@ -2033,6 +2208,67 @@
             "bearer": []
           }
         ],
+        "tags": [
+          "garage-requests"
+        ]
+      }
+    },
+    "/api/v1/garage/requests/{id}/decline": {
+      "post": {
+        "operationId": "GarageRequestsController_decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageRecipientDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a missing or unknown reason, a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic who may not answer quotes"
+          },
+          "404": {
+            "description": "not_found: not sent to this garage"
+          },
+          "409": {
+            "description": "already_answered: the garage answered already; request_not_open: the request, the garage’s row or the garage is closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decline a request with one of the four reasons",
         "tags": [
           "garage-requests"
         ]
@@ -4805,6 +5041,24 @@
             "description": "The city saved in Setări",
             "nullable": true
           },
+          "phone": {
+            "type": "string",
+            "description": "E.164",
+            "nullable": true
+          },
+          "phoneConfirmed": {
+            "type": "boolean",
+            "description": "Whether the phone is confirmed; false when there is none"
+          },
+          "pendingEmail": {
+            "type": "string",
+            "description": "The address of an e-mail change waiting for its link",
+            "nullable": true
+          },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "Whether the account can sign in by password"
+          },
           "roles": {
             "type": "array",
             "items": {
@@ -4864,6 +5118,10 @@
           "emailConfirmed",
           "language",
           "city",
+          "phone",
+          "phoneConfirmed",
+          "pendingEmail",
+          "hasPassword",
           "roles",
           "role",
           "garageId",
@@ -4881,11 +5139,21 @@
               "ro",
               "en"
             ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "city": {
+            "type": "string",
+            "description": "Trimmed; null or blank saves no city",
+            "maxLength": 60,
+            "minLength": 2,
+            "nullable": true
           }
-        },
-        "required": [
-          "language"
-        ]
+        }
       },
       "AuditActorDto": {
         "type": "object",
@@ -5664,6 +5932,30 @@
           "queued"
         ]
       },
+      "EmailChangeDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The new address; trimmed and lower-cased",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "PendingEmailDto": {
+        "type": "object",
+        "properties": {
+          "pendingEmail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pendingEmail"
+        ]
+      },
       "ConfirmEmailDto": {
         "type": "object",
         "properties": {
@@ -5735,6 +6027,52 @@
         "required": [
           "token",
           "password"
+        ]
+      },
+      "PasswordChangeDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "Required when the account already has a password",
+            "maxLength": 1024
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "8 to 128 characters, not a common password",
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "newPassword"
+        ]
+      },
+      "PhoneChangeDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "As typed: spaces, dots, dashes and brackets dropped, 00 and a national 0 read as +40; must then be E.164",
+            "example": "0722 123 456",
+            "maxLength": 32,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "PhoneConfirmDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The six digits sent by WhatsApp",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "code"
         ]
       },
       "PhoneCodeDto": {
@@ -6699,6 +7037,16 @@
             "format": "date-time",
             "nullable": true
           },
+          "declineReason": {
+            "type": "string",
+            "enum": [
+              "fully_booked",
+              "job_not_done",
+              "make_model_engine_not_done",
+              "need_to_see_car"
+            ],
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6709,6 +7057,7 @@
           "garage",
           "status",
           "answeredAt",
+          "declineReason",
           "createdAt"
         ]
       },
@@ -7245,6 +7594,7 @@
             "type": "string",
             "description": "Set on the rows of a closed read",
             "enum": [
+              "declined",
               "expired",
               "garage_suspended",
               "cancelled",
@@ -7607,6 +7957,7 @@
             "type": "string",
             "description": "Set on the rows of a closed read",
             "enum": [
+              "declined",
               "expired",
               "garage_suspended",
               "cancelled",
@@ -7668,6 +8019,23 @@
           "car",
           "description",
           "booking"
+        ]
+      },
+      "DeclineRequestDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "fully_booked",
+              "job_not_done",
+              "make_model_engine_not_done",
+              "need_to_see_car"
+            ]
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "CreateQuoteRequestDto": {
