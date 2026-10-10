@@ -103,6 +103,10 @@ test.describe('inviting a mechanic @seeded @mailbox', () => {
         'This invitation is no longer valid. Ask the garage for a new one.',
       ),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Accept' })).toHaveCount(0);
+    // The invitation's own Accept; the consent bar's sits outside the page.
+    await expect(page.getByRole('main')).toBeVisible();
+    await expect(
+      page.getByRole('main').getByRole('button', { name: 'Accept' }),
+    ).toHaveCount(0);
   });
 });

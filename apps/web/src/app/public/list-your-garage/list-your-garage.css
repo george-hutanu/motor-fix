@@ -65,23 +65,17 @@ ol {
 section > .note {
   margin-top: var(--mf-space-3);
 }
-/* Pinned to the bottom of the screen while the sections pass: reaching Save never scrolls the owner off the step a draft is saved at. */
+/* Pinned to the bottom of the screen while the sections pass: reaching Save never scrolls the owner off the step a draft is saved at. It sits on the public tab bar (below 768 px, the frame's --tab-bar) and on the consent bar while that asks (--consent-bar, its own height). */
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mf-space-2);
   position: sticky;
-  bottom: 0;
+  bottom: calc(var(--tab-bar, 0px) + var(--consent-bar, 0px));
   z-index: 1;
   padding-block: var(--mf-space-2);
   background: var(--mf-bg);
   border-top: 1px solid var(--mf-line);
-}
-/* Below 768 px the public tab bar is pinned at the bottom too (1 px line, 8 px, 52 px links, max(16 px, safe area)): sit above it. */
-@media (max-width: 767.98px) {
-  .actions {
-    bottom: calc(61px + max(16px, var(--mf-safe-bottom)));
-  }
 }
 .ended {
   display: grid;

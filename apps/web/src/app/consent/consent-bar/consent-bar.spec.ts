@@ -88,6 +88,65 @@ describe('the consent bar', () => {
     expect(host.querySelector('[role="region"]')).toBeNull();
   });
 
+  describe('the room it takes', () => {
+    let observed: ((entries: { contentRect: { height: number } }[]) => void)[];
+    const original = globalThis.ResizeObserver;
+
+    beforeEach(() => {
+      observed = [];
+      globalThis.ResizeObserver = class {
+        constructor(
+          callback: (entries: { contentRect: { height: number } }[]) => void,
+        ) {
+          observed.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      } as unknown as typeof ResizeObserver;
+    });
+    afterEach(() => {
+      globalThis.ResizeObserver = original;
+      document.documentElement.style.removeProperty('--consent-bar');
+    });
+
+    const height = () =>
+      document.documentElement.style.getPropertyValue('--consent-bar');
+
+    it("gives the page its height as --consent-bar, so the page's own pinned buttons sit above it", async () => {
+      await render();
+
+      for (const callback of observed)
+        callback([{ contentRect: { height: 132 } }]);
+      expect(height()).toBe('132px');
+
+      for (const callback of observed)
+        callback([{ contentRect: { height: 0 } }]);
+      expect(height()).toBe('0px');
+    });
+
+    it('gives the room back when it goes', async () => {
+      await render();
+      for (const callback of observed)
+        callback([{ contentRect: { height: 132 } }]);
+
+      TestBed.resetTestingModule();
+
+      expect(height()).toBe('');
+    });
+  });
+
+  it("lifts the listing's pinned Save above the bar and the tab bar", () => {
+    const css = readFileSync(
+      join(__dirname, '../../public/list-your-garage/list-your-garage.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(
+      /\.actions \{[^}]*bottom: calc\(var\(--tab-bar, 0px\) \+ var\(--consent-bar, 0px\)\);/,
+    );
+  });
+
   it('keeps its buttons at least 44 px high', () => {
     const css = readFileSync(join(__dirname, 'consent-bar.css'), 'utf8');
 

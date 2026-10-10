@@ -76,8 +76,11 @@ describe('the public tab bar', () => {
   });
 
   it('is the height the page actions sit above', () => {
+    expect(read('frame/frame.css')).toMatch(
+      /--tab-bar: calc\(1px \+ 8px \+ 52px \+ max\(16px, var\(--mf-safe-bottom\)\)\);/,
+    );
     expect(read('list-your-garage/list-your-garage.css')).toMatch(
-      /bottom: calc\(61px \+ max\(16px, var\(--mf-safe-bottom\)\)\);/,
+      /bottom: calc\(var\(--tab-bar, 0px\) \+ var\(--consent-bar, 0px\)\);/,
     );
   });
 });

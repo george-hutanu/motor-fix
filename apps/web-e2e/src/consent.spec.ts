@@ -52,6 +52,9 @@ async function analyticsCalls(target: BrowserContext | Page) {
 const bar = (page: Page, language: 'ro' | 'en') =>
   page.getByRole('region', { name: TEXT[language].bar });
 
+const signOut = (page: Page) =>
+  page.getByRole('button', { name: /^(Ieși din cont|Sign out)$/ });
+
 const noSideScroll = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
@@ -272,7 +275,9 @@ test.describe('a garage profile and the dashboard @seeded', () => {
       .click();
     await signIn(page, ACCOUNTS.driver);
     await expect(page).toHaveURL('/app/driver');
-    await settled(page);
+    // Signed in from a public page, whose live stream never ends: no
+    // networkidle comes, so wait for the dashboard to be drawn.
+    await expect(signOut(page)).toBeVisible();
     await expect(bar(page, 'ro')).toBeHidden();
     await expect.poll(() => calls.length).toBeGreaterThan(0);
 
@@ -311,7 +316,9 @@ test.describe('the account carries the choice @seeded', () => {
       .click();
     await signIn(page, ACCOUNTS.driver);
     await expect(page).toHaveURL('/app/driver');
-    await settled(page);
+    // Signed in from a public page, whose live stream never ends: no
+    // networkidle comes, so wait for the dashboard to be drawn.
+    await expect(signOut(page)).toBeVisible();
 
     const other = await browser.newContext();
     const calls = await analyticsCalls(other);
