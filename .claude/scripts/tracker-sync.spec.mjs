@@ -4,12 +4,12 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { readyLogged } from "./notion-ready.mjs";
+import { readyLogged } from "./tracker/ready.mjs";
 import { SCHEMA } from "./tracker/bootstrap.mjs";
 import { fakeGitHub } from "./tracker/fixtures/github.mjs";
 import { main } from "./tracker-sync.mjs";
 
-// Every run injects fetch and gh: nothing here reaches GitHub or Notion.
+// Every run injects fetch and gh: nothing here reaches GitHub.
 const TOKEN = "ghp_SECRET_never_print_me";
 const FEATURE = "specs/1036-github-tracker-lifecycle";
 const PR_URL = "https://github.com/george-hutanu/motor-fix/pull/335";
@@ -163,6 +163,14 @@ describe("status events move the story's issue in Project #11", () => {
       assert.equal(gh.itemValues(60)["QA from"], TODAY, event);
       assert.ok(prEdits(r).some((a) => a.join(" ").includes("--add-label QA")), event);
     }
+  });
+
+  it("refuses to guess when two issues start with the story's id, and moves neither", async () => {
+    const gh = world({ story: "Planning", issues: [issue(70, "ST-1036 follow-up: delete the import", ["type: tech debt"])] });
+    const r = await run(["implement", "--pr", "335"], { gh });
+    assert.equal(gh.itemValues(60).Status, "Planning");
+    assert.notEqual(gh.itemValues(70)?.Status, "Implementing");
+    assert.match([...r.out, ...r.err].join("\n"), /#60.*#70|#70.*#60/);
   });
 
   it("a Done issue never moves", async () => {
@@ -448,10 +456,10 @@ describe("file", () => {
     const gh = world();
     const repo = repoWith();
     writeFileSync(join(repo, "body.md"), "## Goal\n\nA thing.\n");
-    const r = await run(["file", "--type", "task", "--title", "Harness: drop the Notion sync", "--epic", "EP-6", "--priority", "High", "--body-file", join(repo, "body.md")], { gh, repo });
+    const r = await run(["file", "--type", "task", "--title", "Harness: drop the old sync", "--epic", "EP-6", "--priority", "High", "--body-file", join(repo, "body.md")], { gh, repo });
     assert.equal(r.code, 0, r.err.join("\n"));
     const made = issueOf(gh, r.json.issue);
-    assert.equal(made.title, "Harness: drop the Notion sync");
+    assert.equal(made.title, "Harness: drop the old sync");
     assert.deepEqual(made.labels.map((l) => l.name).sort(), ["EP-6", "type: task"]);
     assert.equal(gh.itemValues(made.number).Status, "To do");
     assert.equal(gh.itemValues(made.number)["Work type"], "Task");
@@ -515,13 +523,13 @@ describe("failures never stop the build", () => {
 });
 
 // SC-001: the GitHub path calls GitHub only.
-describe("no Notion request", () => {
+describe("GitHub only", () => {
   it("a whole lifecycle reaches api.github.com and nothing else", async () => {
     const gh = world();
     const repo = repoWith({ comment: "- done\n" });
     const urls = [];
     for (const argv of [["start", "--pr", "335"], ["pr", "335"], ["implement", "--pr", "335"], ["qa", "--pr", "335"], ["finish", "--pr", "335", "--body-file", join(repo, "comment.md")]]) {
-      const r = await run(argv, { gh, repo, env: { GH_PROJECT_TOKEN: TOKEN, NOTION_TOKEN: "ntn_x" } });
+      const r = await run(argv, { gh, repo, env: { GH_PROJECT_TOKEN: TOKEN } });
       assert.equal(r.code, 0, `${argv[0]}: ${r.err.join("\n")}`);
       urls.push(...r.urls);
     }

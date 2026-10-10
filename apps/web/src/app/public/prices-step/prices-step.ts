@@ -9,6 +9,7 @@ import {
   inject,
   input,
   model,
+  output,
   PLATFORM_ID,
   signal,
   untracked,
@@ -33,6 +34,7 @@ import {
   addProposal,
   brandOffer,
   canAdd,
+  jobName,
   PRE_LISTED,
   preList,
   remove,
@@ -117,9 +119,11 @@ export class PricesStep {
   readonly takenBrands = input<readonly MarkedBrand[]>([]);
   // The step in view: a lookup that failed is tried again.
   readonly current = input(false);
+  // The catalogue jobs it has looked up, so step 2 can name them too.
+  readonly known = output<ReadonlyMap<string, JobTypeDto>>();
 
   protected readonly nameMax = JOB_NAME_MAX;
-  private readonly known = signal<ReadonlyMap<string, JobTypeDto>>(new Map());
+  private readonly names = signal<ReadonlyMap<string, JobTypeDto>>(new Map());
   private readonly left = signal<ReadonlySet<string>>(new Set());
   protected readonly query = signal('');
   private readonly found = signal<JobTypeDto[]>([]);
@@ -140,7 +144,7 @@ export class PricesStep {
   );
   // Kept jobs the page has no name for yet.
   private readonly unnamed = computed(() => {
-    const known = this.known();
+    const known = this.names();
     const ids = (this.value()?.jobs ?? []).flatMap(({ jobTypeId }) =>
       jobTypeId !== undefined && !known.has(jobTypeId) ? [jobTypeId] : [],
     );
@@ -160,7 +164,7 @@ export class PricesStep {
   protected readonly proposal = computed(() => {
     const typed = this.query().trim();
     if (typed.length < JOB_NAME_MIN || typed.length > JOB_NAME_MAX) return null;
-    const known = this.known();
+    const known = this.names();
     const names = [
       ...this.found().flatMap((job) => [job.nameRo, job.nameEn]),
       ...(this.section().jobs ?? []).flatMap(({ jobTypeId, name }) => {
@@ -180,6 +184,7 @@ export class PricesStep {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
     // The catalogue comes with the client: a server render would drop it.
     if (isPlatformServer(inject(PLATFORM_ID))) return;
+    effect(() => this.known.emit(this.names()));
     effect(() => {
       this.current();
       const keys = this.wantsListed();
@@ -223,10 +228,7 @@ export class PricesStep {
   }
 
   protected nameOf(entry: PriceEntry) {
-    if (entry.name !== undefined) return entry.name;
-    const job = this.known().get(entry.jobTypeId ?? '');
-    if (!job) return '';
-    return this.i18n.language() === 'en' ? job.nameEn : job.nameRo;
+    return jobName(entry, this.names(), this.i18n.language());
   }
 
   protected brandName(entry: PriceEntry) {
@@ -315,7 +317,7 @@ export class PricesStep {
   }
 
   private remember(items: readonly JobTypeDto[]) {
-    this.known.update((known) => {
+    this.names.update((known) => {
       const next = new Map(known);
       for (const job of items) next.set(job.id, job);
       return next;

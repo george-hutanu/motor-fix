@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 // Which stories are ready to work on, decided here so the rule is tested
-// rather than re-judged from prose on every run. `notion-ready` gathers each
-// item's status, blockers and any outside hold, asks this script, then ticks
-// and unticks the Ready to work checkbox it names. `/speckit-archive` asks the
+// rather than re-judged from prose on every run. `tracker-sync.mjs ready`
+// gathers each item's status, blockers and any outside hold, asks this
+// script, then adds and removes the `ready to work` label it names. `/speckit-archive` asks the
 // same script whether the refresh ran after the story finished.
 //
-// Ready: still To do, every blocker Done (a story) or Merged (a timeline row),
+// Ready: still To do, every blocker Done (or Merged),
 // and no hold — a wait on the owner, the lawyer or anyone outside the build.
 //
-//   node .claude/scripts/notion-ready.mjs decide < items.json
+//   node .claude/scripts/tracker/ready.mjs decide < items.json
 //     items: [{ id, status, priority, blockers: [{ id, status }], hold, ticked }]
 //     prints { tick, untick, ready: [{ id, priority }], held: [{ id, reason }] }
-//   node .claude/scripts/notion-ready.mjs check specs/<feature>/notion-sync.md
+//   node .claude/scripts/tracker/ready.mjs check specs/<feature>/tracker-sync.md
 //     exits 0 when a ready line follows the last finish line, else 1 with why
-//   { cat specs/<feature>/notion-sync.md; gh pr view <n> --json comments \
-//       --jq '.comments[].body'; } | node .claude/scripts/notion-ready.mjs check -
+//   { cat specs/<feature>/tracker-sync.md; gh pr view <n> --json comments \
+//       --jq '.comments[].body'; } | node .claude/scripts/tracker/ready.mjs check -
 //     the same, over the log and the story PR's comments: after the merge the
 //     finish and ready lines are a comment on the merged PR, not a commit
 import { readFileSync, realpathSync } from 'node:fs';
@@ -55,11 +55,10 @@ export function decideReady(items) {
 }
 
 // Log lines are `- <date> · <event> · …`, some written without the ` · ` after
-// the date. A failed refresh is logged `[NOTION-SYNC PENDING: ready …]` (or
-// TRACKER-SYNC, on GitHub), as a
+// the date. A failed refresh is logged `[TRACKER-SYNC PENDING: ready …]`, as a
 // bullet like every other line or bare.
 const EVENT = /^- \d{4}-\d{2}-\d{2}(?: ·)? (\w+)\b/;
-const PENDING_READY = /^(?:- )?\[(?:NOTION|TRACKER)-SYNC PENDING: ready\b/;
+const PENDING_READY = /^(?:- )?\[TRACKER-SYNC PENDING: ready\b/;
 
 export function readyLogged(text) {
   let finish = -1;
@@ -69,8 +68,8 @@ export function readyLogged(text) {
     if (event === 'finish') finish = index;
     if (event === 'ready') ready = index;
   });
-  if (finish === -1) return { ok: false, reason: 'no finish line: run `speckit-tracker-sync finish` (`speckit-notion-sync finish` for a story started on Notion) once the PR has merged' };
-  if (ready < finish) return { ok: false, reason: 'no ready line after the last finish: run `speckit-tracker-sync ready` (`notion-ready <epic>` on Notion) and log it' };
+  if (finish === -1) return { ok: false, reason: 'no finish line: run `speckit-tracker-sync finish` once the PR has merged' };
+  if (ready < finish) return { ok: false, reason: 'no ready line after the last finish: run `speckit-tracker-sync ready` and log it' };
   return { ok: true, reason: 'ready refreshed after finish' };
 }
 
@@ -84,7 +83,7 @@ function main([command, file]) {
     (result.ok ? console.log : console.error)(result.reason);
     return result.ok ? 0 : 1;
   }
-  console.error('usage: notion-ready.mjs decide < items.json | check <notion-sync.md | ->');
+  console.error('usage: tracker/ready.mjs decide < items.json | check <tracker-sync.md | ->');
   return 2;
 }
 
@@ -92,7 +91,7 @@ function run(argv) {
   try {
     return main(argv);
   } catch (error) {
-    console.error(`notion-ready: ${error.message}`);
+    console.error(`tracker/ready: ${error.message}`);
     return 2;
   }
 }

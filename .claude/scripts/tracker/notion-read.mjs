@@ -1,9 +1,10 @@
+// The owner's final import only: deleted after it runs (george-hutanu/motor-fix-specs#1119).
 // Reads the backlog the GitHub import needs from Notion: stories, epics and
 // the epics' build-timeline rows, from their properties. Each item keeps its
 // raw properties and last edit; notion-content.mjs reads the page bodies.
 import { readProp } from "../lib/notion.mjs";
-import { STORIES } from "../notion-sync.mjs";
 
+const STORIES = "326eee3c-abec-41d9-9f96-eb3bd545a802";
 const EPICS = "ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac";
 const OWNER_LOGIN = "george-hutanu";
 

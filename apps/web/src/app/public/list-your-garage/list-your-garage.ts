@@ -40,11 +40,12 @@ import {
   type PlaceSection,
   placeComplete,
 } from '@motor-fix/contracts/place-section';
+import type { JobTypeDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
-import { brandsOf } from '../brands-section';
+import { brandsOf, dropUnlisted, jobsOf, refOf } from '../brands-section';
 import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
 import { DocumentsStep } from '../documents-step/documents-step';
@@ -179,6 +180,10 @@ export class ListYourGarage {
         : []),
     ]);
   });
+  // The catalogue names step 3 has looked up, for step 2's job rows.
+  protected readonly knownJobs = signal<ReadonlyMap<string, JobTypeDto>>(
+    new Map(),
+  );
   protected readonly current = signal(1);
   protected readonly open = signal(false);
   protected readonly prefix = computed(() =>
@@ -201,6 +206,16 @@ export class ListYourGarage {
         this.takenBrands().map((b) => b.brandId),
       );
       if (kept !== prices) this.keeper.section('3', kept);
+    });
+    // A job step 3 no longer lists keeps no unticked record in step 2.
+    effect(() => {
+      const section = this.brands();
+      const brands = dropUnlisted(
+        section.brands,
+        jobsOf(this.prices()?.jobs ?? []).map(refOf),
+      );
+      if (brands !== section.brands)
+        this.keeper.section('2', { ...section, brands });
     });
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {

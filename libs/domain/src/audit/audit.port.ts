@@ -35,6 +35,11 @@ export type AuditChange = Omit<
 // Called inside the change's own transaction: a failed entry fails the change.
 export interface AuditPort {
   record(tx: Prisma.TransactionClient, entry: AuditEntry): Promise<void>;
+  // The same entries in one insert, for writes that move many rows at once.
+  recordMany(
+    tx: Prisma.TransactionClient,
+    entries: AuditEntry[],
+  ): Promise<void>;
   // One update entry per field of `after` that differs from `before`.
   recordChanges(
     tx: Prisma.TransactionClient,

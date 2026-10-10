@@ -31,7 +31,7 @@
   </mf-document-area>
 }
 <label class="choice">
-  <input #tickBox type="checkbox" [checked]="ticked()" (change)="tick(tickBox.checked)" />
+  <input #tickBox class="mf-check" type="checkbox" [checked]="ticked()" (change)="tick(tickBox.checked)" />
   <span>{{ 'public.listing.declaration.text' | t }}</span>
 </label>
 <div class="field">

@@ -3,6 +3,7 @@ import {
   FUELS,
   type Fuel,
   type GarageBrandAnswerDto,
+  type GarageBrandOwnerAnswerDto,
   type PublicBrandDto,
 } from '@motor-fix/contracts';
 
@@ -52,6 +53,31 @@ export function brandAnswerWithFuels(
     worksOn: answer.worksOn.map((brand) => ({
       ...brand,
       fuels: fuels.get(brand.id) ?? [],
+    })),
+  };
+}
+
+// The answer the owner's write returns: each taken brand with the jobs ticked
+// for it, in price-list order; a tick whose job left the list comes last.
+export function brandAnswerWithJobs(
+  rows: Row[],
+  texts: { brandNote: string | null; refusalPhrase: string | null },
+  ticks: { brandId: string; jobTypeId: string }[],
+  priceList: string[],
+): GarageBrandOwnerAnswerDto {
+  const answer = brandAnswer(rows, texts);
+  const place = (id: string) => {
+    const at = priceList.indexOf(id);
+    return at === -1 ? priceList.length : at;
+  };
+  return {
+    ...answer,
+    worksOn: answer.worksOn.map((brand) => ({
+      ...brand,
+      jobs: ticks
+        .filter((t) => t.brandId === brand.id)
+        .map((t) => t.jobTypeId)
+        .sort((a, b) => place(a) - place(b)),
     })),
   };
 }

@@ -1,3 +1,4 @@
+// The owner's final import only: deleted after it runs (george-hutanu/motor-fix-specs#1119).
 // Renders a Notion story or epic page as the Markdown of its GitHub issue:
 // each property no GitHub field carries (as its own section), every block
 // (sub-pages and inline databases included) and every comment, with no

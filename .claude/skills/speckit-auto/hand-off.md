@@ -3,10 +3,8 @@
 Read after phase 17. Then write the report (`report.md`).
 
 The tracker is the story's GitHub issue (`speckit-tracker-sync`, log
-`tracker-sync.md`). A feature that started on Notion (`notion-sync.md`, no
-`tracker-sync.md`) finishes there: read `speckit-notion-sync` and
-`notion-sync.md` wherever these steps name the tracker; `lifecycle.mjs`
-picks the same on its own.
+`tracker-sync.md`), for every feature: one whose folder still holds an older
+log moves to `tracker-sync.md` at its next event.
 
 ## Hand-off
 
@@ -48,7 +46,7 @@ and QA lap is where most of a story's cost went.
    ```markdown
    # Hand-off — <feature>
    - PR: #<n> <url> · branch <branch> · worktree <absolute path> · head <sha>
-   - Tracker: issue <url> (ST-<n>) · events in specs/<feature>/tracker-sync.md (a Notion story's page id and notion-sync.md for a feature that started there)
+   - Tracker: issue <url> (ST-<n>) · events in specs/<feature>/tracker-sync.md
    - QA run: <id> · head <sha> · lap 1 · <url>
    - Open decisions: <each, with its source file> | none
    - Deferred: <each deferred.md bullet not yet filed (large fixes only, AGENTS.md's size test), or "all filed"> | none

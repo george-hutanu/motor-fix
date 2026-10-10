@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
-import { decideReady, readyLogged } from './notion-ready.mjs';
+import { decideReady, readyLogged } from './ready.mjs';
 
 const item = (id, over = {}) => ({ id, status: 'To do', priority: 'Medium', blockers: [], hold: null, ticked: false, ...over });
 const ids = (list) => list.map((entry) => entry.id ?? entry);
@@ -71,7 +71,7 @@ describe('the ready list', () => {
   });
 });
 
-const log = (...lines) => ['# Notion sync — 490-notion-ready', '', ...lines].join('\n');
+const log = (...lines) => ['# Tracker sync — 490-ready-to-work', '', ...lines].join('\n');
 
 describe('the archive check', () => {
   it('passes when a ready line follows the last finish', () => {
@@ -80,12 +80,12 @@ describe('the archive check', () => {
   });
 
   it('passes when the refresh after the finish was logged PENDING', () => {
-    const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '[NOTION-SYNC PENDING: ready Foundations — usage limit]'));
+    const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '[TRACKER-SYNC PENDING: ready Foundations — usage limit]'));
     assert.equal(result.ok, true);
   });
 
   it('passes when the PENDING refresh is written as a bullet, like every other line', () => {
-    const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '- [NOTION-SYNC PENDING: ready Foundations — usage limit]'));
+    const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '- [TRACKER-SYNC PENDING: ready Foundations — usage limit]'));
     assert.equal(result.ok, true);
   });
 
@@ -98,7 +98,7 @@ describe('the archive check', () => {
   it('fails with no ready line after the finish, and names what to run', () => {
     const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '- 2026-10-04 · finish · Foundations timeline row · QA → Merged'));
     assert.equal(result.ok, false);
-    assert.match(result.reason, /notion-ready/);
+    assert.match(result.reason, /tracker\/ready|speckit-tracker-sync ready/);
   });
 
   it('fails when the only ready line came before the last finish', () => {
@@ -122,7 +122,7 @@ describe('the archive check', () => {
 // merged PR, not in a commit, so the check reads the log and those comments
 // together from stdin.
 describe('the archive check from stdin', () => {
-  const cli = (input) => spawnSync('node', [join(import.meta.dirname, 'notion-ready.mjs'), 'check', '-'], { input, encoding: 'utf8' });
+  const cli = (input) => spawnSync('node', [join(import.meta.dirname, 'ready.mjs'), 'check', '-'], { input, encoding: 'utf8' });
 
   it('passes when the PR comment after the log carries finish then ready', () => {
     const comment = ['Finish log', '', '- 2026-10-04 · finish · ST-490 story · QA → Done', '- 2026-10-04 · ready · Foundations · +ST-82'].join('\n');
@@ -133,6 +133,6 @@ describe('the archive check from stdin', () => {
   it('fails, naming what to run, when stdin has no ready line after the finish', () => {
     const result = cli(log('- 2026-10-04 · finish · ST-490 story · QA → Done'));
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /notion-ready/);
+    assert.match(result.stderr, /tracker\/ready|speckit-tracker-sync ready/);
   });
 });

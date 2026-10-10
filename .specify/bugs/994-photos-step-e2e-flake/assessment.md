@@ -2,7 +2,7 @@
 
 - **Slug**: 994-photos-step-e2e-flake
 - **Created**: 2026-10-09
-- **Source**: Notion ST-994, https://app.notion.com/p/3f3607bff0d281f1aef7eb33a0ac6679
+- **Source**: ST-994
 - **Verdict**: valid
 - **Severity**: high (E2E is red on unrelated PRs: CI fails a test that passes only on a retry)
 

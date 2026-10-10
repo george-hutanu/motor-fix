@@ -90,11 +90,20 @@ export function tracker(github) {
     return issues;
   }
 
-  /** The issue titled with `key` (ST-n, EP-n), with its Project values and dependencies; null when none is. */
+  /**
+   * The issue titled with `key` (ST-n, EP-n), with its Project values and dependencies; null when none is.
+   * Two issues starting with the same id are refused, never guessed between: a follow-up titled
+   * `ST-n …` would otherwise take the story's events.
+   */
   async function find(key, { label } = {}) {
     const re = new RegExp(`^${key}\\b`);
-    const hit = (await allIssues()).find((i) => re.test(i.title) && (!label || labelNames(i).includes(label)));
-    return hit ? detail(hit.node_id) : null;
+    const hits = (await allIssues()).filter((i) => re.test(i.title) && (!label || labelNames(i).includes(label)));
+    if (hits.length > 1)
+      throw new GitHubError(
+        "ambiguous",
+        `${key}: issues ${hits.map((i) => `#${i.number}`).join(", ")} all start with it; retitle the ones that are not the story`,
+      );
+    return hits.length ? detail(hits[0].node_id) : null;
   }
 
   async function detail(nodeId) {
