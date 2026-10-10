@@ -85,11 +85,12 @@ function usageError({ positional: [event, ...rest], flags }) {
   return `unknown event "${event ?? ""}"`;
 }
 
-/** gh's stdout, or "" when it fails; through REST in a cloud session (lib/gh-rest.mjs). */
-function defaultGh(args, opts = {}) {
+/** gh's stdout, or "" when a read fails; a write (`strict`) throws. Through REST in a cloud session (lib/gh-rest.mjs). */
+function defaultGh(args, { strict = false, ...opts } = {}) {
   try {
     return ghSync(args, opts);
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     return "";
   }
 }
@@ -160,6 +161,18 @@ export async function main(argv, io = {}) {
   const github = githubClient({ token, fetchImpl: io.fetchImpl ?? fetch, paceMs: PACE_MS, ...(io.sleep ? { sleep: io.sleep } : {}) });
   const t = tracker(github);
   const ctx = { t, github, gh, repo, feature, flags: parsed.flags, rest, event, st, log, step, date };
+  // A PR write that fails is queued PENDING (the whole event replays) and the event goes on.
+  ctx.prWrite = (args, what) => {
+    try {
+      gh(args, { strict: true });
+      return true;
+    } catch (error) {
+      const why = scrub(String(error?.message ?? error).split("\n")[0]);
+      ctx.pending ??= `${what} — ${why}`;
+      if (io.replay !== false && logFile && !queued(logFile, argv)) append(pendingLine(ctx.pending, argv));
+      return false;
+    }
+  };
   let prNumber;
   ctx.prNumber = () => {
     prNumber ??= String(parsed.flags.pr ?? gh(["pr", "view", "--json", "number", "-q", ".number"])).trim();
@@ -177,7 +190,8 @@ export async function main(argv, io = {}) {
     ctx.story = await t.find(st);
     if (!ctx.story) return done({ event, story: st, skipped: `no issue titled ${st} in the issue repository` });
     const handler = event === "pr" ? linkPr : event === "debt" ? fileDebt : event === "ready" ? readyEvent : statusEvent;
-    return done({ event, story: st, issue: ctx.story.number, url: ctx.story.url, ...(await handler(ctx)) });
+    const result = await handler(ctx);
+    return done({ event, story: st, issue: ctx.story.number, url: ctx.story.url, ...result, ...(ctx.pending ? { pending: ctx.pending } : {}) });
   } catch (error) {
     if (error instanceof TokenError) {
       if (io.replay !== false) stderr(`tracker-sync: the GitHub token lacks the project scope; grant it: ${REFRESH}`);
@@ -273,9 +287,12 @@ async function statusEvent(ctx) {
   if (comment) {
     ctx.step.name = "blocked";
     await t.comment(story, `Blocked: ${reason}`);
-    if (ctx.prNumber()) ctx.gh(["pr", "comment", ctx.prNumber(), "--body", `Blocked: ${reason}`]);
   }
   log(event, st, `${decision.note}${comment ? ` — ${reason}` : ""}`);
+  const blockedPr = event === "blocked" && ctx.prNumber();
+  if (blockedPr && (comment || !prCommentLogged(ctx, blockedPr, reason))) {
+    if (ctx.prWrite(["pr", "comment", blockedPr, "--body", `Blocked: ${reason}`], `blocked PR #${blockedPr}`)) log("pr-comment", `PR #${blockedPr}`, `Blocked: ${reason}`);
+  }
 
   const epic = await epicOf(ctx);
   if (epic && (event === "start" || event === "finish")) await moveEpic(ctx, epic, event);
@@ -283,12 +300,17 @@ async function statusEvent(ctx) {
   const pr = ctx.prNumber();
   if (pr) {
     const labels = [...decision.labels.matchAll(/--(add|remove)-label "([^"]*)"/g)].flatMap((m) => [`--${m[1]}-label`, m[2]]);
-    ctx.gh(["pr", "edit", pr, ...labels]);
-    log("labels", `PR #${pr}`, decision.stage ?? "none");
+    if (ctx.prWrite(["pr", "edit", pr, ...labels], `labels PR #${pr}`)) log("labels", `PR #${pr}`, decision.stage ?? "none");
   }
   const out = { status: decision.story, write: decision.write };
   if (event === "start" || event === "finish") out.ready = await refreshReady(ctx, { epic });
   return out;
+}
+
+function prCommentLogged(ctx, pr, reason) {
+  return logText(ctx)
+    .split("\n")
+    .some((line) => line.endsWith(` · pr-comment · PR #${pr} · Blocked: ${reason}`));
 }
 
 function blockLogged(ctx, reason) {

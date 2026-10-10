@@ -89,7 +89,7 @@ function repoWith({ deferred, comment } = {}) {
   return repo;
 }
 
-async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl } = {}) {
+async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false } = {}) {
   const out = [];
   const err = [];
   const ghCalls = [];
@@ -105,6 +105,7 @@ async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_T
     run: tokenRun ?? (() => ({ code: 1, stdout: "", stderr: "" })),
     gh: (args) => {
       ghCalls.push(args);
+      if (ghFails(args)) throw new Error(`gh ${args.join(" ")}: HTTP 502`);
       if (args[0] === "pr" && args[1] === "view") return args.includes(".url") ? `${PR_URL}\n` : "335\n";
       return "";
     },
@@ -200,6 +201,42 @@ describe("blocked and unblock", () => {
 
     await run(["unblock", "--pr", "335"], { gh, repo });
     assert.equal(gh.itemValues(60).Status, "QA");
+  });
+});
+
+// @traces 1036-FR-003 1036-FR-011
+describe("a failed PR write", () => {
+  const prWrite = (args) => args[0] === "pr" && (args[1] === "edit" || args[1] === "comment");
+
+  it("logs the label edit PENDING instead of logging the label as set, and the next run retries it", async () => {
+    const gh = world({ story: "Implementing" });
+    const repo = repoWith();
+    const down = await run(["qa", "--pr", "335"], { gh, repo, ghFails: prWrite });
+    assert.equal(down.code, 0);
+    assert.equal(gh.itemValues(60).Status, "QA", "the issue write still lands");
+    assert.ok(!down.lines.some((l) => l.includes("· labels · PR #335")), down.log);
+    assert.ok(down.log.includes('[TRACKER-SYNC PENDING: labels PR #335'), down.log);
+    assert.ok(down.log.includes('retry: ["qa","--pr","335"]'), down.log);
+    assert.ok(down.json.pending, "the result names what is pending");
+
+    const next = await run(["review", "--pr", "335"], { gh, repo });
+    assert.ok(next.log.includes("[TRACKER-SYNC RETRIED 2026-10-10: labels PR #335"), next.log);
+  });
+
+  it("retries a failed Blocked: PR comment without posting the issue comment twice", async () => {
+    const gh = world({ story: "QA" });
+    const repo = repoWith();
+    const down = await run(["blocked", "CI", "red", "--pr", "335"], { gh, repo, ghFails: (a) => a[0] === "pr" && a[1] === "comment" });
+    assert.equal(down.code, 0);
+    assert.ok(down.log.includes("[TRACKER-SYNC PENDING: blocked PR #335"), down.log);
+
+    const again = await run(["blocked", "CI", "red", "--pr", "335"], { gh, repo });
+    assert.equal(gh.state.comments.get(60).length, 1, "the issue comment is posted once");
+    assert.ok(again.gh.some((a) => a[0] === "pr" && a[1] === "comment" && a.includes("Blocked: CI red")), "the PR comment is retried");
+    assert.ok(again.log.includes("[TRACKER-SYNC RETRIED 2026-10-10: blocked PR #335"), again.log);
+
+    const third = await run(["blocked", "CI", "red", "--pr", "335"], { gh, repo });
+    assert.ok(!third.gh.some((a) => a[1] === "comment"), "posted once it went through");
   });
 });
 

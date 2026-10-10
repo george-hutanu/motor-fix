@@ -34,7 +34,7 @@ describe('speckit-tracker-sync', () => {
     assert.doesNotMatch(skill, /gh-motorfix/);
   });
 
-  // @traces 1036-FR-010
+  // @traces 1036-FR-008
   it('keeps the hold review before a ready label goes on', () => {
     assert.match(skill, /--tick/);
     assert.match(skill, /closed or Done/);

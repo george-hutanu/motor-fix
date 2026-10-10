@@ -66,8 +66,12 @@ Each call prints one JSON line and appends `- <date> · <event> · <item> ·
   `[TRACKER-SYNC PENDING: <step> <item> — <error>] retry: […]`, exits 0, and
   its next run retries that line first, rewriting it RETRIED once it succeeds
   (or FAILED). Writes are paced at one a second.
-- An issue missing for the story is logged PENDING; the script never creates
-  a story's issue on its own (`file` does, on request).
+- An issue missing for the story prints one `skipped` result, writes
+  nothing and exits 0; the script never creates a story's issue on its own
+  (`file` does, on request).
+- A failed PR write (the stage labels, the `Blocked:` comment) is logged
+  PENDING like any other GitHub error, never as done, and the event's other
+  writes still go through.
 - `file` and `debt` reuse an open issue with exactly the same title instead
   of filing a second (a run that failed after its POST left one).
 
