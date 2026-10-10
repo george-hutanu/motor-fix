@@ -14,6 +14,7 @@ import { I18n, relativeTime, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { EmptyState } from '../empty-state/empty-state';
+import { focusCard } from '../focus-card';
 import { liveResource } from '../live';
 
 interface Row {
@@ -51,6 +52,7 @@ export class RequestsView {
 
   constructor() {
     void this.i18n.enter('driver');
+    focusCard('data-request', this.rows);
   }
 
   private row(item: RequestSummaryDto, language: 'ro' | 'en', now: Date): Row {

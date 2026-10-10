@@ -5,6 +5,8 @@ import {
   effect,
   inject,
 } from '@angular/core';
+import { Router } from '@angular/router';
+import type { NotificationDto } from '@motor-fix/data-access';
 import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
@@ -24,7 +26,8 @@ export function ago(at: string, now: Date, i18n: I18n): string {
   return formatDay(at, i18n.language());
 }
 
-// The person's notifications, newest first; opening one marks it read.
+// The person's notifications, newest first; opening one marks it read and,
+// when it names a view, closes the list and goes there.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -36,6 +39,7 @@ export class BellList {
   private readonly task = injectOverlayTask<BellStore, void>();
   protected readonly store = this.task.data;
   private readonly i18n = inject(I18n);
+  private readonly router = inject(Router);
   private readonly now = new Date();
   protected readonly unread = computed(() =>
     this.store.items().some((n) => !n.readAt),
@@ -46,6 +50,13 @@ export class BellList {
     effect(() => {
       if (this.store.ended()) this.task.close();
     });
+  }
+
+  protected open(item: NotificationDto) {
+    void this.store.read(item.id);
+    if (!item.link) return;
+    this.task.close();
+    void this.router.navigateByUrl(item.link);
   }
 
   protected when(at: string) {

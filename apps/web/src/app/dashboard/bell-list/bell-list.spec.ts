@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import {
   type NotificationDto,
   NotificationsService,
@@ -20,6 +21,7 @@ const row = (id: string, overrides: Partial<NotificationDto> = {}) =>
     at: minutesAgo(5),
     id,
     kind: 'TEST_MESSAGE',
+    link: null,
     readAt: null,
     subjectId: null,
     text: `Text ${id}`,
@@ -63,6 +65,7 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       BellStore,
+      provideRouter([]),
       { provide: NotificationsService, useValue: api },
       { provide: Live, useValue: { events: new Subject() } },
     ],
@@ -156,6 +159,63 @@ describe('BellList', () => {
 
     expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
     expect(element.querySelector('li')?.classList).not.toContain('unread');
+  });
+
+  // @traces 032-notifications-bell-FR-001 032-notifications-bell-FR-003
+  it('opens the view a tapped row links to and closes the list', async () => {
+    const { element } = await render(async () => ({
+      items: [row('a', { kind: 'DUE_ITP', link: '/app/driver/cars/c1' })],
+      nextCursor: null,
+    }));
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
+
+    element.querySelector<HTMLButtonElement>('li button')?.click();
+    await settle();
+
+    expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
+    expect(navigate).toHaveBeenCalledWith('/app/driver/cars/c1');
+    expect(panel()).toBeNull();
+  });
+
+  // @traces 032-notifications-bell-FR-002
+  it('keeps the list open for a row that links nowhere', async () => {
+    const { element } = await render(async () => ({
+      items: [row('a')],
+      nextCursor: null,
+    }));
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+    element.querySelector<HTMLButtonElement>('li button')?.click();
+    await settle();
+
+    expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
+    expect(navigate).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
+  });
+
+  // @traces 032-notifications-bell-FR-001
+  it('still opens the view of a row already read, without reading it again', async () => {
+    const { element } = await render(async () => ({
+      items: [
+        row('a', {
+          kind: 'QUOTE_RECEIVED',
+          link: '/app/driver/requests/r1',
+          readAt: minutesAgo(1),
+        }),
+      ],
+      nextCursor: null,
+    }));
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
+
+    element.querySelector<HTMLButtonElement>('li button')?.click();
+    await settle();
+
+    expect(api.bellControllerRead).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/app/driver/requests/r1');
   });
 
   it('marks all read', async () => {
