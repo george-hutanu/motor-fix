@@ -412,6 +412,9 @@ async function requester(db: Client): Promise<Requester | null> {
   };
 }
 
+// The seed's own requests carry this key prefix, so clearDay() knows them.
+const OWN_KEY = 'seed-';
+
 // One request from the requester to the garage, `hours` old; its recipient
 // row is returned.
 async function send(
@@ -425,9 +428,9 @@ async function send(
                                 description, status, created_at, expires_at, idempotency_key)
      VALUES (gen_random_uuid(), $1, $2, 'Dacia', 'Logan', 2018, 'petrol', '1.0 TCe',
              'Scârțâie la frânare', $3::quote_request_status,
-             now() - make_interval(hours => $4), now() + interval '7 days', gen_random_uuid()::text)
+             now() - make_interval(hours => $4), now() + interval '7 days', $5 || gen_random_uuid()::text)
      RETURNING id`,
-    [who.driverId, who.carId, booked ? 'booked' : 'sent', hours],
+    [who.driverId, who.carId, booked ? 'booked' : 'sent', hours, OWN_KEY],
   );
   const requestId = request.rows[0]?.id;
   await db.query(
@@ -513,6 +516,22 @@ async function requests(db: Client) {
   if (!who) return;
   await send(db, who, 2, false);
   await book(db, who, await send(db, who, 1, true));
+}
+
+// A driver sends at most 20 requests a day (quotes-config.ts), and the
+// release seeds staging before every end-to-end run, whose flows send
+// requests as the seeded driver: remove what seeded accounts sent in the last
+// 25 hours (a Bucharest day, the API's, is never longer), so each run starts
+// with the day unused. Their quotes, bookings and jobs go with them; the
+// seed's own requests stay.
+async function clearDay(db: Client) {
+  await db.query(
+    `DELETE FROM quote_request r USING account a
+     WHERE a.id = r.driver_id AND a.email LIKE '%@example.test'
+       AND r.created_at > now() - interval '25 hours'
+       AND r.idempotency_key NOT LIKE $1 || '%'`,
+    [OWN_KEY],
+  );
 }
 
 // A database seeded before book() started its job holds that job to do, never
@@ -627,6 +646,7 @@ async function seed(db: Client, secret: string) {
      CROSS JOIN unnest(enum_range(NULL::verification_check_kind)) AS k
      ON CONFLICT (file_id, kind) DO NOTHING`,
   );
+  await clearDay(db);
   await requests(db);
   await startOlderJob(db);
   await quoteable(db);

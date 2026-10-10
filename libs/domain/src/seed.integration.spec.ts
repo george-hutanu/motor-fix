@@ -655,6 +655,79 @@ describe('seed of a request through to a job', () => {
   });
 });
 
+// The release seeds staging before every end-to-end run, and each run sends
+// requests as the seeded driver, who may send only so many a day.
+describe("seed of the day's requests", () => {
+  const sendAs = async (email: string, hoursAgo: number) => {
+    const car = await prisma.car.findFirstOrThrow({
+      where: { owner: { email } },
+    });
+    return prisma.quoteRequest.create({
+      data: {
+        carBrand: 'Dacia',
+        carFuel: 'petrol',
+        carId: car.id,
+        carModel: car.model,
+        carYear: car.year,
+        createdAt: new Date(Date.now() - hoursAgo * 60 * 60 * 1000),
+        driverId: car.ownerId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        idempotencyKey: `e2e-${hoursAgo}-${Math.random()}`,
+      },
+    });
+  };
+  const ids = async () =>
+    (
+      await prisma.quoteRequest.findMany({
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      })
+    ).map((r) => r.id);
+
+  // @traces 1130-FR-001
+  // @traces 1130-FR-002
+  it('removes what seeded accounts sent in the last day and keeps its own two', async () => {
+    expect(seed('test').status).toBe(0);
+    const own = await ids();
+    for (let n = 0; n < 20; n++) await sendAs('cerere@example.test', 0);
+    await sendAs('cerere@example.test', 24);
+
+    expect(seed('test').status).toBe(0);
+
+    expect(await ids()).toEqual(own);
+  });
+
+  // @traces 1130-FR-002
+  it('keeps a request sent more than a day ago, and one from an account it did not seed', async () => {
+    expect(seed('test').status).toBe(0);
+    const older = await sendAs('cerere@example.test', 26);
+    const brand = await prisma.brand.findFirstOrThrow({
+      where: { key: 'dacia' },
+    });
+    const someone = await prisma.account.create({
+      data: { email: 'ana@motorfix.ro', lastRole: 'driver', name: 'Ana' },
+    });
+    await prisma.car.create({
+      data: {
+        brandId: brand.id,
+        fuel: 'diesel',
+        idempotencyKey: 'mine',
+        model: 'Duster',
+        odometerKm: 1000,
+        ownerId: someone.id,
+        year: 2020,
+      },
+    });
+    const theirs = await sendAs('ana@motorfix.ro', 0);
+    const kept = await ids();
+    expect(kept).toEqual(expect.arrayContaining([older.id, theirs.id]));
+
+    expect(seed('test').status).toBe(0);
+
+    expect(await ids()).toEqual(kept);
+  });
+});
+
 describe('seed of the platform rules', () => {
   const rules = () =>
     prisma.platformRule.findMany({

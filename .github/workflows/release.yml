@@ -212,7 +212,9 @@ jobs:
             echo "::warning::Grafana refused the deploy annotation; the release goes on without it"
       # The end-to-end run signs in as the seed accounts, and only a reset used
       # to seed staging, so an account added since the last one was missing.
-      # The seed only adds what is missing. Staging's Postgres has no public
+      # The seed only adds what is missing, and removes the requests the seed
+      # accounts sent in the last day, so the driver's daily limit (20) is not
+      # used up by earlier runs. Staging's Postgres has no public
       # address: the seed runs inside the api over `railway ssh`, as in
       # reset-staging.yml, whose script it shares.
       - name: Install the Railway CLI
