@@ -166,7 +166,7 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
 
   @ApiProperty({
     description:
-      'The jobs of the visible price list, in its order; empty without one',
+      'The public jobs of the price list, in its order; empty without one',
     type: [PublicJobTypeDto],
   })
   jobTypes!: PublicJobTypeDto[];

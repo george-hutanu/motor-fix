@@ -802,18 +802,21 @@ function expectPublicOnly(body: Record<string, unknown>, mobile: boolean) {
 }
 
 // @traces 221-FR-004
+// @traces 357-public-price-jobs-FR-006
 describe('the jobs a profile offers', () => {
   const jobType = (nameRo: string, nameEn: string) =>
     prisma.jobType.create({
       data: { key: `job-${randomUUID()}`, nameEn, nameRo, status: 'approved' },
     });
 
-  it('lists the distinct jobs of the visible prices in the list’s order', async () => {
+  it('lists the public jobs once each, in the order of their default rows', async () => {
     const approved = await garage('approved');
     const owner = await account('owner', ['garage']);
     const oil = await jobType('Schimb ulei', 'Oil change');
     const brakes = await jobType('Plăcuțe frână', 'Brake pads');
     const hidden = await jobType('Diagnoză', 'Diagnosis');
+    const noTop = await jobType('Verificare suspensie', 'Suspension check');
+    const brandTop = await jobType('Kit distribuție', 'Timing kit');
     const dacia = await catalogueBrand('Dacia');
     const price = (jobTypeId: string, position: number, extra = {}) =>
       prisma.garagePrice.create({
@@ -822,6 +825,7 @@ describe('the jobs a profile offers', () => {
           garageId: approved.id,
           jobTypeId,
           position,
+          toBani: 30_000,
           updatedBy: owner,
           ...extra,
         },
@@ -830,6 +834,9 @@ describe('the jobs a profile offers', () => {
     await price(oil.id, 1);
     await price(oil.id, 3, { brandId: dacia.id });
     await price(hidden.id, 0, { visible: false });
+    await price(noTop.id, 4, { toBani: null });
+    await price(brandTop.id, 5, { toBani: null });
+    await price(brandTop.id, 6, { brandId: dacia.id });
 
     const res = await read(approved.slug);
 

@@ -40,6 +40,7 @@ export * from './place-section';
 export * from './places.dto';
 export * from './plate';
 export * from './platform-rules.dto';
+export * from './price-list.dto';
 export * from './price-range';
 export * from './problem';
 export * from './public-holidays.dto';
