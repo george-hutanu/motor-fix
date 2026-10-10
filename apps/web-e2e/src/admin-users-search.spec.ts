@@ -39,7 +39,8 @@ async function inEnglish(page: Page) {
 const searchBox = (page: Page, name = 'Caută după nume, e‑mail sau telefon') =>
   page.getByRole('searchbox', { name });
 
-// @traces 002-find-account-search-FR-004 002-find-account-search-FR-008 002-find-account-search-FR-010 002-find-account-search-FR-011
+// @traces 002-FR-004 002-FR-008 002-FR-010 002-FR-011
+// @traces 002-FR-015
 test.describe('searching the accounts @seeded', () => {
   test('finds the seeded driver by a phone written with spaces, and keeps the search on reload', async ({
     page,
@@ -145,6 +146,28 @@ test.describe('searching the accounts @seeded', () => {
       await expect(page).toHaveURL(/role=mechanic&status=active/);
     });
   }
+
+  test('filters through the sheet in English on a phone', async ({ page }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await signInAsAdmin(page);
+    await inEnglish(page);
+    await page.goto('/app/admin/users');
+
+    await page
+      .getByRole('button', { name: 'Filters: All roles · All states' })
+      .click();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('checkbox', { name: 'mechanic' }).check();
+    await sheet.getByRole('radio', { name: 'active' }).check();
+    await sheet.getByRole('button', { name: 'Apply' }).click();
+
+    await expect(
+      page.getByRole('button', { name: 'Filters: mechanic · active' }),
+    ).toBeFocused();
+    await expect(page).toHaveURL(/role=mechanic&status=active/);
+    await expect(page.locator('.found')).toHaveText(/^[\d,]+ accounts? found$/);
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
 
   test('reads in English', async ({ page }) => {
     await page.setViewportSize({ height: 800, width: 1280 });

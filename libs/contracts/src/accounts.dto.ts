@@ -1,8 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
-import { ACCOUNT_ROLES, ACCOUNT_STATES, SEARCH_MAX } from './account-search';
-import { ROLE } from './me.dto';
+import {
+  ACCOUNT_ROLES,
+  ACCOUNT_STATES,
+  type AccountRole,
+  SEARCH_MAX,
+} from './account-search';
 
 const COUNT_KIND = ['requests', 'reviews', 'age'] as const;
 const STATUS = ['active', 'suspended'] as const;
@@ -70,10 +74,10 @@ export class AdminAccountDto {
 
   @ApiProperty({
     description: 'In the order driver, garage, receptionist, mechanic, admin',
-    enum: ROLE,
+    enum: ACCOUNT_ROLES,
     isArray: true,
   })
-  roles!: (typeof ROLE)[number][];
+  roles!: AccountRole[];
 
   @ApiProperty({
     description:

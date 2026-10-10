@@ -46,7 +46,7 @@ describe('FailureLog', () => {
     expect(JSON.stringify(lines)).not.toContain('secret');
   });
 
-  // @traces 002-find-account-search-FR-007
+  // @traces 002-FR-007
   it('never writes the search, an e-mail or a phone from the address', () => {
     answer(
       '/api/v1/admin/accounts?q=andrei%40gmail.com&role=driver&q=0722123456',

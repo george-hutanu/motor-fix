@@ -396,7 +396,7 @@ async function search(el: HTMLElement, value: string) {
   await settle();
 }
 
-// @traces 002-find-account-search-FR-009
+// @traces 002-FR-009
 describe('searching the accounts', () => {
   it('reads once, 300 ms after the last key, a key within the wait restarting it', async () => {
     const el = await open();
@@ -481,7 +481,7 @@ describe('searching the accounts', () => {
     expect(rows(el)).toHaveLength(23);
   });
 
-  // @traces 002-find-account-search-FR-012
+  // @traces 002-FR-012
   it('shows the skeleton rows while a search reads, the controls still usable, and retries the same search after a failure', async () => {
     const el = await open();
     list = () => new Promise(() => {});
@@ -506,7 +506,7 @@ describe('searching the accounts', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-011
+// @traces 002-FR-011
 describe('the count line', () => {
   it('counts what a search found in the Romanian plural forms, in a live region', async () => {
     list = async () => ({ ...pageOf(0, 20, 'c1'), total: 37 });
@@ -541,7 +541,7 @@ describe('the count line', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-012
+// @traces 002-FR-012
 describe('a search with no match', () => {
   it('says so and clears the search and filters, reading the whole list and putting focus in the box', async () => {
     list = async (_cursor, read) =>
@@ -578,7 +578,7 @@ describe('a search with no match', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-010
+// @traces 002-FR-010
 describe('the search on the address', () => {
   it('fills the controls from the address and reads the narrowed list', async () => {
     const el = await open('ro', `${VIEW}?q=dinamo&role=mechanic&status=active`);

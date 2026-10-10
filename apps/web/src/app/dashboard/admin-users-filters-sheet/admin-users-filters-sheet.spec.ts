@@ -90,7 +90,7 @@ const apply = (label = 'Aplică') =>
     ) as HTMLButtonElement
   ).click();
 
-// @traces 002-find-account-search-FR-008 002-find-account-search-FR-013
+// @traces 002-FR-008 002-FR-013
 describe("the accounts' filters sheet", () => {
   it('lists the roles as ticks and the states as one choice, the current ones checked', async () => {
     await open();

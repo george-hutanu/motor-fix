@@ -4,6 +4,8 @@ export { HlmButton } from './lib/helm/button';
 export { HlmDialogImports } from './lib/helm/dialog';
 export { HlmInput } from './lib/helm/input';
 export { HlmLabel } from './lib/helm/label';
+// Each directive of HlmPopoverImports is named here too: the web build cannot
+// import a directive of the array that the entry point does not export.
 export {
   HlmPopover,
   HlmPopoverContent,

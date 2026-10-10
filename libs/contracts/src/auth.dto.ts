@@ -13,9 +13,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { ACCOUNT_ROLES, type AccountRole } from './account-search';
 import { PRIVACY_VERSION, TERMS_VERSION } from './consent';
 import { EMAIL_PATTERN } from './email';
-import { ROLE } from './me.dto';
 import { E164, normalisePhone } from './phone';
 
 export { EMAIL_PATTERN } from './email';
@@ -240,24 +240,24 @@ export class ConfirmEmailAnswerDto {
 export class SwitchRoleDto {
   @ApiProperty({
     description: 'One of the roles the account holds',
-    enum: ROLE,
+    enum: ACCOUNT_ROLES,
   })
-  @IsIn(ROLE)
-  role!: (typeof ROLE)[number];
+  @IsIn(ACCOUNT_ROLES)
+  role!: AccountRole;
 }
 
 export class RefreshDto {
   @ApiPropertyOptional({
     description:
       'The role the tab is showing; used when the account still holds it',
-    enum: ROLE,
+    enum: ACCOUNT_ROLES,
   })
   @IsOptional()
-  @IsIn(ROLE)
-  role?: (typeof ROLE)[number];
+  @IsIn(ACCOUNT_ROLES)
+  role?: AccountRole;
 }
 
-export const OAUTH_PROVIDER = ['google', 'apple'] as const;
+const OAUTH_PROVIDER = ['google', 'apple'] as const;
 export type OAuthProvider = (typeof OAUTH_PROVIDER)[number];
 
 export class ProvidersDto {

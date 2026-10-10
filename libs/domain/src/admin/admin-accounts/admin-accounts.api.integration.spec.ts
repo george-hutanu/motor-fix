@@ -170,7 +170,7 @@ describe('the failure log', () => {
 describe('GET /admin/accounts with a search and filters', () => {
   const SEARCH = '/admin/accounts?q=0722%20123%20456&role=driver&status=active';
 
-  // @traces 002-find-account-search-FR-001
+  // @traces 002-FR-001
   it('answers the matches with their total and nothing personal', async () => {
     const auth = await as('admin');
     const id = await account('Andrei Marin', ['driver'], {
@@ -191,7 +191,7 @@ describe('GET /admin/accounts with a search and filters', () => {
     expect(JSON.stringify(res.body)).not.toMatch(/gmail|722123456/);
   });
 
-  // @traces 002-find-account-search-FR-005
+  // @traces 002-FR-005
   it('reads repeated and comma-separated roles alike', async () => {
     const auth = await as('admin');
     await account('Șofer', ['driver']);
@@ -208,7 +208,7 @@ describe('GET /admin/accounts with a search and filters', () => {
     expect(joined.body).toEqual(repeated.body);
   });
 
-  // @traces 002-find-account-search-FR-002
+  // @traces 002-FR-002
   it.each([
     [`q=${'a'.repeat(81)}`, 'invalid_query'],
     ['role=pilot', 'invalid_filter'],
@@ -221,7 +221,7 @@ describe('GET /admin/accounts with a search and filters', () => {
     expect(res.body.code).toBe(code);
   });
 
-  // @traces 002-find-account-search-FR-007
+  // @traces 002-FR-007
   it.each(NON_ADMIN)('answers 404 to a %s searching', async (role) => {
     const res = await get(SEARCH, await as(role));
 
@@ -236,6 +236,14 @@ describe('GET /admin/accounts with a search and filters', () => {
     expect(res.body.code).toBe('sign_in_required');
   });
 
+  it('answers 403 account_suspended to a suspended admin searching', async () => {
+    const res = await get(SEARCH, await as('admin', 'suspended'));
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('account_suspended');
+    expect(res.body.items).toBeUndefined();
+  });
+
   it('records nothing in the change history', async () => {
     const auth = await as('admin');
     const before = await prisma.activityLog.count();
@@ -245,6 +253,7 @@ describe('GET /admin/accounts with a search and filters', () => {
     expect(await prisma.activityLog.count()).toBe(before);
   });
 
+  // @traces 002-FR-014
   it('logs a failed search without its query', async () => {
     const lines: unknown[] = [];
     jest

@@ -100,7 +100,7 @@ const fakeClock = () =>
     doNotFake: ['queueMicrotask', 'nextTick', 'setImmediate'],
   });
 
-// @traces 002-find-account-search-FR-008 002-find-account-search-FR-013
+// @traces 002-FR-008 002-FR-013
 describe('the search box', () => {
   it('is a search field named by its visible label, in a search landmark of the same name', async () => {
     const { element } = await open();
@@ -156,7 +156,7 @@ describe('the search box', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-009 002-find-account-search-FR-010
+// @traces 002-FR-009 002-FR-010
 describe('the search text it commits', () => {
   it('commits the text 300 ms after the last key, once', async () => {
     const { element, host } = await open();
@@ -195,7 +195,7 @@ describe('the search text it commits', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-008 002-find-account-search-FR-013
+// @traces 002-FR-008 002-FR-013
 describe('the role drop-down', () => {
   it('reads "Toate rolurile" with none ticked, the role with one and the number with more', async () => {
     const { element, host } = await open();
@@ -296,7 +296,7 @@ describe('the role drop-down', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-008
+// @traces 002-FR-008
 describe('the state drop-down', () => {
   it('offers every state, named by its label, the current one selected', async () => {
     const { element } = await open('ro', (h) => h.status.set('suspended'));
@@ -324,7 +324,7 @@ describe('the state drop-down', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-008 002-find-account-search-FR-013
+// @traces 002-FR-008 002-FR-013
 describe("the phone's filter button", () => {
   it('summarises the choice', async () => {
     const { element, host } = await open();

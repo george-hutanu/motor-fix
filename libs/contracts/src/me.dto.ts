@@ -1,14 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
 
-export const ROLE = [
-  'driver',
-  'garage',
-  'receptionist',
-  'mechanic',
-  'admin',
-] as const;
-type Role = (typeof ROLE)[number];
+import { ACCOUNT_ROLES, type AccountRole } from './account-search';
 
 const LANGUAGE = ['ro', 'en'] as const;
 
@@ -82,11 +75,11 @@ export class MeDto {
   })
   city!: string | null;
 
-  @ApiProperty({ enum: ROLE, isArray: true })
-  roles!: Role[];
+  @ApiProperty({ enum: ACCOUNT_ROLES, isArray: true })
+  roles!: AccountRole[];
 
-  @ApiProperty({ description: 'The role in use', enum: ROLE })
-  role!: Role;
+  @ApiProperty({ description: 'The role in use', enum: ACCOUNT_ROLES })
+  role!: AccountRole;
 
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   garageId!: string | null;

@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_ROLES,
   type AccountRole,
   type AccountState,
   type AdminAccountDto,
@@ -34,9 +35,6 @@ const PAGE = 20;
 const DAY = 86_400_000;
 const NEW_FOR = 7 * DAY;
 
-// The order the roles are shown in; the first one decides the count and garage.
-const ORDER: Role[] = ['driver', 'garage', 'receptionist', 'mechanic', 'admin'];
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const invalidCursor = () =>
@@ -57,8 +55,8 @@ const invalidFilter = () =>
     message: 'A role or state is not one this list knows, or a state repeats.',
   });
 
-// The query as the address gives it: absent, once, or repeated.
-export type Search = {
+// The query as the address gives it: a role or state absent, once, or repeated.
+type Search = {
   q?: string;
   role?: string | string[];
   status?: string | string[];
@@ -74,7 +72,7 @@ const values = (value: string | string[] | undefined) =>
   value === undefined ? [] : Array.isArray(value) ? value : [value];
 
 function readSearch(search: Search): Filters {
-  const settled = settleSearch(values(search.q).join(' '));
+  const settled = settleSearch(search.q ?? '');
   if (settled.length > SEARCH_MAX) throw invalidQuery();
   const { roles, unknown } = readRoles(values(search.role));
   const states = values(search.status);
@@ -112,14 +110,15 @@ function where(filters: Filters, after?: { createdAt: Date; id: string }) {
   if (filters.q) {
     const like = contained(filters.q);
     const digits = phoneDigits(filters.q);
-    parts.push(Prisma.sql`(
-      account_fold(a.name) LIKE account_fold(${like})
-      OR a.email ILIKE ${like}
-      OR EXISTS (SELECT 1 FROM garage_member m JOIN garage g ON g.id = m.garage_id
-        WHERE m.account_id = a.id AND account_fold(g.name) LIKE account_fold(${like}))
-      OR EXISTS (SELECT 1 FROM mechanic c JOIN garage g ON g.id = c.garage_id
-        WHERE c.account_id = a.id AND account_fold(g.name) LIKE account_fold(${like}))
-      ${digits ? Prisma.sql`OR a.phone LIKE ${`%${digits}%`}` : Prisma.empty}
+    // One index-driven arm per field, so each can use its trigram index.
+    parts.push(Prisma.sql`a.id IN (
+      SELECT id FROM account WHERE account_fold(name) LIKE account_fold(${like})
+      UNION SELECT id FROM account WHERE email ILIKE ${like}
+      UNION SELECT m.account_id FROM garage_member m JOIN garage g ON g.id = m.garage_id
+        WHERE account_fold(g.name) LIKE account_fold(${like})
+      UNION SELECT c.account_id FROM mechanic c JOIN garage g ON g.id = c.garage_id
+        WHERE account_fold(g.name) LIKE account_fold(${like})
+      ${digits ? Prisma.sql`UNION SELECT id FROM account WHERE phone LIKE ${`%${digits}%`}` : Prisma.empty}
     )`);
   }
   if (after) {
@@ -185,7 +184,7 @@ const GARAGE_OF: Partial<Record<Role, (row: Row) => string | null>> = {
 // What an account a week old or more is counted by, after its first role;
 // the others, and every newer account, by their age in days.
 // TODO: count requests and reviews once their stories build them; until
-// then the value is 0 (FR-003).
+// then the value is 0.
 const COUNTED_BY: Partial<Record<Role, 'requests' | 'reviews'>> = {
   driver: 'requests',
   garage: 'reviews',
@@ -193,7 +192,10 @@ const COUNTED_BY: Partial<Record<Role, 'requests' | 'reviews'>> = {
 };
 
 function item(row: Row, now: Date, suspendedAt?: Date): AdminAccountDto {
-  const roles = ORDER.filter((role) => row.roles.some((r) => r.role === role));
+  // In the order the roles are shown; the first decides the count and garage.
+  const roles = ACCOUNT_ROLES.filter((role) =>
+    row.roles.some((r) => r.role === role),
+  );
   const garage = roles.map((role) => GARAGE_OF[role]).find(Boolean);
   const age = Math.max(0, now.getTime() - row.createdAt.getTime());
   const kind = age < NEW_FOR ? undefined : COUNTED_BY[roles[0]];
@@ -253,13 +255,14 @@ export class AdminAccountsService {
   }
 
   // A page of the accounts a search and filters match, with their number.
-  // The ids come from SQL in the list's order; ST-1's select reads the rows.
+  // The ids come from SQL in the list's order; the plain list's select reads
+  // the rows.
   private async found(
     filters: Filters,
     after: { createdAt: Date; id: string } | undefined,
     now: Date,
   ): Promise<AdminAccountsPageDto> {
-    // An open watch is ST-4's; until it exists no account is under one.
+    // TODO: match open watches once they exist; until then none is under one.
     if (filters.status === 'watch') {
       return { items: [], nextCursor: null, total: 0 };
     }

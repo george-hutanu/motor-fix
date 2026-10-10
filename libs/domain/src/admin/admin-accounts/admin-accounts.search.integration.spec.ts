@@ -2,11 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Redis } from 'ioredis';
 
-import {
-  AdminAccountsService,
-  type Search,
-  SUMMARY_KEY,
-} from './admin-accounts.service';
+import { AdminAccountsService, SUMMARY_KEY } from './admin-accounts.service';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import {
@@ -14,6 +10,8 @@ import {
   fixtures,
   redisUrlFor,
 } from '../../notifications/notifications.testing';
+
+type Search = NonNullable<Parameters<AdminAccountsService['page']>[2]>;
 
 const redisUrl = redisUrlFor(9);
 const { account, prisma, reset } = fixtures();
@@ -35,6 +33,16 @@ beforeEach(async () => {
   await redis.del(SUMMARY_KEY);
 });
 
+// A made-up address of the letters g to v only: no digit to match a phone
+// query and no a to f, so a short query such as "ab" never matches it.
+const address = () =>
+  `${randomUUID()
+    .replace(/-/g, '')
+    .replace(
+      /./g,
+      (c) => 'ghijklmnopqrstuv'[Number.parseInt(c, 16)],
+    )}@example.test`;
+
 let made = 0;
 
 // Each account a day older than the one before, so the order is known.
@@ -49,9 +57,7 @@ const person = async (
 ) => {
   made += 1;
   const id = await account(name, options.roles ?? ['driver'], {
-    // Letters only, so no digit in a made-up address matches a phone query.
-    email:
-      options.email ?? `${randomUUID().replace(/[\d-]/g, '')}@example.test`,
+    email: options.email ?? address(),
     status: options.status,
   });
   await prisma.account.update({
@@ -72,8 +78,9 @@ const garage = (name: string) =>
 const names = async (search: Search, cursor?: string) =>
   (await service.page(cursor, NOW, search)).items.map((i) => i.name);
 
+// @traces 002-FR-015
 describe('searching by name', () => {
-  // @traces 002-find-account-search-FR-003
+  // @traces 002-FR-003
   it('finds a name by any part of it, whatever the case', async () => {
     await person('Andrei Marin');
     await person('Maria Pop');
@@ -98,6 +105,18 @@ describe('searching by name', () => {
     expect(await names({ q: 'ȚĂRANU' })).toEqual(['Ștefan Țăranu']);
   });
 
+  it('finds a name stored with its marks written apart from their letters', async () => {
+    // Ș as S and a combining comma below, ă as a and a combining breve.
+    await person('Ștefan Țăranu');
+
+    expect(await names({ q: 'stefan' })).toEqual([
+      'Ștefan Țăranu'.normalize('NFD'),
+    ]);
+    expect(await names({ q: 'Țăranu' })).toEqual([
+      'Ștefan Țăranu'.normalize('NFD'),
+    ]);
+  });
+
   it('collapses the spaces in the query', async () => {
     await person('Andrei Marin');
 
@@ -116,7 +135,7 @@ describe('searching by name', () => {
 });
 
 describe('searching by e-mail', () => {
-  // @traces 002-find-account-search-FR-003
+  // @traces 002-FR-003
   it.each(['andrei.marin@', 'gmail.com', 'MARIN@GMAIL'])(
     'finds the account by %s',
     async (q) => {
@@ -129,7 +148,7 @@ describe('searching by e-mail', () => {
 });
 
 describe('searching by phone', () => {
-  // @traces 002-find-account-search-FR-004
+  // @traces 002-FR-004
   it.each([
     '0722 123 456',
     '0722123456',
@@ -176,7 +195,7 @@ describe('searching by phone', () => {
 });
 
 describe('searching by garage', () => {
-  // @traces 002-find-account-search-FR-003
+  // @traces 002-FR-003
   it('finds the owner, the receptionist and the mechanic of a garage', async () => {
     const { id: garageId } = await garage('Atelier Dinamo');
     const owner = await person('Mihai', { roles: ['garage'] });
@@ -213,7 +232,7 @@ describe('searching by garage', () => {
 });
 
 describe('what a search never finds', () => {
-  // @traces 002-find-account-search-FR-001
+  // @traces 002-FR-001
   it('leaves a deleted account out by name, e-mail and phone', async () => {
     await person('Andrei Marin', {
       email: 'andrei.marin@gmail.com',
@@ -229,7 +248,7 @@ describe('what a search never finds', () => {
 });
 
 describe('a query too short or too long', () => {
-  // @traces 002-find-account-search-FR-002
+  // @traces 002-FR-002
   it('reads one character as no search, with no total', async () => {
     await person('Andrei');
     await person('Maria');
@@ -259,7 +278,7 @@ describe('a query too short or too long', () => {
 });
 
 describe('the filters', () => {
-  // @traces 002-find-account-search-FR-005
+  // @traces 002-FR-005
   it('keeps the accounts holding any of the roles, each once', async () => {
     await person('Șofer', { roles: ['driver'] });
     await person('Șofer și service', { roles: ['driver', 'garage'] });
@@ -310,7 +329,7 @@ describe('the filters', () => {
     });
   });
 
-  // @traces 002-find-account-search-FR-005
+  // @traces 002-FR-005
   it('combines the search, the roles and the state', async () => {
     const { id: garageId } = await garage('Atelier Dinamo');
     const active = await person('Costel', { roles: ['mechanic'] });
@@ -359,7 +378,7 @@ describe('the filters', () => {
 });
 
 describe('paging a search', () => {
-  // @traces 002-find-account-search-FR-006
+  // @traces 002-FR-006
   it('counts every match and chains the pages within the search', async () => {
     for (let n = 0; n < 23; n++) await person(`Marin ${n}`);
     await person('Altcineva');

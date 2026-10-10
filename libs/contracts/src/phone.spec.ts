@@ -37,7 +37,7 @@ describe('a phone number as the person types it', () => {
   });
 });
 
-// @traces 002-find-account-search-FR-004
+// @traces 002-FR-004
 describe('a phone number rewritten for a search', () => {
   it.each([
     ['0722 123 456', '+40722123456'],
@@ -46,8 +46,18 @@ describe('a phone number rewritten for a search', () => {
     ['0722', '+40722'],
     ['722-123', '722123'],
     ['+44 7700', '+447700'],
+    ['(0722) 123-456', '+40722123456'],
+    ['0722.123.456', '+40722123456'],
+    ['0040 722 123 456', '+40722123456'],
+    ['+44 7911 123456', '+447911123456'],
+    ['', ''],
   ])('rewrites %s as %s, however short', (typed, rewritten) => {
     expect(rewritePhone(typed)).toBe(rewritten);
+  });
+
+  it('does not pass a partial number as a full one', () => {
+    expect(normalisePhone('0722')).toBeNull();
+    expect(normalisePhone('0722 123 456')).toBe('+40722123456');
   });
 
   it('leaves letters for the caller to refuse', () => {

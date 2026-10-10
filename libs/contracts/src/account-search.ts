@@ -9,7 +9,7 @@ export const ACCOUNT_ROLES = [
 ] as const;
 export type AccountRole = (typeof ACCOUNT_ROLES)[number];
 
-// `watch` is an open watch, which ST-4 defines; until then none matches.
+// `watch` is an open watch; until watches exist none matches.
 export const ACCOUNT_STATES = ['active', 'watch', 'suspended'] as const;
 export type AccountState = (typeof ACCOUNT_STATES)[number];
 
