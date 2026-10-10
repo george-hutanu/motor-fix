@@ -1,10 +1,11 @@
 ---
 capability: home
-updated: 2026-10-08
+updated: 2026-10-10
 features:
   - 225-brand-picker
   - 229-location-or-address
   - 230-brand-search
+  - 226-best-rated-brand-dial
 ---
 
 # Capability: Home
@@ -166,3 +167,43 @@ _From 230-brand-search._
 ### 230-FR-014 — Choosing a brand on Home MUST write nothing: it is not counted as a search, and no event, audit entry or live update is produced.
 
 _From 230-brand-search._
+
+### 226-FR-001 — Home MUST show the large rating dial (`mf-rating-dial`, size large) under the count, pointing to the rating of the best garage that takes the selected brand in the area, with the rating as a number (one decimal in the language's format, 019-FR-003) and the small label "NOTĂ" / "RATING"; under the dial the garage's name, then one line with its city (when known) and, with a place set, its distance ("3,2 km" / "3.2 km", 229-FR-015), or "Mecanic mobil · vine la tine" / "Mobile mechanic · comes to you" for a mobile mechanic (from its kind, with or without a place), whose city and seat are never shown.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-002 — Under the dial Home MUST show the preview: up to three rows, the two best garages that take the brand then the best garage that refuses it or has not marked it, in that order; each row holds a lamp (`mf-lamp`, green for `works_on`, red otherwise) whose label is "Lucrează pe {brand}" / "Works on {brand}" or "Nu primește {brand}" / "Doesn't take {brand}", the garage's name, its rating ("4,9", or "Fără recenzii" / "No reviews yet" with none) and its hourly rate "de la {rate} lei/oră" / "from {rate} lei/hour" from the garage's labour-from price in whole lei (left out when the garage has none). The slots are fixed (two takers, one refuser); with fewer garages than slots only the existing rows are shown, no empty row, and a missing taker is never replaced by a refuser (only FR-004's no-taker state shows up to three refusers).
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-003 — Each preview row MUST be one link to the garage's public profile in the current language with the brand carried (`?brand={slug}`, as the Results cards do), at least 44 px tall, and the whole row is the hit area.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-004 — When the Home read's answer carries no best garage, the dial MUST rest at 0 ("—", empty arc, its accessible name the "nobody takes it" line below) and, in place of the garage's name, read "Niciun service din zonă nu primește încă {brand}" / "No garage nearby takes {brand} yet"; the preview shows the refusing rows that exist (up to three, same order). When the answer's `total` is 0 and a place is set, the line reads "Niciun service în 25 km" / "No garage within 25 km" followed by a button "Schimbă locul" / "Change place" that opens the place dialog; without a place and `total` 0, the "nobody takes it" line stands.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-005 — While the Home read is loading, the dial MUST show 0 and a greyed (dimmed) state with a skeleton line in place of the name and three skeleton rows in the preview, the area marked busy; while it has failed, the count area's message and retry (225-FR-012) stand and the dial stays at 0 with no name and no rows. A retry refills the dial and the preview from the same read.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-006 — On every brand or place change the dial and the preview MUST follow the one Home read of 225-FR-006 and 229-FR-007 (no second request), changing at the same moment the count does; the needle and arc move to the new value through the shared dial motion (053-FR-003) and jump with reduced motion. The dial's change is announced through the count area's existing live region (no second region, polite only after the picker was touched), adding "{rating} · {garage name}" or the "nobody takes it" line to what it reads.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-007 — Every text of this story MUST live in the shared i18n files in Romanian and English; the dial, the rows and the formats re-render on a language switch without a new read.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-008 — The dial and the preview MUST hold at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll; the dial is at most 240 px wide and centred on a phone; the lamp's label and rate text are at least 12 px and the lamp's dot colour comes from the tokens; the preview's rows are 44 px tall at least; a name or city longer than its line wraps inside the row and never widens it, and a row shows the shared focus ring of the Cockpit theme when focused by keyboard.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-012 — The development seed MUST give the eight listed garages ratings, review counts and labour-from prices such that, near Bucharest with Dacia selected, the dial names one known garage, the preview holds two known takers and one known refuser, two takers share a rating and differ by reviews, and one taker has no reviews; the Cluj-Napoca mobile mechanic takes Dacia, so a place in Cluj-Napoca names it on the dial with "Mecanic mobil · vine la tine".
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-013 — This story writes nothing at run time (no audit entry, no event, no live update, no search log); the data is re-read on each brand or place change only. No new route: the Home read stays public and the public routes list is unchanged. No new service, queue or outside call: the PR's Observability section says so, and the existing Home read metrics (if any) cover it.
+
+_From 226-best-rated-brand-dial._
