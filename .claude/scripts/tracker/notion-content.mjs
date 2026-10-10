@@ -158,14 +158,6 @@ export function pageLoader(client, tracker, { cache = null, store = null, downlo
   return load;
 }
 
-/** Reads every story's and epic's content (pageLoader); returns the number of pages read from Notion. */
-export async function loadContent(client, tracker, options = {}) {
-  const load = pageLoader(client, tracker, options);
-  let read = 0;
-  for (const page of [...tracker.stories, ...tracker.epics]) if (await load(page)) read++;
-  return read;
-}
-
 /** Whether a read page has files of its own stored in the issue repository's clone. */
 export function hasStoredFiles(page) {
   return Boolean(page.content && filesOf(page.content).some(Boolean));

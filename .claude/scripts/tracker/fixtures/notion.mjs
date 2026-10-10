@@ -2,6 +2,16 @@
 // fetch that serves it the way the Notion API does. The property names and
 // types are those of the stories, epics and build-timeline data sources.
 
+import { pageLoader } from "../notion-content.mjs";
+
+/** Reads every story's and epic's content (pageLoader); returns the number of pages read from Notion. */
+export async function loadContent(client, tracker, options = {}) {
+  const load = pageLoader(client, tracker, options);
+  let read = 0;
+  for (const page of [...tracker.stories, ...tracker.epics]) if (await load(page)) read++;
+  return read;
+}
+
 export const STORIES_DS = "326eee3c-abec-41d9-9f96-eb3bd545a802";
 export const EPICS_DS = "ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac";
 export const OWNER = "aaaaaaaa-0000-0000-0000-000000000001";

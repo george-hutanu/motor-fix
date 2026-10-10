@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { notionClient } from "../lib/notion.mjs";
-import { fakeNotion, storyId } from "./fixtures/notion.mjs";
-import { FileError, fetchFile, folderCache, folderStore, loadContent, MAX_FILE_BYTES } from "./notion-content.mjs";
+import { fakeNotion, loadContent, storyId } from "./fixtures/notion.mjs";
+import { FileError, fetchFile, folderCache, folderStore, MAX_FILE_BYTES } from "./notion-content.mjs";
 import { renderPage } from "./notion-markdown.mjs";
 import { readTracker } from "./notion-read.mjs";
 

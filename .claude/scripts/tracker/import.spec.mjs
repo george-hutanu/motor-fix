@@ -7,11 +7,11 @@ import { join } from "node:path";
 import { notionClient } from "../lib/notion.mjs";
 import { reconcile, RESERVED_FIELD_NAMES, SCHEMA } from "./bootstrap.mjs";
 import { createdTitle, createsIssue, fakeGitHub } from "./fixtures/github.mjs";
-import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
+import { fakeNotion, loadContent, SECRET, storyId } from "./fixtures/notion.mjs";
 import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import { featureTitles, issuePlans, plainValue, runImport, TEXT_MAX } from "./import.mjs";
 import { refToken } from "./notion-markdown.mjs";
-import { fetchFile, folderCache, folderStore, loadContent, pageLoader } from "./notion-content.mjs";
+import { fetchFile, folderCache, folderStore, pageLoader } from "./notion-content.mjs";
 import { reporter } from "./progress.mjs";
 import { readTracker } from "./notion-read.mjs";
 

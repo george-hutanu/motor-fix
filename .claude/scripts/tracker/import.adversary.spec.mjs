@@ -7,10 +7,9 @@ import { join } from "node:path";
 import { notionClient } from "../lib/notion.mjs";
 import { reconcile } from "./bootstrap.mjs";
 import { createsIssue, fakeClock, fakeGitHub } from "./fixtures/github.mjs";
-import { fakeNotion, SECRET, storyId } from "./fixtures/notion.mjs";
+import { fakeNotion, loadContent, SECRET, storyId } from "./fixtures/notion.mjs";
 import { githubClient } from "./github.mjs";
 import { issuePlans, runImport } from "./import.mjs";
-import { loadContent } from "./notion-content.mjs";
 import { readTracker } from "./notion-read.mjs";
 
 const TOKEN = "ghp_SECRET_never_print_me";
