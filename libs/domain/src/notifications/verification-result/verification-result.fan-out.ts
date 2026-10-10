@@ -2,7 +2,6 @@ import type { EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
 
-import { loadGarageAccess } from '../../events/garage-access';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { countVerificationResult } from '../../metrics/product-counters';
 import type { EmailConfig } from '../email-config';
@@ -11,7 +10,7 @@ import {
   NOTIFICATIONS_PRISMA,
   NotificationsService,
 } from '../notifications.service';
-import { reasonLabel } from '../templates/verification-result';
+import { DECISIONS, reasonLabel } from '../templates/verification-result';
 
 export const VERIFICATION_RESULT_QUEUE = 'verification-result';
 
@@ -37,8 +36,6 @@ export interface VerificationDecidedEvent {
   payload: { decision?: string; fileId: string; garageId: string };
 }
 
-const DECISIONS = new Set(['approved', 'more_requested', 'rejected']);
-
 // Tells a garage's owners how its verification was decided, each in their
 // own language. The service sends the e-mail and the bell whatever they
 // muted, and applies the device and WhatsApp rules; the outbox event id keeps
@@ -47,31 +44,33 @@ const DECISIONS = new Set(['approved', 'more_requested', 'rejected']);
 @Injectable()
 export class VerificationResultFanOut {
   private readonly logger = new Logger('VerificationResult');
-  private readonly access: ReturnType<typeof loadGarageAccess>;
 
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     private readonly notifications: NotificationsService,
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
-  ) {
-    this.access = loadGarageAccess(prisma);
-  }
+  ) {}
 
   async handle(
     job: Pick<Job<VerificationDecidedEvent>, 'data'>,
   ): Promise<void> {
     const { id: eventId, payload } = job.data;
     const { decision = '', fileId, garageId } = payload;
-    const file = DECISIONS.has(decision)
-      ? await this.prisma.verificationFile.findUnique({
-          select: {
-            garage: { select: { slug: true } },
-            reasonCode: true,
-            reasonNote: true,
-          },
-          where: { id: fileId },
-        })
-      : null;
+    // The file must be the named garage's: its owners are the ones told, and
+    // its reason and note are what they read.
+    const file =
+      DECISIONS.has(decision) &&
+      typeof fileId === 'string' &&
+      typeof garageId === 'string'
+        ? await this.prisma.verificationFile.findFirst({
+            select: {
+              garage: { select: { slug: true } },
+              reasonCode: true,
+              reasonNote: true,
+            },
+            where: { garageId, id: fileId },
+          })
+        : null;
     const owners = file ? await this.owners(garageId) : new Map();
     if (!file || owners.size === 0) {
       countVerificationResult('skipped');
@@ -127,10 +126,12 @@ export class VerificationResultFanOut {
 
   // The garage's owners whose accounts still stand, by language.
   private async owners(garageId: string): Promise<Map<string, string[]>> {
-    const { owners } = await this.access(garageId);
     const accounts = await this.prisma.account.findMany({
       select: { id: true, language: true },
-      where: { id: { in: [...owners] }, status: { not: 'deleted' } },
+      where: {
+        memberships: { some: { garageId, role: 'owner' } },
+        status: { not: 'deleted' },
+      },
     });
     const groups = new Map<string, string[]>();
     for (const { id, language } of accounts) {

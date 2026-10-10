@@ -8,6 +8,7 @@ import {
 
 import { emailHtml } from './email-layout';
 import { TEMPLATES } from './templates/registry';
+import { DECISIONS } from './templates/verification-result';
 
 type Language = 'ro' | 'en';
 export type Channel = 'email' | 'bell' | 'push' | 'sms' | 'whatsapp';
@@ -229,8 +230,6 @@ function renderText(
       return fill(text as string);
   }
 }
-
-const DECISIONS = new Set<unknown>(['approved', 'more_requested', 'rejected']);
 
 export function templateName(kind: string, params: Params): string {
   if (kind === 'VERIFICATION_RESULT') {

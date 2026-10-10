@@ -26,13 +26,9 @@ async function decisionMails(page: Page, email: string): Promise<Mail[]> {
 
 // No endpoint submits or decides a verification file today, so the test
 // records the decision's event as the verification service would; the relay
-// and the worker do the rest.
+// and the worker do the rest. Every run that has the mailbox has the
+// database too, so the flow needs DATABASE_URL and fails without it.
 test.describe('the verification result e-mail @seeded @mailbox', () => {
-  test.describe.configure({ mode: 'default' });
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'records its event straight in PostgreSQL, which needs DATABASE_URL',
-  );
   let db: Client;
   let eventId: string | undefined;
 
@@ -67,7 +63,8 @@ test.describe('the verification result e-mail @seeded @mailbox', () => {
        WHERE g.slug = $1 ORDER BY f.created_at DESC LIMIT 1`,
       [SLUG],
     );
-    const { file, garage } = rows[0] as { file: string; garage: string };
+    expect(rows[0], 'the seeded garage has no verification file').toBeDefined();
+    const { file, garage } = rows[0] ?? { file: '', garage: '' };
     const recorded = await db.query<{ id: string }>(
       `INSERT INTO outbox_event (audience, kind, payload, subject_id)
        VALUES ($1, 'verification.decided', $2, $3) RETURNING id::text`,

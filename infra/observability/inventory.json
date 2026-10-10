@@ -352,6 +352,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_verification_result_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counts each verification decision told to its garage's owners by outcome (built, skipped: no owner or no decision to tell), with the fan-out's log line naming the file id; also on motorfix-product; a count has no failure to alert on, the verification-result queue entry owns the final-failure alert",
+      "story": "ST-209"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_quote_received_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
