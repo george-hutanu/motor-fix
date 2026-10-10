@@ -75,6 +75,7 @@
       },
       "none": "fără mașină"
     },
+    "clear": "Șterge filtrele",
     "count": {
       "age": {
         "few": "cont de {n} zile",
@@ -94,8 +95,28 @@
     },
     "empty": "Niciun cont încă.",
     "failed": "Lista nu s‑a încărcat.",
+    "filters": {
+      "allRoles": "Toate rolurile",
+      "allStates": "Toate stările",
+      "apply": "Aplică",
+      "button": "Filtre: {summary}",
+      "roles": "Roluri",
+      "someRoles": {
+        "few": "{n} roluri",
+        "one": "{n} rol",
+        "other": "{n} de roluri"
+      },
+      "state": "Stare",
+      "title": "Filtre"
+    },
+    "found": {
+      "few": "{n} conturi găsite",
+      "one": "{n} cont găsit",
+      "other": "{n} de conturi găsite"
+    },
     "loading": "Se încarcă conturile",
     "more": "Următoarele conturi nu s‑au încărcat.",
+    "noMatch": "Niciun cont nu se potrivește.",
     "recent": "Conturi recente",
     "retry": "Reîncearcă",
     "roles": {
@@ -105,10 +126,15 @@
       "mechanic": "mecanic",
       "receptionist": "recepție"
     },
+    "search": {
+      "clear": "Golește căutarea",
+      "label": "Caută după nume, e‑mail sau telefon"
+    },
     "state": {
       "active": "activ",
       "since": "{state} · din {when}",
-      "suspended": "suspendat"
+      "suspended": "suspendat",
+      "watch": "sub observație"
     },
     "totals": {
       "drivers": {

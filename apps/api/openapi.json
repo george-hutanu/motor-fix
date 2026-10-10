@@ -1389,6 +1389,49 @@
               "maxLength": 200,
               "type": "string"
             }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Contained in the name, a garage worked at or the e-mail, or a phone written in part; trimmed and spaces collapsed, ignored under 2 characters",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "description": "Accounts holding at least one of these roles; repeated or comma-separated",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "driver",
+                  "garage",
+                  "receptionist",
+                  "mechanic",
+                  "admin"
+                ]
+              }
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "watch matches none until open watches exist",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "watch",
+                "suspended"
+              ]
+            }
           }
         ],
         "responses": {
@@ -1403,7 +1446,7 @@
             }
           },
           "400": {
-            "description": "invalid_cursor, or a query parameter it does not take"
+            "description": "invalid_cursor; invalid_query: q over 80 characters; invalid_filter: an unknown role or state, or a repeated state; or a query parameter it does not take"
           },
           "404": {
             "description": "not_found: not an admin"
@@ -5885,6 +5928,11 @@
           "nextCursor": {
             "type": "string",
             "nullable": true
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every account the search and filters match, counted at this read; only when q, role or status is given",
+            "minimum": 0
           }
         },
         "required": [

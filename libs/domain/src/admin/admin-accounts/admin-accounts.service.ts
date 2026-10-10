@@ -1,7 +1,15 @@
-import type {
-  AdminAccountDto,
-  AdminAccountsPageDto,
-  AdminAccountsSummaryDto,
+import {
+  type AccountRole,
+  type AccountState,
+  type AdminAccountDto,
+  type AdminAccountsPageDto,
+  type AdminAccountsSummaryDto,
+  isAccountState,
+  readRoles,
+  rewritePhone,
+  SEARCH_MAX,
+  SEARCH_MIN,
+  settleSearch,
 } from '@motor-fix/contracts';
 import {
   BadRequestException,
@@ -13,7 +21,11 @@ import type { Redis } from 'ioredis';
 
 import { AUTH_REDIS } from '../../auth/attempts';
 import { PRISMA } from '../../auth/prisma';
-import type { Prisma, PrismaClient, Role } from '../../generated/prisma/client';
+import {
+  Prisma,
+  type PrismaClient,
+  type Role,
+} from '../../generated/prisma/client';
 import { countPlatformFigures } from '../../insights/platform-figures';
 
 export const SUMMARY_KEY = 'admin:accounts:summary';
@@ -32,6 +44,91 @@ const invalidCursor = () =>
     code: 'invalid_cursor',
     message: 'The cursor is not one this list gave out.',
   });
+
+const invalidQuery = () =>
+  new BadRequestException({
+    code: 'invalid_query',
+    message: `The search is longer than ${SEARCH_MAX} characters.`,
+  });
+
+const invalidFilter = () =>
+  new BadRequestException({
+    code: 'invalid_filter',
+    message: 'A role or state is not one this list knows, or a state repeats.',
+  });
+
+// The query as the address gives it: absent, once, or repeated.
+export type Search = {
+  q?: string;
+  role?: string | string[];
+  status?: string | string[];
+};
+
+type Filters = {
+  q: string | undefined;
+  roles: AccountRole[];
+  status: AccountState | undefined;
+};
+
+const values = (value: string | string[] | undefined) =>
+  value === undefined ? [] : Array.isArray(value) ? value : [value];
+
+function readSearch(search: Search): Filters {
+  const settled = settleSearch(values(search.q).join(' '));
+  if (settled.length > SEARCH_MAX) throw invalidQuery();
+  const { roles, unknown } = readRoles(values(search.role));
+  const states = values(search.status);
+  if (unknown.length > 0 || states.length > 1) throw invalidFilter();
+  if (states.length === 1 && !isAccountState(states[0])) throw invalidFilter();
+  return {
+    q: settled.length >= SEARCH_MIN ? settled : undefined,
+    roles,
+    status: states[0] as AccountState | undefined,
+  };
+}
+
+// The digits a phone-looking query is matched by: 4 to 15 digits once the
+// separators and a leading + or 00 are gone, rewritten as sign-in rewrites a
+// number but with no length check ("0722" is +40722).
+function phoneDigits(q: string) {
+  const bare = q.replace(/[\s.()-]/g, '').replace(/^(\+|00)/, '');
+  if (!/^\d{4,15}$/.test(bare)) return undefined;
+  return rewritePhone(q).replace(/^\+/, '');
+}
+
+// The query as literal text inside a LIKE pattern.
+const contained = (text: string) => `%${text.replace(/[\\%_]/g, '\\$&')}%`;
+
+function where(filters: Filters, after?: { createdAt: Date; id: string }) {
+  const parts: Prisma.Sql[] = [Prisma.sql`a.status IN ('active', 'suspended')`];
+  if (filters.status) {
+    parts.push(Prisma.sql`a.status = ${filters.status}::account_status`);
+  }
+  if (filters.roles.length > 0) {
+    parts.push(
+      Prisma.sql`EXISTS (SELECT 1 FROM account_role r WHERE r.account_id = a.id AND r.role::text IN (${Prisma.join(filters.roles)}))`,
+    );
+  }
+  if (filters.q) {
+    const like = contained(filters.q);
+    const digits = phoneDigits(filters.q);
+    parts.push(Prisma.sql`(
+      account_fold(a.name) LIKE account_fold(${like})
+      OR a.email ILIKE ${like}
+      OR EXISTS (SELECT 1 FROM garage_member m JOIN garage g ON g.id = m.garage_id
+        WHERE m.account_id = a.id AND account_fold(g.name) LIKE account_fold(${like}))
+      OR EXISTS (SELECT 1 FROM mechanic c JOIN garage g ON g.id = c.garage_id
+        WHERE c.account_id = a.id AND account_fold(g.name) LIKE account_fold(${like}))
+      ${digits ? Prisma.sql`OR a.phone LIKE ${`%${digits}%`}` : Prisma.empty}
+    )`);
+  }
+  if (after) {
+    parts.push(
+      Prisma.sql`(a.created_at, a.id) < (${after.createdAt}, ${after.id}::uuid)`,
+    );
+  }
+  return Prisma.join(parts, ' AND ');
+}
 
 const encode = (createdAt: Date, id: string) =>
   Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
@@ -131,8 +228,13 @@ export class AdminAccountsService {
   async page(
     cursor: string | undefined,
     now: Date,
+    search: Search = {},
   ): Promise<AdminAccountsPageDto> {
     const after = cursor === undefined ? undefined : decode(cursor);
+    const filters = readSearch(search);
+    if (filters.q || filters.roles.length > 0 || filters.status) {
+      return this.found(filters, after, now);
+    }
     const rows = await this.prisma.account.findMany({
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: ROW,
@@ -147,6 +249,37 @@ export class AdminAccountsService {
         }),
       },
     });
+    return this.answer(rows, now);
+  }
+
+  // A page of the accounts a search and filters match, with their number.
+  // The ids come from SQL in the list's order; ST-1's select reads the rows.
+  private async found(
+    filters: Filters,
+    after: { createdAt: Date; id: string } | undefined,
+    now: Date,
+  ): Promise<AdminAccountsPageDto> {
+    // An open watch is ST-4's; until it exists no account is under one.
+    if (filters.status === 'watch') {
+      return { items: [], nextCursor: null, total: 0 };
+    }
+    const [ids, [{ total }]] = await Promise.all([
+      this.prisma.$queryRaw<{ id: string }[]>`
+        SELECT a.id FROM account a WHERE ${where(filters, after)}
+        ORDER BY a.created_at DESC, a.id DESC LIMIT ${PAGE + 1}`,
+      this.prisma.$queryRaw<{ total: number }[]>`
+        SELECT count(*)::int AS total FROM account a WHERE ${where(filters)}`,
+    ]);
+    const order = ids.map((r) => r.id);
+    const rows = await this.prisma.account.findMany({
+      select: ROW,
+      where: { id: { in: order } },
+    });
+    rows.sort((x, y) => order.indexOf(x.id) - order.indexOf(y.id));
+    return { ...(await this.answer(rows, now)), total };
+  }
+
+  private async answer(rows: Row[], now: Date) {
     const shown = rows.slice(0, PAGE);
     const suspendedSince = await this.suspendedSince(
       shown.filter((r) => r.status === 'suspended').map((r) => r.id),

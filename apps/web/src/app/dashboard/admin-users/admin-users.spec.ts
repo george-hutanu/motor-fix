@@ -1,6 +1,9 @@
+import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component } from '@angular/core';
+import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import {
   type AdminAccountDto,
   type AdminAccountsPageDto,
@@ -11,8 +14,7 @@ import { I18n } from '@motor-fix/i18n';
 
 import { AdminUsers } from './admin-users';
 
-@Component({ imports: [AdminUsers], template: '<mf-admin-users />' })
-class Host {}
+const VIEW = '/app/admin/users';
 
 const TOTALS: AdminAccountsSummaryDto = {
   activeDrivers: 12480,
@@ -42,8 +44,16 @@ const pageOf = (from: number, size: number, next: string | null) => ({
 const failure = () => Promise.reject(new HttpErrorResponse({ status: 500 }));
 
 let summary: () => Promise<AdminAccountsSummaryDto>;
-let list: (cursor?: string) => Promise<AdminAccountsPageDto>;
+type Read = {
+  cursor?: string;
+  q?: string;
+  role?: string[];
+  status?: string;
+};
+
+let list: (cursor?: string, read?: Read) => Promise<AdminAccountsPageDto>;
 let cursors: (string | undefined)[];
+let reads: Read[];
 let seen: (() => void) | undefined;
 let inView: boolean;
 
@@ -67,6 +77,7 @@ class Observer {
 
 beforeEach(() => {
   cursors = [];
+  reads = [];
   seen = undefined;
   inView = false;
   summary = async () => TOTALS;
@@ -82,7 +93,11 @@ beforeEach(() => {
     }) as unknown as MediaQueryList;
 });
 
-afterEach(() => TestBed.resetTestingModule());
+afterEach(() => {
+  jest.useRealTimers();
+  TestBed.resetTestingModule();
+  document.body.innerHTML = '';
+});
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -91,19 +106,18 @@ async function settle() {
   }
 }
 
-async function open(language: 'ro' | 'en' = 'ro') {
+async function open(language: 'ro' | 'en' = 'ro', url = VIEW) {
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([{ component: AdminUsers, path: 'app/admin/users' }]),
+      provideLocationMocks(),
       {
         provide: AdminService,
         useValue: {
-          adminAccountsControllerList: ({
-            cursor,
-          }: {
-            cursor?: string;
-          } = {}) => {
-            cursors.push(cursor);
-            return list(cursor);
+          adminAccountsControllerList: (read: Read = {}) => {
+            cursors.push(read.cursor);
+            reads.push(read);
+            return list(read.cursor, read);
           },
           adminAccountsControllerSummary: () => summary(),
           adminOverviewControllerGrowth: async () => ({ months: [] }),
@@ -112,9 +126,13 @@ async function open(language: 'ro' | 'en' = 'ro') {
     ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
-  const fixture = TestBed.createComponent(Host);
+  const harness = await RouterTestingHarness.create();
+  // A booted app listens for the back button; the test bed does not boot one.
+  TestBed.inject(Router).setUpLocationChangeListener();
+  await harness.navigateByUrl(url);
+  document.body.append(harness.fixture.nativeElement);
   await settle();
-  return fixture.nativeElement as HTMLElement;
+  return harness.routeNativeElement as HTMLElement;
 }
 
 const text = (el: Element | null | undefined) =>
@@ -341,5 +359,312 @@ describe('the growth panel', () => {
     const el = await open();
 
     expect(el.querySelector('mf-admin-growth')).not.toBeNull();
+  });
+});
+
+const box = (el: HTMLElement) =>
+  el.querySelector('input[type="search"]') as HTMLInputElement;
+const type = (el: HTMLElement, value: string) => {
+  box(el).value = value;
+  box(el).dispatchEvent(new Event('input'));
+};
+const state = (el: HTMLElement) =>
+  el.querySelector('select.state') as HTMLSelectElement;
+const choose = (el: HTMLElement, value: string) => {
+  state(el).value = value;
+  state(el).dispatchEvent(new Event('change'));
+};
+const found = (el: HTMLElement) => el.querySelector('.found');
+const url = () => TestBed.inject(Router).url;
+const names = (el: HTMLElement) =>
+  rows(el).map((r) => text(r.querySelector('.name')));
+const named = (...list: string[]) => ({
+  items: list.map((name, n) => item(n, { id: `id-${name}`, name })),
+  nextCursor: null,
+  total: list.length,
+});
+const fakeClock = () =>
+  jest.useFakeTimers({
+    doNotFake: ['queueMicrotask', 'nextTick', 'setImmediate'],
+  });
+// The search box commits its text 300 ms after the last key.
+async function search(el: HTMLElement, value: string) {
+  fakeClock();
+  type(el, value);
+  jest.advanceTimersByTime(300);
+  jest.useRealTimers();
+  await settle();
+}
+
+// @traces 002-find-account-search-FR-009
+describe('searching the accounts', () => {
+  it('reads once, 300 ms after the last key, a key within the wait restarting it', async () => {
+    const el = await open();
+    fakeClock();
+
+    type(el, 'an');
+    jest.advanceTimersByTime(200);
+    type(el, 'andrei');
+    jest.advanceTimersByTime(299);
+    expect(reads).toHaveLength(1);
+
+    jest.advanceTimersByTime(1);
+    jest.useRealTimers();
+    await settle();
+    expect(reads).toHaveLength(2);
+    expect(reads[1]).toMatchObject({ q: 'andrei' });
+    expect(reads[1].cursor).toBeUndefined();
+  });
+
+  it('sends fewer than 2 characters as no search and reads the whole list again', async () => {
+    const el = await open('ro', `${VIEW}?q=dinamo`);
+    expect(reads[0]).toMatchObject({ q: 'dinamo' });
+
+    await search(el, ' a ');
+
+    expect(reads.at(-1)?.q).toBeUndefined();
+    expect(url()).toBe(VIEW);
+  });
+
+  it('never shows a read that a newer one replaced', async () => {
+    const pending = new Map<string, (page: AdminAccountsPageDto) => void>();
+    const el = await open();
+    list = (_cursor, read) =>
+      new Promise((resolve) => pending.set(read?.q ?? '', resolve));
+
+    await search(el, 'ma');
+    await search(el, 'marin');
+    pending.get('marin')?.(named('Andrei Marin'));
+    await settle();
+    pending.get('ma')?.(named('Maria Pop', 'Mara Ion'));
+    await settle();
+
+    expect(names(el)).toEqual(['Andrei Marin']);
+  });
+
+  it('drops a next page still loading when the search changes', async () => {
+    let release: (page: AdminAccountsPageDto) => void = () => {};
+    list = async (cursor, read) =>
+      read?.q
+        ? named('Atelier Dinamo')
+        : cursor === undefined
+          ? pageOf(0, 20, 'c1')
+          : new Promise((resolve) => {
+              release = resolve;
+            });
+    const el = await open();
+
+    seen?.();
+    await settle();
+    await search(el, 'dinamo');
+    release(pageOf(20, 5, null));
+    await settle();
+
+    expect(names(el)).toEqual(['Atelier Dinamo']);
+  });
+
+  it('pages within the search, sending it with the cursor', async () => {
+    list = async (cursor) =>
+      cursor === undefined
+        ? { ...pageOf(0, 20, 'c1'), total: 23 }
+        : { ...pageOf(20, 3, null), total: 23 };
+    const el = await open('ro', `${VIEW}?q=marin&role=driver`);
+
+    seen?.();
+    await settle();
+
+    expect(reads[1]).toMatchObject({
+      cursor: 'c1',
+      q: 'marin',
+      role: ['driver'],
+    });
+    expect(rows(el)).toHaveLength(23);
+  });
+
+  // @traces 002-find-account-search-FR-012
+  it('shows the skeleton rows while a search reads, the controls still usable, and retries the same search after a failure', async () => {
+    const el = await open();
+    list = () => new Promise(() => {});
+
+    await search(el, 'dinamo');
+
+    expect(el.querySelector('[aria-busy="true"] .skeleton-row')).not.toBeNull();
+    expect(box(el).disabled).toBe(false);
+
+    list = failure;
+    choose(el, 'active');
+    await settle();
+    expect(text(el.querySelector('.failed'))).toContain(
+      'Lista nu s‑a încărcat',
+    );
+
+    list = async () => named('Atelier Dinamo');
+    button(el, 'Reîncearcă')?.click();
+    await settle();
+    expect(reads.at(-1)).toMatchObject({ q: 'dinamo', status: 'active' });
+    expect(names(el)).toEqual(['Atelier Dinamo']);
+  });
+});
+
+// @traces 002-find-account-search-FR-011
+describe('the count line', () => {
+  it('counts what a search found in the Romanian plural forms, in a live region', async () => {
+    list = async () => ({ ...pageOf(0, 20, 'c1'), total: 37 });
+    const el = await open('ro', `${VIEW}?q=marin`);
+
+    expect(text(found(el))).toBe('37 de conturi găsite');
+    expect(found(el)?.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it.each([
+    [1, '1 cont găsit'],
+    [3, '3 conturi găsite'],
+    [1234, '1.234 de conturi găsite'],
+  ])('reads %i as "%s"', async (total, line) => {
+    list = async () => ({ ...pageOf(0, 1, null), total });
+    const el = await open('ro', `${VIEW}?status=active`);
+
+    expect(text(found(el))).toBe(line);
+  });
+
+  it('counts in English', async () => {
+    list = async () => ({ ...pageOf(0, 1, null), total: 1234 });
+    const el = await open('en', `${VIEW}?role=mechanic`);
+
+    expect(text(found(el))).toBe('1,234 accounts found');
+  });
+
+  it('is not there for the whole list', async () => {
+    const el = await open();
+
+    expect(found(el)).toBeNull();
+  });
+});
+
+// @traces 002-find-account-search-FR-012
+describe('a search with no match', () => {
+  it('says so and clears the search and filters, reading the whole list and putting focus in the box', async () => {
+    list = async (_cursor, read) =>
+      read?.q || read?.role || read?.status
+        ? { items: [], nextCursor: null, total: 0 }
+        : pageOf(0, 3, null);
+    const el = await open(
+      'ro',
+      `${VIEW}?city=cluj-napoca&q=zzz&role=mechanic&status=active`,
+    );
+
+    expect(text(el.querySelector('.empty'))).toBe(
+      'Niciun cont nu se potrivește.',
+    );
+    const clear = button(el, 'Șterge filtrele');
+    expect(clear?.getAttribute('type')).toBe('button');
+    clear?.click();
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?city=cluj-napoca`);
+    expect(reads.at(-1)).toEqual({});
+    expect(rows(el)).toHaveLength(3);
+    expect(box(el).value).toBe('');
+    expect(state(el).value).toBe('');
+    expect(document.activeElement).toBe(box(el));
+  });
+
+  it('reads in English', async () => {
+    list = async () => ({ items: [], nextCursor: null, total: 0 });
+    const el = await open('en', `${VIEW}?q=zzz`);
+
+    expect(text(el.querySelector('.empty'))).toBe('No account matches.');
+    expect(button(el, 'Clear the filters')).toBeDefined();
+  });
+});
+
+// @traces 002-find-account-search-FR-010
+describe('the search on the address', () => {
+  it('fills the controls from the address and reads the narrowed list', async () => {
+    const el = await open('ro', `${VIEW}?q=dinamo&role=mechanic&status=active`);
+
+    expect(reads).toEqual([
+      { q: 'dinamo', role: ['mechanic'], status: 'active' },
+    ]);
+    expect(box(el).value).toBe('dinamo');
+    expect(state(el).value).toBe('active');
+    expect(text(el.querySelector('button.roles'))).toBe('mecanic');
+  });
+
+  it('reads several roles written with commas', async () => {
+    await open('ro', `${VIEW}?role=mechanic,driver`);
+
+    expect(reads[0].role).toEqual(['driver', 'mechanic']);
+  });
+
+  it('drops an unknown role or state from the address, in place, and never sends it', async () => {
+    await open(
+      'ro',
+      `${VIEW}?city=cluj-napoca&role=pilot,mechanic&status=deleted`,
+    );
+
+    expect(reads.at(-1)).toEqual({ role: ['mechanic'] });
+    expect(reads.some((r) => r.status || r.role?.includes('pilot'))).toBe(
+      false,
+    );
+    expect(url()).toBe(`${VIEW}?city=cluj-napoca&role=mechanic`);
+    expect(
+      TestBed.inject(Router).lastSuccessfulNavigation()?.extras.replaceUrl,
+    ).toBe(true);
+  });
+
+  it('keeps the first 80 characters of a longer search on the address', async () => {
+    await open('ro', `${VIEW}?q=${'a'.repeat(90)}`);
+
+    expect(reads.at(-1)?.q).toBe('a'.repeat(80));
+  });
+
+  it('writes each applied change as its own history entry, keeping the shell keys', async () => {
+    const el = await open('ro', `${VIEW}?city=cluj-napoca&period=7d`);
+
+    choose(el, 'active');
+    await settle();
+    expect(url()).toBe(`${VIEW}?city=cluj-napoca&period=7d&status=active`);
+
+    await search(el, 'dinamo');
+    expect(url()).toBe(
+      `${VIEW}?city=cluj-napoca&period=7d&q=dinamo&status=active`,
+    );
+    expect(reads.at(-1)).toEqual({ q: 'dinamo', status: 'active' });
+
+    TestBed.inject(Location).back();
+    await settle();
+    expect(url()).toBe(`${VIEW}?city=cluj-napoca&period=7d&status=active`);
+    expect(box(el).value).toBe('');
+    expect(reads.at(-1)).toEqual({ status: 'active' });
+
+    TestBed.inject(Location).back();
+    await settle();
+    expect(url()).toBe(`${VIEW}?city=cluj-napoca&period=7d`);
+    expect(reads.at(-1)).toEqual({});
+  });
+
+  it('writes the roles comma-separated in their fixed order', async () => {
+    const el = await open();
+
+    (el.querySelector('button.roles') as HTMLButtonElement).click();
+    await settle();
+    const tick = (name: string) =>
+      (
+        [
+          ...document.querySelectorAll<HTMLInputElement>(
+            'fieldset[aria-label="Roluri"] input[type="checkbox"]',
+          ),
+        ].find(
+          (c) => c.closest('label')?.textContent?.trim() === name,
+        ) as HTMLInputElement
+      ).click();
+    tick('mecanic');
+    await settle();
+    tick('șofer');
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?role=driver,mechanic`);
+    expect(reads.at(-1)).toEqual({ role: ['driver', 'mechanic'] });
   });
 });

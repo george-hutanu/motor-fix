@@ -1,0 +1,150 @@
+/* Phones: the search box over the filter button; from 768 px one row. */
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.search {
+  position: relative;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.glass {
+  position: absolute;
+  left: var(--mf-space-3);
+  color: var(--mf-text-secondary);
+  pointer-events: none;
+}
+input[type="search"] {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--mf-tap);
+  padding: 0 calc(var(--mf-tap) + var(--mf-space-1)) 0
+    calc(var(--mf-space-3) + 16px + var(--mf-space-2));
+  font: inherit;
+  font-size: max(16px, 1rem);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+input[type="search"]::placeholder {
+  color: var(--mf-text-secondary);
+}
+/* The box's own clear control is ours, the same in every browser. */
+input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}
+.clear-search {
+  position: absolute;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+  padding: 0;
+  color: var(--mf-text-secondary);
+  background: none;
+  border: 0;
+  border-radius: var(--mf-radius-control);
+  cursor: pointer;
+}
+.wide {
+  display: none;
+}
+.filter,
+.roles,
+select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  font: inherit;
+  font-size: max(16px, 1rem);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  cursor: pointer;
+}
+.filter {
+  align-self: flex-start;
+}
+.filter span,
+.roles span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filter svg,
+.roles svg {
+  flex: none;
+}
+input[type="search"]:focus-visible,
+.clear-search:focus-visible,
+.filter:focus-visible,
+.roles:focus-visible,
+select:focus-visible,
+.tick:has(input:focus-visible) {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+.ticks {
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: var(--mf-space-1) 0;
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+.tick {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  font-size: var(--mf-size-small);
+  cursor: pointer;
+}
+.tick input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--mf-amber);
+}
+@media (min-width: 768px) {
+  :host {
+    flex-direction: row;
+    align-items: center;
+  }
+  .search {
+    flex: 1 1 18rem;
+  }
+  input[type="search"],
+  .roles,
+  select {
+    font-size: var(--mf-size-small);
+  }
+  .filter {
+    display: none;
+  }
+  .wide {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--mf-space-2);
+  }
+}
+fieldset.ticks {
+  margin: 0;
+}

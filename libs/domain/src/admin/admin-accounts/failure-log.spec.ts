@@ -46,6 +46,23 @@ describe('FailureLog', () => {
     expect(JSON.stringify(lines)).not.toContain('secret');
   });
 
+  // @traces 002-find-account-search-FR-007
+  it('never writes the search, an e-mail or a phone from the address', () => {
+    answer(
+      '/api/v1/admin/accounts?q=andrei%40gmail.com&role=driver&q=0722123456',
+      400,
+    );
+
+    expect(lines).toEqual([
+      {
+        message: 'admin accounts request failed',
+        route: 'GET /api/v1/admin/accounts',
+        status: 400,
+      },
+    ]);
+    expect(JSON.stringify(lines)).not.toMatch(/andrei|gmail|0722/);
+  });
+
   it.each([401, 403, 404, 500])(
     'logs a %s, including a refusal the guard answers before the route runs',
     (status) => {

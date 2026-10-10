@@ -74,6 +74,7 @@
       },
       "none": "no car"
     },
+    "clear": "Clear the filters",
     "count": {
       "age": {
         "one": "{n}-day-old account",
@@ -90,8 +91,26 @@
     },
     "empty": "No accounts yet.",
     "failed": "The list did not load.",
+    "filters": {
+      "allRoles": "All roles",
+      "allStates": "All states",
+      "apply": "Apply",
+      "button": "Filters: {summary}",
+      "roles": "Roles",
+      "someRoles": {
+        "one": "{n} role",
+        "other": "{n} roles"
+      },
+      "state": "State",
+      "title": "Filters"
+    },
+    "found": {
+      "one": "{n} account found",
+      "other": "{n} accounts found"
+    },
     "loading": "Loading the accounts",
     "more": "The next accounts did not load.",
+    "noMatch": "No account matches.",
     "recent": "Recent accounts",
     "retry": "Try again",
     "roles": {
@@ -101,10 +120,15 @@
       "mechanic": "mechanic",
       "receptionist": "reception"
     },
+    "search": {
+      "clear": "Clear the search",
+      "label": "Search by name, e‑mail or phone"
+    },
     "state": {
       "active": "active",
       "since": "{state} · since {when}",
-      "suspended": "suspended"
+      "suspended": "suspended",
+      "watch": "under watch"
     },
     "totals": {
       "drivers": {

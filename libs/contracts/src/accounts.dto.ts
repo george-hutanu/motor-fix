@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
+import { ACCOUNT_ROLES, ACCOUNT_STATES, SEARCH_MAX } from './account-search';
 import { ROLE } from './me.dto';
 
 const COUNT_KIND = ['requests', 'reviews', 'age'] as const;
@@ -16,6 +17,35 @@ export class AdminAccountsQueryDto {
   @IsOptional()
   @IsString()
   cursor?: string;
+
+  // The values' rules (the length, the roles, one state) are the service's,
+  // answered with their own codes; the edge checks only that they are text.
+  @ApiPropertyOptional({
+    description:
+      'Contained in the name, a garage worked at or the e-mail, or a phone written in part; trimmed and spaces collapsed, ignored under 2 characters',
+    maxLength: SEARCH_MAX,
+  })
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Accounts holding at least one of these roles; repeated or comma-separated',
+    enum: ACCOUNT_ROLES,
+    isArray: true,
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  role?: string | string[];
+
+  @ApiPropertyOptional({
+    description: 'watch matches none until open watches exist',
+    enum: ACCOUNT_STATES,
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  status?: string | string[];
 }
 
 export class AdminAccountCountDto {
@@ -84,6 +114,14 @@ export class AdminAccountsPageDto {
 
   @ApiProperty({ nullable: true, type: String })
   nextCursor!: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Every account the search and filters match, counted at this read; only when q, role or status is given',
+    minimum: 0,
+    type: 'integer',
+  })
+  total?: number;
 }
 
 // Counted at most once a minute, the same for every language.
