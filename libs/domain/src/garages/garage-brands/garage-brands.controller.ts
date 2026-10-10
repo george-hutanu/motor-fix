@@ -39,7 +39,8 @@ export class GarageBrandsController {
   })
   @ApiOkResponse({ type: GarageBrandOwnerAnswerDto })
   @ApiBadRequestResponse({
-    description: 'validation_failed: a bad or unknown brand, a text too long',
+    description:
+      'validation_failed: a bad or unknown brand, a text too long, a job not on the price list (job_not_priced), jobs on a refused brand (jobs_on_refused)',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
