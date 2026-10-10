@@ -6,6 +6,7 @@ features:
   - 229-location-or-address
   - 230-brand-search
   - 226-best-rated-brand-dial
+  - 227-garage-cards-home
 ---
 
 # Capability: Home
@@ -172,17 +173,17 @@ _From 230-brand-search._
 
 _From 226-best-rated-brand-dial._
 
-### 226-FR-002 — Under the dial Home MUST show the preview: up to three rows, the two best garages that take the brand then the best garage that refuses it or has not marked it, in that order; each row holds a lamp (`mf-lamp`, green for `works_on`, red otherwise) whose label is "Lucrează pe {brand}" / "Works on {brand}" or "Nu primește {brand}" / "Doesn't take {brand}", the garage's name, its rating ("4,9", or "Fără recenzii" / "No reviews yet" with none) and its hourly rate "de la {rate} lei/oră" / "from {rate} lei/hour" from the garage's labour-from price in whole lei (left out when the garage has none). The slots are fixed (two takers, one refuser); with fewer garages than slots only the existing rows are shown, no empty row, and a missing taker is never replaced by a refuser (only FR-004's no-taker state shows up to three refusers).
+### 227-FR-010 — The dial preview (ST-226) MUST render as the board's one panel: the Cockpit surface with a 1 px line and the panel radius token (`--mf-radius-panel`), no hard-coded radius anywhere in its styles; each row at least 64 px tall, consecutive rows split by a 1 px separator; on the left the lamp dot and the garage's name with the status words under the name; on the right the rating over the rate, right-aligned with tabular numerals; a phone keeps the rows full width under the dial. The row's link, lamp, copy and states of 226-FR-002 to 226-FR-005 are unchanged.
 
-_From 226-best-rated-brand-dial._
+_From 227-garage-cards-home._
 
 ### 226-FR-003 — Each preview row MUST be one link to the garage's public profile in the current language with the brand carried (`?brand={slug}`, as the Results cards do), at least 44 px tall, and the whole row is the hit area.
 
 _From 226-best-rated-brand-dial._
 
-### 226-FR-004 — When the Home read's answer carries no best garage, the dial MUST rest at 0 ("—", empty arc, its accessible name the "nobody takes it" line below) and, in place of the garage's name, read "Niciun service din zonă nu primește încă {brand}" / "No garage nearby takes {brand} yet"; the preview shows the refusing rows that exist (up to three, same order). When the answer's `total` is 0 and a place is set, the line reads "Niciun service în 25 km" / "No garage within 25 km" followed by a button "Schimbă locul" / "Change place" that opens the place dialog; without a place and `total` 0, the "nobody takes it" line stands.
+### 227-FR-011 — The "nobody takes it" line of 226-FR-004 MUST read "Niciun service din zonă nu primește {brand}" / "No garage nearby takes {brand}" (no trailing "încă" / "yet") in the dial and in the live announcement.
 
-_From 226-best-rated-brand-dial._
+_From 227-garage-cards-home._
 
 ### 226-FR-005 — While the Home read is loading, the dial MUST show 0 and a greyed (dimmed) state with a skeleton line in place of the name and three skeleton rows in the preview, the area marked busy; while it has failed, the count area's message and retry (225-FR-012) stand and the dial stays at 0 with no name and no rows. A retry refills the dial and the preview from the same read.
 
@@ -196,9 +197,9 @@ _From 226-best-rated-brand-dial._
 
 _From 226-best-rated-brand-dial._
 
-### 226-FR-008 — The dial and the preview MUST hold at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll; the dial is at most 240 px wide and centred on a phone; the lamp's label and rate text are at least 12 px and the lamp's dot colour comes from the tokens; the preview's rows are 44 px tall at least; a name or city longer than its line wraps inside the row and never widens it, and a row shows the shared focus ring of the Cockpit theme when focused by keyboard.
+### 227-FR-010 — The dial preview (ST-226) MUST render as the board's one panel: the Cockpit surface with a 1 px line and the panel radius token (`--mf-radius-panel`), no hard-coded radius anywhere in its styles; each row at least 64 px tall, consecutive rows split by a 1 px separator; on the left the lamp dot and the garage's name with the status words under the name; on the right the rating over the rate, right-aligned with tabular numerals; a phone keeps the rows full width under the dial. The row's link, lamp, copy and states of 226-FR-002 to 226-FR-005 are unchanged.
 
-_From 226-best-rated-brand-dial._
+_From 227-garage-cards-home._
 
 ### 226-FR-012 — The development seed MUST give the eight listed garages ratings, review counts and labour-from prices such that, near Bucharest with Dacia selected, the dial names one known garage, the preview holds two known takers and one known refuser, two takers share a rating and differ by reviews, and one taker has no reviews; the Cluj-Napoca mobile mechanic takes Dacia, so a place in Cluj-Napoca names it on the dial with "Mecanic mobil · vine la tine".
 
@@ -207,3 +208,53 @@ _From 226-best-rated-brand-dial._
 ### 226-FR-013 — This story writes nothing at run time (no audit entry, no event, no live update, no search log); the data is re-read on each brand or place change only. No new route: the Home read stays public and the public routes list is unchanged. No new service, queue or outside call: the PR's Observability section says so, and the existing Home read metrics (if any) cover it.
 
 _From 226-best-rated-brand-dial._
+
+### 227-FR-001 — Home MUST show, after the car section and before the page's footer parts, a section with the heading "Cine primește {brand}" / "Who takes your {brand}" and, beside the heading, a link "Vezi toate pe hartă" / "See all on the map" whose route and parameters are exactly those of the main button "Caută service-uri" (Results in the current language with `?brand={slug}`, and the place when that button carries one). The heading and the link are shown in every state once a brand is selected, including when no garage is in the area; with no brand selected the whole section is absent (the dial, count and preview are in their own no-brand state, 226-FR-001).
+
+_From 227-garage-cards-home._
+
+### 227-FR-002 — Under the heading Home MUST show one card per garage in the Home read's `preview`, in that order (up to three: the two best takers then the best refuser, 226-FR-002), from the same read the count, dial and preview use (no second request, 226-FR-006). With fewer garages only the existing cards are shown, never an empty card; with none, no card.
+
+_From 227-garage-cards-home._
+
+### 227-FR-003 — Each card MUST show: a small rating dial (`mf-rating-dial`, size small) with the rating as a number (one decimal in the language's format, 019-FR-003; "—" with no reviews); the garage's name; a where line with the city (when known) and, with a place set, the distance ("2,4 km" / "2.4 km", 229-FR-015), or for a mobile mechanic "Mecanic mobil · vine la tine · zonă de {radius} km" / "Mobile mechanic · comes to you · {radius} km area" from its service radius, with no city, seat or address ever shown; a lamp (`mf-lamp`, green for `works_on`, red otherwise) with the words "Lucrează pe {brand}" / "Works on {brand}" or "Nu primește {brand}" / "Doesn't take {brand}"; the line "Lucrează pe" / "Works on" followed by the garage's works-on brand names; the line "Nu primește" / "Doesn't take" followed by the brand names the garage refused itself (the selected brand is not added when the garage merely never marked it); the hourly rate "de la {rate} lei/oră" / "from {rate} lei/hour" in whole lei (left out when the garage has none); and the number of reviews in the language's shared CLDR plural form ("1 recenzie", "12 recenzii", "20 de recenzii", "101 recenzii"; "1 review", "12 reviews"), or "Fără recenzii" / "No reviews yet" with none.
+
+_From 227-garage-cards-home._
+
+### 227-FR-004 — A brand-name list longer than 6 MUST show its first 6 names followed by "+N" (N the names left out); an empty list shows "—". Names come ordered by the API (brand name ascending); the card never re-sorts.
+
+_From 227-garage-cards-home._
+
+### 227-FR-005 — Each card MUST be one link to the garage's public profile in the current language with the brand carried (`?brand={slug}`, 226-FR-003), the whole card the hit area, at least 44 px tall, showing the Cockpit focus ring when focused by keyboard.
+
+_From 227-garage-cards-home._
+
+### 227-FR-006 — While the Home read is loading the section MUST show three skeleton cards and be marked busy; while it has failed, the cards area MUST show the count's message "Nu am putut încărca service‑urile" / "We could not load the garages" and its retry button, which runs the same reload (225-FR-012); no card from a previous answer stays. On a brand or place change the cards change at the same moment the count and the dial do.
+
+_From 227-garage-cards-home._
+
+### 227-FR-007 — Every text of this story MUST live in the shared i18n files in Romanian and English; the section re-renders on a language switch without a new read.
+
+_From 227-garage-cards-home._
+
+### 227-FR-008 — The section MUST hold at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways scroll: cards stack in one column on a phone and sit side by side from tablet width (the board's auto-fit grid); the smallest text is 12 px; a long name or list wraps inside its card; the card's radius, surface, line and lamp colours come from the Cockpit tokens.
+
+_From 227-garage-cards-home._
+
+### 227-FR-012 — This story writes nothing at run time (no audit entry, no event, no live update, no search log); no new route, service, queue or outside call: the Home read stays public and the public routes list is unchanged; the PR's Observability section says so.
+
+_From 227-garage-cards-home._
+
+### 227-FR-013 — The development seed MUST give the listed garages works-on and refused brands such that, near Bucharest with Dacia selected, at least one preview garage has more than 6 works-on brands (the "+N" cut is visible), one has an empty refused list, and the Cluj-Napoca mobile mechanic carries a service radius, so the end-to-end test meets every card variant on seed data.
+
+_From 227-garage-cards-home._
+
+### 227-FR-014 — Accessibility: the section is a landmark-free `section` named by its `h2`; each card's accessible name is the garage's name followed by its stance words and its rating (the dial's number is not announced a second time, and the lamp's colour is never the only carrier of the stance); the error message is announced when it appears (`role="alert"`), the busy state is exposed as `aria-busy`, skeleton cards carry no text for assistive technology, text meets WCAG AA contrast in both themes, and any shimmer or hover motion stops under `prefers-reduced-motion`.
+
+_From 227-garage-cards-home._
+
+## Retired
+
+- `226-FR-002` — superseded by `227-FR-010` (2026-10-10)
+- `226-FR-004` — superseded by `227-FR-011` (2026-10-10)
+- `226-FR-008` — superseded by `227-FR-010` (2026-10-10)

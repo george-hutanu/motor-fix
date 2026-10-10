@@ -137,15 +137,20 @@ test.describe('the brand picker @seeded', () => {
     await ready(page, '/ro');
 
     await tile(page, 'Dacia').click();
+    const count = page.locator('mf-home .count');
     await expect(
-      page.getByText('Nu am putut încărca service‑urile'),
+      count.getByText('Nu am putut încărca service‑urile'),
     ).toBeVisible();
+    // @traces 227-FR-006
+    await expect(page.locator('mf-home-cards [role="alert"]')).toHaveText(
+      /Nu am putut încărca service‑urile/,
+    );
     await expect(
       page.getByRole('link', { name: 'Caută service‑uri' }),
     ).toHaveAttribute('href', '/ro/garages?brand=dacia');
 
     fail = false;
-    await page.getByRole('button', { name: 'Reîncearcă' }).click();
+    await count.getByRole('button', { name: 'Reîncearcă' }).click();
 
     await expect(
       page.getByText('5 din 8 service‑uri primesc Dacia'),
@@ -441,6 +446,7 @@ test.describe('the rating dial near Bucharest @seeded', () => {
   });
 
   // @traces 226-FR-004
+  // @traces 227-FR-011
   test('rests at "—" when nobody near takes the brand, with only refusing rows', async ({
     page,
   }) => {
@@ -451,7 +457,7 @@ test.describe('the rating dial near Bucharest @seeded', () => {
 
     await expect(dialValue(page)).toHaveText('—');
     await expect(dialArea(page).locator('.gauge .name')).toHaveText(
-      'Niciun service din zonă nu primește încă Tesla',
+      'Niciun service din zonă nu primește Tesla',
     );
     await expect(previewRows(page)).toHaveCount(3);
     for (const lamp of await previewRows(page).locator('mf-lamp').all()) {
@@ -611,3 +617,298 @@ for (const width of [320, 834]) {
     expect(caption - value).toBeLessThanOrEqual(40);
   });
 }
+
+// @traces 227-FR-001
+// @traces 227-FR-002
+// @traces 227-FR-003
+// @traces 227-FR-004
+// @traces 227-FR-005
+const cards = (page: Page) => page.locator('mf-home-cards a.card');
+const cardsLink = (page: Page) =>
+  page
+    .locator('mf-home-cards')
+    .getByRole('link', { name: 'Vezi toate pe hartă' });
+
+test.describe('the garage cards near Bucharest @seeded', () => {
+  test.use({
+    geolocation: { latitude: 44.4268, longitude: 26.1025 },
+    permissions: ['geolocation'],
+  });
+
+  test('shows the preview garages as cards, from the one read, and opens them', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await useLocation(page);
+    const reads = homeReads(page);
+    await pickDacia(page);
+
+    await expect(
+      page.getByRole('heading', { name: 'Cine primește Dacia' }),
+    ).toBeVisible();
+    await expect(cards(page)).toHaveCount(3);
+    await expect(cards(page).locator('.name')).toHaveText(
+      await previewRows(page).locator('.name').allTextContents(),
+    );
+    await expect(cards(page).locator('mf-lamp')).toHaveText([
+      'Lucrează pe Dacia',
+      'Lucrează pe Dacia',
+      'Nu primește Dacia',
+    ]);
+    expect(reads).toEqual(['dacia']);
+
+    const militari = cards(page).first();
+    await expect(militari.locator('.where')).toHaveText(
+      /București · \d+(,\d)? km/,
+    );
+    await expect(militari.locator('.list').first()).toContainText('+2');
+    await expect(cards(page).nth(1).locator('.list').nth(1)).toHaveText(
+      /Nu primește\s*—/,
+    );
+
+    await militari.click();
+    await expect(page).toHaveURL(
+      '/ro/garages/service-auto-militari?brand=dacia',
+    );
+    await page.goBack();
+    await cardsLink(page).click();
+    await expect(page).toHaveURL('/ro/garages?brand=dacia');
+  });
+
+  test('keeps the heading and the link when nobody near takes the brand', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await useLocation(page);
+
+    await chooseTesla(page);
+
+    await expect(
+      page.getByRole('heading', { name: 'Cine primește Tesla' }),
+    ).toBeVisible();
+    await expect(cardsLink(page)).toHaveAttribute(
+      'href',
+      '/ro/garages?brand=tesla',
+    );
+    await expect(cards(page)).toHaveCount(3);
+    for (const lamp of await cards(page).locator('mf-lamp').all()) {
+      await expect(lamp).toHaveText('Nu primește Tesla');
+    }
+  });
+});
+
+test.describe('the garage cards in Cluj-Napoca @seeded', () => {
+  test.use({
+    geolocation: { latitude: 46.7712, longitude: 23.6236 },
+    permissions: ['geolocation'],
+  });
+
+  test('shows the mobile mechanic by its area, never an address', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    await useLocation(page);
+
+    const mobile = cards(page).filter({ hasText: 'Mecanic Mobil Cluj' });
+    await expect(mobile.locator('.where')).toHaveText(
+      'Mecanic mobil · vine la tine · zonă de 20 km',
+    );
+  });
+});
+
+// @traces 227-FR-008
+for (const scheme of ['light', 'dark'] as const) {
+  for (const path of ['/ro', '/en']) {
+    test(`fits the garage cards on a 320 px phone on ${path}, ${scheme} @seeded`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ height: 640, width: 320 });
+      await ready(page, path);
+      await pickDacia(page);
+      await expect(cards(page)).toHaveCount(3);
+
+      const boxes = await cards(page).evaluateAll((all) =>
+        all.map((card) => {
+          const box = card.getBoundingClientRect();
+          return { height: box.height, left: Math.round(box.left) };
+        }),
+      );
+      expect(new Set(boxes.map((box) => box.left)).size).toBe(1);
+      for (const box of boxes) expect(box.height).toBeGreaterThanOrEqual(44);
+      const sizes = await page
+        .locator('mf-home-cards')
+        .locator('h2, a, span, mf-lamp')
+        .evaluateAll((parts) =>
+          parts
+            .filter((part) => part.textContent?.trim())
+            .map((part) => Number.parseFloat(getComputedStyle(part).fontSize)),
+        );
+      for (const size of sizes) expect(size).toBeGreaterThanOrEqual(12);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(320);
+    });
+  }
+}
+
+// @traces 227-FR-003
+// @traces 227-FR-008
+for (const path of ['/ro', '/en']) {
+  test(`sets the garage cards' text and dial value at 16 px on a 390 px phone on ${path} @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await ready(page, path);
+    await pickDacia(page);
+    await expect(cards(page)).toHaveCount(3);
+
+    const sizes = await cards(page)
+      .locator('.mf-dial-value, .name, .where, .list, .facts, mf-lamp')
+      .evaluateAll((parts) =>
+        parts.map((p) => Number.parseFloat(getComputedStyle(p).fontSize)),
+      );
+    expect(sizes.length).toBeGreaterThan(3);
+    for (const size of sizes) expect(size).toBeGreaterThanOrEqual(16);
+    for (const dial of await cards(page).locator('mf-rating-dial').all()) {
+      const outer = await dial.boundingBox();
+      const value = await dial.locator('.mf-dial-value').evaluate((v) => {
+        const range = document.createRange();
+        range.selectNodeContents(v);
+        return range.getBoundingClientRect().width;
+      });
+      expect(value).toBeLessThan(outer?.width ?? 0);
+    }
+  });
+}
+
+// @traces 227-FR-003
+for (const width of [390, 1280]) {
+  test(`sets each card's dial beside its name, the status under both, at ${width} px @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width });
+    await ready(page, '/ro');
+    await pickDacia(page);
+    await expect(cards(page)).toHaveCount(3);
+
+    for (const card of await cards(page).all()) {
+      const dial = await card.locator('mf-rating-dial').boundingBox();
+      const name = await card.locator('.name').boundingBox();
+      const lamp = await card.locator('mf-lamp').boundingBox();
+      if (!dial || !name || !lamp) throw new Error('card parts missing');
+      // Beside: the name starts right of the dial, within the dial's height.
+      expect(name.x).toBeGreaterThanOrEqual(dial.x + dial.width - 1);
+      expect(name.y).toBeGreaterThanOrEqual(dial.y - 1);
+      expect(name.y).toBeLessThan(dial.y + dial.height);
+      // Under both: the status starts below the dial, at the card's left edge.
+      expect(lamp.y).toBeGreaterThanOrEqual(dial.y + dial.height - 1);
+      expect(Math.abs(lamp.x - dial.x)).toBeLessThanOrEqual(1);
+    }
+  });
+}
+
+// @traces 227-FR-010
+for (const path of ['/ro', '/en']) {
+  test(`never leaves a word alone on the last line of a preview row's status at 320 px on ${path} @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await ready(page, path);
+    await pickDacia(page);
+
+    const lines = await previewRows(page)
+      .locator('mf-lamp')
+      .evaluateAll((lamps) =>
+        lamps.map((lamp) => {
+          const text = [...lamp.childNodes].find(
+            (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
+          );
+          if (!text?.textContent) return [];
+          const rows = new Map<number, string[]>();
+          for (const match of text.textContent.matchAll(/\S+/g)) {
+            const range = document.createRange();
+            range.setStart(text, match.index ?? 0);
+            range.setEnd(text, (match.index ?? 0) + match[0].length);
+            const top = Math.round(range.getBoundingClientRect().top);
+            rows.set(top, [...(rows.get(top) ?? []), match[0]]);
+          }
+          return [...rows.values()];
+        }),
+      );
+    expect(lines.length).toBe(3);
+    for (const rows of lines) {
+      if (rows.length > 1) expect(rows.at(-1)?.length).toBeGreaterThan(1);
+    }
+  });
+}
+
+// @traces 227-FR-010
+for (const path of ['/ro', '/en']) {
+  for (const brand of ['Dacia', 'BMW']) {
+    test(`never splits a word of a preview row's status across lines at 320 px on ${path} for ${brand} @seeded`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height: 640, width: 320 });
+      await ready(page, path);
+      await page.getByRole('radio', { exact: true, name: brand }).click();
+      await expect(previewRows(page).first()).toHaveAttribute(
+        'href',
+        new RegExp(`[?&]brand=${brand.toLowerCase()}(&|$)`),
+      );
+
+      const split = await previewRows(page)
+        .locator('mf-lamp')
+        .evaluateAll((lamps) =>
+          lamps.flatMap((lamp) => {
+            const text = [...lamp.childNodes].find(
+              (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
+            );
+            if (!text?.textContent) return ['no status text'];
+            const lines = (start: number, end: number) => {
+              const range = document.createRange();
+              range.setStart(text, start);
+              range.setEnd(text, end);
+              return new Set(
+                [...range.getClientRects()].map((r) => Math.round(r.top)),
+              ).size;
+            };
+            return [...text.textContent.matchAll(/[^\s\u00a0]+/g)]
+              .filter((m) => lines(m.index, m.index + m[0].length) > 1)
+              .map((m) => m[0]);
+          }),
+        );
+      expect(split).toEqual([]);
+    });
+  }
+}
+
+// @traces 227-FR-010
+test('sets the preview as one panel of 64 px rows, the rating over the rate on the right @seeded', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 900, width: 1280 });
+  await ready(page, '/ro');
+  await pickDacia(page);
+
+  for (const row of await previewRows(page).all()) {
+    const box = await row.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(64);
+    const rating = await row.locator('.rating').boundingBox();
+    const rate = await row.locator('.rate').boundingBox();
+    const name = await row.locator('.name').boundingBox();
+    if (!rating || !rate || !name || !box) throw new Error('row parts missing');
+    expect(rating.y + rating.height).toBeLessThanOrEqual(rate.y + 1);
+    expect(rating.x).toBeGreaterThan(name.x + name.width - 1);
+  }
+  const panel = page.locator('mf-home-preview ul');
+  const radius = () =>
+    panel.evaluate((list) => getComputedStyle(list).borderTopLeftRadius);
+  expect(await radius()).toBe('20px');
+  // The radius is the theme's panel token, not a number of its own.
+  await page.evaluate(() =>
+    document.documentElement.style.setProperty('--mf-radius-panel', '7px'),
+  );
+  expect(await radius()).toBe('7px');
+});

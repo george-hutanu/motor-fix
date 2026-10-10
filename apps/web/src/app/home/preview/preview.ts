@@ -21,6 +21,18 @@ export class HomePreview {
 
   protected readonly skeletons = [0, 1, 2];
 
+  // The last two words are joined by a no-break space, so a narrow phone
+  // never leaves the brand (or its last word) alone on the status's last line.
+  protected status(garage: HomeGarageDto) {
+    const text = this.i18n.t(
+      garage.stance === 'works_on'
+        ? 'public.home.preview.worksOn'
+        : 'public.home.preview.doesNotTake',
+      { brand: this.brand().name },
+    );
+    return text.replace(/\s+(\S+)\s*$/, '\u00a0$1');
+  }
+
   protected rating(garage: HomeGarageDto) {
     return garage.rating === null
       ? this.i18n.t('public.home.preview.noReviews')

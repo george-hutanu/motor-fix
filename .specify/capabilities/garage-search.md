@@ -7,6 +7,7 @@ features:
   - 225-brand-picker
   - 229-location-or-address
   - 226-best-rated-brand-dial
+  - 227-garage-cards-home
 ---
 
 # Capability: Garage search
@@ -99,9 +100,9 @@ _From 229-location-or-address._
 
 _From 229-location-or-address._
 
-### 226-FR-009 — `GET /api/v1/home?brand={slug}&near={lat},{lng}` MUST keep answering `brand`, `takers` and `total` unchanged (225-FR-009, 229-FR-009) and add `best` (the best taker, or null) and `preview` (a list of up to three garages: the two best takers then the best refuser, in order). Each garage carries: `id`, `name`, `slug`, `stance` (`works_on`, `does_not_take` or `unstated`, the brand-first search's rule), `rating` (one decimal or null), `reviewCount` (whole number), `labourFromLei` (whole lei or null), `businessKind`, `city` (the address's city name, for a fixed garage only; never for a mobile mechanic) and, only when `near` is given, `distanceKm` (one decimal; null for a mobile mechanic) and `comesToYou` (true for a mobile mechanic whose area holds the place), the shape 229-FR-012 gives a listed garage. `best` is the first element of `preview` when there is a taker. The same validation and errors as today; `Cache-Control: public, max-age=60` unchanged.
+### 227-FR-009 — `GET /api/v1/home` MUST add to each garage of `preview` (and so to `best`): `worksOn` (the names of the brands the garage marked `works_on`, A to Z), `doesNotTake` (the names of the brands it marked `does_not_take`, A to Z; never a brand it left unmarked; a brand retired from the catalogue is in neither list) and `serviceRadiusKm` (whole km, a mobile mechanic only; absent for a fixed garage). Everything else of 226-FR-009 is unchanged: the same validation, errors, order and `Cache-Control`; the generated client is regenerated from `apps/api/openapi.json`.
 
-_From 226-best-rated-brand-dial._
+_From 227-garage-cards-home._
 
 ### 226-FR-010 — The order for the dial and the takers MUST be: rating high to low with null ratings after every rated garage, then more reviews first, then name A to Z, then id; the refuser slot uses the same order among the garages whose stance is `does_not_take` or that have no row for the brand. Only approved garages in the area count (the one public scope; the area of 229-FR-010 and FR-011, all of Romania without `near`).
 
@@ -113,3 +114,5 @@ _From 226-best-rated-brand-dial._
 - `043-FR-008` — superseded by `042-FR-013` (2026-10-07)
 
 - `225-FR-009` — superseded by `229-FR-009` (2026-10-08)
+
+- `226-FR-009` — superseded by `227-FR-009` (2026-10-10)

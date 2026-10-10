@@ -1,0 +1,135 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2) var(--mf-space-4);
+  justify-content: space-between;
+  margin-block-end: var(--mf-space-3);
+}
+
+h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.all {
+  align-items: center;
+  color: var(--mf-amber-ink);
+  display: inline-flex;
+  min-height: 44px;
+}
+
+.cards {
+  min-width: 0;
+}
+
+ul,
+.cards:has(.skeleton) {
+  display: grid;
+  gap: var(--mf-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  min-width: 0;
+}
+
+.card {
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+  box-sizing: border-box;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  height: 100%;
+  min-height: 44px;
+  padding: var(--mf-space-4);
+  text-decoration: none;
+}
+
+/* The dial sits beside the name and the where line, as the board draws it;
+   the status, the lists and the facts run under both. */
+.top {
+  align-items: center;
+  display: flex;
+  gap: var(--mf-space-3);
+  margin-block-end: var(--mf-space-1);
+  min-width: 0;
+}
+
+.id {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+
+.name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.where,
+.list,
+.facts {
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* The dial's value too: body size on a phone, the dial's own small size from
+   a tablet up. */
+@media (max-width: 767.98px) {
+  mf-rating-dial {
+    --mf-size-small: var(--mf-size-body);
+  }
+}
+
+/* Body size on a phone, small from a tablet up. */
+@media (min-width: 768px) {
+  .all,
+  .where,
+  .list,
+  .facts {
+    font-size: max(12px, var(--mf-size-small));
+  }
+}
+
+.key {
+  color: var(--mf-text);
+  font-weight: 700;
+}
+
+mf-lamp + .list {
+  border-top: 1px solid var(--mf-line);
+  margin-top: var(--mf-space-1);
+  padding-top: var(--mf-space-2);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.card.skeleton {
+  background: currentColor;
+  border: 0;
+  height: 160px;
+  opacity: 0.15;
+}
+
+.cards > p {
+  margin: 0 0 var(--mf-space-2);
+}
