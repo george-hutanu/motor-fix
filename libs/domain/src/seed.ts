@@ -482,10 +482,10 @@ async function requests(db: Client) {
   await book(db, who, await send(db, who, 1, true));
 }
 
-// A database seeded before ST-424 holds the mechanic's job to do, never
+// A database seeded before book() started its job holds that job to do, never
 // started and with no history, and requests() above adds nothing to it: start
-// it as book() does now, so QA can tick its steps there too (ST-1023). A job
-// with any history was moved by the app, and is left as it is.
+// it as book() does now, so QA can tick its steps there too. A job with any
+// history was moved by the app, and is left as it is.
 async function startOlderJob(db: Client) {
   const job = await db.query<{ id: string }>(
     `UPDATE job j SET status = 'in_work', started_at = now()

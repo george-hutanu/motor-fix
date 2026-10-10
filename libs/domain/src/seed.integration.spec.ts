@@ -587,7 +587,7 @@ describe('seed of a request through to a job', () => {
 
   // Staging kept the job an older seed wrote (to do, never started, no
   // history), and the release's seed-only run must still start it: a job
-  // that is not started refuses every tick (ST-1023).
+  // that is not started refuses every tick.
   it('starts the job an older seed left to do, with its history, when run again', async () => {
     expect(seed('test').status).toBe(0);
     const started = await chain();
