@@ -8,6 +8,7 @@ features:
   - 344-send-quote
   - 030-new-account-empty-states
   - 345-decline-request
+  - 1025-answers-same-day
 ---
 
 # Capability: Quotes
@@ -128,9 +129,9 @@ _From 221-quote-request._
 
 _From 221-quote-request._
 
-### 221-FR-013 — The API MUST answer 201 with the request as the driver reads it (the request DTO of 220-FR-012, with its recipients as garage id, name, slug and status); the dialog MUST then replace its form with the confirmation "Trimis către <garage>." / "Sent to <garage>." for one garage, "Trimis către <n> service‑uri." / "Sent to <n> garages." with the names listed for several, and a link "Vezi Cererile mele" / "See My requests" to the driver's requests view; closing the dialog returns to the profile with the button back. The "răspunde de obicei în aceeași zi" line is added by the response-rate story once a garage has a public rate (Assumptions).
+### 1025-FR-001 — After a quote request is sent, the confirmation MUST show, for each recipient garage that qualifies under FR-002, one short line stating that the garage usually answers the same day: Romanian "{garage} răspunde de obicei în aceeași zi.", English "{garage} usually answers the same day." Both texts MUST exist in Romanian and English; the two sentences contain no hyphenated word, so the U+2011 rule of the existing texts ("service‑uri") does not apply to them.
 
-_From 221-quote-request._
+_From 1025-answers-same-day._
 
 ### 030-FR-009 — The views MUST show, with no data, exactly this text and action:
 
@@ -332,6 +333,34 @@ _From 345-decline-request._
 
 _From 345-decline-request._
 
+### 1025-FR-001 — After a quote request is sent, the confirmation MUST show, for each recipient garage that qualifies under FR-002, one short line stating that the garage usually answers the same day: Romanian "{garage} răspunde de obicei în aceeași zi.", English "{garage} usually answers the same day." Both texts MUST exist in Romanian and English; the two sentences contain no hyphenated word, so the U+2011 rule of the existing texts ("service‑uri") does not apply to them.
+
+_From 1025-answers-same-day._
+
+### 1025-FR-002 — A garage qualifies when its public response rate is in the `rate` state and the rate is at or above RESPONSE_SAME_DAY_MIN_RATE = 70 percent (answered, quoted or declined, within 24 hours over the last 30 days, as the nightly stats compute it, which already requires at least 10 requests ever). The threshold is one named constant, owned by the stats module, so the owner changes it in one place.
+
+_From 1025-answers-same-day._
+
+### 1025-FR-003 — A garage in the `new` state, in the `none` state, or with a rate below the threshold MUST get no line and no empty element: the confirmation reads exactly as before this story for that garage. No text ever states that a garage answers slowly or rarely.
+
+_From 1025-answers-same-day._
+
+### 1025-FR-004 — The rule of FR-002 MUST be applied in one place on the server and carried as a decided fact (`answersSameDay`) on each recipient's garage in the request the send returns, so the dialog does not re-derive it from the percentage; the same rule serves one recipient and several.
+
+_From 1025-answers-same-day._
+
+### 1025-FR-005 — The line MUST never delay or fail the send: the confirmation is rendered from the send response alone (no further call for the line), and a garage with no stats row is treated as `new` (no line, no error).
+
+_From 1025-answers-same-day._
+
+### 1025-FR-006 — For a single recipient the line MUST sit under the sent line, inside the same status region, so a screen reader announces it with the confirmation; for several recipients the qualifying garage's list item MUST read as the FR-001 sentence (same text key), plain text. The line MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll.
+
+_From 1025-answers-same-day._
+
+### 1025-FR-007 — The public garage profile and every other screen that shows the rate MUST be unchanged by this story; the line exists only in the send confirmation.
+
+_From 1025-answers-same-day._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -353,3 +382,5 @@ _From 345-decline-request._
 - `343-FR-004` — superseded by `345-FR-012` (2026-10-10)
 - `344-FR-009` — superseded by `345-FR-013` (2026-10-10)
 - `343-FR-009` — superseded by `345-FR-016` (2026-10-10)
+
+- `221-FR-013` — superseded by `1025-FR-001` (2026-10-10)
