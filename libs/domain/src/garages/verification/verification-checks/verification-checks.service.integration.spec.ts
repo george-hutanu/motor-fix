@@ -211,6 +211,27 @@ describe('recording a check', () => {
     });
   });
 
+  // @traces 357-public-price-jobs-FR-006
+  it('drops the public profile when the activities change, since they decide its jobs', async () => {
+    const changed = () =>
+      prisma.outboxEvent.findMany({
+        where: { kind: 'price_list.updated', subjectId: garageId },
+      });
+
+    await record('activities', { activities: ['brakes'], result: 'ok' });
+
+    const [event, ...others] = await changed();
+    expect(others).toHaveLength(0);
+    expect(event?.audience).toContain(`public:garage:${garageId}`);
+
+    await record('activities', {
+      detail: 'lipsește direcția',
+      result: 'warning',
+    });
+
+    expect(await changed()).toHaveLength(1);
+  });
+
   it('lets the last save win and keeps both in the history', async () => {
     await record('rar', { detail: 'nu apare', result: 'failed' });
     await record('rar', { detail: 'găsită', result: 'ok' }, dan);

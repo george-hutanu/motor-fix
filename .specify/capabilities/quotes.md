@@ -8,6 +8,7 @@ features:
   - 344-send-quote
   - 030-new-account-empty-states
   - 345-decline-request
+  - 357-public-price-jobs
 ---
 
 # Capability: Quotes
@@ -92,9 +93,9 @@ _From 221-quote-request._
 
 _From 221-quote-request._
 
-### 221-FR-004 — The jobs offered MUST be the distinct job types of the garage's visible price list (every GARAGE_PRICE row marked visible, whatever brand it names, in the list's order), read with the garage's public profile; the driver switches them on and off in the dialog. A request MUST hold at least one job or a description; the description MUST be at most 1,000 characters and at least 10 when no job is switched on; a job type repeated in the call is refused. The dialog disables Trimite and shows the reason under the field until these hold; the API answers 400 `validation_failed` naming the field (`jobTypeIds`, `description`).
+### 357-FR-006 — The public garage profile's job list MUST contain exactly the public jobs, each once, in the price list's order (a job's default row's position; a job with no default row by its lowest position; equal positions by row id, so the order is stable), replacing the current filter of approved and visible rows (modifies 221-FR-004: the jobs a request from the profile can ask for are the public jobs).
 
-_From 221-quote-request._
+_From 357-public-price-jobs._
 
 ### 221-FR-005 — `POST /api/v1/quote-requests` MUST take the car id, the garage ids (1 to REQUEST_MAX_GARAGES, no repeats), the job type ids (0 or more, no repeats), the optional description and, per garage, its `source`; it MUST require the `Idempotency-Key` header, 1 to 64 characters, and answer 400 `validation_failed` (field `idempotency-key`) without it. The DTOs live in the contracts library and the OpenAPI document and the generated client are regenerated (421-FR-015, 421-FR-016). The route needs a session and joins no public route (the public-routes test list is unchanged).
 
@@ -353,3 +354,5 @@ _From 345-decline-request._
 - `343-FR-004` — superseded by `345-FR-012` (2026-10-10)
 - `344-FR-009` — superseded by `345-FR-013` (2026-10-10)
 - `343-FR-009` — superseded by `345-FR-016` (2026-10-10)
+
+- `221-FR-004` — superseded by `357-FR-006` (2026-10-10)
