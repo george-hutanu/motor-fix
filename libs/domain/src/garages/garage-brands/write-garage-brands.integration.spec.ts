@@ -2,20 +2,23 @@ import { randomUUID } from 'node:crypto';
 
 import { HttpException } from '@nestjs/common';
 
-import { writeGarageBrands } from './write-garage-brands';
+import { type GarageJobRef, writeGarageBrands } from './write-garage-brands';
+import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
 
-const { prisma, reset } = fixtures();
+const { account, prisma, reset } = fixtures();
+const audit = new AuditService();
 serialDatabase(databaseUrl);
 
 let garageId: string;
 let dacia: string;
 let bmw: string;
 let tesla: string;
+let actorId: string;
 
 async function brand(name: string) {
   const key = `${name.toLowerCase()}-${randomUUID()}`;
@@ -31,11 +34,14 @@ beforeEach(async () => {
   dacia = await brand('Dacia');
   bmw = await brand('BMW');
   tesla = await brand('Tesla');
+  actorId = await account('mihai', ['garage']);
 });
 afterAll(() => prisma.$disconnect());
 
-const write = (section: Record<string, unknown>) =>
-  prisma.$transaction((tx) => writeGarageBrands(tx, garageId, section));
+const write = (section: Record<string, unknown>, jobs: GarageJobRef[] = []) =>
+  prisma.$transaction((tx) =>
+    writeGarageBrands(tx, garageId, section, { actorId, audit, jobs }),
+  );
 
 const stored = async () => {
   const rows = await prisma.garageBrand.findMany({
@@ -248,5 +254,245 @@ describe("writing a garage's brands from step 2", () => {
 
     expect(await prisma.activityLog.count()).toBe(entries);
     expect(await prisma.outboxEvent.count()).toBe(saved);
+  });
+});
+
+describe("writing a garage's job ticks from step 2", () => {
+  async function jobType(key: string, status: 'approved' | 'pending') {
+    return (
+      await prisma.jobType.create({
+        data: {
+          key: `${key}-${randomUUID()}`,
+          nameEn: key,
+          nameRo: key,
+          status,
+        },
+      })
+    ).id;
+  }
+
+  // Oil change and front brakes from the catalogue, and the proposed
+  // "Reglaj faruri" that the price step sent as a name.
+  async function jobs() {
+    const oil = await jobType('oil', 'approved');
+    const brakes = await jobType('brakes', 'approved');
+    const lights = await jobType('Reglaj faruri', 'pending');
+    const given: GarageJobRef[] = [
+      { jobTypeId: oil },
+      { jobTypeId: brakes },
+      { jobTypeId: lights, name: 'Reglaj faruri' },
+    ];
+    return { brakes, given, lights, oil };
+  }
+
+  const ticks = async () =>
+    (
+      await prisma.garageBrandJob.findMany({
+        select: { brandId: true, jobTypeId: true },
+        where: { garageId },
+      })
+    )
+      .map((r) => `${r.brandId} ${r.jobTypeId}`)
+      .sort();
+
+  const entries = () =>
+    prisma.activityLog.findMany({
+      where: { garageId, subjectType: 'garage_brand_job' },
+    });
+
+  // @traces 412-FR-005
+  it('writes a row for every job of each taken brand but the unticked ones', async () => {
+    const { brakes, given, lights, oil } = await jobs();
+
+    await write(
+      {
+        brands: [
+          {
+            brandId: dacia,
+            name: 'Dacia',
+            stance: 'works_on',
+            unticked: [oil.toUpperCase()],
+          },
+          { brandId: bmw, name: 'BMW', stance: 'works_on' },
+          { brandId: tesla, name: 'Tesla', stance: 'does_not_take' },
+        ],
+      },
+      given,
+    );
+
+    expect(await ticks()).toEqual(
+      [
+        `${dacia} ${brakes}`,
+        `${dacia} ${lights}`,
+        `${bmw} ${oil}`,
+        `${bmw} ${brakes}`,
+        `${bmw} ${lights}`,
+      ].sort(),
+    );
+  });
+
+  // @traces 412-FR-005
+  it('matches an unticked proposed job by its name', async () => {
+    const { brakes, given, oil } = await jobs();
+
+    await write(
+      {
+        brands: [
+          {
+            brandId: dacia,
+            name: 'Dacia',
+            stance: 'works_on',
+            unticked: ['Reglaj faruri'],
+          },
+        ],
+      },
+      given,
+    );
+
+    expect(await ticks()).toEqual(
+      [`${dacia} ${oil}`, `${dacia} ${brakes}`].sort(),
+    );
+  });
+
+  // @traces 412-FR-006
+  it('records one create entry per row, by the sending account as the garage', async () => {
+    const { brakes, given, oil } = await jobs();
+
+    await write(
+      {
+        brands: [
+          {
+            brandId: dacia,
+            name: 'Dacia',
+            stance: 'works_on',
+            unticked: ['Reglaj faruri'],
+          },
+        ],
+      },
+      given,
+    );
+
+    const written = await entries();
+    expect(written.map((e) => e.subjectId).sort()).toEqual(
+      [oil, brakes].sort(),
+    );
+    for (const entry of written) {
+      expect(entry).toMatchObject({
+        action: 'create',
+        actorId,
+        actorRole: 'owner',
+        newValue: { brandId: dacia },
+      });
+    }
+  });
+
+  // @traces 412-FR-005
+  it('refuses an unticked job that matches none of the jobs whole, writing nothing', async () => {
+    const { given } = await jobs();
+
+    const refused = await refusalOf(
+      write(
+        {
+          brands: [
+            { brandId: bmw, name: 'BMW', stance: 'works_on' },
+            {
+              brandId: dacia,
+              name: 'Dacia',
+              stance: 'works_on',
+              unticked: ['Schimb ambreiaj'],
+            },
+          ],
+        },
+        given,
+      ),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'unknown_job', field: 'brands[1].unticked' }],
+    });
+    expect((await stored()).brands).toEqual({});
+    expect(await ticks()).toEqual([]);
+    expect(await entries()).toEqual([]);
+  });
+
+  // @traces 412-FR-005
+  it('refuses unticked jobs on a refused brand, writing nothing', async () => {
+    const { given, oil } = await jobs();
+
+    const refused = await refusalOf(
+      write(
+        {
+          brands: [
+            {
+              brandId: tesla,
+              name: 'Tesla',
+              stance: 'does_not_take',
+              unticked: [oil],
+            },
+          ],
+        },
+        given,
+      ),
+    );
+
+    expect(refused.status).toBe(400);
+    expect((await stored()).brands).toEqual({});
+    expect(await entries()).toEqual([]);
+  });
+
+  // @traces 412-FR-005
+  it('writes no row and no entry with no price list, and leaves the garage status alone', async () => {
+    await write({
+      brands: [{ brandId: dacia, name: 'Dacia', stance: 'works_on' }],
+    });
+
+    expect(await ticks()).toEqual([]);
+    expect(await entries()).toEqual([]);
+    expect(
+      (
+        await prisma.garage.findUniqueOrThrow({
+          select: { status: true },
+          where: { id: garageId },
+        })
+      ).status,
+    ).toBe('draft');
+  });
+
+  // The prices step refuses a brand range for a brand not yet taken, so a
+  // listing with brand ranges writes its brands, then its prices, then the
+  // brands again with the jobs the prices returned.
+  // @traces 412-FR-005
+  it('writes the brands again after a brand range was priced, keeping the price', async () => {
+    const { brakes, given, lights, oil } = await jobs();
+    const section = {
+      brands: [
+        {
+          brandId: dacia,
+          name: 'Dacia',
+          stance: 'works_on',
+          unticked: [brakes],
+        },
+      ],
+    };
+    await write(section);
+    await prisma.garagePrice.create({
+      data: {
+        brandId: dacia,
+        fromBani: 30_000,
+        garageId,
+        jobTypeId: oil,
+        position: 0,
+        updatedBy: actorId,
+      },
+    });
+
+    await write(section, given);
+
+    expect(await ticks()).toEqual(
+      [`${dacia} ${oil}`, `${dacia} ${lights}`].sort(),
+    );
+    expect(await prisma.garagePrice.count({ where: { garageId } })).toBe(1);
   });
 });

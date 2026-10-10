@@ -5,7 +5,6 @@ import {
   inject,
   input,
 } from '@angular/core';
-import type { GarageBrandAnswerDto } from '@motor-fix/data-access';
 import { AsWritten, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, type LampState } from '@motor-fix/ui-cockpit';
 
@@ -14,10 +13,12 @@ type Verdict = 'works_on' | 'refused';
 type Named = { id: string; name: string };
 
 // What the lamp and the lists read of a garage's answer about its brands.
-export type BrandAnswer = Pick<
-  GarageBrandAnswerDto,
-  'brandNote' | 'refusalPhrase'
-> & { worksOn: Named[]; doesNotTake: Named[] };
+export type BrandAnswer = {
+  brandNote: string | null;
+  refusalPhrase: string | null;
+  worksOn: Named[];
+  doesNotTake: Named[];
+};
 
 // A garage works on a brand only when it said so; a refusal, or no answer at
 // all for that brand, reads as "does not take". Works-on wins a tie.

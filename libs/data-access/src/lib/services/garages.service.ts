@@ -9,7 +9,7 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
-import { GarageBrandAnswerDto } from '../models/garage-brand-answer-dto';
+import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
 import { garageBrandsControllerReplace } from '../fn/garages/garage-brands-controller-replace';
 import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brands-controller-replace';
 import { garageInvitesControllerResend } from '../fn/garages/garage-invites-controller-resend';
@@ -48,7 +48,7 @@ export class GaragesService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  garageBrandsControllerReplace$Response(params: GarageBrandsControllerReplace$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageBrandAnswerDto>> {
+  garageBrandsControllerReplace$Response(params: GarageBrandsControllerReplace$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageBrandOwnerAnswerDto>> {
     const obs = garageBrandsControllerReplace(this.http, this.rootUrl, params, context);
     return firstValueFrom(obs);
   }
@@ -63,9 +63,9 @@ export class GaragesService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  garageBrandsControllerReplace(params: GarageBrandsControllerReplace$Params, context?: HttpContext): Promise<GarageBrandAnswerDto> {
+  garageBrandsControllerReplace(params: GarageBrandsControllerReplace$Params, context?: HttpContext): Promise<GarageBrandOwnerAnswerDto> {
     const resp = this.garageBrandsControllerReplace$Response(params, context);
-    return resp.then((r: StrictHttpResponse<GarageBrandAnswerDto>): GarageBrandAnswerDto => r.body);
+    return resp.then((r: StrictHttpResponse<GarageBrandOwnerAnswerDto>): GarageBrandOwnerAnswerDto => r.body);
   }
 
   /** Path part for operation `garageInvitesControllerSend()` */

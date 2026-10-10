@@ -2775,7 +2775,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GarageBrandAnswerDto"
+                  "$ref": "#/components/schemas/GarageBrandOwnerAnswerDto"
                 }
               }
             }
@@ -8256,6 +8256,15 @@
                 "electric"
               ]
             }
+          },
+          "jobs": {
+            "description": "A taken brand only: the jobs of the price list it is ticked for. Left out: unchanged, or every job for a brand taken now; empty: none",
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
@@ -8288,13 +8297,44 @@
           "brands"
         ]
       },
-      "GarageBrandAnswerDto": {
+      "OwnerBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "jobs": {
+            "description": "Ticked job type ids, in price-list order",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "jobs"
+        ]
+      },
+      "GarageBrandOwnerAnswerDto": {
         "type": "object",
         "properties": {
           "worksOn": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/BrandRefDto"
+              "$ref": "#/components/schemas/OwnerBrandDto"
             }
           },
           "doesNotTake": {

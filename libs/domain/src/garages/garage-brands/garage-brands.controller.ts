@@ -1,5 +1,5 @@
 import {
-  GarageBrandAnswerDto,
+  GarageBrandOwnerAnswerDto,
   ReplaceGarageBrandsDto,
 } from '@motor-fix/contracts';
 import {
@@ -37,7 +37,7 @@ export class GarageBrandsController {
   @ApiOperation({
     summary: "Replace the garage's brand answer: taken, refused, the texts",
   })
-  @ApiOkResponse({ type: GarageBrandAnswerDto })
+  @ApiOkResponse({ type: GarageBrandOwnerAnswerDto })
   @ApiBadRequestResponse({
     description: 'validation_failed: a bad or unknown brand, a text too long',
   })
@@ -48,7 +48,7 @@ export class GarageBrandsController {
     @CurrentActor() actor: Actor,
     @Param('garageId', new ParseUUIDPipe()) garageId: string,
     @Body() body: ReplaceGarageBrandsDto,
-  ): Promise<GarageBrandAnswerDto> {
+  ): Promise<GarageBrandOwnerAnswerDto> {
     return this.brands.replace(actor, garageId, body);
   }
 }
