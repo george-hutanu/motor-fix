@@ -1,11 +1,10 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
-import { test } from './fixtures.js';
+import { MAILBOX, test } from './fixtures.js';
 
 // The WhatsApp messages as the api sent them, read from the test mailbox the
 // local run starts (mailbox.mjs); a deployed address has none.
-const MAILBOX = 'http://127.0.0.1:3025';
 // The verified number of the seeded owner of Service Dobre, who used the
 // garage last (libs/domain/src/seed.ts).
 const GARAGE_PHONE = '+40700000101';
