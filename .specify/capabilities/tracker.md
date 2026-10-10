@@ -4,6 +4,7 @@ updated: 2026-10-10
 features:
   - 1036-github-tracker-lifecycle
   - 1037-remove-notion
+  - 1135-drop-legacy-pr-body
 ---
 
 # Capability: Tracker
@@ -79,6 +80,14 @@ _From 1037-remove-notion._
 ### 1037-FR-010 — `scripts/banned-words.ts` MUST fail when a tracked file's path or text contains a banned word (case-insensitive) and the file is not in `scripts/banned-words.json`, when a listed file holds more mentions than its count, when a listed file holds fewer (stale), and, with `--base <ref>`, when the list has an entry or a higher count than the base's list; CI's Changes job MUST run it on every pull request.
 
 _From 1037-remove-notion._
+
+### 1135-FR-001 — `scripts/pr-body-check.ts` MUST judge a PR body against the template's current names only: the `## Story` heading and the `Tracker in sync` box are no longer read from their pre-ST-1036 spellings (the heading and box rename step is removed), so a body in the legacy form fails by the ordinary missing-section or missing-box message.
+
+_From 1135-drop-legacy-pr-body._
+
+### 1135-FR-002 — A ready PR's `## Story` section MUST pass only with a `https://github.com/george-hutanu/motor-fix-specs/issues/<n>` link or `N/A` followed by a reason; an old-tracker link (any host of the retired tracker) MUST fail with the existing "no link to the story" message, and so MUST a specs-repo link that does not start a word (one buried in another URL). The header comment MUST describe this rule and no longer mention the pre-rename acceptance or #337.
+
+_From 1135-drop-legacy-pr-body._
 
 ## Retired
 

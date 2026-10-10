@@ -295,7 +295,7 @@ describe('checkPrBody on a ready PR', () => {
       ]);
   });
 
-  // @traces 1135-FR-001
+  // @traces 1135-FR-001 1135-FR-003
   it('refuses a body still in the form used before the rename', () => {
     const heading = filled().replace('## Story', `## ${Retired} story`);
     expect(ready(heading)).toContain('Missing section: "## Story".');
