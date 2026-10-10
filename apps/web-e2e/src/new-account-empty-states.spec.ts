@@ -80,8 +80,9 @@ test.describe('a new account sees helpful empty states @seeded', () => {
   test('Panou on a new account fits a 320 px phone with no text under 12 px', async ({
     page,
   }) => {
-    await page.setViewportSize({ height: 640, width: 320 });
+    // A phone shows an account icon, not the Autentificare button: sign up wide.
     await signUp(page);
+    await page.setViewportSize({ height: 640, width: 320 });
     await expect(invitation(page, 'search')).toBeVisible();
 
     const sideways = await page.evaluate(
