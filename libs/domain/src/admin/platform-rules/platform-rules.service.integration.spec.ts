@@ -327,6 +327,7 @@ describe('the record of a platform rule change', () => {
     const failing: AuditPort = {
       record: () => Promise.reject(new Error('audit down')),
       recordChanges: () => Promise.reject(new Error('audit down')),
+      recordMany: () => Promise.reject(new Error('audit down')),
     };
 
     await expect(
