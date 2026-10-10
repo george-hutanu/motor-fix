@@ -81,7 +81,18 @@ export class InsightsModule
         {
           // The profile view counters the API writes.
           provide: INSIGHTS_REDIS,
-          useFactory: () => new Redis(options.redisUrl),
+          // A Redis that stops answering fails the night, which is retried.
+          useFactory: () => {
+            const redis = new Redis(options.redisUrl, {
+              commandTimeout: 10_000,
+              connectTimeout: 5000,
+              maxRetriesPerRequest: 1,
+            });
+            redis.on('error', (error) =>
+              logger.error(`profile view counters: ${error.message}`),
+            );
+            return redis;
+          },
         },
         {
           inject: [INSIGHTS_PRISMA, INSIGHTS_REDIS],

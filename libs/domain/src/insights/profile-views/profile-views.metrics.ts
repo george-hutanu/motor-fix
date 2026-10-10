@@ -21,7 +21,7 @@ export function recordView(outcome: ViewOutcome) {
     .add(1, { outcome });
 }
 
-export function recordRows(outcome: 'written' | 'gap', count = 1) {
+export function recordRows(outcome: 'written' | 'gap', count: number) {
   if (count === 0) return;
   meter()
     .createCounter('motorfix_profile_view_rows_total', {

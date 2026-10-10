@@ -16,7 +16,7 @@ import { addDays, atLocal, localDay } from '../../bucharest';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { PrismaClient } from '../../generated/prisma/client';
 
-export interface Visitor {
+interface Visitor {
   accountId?: string;
   address: string;
   userAgent: string | undefined;

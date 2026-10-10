@@ -47,7 +47,7 @@ interface ViewsQuery {
   to: string;
 }
 
-export interface ViewsBucket {
+interface ViewsBucket {
   bySource: Record<string, number>;
   // The day, "2026-10-05", or the ISO week, "2026-W41".
   key: string;

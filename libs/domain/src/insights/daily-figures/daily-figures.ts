@@ -108,14 +108,13 @@ export async function writeDailyFigures(
     await prisma.$transaction(async (tx) => {
       // Two runs at once write one after the other.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('garage_daily_figures'), hashtext(${day}))`;
-      for (const row of counted) {
-        const data = { ...row, day: date, writtenAt: now };
-        await tx.garageDailyFigures.upsert({
-          create: data,
-          update: data,
-          where: { garageId_day: { day: date, garageId: row.garageId } },
-        });
-      }
+      // Replaced in two statements, whatever the number of garages.
+      await tx.garageDailyFigures.deleteMany({
+        where: { day: date, garageId: { in: [...withCounter] } },
+      });
+      await tx.garageDailyFigures.createMany({
+        data: counted.map((row) => ({ ...row, day: date, writtenAt: now })),
+      });
       await tx.garageDailyFigures.createMany({
         data: empty.map((g) => ({
           day: date,
