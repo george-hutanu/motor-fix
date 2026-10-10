@@ -12,7 +12,7 @@ import { countAccountChange } from '../metrics/product-counters';
 // Identities whose provider has already checked the e-mail.
 const VOUCHED = new Set(['google', 'apple']);
 
-export interface MyDetails {
+interface MyDetails {
   language?: 'ro' | 'en';
   name?: string;
   city?: string | null;

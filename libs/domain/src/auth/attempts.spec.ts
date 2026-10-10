@@ -342,6 +342,28 @@ describe('the limit on wrong current passwords', () => {
     expect(await attempts.passwordBlocked(ACCOUNT)).toBe(false);
   });
 
+  it('logs a failure whose 15 minutes Redis refused to set', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const chain = {
+      exec: async () => [
+        [null, 1],
+        [new Error('ERR expire refused'), null],
+      ],
+      expire: () => chain,
+      incr: () => chain,
+    };
+    const refusing = { multi: () => chain } as unknown as Redis;
+
+    await new Attempts(refusing).passwordFailed(ACCOUNT);
+
+    expect(warn).toHaveBeenCalledWith(
+      'password attempt limits skipped: Redis unavailable',
+    );
+    warn.mockRestore();
+  });
+
   it('lets every try through and logs when Redis does not answer', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')

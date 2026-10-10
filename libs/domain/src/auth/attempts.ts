@@ -239,7 +239,7 @@ export class Attempts {
   async passwordFailed(accountId: string): Promise<void> {
     try {
       const key = passwordKey(accountId);
-      await this.redis.multi().incr(key).expire(key, WINDOW_SECONDS).exec();
+      await counted(this.redis.multi().incr(key).expire(key, WINDOW_SECONDS));
     } catch {
       this.unavailable('password');
     }

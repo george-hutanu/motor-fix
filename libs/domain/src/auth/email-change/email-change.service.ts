@@ -109,6 +109,12 @@ export class EmailChangeService {
   // older links expire and the new one is written.
   private async issue(accountId: string, email: string, notify: string | null) {
     if (await this.taken(email, accountId)) throw emailTaken();
+    const { webUrl } = this.options;
+    if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
+    const { language } = await this.prisma.account.findUniqueOrThrow({
+      select: { language: true },
+      where: { id: accountId },
+    });
     if (!(await this.attempts.admitContactChange(accountId))) {
       throw refusal(
         HttpStatus.TOO_MANY_REQUESTS,
@@ -116,12 +122,6 @@ export class EmailChangeService {
         'Too many links were asked for; try again later',
       );
     }
-    const { webUrl } = this.options;
-    if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
-    const { language } = await this.prisma.account.findUniqueOrThrow({
-      select: { language: true },
-      where: { id: accountId },
-    });
     const { hash, token } = newToken();
     try {
       await this.notifications.sendAccountEmail({
