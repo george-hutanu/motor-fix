@@ -54,16 +54,12 @@ describe('the public footer', () => {
     );
   });
 
-  it('keeps each "·" with the item after it, so a narrow phone never wraps it alone', async () => {
+  it('spaces the items apart with no "·" glyph, so a narrow phone never starts or ends a line with one', async () => {
     const host = await render();
-    const separators = [...host.querySelectorAll('[aria-hidden="true"]')];
 
-    expect(separators).toHaveLength(2);
-    for (const separator of separators) {
-      const group = separator.parentElement;
-      expect(group?.classList.contains('item')).toBe(true);
-      expect(group?.querySelector('a, button')).not.toBeNull();
-    }
+    expect(host.textContent).not.toContain('·');
+    expect(host.querySelectorAll('[aria-hidden="true"]')).toHaveLength(0);
+    expect(host.querySelectorAll('nav > a, nav > button')).toHaveLength(3);
   });
 
   it('opens the cookie settings dialog', async () => {

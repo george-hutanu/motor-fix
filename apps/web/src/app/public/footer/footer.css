@@ -7,17 +7,11 @@ nav {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  column-gap: var(--mf-space-2);
+  /* Underlined items spaced apart, no "·" glyph to lead or end a wrapped line. */
+  column-gap: var(--mf-space-4);
   padding: var(--mf-space-2) var(--mf-space-4);
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-body);
-}
-/* A separator wraps with the item after it, never alone at a line's end. */
-.item {
-  display: inline-flex;
-  align-items: center;
-  column-gap: var(--mf-space-2);
-  white-space: nowrap;
 }
 a,
 button {
@@ -30,5 +24,6 @@ button {
   color: inherit;
   font: inherit;
   text-decoration: underline;
+  white-space: nowrap;
   cursor: pointer;
 }
