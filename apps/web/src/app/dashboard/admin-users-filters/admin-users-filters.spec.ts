@@ -193,6 +193,37 @@ describe('the search text it commits', () => {
     expect(host.searched).toEqual(['a'.repeat(80)]);
     expect(box(element).maxLength).toBe(80);
   });
+
+  it('keeps what was typed, a trailing space included, when the address catches up with the committed text', async () => {
+    const { element, host } = await open();
+    fakeClock();
+
+    type(element, 'andrei ');
+    jest.advanceTimersByTime(300);
+    expect(host.searched).toEqual(['andrei']);
+
+    host.q.set('andrei');
+    TestBed.tick();
+    expect(box(element).value).toBe('andrei ');
+
+    type(element, 'andrei mar');
+    jest.advanceTimersByTime(300);
+    expect(host.searched).toEqual(['andrei', 'andrei mar']);
+  });
+
+  it('shows a different text the address brings, such as going back', async () => {
+    const { element, host } = await open();
+    fakeClock();
+
+    type(element, 'andrei ');
+    jest.advanceTimersByTime(300);
+    host.q.set('andrei');
+    TestBed.tick();
+
+    host.q.set('ion');
+    TestBed.tick();
+    expect(box(element).value).toBe('ion');
+  });
 });
 
 // @traces 002-FR-008 002-FR-013

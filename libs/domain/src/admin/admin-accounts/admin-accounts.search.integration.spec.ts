@@ -398,6 +398,41 @@ describe('paging a search', () => {
     expect(second.nextCursor).toBeNull();
   });
 
+  // @traces 002-FR-006
+  it("reads a page's matches and their number in one statement, so both see the same accounts", async () => {
+    for (let n = 0; n < 3; n++) await person(`Marin ${n}`);
+    const read = jest.spyOn(prisma, '$queryRaw');
+    try {
+      const page = await service.page(undefined, NOW, { q: 'marin' });
+      expect(page.items).toHaveLength(3);
+      expect(page.total).toBe(3);
+      expect(read).toHaveBeenCalledTimes(1);
+    } finally {
+      read.mockRestore();
+    }
+  });
+
+  it('still counts the matches on a page past the last one', async () => {
+    for (let n = 0; n < 21; n++) await person(`Marin ${n}`);
+    const first = await service.page(undefined, NOW, { q: 'marin' });
+    const second = await service.page(first.nextCursor ?? undefined, NOW, {
+      q: 'marin',
+    });
+    await prisma.account.updateMany({
+      data: { status: 'deleted' },
+      where: { name: 'Marin 20' },
+    });
+
+    const past = await service.page(first.nextCursor ?? undefined, NOW, {
+      q: 'marin',
+    });
+
+    expect(second.items).toHaveLength(1);
+    expect(past.items).toEqual([]);
+    expect(past.total).toBe(20);
+    expect(past.nextCursor).toBeNull();
+  });
+
   it('carries no total on the plain list', async () => {
     await person('Andrei');
 

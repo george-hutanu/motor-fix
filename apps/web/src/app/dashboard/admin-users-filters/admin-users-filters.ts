@@ -30,6 +30,9 @@ import {
 // The wait after the last key before the text is searched for.
 const SETTLE_MS = 300;
 
+// The text the box commits for what it holds.
+const committed = (value: string) => settleSearch(value).slice(0, SEARCH_MAX);
+
 // The accounts' search box, role ticks and state: from 768 px one row, below
 // it the search box over one button opening the same filters in a sheet.
 @Component({
@@ -54,8 +57,16 @@ export class AdminUsersFilters implements OnDestroy {
   readonly filter = output<UsersFilter>();
 
   protected readonly max = SEARCH_MAX;
-  // What the box holds: the address's text until the admin types.
-  protected readonly text = linkedSignal(() => this.q());
+  // What the box holds: the address's text until the admin types. When the
+  // address only catches up with what was typed (its settled form), the typed
+  // text stays, so a trailing space survives the round trip.
+  protected readonly text = linkedSignal<string, string>({
+    computation: (q, previous) =>
+      previous !== undefined && committed(previous.value) === q
+        ? previous.value
+        : q,
+    source: this.q,
+  });
 
   protected readonly roleOptions = computed(() =>
     ACCOUNT_ROLES.map((key) => ({
@@ -107,7 +118,7 @@ export class AdminUsersFilters implements OnDestroy {
     clearTimeout(this.wait);
     this.wait = setTimeout(() => {
       this.wait = undefined;
-      this.search.emit(settleSearch(value).slice(0, SEARCH_MAX));
+      this.search.emit(committed(value));
     }, SETTLE_MS);
   }
 

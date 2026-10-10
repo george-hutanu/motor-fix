@@ -266,14 +266,20 @@ export class AdminAccountsService {
     if (filters.status === 'watch') {
       return { items: [], nextCursor: null, total: 0 };
     }
-    const [ids, [{ total }]] = await Promise.all([
-      this.prisma.$queryRaw<{ id: string }[]>`
-        SELECT a.id FROM account a WHERE ${where(filters, after)}
-        ORDER BY a.created_at DESC, a.id DESC LIMIT ${PAGE + 1}`,
-      this.prisma.$queryRaw<{ total: number }[]>`
-        SELECT count(*)::int AS total FROM account a WHERE ${where(filters)}`,
-    ]);
-    const order = ids.map((r) => r.id);
+    // One statement, so the page and its number read the same accounts: the
+    // count's row always comes back, with no id past the last page.
+    const read = await this.prisma.$queryRaw<
+      { id: string | null; total: number }[]
+    >`
+      SELECT p.id, t.total
+      FROM (SELECT count(*)::int AS total FROM account a WHERE ${where(filters)}) t
+      LEFT JOIN LATERAL (
+        SELECT a.id, a.created_at FROM account a WHERE ${where(filters, after)}
+        ORDER BY a.created_at DESC, a.id DESC LIMIT ${PAGE + 1}
+      ) p ON true
+      ORDER BY p.created_at DESC, p.id DESC`;
+    const total = read[0]?.total ?? 0;
+    const order = read.flatMap((r) => (r.id === null ? [] : [r.id]));
     const rows = await this.prisma.account.findMany({
       select: ROW,
       where: { id: { in: order } },
