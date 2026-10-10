@@ -2,7 +2,7 @@
 
 - **Slug**: 903-admin-users-seeded-e2e (story ST-1003; the gates read a three-digit folder number)
 - **Created**: 2026-10-09
-- **Source**: Notion story ST-1003, https://app.notion.com/p/3f3607bff0d28127be2fe56d7585fd70 (connector read, not a web fetch), and release run 37853741188's log
+- **Source**: story ST-1003, and release run 37853741188's log
 - **Verdict**: valid
 - **Severity**: high (the release's End to end on staging is red on every merge since 3907a87, so nothing reaches production)
 

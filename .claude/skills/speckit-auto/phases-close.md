@@ -8,7 +8,7 @@ Read at phase 13.
 
 Invoke `speckit-context --since`. A run takes hours and the organisation does
 not pause for it: a comment that narrows the ask, a flag, a linked story that
-now owns half the work. This phase re-reads Notion against the digest's own
+now owns half the work. This phase re-reads the story's issue against the digest's own
 `Gathered` date and appends a `## Refresh` section to `context.md`.
 
 Gate overrides:
@@ -19,7 +19,7 @@ Gate overrides:
   the final report and, if it contradicts what was delivered, into `spec.md` as
   a recorded conflict. Expanding the run to satisfy a comment found here is a
   scope change only the user can make (Hard Stop 7).
-- A dead connector is logged `[UNAVAILABLE: notion — …]`, exactly as in phase 3.
+- An unreadable tracker is logged `[UNAVAILABLE: tracker — …]`, exactly as in phase 3.
 
 ### 14. Review
 

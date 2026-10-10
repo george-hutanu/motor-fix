@@ -25,8 +25,8 @@ Phase agent: `model: fable`.
 Invoke `speckit-specify` with the description. Its `before_specify` hook runs
 `speckit.git.feature`, which creates the branch — let it, and branches here use
 the generated `NNN-slug` form, and `.specify/feature.json` ties the branch to
-the feature for the gates. If the description names a Notion story, feature or
-epic, put its URL in the spec so phase 3 can anchor on it.
+the feature for the gates. If the description names a story, feature or epic,
+put its id (`ST-<n>`, `MF-nn`, `EP-<n>`) in the spec so phase 3 can anchor on it.
 
 Gate override: the skill's clarification-question table is its interactive
 gate. Answer every question yourself from the description, the constitution,
@@ -40,35 +40,33 @@ clarification, a contract path, a second Nx project) becomes 2, logged in
 `auto-run.md` with the wire; run the phases it skipped (3, 4, 5, 6, 8) in run
 order before the next one. It never lowers a level.
 
-### 3. Notion context
+### 3. Story context
 
-Invoke `speckit-context`. It anchors on the Notion story, feature or epic the
-spec links (or on terms from the spec) and gathers what the owner's Notion
-space already says — the story and its comments, the feature page, the epic and
-its sibling stories, the architecture pages, the open decisions — into
-`specs/<feature>/context.md`. Notion is its only source, there is no recency
-window, and when sources disagree the latest one wins. The reading runs inside
-its `org-researcher` subagent, so the pages never enter this run's context and
-the agent structurally cannot write to Notion.
+Invoke `speckit-context`. It anchors on the story, feature or epic the spec
+names (or on terms from the spec), writes the story's issue, its comments, its
+epic and the epic's issues to `specs/<feature>/story.md` with `gh` (read
+only), and gathers what the owner's documentation already says — the story and
+its comments, the feature page, the epic and its sibling stories, the
+architecture pages, the open decisions — into `specs/<feature>/context.md`.
+There is no recency window, and when sources disagree the latest one wins. The
+reading runs inside its `org-researcher` subagent, so the pages never enter
+this run's context and the agent structurally cannot write to the tracker.
 
 Gate overrides:
 
 - The overwrite prompt is answered **overwrite**: phase 2 just created this
   feature directory, so any `context.md` there is from this run.
-- A Notion connector that is not connected or errors twice is logged
-  `[UNAVAILABLE: notion — …]` and the run continues without a digest. A dead
-  connector is a gap in the report, never a Hard Stop, and never evidence that
-  nothing exists. The researcher's
-  `[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`
-  is logged the same way, with that fix as the report's follow-up.
-- If the feature has no Notion anchor and no usable search terms, the skill stops.
+- A tracker `gh` cannot read twice is logged `[UNAVAILABLE: tracker — …]`
+  and the run continues without a digest. It is a gap in the report, never a
+  Hard Stop, and never evidence that nothing exists.
+- If the feature has no anchor and no usable search terms, the skill stops.
   In this command that is a complete phase with an empty digest, not a Hard
   Stop — log it and continue to phase 4.
 
 The output is an input, not a decision: carry its **Contradictions** and
 **Proposed Clarifications** into phase 4 as clarification material, and its
 **Constraints** into phase 5's Technical Context. The story remains the only
-source of scope — any other Notion finding never becomes a requirement here,
+source of scope — any other finding never becomes a requirement here,
 and this phase never edits `spec.md`.
 
 ### 4. Clarify

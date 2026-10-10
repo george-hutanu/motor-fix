@@ -63,8 +63,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 2. **Load design documents**: Read from FEATURE_DIR:
    - **Required**: plan.md (tech stack, libraries, structure), spec.md (user stories with priorities)
    - **Optional**: data-model.md (entities), contracts/ (interface contracts), research.md (decisions), quickstart.md (test scenarios)
-   - **IF EXISTS**: Read `FEATURE_DIR/context.md` — the owner's Notion
-     space as `/speckit-context` read it, the latest source winning. Its **Constraints** are as binding as anything in the
+   - **IF EXISTS**: Read `FEATURE_DIR/context.md` — the owner's documentation
+     and the story's issue as `/speckit-context` read them, the latest source winning. Its **Constraints** are as binding as anything in the
      spec; its **Contradictions with spec.md** are open conflicts, not trivia;
      its **Proposed Clarifications** are candidate questions already researched.
      Skipping it is how a decision the organisation made last month gets

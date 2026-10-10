@@ -25,13 +25,3 @@ export function specsClone(root, specsRepo = {}) {
   const moved = join(root, ".motor-fix-specs");
   return existsSync(join(moved, ".git")) ? moved : join(root, "specs");
 }
-
-/**
- * The tracker a feature runs its lifecycle on: a feature that started on
- * Notion (its notion-sync.md, and no tracker-sync.md) finishes there; every
- * other runs on GitHub.
- */
-export function trackerOf(featureDir) {
-  const notion = existsSync(join(featureDir, "notion-sync.md")) && !existsSync(join(featureDir, "tracker-sync.md"));
-  return notion ? { name: "notion", script: ".claude/scripts/notion-sync.mjs", log: "notion-sync.md" } : { name: "github", script: ".claude/scripts/tracker-sync.mjs", log: "tracker-sync.md" };
-}

@@ -2,7 +2,7 @@
 
 - **Slug**: 927-e2e-fixtures-imports
 - **Assessed**: 2026-10-08
-- **Source**: release run 37714584571 (E2E job), Notion ST-927
+- **Source**: release run 37714584571 (E2E job), ST-927
 - **Verdict**: valid
 
 ## Symptom

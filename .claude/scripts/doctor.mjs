@@ -17,7 +17,6 @@ import { basename, join } from "node:path";
 import { LEVELS, activeFeature, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { resolveLevel } from "./level.mjs";
 import { fingerprint, loadRegistry, registryPath, scriptPath } from "./lib/hooks.mjs";
-import { check as checkNotion, detect as detectNotion } from "./notion-agent-tools.mjs";
 
 const OK = "ok";
 const WARN = "warn";
@@ -183,22 +182,6 @@ export function checkSkillsAndAgents(repo) {
   return out;
 }
 
-/** The Notion agents' tool lists: drift in the repo fails; a newer connector id only warns. */
-export function checkNotionTools(repo, options) {
-  const drift = checkNotion(repo);
-  if (drift.length) return [{ name: "agents/notion-tools", status: FAIL, detail: drift.join("; ") }];
-  const { missing, note } = detectNotion(repo, options);
-  return [
-    {
-      name: "agents/notion-tools",
-      status: missing.length ? WARN : OK,
-      detail: missing.length
-        ? `recent sessions carried Notion server(s) the agents lack — run: ${missing.map((id) => `node .claude/scripts/notion-agent-tools.mjs add ${id}`).join("; ")}`
-        : `no Notion server missing (${note})`,
-    },
-  ];
-}
-
 /** Project dirs (relative) that carry a stryker.config.json; "." for a root one. */
 export function strykerOwners(repo) {
   if (existsSync(join(repo, "stryker.config.json"))) return ["."];
@@ -318,7 +301,7 @@ export function checkCommands(repo) {
 }
 
 export function runChecks(repo) {
-  return [...checkHooks(repo), ...checkFeatureState(repo), ...checkSkillsAndAgents(repo), ...checkNotionTools(repo), ...checkCommands(repo)];
+  return [...checkHooks(repo), ...checkFeatureState(repo), ...checkSkillsAndAgents(repo), ...checkCommands(repo)];
 }
 
 export function blessHooks(repo) {
