@@ -119,10 +119,10 @@ describe('HomeService.forBrand', () => {
   });
 });
 
-// @traces 226-best-rated-brand-dial-FR-009
-// @traces 226-best-rated-brand-dial-FR-010
-// @traces 226-best-rated-brand-dial-FR-002
-// @traces 226-best-rated-brand-dial-FR-004
+// @traces 226-FR-009
+// @traces 226-FR-010
+// @traces 226-FR-002
+// @traces 226-FR-004
 
 type Rated = {
   name?: string;

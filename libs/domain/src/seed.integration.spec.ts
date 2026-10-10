@@ -449,7 +449,7 @@ describe('seed of the listed garages', () => {
     }
   });
 
-  // @traces 226-best-rated-brand-dial-FR-012
+  // @traces 226-FR-012
   it('gives the listed garages ratings, review counts and hourly rates for the dial', async () => {
     expect(seed('test').status).toBe(0);
 

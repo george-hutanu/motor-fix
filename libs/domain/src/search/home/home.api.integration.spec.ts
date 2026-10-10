@@ -105,7 +105,7 @@ describe('GET /home', () => {
     });
   });
 
-  // @traces 226-best-rated-brand-dial-FR-009
+  // @traces 226-FR-009
   it('answers the best garage and the preview rows with every field Home shows', async () => {
     await garage('taker', 'approved', 'works_on');
     await prisma.garage.update({
@@ -142,6 +142,7 @@ describe('GET /home', () => {
     expect(res.body).toMatchObject({ best: null, preview: [] });
   });
 
+  // @traces 226-FR-013
   it('lets the answer be cached for a minute', async () => {
     const res = await home({ brand: 'dacia' });
 
@@ -232,7 +233,7 @@ describe('GET /home near a place', () => {
     expect(res.body).toMatchObject({ takers: 2, total: 3 });
   });
 
-  // @traces 226-best-rated-brand-dial-FR-009
+  // @traces 226-FR-009
   it('ranks the garages in the area, each with its distance or its coming to you', async () => {
     const res = await home({ brand: 'dacia', near: '46.771,23.624' });
 
@@ -272,6 +273,7 @@ describe('GET /home near a place', () => {
     expect(res.body).toMatchObject({ takers: 0, total: 0 });
   });
 
+  // @traces 226-FR-013
   it('writes nothing when it reads near a place', async () => {
     const before = await Promise.all([
       prisma.activityLog.count(),

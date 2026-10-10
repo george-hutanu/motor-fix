@@ -5,8 +5,7 @@ import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
-import { garagesInArea } from '../area/search-area';
-import { groupsOf, placed } from '../garage-search/garage-search.service';
+import { garagesInArea, groupsOf, placed } from '../area/search-area';
 
 // The one order of the dial and the preview: the best rating, unreviewed
 // garages last, then more reviews, then name and id so a tie never moves.

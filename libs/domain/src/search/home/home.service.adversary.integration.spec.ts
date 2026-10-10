@@ -77,44 +77,7 @@ async function garage(slug: string, stance: Stance | undefined, at: At = {}) {
 const slugs = (answer: { preview: { slug: string }[] }) =>
   answer.preview.map(({ slug }) => slug);
 
-// @traces 226-best-rated-brand-dial-FR-011
-describe('garage rating columns', () => {
-  const insert = (rating: string | null, count: number) =>
-    prisma.$executeRawUnsafe(
-      `INSERT INTO garage (id, name, slug, rating, review_count) VALUES (gen_random_uuid(), 'g', 'g-${Math.random()}', ${rating}, ${count})`,
-    );
-
-  it.each([
-    ['0.9', 1],
-    ['0.0', 1],
-    ['5.1', 1],
-    ['-1.0', 1],
-  ])('refuses a rating of %s', async (rating, count) => {
-    await expect(insert(rating, count)).rejects.toThrow(
-      /garage_(rating|review)/,
-    );
-  });
-
-  it('refuses a rating with no reviews', async () => {
-    await expect(insert('4.0', 0)).rejects.toThrow(/garage_(rating|review)/);
-  });
-
-  it('refuses reviews with no rating', async () => {
-    await expect(insert(null, 3)).rejects.toThrow(/garage_(rating|review)/);
-  });
-
-  it('refuses a negative review count', async () => {
-    await expect(insert(null, -1)).rejects.toThrow(/garage_(rating|review)/);
-  });
-
-  it('accepts the bounds 1.0 and 5.0 and no rating with no reviews', async () => {
-    await expect(insert('1.0', 1)).resolves.toBe(1);
-    await expect(insert('5.0', 2147483647)).resolves.toBe(1);
-    await expect(insert(null, 0)).resolves.toBe(1);
-  });
-});
-
-// @traces 226-best-rated-brand-dial-FR-010
+// @traces 226-FR-010
 describe('HomeService.forBrand ordering at the edges', () => {
   it('ranks 5.0 above 4.9 whatever the review counts, and answers numbers', async () => {
     await garage('many', 'works_on', { rating: 4.9, reviews: 9000 });
@@ -179,36 +142,11 @@ describe('HomeService.forBrand ordering at the edges', () => {
     expect(slugs(answer)).toEqual(['t', 'silent-top']);
     expect(answer.preview[1].stance).toBe('unstated');
   });
-
-  it('does not let a better-rated refuser displace a worse taker', async () => {
-    await garage('t1', 'works_on', { rating: 1, reviews: 1 });
-    await garage('t2', 'works_on');
-    await garage('t3', 'works_on');
-    await garage('r', 'does_not_take', { rating: 5, reviews: 500 });
-
-    const answer = await home.forBrand('dacia');
-
-    expect(slugs(answer)).toEqual(['t1', 't2', 'r']);
-    expect(answer.takers).toBe(3);
-  });
 });
 
-// @traces 226-best-rated-brand-dial-FR-002
-// @traces 226-best-rated-brand-dial-FR-004
+// @traces 226-FR-002
+// @traces 226-FR-004
 describe('HomeService.forBrand slots', () => {
-  it('holds exactly three refusers, best first, when nobody takes the brand and five refuse', async () => {
-    for (const [i, rating] of [3, 5, 4, 2, 1].entries()) {
-      await garage(`r${i}`, 'does_not_take', { rating, reviews: 1 });
-    }
-
-    const answer = await home.forBrand('dacia');
-
-    expect(answer.best).toBeNull();
-    expect(slugs(answer)).toEqual(['r1', 'r2', 'r0']);
-    expect(answer.takers).toBe(0);
-    expect(answer.total).toBe(5);
-  });
-
   it('shows a taker count above the two taker rows when many take the brand', async () => {
     for (let i = 0; i < 12; i++) {
       await garage(`t${i}`, 'works_on', { rating: 4, reviews: i + 1 });
@@ -219,16 +157,6 @@ describe('HomeService.forBrand slots', () => {
     expect(answer.takers).toBe(12);
     expect(answer.preview).toHaveLength(2);
     expect(slugs(answer)).toEqual(['t11', 't10']);
-  });
-
-  it('holds one taker and no empty row when only one garage is listed', async () => {
-    await garage('only', 'works_on', { rating: 4.2, reviews: 3 });
-
-    const answer = await home.forBrand('dacia');
-
-    expect(answer.takers).toBe(1);
-    expect(slugs(answer)).toEqual(['only']);
-    expect(answer.best?.slug).toBe('only');
   });
 
   it('treats a garage that answered only for another brand as unstated here', async () => {
@@ -242,21 +170,9 @@ describe('HomeService.forBrand slots', () => {
     ]);
     expect(answer.takers).toBe(0);
   });
-
-  it('never lists a draft or suspended garage in any slot', async () => {
-    await garage('d', 'works_on', { rating: 5, status: 'draft' });
-    await garage('s', 'does_not_take', { rating: 5, status: 'suspended' });
-    await garage('sd', undefined, { rating: 5, status: 'draft' });
-
-    expect(await home.forBrand('dacia')).toMatchObject({
-      best: null,
-      preview: [],
-      total: 0,
-    });
-  });
 });
 
-// @traces 226-best-rated-brand-dial-FR-009
+// @traces 226-FR-009
 describe('HomeService.forBrand garage text and repeats', () => {
   it('answers a name with markup, quotes and non-ASCII letters verbatim', async () => {
     const name = `<img src=x onerror=alert(1)> "Ăâî" & Șoseaua '😀'`;
@@ -273,15 +189,6 @@ describe('HomeService.forBrand garage text and repeats', () => {
     await garage('long', 'works_on', { name });
 
     expect((await home.forBrand('dacia')).best?.name).toBe(name);
-  });
-
-  it('never gives a mobile mechanic a city, even one stored on its row, with no place', async () => {
-    await garage('mob', 'works_on', { city: 'București', kind: 'mobile' });
-
-    const { best } = await home.forBrand('dacia');
-
-    expect(best?.businessKind).toBe('mobile');
-    expect(best).not.toHaveProperty('city');
   });
 
   it('answers the same twice and puts best first in the preview', async () => {

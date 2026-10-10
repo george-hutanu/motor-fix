@@ -84,7 +84,7 @@ const documented = (dto: abstract new () => object) =>
     ) as string[]
   ).map((name) => name.slice(1));
 
-// @traces 226-best-rated-brand-dial-FR-009
+// @traces 226-FR-009
 describe('HomeDto', () => {
   it('keeps the brand and both counts and adds the best garage and the preview', () => {
     expect(documented(HomeDto).sort()).toEqual([

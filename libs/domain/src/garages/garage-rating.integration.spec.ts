@@ -1,10 +1,7 @@
-import { serialDatabase } from '../../auth/serial-db.testing';
-import {
-  databaseUrl,
-  fixtures,
-} from '../../notifications/notifications.testing';
+import { serialDatabase } from '../auth/serial-db.testing';
+import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
-// @traces 226-best-rated-brand-dial-FR-011
+// @traces 226-FR-011
 
 const { prisma } = fixtures();
 serialDatabase(databaseUrl);

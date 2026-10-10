@@ -348,8 +348,9 @@ async function list(db: Client, garage: (typeof LISTED)[number]) {
   // Set once: a rating the reviews later write is never put back.
   await db.query(
     `UPDATE garage
-     SET rating = $2, review_count = $3, labour_from_bani = $4
-     WHERE slug = $1 AND rating IS NULL AND labour_from_bani IS NULL`,
+     SET rating = $2, review_count = $3,
+       labour_from_bani = COALESCE(labour_from_bani, $4)
+     WHERE slug = $1 AND rating IS NULL`,
     [
       garage.slug,
       garage.reviews?.rating ?? null,

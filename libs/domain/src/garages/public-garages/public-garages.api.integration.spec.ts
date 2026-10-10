@@ -492,7 +492,7 @@ describe('what the profile says about the garage', () => {
     expect(res.body).not.toHaveProperty('businessKind');
   });
 
-  // @traces 226-best-rated-brand-dial-FR-011
+  // @traces 226-FR-011
   it('answers the rating and review count the garage holds, as Home does', async () => {
     const approved = await prisma.garage.create({
       data: {
