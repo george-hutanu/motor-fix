@@ -1,11 +1,13 @@
 import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { specsClone } from "./repos.mjs";
 
 // The forms live in the private specs clone (motor-fix-specs), which CI does
 // not check out; the public repository keeps only a config that points there.
-const DIR = fileURLToPath(new URL("../../../specs/.github/ISSUE_TEMPLATE/", import.meta.url));
+const DIR = `${join(specsClone(fileURLToPath(new URL("../../../", import.meta.url))), ".github", "ISSUE_TEMPLATE")}/`;
 const CODE_DIR = fileURLToPath(new URL("../../../.github/ISSUE_TEMPLATE/", import.meta.url));
 const FORMS = { story: "story", task: "task", bug: "bug", "tech-debt": "tech debt", decision: "decision" };
 const read = (name) => readFileSync(`${DIR}${name}`, "utf8");
