@@ -283,3 +283,38 @@ describe('checkPrBody on a draft PR', () => {
     expect(draft(body)).toEqual(['Missing section: "## Agent review".']);
   });
 });
+
+// @traces 1017-FR-006
+describe('the Closes line under Notion story', () => {
+  const draft = (body: string) =>
+    checkPrBody({ body, draft: true, template, title: 'WIP' });
+
+  it('sits in the template under the story link', () => {
+    expect(template).toMatch(
+      /## Notion story\n\n_\(fill in: the story link[^\n]*\n\n<!--[^\n]*-->\nCloses george-hutanu\/motor-fix-specs#\n/,
+    );
+  });
+
+  for (const [name, change] of [
+    [
+      'filled in',
+      (b: string) =>
+        b.replace(
+          /^Closes george-hutanu\/motor-fix-specs#$/m,
+          'Closes george-hutanu/motor-fix-specs#12',
+        ),
+    ],
+    ['left empty', (b: string) => b],
+    [
+      'removed',
+      (b: string) =>
+        b.replace(/^Closes george-hutanu\/motor-fix-specs#\n/m, ''),
+    ],
+  ] as const) {
+    it(`passes a ready and a draft body with the line ${name}`, () => {
+      expect(template).toMatch(/^Closes george-hutanu\/motor-fix-specs#$/m);
+      expect(ready(change(filled()))).toEqual([]);
+      expect(draft(change(template))).toEqual([]);
+    });
+  }
+});

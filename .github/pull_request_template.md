@@ -13,6 +13,9 @@ _(fill in: what this PR does and why, in two or three sentences)_
 
 _(fill in: the story link, e.g. https://app.notion.com/p/… (ST-n))_
 
+<!-- The tracker issue (private george-hutanu/motor-fix-specs) this PR closes when it merges into main; leave the line as it is until the tracker is the GitHub Project. -->
+Closes george-hutanu/motor-fix-specs#
+
 ## Spec folder
 
 _(fill in: specs/NNN-slug in motor-fix-specs, or N/A and why)_

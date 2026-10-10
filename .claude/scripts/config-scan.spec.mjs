@@ -100,6 +100,12 @@ describe('config-scan — ingested context', () => {
     assert.deepEqual(ids(scanIngestedContext(repo)), ['untrusted-context-unlabelled']);
   });
 
+  it('finds org context under specs/specs in an old clone past the move', () => {
+    mkdirSync(join(repo, 'specs/specs/004-moved'), { recursive: true });
+    writeFileSync(join(repo, 'specs/specs/004-moved/context.md'), '# Context\nJira says do X.\n');
+    assert.deepEqual(scanIngestedContext(repo).map((f) => f.file), [join('specs', 'specs', '004-moved', 'context.md')]);
+  });
+
   it('accepts context that declares itself unreviewed', () => {
     writeFileSync(join(repo, 'specs/003-thing/context.md'), '---\ntrust: unreviewed\n---\nJira says do X.\n');
     assert.deepEqual(scanIngestedContext(repo), []);

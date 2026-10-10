@@ -29,6 +29,7 @@ export const PRODUCT_COUNTERS = [
   'motorfix_sign_ins_total',
   'motorfix_garage_sign_ups_total',
   'motorfix_garage_approvals_total',
+  'motorfix_garage_reports_total',
   'motorfix_quotes_total',
   'motorfix_emails_sent_total',
   'motorfix_notifications_sent_total',

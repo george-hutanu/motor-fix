@@ -38,7 +38,7 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { grandfathered } from "./lib/feature.mjs";
+import { featuresRoot, grandfathered } from "./lib/feature.mjs";
 import { isTestFile, SKIP_DIRS, TEST_ROOTS } from "./lib/tests.mjs";
 import { traceTokens } from "./lib/traces.mjs";
 import { retiredTokens } from "./capabilities.mjs";
@@ -48,7 +48,7 @@ const args = new Set(process.argv.slice(2));
 const asJson = args.has("--json");
 const check = args.has("--check");
 
-const specsDir = join(repo, "specs");
+const specsDir = join(repo, featuresRoot(repo));
 const exempt = grandfathered(repo);
 
 
