@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 111,
+    "count": 112,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -738,7 +738,10 @@
       "source": "libs/domain/src/auth/consents/consents.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/consents and /api/v1/me/consents",
       "dashboard": "motorfix-api",
-      "alerts": ["api-error-rate", "api-latency"],
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-244"
     },
     {

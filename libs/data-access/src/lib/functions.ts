@@ -187,6 +187,8 @@ export type { GarageReportsControllerReport$Params as GarageReportsControllerRep
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
 export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
+export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
+export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { InvitesControllerCheck$Params as InvitesControllerCheck$Params } from './fn/invites/invites-controller-check';

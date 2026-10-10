@@ -24,6 +24,9 @@ import { GarageReportsControllerReport$Params } from '../fn/garages/garage-repor
 import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
+import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
+import { PriceListControllerRead$Params } from '../fn/garages/price-list-controller-read';
+import { PriceListDto } from '../models/price-list-dto';
 import { profileViewsControllerRecord } from '../fn/garages/profile-views-controller-record';
 import { ProfileViewsControllerRecord$Params } from '../fn/garages/profile-views-controller-record';
 import { PublicGarageDto } from '../models/public-garage-dto';
@@ -234,6 +237,39 @@ export class GaragesService extends BaseService {
   garageSettingsControllerUpdate(params: GarageSettingsControllerUpdate$Params, context?: HttpContext): Promise<GarageSettingsDto> {
     const resp = this.garageSettingsControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageSettingsDto>): GarageSettingsDto => r.body);
+  }
+
+  /** Path part for operation `priceListControllerRead()` */
+  static readonly PriceListControllerReadPath = '/api/v1/garages/{garageId}/prices';
+
+  /**
+   * The garage's price list: each job, whether drivers see it and, when not, why.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `priceListControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  priceListControllerRead$Response(params: PriceListControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<PriceListDto>> {
+    const obs = priceListControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The garage's price list: each job, whether drivers see it and, when not, why.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `priceListControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  priceListControllerRead(params: PriceListControllerRead$Params, context?: HttpContext): Promise<PriceListDto> {
+    const resp = this.priceListControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PriceListDto>): PriceListDto => r.body);
   }
 
   /** Path part for operation `publicGaragesControllerBySlug()` */

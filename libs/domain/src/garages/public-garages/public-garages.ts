@@ -23,6 +23,7 @@ import type { PrismaClient } from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
 import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
+import { PRICE_ROW_SELECT, priceListJobs } from '../price-list/price-list';
 
 // The one scope of every read a visitor can reach: spread into the `where`
 // of a garage read. A test fails when a public handler's read skips it.
@@ -168,15 +169,10 @@ export class PublicGaragesService {
           orderBy: { position: 'asc' },
           select: { fileKey: true, height: true, id: true, width: true },
         },
-        // The jobs a request from the profile can ask for: those of the
-        // visible prices, in the price list's order.
-        prices: {
-          orderBy: [{ position: 'asc' }, { id: 'asc' }],
-          select: {
-            jobType: { select: { id: true, nameEn: true, nameRo: true } },
-          },
-          where: { jobType: { status: 'approved' }, visible: true },
-        },
+        // The jobs a request from the profile can ask for: the public ones
+        // of the price list, as the price list rule decides.
+        prices: { select: PRICE_ROW_SELECT },
+        rarActivities: true,
         rating: true,
         refusalPhrase: true,
         responseStats: { select: { lifetimeRequests: true, rate: true } },
@@ -211,6 +207,7 @@ export class PublicGaragesService {
       paymentTransfer,
       photos,
       prices,
+      rarActivities,
       rating,
       responseStats,
       reviewCount,
@@ -226,9 +223,13 @@ export class PublicGaragesService {
       name,
       slug: held,
       ...brandAnswerWithFuels(brands, texts),
-      jobTypes: [
-        ...new Map(prices.map(({ jobType }) => [jobType.id, jobType])).values(),
-      ],
+      jobTypes: priceListJobs(prices, rarActivities)
+        .filter((job) => job.public)
+        .map(({ jobTypeId, nameEn, nameRo }) => ({
+          id: jobTypeId,
+          nameEn,
+          nameRo,
+        })),
       paymentMethods: {
         card: paymentCard,
         cash: paymentCash,
