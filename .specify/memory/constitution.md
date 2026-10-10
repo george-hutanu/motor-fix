@@ -1,5 +1,22 @@
 <!--
-Sync Impact Report (v1.11.3)
+Sync Impact Report (v1.12.0)
+- Version change: 1.11.3 → 1.12.0 (MINOR: Principle VII adds a rule — the
+  main checkout is a mirror of `origin/main`, holds no edits to tracked
+  files, and is fast-forwarded by the orchestrating session after each
+  merge; Enforcement gains the `main-checkout-gate.mjs` row)
+- Source: ST-1035 (the main checkout never holds a local edit that blocks
+  fast-forwarding main).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line and VII
+  - ✅ CLAUDE.local.md — the version line and the gates table
+  - ✅ AGENTS.md — lifecycle step 7 fast-forwards the main checkout
+  - ✅ .claude/hooks/main-checkout-gate.mjs, registry.json, settings.json;
+    .claude/scripts/watch.mjs (main row, `ff-main`),
+    .claude/hooks/session-watch-reminder.mjs;
+    .claude/skills/speckit-watch/SKILL.md
+  - ✅ .claude/scripts/constitution-card.spec.mjs — keeps them agreeing
+
+Previous report (v1.11.3)
 - Version change: 1.11.2 → 1.11.3 (PATCH: Additional Constraints names the
   specs repo's Diátaxis paths and `llms.txt` as the architecture source, the
   Notion pages frozen and the export retired; no rule added, removed or
@@ -455,6 +472,14 @@ waits for the owner:
    Then set the task Done. A PR opened by Dependabot (read from its author on
    GitHub) whose every commit Dependabot wrote skips step 5 and merges on every other check green with no
    `agent-review` status; a pending, failing or missing check still refuses it.
+   The orchestrating session then fast-forwards the main checkout
+   (`git -C <main> merge --ff-only origin/main`; `/speckit-watch`'s `ff-main`
+   safe fix does it when the watch reports it `behind`).
+
+The main checkout is a mirror of `origin/main`: it holds no edits to tracked
+files, and every change rides a PR from a worktree. `SPECKIT_ALLOW_MAIN_EDIT=1`
+is the owner's escape hatch, and the watch names a main checkout that is
+behind or dirty.
 
 A task that cannot go on without something outside it is set Blocked, with the
 reason on the story and the PR and the PR's `blocked` label, and returns to
@@ -524,6 +549,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
 | VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
+| VII main checkout | `main-checkout-gate.mjs` (PreToolUse); `watch.mjs` main row, `session-watch-reminder.mjs` | refuses an Edit, Write or NotebookEdit of a file git tracks in the main checkout, whichever session asks (worktrees, untracked and ignored paths and other repositories pass; `SPECKIT_ALLOW_MAIN_EDIT=1` overrides; a git failure lets it through); the watch reports the main checkout `behind` (safe fix `ff-main`) or `dirty: <files>`, and the session-start reminder names it |
 | VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester, or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
 | IV folder rules | `scripts/structure-check.ts` (CI Checks job, `.husky/pre-commit`); `config-protection.mjs` | fails on a flat submodule or a component that is not a `<name>/` folder with external `<name>.html`/`<name>.css` unless `scripts/structure-baseline.json` lists it, on a stale baseline entry, and on an entry the base branch's baseline lacks; the hook refuses an edit that grows the baseline |
@@ -605,4 +631,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.11.3 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-09
+**Version**: 1.12.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-10
