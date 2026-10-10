@@ -186,6 +186,18 @@ describe('doctor — commands', () => {
     assert.match(detail(results, 'commands/permissions'), /gone\.mjs/);
   });
 
+  it('reads a prefix rule (`:*`) as the script it names, so a script still there is no warning', () => {
+    write('package.json', fullPackage);
+    write('scripts/here.mjs', '');
+    write('.claude/settings.json', {
+      ...settingsWith(['pre:bash:guard']),
+      permissions: { allow: ['Bash(node scripts/here.mjs:*)', 'Bash(node scripts/gone.mjs:*)'] },
+    });
+    const results = checkCommands(repo);
+    assert.match(detail(results, 'commands/permissions'), /gone\.mjs/);
+    assert.doesNotMatch(detail(results, 'commands/permissions'), /here\.mjs/);
+  });
+
   it('finds mutation owners by their Nx target, including the root scripts project', () => {
     write('package.json', fullPackage);
     write('libs/contracts/stryker.config.json', { thresholds: { break: 0 } });

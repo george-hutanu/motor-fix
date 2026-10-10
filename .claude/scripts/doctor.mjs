@@ -263,7 +263,7 @@ export function checkCommands(repo) {
   const settings = readJson(join(repo, ".claude", "settings.json")) ?? {};
   const stale = [];
   for (const rule of settings.permissions?.allow ?? []) {
-    const m = rule.match(/^Bash\((?:node|python3)\s+([^\s)]+)/);
+    const m = rule.match(/^Bash\((?:node|python3)\s+([^\s):]+)/); // a prefix rule ends `:*`
     const script = m?.[1].replace(/^\$CLAUDE_PROJECT_DIR\//, "");
     if (script && !existsSync(join(repo, script))) stale.push(rule);
   }
