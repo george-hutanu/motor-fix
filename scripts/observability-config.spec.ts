@@ -77,3 +77,44 @@ describe('the MCP server and its identity server', () => {
     expect(keycloak.alerts).toEqual([rule?.uid, 'mcp-issuer-unreachable']);
   });
 });
+
+describe('the verification result queue', () => {
+  // @traces 209-FR-014
+  it('alerts on its final job failures, shows its counter on the queues dashboard and lists both', () => {
+    const rules = JSON.parse(
+      read('infra', 'observability', 'alerts', 'notifications.json'),
+    ).groups.flatMap((g: { rules: unknown[] }) => g.rules) as {
+      uid: string;
+      annotations: { dashboard_uid: string };
+      data: { model: { expr?: string } }[];
+    }[];
+    const rule = rules.find((r) =>
+      r.data.some((d) =>
+        /motorfix_jobs_total\{[^}]*queue="verification-result"[^}]*outcome="failed"/.test(
+          d.model.expr ?? '',
+        ),
+      ),
+    );
+    expect(rule?.annotations.dashboard_uid).toBe('motorfix-queues');
+
+    const dashboard = read(
+      'infra',
+      'observability',
+      'grafana',
+      'dashboards',
+      'motorfix-queues.json',
+    );
+    expect(dashboard).toContain('motorfix_verification_result_total');
+
+    const queue = JSON.parse(
+      read('infra', 'observability', 'inventory.json'),
+    ).entries.find(
+      (e: { kind: string; name: string }) =>
+        e.kind === 'queue' && e.name === 'verification-result',
+    );
+    expect(queue).toMatchObject({
+      alerts: [rule?.uid],
+      dashboard: 'motorfix-queues',
+    });
+  });
+});

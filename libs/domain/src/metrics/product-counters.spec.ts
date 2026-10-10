@@ -17,6 +17,7 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countVerificationResult,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 
@@ -51,6 +52,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 // @traces 312-FR-016
 // @traces 206-FR-016
 // @traces 251-FR-018
+// @traces 209-FR-014
 describe('the product counters', () => {
   it.each([
     [
@@ -131,6 +133,14 @@ describe('the product counters', () => {
           { outcome },
         ] as const,
     ),
+    ...(['built', 'skipped'] as const).map(
+      (outcome) =>
+        [
+          () => countVerificationResult(outcome),
+          'motorfix_verification_result_total',
+          { outcome },
+        ] as const,
+    ),
     ...GARAGE_REPORT_OUTCOMES.map(
       (outcome) =>
         [
@@ -160,7 +170,7 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  it('keeps every series an instance can add under 52, with labels from fixed sets only', async () => {
+  it('keeps every series an instance can add under 60, with labels from fixed sets only', async () => {
     for (const outcome of ['results', 'none'] as const) countSearch(outcome);
     for (const method of ['password', 'phone', 'google', 'apple'] as const)
       countSignIn(method);
@@ -182,6 +192,9 @@ describe('the product counters', () => {
       countDocumentOpened(kind);
     });
     countDeclarationSigned();
+    (['built', 'skipped'] as const).forEach((outcome) => {
+      countVerificationResult(outcome);
+    });
 
     const { resourceMetrics } = await memory.metricReader.collect();
     const series = resourceMetrics.scopeMetrics
@@ -194,7 +207,7 @@ describe('the product counters', () => {
         ),
       );
     expect(new Set(series).size).toBe(series.length);
-    expect(series.length).toBeLessThan(52);
+    expect(series.length).toBeLessThan(60);
     expect(series.join()).not.toMatch(/@|\d{6,}|[0-9a-f]{8}-/i);
   });
 });

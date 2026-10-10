@@ -1,9 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 
 import { hydrated, ownMap } from './accounts.js';
-import { test } from './fixtures.js';
+import { MAILBOX, test } from './fixtures.js';
 
-const MAILBOX = 'http://127.0.0.1:3025';
 const DRAFT_LINK =
   /https?:\/\/[^\s"<>]+\/(ro|en)\/list-your-garage\?draft=[A-Za-z0-9_-]{43}/;
 

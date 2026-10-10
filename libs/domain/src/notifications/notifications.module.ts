@@ -57,6 +57,11 @@ import {
   type RequestCreatedEvent,
   RequestReceivedFanOut,
 } from './request-received/request-received.fan-out';
+import {
+  VERIFICATION_RESULT_QUEUE,
+  type VerificationDecidedEvent,
+  VerificationResultFanOut,
+} from './verification-result/verification-result.fan-out';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';
@@ -78,6 +83,7 @@ const WORKER = Symbol('NOTIFICATIONS_WORKER');
 const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
+const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
@@ -114,6 +120,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
+    @Optional()
+    @Inject(VERIFICATION_RESULT_WORKER)
+    private readonly verificationResultWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -312,6 +321,32 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        VerificationResultFanOut,
+        {
+          inject: [VerificationResultFanOut],
+          provide: VERIFICATION_RESULT_WORKER,
+          useFactory: (fanOut: VerificationResultFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('VerificationResult').error(
+                'PUBLIC_WEB_URL missing; verification results wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<VerificationDecidedEvent>(
+              VERIFICATION_RESULT_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            return worker;
+          },
+        },
       ],
     };
   }
@@ -320,6 +355,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.newsWorker?.close();
     await this.requestReceivedWorker?.close();
     await this.quoteReceivedWorker?.close();
+    await this.verificationResultWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
     this.publisher.disconnect();

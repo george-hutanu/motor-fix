@@ -17,6 +17,7 @@ import {
   RemindersModule,
   reminderDayMs,
   StorageModule,
+  VERIFICATION_RESULT_CONSUMER,
 } from '@motor-fix/domain';
 import { type DynamicModule, Module } from '@nestjs/common';
 
@@ -62,6 +63,7 @@ export function workerModule(
           NEWS_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
           REQUEST_RECEIVED_CONSUMER,
+          VERIFICATION_RESULT_CONSUMER,
         ],
         databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,

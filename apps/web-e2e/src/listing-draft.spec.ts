@@ -1,12 +1,11 @@
 import { expect, type Page } from '@playwright/test';
 
 import { ready, settled } from './accounts.js';
-import { test } from './fixtures.js';
+import { MAILBOX, test } from './fixtures.js';
 
 // The link e-mail as the API sent it, read from the test mailbox the local
 // run starts (mailbox.mjs); a deployed address has none, so the config leaves
 // out flows tagged @mailbox there.
-const MAILBOX = 'http://127.0.0.1:3025';
 const DRAFT_LINK =
   /https?:\/\/[^\s"<>]+\/(ro|en)\/list-your-garage\?draft=[A-Za-z0-9_-]{43}/;
 
