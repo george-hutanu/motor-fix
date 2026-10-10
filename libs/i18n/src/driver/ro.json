@@ -52,6 +52,49 @@
     },
     "retry": "Reîncearcă"
   },
+  "details": {
+    "cancel": "Renunță",
+    "changeEmail": "Schimbă e‑mailul",
+    "changePassword": "Schimbă parola",
+    "changePhone": "Schimbă numărul",
+    "city": "Oraș",
+    "edit": "Modifică",
+    "email": "E‑mail",
+    "field": {
+      "pattern": "Folosește doar litere, cifre și semne obișnuite."
+    },
+    "name": "Nume",
+    "password": "Parolă",
+    "passwordNotSet": "Nesetată",
+    "passwordSet": "Setată",
+    "pending": "În așteptarea confirmării: {address}",
+    "phone": "Telefon",
+    "phoneLine": "Service‑ul îți vede numărul doar după ce accepți oferta lui.",
+    "problem": {
+      "account_suspended": "Contul tău este suspendat."
+    },
+    "resend": "Trimite linkul din nou",
+    "resent": "Am trimis linkul.",
+    "save": "Salvează",
+    "saved": "Am salvat.",
+    "setPassword": "Setează o parolă",
+    "title": "Datele tale",
+    "unconfirmed": "Neconfirmat"
+  },
+  "emailChange": {
+    "address": "Adresă de e‑mail nouă",
+    "field": {
+      "pattern": "Scrie o adresă de e‑mail validă."
+    },
+    "problem": {
+      "email_taken": "Adresa e folosită de alt cont.",
+      "email_unchanged": "Aceasta e adresa ta actuală.",
+      "send_failed": "Nu am putut trimite. Încearcă din nou.",
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou mai târziu."
+    },
+    "submit": "Trimite linkul",
+    "title": "Schimbă adresa de e‑mail"
+  },
   "empty": {
     "addFirstCar": "Adaugă prima ta mașină",
     "cars": "Adaugă prima ta mașină. O folosim ca să‑ți arătăm service‑urile potrivite și să‑ți amintim de ITP.",
@@ -100,6 +143,56 @@
     "activeRequest": "Cererea activă",
     "quotes": "Oferte primite",
     "repairs": "Istoric reparații"
+  },
+  "passwordChange": {
+    "current": "Parola actuală",
+    "field": {
+      "weak_password": "Alege o parolă mai greu de ghicit: este printre cele mai folosite."
+    },
+    "hint": "8 la 128 de caractere",
+    "new": "Parola nouă",
+    "problem": {
+      "invalid_credentials": "Parola actuală nu e corectă.",
+      "recent_sign_in_required": "Intră din nou în cont ca să setezi o parolă.",
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou mai târziu."
+    },
+    "saved": "Parola a fost schimbată. Celelalte dispozitive au fost deconectate.",
+    "setSaved": "Parola a fost setată. Celelalte dispozitive au fost deconectate.",
+    "setSubmit": "Setează parola",
+    "setTitle": "Setează o parolă",
+    "signInAgain": "Intră din nou în cont",
+    "submit": "Schimbă parola",
+    "title": "Schimbă parola"
+  },
+  "phoneChange": {
+    "again": "Trimite un cod nou",
+    "code": {
+      "field": {
+        "pattern": "Scrie cele 6 cifre din mesaj."
+      },
+      "label": "Cod",
+      "problem": {
+        "code_expired": "Codul a expirat. Cere unul nou.",
+        "code_invalid": "Codul nu e corect.",
+        "phone_taken": "Numărul e folosit de alt cont MotorFix.",
+        "too_many_attempts": "Prea multe încercări. Încearcă din nou mai târziu."
+      }
+    },
+    "confirm": "Confirmă",
+    "field": {
+      "pattern": "Scrie un număr de telefon valid."
+    },
+    "number": "Număr de telefon",
+    "problem": {
+      "phone_taken": "Numărul e folosit de alt cont MotorFix.",
+      "phone_unchanged": "Acesta e numărul tău actual.",
+      "send_failed": "Nu am putut trimite. Încearcă din nou.",
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou mai târziu."
+    },
+    "saved": "Am schimbat numărul.",
+    "sent": "Am trimis un cod pe WhatsApp la {phone}.",
+    "submit": "Trimite codul",
+    "title": "Schimbă numărul de telefon"
   },
   "requests": {
     "retry": "Încearcă din nou"

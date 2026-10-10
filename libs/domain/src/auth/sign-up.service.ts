@@ -28,6 +28,13 @@ export const refusal = (
   errors?: { code: string; field: string }[],
 ) => new HttpException({ code, message, ...(errors && { errors }) }, status);
 
+export const tooMany = () =>
+  refusal(
+    HttpStatus.TOO_MANY_REQUESTS,
+    'too_many_attempts',
+    'Too many tries; try again later',
+  );
+
 // Counted in code points, so "8 characters" means what a person typed.
 export const weakPassword = (password: string) => {
   const length = [...password].length;

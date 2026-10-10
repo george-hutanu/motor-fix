@@ -4,14 +4,16 @@
     "confirming": "Confirming your address…",
     "error": "We could not confirm your address just now.",
     "expired": "The link has expired",
-    "expiredLine": "A confirmation link works once, for 72 hours.",
+    "expiredLine": "A confirmation link works once: for 72 hours after sign-up, or 24 hours when you change your address.",
     "failed": "We could not send the link. Try again.",
     "home": "Go to MotorFix",
-    "refused": "We cannot send another link from this one. Sign in and press “Send again”.",
+    "refused": "We cannot send another link from this one. Sign in and ask for a new link there.",
     "retry": "Try again",
     "sendNew": "Send a new link",
     "sent": "We sent a new link by e-mail.",
-    "tooMany": "You already asked for a link. Try again a little later."
+    "taken": "The address is used by another account.",
+    "takenLine": "Another MotorFix account now uses this address, so we could not move it to yours.",
+    "tooMany": "Too many tries. Try again later."
   },
   "consent": {
     "after": ".",

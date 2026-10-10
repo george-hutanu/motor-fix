@@ -2,7 +2,6 @@ import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 import { CarsView } from './cars-view/cars-view';
-import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import type { EmptyIcon } from './empty-state/empty-state';
 import { PushView } from './push-view/push-view';
 import { garageOf, Session } from './session';
@@ -183,9 +182,12 @@ export const DASHBOARDS: Record<
         unreleased: true,
       },
       {
-        body: DriverSettingsView,
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
+        load: () =>
+          import('./driver-settings-view/driver-settings-view').then(
+            (m) => m.DriverSettingsView,
+          ),
         path: 'settings',
         push: true,
         subtitle: 'shell.frame.subtitle.driver.settings',
