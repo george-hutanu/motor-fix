@@ -18,6 +18,7 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countVerificationResult,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 
@@ -90,10 +91,14 @@ function countEverySeries() {
   ACCOUNT_FIELDS.forEach((field) => {
     countAccountChange(field);
   });
+  (['built', 'skipped'] as const).forEach((outcome) => {
+    countVerificationResult(outcome);
+  });
 }
 
 // @traces 206-FR-016
 // @traces 139-FR-019
+// @traces 209-FR-014
 describe('the product counters', () => {
   it.each([
     [
@@ -179,6 +184,14 @@ describe('the product counters', () => {
         [
           () => countRequestReceived(outcome),
           'motorfix_request_received_total',
+          { outcome },
+        ] as const,
+    ),
+    ...(['built', 'skipped'] as const).map(
+      (outcome) =>
+        [
+          () => countVerificationResult(outcome),
+          'motorfix_verification_result_total',
           { outcome },
         ] as const,
     ),
