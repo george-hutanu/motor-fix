@@ -49,6 +49,18 @@ const gitOut = (cwd, args) => {
   }
 };
 
+/** Paths from `git status --porcelain -z`: unquoted, a rename or copy by its new path (its old one follows it). */
+function parseStatusZ(status) {
+  const fields = status.split("\0");
+  const paths = [];
+  for (let i = 0; i < fields.length; i++) {
+    if (!fields[i]) continue;
+    paths.push(fields[i].slice(3));
+    if (/[RC]/.test(fields[i].slice(0, 2))) i++;
+  }
+  return paths;
+}
+
 /**
  * The main checkout against origin/main, without a fetch (worktrees share its
  * refs): `dirty` lists tracked files modified, staged or deleted (null when git
@@ -56,9 +68,9 @@ const gitOut = (cwd, args) => {
  * or unreadable).
  */
 export function mainCheckoutState(path, run = gitOut) {
-  const status = run(path, ["status", "--porcelain", "--untracked-files=no"]);
+  const status = run(path, ["status", "--porcelain", "-z", "--untracked-files=no"]);
   if (status === null) return { dirty: null, ahead: null, behind: null };
-  const dirty = status.split("\n").filter(Boolean).map((l) => l.slice(3));
+  const dirty = parseStatusZ(status);
   if (run(path, ["rev-parse", "--abbrev-ref", "HEAD"])?.trim() !== "main") return { dirty, ahead: null, behind: null };
   const counts = (run(path, ["rev-list", "--left-right", "--count", "HEAD...origin/main"]) ?? "").trim().split(/\s+/);
   const [ahead, behind] = counts.length === 2 && counts.every((c) => /^\d+$/.test(c)) ? counts.map(Number) : [null, null];
