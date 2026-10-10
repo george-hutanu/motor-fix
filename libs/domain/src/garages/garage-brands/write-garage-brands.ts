@@ -67,6 +67,8 @@ export async function writeGarageBrands(
   }
   const listed = [...new Set(jobs.map((j) => j.jobTypeId.toLowerCase()))];
   const rows = section.brands.flatMap(({ brandId, stance, unticked }, at) => {
+    // No price list yet: the sending flow writes the brands before the prices
+    // and again with the jobs they returned, so the refs wait for that call.
     if (stance !== 'works_on' || listed.length === 0) return [];
     const off = new Set(untickedIds(unticked ?? [], jobs, at));
     return listed

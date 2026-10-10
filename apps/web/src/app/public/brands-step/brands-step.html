@@ -65,10 +65,10 @@
                 </li>
               }
             </ul>
-            <button type="button" (click)="tickEvery(brand.id)">{{ 'public.listing.brands.jobs.tickAll' | t }}</button>
+            <button hlmBtn variant="secondary" type="button" (click)="tickEvery(brand.id)">{{ 'public.listing.brands.jobs.tickAll' | t }}</button>
           </details>
         } @else {
-          <p><button type="button" (click)="goTo.emit(3)">{{ 'public.listing.brands.jobs.empty' | t }}</button></p>
+          <p><button hlmBtn variant="ghost" type="button" (click)="goTo.emit(3)">{{ 'public.listing.brands.jobs.empty' | t }}</button></p>
         }
         @if (getsNothing(brand.id, ticked)) {
           <p class="quiet" role="status">{{ 'public.listing.brands.noRequests' | t: { brand: brand.name } }}</p>

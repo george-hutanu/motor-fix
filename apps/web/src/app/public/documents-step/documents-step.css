@@ -31,12 +31,42 @@ h3 {
   min-width: 0;
   cursor: pointer;
 }
+/* The box is drawn at 20 px inside a 44 px tap target. */
 .choice input {
+  display: inline-grid;
+  place-items: center;
   flex: none;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--mf-amber);
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+  min-height: 0;
+  margin: 0 calc((1.25rem - var(--mf-tap)) / 2) 0 0;
+  appearance: none;
+  cursor: pointer;
+}
+.choice input::before,
+.choice input::after {
+  grid-area: 1 / 1;
+  content: "";
+  box-sizing: border-box;
+}
+.choice input::before {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--mf-text-secondary);
+  border-radius: 4px;
+  background: var(--mf-bg);
+}
+.choice input:checked::before {
+  border-color: var(--mf-text);
+  background: var(--mf-text);
+}
+.choice input:checked::after {
+  width: 6px;
+  height: 11px;
+  margin-top: -2px;
+  border: solid var(--mf-bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 .choice input:focus-visible {
   outline: 2px solid var(--mf-amber-ink);

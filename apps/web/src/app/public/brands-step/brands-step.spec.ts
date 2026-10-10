@@ -780,6 +780,7 @@ describe('step 2, the jobs of a taken brand', () => {
       (b) => text(b) === 'Adaugă mai întâi lucrări în lista de prețuri',
     ) as HTMLButtonElement;
     expect(link).toBeDefined();
+    expect(link.hasAttribute('hlmBtn')).toBe(true);
     expect(quietLines(step, 'Dacia')).toHaveLength(0);
 
     await press(fixture, link);
@@ -899,7 +900,7 @@ describe('step 2, the jobs of a taken brand', () => {
       'Dacia, Gearbox',
     ]);
     expect(tick(step, 'Dacia', 'Front brakes').checked).toBe(false);
-    expect(tickAllButton(step, 'Dacia')).toBeDefined();
+    expect(tickAllButton(step, 'Dacia')?.hasAttribute('hlmBtn')).toBe(true);
     expect(fixture.componentInstance.value()).toEqual(before);
   });
 
@@ -927,5 +928,8 @@ describe('the job row on a phone', () => {
     expect(css).toMatch(
       /\.jobs label[^{]*\{[^}]*min-height:\s*var\(--mf-tap\)/,
     );
+    // The sweep measures the checkbox itself: its box is drawn smaller inside.
+    expect(css).toMatch(/\.jobs input \{[^}]*\swidth:\s*var\(--mf-tap\)/);
+    expect(css).toMatch(/\.jobs input \{[^}]*\sheight:\s*var\(--mf-tap\)/);
   });
 });

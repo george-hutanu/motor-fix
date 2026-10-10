@@ -23,7 +23,7 @@ import {
   type JobTypeDto,
 } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
+import { HlmButton, HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
 
 import {
   type BrandsSection,
@@ -59,7 +59,7 @@ type JobName = Pick<JobTypeDto, 'nameEn' | 'nameRo'>;
 // nothing.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmInput, HlmLabel, Lamp, TranslatePipe],
+  imports: [HlmButton, HlmInput, HlmLabel, Lamp, TranslatePipe],
   selector: 'mf-brands-step',
   styleUrl: './brands-step.css',
   templateUrl: './brands-step.html',

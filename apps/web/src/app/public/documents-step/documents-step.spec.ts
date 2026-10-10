@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { CdkDropList } from '@angular/cdk/drag-drop';
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -796,5 +799,9 @@ describe('the declaration', () => {
     const { step } = await open();
 
     expect(box(step).closest('label')?.classList).toContain('choice');
+    // The sweep measures the checkbox itself: its box is drawn smaller inside.
+    const css = readFileSync(join(__dirname, 'documents-step.css'), 'utf8');
+    expect(css).toMatch(/\.choice input \{[^}]*\swidth:\s*var\(--mf-tap\)/);
+    expect(css).toMatch(/\.choice input \{[^}]*\sheight:\s*var\(--mf-tap\)/);
   });
 });
