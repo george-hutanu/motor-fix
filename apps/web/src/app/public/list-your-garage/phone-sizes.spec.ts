@@ -53,6 +53,20 @@ describe('the list-your-garage page on a phone', () => {
     );
   });
 
+  // The open step list is laid over the page: over the pinned Save, and ending
+  // above the tab bar and the consent bar, so no step sits under either.
+  it('lays the open step list over Save and ends it above the bars at the bottom', () => {
+    const phone = read('list-your-garage/list-your-garage.css')
+      .split('@media not all and (min-width: 768px)')[1]
+      ?.replace(/\s+/g, ' ')
+      .replace(/\( /g, '(')
+      .replace(/ \)/g, ')');
+    expect(phone).toMatch(/\bnav \{[^}]*z-index: 2;/);
+    expect(phone).toMatch(
+      /\bol \{[^}]*max-height: calc\(100dvh - var\(--public-site-bar, 0px\) - var\(--mf-tap\) - var\(--tab-bar, 0px\) - var\(--consent-bar, 0px\)\);/,
+    );
+  });
+
   it("sizes the map's zoom buttons over maplibre's own 29 px rule", () => {
     const styles = readFileSync(join(publicDir, '../../styles.css'), 'utf8');
     expect(styles).toMatch(

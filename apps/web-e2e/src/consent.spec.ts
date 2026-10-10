@@ -281,8 +281,9 @@ test.describe('a garage profile and the dashboard @seeded', () => {
     await expect(bar(page, 'ro')).toBeHidden();
     await expect.poll(() => calls.length).toBeGreaterThan(0);
 
+    // The driver's dashboard holds its live stream open, so no networkidle
+    // comes here either: wait for what the step reads.
     await page.goto('/app/driver/settings');
-    await settled(page);
     await page
       .getByRole('button', { exact: true, name: 'Setări cookie' })
       .click();
@@ -294,8 +295,12 @@ test.describe('a garage profile and the dashboard @seeded', () => {
     await expect(dialog).toBeHidden();
     const off = calls.length;
 
+    // A page view goes at the end of the navigation, before the dashboard
+    // asks for its requests; once those are drawn, none can still come.
+    const drawn = page.waitForResponse('**/api/v1/requests');
     await page.goto('/app/driver');
-    await settled(page);
+    await drawn;
+    await expect(signOut(page)).toBeVisible();
     expect(calls.length).toBe(off);
   });
 });

@@ -19,9 +19,9 @@ class CookieSettings {
   protected readonly task = injectOverlayTask<undefined, undefined>();
   protected readonly on = signal(this.consent.granted());
 
+  // Consent.save stores nothing for a switch left as it was.
   protected async save() {
-    if (this.on() !== this.consent.granted())
-      await this.consent.save(this.on());
+    await this.consent.save(this.on());
     this.task.close(undefined);
   }
 }

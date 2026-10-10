@@ -101,7 +101,9 @@ describe('the cookie settings dialog', () => {
     expect(consent.save).toHaveBeenCalledWith(false);
   });
 
-  it('stores nothing on "Renunță" or on an unchanged save', async () => {
+  // An unchanged switch is handed on as it is: Consent.save stores nothing
+  // for it (consent.spec.ts), the one place that rule is written.
+  it('stores nothing on "Renunță" and leaves an unchanged save to Consent', async () => {
     const cancelled = open(true);
     await settle();
     toggle()?.click();
@@ -117,6 +119,6 @@ describe('the cookie settings dialog', () => {
     await unchanged;
 
     expect(first.save).not.toHaveBeenCalled();
-    expect(consent.save).not.toHaveBeenCalled();
+    expect(consent.save).toHaveBeenCalledWith(false);
   });
 });
