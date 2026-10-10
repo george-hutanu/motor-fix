@@ -120,7 +120,7 @@ describe("issuePlans", () => {
     const { plans } = issuePlans(await tracker());
     const st4 = plans.find((p) => p.key === "ST-4");
     assert.equal(st4.title, "ST-4 Ask `@alice` about the logs");
-    assert.equal(st4.parent, null);
+    assert.equal(st4.parent, "GROUP-NONE");
     assert.equal(st4.milestone, null);
     assert.deepEqual(st4.labels, ["type: tech debt"]);
     assert.equal("Epic" in st4.fields, false);
@@ -162,7 +162,7 @@ describe("issuePlans", () => {
     const { plans } = issuePlans(await tracker());
     assert.deepEqual(
       plans.map((p) => p.key),
-      ["ST-2", "ST-5", "ST-7", "ST-1", "ST-8", "ST-4", "ST-6", "EP-1", "EP-2", "EP-3", "EP-17", FEATURE_KEY, "ST-3"],
+      ["ST-2", "ST-5", "ST-7", "ST-1", "ST-8", "ST-4", "ST-6", "EP-1", "EP-2", "EP-3", "EP-17", FEATURE_KEY, "GROUP-NONE", "ST-3"],
     );
   });
 
@@ -186,9 +186,9 @@ describe("a full import", () => {
     const { exit, lines } = await importInto(gh);
     assert.equal(exit, 0);
     const imported = gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body));
-    assert.equal(imported.length, 13);
+    assert.equal(imported.length, 14);
     assert.match(imported[0].title, /^ST-2 /);
-    assert.equal(gh.state.projects[0].items.length, 13);
+    assert.equal(gh.state.projects[0].items.length, 14);
     assert.deepEqual(itemValues(gh, "ST-2"), {
       Status: "Implementing",
       Priority: "Urgent",
@@ -211,7 +211,7 @@ describe("a full import", () => {
     const gh = await bootstrapped();
     await importInto(gh);
     const sets = gh.requests.filter((r) => r.op === "SetFields");
-    assert.equal(sets.length, 13);
+    assert.equal(sets.length, 14);
   });
 
   it("closes Done items as completed", async () => {
@@ -301,7 +301,7 @@ describe("a full import", () => {
     const gh = await bootstrapped();
     await importInto(gh);
     for (const issue of gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body))) {
-      assert.match(issue.body, /^<!-- motorfix:((ST|EP)-\d+|FEATURE-[0-9a-f]{32}) -->(\n|$)/);
+      assert.match(issue.body, /^<!-- motorfix:((ST|EP)-\d+|FEATURE-[0-9a-f]{32}|GROUP-[\w-]+) -->(\n|$)/);
       assert.ok(!issue.body.includes("## Properties"), issue.title);
       assert.ok(!issue.body.includes("\uE000"), "a reference token left unresolved");
     }
@@ -327,7 +327,7 @@ describe("a full import", () => {
     const { exit } = await importInto(gh, { fetchImpl });
     assert.equal(exit, 0);
     assert.ok(throttled);
-    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 13);
+    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 14);
   });
 });
 
@@ -342,7 +342,7 @@ describe("running it again", () => {
     assert.equal(exit, 0);
     assert.equal(github.stats.content, 0);
     assert.equal(gh.writes().length, before);
-    assert.ok(lines.some((l) => /^plan\s+create 0 · feature 0 · adopt 0 · update 0 · add-item 0 · set-fields 0/.test(l)));
+    assert.ok(lines.some((l) => /^plan\s+create 0 · feature 0 · group 0 · adopt 0 · update 0 · add-item 0 · set-fields 0/.test(l)), lines.join("\n"));
   });
 
   it("updates only the field that changed in Notion", async () => {
@@ -441,9 +441,9 @@ describe("a lap with a budget", () => {
     const { exit } = await importInto(gh);
     assert.equal(exit, 0);
     const keys = gh.state.issues.map((i) => i.body.match(/<!-- motorfix:(\S+) -->/)?.[1]).filter(Boolean);
-    assert.equal(keys.length, 13);
-    assert.equal(new Set(keys).size, 13);
-    assert.equal(gh.state.projects[0].items.length, 13);
+    assert.equal(keys.length, 14);
+    assert.equal(new Set(keys).size, 14);
+    assert.equal(gh.state.projects[0].items.length, 14);
   });
 });
 
@@ -469,7 +469,7 @@ describe("guards", () => {
     assert.equal(issueOf(gh, "ST-1"), undefined);
     assert.ok(issueOf(gh, "ST-2") && issueOf(gh, "EP-1"));
     assert.ok(lines.includes("incomplete ST-1 unsupported block u1: not a block the import can render"));
-    assert.match(lines.at(-1), /^failed\s+1 part\(s\) of Notion pages left behind: 1 page\(s\) not written, the other 12 written$/);
+    assert.match(lines.at(-1), /^failed\s+1 part\(s\) of Notion pages left behind: 1 page\(s\) not written, the other 13 written$/);
     assert.ok(!lines.some((l) => /^(sub-issue|blocked-by|pr-closes|close|relink)\s+ST-1\b/.test(l)));
   });
 
@@ -511,9 +511,9 @@ describe("guards", () => {
     assert.equal(exit, 0);
     assert.equal(nonGets(gh, from).length, 0);
     assert.ok(lines.some((l) => /^read\s+notion: 8 stories, 4 epics/.test(l)));
-    assert.ok(lines.some((l) => /^plan\s+create 12 · feature 1 · adopt 0 · update 0 · add-item 0 · set-fields 13 · close 2 · reopen 0 · relink \d+ · sub-issue 8 · move 0 · blocked-by 4 · pr-closes 1$/.test(l)));
-    assert.ok(lines.some((l) => /^bodies\s+13 pages, [\d,]+ characters; 0 too long for an issue/.test(l)));
-    assert.ok(lines.some((l) => /^titles\s+\(13\)$/.test(l)));
+    assert.ok(lines.some((l) => /^plan\s+create 12 · feature 1 · group 1 · adopt 0 · update 0 · add-item 0 · set-fields 14 · close 2 · reopen 0 · relink \d+ · sub-issue 9 · move 0 · blocked-by 4 · pr-closes 1$/.test(l)), lines.join("\n"));
+    assert.ok(lines.some((l) => /^bodies\s+14 pages, [\d,]+ characters; 0 too long for an issue/.test(l)));
+    assert.ok(lines.some((l) => /^titles\s+\(14\)$/.test(l)));
     assert.ok(lines.some((l) => l.trim() === "ST-4 Ask `@alice` about the logs"));
     assert.ok(lines.some((l) => /^warn\s+.*ST-5/.test(l)));
   });
@@ -524,7 +524,7 @@ describe("guards", () => {
     const { exit, lines } = await importInto(gh, { maxItems: 12 });
     assert.equal(exit, 2);
     assert.equal(nonGets(gh, from).length, 0);
-    assert.ok(lines.some((l) => /13/.test(l) && /12/.test(l)));
+    assert.ok(lines.some((l) => /14 items, over --max-items 12/.test(l)), lines.join("\n"));
   });
 
   it("asks for the bootstrap first when the Project or its labels are missing", async () => {
@@ -570,7 +570,7 @@ describe("Notion data the import cannot map as typed", () => {
       t.stories[0].epics = ["EP-99"];
       nameFeatures(t, "ST-1", []);
     });
-    assert.equal(st(r).parent, null);
+    assert.equal(st(r).parent, "GROUP-NONE");
     assert.ok(!st(r).labels.some((l) => /^EP-/.test(l)));
     assert.equal(st(r).fields.Epic, undefined);
     assert.ok(r.warnings.some((w) => /ST-1 is under EP-99, which is not imported/.test(w)));
@@ -602,7 +602,7 @@ describe("Notion data the import cannot map as typed", () => {
     const { exit, lines } = await importInto(gh, { tracker: t });
     assert.ok(lines.some((l) => /^warn\s+ST-1 has Status "Someday"/.test(l)));
     assert.equal(exit, 0);
-    assert.match(lines.at(-1), /^done\s+13 items; 0 steps left; \d+ content requests$/);
+    assert.match(lines.at(-1), /^done\s+14 items; 0 steps left; \d+ content requests$/);
   });
 
   it("warns and skips the Closes line when Notion names a PR GitHub does not have", async () => {
@@ -748,7 +748,7 @@ describe("reading and writing together", () => {
     assert.equal(exit, 0);
     const lastRead = events.findLastIndex((e) => e.startsWith("read "));
     assert.ok(events.findIndex((e) => e.startsWith("create")) < lastRead, events.join(", "));
-    assert.equal(events.filter((e) => e.startsWith("create")).length, 13);
+    assert.equal(events.filter((e) => e.startsWith("create")).length, 14);
   });
 
   it("serves cached pages without asking Notion, reads them first and writes them while the rest are read", async () => {
@@ -768,7 +768,7 @@ describe("reading and writing together", () => {
     // The cached epics are all read before the first story is asked of Notion, and the first issue written is one of them.
     assert.ok(events.findIndex((e) => e.startsWith("read ")) > events.findLastIndex((e) => e.startsWith("cache ")));
     assert.match(events.find((e) => e.startsWith("create")), /^create EP-/);
-    assert.ok(lines.includes(`read      notion: 13 pages' content, ${12 - epics.length} read from Notion, the rest from the cache`), lines.filter((l) => l.startsWith("read")).join("\n"));
+    assert.ok(lines.includes(`read      notion: 14 pages' content, ${12 - epics.length} read from Notion, the rest from the cache`), lines.filter((l) => l.startsWith("read")).join("\n"));
   });
 
   it("reads several pages from Notion at once, and still writes each issue once", async () => {
@@ -789,7 +789,7 @@ describe("reading and writing together", () => {
     const { exit } = await importInto(gh, { tracker: t, load });
     assert.equal(exit, 0);
     assert.ok(most > 1 && most <= 4, `at most ${most} reads at once`);
-    assert.equal(gh.state.issues.length, 13);
+    assert.equal(gh.state.issues.length, 14);
   });
 
   it("keeps reading while a slow writer works, so the reader runs ahead", async () => {
@@ -812,14 +812,14 @@ describe("reading and writing together", () => {
     const one = await importInto(gh, { tracker: lap1.t, load: lap1.load, budget: 4 });
     assert.equal(one.exit, 3);
     assert.ok(first.length < 12, `read ${first.length} pages in a lap that stopped early`);
-    assert.ok(one.lines.some((l) => /^stopped\s+after (ST|EP)-\d+ \(4 of \d+ steps, budget 4 reached\)$/.test(l)));
+    assert.ok(one.lines.some((l) => /^stopped\s+after (ST|EP|GROUP)-[\w-]+ \(4 of \d+ steps, budget 4 reached\)$/.test(l)), one.lines.join("\n"));
     const lap2 = await streaming([], folderCache(dir));
     const two = await importInto(gh, { tracker: lap2.t, load: lap2.load });
     assert.equal(two.exit, 0);
     const keys = gh.state.issues.map((i) => i.body.match(/<!-- motorfix:(\S+) -->/)?.[1]).filter(Boolean);
-    assert.equal(new Set(keys).size, 13);
-    assert.equal(keys.length, 13);
-    assert.ok(two.lines.some((l) => /^read\s+notion: 13 pages' content, \d+ read from Notion, the rest from the cache$/.test(l)));
+    assert.equal(new Set(keys).size, 14);
+    assert.equal(keys.length, 14);
+    assert.ok(two.lines.some((l) => /^read\s+notion: 14 pages' content, \d+ read from Notion, the rest from the cache$/.test(l)));
   });
 
   it("prints one progress line per page read and per write step when not on a terminal", async () => {
@@ -831,10 +831,10 @@ describe("reading and writing together", () => {
     const exit = await runImport({ github: clientOf(gh), tracker: t, load, log: (l) => (lines.push(l), report.log(l)), progress: report.progress, lap: 2 });
     assert.equal(exit, 0);
     const progressLines = text.filter((x) => x.startsWith("progress"));
-    const steps = lines.filter((l) => /^(create|feature|adopt|update|add-item|set-fields|close|reopen|relink|sub-issue|move|blocked-by|pr-closes)\s/.test(l)).length;
-    assert.equal(progressLines.length, 13 + steps);
+    const steps = lines.filter((l) => /^(create|feature|group|adopt|update|add-item|set-fields|close|reopen|relink|sub-issue|move|blocked-by|pr-closes)\s/.test(l)).length;
+    assert.equal(progressLines.length, 14 + steps);
     assert.ok(text.every((x) => x.endsWith("\n") && !x.includes("\r")));
-    assert.ok(progressLines.some((x) => /^progress  read \d+\/13 · written \d+\/13 · step 1\/\d \(create\) · (ST|EP)-\d+ · lap 2\n$/.test(x)), progressLines.slice(0, 3).join(""));
+    assert.ok(progressLines.some((x) => /^progress  read \d+\/14 · written \d+\/14 · step 1\/\d \(create\) · (ST|EP)-\d+ · lap 2\n$/.test(x)), progressLines.slice(0, 3).join(""));
   });
 });
 
@@ -973,7 +973,7 @@ describe("stories attached to their epic", () => {
       assert.ok((gh.state.subIssues.get(issueOf(gh, parent).number) ?? []).includes(issue.id), `${key} sub-issue`);
     }
     assert.ok((gh.state.subIssues.get(issueOf(gh, "EP-1").number) ?? []).includes(issueOf(gh, FEATURE_KEY).id));
-    assert.ok(p.items.length === 13);
+    assert.ok(p.items.length === 14);
   });
 
   it("links each item to its parent, children, blockers and the items it blocks as it is written, before the lap ends", async () => {
@@ -1045,11 +1045,11 @@ describe("a dropped connection mid-run", () => {
     assert.match(one.lines.at(-2), /^stopped\s+after network errors on 1 step\(s\) \(ST-1 create\)/);
     assert.match(one.lines.at(-1), /^continue\s+node \.claude\/scripts\/tracker\/import\.mjs$/);
     assert.equal(issueOf(gh, "ST-1"), undefined);
-    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 12);
+    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 13);
     assert.ok(!one.lines.some((l) => /^(sub-issue|blocked-by|pr-closes|close)\s+ST-1\b/.test(l)));
     const two = await importInto(gh);
     assert.equal(two.exit, 0, two.lines.join("\n"));
-    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 13);
+    assert.equal(gh.state.issues.filter((i) => /<!-- motorfix:/.test(i.body)).length, 14);
     assert.ok((gh.state.subIssues.get(issueOf(gh, FEATURE_KEY).number) ?? []).includes(issueOf(gh, "ST-1").id));
   });
 
@@ -1204,7 +1204,8 @@ describe("features between an epic and its stories", () => {
     const gh = await bootstrapped({ subIssueMax: 4 });
     const flat = await tracker();
     for (const s of flat.stories) nameFeatures(flat, s.key, []);
-    assert.equal((await importInto(gh, { tracker: flat, subIssueMax: 4 })).exit, 0);
+    // That import knew no groups: it planned for GitHub's real limit.
+    assert.equal((await importInto(gh, { tracker: flat })).exit, 0);
     assert.deepEqual(childrenOf(gh, "EP-1"), ["ST-1", "ST-5", "ST-7", "ST-8"]);
 
     const t = await tracker();
@@ -1241,5 +1242,129 @@ describe("features between an epic and its stories", () => {
     await github.rest("POST", "issues/2/sub_issues", { sub_issue_id: 1003, replace_parent: true });
     assert.deepEqual(gh.state.subIssues.get(1), []);
     assert.deepEqual(gh.state.subIssues.get(2), [1003]);
+  });
+});
+
+// @traces 1017-FR-007
+// @traces 1017-FR-010
+describe("group issues when an epic outgrows GitHub's sub-issue limit", () => {
+  /** Adds a copy of ST-8 (a Story under EP-1) as ST-<n>. */
+  const extra = (t, n, fields = {}) => {
+    const base = t.stories.find((s) => s.key === "ST-8");
+    t.stories.push({ ...base, key: `ST-${n}`, id: storyId(n), title: `Extra ${n}`, blockers: [], ...fields });
+  };
+  const under = (plans, key) => plans.filter((p) => p.parent === key).map((p) => p.key);
+  const titlesUnder = (gh, key) => (gh.state.subIssues.get(issueOf(gh, key).number) ?? []).map((id) => gh.state.issues.find((i) => i.id === id).title).sort();
+
+  it("keeps an epic under the limit exactly as before: no group issue, its featureless stories under it", async () => {
+    const { plans } = issuePlans(await tracker());
+    assert.ok(!plans.some((p) => p.key.startsWith("GROUP-EP-")));
+    for (const key of ["ST-3", "ST-5", "ST-7", "ST-8"]) assert.equal(plans.find((p) => p.key === key).parent, "EP-1", key);
+    assert.equal(plans.find((p) => p.key === FEATURE_KEY).parent, "EP-1");
+    assert.deepEqual(under(plans, "EP-17"), ["ST-6"]);
+  });
+
+  it("splits an overflowing epic's featureless stories into one group per Work type, chunked by ID, so the epic holds only features and groups", async () => {
+    const t = await tracker();
+    for (const n of [20, 21, 22, 23, 24]) extra(t, n);
+    const { plans, warnings } = issuePlans(t, { subIssueMax: 5 });
+    const groups = plans.filter((p) => p.key.startsWith("GROUP-EP-1-"));
+    assert.deepEqual(
+      groups.map((g) => [g.key, g.title]),
+      [
+        ["GROUP-EP-1-story-1", "EP-1 · Stories (1/2)"],
+        ["GROUP-EP-1-story-2", "EP-1 · Stories (2/2)"],
+        ["GROUP-EP-1-bug-1", "EP-1 · Bugs"],
+        ["GROUP-EP-1-decision-1", "EP-1 · Decisions"],
+      ],
+    );
+    assert.deepEqual(under(plans, "GROUP-EP-1-story-1").sort(), ["ST-20", "ST-21", "ST-22", "ST-7", "ST-8"]);
+    assert.deepEqual(under(plans, "GROUP-EP-1-story-2").sort(), ["ST-23", "ST-24"]);
+    assert.deepEqual(under(plans, "GROUP-EP-1-bug-1"), ["ST-3"]);
+    assert.deepEqual(under(plans, "GROUP-EP-1-decision-1"), ["ST-5"]);
+    assert.deepEqual(under(plans, "EP-1").sort(), [FEATURE_KEY, ...groups.map((g) => g.key)].sort());
+    // The story under its feature stays there; every story keeps its Epic field and label.
+    assert.equal(plans.find((p) => p.key === "ST-1").parent, FEATURE_KEY);
+    assert.equal(plans.find((p) => p.key === "ST-7").fields.Epic, "EP-1");
+    const [first, , bugs] = groups;
+    assert.deepEqual(bugs.labels, ["type: group", "EP-1"]);
+    assert.deepEqual(bugs.fields, { "Work type": "Group", Epic: "EP-1", Release: "1 - Launch" });
+    assert.equal(bugs.state, "closed", "its one story is Done");
+    assert.equal(first.state, "open");
+    assert.equal(bugs.assignee, "george-hutanu");
+    assert.match(bugs.body, /^<!-- motorfix:GROUP-EP-1-bug-1 -->\n\nBugs of EP-1 with no feature: GitHub holds at most 5 sub-issues per issue\.$/);
+    assert.ok(!warnings.some((w) => /^EP-1 needs/.test(w)));
+  });
+
+  it("warns when even the features and groups pass the limit", async () => {
+    const { warnings } = issuePlans(await tracker(), { subIssueMax: 2 });
+    assert.ok(warnings.some((w) => /^EP-1 needs \d+ sub-issues/.test(w)), warnings.join("\n"));
+  });
+
+  it("puts every issue with no epic under one No epic issue, with no Epic field", async () => {
+    const { plans } = issuePlans(await tracker());
+    const none = plans.find((p) => p.key === "GROUP-NONE");
+    assert.equal(none.title, "No epic");
+    assert.deepEqual(none.labels, ["type: group"]);
+    assert.deepEqual(none.fields, { "Work type": "Group" });
+    assert.equal(none.parent, null);
+    assert.equal(none.state, "open");
+    assert.deepEqual(under(plans, "GROUP-NONE"), ["ST-4"]);
+    assert.equal(plans.find((p) => p.key === "ST-4").fields.Epic, undefined);
+    assert.ok(plans.indexOf(none) < plans.findIndex((p) => p.key === "ST-3"), "before the Done stories");
+  });
+
+  it("splits No epic into type groups under it when it would pass the limit", async () => {
+    const t = await tracker();
+    for (const n of [30, 31, 32]) extra(t, n, { epics: [], type: "Task" });
+    const { plans } = issuePlans(t, { subIssueMax: 3 });
+    assert.deepEqual(under(plans, "GROUP-NONE").sort(), ["GROUP-NONE-task-1", "GROUP-NONE-tech-debt-1"]);
+    assert.deepEqual(under(plans, "GROUP-NONE-task-1").sort(), ["ST-30", "ST-31", "ST-32"]);
+    assert.deepEqual(under(plans, "GROUP-NONE-tech-debt-1"), ["ST-4"]);
+    const tasks = plans.find((p) => p.key === "GROUP-NONE-task-1");
+    assert.equal(tasks.title, "No epic · Tasks");
+    assert.equal(plans.find((p) => p.key === "GROUP-NONE-tech-debt-1").title, "No epic · Tech debt");
+    assert.deepEqual(tasks.fields, { "Work type": "Group" });
+    assert.deepEqual(tasks.labels, ["type: group"]);
+  });
+
+  it("creates the groups, moves the stories an older import put under the full epic into them, and a rerun writes nothing", async () => {
+    // GitHub holds 4 here; an older import (no groups) filled EP-1 with Sign-in and three stories and left ST-3 out.
+    const gh = await bootstrapped({ subIssueMax: 4 });
+    assert.equal((await importInto(gh)).exit, 0);
+    assert.equal(childrenOf(gh, "EP-1").length, 4);
+    assert.deepEqual(childrenOf(gh, "GROUP-NONE"), ["ST-4"]);
+
+    const { exit, lines } = await importInto(gh, { subIssueMax: 4 });
+    assert.equal(exit, 0, lines.join("\n"));
+    assert.deepEqual(titlesUnder(gh, "EP-1"), ["EP-1 · Bugs", "EP-1 · Decisions", "EP-1 · Stories", "Sign-in"]);
+    assert.deepEqual(childrenOf(gh, "GROUP-EP-1-story-1"), ["ST-7", "ST-8"]);
+    assert.deepEqual(childrenOf(gh, "GROUP-EP-1-bug-1"), ["ST-3"]);
+    assert.deepEqual(childrenOf(gh, "GROUP-EP-1-decision-1"), ["ST-5"]);
+    for (const key of ["ST-3", "ST-5", "ST-7", "ST-8"]) assert.equal(parentsOf(gh, key).length, 1, key);
+    assert.ok(lines.some((l) => /^move\s+ST-\d+ from #\d+ to #\d+/.test(l)));
+    assert.ok(lines.some((l) => /^group\s+GROUP-EP-1-story-1 → #\d+/.test(l)));
+    assert.ok(!lines.some((l) => /^warn\s+EP-1 holds/.test(l)));
+    const bugs = issueOf(gh, "GROUP-EP-1-bug-1");
+    assert.equal(bugs.title, "EP-1 · Bugs");
+    assert.equal(bugs.state, "closed");
+    assert.deepEqual(bugs.labels.map((l) => l.name), ["type: group", "EP-1"]);
+    assert.deepEqual(itemValues(gh, "GROUP-EP-1-bug-1"), { "Work type": "Group", Epic: "EP-1", Release: "1 - Launch" });
+
+    const before = gh.writes().length;
+    const again = await importInto(gh, { subIssueMax: 4 });
+    assert.equal(again.exit, 0, again.lines.join("\n"));
+    assert.equal(gh.writes().length, before);
+  });
+
+  it("never takes a group issue titled EP-1 · … for EP-1 itself", async () => {
+    const gh = await bootstrapped({ subIssueMax: 4 });
+    await importInto(gh, { subIssueMax: 4 });
+    // EP-1's issue loses its marker and title, so only the group issues still read "EP-1 · …".
+    const ep1 = issueOf(gh, "EP-1");
+    ep1.body = "Foundations";
+    ep1.title = "Foundations";
+    const { lines } = await importInto(gh, { subIssueMax: 4, dryRun: true });
+    assert.ok(lines.some((l) => /^plan\s+create 1 · /.test(l)), lines.join("\n"));
   });
 });

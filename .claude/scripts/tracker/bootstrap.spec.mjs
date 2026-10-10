@@ -60,7 +60,7 @@ describe("a first run on a fresh account", () => {
     await run(gh);
     assert.deepEqual(optionNames(gh, "Status"), ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"]);
     assert.deepEqual(optionNames(gh, "Priority"), ["Urgent", "Highest", "High", "Medium", "Low"]);
-    assert.deepEqual(optionNames(gh, "Work type"), ["Story", "Task", "Bug", "Tech debt", "Decision", "Epic", "Feature"]);
+    assert.deepEqual(optionNames(gh, "Work type"), ["Story", "Task", "Bug", "Tech debt", "Decision", "Epic", "Feature", "Group"]);
     assert.deepEqual(optionNames(gh, "Epic"), EPICS);
     assert.equal(fieldNamed(gh, "Ready to work"), undefined, "readiness is Status To do and not blocked");
     for (const name of ["Started", "QA from", "Merged at", "Planned start", "Planned end"]) assert.equal(fieldNamed(gh, name).dataType, "DATE", name);
@@ -80,12 +80,16 @@ describe("a first run on a fresh account", () => {
     assert.equal(views.Roadmap.layout, "ROADMAP_LAYOUT");
     assert.equal(views.Blocked.filter, "status:Blocked");
     assert.equal(views["My work"].filter, "assignee:@me -status:Done");
-    for (const key of EPICS) {
-      assert.equal(views[key]?.layout, "BOARD_LAYOUT", key);
-      assert.equal(views[key].filter, `epic:"${key}"`);
-    }
+    // An epic's issues are seen through its sub-issues, not a view per epic.
+    for (const key of EPICS) assert.equal(views[key], undefined, key);
     const names = (v) => v.visibleFieldIds.map((id) => project(gh).fields.find((f) => f.id === id).name);
     assert.deepEqual(names(views.Blocked), ["Title", "Priority", "Work type", "Epic", "Assignees"]);
+    assert.equal(views.Epics.layout, "TABLE_LAYOUT");
+    assert.equal(views.Epics.filter, "work-type:Epic");
+    assert.deepEqual(names(views.Epics), ["Title", "Status", "Priority", "Sub-issues progress", "Planned start", "Planned end", "Release"]);
+    assert.equal(views["By epic"].layout, "TABLE_LAYOUT");
+    assert.equal(views["By epic"].filter, "-work-type:Epic,Group,Feature");
+    assert.deepEqual(names(views["By epic"]), ["Title", "Status", "Priority", "Work type", "Epic", "Parent issue", "Assignees"]);
     assert.ok(ops(gh, "CreateView").every((c) => !("filter" in c.body.variables)), "the create input has no filter");
   });
 
@@ -360,7 +364,7 @@ describe("the owner's checklist", () => {
   it("fits fifteen lines, one setting each, and holds only what the API cannot set", async () => {
     assert.ok(CHECKLIST.length >= 7 && CHECKLIST.length <= 15, `${CHECKLIST.length} lines`);
     const text = CHECKLIST.join("\n");
-    for (const needle of [/Board.*group by Status/i, /Table.*sort.*Priority/i, /EP-.*group by Status/i, /Roadmap.*Started.*Merged at/i, /Roadmap.*Planned start.*Planned end/i, /auto-add.*george-hutanu\/motor-fix-specs .*is:issue/i, /Insights/i, /private/i]) {
+    for (const needle of [/Board.*group by Status/i, /Table.*sort.*Priority/i, /By epic.*group by Epic.*Status/i, /Epics.*Sub-issues progress/i, /Roadmap.*Started.*Merged at/i, /Roadmap.*Planned start.*Planned end/i, /auto-add.*george-hutanu\/motor-fix-specs .*is:issue/i, /Insights/i, /private/i]) {
       assert.match(text, needle);
     }
     assert.doesNotMatch(text, /filter|create (the )?field|option/i);
@@ -370,5 +374,56 @@ describe("the owner's checklist", () => {
     const gh = fakeGitHub();
     const r = await run(gh);
     assert.deepEqual(r.lines.slice(-CHECKLIST.length), CHECKLIST);
+  });
+});
+
+// @traces 1017-FR-003
+describe("the per-epic views an earlier bootstrap made", () => {
+  async function withOldViews() {
+    const gh = fakeGitHub();
+    const dir = formsDir();
+    await run(gh, { formsDir: dir });
+    const p = project(gh);
+    const ids = (names) => names.map((n) => fieldNamed(gh, n).id);
+    for (const key of ["EP-1", "EP-2", "EP-3", "EP-4"]) p.views.push({ id: `PVTV_${key}`, name: key, layout: "BOARD_LAYOUT", filter: `epic:"${key}"`, visibleFieldIds: ids(["Title", "Priority", "Work type"]) });
+    // Changed by hand: another filter, another layout, another field.
+    p.views.find((v) => v.name === "EP-2").filter = 'epic:"EP-2" -status:Done';
+    p.views.find((v) => v.name === "EP-3").layout = "TABLE_LAYOUT";
+    p.views.find((v) => v.name === "EP-4").visibleFieldIds.push(fieldNamed(gh, "Status").id);
+    return { gh, dir };
+  }
+
+  it("deletes the ones still as bootstrap made them, keeps any changed by hand, says which, and exits 0", async () => {
+    const { gh, dir } = await withOldViews();
+    const r = await run(gh, { formsDir: dir });
+    assert.equal(r.exit, 0, r.lines.join("\n"));
+    assert.deepEqual(ops(gh, "DeleteView").map((c) => c.body.variables.viewId), ["PVTV_EP-1"]);
+    const left = project(gh).views.map((v) => v.name);
+    assert.ok(!left.includes("EP-1") && ["EP-2", "EP-3", "EP-4"].every((n) => left.includes(n)));
+    assert.ok(r.lines.some((l) => /^view\s+removed\s+EP-1$/.test(l)));
+    for (const n of ["EP-2", "EP-3", "EP-4"]) assert.ok(r.lines.some((l) => new RegExp(`^view\\s+kept\\s+${n} `).test(l)), n);
+    const before = gh.writes().length;
+    assert.equal((await run(gh, { formsDir: dir })).exit, 0);
+    assert.equal(gh.writes().length, before);
+  });
+
+  it("only says it would remove one on a dry run", async () => {
+    const { gh, dir } = await withOldViews();
+    const before = gh.writes().length;
+    const r = await run(gh, { formsDir: dir, dryRun: true });
+    assert.equal(gh.writes().length, before);
+    assert.ok(r.lines.some((l) => /^view\s+would remove\s+EP-1$/.test(l)));
+  });
+
+  it("tells the owner how to read an epic now: the By epic and Epics views, groups and the No epic parent", () => {
+    assert.ok(!CHECKLIST.some((l) => /EP-<n> view/.test(l)));
+    assert.ok(CHECKLIST.includes("- By epic view: group by Epic, then slice by Status."));
+    assert.ok(CHECKLIST.includes("- Epics view: show Sub-issues progress; expand a row to see its features, groups and stories."));
+    assert.match(SCHEMA.readme, /group issue/);
+    assert.match(SCHEMA.readme, /No epic/);
+  });
+
+  it("never deletes a view of its own schema", () => {
+    assert.ok(!SCHEMA.views.some((v) => /^EP-\d+$/.test(v.name)));
   });
 });

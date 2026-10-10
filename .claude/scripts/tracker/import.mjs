@@ -38,17 +38,18 @@ const PRIORITIES = ["Urgent", "Highest", "High", "Medium", "Low"];
 const WRITABLE = new Set(["SINGLE_SELECT", "DATE", "NUMBER", "TEXT"]);
 // GitHub refusing a sub-issue because the parent already holds its limit.
 const FULL_PARENT = /cannot have more than \d+ sub-issues/i;
-const KINDS = ["create", "feature", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "move", "blocked-by", "pr-closes"];
+const KINDS = ["create", "feature", "group", "adopt", "update", "add-item", "set-fields", "close", "reopen", "relink", "sub-issue", "move", "blocked-by", "pr-closes"];
 const READERS = 4;
-// A feature's key is its Notion page id: it never looks like a story's or an epic's.
-const MARKER = /<!-- motorfix:((?:ST|EP)-\d+|FEATURE-[0-9a-f]{32}) -->/;
+// A feature's key is its Notion page id, a group's names its epic (or NONE), work type and chunk: neither looks like a story's or an epic's.
+const MARKER = /<!-- motorfix:((?:ST|EP)-\d+|FEATURE-[0-9a-f]{32}|GROUP-(?:EP-\d+|NONE)(?:-[a-z][a-z-]*-\d+)?) -->/;
 // Set on an issue filed by hand and adopted: its title and labels stay the person's.
 const ADOPTED = "<!-- motorfix:adopted -->";
 
 /** GitHub takes 65,536 characters in an issue body; a longer page is kept whole in a file. */
 export const BODY_LIMIT = 60_000;
 const plainId = (id) => String(id).replaceAll("-", "").toLowerCase();
-const keyNumber = (key) => Number(key.split("-")[1]);
+/** The number in ST-<n>, EP-<n> or a group's GROUP-EP-<n>-…; NaN for a feature or GROUP-NONE. */
+const keyNumber = (key) => Number(/^(?:GROUP-)?(?:ST|EP)-(\d+)/.exec(key)?.[1]);
 const featureKey = (id) => `FEATURE-${plainId(id)}`;
 // A bare @name in a public issue title would notify that GitHub user.
 const quiet = (title) => title.replace(/(^|\s)(@[\w-]+)/g, "$1`$2`");
@@ -175,7 +176,7 @@ export async function featureTitles(client, tracker) {
 }
 
 /** What each story, feature and epic should be on GitHub, in import order, and what Notion held that could not be mapped. */
-export function issuePlans(tracker) {
+export function issuePlans(tracker, { subIssueMax = 100 } = {}) {
   const warnings = [];
   const seen = new Map();
   for (const r of [...tracker.stories, ...tracker.epics]) {
@@ -301,6 +302,7 @@ export function issuePlans(tracker) {
       blockers,
       pr: pr ? Number(pr[1]) : null,
       featureIds,
+      type,
       get fields() {
         return dated({ Status: status }, [
           ["Priority", s.priority],
@@ -423,6 +425,8 @@ export function issuePlans(tracker) {
     };
   });
 
+  const groupPlans = groupOverflow({ stories, features: featurePlans, epics, epicByKey, subIssueMax, warnings });
+
   const rank = (p) => {
     const i = PRIORITIES.indexOf(p.fields.Priority);
     return i === -1 ? PRIORITIES.length : i;
@@ -431,7 +435,100 @@ export function issuePlans(tracker) {
   const open = stories.filter((p) => p.state === "open").sort((a, b) => rank(a) - rank(b) || byId(a, b));
   const done = stories.filter((p) => p.state === "closed").sort(byId);
   const byTitle = (a, b) => a.title.localeCompare(b.title) || a.key.localeCompare(b.key);
-  return { plans: [...open, ...epics.sort(byId), ...featurePlans.sort(byTitle), ...done], warnings };
+  return { plans: [...open, ...epics.sort(byId), ...featurePlans.sort(byTitle), ...groupPlans, ...done], warnings };
+}
+
+// A group's name for the work type it holds.
+const GROUP_NAMES = { Story: "Stories", Task: "Tasks", Bug: "Bugs", "Tech debt": "Tech debt", Decision: "Decisions" };
+const TYPE_ORDER = Object.keys(GROUP_NAMES);
+const typeSlug = (type) => type.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-+|-+$/g, "") || "other";
+
+/**
+ * GitHub holds at most `subIssueMax` sub-issues per issue. An epic whose
+ * features and featureless stories would pass it keeps its features and holds
+ * one group issue per work type (GROUP-EP-<n>-<type>-<chunk>) for those
+ * stories, each at most `subIssueMax` stories by ID; an epic under the limit
+ * is left as it is. Work with no epic sits under one "No epic" issue
+ * (GROUP-NONE), itself split into type groups the same way when it would
+ * pass the limit. Sets each moved story's parent; returns the group plans.
+ */
+function groupOverflow({ stories, features, epics, epicByKey, subIssueMax, warnings }) {
+  const groups = [];
+  const plan = ({ key, title, holds, epic, parent, children }) => {
+    const p = {
+      key,
+      title: quiet(title),
+      record: { id: key, key },
+      body: `<!-- motorfix:${key} -->\n\n${holds}`,
+      gaps: [],
+      file: null,
+      labels: ["type: group", ...(epic ? [epic] : [])],
+      milestone: null,
+      assignee: epicByKey.get(epic)?.assignee ?? OWNER,
+      parent,
+      epic: null,
+      blockers: [],
+      pr: null,
+      featureIds: [],
+      fields: dated({ "Work type": "Group" }, [
+        ["Epic", epic],
+        ["Release", epicByKey.get(epic)?.release],
+      ]),
+    };
+    Object.defineProperty(p, "state", { enumerable: true, get: () => (children().length && children().every((c) => c.state === "closed") ? "closed" : "open") });
+    groups.push(p);
+    return p;
+  };
+  /** Moves `owner`'s featureless stories into type groups when its direct children would pass the limit. */
+  const split = ({ owner, tag, label, epic, direct, featureCount, what }) => {
+    if (featureCount + direct.length <= subIssueMax) return false;
+    const byType = new Map();
+    for (const s of [...direct].sort((a, b) => keyNumber(a.key) - keyNumber(b.key))) {
+      if (!byType.has(s.type)) byType.set(s.type, []);
+      byType.get(s.type).push(s);
+    }
+    const order = (t) => (TYPE_ORDER.includes(t) ? TYPE_ORDER.indexOf(t) : TYPE_ORDER.length);
+    let made = 0;
+    for (const type of [...byType.keys()].sort((a, b) => order(a) - order(b) || a.localeCompare(b))) {
+      const list = byType.get(type);
+      const name = GROUP_NAMES[type] ?? type;
+      const chunks = Math.ceil(list.length / subIssueMax);
+      for (let i = 0; i < chunks; i++) {
+        const members = list.slice(i * subIssueMax, (i + 1) * subIssueMax);
+        const part = chunks > 1 ? ` (${i + 1}/${chunks})` : "";
+        const key = `GROUP-${tag}-${typeSlug(type)}-${i + 1}`;
+        plan({
+          key,
+          title: `${label} · ${name}${part}`,
+          holds: `${name} ${what}${chunks > 1 ? `, part ${i + 1} of ${chunks} by ID` : ""}: GitHub holds at most ${subIssueMax} sub-issues per issue.`,
+          epic,
+          parent: owner,
+          children: () => members,
+        });
+        for (const s of members) s.parent = key;
+        made++;
+      }
+    }
+    if (featureCount + made > subIssueMax) warnings.push(`${label} needs ${featureCount + made} sub-issues (${featureCount} features, ${made} groups), over GitHub's ${subIssueMax}: the rest carry it by label and Epic field only`);
+    return true;
+  };
+
+  for (const e of [...epics].sort((a, b) => keyNumber(a.key) - keyNumber(b.key))) {
+    const direct = stories.filter((s) => s.parent === e.key);
+    const featureCount = features.filter((f) => f.parent === e.key).length;
+    split({ owner: e.key, tag: e.key, label: e.key, epic: e.key, direct, featureCount, what: `of ${e.key} with no feature` });
+  }
+
+  const loose = stories.filter((s) => s.parent === null);
+  const looseFeatures = features.filter((f) => f.parent === null);
+  if (loose.length || looseFeatures.length) {
+    const NONE = "GROUP-NONE";
+    const at = groups.length;
+    plan({ key: NONE, title: "No epic", holds: "Every issue with no epic, and the features no epic holds.", epic: null, parent: null, children: () => [...loose, ...looseFeatures, ...groups.slice(at + 1)].filter((c) => c.parent === NONE) });
+    for (const f of looseFeatures) f.parent = NONE;
+    if (!split({ owner: NONE, tag: "NONE", label: "No epic", epic: null, direct: loose, featureCount: looseFeatures.length, what: "with no epic" })) for (const s of loose) s.parent = NONE;
+  }
+  return groups;
 }
 
 const ITEMS = `query Items($id: ID!, $after: String) { node(id: $id) { ... on ProjectV2 { items(first: 100, after: $after) { totalCount pageInfo { hasNextPage endCursor }
@@ -538,7 +635,7 @@ export async function runImport({
   subIssueMax = 100,
 }) {
   const out = (kind, detail) => log(`${kind.padEnd(9)} ${detail}`);
-  const { plans, warnings } = issuePlans(tracker);
+  const { plans, warnings } = issuePlans(tracker, { subIssueMax });
   const total = plans.length;
 
   const { project, repositoryIds } = await findProject(github);
@@ -571,7 +668,8 @@ export async function runImport({
   for (const issue of listed) {
     const marked = issue.body?.match(MARKER)?.[1];
     if (marked) byMarker.set(marked, issue);
-    const titleKey = issue.title.match(/^(?:ST|EP)-\d+\b/)?.[0];
+    // A group's title starts with its epic's key ("EP-1 · Tasks"): only its marker names it.
+    const titleKey = marked?.startsWith("GROUP-") ? null : issue.title.match(/^(?:ST|EP)-\d+\b/)?.[0];
     if (titleKey && !byTitle.has(titleKey)) byTitle.set(titleKey, issue);
   }
   const items = await projectItems(github, project.id);
@@ -604,7 +702,7 @@ export async function runImport({
     const found = existing.has(plan.key) ? issue.get(plan.key) : undefined;
     let item = found ? itemOf.get(found.number) : undefined;
     if (!found) {
-      step(plan.key.startsWith("FEATURE-") ? "feature" : "create", async () => {
+      step(plan.key.startsWith("FEATURE-") ? "feature" : plan.key.startsWith("GROUP-") ? "group" : "create", async () => {
         const body = bodyOf(plan);
         const assignee = plan.assignee ? await userId(plan.assignee) : null;
         // Placed under its parent at create when the parent has room; the link steps report it when it has none.
@@ -978,7 +1076,7 @@ export async function runImport({
     for (const w of [...tracker.warnings, ...warnings, ...lateWarnings]) out("warn", w);
     if (!unread) bodiesLine();
     // A create puts its issue in the Project, so it adds an item as an add-item does.
-    const adding = counts["add-item"] + counts.create + counts.feature;
+    const adding = counts["add-item"] + counts.create + counts.feature + counts.group;
     if (items.length + adding > maxItems) {
       await stop();
       out("refused", `the Project would hold ${items.length + adding} items, over --max-items ${maxItems}`);

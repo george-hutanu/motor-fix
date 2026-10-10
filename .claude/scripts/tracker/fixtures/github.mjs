@@ -19,6 +19,8 @@ const BUILT_IN = [
   { name: "Status", dataType: "SINGLE_SELECT", options: ["Todo", "In Progress", "Done"].map((name) => ({ name, color: "GRAY" })) },
   { name: "Labels", dataType: "LABELS" },
   { name: "Milestone", dataType: "MILESTONE" },
+  { name: "Parent issue", dataType: "PARENT_ISSUE" },
+  { name: "Sub-issues progress", dataType: "SUB_ISSUES_PROGRESS" },
 ];
 
 /** A fake GitHub; `seed` presets labels, milestones, issues, pulls and projects. */
@@ -245,6 +247,12 @@ export function fakeGitHub(seed = {}) {
       const made = { id: nextId("PVTV"), name: v.name, layout: v.layout, filter: null, visibleFieldIds: v.fieldIds ?? [] };
       projectById(v.projectId).views.push(made);
       return { createProjectV2View: { projectV2View: { id: made.id } } };
+    },
+    DeleteView: (v) => {
+      const p = state.projects.find((x) => x.views.some((w) => w.id === v.viewId));
+      if (!p) return { errors: [{ type: "NOT_FOUND", message: `Could not resolve to a node with the global id of '${v.viewId}'` }] };
+      p.views = p.views.filter((w) => w.id !== v.viewId);
+      return { deleteProjectV2View: { projectV2View: { id: v.viewId } } };
     },
     SetViewFilter: (v) => {
       const w = state.projects.flatMap((p) => p.views).find((x) => x.id === v.viewId);

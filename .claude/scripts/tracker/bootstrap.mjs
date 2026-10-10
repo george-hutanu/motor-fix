@@ -59,7 +59,7 @@ export const SCHEMA = {
   fields: [
     select("Status", [["To do"], ["Planning", "BLUE"], ["Implementing", "YELLOW"], ["Blocked", "RED"], ["QA", "ORANGE"], ["Done", "GREEN"]]),
     select("Priority", [["Urgent", "RED"], ["Highest", "ORANGE"], ["High", "YELLOW"], ["Medium", "BLUE"], ["Low"]]),
-    select("Work type", [["Story"], ["Task"], ["Bug"], ["Tech debt"], ["Decision"], ["Epic"], ["Feature"]]),
+    select("Work type", [["Story"], ["Task"], ["Bug"], ["Tech debt"], ["Decision"], ["Epic"], ["Feature"], ["Group"]]),
     select(
       "Epic",
       EPICS.map((e) => [e]),
@@ -85,10 +85,12 @@ export const SCHEMA = {
     { name: "Roadmap", layout: "ROADMAP_LAYOUT", fields: [] },
     { name: "Blocked", layout: "TABLE_LAYOUT", filter: "status:Blocked", fields: ["Title", "Priority", "Work type", "Epic", "Assignees"] },
     { name: "My work", layout: "TABLE_LAYOUT", filter: "assignee:@me -status:Done", fields: ["Title", "Status", "Priority", "Work type", "Epic"] },
-    ...EPICS.map((e) => ({ name: e, layout: "BOARD_LAYOUT", filter: `epic:"${e}"`, fields: ["Title", "Priority", "Work type"] })),
+    // An epic's rows expand into its features, groups and stories; a field GitHub does not expose is left out.
+    { name: "Epics", layout: "TABLE_LAYOUT", filter: "work-type:Epic", fields: ["Title", "Status", "Priority", "Sub-issues progress", "Planned start", "Planned end", "Release"] },
+    { name: "By epic", layout: "TABLE_LAYOUT", filter: "-work-type:Epic,Group,Feature", fields: ["Title", "Status", "Priority", "Work type", "Epic", "Parent issue", "Assignees"] },
   ],
   labels: [
-    ...["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "type: feature", "epic"].map(label("1d76db")),
+    ...["type: story", "type: task", "type: bug", "type: tech debt", "type: decision", "type: feature", "type: group", "epic"].map(label("1d76db")),
     ...["front end", "backend", "real-time", "outside service", "legal", "design", "data"].map((a) => label("0e8a16")(`area: ${a}`)),
     ...ROLES.map((r) => label("fbca04")(`role: ${r}`)),
     ...TRACKS.map((t) => label("c5def5")(`track: ${t}`)),
@@ -104,6 +106,7 @@ export const SCHEMA = {
     "- File new work with an issue form (Story, Task, Bug, Tech debt, Decision); it lands here by itself.",
     "- An imported issue is titled `ST-<n>` or `EP-<n>` after its old ID; a new one is known by its number.",
     "- Stories are sub-issues of their feature, and features (and stories with no feature) of their epic; Blocked by links are issue dependencies.",
+    "- GitHub holds at most 100 sub-issues per issue: an epic that would pass it holds its features and one group issue per work type (`EP-<n> · Tasks`, split `(1/2)` when a group would pass it too) for its stories with no feature; work with no epic sits under the `No epic` issue.",
     '- Ready to work: Status To do and not blocked by an open issue (filter `status:"To do" -is:blocked`).',
   ].join("\n"),
 };
@@ -114,10 +117,17 @@ export const SCHEMA = {
 export const OBSOLETE_FIELDS = [{ name: "Ready to work", dataType: "SINGLE_SELECT", options: ["Yes", "No"] }];
 const obsolete = new Set(OBSOLETE_FIELDS.map((f) => f.name));
 
+// Views an earlier bootstrap made per epic: a board filtered to one epic. One is
+// deleted only when it is still exactly as bootstrap made it.
+const OLD_EPIC_VIEW = { layout: "BOARD_LAYOUT", fields: ["Title", "Priority", "Work type"] };
+const oldEpicView = (view) => /^EP-\d+$/.test(view.name);
+const asMade = (view) => view.layout === OLD_EPIC_VIEW.layout && view.filter === `epic:"${view.name}"` && sameSet(view.fieldNames.filter((n) => !obsolete.has(n)), OLD_EPIC_VIEW.fields);
+
 export const CHECKLIST = [
   "- Board view: group by Status.",
   "- Table view: sort by Priority, then by Title.",
-  "- Each EP-<n> view: group by Status.",
+  "- By epic view: group by Epic, then slice by Status.",
+  "- Epics view: show Sub-issues progress; expand a row to see its features, groups and stories.",
   "- Roadmap view: dates Started and Merged at, zoom Month.",
   '- Duplicate the Roadmap view as "Plan": dates Planned start and Planned end, zoom Quarter.',
   `- Workflows: turn on Auto-add to project for ${OWNER}/${ISSUE_REPO} with is:issue.`,
@@ -148,6 +158,7 @@ const Q = {
   // A roadmap takes no visible fields: GitHub refuses any configuration for one.
   createRoadmapView:
     "mutation CreateView($projectId: ID!, $name: String!, $layout: ProjectV2ViewLayout!) { createProjectV2View(input: { projectId: $projectId, name: $name, layout: $layout }) { projectV2View { id } } }",
+  deleteView: "mutation DeleteView($viewId: ID!) { deleteProjectV2View(input: { viewId: $viewId }) { projectV2View { id } } }",
   setViewFilter: "mutation SetViewFilter($viewId: ID!, $filter: String!) { updateProjectV2View(input: { viewId: $viewId, filter: $filter }) { projectV2View { id } } }",
 };
 
@@ -296,6 +307,15 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
       await write(Q.setViewFilter, { viewId: have.id, filter: want.filter });
       created("view", detail, "updated");
     } else present("view", detail);
+  }
+  const wanted = new Set(SCHEMA.views.map((v) => v.name));
+  for (const view of state.views.filter((v) => oldEpicView(v) && !wanted.has(v.name))) {
+    if (!asMade(view)) out("view", "kept", `${view.name} (changed by hand; delete it in the UI if unused)`);
+    else if (dryRun) out("view", "would remove", view.name);
+    else {
+      await github.graphql(Q.deleteView, { viewId: view.id });
+      out("view", "removed", view.name);
+    }
   }
 
   // GitHub label names are case-insensitive: an existing "ep-1" is EP-1.
