@@ -81,15 +81,10 @@ const setStance = (
   prisma.$transaction((tx) =>
     brands.setStance(tx, w.actor, garageId, brandId, stance),
   );
-const addJob = (
-  w: World,
-  brandId: string,
-  jobTypeId: string,
-  garageId = w.garage,
-) =>
-  prisma.$transaction((tx) =>
-    brands.addJob(tx, w.actor, garageId, brandId, jobTypeId),
-  );
+const seedJob = (w: World, brandId: string, jobTypeId: string) =>
+  prisma.garageBrandJob.create({
+    data: { brandId, garageId: w.garage, jobTypeId },
+  });
 
 describe('GarageBrandsService under hostile calls', () => {
   it('answers unstated for an unknown brand and an unknown garage', async () => {
@@ -117,13 +112,6 @@ describe('GarageBrandsService under hostile calls', () => {
     expect(await prisma.garageBrand.count()).toBe(0);
   });
 
-  it('refuses a job on an unknown brand and stores nothing', async () => {
-    const w = await world();
-
-    await expect(addJob(w, randomUUID(), randomUUID())).rejects.toThrow();
-    expect(await prisma.garageBrandJob.count()).toBe(0);
-  });
-
   it("refuses an actor writing another garage's stance", async () => {
     const w = await world();
 
@@ -133,18 +121,6 @@ describe('GarageBrandsService under hostile calls', () => {
     expect(await prisma.garageBrand.count()).toBe(0);
   });
 
-  it('refuses an actor adding a job to another garage', async () => {
-    const w = await world();
-    await prisma.garageBrand.create({
-      data: { brandId: w.dacia, garageId: w.other, stance: 'works_on' },
-    });
-
-    await expect(addJob(w, w.dacia, randomUUID(), w.other)).rejects.toThrow(
-      NotFoundException,
-    );
-    expect(await prisma.garageBrandJob.count()).toBe(0);
-  });
-
   it('refuses a stance outside the two values', async () => {
     const w = await world();
 
@@ -152,14 +128,6 @@ describe('GarageBrandsService under hostile calls', () => {
       setStance(w, w.dacia, 'maybe' as unknown as 'works_on'),
     ).rejects.toThrow();
     expect(await prisma.garageBrand.count()).toBe(0);
-  });
-
-  it('refuses a job type that is not a UUID', async () => {
-    const w = await world();
-    await setStance(w, w.dacia, 'works_on');
-
-    await expect(addJob(w, w.dacia, 'oil change')).rejects.toThrow();
-    expect(await prisma.garageBrandJob.count()).toBe(0);
   });
 
   it('persists nothing when the surrounding transaction rolls back', async () => {
@@ -196,20 +164,6 @@ describe('GarageBrandsService under hostile calls', () => {
     expect(await brands.stanceFor(w.garage, w.dacia)).toBe('works_on');
   });
 
-  it('adds the same job twice at once without an error and with one row', async () => {
-    const w = await world();
-    const job = randomUUID();
-    await setStance(w, w.dacia, 'works_on');
-
-    const results = await Promise.allSettled([
-      addJob(w, w.dacia, job),
-      addJob(w, w.dacia, job),
-    ]);
-
-    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
-    expect(await prisma.garageBrandJob.count()).toBe(1);
-  });
-
   it("clears only the flipped brand's jobs, not another brand's or garage's", async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
@@ -217,8 +171,8 @@ describe('GarageBrandsService under hostile calls', () => {
     await prisma.garageBrand.create({
       data: { brandId: w.dacia, garageId: w.other, stance: 'works_on' },
     });
-    await addJob(w, w.dacia, randomUUID());
-    await addJob(w, w.tesla, randomUUID());
+    await seedJob(w, w.dacia, randomUUID());
+    await seedJob(w, w.tesla, randomUUID());
     await prisma.garageBrandJob.create({
       data: { brandId: w.dacia, garageId: w.other, jobTypeId: randomUUID() },
     });
@@ -240,7 +194,7 @@ describe('GarageBrandsService under hostile calls', () => {
   it('drops jobs after works_on, does_not_take, works_on', async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
-    await addJob(w, w.dacia, randomUUID());
+    await seedJob(w, w.dacia, randomUUID());
 
     await setStance(w, w.dacia, 'does_not_take');
     await setStance(w, w.dacia, 'works_on');

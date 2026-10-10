@@ -1,3 +1,4 @@
+// The owner's final import only: deleted after it runs (george-hutanu/motor-fix-specs#1119).
 // A small Notion API client for the harness scripts: plain fetch, no SDK.
 // Checked against developers.notion.com on 2026-10-05: API version
 // 2026-03-11, data sources queried with POST /v1/data_sources/{id}/query,

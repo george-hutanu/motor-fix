@@ -1,7 +1,7 @@
 # Bug Assessment: staging E2E fails the release with errors outside any test
 
 - **Slug**: 1007-asset-cache-test-ended
-- **Story**: ST-1007 (Bug), https://app.notion.com/p/3f4607bff0d2819c9df6fc432fdd6ee1
+- **Story**: ST-1007 (Bug)
 - **Verdict**: valid
 
 ## Evidence

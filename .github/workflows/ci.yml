@@ -42,6 +42,11 @@ jobs:
       - id: classify
         if: github.event_name == 'pull_request'
         run: node scripts/docs-only.ts origin/${{ github.base_ref }}
+      # Runs here, not in Checks, so a documentation-only PR is held to it too;
+      # scripts/banned-words.json lists the retired names and what may hold them.
+      - name: Banned words
+        if: github.event_name == 'pull_request'
+        run: node scripts/banned-words.ts --base origin/${{ github.base_ref }}
 
   # The checks that need no database share one runner and one install: on the
   # free plan every job holds one of the account's 20 concurrent runners, so

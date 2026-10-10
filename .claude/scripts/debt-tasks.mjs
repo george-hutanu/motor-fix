@@ -1,25 +1,25 @@
 #!/usr/bin/env node
-// Technical debt a review defers becomes a task in Notion. Every bullet in
+// Technical debt a review defers becomes a task on the tracker. Every bullet in
 // specs/<feature>/deferred.md — routed there by spec-reviewer, code-reviewer
-// or the PR tester — is one "To do" row in MotorFix stories, linked to the
-// story and epic it came from: Issue type "Tech debt", or "Decision" when the
-// finding waits on the owner, so each has its own board in Notion.
+// or the PR tester — is one "To do" issue in george-hutanu/motor-fix-specs,
+// linked to the story it came from: work type "Tech debt", or "Decision" when
+// the finding waits on the owner.
 //
-// This script decides; `speckit-notion-sync debt` makes the Notion writes:
+// This script decides; `tracker-sync.mjs debt` makes the writes:
 //
 //   node .claude/scripts/debt-tasks.mjs plan <deferred.md> --story <url> [--epic <url>] --pr <url> --id ST-<n> [--feature <url>]
 //     prints the pending entries as [{ line, properties, content }]; a story
 //     with no epic omits --epic and its tasks carry no Epic relation
-//   node .claude/scripts/debt-tasks.mjs mark <deferred.md> --line <n> --url <notion url>
+//   node .claude/scripts/debt-tasks.mjs mark <deferred.md> --line <n> --url <issue url>
 //     writes the task's URL onto that bullet, so no later run files it again
 //
-// A bullet already carrying "— Notion: <url>" or "— Issue: <url>", or ticked `[x]`, is not pending.
+// A bullet already carrying "— Issue: <url>", or ticked `[x]`, is not pending.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const SEVERITIES = ["blocker", "high", "medium", "low"];
 const PRIORITY = { blocker: "Highest", high: "High", medium: "Medium", low: "Low" };
-// The filed task's address: "— Notion: <url>" (Notion) or "— Issue: <url>" (GitHub).
-const NOTION = /\s+—\s+(?:Notion|Issue):\s+(\S+)\s*$/;
+// The filed task's address: "— Issue: <url>".
+const FILED = /\s+—\s+Issue:\s+(\S+)\s*$/;
 
 export function parseDeferred(markdown) {
   const lines = markdown.split("\n");
@@ -30,26 +30,26 @@ export function parseDeferred(markdown) {
   });
   return entries.map(({ line, text }) => {
     const done = /^- \[[xX]\]/.test(text);
-    const notion = lines[line].match(NOTION)?.[1] ?? null;
+    const issue = lines[line].match(FILED)?.[1] ?? null;
     const sev = text.match(/\*\*(blocker|high|medium|low)\*\*/i)?.[1] ?? text.match(/^- (?:\[[ xX]\] )?(BLOCKER|HIGH|MEDIUM|LOW)\b/i)?.[1] ?? "low";
     const severity = SEVERITIES.includes(sev.toLowerCase()) ? sev.toLowerCase() : "low";
     const where = text.match(/`([^`]+)`/)?.[1] ?? "";
     const decision = /\bdecisions?\b|open questions?\b/i.test(text.replace(/`[^`]*`/g, ""));
     const reviewer = text.match(/\b(spec-reviewer|code-reviewer|pr-tester|test-adversary)\b/)?.[1] ?? "review";
     const title = text
-      .replace(NOTION, "")
+      .replace(FILED, "")
       .replace(/^- (\[[ xX]\] )?/, "")
       .replace(/^(BLOCKER|HIGH|MEDIUM|LOW)\b[^:]*:\s*/i, "")
       .replace(/\s+—\s+\*\*\w+\*\*\s+—\s+/, " — ")
       .replace(/\s*\([^()]*(reviewer|pr-tester|adversary)[^()]*\)\.?\s*$/, "")
       .trim();
-    return { line, text, title, severity, where, reviewer, decision, notion, done, pending: !done && !notion };
+    return { line, text, title, severity, where, reviewer, decision, issue, done, pending: !done && !issue };
   });
 }
 
 const shorten = (s, n) => (s.length <= n ? s : `${s.slice(0, n - 1).trimEnd()}…`);
 
-/** The MotorFix stories row for one deferred finding. */
+/** The tracker issue for one deferred finding. */
 export function taskFor(entry, { story, epic, feature, pr, storyId }) {
   const summary = entry.title.replace(/`|\*\*/g, "").replace(/^\S+\s+—\s+/, "");
   const kind = entry.decision ? "Decision" : "Tech debt";
@@ -66,7 +66,7 @@ export function taskFor(entry, { story, epic, feature, pr, storyId }) {
         : `So that the code stays sound, fix what ${entry.reviewer} deferred in ${storyId}: ${summary}`,
       400,
     ),
-    // A story with no epic gets no Epic relation: `[null]` makes Notion answer 400.
+    // A story with no epic gets no Epic.
     ...(epicUrl ? { Epic: JSON.stringify([epicUrl]) } : {}),
     ...(feature ? { Feature: JSON.stringify([feature]) } : {}),
   };
@@ -79,15 +79,15 @@ export function taskFor(entry, { story, epic, feature, pr, storyId }) {
     `- **From story:** ${story} (${storyId})`,
     "",
     "## Finding",
-    entry.text.replace(NOTION, "").replace(/^- (\[[ xX]\] )?/, ""),
+    entry.text.replace(FILED, "").replace(/^- (\[[ xX]\] )?/, ""),
   ].join("\n");
   return { line: entry.line, properties, content };
 }
 
-export function markFiled(markdown, line, url, label = "Notion") {
+export function markFiled(markdown, line, url, label = "Issue") {
   const lines = markdown.split("\n");
   if (!/^- /.test(lines[line] ?? "")) throw new Error(`line ${line} is not a bullet of deferred.md`);
-  if (NOTION.test(lines[line])) return markdown;
+  if (FILED.test(lines[line])) return markdown;
   lines[line] = `${lines[line]} — ${label}: ${url}`;
   return lines.join("\n");
 }

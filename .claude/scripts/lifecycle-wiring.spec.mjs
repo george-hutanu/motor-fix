@@ -24,6 +24,6 @@ describe('the skills name one lifecycle.mjs call per step', () => {
 
   it('speckit-auto merges and finishes with lifecycle.mjs merge, not the recipe', () => {
     assert.match(auto, /node \.claude\/scripts\/lifecycle\.mjs merge/);
-    assert.doesNotMatch(auto, /git checkout -- specs\/<feature>\/notion-sync\.md/);
+    assert.doesNotMatch(auto, /git checkout -- specs\/<feature>\/tracker-sync\.md/);
   });
 });

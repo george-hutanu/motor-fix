@@ -109,7 +109,7 @@ The phase's hooks run inside the agent with the same yes answers. Read its
 `STATUS:` line: `success` continues; `failure` or `blocked` is the phase
 failing, handled as the inline phase's failure would be, never as a pass;
 `partial` passes only when `FILES` names the phase's artifact and what failed
-was a Notion or mock write. No retry. If the Agent call itself errors, run the
+was a tracker or mock write. No retry. If the Agent call itself errors, run the
 phase inline and log a pin miss in `auto-run.md`. The phase's run-log entry
 records the agent's model and its `STATUS:` line.
 

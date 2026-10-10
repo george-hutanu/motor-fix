@@ -133,6 +133,7 @@ describe('JobTypeLoader under hostile files and failures', () => {
         return real.record(...args);
       },
       recordChanges: (...args) => real.recordChanges(...args),
+      recordMany: (...args) => real.recordMany(...args),
     } as AuditPort;
 
     await expect(

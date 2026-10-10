@@ -74,7 +74,7 @@ hooks:
     optional: false
     priority: 5
     prompt: Move the story's issue to Implementing?
-    description: 'Tracker sync, event implement: the story''s issue Planning → Implementing in Project MotorFix, PR label planning → in development (speckit-notion-sync for a feature that started on Notion)'
+    description: 'Tracker sync, event implement: the story''s issue Planning → Implementing in Project MotorFix, PR label planning → in development'
     condition: null
   - extension: git
     command: speckit.git.commit
@@ -127,7 +127,7 @@ hooks:
     optional: false
     priority: 5
     prompt: Mark the story's issue Planning?
-    description: 'Tracker sync, event start: the story''s issue to Planning in Project MotorFix, epic to Implementing, draft PR opened with the planning label (speckit-notion-sync for a feature that started on Notion)'
+    description: 'Tracker sync, event start: the story''s issue to Planning in Project MotorFix, epic to Implementing, draft PR opened with the planning label'
     condition: null
   - extension: motorfix
     command: speckit.design.check

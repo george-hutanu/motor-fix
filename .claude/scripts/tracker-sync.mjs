@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // One Bash call per `speckit-tracker-sync` event: the story's issue in
 // george-hutanu/motor-fix-specs and its item in Project "MotorFix" (#11) move
-// with the lifecycle, on the same ladder (notion-status.mjs) and readiness
-// rule (notion-ready.mjs) Notion used; the PR's labels move with them, and
+// with the lifecycle, on the ladder in tracker/status.mjs and the readiness
+// rule in tracker/ready.mjs; the PR's labels move with them, and
 // each step appends a line to specs/<feature>/tracker-sync.md.
 //
 //   node .claude/scripts/tracker-sync.mjs <event> [args] [--story ST-<n>] [--pr <n>]
@@ -28,12 +28,12 @@ import { markFiled, parseDeferred, taskFor } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
 import { ghSync } from "./lib/gh-rest.mjs";
-import { decideReady } from "./notion-ready.mjs";
-import { decide, recordPrior } from "./notion-status.mjs";
 import { readState } from "./run-state.mjs";
 import { GitHubError, githubClient } from "./tracker/github.mjs";
 import { epicLabel, isContainer, READY_LABEL, statusOf, tracker } from "./tracker/issues.mjs";
+import { decideReady } from "./tracker/ready.mjs";
 import { closesLine, pullPath } from "./tracker/repos.mjs";
+import { decide, recordPrior } from "./tracker/status.mjs";
 import { assertProjectScope, projectToken, REFRESH, TokenError } from "./tracker/token.mjs";
 
 const STATUS_EVENTS = new Set(["start", "implement", "qa", "review", "finish", "blocked", "unblock"]);
@@ -268,7 +268,7 @@ async function statusEvent(ctx) {
   const { t, story, event, st, log } = ctx;
   const reason = ctx.rest.join(" ");
   const current = story.values.Status ?? "To do";
-  const decision = decide({ event, current, prior: readState(ctx.repo).notion_prior_status ?? null });
+  const decision = decide({ event, current, prior: readState(ctx.repo).prior_status ?? null });
 
   // Status first, then the prior it left, so a failure further on replays into the same decision.
   if (decision.write) {
