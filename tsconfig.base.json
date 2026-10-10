@@ -13,6 +13,9 @@
     "noImplicitReturns": true,
     "paths": {
       "@motor-fix/contracts": ["./libs/contracts/src/index.ts"],
+      "@motor-fix/contracts/account-search": [
+        "./libs/contracts/src/account-search.ts"
+      ],
       "@motor-fix/contracts/consent": ["./libs/contracts/src/consent.ts"],
       "@motor-fix/contracts/email": ["./libs/contracts/src/email.ts"],
       "@motor-fix/contracts/env": ["./libs/contracts/src/env.ts"],
