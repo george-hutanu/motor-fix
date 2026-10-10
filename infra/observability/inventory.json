@@ -525,6 +525,18 @@
       "alerts": "none",
       "reason": "counts each time an admin opens a document page, by kind; ST-880 adds the alerts",
       "story": "ST-206"
+    },
+    {
+      "kind": "endpoint",
+      "name": "outage-alerts",
+      "source": "libs/domain/src/notifications/outage/outage.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/monitoring/outage-alerts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "outage"
+      ],
+      "reason": "Grafana's outage contact point calls it; one Outage log line per alert (service, state, fingerprint, admins, sent), never the token or an address; the uptime checks (infra/observability/uptime/checks.json) and the outage rule watch the services it reports on",
+      "story": "ST-251"
     }
   ]
 }

@@ -7,7 +7,7 @@ const KIND = 'ADMIN_OUTAGE_ALERT';
 const at = '2026-10-10T03:04:05.000Z';
 const dashboard = 'https://motorfix.test/app/admin';
 
-// @traces 251-monitoring-backups-FR-008
+// @traces 251-FR-008
 describe('the outage alert', () => {
   it('goes by e-mail and push, and both texts pass the template check', () => {
     expect(NOTIFICATION_TYPES[KIND].channels).toEqual(['email', 'push']);

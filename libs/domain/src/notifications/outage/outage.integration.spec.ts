@@ -1,10 +1,11 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { NotificationsModule } from '../notifications.module';
+import { NotificationsService } from '../notifications.service';
 import {
   databaseUrl,
   fixtures,
@@ -122,7 +123,7 @@ const outsideRows = () =>
     where: { channel: { in: ['email', 'push'] }, kind: KIND },
   });
 
-// @traces 251-monitoring-backups-FR-005 251-monitoring-backups-FR-006 251-monitoring-backups-FR-007 251-monitoring-backups-FR-008
+// @traces 251-FR-005 251-FR-006 251-FR-007 251-FR-008
 describe('the outage webhook', () => {
   it('sends every active admin one e-mail and one push when a check goes down', async () => {
     const { admins, others } = await people();
@@ -223,6 +224,22 @@ describe('the outage webhook', () => {
     expect(mine.every((r) => r.status === 'queued')).toBe(true);
   });
 
+  it('sends at once during quiet hours', async () => {
+    await people();
+    const service = app.get(NotificationsService);
+    // 23:10 in Bucharest.
+    service.now = () => new Date('2026-10-04T20:10:00Z');
+    try {
+      await post(app, payload(alert('firing')), `Bearer ${TOKEN}`);
+    } finally {
+      service.now = () => new Date();
+    }
+
+    const sent = await outsideRows();
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.every((r) => r.status === 'queued' && !r.sendAfter)).toBe(true);
+  });
+
   it.each([
     ['no token', undefined],
     ['a wrong token', 'Bearer not-the-token'],
@@ -273,5 +290,29 @@ describe('the outage webhook', () => {
   it('checks the token before the body', async () => {
     const res = await post(app, { alerts: 'down' }, 'Bearer wrong');
     expect(res.status).toBe(401);
+  });
+});
+
+// @traces 251-FR-009
+describe('the outage log', () => {
+  it('writes one line per alert naming service, state, fingerprint and admin count, never the token or an address', async () => {
+    await people();
+    const log = jest.spyOn(Logger.prototype, 'log');
+
+    await post(
+      app,
+      payload(alert('firing'), alert('firing', { fingerprint: 'aa11bb22' })),
+      `Bearer ${TOKEN}`,
+    );
+
+    const lines = log.mock.calls
+      .map(([message]) => String(message))
+      .filter((message) => message.includes('fingerprint='));
+    log.mockRestore();
+    expect(lines).toEqual([
+      'api down fingerprint=5f1a2b3c4d5e6f70 admins=2 sent=true',
+      'api down fingerprint=aa11bb22 admins=2 sent=true',
+    ]);
+    expect(lines.join()).not.toMatch(new RegExp(`${TOKEN}|@`));
   });
 });

@@ -23,15 +23,28 @@ const iso = (value: unknown): string | null => {
   return Number.isNaN(time) ? null : new Date(time).toISOString();
 };
 
+// Any other status is malformed: announcing "back" for it could tell admins a
+// service recovered while it is still down.
+const STATES = new Map<unknown, Outage['state']>([
+  ['firing', 'down'],
+  ['resolved', 'back'],
+]);
+
 function readAlert(value: unknown): ReadAlert {
   const alert = record(value) ?? {};
   const labels = record(alert['labels']) ?? {};
   if (labels['outage'] !== 'true') return { skipped: 'not_outage' };
-  const state = alert['status'] === 'firing' ? 'down' : 'back';
+  const state = STATES.get(alert['status']);
   const { fingerprint, startsAt } = alert;
   const started = iso(startsAt);
   const at = state === 'down' ? started : iso(alert['endsAt']);
-  if (typeof fingerprint !== 'string' || !fingerprint || !started || !at) {
+  if (
+    !state ||
+    typeof fingerprint !== 'string' ||
+    !fingerprint ||
+    !started ||
+    !at
+  ) {
     return { skipped: 'malformed' };
   }
   const service = labels['service'];

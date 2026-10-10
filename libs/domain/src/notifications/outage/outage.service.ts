@@ -23,13 +23,15 @@ export class OutageService {
   ) {}
 
   async handle(alerts: readonly ReadAlert[]): Promise<void> {
+    // Read once per webhook, and only when it holds an outage.
+    let admins: { id: string }[] | undefined;
     for (const alert of alerts) {
       if (!('outage' in alert)) {
         this.logger.log(`alert skipped: ${alert.skipped}`);
         continue;
       }
       const { at, eventId, fingerprint, service, state } = alert.outage;
-      const admins = await this.prisma.account.findMany({
+      admins ??= await this.prisma.account.findMany({
         select: { id: true },
         where: { roles: { some: { role: 'admin' } }, status: 'active' },
       });

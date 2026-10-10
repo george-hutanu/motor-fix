@@ -33,6 +33,7 @@ async function start(
   return app;
 }
 
+// @traces 251-FR-001
 describe('health', () => {
   let app: INestApplication;
 

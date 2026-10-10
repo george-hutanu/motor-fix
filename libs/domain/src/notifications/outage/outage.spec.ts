@@ -14,7 +14,7 @@ const resolved = {
   status: 'resolved',
 };
 
-// @traces 251-monitoring-backups-FR-006 251-monitoring-backups-FR-007
+// @traces 251-FR-006 251-FR-007
 describe('reading a Grafana alert payload', () => {
   it('reads a firing outage alert as the service being down since it started', () => {
     expect(readAlerts({ alerts: [firing] })).toEqual([
@@ -73,6 +73,15 @@ describe('reading a Grafana alert payload', () => {
     ['no fingerprint', { ...firing, fingerprint: undefined }],
     ['an unreadable start', { ...firing, startsAt: 'yesterday' }],
     ['an unreadable end once resolved', { ...resolved, endsAt: 'later' }],
+    [
+      'a status other than firing or resolved',
+      { ...firing, status: 'pending' },
+    ],
+    ['no status', { ...firing, status: undefined }],
+    [
+      'a status named after an object property',
+      { ...firing, status: 'toString' },
+    ],
   ])('skips an outage alert with %s', (_label, alert) => {
     expect(readAlerts({ alerts: [alert] })).toEqual([{ skipped: 'malformed' }]);
   });

@@ -257,7 +257,7 @@ describe('telemetry', () => {
   });
 });
 
-// @traces 251-monitoring-backups-FR-005
+// @traces 251-FR-005
 describe('outageWebhookToken', () => {
   it('reads the token trimmed, and nothing when unset or blank', () => {
     expect(outageWebhookToken({ OUTAGE_WEBHOOK_TOKEN: ' t-1 ' })).toBe('t-1');
