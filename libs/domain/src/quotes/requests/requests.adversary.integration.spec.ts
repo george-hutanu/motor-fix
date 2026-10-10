@@ -317,8 +317,8 @@ describe('GET /requests/:id leaks nothing of others', () => {
       s.dinamo.answering,
       s.dinamo.plain,
       s.militari.receptionist,
+      // A decline under 5 minutes old reads as waiting.
       'fully_booked',
-      'declineReason',
       'declinedBy',
       'declinedAt',
       car.plate ?? 'B123ABC',

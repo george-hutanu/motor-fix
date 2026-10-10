@@ -1,4 +1,5 @@
 import type { ToolDefinition } from './registry';
+import { declineQuoteRequest } from './tools/decline-quote-request/decline-quote-request';
 import { getDaySheet } from './tools/get-day-sheet/get-day-sheet';
 import { getMyAccount } from './tools/get-my-account/get-my-account';
 import { getSchedule } from './tools/get-schedule/get-schedule';
@@ -11,4 +12,5 @@ export const catalogue: ToolDefinition[] = [
   getSchedule,
   getDaySheet,
   getStats,
+  declineQuoteRequest,
 ];

@@ -159,6 +159,8 @@ model RequestRecipient {
   // The undo window counts from here.
   declinedAt      DateTime?       @map("declined_at") @db.Timestamptz(3)
   declinedBy      String?         @map("declined_by") @db.Uuid
+  // When the driver was told, once the undo window closed; null until then.
+  declineToldAt   DateTime?       @map("decline_told_at") @db.Timestamptz(3)
   remindedDay2At  DateTime?       @map("reminded_day2_at") @db.Timestamptz(3)
   remindedDay5At  DateTime?       @map("reminded_day5_at") @db.Timestamptz(3)
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)

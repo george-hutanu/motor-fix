@@ -207,6 +207,9 @@ describe('the product counters', () => {
         ),
       );
     expect(new Set(series).size).toBe(series.length);
+    // A fixed ceiling, raised from 50 as the catalogue grew (the driver's
+    // decline message, the verification result): the e-mail counter keeps
+    // one series per template.
     expect(series.length).toBeLessThan(60);
     expect(series.join()).not.toMatch(/@|\d{6,}|[0-9a-f]{8}-/i);
   });

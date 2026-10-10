@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
@@ -49,10 +49,44 @@ async function openWithUpdate(
   return line;
 }
 
-async function box(locator: Locator) {
-  const found = await locator.boundingBox();
-  if (!found) throw new Error('not laid out');
-  return found;
+type Box = { height: number; width: number; x: number; y: number };
+
+// Frames a layout gets to settle in, about two seconds at 60 frames a second.
+const SETTLE_FRAMES = 120;
+
+// The boxes of `selectors`, read together in one frame once the fonts have
+// loaded and two frames in a row lay them out the same. The line's text shows
+// before the frame around it settles (a web font swapping in can wrap the
+// header onto a second row), so boxes read one call apart can come from two
+// different layouts.
+async function settled(page: Page, ...selectors: string[]): Promise<Box[]> {
+  return page.evaluate(
+    async ([wanted, frames]) => {
+      await document.fonts.ready;
+      const read = () =>
+        JSON.stringify(
+          wanted.map((selector) => {
+            const found = document.querySelectorAll(selector);
+            if (found.length !== 1)
+              throw new Error(
+                `${selector} matches ${found.length} elements, not one`,
+              );
+            const { height, width, x, y } = found[0].getBoundingClientRect();
+            return { height, width, x, y };
+          }),
+        );
+      const frame = () => new Promise((done) => requestAnimationFrame(done));
+      let last = read();
+      for (let i = 0; i < frames; i++) {
+        await frame();
+        const now = read();
+        if (now === last) return JSON.parse(now) as Box[];
+        last = now;
+      }
+      throw new Error(`the layout did not settle in ${frames} frames: ${last}`);
+    },
+    [selectors, SETTLE_FRAMES] as const,
+  );
 }
 
 for (const [name, width, height] of [
@@ -66,9 +100,12 @@ for (const [name, width, height] of [
   }) => {
     await page.setViewportSize({ height, width });
     const line = await openWithUpdate(page);
-    const header = await box(page.locator('.view > header'));
-    const toggle = await box(page.locator('mf-language-switch'));
-    const status = await box(line);
+    const [header, toggle, status] = await settled(
+      page,
+      '.view > header',
+      'mf-language-switch',
+      '.live-status',
+    );
 
     expect(status.y - (toggle.y + toggle.height)).toBeGreaterThanOrEqual(8);
     expect(status.y - (header.y + header.height)).toBeGreaterThanOrEqual(8);
@@ -89,26 +126,33 @@ test("under the offline bar, the live status line adds its own 8 px to the bar's
   page,
 }) => {
   await page.setViewportSize({ height: 640, width: 320 });
-  const line = await openWithUpdate(page, { thenDrop: true });
+  await openWithUpdate(page, { thenDrop: true });
   const bar = page.locator('.live-offline');
   await expect(bar).toHaveText('Fără conexiune. Ce vezi poate fi vechi.', {
     // OFFLINE_AFTER is 10 s; twice that.
     timeout: 20_000,
   });
-  const offline = await box(bar);
-  const status = await box(line);
+  const [offline, status, header] = await settled(
+    page,
+    '.live-offline',
+    '.live-status',
+    '.view > header',
+  );
 
   expect(status.y - (offline.y + offline.height)).toBeGreaterThanOrEqual(20);
-  expect(status.x).toBe((await box(page.locator('.view > header'))).x);
+  expect(status.x).toBe(header.x);
 });
 
 test('under the e-mail banner, the live status line keeps 8 px clear of it', async ({
   page,
 }) => {
   await page.setViewportSize({ height: 640, width: 320 });
-  const line = await openWithUpdate(page, { emailConfirmed: false });
-  const banner = await box(page.locator('mf-email-banner [role="status"]'));
-  const status = await box(line);
+  await openWithUpdate(page, { emailConfirmed: false });
+  const [banner, status] = await settled(
+    page,
+    'mf-email-banner [role="status"]',
+    '.live-status',
+  );
 
   expect(status.y - (banner.y + banner.height)).toBeGreaterThanOrEqual(8);
 });

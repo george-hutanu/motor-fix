@@ -11,6 +11,7 @@ import {
   type Capability,
   capabilitiesOf,
   type DaySheetService,
+  type DeclineService,
   type GarageFiguresService,
   type GarageRequestsService,
   type GarageScheduleService,
@@ -42,6 +43,7 @@ export interface ToolContext {
   featureOn(garageId: string, key: string): Promise<boolean>;
   garage: {
     daySheet: Pick<DaySheetService, 'get'>;
+    decline: Pick<DeclineService, 'decline'>;
     figures: Pick<GarageFiguresService, 'get'>;
     requests: Pick<GarageRequestsService, 'inbox'>;
     schedule: Pick<GarageScheduleService, 'list'>;
@@ -55,7 +57,12 @@ export interface ToolDefinition<In extends ZodRawShape = ZodRawShape> {
   description: string;
   inputSchema: In;
   outputSchema?: ZodRawShape;
-  annotations: { readOnlyHint: boolean; destructiveHint: boolean };
+  annotations: {
+    readOnlyHint: boolean;
+    destructiveHint: boolean;
+    // Set on an act a repeat would not answer the same way.
+    idempotentHint?: boolean;
+  };
   roles: readonly Role[];
   // Checked for the role in use, so a mechanic's permissions and a
   // receptionist's limits apply as they do on the API.

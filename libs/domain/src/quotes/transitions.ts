@@ -148,6 +148,7 @@ function recipientColumns(
       declinedAt: null,
       declinedBy: null,
       declineReason: null,
+      declineToldAt: null,
     };
   }
   return {};
