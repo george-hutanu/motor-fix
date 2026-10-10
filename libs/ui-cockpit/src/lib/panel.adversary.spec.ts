@@ -12,7 +12,7 @@ import { Panel } from './panel';
 })
 class Host {
   readonly heading = signal<string | undefined>('Oferte primite');
-  readonly link = signal<unknown[] | string | undefined>(undefined);
+  readonly link = signal<string[] | string | undefined>(undefined);
 }
 
 async function render() {

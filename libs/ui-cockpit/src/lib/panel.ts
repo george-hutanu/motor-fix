@@ -73,6 +73,6 @@ import { RouterLink } from '@angular/router';
 export class Panel {
   readonly heading = input<string>();
   // The view the heading opens, if the panel stands for one.
-  readonly link = input<unknown[] | string>();
+  readonly link = input<string[] | string>();
   protected readonly headingId = inject(_IdGenerator).getId('mf-panel-title-');
 }

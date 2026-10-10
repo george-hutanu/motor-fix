@@ -2,10 +2,3 @@ mf-empty-state {
   margin: var(--mf-space-4);
   padding: var(--mf-space-5) 0;
 }
-a[hlmBtn] {
-  min-height: var(--mf-tap);
-  max-width: 100%;
-  text-decoration: none;
-  /* Until the driver's texts load the label is its key, one unbreakable word. */
-  overflow-wrap: anywhere;
-}
