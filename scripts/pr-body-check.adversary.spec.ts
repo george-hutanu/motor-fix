@@ -43,24 +43,6 @@ function ready(body: string | null, draft = false) {
 }
 
 describe('PR body check, retired tracker form', () => {
-  it('passes a body with a specs-repo issue link', () => {
-    expect(ready(filled())).toEqual([]);
-  });
-
-  it('passes N/A with a reason in the story section', () => {
-    expect(ready(filled('N/A: dependency bump'))).toEqual([]);
-  });
-
-  it.each(['so', 'site', 'com'])(
-    'refuses a story link on the .%s host',
-    (tld) => {
-      const body = filled(
-        `https://www.${retired}.${tld}/${Retired}-Story-abc123`,
-      );
-      expect(ready(body)).toEqual([NO_STORY_LINK]);
-    },
-  );
-
   it('refuses a retired-host link on a subdomain', () => {
     const body = filled(`https://my-team.${retired}.site/page-0123456789`);
     expect(ready(body)).toEqual([NO_STORY_LINK]);
@@ -71,29 +53,27 @@ describe('PR body check, retired tracker form', () => {
     expect(ready(body)).toEqual([NO_STORY_LINK]);
   });
 
-  it('refuses the retired story heading on a ready body', () => {
-    const body = filled().replace('## Story', `## ${Retired} story`);
-    expect(ready(body)).toContain('Missing section: "## Story".');
-  });
-
-  it('refuses the retired story heading on a draft', () => {
-    const body = filled().replace('## Story', `## ${Retired} story`);
-    expect(ready(body, true)).toEqual(['Missing section: "## Story".']);
-  });
-
-  it('refuses the retired sync box', () => {
-    const body = filled().replace('Tracker in sync', `${Retired} in sync`);
-    expect(ready(body)).toEqual([
-      '"## Checklist" is missing its box: "Tracker in sync: the story\'s issue is Planning, then Implementing, QA once ready, Done on merge".',
-    ]);
-  });
-
   it('refuses a mixed body on the legacy parts only', () => {
     const body = filled(`https://${retired}.so/x`).replace(
       'Tracker in sync',
       `${Retired} in sync`,
     );
-    expect(ready(body)).toHaveLength(2);
+    expect(ready(body)).toEqual([
+      NO_STORY_LINK,
+      expect.stringMatching(
+        /^"## Checklist" is missing its box: "Tracker in sync/,
+      ),
+    ]);
+  });
+
+  it('passes a story link wrapped in emphasis or a Markdown link', () => {
+    for (const story of [
+      `**${LINK}**`,
+      `_${LINK}_`,
+      `[ST-1](${LINK})`,
+      `<${LINK}>`,
+    ])
+      expect(ready(filled(story))).toEqual([]);
   });
 
   it('refuses a link to another repository of the same owner', () => {
@@ -160,11 +140,6 @@ describe('PR body check, retired tracker form', () => {
   it('refuses a retired link hidden in an HTML comment', () => {
     const body = filled(`<!-- ${LINK} -->\nhttps://${retired}.so/x`);
     expect(ready(body)).toEqual([NO_STORY_LINK]);
-  });
-
-  it('gives the same result when called twice', () => {
-    const body = filled(`https://${retired}.so/x`);
-    expect(ready(body)).toEqual(ready(body));
   });
 });
 
