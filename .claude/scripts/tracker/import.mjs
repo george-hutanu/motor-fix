@@ -1291,7 +1291,7 @@ async function main(argv = process.argv.slice(2)) {
     const load = pageLoader(client, tracker, { cache: folderCache(join(cacheDir, "pages")), store, refresh: argv.includes("--refresh"), log: report.log });
     const publish = async (files) => {
       for (const f of files) store.write(f.path, f.text);
-      const done = specsRepo.commit({ root, message: "docs(tracker): ST-1017 page files for the imported issues", paths: ["tracker"] });
+      const done = specsRepo.commit({ root, message: "docs(tracker): page files for the imported issues", paths: ["tracker"] });
       if (!done.ok) throw new GitHubError("specs", `could not push tracker/ to ${ISSUE_REPO}: ${done.error}`);
     };
     try {
