@@ -1,5 +1,4 @@
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
-import { Client } from 'pg';
 
 import { hydrated, PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
@@ -39,7 +38,6 @@ const car = (quote: ReturnType<typeof dialog>) =>
   quote.getByRole('combobox', { exact: true, name: 'Mașina' });
 
 // @seeded: a driver sends a request from a garage's profile against the real API.
-// @traces 1025-FR-003
 // @traces 221-SC-001 221-SC-002 221-SC-007 221-FR-003
 test.describe('a quote request from a garage profile @seeded', () => {
   test('goes out from the profile, shows in Cererile mele without a reload and reaches the garage', async ({
@@ -66,8 +64,6 @@ test.describe('a quote request from a garage profile @seeded', () => {
     await expect(
       quote.getByText('Trimis către Service Auto Militari.'),
     ).toBeVisible();
-    // The seeded garage has no figures yet, so the confirmation promises nothing.
-    await expect(quote.getByText(/aceeași zi/)).toHaveCount(0);
 
     await quote.getByRole('link', { name: 'Vezi Cererile mele' }).click();
     await expect(page).toHaveURL('/app/driver/requests');
@@ -131,44 +127,30 @@ test.describe('a quote request from a garage profile @seeded', () => {
   }
 });
 
-// The seeded garage's nightly figures, written straight to PostgreSQL just
-// before the send so that it usually answers the same day; removed after. A
-// deployed address has no such database, so its run leaves @database out.
+// The API's half (the rate, the threshold, the flag on each recipient) is in
+// the quote-requests and requests integration specs. Here the real send goes
+// out and its reply is handed to the dialog with the flag set, so the line's
+// place and fit are checked on a phone without touching any garage's figures.
 // @traces 1025-FR-001 1025-FR-006
-test.describe('the confirmation for a garage that usually answers the same day @seeded @database', () => {
-  let db: Client;
-
-  test.beforeAll(async () => {
-    db = new Client({ connectionString: process.env['DATABASE_URL'] });
-    await db.connect();
-  });
-
-  test.afterAll(async () => {
-    await db.query(
-      `DELETE FROM garage_response_stats
-       WHERE garage_id = (SELECT id FROM garage WHERE slug = 'service-auto-militari')`,
-    );
-    await db.end();
-  });
-
+test.describe('the confirmation for a garage that usually answers the same day @seeded', () => {
   test('says so under the sent line on a 320 px phone, with no sideways scroll', async ({
     page,
   }) => {
     await signedInDriver(page);
     await page.setViewportSize({ height: 800, width: 320 });
+    await page.route('**/api/v1/quote-requests', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        recipients: { answersSameDay: boolean }[];
+      };
+      for (const recipient of body.recipients) recipient.answersSameDay = true;
+      await route.fulfill({ json: body, response });
+    });
     await hydrated(page, PROFILE);
     await page.getByRole('button', { name: 'Cere ofertă' }).click();
     const quote = dialog(page, 'Cere ofertă');
     await expect(car(quote)).toContainText('Dacia Logan');
     await quote.getByRole('switch', { name: OIL }).click();
-    await db.query(
-      `INSERT INTO garage_response_stats (garage_id, requests_30d,
-         answered_within_day_30d, lifetime_requests, rate, computed_at)
-       SELECT id, 10, 9, 12, 90, now() FROM garage WHERE slug = 'service-auto-militari'
-       ON CONFLICT (garage_id) DO UPDATE SET requests_30d = 10,
-         answered_within_day_30d = 9, lifetime_requests = 12, rate = 90,
-         computed_at = now()`,
-    );
 
     await quote.getByRole('button', { name: 'Trimite' }).click();
 

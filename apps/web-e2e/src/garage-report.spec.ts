@@ -21,12 +21,16 @@ async function send(page: Page) {
 
 // The tests report a listed garage no other spec names, and put its file back
 // after each: a garage of their own would change the counts Home shows to the
-// specs running beside them. A deployed address has no such database, so its
-// run leaves @database out.
-test.describe('a report of a garage from its profile @seeded @database', () => {
+// specs running beside them. A deployed address, whose run has no
+// DATABASE_URL, skips them.
+test.describe('a report of a garage from its profile @seeded', () => {
   // The preset runs tests fully parallel; these share one garage, so they
   // take turns in one worker.
   test.describe.configure({ mode: 'default' });
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its garage straight to PostgreSQL, which needs DATABASE_URL',
+  );
   const slug = 'atelier-drumul-taberei';
   let db: Client;
   let garageId: string;

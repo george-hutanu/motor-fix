@@ -761,5 +761,8 @@ describe('the profile page and the same-day line', () => {
     });
 
     expect(page().textContent).not.toMatch(/same day/);
+    expect(page().querySelector('.rate')?.textContent?.trim()).toBe(
+      'Answers 95% of requests within a day',
+    );
   });
 });

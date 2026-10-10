@@ -8,7 +8,6 @@ const RESPONSE_RATE_WINDOW_HOURS = 24;
 const RESPONSE_RATE_MIN_REQUESTS = 10;
 // At or above it, a garage's confirmation line says it usually answers the
 // same day.
-// TODO: confirm the 70 percent threshold with the owner once real figures exist.
 const RESPONSE_SAME_DAY_MIN_RATE = 70;
 
 const HOUR = 3_600_000;
@@ -69,9 +68,7 @@ export function responseRateOf(
 }
 
 export const answersSameDayOf = (rate: ResponseRateDto) =>
-  rate.state === 'rate' &&
-  typeof rate.rate === 'number' &&
-  rate.rate >= RESPONSE_SAME_DAY_MIN_RATE;
+  rate.state === 'rate' && (rate.rate ?? 0) >= RESPONSE_SAME_DAY_MIN_RATE;
 
 const same = (a: ResponseFigures, b: ResponseFigures) =>
   a.requests30d === b.requests30d &&

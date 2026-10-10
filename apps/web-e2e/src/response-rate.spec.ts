@@ -16,9 +16,13 @@ const SIZES = [
 
 // Garages, a driver and requests of this file's own, written straight to
 // PostgreSQL, and the night's job queued by hand on the worker's queue. A
-// deployed address has neither, so its run leaves @database out.
+// deployed address, whose run has neither DATABASE_URL nor REDIS_URL, skips it.
 // @traces 384-FR-008 384-FR-009 384-FR-011
-test.describe('the response rate on a garage profile @seeded @database', () => {
+test.describe('the response rate on a garage profile @seeded', () => {
+  test.skip(
+    !process.env['DATABASE_URL'] || !process.env['REDIS_URL'],
+    'seeds requests in PostgreSQL and runs the night job through Redis',
+  );
   test.describe.configure({ mode: 'serial' });
   const tag = Date.now().toString(36);
   const slugs = {

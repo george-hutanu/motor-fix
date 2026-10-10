@@ -15,7 +15,7 @@ export function answersLine(
   i18n: I18n,
   recipient: RequestDto['recipients'][number],
 ) {
-  return recipient.answersSameDay === true
+  return recipient.answersSameDay
     ? i18n.t('public.requestQuote.answersSameDay', {
         garage: recipient.garage.name,
       })

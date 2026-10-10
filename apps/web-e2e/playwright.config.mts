@@ -50,13 +50,12 @@ export default defineConfig({
   // runs them only when it is given their password. Flows tagged @mailbox read
   // the local test mailbox, flows tagged @openid the local stand-in issuer,
   // flows tagged @assistants the local identity server, and flows tagged
-  // @reset need a seeded account the global setup resets, and flows tagged
-  // @database write straight to the local PostgreSQL or Redis, none of which a
+  // @reset need a seeded account the global setup resets, none of which a
   // deployed address has.
   grepInvert: deployed
     ? process.env['E2E_PASSWORD']
-      ? /@mailbox|@openid|@assistants|@reset|@database/
-      : /@seeded|@mailbox|@openid|@assistants|@reset|@database/
+      ? /@mailbox|@openid|@assistants|@reset/
+      : /@seeded|@mailbox|@openid|@assistants|@reset/
     : undefined,
   // The photo flows add an approved garage, which Home's counts would take
   // in: they run after everything else. The platform rules and maintenance

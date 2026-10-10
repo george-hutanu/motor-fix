@@ -772,4 +772,33 @@ describe('the confirmation’s answering line', () => {
 
     expect(items()).toEqual(names);
   });
+
+  it('turns each qualifying name into the English sentence, in order', async () => {
+    const names = [GARAGE.name, 'Atelier Berceni', 'Mecanic Mobil'];
+
+    await sendWith(sent(names, [GARAGE.name, 'Mecanic Mobil']), 'en');
+
+    expect(items()).toEqual([
+      'Service Auto Militari usually answers the same day.',
+      'Atelier Berceni',
+      'Mecanic Mobil usually answers the same day.',
+    ]);
+  });
+
+  it('puts markup in a garage name in the line as text, never as elements', async () => {
+    const name = '<img src=x onerror=alert(1)> & <b>Bold</b>';
+
+    await sendWith(sent([name], [name]));
+
+    expect(lines()[1]).toBe(`${name} răspunde de obicei în aceeași zi.`);
+    expect(panel().querySelector('.done img, .done b')).toBeNull();
+  });
+
+  it('keeps a garage name that looks like message syntax whole in the line', async () => {
+    const name = "{garage} {n, plural, one {x} other {y}} 'quoted'";
+
+    await sendWith(sent([name], [name]));
+
+    expect(lines()[1]).toBe(`${name} răspunde de obicei în aceeași zi.`);
+  });
 });
