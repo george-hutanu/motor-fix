@@ -53,7 +53,7 @@ function reasonOf(
   if (jobType.status === 'pending') return 'awaiting_approval';
   if (
     rarActivities.length > 0 &&
-    jobType.rarActivity !== null &&
+    jobType.rarActivity &&
     !rarActivities.includes(jobType.rarActivity)
   ) {
     return 'not_authorised';

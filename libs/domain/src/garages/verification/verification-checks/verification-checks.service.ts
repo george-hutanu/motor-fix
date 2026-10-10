@@ -134,6 +134,17 @@ export class VerificationChecksService {
         data: { rarActivities: next.activities },
         where: { id: file.garageId },
       });
+      // The activities decide which of its jobs the public profile lists.
+      await this.events.record(tx, {
+        audience: {
+          garageId: file.garageId,
+          results: false,
+          type: 'public_garage',
+        },
+        kind: 'price_list.updated',
+        payload: {},
+        subjectId: file.garageId,
+      });
     }
 
     await this.audit.record(tx, {
