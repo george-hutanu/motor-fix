@@ -698,10 +698,20 @@ describe("the feature document index", () => {
   it("names a body line that still links Notion or a retired docs/ path", async () => {
     const { staleLinks } = await import("./import.mjs");
     assert.deepEqual(staleLinks("[ok](docs/reference/features/a.md)\nsee docs/index.json"), []);
-    assert.deepEqual(staleLinks(`plan: docs/execution-plans/ep-1.md\nhttps://www.${"notion"}.so/x`), [
+    assert.deepEqual(staleLinks(`[plan](docs/execution-plans/ep-1.md)\nhttps://www.${"notion"}.so/x`), [
       "still links an old path (docs/execution-plans)",
       "still links a Notion URL",
     ]);
+    assert.deepEqual(staleLinks("Docs: https://github.com/o/r/blob/trunk/docs/features/a.md\nDocs: docs/decisions/b.md"), [
+      "still links an old path (docs/features)",
+      "still links an old path (docs/decisions)",
+    ]);
+  });
+
+  it("leaves a docs/ path named in prose alone: only a link is stale", async () => {
+    const { staleLinks } = await import("./import.mjs");
+    assert.deepEqual(staleLinks("Record the run in `docs/device-checks/EP-1.md` before merging."), []);
+    assert.deepEqual(staleLinks("The patch is at docs/import-design-link.patch, apply it by hand."), []);
   });
 
   it("finds the specs clone where specs-repo.mjs says, else .motor-fix-specs, else specs/", async () => {

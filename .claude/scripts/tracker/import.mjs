@@ -118,14 +118,16 @@ const DESIGN_INDEX = "docs/reference/design/index.json";
 const DESIGN_HOME = "docs/reference/design/index.md";
 const boardKey = (name) => String(name).replace(/^.*›\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
 /** Old documentation paths the Diátaxis move retired. */
-const OLD_DOC_PATH = /\bdocs\/(?!(?:tutorials|how-to|reference|explanation)\/|index\.json\b)[\w.-]+/;
+// A retired docs/ path counts only where it is a link: a Markdown link target,
+// a URL or a "Docs:" line. A path named in prose is not a link to repair.
+const OLD_DOC_PATH = /(?:\]\((?:[^)\s]*\/)?|https?:\/\/\S*?\/|^\s*Docs:\s*(?:\S*\/)?)(docs\/(?!(?:tutorials|how-to|reference|explanation)\/|index\.json\b)[\w.-]+)/;
 const NOTION_URL = /https?:\/\/(?:[\w-]+\.)*notion\.(?:so|com|site)\b/i;
 /** What in an issue body still points at Notion or an old docs/ path, one line each. */
 export function staleLinks(body) {
   return String(body ?? "")
     .split("\n")
     .filter((line) => NOTION_URL.test(line) || OLD_DOC_PATH.test(line))
-    .map((line) => `still links ${NOTION_URL.test(line) ? "a Notion URL" : `an old path (${OLD_DOC_PATH.exec(line)[0]})`}`);
+    .map((line) => `still links ${NOTION_URL.test(line) ? "a Notion URL" : `an old path (${OLD_DOC_PATH.exec(line)[1]})`}`);
 }
 
 /** A value for a Project text field: lists joined, one line, no Notion address, at most TEXT_MAX characters. */
