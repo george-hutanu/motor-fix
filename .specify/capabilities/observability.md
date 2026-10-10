@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -17,6 +17,7 @@ features:
   - 374-assistant-requests
   - 1016-mcp-staging
   - 344-send-quote
+  - 244-analytics-news-consent
 ---
 
 # Capability: Observability
@@ -385,9 +386,9 @@ _From 879-dashboards._
 
 _From 879-dashboards._
 
-### 879-FR-010 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from the fixed sets of FR-009 (876-FR-011), and the series the seven counters add per instance MUST stay under 50, asserted by a unit test as ST-878 did for its figures.
+### 244-FR-018 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from fixed sets (876-FR-011), and the series all product counters add per instance, the consent counter included, MUST stay under 60, asserted by a unit test. (Replaces 879-FR-010's "seven counters under 50": its test already counted every product counter and stood at 49, so the three consent series need the room; 60 stays far inside the 1.5k-of-10k series budget.)
 
-_From 879-dashboards._
+_From 244-analytics-news-consent._
 
 ### 879-FR-011 — With telemetry off the counters MUST be no-ops with no behaviour change to the use cases (876-FR-014); each counter MUST have a colocated test that runs the action with a metrics reader attached and asserts the increment and its labels, and a failed action (a refused sign-in, a search that throws) MUST count nothing.
 
@@ -457,9 +458,15 @@ _From 1016-mcp-staging._
 
 _From 344-send-quote._
 
+### 244-FR-016 — The three operations (`POST /api/v1/consents`, `POST /api/v1/me/consents`, `GET /api/v1/me/consents`) and the outside call to Plausible MUST ship with their observability in the same PR: the request-duration metric by route for the three routes, one log line per stored record (decision, kind, signed in or not, never the browser id or the account id in clear), a counter of records by decision, a panel on the API dashboard and an entry each in `infra/observability/inventory.json` (the endpoints and the Plausible outside call, which is a browser-side call and says so as its reason), with an alert or the reason there is none.
+
+_From 244-analytics-news-consent._
+
 ## Retired
 
 - `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
 
 - `875-FR-007` — superseded by `879-FR-016` (2026-10-08)
 - `881-FR-002` — superseded by `879-FR-012` (2026-10-08)
+
+- `879-FR-010` — superseded by `244-FR-018` (2026-10-10)

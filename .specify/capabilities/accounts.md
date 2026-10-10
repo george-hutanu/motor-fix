@@ -23,6 +23,7 @@ features:
   - 261-maintenance-mode
   - 097-garage-dashboard
   - 030-new-account-empty-states
+  - 244-analytics-news-consent
 ---
 
 # Capability: Accounts
@@ -618,6 +619,70 @@ _From 030-new-account-empty-states._
 ### 030-FR-013 — An empty state MUST be reachable and readable without a pointer: its icon is decorative (hidden from assistive technology, no text of its own), its button is a native button or link in the page's tab order with the shell's visible focus ring, and its text meets the Cockpit theme's contrast in light and dark. The icon is chosen per state by the plan (inline, no icon library).
 
 _From 030-new-account-empty-states._
+
+### 244-FR-001 — No page, public or signed-in, server-rendered or in the browser, MUST load the analytics script or send any request to the analytics service until the browser holds a valid `granted` analytics choice (current text version, less than 365 days old). This feature MUST add no browser storage before consent beyond `mf_consent` (the choice and its browser id), which is essential.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-002 — Every page MUST show the consent bar while the browser holds no valid choice: the text, the privacy-notice link and the two equal-weight buttons of User Story 1 scenario 1, in the page's language. The bar MUST NOT block the page: it is a bottom bar in the Cockpit style (light and dark), on a phone a bottom sheet above the tab bar where there is one, the page's content reserving the bar's height so the bar covers no button or link, with buttons at least 44 px high, readable and usable at 320 px with no sideways scroll, reachable by keyboard and announced as a region to assistive technology.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-003 — Pressing "Accept" MUST store the choice `granted` in the browser (decision, text version, time, browser id) under the one key `mf_consent`, hide the bar, load the analytics script on that page and every page after, and send one record to the server. Pressing "Refuz" MUST do the same with `refused` and MUST NOT load the script.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-004 — The analytics script MUST be Plausible's manual script, loaded only from Plausible's EU service, only after consent, and never from a server-rendered page; a page served with JavaScript off MUST carry no analytics script. The app MUST send one page view per route change itself, only while the choice in force is a valid `granted`.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-005 — The text version MUST be one constant, `ANALYTICS_CONSENT_VERSION` in the contracts library, raised with each approved text change; a stored choice MUST be valid only when its text version equals the constant and its time is less than 365 days before now ("12 months" everywhere in this spec means 365 days; one constant, `ANALYTICS_CONSENT_MAX_AGE_DAYS`, beside the version). An invalid choice MUST show the bar again, keep analytics off and show the dialog's switch off.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-006 — Every public page's footer and every dashboard's Setări view MUST carry the link "Setări cookie" / "Cookie settings" that opens the dialog of User Story 2 scenario 2. Saving a changed switch MUST store `granted` or `withdrawn` as FR-003 stores a choice; turning it off MUST stop every analytics event at once and keep the script off on the next page. Cancel, or an unchanged switch, MUST store nothing.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-007 — Other open tabs of the same browser MUST apply a saved choice without a reload, through the browser's storage event: hide the bar and start or stop analytics.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-008 — Consent records MUST live in one append-only table, `CONSENT_RECORD`: id, `browser_consent_id` (a random id made once in the browser and kept with the choice), `account_id` (empty for a visitor), `kind` `analytics`, `decision` one of `granted`, `refused`, `withdrawn`, `text_version`, `language`, `at`. Rows MUST only be added, never changed or deleted; an account's choice in force MUST be its row with the latest `at`. Nothing reads records by browser id: the browser's own `mf_consent` is its latest choice.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-009 — `POST /api/v1/consents` (a visitor) and `POST /api/v1/me/consents` (a signed-in person, which needs a session) MUST take `{ browserConsentId, decision, textVersion, language, at }` validated at the edge (uuid, the three decisions, the current text version only, the app's languages, a time no more than 5 minutes ahead of the server's clock), write one row (the `/me` route carries the session's account id; the public route never does, since a public route does not resolve a session), and answer 201 with nothing more than the row's id. The public route MUST be public, and both MUST be limited per address, 20 records per hour, through the shared address throttle (count only; a throttle that cannot count never refuses), answering 429 beyond it.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-010 — A record stored by a signed-in person MUST, in the same transaction, write one audit entry on the person's own account (actor the person, field `analyticsConsent`, value the decision and the text version). Nothing MUST let a caller name another account or another person's browser id as the subject: the subject is always the session's account.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-011 — `GET /api/v1/me/consents` MUST need a session and answer the account's latest analytics record (decision, text version, language, at, or null) and the account's latest terms and latest privacy-notice consent (kind, text version, language, accepted time; two entries at most) as already stored; a visitor MUST get the `sign_in_required` 401.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-012 — Right after a sign-in, and on each dashboard load, the browser MUST reconcile its choice with the account's latest analytics record: the newer of the two applies and is kept in the browser with the account; when the browser's is newer, or the account has none, it MUST be stored on the account as a record keeping its own decision and time, but only when the browser's choice was made under that account or as a visitor not yet bound to an account; a choice made under another account is never stored and the account's applies (or the bar shows when it has none). When the account's is newer it MUST NOT be stored again. Public pages use the browser's choice. The bar MUST NOT show when the account's valid choice applies.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-013 — A record the server did not accept (network error, 5xx, 429) MUST be kept as pending in the browser with the choice and sent again on the next page load, at most once per load, until it is accepted; a 4xx other than 429 drops it.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-014 — Every text of the bar and the dialog MUST exist in Romanian and in English through the app's translation files, and the stored record's `language` MUST be the page's language at the time of the choice.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-015 — News e-mail consent MUST stay as built: off by default, never ticked in advance, a one-click stop in every news e-mail and the switch in settings. This feature MUST NOT change the news-consent flow, the unsubscribe page or the news preference, and the existing news-consent tests MUST pass unchanged on the branch.
+
+_From 244-analytics-news-consent._
+
+### 244-FR-017 — The feature MUST be covered by failing-first tests: Jest for the append-only rule and "latest wins" per account, the 5-minute clock tolerance, the address limit, the audit entry and account id of a signed-in record, the reconciliation rule, the validity rule (version, 12 months) and the bar and dialog components; Playwright for a first visit with no analytics request, "Accept" then requests, "Setări cookie" off then none, "Refuz" and reload then none, each in Romanian and in English, and at 320 px.
+
+_From 244-analytics-news-consent._
 
 ## Retired
 
