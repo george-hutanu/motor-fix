@@ -1,0 +1,82 @@
+name: Backup
+
+# Every night at 03:00 UTC, and by hand: one encrypted copy of each
+# environment's database in the backup bucket, kept 30 days. The database has
+# no public address, so scripts/backup/dump.sh runs inside its PostgreSQL
+# service over `railway ssh` and refuses any service that is not the
+# environment this job names. An environment whose GitHub environment has no
+# RAILWAY_SERVICE_POSTGRES is skipped (production while it is off); one with
+# the service but a missing bucket or passphrase setting fails. A failed run is
+# the backup alert: GitHub e-mails the owner.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: ${{ matrix.environment }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [staging, production]
+    concurrency:
+      group: backup-${{ matrix.environment }}
+      cancel-in-progress: false
+    env:
+      ENVIRONMENT: ${{ matrix.environment }}
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
+      RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
+      RAILWAY_SERVICE_POSTGRES: ${{ vars.RAILWAY_SERVICE_POSTGRES }}
+      BACKUP_S3_ENDPOINT: ${{ vars.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_REGION: ${{ vars.BACKUP_S3_REGION }}
+      BACKUP_S3_BUCKET: ${{ vars.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      BACKUP_GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+      KEY_NAME: backup-${{ matrix.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Check the settings
+        id: settings
+        run: node scripts/backup.ts settings >> "$GITHUB_OUTPUT"
+      - name: Note the skip
+        if: steps.settings.outputs.skip == 'true'
+        run: echo "::notice title=Backup skipped::$ENVIRONMENT has no RAILWAY_SERVICE_POSTGRES, so no copy was taken"
+      - name: Install the Railway CLI
+        if: steps.settings.outputs.skip != 'true'
+        run: npm install --global @railway/cli@5.63.1
+      # `railway ssh` signs in with a key registered to the token's workspace.
+      - name: Register an SSH key for this run
+        if: steps.settings.outputs.skip != 'true'
+        run: |
+          mkdir -p -m 700 ~/.ssh
+          ssh-keygen -q -t ed25519 -N '' -C "$KEY_NAME" -f ~/.ssh/id_ed25519
+          railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"
+          # No terminal answers ssh's first-connection prompt on a runner:
+          # trust the relay's host key the first time, and check it after.
+          printf 'Host ssh.railway.com\n  StrictHostKeyChecking accept-new\n' >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+      - name: Dump, encrypt, upload and prune
+        if: steps.settings.outputs.skip != 'true'
+        env:
+          AWS_ENDPOINT_URL: ${{ vars.BACKUP_S3_ENDPOINT }}
+          AWS_REGION: ${{ vars.BACKUP_S3_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+        run: bash scripts/backup/backup.sh
+      - name: Remove the SSH key
+        if: always() && steps.settings.outputs.skip != 'true'
+        # By its name, unique to this run; nothing to remove if none was made.
+        run: |
+          [ -f ~/.ssh/id_ed25519.pub ] || exit 0
+          railway ssh keys remove "$KEY_NAME"
