@@ -256,6 +256,8 @@ test.describe('with full motion', () => {
   test('a dialog pops in, and switching to reduced motion stops everything at once', async ({
     page,
   }) => {
+    // At full speed the 420 ms pop can be over before a slow host reads it.
+    await slowMotion(page);
     await openCockpit(page);
     await openDialog(page);
     expect(named(await running(page), 'mf-pop')).toMatchObject([
@@ -263,7 +265,6 @@ test.describe('with full motion', () => {
     ]);
     await page.keyboard.press('Escape');
 
-    await slowMotion(page);
     await page.reload();
     await expect(
       page.locator('mf-cockpit-gauges-sample mf-lamp').first(),
