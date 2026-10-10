@@ -23,7 +23,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { featureLevel, grandfathered, LEVELS } from "./lib/feature.mjs";
+import { featureLevel, featuresRoot, grandfathered, LEVELS } from "./lib/feature.mjs";
 import { coveredTokens } from "./lib/tests.mjs";
 import { loadCapabilities, parseDelta, retiredTokens } from "./capabilities.mjs";
 import { parseDeferred } from "./retro-evidence.mjs";
@@ -56,7 +56,7 @@ function newestMtime(dir) {
 }
 
 export function featureStatus(repo, dir, { covered, retired, capabilities, staleDays, exempt = new Set() }) {
-  const featureDir = join(repo, "specs", dir);
+  const featureDir = join(repo, featuresRoot(repo), dir);
   const read = (name) => (existsSync(join(featureDir, name)) ? readFileSync(join(featureDir, name), "utf8") : null);
   const num = dir.match(/^(\d{3,})-/)?.[1] ?? "000";
 
@@ -83,7 +83,7 @@ export function featureStatus(repo, dir, { covered, retired, capabilities, stale
   // git-excluded, so git knows nothing about it and the newest file mtime is
   // the only signal there is. Reporting the source keeps the difference
   // visible instead of quietly changing what "stale" means.
-  const lastCommit = git(repo, ["log", "-1", "--format=%cI", "--", `specs/${dir}`]) || null;
+  const lastCommit = git(repo, ["log", "-1", "--format=%cI", "--", `${featuresRoot(repo)}/${dir}`]) || null;
   const touched = lastCommit ?? newestMtime(featureDir);
   const ageSource = lastCommit ? "commit" : touched ? "file mtime (specs/ is not tracked here)" : null;
   const age = daysSince(touched);
@@ -137,7 +137,7 @@ export function featureStatus(repo, dir, { covered, retired, capabilities, stale
 }
 
 export function gatherStatus(repo, { staleDays = DEFAULT_STALE_DAYS } = {}) {
-  const specsDir = join(repo, "specs");
+  const specsDir = join(repo, featuresRoot(repo));
   const context = {
     covered: coveredTokens(repo),
     retired: retiredTokens(repo),

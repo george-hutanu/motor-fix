@@ -20,7 +20,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { basename, join } from "node:path";
-import { activeFeature, featureLevel, LEVELS } from "./lib/feature.mjs";
+import { activeFeature, featureLevel, featuresRoot, LEVELS } from "./lib/feature.mjs";
 import { loadCapabilities, parseDelta, retiredTokens } from "./capabilities.mjs";
 
 const git = (repo, args) => {
@@ -99,7 +99,7 @@ export function parseDeferred(text) {
 
 /** Open action items carried out of an earlier feature's retrospective. */
 export function carryover(repo, featureName) {
-  const specsDir = join(repo, "specs");
+  const specsDir = join(repo, featuresRoot(repo));
   const out = [];
   for (const dir of existsSync(specsDir) ? readdirSync(specsDir).sort() : []) {
     if (dir >= featureName) continue;
