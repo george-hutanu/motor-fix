@@ -1,3 +1,4 @@
+import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -5,12 +6,13 @@ import {
   effect,
   inject,
   PendingTasks,
+  PLATFORM_ID,
   RESPONSE_INIT,
   signal,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS } from '@motor-fix/contracts/events';
 import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import {
@@ -27,6 +29,7 @@ import { Gone } from './gone/gone';
 import { PhotosSection } from './photos-section/photos-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
+import { sourceOf } from './view-source';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
 import { publicLiveResource } from '../live';
@@ -62,6 +65,8 @@ const GONE = [404, 410];
 })
 export class GarageProfile {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly garages = inject(GaragesService);
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
@@ -126,11 +131,33 @@ export class GarageProfile {
       }
       untracked(() => this.profile.reload());
     });
+    let viewed: string | undefined;
+    effect(() => {
+      const id = this.garage()?.id;
+      if (!this.browser || !id || id === viewed) return;
+      viewed = id;
+      untracked(() => this.view(id));
+    });
     effect(() => {
       if (!this.response) return;
       if (this.removed()) this.response.status = 410;
       else if (this.unknown()) this.response.status = 404;
     });
+  }
+
+  // One view per garage opened, sent once it is known to be there and never
+  // waited on: a refused or lost view leaves the page as it is.
+  private view(id: string): void {
+    const before = this.router.lastSuccessfulNavigation()?.previousNavigation;
+    const source = sourceOf(
+      before
+        ? this.router.serializeUrl(before.finalUrl ?? before.initialUrl)
+        : undefined,
+      this.route.snapshot.queryParamMap.get('src'),
+    );
+    this.garages
+      .profileViewsControllerRecord({ body: { source }, id })
+      .catch(() => undefined);
   }
 
   // The server render waits for the first answer, so its status and its

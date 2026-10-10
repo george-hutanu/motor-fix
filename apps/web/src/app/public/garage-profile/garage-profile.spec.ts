@@ -64,6 +64,9 @@ type Read = {
 };
 let reads: Read[];
 const api = {
+  profileViewsControllerRecord: jest.fn(
+    (_: { id: string; body: { source?: string } }) => Promise.resolve(),
+  ),
   publicGaragesControllerBySlug: jest.fn(
     (query: { slug: string; brand?: string }) =>
       new Promise<PublicGarageDto>((resolve, reject) => {
@@ -103,6 +106,7 @@ beforeEach(async () => {
   reads = [];
   response = {};
   api.publicGaragesControllerBySlug.mockClear();
+  api.profileViewsControllerRecord.mockClear();
   live.register.mockClear();
   TestBed.configureTestingModule({
     providers: [
@@ -704,6 +708,113 @@ describe('moving between profiles', () => {
     expect(page().querySelector('h1')?.textContent?.trim()).toBe(
       'Atelier Dinamo',
     );
+  });
+});
+
+// @traces 143-FR-008
+describe('the profile view', () => {
+  const beacons = () =>
+    api.profileViewsControllerRecord.mock.calls.map(([call]) => call);
+
+  it('sends one view once the garage is known, and none before', async () => {
+    await open('/ro/garages/service-auto-militari');
+    expect(beacons()).toEqual([]);
+
+    await reads[0]?.answer(FIXED);
+
+    expect(beacons()).toEqual([
+      { body: { source: 'profile_direct' }, id: 'g-2' },
+    ]);
+  });
+
+  it('names the page the visitor came from', async () => {
+    await open('/ro/garages');
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+
+    expect(beacons()).toEqual([{ body: { source: 'search' }, id: 'g-2' }]);
+  });
+
+  it('names a shared link by its marker', async () => {
+    await open('/ro/garages/service-auto-militari?src=share');
+    await reads[0]?.answer(FIXED);
+
+    expect(beacons()).toEqual([{ body: { source: 'shared_link' }, id: 'g-2' }]);
+  });
+
+  it('sends no second view when the same garage is read again', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await open('/ro/garages/service-auto-militari?brand=dacia');
+    await reads[1]?.answer(FIXED);
+
+    expect(beacons()).toHaveLength(1);
+  });
+
+  it('sends a view for the next garage the visitor opens', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[1]?.answer(MOBILE);
+
+    expect(beacons().map((b) => b.id)).toEqual(['g-2', 'g-1']);
+    expect(beacons()[1]?.body).toEqual({ source: 'profile_direct' });
+  });
+
+  it('sends nothing for a garage that is not there', async () => {
+    await open('/ro/garages/nu-exista');
+    await reads[0]?.fail(404);
+
+    expect(beacons()).toEqual([]);
+  });
+
+  it('leaves the page as it is when the view is refused', async () => {
+    api.profileViewsControllerRecord.mockReturnValueOnce(
+      Promise.reject(new HttpErrorResponse({ status: 429 })),
+    );
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await settle();
+
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
+    expect(text()).not.toContain('Nu am putut încărca');
+    expect(response.status).toBeUndefined();
+  });
+
+  it('shows the garage while the view is still on its way', async () => {
+    api.profileViewsControllerRecord.mockReturnValueOnce(
+      new Promise<void>(() => undefined),
+    );
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
+  });
+
+  it('sends nothing from the server render', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { component: GarageProfile, path: ':lang/garages/:garage' },
+        ]),
+        { provide: GaragesService, useValue: api },
+        { provide: PublicLive, useValue: live },
+        { provide: PLATFORM_ID, useValue: 'server' },
+        { provide: RESPONSE_INIT, useValue: {} },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    harness = await RouterTestingHarness.create();
+
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+
+    expect(beacons()).toEqual([]);
   });
 });
 
