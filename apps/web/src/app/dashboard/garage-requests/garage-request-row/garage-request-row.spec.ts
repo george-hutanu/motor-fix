@@ -170,8 +170,8 @@ describe('the request row’s Trimite oferta button', () => {
   });
 });
 
-// @traces 345-decline-request-FR-013
-// @traces 345-decline-request-FR-015
+// @traces 345-FR-013
+// @traces 345-FR-015
 describe('the request row’s Refuză button', () => {
   it.each([
     ['owner', false],
@@ -249,7 +249,7 @@ describe('the request row’s Refuză button', () => {
   });
 });
 
-// @traces 345-decline-request-FR-012
+// @traces 345-FR-012
 describe('a declined row', () => {
   it.each([
     ['ro', 'Refuzată'],

@@ -112,7 +112,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 345-decline-request-FR-014
+// @traces 345-FR-014
 describe('the decline dialog: what it asks', () => {
   it('asks why, naming the driver and the car under the title', async () => {
     await open();
@@ -136,6 +136,8 @@ describe('the decline dialog: what it asks', () => {
     expect(new Set(radios().map((r) => r.name)).size).toBe(1);
   });
 
+  // Every text in both languages; the layout half is the QA sweep's.
+  // @traces 345-FR-019
   it('reads in English', async () => {
     await open({ language: 'en' });
 
@@ -172,8 +174,8 @@ describe('the decline dialog: what it asks', () => {
   });
 });
 
-// @traces 345-decline-request-FR-014
-// @traces 345-decline-request-FR-015
+// @traces 345-FR-014
+// @traces 345-FR-015
 describe('the decline dialog: declining', () => {
   it('declines with the picked reason, then closes with Cerere refuzată', async () => {
     await open();

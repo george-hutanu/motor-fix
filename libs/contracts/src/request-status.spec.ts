@@ -39,7 +39,7 @@ describe('the request status labels', () => {
 });
 
 // @traces 343-FR-004
-// @traces 345-decline-request-FR-012
+// @traces 345-FR-012
 describe('the reasons a garage’s request closed', () => {
   it('are tried in this order, the garage’s own decline first', () => {
     expect(GARAGE_CLOSE_REASONS).toEqual([
@@ -85,8 +85,8 @@ describe('the reasons a garage’s request closed', () => {
   });
 });
 
-// @traces 345-decline-request-FR-010
-// @traces 345-decline-request-FR-014
+// @traces 345-FR-010
+// @traces 345-FR-014
 describe('the reasons a garage declines', () => {
   it('have a label and a clause in both languages for every reason, and nothing else', () => {
     expect(Object.keys(DECLINE_REASON_TEXTS).sort()).toEqual(

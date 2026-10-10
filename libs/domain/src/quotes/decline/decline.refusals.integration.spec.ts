@@ -46,8 +46,8 @@ async function nothingWritten(recipientId: string) {
   ).toBe(0);
 }
 
-// @traces 345-decline-request-FR-002
-// @traces 345-decline-request-FR-020
+// @traces 345-FR-002
+// @traces 345-FR-020
 describe('POST /garage/requests/:id/decline who may decline', () => {
   it('answers 403 forbidden to a mechanic of the garage who may not answer quotes', async () => {
     const { dinamo, recipient, request } = await open();
@@ -82,8 +82,8 @@ describe('POST /garage/requests/:id/decline who may decline', () => {
   });
 });
 
-// @traces 345-decline-request-FR-004
-// @traces 345-decline-request-FR-020
+// @traces 345-FR-004
+// @traces 345-FR-020
 describe('POST /garage/requests/:id/decline on a request the garage cannot answer', () => {
   it.each([
     ['quoted', 'quoted'],

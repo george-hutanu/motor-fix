@@ -119,6 +119,7 @@ export class RequestsService {
     });
     if (!row) throw new NotFoundException();
     const [booking] = row.bookings;
+    const now = new Date();
     return {
       ...summaryOf(row),
       booking: booking ? bookingOf(booking) : null,
@@ -127,7 +128,7 @@ export class RequestsService {
         garage: garageRef(quote.garage),
       })),
       recipients: row.recipients.map((recipient) =>
-        recipientOf(recipient, new Date()),
+        recipientOf(recipient, now),
       ),
     };
   }

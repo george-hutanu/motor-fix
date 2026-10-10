@@ -103,8 +103,8 @@ test.describe('declining a request @seeded', () => {
     'moves declined_at back in PostgreSQL',
   );
 
-  // @traces 345-decline-request-FR-011
-  // @traces 345-decline-request-FR-020
+  // @traces 345-FR-011
+  // @traces 345-FR-020
   test('the owner declines with a reason; the row shows Refuzată and the driver sees it after the window', async ({
     page,
     request,

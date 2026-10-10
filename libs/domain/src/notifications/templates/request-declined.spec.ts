@@ -30,8 +30,8 @@ const CLAUSES = {
   },
 } as const;
 
-// @traces 345-decline-request-FR-009
-// @traces 345-decline-request-FR-010
+// @traces 345-FR-009
+// @traces 345-FR-010
 describe('the declined request message to the driver', () => {
   it('is registered for the driver and passes the template check', () => {
     expect(TEMPLATES[KIND]?.audience).toBe('driver');

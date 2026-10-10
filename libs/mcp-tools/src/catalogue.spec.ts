@@ -25,7 +25,7 @@ const FORBIDDEN = [
 describe('catalogue', () => {
   // @traces 365-FR-007
   // @traces 374-FR-001
-  // @traces 345-decline-request-FR-017
+  // @traces 345-FR-017
   it('ships get_my_account, the four garage reads and decline_quote_request, the one act', () => {
     expect(catalogue.map((t) => t.name).sort()).toEqual(
       ['get_my_account', ...GARAGE_READS, ...GARAGE_ACTS].sort(),

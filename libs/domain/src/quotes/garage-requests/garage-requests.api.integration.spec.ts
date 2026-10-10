@@ -1079,8 +1079,8 @@ describe('GET /garage/requests?status=quoted', () => {
   });
 });
 
-// @traces 345-decline-request-FR-012
-// @traces 345-decline-request-FR-020
+// @traces 345-FR-012
+// @traces 345-FR-020
 describe('GET /garage/requests?status=closed after a decline', () => {
   async function declinedAgo(ms: number, over: { status?: 'quoted' } = {}) {
     const andrei = await driver();

@@ -149,7 +149,7 @@ const toldAt = async (id: string) =>
   (await prisma.requestRecipient.findUniqueOrThrow({ where: { id } }))
     .declineToldAt;
 
-// @traces 345-decline-request-FR-007
+// @traces 345-FR-007
 describe('the decline-window timer', () => {
   it('relays request.declined to the quote-timers queue', () => {
     expect(DECLINE_WINDOW_CONSUMER).toMatchObject({
@@ -197,9 +197,9 @@ describe('the decline-window timer', () => {
   });
 });
 
-// @traces 345-decline-request-FR-008
-// @traces 345-decline-request-FR-009
-// @traces 345-decline-request-FR-020
+// @traces 345-FR-008
+// @traces 345-FR-009
+// @traces 345-FR-020
 describe('closing the decline window', () => {
   it('tells the driver once, for a decline 5 minutes old, and marks the recipient told', async () => {
     const { driverId, recipient } = await declined(5 * MINUTE);
@@ -268,6 +268,20 @@ describe('closing the decline window', () => {
     expect(await channels(driverId)).toEqual(['email', 'in_app']);
     expect(await prisma.outboxEvent.count()).toBe(1);
     expect(await counted('already_told')).toBe(before + 1);
+  });
+
+  it('tells once when the timer and the sweep close the same window together', async () => {
+    const { driverId, recipient } = await declined();
+    const window = await start();
+
+    await Promise.all([
+      window.fire(recipient.id, false),
+      window.fire(recipient.id, true),
+    ]);
+
+    expect(await channels(driverId)).toEqual(['email', 'in_app']);
+    expect(await prisma.outboxEvent.count()).toBe(1);
+    expect(await toldAt(recipient.id)).not.toBeNull();
   });
 
   it('tells nothing for a decline under 5 minutes old, which the sweep leaves too', async () => {

@@ -252,8 +252,8 @@ describe('GET /requests/:id', () => {
   });
 });
 
-// @traces 345-decline-request-FR-011
-// @traces 345-decline-request-FR-020
+// @traces 345-FR-011
+// @traces 345-FR-020
 describe('GET /requests/:id after a garage declined', () => {
   async function declinedAgo(ms: number) {
     const andrei = await world.account('Andrei Marin');

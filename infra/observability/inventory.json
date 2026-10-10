@@ -356,7 +356,7 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts garage declines by outcome (declined, already_answered, request_not_open, invalid) and reason code, with no identifiers, and one Declines log line per decline naming the recipient and request ids; the route is POST /api/v1/garage/requests/{id}/decline in http.server.request.duration; no agreed threshold yet, ST-880 adds the alert rules",
+      "reason": "counts garage declines by outcome (declined, already_answered, request_not_open, invalid; invalid counts the service's own 403 and 404, the validation pipe's 400s show in the route metric) and reason code, with no identifiers, and one Declines log line per decline naming the recipient and request ids; the route is POST /api/v1/garage/requests/{id}/decline in http.server.request.duration; no agreed threshold yet, ST-880 adds the alert rules",
       "story": "ST-345"
     },
     {

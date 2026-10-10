@@ -3,7 +3,6 @@ import type {
   GarageRecipientDto,
 } from '@motor-fix/contracts';
 import {
-  HttpException,
   HttpStatus,
   Inject,
   Injectable,
@@ -22,65 +21,19 @@ import type {
   RequestRecipient,
 } from '../../generated/prisma/client';
 import {
-  type RequestDeclineOutcome,
-  recordRequestDecline,
-} from '../quotes/quotes.metrics';
+  ANSWERING,
+  type AnswerTarget,
+  answerOutcomeOf,
+  judgeAnswer,
+} from '../answers';
+import { recordRequestDecline } from '../quotes/quotes.metrics';
 import { moveRecipient } from '../transitions';
 
 type Tx = Prisma.TransactionClient;
 
-// The garage's row of the request, locked so a decline and a send, or two
-// declines, are judged one after the other.
-interface Target {
-  recipient_id: string;
-  recipient_status: string;
-  request_status: string;
-  driver_id: string;
-  garage_status: string;
-}
-
-const ANSWERING = new Set(['garage', 'receptionist', 'mechanic']);
-
-const alreadyAnswered = () =>
-  refusal(
-    HttpStatus.CONFLICT,
-    'already_answered',
-    'Altcineva a răspuns deja la această cerere',
-  );
-
-const notOpen = () =>
-  refusal(
-    HttpStatus.CONFLICT,
-    'request_not_open',
-    'Cererea nu mai este deschisă',
-  );
-
-// A decline, as a quote, answers only an open request the garage has not
-// answered yet.
-function judge(target: Target) {
-  if (target.garage_status === 'suspended') throw notOpen();
-  if (['quoted', 'declined'].includes(target.recipient_status)) {
-    throw alreadyAnswered();
-  }
-  if (target.recipient_status !== 'waiting') throw notOpen();
-  if (!['sent', 'quoted'].includes(target.request_status)) throw notOpen();
-}
-
-// The two conflicts by name; any other client error (403, 404) as invalid.
-function outcomeOf(error: unknown): RequestDeclineOutcome | null {
-  if (!(error instanceof HttpException)) return null;
-  const body = error.getResponse() as { code?: string };
-  if (body.code === 'already_answered') return 'already_answered';
-  if (body.code === 'request_not_open') return 'request_not_open';
-  const status = error.getStatus();
-  return status >= 400 && status < 500 ? 'invalid' : null;
-}
-
 const iso = (at: Date | null) => at?.toISOString() ?? null;
 
-export const recipientAnswerOf = (
-  row: RequestRecipient,
-): GarageRecipientDto => ({
+const recipientAnswerOf = (row: RequestRecipient): GarageRecipientDto => ({
   answeredAt: iso(row.answeredAt),
   declinedAt: iso(row.declinedAt),
   declineReason: row.declineReason,
@@ -114,7 +67,7 @@ export class DeclineService {
       this.logger.log(`recipient ${row.id} of request ${requestId}: declined`);
       return recipientAnswerOf(row);
     } catch (error) {
-      const outcome = outcomeOf(error);
+      const outcome = answerOutcomeOf(error, 'invalid');
       if (outcome) {
         recordRequestDecline(outcome, reason);
         this.logger.warn(`decline of request ${requestId}: ${outcome}`);
@@ -131,7 +84,7 @@ export class DeclineService {
   ): Promise<RequestRecipient> {
     const garageId = actor.garageId;
     if (!ANSWERING.has(actor.role) || !garageId) throw new NotFoundException();
-    const [target] = await tx.$queryRaw<Target[]>`
+    const [target] = await tx.$queryRaw<AnswerTarget[]>`
       SELECT rr.id AS recipient_id, rr.status::text AS recipient_status,
              qr.status::text AS request_status, qr.driver_id,
              g.status::text AS garage_status
@@ -149,7 +102,7 @@ export class DeclineService {
         'Nu ai dreptul să răspunzi la cereri',
       );
     }
-    judge(target);
+    judgeAnswer(target);
     const payload = {
       driverId: target.driver_id,
       garageId,

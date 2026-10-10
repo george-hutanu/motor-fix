@@ -1,4 +1,4 @@
-// @traces 345-decline-request-FR-017
+// @traces 345-FR-017
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 
 import { declineQuoteRequest } from './decline-quote-request';

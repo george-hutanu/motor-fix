@@ -192,7 +192,7 @@ describe('Cererile mele', () => {
     expect(text(rows(element)[0])).toContain('Ofertă');
   });
 
-  // @traces 345-decline-request-FR-016
+  // @traces 345-FR-016
   it('reads the list again when a garage’s decline window closes', async () => {
     await render([[row()], [row()]]);
 
@@ -206,7 +206,7 @@ describe('Cererile mele', () => {
     expect(list).toHaveBeenCalledTimes(2);
   });
 
-  // @traces 345-decline-request-FR-016
+  // @traces 345-FR-016
   it('reads nothing again for an undone decline, which the driver never saw', async () => {
     await render([[row()], [row()]]);
 

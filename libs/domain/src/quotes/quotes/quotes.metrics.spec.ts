@@ -67,7 +67,7 @@ const points = async (name: string) =>
     value: point.value,
   }));
 
-// @traces 345-decline-request-FR-018
+// @traces 345-FR-018
 describe('counting declines and their windows', () => {
   it('adds one per decline by outcome and reason, with no identifiers', async () => {
     recordRequestDecline('declined', 'fully_booked');

@@ -58,7 +58,7 @@ async function stillWaiting(recipientId: string) {
   expect(await logged()).toBe(0);
 }
 
-// @traces 345-decline-request-FR-001
+// @traces 345-FR-001
 describe('POST /garage/requests/:id/decline, the body', () => {
   it.each([
     ['missing', {}],
@@ -102,9 +102,9 @@ describe('POST /garage/requests/:id/decline, the body', () => {
   });
 });
 
-// @traces 345-decline-request-FR-002
-// @traces 345-decline-request-FR-003
-// @traces 345-decline-request-FR-005
+// @traces 345-FR-002
+// @traces 345-FR-003
+// @traces 345-FR-005
 describe('POST /garage/requests/:id/decline', () => {
   it.each([
     ['owner', 'garage'],
@@ -251,7 +251,7 @@ describe('POST /garage/requests/:id/decline', () => {
   });
 });
 
-// @traces 345-decline-request-FR-020
+// @traces 345-FR-020
 describe('the response rate after a decline', () => {
   it('counts a declined recipient as answered', async () => {
     const { dinamo, request } = await open();
