@@ -764,9 +764,13 @@ test('sets the preview as one panel of 64 px rows, the rating over the rate on t
     expect(rating.y + rating.height).toBeLessThanOrEqual(rate.y + 1);
     expect(rating.x).toBeGreaterThan(name.x + name.width - 1);
   }
-  expect(
-    await page
-      .locator('mf-home-preview ul')
-      .evaluate((list) => getComputedStyle(list).borderTopLeftRadius),
-  ).toBe('20px');
+  const panel = page.locator('mf-home-preview ul');
+  const radius = () =>
+    panel.evaluate((list) => getComputedStyle(list).borderTopLeftRadius);
+  expect(await radius()).toBe('20px');
+  // The radius is the theme's panel token, not a number of its own.
+  await page.evaluate(() =>
+    document.documentElement.style.setProperty('--mf-radius-panel', '7px'),
+  );
+  expect(await radius()).toBe('7px');
 });

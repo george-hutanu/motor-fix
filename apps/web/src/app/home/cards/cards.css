@@ -13,7 +13,6 @@
 }
 
 h2 {
-  font-size: var(--mf-size-body);
   margin: 0;
   overflow-wrap: anywhere;
 }
