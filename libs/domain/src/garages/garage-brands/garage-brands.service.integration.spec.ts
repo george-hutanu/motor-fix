@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { ConflictException } from '@nestjs/common';
-
 import { GarageBrandsService } from './garage-brands.service';
 import { AuditService } from '../../audit/audit.service';
 import { foreignEntries } from '../../audit/audit.testing';
@@ -76,10 +74,11 @@ const setStance = (
     brands.setStance(tx, w.actor, w.garage, brandId, stance),
   );
 
-const addJob = (w: World, brandId: string, jobTypeId: string) =>
-  prisma.$transaction((tx) =>
-    brands.addJob(tx, w.actor, w.garage, brandId, jobTypeId),
-  );
+// A job row written straight, as the PUT's createMany leaves it.
+const seedJob = (w: World, brandId: string, jobTypeId: string) =>
+  prisma.garageBrandJob.create({
+    data: { brandId, garageId: w.garage, jobTypeId },
+  });
 
 const row = (w: World, brandId: string) =>
   prisma.garageBrand.findUniqueOrThrow({
@@ -95,15 +94,6 @@ const history = (w: World) =>
       subjectType: { in: ['garage_brand', 'garage_brand_job'] },
     },
   });
-
-async function conflictCode(run: Promise<unknown>) {
-  const error = await run.then(
-    () => undefined,
-    (e: unknown) => e,
-  );
-  expect(error).toBeInstanceOf(ConflictException);
-  return ((error as ConflictException).getResponse() as { code: string }).code;
-}
 
 describe('GarageBrandsService', () => {
   it('answers unstated for a brand the garage has said nothing about', async () => {
@@ -169,39 +159,11 @@ describe('GarageBrandsService', () => {
     ).toBe(1);
   });
 
-  it('stores a job for a brand the garage works on, once', async () => {
-    const w = await world();
-    const jobType = randomUUID();
-    await setStance(w, w.dacia, 'works_on');
-
-    await addJob(w, w.dacia, jobType);
-    await addJob(w, w.dacia, jobType);
-
-    expect(
-      await prisma.garageBrandJob.findMany({ where: { garageId: w.garage } }),
-    ).toEqual([
-      expect.objectContaining({ brandId: w.dacia, jobTypeId: jobType }),
-    ]);
-  });
-
-  it.each([
-    ['does not take', 'does_not_take' as const],
-    ['has said nothing about', undefined],
-  ])('refuses a job for a brand the garage %s', async (_, stance) => {
-    const w = await world();
-    if (stance) await setStance(w, w.tesla, stance);
-
-    expect(await conflictCode(addJob(w, w.tesla, randomUUID()))).toBe(
-      'brand_not_worked_on',
-    );
-    expect(await prisma.garageBrandJob.count()).toBe(0);
-  });
-
   it('clears the fuels and the jobs of a brand the garage stops taking', async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
-    await addJob(w, w.dacia, randomUUID());
-    await addJob(w, w.dacia, randomUUID());
+    await seedJob(w, w.dacia, randomUUID());
+    await seedJob(w, w.dacia, randomUUID());
 
     await setStance(w, w.dacia, 'does_not_take');
 
@@ -287,7 +249,7 @@ describe('GarageBrandsService', () => {
     const jobType = randomUUID();
 
     await setStance(w, w.dacia, 'works_on');
-    await addJob(w, w.dacia, jobType);
+    await seedJob(w, w.dacia, jobType);
     await setStance(w, w.dacia, 'does_not_take');
 
     const entries = await history(w);
@@ -299,13 +261,6 @@ describe('GarageBrandsService', () => {
         newValue: expect.objectContaining({ stance: 'works_on' }),
         subjectId: w.dacia,
         subjectType: 'garage_brand',
-      }),
-      expect.objectContaining({
-        action: 'create',
-        actorId: w.mihai,
-        garageId: w.garage,
-        subjectId: jobType,
-        subjectType: 'garage_brand_job',
       }),
       ...['stance', 'petrol', 'diesel', 'hybrid', 'electric'].map((field) =>
         expect.objectContaining({

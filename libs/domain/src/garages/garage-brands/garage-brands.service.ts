@@ -5,12 +5,7 @@ import {
   type GarageBrandOwnerAnswerDto,
   type ReplaceGarageBrandsDto,
 } from '@motor-fix/contracts';
-import {
-  ConflictException,
-  HttpStatus,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { assertCatalogued } from './write-garage-brands';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
@@ -438,39 +433,5 @@ export class GarageBrandsService {
       })),
     );
     return result;
-  }
-
-  async addJob(
-    tx: Prisma.TransactionClient,
-    actor: Actor,
-    garageId: string,
-    brandId: string,
-    jobTypeId: string,
-  ) {
-    assertGarage(actor, garageId);
-    const row = await tx.garageBrand.findUnique({
-      select: { stance: true },
-      where: { garageId_brandId: { brandId, garageId } },
-    });
-    if (row?.stance !== 'works_on') {
-      throw new ConflictException({
-        code: 'brand_not_worked_on',
-        message: 'The garage does not work on this brand',
-      });
-    }
-    const { count } = await tx.garageBrandJob.createMany({
-      data: { brandId, garageId, jobTypeId },
-      skipDuplicates: true,
-    });
-    if (count === 0) return;
-    await this.audit.record(tx, {
-      action: 'create',
-      actorId: actor.accountId,
-      actorRole: actor.role,
-      garageId,
-      newValue: { brandId },
-      subjectId: jobTypeId,
-      subjectType: 'garage_brand_job',
-    });
   }
 }
