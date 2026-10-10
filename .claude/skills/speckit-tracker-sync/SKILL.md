@@ -68,6 +68,8 @@ Each call prints one JSON line and appends `- <date> · <event> · <item> ·
   (or FAILED). Writes are paced at one a second.
 - An issue missing for the story is logged PENDING; the script never creates
   a story's issue on its own (`file` does, on request).
+- `file` and `debt` reuse an open issue with exactly the same title instead
+  of filing a second (a run that failed after its POST left one).
 
 ## 2. What each event does
 
