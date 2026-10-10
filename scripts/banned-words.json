@@ -14,7 +14,7 @@
     },
     "scripts/pr-body-check.ts": {
       "count": 5,
-      "reason": "Accepts the old story heading and link on PRs opened before ST-1036; dropped once #337 and #338 merge (george-hutanu/motor-fix-specs#1135)."
+      "reason": "Accepts the old story heading and link on PRs opened before ST-1036; dropped once #337 merges (george-hutanu/motor-fix-specs#1135)."
     }
   },
   "words": ["notion"]

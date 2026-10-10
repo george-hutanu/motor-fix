@@ -7,7 +7,7 @@
 // anything is tested). A ready PR must also have no "_(fill in: …)_" placeholder,
 // no empty section, no bare N/A, every labelled line, every box ticked, a
 // story link (its issue in george-hutanu/motor-fix-specs; an older PR's link
-// to the retired tracker still passes until #337 and #338 merge, motor-fix-specs#1135) and a Conventional title with a scope. A PR
+// to the retired tracker still passes until #337 merges, motor-fix-specs#1135) and a Conventional title with a scope. A PR
 // opened before the rename keeps its "## Notion story" heading and "Notion in
 // sync" box: both are read as "## Story" and "Tracker in sync". HTML comments are hints
 // GitHub does not render, so they are removed before judging.
