@@ -1,0 +1,53 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.subject {
+  color: var(--mf-text-secondary);
+}
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+.reasons {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.reason {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.reason input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.error {
+  color: var(--mf-red-ink);
+  font-size: var(--mf-size-small);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}

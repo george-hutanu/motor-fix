@@ -39,7 +39,7 @@ export class RequestsView {
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
-    ['request.created', 'quote.sent'],
+    ['request.created', 'quote.sent', 'request.declined'],
   );
   protected readonly rows = computed(() => {
     const items = this.list.value()?.items;

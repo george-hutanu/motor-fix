@@ -141,6 +141,8 @@ export type { GarageRequestsControllerList$Params as GarageRequestsControllerLis
 export { garageRequestsControllerList as garageRequestsControllerList } from './fn/garage-requests/garage-requests-controller-list';
 export type { GarageRequestsControllerGet$Params as GarageRequestsControllerGet$Params } from './fn/garage-requests/garage-requests-controller-get';
 export { garageRequestsControllerGet as garageRequestsControllerGet } from './fn/garage-requests/garage-requests-controller-get';
+export type { GarageRequestsControllerDecline$Params as GarageRequestsControllerDecline$Params } from './fn/garage-requests/garage-requests-controller-decline';
+export { garageRequestsControllerDecline as garageRequestsControllerDecline } from './fn/garage-requests/garage-requests-controller-decline';
 export type { QuoteRequestsControllerSend$Params as QuoteRequestsControllerSend$Params } from './fn/quote-requests/quote-requests-controller-send';
 export { quoteRequestsControllerSend as quoteRequestsControllerSend } from './fn/quote-requests/quote-requests-controller-send';
 export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControllerCandidates$Params } from './fn/quote-requests/quote-requests-controller-candidates';

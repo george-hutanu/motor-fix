@@ -48,6 +48,7 @@ export type { CreateCarDto } from './models/create-car-dto';
 export type { CreateGarageReportDto } from './models/create-garage-report-dto';
 export type { CreateListingDraftDto } from './models/create-listing-draft-dto';
 export type { CreateQuoteRequestDto } from './models/create-quote-request-dto';
+export type { DeclineRequestDto } from './models/decline-request-dto';
 export type { DocumentPageAddressDto } from './models/document-page-address-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
@@ -342,6 +343,8 @@ export type { GarageRequestsControllerList$Params as GarageRequestsControllerLis
 export { garageRequestsControllerList as garageRequestsControllerList } from './fn/garage-requests/garage-requests-controller-list';
 export type { GarageRequestsControllerGet$Params as GarageRequestsControllerGet$Params } from './fn/garage-requests/garage-requests-controller-get';
 export { garageRequestsControllerGet as garageRequestsControllerGet } from './fn/garage-requests/garage-requests-controller-get';
+export type { GarageRequestsControllerDecline$Params as GarageRequestsControllerDecline$Params } from './fn/garage-requests/garage-requests-controller-decline';
+export { garageRequestsControllerDecline as garageRequestsControllerDecline } from './fn/garage-requests/garage-requests-controller-decline';
 export type { QuoteRequestsControllerSend$Params as QuoteRequestsControllerSend$Params } from './fn/quote-requests/quote-requests-controller-send';
 export { quoteRequestsControllerSend as quoteRequestsControllerSend } from './fn/quote-requests/quote-requests-controller-send';
 export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControllerCandidates$Params } from './fn/quote-requests/quote-requests-controller-candidates';

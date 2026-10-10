@@ -12,6 +12,11 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { garageOf, Session } from '../../session';
+import {
+  type DeclineRequestData,
+  DeclineRequestDialog,
+  type DeclineRequestResult,
+} from '../decline-request-dialog/decline-request-dialog';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 import {
   type SendQuoteData,
@@ -21,7 +26,8 @@ import {
 
 // One request as the garage sees it: who, the car, the jobs, the mechanic and
 // the age; a closed one says why it closed in place of the mechanic and age.
-// An open, unanswered row offers Trimite oferta to whoever may answer quotes.
+// An open, unanswered row offers Trimite oferta and Refuză to whoever may
+// answer quotes.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -76,5 +82,22 @@ export class GarageRequestRow {
     );
     if (result === 'sent') this.feed?.sent(this.row().id);
     else if (result === 'refused') this.feed?.reload();
+  }
+
+  protected async decline() {
+    const row = this.row();
+    const result = await this.overlays.open<
+      DeclineRequestResult,
+      DeclineRequestData
+    >(DeclineRequestDialog, {
+      data: {
+        car: `${row.car.brand} ${row.car.model} · ${row.car.year}`,
+        driver: row.driver.shortName,
+        requestId: row.id,
+      },
+      shape: 'dialog',
+      title: 'garage.requests.decline.title',
+    });
+    if (result === 'declined' || result === 'refused') this.feed?.reload();
   }
 }

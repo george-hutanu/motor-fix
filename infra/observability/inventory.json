@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 105,
+    "count": 106,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -177,6 +177,17 @@
       "story": "ST-344"
     },
     {
+      "kind": "queue",
+      "name": "quote-timers",
+      "source": "libs/domain/src/quotes/decline-window/decline-window.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "decline-window-sweep-late"
+      ],
+      "reason": "carries the relay's request.declined events and each decline's undo-window timer and sweep; counted by motorfix_decline_windows_closed_total (sent, muted, skipped_undone, skipped_closed, already_told, by timer or sweep) with one DeclineWindow log line per window naming the recipient id; BullMQ's queue metrics cover depth and failures; decline-window-sweep-late fires when the sweep closes more than 10 windows in an hour (lost timers)",
+      "story": "ST-345"
+    },
+    {
       "kind": "outside-service",
       "name": "brevo",
       "host": "api.brevo.com",
@@ -315,13 +326,13 @@
     },
     {
       "kind": "product-counter",
-      "name": "mcp_tool_calls_total{tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats\"}",
+      "name": "mcp_tool_calls_total{tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats|decline_quote_request\"}",
       "source": "libs/mcp-tools/src/catalogue.ts",
       "dashboard": "motorfix-mcp",
       "alerts": [
         "mcp-tool-errors"
       ],
-      "reason": "the four garage read tools count under mcp_tool_calls_total{tool,outcome} and mcp_tool_call_duration_seconds{tool}, one McpToolCall log line and an mcp.tool <name> span per call, like every tool; the existing mcp-tool-errors alert sums every tool; reads write no audit row",
+      "reason": "the four garage read tools count under mcp_tool_calls_total{tool,outcome} and mcp_tool_call_duration_seconds{tool}, one McpToolCall log line and an mcp.tool <name> span per call, like every tool; the existing mcp-tool-errors alert sums every tool; reads write no audit row; decline_quote_request (ST-345) acts, so its decline writes the audit row marked via the assistant and counts in motorfix_request_declines_total",
       "story": "ST-374"
     },
     {
@@ -359,6 +370,24 @@
       "alerts": "none",
       "reason": "counts quotes garages send by outcome (sent, refused, already_answered, request_not_open; refused covers the service's own 400, 403 and 404, the validation pipe's 400s show in the route metric) and records motorfix_quote_response_minutes (request created to quote sent) with no identifiers, with one Quotes log line per send naming the quote id, the request id and the outcome; no agreed threshold yet, ST-880 adds the alert rules",
       "story": "ST-344"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_request_declines_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts garage declines by outcome (declined, already_answered, request_not_open, invalid; invalid counts the service's own 403 and 404, the validation pipe's 400s show in the route metric) and reason code, with no identifiers, and one Declines log line per decline naming the recipient and request ids; the route is POST /api/v1/garage/requests/{id}/decline in http.server.request.duration; no agreed threshold yet, ST-880 adds the alert rules",
+      "story": "ST-345"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_decline_windows_closed_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each closed decline undo window by outcome and whether the timer or the sweep closed it; a rising sweep share means lost timers; no agreed threshold yet, ST-880 adds the alert rules",
+      "story": "ST-345"
     },
     {
       "kind": "product-counter",
