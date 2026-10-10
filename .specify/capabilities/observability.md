@@ -17,7 +17,10 @@ features:
   - 374-assistant-requests
   - 1016-mcp-staging
   - 344-send-quote
+  - 244-analytics-news-consent
   - 209-status-change-emails
+  - 251-monitoring-backups
+  - 1024-alert-rules
 ---
 
 # Capability: Observability
@@ -386,9 +389,13 @@ _From 879-dashboards._
 
 _From 879-dashboards._
 
-### 879-FR-010 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from the fixed sets of FR-009 (876-FR-011), and the series the seven counters add per instance MUST stay under 50, asserted by a unit test as ST-878 did for its figures.
+### 244-FR-018 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from fixed sets (876-FR-011), and the series all product counters add per instance, the consent counter included, MUST stay under 60, asserted by a unit test. (Replaces 879-FR-010's "seven counters under 50": its test already counted every product counter and stood at 49, so the three consent series need the room; 60 stays far inside the 1.5k-of-10k series budget.)
 
-_From 879-dashboards._
+_From 244-analytics-news-consent._
+
+### 251-FR-018 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from fixed sets, and the series the product counters add per instance MUST stay under 60, asserted by a unit test. The outage alert's two e-mail templates add two series; with ST-209's status e-mails, merged first and already asserting under 60, the total is 56.
+
+_From 251-monitoring-backups._
 
 ### 879-FR-011 — With telemetry off the counters MUST be no-ops with no behaviour change to the use cases (876-FR-014); each counter MUST have a colocated test that runs the action with a metrics reader attached and asserts the increment and its labels, and a failed action (a refused sign-in, a search that throws) MUST count nothing.
 
@@ -458,9 +465,97 @@ _From 1016-mcp-staging._
 
 _From 344-send-quote._
 
+### 244-FR-016 — The three operations (`POST /api/v1/consents`, `POST /api/v1/me/consents`, `GET /api/v1/me/consents`) and the outside call to Plausible MUST ship with their observability in the same PR: the request-duration metric by route for the three routes, one log line per stored record (decision, kind, signed in or not, never the browser id or the account id in clear), a counter of records by decision, a panel on the API dashboard and an entry each in `infra/observability/inventory.json` (the endpoints and the Plausible outside call, which is a browser-side call and says so as its reason), with an alert or the reason there is none.
+
+_From 244-analytics-news-consent._
+
 ### 209-FR-014 — Observability: the consumer MUST count the messages it builds per outcome (`built`, `skipped` — no owner or no decision to tell about) in one product counter on the `motorfix-queues` dashboard, log one line per event with the file id, the decision and how many owners it reached (never the note, the address or the e-mail), run inside the worker's existing trace as its own span, and be listed in `infra/observability/inventory.json` as a queue with its counter, dashboard panel and an alert rule on the queue's final job failures; `node scripts/observability-inventory.ts` MUST pass. The PR's Observability section names them.
 
 _From 209-status-change-emails._
+
+### 251-FR-002 — The repo MUST hold, under `infra/observability/`, the definition of two Grafana Cloud Synthetic Monitoring HTTP checks per configured environment: Home (the environment's public web URL, expecting 200, `service=web`) and the web server's `/health/ready` (expecting 200, ready only while the API's is, `service=api`; a web outage fails it too), each every 60 s from one EU probe, with a 10 s timeout. A Jest spec MUST read the files and assert the frequency, probe count, targets and the monthly execution budget (2 checks × 43,200 = 86,400, under the free tier's 100,000).
+
+_From 251-monitoring-backups._
+
+### 251-FR-003 — The repo MUST hold, under `infra/observability/alerts/`, one outage alert rule whose `service` label is named from the check's job (`motorfix-web` gives `web`; Synthetic Monitoring writes the check's own label as `label_service`), evaluated every 60 s with no pending period (`for: 0s`): a check whose `probe_success` was 0 for every run of the last 3 minutes (3 consecutive failures) fires one alert per check, labelled `outage=true` and `service` = `web` or `api`, and resolves on the first pass. The rule MUST reference only the two checks of FR-002 and route to one contact point, `motorfix-outage`, which carries both the MotorFix outage webhook and the admin e-mail. ST-880's threshold rules MUST NOT carry the `outage` label.
+
+_From 251-monitoring-backups._
+
+### 251-FR-004 — `infra/observability/README.md` MUST say how the checks, the rule and the contact point with its webhook and e-mail are imported (by hand, as the existing alert rules), which secret and variable the webhook needs (names only), and that the admin address list on the e-mail is updated by hand when an admin is added or removed.
+
+_From 251-monitoring-backups._
+
+### 251-FR-005 — The API MUST expose one endpoint that accepts Grafana's alerting webhook payload, open to visitors (`@Public()`, excluded from the OpenAPI document, so not in the public routes list; its own integration spec proves it is open to the token alone, as the Brevo webhook's is) and protected by a bearer token read from `OUTAGE_WEBHOOK_TOKEN`: the token is compared in constant time, a missing or wrong token answers 401, and when the variable is unset every call answers 401 and sends nothing. A body that is not a Grafana alerting payload answers 400 after the token check and sends nothing. The variable MUST be listed in `.env.example` by name with no value.
+
+_From 251-monitoring-backups._
+
+### 251-FR-006 — For each alert in the payload whose labels carry `outage=true`, the endpoint MUST send ADMIN_OUTAGE_ALERT to every active admin (an account with role `admin` and status `active`), by e-mail and push, with the state (`down` when the alert is firing, `back` when resolved), the service name and the alert's start time (firing) or end time (resolved); an alert without that label is acknowledged (204) and sends nothing. The endpoint MUST answer 204 on success and MUST NOT wait for the messages to be delivered.
+
+_From 251-monitoring-backups._
+
+### 251-FR-007 — One message pair per outage: the notification's event id MUST be derived from the alert's fingerprint, its start time (`startsAt`, read as one ISO time so two formats of one start give one id) and its state, so a repeated firing or resolved payload for the same outage sends nothing more (the existing uniqueness on kind, account, channel and event id), while a later outage of the same check (a new `startsAt`) is sent again.
+
+_From 251-monitoring-backups._
+
+### 251-FR-009 — The endpoint MUST write one structured log line per alert received (service, state, fingerprint, admin count; never the token or an address) and MUST be listed in `infra/observability/inventory.json` with its dashboard panel and its alert (or the reason for none).
+
+_From 251-monitoring-backups._
+
+### 251-FR-010 — The `node-app` image stage MUST start Node with source maps enabled (`NODE_OPTIONS=--enable-source-maps`), and the API, worker and MCP bundles' source maps MUST be present in the image, so a logged stack names the `.ts` source file and line. A Jest spec MUST assert the Dockerfile's runtime options and that each bundle's build emits its map; the drill of FR-015 and the staging check (one thrown error read in Grafana) are the end-to-end evidence, recorded in the runbook.
+
+_From 251-monitoring-backups._
+
+### 1024-FR-001 — The repository MUST hold five alert-rule files under `infra/observability/alerts/`: `api.json`, `worker.json`, `web.json`, `postgres.json` and `redis.json`, each in `mcp.json`'s format (`apiVersion: 1`, one group named after the service, folder `MotorFix`, `interval: 1m`), and every rule MUST carry a uid prefixed by its service name, a title starting with the service's name, `condition` `B`, `noDataState: OK`, `execErrState: Error`, the label `service` (`api`, `worker`, `web`, `postgres`, `redis`), an `annotations.summary` that names the environment (`{{ $labels.deployment_environment }}`) and a `dashboard_uid` naming the service's dashboard (`motorfix-api`, `motorfix-worker`, `motorfix-web`, `motorfix-postgres`, `motorfix-redis`), a query `A` on datasource uid `grafanacloud-prom` grouped by `deployment_environment`, and `notification_settings.receiver` `MotorFix owner`. A rule MUST NOT carry an `outage` label (251-FR-003), reference `probe_success`, or name an environment in a query.
+
+_From 1024-alert-rules._
+
+### 1024-FR-002 — `api.json`, `worker.json` and `web.json` MUST each hold a "down" rule (`api-down`, `worker-down`, `web-down`) that fires, per environment, when the service's `target_info{service_name="<service>"}` had samples in the last 24 hours and none in the last 5 minutes (`mcp-down`'s pattern, not pinned to an environment), `for: 0s`.
+
+_From 1024-alert-rules._
+
+### 1024-FR-003 — `api.json` and `web.json` MUST each hold an error-rate rule (`api-error-rate`, `web-error-rate`) that fires, per environment, when responses with status `5..` over all responses (`http_server_request_duration_seconds_count` for that `service_name`) in the last 10 minutes exceed 5 % and at least 20 responses were counted in that window, `for: 0s`. The worker answers no requests; its error arm is `worker-jobs-failed` (FR-005).
+
+_From 1024-alert-rules._
+
+### 1024-FR-004 — `api.json` MUST hold `api-latency` (p95 of `http_server_request_duration_seconds_bucket` for `service_name="api"` over 10 minutes above 1.5 s) and `web.json` `web-latency` (the same for `web`, above 3 s); `worker.json` MUST hold `worker-saturation` (`nodejs_eventloop_delay_p99_seconds` for `service_name="worker"` above 0.5 s); each `for: 5m`.
+
+_From 1024-alert-rules._
+
+### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`).
+
+_From 1024-alert-rules._
+
+### 1024-FR-006 — `postgres.json` MUST hold `postgres-unreachable` (`motorfix_datastore_up{store="postgres"}` read 0 for 5 minutes), `postgres-connections` (the sum of `motorfix_pg_connections` over `motorfix_pg_connections_max` above 80 % for 5 minutes) and `postgres-size` (`motorfix_pg_database_size_bytes` above 4 GiB for 5 minutes; the memory arm, since PostgreSQL exposes no memory figure).
+
+_From 1024-alert-rules._
+
+### 1024-FR-007 — `redis.json` MUST hold `redis-unreachable` (`motorfix_datastore_up{store="redis"}` read 0 for 5 minutes), `redis-memory` (`motorfix_redis_memory_used_bytes` over `motorfix_redis_memory_max_bytes` above 80 % where the maximum is above 0, else used memory above 256 MiB, for 5 minutes) and `redis-connections` (`motorfix_redis_clients_connected` above 100 for 5 minutes).
+
+_From 1024-alert-rules._
+
+### 1024-FR-008 — `infra/observability/inventory.json` MUST list, in place of `"none"`: for the `app` and `railway-service` entries `api`, `worker`, `web`, that service's rule uids; for every `queue` entry with `"alerts": "none"`, `worker-queue-backlog` and `worker-jobs-failed` (the `verification-result` and `quote-timers` entries keep theirs); for `postgresql` and `redis`, their three uids; for every `outside-service` and `endpoint` entry with `"alerts": "none"` whose reason names ST-880, the error-rate and latency uids of the service that calls it (worker: `worker-jobs-failed` and `worker-saturation`) (`dashboard` tells which: `motorfix-api` → api, `motorfix-worker` → worker, `motorfix-web-vitals` and `motorfix-web` → web); every `product-counter` keeps `"none"` with the reason that a count has no failure to alert on and names the rule of the service that reports it. No `reason` MUST name ST-880 afterwards, `web-e2e` and `openfreemap` stay as they are, and `node scripts/observability-inventory.ts` MUST pass.
+
+_From 1024-alert-rules._
+
+### 1024-FR-009 — `.github/workflows/grafana-alerts.yml` ("Grafana alerts") MUST run on `push` to `main` with paths `infra/observability/alerts/**` and `.github/workflows/grafana-alerts.yml`, and on `workflow_dispatch`; when `GRAFANA_SA_TOKEN` or `GRAFANA_URL` is unset it MUST print one notice naming the missing one, apply nothing and succeed; otherwise it MUST apply every `infra/observability/alerts/*.json` file to the `MotorFix` folder (uid `motorfix`, created when missing), one `PUT /api/v1/provisioning/folder/motorfix/rule-groups/<group>` per group with `X-Disable-Provenance: true`, so that Grafana's group of that name holds exactly the file's rules, printing one line per file, with the token sent only as a request header and never printed, each call bounded by a 60 s timeout; a refused or unanswered call is printed naming the file, the remaining files are still applied, and the step fails at the end. The existing `mcp.json`, `notifications.json` and `quotes.json` are applied unchanged.
+
+_From 1024-alert-rules._
+
+### 1024-FR-010 — A colocated Jest spec, `scripts/alert-rules.spec.ts` (run by the scripts project like `scripts/pr-body-check.spec.ts`), MUST read the files under `infra/observability/alerts/` and the workflow and assert FR-001 to FR-007 and FR-009 on this repository: every file parses, the five groups and their rule uids exist, every rule's labels, annotations, receiver, datasource, thresholds, windows and `for` match this spec, no uid repeats across files, no rule carries `outage` or names an environment, at most 50 rules in all, every metric a query names is one the dashboards under `infra/observability/grafana/dashboards/` query, and the workflow has the triggers, paths and skip condition of FR-009. It MUST fail on a fixture that breaks each rule (a duplicate uid, an `outage` label, an unknown metric, a missing receiver).
+
+_From 1024-alert-rules._
+
+### 1024-FR-011 — `infra/observability/README.md` MUST replace "Alert rules go in `infra/observability/alerts/`; ST-880 adds them" with one section naming the folder and files, the `MotorFix` folder, the `MotorFix owner` contact point, the rules' signals per service in one table, the workflow's name and triggers, `GRAFANA_SA_TOKEN` and `GRAFANA_URL` by name only, and that a change made only in Grafana's UI is overwritten by the next run.
+
+_From 1024-alert-rules._
+
+### 1024-FR-012 — Nothing in this feature MUST read, print or commit a Grafana URL, token or any other value; only variable names appear. No dependency is added, and no product source under `apps/` or `libs/*/src` changes (Constitution I).
+
+_From 1024-alert-rules._
+
+### 1024-FR-013 — The PR body's Observability section MUST list the rules per service with their thresholds, and its Notes MUST list the owner's two steps: the `MotorFix owner` contact point with the owner's e-mail exists in Grafana, and one test firing (Grafana's "Test" on the contact point, or a rule fired by hand) was received, each marked as not verifiable by the agent.
+
+_From 1024-alert-rules._
 
 ## Retired
 
@@ -468,3 +563,7 @@ _From 209-status-change-emails._
 
 - `875-FR-007` — superseded by `879-FR-016` (2026-10-08)
 - `881-FR-002` — superseded by `879-FR-012` (2026-10-08)
+
+- `879-FR-010` — superseded by `244-FR-018` (2026-10-10)
+
+- `879-FR-010` — superseded by `251-FR-018` (2026-10-10)

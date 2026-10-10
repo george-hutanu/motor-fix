@@ -122,6 +122,16 @@ export function countGarageReport(outcome: GarageReportOutcome) {
   ).add(1, { outcome });
 }
 
+// One per analytics choice stored, visitor or signed in.
+export function countConsentRecord(
+  decision: 'granted' | 'refused' | 'withdrawn',
+) {
+  counter(
+    'motorfix_consent_records_total',
+    'Analytics consent choices stored, by decision',
+  ).add(1, { decision });
+}
+
 type AccountChangeField = 'name' | 'city' | 'email' | 'phone' | 'password';
 
 // One saved change of the account's own details, by field.

@@ -5,9 +5,14 @@ import { test } from './fixtures.js';
 
 const SETTINGS = '/app/garage/settings';
 const OUTSIDE = ['email', 'push'] as const;
+// The restore runs after a test has left the request's keep-alive socket idle
+// for longer than the server keeps it, so a call can meet a reset socket
+// (ECONNRESET); only that is retried, never an answer.
+const RESET = { maxRetries: 2 };
 
 async function accessToken(request: APIRequestContext, email: string) {
   const res = await request.post('/api/v1/auth/sign-in', {
+    ...RESET,
     data: { email, password: PASSWORD, remember: false },
   });
   expect(res.ok()).toBe(true);
@@ -21,6 +26,7 @@ async function restore(request: APIRequestContext) {
     Authorization: `Bearer ${await accessToken(request, ACCOUNTS.garage)}`,
   };
   const read = await request.get('/api/v1/notification-preferences', {
+    ...RESET,
     headers,
   });
   const { staff } = (await read.json()) as {
@@ -28,6 +34,7 @@ async function restore(request: APIRequestContext) {
   };
   const garageId = staff.find((entry) => entry.role === 'owner')?.garageId;
   const saved = await request.put('/api/v1/notification-preferences', {
+    ...RESET,
     data: {
       preferences: OUTSIDE.map((channel) => ({
         channel,

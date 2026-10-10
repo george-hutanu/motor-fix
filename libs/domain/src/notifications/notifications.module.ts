@@ -38,6 +38,8 @@ import {
   NOTIFICATIONS_QUEUE,
   NotificationsService,
 } from './notifications.service';
+import { OutageController } from './outage/outage.controller';
+import { OUTAGE_WEBHOOK_TOKEN, OutageService } from './outage/outage.service';
 import { PHONE_CONFIG, type PhoneConfig } from './phone-config';
 import { NotificationPreferencesController } from './preferences/preferences.controller';
 import { NotificationPreferencesService } from './preferences/preferences.service';
@@ -73,6 +75,8 @@ interface NotificationsOptions {
   email: EmailConfig;
   // The VAPID identity; null (the default) leaves push off.
   push?: PushConfig | null;
+  // Grafana's outage webhook bearer; unset refuses every call (API only).
+  outageWebhookToken?: string;
 }
 
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
@@ -122,7 +126,7 @@ export class NotificationsModule implements OnApplicationShutdown {
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
-  // the Brevo webhook and each person's message choices.
+  // the Brevo and outage webhooks and each person's message choices.
   // `auth` is the application's AuthModule, whose guard the test route uses.
   static register(
     options: NotificationsOptions,
@@ -135,6 +139,7 @@ export class NotificationsModule implements OnApplicationShutdown {
         BrevoWebhookController,
         NotificationPreferencesController,
         NewsController,
+        OutageController,
         PushSubscriptionsController,
       ],
       exports: [NotificationsService],
@@ -149,6 +154,11 @@ export class NotificationsModule implements OnApplicationShutdown {
         BellService,
         NotificationPreferencesService,
         NewsService,
+        OutageService,
+        {
+          provide: OUTAGE_WEBHOOK_TOKEN,
+          useValue: options.outageWebhookToken ?? '',
+        },
         PushSubscriptionsService,
       ],
     };

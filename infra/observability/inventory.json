@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 107,
+    "count": 110,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -9,8 +9,11 @@
       "name": "api",
       "source": "apps/api",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "api-down",
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-881"
     },
     {
@@ -30,8 +33,11 @@
       "name": "web",
       "source": "apps/web",
       "dashboard": "motorfix-web",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "web-down",
+        "web-error-rate",
+        "web-latency"
+      ],
       "story": "ST-877"
     },
     {
@@ -48,8 +54,12 @@
       "name": "worker",
       "source": "apps/worker",
       "dashboard": "motorfix-worker",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "worker-down",
+        "worker-saturation",
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
       "story": "ST-881"
     },
     {
@@ -57,8 +67,11 @@
       "name": "api",
       "source": "scripts/railway-deploy.ts",
       "dashboard": "motorfix-overview",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "api-down",
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-881"
     },
     {
@@ -66,8 +79,12 @@
       "name": "worker",
       "source": "scripts/railway-deploy.ts",
       "dashboard": "motorfix-overview",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "worker-down",
+        "worker-saturation",
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
       "story": "ST-881"
     },
     {
@@ -75,8 +92,11 @@
       "name": "web",
       "source": "scripts/railway-deploy.ts",
       "dashboard": "motorfix-overview",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "web-down",
+        "web-error-rate",
+        "web-latency"
+      ],
       "story": "ST-877"
     },
     {
@@ -107,8 +127,11 @@
       "name": "insights",
       "source": "libs/domain/src/insights/insights.module.ts",
       "dashboard": "motorfix-queues",
-      "alerts": "none",
-      "reason": "two nightly jobs, platform-daily and response-stats, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; no alert: a missed night leaves the last figures in place and the next night recounts, and ST-880 adds the queue alerts",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
+      "reason": "two nightly jobs, platform-daily and response-stats, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night leaves the last figures in place and the next night recounts",
       "story": "ST-881"
     },
     {
@@ -116,8 +139,10 @@
       "name": "reminders",
       "source": "libs/domain/src/cars/reminders/reminders.module.ts",
       "dashboard": "motorfix-queues",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
       "story": "ST-881"
     },
     {
@@ -125,8 +150,10 @@
       "name": "notifications",
       "source": "libs/domain/src/notifications/notifications.module.ts",
       "dashboard": "motorfix-queues",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
       "story": "ST-881"
     },
     {
@@ -134,8 +161,10 @@
       "name": "listing-photos",
       "source": "libs/domain/src/garages/photos/listing-photos/listing-photos.module.ts",
       "dashboard": "motorfix-queues",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
       "story": "ST-881"
     },
     {
@@ -143,8 +172,10 @@
       "name": "news",
       "source": "libs/domain/src/notifications/news/news.fan-out.ts",
       "dashboard": "motorfix-queues",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
       "story": "ST-881"
     },
     {
@@ -152,8 +183,10 @@
       "name": "request-received",
       "source": "libs/domain/src/notifications/request-received/request-received.fan-out.ts",
       "dashboard": "motorfix-queues",
-      "alerts": "none",
-      "reason": "no agreed threshold yet; ST-880 adds the alerts",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
       "story": "ST-343"
     },
     {
@@ -172,8 +205,11 @@
       "name": "quote-received",
       "source": "libs/domain/src/notifications/quote-received/quote-received.fan-out.ts",
       "dashboard": "motorfix-queues",
-      "alerts": "none",
-      "reason": "counted by motorfix_quote_received_total (built, muted) on motorfix-queues and motorfix-product; BullMQ's queue metrics cover depth and failures; no agreed threshold yet, ST-880 adds the alerts",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_quote_received_total (built, muted) on motorfix-queues and motorfix-product; BullMQ's queue metrics cover depth and failures",
       "story": "ST-344"
     },
     {
@@ -193,8 +229,12 @@
       "host": "api.brevo.com",
       "source": "libs/domain/src/notifications/email-config.ts",
       "dashboard": "motorfix-worker",
-      "alerts": "none",
-      "reason": "carries e-mail and the WhatsApp sign-in and phone-change codes (ST-139: sent straight from the API, a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as the sign-in's 502 or the phone change's 503 send_failed); ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "worker-jobs-failed",
+        "worker-saturation"
+      ],
+      "reason": "carries e-mail and the WhatsApp sign-in and phone-change codes (ST-139: sent straight from the API, a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as the sign-in's 502 or the phone change's 503 send_failed, which api-error-rate covers); worker-jobs-failed and worker-saturation cover the worker's e-mail sends",
       "story": "ST-881"
     },
     {
@@ -203,8 +243,10 @@
       "host": "accounts.google.com",
       "source": "libs/domain/src/auth/oauth/providers.ts",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-881"
     },
     {
@@ -213,8 +255,10 @@
       "host": "appleid.apple.com",
       "source": "libs/domain/src/auth/oauth/providers.ts",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-881"
     },
     {
@@ -223,8 +267,10 @@
       "client": "s3",
       "source": "libs/domain/src/storage/storage.service.ts",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-881"
     },
     {
@@ -233,8 +279,10 @@
       "client": "web-push",
       "source": "libs/domain/src/notifications/push/push.ts",
       "dashboard": "motorfix-worker",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "worker-jobs-failed",
+        "worker-saturation"
+      ],
       "story": "ST-881"
     },
     {
@@ -242,8 +290,11 @@
       "name": "postgresql",
       "source": "libs/contracts/src/env.ts",
       "dashboard": "motorfix-postgres",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "postgres-unreachable",
+        "postgres-connections",
+        "postgres-size"
+      ],
       "story": "ST-881"
     },
     {
@@ -251,8 +302,11 @@
       "name": "redis",
       "source": "libs/contracts/src/env.ts",
       "dashboard": "motorfix-redis",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "redis-unreachable",
+        "redis-memory",
+        "redis-connections"
+      ],
       "story": "ST-881"
     },
     {
@@ -261,8 +315,11 @@
       "host": "api.geoapify.com",
       "source": "libs/domain/src/places/providers/geoapify-places.provider.ts",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}; ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}",
       "story": "ST-111"
     },
     {
@@ -281,7 +338,7 @@
       "source": "libs/domain/src/auth/maintenance.ts",
       "dashboard": "none",
       "alerts": "none",
-      "reason": "counts calls refused while maintenance is on, by route and role (visitor or signed_in); ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "counts calls refused while maintenance is on, by route and role (visitor or signed_in); ST-879 adds the dashboard; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-261"
     },
     {
@@ -290,7 +347,7 @@
       "source": "libs/domain/src/admin/platform-rules/changes/changes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts rule change requests by action (requested, approved, refused, cancelled), with one PlatformRuleChanges log line per step; ST-880 adds the alerts",
+      "reason": "counts rule change requests by action (requested, approved, refused, cancelled), with one PlatformRuleChanges log line per step; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-260"
     },
     {
@@ -298,8 +355,11 @@
       "name": "grafana-faro",
       "source": "apps/web/src/app/telemetry/browser/faro.ts",
       "dashboard": "motorfix-web-vitals",
-      "alerts": "none",
-      "reason": "the browser's collector; ST-880 adds the alerts",
+      "alerts": [
+        "web-error-rate",
+        "web-latency"
+      ],
+      "reason": "the browser's collector",
       "story": "ST-877"
     },
     {
@@ -313,6 +373,16 @@
       ],
       "reason": "the identity server signing-key fetch, host read from ASSISTANT_ISSUER; counted in mcp_key_fetches_total{outcome} on the mcp dashboard; a failed fetch fires mcp-key-fetch-failures, and calls answer 503 (not counted as sign-in failures); the IssuerProbe reads its discovery document once a minute into mcp_issuer_up, which fires mcp-issuer-unreachable",
       "story": "ST-365"
+    },
+    {
+      "kind": "outside-service",
+      "name": "plausible",
+      "host": "plausible.io",
+      "source": "apps/web/src/app/consent/plausible/plausible.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "only the visitor's browser calls it, and only after a valid Accept; nothing on the server waits on it, Plausible's own site shows the page views, and the consent choices it rests on are counted on motorfix-product (motorfix_consent_records_total)",
+      "story": "ST-244"
     },
     {
       "kind": "product-counter",
@@ -331,7 +401,7 @@
       "source": "libs/domain/src/garages/public-garages/public-garages.metrics.ts",
       "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "counts the public profile cache by outcome (hit, miss, drop); ST-880 adds the alerts",
+      "reason": "counts the public profile cache by outcome (hit, miss, drop); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-307"
     },
     {
@@ -340,7 +410,7 @@
       "source": "libs/domain/src/quotes/quote-requests/quote-requests.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts quote requests sent by outcome (sent with its recipients, cannot_receive, limit, invalid — invalid counts the use case's own refusals, not the validation pipe's or a missing Idempotency-Key), with one log line per send naming the outcome and the request id; ST-880 adds the alert rules",
+      "reason": "counts quote requests sent by outcome (sent with its recipients, cannot_receive, limit, invalid — invalid counts the use case's own refusals, not the validation pipe's or a missing Idempotency-Key), with one log line per send naming the outcome and the request id; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-221"
     },
     {
@@ -349,7 +419,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each garage a new request reaches by outcome (built, muted, skipped), with one log line per event naming the request id and how many staff it reached; no agreed threshold yet, ST-880 adds the alert rules",
+      "reason": "counts each garage a new request reaches by outcome (built, muted, skipped), with one log line per event naming the request id and how many staff it reached; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-343"
     },
     {
@@ -358,7 +428,7 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts quotes garages send by outcome (sent, refused, already_answered, request_not_open; refused covers the service's own 400, 403 and 404, the validation pipe's 400s show in the route metric) and records motorfix_quote_response_minutes (request created to quote sent) with no identifiers, with one Quotes log line per send naming the quote id, the request id and the outcome; no agreed threshold yet, ST-880 adds the alert rules",
+      "reason": "counts quotes garages send by outcome (sent, refused, already_answered, request_not_open; refused covers the service's own 400, 403 and 404, the validation pipe's 400s show in the route metric) and records motorfix_quote_response_minutes (request created to quote sent) with no identifiers, with one Quotes log line per send naming the quote id, the request id and the outcome; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-344"
     },
     {
@@ -367,7 +437,7 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts garage declines by outcome (declined, already_answered, request_not_open, invalid; invalid counts the service's own 403 and 404, the validation pipe's 400s show in the route metric) and reason code, with no identifiers, and one Declines log line per decline naming the recipient and request ids; the route is POST /api/v1/garage/requests/{id}/decline in http.server.request.duration; no agreed threshold yet, ST-880 adds the alert rules",
+      "reason": "counts garage declines by outcome (declined, already_answered, request_not_open, invalid; invalid counts the service's own 403 and 404, the validation pipe's 400s show in the route metric) and reason code, with no identifiers, and one Declines log line per decline naming the recipient and request ids; the route is POST /api/v1/garage/requests/{id}/decline in http.server.request.duration; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-345"
     },
     {
@@ -376,7 +446,7 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each closed decline undo window by outcome and whether the timer or the sweep closed it; a rising sweep share means lost timers; no agreed threshold yet, ST-880 adds the alert rules",
+      "reason": "counts each closed decline undo window by outcome and whether the timer or the sweep closed it; a rising sweep share means lost timers; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-345"
     },
     {
@@ -394,7 +464,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "counts each sent quote announced to its driver by outcome (built, muted), with the fan-out's log line naming the quote id; also on motorfix-product; no agreed threshold yet, ST-880 adds the alert rules",
+      "reason": "counts each sent quote announced to its driver by outcome (built, muted), with the fan-out's log line naming the quote id; also on motorfix-product; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-344"
     },
     {
@@ -403,8 +473,10 @@
       "source": "libs/domain/src/quotes/quote-requests/quote-requests.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/quote-requests and /api/v1/quote-requests/garages",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-221"
     },
     {
@@ -413,8 +485,11 @@
       "source": "libs/domain/src/quotes/quotes/quotes.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/quotes",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "one log line per send naming the quote id, the request id and the outcome; the send counter and response-time histogram are the motorfix_quotes_sent_total entry; no agreed threshold yet, ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one log line per send naming the quote id, the request id and the outcome; the send counter and response-time histogram are the motorfix_quotes_sent_total entry",
       "story": "ST-344"
     },
     {
@@ -423,7 +498,7 @@
       "source": "libs/domain/src/search/garage-search/garage-search.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "ST-880 adds the alert rules",
+      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -432,7 +507,7 @@
       "source": "libs/domain/src/auth/sign-in.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "ST-880 adds the alert rules",
+      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -441,7 +516,7 @@
       "source": "libs/domain/src/garages/listing-drafts/listing-drafts.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "ST-880 adds the alert rules",
+      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -450,7 +525,7 @@
       "source": "libs/domain/src/garages/verification/verification.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "ST-880 adds the alert rules",
+      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -459,7 +534,7 @@
       "source": "libs/domain/src/notifications/notifications.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "ST-880 adds the alert rules",
+      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -468,7 +543,7 @@
       "source": "libs/domain/src/notifications/notifications.processor.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "ST-880 adds the alert rules",
+      "reason": "a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -477,7 +552,7 @@
       "source": "libs/domain/src/notifications/notifications.processor.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "ST-880 adds the alert rules",
+      "reason": "a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -486,8 +561,10 @@
       "source": "libs/domain/src/admin/admin-accounts/admin-accounts.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/accounts and /api/v1/admin/accounts/summary",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-1"
     },
     {
@@ -496,8 +573,11 @@
       "source": "libs/domain/src/workshop/job-steps/job-steps.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/steps, /order, /:stepId and /:stepId/done",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "each refusal logs one 'job step refused' line with ids and its code; ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each refusal logs one 'job step refused' line with ids and its code",
       "story": "ST-424"
     },
     {
@@ -506,7 +586,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); ST-880 adds the alerts",
+      "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-424"
     },
     {
@@ -524,8 +604,11 @@
       "source": "libs/domain/src/auth/me.controller.ts",
       "metric": "http.server.request.duration by http.route PATCH /api/v1/me, POST /api/v1/me/email, /api/v1/me/phone, /api/v1/me/phone/confirm and /api/v1/auth/confirm-email (the change link)",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the brevo entry and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 503 send_failed; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation; ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the brevo entry and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 503 send_failed; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-139"
     },
     {
@@ -534,8 +617,11 @@
       "source": "libs/domain/src/auth/password/password-change/password-change.controller.ts",
       "metric": "http.server.request.duration by http.route POST /api/v1/auth/password",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "each refusal logs one 'password change refused: <code>' line and a failed notice e-mail logs 'password changed e-mail not sent'; a saved change counts on motorfix_account_changes_total{field=\"password\"}; ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each refusal logs one 'password change refused: <code>' line and a failed notice e-mail logs 'password changed e-mail not sent'; a saved change counts on motorfix_account_changes_total{field=\"password\"}",
       "story": "ST-139"
     },
     {
@@ -544,8 +630,11 @@
       "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:id/reports",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "refusals show on the request-duration metric by route and status code; ST-880 adds the alerts",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "refusals show on the request-duration metric by route and status code",
       "story": "ST-312"
     },
     {
@@ -554,7 +643,7 @@
       "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "outcomes created, already_reported and refused (both 409); 404 and 429 read from the request-duration metric by route and status; ST-880 adds the alert rules",
+      "reason": "outcomes created, already_reported and refused (both 409); 404 and 429 read from the request-duration metric by route and status; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-312"
     },
     {
@@ -563,8 +652,11 @@
       "source": "libs/domain/src/garages/documents/listing-documents/listing-documents.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/listing-drafts/:id/documents/:kind, /upload-url and /:key",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts; a page left in storage after a failed delete logs one warning with the draft id and key",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a page left in storage after a failed delete logs one warning with the draft id and key",
       "story": "ST-206"
     },
     {
@@ -573,8 +665,11 @@
       "source": "libs/domain/src/garages/documents/legal-documents/legal-documents.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/documents/:documentId/pages/:n/download-url",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "ST-880 adds the alerts; each issued address writes one open entry in the history and counts motorfix_documents_opened_total",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each issued address writes one open entry in the history and counts motorfix_documents_opened_total",
       "story": "ST-206"
     },
     {
@@ -583,7 +678,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each confirmed document page by kind (onrc_certificate, rar_authorisation); ST-880 adds the alerts",
+      "reason": "counts each confirmed document page by kind (onrc_certificate, rar_authorisation); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-206"
     },
     {
@@ -592,7 +687,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each signed declaration; ST-880 adds the alerts",
+      "reason": "counts each signed declaration; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-206"
     },
     {
@@ -601,8 +696,40 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each time an admin opens a document page, by kind; ST-880 adds the alerts",
+      "reason": "counts each time an admin opens a document page, by kind; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-206"
+    },
+    {
+      "kind": "endpoint",
+      "name": "consents",
+      "source": "libs/domain/src/auth/consents/consents.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/consents and /api/v1/me/consents",
+      "dashboard": "motorfix-api",
+      "alerts": ["api-error-rate", "api-latency"],
+      "story": "ST-244"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_consent_records_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each analytics consent choice stored, by decision; a choice count has no failure mode of its own; the consents endpoint carries the api error-rate and latency rules",
+      "story": "ST-244"
+    },
+    {
+      "kind": "endpoint",
+      "name": "outage-alerts",
+      "source": "libs/domain/src/notifications/outage/outage.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/monitoring/outage-alerts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "outage",
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "Grafana's outage contact point calls it; one Outage log line per alert (service, state, fingerprint, admins, sent), never the token or an address; the uptime checks (infra/observability/uptime/checks.json) and the outage rule watch the services it reports on",
+      "story": "ST-251"
     }
   ]
 }

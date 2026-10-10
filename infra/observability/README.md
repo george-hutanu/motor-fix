@@ -87,7 +87,70 @@ reads to link the admin panel to the overview). Without either, both are
 skipped with a notice and the release goes on. A change made only in the
 Grafana UI is overwritten by the next release: edit the JSON instead.
 
-Alert rules go in `infra/observability/alerts/`; ST-880 adds them.
+## Alert rules
+
+`infra/observability/alerts/` holds one JSON file per rule group, in Grafana's
+provisioning format (`apiVersion: 1`, folder `MotorFix`, every minute):
+`api.json`, `web.json`, `worker.json`, `postgres.json` and `redis.json` for
+the services, `mcp.json`, `notifications.json` and `quotes.json` for the
+narrower signals. Each rule groups by `deployment_environment`, so an
+environment that never reported raises nothing, and carries its `service`
+label, a summary naming the environment and its dashboard's uid. The
+service rules notify the `MotorFix owner` contact point (the owner's e-mail),
+which is created by hand in Grafana once.
+
+| Service | Signals (the file holds each threshold) |
+|---|---|
+| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time |
+| worker | down, event-loop delay, oldest waiting job per queue, a job's final failure per queue (`verification-result` keeps its own rule) |
+| PostgreSQL | unreachable, connections used, database size |
+| Redis | unreachable, memory used, connected clients |
+
+The "Grafana alerts" workflow (`.github/workflows/grafana-alerts.yml`) applies
+every file on a push to `main` that changes one, and by hand
+(`workflow_dispatch`): it creates the `MotorFix` folder (uid `motorfix`) when
+missing and replaces each file's group whole, so a rule removed from a file
+leaves Grafana too, and a group whose file is gone is left alone. It uses
+`GRAFANA_SA_TOKEN` and `GRAFANA_URL`, as the release does, and without either
+it is skipped with a notice. A change made only in the Grafana UI is
+overwritten by the next run: edit the JSON instead. A file whose rule uid is
+already held by a rule imported by hand fails, naming the file and the group; delete that
+copy in Grafana once and run the workflow again.
+
+## Uptime checks and the outage alert
+
+Two Grafana Synthetic Monitoring HTTP checks watch staging from outside
+(`uptime/checks.json`): Home (`motorfix-web`) and `/health/ready`
+(`motorfix-api`, which answers 200 only while PostgreSQL, Redis and storage
+answer),
+each once a minute from one probe, failing after 10 seconds or on anything
+but 200. That is 86,400 runs a month against the free tier's 100,000, so a
+third check, or a second probe, does not fit.
+
+The rule in `alerts/outage.json` fires when every run of a check failed for
+3 minutes, one alert per service labelled `outage: "true"`, and resolves on
+the first passing run. Its contact point `motorfix-outage` sends both to the
+API's webhook, `POST /api/v1/monitoring/outage-alerts`, which sends every
+active admin one e-mail and one push for "down" and again for "back"
+(`ADMIN_OUTAGE_ALERT`, which no saved choice or quiet hours can mute). The
+same alert sent again sends nothing more.
+
+Set up by hand in Grafana Cloud, once per stack (nothing here calls its API):
+
+1. Synthetic Monitoring › Checks: create the two checks from
+   `uptime/checks.json`, `{PUBLIC_WEB_URL}` replaced by the environment's
+   public web address.
+2. Alerting › Contact points: `motorfix-outage`, a webhook to
+   `{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts` with the header
+   `Authorization: Bearer <token>`, and an e-mail integration listing every
+   admin's address (the fallback when the API itself is down; kept current
+   by hand when an admin joins or leaves).
+3. The API service in Railway: `OUTAGE_WEBHOOK_TOKEN`, the same token. Unset,
+   the webhook refuses every call.
+4. Alerting › Alert rules: import `alerts/outage.json`.
+
+A failed nightly backup run (`.github/workflows/backup.yml`) is the backup
+alert: GitHub e-mails the owner about the failed run.
 
 ## Inventory
 

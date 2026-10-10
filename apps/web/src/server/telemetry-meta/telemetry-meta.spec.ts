@@ -144,4 +144,33 @@ describe('withTelemetryMeta', () => {
         '</head><body></body></html>',
     );
   });
+
+  // @traces 244-FR-004
+  it('names the analytics domain in its own tag when one is set', async () => {
+    const res = await withTelemetryMeta(html(), undefined, 'motorfix.ro');
+
+    expect(await res.text()).toBe(
+      '<html><head><title>MotorFix</title>' +
+        '<meta name="mf-analytics" content="motorfix.ro">' +
+        '</head><body></body></html>',
+    );
+  });
+
+  // @traces 244-FR-004
+  it('puts both tags in when the collector and the analytics domain are set, escaping the domain', async () => {
+    const res = await withTelemetryMeta(html(), collector, 'a"&<b>');
+
+    const body = await res.text();
+    expect(body).toContain('<meta name="mf-telemetry"');
+    expect(body).toContain(
+      '<meta name="mf-analytics" content="a&quot;&amp;&lt;b&gt;">',
+    );
+  });
+
+  // @traces 244-FR-004
+  it('adds no analytics tag when no domain is set', async () => {
+    const res = await withTelemetryMeta(html(), collector, undefined);
+
+    expect(await res.text()).not.toContain('mf-analytics');
+  });
 });

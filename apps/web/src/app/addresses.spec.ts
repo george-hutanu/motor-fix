@@ -80,8 +80,9 @@ const robots = () =>
 
 const LANDMARKS = 'header, main, nav, footer, aside, section[aria-label]';
 
-// One main, at the top level, holding Home; every other part of the frame in a
-// landmark of its own, the site bar holding sign-in and the language switch.
+// One main, at the top level, holding Home; every other part of the frame
+// that holds anything in a landmark of its own, the site bar holding sign-in
+// and the language switch. The consent bar is empty on the server.
 function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
   const root = harness.fixture.nativeElement as HTMLElement;
   const mains = root.querySelectorAll('main');
@@ -94,6 +95,7 @@ function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
   const frame = root.querySelector('mf-public-frame');
   expect(frame).not.toBeNull();
   for (const part of Array.from(frame?.children ?? [])) {
+    if (part.tagName === 'MF-CONSENT-BAR') continue;
     const landmark = part.matches(LANDMARKS)
       ? part
       : part.querySelector(LANDMARKS);
