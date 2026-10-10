@@ -69,6 +69,9 @@
     "pending": "Waiting for confirmation: {address}",
     "phone": "Phone",
     "phoneLine": "A garage sees your number only after you accept its quote.",
+    "problem": {
+      "account_suspended": "Your account is suspended."
+    },
     "resend": "Send the link again",
     "resent": "Link sent.",
     "save": "Save",

@@ -70,6 +70,9 @@
     "pending": "În așteptarea confirmării: {address}",
     "phone": "Telefon",
     "phoneLine": "Service‑ul îți vede numărul doar după ce accepți oferta lui.",
+    "problem": {
+      "account_suspended": "Contul tău este suspendat."
+    },
     "resend": "Trimite linkul din nou",
     "resent": "Am trimis linkul.",
     "save": "Salvează",

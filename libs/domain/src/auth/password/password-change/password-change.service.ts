@@ -65,8 +65,11 @@ export class PasswordChangeService {
       where: { id: accountId },
     });
     const stored = account.identities[0]?.passwordHash;
+    // The e-mail a first password signs in with; null when one is replaced.
+    const first = stored
+      ? null
+      : this.mayCreate(account.email, family.openedAt);
     if (stored) await this.proven(accountId, stored, body.currentPassword);
-    else this.mayCreate(account.email, family.openedAt);
     if (weakPassword(body.newPassword)) {
       throw this.refused(
         refusal(
@@ -80,19 +83,14 @@ export class PasswordChangeService {
     const passwordHash = await hashPassword(body.newPassword);
     const at = new Date();
     await this.prisma.$transaction(async (tx) => {
-      if (stored) {
+      if (first) {
+        await tx.accountIdentity.create({
+          data: { accountId, method: 'password', passwordHash, subject: first },
+        });
+      } else {
         await tx.accountIdentity.updateMany({
           data: { passwordHash },
           where: { accountId, method: 'password' },
-        });
-      } else {
-        await tx.accountIdentity.create({
-          data: {
-            accountId,
-            method: 'password',
-            passwordHash,
-            subject: account.email as string,
-          },
         });
       }
       await tx.refreshToken.deleteMany({
@@ -153,7 +151,7 @@ export class PasswordChangeService {
 
   // A first password signs in with the account e-mail, and only a session
   // opened in the last ten minutes may set it.
-  private mayCreate(email: string | null, openedAt: Date) {
+  private mayCreate(email: string | null, openedAt: Date): string {
     if (!email) {
       throw this.refused(
         refusal(
@@ -172,6 +170,7 @@ export class PasswordChangeService {
         ),
       );
     }
+    return email;
   }
 
   // The notice e-mail and the other tabs' sign-out; the change stands

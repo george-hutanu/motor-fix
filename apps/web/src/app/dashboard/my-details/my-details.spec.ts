@@ -318,7 +318,9 @@ describe('editing the name and the city', () => {
     await settle();
 
     expect(field(element, 'Oraș').value).toBe('Sibiu');
-    expect(element.querySelector('[role="alert"]')?.textContent).toBeTruthy();
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Contul tău este suspendat.',
+    );
     expect(toast).not.toHaveBeenCalled();
     expect(current()?.city).toBeNull();
   });

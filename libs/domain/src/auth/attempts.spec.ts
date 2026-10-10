@@ -96,6 +96,30 @@ function countingRedis() {
 const sha256 = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 
+describe('a failed sign-in', () => {
+  it('logs a failure whose 15 minutes Redis refused to set', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const chain = {
+      exec: async () => [
+        [null, 1],
+        [new Error('ERR expire refused'), null],
+      ],
+      expire: () => chain,
+      incr: () => chain,
+    };
+    const refusing = { multi: () => chain } as unknown as Redis;
+
+    await new Attempts(refusing).fail('ana@example.test', '198.51.100.7');
+
+    expect(warn).toHaveBeenCalledWith(
+      'sign-in attempt limits skipped: Redis unavailable',
+    );
+    warn.mockRestore();
+  });
+});
+
 describe('the limits on sending a sign-in code', () => {
   const phone = '+40722123456';
   const address = '198.51.100.7';

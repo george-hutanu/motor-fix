@@ -113,7 +113,7 @@ export class Attempts {
           .incr(keyOf('address', client))
           .expire(keyOf('address', client), WINDOW_SECONDS);
       }
-      await counts.exec();
+      await counted(counts);
     } catch {
       this.unavailable('sign-in');
     }
