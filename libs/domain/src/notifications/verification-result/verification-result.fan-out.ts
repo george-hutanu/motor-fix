@@ -33,7 +33,9 @@ export const VERIFICATION_RESULT_CONSUMER = {
 // A job as the relay queues it: `id` is the outbox event's.
 export interface VerificationDecidedEvent {
   id: string;
-  payload: { decision?: string; fileId: string; garageId: string };
+  // Unchecked: the relay passes the payload through as recorded, so handle()
+  // checks each field before it trusts one.
+  payload: { decision?: unknown; fileId?: unknown; garageId?: unknown };
 }
 
 // Tells a garage's owners how its verification was decided, each in their
@@ -55,26 +57,29 @@ export class VerificationResultFanOut {
     job: Pick<Job<VerificationDecidedEvent>, 'data'>,
   ): Promise<void> {
     const { id: eventId, payload } = job.data;
-    const { decision = '', fileId, garageId } = payload;
+    const { decision, fileId, garageId } = payload;
+    if (
+      typeof decision !== 'string' ||
+      !DECISIONS.has(decision) ||
+      typeof fileId !== 'string' ||
+      typeof garageId !== 'string'
+    ) {
+      this.skip(fileId, decision);
+      return;
+    }
     // The file must be the named garage's: its owners are the ones told, and
     // its reason and note are what they read.
-    const file =
-      DECISIONS.has(decision) &&
-      typeof fileId === 'string' &&
-      typeof garageId === 'string'
-        ? await this.prisma.verificationFile.findFirst({
-            select: {
-              garage: { select: { slug: true } },
-              reasonCode: true,
-              reasonNote: true,
-            },
-            where: { garageId, id: fileId },
-          })
-        : null;
+    const file = await this.prisma.verificationFile.findFirst({
+      select: {
+        garage: { select: { slug: true } },
+        reasonCode: true,
+        reasonNote: true,
+      },
+      where: { garageId, id: fileId },
+    });
     const owners = file ? await this.owners(garageId) : new Map();
     if (!file || owners.size === 0) {
-      countVerificationResult('skipped');
-      this.logger.log(`verification file ${fileId} ${decision}: nobody told`);
+      this.skip(fileId, decision);
       return;
     }
     let told = 0;
@@ -93,6 +98,13 @@ export class VerificationResultFanOut {
     countVerificationResult('built');
     this.logger.log(
       `verification file ${fileId} ${decision} told to ${told} owners`,
+    );
+  }
+
+  private skip(fileId: unknown, decision: unknown): void {
+    countVerificationResult('skipped');
+    this.logger.log(
+      `verification file ${fileId ?? '?'} ${decision ?? '?'}: nobody told`,
     );
   }
 

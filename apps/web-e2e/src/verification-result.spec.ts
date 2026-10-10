@@ -2,12 +2,11 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ACCOUNTS } from './accounts.js';
-import { test } from './fixtures.js';
+import { MAILBOX, test } from './fixtures.js';
 
 // The decision e-mail as the worker sent it, read from the test mailbox the
 // local run starts (mailbox.mjs); a deployed address has none, so the config
 // leaves out flows tagged @mailbox there.
-const MAILBOX = 'http://127.0.0.1:3025';
 const SUBJECT = 'Service-ul tău e aprobat și pe hartă';
 const SLUG = 'atelier-test';
 

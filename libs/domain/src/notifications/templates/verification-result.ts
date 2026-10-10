@@ -4,7 +4,8 @@ import type { Template } from '../templates';
 // file. Each WhatsApp name is a template registered with Brevo. The note is
 // the admin's own words, so it goes in the e-mail only, never a push or bell.
 
-// The decisions an owner is told about, each with its own template.
+// The decisions an owner is told about, each with its own template. Typed
+// unknown so .has() takes a raw payload value before anything narrows it.
 export const DECISIONS: ReadonlySet<unknown> = new Set([
   'approved',
   'more_requested',

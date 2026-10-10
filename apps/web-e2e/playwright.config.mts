@@ -1,6 +1,8 @@
 import { nxE2EPreset } from '@nx/playwright/preset';
 import { defineConfig, devices } from '@playwright/test';
 
+import { MAILBOX } from './src/fixtures.js';
+
 // BASE_URL points the suite at a deployed environment; without it, the api, the
 // worker and the web dev server are started locally.
 const deployed = process.env['BASE_URL'];
@@ -15,7 +17,6 @@ const SERVER_START = 180_000;
 // PHONE_SENDING=on, PHONE_ALLOWLIST=+4070000*, WHATSAPP_SENDER and
 // WHATSAPP_TEMPLATES) come from the environment, set by CI's E2E job and by
 // .env locally.
-const MAILBOX = 'http://127.0.0.1:3025';
 // The api reads the stand-in OpenID issuer (openid.mjs, web-e2e:openid) as
 // Google when GOOGLE_ISSUER points at it, with any GOOGLE_CLIENT_ID and
 // GOOGLE_CLIENT_SECRET: CI's E2E job and .env locally set them.
