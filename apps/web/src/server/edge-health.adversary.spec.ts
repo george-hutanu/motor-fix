@@ -46,6 +46,7 @@ afterEach(async () => {
   await close(upstream);
 });
 
+// @traces 251-FR-001
 describe('web readiness under odd API answers', () => {
   it.each([200, 201, 204, 299])('is ready on %i', async (code) => {
     status = code;

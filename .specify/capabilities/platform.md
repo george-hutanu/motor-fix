@@ -70,6 +70,7 @@ features:
   - 1035-main-checkout-guard
   - 1037-remove-notion
   - 1119-drop-tracker-import
+  - 251-monitoring-backups
 ---
 
 # Capability: Platform
@@ -1637,6 +1638,30 @@ _From 1037-remove-notion._
 ### 1037-FR-006 — `level.mjs suggest` given `ST-<n>` or a URL MUST size the text it was given (no tracker read).
 
 _From 1037-remove-notion._
+
+### 251-FR-012 — A scheduled workflow MUST run every day at 03:00 UTC and on `workflow_dispatch`, one job per environment (`staging`, `production`), each in its GitHub environment. An environment whose `RAILWAY_SERVICE_POSTGRES` variable is unset MUST be skipped with a notice and MUST NOT fail the run; one whose variable is set but whose backup settings (`BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_GPG_PASSPHRASE`) are incomplete MUST fail naming the missing setting. A failed run is the backup alert at launch.
+
+_From 251-monitoring-backups._
+
+### 251-FR-013 — The dump MUST run inside the environment's PostgreSQL service over `railway ssh` (the service's own tools, PostgreSQL 18): one transaction-consistent snapshot that produces the dump in PostgreSQL's custom format and a manifest (JSON: environment, UTC timestamp, database server version, the encrypted object's size (`dump_size_bytes`, which the drill checks before it downloads), and the row count of every table in `public` taken in the same snapshot). Both MUST be streamed back to the runner, the dump encrypted with symmetric AES-256 (`gpg`) under the passphrase secret before it touches the runner's disk, and uploaded to the S3-compatible bucket as `<environment>/<timestamp>.dump.gpg` and `<environment>/<timestamp>.manifest.json`. The run's log MUST never print the passphrase, the keys, the database URL or the dump.
+
+_From 251-monitoring-backups._
+
+### 251-FR-014 — After a successful upload the job MUST delete that environment's objects older than 30 days and MUST NOT delete anything when the upload failed; the retention is one constant in the script.
+
+_From 251-monitoring-backups._
+
+### 251-FR-015 — A restore drill script MUST, given a backup key (default: the environment's newest), download and decrypt it, restore it into a fresh throwaway PostgreSQL of the manifest's major version (`postgres:18` for staging and production today; staging has no PostGIS, only `plpgsql` and `pg_stat_statements`) (removing a leftover one first), compare every table's row count with the manifest and fail on any difference naming the table, boot the API against it with the compose Redis and object storage and require `GET /health/ready` 200, print the duration of each step and the total, and tear the database down. A workflow MUST run it on `workflow_dispatch` and on the first day of every quarter on staging's newest backup; its failure is the alert.
+
+_From 251-monitoring-backups._
+
+### 251-FR-016 — The drill MUST time each step in the order download, decrypt, restore, compare, build, boot and print the total; it MUST be run once during this story on staging's backup, and the specs repo MUST gain a runbook (`docs/how-to/`) with the backup and restore steps, the secret and variable names, the measured time of each step, the recovery time and the data-loss window against the targets (back within 4 h; at most 15 min of data lost, which a daily dump does not meet: see Open questions), the on-call and admin-list steps and the source-map check of FR-010.
+
+_From 251-monitoring-backups._
+
+### 251-FR-017 — The runner-side logic (settings check, object naming, retention selection, manifest comparison, step timing) MUST live in the `scripts` project with Jest specs, and the two workflows MUST be checked by a spec for their triggers, environments and that no secret is echoed.
+
+_From 251-monitoring-backups._
 
 ## Retired
 

@@ -721,6 +721,20 @@
       ],
       "reason": "counts the daily rows the night writes and the days it logs as gaps, with one ProfileViews log line per day naming the day and the count; a failed night is the profile-views-job-failed alert",
       "story": "ST-143"
+    },
+    {
+      "kind": "endpoint",
+      "name": "outage-alerts",
+      "source": "libs/domain/src/notifications/outage/outage.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/monitoring/outage-alerts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "outage",
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "Grafana's outage contact point calls it; one Outage log line per alert (service, state, fingerprint, admins, sent), never the token or an address; the uptime checks (infra/observability/uptime/checks.json) and the outage rule watch the services it reports on",
+      "story": "ST-251"
     }
   ]
 }
