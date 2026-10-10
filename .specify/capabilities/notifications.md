@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 194-email-sending
   - 195-message-templates
@@ -26,6 +26,7 @@ features:
   - 343-live-quote-requests
   - 312-report-garage
   - 344-send-quote
+  - 139-edit-my-details
 ---
 
 # Capability: Notifications
@@ -581,6 +582,10 @@ _From 343-live-quote-requests._
 ### 344-FR-016 — `quote.sent` MUST have one registered consumer in the notifications worker which, per event, builds one QUOTE_RECEIVED through the existing notification service for the request's driver, subject the quote, on the channels the catalogue allows (e-mail, push, WhatsApp), honouring the driver's per-type, per-channel mute (198), with push falling back to e-mail for a person with no device (196-FR-007); parameters are the garage's name and the range in lei, never the note, the driver's data or the plate. The job id derives from the event id so a second relay builds nothing twice (257-FR-005). QUOTE_RECEIVED MUST gain its single-quote templates in Romanian and English for e-mail, push, WhatsApp and the bell, passing the template check (195-FR-009): push and bell "Ofertă nouă de la {garage}: {range} lei" / "New quote from {garage}: {range} lei", e-mail with a link to the driver's request; the grouped template stays.
 
 _From 344-send-quote._
+
+### 139-FR-018 — Every e-mail notice MUST be queued through the notifications queue and the phone code sent directly as the sign-in code is, all in the account's language, and every new text, including one for each refusal code this story adds (`email_taken`, `email_unchanged`, `phone_taken`, `phone_unchanged`, `send_failed`, `code_invalid`, `code_expired`, `recent_sign_in_required`, `too_many_attempts`, `invalid_credentials`, `weak_password`), MUST exist in Romanian and English, Romanian words joined by a hyphen using U+2011; text the person typed MUST never be shown back as markup.
+
+_From 139-edit-my-details._
 
 ## Retired
 

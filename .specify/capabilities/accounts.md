@@ -23,6 +23,7 @@ features:
   - 261-maintenance-mode
   - 097-garage-dashboard
   - 030-new-account-empty-states
+  - 139-edit-my-details
 ---
 
 # Capability: Accounts
@@ -91,9 +92,9 @@ _From 079-account-model._
 
 _From 079-account-model._
 
-### 097-FR-005 — `GET /api/v1/me` MUST add `garageAccess`: for each garage the account works at, `{ garageId, name, status, role, permissions, features }` — the garage's id, name and status (`draft`, `approved`, `suspended`), the person's role there (`owner`, `receptionist`, `mechanic`), their three permissions (`canMoveBookings`, `canAnswerQuotes`, `canRecordFinalPrice`, all true for an owner and a receptionist as the capability table gives them today, the mechanic card's for a mechanic) and `features`, a `Record<string, boolean>` of the garage's `GARAGE_FEATURE` rows, key → `enabled` (`team_mechanics`, `whatsapp` today; a missing key means on); an empty list for an account with no membership. The existing fields stay (`garageId` included); no write is added, and reads are not recorded in the change history. The DTO lives in the contracts library, the OpenAPI file and the generated client are regenerated (Principle V). Modifies 079‑FR‑016.
+### 139-FR-003 — `GET /api/v1/me` MUST also return `phone`, `phoneConfirmed`, `pendingEmail` (the address of a live e-mail change, else null) and `hasPassword` (whether a `password` identity exists), so the panel can show the pending line, "Neconfirmat" and "Setează o parolă" without another call (modifies 097-FR-005).
 
-_From 097-garage-dashboard._
+_From 139-edit-my-details._
 
 ### 028-FR-005 — A signed‑out visit to a dashboard view address MUST end on Home with the sign‑in dialog open and keep that address; after signing in, that address MUST open when the area guard admits it (it is under the landing of the role the account signs in with), otherwise the landing opens as today; the kept address never changes the role used last. Closing the dialog without signing in MUST drop the kept address; the router URL (path, query and fragment) is kept only when it starts with `/` and not `//` or `/\`; it is opened only through the router (an address of this site, never a browser location change); it uses the one return key the provider sign‑in already uses (083‑FR‑003), the last writer winning. Modifies 082‑FR‑021 (after signing in, the landing opened). A session that expires mid‑visit is not this rule: a view change reads the session in memory, and a refused call is answered by the dialog over the screen (ST-130, unchanged).
 
@@ -247,9 +248,9 @@ _From 080-sign-up._
 
 _From 080-sign-up._
 
-### 020-FR-001 — The API MUST let a signed-in account change its own language with `PATCH /api/v1/me` and a body `{ "language": "ro" | "en" }`, in every role, and answer with that account's "who am I", the same shape `GET /api/v1/me` returns.
+### 139-FR-004 — `PATCH /api/v1/me` MUST also accept `name` (2 to 80 characters once trimmed, no control characters) and `city` (null, or 2 to 60 characters once trimmed, no control characters; a blank city after trimming is stored as null), each optional, beside `language`; it MUST save the given fields in one transaction with one audit entry per field whose value changed (field, old value, new value, by the account in the role it is using) and one `account.updated` event naming the account and the changed fields, and answer "who am I"; a body with no change writes nothing (modifies 020-FR-001, 020-FR-005).
 
-_From 020-account-language._
+_From 139-edit-my-details._
 
 ### 020-FR-002 — The change MUST be refused with 401 `sign_in_required` without a valid token, and with 403 `account_suspended` for a suspended account, leaving the account unchanged.
 
@@ -263,9 +264,9 @@ _From 020-account-language._
 
 _From 020-account-language._
 
-### 020-FR-005 — A change to a different language MUST add one audit entry on the account (an update of the field `language`, old value to new value), by the account in the role it is using, saved in the same transaction as the change; setting the same language MUST add none.
+### 139-FR-004 — `PATCH /api/v1/me` MUST also accept `name` (2 to 80 characters once trimmed, no control characters) and `city` (null, or 2 to 60 characters once trimmed, no control characters; a blank city after trimming is stored as null), each optional, beside `language`; it MUST save the given fields in one transaction with one audit entry per field whose value changed (field, old value, new value, by the account in the role it is using) and one `account.updated` event naming the account and the changed fields, and answer "who am I"; a body with no change writes nothing (modifies 020-FR-001, 020-FR-005).
 
-_From 020-account-language._
+_From 139-edit-my-details._
 
 ### 130-FR-002 — The public list MUST be exactly: `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/sign-up`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/sign-out`, `GET /health/live`, `GET /health/ready` (outside the `/api/v1` prefix), `POST /api/v1/webhooks/brevo`, which checks Brevo's own bearer secret and is left out of the OpenAPI document (it arrived with ST-194; its own integration spec boots the app-wide check), and the two cookie-authenticated routes added since, `POST /api/v1/auth/sign-out-everywhere` (128-FR-001) and `POST /api/v1/auth/roles/switch` (394-FR-001); a test MUST enumerate every route the API serves, call each without a token, and fail when the set of routes not answering 401 `sign_in_required` differs from this list.
 
@@ -619,6 +620,78 @@ _From 030-new-account-empty-states._
 
 _From 030-new-account-empty-states._
 
+### 139-FR-001 — The driver dashboard's Setări view MUST show, before the push and notification panels, the panel "Datele tale" / "Your details" with the rows Nume, Telefon, E-mail, Oraș (an empty value shown as "—"), the line under the phone "Service-ul îți vede numărul doar după ce accepți oferta lui." / "A garage sees your number only after you accept its quote.", and the button "Modifică" / "Edit".
+
+_From 139-edit-my-details._
+
+### 139-FR-002 — Modifică MUST turn the name and city rows into fields with "Salvează" / "Save" and "Renunță" / "Cancel"; the e-mail, phone and password rows MUST each carry their own "Schimbă" / "Change" action that opens a dialog of the kit (`libs/overlays`) for that change alone. Every form MUST validate before sending through the kit's shared task saving, show each problem under its field tied by `aria-describedby`, disable its main button and show progress while a call is on its way, and show the answer's code in the person's language in a region screen readers announce (`role="alert"`). Focus MUST move to the first invalid field after a failed save, to the first field when the inline edit or a dialog opens, and back to the control that opened it when the dialog closes or the inline edit is saved or cancelled; Escape closes a dialog. Tap targets MUST be at least 44 px, and the panel and every dialog MUST show no sideways scroll at 320 px, in light and dark, in Romanian and English.
+
+_From 139-edit-my-details._
+
+### 139-FR-003 — `GET /api/v1/me` MUST also return `phone`, `phoneConfirmed`, `pendingEmail` (the address of a live e-mail change, else null) and `hasPassword` (whether a `password` identity exists), so the panel can show the pending line, "Neconfirmat" and "Setează o parolă" without another call (modifies 097-FR-005).
+
+_From 139-edit-my-details._
+
+### 139-FR-004 — `PATCH /api/v1/me` MUST also accept `name` (2 to 80 characters once trimmed, no control characters) and `city` (null, or 2 to 60 characters once trimmed, no control characters; a blank city after trimming is stored as null), each optional, beside `language`; it MUST save the given fields in one transaction with one audit entry per field whose value changed (field, old value, new value, by the account in the role it is using) and one `account.updated` event naming the account and the changed fields, and answer "who am I"; a body with no change writes nothing (modifies 020-FR-001, 020-FR-005).
+
+_From 139-edit-my-details._
+
+### 139-FR-005 — A name or city out of range, with control characters, or any unknown field MUST answer 400 `validation_failed` naming the field, and nothing is saved; the panel shows the problem as a Romanian and English text per rule (name or city too short, too long, or with a disallowed character).
+
+_From 139-edit-my-details._
+
+### 139-FR-006 — `POST /api/v1/me/email` with `{ email }` (trimmed, compared and stored lower-case, at most 254 characters, text, "@" and a domain with a dot) MUST, for an active account, when the address belongs to no account: issue a confirmation token (32 random bytes, stored as its SHA-256 hash, purpose `email_change`, the new address, valid 24 hours, single use), void every older `email_change` token of the account, queue one `ACCOUNT_EMAIL` e-mail with purpose `email_check` to the new address carrying the link `<PUBLIC_WEB_URL>/<language>/confirm-email/<token>`, queue one `ACCOUNT_EMAIL` notice with purpose `email_change_notice` to the current address when the account has one, and answer 202 `{ pendingEmail }`. The account's e-mail MUST stay unchanged until the link is opened.
+
+_From 139-edit-my-details._
+
+### 139-FR-007 — An address that belongs to any account (whatever its state, compared without regard to case) MUST answer 409 `email_taken`; the account's own current address MUST answer 409 `email_unchanged`; nothing is sent in either case.
+
+_From 139-edit-my-details._
+
+### 139-FR-008 — Opening the link (the existing `POST /api/v1/auth/confirm-email`, no sign-in, its lookup and confirmation made aware of the token's purpose) with an unexpired, unused `email_change` token of an active account MUST, in one transaction: set the account's e-mail to the token's address, set the confirmed time to now, move the `password` identity's subject to the new address when one exists, mark the token used, record an audit entry for `email` (old and new value) and an `account.updated` event, and answer `{ status: "confirmed" }`; the page then says "Adresa ta de e-mail este confirmată." / "Your e-mail address is confirmed." When the address became taken meanwhile it MUST answer 409 `email_taken` and the page says "Adresa e folosită de alt cont."
+
+_From 139-edit-my-details._
+
+### 139-FR-009 — An expired, used, voided or unknown token MUST answer as the confirmation page's expired state does today (410 `link_expired`), and "Trimite un link nou" on that page MUST issue a new `email_change` link to the same pending address by the expired token only when that token is the account's latest `email_change` token and the address still belongs to no account (else 410 `link_expired` and nothing is sent), within the limits of FR-012.
+
+_From 139-edit-my-details._
+
+### 139-FR-010 — The panel's "Trimite linkul din nou" MUST, when the account has a pending e-mail change, send a new link to the pending address (voiding the older), else send a new confirmation link to the current unconfirmed address through the existing resend; both within the limits of FR-012.
+
+_From 139-edit-my-details._
+
+### 139-FR-011 — `POST /api/v1/me/phone` with `{ phone }` MUST accept a possible phone number as the phone sign-in accepts it (a Romanian mobile typed as 07xx xxx xxx read as +40…), store it in international form, and, for an active account when the number belongs to no other account: make a 6-digit code (stored only as its HMAC with its expiry 5 minutes ahead and its try count, one live change per account, a new code replacing the old), send one WhatsApp message of the new kind `PHONE_CHANGE_CODE` (transactional, cannot be muted, in the account's language) to the new number directly through Brevo, as the sign-in code is sent today, so the code is never written to a notification row, and answer 202. A number that belongs to another account MUST answer 409 `phone_taken`; the account's own number 409 `phone_unchanged`; a number that is not possible 400 `validation_failed`; WhatsApp sending blocked or Brevo refusing 503 `send_failed` with nothing kept.
+
+_From 139-edit-my-details._
+
+### 139-FR-012 — At most 5 links or codes (FR-006, FR-009, FR-010, FR-011 together) MUST be issued per account per hour, counted in one new per-account Redis counter in addition to the existing confirm-resend and per-number code limits (which stay as they are); the sixth MUST answer 429 `too_many_attempts` and send nothing. When Redis cannot be reached the limit is skipped and the failure logged, with the sign-in limiter's fail-open rule.
+
+_From 139-edit-my-details._
+
+### 139-FR-013 — `POST /api/v1/me/phone/confirm` with `{ code }` MUST, for the right code of a live change within 5 minutes, in one transaction: set the account's phone and its confirmed time to now, move the `whatsapp_phone` identity's subject to the new number when one exists, delete the change record, record an audit entry for `phone` (old and new value) and an `account.updated` event, and answer "who am I". A wrong code MUST answer 401 `code_invalid` and count one try; the fifth wrong try and every later one 429 `too_many_attempts` with the code void; an expired or missing code 410 `code_expired`. When the number became taken meanwhile it MUST answer 409 `phone_taken`.
+
+_From 139-edit-my-details._
+
+### 139-FR-014 — `POST /api/v1/auth/password` (under the auth path, where the `mf_refresh` cookie scoped to `/api/v1/auth` arrives, so the current family is known) with `{ currentPassword, newPassword }` MUST, for an account with a `password` identity whose current password verifies: store the argon2id hash of the new password, delete every refresh token of the account except the family of the presented refresh-token cookie, delete the account's push subscriptions of other sessions (all of them, as sign-out everywhere does today, when sessions cannot be told apart), record an audit entry of kind `password_changed` with no value and an `account.password_changed` event, all in one transaction; after it commits, publish `session.revoked` for the closed families so their open pages end at once and queue one `ACCOUNT_EMAIL` notice with purpose `password_changed` to the account's e-mail, as the password reset does (the notifications module writes through its own client, so the notice cannot join the auth transaction; a notice that fails to queue is logged and does not undo the change), and answer 204. The new password MUST meet sign-up's rules (080-FR-004) else 400 `weak_password` on `newPassword`; the password fields MUST never be logged.
+
+_From 139-edit-my-details._
+
+### 139-FR-015 — A wrong current password MUST answer 401 `invalid_credentials` and count one failure per account in Redis in a 15-minute window; from the fifth counted failure every try MUST be refused with 429 `too_many_attempts` until 15 minutes after the last counted failure, without the password being checked; a successful change clears the count. When Redis cannot be reached the limit is skipped and logged.
+
+_From 139-edit-my-details._
+
+### 139-FR-016 — For an account with no `password` identity and an e-mail, the same endpoint with `{ newPassword }` and no current password MUST create the `password` identity (subject: the account's e-mail) when the session's refresh-token family was opened within the last 10 minutes, else answer 403 `recent_sign_in_required` and the panel offers to sign in again; an account with no e-mail MUST be refused 409 `email_required` and the panel does not offer it. An assistant session (`via: assistant`) MUST be refused 404 on every password call, and on every e-mail and phone change and confirmation call (contact details are how the account is recovered; name and city follow the assistant's grant, FR-004).
+
+_From 139-edit-my-details._
+
+### 139-FR-017 — Every endpoint of this story MUST act on the signed-in account only (no account id in the path), refuse a suspended account with 403 `account_suspended` and an unsigned call with 401 `sign_in_required`, and be listed in the OpenAPI file with its DTOs in the contracts library and the generated client regenerated (Principle V).
+
+_From 139-edit-my-details._
+
+### 139-FR-019 — The new endpoints and the new notification kind MUST be listed in `infra/observability/inventory.json` with their signals (the product counters of e-mail and phone changes and password changes), and the e-mail and WhatsApp sends ride the existing notification dashboard and alerts.
+
+_From 139-edit-my-details._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -638,3 +711,7 @@ _From 030-new-account-empty-states._
 
 - `082-FR-006` — superseded by `261-FR-005` (2026-10-08)
 - `079-FR-016` — superseded by `097-FR-005` (2026-10-08)
+
+- `020-FR-001` — superseded by `139-FR-004` (2026-10-10)
+- `020-FR-005` — superseded by `139-FR-004` (2026-10-10)
+- `097-FR-005` — superseded by `139-FR-003` (2026-10-10)
