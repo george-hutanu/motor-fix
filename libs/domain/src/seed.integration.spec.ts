@@ -309,8 +309,11 @@ describe('seed of the listed garages', () => {
         brands: {
           select: { brand: { select: { key: true } }, stance: true },
         },
+        labourFromBani: true,
         latitude: true,
         longitude: true,
+        rating: true,
+        reviewCount: true,
         slug: true,
       },
       where: { status: 'approved' },
@@ -444,6 +447,39 @@ describe('seed of the listed garages', () => {
         },
       ]);
     }
+  });
+
+  // @traces 226-best-rated-brand-dial-FR-012
+  it('gives the listed garages ratings, review counts and hourly rates for the dial', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const rows = await prisma.garage.findMany({
+      orderBy: { slug: 'asc' },
+      select: {
+        labourFromBani: true,
+        rating: true,
+        reviewCount: true,
+        slug: true,
+      },
+      where: { status: 'approved' },
+    });
+    expect(
+      rows.map(({ labourFromBani, rating, reviewCount, slug }) => [
+        slug,
+        rating === null ? null : Number(rating),
+        reviewCount,
+        labourFromBani,
+      ]),
+    ).toEqual([
+      ['atelier-berceni', 4.9, 80, 15000],
+      ['atelier-drumul-taberei', 4.2, 15, 14000],
+      ['auto-pipera', null, 0, 22000],
+      ['mecanic-mobil-cluj', 4.8, 35, 12000],
+      ['service-auto-militari', 4.9, 120, 18000],
+      ['service-colentina', 4.6, 40, 16000],
+      ['service-marasti', 4.4, 22, 13000],
+      ['service-titan', null, 0, null],
+    ]);
   });
 
   it('changes nothing in the listed garages when run twice', async () => {

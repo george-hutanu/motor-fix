@@ -13,6 +13,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { HomeService } from '../../search/home/home.service';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
@@ -489,6 +490,33 @@ describe('what the profile says about the garage', () => {
     expect(res.status).toBe(200);
     expect(res.body).not.toHaveProperty('description');
     expect(res.body).not.toHaveProperty('businessKind');
+  });
+
+  // @traces 226-best-rated-brand-dial-FR-011
+  it('answers the rating and review count the garage holds, as Home does', async () => {
+    const approved = await prisma.garage.create({
+      data: {
+        name: 'Atelier Berceni',
+        rating: 4.7,
+        reviewCount: 31,
+        slug: `berceni-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+    const brand = await catalogueBrand('Dacia');
+    await prisma.garageBrand.create({
+      data: { brandId: brand.id, garageId: approved.id, stance: 'works_on' },
+    });
+
+    const res = await read(approved.slug);
+    const shown = await new HomeService(prisma).forBrand(brand.slug);
+
+    expect(res.body).toMatchObject({ rating: 4.7, reviewCount: 31 });
+    expect(shown.best).toMatchObject({
+      rating: res.body.rating,
+      reviewCount: res.body.reviewCount,
+      slug: approved.slug,
+    });
   });
 
   it('dates the verification by the latest approved file', async () => {

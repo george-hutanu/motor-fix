@@ -61,53 +61,73 @@ const LISTED: {
   stances: Record<string, Stance>;
   at: [number, number];
   mobile?: { seat: string; radiusKm: number };
+  // Home's dial near Bucharest with Dacia: Militari, then Berceni (the same
+  // rating, fewer reviews), then Colentina, the best garage refusing it.
+  reviews: { rating: number; count: number } | null;
+  labourLei: number | null;
 }[] = [
   {
     at: [44.435, 26.015],
+    labourLei: 180,
     name: 'Service Auto Militari',
+    reviews: { count: 120, rating: 4.9 },
     slug: 'service-auto-militari',
     stances: { dacia: 'works_on', volkswagen: 'works_on' },
   },
   {
     at: [44.382, 26.12],
+    labourLei: 150,
     name: 'Atelier Berceni',
+    reviews: { count: 80, rating: 4.9 },
     slug: 'atelier-berceni',
     stances: { dacia: 'works_on' },
   },
   {
     at: [44.5, 26.12],
+    labourLei: 220,
     name: 'Auto Pipera',
+    reviews: null,
     slug: 'auto-pipera',
     stances: { dacia: 'works_on', volkswagen: 'does_not_take' },
   },
   {
     at: [44.455, 26.15],
+    labourLei: 160,
     name: 'Service Colentina',
+    reviews: { count: 40, rating: 4.6 },
     slug: 'service-colentina',
     stances: { dacia: 'does_not_take', volkswagen: 'works_on' },
   },
   {
     at: [44.42, 26.03],
+    labourLei: 140,
     name: 'Atelier Drumul Taberei',
+    reviews: { count: 15, rating: 4.2 },
     slug: 'atelier-drumul-taberei',
     stances: { volkswagen: 'works_on' },
   },
   {
     at: [44.415, 26.17],
+    labourLei: null,
     name: 'Service Titan',
+    reviews: null,
     slug: 'service-titan',
     stances: {},
   },
   {
     at: [46.78, 23.62],
+    labourLei: 130,
     name: 'Service Mărăști',
+    reviews: { count: 22, rating: 4.4 },
     slug: 'service-marasti',
     stances: { dacia: 'works_on' },
   },
   {
     at: [46.9, 23.68],
+    labourLei: 120,
     mobile: { radiusKm: 20, seat: 'Strada Sediului 1, Cluj-Napoca' },
     name: 'Mecanic Mobil Cluj',
+    reviews: { count: 35, rating: 4.8 },
     slug: 'mecanic-mobil-cluj',
     stances: { dacia: 'works_on' },
   },
@@ -324,6 +344,18 @@ async function list(db: Client, garage: (typeof LISTED)[number]) {
     `UPDATE garage SET city_key = $2, city_name = $3
      WHERE slug = $1 AND city_key IS NULL`,
     [garage.slug, key, name],
+  );
+  // Set once: a rating the reviews later write is never put back.
+  await db.query(
+    `UPDATE garage
+     SET rating = $2, review_count = $3, labour_from_bani = $4
+     WHERE slug = $1 AND rating IS NULL AND labour_from_bani IS NULL`,
+    [
+      garage.slug,
+      garage.reviews?.rating ?? null,
+      garage.reviews?.count ?? 0,
+      garage.labourLei === null ? null : garage.labourLei * 100,
+    ],
   );
   for (const [brand, stance] of Object.entries(garage.stances)) {
     // A brand a garage does not take is taken for no fuel.

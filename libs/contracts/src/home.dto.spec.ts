@@ -1,7 +1,12 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { HomeQueryDto, PopularBrandsQueryDto } from './home.dto';
+import {
+  HomeDto,
+  HomeGarageDto,
+  HomeQueryDto,
+  PopularBrandsQueryDto,
+} from './home.dto';
 
 const errors = (dto: new () => object, query: Record<string, unknown>) =>
   validateSync(plainToInstance(dto, query), {
@@ -67,5 +72,43 @@ describe('PopularBrandsQueryDto', () => {
 
   it.each(['0', '13', '2.5', 'eight', ''])('refuses the limit %s', (value) => {
     expect(errors(PopularBrandsQueryDto, { limit: value })).not.toEqual([]);
+  });
+});
+
+// The OpenAPI document is built from these; the generated client reads it.
+const documented = (dto: abstract new () => object) =>
+  (
+    Reflect.getMetadata(
+      'swagger/apiModelPropertiesArray',
+      dto.prototype,
+    ) as string[]
+  ).map((name) => name.slice(1));
+
+// @traces 226-best-rated-brand-dial-FR-009
+describe('HomeDto', () => {
+  it('keeps the brand and both counts and adds the best garage and the preview', () => {
+    expect(documented(HomeDto).sort()).toEqual([
+      'best',
+      'brand',
+      'preview',
+      'takers',
+      'total',
+    ]);
+  });
+
+  it('documents every field of a garage Home shows', () => {
+    expect(documented(HomeGarageDto).sort()).toEqual([
+      'businessKind',
+      'city',
+      'comesToYou',
+      'distanceKm',
+      'id',
+      'labourFromLei',
+      'name',
+      'rating',
+      'reviewCount',
+      'slug',
+      'stance',
+    ]);
   });
 });

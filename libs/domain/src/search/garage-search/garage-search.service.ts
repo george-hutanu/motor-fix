@@ -52,7 +52,7 @@ function decode(cursor: string, brandId: string): Cursor {
   return parsed as Cursor;
 }
 
-function groupsOf(
+export function groupsOf(
   brandId: string,
   area: Map<string, InArea> | undefined,
 ): Record<Cursor['g'], Prisma.GarageWhereInput> {
@@ -66,10 +66,10 @@ function groupsOf(
 
 // A mobile mechanic's distance would tell where its seat is; it only says it
 // comes to the place.
-function placed(
-  item: ListedGarageDto,
+export function placed<T extends { id: string }>(
+  item: T,
   area: Map<string, InArea> | undefined,
-): ListedGarageDto {
+): T & Pick<ListedGarageDto, 'comesToYou' | 'distanceKm'> {
   const found = area?.get(item.id);
   if (!found) return item;
   return {
