@@ -1,0 +1,34 @@
+<ul>
+  @if (loading()) {
+    @for (row of skeletons; track row) {
+      <li class="row skeleton" aria-hidden="true"></li>
+    }
+  } @else {
+    @for (garage of garages(); track garage.id) {
+      <li>
+        <a
+          class="row"
+          [routerLink]="['/', i18n.language(), 'garages', garage.slug]"
+          [queryParams]="{ brand: brand().slug }"
+        >
+          <mf-lamp
+            [state]="garage.stance === 'works_on' ? 'green' : 'red'"
+            [label]="
+              (garage.stance === 'works_on'
+                ? 'public.home.preview.worksOn'
+                : 'public.home.preview.doesNotTake'
+              ) | t: { brand: brand().name }
+            "
+          />
+          <span class="name">{{ garage.name }}</span>
+          <span class="facts">
+            <span class="rating">{{ rating(garage) }}</span>
+            @if (garage.labourFromLei !== null) {
+              <span class="rate">{{ 'public.home.preview.rate' | t: { rate: garage.labourFromLei } }}</span>
+            }
+          </span>
+        </a>
+      </li>
+    }
+  }
+</ul>

@@ -154,6 +154,7 @@
         "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
         "apps/web/src/app/dashboard/garage-requests/garage-requests-panel/garage-requests-panel.html",
         "apps/web/src/app/dashboard/requests-view/requests-view.html",
+        "apps/web/src/app/home/preview/preview.html",
         "apps/web/src/app/maintenance/maintenance-page/maintenance-page.html",
         "apps/web/src/app/not-found/not-found.html",
         "apps/web/src/app/public/frame/frame.html",

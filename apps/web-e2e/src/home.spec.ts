@@ -349,3 +349,191 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   }
 }
+
+// @traces 226-best-rated-brand-dial-FR-001
+// @traces 226-best-rated-brand-dial-FR-002
+// @traces 226-best-rated-brand-dial-FR-003
+// @traces 226-best-rated-brand-dial-FR-006
+const dialArea = (page: Page) => page.locator('mf-home .dial');
+const dialValue = (page: Page) =>
+  dialArea(page).locator('mf-rating-dial .mf-dial-value');
+const previewRows = (page: Page) => page.locator('mf-home-preview a.row');
+const useLocation = async (page: Page) => {
+  await line(page).getByRole('button').click();
+  await placeDialog(page)
+    .getByRole('button', { name: 'Folosește locația mea' })
+    .click();
+  await expect(line(page)).toHaveText(/Lângă tine\s*·\s*Schimbă/);
+};
+const chooseTesla = async (page: Page) => {
+  await page.getByRole('combobox', { name: 'Caută marca' }).fill('tesla');
+  await page.getByRole('option', { name: 'Tesla' }).click();
+};
+
+test.describe('the rating dial near Bucharest @seeded', () => {
+  test.use({
+    geolocation: { latitude: 44.4268, longitude: 26.1025 },
+    permissions: ['geolocation'],
+  });
+
+  test('names the best garage for Dacia, then two takers and one refuser', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    const reads = homeReads(page);
+
+    await useLocation(page);
+
+    await expect(dialValue(page)).toHaveText('4,9');
+    await expect(dialArea(page)).toContainText('NOTĂ');
+    await expect(dialArea(page).locator('.name')).toHaveText(
+      'Service Auto Militari',
+    );
+    await expect(dialArea(page).locator('.line')).toHaveText(
+      /București · \d+,\d km/,
+    );
+    await expect(previewRows(page)).toHaveCount(3);
+    await expect(previewRows(page).locator('.name')).toHaveText([
+      'Service Auto Militari',
+      'Atelier Berceni',
+      'Service Colentina',
+    ]);
+    await expect(previewRows(page).locator('mf-lamp')).toHaveText([
+      'Lucrează pe Dacia',
+      'Lucrează pe Dacia',
+      'Nu primește Dacia',
+    ]);
+    expect(reads).toEqual(['dacia']);
+
+    await previewRows(page).first().click();
+    await expect(page).toHaveURL(
+      '/ro/garages/service-auto-militari?brand=dacia',
+    );
+  });
+
+  // @traces 226-best-rated-brand-dial-FR-004
+  test('rests at "—" when nobody near takes the brand, with only refusing rows', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await useLocation(page);
+
+    await chooseTesla(page);
+
+    await expect(dialValue(page)).toHaveText('—');
+    await expect(dialArea(page).locator('.name')).toHaveText(
+      'Niciun service din zonă nu primește încă Tesla',
+    );
+    await expect(previewRows(page)).toHaveCount(3);
+    for (const lamp of await previewRows(page).locator('mf-lamp').all()) {
+      await expect(lamp).toHaveText('Nu primește Tesla');
+    }
+  });
+});
+
+test.describe('the rating dial in Cluj-Napoca @seeded', () => {
+  test.use({
+    geolocation: { latitude: 46.7712, longitude: 23.6236 },
+    permissions: ['geolocation'],
+  });
+
+  test('names the mobile mechanic that comes to you', async ({ page }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+
+    await useLocation(page);
+
+    await expect(dialValue(page)).toHaveText('4,8');
+    await expect(dialArea(page).locator('.name')).toHaveText(
+      'Mecanic Mobil Cluj',
+    );
+    await expect(dialArea(page).locator('.line')).toHaveText(
+      'Mecanic mobil · vine la tine',
+    );
+  });
+});
+
+// @traces 226-best-rated-brand-dial-FR-004
+test.describe('the rating dial far from every garage @seeded', () => {
+  test.use({
+    geolocation: { latitude: 44.1733, longitude: 28.6383 },
+    permissions: ['geolocation'],
+  });
+
+  test('says no garage is within 25 km and offers to change the place', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+
+    await useLocation(page);
+
+    await expect(dialArea(page).locator('.name')).toHaveText(
+      'Niciun service în 25 km',
+    );
+    await expect(previewRows(page)).toHaveCount(0);
+    await dialArea(page).getByRole('button', { name: 'Schimbă locul' }).click();
+    await expect(placeDialog(page)).toBeVisible();
+  });
+});
+
+test.describe('the rating dial with reduced motion @seeded', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('moves the dial and the first row in one render, the needle with no transition', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    await expect(dialValue(page)).toHaveText('4,9');
+
+    await chooseTesla(page);
+    await expect(dialValue(page)).toHaveText('—');
+
+    // Read in one task, so the dial and the row are seen in the same render.
+    expect(
+      await page.evaluate(() => [
+        document
+          .querySelector('mf-home .dial .mf-dial-value')
+          ?.textContent?.trim(),
+        document
+          .querySelector('mf-home-preview a.row mf-lamp')
+          ?.getAttribute('data-state'),
+      ]),
+    ).toEqual(['—', 'red']);
+    expect(
+      await dialArea(page)
+        .locator('.mf-dial-needle')
+        .evaluate((n) => getComputedStyle(n).transitionDuration),
+    ).toBe('0s');
+  });
+});
+
+// @traces 226-best-rated-brand-dial-FR-008
+for (const scheme of ['light', 'dark'] as const) {
+  for (const path of ['/ro', '/en']) {
+    test(`fits the dial and its three rows on a 320 px phone on ${path}, ${scheme} @seeded`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ height: 640, width: 320 });
+      await ready(page, path);
+      await page.getByRole('radio', { exact: true, name: 'Dacia' }).click();
+
+      await expect(previewRows(page)).toHaveCount(3);
+      for (const box of await previewRows(page).evaluateAll((rows) =>
+        rows.map((r) => r.getBoundingClientRect().height),
+      )) {
+        expect(box).toBeGreaterThanOrEqual(44);
+      }
+      const dialWidth = await dialArea(page)
+        .locator('mf-rating-dial')
+        .evaluate((d) => d.getBoundingClientRect().width);
+      expect(dialWidth).toBeLessThanOrEqual(240);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(320);
+    });
+  }
+}

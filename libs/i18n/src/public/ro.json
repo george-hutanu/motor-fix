@@ -60,6 +60,14 @@
       "one": "{takers} din {count} service {verb} {brand}",
       "other": "{takers} din {count} de service‑uri {verb} {brand}"
     },
+    "dial": {
+      "announce": "{rating} · {name}",
+      "changePlace": "Schimbă locul",
+      "label": "NOTĂ",
+      "mobile": "Mecanic mobil · vine la tine",
+      "noneNear": "Niciun service în 25 km",
+      "noTaker": "Niciun service din zonă nu primește încă {brand}"
+    },
     "failed": "Nu am putut încărca service‑urile",
     "hero": {
       "headline": "Cine lucrează pe {brand}, aproape de tine",
@@ -81,6 +89,12 @@
       "searchUnavailable": "Nu putem căuta adrese acum",
       "title": "Alege locul",
       "useLocation": "Folosește locația mea"
+    },
+    "preview": {
+      "doesNotTake": "Nu primește {brand}",
+      "noReviews": "Fără recenzii",
+      "rate": "de la {rate} lei/oră",
+      "worksOn": "Lucrează pe {brand}"
     },
     "retry": "Reîncearcă",
     "search": "Caută service‑uri",

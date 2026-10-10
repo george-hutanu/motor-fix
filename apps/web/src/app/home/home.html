@@ -55,11 +55,54 @@
         {{ 'public.home.retry' | t }}
       </button>
     } @else if (count(); as count) {
-      {{ count }}
+      <span class="tally">{{ count }}</span>
+      @if (announce(); as announce) {
+        <span class="announce">{{ announce }}</span>
+      }
     } @else {
       <span class="skeleton"></span>
     }
   </div>
+  <section
+    class="dial"
+    [class.dimmed]="busy()"
+    [attr.aria-busy]="busy()"
+  >
+    <div class="gauge" [attr.role]="nobody() ? 'img' : null" [attr.aria-label]="nobody()">
+      <mf-rating-dial
+        size="large"
+        [value]="answer()?.best?.rating"
+        [attr.aria-hidden]="nobody() ? 'true' : null"
+      />
+      <span class="reading" aria-hidden="true">{{ 'public.home.dial.label' | t }}</span>
+      @if (busy()) {
+        <span class="name skeleton"></span>
+      } @else if (answer()?.best; as best) {
+        <span class="name">{{ best.name }}</span>
+        @if (line(); as line) {
+          <span class="line">{{ line }}</span>
+        }
+      } @else if (nobody(); as nobody) {
+        <span class="name">{{ nobody }}</span>
+        @if (answer()?.total === 0 && place()) {
+          <button
+            type="button"
+            class="spartan-button spartan-button-variant-ghost"
+            (click)="pickPlace()"
+          >
+            {{ 'public.home.dial.changePlace' | t }}
+          </button>
+        }
+      }
+    </div>
+    @if (busy() || answer()) {
+      <mf-home-preview
+        [brand]="brand"
+        [garages]="answer()?.preview ?? []"
+        [loading]="busy()"
+      />
+    }
+  </section>
   <section class="car" [attr.aria-label]="'public.home.car' | t"></section>
 }
 <p>{{ health()?.version ?? ('shell.version.unknown' | t) }}</p>
