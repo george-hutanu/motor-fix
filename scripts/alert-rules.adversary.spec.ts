@@ -366,6 +366,9 @@ describe('Grafana alerts workflow under hostile input', () => {
     });
     expect(code).not.toBe(0);
     expect(out).toMatch(/::error::.*slow\.json/);
+    expect(out).toMatch(
+      /slow\.json: Grafana refused group slow \(exit code 28\)/,
+    );
     expect(puts(calls)).toHaveLength(2);
   });
 

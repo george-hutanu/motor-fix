@@ -13,6 +13,12 @@ on:
 permissions:
   contents: read
 
+# One run at a time, none cancelled: a run from an older ref that ended last
+# would leave Grafana holding older rules.
+concurrency:
+  group: grafana-alerts
+  cancel-in-progress: false
+
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -82,7 +88,7 @@ jobs:
               if call -X PUT "$api/v1/provisioning/folder/motorfix/rule-groups/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$body"; then
                 echo "applied $f ($group)"
               else
-                echo "::error::$f: Grafana refused group $group (exit code 0)."
+                echo "::error::$f: Grafana refused group $group (exit code $?)."
                 failed=1
               fi
             done <<< "$bodies"
