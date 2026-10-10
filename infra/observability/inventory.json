@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 107,
+    "count": 108,
     "source": "apps/api/openapi.json"
   },
   "entries": [

@@ -17,6 +17,8 @@ import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
 import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
 import { GaragePlaceService } from './place/garage-place.service';
+import { PriceListController } from './price-list/price-list.controller';
+import { PriceListService } from './price-list/price-list.service';
 import { GaragePricesService } from './prices/garage-prices.service';
 import { PublicGaragesService } from './public-garages/public-garages';
 import { PublicGaragesController } from './public-garages/public-garages.controller';
@@ -69,6 +71,7 @@ export class GaragesModule {
         InvitesController,
         LegalDocumentsController,
         ListingDraftsController,
+        PriceListController,
         PublicGaragesController,
         VerificationChecksController,
       ],
@@ -102,6 +105,7 @@ export class GaragesModule {
           useFactory: (redis: Redis) => new ListingDraftThrottle(redis),
         },
         StaffInviteService,
+        PriceListService,
         PublicGaragesService,
         VerificationService,
         VerificationChecksService,
