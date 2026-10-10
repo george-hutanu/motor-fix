@@ -8,6 +8,7 @@ import {
   BrandsService,
   HealthService,
   type HomeDto,
+  type HomeGarageDto,
   HomeService,
   type MeDto,
   PlacesService,
@@ -58,7 +59,11 @@ const brand = (slug: string) =>
 type Read = {
   slug: string;
   near: string | undefined;
-  answer: (takers: number, total: number) => Promise<void>;
+  answer: (
+    takers: number,
+    total: number,
+    garages?: Partial<Pick<HomeDto, 'best' | 'preview'>>,
+  ) => Promise<void>;
   fail: (error: unknown) => Promise<void>;
 };
 let reads: Read[];
@@ -67,8 +72,15 @@ const homeApi = {
     ({ brand: slug, near }: { brand: string; near?: string }) =>
       new Promise<HomeDto>((resolve, reject) => {
         reads.push({
-          answer: async (takers, total) => {
-            resolve({ brand: brand(slug), takers, total });
+          answer: async (takers, total, garages) => {
+            resolve({
+              best: null,
+              brand: brand(slug),
+              preview: [],
+              takers,
+              total,
+              ...garages,
+            });
             await settle();
           },
           fail: async (error) => {
@@ -164,6 +176,9 @@ const checked = () =>
     .find((t) => t.getAttribute('aria-checked') === 'true')
     ?.textContent?.trim();
 const count = () => page().querySelector<HTMLElement>('[aria-live]');
+// What the count line says, apart from what the live region adds for the dial.
+const tally = () =>
+  count()?.querySelector('.tally')?.textContent?.replace(/\s+/g, ' ').trim();
 const search = () =>
   [...page().querySelectorAll<HTMLAnchorElement>('a')].find((a) =>
     /Caută service‑uri|Find garages/.test(a.textContent ?? ''),
@@ -279,9 +294,7 @@ describe('Home brand picker', () => {
     await reads[1].answer(3, 6);
 
     expect(count()?.getAttribute('aria-busy')).toBe('false');
-    expect(count()?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      '3 din 6 service‑uri primesc Dacia',
-    );
+    expect(tally()).toBe('3 din 6 service‑uri primesc Dacia');
   });
 
   it.each([
@@ -295,7 +308,7 @@ describe('Home brand picker', () => {
 
     await reads[1].answer(takers, total);
 
-    expect(count()?.textContent?.replace(/\s+/g, ' ').trim()).toBe(expected);
+    expect(tally()).toBe(expected);
   });
 
   it.each([
@@ -308,7 +321,7 @@ describe('Home brand picker', () => {
 
     await reads[1].answer(takers, total);
 
-    expect(count()?.textContent?.replace(/\s+/g, ' ').trim()).toBe(expected);
+    expect(tally()).toBe(expected);
   });
 
   it('drops the answer for a brand no longer selected', async () => {
@@ -1008,5 +1021,248 @@ describe('Home place from the Setări city', () => {
     await settle();
 
     expect(lineText()).toBe('Lângă tine · Schimbă');
+  });
+});
+
+const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
+  businessKind: 'company',
+  city: 'București',
+  id: 'militari',
+  labourFromLei: 180,
+  name: 'Service Auto Militari',
+  rating: 4.9,
+  reviewCount: 120,
+  slug: 'service-auto-militari',
+  stance: 'works_on',
+  ...over,
+});
+const MILITARI = garageOf();
+const BERCENI = garageOf({
+  id: 'berceni',
+  labourFromLei: 150,
+  name: 'Atelier Berceni',
+  reviewCount: 80,
+  slug: 'atelier-berceni',
+});
+const COLENTINA = garageOf({
+  id: 'colentina',
+  labourFromLei: 160,
+  name: 'Service Colentina',
+  rating: 4.6,
+  reviewCount: 40,
+  slug: 'service-colentina',
+  stance: 'does_not_take',
+});
+const MOBILE = garageOf({
+  businessKind: 'mobile',
+  city: undefined,
+  comesToYou: true,
+  distanceKm: null,
+  id: 'mobil',
+  name: 'Mecanic Mobil Cluj',
+  rating: 4.8,
+  slug: 'mecanic-mobil-cluj',
+});
+const THREE = { best: MILITARI, preview: [MILITARI, BERCENI, COLENTINA] };
+
+const dialArea = () => page().querySelector<HTMLElement>('.dial');
+const dial = () => page().querySelector<HTMLElement>('mf-rating-dial');
+const dialValue = () =>
+  dial()?.querySelector('.mf-dial-value')?.textContent?.trim();
+const bestName = () =>
+  dialArea()?.querySelector('.name')?.textContent?.replace(/\s+/g, ' ').trim();
+const bestLine = () =>
+  dialArea()?.querySelector('.line')?.textContent?.replace(/\s+/g, ' ').trim();
+const rows = () => [
+  ...page().querySelectorAll<HTMLAnchorElement>('mf-home-preview a'),
+];
+
+// @traces 226-FR-001
+// @traces 226-FR-006
+// @traces 226-FR-007
+describe('Home rating dial', () => {
+  it('points the large dial at the best rating and names the garage and its city', async () => {
+    await render();
+    await choose('Dacia');
+
+    await reads[1].answer(3, 6, THREE);
+
+    expect(dial()?.getAttribute('data-size')).toBe('large');
+    expect(dialValue()).toBe('4,9');
+    expect(dialArea()?.textContent).toContain('NOTĂ');
+    expect(bestName()).toBe('Service Auto Militari');
+    expect(bestLine()).toBe('București');
+  });
+
+  it('adds the distance to the city once a place is set', async () => {
+    store(HERE);
+    await render();
+
+    await reads[0].answer(3, 6, {
+      best: { ...MILITARI, comesToYou: false, distanceKm: 3.2 },
+      preview: [],
+    });
+
+    expect(bestLine()).toBe('București · 3,2 km');
+  });
+
+  it('says a mobile mechanic comes to you, never its city', async () => {
+    store(HERE);
+    await render();
+
+    await reads[0].answer(1, 1, { best: MOBILE, preview: [MOBILE] });
+
+    expect(bestLine()).toBe('Mecanic mobil · vine la tine');
+    expect(dialArea()?.textContent).not.toContain('București');
+  });
+
+  it('switches to English without a new read', async () => {
+    store(HERE);
+    await render();
+    await reads[0].answer(3, 6, {
+      best: { ...MILITARI, comesToYou: false, distanceKm: 3.2 },
+      preview: [MILITARI],
+    });
+
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(dialValue()).toBe('4.9');
+    expect(dialArea()?.textContent).toContain('RATING');
+    expect(bestLine()).toBe('București · 3.2 km');
+    expect(homeApi.homeControllerForBrand).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves the dial and the first row together, from the one read per brand', async () => {
+    await render();
+    await reads[0].answer(3, 6, THREE);
+    await choose('Dacia');
+
+    await reads[1].answer(1, 2, {
+      best: BERCENI,
+      preview: [BERCENI, COLENTINA],
+    });
+
+    expect(slugsRead()).toEqual(['bmw', 'dacia']);
+    expect(bestName()).toBe('Atelier Berceni');
+    expect(rows()[0]?.textContent).toContain('Atelier Berceni');
+  });
+
+  it('announces the rating and the garage in the count area, once touched', async () => {
+    await render();
+    await choose('Dacia');
+
+    await reads[1].answer(3, 6, THREE);
+
+    expect(count()?.getAttribute('aria-live')).toBe('polite');
+    expect(count()?.textContent).toContain('4,9 · Service Auto Militari');
+    expect(page().querySelectorAll('[aria-live]')).toHaveLength(1);
+  });
+
+  it('shows the preview under the dial, one row per garage', async () => {
+    await render();
+    await choose('Dacia');
+
+    await reads[1].answer(3, 6, THREE);
+
+    expect(rows().map((row) => row.getAttribute('href'))).toEqual([
+      '/ro/garages/service-auto-militari?brand=dacia',
+      '/ro/garages/atelier-berceni?brand=dacia',
+      '/ro/garages/service-colentina?brand=dacia',
+    ]);
+  });
+});
+
+// @traces 226-FR-004
+// @traces 226-FR-005
+describe('Home rating dial with nothing to name', () => {
+  it('rests at "—" and says nobody nearby takes the brand, with the refusing rows', async () => {
+    await render();
+    await choose('Dacia');
+
+    await reads[1].answer(0, 1, { best: null, preview: [COLENTINA] });
+
+    const nobody = 'Niciun service din zonă nu primește încă Dacia';
+    expect(dialValue()).toBe('—');
+    expect(bestName()).toBe(nobody);
+    expect(
+      dialArea()?.querySelector('[role="img"]')?.getAttribute('aria-label'),
+    ).toBe(nobody);
+    expect(count()?.textContent).toContain(nobody);
+    expect(rows()).toHaveLength(1);
+  });
+
+  it('says so in English', async () => {
+    await render();
+    await TestBed.inject(I18n).use('en');
+    await choose('Dacia');
+
+    await reads[1].answer(0, 0);
+
+    expect(bestName()).toBe('No garage nearby takes Dacia yet');
+  });
+
+  it('says no garage is within 25 km of the place, and offers to change it', async () => {
+    store(HERE);
+    await render();
+
+    await reads[0].answer(0, 0);
+
+    expect(bestName()).toBe('Niciun service în 25 km');
+    const change = [
+      ...(dialArea()?.querySelectorAll<HTMLButtonElement>('button') ?? []),
+    ].find((b) => b.textContent?.trim() === 'Schimbă locul');
+    change?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(PlaceDialog, {
+      confirmDiscard: false,
+      shape: 'dialog',
+      title: 'public.home.place.title',
+    });
+  });
+
+  it('says nobody takes the brand when no garage is listed and no place is set', async () => {
+    await render();
+
+    await reads[0].answer(0, 0);
+
+    expect(bestName()).toBe('Niciun service din zonă nu primește încă BMW');
+  });
+
+  it('dims the dial while it loads, with a skeleton name and three skeleton rows', async () => {
+    await render();
+
+    expect(dialArea()?.getAttribute('aria-busy')).toBe('true');
+    expect(dialArea()?.classList).toContain('dimmed');
+    expect(dialValue()).toBe('—');
+    expect(dialArea()?.querySelector('.name.skeleton')).not.toBeNull();
+    expect(
+      page().querySelectorAll('mf-home-preview .row.skeleton'),
+    ).toHaveLength(3);
+    expect(rows()).toHaveLength(0);
+
+    await reads[0].answer(3, 6, THREE);
+
+    expect(dialArea()?.getAttribute('aria-busy')).toBe('false');
+    expect(dialArea()?.classList).not.toContain('dimmed');
+  });
+
+  it('keeps the dial at "—" with no name and no rows when the read fails, and refills on retry', async () => {
+    await render();
+
+    await reads[0].fail(new HttpErrorResponse({ status: 503 }));
+
+    expect(dialValue()).toBe('—');
+    expect(bestName()).toBeUndefined();
+    expect(rows()).toHaveLength(0);
+    expect(page().querySelectorAll('mf-home-preview .row')).toHaveLength(0);
+
+    retry()?.click();
+    await settle();
+    await reads[1].answer(3, 6, THREE);
+
+    expect(dialValue()).toBe('4,9');
+    expect(rows()).toHaveLength(3);
   });
 });

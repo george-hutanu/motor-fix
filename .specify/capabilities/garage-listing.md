@@ -23,6 +23,7 @@ features:
   - 206-documents-declaration
   - 163-figures-period-city
   - 412-brand-job-ticks
+  - 226-best-rated-brand-dial
 ---
 
 # Capability: Garage listing
@@ -561,9 +562,9 @@ _From 111-garage-address-map._
 
 _From 111-garage-address-map._
 
-### 307-FR-002 — The answer MUST add to today's fields: `description` (the one line the garage wrote about itself, as written, in both languages; omitted when empty), `verifiedAt` (the decision time of the garage's latest approved verification file, else the garage's `approvedAt`, an ISO-8601 instant; null when neither exists), `rating` (one decimal or null) and `reviewCount` (a whole number, 0 until reviews exist), the garage's `businessKind` (`mobile` or a fixed kind) and, for a mobile mechanic, `serviceRadiusKm` with the 20 km default filled in.
+### 226-FR-011 — The garage row MUST gain `rating` (1.0 to 5.0, one decimal, null until reviews exist) and `review_count` (whole number, 0 by default), with database checks that a rating is between 1.0 and 5.0, a count is 0 or more, and `rating IS NULL` exactly when `review_count = 0` (one "no reviews" state); no screen or route writes them in this story. The public profile read (307-FR-002) MUST answer these columns in place of its fixed `rating: null` and `reviewCount: 0`, so Home and the profile never disagree.
 
-_From 307-public-garage-profile._
+_From 226-best-rated-brand-dial._
 
 ### 111-FR-016 — No public shape of the API MUST carry the registered seat [X20c]: no DTO reachable from a `@Public()` route, read or list, has a property for `seat_address` (in any spelling), and the public garage read of a mobile mechanic has no position (the seat is the position). `seat_address` is read only by the garage's own staff and MotorFix admins through the later dashboard and admin stories, which are not this one. A test MUST read the generated OpenAPI document and fail on any property whose name contains `seat` in a schema reachable from the responses of the routes in the public routes list, and the public routes list MUST gain `GET /api/v1/places`.
 
@@ -826,3 +827,5 @@ _From 412-brand-job-ticks._
 - `040-FR-006` — superseded by `397-FR-006` (2026-10-08)
 
 - `205-FR-005` — superseded by `206-FR-010` (2026-10-09)
+
+- `307-FR-002` — superseded by `226-FR-011` (2026-10-10)

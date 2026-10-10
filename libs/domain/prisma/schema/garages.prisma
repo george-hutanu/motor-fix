@@ -58,6 +58,10 @@ model Garage {
   // The hourly labour range, in bani; both set when the listing is sent.
   labourFromBani             Int?                     @map("labour_from_bani")
   labourToBani               Int?                     @map("labour_to_bani")
+  // Written by the reviews; until then null and 0. CHECKs in the migration:
+  // 1.0 to 5.0, a count of 0 or more, and a rating exactly when reviewed.
+  rating                     Decimal?                 @db.Decimal(2, 1)
+  reviewCount                Int                      @default(0) @map("review_count")
   prices                     GaragePrice[]
   // WeeklyHours from contracts' garage-hours; {} until the listing is sent.
   hours                      Json                     @default("{}")

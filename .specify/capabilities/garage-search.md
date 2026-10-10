@@ -1,11 +1,12 @@
 ---
 capability: garage-search
-updated: 2026-10-08
+updated: 2026-10-10
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
   - 225-brand-picker
   - 229-location-or-address
+  - 226-best-rated-brand-dial
 ---
 
 # Capability: Garage search
@@ -97,6 +98,14 @@ _From 229-location-or-address._
 ### 229-FR-020 — Observability: no new service, endpoint, queue or outside call; the existing places look-up metrics cover the address search; the PR's Observability section states this and, if a counter for Home reads with and without a place is added, lists it in the inventory.
 
 _From 229-location-or-address._
+
+### 226-FR-009 — `GET /api/v1/home?brand={slug}&near={lat},{lng}` MUST keep answering `brand`, `takers` and `total` unchanged (225-FR-009, 229-FR-009) and add `best` (the best taker, or null) and `preview` (a list of up to three garages: the two best takers then the best refuser, in order). Each garage carries: `id`, `name`, `slug`, `stance` (`works_on`, `does_not_take` or `unstated`, the brand-first search's rule), `rating` (one decimal or null), `reviewCount` (whole number), `labourFromLei` (whole lei or null), `businessKind`, `city` (the address's city name, for a fixed garage only; never for a mobile mechanic) and, only when `near` is given, `distanceKm` (one decimal; null for a mobile mechanic) and `comesToYou` (true for a mobile mechanic whose area holds the place), the shape 229-FR-012 gives a listed garage. `best` is the first element of `preview` when there is a taker. The same validation and errors as today; `Cache-Control: public, max-age=60` unchanged.
+
+_From 226-best-rated-brand-dial._
+
+### 226-FR-010 — The order for the dial and the takers MUST be: rating high to low with null ratings after every rated garage, then more reviews first, then name A to Z, then id; the refuser slot uses the same order among the garages whose stance is `does_not_take` or that have no row for the brand. Only approved garages in the area count (the one public scope; the area of 229-FR-010 and FR-011, all of Romania without `near`).
+
+_From 226-best-rated-brand-dial._
 
 ## Retired
 
