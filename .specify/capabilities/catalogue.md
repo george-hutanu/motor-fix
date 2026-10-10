@@ -1,12 +1,13 @@
 ---
 capability: catalogue
-updated: 2026-10-08
+updated: 2026-10-10
 features:
   - 039-brand-catalogue
   - 112-opening-hours
   - 354-job-catalogue-prices
   - 109-garage-details-prices
   - 230-brand-search
+  - 357-public-price-jobs
 ---
 
 # Capability: Catalogue
@@ -82,6 +83,50 @@ _From 109-garage-details-prices._
 ### 230-FR-015 — The development brand data file MUST hold Alfa Romeo and Citroën (unranked) besides its twelve brands, so the scenarios above run against the development catalogue; the eight tiles stay the eight most popular.
 
 _From 230-brand-search._
+
+### 357-FR-001 — The system MUST decide, for each job on a garage's price list, whether drivers see it: a job is public when its catalogue status is `approved`, its kind of work is covered by the garage's RAR authorisation (the job's RAR activity is empty or among the activities an admin recorded for the garage, or the garage has none recorded yet, FR-008), the garage has not hidden its default (no brand) price row, and both ends of that default range are set. A brand row's `visible` flag plays no part.
+
+_From 357-public-price-jobs._
+
+### 357-FR-002 — When a job is not public, the system MUST give exactly one reason code, the first that applies in this order: `rejected` (catalogue status rejected), `awaiting_approval` (catalogue status pending), `not_authorised`, `hidden_by_garage`, `no_top_price` (top of the default range missing, or no default range at all).
+
+_From 357-public-price-jobs._
+
+### 357-FR-003 — The job's default range MUST decide for every brand: a complete brand range never makes a job public, and an incomplete brand range never hides a job whose default range is complete; the same holds for the visible flag: only the default row's counts.
+
+_From 357-public-price-jobs._
+
+### 357-FR-004 — The state MUST be computed on every read from the stored rows, never stored, so a change of price, visibility, catalogue status or authorisation needs no second write and no new approval by MotorFix.
+
+_From 357-public-price-jobs._
+
+### 357-FR-005 — The rule MUST live in one place in the garages domain and be the only judge of a job's public state: both the public profile's job list and the owner's list call it, with no second copy of the conditions in either reader (Principle V).
+
+_From 357-public-price-jobs._
+
+### 357-FR-007 — The owner MUST be able to read every job of their garage's price list with its state through `GET /api/v1/garages/{garageId}/prices`, answering `{ items: [...] }`, one item per job in the price list's order (as FR-006), each with the job's id, its Romanian and English names, `public` (boolean), `reason` (one of the five codes, present only when not public), `durationMinutes` when set, `fromBani` and `toBani` when set, from the default range; an empty price list answers `items: []`; the answer carries no brand range, no labour range and nothing about other garages.
+
+_From 357-public-price-jobs._
+
+### 357-FR-008 — A garage with no recorded RAR activities (approved before the by-hand RAR check recorded any) MUST count every job as covered by its authorisation, until an admin records its activities; once any are recorded, a job is covered only when its RAR activity is empty or among them.
+
+_From 357-public-price-jobs._
+
+### 357-FR-009 — Only the garage's owner reads the list: a receptionist or a mechanic of the garage gets 403 `forbidden`, anyone whose account is not of that garage gets 404 `not_found` with nothing about the garage, and no session gets the standard sign-in demand; an AI assistant acting for the owner reads it like the owner; the check is the one the brands write already uses (`assertGarageOwner`); a `garageId` that is not a uuid gets 400 `validation_failed` before any check.
+
+_From 357-public-price-jobs._
+
+### 357-FR-010 — The endpoint MUST be described in the API's OpenAPI document with its DTOs in the contracts library, so the generated client carries it for the Prețuri view (Principle V).
+
+_From 357-public-price-jobs._
+
+### 357-FR-011 — Observability MUST ship with the endpoint: its route counts under the API's request duration metric and its errors in the API's error rate, both on the `motorfix-api` dashboard and covered by the `api` entry's `api-error-rate` and `api-latency` alert rules; the endpoint count in `infra/observability/inventory.json` is rewritten from `apps/api/openapi.json` (`scripts/observability-inventory.ts --write`) and the inventory check passes.
+
+_From 357-public-price-jobs._
+
+### 357-FR-012 — The reason codes MUST be the vocabulary the view will label (`no_top_price` "ascuns · fără preț maxim", `hidden_by_garage` "ascuns de tine", `not_authorised` "ascuns · nu e în autorizația RAR", `awaiting_approval` "ascuns · așteaptă aprobarea", `rejected` "respins"); the API returns the codes only, the labels belong to specs issue #139.
+
+_From 357-public-price-jobs._
 
 ## Retired
 
