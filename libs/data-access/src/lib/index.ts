@@ -104,6 +104,7 @@ export type { NotificationPreferenceDto } from './models/notification-preference
 export type { NotificationPreferencesDto } from './models/notification-preferences-dto';
 export type { OAuthCompleteDto } from './models/o-auth-complete-dto';
 export type { OAuthPendingDto } from './models/o-auth-pending-dto';
+export type { PasswordChangeDto } from './models/password-change-dto';
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';
@@ -246,6 +247,8 @@ export type { PasswordResetControllerCheck$Params as PasswordResetControllerChec
 export { passwordResetControllerCheck as passwordResetControllerCheck } from './fn/auth/password-reset-controller-check';
 export type { PasswordResetControllerComplete$Params as PasswordResetControllerComplete$Params } from './fn/auth/password-reset-controller-complete';
 export { passwordResetControllerComplete as passwordResetControllerComplete } from './fn/auth/password-reset-controller-complete';
+export type { PasswordChangeControllerChange$Params as PasswordChangeControllerChange$Params } from './fn/auth/password-change-controller-change';
+export { passwordChangeControllerChange as passwordChangeControllerChange } from './fn/auth/password-change-controller-change';
 export type { PhoneSignInControllerPhoneCode$Params as PhoneSignInControllerPhoneCode$Params } from './fn/auth/phone-sign-in-controller-phone-code';
 export { phoneSignInControllerPhoneCode as phoneSignInControllerPhoneCode } from './fn/auth/phone-sign-in-controller-phone-code';
 export type { PhoneSignInControllerPhoneSignIn$Params as PhoneSignInControllerPhoneSignIn$Params } from './fn/auth/phone-sign-in-controller-phone-sign-in';

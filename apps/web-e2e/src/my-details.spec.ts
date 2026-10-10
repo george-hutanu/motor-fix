@@ -5,6 +5,7 @@
 // @traces 139-edit-my-details-FR-008
 // @traces 139-edit-my-details-FR-011
 // @traces 139-edit-my-details-FR-013
+// @traces 139-edit-my-details-FR-014
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
@@ -376,6 +377,83 @@ test.describe('changing the phone number @seeded @mailbox', () => {
           .getByRole('region', { exact: true, name: 'Datele tale' })
           .getByText(email, { exact: true }),
       ).toBeVisible();
+      await other.close();
+    });
+  }
+});
+
+const NEW_PASSWORD = 'alta-parola-de-test-e2e';
+
+test.describe('changing the password @seeded', () => {
+  for (const size of SIZES) {
+    test(`changes the password, stays signed in, and signs in again only with the new one on a ${size.name}`, async ({
+      browser,
+      page,
+    }) => {
+      const email = unique('parola-noua');
+      const created = await page.request.post('/api/v1/auth/sign-up', {
+        data: {
+          consent: CURRENT_CONSENT,
+          email,
+          language: 'ro',
+          name: 'Andrei Parola',
+          password: OWN_PASSWORD,
+        },
+        headers: { 'x-forwarded-for': `203.0.113.${Date.now() % 250}` },
+      });
+      expect(created.status()).toBe(201);
+      await page.context().clearCookies();
+      await page.setViewportSize({ height: size.height, width: size.width });
+
+      await ready(page, '/ro');
+      await page
+        .getByRole('button', { exact: true, name: 'Autentificare' })
+        .click();
+      await signIn(page, email, { password: OWN_PASSWORD });
+      await expect(page).toHaveURL('/app/driver');
+      await page.goto(SETTINGS);
+      const panel = page.getByRole('region', {
+        exact: true,
+        name: 'Datele tale',
+      });
+      await panel
+        .getByRole('button', { exact: true, name: 'Schimbă parola' })
+        .click();
+      const dialog = page.getByRole('dialog', { name: 'Schimbă parola' });
+      await dialog.getByLabel('Parola actuală').fill(OWN_PASSWORD);
+      await dialog.getByLabel('Parola nouă').fill(NEW_PASSWORD);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        ),
+      ).toBeLessThanOrEqual(0);
+      await dialog
+        .getByRole('button', { exact: true, name: 'Schimbă parola' })
+        .click();
+      await expect(dialog).toBeHidden();
+      await expect(
+        page.getByText(
+          'Parola a fost schimbată. Celelalte dispozitive au fost deconectate.',
+        ),
+      ).toBeVisible();
+      // This device stays signed in.
+      await page.reload();
+      await expect(panel).toBeVisible();
+      await expect(page).toHaveURL(SETTINGS);
+
+      const other = await browser.newContext();
+      const again = await other.newPage();
+      await again.setViewportSize({ height: size.height, width: size.width });
+      await ready(again, '/ro');
+      await again
+        .getByRole('button', { exact: true, name: 'Autentificare' })
+        .click();
+      await signIn(again, email, { password: OWN_PASSWORD });
+      await expect(
+        again.getByText('E‑mailul sau parola nu sunt corecte.'),
+      ).toBeVisible();
+      await signIn(again, email, { password: NEW_PASSWORD });
+      await expect(again).toHaveURL('/app/driver');
       await other.close();
     });
   }

@@ -98,6 +98,7 @@ export type { NotificationPreferenceDto } from './models/notification-preference
 export type { NotificationPreferencesDto } from './models/notification-preferences-dto';
 export type { OAuthCompleteDto } from './models/o-auth-complete-dto';
 export type { OAuthPendingDto } from './models/o-auth-pending-dto';
+export type { PasswordChangeDto } from './models/password-change-dto';
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';

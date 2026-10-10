@@ -55,6 +55,7 @@
   "details": {
     "cancel": "Renunță",
     "changeEmail": "Schimbă e‑mailul",
+    "changePassword": "Schimbă parola",
     "changePhone": "Schimbă numărul",
     "city": "Oraș",
     "edit": "Modifică",
@@ -63,6 +64,9 @@
       "pattern": "Folosește doar litere, cifre și semne obișnuite."
     },
     "name": "Nume",
+    "password": "Parolă",
+    "passwordNotSet": "Nesetată",
+    "passwordSet": "Setată",
     "pending": "În așteptarea confirmării: {address}",
     "phone": "Telefon",
     "phoneLine": "Service‑ul îți vede numărul doar după ce accepți oferta lui.",
@@ -81,6 +85,7 @@
     "resent": "Am trimis linkul.",
     "save": "Salvează",
     "saved": "Am salvat.",
+    "setPassword": "Setează o parolă",
     "title": "Datele tale",
     "unconfirmed": "Neconfirmat"
   },
@@ -146,6 +151,26 @@
     "activeRequest": "Cererea activă",
     "quotes": "Oferte primite",
     "repairs": "Istoric reparații"
+  },
+  "passwordChange": {
+    "current": "Parola actuală",
+    "field": {
+      "weak_password": "Alege o parolă mai greu de ghicit: este printre cele mai folosite."
+    },
+    "hint": "8 la 128 de caractere",
+    "new": "Parola nouă",
+    "problem": {
+      "invalid_credentials": "Parola actuală nu e corectă.",
+      "recent_sign_in_required": "Intră din nou în cont ca să setezi o parolă.",
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou mai târziu."
+    },
+    "saved": "Parola a fost schimbată. Celelalte dispozitive au fost deconectate.",
+    "setSaved": "Parola a fost setată. Celelalte dispozitive au fost deconectate.",
+    "setSubmit": "Setează parola",
+    "setTitle": "Setează o parolă",
+    "signInAgain": "Intră din nou în cont",
+    "submit": "Schimbă parola",
+    "title": "Schimbă parola"
   },
   "phoneChange": {
     "again": "Trimite un cod nou",

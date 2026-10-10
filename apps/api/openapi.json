@@ -1336,6 +1336,50 @@
         ]
       }
     },
+    "/api/v1/auth/password": {
+      "post": {
+        "operationId": "PasswordChangeController_change",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Changed or set; every other session ended"
+          },
+          "400": {
+            "description": "weak_password, validation_failed"
+          },
+          "401": {
+            "description": "invalid_credentials, sign_in_required"
+          },
+          "403": {
+            "description": "recent_sign_in_required"
+          },
+          "409": {
+            "description": "email_required"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/me/phone": {
       "post": {
         "operationId": "PhoneChangeController_request",
@@ -5870,6 +5914,24 @@
         "required": [
           "token",
           "password"
+        ]
+      },
+      "PasswordChangeDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "Required when the account already has a password",
+            "maxLength": 1024
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "8 to 128 characters, not a common password",
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "newPassword"
         ]
       },
       "PhoneChangeDto": {

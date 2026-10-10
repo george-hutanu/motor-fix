@@ -28,8 +28,13 @@ import {
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 import { EmailChangeDialog } from './email-change-dialog/email-change-dialog';
+import {
+  type PasswordChangeAnswer,
+  PasswordChangeDialog,
+} from './password-change-dialog/password-change-dialog';
 import { PhoneChangeDialog } from './phone-change-dialog/phone-change-dialog';
 import { characters } from '../../characters';
+import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { Session } from '../session';
 
 const CONTROL = /\p{Cc}/u;
@@ -46,7 +51,7 @@ const city = (control: AbstractControl): ValidationErrors | null =>
 
 // "Datele tale": the driver's name, phone, e-mail and city, the name and the
 // city edited in place, the e-mail changed through a link, the phone through
-// a WhatsApp code.
+// a WhatsApp code, the password through its dialog.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -67,6 +72,7 @@ export class MyDetails {
   private readonly i18n = inject(I18n);
   private readonly injector = inject(Injector);
   private readonly overlays = inject(Overlays);
+  private readonly signIn = inject(SignInDialog);
   protected readonly session = inject(Session);
 
   protected readonly editing = signal(false);
@@ -132,6 +138,35 @@ export class MyDetails {
       this.session.current.set(answer);
       toast(this.i18n.t('driver.phoneChange.saved'));
     }
+  }
+
+  // A first password needs a recent sign-in: the dialog asks for one, and
+  // opens again once it is done.
+  protected async changePassword(hasPassword: boolean) {
+    const answer = await this.overlays.open<
+      PasswordChangeAnswer | 'cancelled',
+      { hasPassword: boolean }
+    >(PasswordChangeDialog, {
+      data: { hasPassword },
+      shape: 'dialog',
+      title: hasPassword
+        ? 'driver.passwordChange.title'
+        : 'driver.passwordChange.setTitle',
+    });
+    if (answer === 'sign-in') {
+      if (await this.signIn.gate()) await this.changePassword(hasPassword);
+      return;
+    }
+    if (answer !== 'changed') return;
+    const me = this.session.current();
+    if (me) this.session.current.set({ ...me, hasPassword: true });
+    toast(
+      this.i18n.t(
+        hasPassword
+          ? 'driver.passwordChange.saved'
+          : 'driver.passwordChange.setSaved',
+      ),
+    );
   }
 
   // The link again: to the pending address, else to the unconfirmed one.

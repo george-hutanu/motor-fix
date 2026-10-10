@@ -54,6 +54,7 @@
   "details": {
     "cancel": "Cancel",
     "changeEmail": "Change e-mail",
+    "changePassword": "Change the password",
     "changePhone": "Change number",
     "city": "City",
     "edit": "Edit",
@@ -62,6 +63,9 @@
       "pattern": "Use only letters, digits and ordinary signs."
     },
     "name": "Name",
+    "password": "Password",
+    "passwordNotSet": "Not set",
+    "passwordSet": "Set",
     "pending": "Waiting for confirmation: {address}",
     "phone": "Phone",
     "phoneLine": "A garage sees your number only after you accept its quote.",
@@ -80,6 +84,7 @@
     "resent": "Link sent.",
     "save": "Save",
     "saved": "Saved.",
+    "setPassword": "Set a password",
     "title": "Your details",
     "unconfirmed": "Not confirmed"
   },
@@ -145,6 +150,26 @@
     "activeRequest": "Active request",
     "quotes": "Quotes received",
     "repairs": "Repair history"
+  },
+  "passwordChange": {
+    "current": "Current password",
+    "field": {
+      "weak_password": "Choose a password that is harder to guess: this one is among the most used."
+    },
+    "hint": "8 to 128 characters",
+    "new": "New password",
+    "problem": {
+      "invalid_credentials": "The current password is not right.",
+      "recent_sign_in_required": "Sign in again to set a password.",
+      "too_many_attempts": "Too many tries. Try again later."
+    },
+    "saved": "Password changed. Other devices were signed out.",
+    "setSaved": "Password set. Other devices were signed out.",
+    "setSubmit": "Set the password",
+    "setTitle": "Set a password",
+    "signInAgain": "Sign in again",
+    "submit": "Change the password",
+    "title": "Change the password"
   },
   "phoneChange": {
     "again": "Send a new code",

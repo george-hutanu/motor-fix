@@ -303,8 +303,14 @@ export class Frame implements OnInit {
         if (message.kind === 'account.email_confirmed') {
           void this.session.reload();
         }
-        // Every session ended (all devices, a password reset), here or elsewhere.
-        if (message.kind === 'session.revoked') void this.revoked();
+        // Every session ended (all devices, a password reset), here or
+        // elsewhere; a password change keeps the tab it was made in.
+        if (
+          message.kind === 'session.revoked' &&
+          !this.session.keepsThroughRevoke()
+        ) {
+          void this.revoked();
+        }
       });
     // The stream may have missed events: read the account again.
     this.live.resync

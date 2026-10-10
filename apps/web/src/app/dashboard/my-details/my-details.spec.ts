@@ -8,7 +8,9 @@ import { toast } from '@motor-fix/ui-cockpit';
 
 import { EmailChangeDialog } from './email-change-dialog/email-change-dialog';
 import { MyDetails } from './my-details';
+import { PasswordChangeDialog } from './password-change-dialog/password-change-dialog';
 import { PhoneChangeDialog } from './phone-change-dialog/phone-change-dialog';
+import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { Session } from '../session';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -39,6 +41,7 @@ let current: ReturnType<typeof signal<MeDto | null>>;
 let update: jest.Mock;
 let askAgain: jest.Mock;
 let open: jest.Mock;
+let gate: jest.Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -59,6 +62,7 @@ async function render(
   update = jest.fn(({ body }: { body: unknown }) => answer(body));
   askAgain = jest.fn(async () => undefined);
   open = jest.fn(async () => 'cancelled');
+  gate = jest.fn(async () => true);
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { current } },
@@ -70,6 +74,7 @@ async function render(
         },
       },
       { provide: Overlays, useValue: { open } },
+      { provide: SignInDialog, useValue: { gate } },
     ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
@@ -123,6 +128,7 @@ describe('the details panel', () => {
       'Telefon: —',
       'E‑mail: andrei@example.ro',
       'Oraș: —',
+      'Parolă: Setată',
     ]);
     expect(element.textContent).toContain(
       'Service‑ul îți vede numărul doar după ce accepți oferta lui.',
@@ -148,6 +154,7 @@ describe('the details panel', () => {
       'Phone',
       'E-mail',
       'City',
+      'Password',
     ]);
     expect(element.textContent).toContain(
       'A garage sees your number only after you accept its quote.',
@@ -442,5 +449,93 @@ describe('the phone row', () => {
     const { element } = await render({ phone: null }, 'en');
 
     expect(button(element, 'Change number')).toBeDefined();
+  });
+});
+
+// @traces 139-edit-my-details-FR-014
+// @traces 139-edit-my-details-FR-016
+describe('the password row', () => {
+  it('opens the change dialog for an account with a password and says the others were signed out', async () => {
+    const { element } = await render();
+    open.mockResolvedValueOnce('changed');
+
+    button(element, 'Schimbă parola')?.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(PasswordChangeDialog, {
+      data: { hasPassword: true },
+      shape: 'dialog',
+      title: 'driver.passwordChange.title',
+    });
+    expect(toast).toHaveBeenCalledWith(
+      'Parola a fost schimbată. Celelalte dispozitive au fost deconectate.',
+    );
+  });
+
+  it('says nothing when the dialog is cancelled', async () => {
+    const { element } = await render();
+
+    button(element, 'Schimbă parola')?.click();
+    await settle();
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('offers "Setează o parolă" to an account with an e-mail and no password, and marks the account as having one after', async () => {
+    const { element } = await render({ hasPassword: false });
+    expect(rows(element)).toContain('Parolă: Nesetată');
+    open.mockResolvedValueOnce('changed');
+
+    button(element, 'Setează o parolă')?.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(PasswordChangeDialog, {
+      data: { hasPassword: false },
+      shape: 'dialog',
+      title: 'driver.passwordChange.setTitle',
+    });
+    expect(current()?.hasPassword).toBe(true);
+    expect(toast).toHaveBeenCalledWith(
+      'Parola a fost setată. Celelalte dispozitive au fost deconectate.',
+    );
+    expect(button(element, 'Schimbă parola')).toBeDefined();
+  });
+
+  it('opens the sign-in when asked to sign in again, then the dialog once more', async () => {
+    const { element } = await render({ hasPassword: false });
+    open.mockResolvedValueOnce('sign-in').mockResolvedValueOnce('changed');
+
+    button(element, 'Setează o parolă')?.click();
+    await settle();
+
+    expect(gate).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(current()?.hasPassword).toBe(true);
+  });
+
+  it('does not open the dialog again when the sign-in is closed', async () => {
+    const { element } = await render({ hasPassword: false });
+    open.mockResolvedValueOnce('sign-in');
+    gate.mockResolvedValueOnce(false);
+
+    button(element, 'Setează o parolă')?.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(current()?.hasPassword).toBe(false);
+  });
+
+  it('does not offer a password to an account with no e-mail and none', async () => {
+    const { element } = await render({ email: null, hasPassword: false });
+
+    expect(button(element, 'Setează o parolă')).toBeUndefined();
+    expect(button(element, 'Schimbă parola')).toBeUndefined();
+  });
+
+  it('speaks English', async () => {
+    const { element } = await render({ hasPassword: false }, 'en');
+
+    expect(rows(element)).toContain('Password: Not set');
+    expect(button(element, 'Set a password')).toBeDefined();
   });
 });

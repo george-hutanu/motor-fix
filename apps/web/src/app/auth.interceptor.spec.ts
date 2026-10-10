@@ -113,6 +113,34 @@ describe('authInterceptor', () => {
     call.flush({});
   });
 
+  // @traces 139-edit-my-details-FR-014
+  it('sends the token with the password change, a signed-in call under auth', () => {
+    const { http, server } = setup('abc');
+
+    http.post('/api/v1/auth/password', {}).subscribe();
+    const call = server.expectOne('/api/v1/auth/password');
+
+    expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
+    call.flush({});
+  });
+
+  // @traces 139-edit-my-details-FR-015
+  it('passes a wrong password on without renewing, so it is not sent and counted twice', async () => {
+    const { http, server, session } = setup('abc');
+
+    const answer = firstValueFrom(http.post('/api/v1/auth/password', {}));
+    server
+      .expectOne('/api/v1/auth/password')
+      .flush(
+        { code: 'invalid_credentials', status: 401 },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+
+    await expect(answer).rejects.toMatchObject({ status: 401 });
+    expect(session.renew).not.toHaveBeenCalled();
+    server.expectNone('/api/v1/auth/password');
+  });
+
   it.each(['/api/v1/auth/assistant/token', '/api/v1/auth/assistant/authorize'])(
     'sends no token to the identity server call %s',
     (url) => {

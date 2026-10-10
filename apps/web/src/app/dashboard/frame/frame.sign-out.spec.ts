@@ -38,6 +38,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
   const session = {
     current,
     ended: new Subject<void>(),
+    keepsThroughRevoke: jest.fn(() => false),
     revoked: jest.fn(() => current.set(null)),
     shown: current,
     signOut: jest.fn(async () => current.set(null)),
@@ -233,6 +234,24 @@ describe('a session ended elsewhere', () => {
     expect(session.revoked).toHaveBeenCalledTimes(1);
     expect(session.signOut).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenLastCalledWith('/');
+  });
+
+  // @traces 139-edit-my-details-FR-014
+  it('stays signed in through the session.revoked its own password change sent', async () => {
+    const { live, navigate, session } = await render('driver', '/app/driver');
+    session.keepsThroughRevoke.mockReturnValue(true);
+    navigate.mockClear();
+
+    live.events.next({
+      at: new Date().toISOString(),
+      id: 'event-2',
+      kind: 'session.revoked',
+    });
+    await flush();
+
+    expect(session.revoked).not.toHaveBeenCalled();
+    expect(live.close).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalledWith('/');
   });
 
   it('closes the live connection and opens Home when another tab signed out', async () => {

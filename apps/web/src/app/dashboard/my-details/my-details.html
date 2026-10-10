@@ -75,6 +75,27 @@
             <dd>{{ me.city ?? '—' }}</dd>
           }
         </div>
+        <div class="row">
+          <dt>{{ 'driver.details.password' | t }}</dt>
+          @if (me.hasPassword) {
+            <dd>{{ 'driver.details.passwordSet' | t }}</dd>
+          } @else {
+            <dd>{{ 'driver.details.passwordNotSet' | t }}</dd>
+          }
+          @if (!editing() && (me.hasPassword || me.email)) {
+            <div class="actions">
+              @if (me.hasPassword) {
+                <button hlmBtn variant="ghost" type="button" (click)="changePassword(true)">
+                  {{ 'driver.details.changePassword' | t }}
+                </button>
+              } @else {
+                <button hlmBtn variant="ghost" type="button" (click)="changePassword(false)">
+                  {{ 'driver.details.setPassword' | t }}
+                </button>
+              }
+            </div>
+          }
+        </div>
       </dl>
       <p class="hint">{{ 'driver.details.phoneLine' | t }}</p>
       @if (editing()) {
