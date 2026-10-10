@@ -387,10 +387,10 @@ test.describe('the rating dial near Bucharest @seeded', () => {
 
     await expect(dialValue(page)).toHaveText('4,9');
     await expect(dialArea(page)).toContainText('NOTĂ');
-    await expect(dialArea(page).locator('.name')).toHaveText(
+    await expect(dialArea(page).locator('.gauge .name')).toHaveText(
       'Service Auto Militari',
     );
-    await expect(dialArea(page).locator('.line')).toHaveText(
+    await expect(dialArea(page).locator('.gauge .line')).toHaveText(
       /București · \d+,\d km/,
     );
     await expect(previewRows(page)).toHaveCount(3);
@@ -422,7 +422,7 @@ test.describe('the rating dial near Bucharest @seeded', () => {
     await chooseTesla(page);
 
     await expect(dialValue(page)).toHaveText('—');
-    await expect(dialArea(page).locator('.name')).toHaveText(
+    await expect(dialArea(page).locator('.gauge .name')).toHaveText(
       'Niciun service din zonă nu primește încă Tesla',
     );
     await expect(previewRows(page)).toHaveCount(3);
@@ -445,10 +445,10 @@ test.describe('the rating dial in Cluj-Napoca @seeded', () => {
     await useLocation(page);
 
     await expect(dialValue(page)).toHaveText('4,8');
-    await expect(dialArea(page).locator('.name')).toHaveText(
+    await expect(dialArea(page).locator('.gauge .name')).toHaveText(
       'Mecanic Mobil Cluj',
     );
-    await expect(dialArea(page).locator('.line')).toHaveText(
+    await expect(dialArea(page).locator('.gauge .line')).toHaveText(
       'Mecanic mobil · vine la tine',
     );
   });
@@ -469,7 +469,7 @@ test.describe('the rating dial far from every garage @seeded', () => {
 
     await useLocation(page);
 
-    await expect(dialArea(page).locator('.name')).toHaveText(
+    await expect(dialArea(page).locator('.gauge .name')).toHaveText(
       'Niciun service în 25 km',
     );
     await expect(previewRows(page)).toHaveCount(0);
@@ -489,6 +489,11 @@ test.describe('the rating dial with reduced motion @seeded', () => {
     await expect(dialValue(page)).toHaveText('4,9');
 
     await chooseTesla(page);
+    // "—" is also the dial while the answer loads: wait for Tesla's rows.
+    await expect(previewRows(page).first().locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'red',
+    );
     await expect(dialValue(page)).toHaveText('—');
 
     // Read in one task, so the dial and the row are seen in the same render.
