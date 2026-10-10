@@ -140,6 +140,35 @@ describe('the account e-mails', () => {
   });
 });
 
+// @traces 209-FR-005
+describe('the verification result variant', () => {
+  it.each(['approved', 'more_requested', 'rejected'])(
+    'picks VERIFICATION_RESULT.%s by the decision',
+    (decision) => {
+      expect(templateName('VERIFICATION_RESULT', { decision })).toBe(
+        `VERIFICATION_RESULT.${decision}`,
+      );
+    },
+  );
+
+  it.each([
+    [{}],
+    [{ decision: 'reopened' }],
+    [{ decision: 'constructor' }],
+    [{ decision: null }],
+  ])('keeps the bare kind for %j', (params) => {
+    expect(templateName('VERIFICATION_RESULT', params)).toBe(
+      'VERIFICATION_RESULT',
+    );
+  });
+
+  it('leaves another kind with a decision alone', () => {
+    expect(templateName('QUOTE_RECEIVED', { decision: 'approved' })).toBe(
+      'QUOTE_RECEIVED',
+    );
+  });
+});
+
 describe('grouped e-mails', () => {
   it('names the count of new quotes in both languages', () => {
     expect(
