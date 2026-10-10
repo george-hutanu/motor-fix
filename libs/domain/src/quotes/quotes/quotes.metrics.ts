@@ -31,3 +31,41 @@ export function recordQuoteSend(outcome: QuoteSendOutcome, minutes?: number) {
     })
     .record(minutes);
 }
+
+export type RequestDeclineOutcome =
+  | 'declined'
+  | 'already_answered'
+  | 'request_not_open'
+  | 'invalid';
+
+// One count per decline a garage tries, by outcome and reason; never who.
+export function recordRequestDecline(
+  outcome: RequestDeclineOutcome,
+  reason: string,
+) {
+  meter()
+    .createCounter('motorfix_request_declines_total', {
+      description: 'Requests garages declined, by outcome and reason',
+    })
+    .add(1, { outcome, reason });
+}
+
+export type DeclineWindowOutcome =
+  | 'sent'
+  | 'muted'
+  | 'skipped_undone'
+  | 'skipped_closed'
+  | 'already_told';
+
+// One count per decline window the worker closes, by outcome, and whether
+// the sweep found it rather than its own timer.
+export function recordDeclineWindow(
+  outcome: DeclineWindowOutcome,
+  sweep: boolean,
+) {
+  meter()
+    .createCounter('motorfix_decline_windows_closed_total', {
+      description: 'Decline undo windows closed, by outcome',
+    })
+    .add(1, { outcome, sweep: String(sweep) });
+}

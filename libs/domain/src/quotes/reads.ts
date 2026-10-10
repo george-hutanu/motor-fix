@@ -84,6 +84,8 @@ export function closeReasonOf(
   garage: GarageStatus,
   ownQuoteAccepted: boolean,
 ): GarageCloseReason {
+  // The garage's own answer comes before anything that happened after it.
+  if (recipient === 'declined') return 'declined';
   if (recipient === 'expired') return 'expired';
   if (recipient === 'closed' && garage === 'suspended') {
     return 'garage_suspended';

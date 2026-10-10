@@ -1,6 +1,8 @@
 import { type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   DataStoreMetricsModule,
+  DECLINE_WINDOW_CONSUMER,
+  DeclineWindowModule,
   emailConfig,
   HealthModule,
   InsightsModule,
@@ -32,7 +34,7 @@ class WorkerModule {}
 // The worker serves no routes of its own: its HTTP listener exists so that
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
-// WhatsApp, runs the monthly news, the daily reminders, the listing draft
+// WhatsApp, runs the monthly news, the daily reminders, the decline windows, the listing draft
 // sweep, the listing photos' copies and the nightly platform figures (placing
 // the garages with no city first), and
 // reads the data stores for their figures.
@@ -59,6 +61,7 @@ export function workerModule(
       StorageModule.register(env),
       OutboxRelayModule.register({
         consumers: [
+          DECLINE_WINDOW_CONSUMER,
           NEWS_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
           REQUEST_RECEIVED_CONSUMER,
@@ -72,6 +75,12 @@ export function workerModule(
         dayMs: reminderDayMs(env.APP_ENV, process.env),
         notifications,
         redisUrl: env.REDIS_URL,
+      }),
+      // Tells the driver of a decline once its undo window has passed.
+      DeclineWindowModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+        webUrl: email.webUrl,
       }),
       ListingPhotosWorkerModule.register({ redisUrl: env.REDIS_URL }),
       InsightsModule.registerWorker({

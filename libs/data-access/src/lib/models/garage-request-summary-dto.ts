@@ -17,7 +17,7 @@ export interface GarageRequestSummaryDto {
   /**
    * Set on the rows of a closed read
    */
-  closedReason: ('expired' | 'garage_suspended' | 'cancelled' | 'account_closed' | 'accepted_elsewhere') | null;
+  closedReason: ('declined' | 'expired' | 'garage_suspended' | 'cancelled' | 'account_closed' | 'accepted_elsewhere') | null;
   createdAt: string;
 
   /**

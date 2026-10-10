@@ -15,7 +15,9 @@ import type {
   PrismaClient,
   QuoteRequest,
   RequestJob,
+  RequestRecipient,
 } from '../../generated/prisma/client';
+import { DECLINE_UNDO_MINUTES } from '../quotes-config';
 import {
   assertCursor,
   garageRef,
@@ -68,8 +70,9 @@ const bookingOf = (booking: Booking & { garage: Garage }): BookingDto => ({
   status: booking.status,
 });
 
-// The driver's own requests. A garage is only its name and page; how a
-// garage declined and who did it are the garage's business.
+// The driver's own requests. A garage is only its name and page; a decline
+// shows with its reason once the garage's undo window has closed, and who
+// declined stays the garage's business.
 @Injectable()
 export class RequestsService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
@@ -123,13 +126,33 @@ export class RequestsService {
         ...quoteOf(quote),
         garage: garageRef(quote.garage),
       })),
-      recipients: row.recipients.map((recipient) => ({
-        answeredAt: iso(recipient.answeredAt),
-        createdAt: recipient.createdAt.toISOString(),
-        garage: garageRef(recipient.garage),
-        id: recipient.id,
-        status: recipient.status,
-      })),
+      recipients: row.recipients.map((recipient) =>
+        recipientOf(recipient, new Date()),
+      ),
     };
   }
+}
+
+const UNDO_MS = DECLINE_UNDO_MINUTES * 60_000;
+
+// A decline the garage may still undo is not news yet: the driver sees the
+// garage waiting until its window has closed, then the decline and its
+// reason, never who declined.
+function recipientOf(
+  recipient: RequestRecipient & { garage: Garage },
+  now: Date,
+): RequestDto['recipients'][number] {
+  const declined =
+    recipient.status === 'declined' &&
+    recipient.declinedAt !== null &&
+    now.getTime() - recipient.declinedAt.getTime() >= UNDO_MS;
+  const hidden = recipient.status === 'declined' && !declined;
+  return {
+    answeredAt: hidden ? null : iso(recipient.answeredAt),
+    createdAt: recipient.createdAt.toISOString(),
+    declineReason: declined ? recipient.declineReason : null,
+    garage: garageRef(recipient.garage),
+    id: recipient.id,
+    status: hidden ? 'waiting' : recipient.status,
+  };
 }

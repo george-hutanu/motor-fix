@@ -5,7 +5,11 @@ import {
   MeterProvider,
 } from '@opentelemetry/sdk-metrics';
 
-import { recordQuoteSend } from './quotes.metrics';
+import {
+  recordDeclineWindow,
+  recordQuoteSend,
+  recordRequestDecline,
+} from './quotes.metrics';
 
 const { metricReader } = inMemory();
 // A count before telemetry starts is lost, and must not keep later ones out.
@@ -54,5 +58,55 @@ describe('counting quotes sent', () => {
     expect(point.value.buckets.boundaries).toEqual([
       5, 15, 30, 60, 180, 360, 720, 1440, 2880, 10080,
     ]);
+  });
+});
+
+const points = async (name: string) =>
+  ((await metric(name))?.dataPoints ?? []).map((point) => ({
+    ...point.attributes,
+    value: point.value,
+  }));
+
+// @traces 345-decline-request-FR-018
+describe('counting declines and their windows', () => {
+  it('adds one per decline by outcome and reason, with no identifiers', async () => {
+    recordRequestDecline('declined', 'fully_booked');
+    recordRequestDecline('declined', 'fully_booked');
+    recordRequestDecline('already_answered', 'need_to_see_car');
+    recordRequestDecline('request_not_open', 'job_not_done');
+    recordRequestDecline('invalid', 'make_model_engine_not_done');
+
+    expect(await points('motorfix_request_declines_total')).toEqual(
+      expect.arrayContaining([
+        { outcome: 'declined', reason: 'fully_booked', value: 2 },
+        { outcome: 'already_answered', reason: 'need_to_see_car', value: 1 },
+        { outcome: 'request_not_open', reason: 'job_not_done', value: 1 },
+        {
+          outcome: 'invalid',
+          reason: 'make_model_engine_not_done',
+          value: 1,
+        },
+      ]),
+    );
+  });
+
+  it('adds one per window closed by outcome and whether the sweep ran it', async () => {
+    recordDeclineWindow('sent', false);
+    recordDeclineWindow('sent', true);
+    recordDeclineWindow('muted', false);
+    recordDeclineWindow('skipped_undone', false);
+    recordDeclineWindow('skipped_closed', true);
+    recordDeclineWindow('already_told', false);
+
+    expect(await points('motorfix_decline_windows_closed_total')).toEqual(
+      expect.arrayContaining([
+        { outcome: 'sent', sweep: 'false', value: 1 },
+        { outcome: 'sent', sweep: 'true', value: 1 },
+        { outcome: 'muted', sweep: 'false', value: 1 },
+        { outcome: 'skipped_undone', sweep: 'false', value: 1 },
+        { outcome: 'skipped_closed', sweep: 'true', value: 1 },
+        { outcome: 'already_told', sweep: 'false', value: 1 },
+      ]),
+    );
   });
 });

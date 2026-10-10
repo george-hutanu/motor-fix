@@ -169,6 +169,7 @@ describe('GET /requests/:id', () => {
       {
         answeredAt: null,
         createdAt: expect.any(String),
+        declineReason: null,
         garage: garageRef,
         id: expect.any(String),
         status: 'quoted',
@@ -210,7 +211,7 @@ describe('GET /requests/:id', () => {
     });
   });
 
-  it('shows no decline reason on a recipient that declined', async () => {
+  it('shows a decline under 5 minutes old as still waiting, with no reason and no staff', async () => {
     const andrei = await world.account('Andrei Marin');
     const { garage, owner } = await team('Atelier Dinamo');
     const request = await world.request(andrei);
@@ -219,7 +220,11 @@ describe('GET /requests/:id', () => {
     const res = await get(`/requests/${request.id}`, bearer(andrei, 'driver'));
 
     expect(res.body.recipients).toEqual([
-      expect.objectContaining({ status: 'declined' }),
+      expect.objectContaining({
+        answeredAt: null,
+        declineReason: null,
+        status: 'waiting',
+      }),
     ]);
     expect(JSON.stringify(res.body)).not.toContain('fully_booked');
     expect(JSON.stringify(res.body)).not.toContain(owner);
@@ -244,5 +249,69 @@ describe('GET /requests/:id', () => {
     expect(
       (await get('/requests/not-an-id', bearer(andrei, 'driver'))).status,
     ).toBe(400);
+  });
+});
+
+// @traces 345-decline-request-FR-011
+// @traces 345-decline-request-FR-020
+describe('GET /requests/:id after a garage declined', () => {
+  async function declinedAgo(ms: number) {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await team('Atelier Dinamo');
+    const request = await world.request(andrei);
+    const recipient = await world.recipient(
+      request.id,
+      dinamo.garage.id,
+      'declined',
+      dinamo.receptionist,
+    );
+    const at = new Date(Date.now() - ms);
+    await prisma.requestRecipient.update({
+      data: {
+        answeredAt: at,
+        declinedAt: at,
+        declineReason: 'need_to_see_car',
+      },
+      where: { id: recipient.id },
+    });
+    const res = await get(`/requests/${request.id}`, bearer(andrei, 'driver'));
+    return { at, dinamo, res };
+  }
+
+  it('still answers waiting at 4:59', async () => {
+    const { res } = await declinedAgo(4 * 60_000 + 59_000);
+
+    expect(res.body.recipients[0]).toMatchObject({
+      answeredAt: null,
+      declineReason: null,
+      status: 'waiting',
+    });
+  });
+
+  it('answers declined with the reason from 5:00, never who declined', async () => {
+    const { at, dinamo, res } = await declinedAgo(5 * 60_000);
+
+    expect(res.body.recipients[0]).toMatchObject({
+      answeredAt: at.toISOString(),
+      declineReason: 'need_to_see_car',
+      status: 'declined',
+    });
+    expect(res.body.recipients[0]).not.toHaveProperty('declinedBy');
+    expect(res.body.recipients[0]).not.toHaveProperty('declinedAt');
+    expect(JSON.stringify(res.body)).not.toContain(dinamo.receptionist);
+  });
+
+  it('answers declineReason null on a recipient that did not decline', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const { garage } = await team('Atelier Dinamo');
+    const request = await world.request(andrei);
+    await world.recipient(request.id, garage.id);
+
+    const res = await get(`/requests/${request.id}`, bearer(andrei, 'driver'));
+
+    expect(res.body.recipients[0]).toMatchObject({
+      declineReason: null,
+      status: 'waiting',
+    });
   });
 });

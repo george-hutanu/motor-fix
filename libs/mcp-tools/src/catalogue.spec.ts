@@ -9,6 +9,8 @@ const GARAGE_READS = [
   'list_quote_requests',
 ];
 
+const GARAGE_ACTS = ['decline_quote_request'];
+
 // What an assistant must never be able to do for a person.
 const FORBIDDEN = [
   /pay(ment)?s?\b|card|invoice|refund|charge/i,
@@ -23,15 +25,17 @@ const FORBIDDEN = [
 describe('catalogue', () => {
   // @traces 365-FR-007
   // @traces 374-FR-001
-  it('ships get_my_account and the four garage reads, every one a read', () => {
+  // @traces 345-decline-request-FR-017
+  it('ships get_my_account, the four garage reads and decline_quote_request, the one act', () => {
     expect(catalogue.map((t) => t.name).sort()).toEqual(
-      ['get_my_account', ...GARAGE_READS].sort(),
+      ['get_my_account', ...GARAGE_READS, ...GARAGE_ACTS].sort(),
     );
     for (const tool of catalogue) {
-      expect(tool.acts).toBe(false);
-      expect(tool.annotations).toEqual({
-        destructiveHint: false,
-        readOnlyHint: true,
+      const acts = GARAGE_ACTS.includes(tool.name);
+      expect(tool.acts).toBe(acts);
+      expect(tool.annotations).toMatchObject({
+        destructiveHint: acts,
+        readOnlyHint: !acts,
       });
     }
   });
