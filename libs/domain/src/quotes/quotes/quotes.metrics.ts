@@ -1,6 +1,6 @@
 import { metrics } from '@opentelemetry/api';
 
-export type QuoteSendOutcome =
+type QuoteSendOutcome =
   | 'sent'
   | 'refused'
   | 'already_answered'
@@ -32,7 +32,7 @@ export function recordQuoteSend(outcome: QuoteSendOutcome, minutes?: number) {
     .record(minutes);
 }
 
-export type RequestDeclineOutcome =
+type RequestDeclineOutcome =
   | 'declined'
   | 'already_answered'
   | 'request_not_open'
