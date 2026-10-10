@@ -66,9 +66,12 @@ async function settled(page: Page, ...selectors: string[]): Promise<Box[]> {
       const read = () =>
         JSON.stringify(
           wanted.map((selector) => {
-            const found = document.querySelector(selector);
-            if (!found) throw new Error(`${selector} is not on the page`);
-            const { height, width, x, y } = found.getBoundingClientRect();
+            const found = document.querySelectorAll(selector);
+            if (found.length !== 1)
+              throw new Error(
+                `${selector} matches ${found.length} elements, not one`,
+              );
+            const { height, width, x, y } = found[0].getBoundingClientRect();
             return { height, width, x, y };
           }),
         );
