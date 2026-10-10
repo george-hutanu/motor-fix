@@ -14,8 +14,8 @@ const answers: Record<string, string> = {
     'N/A: no screen changed',
   'specs/NNN-slug in motor-fix-specs, or N/A and why': '`specs/001-example`',
   'the main changes, one bullet each': '- Adds the template\n- Adds the check',
-  'the story link, e.g. https://app.notion.com/p/… (ST-n)':
-    'https://app.notion.com/p/0000000000000000000000000000000a (ST-1)',
+  'the story link, e.g. https://github.com/george-hutanu/motor-fix-specs/issues/<n> (ST-n)':
+    'https://github.com/george-hutanu/motor-fix-specs/issues/60 (ST-1)',
   'what could break, and how to undo it':
     'A PR body the check misreads; revert the workflow.',
   'what this change adds - service, queue, endpoint, outside call, product action - and the signals, dashboard panel and alert that come with it, or N/A and the reason':
@@ -52,7 +52,7 @@ describe('the pull request template', () => {
     const headings = [...template.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
     expect(headings).toEqual([
       'Why',
-      'Notion story',
+      'Story',
       'Spec folder',
       'What changed',
       'How it was tested',
@@ -71,7 +71,7 @@ describe('the pull request template', () => {
       'Conventional Commit',
       'Tests were written first',
       'Design checked',
-      'Notion in sync',
+      'Tracker in sync',
     ]) {
       expect(template).toMatch(new RegExp(`- \\[ \\] .*${item}`));
     }
@@ -254,19 +254,38 @@ describe('checkPrBody on a ready PR', () => {
     expect(ready(filled(), 'fix(web)!: ST-2 breaking')).toEqual([]);
   });
 
-  it('wants a Notion link or N/A with a reason in the Notion story section', () => {
-    const body = withSection(filled(), 'Notion story', 'ST-1');
+  // @traces 1036-FR-014
+  it('wants a tracker issue link, a Notion link or N/A with a reason in the Story section', () => {
+    const body = withSection(filled(), 'Story', 'ST-1');
     expect(ready(body)).toEqual([
-      '"## Notion story" has no Notion link (or N/A and the reason).',
+      '"## Story" has no link to the story (its issue in george-hutanu/motor-fix-specs, or its Notion page), or N/A and the reason.',
     ]);
-    const na = withSection(filled(), 'Notion story', 'N/A: dependency bump');
+    const na = withSection(filled(), 'Story', 'N/A: dependency bump');
     expect(ready(na)).toEqual([]);
-    const legacy = withSection(
-      filled(),
-      'Notion story',
+    for (const link of [
       'https://www.notion.so/motorfix/ST-1-abc',
+      'https://app.notion.com/p/0000000000000000000000000000000a (ST-1)',
+    ])
+      expect(ready(withSection(filled(), 'Story', link))).toEqual([]);
+    const otherRepo = withSection(
+      filled(),
+      'Story',
+      'https://github.com/someone/else/issues/1',
     );
-    expect(ready(legacy)).toEqual([]);
+    expect(ready(otherRepo)).toHaveLength(1);
+  });
+
+  // @traces 1036-FR-013
+  it('still passes a PR opened before the rename, with its Notion story heading and box', () => {
+    const before = filled()
+      .replace('## Story', '## Notion story')
+      .replace('Tracker in sync', 'Notion in sync');
+    expect(ready(before)).toEqual([]);
+    expect(
+      checkPrBody({ body: before, draft: true, template, title: 'WIP' }),
+    ).toEqual([]);
+    const noLink = withSection(before, 'Notion story', 'ST-1');
+    expect(ready(noLink)).toHaveLength(1);
   });
 });
 
@@ -285,13 +304,13 @@ describe('checkPrBody on a draft PR', () => {
 });
 
 // @traces 1017-FR-006
-describe('the Closes line under Notion story', () => {
+describe('the Closes line under Story', () => {
   const draft = (body: string) =>
     checkPrBody({ body, draft: true, template, title: 'WIP' });
 
   it('sits in the template under the story link', () => {
     expect(template).toMatch(
-      /## Notion story\n\n_\(fill in: the story link[^\n]*\n\n<!--[^\n]*-->\nCloses george-hutanu\/motor-fix-specs#\n/,
+      /## Story\n\n_\(fill in: the story link[^\n]*\n\n<!--[^\n]*-->\nCloses george-hutanu\/motor-fix-specs#\n/,
     );
   });
 

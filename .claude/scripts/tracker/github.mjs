@@ -70,6 +70,7 @@ export function githubClient({
   repo = ISSUE_REPO,
   maxWaitS = 120,
   timeoutMs = TIMEOUT_MS,
+  paceMs = PACE_MS,
   log,
 }) {
   const scrub = (text) => String(text).replaceAll(token, "[token]");
@@ -112,7 +113,7 @@ export function githubClient({
     let lost = false;
     for (let failures = 0, throttles = 0; ; ) {
       if (content) {
-        const wait = lastContent + PACE_MS - now();
+        const wait = lastContent + paceMs - now();
         if (wait > 0) await sleep(wait);
         lastContent = now();
       }

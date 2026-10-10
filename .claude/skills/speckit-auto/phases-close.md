@@ -23,7 +23,7 @@ Gate overrides:
 
 ### 14. Review
 
-Do not invoke `speckit-notion-sync qa` here: QA follows the PR being marked
+Do not invoke `speckit-tracker-sync qa` here: QA follows the PR being marked
 ready, which is the run's hand-off (`hand-off.md`), after phase 16. There is no In
 review stage between Implementing and QA.
 `finish` runs after the tail agent (`tail.md`) merges the PR to `main`.
@@ -46,7 +46,7 @@ report them as a Hard Stop. MEDIUM/LOW findings with a small or medium fix are
 fixed on the branch too, pre-existing or adjacent ones included, before ready;
 only a large fix by the size test in AGENTS.md ("Technical debt a review
 defers") is routed to defer, goes to `specs/<feature>/deferred.md` and is filed
-as a Notion task (`speckit-notion-sync debt`).
+as a tracker issue (`speckit-tracker-sync debt`).
 
 ### 15. Agent context
 

@@ -69,12 +69,12 @@ hooks:
     description: Design check (skips when specs/<feature>/design.md is current)
     condition: null
   - extension: motorfix
-    command: speckit.notion.sync
+    command: speckit.tracker.sync
     enabled: true
     optional: false
     priority: 5
-    prompt: Move the story to Implementing in Notion?
-    description: 'Notion sync, event implement: story and build-timeline row Planning → Implementing, PR label planning → in development'
+    prompt: Move the story's issue to Implementing?
+    description: 'Tracker sync, event implement: the story''s issue Planning → Implementing in Project MotorFix, PR label planning → in development (speckit-notion-sync for a feature that started on Notion)'
     condition: null
   - extension: git
     command: speckit.git.commit
@@ -122,12 +122,12 @@ hooks:
     condition: null
   after_specify:
   - extension: motorfix
-    command: speckit.notion.sync
+    command: speckit.tracker.sync
     enabled: true
     optional: false
     priority: 5
-    prompt: Mark the story Planning in Notion?
-    description: 'Notion sync, event start: story and build-timeline row to Planning, epic to In progress, draft PR opened with the planning label'
+    prompt: Mark the story's issue Planning?
+    description: 'Tracker sync, event start: the story''s issue to Planning in Project MotorFix, epic to Implementing, draft PR opened with the planning label (speckit-notion-sync for a feature that started on Notion)'
     condition: null
   - extension: motorfix
     command: speckit.design.check

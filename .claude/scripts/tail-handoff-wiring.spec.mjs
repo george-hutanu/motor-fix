@@ -26,7 +26,7 @@ describe('the hand-off', () => {
   it('ends the story agent at ready with a hand-off note and NEXT: tail', () => {
     const handoff = section(auto, '## Hand-off');
     assert.match(handoff, /lifecycle\.mjs ready --body-file/);
-    assert.match(handoff, /Notion\s+`qa`/);
+    assert.match(handoff, /tracker's\s+`qa`/);
     assert.match(handoff, /handoff\.md/);
     assert.match(handoff, /NEXT: tail #<n>/);
     // Run in the owner's session, nobody reads that NEXT: the run sends its own tail.
@@ -36,7 +36,7 @@ describe('the hand-off', () => {
 
   it('gives the tail lifecycle steps 5-7, on the default model', () => {
     const tail = section(auto, '## The tail');
-    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /lifecycle\.mjs merge --pr <n>/, /Notion `finish`/, /notion-ready|archive check/])
+    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /lifecycle\.mjs merge --pr <n>/, /tracker's `finish`/, /notion-ready|archive check/])
       assert.match(tail, step);
     assert.match(tail, /stays on Opus/);
     assert.doesNotMatch(tail, /model: "sonnet"/);

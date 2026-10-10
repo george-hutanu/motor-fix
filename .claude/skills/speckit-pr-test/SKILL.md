@@ -1,6 +1,6 @@
 ---
 name: "speckit-pr-test"
-description: "Test and review a ready PR like a QA engineer before it merges: run the pr-tester subagent, which tests the PR head on GitHub Actions (the PR QA workflow) and reviews it here, post its review and the agent-review commit status, move the Notion story to QA, and drive the fix-and-retest loop until agent-review is success or the repair cap blocks the run. Mandatory between 'mark ready' and 'merge' (Constitution VII); /speckit-auto and /speckit-review run it."
+description: "Test and review a ready PR like a QA engineer before it merges: run the pr-tester subagent, which tests the PR head on GitHub Actions (the PR QA workflow) and reviews it here, post its review and the agent-review commit status, move the story's tracker issue to QA, and drive the fix-and-retest loop until agent-review is success or the repair cap blocks the run. Mandatory between 'mark ready' and 'merge' (Constitution VII); /speckit-auto and /speckit-review run it."
 argument-hint: "<PR number> [--dry-run] [--local]"
 compatibility: "Requires gh and Node 24; the boot and sweep run on GitHub Actions. --local also needs Playwright's Chromium and Docker or local PostgreSQL/Redis binaries"
 metadata:
@@ -16,7 +16,7 @@ disable-model-invocation: false
 $ARGUMENTS
 ```
 
-The first number is the PR. `--dry-run` posts nothing to GitHub or Notion: use
+The first number is the PR. `--dry-run` posts nothing to GitHub or the tracker: use
 it for a PR another session owns. `--local` boots the PR on this machine
 instead of GitHub Actions: only when Actions is unavailable, or for a PR whose
 tester change cannot yet run there. It waits for a `scripts/heavy.sh` slot.
@@ -36,7 +36,7 @@ without a status, so the test runs again.
 
 ## Procedure
 
-1. **Notion → QA** (skip on `--dry-run`): `speckit-notion-sync qa`, which also
+1. **Tracker → QA** (skip on `--dry-run`): `speckit-tracker-sync qa`, which also
    sets the PR's one stage label to `QA`. Marking the PR ready already moved
    both to QA (there is no In review stage), so this normally reports
    `unchanged` and only catches a PR that skipped that step. The story and its
@@ -94,7 +94,7 @@ without a status, so the test runs again.
 5. **Success**: return to the caller, which merges on green CI
    (`node .claude/scripts/pr-test/ci-wait.mjs <n>` with `run_in_background`,
    which prints only the checks that did not pass, then
-   `gh pr merge <n> --merge`, then `speckit-notion-sync finish`). The merge
+   `gh pr merge <n> --merge`, then `speckit-tracker-sync finish`). The merge
    gate refuses while any check is failing, running or missing.
 6. **Failure**: the implementing agent fixes every blocking finding — a failing
    test first that reproduces it (`/speckit-tests` rules), then the fix — commits,
@@ -111,13 +111,13 @@ without a status, so the test runs again.
    adjacent ones included, even when `agent-review` passed; only a large fix
    by the size test in AGENTS.md ("Technical debt a review defers") goes to
    `specs/<feature>/deferred.md`, and every deferred bullet is filed as a
-   Notion task (`speckit-notion-sync debt`).
+   tracker issue (`speckit-tracker-sync debt`).
    On success, file the lap's deferred findings the same way before merging,
    in the order `/speckit-auto`'s "The tail" step 4 gives (commit the task URLs,
    which step 2 carries without a lap; the new head's own findings, if a lap
-   ran, go to Notion directly).
+   ran, go to the tracker directly).
 7. **Cap reached** (`repair` exits 1): the run is blocked with
-   `repair-loop-exceeded`. Run `speckit-notion-sync blocked` with the reason
+   `repair-loop-exceeded`. Run `speckit-tracker-sync blocked` with the reason
    (open findings, laps used), comment the same on the PR
    (`gh pr comment <n> --body …`), leave `agent-review` at failure, and stop.
    The PR is never merged at the cap.
