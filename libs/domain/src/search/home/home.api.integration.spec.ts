@@ -106,6 +106,7 @@ describe('GET /home', () => {
   });
 
   // @traces 226-FR-009
+  // @traces 227-FR-009
   it('answers the best garage and the preview rows with every field Home shows', async () => {
     await garage('taker', 'approved', 'works_on');
     await prisma.garage.update({
@@ -125,6 +126,7 @@ describe('GET /home', () => {
     expect(res.body.best).toEqual({
       businessKind: 'pfa',
       city: 'București',
+      doesNotTake: [],
       id: expect.any(String),
       labourFromLei: 150,
       name: 'taker',
@@ -132,6 +134,7 @@ describe('GET /home', () => {
       reviewCount: 80,
       slug: 'taker',
       stance: 'works_on',
+      worksOn: ['Dacia'],
     });
     expect(res.body.preview).toEqual([res.body.best]);
   });
@@ -252,6 +255,22 @@ describe('GET /home near a place', () => {
     ]);
   });
 
+  // @traces 227-FR-009
+  it('gives a mobile mechanic its service radius and a fixed garage none', async () => {
+    const res = await home({ brand: 'dacia', near: '46.771,23.624' });
+
+    expect(
+      res.body.preview.map((g: { slug: string; serviceRadiusKm?: number }) => [
+        g.slug,
+        'serviceRadiusKm' in g ? g.serviceRadiusKm : 'absent',
+      ]),
+    ).toEqual([
+      ['in-taker', 'absent'],
+      ['mobile-in', 35],
+      ['in-refuser', 'absent'],
+    ]);
+  });
+
   it('counts all of Romania without a place', async () => {
     const res = await home({ brand: 'dacia' });
 
@@ -274,6 +293,7 @@ describe('GET /home near a place', () => {
   });
 
   // @traces 226-FR-013
+  // @traces 227-FR-012
   it('writes nothing when it reads near a place', async () => {
     const before = await Promise.all([
       prisma.activityLog.count(),

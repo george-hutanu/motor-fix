@@ -15,6 +15,7 @@ const DACIA: BrandDto = {
 const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   businessKind: 'company',
   city: 'București',
+  doesNotTake: [],
   id: 'g',
   labourFromLei: 180,
   name: 'Service',
@@ -22,6 +23,7 @@ const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   reviewCount: 120,
   slug: 'service',
   stance: 'works_on',
+  worksOn: ['Dacia'],
   ...over,
 });
 

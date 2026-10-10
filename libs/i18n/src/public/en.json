@@ -56,6 +56,15 @@
   },
   "home": {
     "car": "Your car",
+    "cards": {
+      "area": "{km} km area",
+      "doesNotTake": "Doesn't take",
+      "heading": "Who takes your {brand}",
+      "link": "See all on the map",
+      "more": "+{n}",
+      "none": "—",
+      "worksOn": "Works on"
+    },
     "count": {
       "one": "{takers} of {count} garage {verb} {brand}",
       "other": "{takers} of {count} garages {verb} {brand}"
@@ -66,7 +75,7 @@
       "label": "RATING",
       "mobile": "Mobile mechanic · comes to you",
       "noneNear": "No garage within {km} km",
-      "noTaker": "No garage nearby takes {brand} yet"
+      "noTaker": "No garage nearby takes {brand}"
     },
     "failed": "We could not load the garages",
     "hero": {

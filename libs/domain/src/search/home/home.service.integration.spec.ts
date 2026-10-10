@@ -231,6 +231,7 @@ describe('HomeService.forBrand: the best garage', () => {
     expect(answer.best).toEqual({
       businessKind: 'company',
       city: 'București',
+      doesNotTake: [],
       id,
       labourFromLei: 181,
       name: 'Service Auto Militari',
@@ -238,6 +239,7 @@ describe('HomeService.forBrand: the best garage', () => {
       reviewCount: 120,
       slug: 'militari',
       stance: 'works_on',
+      worksOn: ['Dacia'],
     });
     expect(answer.preview[0]).toEqual(answer.best);
   });
@@ -247,6 +249,7 @@ describe('HomeService.forBrand: the best garage', () => {
 
     expect((await home.forBrand('dacia')).best).toEqual({
       businessKind: null,
+      doesNotTake: [],
       id: expect.any(String),
       labourFromLei: null,
       name: 'bare',
@@ -254,6 +257,7 @@ describe('HomeService.forBrand: the best garage', () => {
       reviewCount: 0,
       slug: 'bare',
       stance: 'works_on',
+      worksOn: ['Dacia'],
     });
   });
 
@@ -428,5 +432,94 @@ describe('HomeService.forBrand near a place', () => {
     expect(
       await home.forBrand('dacia', { lat: 44.43, lng: 26.1 }),
     ).toMatchObject({ best: null, preview: [], takers: 0, total: 0 });
+  });
+});
+
+describe('HomeService.forBrand: the brand lists', () => {
+  // @traces 227-FR-009
+  it('lists the brands each garage works on and refuses, by name, never one it left unmarked', async () => {
+    const bmw = (
+      await prisma.brand.create({
+        data: { key: 'bmw', name: 'BMW', slug: 'bmw' },
+      })
+    ).id;
+    const audi = (
+      await prisma.brand.create({
+        data: { key: 'audi', name: 'Audi', slug: 'audi' },
+      })
+    ).id;
+    await garage('both', [
+      [tesla, 'does_not_take'],
+      [dacia, 'works_on'],
+      [bmw, 'works_on'],
+      [audi, 'does_not_take'],
+    ]);
+    await garage('silent-on-dacia', [[bmw, 'works_on']]);
+
+    const { preview } = await home.forBrand('dacia');
+
+    expect(
+      preview.map(({ doesNotTake, slug, worksOn }) => ({
+        doesNotTake,
+        slug,
+        worksOn,
+      })),
+    ).toEqual([
+      {
+        doesNotTake: ['Audi', 'Tesla'],
+        slug: 'both',
+        worksOn: ['BMW', 'Dacia'],
+      },
+      { doesNotTake: [], slug: 'silent-on-dacia', worksOn: ['BMW'] },
+    ]);
+  });
+
+  // @traces 227-FR-009
+  it('leaves a brand retired from the catalogue out of both lists', async () => {
+    const saab = (
+      await prisma.brand.create({
+        data: { active: false, key: 'saab', name: 'Saab', slug: 'saab' },
+      })
+    ).id;
+    const rover = (
+      await prisma.brand.create({
+        data: { active: false, key: 'rover', name: 'Rover', slug: 'rover' },
+      })
+    ).id;
+    await garage('retired-brands', [
+      [dacia, 'works_on'],
+      [saab, 'works_on'],
+      [rover, 'does_not_take'],
+    ]);
+
+    const { preview } = await home.forBrand('dacia');
+
+    expect(preview[0]).toMatchObject({
+      doesNotTake: [],
+      slug: 'retired-brands',
+      worksOn: ['Dacia'],
+    });
+  });
+
+  // @traces 227-FR-009
+  it('gives a mobile mechanic its service radius and a fixed garage none', async () => {
+    await garage('fixed', [[dacia, 'works_on']]);
+    await garage('mobile', [[dacia, 'works_on']]);
+    await prisma.garage.update({
+      data: { businessKind: 'mobile', serviceRadiusKm: 20 },
+      where: { slug: 'mobile' },
+    });
+    await prisma.garage.update({
+      data: { businessKind: 'company', serviceRadiusKm: 15 },
+      where: { slug: 'fixed' },
+    });
+
+    const { preview } = await home.forBrand('dacia');
+    const mobile = preview.find((g) => g.slug === 'mobile');
+    const fixed = preview.find((g) => g.slug === 'fixed');
+
+    expect(mobile?.serviceRadiusKm).toBe(20);
+    expect(fixed).toBeDefined();
+    expect(fixed).not.toHaveProperty('serviceRadiusKm');
   });
 });

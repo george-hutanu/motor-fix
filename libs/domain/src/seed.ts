@@ -46,13 +46,28 @@ const GARAGES = [
   { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
 ];
 
-// Listed garages, so Home and search have a known count: 3 of 6 take Dacia.
-// Approved in an earlier month, so the admin's growth this month stays 0.
+// The catalogue's own rows: the brands the listed garages name, and
+// Mercedes-Benz, which none names, so the brand pickers offer an unmarked one.
 const BRANDS = [
-  { key: 'dacia', name: 'Dacia', popularity: 7, slug: 'dacia' },
+  { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
+  {
+    key: 'mercedes-benz',
+    name: 'Mercedes-Benz',
+    popularity: 3,
+    slug: 'mercedes-benz',
+  },
+  { key: 'audi', name: 'Audi', popularity: 4, slug: 'audi' },
   { key: 'volkswagen', name: 'Volkswagen', popularity: 5, slug: 'volkswagen' },
+  { key: 'skoda', name: 'Škoda', popularity: 6, slug: 'skoda' },
+  { key: 'dacia', name: 'Dacia', popularity: 7, slug: 'dacia' },
+  { key: 'renault', name: 'Renault', popularity: 8, slug: 'renault' },
+  { key: 'ford', name: 'Ford', popularity: 9, slug: 'ford' },
+  { key: 'toyota', name: 'Toyota', popularity: 10, slug: 'toyota' },
+  { key: 'tesla', name: 'Tesla', popularity: 12, slug: 'tesla' },
 ];
 
+// Listed garages, so Home and search have a known count: 5 of 8 take Dacia.
+// Approved in an earlier month, so the admin's growth this month stays 0.
 // Every listed garage has a place, so a search near Bucharest or Cluj-Napoca
 // finds them; the mobile mechanic's seat is never shown, only its area.
 const LISTED: {
@@ -72,7 +87,18 @@ const LISTED: {
     name: 'Service Auto Militari',
     reviews: { count: 120, rating: 4.9 },
     slug: 'service-auto-militari',
-    stances: { dacia: 'works_on', volkswagen: 'works_on' },
+    // More than six brands, so Home's card cuts the list.
+    stances: {
+      audi: 'works_on',
+      bmw: 'works_on',
+      dacia: 'works_on',
+      ford: 'works_on',
+      renault: 'works_on',
+      skoda: 'works_on',
+      tesla: 'does_not_take',
+      toyota: 'works_on',
+      volkswagen: 'works_on',
+    },
   },
   {
     at: [44.382, 26.12],

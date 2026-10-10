@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import {
   type BrandDto,
   BrandsService,
@@ -724,6 +724,76 @@ describe('Home brand cycling', () => {
   });
 });
 
+// @traces 227-FR-005
+describe('Home on the way back from a card', () => {
+  // Home created again inside the browser's back (or a new visit).
+  async function again(trigger: 'popstate' | 'imperative' = 'popstate') {
+    fixture.destroy();
+    Object.defineProperty(TestBed.inject(Router), 'currentNavigation', {
+      configurable: true,
+      value: signal({ trigger }),
+    });
+    await render();
+  }
+
+  it('keeps the tile the person chose, not the first one', async () => {
+    await render();
+    await choose('Dacia');
+
+    await again();
+
+    expect(checked()).toBe('Dacia');
+    expect(search()?.getAttribute('href')).toBe('/ro/garages?brand=dacia');
+  });
+
+  it('starts at the first tile on a new visit to Home', async () => {
+    await render();
+    await choose('Dacia');
+
+    await again('imperative');
+
+    expect(checked()).toBe('BMW');
+  });
+
+  it('shows the popular tiles again after a searched brand', async () => {
+    await render();
+    await choose('Dacia');
+    fixture.debugElement
+      .query(By.directive(BrandSearch))
+      .componentInstance.chosen.emit(ALFA);
+    await settle();
+
+    await again();
+
+    expect(tiles().map((t) => t.textContent?.trim())).toEqual(NAMES);
+    expect(checked()).toBe('BMW');
+  });
+
+  it('starts at the first tile while nobody chose, the cycle aside', async () => {
+    jest.useFakeTimers();
+    await render();
+    jest.advanceTimersByTime(5000);
+    await settle();
+
+    await again();
+
+    expect(checked()).toBe('BMW');
+  });
+
+  it('stays on the kept tile instead of cycling on', async () => {
+    await render();
+    await choose('Audi');
+    jest.useFakeTimers();
+
+    await again();
+    for (let step = 0; step < 8; step++) {
+      jest.advanceTimersByTime(5000);
+      await settle();
+      expect(checked()).toBe('Audi');
+    }
+  });
+});
+
 describe('Home count that fails', () => {
   it.each([
     ['the network', new HttpErrorResponse({ status: 0 })],
@@ -1027,6 +1097,7 @@ describe('Home place from the Setări city', () => {
 const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   businessKind: 'company',
   city: 'București',
+  doesNotTake: [],
   id: 'militari',
   labourFromLei: 180,
   name: 'Service Auto Militari',
@@ -1034,6 +1105,7 @@ const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   reviewCount: 120,
   slug: 'service-auto-militari',
   stance: 'works_on',
+  worksOn: ['Dacia'],
   ...over,
 });
 const MILITARI = garageOf();
@@ -1106,6 +1178,31 @@ describe('Home rating dial', () => {
     expect(bestLine()).toBe('București · 3,2 km');
   });
 
+  // @traces 227-FR-003
+  it('marks a line that is only the city as shown as written', async () => {
+    await render();
+    await choose('Dacia');
+    await reads[1].answer(3, 6, THREE);
+
+    const line = dialArea()?.querySelector('.line');
+    expect(line?.textContent?.trim()).toBe('București');
+    expect(line?.closest('[translate="no"]')).not.toBeNull();
+  });
+
+  // @traces 227-FR-003
+  it('marks the city beside the distance as shown as written', async () => {
+    store(HERE);
+    await render();
+    await reads[0].answer(3, 6, {
+      best: { ...MILITARI, comesToYou: false, distanceKm: 3.2 },
+      preview: [],
+    });
+
+    const city = dialArea()?.querySelector('.line [translate="no"]');
+    expect(city?.textContent?.trim()).toBe('București');
+    expect(bestLine()).toBe('București · 3,2 km');
+  });
+
   it('says a mobile mechanic comes to you, never its city', async () => {
     store(HERE);
     await render();
@@ -1175,6 +1272,7 @@ describe('Home rating dial', () => {
 
 // @traces 226-FR-004
 // @traces 226-FR-005
+// @traces 227-FR-011
 describe('Home rating dial with nothing to name', () => {
   it('rests at "—" and says nobody nearby takes the brand, with the refusing rows', async () => {
     await render();
@@ -1182,7 +1280,7 @@ describe('Home rating dial with nothing to name', () => {
 
     await reads[1].answer(0, 1, { best: null, preview: [COLENTINA] });
 
-    const nobody = 'Niciun service din zonă nu primește încă Dacia';
+    const nobody = 'Niciun service din zonă nu primește Dacia';
     expect(dialValue()).toBe('—');
     expect(bestName()).toBe(nobody);
     expect(
@@ -1199,7 +1297,7 @@ describe('Home rating dial with nothing to name', () => {
 
     await reads[1].answer(0, 0);
 
-    expect(bestName()).toBe('No garage nearby takes Dacia yet');
+    expect(bestName()).toBe('No garage nearby takes Dacia');
   });
 
   it('says no garage is within 25 km of the place, and offers to change it', async () => {
@@ -1227,7 +1325,7 @@ describe('Home rating dial with nothing to name', () => {
 
     await reads[0].answer(0, 0);
 
-    expect(bestName()).toBe('Niciun service din zonă nu primește încă BMW');
+    expect(bestName()).toBe('Niciun service din zonă nu primește BMW');
   });
 
   it('dims the dial while it loads, with a skeleton name and three skeleton rows', async () => {
@@ -1264,5 +1362,74 @@ describe('Home rating dial with nothing to name', () => {
 
     expect(dialValue()).toBe('4,9');
     expect(rows()).toHaveLength(3);
+  });
+});
+
+const cardsArea = () => page().querySelector<HTMLElement>('mf-home-cards');
+const cards = () => [
+  ...page().querySelectorAll<HTMLAnchorElement>('mf-home-cards a.card'),
+];
+const allLink = () =>
+  page().querySelector<HTMLAnchorElement>('mf-home-cards a.all');
+
+// @traces 227-FR-001
+// @traces 227-FR-002
+// @traces 227-FR-006
+describe('Home garage cards', () => {
+  it('follows the car section with one card per preview garage, from the same read', async () => {
+    await render();
+    await choose('Dacia');
+
+    await reads[1].answer(3, 6, THREE);
+
+    expect(
+      page().querySelector('section.car')?.nextElementSibling?.localName,
+    ).toBe('mf-home-cards');
+    expect(cards().map((card) => card.getAttribute('href'))).toEqual(
+      rows().map((row) => row.getAttribute('href')),
+    );
+    expect(slugsRead()).toEqual(['bmw', 'dacia']);
+  });
+
+  it('points its link where the main button points', async () => {
+    await render();
+    await choose('Dacia');
+    await reads[1].answer(0, 0);
+
+    expect(allLink()?.getAttribute('href')).toBe(
+      search()?.getAttribute('href'),
+    );
+    expect(allLink()?.getAttribute('href')).toBe('/ro/garages?brand=dacia');
+    expect(cards()).toHaveLength(0);
+  });
+
+  it('shows skeleton cards while the read loads, and none of the last brand', async () => {
+    await render();
+    await reads[0].answer(3, 6, THREE);
+    await choose('Dacia');
+
+    expect(cardsArea()?.querySelectorAll('.card.skeleton')).toHaveLength(3);
+    expect(cards()).toHaveLength(0);
+  });
+
+  it('says the read failed in the cards too, and its retry reads again', async () => {
+    await render();
+    await reads[0].fail(new HttpErrorResponse({ status: 503 }));
+
+    expect(cardsArea()?.querySelector('[role="alert"]')?.textContent).toContain(
+      'Nu am putut încărca service‑urile',
+    );
+    cardsArea()?.querySelector<HTMLButtonElement>('button')?.click();
+    await settle();
+    await reads[1].answer(3, 6, THREE);
+
+    expect(slugsRead()).toEqual(['bmw', 'bmw']);
+    expect(cards()).toHaveLength(3);
+  });
+
+  it('is absent with no brand selected', async () => {
+    await render([]);
+
+    expect(cardsArea()).toBeNull();
   });
 });

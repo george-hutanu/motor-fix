@@ -89,6 +89,30 @@ export class HomeGarageDto {
       'True for a mobile mechanic whose area holds the place. Only with near',
   })
   comesToYou?: boolean;
+
+  @ApiProperty({
+    description:
+      'Names of the brands the garage works on, A to Z; an unmarked brand is in neither list',
+    example: ['BMW', 'Dacia'],
+    type: [String],
+  })
+  worksOn!: string[];
+
+  @ApiProperty({
+    description: 'Names of the brands the garage refuses, A to Z',
+    example: ['Tesla'],
+    type: [String],
+  })
+  doesNotTake!: string[];
+
+  @ApiPropertyOptional({
+    description:
+      "A mobile mechanic's service radius in km; never for a fixed garage",
+    maximum: 100,
+    minimum: 1,
+    type: 'integer',
+  })
+  serviceRadiusKm?: number;
 }
 
 export class HomeDto {
