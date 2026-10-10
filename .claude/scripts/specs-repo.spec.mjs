@@ -172,6 +172,45 @@ describe('commit', () => {
     assert.deepEqual([r.committed, r.pushed], [false, true]);
   });
 
+  // The docs lint runs here, on the laptop, never in Actions (owner, 2026-10-10).
+  const lint = () => {
+    const c = cloneDir(root);
+    mkdirSync(join(c, 'scripts'), { recursive: true });
+    writeFileSync(join(c, 'scripts', 'docs-lint.mjs'), "import { existsSync } from 'node:fs';\nif (existsSync('docs/bad.md')) { console.log('docs/bad.md: no front matter'); process.exit(1); }\n");
+    git(c, 'add', 'scripts');
+    git(c, ...ID, 'commit', '-q', '-m', 'chore(specs): lint');
+    git(c, 'push', '-q', 'origin', `HEAD:${TRUNK}`);
+    mkdirSync(join(c, 'docs'), { recursive: true });
+    return c;
+  };
+
+  it('refuses a docs commit the docs lint fails, naming the finding, and pushes nothing', () => {
+    const c = lint();
+    writeFileSync(join(c, 'docs', 'bad.md'), 'x\n');
+    const before = git(remote, 'rev-parse', TRUNK);
+    const r = commit({ root, message: 'docs(specs): bad page', paths: ['docs'] });
+    assert.equal(r.ok, false, JSON.stringify(r));
+    assert.match(r.error, /docs-lint[\s\S]*docs\/bad\.md: no front matter/);
+    assert.equal(git(remote, 'rev-parse', TRUNK), before);
+    assert.equal(git(c, 'log', '-1', '--format=%s'), 'chore(specs): lint');
+  });
+
+  it('commits and pushes a docs change the docs lint passes', () => {
+    const c = lint();
+    writeFileSync(join(c, 'docs', 'good.md'), 'x\n');
+    const r = commit({ root, message: 'docs(specs): good page', paths: ['docs'] });
+    assert.deepEqual([r.ok, r.pushed], [true, true], JSON.stringify(r));
+  });
+
+  it('leaves the docs lint out of a commit that touches only a feature folder', () => {
+    const c = lint();
+    writeFileSync(join(c, 'docs', 'bad.md'), 'x\n');
+    mkdirSync(join(root, 'specs', '300-a'));
+    writeFileSync(join(root, 'specs', '300-a', 'notion-sync.md'), 'line\n');
+    const r = commit({ root, message: 'chore(specs): ST-300 qa', paths: ['300-a'] });
+    assert.deepEqual([r.ok, r.pushed], [true, true], JSON.stringify(r));
+  });
+
   it('refuses when specs/ is not a clone, naming ensure', () => {
     rmSync(join(root, 'specs'), { recursive: true, force: true });
     rmSync(cloneDir(root), { recursive: true, force: true });
@@ -445,14 +484,16 @@ describe('ensure migrates an existing clone in place', () => {
     ensure({ root, url: remote });
     moveTrunk();
     ensure({ root });
+    const body = (f) => (f.endsWith('.mjs') ? `// ${f}\n` : `${f}\n`);
     const files = ['README.md', 'llms.txt', 'AGENTS.md', '.gitignore', 'scripts/docs-lint.mjs', '.github/workflows/docs-lint.yml', 'tracker/README.md', 'docs/reference/a.md'];
     for (const f of files) {
       mkdirSync(dirname(join(clone(), f)), { recursive: true });
-      writeFileSync(join(clone(), f), `${f}\n`);
+      // A runnable lint: commit runs it on a change to docs/ or llms.txt.
+      writeFileSync(join(clone(), f), body(f));
     }
     const r = commit({ root, message: 'docs: organise by Diataxis', paths: files });
     assert.deepEqual([r.ok, r.committed, r.pushed], [true, true, true], JSON.stringify(r));
-    for (const f of files) assert.equal(git(remote, 'show', `${TRUNK}:${f}`), f);
+    for (const f of files) assert.equal(git(remote, 'show', `${TRUNK}:${f}`), body(f).trim());
     for (const bad of ['.git/config', 'other/x', '../x', 'docs/../.git/config', 'scripts/../.git/config']) {
       const b = commit({ root, message: 'docs: x', paths: [bad] });
       assert.equal(b.ok, false, bad);

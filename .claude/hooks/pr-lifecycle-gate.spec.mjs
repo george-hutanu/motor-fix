@@ -208,6 +208,14 @@ describe('PR lifecycle gate — the feature folder', () => {
       assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
     }));
 
+  it('finds the feature under specs/specs in an old clone past the move, by pointer or branch', () =>
+    withRepo((dir) => {
+      mkdirSync(join(dir, 'specs', 'specs', '083-sign-in-apple-google'), { recursive: true });
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', 'specs', '083-sign-in-apple-google'));
+      point(dir, 'specs/083-sign-in-apple-google');
+      assert.equal(featureDir(dir, '050-other'), join('specs', 'specs', '083-sign-in-apple-google'));
+    }));
+
   // @traces 725-FR-001
   it('finds a zero-padded folder with the same number and slug', () =>
     withRepo((dir) => {

@@ -620,6 +620,8 @@ describe('a level reaches only the feature it was sized for', () => {
       [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: fresh }, '@/specs/002-new'],
       [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: zoneless }, 'specs/002-new'],
       [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: offset }, 'specs/002-new'],
+      [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: fresh }, 'specs/specs/002-new'],
+      [{ feature_directory: 'specs/002-new', level: 1, level_for: 'specs/002-new' }, '@/.motor-fix-specs/specs/002-new'],
     ];
     for (const [before, value] of cases) {
       assert.deepEqual(run(before, value), pointTo(before, 'specs/002-new'), JSON.stringify(before));

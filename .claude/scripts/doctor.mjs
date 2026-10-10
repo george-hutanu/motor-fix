@@ -14,7 +14,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { LEVELS, activeFeature } from "./lib/feature.mjs";
+import { LEVELS, activeFeature, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { resolveLevel } from "./level.mjs";
 import { fingerprint, loadRegistry, registryPath, scriptPath } from "./lib/hooks.mjs";
 import { check as checkNotion, detect as detectNotion } from "./notion-agent-tools.mjs";
@@ -112,7 +112,7 @@ export function checkFeatureState(repo) {
   // broken pointer.
   if (existsSync(state) && readJson(state)?.feature_directory !== undefined) {
     const dir = readJson(state)?.feature_directory;
-    const abs = dir ? (dir.startsWith("/") ? dir : join(repo, dir)) : null;
+    const abs = typeof dir === "string" && dir ? locateFeature(repo, dir, "spec.md") : null;
     const good = abs && existsSync(join(abs, "spec.md"));
     out.push({
       name: "feature/pointer",
@@ -137,7 +137,7 @@ export function checkFeatureState(repo) {
   const baselineFile = join(repo, ".specify", "trace-baseline.json");
   const baseline = readJson(baselineFile) ?? {};
   const listed = [...(baseline.grandfathered ?? []), ...(baseline.artifact_legacy ?? [])];
-  const gone = listed.filter((name) => !existsSync(join(repo, "specs", name)));
+  const gone = listed.filter((name) => !existsSync(join(repo, featuresRoot(repo), name)));
   out.push({
     name: "feature/baseline",
     status: gone.length ? WARN : OK,

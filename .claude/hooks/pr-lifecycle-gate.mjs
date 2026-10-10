@@ -46,9 +46,9 @@
 // helps nobody. Blocks once per turn: `stop_hook_active` means it already did.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
-import { branchFeatureDir } from "../scripts/lib/feature.mjs";
+import { branchFeatureDir, locateFeature } from "../scripts/lib/feature.mjs";
 import { ghSync } from "../scripts/lib/gh-rest.mjs";
 import { cloneAt } from "../scripts/specs-repo.mjs";
 
@@ -225,13 +225,18 @@ function runBlocked(cwd) {
  * The branch's feature folder, relative to cwd: the `.specify/feature.json`
  * pointer when its folder exists, else the folder the branch names
  * (lib/feature.mjs `branchFeatureDir`, which activeFeature shares, so branch
- * `83-x` finds `specs/083-x` here and in every other gate). Nothing found:
- * `specs/<branch>`.
+ * `83-x` finds `specs/083-x` here and in every other gate). Either specs
+ * layout: a pointer to `specs/<feature>` finds `specs/specs/<feature>` in an
+ * old clone past trunk's move (`locateFeature`). Nothing found: `specs/<branch>`.
  */
 export function featureDir(cwd, branch) {
   try {
     const pointer = JSON.parse(readFileSync(join(cwd, ".specify", "feature.json"), "utf8")).feature_directory;
-    if (typeof pointer === "string" && pointer && existsSync(join(cwd, pointer))) return pointer;
+    if (typeof pointer === "string" && pointer) {
+      if (existsSync(join(cwd, pointer))) return pointer;
+      const found = locateFeature(cwd, pointer);
+      if (existsSync(found)) return relative(cwd, found);
+    }
   } catch {
     // no pointer: the branch names the feature
   }
