@@ -1,0 +1,187 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "postgres",
+      "folder": "MotorFix",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "postgres-unreachable",
+          "title": "PostgreSQL unreachable",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "postgres"
+          },
+          "annotations": {
+            "summary": "PostgreSQL has not answered the worker for 5 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-postgres"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (motorfix_datastore_up{store=\"postgres\"})",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "postgres-connections",
+          "title": "PostgreSQL connections high",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "postgres"
+          },
+          "annotations": {
+            "summary": "PostgreSQL has used more than 80% of its connections for 5 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-postgres"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "sum by (deployment_environment) (motorfix_pg_connections) / max by (deployment_environment) (motorfix_pg_connections_max)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.8
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "postgres-size",
+          "title": "PostgreSQL database large",
+          "condition": "B",
+          "for": "5m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "postgres"
+          },
+          "annotations": {
+            "summary": "The PostgreSQL database has been larger than 4 GiB for 5 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-postgres"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "max by (deployment_environment) (motorfix_pg_database_size_bytes)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        4294967296
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
