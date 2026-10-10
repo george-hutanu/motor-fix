@@ -27,6 +27,7 @@ features:
   - 312-report-garage
   - 344-send-quote
   - 209-status-change-emails
+  - 251-monitoring-backups
 ---
 
 # Capability: Notifications
@@ -638,6 +639,10 @@ _From 209-status-change-emails._
 ### 209-FR-015 — End to end, the system MUST be shown to deliver a Romanian decision e-mail to the test mailbox (the `@mailbox` flows): a `verification.decided` (approved) event recorded for a seeded garage's file leaves one Romanian `VERIFICATION_RESULT` approval e-mail to the owner in the mailbox and none to its other staff (no endpoint submits or decides a file today, plan.md R6); the auto-approval path (207-FR-009) reaching the consumer is proven by an integration test; the rejection's label and note are proven by the integration tests (FR-007..FR-010).
 
 _From 209-status-change-emails._
+
+### 251-FR-008 — ADMIN_OUTAGE_ALERT MUST have a registered template in English and Romanian for e-mail and push that names the service, the state and the time, holds no personal data and passes the existing template checks; accounts without the admin role MUST never receive it, and an admin's preferences, quiet hours or mutes MUST NOT stop it (the existing locks in `staff-lists.ts`, now covered by a test on the send path). It is urgent, so quiet hours never hold it (decision A37).
+
+_From 251-monitoring-backups._
 
 ## Retired
 
