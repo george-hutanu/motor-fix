@@ -112,6 +112,10 @@ epic or a plan, whether run through spec-kit or by hand.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
+     The orchestrating session then fast-forwards the main checkout
+     (`git -C <main> merge --ff-only origin/main`); when the watch reports it
+     `behind`, `/speckit-watch`'s `ff-main` safe fix does it. The main
+     checkout holds no edits to tracked files (`pre:edit:main-checkout`).
      What only exists after the merge (the merge sha, the finish, ready and
      comment lines) goes to Notion and into one comment on the merged PR
      (`gh pr comment <n>`), never a commit of its own; whatever must reach a

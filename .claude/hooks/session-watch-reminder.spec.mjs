@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DEFAULT_TIMEOUT_MS, activeCount, readWatch, reminder, runReminder } from './session-watch-reminder.mjs';
+import { DEFAULT_TIMEOUT_MS, activeCount, mainLine, readWatch, reminder, runReminder } from './session-watch-reminder.mjs';
 
 // A resumed or compacted session has lost its background watch wait, and a hook
 // cannot start one. So the session-start reminder only says, once, that
@@ -158,5 +158,86 @@ describe('watch reminder — as a hook', () => {
     } finally {
       rmSync(plain, { recursive: true, force: true });
     }
+  });
+});
+
+// A main checkout left behind origin/main, or holding an edit to a
+// tracked file, serves stale gates to every session that starts in it. The
+// reminder names it at session start, in the main checkout only.
+describe('watch reminder — the main checkout', () => {
+  let scratch;
+  let repo;
+  let linked;
+  const git = (cwd, ...args) =>
+    execFileSync('git', ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', '-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, stdio: 'pipe', encoding: 'utf8' });
+  const quiet = () => ({ rows: [] });
+
+  beforeEach(() => {
+    scratch = realpathSync(mkdtempSync(join(tmpdir(), 'watch-reminder-main-')));
+    repo = join(scratch, 'repo');
+    mkdirSync(repo);
+    git(repo, 'init', '-q', '-b', 'main');
+    writeFileSync(join(repo, 'README.md'), 'x\n');
+    git(repo, 'add', '.');
+    git(repo, 'commit', '-q', '-m', 'init');
+    git(scratch, 'init', '-q', '--bare', 'origin.git');
+    git(repo, 'remote', 'add', 'origin', join(scratch, 'origin.git'));
+    git(repo, 'push', '-q', 'origin', 'main');
+    linked = join(scratch, 'wt-a');
+    git(repo, 'worktree', 'add', '-q', '-b', 'a', linked);
+  });
+  afterEach(() => rmSync(scratch, { recursive: true, force: true }));
+
+  const advanceOrigin = () => {
+    git(linked, 'commit', '-q', '--allow-empty', '-m', 'merged');
+    git(linked, 'push', '-q', 'origin', 'HEAD:main');
+  };
+  const ff = () => `git -C ${repo} merge --ff-only origin/main`;
+
+  // @traces 1035-FR-007
+  it('says nothing when clean and level with origin/main', () => {
+    assert.equal(mainLine(repo), '');
+    assert.equal(runReminder({ repo, watch: quiet, armed: () => null }), '');
+  });
+
+  it('names a main checkout behind origin/main, with the fast-forward command', () => {
+    advanceOrigin();
+    assert.equal(mainLine(repo), `main checkout behind origin/main by 1 — ${ff()}`);
+    assert.equal(runReminder({ repo, watch: quiet, armed: () => null }), `main checkout behind origin/main by 1 — ${ff()}`);
+  });
+
+  it('names the tracked files edited in it, leaving untracked ones out', () => {
+    writeFileSync(join(repo, 'scratch.txt'), 'untracked\n');
+    assert.equal(mainLine(repo), '');
+    writeFileSync(join(repo, 'README.md'), 'edited\n');
+    assert.equal(mainLine(repo), `main checkout dirty: README.md — ${ff()}`);
+  });
+
+  it('speaks even below the worktree count and while a wait is armed, and before the parallel-work line', () => {
+    advanceOrigin();
+    assert.match(runReminder({ repo, watch: quiet, armed: () => 4242 }), /^main checkout behind/);
+    git(repo, 'worktree', 'add', '-q', '-b', 'b', join(scratch, 'wt-b'));
+    const busy = () => ({ rows: [{ main: false, verdict: 'ok' }, { main: false, verdict: 'stale' }] });
+    const lines = runReminder({ repo, watch: busy, armed: () => null }).split('\n');
+    assert.equal(lines.length, 2);
+    assert.match(lines[0], /^main checkout behind/);
+    assert.match(lines[1], /^2 worktrees active: /);
+  });
+
+  it('says nothing about main in a worktree session', () => {
+    advanceOrigin();
+    writeFileSync(join(repo, 'README.md'), 'edited\n');
+    assert.equal(runReminder({ repo: linked, watch: quiet }), '');
+  });
+
+  it('fails open with no origin/main and outside a repository', () => {
+    const lone = join(scratch, 'lone');
+    mkdirSync(lone);
+    git(lone, 'init', '-q', '-b', 'main');
+    git(lone, 'commit', '-q', '--allow-empty', '-m', 'init');
+    assert.equal(mainLine(lone), '');
+    const plain = join(scratch, 'plain');
+    mkdirSync(plain);
+    assert.equal(mainLine(plain), '');
   });
 });
