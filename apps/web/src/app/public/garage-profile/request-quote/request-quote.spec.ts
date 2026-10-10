@@ -76,7 +76,8 @@ const candidate = (
   slug: id,
 });
 
-const sent = (names: string[]): RequestDto =>
+// The garages named in `sameDay` usually answer the same day.
+const sent = (names: string[], sameDay: string[] = []): RequestDto =>
   ({
     booking: null,
     car: {
@@ -97,6 +98,7 @@ const sent = (names: string[]): RequestDto =>
     quotesCount: 0,
     recipients: names.map((name, i) => ({
       answeredAt: null,
+      answersSameDay: sameDay.includes(name),
       createdAt: '2026-10-09T09:00:00.000Z',
       declineReason: null,
       garage: { id: `g-${i}`, name, slug: `g-${i}` },
@@ -135,10 +137,11 @@ async function open(
     source?: RequestQuoteData['source'];
     language?: 'ro' | 'en';
     garage?: PublicGarageDto;
+    reply?: RequestDto;
   } = {},
 ) {
   list = jest.fn(async () => ({ items: options.cars ?? [LOGAN] }));
-  send = jest.fn(async () => sent([GARAGE.name]));
+  send = jest.fn(async () => options.reply ?? sent([GARAGE.name]));
   nearby = jest.fn(async () => ({ items: options.candidates ?? [] }));
   onSent = jest.fn();
   TestBed.configureTestingModule({
@@ -687,5 +690,86 @@ describe('the garage picker', () => {
         (a) => a.textContent?.trim() === 'Înapoi la căutare',
       ),
     ).toBe(true);
+  });
+});
+
+// @traces 1025-FR-001
+// @traces 1025-FR-003
+// @traces 1025-FR-005
+// @traces 1025-FR-006
+describe('the confirmation’s answering line', () => {
+  const SAME_DAY = 'Service Auto Militari răspunde de obicei în aceeași zi.';
+  const lines = () =>
+    [...panel().querySelectorAll('.done[role="status"] p')].map((p) =>
+      (p.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+  const items = () =>
+    [...panel().querySelectorAll('.done li')].map((li) =>
+      (li.textContent ?? '').trim(),
+    );
+
+  async function sendWith(reply: RequestDto, language?: 'en') {
+    await open({ language, reply });
+    type('Scârțâie la frânare');
+    button(language === 'en' ? 'Send' : 'Trimite')?.click();
+    await settle();
+  }
+
+  it('adds the line under the sent line, in the status region, for a garage that usually answers the same day', async () => {
+    await sendWith(sent([GARAGE.name], [GARAGE.name]));
+
+    expect(lines()).toEqual(['Trimis către Service Auto Militari.', SAME_DAY]);
+  });
+
+  it('reads the line from the send’s answer alone, with no further call', async () => {
+    await open({ reply: sent([GARAGE.name], [GARAGE.name]) });
+    type('Scârțâie la frânare');
+    const before = [list.mock.calls.length, nearby.mock.calls.length];
+
+    await press();
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect([list.mock.calls.length, nearby.mock.calls.length]).toEqual(before);
+    expect(lines()).toContain(SAME_DAY);
+  });
+
+  it('says it in English', async () => {
+    await sendWith(sent([GARAGE.name], [GARAGE.name]), 'en');
+
+    expect(lines()).toEqual([
+      'Sent to Service Auto Militari.',
+      'Service Auto Militari usually answers the same day.',
+    ]);
+  });
+
+  it('shows only the sent line, with no empty element, for a garage that has not earned it', async () => {
+    await sendWith(sent([GARAGE.name]));
+
+    expect(lines()).toEqual(['Trimis către Service Auto Militari.']);
+    expect(panel().querySelectorAll('.done p')).toHaveLength(1);
+    expect(text()).not.toContain('aceeași zi');
+  });
+
+  it('shows nothing of it in English either', async () => {
+    await sendWith(sent([GARAGE.name]), 'en');
+
+    expect(lines()).toEqual(['Sent to Service Auto Militari.']);
+  });
+
+  it('turns the name of each garage that has earned it into the sentence, leaving the others bare', async () => {
+    const names = [GARAGE.name, 'Atelier Berceni', 'Mecanic Mobil'];
+
+    await sendWith(sent(names, [GARAGE.name]));
+
+    expect(lines()).toEqual(['Trimis către 3 service‑uri.']);
+    expect(items()).toEqual([SAME_DAY, 'Atelier Berceni', 'Mecanic Mobil']);
+  });
+
+  it('keeps the list of names as it was when no garage has earned it', async () => {
+    const names = [GARAGE.name, 'Atelier Berceni'];
+
+    await sendWith(sent(names));
+
+    expect(items()).toEqual(names);
   });
 });

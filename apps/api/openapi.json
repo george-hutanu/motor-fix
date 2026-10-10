@@ -7222,6 +7222,10 @@
           "garage": {
             "$ref": "#/components/schemas/GarageRefDto"
           },
+          "answersSameDay": {
+            "type": "boolean",
+            "description": "The garage usually answers the same day: its public rate is at or above the API’s threshold"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -7255,6 +7259,7 @@
         "required": [
           "id",
           "garage",
+          "answersSameDay",
           "status",
           "answeredAt",
           "declineReason",

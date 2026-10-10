@@ -168,6 +168,7 @@ describe('GET /requests/:id', () => {
     expect(res.body.recipients).toEqual([
       {
         answeredAt: null,
+        answersSameDay: false,
         createdAt: expect.any(String),
         declineReason: null,
         garage: garageRef,
@@ -209,6 +210,30 @@ describe('GET /requests/:id', () => {
       startsAt: booking.startsAt.toISOString(),
       status: 'confirmed',
     });
+  });
+
+  // @traces 1025-FR-004
+  it('says a garage usually answers the same day once its public rate is high enough', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const { garage } = await team('Atelier Dinamo');
+    const request = await world.request(andrei);
+    await world.recipient(request.id, garage.id, 'waiting');
+    await prisma.garageResponseStats.create({
+      data: {
+        answeredWithinDay30d: 9,
+        computedAt: new Date(),
+        garageId: garage.id,
+        lifetimeRequests: 12,
+        rate: 90,
+        requests30d: 10,
+      },
+    });
+
+    const res = await get(`/requests/${request.id}`, bearer(andrei, 'driver'));
+
+    expect(res.body.recipients).toEqual([
+      expect.objectContaining({ answersSameDay: true }),
+    ]);
   });
 
   it('shows a decline under 5 minutes old as still waiting, with no reason and no staff', async () => {

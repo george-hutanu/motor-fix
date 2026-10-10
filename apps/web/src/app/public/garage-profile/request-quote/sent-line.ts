@@ -8,3 +8,16 @@ export function sentLine(i18n: I18n, request: RequestDto) {
     ? i18n.t('public.requestQuote.sentOne', { garage: names[0] })
     : i18n.t('public.requestQuote.sentMany', { count: names.length });
 }
+
+// "Atelier Dinamo răspunde de obicei în aceeași zi.", or nothing for a
+// garage the API does not say usually answers the same day.
+export function answersLine(
+  i18n: I18n,
+  recipient: RequestDto['recipients'][number],
+) {
+  return recipient.answersSameDay
+    ? i18n.t('public.requestQuote.answersSameDay', {
+        garage: recipient.garage.name,
+      })
+    : null;
+}

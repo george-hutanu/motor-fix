@@ -6,6 +6,9 @@ import type { PrismaClient } from '../../generated/prisma/client';
 const RESPONSE_RATE_PERIOD_DAYS = 30;
 const RESPONSE_RATE_WINDOW_HOURS = 24;
 const RESPONSE_RATE_MIN_REQUESTS = 10;
+// At or above it, a garage's confirmation line says it usually answers the
+// same day. Proposed; the owner may change it.
+export const RESPONSE_SAME_DAY_MIN_RATE = 70;
 
 const HOUR = 3_600_000;
 
@@ -63,6 +66,9 @@ export function responseRateOf(
     ? { state: 'none' }
     : { rate: row.rate, state: 'rate' };
 }
+
+export const answersSameDayOf = (rate: ResponseRateDto) =>
+  rate.state === 'rate' && (rate.rate ?? 0) >= RESPONSE_SAME_DAY_MIN_RATE;
 
 const same = (a: ResponseFigures, b: ResponseFigures) =>
   a.requests30d === b.requests30d &&

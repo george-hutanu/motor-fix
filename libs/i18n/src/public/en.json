@@ -478,6 +478,7 @@
   },
   "requestQuote": {
     "addCar": "Add a car",
+    "answersSameDay": "{garage} usually answers the same day.",
     "backToSearch": "Back to search",
     "button": "Request a quote",
     "candidatesFailed": "We could not load the garages nearby.",

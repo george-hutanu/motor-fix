@@ -4,6 +4,11 @@
 import { GarageRefDto } from '../models/garage-ref-dto';
 export interface RecipientDto {
   answeredAt: string | null;
+
+  /**
+   * The garage usually answers the same day: its public rate is at or above the API’s threshold
+   */
+  answersSameDay: boolean;
   createdAt: string;
   declineReason: ('fully_booked' | 'job_not_done' | 'make_model_engine_not_done' | 'need_to_see_car') | null;
   garage: GarageRefDto;
