@@ -1,7 +1,10 @@
 @if (cars()?.length === 0) {
-  <p>{{ 'shell.frame.empty' | t }}</p>
+  <mf-empty-state icon="car" text="driver.empty.cars">
+    <button hlmBtn type="button" (click)="add()">{{ 'driver.cars.add.title' | t }}</button>
+  </mf-empty-state>
+} @else {
+  <button hlmBtn type="button" (click)="add()">{{ 'driver.cars.add.title' | t }}</button>
 }
-<button hlmBtn type="button" (click)="add()">{{ 'driver.cars.add.title' | t }}</button>
 @if (cars(); as list) {
   @if (list.length) {
     <div class="cards">

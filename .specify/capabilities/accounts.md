@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-08
+updated: 2026-10-10
 features:
   - 079-account-model
   - 082-sign-in
@@ -22,6 +22,7 @@ features:
   - 089-add-a-car
   - 261-maintenance-mode
   - 097-garage-dashboard
+  - 030-new-account-empty-states
 ---
 
 # Capability: Accounts
@@ -569,6 +570,54 @@ _From 089-add-a-car._
 ### 089-FR-010 — The garage-side dashboard's account block MUST show "Adaugă o mașină" / "Add a car" for an account that does not hold the `driver` role, opening the same dialog; after a save that added the role, the app MUST re-read "who am I" so the "Șofer" / "Driver" chip appears and the switch opens `/app/driver`. An account that already holds `driver` sees no entry there (it adds cars on its driver dashboard).
 
 _From 089-add-a-car._
+
+### 030-FR-001 — Panou MUST show its panels in a grid in this order and placement: Cererea activă (row 1), Oferte primite and Mașinile mele (row 2), Istoric reparații (row 3, full width), Service-uri salvate (row 4); one column on a phone (below 768 px). Panels of features not yet released (În direct din service, Kilometri și reparații, Cheltuieli, Asistent AI) MUST NOT be rendered.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-002 — For a driver with no active request (a request is active while its status is neither `done` nor `closed`), the first row MUST replace Cererea activă with the invitations: "Adaugă prima ta mașină" + button "Adaugă o mașină" when the driver has no car, and "Caută un service pentru mașina ta" + button "Caută un service" always.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-003 — "Adaugă o mașină" MUST open the shell's add-car dialog; "Caută un service" and "Caută altele" MUST open Home (`/<lang>`).
+
+_From 030-new-account-empty-states._
+
+### 030-FR-004 — A panel whose data has loaded and is empty MUST show exactly this text, in the active language, and at most the one action named:
+
+_From 030-new-account-empty-states._
+
+### 030-FR-005 — Every empty state MUST be rendered by one shared empty-state component: an icon, one or two sentences, at most one button; its smallest text MUST be 12 px.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-006 — A panel MUST show a skeleton while its data loads and its empty state only after the data has loaded and is empty; a failed load MUST show the shell's shared error text in the panel's place (ST-29 adds the panel's own message and retry). Panels read only the driver's cars and requests lists: Mașinile mele is empty with no car; Oferte primite is empty when no request has a quote (`quotesCount` 0); Istoric reparații is empty when no request is `done`; Cererea activă follows FR-002. Service-uri salvate follows FR-011. A panel with data shows, until ST-29 fills it, its frame with its heading as a link to its view, and nothing else.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-007 — For a driver with at least one car and no active request, the first row MUST show only the search invitation; the due item beside it is ST-31's.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-008 — A car saved from the add-car dialog MUST take the first row and Mașinile mele (panel and view) out of their empty state without a page reload; changes made elsewhere show on the next load of Panou.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-010 — Every text this story shows MUST come from the translation files with a key present in both Romanian and English; no text may be hard-coded in a template.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-011 — The Service-uri salvate panel and view MUST show their empty state without reading any saved-garages data; they are shown only to a driver with the `driver.saved_garages` capability, exactly as the view is gated today.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-012 — Panou MUST render correctly on a 320 px and a 390 px phone, a tablet and a desktop, in light and dark, Romanian and English, with no horizontal scroll.
+
+_From 030-new-account-empty-states._
+
+### 030-FR-013 — An empty state MUST be reachable and readable without a pointer: its icon is decorative (hidden from assistive technology, no text of its own), its button is a native button or link in the page's tab order with the shell's visible focus ring, and its text meets the Cockpit theme's contrast in light and dark. The icon is chosen per state by the plan (inline, no icon library).
+
+_From 030-new-account-empty-states._
 
 ## Retired
 

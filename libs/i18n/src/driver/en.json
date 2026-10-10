@@ -51,8 +51,17 @@
     },
     "retry": "Try again"
   },
-  "home": {
-    "newRequest": "New request"
+  "empty": {
+    "addFirstCar": "Add your first car",
+    "cars": "Add your first car. We use it to show you the right garages and to remind you about the ITP.",
+    "findGarage": "Find a garage",
+    "findGarageForCar": "Find a garage for your car",
+    "findOthers": "Find others",
+    "quotes": "No quotes yet. Send a request and compare the quotes here.",
+    "repairs": "No repairs yet. Repairs done through MotorFix appear here by themselves.",
+    "requests": "No requests yet. Ask several garages for a quote at once.",
+    "reviews": "No reviews yet. After a repair through MotorFix we ask what you think.",
+    "saved": "You have not saved any garage yet."
   },
   "notifications": {
     "alwaysSent": "Always sent: booking confirmed, new time proposed by the garage, booking cancelled or lapsed, car ready.",
@@ -86,8 +95,12 @@
     },
     "title": "Notifications"
   },
+  "panel": {
+    "activeRequest": "Active request",
+    "quotes": "Quotes received",
+    "repairs": "Repair history"
+  },
   "requests": {
-    "empty": "No requests yet",
     "retry": "Try again"
   }
 }

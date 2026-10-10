@@ -1,11 +1,12 @@
 ---
 capability: quotes
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
   - 343-live-quote-requests
   - 344-send-quote
+  - 030-new-account-empty-states
 ---
 
 # Capability: Quotes
@@ -130,13 +131,13 @@ _From 221-quote-request._
 
 _From 221-quote-request._
 
-### 221-FR-014 — The driver dashboard's Cererile mele view MUST list the driver's requests from `GET /api/v1/requests` newest first: for each, the car ("Dacia Logan 2017"), the jobs' names in the person's language (or the description's first line when there are none), the status label from the contracts' label map (220-FR-003: `sent` → "Trimisă" / "Sent") and the relative time of its creation in the person's language and Europe/Bucharest ("acum câteva secunde" under one minute); with no request an empty state "Nicio cerere încă" / "No requests yet" with a "Cerere nouă" button. The view MUST re-read through the live helper (256-FR-002, 257-FR-008) on `request.created` so a request sent in another tab appears without a reload. Details, filters and the later statuses' content are other stories'.
+### 030-FR-009 — The views MUST show, with no data, exactly this text and action:
 
-_From 221-quote-request._
+_From 030-new-account-empty-states._
 
-### 221-FR-015 — The driver dashboard's first view MUST show a primary button "Cerere nouă" / "New request" that opens Home (`/<lang>`), where the brand picker and the results lead to a garage profile; Home itself is unchanged.
+### 030-FR-002 — For a driver with no active request (a request is active while its status is neither `done` nor `closed`), the first row MUST replace Cererea activă with the invitations: "Adaugă prima ta mașină" + button "Adaugă o mașină" when the driver has no car, and "Caută un service pentru mașina ta" + button "Caută un service" always.
 
-_From 221-quote-request._
+_From 030-new-account-empty-states._
 
 ### 221-FR-016 — `source` MUST be stored per recipient: `profile_direct` for the garage whose profile the dialog was opened from, `shared_link` for that garage when the profile's address carries `?src=share`, `search` for every garage ticked in the picker; the API MUST accept only the contracts' source values and MUST refuse a garage id given twice. `home`, `map`, `saved` and `unknown` are not produced by this story. The source is a recorded fact for later statistics, never an input to routing or the limit.
 
@@ -286,3 +287,6 @@ _From 344-send-quote._
 - `343-FR-002` — superseded by `344-FR-008` (2026-10-09)
 - `343-FR-003` — superseded by `344-FR-007` (2026-10-09)
 - `343-FR-008` — superseded by `344-FR-009` (2026-10-09)
+
+- `221-FR-014` — superseded by `030-FR-009` (2026-10-10)
+- `221-FR-015` — superseded by `030-FR-002` (2026-10-10)

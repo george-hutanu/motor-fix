@@ -1,16 +1,47 @@
 :host {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mf-space-4);
   margin: var(--mf-space-4);
+  min-width: 0;
 }
-a[hlmBtn] {
+@media (min-width: 768px) {
+  :host {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wide {
+    grid-column: 1 / -1;
+  }
+}
+.invitations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+mf-panel {
+  display: block;
+  min-width: 0;
+}
+.skeleton {
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-line);
+  min-height: 112px;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+[hlmBtn] {
   min-height: var(--mf-tap);
   max-width: 100%;
+  white-space: normal;
   text-decoration: none;
   /* Until the driver's texts load the label is its key, one unbreakable word. */
   overflow-wrap: anywhere;
 }
 @media (max-width: 389px) {
-  a[hlmBtn] {
+  [hlmBtn] {
     width: 100%;
   }
 }
