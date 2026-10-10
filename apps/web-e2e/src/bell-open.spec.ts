@@ -97,11 +97,13 @@ test.describe('opening a notification from the bell', () => {
       const reads = await driverWithReminder(page);
       await page.setViewportSize(size);
       const list = await openBell(page);
-      await expect(list).toBeVisible();
+      // The dialog's container has no box of its own: judge it by its rows.
+      const itp = list.getByRole('button', { name: new RegExp(ITP) });
+      await expect(itp).toBeVisible();
 
-      await list.getByRole('button', { name: new RegExp(ITP) }).click();
+      await itp.click();
 
-      await expect(list).toBeHidden();
+      await expect(itp).toBeHidden();
       await expect(page).toHaveURL(`/app/driver/cars/${CAR}`);
       const logan = page.locator('[data-car]', { hasText: 'Dacia Logan' });
       await expect(logan).toBeFocused();
@@ -125,10 +127,11 @@ test.describe('opening a notification from the bell', () => {
     await page.setViewportSize({ height: 844, width: 390 });
     const list = await openBell(page);
 
-    await list.getByRole('button', { name: /Mesaj de test/ }).click();
+    const message = list.getByRole('button', { name: /Mesaj de test/ });
+    await message.click();
 
     await expect.poll(() => reads).toEqual(['n-test']);
-    await expect(list).toBeVisible();
+    await expect(message).toBeVisible();
     await expect(page).toHaveURL('/app/driver');
   });
 });
