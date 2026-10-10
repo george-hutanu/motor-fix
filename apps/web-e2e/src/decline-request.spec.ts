@@ -95,14 +95,9 @@ const panel = (page: Page) => page.locator('mf-garage-requests-panel');
 
 // @seeded: the owner declines a driver's request from Panou. The driver's
 // read judges the 5-minute window from declined_at, so the case moves that
-// back in PostgreSQL rather than wait; a deployed address, whose run has no
-// DATABASE_URL, skips it.
-test.describe('declining a request @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'moves declined_at back in PostgreSQL',
-  );
-
+// back in PostgreSQL rather than wait; a deployed address has no such
+// database, so its run leaves @database out.
+test.describe('declining a request @seeded @database', () => {
   // @traces 345-FR-011
   // @traces 345-FR-020
   test('the owner declines with a reason; the row shows Refuzată and the driver sees it after the window', async ({

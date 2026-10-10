@@ -133,13 +133,9 @@ test.describe('a quote request from a garage profile @seeded', () => {
 
 // The seeded garage's nightly figures, written straight to PostgreSQL just
 // before the send so that it usually answers the same day; removed after. A
-// deployed address, whose run has no DATABASE_URL, skips it.
+// deployed address has no such database, so its run leaves @database out.
 // @traces 1025-FR-001 1025-FR-006
-test.describe('the confirmation for a garage that usually answers the same day @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes the garage’s figures straight to PostgreSQL, which needs DATABASE_URL',
-  );
+test.describe('the confirmation for a garage that usually answers the same day @seeded @database', () => {
   let db: Client;
 
   test.beforeAll(async () => {
