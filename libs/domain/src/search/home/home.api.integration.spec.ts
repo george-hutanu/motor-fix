@@ -277,6 +277,7 @@ describe('GET /home near a place', () => {
   });
 
   // @traces 226-FR-013
+  // @traces 227-FR-012
   it('writes nothing when it reads near a place', async () => {
     const before = await Promise.all([
       prisma.activityLog.count(),
