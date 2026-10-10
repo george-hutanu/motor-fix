@@ -1,7 +1,7 @@
 @if (state(); as empty) {
   <mf-empty-state [icon]="empty.icon" [text]="empty.text">
-    @if (empty.action === 'home') {
-      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findOthers' | t }}</a>
+    @if (empty.action; as label) {
+      <a hlmBtn [routerLink]="['/', language()]">{{ label | t }}</a>
     }
   </mf-empty-state>
 } @else {

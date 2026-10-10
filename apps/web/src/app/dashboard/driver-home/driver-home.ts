@@ -28,7 +28,7 @@ const ENDED: readonly RequestSummaryDto['status'][] = ['done', 'closed'];
 
 // "Panou", the driver dashboard's first view: the panel grid, each panel in
 // its loading, empty or error state, and, with no active request, the
-// invitations to add a car and to find a garage. ST-29 fills the panels.
+// invitations to add a car and to find a garage. A later story fills the panels.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [EmptyState, HlmButton, Panel, RouterLink, TranslatePipe],
@@ -65,7 +65,7 @@ export class DriverHome {
     this.filter((r) => r.status === 'done'),
   );
   protected readonly saved = computed(() =>
-    allowedViews('driver', this.session.current()?.capabilities ?? []).some(
+    allowedViews('driver', this.session.shown()?.capabilities ?? []).some(
       (view) => view.path === 'saved',
     ),
   );

@@ -69,7 +69,7 @@ describe('the dashboard view lists', () => {
       text: 'driver.empty.reviews',
     });
     expect(byPath('saved')?.emptyState).toEqual({
-      action: 'home',
+      action: 'driver.empty.findOthers',
       icon: 'bookmark',
       text: 'driver.empty.saved',
     });
@@ -113,7 +113,7 @@ describe('the dashboard view lists', () => {
       {
         capability: 'driver.saved_garages',
         emptyState: {
-          action: 'home',
+          action: 'driver.empty.findOthers',
           icon: 'bookmark',
           text: 'driver.empty.saved',
         },

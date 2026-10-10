@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ready } from './accounts.js';
+import { ownAddress, ready } from './accounts.js';
 import { test } from './fixtures.js';
 
 // A fake password for the account this test creates; never a real one.
@@ -9,18 +9,8 @@ const NEW_PASSWORD = 'parola-noua-de-test';
 const fresh = () =>
   `gol-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
 
-// Sign-up is limited per address per hour: each run signs up from its own.
-async function ownAddress(page: Page) {
-  const address = `198.51.100.${Date.now() % 250}`;
-  await page.route('**/api/v1/auth/sign-up', (route) =>
-    route.continue({
-      headers: { ...route.request().headers(), 'x-forwarded-for': address },
-    }),
-  );
-}
-
 async function signUp(page: Page) {
-  await ownAddress(page);
+  await ownAddress(page, '198.51.100');
   await ready(page, '/ro');
   await page
     .getByRole('button', { exact: true, name: 'Autentificare' })

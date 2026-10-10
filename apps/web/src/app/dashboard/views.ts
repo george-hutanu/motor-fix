@@ -35,8 +35,8 @@ export interface DashboardView {
   // What will appear here, until its story builds the body.
   empty?: string;
   // ...or, for a view whose story says what it shows with nothing yet, its
-  // empty state: the icon, the text and, if any, the link to Home.
-  emptyState?: { icon: EmptyIcon; text: string; action?: 'home' };
+  // empty state: the icon, the text and, if any, the label of a link to Home.
+  emptyState?: { icon: EmptyIcon; text: string; action?: string };
   // The view's body carries this device's push panel.
   push?: boolean;
   // ...and, under it, the person's staff notification choices.
@@ -166,7 +166,7 @@ export const DASHBOARDS: Record<
       {
         capability: 'driver.saved_garages',
         emptyState: {
-          action: 'home',
+          action: 'driver.empty.findOthers',
           icon: 'bookmark',
           text: 'driver.empty.saved',
         },
