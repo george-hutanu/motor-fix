@@ -120,19 +120,20 @@ export class Home {
     });
   });
 
-  // The answer for the brand shown, once it is in: never one still loading
-  // or one that failed.
   protected readonly answer = computed(() =>
     this.home.isLoading() || !this.home.hasValue()
       ? undefined
       : this.home.value(),
+  );
+  protected readonly noneNear = computed(
+    () => this.answer()?.total === 0 && Boolean(this.place()),
   );
   // With no taker the dial names nobody: none within reach of the place, or
   // none of those listed that takes the brand.
   protected readonly nobody = computed(() => {
     const answer = this.answer();
     if (!answer || answer.best) return null;
-    return answer.total === 0 && this.place()
+    return this.noneNear()
       ? this.i18n.t('public.home.dial.noneNear', {
           km: SEARCH_RADIUS_DEFAULT_KM,
         })

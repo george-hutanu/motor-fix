@@ -68,12 +68,18 @@
     [class.dimmed]="busy()"
     [attr.aria-busy]="busy()"
   >
-    <div class="gauge" [attr.role]="nobody() ? 'img' : null" [attr.aria-label]="nobody()">
-      <mf-rating-dial
-        size="large"
-        [value]="answer()?.best?.rating"
-        [attr.aria-hidden]="nobody() ? 'true' : null"
-      />
+    <div class="gauge">
+      <span
+        class="meter"
+        [attr.role]="nobody() ? 'img' : null"
+        [attr.aria-label]="nobody()"
+      >
+        <mf-rating-dial
+          size="large"
+          [value]="answer()?.best?.rating"
+          [attr.aria-hidden]="nobody() ? 'true' : null"
+        />
+      </span>
       <span class="reading" aria-hidden="true">{{ 'public.home.dial.label' | t }}</span>
       @if (busy()) {
         <span class="name skeleton"></span>
@@ -84,7 +90,7 @@
         }
       } @else if (nobody(); as nobody) {
         <span class="name">{{ nobody }}</span>
-        @if (answer()?.total === 0 && place()) {
+        @if (noneNear()) {
           <button
             type="button"
             class="spartan-button spartan-button-variant-ghost"

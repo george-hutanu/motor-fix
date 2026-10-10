@@ -1,7 +1,7 @@
 import { Component, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
-import { formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { formatLei, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp } from '@motor-fix/ui-cockpit';
 
 // Three rows under Home's dial: the two best garages that take the brand,
@@ -25,5 +25,9 @@ export class HomePreview {
     return garage.rating === null
       ? this.i18n.t('public.home.preview.noReviews')
       : formatRating(garage.rating, this.i18n.language());
+  }
+
+  protected rate(lei: number) {
+    return formatLei(lei * 100, this.i18n.language());
   }
 }

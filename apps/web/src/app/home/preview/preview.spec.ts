@@ -5,10 +5,10 @@ import { I18n } from '@motor-fix/i18n';
 
 import { HomePreview } from './preview';
 
-// @traces 226-best-rated-brand-dial-FR-002
-// @traces 226-best-rated-brand-dial-FR-003
-// @traces 226-best-rated-brand-dial-FR-007
-// @traces 226-best-rated-brand-dial-FR-008
+// @traces 226-FR-002
+// @traces 226-FR-003
+// @traces 226-FR-007
+// @traces 226-FR-008
 
 const DACIA: BrandDto = {
   id: 'd',

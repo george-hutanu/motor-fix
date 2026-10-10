@@ -88,8 +88,10 @@
   opacity: 0.5;
 }
 
-.gauge mf-rating-dial {
+.meter {
+  display: block;
   max-width: 240px;
+  width: 100%;
 }
 
 .reading {

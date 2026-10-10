@@ -1077,9 +1077,9 @@ const rows = () => [
   ...page().querySelectorAll<HTMLAnchorElement>('mf-home-preview a'),
 ];
 
-// @traces 226-best-rated-brand-dial-FR-001
-// @traces 226-best-rated-brand-dial-FR-006
-// @traces 226-best-rated-brand-dial-FR-007
+// @traces 226-FR-001
+// @traces 226-FR-006
+// @traces 226-FR-007
 describe('Home rating dial', () => {
   it('points the large dial at the best rating and names the garage and its city', async () => {
     await render();
@@ -1173,8 +1173,8 @@ describe('Home rating dial', () => {
   });
 });
 
-// @traces 226-best-rated-brand-dial-FR-004
-// @traces 226-best-rated-brand-dial-FR-005
+// @traces 226-FR-004
+// @traces 226-FR-005
 describe('Home rating dial with nothing to name', () => {
   it('rests at "—" and says nobody nearby takes the brand, with the refusing rows', async () => {
     await render();

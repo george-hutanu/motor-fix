@@ -24,7 +24,7 @@
           <span class="facts">
             <span class="rating">{{ rating(garage) }}</span>
             @if (garage.labourFromLei !== null) {
-              <span class="rate">{{ 'public.home.preview.rate' | t: { rate: garage.labourFromLei } }}</span>
+              <span class="rate">{{ 'public.home.preview.rate' | t: { rate: rate(garage.labourFromLei) } }}</span>
             }
           </span>
         </a>

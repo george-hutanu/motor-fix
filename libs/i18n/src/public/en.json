@@ -91,7 +91,7 @@
     "preview": {
       "doesNotTake": "Doesn't take {brand}",
       "noReviews": "No reviews yet",
-      "rate": "from {rate} lei/hour",
+      "rate": "from {rate}/hour",
       "worksOn": "Works on {brand}"
     },
     "retry": "Try again",

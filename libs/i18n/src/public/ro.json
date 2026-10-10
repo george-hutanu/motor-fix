@@ -93,7 +93,7 @@
     "preview": {
       "doesNotTake": "Nu primește {brand}",
       "noReviews": "Fără recenzii",
-      "rate": "de la {rate} lei/oră",
+      "rate": "de la {rate}/oră",
       "worksOn": "Lucrează pe {brand}"
     },
     "retry": "Reîncearcă",

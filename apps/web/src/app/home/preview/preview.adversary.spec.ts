@@ -52,7 +52,7 @@ const rows = (page: HTMLElement) => [
 const said = (el: Element | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
 
-// @traces 226-best-rated-brand-dial-FR-002
+// @traces 226-FR-002
 describe('HomePreview with unusual lists', () => {
   it('shows no row and no skeleton for an empty list', async () => {
     const page = await render([]);
@@ -82,7 +82,7 @@ describe('HomePreview with unusual lists', () => {
   });
 });
 
-// @traces 226-best-rated-brand-dial-FR-002
+// @traces 226-FR-002
 describe('HomePreview ratings and rates', () => {
   it.each([
     [1, '1,0'],
@@ -117,15 +117,15 @@ describe('HomePreview ratings and rates', () => {
     expect(said(row)).toContain('de la 1 lei/oră');
   });
 
-  it('groups a large rate the Romanian way or leaves it plain, never as NaN or undefined', async () => {
+  it('groups a large rate the Romanian way, never as NaN or undefined', async () => {
     const [row] = rows(await render([garageOf({ labourFromLei: 1250 })]));
 
-    expect(said(row)).toMatch(/de la 1\.?250 lei\/oră/);
+    expect(said(row)).toContain('de la 1.250 lei/oră');
     expect(said(row)).not.toMatch(/NaN|undefined|null/);
   });
 });
 
-// @traces 226-best-rated-brand-dial-FR-008
+// @traces 226-FR-008
 describe('HomePreview with hostile text', () => {
   it('shows markup in a name as text and builds no element from it', async () => {
     const name = '<img src=x onerror=alert(1)><script>alert(2)</script>';
@@ -165,7 +165,7 @@ describe('HomePreview with hostile text', () => {
   });
 });
 
-// @traces 226-best-rated-brand-dial-FR-007
+// @traces 226-FR-007
 describe('HomePreview on a language switch', () => {
   it('keeps the same rows and links and re-writes the words and formats', async () => {
     const page = await render([

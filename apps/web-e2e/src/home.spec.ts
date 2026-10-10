@@ -350,10 +350,10 @@ for (const scheme of ['light', 'dark'] as const) {
   }
 }
 
-// @traces 226-best-rated-brand-dial-FR-001
-// @traces 226-best-rated-brand-dial-FR-002
-// @traces 226-best-rated-brand-dial-FR-003
-// @traces 226-best-rated-brand-dial-FR-006
+// @traces 226-FR-001
+// @traces 226-FR-002
+// @traces 226-FR-003
+// @traces 226-FR-006
 const dialArea = (page: Page) => page.locator('mf-home .dial');
 const dialValue = (page: Page) =>
   dialArea(page).locator('mf-rating-dial .mf-dial-value');
@@ -412,7 +412,7 @@ test.describe('the rating dial near Bucharest @seeded', () => {
     );
   });
 
-  // @traces 226-best-rated-brand-dial-FR-004
+  // @traces 226-FR-004
   test('rests at "—" when nobody near takes the brand, with only refusing rows', async ({
     page,
   }) => {
@@ -454,7 +454,7 @@ test.describe('the rating dial in Cluj-Napoca @seeded', () => {
   });
 });
 
-// @traces 226-best-rated-brand-dial-FR-004
+// @traces 226-FR-004
 test.describe('the rating dial far from every garage @seeded', () => {
   test.use({
     geolocation: { latitude: 44.1733, longitude: 28.6383 },
@@ -510,7 +510,7 @@ test.describe('the rating dial with reduced motion @seeded', () => {
   });
 });
 
-// @traces 226-best-rated-brand-dial-FR-008
+// @traces 226-FR-008
 for (const scheme of ['light', 'dark'] as const) {
   for (const path of ['/ro', '/en']) {
     test(`fits the dial and its three rows on a 320 px phone on ${path}, ${scheme} @seeded`, async ({
