@@ -25,11 +25,13 @@ export class AdminAccountsController {
   @Requires('admin.users')
   @ApiOkResponse({ type: AdminAccountsPageDto })
   @ApiBadRequestResponse({
-    description: 'invalid_cursor, or a query parameter it does not take',
+    description:
+      'invalid_cursor; invalid_query: q over 80 characters; invalid_filter: an unknown role or state, or a repeated state; or a query parameter it does not take',
   })
   @ApiNotFoundResponse({ description: 'not_found: not an admin' })
   list(@Query() query: AdminAccountsQueryDto): Promise<AdminAccountsPageDto> {
-    return this.accounts.page(query.cursor, new Date());
+    const { cursor, ...search } = query;
+    return this.accounts.page(cursor, new Date(), search);
   }
 
   @Get('summary')

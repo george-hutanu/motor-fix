@@ -15,12 +15,30 @@ export interface AdminAccountsControllerList$Params {
  * The nextCursor of the previous page
  */
   cursor?: string;
+
+/**
+ * Contained in the name, a garage worked at or the e-mail, or a phone written in part; trimmed and spaces collapsed, ignored under 2 characters
+ */
+  q?: string;
+
+/**
+ * Accounts holding at least one of these roles; repeated or comma-separated
+ */
+  role?: Array<'driver' | 'garage' | 'receptionist' | 'mechanic' | 'admin'>;
+
+/**
+ * watch matches none until open watches exist
+ */
+  status?: 'active' | 'watch' | 'suspended';
 }
 
 export function adminAccountsControllerList(http: HttpClient, rootUrl: string, params?: AdminAccountsControllerList$Params, context?: HttpContext): Observable<StrictHttpResponse<AdminAccountsPageDto>> {
   const rb = new RequestBuilder(rootUrl, adminAccountsControllerList.PATH, 'get');
   if (params) {
     rb.query('cursor', params.cursor, {});
+    rb.query('q', params.q, {});
+    rb.query('role', params.role, {});
+    rb.query('status', params.status, {});
   }
 
   return http.request(
