@@ -112,6 +112,14 @@ test.describe('declining a request @seeded', () => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await signedIn(page, OWNER);
     const { driver, garageId, id, owner } = await send(request);
+    // The closed rows of the last day, where a declined row shows, sit under
+    // the waiting list in the Cereri de ofertă view; Panou lists only the
+    // waiting ones (FR-012).
+    await page
+      .getByRole('navigation', { name: 'Meniu' })
+      .getByRole('link', { name: /^Cereri de ofertă/ })
+      .click();
+    await expect(page).toHaveURL('/app/garage/requests');
     const row = panel(page).locator(`[data-live-id="${id}"]`);
     await expect(row).toBeVisible({ timeout: 5_000 });
 

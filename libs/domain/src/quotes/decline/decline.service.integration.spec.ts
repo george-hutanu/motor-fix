@@ -236,6 +236,7 @@ describe('POST /garage/requests/:id/decline', () => {
         throw new Error('audit down');
       },
       recordChanges: (...args) => real.recordChanges(...args),
+      recordMany: (...args) => real.recordMany(...args),
     };
     const service = new DeclineService(prisma, failing, outbox);
 
