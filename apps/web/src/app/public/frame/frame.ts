@@ -10,7 +10,9 @@ import {
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 import { filter } from 'rxjs';
 
+import { ConsentBar } from '../../consent/consent-bar/consent-bar';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
+import { PublicFooter } from '../footer/footer';
 import { PublicTabBar } from '../tab-bar/tab-bar';
 
 // Full height, so the sticky tab bar sits at the bottom of a short page too.
@@ -18,8 +20,11 @@ import { PublicTabBar } from '../tab-bar/tab-bar';
 // 640 px; narrower, an account button stands in for them beside the language
 // switch, and the tab bar does the rest.
 @Component({
+  host: { '[class.no-tab-bar]': '!tabBar' },
   imports: [
+    ConsentBar,
     LanguageSwitch,
+    PublicFooter,
     RouterLink,
     RouterOutlet,
     PublicTabBar,

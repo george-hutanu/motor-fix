@@ -1,0 +1,12 @@
+@if (consent.showBar()) {
+  <section role="region" [attr.aria-label]="'consent.bar.label' | t">
+    <p>
+      {{ 'consent.bar.text' | t }}
+      <a [routerLink]="['/', i18n.language(), 'privacy']">{{ 'consent.bar.privacy' | t }}</a>
+    </p>
+    <div class="answers">
+      <button hlmBtn variant="secondary" type="button" (click)="consent.accept()">{{ 'consent.bar.accept' | t }}</button>
+      <button hlmBtn variant="secondary" type="button" (click)="consent.refuse()">{{ 'consent.bar.refuse' | t }}</button>
+    </div>
+  </section>
+}

@@ -2,7 +2,12 @@ import { expect } from '@playwright/test';
 
 import { test } from './fixtures.js';
 import globalSetup from './global-setup.js';
-import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './rate-counts.js';
+import {
+  CONSENT_KEYS,
+  clearCounts,
+  DRAFT_KEYS,
+  SIGN_UP_KEYS,
+} from './rate-counts.js';
 
 // A Redis that holds plain keys and answers SCAN one key per page, so the
 // cursor has to be followed to the end.
@@ -54,6 +59,19 @@ test.describe('the per-address counts a local run clears', () => {
     expect(await clearCounts(redis, DRAFT_KEYS)).toBe(2);
 
     expect([...store]).toEqual(['auth:signup:address:bbb']);
+  });
+
+  // @traces 244-FR-012
+  test('deletes every consent record count and nothing else', async () => {
+    const { redis, store } = keyStore([
+      'consents:record:aaa',
+      'listing-drafts:create:bbb',
+      'consents:record:ccc',
+    ]);
+
+    expect(await clearCounts(redis, CONSENT_KEYS)).toBe(2);
+
+    expect([...store]).toEqual(['listing-drafts:create:bbb']);
   });
 
   test('stops scanning after its page cap when the cursor never ends', async () => {

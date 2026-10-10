@@ -20,6 +20,10 @@ export async function routedContext(
   if (deployed) await cacheAssets(context, new URL(deployed).origin);
   // The browser telemetry collector: answered here, so nothing leaves.
   await context.route(COLLECTOR, (route) => route.fulfill({ status: 204 }));
+  // Analytics, loaded once a test accepts them: answered here too.
+  await context.route('https://plausible.io/**', (route) =>
+    route.fulfill({ status: 204 }),
+  );
   await use(context);
   // Handlers still answering when the test ends must not outlive it.
   await context.unrouteAll({ behavior: 'ignoreErrors' });
