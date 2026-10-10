@@ -192,6 +192,34 @@ describe('Cererile mele', () => {
     expect(text(rows(element)[0])).toContain('Ofertă');
   });
 
+  // @traces 345-decline-request-FR-016
+  it('reads the list again when a garage’s decline window closes', async () => {
+    await render([[row()], [row()]]);
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'rr-1',
+      kind: 'request.declined',
+    });
+    await wait(400);
+
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  // @traces 345-decline-request-FR-016
+  it('reads nothing again for an undone decline, which the driver never saw', async () => {
+    await render([[row()], [row()]]);
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'rr-1',
+      kind: 'request.decline_undone',
+    });
+    await wait(400);
+
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
   it('offers a retry when the first read fails, and shows the list after it', async () => {
     const { element, settle } = await render([new Error('down'), [row()]]);
 
