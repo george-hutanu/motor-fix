@@ -223,6 +223,20 @@ describe("a failed PR write", () => {
     assert.ok(next.log.includes("[TRACKER-SYNC RETRIED 2026-10-10: labels PR #335"), next.log);
   });
 
+  it("logs a failed epic label on the PR PENDING, and the next run retries it", async () => {
+    const gh = world();
+    const repo = repoWith();
+    const down = await run(["pr", "335"], { gh, repo, ghFails: (a) => a[0] === "pr" && a[1] === "edit" });
+    assert.equal(down.code, 0);
+    assert.equal(gh.itemValues(60).PR, PR_URL, "the issue write still lands");
+    assert.ok(down.log.includes("[TRACKER-SYNC PENDING: epic label PR #335"), down.log);
+    assert.ok(down.json.pending, "the result names what is pending");
+
+    const next = await run(["review", "--pr", "335"], { gh, repo });
+    assert.ok(next.gh.some((a) => a.join(" ") === "pr edit 335 --add-label EP-6"), "the label edit is retried");
+    assert.ok(next.log.includes("[TRACKER-SYNC RETRIED 2026-10-10: epic label PR #335"), next.log);
+  });
+
   it("retries a failed Blocked: PR comment without posting the issue comment twice", async () => {
     const gh = world({ story: "QA" });
     const repo = repoWith();

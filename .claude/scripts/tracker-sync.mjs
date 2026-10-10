@@ -422,8 +422,8 @@ async function linkPr(ctx) {
   if (body !== (pull.body ?? "")) await github.rest("PATCH", pullPath(n), { body }, { kept: pull.body ?? "" });
   const code = epicLabel(story);
   if (code) {
-    gh(["label", "create", code, "--force"]);
-    gh(["pr", "edit", n, "--add-label", code]);
+    const what = `epic label PR #${n}`;
+    if (ctx.prWrite(["label", "create", code, "--force"], what)) ctx.prWrite(["pr", "edit", n, "--add-label", code], what);
   }
   ctx.log("pr", st, text);
   return { pr: url };
