@@ -175,4 +175,52 @@ test.describe('declining a request @seeded', () => {
       status: 'declined',
     });
   });
+
+  // On a phone the dialog opens as a bottom sheet, whose dialog container
+  // has no box: the sheet's panel is what shows.
+  // @traces 345-FR-011
+  test('on a 320 px phone the decline sheet offers four reasons, closes with Escape declining nothing, and declines', async ({
+    page,
+    request,
+  }) => {
+    await page.setViewportSize({ height: 900, width: 1440 });
+    await signedIn(page, OWNER);
+    const { id, owner } = await send(request);
+    await page.setViewportSize({ height: 568, width: 320 });
+    const row = panel(page).locator(`[data-live-id="${id}"]`);
+    await expect(row).toBeAttached({ timeout: 5_000 });
+
+    const dialog = page.getByRole('dialog', {
+      name: 'De ce refuzați cererea?',
+    });
+    const sheet = dialog.locator('mf-overlay-panel');
+    await row.getByRole('button', { exact: true, name: 'Refuză' }).click();
+    await expect(sheet).toBeVisible();
+    await expect(dialog.getByRole('radio')).toHaveCount(4);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(false);
+
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    const list = await request.get('/api/v1/garage/requests?status=waiting', {
+      headers: bearer(owner),
+    });
+    expect(JSON.stringify(await list.json())).toContain(id);
+
+    await row.getByRole('button', { exact: true, name: 'Refuză' }).click();
+    await expect(sheet).toBeVisible();
+    await dialog
+      .getByRole('radio', { name: 'Trebuie să vedem mașina mai întâi' })
+      .check();
+    await dialog.getByRole('button', { exact: true, name: 'Refuză' }).click();
+    await expect(page.getByText('Cerere refuzată')).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(sheet).toHaveCount(0);
+  });
 });
