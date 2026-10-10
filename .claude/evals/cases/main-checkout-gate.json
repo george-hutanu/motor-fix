@@ -1,0 +1,24 @@
+[
+  {
+    "id": "blocks-an-edit-to-a-tracked-file-in-the-main-checkout",
+    "hook": "pre:edit:main-checkout",
+    "why": "an edit to a tracked file in the main checkout blocks the fast-forward that keeps it a mirror of origin/main; every change rides a PR from a worktree",
+    "payload": {
+      "tool_name": "Edit",
+      "tool_input": { "file_path": "docs/tracked.md", "old_string": "a", "new_string": "b" }
+    },
+    "expect": { "exit": 2, "stderr": "main-checkout-gate" },
+    "fixture": { "commits": [{ "files": { "docs/tracked.md": "a\n" } }] }
+  },
+  {
+    "id": "allows-a-new-file-in-the-main-checkout",
+    "hook": "pre:edit:main-checkout",
+    "why": "an untracked path (scratch notes, .work/, a new file) is not what blocks a fast-forward, so the gate must not stand in its way",
+    "payload": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": "docs/new.md", "content": "new\n" }
+    },
+    "expect": { "exit": 0 },
+    "fixture": { "commits": [{ "files": { "docs/tracked.md": "a\n" } }] }
+  }
+]

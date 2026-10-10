@@ -30,7 +30,7 @@
         "strict"
       ],
       "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), and no live watch.mjs --wait holds the repository, print one line telling the session to arm the wait; silent otherwise, and always exits 0",
-      "fingerprint": "d70b4e5e9eaf"
+      "fingerprint": "54bc3ff6721a"
     },
     {
       "id": "session:start:github-identity",
@@ -121,6 +121,19 @@
       "description": "Block src/ edits on a feature branch with FRs and open tasks until the branch adds or modifies a *.spec.* / *.test.* file",
       "fail_closed": true,
       "fingerprint": "0e73553405a6"
+    },
+    {
+      "id": "pre:edit:main-checkout",
+      "event": "PreToolUse",
+      "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+      "script": "main-checkout-gate.mjs",
+      "profiles": [
+        "standard",
+        "strict"
+      ],
+      "description": "Refuse an edit to a file git tracks in the main checkout: it stays a mirror of origin/main, and every change rides a PR from a worktree (SPECKIT_ALLOW_MAIN_EDIT=1 overrides)",
+      "fail_closed": true,
+      "fingerprint": "fd3d2128f0c2"
     },
     {
       "id": "post:edit:affected-tests",
