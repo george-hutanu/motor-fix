@@ -89,6 +89,12 @@ describe('the archive check', () => {
     assert.equal(result.ok, true);
   });
 
+  // @traces 1036-FR-015
+  it('passes on a tracker-sync.md whose refresh after the finish was logged PENDING', () => {
+    const result = readyLogged(log('- 2026-10-10 · finish · ST-1036 · QA → Done', '- [TRACKER-SYNC PENDING: ready EP-6 — 502] retry: ["finish","--no-comment"]'));
+    assert.equal(result.ok, true);
+  });
+
   it('fails with no ready line after the finish, and names what to run', () => {
     const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '- 2026-10-04 · finish · Foundations timeline row · QA → Merged'));
     assert.equal(result.ok, false);

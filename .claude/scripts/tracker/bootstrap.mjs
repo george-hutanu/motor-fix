@@ -107,7 +107,7 @@ export const SCHEMA = {
     "- An imported issue is titled `ST-<n>` or `EP-<n>` after its old ID; a new one is known by its number.",
     "- Stories are sub-issues of their feature, and features (and stories with no feature) of their epic; Blocked by links are issue dependencies.",
     "- GitHub holds at most 100 sub-issues per issue: an epic that would pass it holds its features and one group issue per work type (`EP-<n> · Tasks`, split `(1/2)` when a group would pass it too) for its stories with no feature; work with no epic sits under the `No epic` issue.",
-    '- Ready to work: Status To do and not blocked by an open issue (filter `status:"To do" -is:blocked`).',
+    '- Ready to work: the `ready to work` label, which `speckit-tracker-sync` keeps on each To do issue whose every dependency is closed or Done (filter `label:"ready to work"`).',
   ].join("\n"),
 };
 

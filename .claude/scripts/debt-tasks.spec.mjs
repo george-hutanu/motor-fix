@@ -120,6 +120,19 @@ describe('writing the task back', () => {
     assert.equal(markFiled(next, entries[0].line, 'https://app.notion.com/p/other'), next);
   });
 
+  // @traces 1036-FR-009
+  it('marks a GitHub issue with its own label, and a bullet carrying one is filed', () => {
+    const entries = parseDeferred(DEFERRED);
+    const url = 'https://github.com/george-hutanu/motor-fix-specs/issues/901';
+    const next = markFiled(DEFERRED, entries[0].line, url, 'Issue');
+    assert.ok(next.split('\n')[entries[0].line].endsWith(` — Issue: ${url}`));
+    const again = parseDeferred(next);
+    assert.equal(again[0].notion, url);
+    assert.equal(again[0].pending, false);
+    assert.ok(!again[0].title.includes(url), 'the URL never reaches the title');
+    assert.equal(markFiled(next, entries[0].line, 'https://github.com/george-hutanu/motor-fix-specs/issues/902', 'Issue'), next);
+  });
+
   it('refuses a line that is not a bullet', () => {
     assert.throws(() => markFiled(DEFERRED, 0, 'https://app.notion.com/p/x'), /not a bullet/);
     assert.throws(() => markFiled(DEFERRED, 99, 'https://app.notion.com/p/x'), /not a bullet/);

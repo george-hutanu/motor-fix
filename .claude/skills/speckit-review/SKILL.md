@@ -49,7 +49,7 @@ Record `RANGE`, `FEATURE_DIR`, and the changed-file list. A range with no
 changes under `apps/`, `libs/` or `e2e/` has nothing to review — say so and
 stop.
 
-Do not invoke `speckit-notion-sync qa` yet: QA follows the PR being marked
+Do not invoke `speckit-tracker-sync qa` yet: QA follows the PR being marked
 ready, which happens at the end of this skill if nothing blocks.
 
 ### 2. Run the workflow
@@ -180,7 +180,7 @@ Run standalone (not from `/speckit-auto`, which hands off after its own phase
 tests are green, fill in the PR body from `.github/pull_request_template.md`
 and mark the PR ready exactly as `/speckit-auto`'s hand-off steps 1–3 do
 (records committed, `pr-body-check.ts`, `gh pr edit --body-file`, `gh pr ready`,
-`speckit-notion-sync qa` and its line pushed; ready is QA). `lifecycle.mjs
+`speckit-tracker-sync qa` and its line pushed; ready is QA). `lifecycle.mjs
 ready` may refuse a level 2 or 3 feature whose owed artifacts are missing
 (`level.mjs check --ready`): run the phases it names, then run it again. Then run the QA step
 and merge exactly as `/speckit-auto`'s "The tail" steps 1–6 do: green CI, `/speckit-pr-test <n>`
@@ -188,8 +188,8 @@ and merge exactly as `/speckit-auto`'s "The tail" steps 1–6 do: green CI, `/sp
 MEDIUM/LOW findings with a small or medium fix are fixed on the branch before
 ready, pre-existing or adjacent ones included; only a large fix (the size test
 in AGENTS.md, "Technical debt a review defers") is routed to defer, goes to
-`specs/<feature>/deferred.md` and is filed as a Notion task
-(`speckit-notion-sync debt`). With a blocker left, do none of this.
+`specs/<feature>/deferred.md` and is filed as a tracker issue
+(`speckit-tracker-sync debt`). With a blocker left, do none of this.
 
 ## Done When
 

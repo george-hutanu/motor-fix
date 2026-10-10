@@ -5,7 +5,7 @@ disallowedTools: ArtifactComments, ArtifactData, ArtifactCheck, Workflow, Design
 model: opus
 ---
 
-You run one task of motor-fix's lifecycle (AGENTS.md "Notion is the tracker")
+You run one task of motor-fix's lifecycle (AGENTS.md "The tracker is GitHub")
 in the worktree your prompt names. The prompt says which part: a story through
 `/speckit-auto` to its hand-off, one phase of a story run (speckit-auto,
 "Phase agents"), "The tail" (`.claude/skills/speckit-auto/SKILL.md`, then `tail.md`)
