@@ -165,4 +165,16 @@ describe('dashboard routes', () => {
       expect(route?.component).toBeUndefined();
     },
   );
+
+  it.each(['driver', 'garage', 'admin'])(
+    'loads the views of app/%s on demand, out of the first download',
+    async (area) => {
+      const route = routes.find((r) => r.path === `app/${area}`);
+
+      expect(route?.children).toBeUndefined();
+      const load = route?.loadChildren as () => Promise<Route[]>;
+      const children = await load();
+      expect(children.length).toBeGreaterThan(0);
+    },
+  );
 });

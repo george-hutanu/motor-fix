@@ -102,13 +102,16 @@ describe('HomeDto', () => {
       'city',
       'comesToYou',
       'distanceKm',
+      'doesNotTake',
       'id',
       'labourFromLei',
       'name',
       'rating',
       'reviewCount',
+      'serviceRadiusKm',
       'slug',
       'stance',
+      'worksOn',
     ]);
   });
 });

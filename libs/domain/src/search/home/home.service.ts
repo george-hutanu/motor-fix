@@ -4,7 +4,11 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { publicGarages } from '../../garages/public-garages/public-garages';
-import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import type {
+  GarageBrandStance,
+  Prisma,
+  PrismaClient,
+} from '../../generated/prisma/client';
 import { garagesInArea, groupsOf, placed } from '../area/search-area';
 
 // The one order of the dial and the preview: the best rating, unreviewed
@@ -64,7 +68,16 @@ export class HomeService {
     const rows = await this.prisma.garage.findMany({
       orderBy: BEST_FIRST,
       select: {
-        brands: { select: { stance: true }, where: { brandId } },
+        brands: {
+          orderBy: { brand: { name: 'asc' } },
+          select: {
+            brand: { select: { name: true } },
+            brandId: true,
+            stance: true,
+          },
+          // A brand retired from the catalogue is in neither list.
+          where: { brand: { active: true } },
+        },
         businessKind: true,
         cityName: true,
         id: true,
@@ -72,13 +85,19 @@ export class HomeService {
         name: true,
         rating: true,
         reviewCount: true,
+        serviceRadiusKm: true,
         slug: true,
       },
       take,
       where: { ...publicGarages(), ...group },
     });
+    const named = (
+      brands: (typeof rows)[number]['brands'],
+      stance: GarageBrandStance,
+    ) => brands.filter((b) => b.stance === stance).map((b) => b.brand.name);
     return rows.map((row) => ({
       businessKind: row.businessKind,
+      doesNotTake: named(row.brands, 'does_not_take'),
       id: row.id,
       labourFromLei:
         row.labourFromBani === null
@@ -88,10 +107,16 @@ export class HomeService {
       rating: row.rating === null ? null : row.rating.toNumber(),
       reviewCount: row.reviewCount,
       slug: row.slug,
-      stance: row.brands[0]?.stance ?? 'unstated',
+      stance:
+        row.brands.find((b) => b.brandId === brandId)?.stance ?? 'unstated',
+      worksOn: named(row.brands, 'works_on'),
       // A mobile mechanic's city would tell where its seat is.
       ...(row.businessKind !== 'mobile' &&
         row.cityName !== null && { city: row.cityName }),
+      ...(row.businessKind === 'mobile' &&
+        row.serviceRadiusKm !== null && {
+          serviceRadiusKm: row.serviceRadiusKm,
+        }),
     }));
   }
 }
