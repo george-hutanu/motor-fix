@@ -41,10 +41,13 @@ async function pauseClock(page: Page) {
 async function drawn(page: Page, canvas: Locator, paused: boolean) {
   if (!paused) return expect(canvas).toHaveAttribute('width', /\d/);
   await expect
-    .poll(async () => {
-      await page.clock.runFor(FRAME);
-      return (await canvas.getAttribute('width')) ?? '';
-    })
+    .poll(
+      async () => {
+        await page.clock.runFor(FRAME);
+        return (await canvas.getAttribute('width')) ?? '';
+      },
+      { intervals: [FRAME] },
+    )
     .toMatch(/\d/);
 }
 
@@ -142,10 +145,11 @@ test('redraws in the light tokens and back when the device switches theme', asyn
 test('draws the charts complete at once with reduced motion', async ({
   page,
 }) => {
-  await open(page, 'dark', 1280, 'reduce');
+  await pauseClock(page);
+  await open(page, 'dark', 1280, 'reduce', true);
   const first = await shot(page);
 
-  await page.waitForTimeout(1500);
+  await page.clock.runFor(GROWTH);
 
   expect(await shot(page)).toEqual(first);
 });
