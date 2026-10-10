@@ -28,6 +28,7 @@ import { OAuthService } from './oauth/oauth.service';
 import { createPrisma, PRISMA } from './prisma';
 import { SESSION_EVENTS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
+import { WhoAmI } from './who-am-i';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AuditHistoryController } from '../audit/audit-history/audit-history.controller';
@@ -73,6 +74,7 @@ export class AuthModule implements OnApplicationShutdown {
         AUTH_REDIS,
         EVENT_PORT,
         MAINTENANCE,
+        WhoAmI,
         PRISMA,
         SESSION_EVENTS,
         SignInService,
@@ -88,6 +90,7 @@ export class AuthModule implements OnApplicationShutdown {
         { provide: APP_GUARD, useExisting: ActorGuard },
         AuditHistoryService,
         ConsentsService,
+        WhoAmI,
         OAuthService,
         SignInService,
         SignUpService,

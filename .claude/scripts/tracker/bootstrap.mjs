@@ -67,12 +67,12 @@ export const SCHEMA = {
     ...["Started", "QA from", "Merged at", "Planned start", "Planned end"].map(plain("DATE")),
     plain("NUMBER")("Story points"),
     plain("ITERATION")("Sprint"),
-    // Every other Notion property has a field of its own too (data-model.md, "Property → GitHub").
+    // The rest of a story's properties, one field each.
     select("Role", ROLES.map((r) => [r])),
     select("Track", TRACKS.map((t) => [t])),
     select("Release", RELEASES.map((r, i) => [r, ["RED", "ORANGE", "GRAY"][i]])),
     ...["Area", "Component", "Feature", "Design", "Design boards", "PR", "Session", "User story", "Took", "Place", "Goal", "Done when"].map(plain("TEXT")),
-    ...["Date", "Work start", "Work end", "Created in Notion"].map(plain("DATE")),
+    ...["Date", "Work start", "Work end"].map(plain("DATE")),
     ...["Story count", "Weeks"].map(plain("NUMBER")),
   ],
   views: [
@@ -102,9 +102,8 @@ export const SCHEMA = {
     "",
     "The backlog of MotorFix: one issue per story, task, bug, tech debt or decision, and one parent issue per epic.",
     "",
-    "- Each imported issue carries its whole page: every property, the build brief or plan, comments (under Notes from Notion) and files (stored in this repository under tracker/).",
     "- File new work with an issue form (Story, Task, Bug, Tech debt, Decision); it lands here by itself.",
-    "- An imported issue is titled `ST-<n>` or `EP-<n>` after its old ID; a new one is known by its number.",
+    "- A story or task is titled `ST-<n>` and an epic `EP-<n>`.",
     "- Stories are sub-issues of their feature, and features (and stories with no feature) of their epic; Blocked by links are issue dependencies.",
     "- GitHub holds at most 100 sub-issues per issue: an epic that would pass it holds its features and one group issue per work type (`EP-<n> · Tasks`, split `(1/2)` when a group would pass it too) for its stories with no feature; work with no epic sits under the `No epic` issue.",
     '- Ready to work: the `ready to work` label, which `speckit-tracker-sync` keeps on each To do issue whose every dependency is closed or Done (filter `label:"ready to work"`).',
@@ -242,7 +241,7 @@ export async function reconcile(github, { today = new Date(), formsDir = FORMS_D
   if (state.statusUpdates > 0) present("status");
   else {
     const date = today.toISOString().slice(0, 10);
-    await write(Q.postStatus, { projectId, status: "ON_TRACK", body: `Project set up on ${date}; the backlog is imported from Notion next.` });
+    await write(Q.postStatus, { projectId, status: "ON_TRACK", body: `Project set up on ${date}.` });
     created("status", "ON_TRACK");
   }
 

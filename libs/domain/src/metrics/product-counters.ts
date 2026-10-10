@@ -131,3 +131,13 @@ export function countConsentRecord(
     'Analytics consent choices stored, by decision',
   ).add(1, { decision });
 }
+
+type AccountChangeField = 'name' | 'city' | 'email' | 'phone' | 'password';
+
+// One saved change of the account's own details, by field.
+export function countAccountChange(field: AccountChangeField) {
+  counter(
+    'motorfix_account_changes_total',
+    "Changes to an account's own details, by field",
+  ).add(1, { field });
+}

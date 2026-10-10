@@ -59,6 +59,7 @@ model Account {
   pushSubscriptions       PushSubscription[]
   smsCounters             SmsCounter[]
   tokens                  AccountToken[]
+  phoneChange             PhoneChange?
   reminders               Reminder[]
   cars                    Car[]
   consents                AccountConsent[]
@@ -138,6 +139,8 @@ model ConsentRecord {
 enum AccountTokenPurpose {
   email_confirm
   password_reset
+  // A link to a new address; the row's email is that address.
+  email_change
 
   @@map("account_token_purpose")
 }
@@ -153,6 +156,20 @@ model SignInCode {
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@map("sign_in_code")
+}
+
+// The account's live phone change: the new number and an HMAC of the code
+// sent to it. One per account, a new request replaces it.
+model PhoneChange {
+  accountId String   @id @map("account_id") @db.Uuid
+  phone     String
+  codeHash  String   @map("code_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("phone_change")
 }
 
 // A single-use link sent to the account holder; only the token's SHA-256

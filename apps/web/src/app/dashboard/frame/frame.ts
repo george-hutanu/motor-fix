@@ -305,8 +305,7 @@ export class Frame implements OnInit {
         if (message.kind === 'account.email_confirmed') {
           void this.session.reload();
         }
-        // Every session ended (all devices, a password reset), here or elsewhere.
-        if (message.kind === 'session.revoked') void this.revoked();
+        if (message.kind === 'session.revoked') void this.sessionsEnded();
       });
     // The stream may have missed events: read the account again.
     this.live.resync
@@ -371,6 +370,16 @@ export class Frame implements OnInit {
     } finally {
       this.signingOut.set(false);
     }
+  }
+
+  // Every session ended (all devices, a password reset), here or elsewhere.
+  // Right after this tab's own password change, which keeps its session, the
+  // server says whether it still renews instead.
+  private async sessionsEnded() {
+    if (this.session.keepsThroughRevoke() && (await this.session.renew())) {
+      return;
+    }
+    await this.revoked();
   }
 
   private async revoked() {

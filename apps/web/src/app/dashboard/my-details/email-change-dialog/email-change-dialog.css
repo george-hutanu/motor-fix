@@ -1,0 +1,20 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+label {
+  font-weight: 700;
+}
+input {
+  width: 100%;
+  min-height: 44px;
+}
+button {
+  width: 100%;
+  min-height: 54px;
+  white-space: normal;
+}
