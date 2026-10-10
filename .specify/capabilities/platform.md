@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -67,6 +67,7 @@ features:
   - 1016-mcp-staging
   - 1018-notion-docs-to-specs
   - 1026-diataxis-docs
+  - 1035-main-checkout-guard
 ---
 
 # Capability: Platform
@@ -1662,6 +1663,46 @@ _From 1026-diataxis-docs._
 ### 1026-FR-027 — Each rewiring in FR-020 to FR-025 MUST have a harness spec (vitest, `npm run test:harness`) written before the change that fails on the previous wording or behaviour and passes after; `node .claude/scripts/doctor.mjs` MUST pass on the branch.
 
 _From 1026-diataxis-docs._
+
+### 1035-FR-001 — A `PreToolUse` gate, `.claude/hooks/main-checkout-gate.mjs`, MUST refuse (exit 2) an `Edit`, `Write`, `MultiEdit` or `NotebookEdit` whose target path is tracked by git (`git ls-files --error-unmatch`) in the main checkout. The main checkout is judged from the target, not the session: the target's real path (symlinks resolved, nearest existing directory) lies in a repository whose `--git-dir` is the `--git-common-dir` of the session's checkout (`CLAUDE_PROJECT_DIR`, else the working directory). So a worktree session editing the main checkout's file by absolute path is refused too, and the specs clone (its own repository) is not. The refusal is one stderr message naming the file, stating that the main checkout holds no edits to tracked files and every change rides a PR from a worktree, and naming `SPECKIT_ALLOW_MAIN_EDIT=1`.
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-002 — The gate MUST let through (exit 0): any edit in a worktree (its git dir differs from the common dir); a path git does not track (`.work/`, `.claude/settings.local.json`, a new file; ignored paths are untracked, one `ls-files` decides); a path in another repository, the specs clone included; a payload with no path; and an edit it would refuse when `SPECKIT_ALLOW_MAIN_EDIT` is exactly `1` (any other value does not override), in which case it prints one stderr line that the override is in force. In a cloud session (`CLAUDE_CODE_REMOTE=true`) with `HEAD` not on `main`, it lets the edit through.
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-003 — The gate MUST fail open on git: git missing or failing, a path in no repository, or an unexpected error in its own code exits 0 and refuses nothing; it MUST finish in under 2 seconds on a cold run (three `git` calls at most on the laptop, four in a cloud session where `HEAD` is also read). A truncated or unparseable payload is refused by `run-hook.mjs` like every refusing gate (`fail_closed: true`).
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-004 — The gate MUST be registered in `.claude/hooks/registry.json` (id `pre:edit:main-checkout`, `PreToolUse`, matcher `Edit|Write|MultiEdit|NotebookEdit`, profiles `standard` and `strict`, `fail_closed: true`, its fingerprint blessed) and wired in `.claude/settings.json` through `run-hook.mjs pre:edit:main-checkout`, like the existing pre-edit gates; `node .claude/scripts/doctor.mjs` MUST be green afterwards.
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-005 — `.claude/scripts/watch.mjs` MUST judge the main checkout on every pass: `dirty: <files>` when tracked files are modified, staged or deleted (untracked excluded); otherwise `behind` when `HEAD` is on `main` and a strict ancestor of `origin/main` (the reason naming the count); else `ok` (a main checkout off `main` or diverged is not judged further). The watch does not fetch: every worktree shares the main checkout's refs, so `origin/main` moves whenever any checkout fetches or pushes. `behind` and `dirty` rows show the fix line `git -C <main> merge --ff-only origin/main`; the board, `--json` and the `--gate` lines carry it, so a `--wait` wakes the session for it.
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-006 — `--fix` MUST apply the fast-forward as a safe fix, `ff-main`, only for a clean `behind` main checkout, running exactly `git merge --ff-only origin/main` in it and recording the action; a dirty checkout is shown and never changed; a failure is a failed action with git's message.
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-007 — The session-start watch reminder (`.claude/hooks/session-watch-reminder.mjs`) MUST, when it runs in the main checkout, print one line when that checkout is behind or dirty (the same judgement as FR-005, naming the files or the count and the fix command), whether or not it also prints the arm-the-watch line; it MUST still print nothing in a worktree, stay under its timeout and always exit 0.
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-008 — AGENTS.md lifecycle step 7 MUST say in one line that after the merge the main checkout is fast-forwarded (`git -C <main> merge --ff-only origin/main`, by the orchestrating session, which `/speckit-watch`'s `ff-main` safe fix does when the watch reports `behind`); the `speckit-watch` skill MUST describe the main row's `behind`/`dirty` states and the `ff-main` safe fix in place of "the main worktree is shown, never fixed".
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-009 — The constitution MUST be amended to 1.12.0 (MINOR) with a rule that the main checkout holds no edits to tracked files, every change rides a PR from a worktree, and the orchestrating session fast-forwards the main checkout after each merge; its Sync Impact Report MUST record the bump, the source (ST-1035) and every file touched; the Enforcement table MUST gain a row naming `main-checkout-gate.mjs` (PreToolUse) and the watch's report; `.specify/memory/constitution-card.md` MUST carry the version and the rule in one line; CLAUDE.local.md MUST carry the version line and a gates-table row for the gate without growing past `.specify/context-baseline.json` (`context-audit.mjs` green), and `constitution-card.spec.mjs` MUST pass.
+
+_From 1035-main-checkout-guard._
+
+### 1035-FR-010 — Tests MUST exist before the implementation and MUST cover: every refusal and pass of FR-001 to FR-003 (tracked, untracked, ignored, worktree, a worktree session editing main by absolute path, specs clone, override, no path, git failure, cloud session) in a vitest spec `.claude/hooks/main-checkout-gate.spec.mjs`; at least two `.claude/evals/cases` entries (a tracked file refused with exit 2 and stderr naming the gate; an untracked file let through); the main row's three verdicts, the fix line and the `ff-main` safe fix (FR-005, FR-006) in `watch.spec.mjs`; the reminder's line (FR-007) in `session-watch-reminder.spec.mjs`.
+
+_From 1035-main-checkout-guard._
 
 ## Retired
 

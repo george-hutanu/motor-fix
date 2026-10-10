@@ -1705,3 +1705,135 @@ describe('listPrs', () => {
     assert.equal(prs.find((p) => p.number === 2).statusCheckRollup, undefined);
   });
 });
+
+// The main checkout is a mirror of origin/main: an edit to a tracked
+// file there blocks the fast-forward, and a checkout left behind serves stale
+// gates and docs to every session that starts in it. The watch names both.
+describe('the main checkout row', () => {
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const mainRow = (over = {}) => row({ path: '/repo', main: true, holder: 'owner', branch: 'main', dirty: [], ahead: 0, behind: 0, ...over });
+  const ff = 'git -C /repo merge --ff-only origin/main';
+
+  // @traces 1035-FR-005
+  it('is ok when clean and level with origin/main', () => {
+    const r = fixOf(mainRow(), opts);
+    assert.equal(r.verdict, 'ok');
+    assert.equal(r.fix, null);
+  });
+
+  it('is behind, with fix ff-main and the command, when clean and a strict ancestor of origin/main', () => {
+    const r = fixOf(mainRow({ behind: 3 }), opts);
+    assert.equal(r.verdict, 'behind');
+    assert.equal(r.fix, 'ff-main');
+    assert.match(r.reason, /behind origin\/main by 3/);
+    assert.ok(r.reason.includes(ff), r.reason);
+  });
+
+  it('is dirty, naming the files and the command but with no fix, whether behind or not', () => {
+    for (const behind of [0, 2]) {
+      const r = fixOf(mainRow({ dirty: ['AGENTS.md', 'docs/a.md'], behind }), opts);
+      assert.equal(r.verdict, 'dirty: AGENTS.md, docs/a.md');
+      assert.equal(r.fix, null);
+      assert.ok(r.reason.includes(ff), r.reason);
+    }
+  });
+
+  it('is not behind when it has commits of its own (diverged), nor off main', () => {
+    assert.equal(fixOf(mainRow({ ahead: 1, behind: 2 }), opts).fix, null);
+    assert.equal(fixOf(mainRow({ branch: 'other', ahead: null, behind: null }), opts).fix, null);
+  });
+
+  it('is blocked, never fast-forwarded, when git cannot read its status', () => {
+    const r = fixOf(mainRow({ dirty: null, behind: 2 }), opts);
+    assert.equal(r.verdict, 'blocked');
+    assert.equal(r.fix, null);
+  });
+
+  const capture = (fn) => {
+    const out = [];
+    const log = console.log;
+    console.log = (...a) => out.push(a.join(' '));
+    try {
+      return { status: fn(), out: out.join('\n') };
+    } finally {
+      console.log = log;
+    }
+  };
+  /** Moves origin/main one commit past the main checkout, as a merged PR does. */
+  const advanceOrigin = (f) => {
+    const a = f.add('agent-a', '901-a');
+    writeFileSync(join(a, 'merged.txt'), 'x\n');
+    git(a, 'add', '.');
+    git(a, 'commit', '-q', '-m', 'merged');
+    git(a, 'push', '-q', 'origin', 'HEAD:main');
+    return git(a, 'rev-parse', 'HEAD');
+  };
+  const mainOf = (report, f) => report.rows.find((r) => r.path === f.repo);
+
+  it('reads behind and dirty from real git, leaving untracked files out', () => {
+    const f = fixture();
+    try {
+      writeFileSync(join(f.repo, 'scratch.txt'), 'untracked\n');
+      assert.equal(mainOf(collect(f.repo, env()), f).verdict, 'ok');
+      advanceOrigin(f);
+      const behind = mainOf(collect(f.repo, env()), f);
+      assert.equal(behind.verdict, 'behind');
+      assert.equal(behind.fix, 'ff-main');
+      assert.ok(behind.reason.includes(`git -C ${f.repo} merge --ff-only origin/main`), behind.reason);
+      writeFileSync(join(f.repo, 'README.md'), 'edited\n');
+      const dirty = mainOf(collect(f.repo, env()), f);
+      assert.equal(dirty.verdict, 'dirty: README.md');
+      assert.equal(dirty.fix, null);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 1035-FR-006
+  it('--gate names ff-main for a clean, behind main checkout', () => {
+    const f = fixture();
+    try {
+      advanceOrigin(f);
+      const { status, out } = capture(() => main(['--gate'], { cwd: f.repo, ...env() }));
+      assert.equal(status, 2);
+      assert.ok(out.split('\n').includes(`ff-main ${f.repo}`), out);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('--fix fast-forwards a clean, behind main checkout and reports it', () => {
+    const f = fixture();
+    try {
+      const tip = advanceOrigin(f);
+      const { status, out } = capture(() => main(['--fix'], { cwd: f.repo, ...env(), sweep: () => null }));
+      assert.equal(status, 0);
+      assert.match(out, new RegExp(`fixed: ff-main ${f.repo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+      assert.equal(git(f.repo, 'rev-parse', 'HEAD'), tip);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('--fix leaves a dirty main checkout exactly as it was', () => {
+    const f = fixture();
+    try {
+      const before = git(f.repo, 'rev-parse', 'HEAD');
+      advanceOrigin(f);
+      writeFileSync(join(f.repo, 'README.md'), 'edited\n');
+      capture(() => main(['--fix'], { cwd: f.repo, ...env(), sweep: () => null }));
+      assert.equal(git(f.repo, 'rev-parse', 'HEAD'), before);
+      assert.equal(readFileSync(join(f.repo, 'README.md'), 'utf8'), 'edited\n');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a fast-forward git refuses as a failed action', () => {
+    const report = { rows: [{ ...mainRow({ path: '/nonexistent/main-checkout', behind: 1 }), verdict: 'behind', fix: 'ff-main' }], prunable: [], plan: [] };
+    const actions = applyFixes('/nonexistent/main-checkout', report);
+    assert.equal(actions.length, 1);
+    assert.equal(actions[0].what, 'ff-main /nonexistent/main-checkout');
+    assert.equal(actions[0].ok, false);
+  });
+});
