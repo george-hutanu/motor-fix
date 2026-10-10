@@ -86,6 +86,30 @@ test.describe('a new account sees helpful empty states @seeded', () => {
     await expect(page).toHaveURL(/\/en\/?$/);
   });
 
+  // @traces 030-FR-012
+  test('Panou on a new account fits a 320 px phone with no text under 12 px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await signUp(page);
+    await expect(invitation(page, 'search')).toBeVisible();
+
+    const sideways = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+    );
+    expect(sideways).toBe(false);
+    const smallest = await main(page).evaluate((root) =>
+      Math.min(
+        ...[...root.querySelectorAll('mf-empty-state *, mf-panel h2')]
+          .filter((e) => e.textContent?.trim())
+          .map((e) => Number.parseFloat(getComputedStyle(e).fontSize)),
+      ),
+    );
+    expect(smallest).toBeGreaterThanOrEqual(12);
+  });
+
   // @traces 030-FR-009, 030-FR-011
   test('a new driver finds each view’s own empty state, never the shared placeholder', async ({
     page,
