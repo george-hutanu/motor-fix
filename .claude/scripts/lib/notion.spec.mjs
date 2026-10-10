@@ -1,3 +1,4 @@
+// The owner's final import only: deleted after it runs (george-hutanu/motor-fix-specs#1119).
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';

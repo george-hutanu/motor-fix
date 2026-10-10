@@ -2,7 +2,7 @@
 
 - **Slug**: 1009-seeded-owner-e2e-leak
 - **Created**: 2026-10-09
-- **Source**: Notion ST-1009, https://app.notion.com/p/3f4607bff0d281fa93dae274113eec3c
+- **Source**: ST-1009
 - **Verdict**: valid
 - **Severity**: high (release-blocking: staging release run 37864374849 and E2E on unrelated PRs fail)
 

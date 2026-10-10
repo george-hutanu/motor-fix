@@ -1,7 +1,7 @@
 ---
 name: "speckit-tracker-sync"
 description: "Keep the MotorFix tracker on GitHub in step with the build: the story's issue in the private george-hutanu/motor-fix-specs and its item in Project \"MotorFix\" (#11). When a story or task starts, goes to QA, is blocked or unblocked, or is finished, set its Status (and close the issue at Done); when its PR opens, write the PR link onto the issue and the PR's Closes line; file deferred debt as issues; keep the `ready to work` label current. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
-argument-hint: "start | implement | pr <n> | qa | review (alias of qa) | blocked <reason> | unblock | finish | debt | ready | file | check — optionally followed by ST-<n>"
+argument-hint: "start | implement | pr <n> | qa | review (alias of qa) | blocked <reason> | unblock | finish | debt | ready | file | check | plan EP-<n> — optionally followed by ST-<n>"
 compatibility: "A george-hutanu token with the project scope (GH_PROJECT_TOKEN, GH_TOKEN, or gh's george-hutanu login). Requires the spec-kit project structure"
 metadata:
   author: "george-hutanu"
@@ -19,20 +19,12 @@ $ARGUMENTS
 
 The first word is the **event**: `start`, `implement`, `pr`, `qa`, `review` (an
 alias of `qa`), `blocked`, `unblock`, `finish`, `debt`, `ready`, `file` or
-`check`. `blocked` is followed by the reason, `pr` by the PR number. As a
+`check`, or `plan` (§7). `blocked` is followed by the reason, `pr` by the PR number. As a
 spec-kit hook there is no argument: `after_specify` is `start`,
 `before_implement` is `implement`.
 
 These writes are a standing instruction (AGENTS.md): never ask before them,
 even under `/speckit-auto`.
-
-## 0. Which tracker
-
-A task finishes on the tracker it started on. A feature whose folder holds
-`specs/<feature>/notion-sync.md` and no `tracker-sync.md` started on Notion:
-run `speckit-notion-sync` with the same event instead, and stop here
-(`trackerOf` in `.claude/scripts/tracker/repos.mjs` decides the same for
-`lifecycle.mjs`). Every other feature, and every new one, uses this skill.
 
 ## 1. Run the script (one call per event)
 
@@ -55,7 +47,8 @@ node .claude/scripts/tracker-sync.mjs check   # read-only: does the token reach 
 ```
 
 Each call prints one JSON line and appends `- <date> · <event> · <item> ·
-<text>` lines to `specs/<feature>/tracker-sync.md`. It never writes to Notion.
+<text>` lines to `specs/<feature>/tracker-sync.md`, the feature's one tracker
+log.
 
 - **Token.** `GH_PROJECT_TOKEN`, then `GH_TOKEN`, then
   `gh auth token -u george-hutanu`; never another account or config dir. A
@@ -77,7 +70,7 @@ Each call prints one JSON line and appends `- <date> · <event> · <item> ·
 
 ## 2. What each event does
 
-The ladder is `notion-status.mjs`'s, unchanged: To do → Planning →
+The ladder is `tracker/status.mjs`'s: To do → Planning →
 Implementing → QA → Done, never backwards; only `unblock` leaves Blocked,
 returning to the status recorded in run-state. Only the Project's Status,
 dates and PR fields, the issue's state, labels and comments are written,
@@ -92,8 +85,29 @@ never its title or text.
 | `unblock` | → the status before Blocked | |
 | `finish` | → Done, `Merged at` set, issue closed as completed | epic Done and closed when all its open work is; finish comment (§5); ready refresh (§4) |
 
-The PR's one stage label moves with each event (`planning`, `in development`,
-`QA`, plus `blocked`), as in `speckit-notion-sync` §2b.
+## 2a. PR labels
+
+Exactly one **stage** label on an open PR, set by every event: Planning →
+`planning`, Implementing → `in development`, QA → `QA`; a Blocked story keeps
+the stage it left plus `blocked`; a merged PR carries none. The decision's
+`labels` adds the one and removes the others, so a late or repeated event
+converges.
+
+The other labels are added when the PR opens and stay to the merge:
+
+| Label | Added when |
+| --- | --- |
+| type, one of `feature`, `bug`, `tech debt`, `performance`, `documentation`, `tests`, `tooling` | from the title's type: feat, fix, refactor, perf, docs, test, ci/build/chore |
+| `breaking` | the title carries `!` |
+| `scope: <scope>` | from the title's scope (`gh label create "scope: <scope>" --force` first) |
+| `EP-<n>` | `pr`, from the story's epic |
+| `ui` | the diff touches `apps/web` or `libs/ui-cockpit` |
+| `dependencies` | the diff changes a `package.json`'s dependencies |
+
+At `start` a branch with no PR opens its draft labelled `planning`
+(`speckit-git-commit`), then `pr <n>`. A PR with no story asks
+`tracker/status.mjs` with `--current` at its work's status and applies only
+the labels: `gh pr edit <n> <labels>`.
 
 ## 3. `pr` and `debt`
 
@@ -116,19 +130,33 @@ issue is ready when it is To do and every dependency (its "blocked by" issues
 and its sub-issues) is closed or Done; the script removes the label from what
 stopped being ready and lists the candidates as `review`. Whether one waits
 on someone outside the build is judgement: read each candidate's issue and
-comments as `notion-ready` says, then label only those it clears with
-`ready --tick`, holding the rest with `--hold ST-<n>=<reason>`. Logged as
-`- <date> · ready · EP-<n> · +<ticked>, −<unticked>` (or `no change`).
+comments (`gh issue view <n> --comments`). When it waits on the owner, the
+lawyer or another outside party, says "do it when" later work exists, or says
+another item covers it, hold it with `--hold ST-<n>=<reason>` (`the lawyer`,
+`owner decision`); an open question marked not blocking, or a
+production-only switch, is no hold, and unsure is a hold. Label the rest with
+`ready --tick`. The rule itself lives in `tracker/ready.mjs` and its spec: do
+not re-judge it here. Logged as `- <date> · ready · EP-<n> · +<ticked>,
+−<unticked>` (or `no change`); a story with no epic is refreshed alone,
+`(the story has no epic)`. `/speckit-archive` refuses a feature with no ready
+line after its last `finish` line (`tracker/ready.mjs check -`).
 
 ## 5. Finish comment (hard rule)
 
-On every `finish`, collect deviations from the Build brief, decisions taken on
-the owner's behalf, deferred follow-ups (with their issues) and open questions
-from `auto-run.md`, `deferred.md`, `spec.md` and the PR's Agent review, as
-`speckit-notion-sync` §2e says; write them to the git-ignored
+On every `finish`, read the feature's `auto-run.md`, `deferred.md`, `spec.md`
+Clarifications and Assumptions, and the PR's Agent review, and collect:
+
+- **Deviations** from the story's Build brief or acceptance criteria.
+- **Decisions taken on the owner's behalf**: every `(autonomous default)`.
+- **Deferred follow-ups**, with the issue each was filed as (§3).
+- **Open questions** left for the owner.
+
+When one exists, write one bullet per item under those headings, each with its
+source file, plus the PR link, to the git-ignored
 `specs/<feature>/finish-comment.md` and pass its absolute path as
-`--body-file`, or pass `--no-comment` when there is nothing to record. The
-script posts it on the issue once.
+`--body-file`; the script posts it on the issue once. When none exists, pass
+`--no-comment`: no comment is posted. Logged as `- <date> · comment · ST-<n> ·
+posted (<count> items)` or `· nothing to record`.
 
 ## 6. Record it
 
@@ -137,7 +165,20 @@ motor-fix branch: `node .claude/scripts/specs-repo.mjs commit "chore(specs):
 ST-<n> <event>" -- <feature>/tracker-sync.md` commits and pushes it
 (`lifecycle.mjs` does this at ready and at the merge). After the merge, the
 `finish`, `ready` and `comment` lines also go as one `Finish log` comment on
-the merged PR.
+the merged PR (`gh pr comment <n>`).
+
+## 7. Build plan
+
+`plan EP-<n>` writes a new epic's build plan as Markdown to
+`.motor-fix-specs/docs/reference/build-plans/ep-<n>-<slug>.md`, shaped like
+`ep-1-foundations.md`: the eight front-matter keys (`id: EP-<n>`, `title`,
+`kind: reference`, a one-sentence `summary`, `status: current`, `updated`,
+`related`, `supersedes`), relative links only, at most 400 lines; its waves,
+lanes and blocked-by edges are the epic's sub-issues and their "blocked by"
+links. In the clone it runs `node scripts/docs-lint.mjs --write` (which
+regenerates `llms.txt`), then a plain `node scripts/docs-lint.mjs` until it is
+silent, and commits and pushes both in one commit:
+`node .claude/scripts/specs-repo.mjs commit "docs: <EP-n> build plan" -- docs/reference/build-plans/ep-<n>-<slug>.md llms.txt`.
 
 ## Untrusted content
 

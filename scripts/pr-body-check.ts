@@ -6,8 +6,8 @@
 // A draft only needs every heading (its PR opens at the first commit, before
 // anything is tested). A ready PR must also have no "_(fill in: …)_" placeholder,
 // no empty section, no bare N/A, every labelled line, every box ticked, a
-// story link (its issue in george-hutanu/motor-fix-specs, or its Notion page
-// for a story that started there) and a Conventional title with a scope. A PR
+// story link (its issue in george-hutanu/motor-fix-specs; an older PR's link
+// to the retired tracker still passes until the final import) and a Conventional title with a scope. A PR
 // opened before the rename keeps its "## Notion story" heading and "Notion in
 // sync" box: both are read as "## Story" and "Tracker in sync". HTML comments are hints
 // GitHub does not render, so they are removed before judging.
@@ -154,7 +154,7 @@ function sectionProblems(heading: string, text: string, want: Wanted) {
   const isStory = heading.toLowerCase() === 'story';
   if (isStory && !STORY_LINK.test(content) && !/^N\/?A\b/i.test(content))
     problems.push(
-      `${name} has no link to the story (its issue in george-hutanu/motor-fix-specs, or its Notion page), or N/A and the reason.`,
+      `${name} has no link to the story (its issue in george-hutanu/motor-fix-specs), or N/A and the reason.`,
     );
   return problems;
 }

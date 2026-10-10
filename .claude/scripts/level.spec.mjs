@@ -941,44 +941,12 @@ describe('the pre-ready check', () => {
   });
 });
 
-// A Notion stand-in: the stories query answers `page`, the page's children
-// answer `blocks`. Every URL asked for is recorded.
-function notionFake({ page, blocks = [], fail, endless } = {}) {
-  const urls = [];
-  const fetchImpl = async (url, init) => {
-    urls.push(url);
-    const reply = (status, data) => ({ ok: status < 300, status, json: async () => data, headers: { get: () => null } });
-    if (fail === 'network') throw new Error('ECONNREFUSED');
-    if (url.includes('/data_sources/') && init.method === 'POST') return reply(200, { results: page ? [page] : [], has_more: false });
-    if (url.includes('/blocks/')) return reply(200, { results: blocks, has_more: Boolean(endless), next_cursor: endless ? 'c' : null });
-    if (url.includes('/pages/')) return page ? reply(200, page) : reply(404, { code: 'object_not_found', message: 'not found' });
-    return reply(500, { code: 'unexpected', message: url });
-  };
-  return { fetchImpl, urls };
-}
-
-const rich = (text) => [{ plain_text: text }];
-const storyPage = ({ type = 'Story', boards = 0, points = null, labels = [], title = 'Fix the garage list sort order' } = {}) => ({
-  id: 'page-1',
-  properties: {
-    Story: { type: 'title', title: rich(title) },
-    'Issue type': { type: 'select', select: { name: type } },
-    Labels: { type: 'multi_select', multi_select: labels.map((name) => ({ name })) },
-    Design: { type: 'rollup', rollup: { type: 'array', array: [] } },
-    'Design boards': { type: 'rollup', rollup: { type: 'array', array: Array.from({ length: boards }, () => ({ type: 'url', url: 'https://x' })) } },
-    ...(points === null ? {} : { 'Story points': { type: 'number', number: points } }),
-  },
-});
-const h = (n, text) => ({ type: `heading_${n}`, [`heading_${n}`]: { rich_text: rich(text) }, has_children: false });
-const p = (text) => ({ type: 'paragraph', paragraph: { rich_text: rich(text) }, has_children: false });
-const brief = (filled = true) => [h(2, 'Build brief'), h(3, 'Screens'), p('the list'), h(3, 'States and errors'), ...(filled ? [p('empty list')] : []), h(2, 'Notes'), p('x')];
-
-async function suggestRun(argv, { fake, env = { NOTION_TOKEN: 'secret_t' }, dir } = {}) {
+async function suggestRun(argv, { dir, fetchImpl } = {}) {
   const out = [];
   const previous = process.env.SPECKIT_JEV;
   process.env.SPECKIT_JEV = '0';
   try {
-    const status = await suggestCommand(argv, { repo: dir, env, fetchImpl: fake?.fetchImpl, out: (line) => out.push(line) });
+    const status = await suggestCommand(argv, { repo: dir, fetchImpl, out: (line) => out.push(line) });
     return { status, out: out.join('\n'), lines: out };
   } finally {
     if (previous === undefined) delete process.env.SPECKIT_JEV;
@@ -986,217 +954,27 @@ async function suggestRun(argv, { fake, env = { NOTION_TOKEN: 'secret_t' }, dir 
   }
 }
 
-describe('suggest from a Notion story', () => {
-  let dir;
-  const fresh = () => (dir = fixture());
-  const done = () => rmSync(dir, { recursive: true, force: true });
-
-  it('stops paging a story whose blocks never stop saying has_more', async () => {
-    fresh();
+// @traces 1037-FR-006
+describe('suggest sizes the text it is given', () => {
+  it('reads no tracker for a story id: ST-9 is sized as text, with no network call', async () => {
+    const dir = fixture();
+    const calls = [];
     try {
-      const fake = notionFake({ page: storyPage(), blocks: brief(), endless: true });
-      const run = await suggestRun(['ST-9'], { fake, dir, env: { NOTION_TOKEN: 'secret_t', NOTION_SYNC_MAX_PAGES: '3' } });
+      const run = await suggestRun(['ST-9'], { dir, fetchImpl: async (url) => { calls.push(String(url)); throw new Error('no network'); } });
       assert.equal(run.status, 0);
-      assert.match(run.lines[0], /^notion not read \(too many pages\)/);
-      assert.ok(fake.urls.filter((u) => u.includes('/blocks/')).length <= 3, fake.urls.join('\n'));
+      assert.deepEqual(calls, []);
+      assert.match(run.out, /level \d|unsure/);
     } finally {
-      done();
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  // @traces 745-FR-008
-  it('reads a story\'s blocks 100 at a time', async () => {
-    fresh();
-    try {
-      const fake = notionFake({ page: storyPage(), blocks: brief() });
-      await suggestRun(['ST-9'], { fake, dir });
-      const reads = fake.urls.filter((u) => u.includes('/blocks/'));
-      assert.ok(reads.length > 0);
-      assert.ok(reads.every((u) => u.endsWith('/children?page_size=100')), reads.join('\n'));
-    } finally {
-      done();
-    }
-  });
-
-  it('sizes a bug with no boards and a complete brief at 1, with no Jev or model call', async () => {
-    fresh();
-    try {
-      const fake = notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief() });
-      const run = await suggestRun(['ST-9'], { fake, dir });
-      assert.equal(run.status, 0);
-      assert.match(run.out, /facts: type Bug/);
-      assert.match(run.out, /level 1 \(one-session\) suggested by notion/);
-      assert.ok(fake.urls.every((u) => u.startsWith('https://api.notion.com/')), fake.urls.join('\n'));
-    } finally {
-      done();
-    }
-  });
-
-  it('keeps the classifier answer of 2 or more over the bug rule', async () => {
-    fresh();
-    try {
-      const fake = notionFake({ page: storyPage({ type: 'Bug', title: 'Fix the payments webhook' }), blocks: brief() });
-      const run = await suggestRun(['ST-9'], { fake, dir });
-      assert.match(run.out, /level 2 \(feature\) suggested by classifier/);
-    } finally {
-      done();
-    }
-  });
-
-  it('never sizes a story with boards below 2, and names the boards', async () => {
-    fresh();
-    try {
-      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug', boards: 2 }), blocks: brief() }), dir });
-      assert.match(run.out, /level 2 .* by notion/);
-      assert.match(run.out, /boards: 2/);
-    } finally {
-      done();
-    }
-  });
-
-  it('never sizes a story with an empty brief section below 2, and names the section', async () => {
-    fresh();
-    try {
-      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief(false) }), dir });
-      assert.match(run.out, /level 2 .* by notion/);
-      assert.match(run.out, /States and errors/);
-    } finally {
-      done();
-    }
-  });
-
-  it('reads a page with no Build brief as an empty brief: at least 2, "brief: not found"', async () => {
-    fresh();
-    try {
-      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug' }), blocks: [p('just prose')] }), dir });
-      assert.match(run.out, /brief: not found/);
-      assert.match(run.out, /level 2 .* by notion/);
-    } finally {
-      done();
-    }
-  });
-
-  it('raises a story with more than 5 points to at least 2; no points changes nothing', async () => {
-    fresh();
-    try {
-      const many = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug', points: 8 }), blocks: brief() }), dir });
-      assert.match(many.out, /level 2 .* by notion/);
-      assert.match(many.out, /points: 8/);
-      const few = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug', points: 3 }), blocks: brief() }), dir });
-      assert.match(few.out, /level 1 .* by notion/);
-    } finally {
-      done();
-    }
-  });
-
-  it('says unsure with the reason when no fact decides, then continues on the story text', async () => {
-    fresh();
-    try {
-      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Decision', labels: ['ui'] }), blocks: brief() }), dir });
-      assert.match(run.out, /facts: type Decision · labels ui/);
-      assert.match(run.out, /unsure \(notion: no decisive facts/);
-      assert.match(run.lines.at(-1), /unsure|level \d/);
-    } finally {
-      done();
-    }
-  });
-
-  for (const [why, setup, reason] of [
-    ['no token', { env: {} }, /no NOTION_TOKEN/],
-    ['a network failure', { fake: notionFake({ fail: 'network' }) }, /network error/],
-    ['a story that is not there', { fake: notionFake({}) }, /ST-9 not found/],
-  ]) {
-    it(`falls back to the text path on ${why}: one line, then exactly what suggest "<text>" prints`, async () => {
-      fresh();
-      try {
-        const run = await suggestRun(['ST-9'], { dir, ...setup });
-        assert.equal(run.status, 0);
-        assert.match(run.lines[0], /^notion not read/);
-        assert.match(run.lines[0], reason);
-        const plain = [];
-        const previous = process.env.SPECKIT_JEV;
-        process.env.SPECKIT_JEV = '0';
-        try {
-          await suggestText('ST-9', { repo: dir, argv: [], out: (l) => plain.push(l) });
-        } finally {
-          if (previous === undefined) delete process.env.SPECKIT_JEV;
-          else process.env.SPECKIT_JEV = previous;
-        }
-        assert.deepEqual(run.lines.slice(1), plain);
-      } finally {
-        done();
-      }
-    });
-  }
-
-  it('--set records only a confident answer', async () => {
-    fresh();
-    try {
-      await suggestRun(['ST-9', '--set'], { fake: notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief() }), dir });
-      assert.equal(JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8')).level, 1);
-      rmSync(join(dir, '.specify/feature.json'));
-      await suggestRun(['ST-9', '--set'], { fake: notionFake({ page: storyPage({ type: 'Decision' }), blocks: brief() }), dir });
-      assert.equal(existsSync(join(dir, '.specify/feature.json')), false, 'an unsure answer writes nothing');
-    } finally {
-      done();
-    }
-  });
-
-  it('accepts a Notion story URL', async () => {
-    fresh();
-    try {
-      const fake = notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief() });
-      const run = await suggestRun(['https://app.notion.com/p/3f0607bff0d2817d8a94d9a31fa161b4'], { fake, dir });
-      assert.match(run.out, /level 1 .* by notion/);
-      assert.ok(fake.urls.some((u) => u.includes('/pages/3f0607bff0d2817d8a94d9a31fa161b4')));
-    } finally {
-      done();
-    }
-  });
-
-  // A Notion fact only raises the text path's answer. When the
-  // classifier is unsure the text path is Jev, so a floor of 2 must not cap a
-  // Jev answer of 3.
-  const notionThenJev = (notion, answers) => {
-    const jev = jevReply(answers);
-    return { fetchImpl: (url, init) => (String(url).startsWith('https://api.notion.com/') ? notion.fetchImpl(url, init) : jev(url, init)), urls: notion.urls };
-  };
-  const suggestWithJev = async (argv, fake) => {
-    const out = [];
-    const previous = process.env.SPECKIT_JEV;
-    delete process.env.SPECKIT_JEV;
-    try {
-      const status = await withKey(() => suggestCommand(argv, { repo: dir, env: { NOTION_TOKEN: 'secret_t' }, fetchImpl: fake.fetchImpl, out: (line) => out.push(line) }));
-      return { status, out: out.join('\n') };
-    } finally {
-      if (previous !== undefined) process.env.SPECKIT_JEV = previous;
-    }
-  };
-
-  it('lets the text path raise a story with boards above the floor of 2', async () => {
-    fresh();
-    try {
-      const fake = notionThenJev(notionFake({ page: storyPage({ boards: 2 }), blocks: brief() }), { level: { choice: '3', confidence: 0.9 } });
-      const run = await suggestWithJev(['ST-9'], fake);
-      assert.equal(run.status, 0);
-      assert.match(run.out, /level 3 \(project\) suggested by jev/);
-      assert.match(run.out, /boards: 2/);
-    } finally {
-      done();
-    }
-  });
-
-  it('keeps the floor of 2 when the text path answers lower', async () => {
-    fresh();
-    try {
-      const fake = notionThenJev(notionFake({ page: storyPage({ boards: 2 }), blocks: brief() }), { level: { choice: '1', confidence: 0.9 } });
-      const run = await suggestWithJev(['ST-9'], fake);
-      assert.match(run.out, /level 2 \(feature\) suggested by notion/);
-    } finally {
-      done();
-    }
+  it('refuses an empty description', async () => {
+    const run = await suggestRun(['--set']);
+    assert.equal(run.status, 1);
   });
 });
+
 
 describe('level.mjs public surface', () => {
   it('exports only what another module or spec imports', async () => {

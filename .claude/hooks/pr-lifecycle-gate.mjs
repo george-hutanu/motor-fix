@@ -4,9 +4,7 @@
 // passed must have been tested by the PR tester (an `agent-review` success on
 // its head commit), and then merged, not left for the user. On a story branch
 // (`NNN-slug`) the open PR must also be linked from its story's tracker issue,
-// which `speckit-tracker-sync pr` records in the feature's tracker-sync.md (or
-// `speckit-notion-sync pr` in notion-sync.md, for a story that started on
-// Notion and finishes there). A PR
+// which `speckit-tracker-sync pr` records in the feature's tracker-sync.md. A PR
 // carries exactly one stage label, and one that fits its draft state:
 // `planning` until /speckit-implement, then `in development` while a draft,
 // `QA` from the moment it is marked ready (there is no `in review` stage: the
@@ -181,7 +179,7 @@ export function decide({ branch, ahead, unpushed, specsUnpushed = 0, pr, prLinke
   if (pr === null)
     return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
   if (pr.state === "OPEN" && !prLinked && /^\d+-/.test(branch))
-    return `PR #${pr.number} is not linked from its story's tracker issue. Write it to the issue's PR field (speckit-tracker-sync pr ${pr.number}; speckit-notion-sync pr ${pr.number} for a story that started on Notion); every story carries its own PR link from the moment the PR opens.`;
+    return `PR #${pr.number} is not linked from its story's tracker issue. Write it to the issue's PR field (speckit-tracker-sync pr ${pr.number}); every story carries its own PR link from the moment the PR opens.`;
   if (pr.state === "OPEN" && pr.labels) {
     const has = (name) => pr.labels.some((l) => l.name === name);
     const fix = stageFix(pr);
@@ -207,7 +205,7 @@ export function decide({ branch, ahead, unpushed, specsUnpushed = 0, pr, prLinke
       ? null
       : `PR #${pr.number} is ready and its checks passed, but its head commit has no agent-review status. Run the PR tester (/speckit-pr-test ${pr.number}), fix its blocking findings, and merge only on an agent-review success.`;
   if (hasAgentReview(checks) || !checks.some(isAgentReview))
-    return `PR #${pr.number} is ready and every check passed. Merge it (gh pr merge ${pr.number} --merge), then run speckit-tracker-sync finish (speckit-notion-sync finish for a story that started on Notion); merging on green CI does not wait for the user.`;
+    return `PR #${pr.number} is ready and every check passed. Merge it (gh pr merge ${pr.number} --merge), then run speckit-tracker-sync finish; merging on green CI does not wait for the user.`;
   return null;
 }
 
@@ -250,16 +248,14 @@ export function handedOff(cwd, branch) {
   return existsSync(join(cwd, featureDir(cwd, branch), "handoff.md"));
 }
 
-/** `speckit-tracker-sync pr` (or `speckit-notion-sync pr`) logged this PR for the branch's story. */
+/** `speckit-tracker-sync pr` logged this PR for the branch's story. */
 export function prLinked(cwd, branch, number) {
   const linked = new RegExp(`· pr · .*#${number}\\b`);
-  return ["tracker-sync.md", "notion-sync.md"].some((name) => {
-    try {
-      return linked.test(readFileSync(join(cwd, featureDir(cwd, branch), name), "utf8"));
-    } catch {
-      return false;
-    }
-  });
+  try {
+    return linked.test(readFileSync(join(cwd, featureDir(cwd, branch), "tracker-sync.md"), "utf8"));
+  } catch {
+    return false;
+  }
 }
 
 /**

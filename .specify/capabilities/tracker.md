@@ -3,15 +3,16 @@ capability: tracker
 updated: 2026-10-10
 features:
   - 1036-github-tracker-lifecycle
+  - 1037-remove-notion
 ---
 
 # Capability: Tracker
 
-How tasks, epics and their stages are tracked next to the code: a user-owned GitHub Project of george-hutanu linked to the private george-hutanu/motor-fix-specs (where every issue, label and milestone lives) and to motor-fix (pull requests only), with the fields the Notion tracker had (Status, Priority, Work type, Epic, the lifecycle dates, Story points, Sprint; readiness is the query Status To do and not blocked, `status:"To do" -is:blocked`, not a field), its views, issue forms per type, labels and milestones, epics as parent issues with their stories as sub-issues, Blocked by as issue dependencies, and the one-way import that brought every Notion story and epic over whole (every property, the page body, comments and files, with no link back to Notion). The requirements arrive with ST-1017 (`1017-github-project-tracker`, slice 1) at its archive; the adapter that writes every lifecycle event there and the switch-off of the Notion writes are its later slices.
+How tasks, epics and their stages are tracked next to the code: a user-owned GitHub Project of george-hutanu linked to the private george-hutanu/motor-fix-specs (where every issue, label and milestone lives) and to motor-fix (pull requests only), with the fields the old tracker had (Status, Priority, Work type, Epic, the lifecycle dates, Story points, Sprint; readiness is the query Status To do and not blocked, `status:"To do" -is:blocked`, not a field), its views, issue forms per type, labels and milestones, epics as parent issues with their stories as sub-issues, Blocked by as issue dependencies, and the one-way import that brought every old-tracker story and epic over whole (every property, the page body, comments and files, with no link back to the old tracker). The requirements arrive with ST-1017 (`1017-github-project-tracker`, slice 1) at its archive; the adapter that writes every lifecycle event there and the switch-off of the old tracker's writes are its later slices.
 
 ## Requirements
 
-### 1036-FR-001 — `node .claude/scripts/tracker-sync.mjs <event>` MUST find the story's issue in george-hutanu/motor-fix-specs by the `ST-<n>` at the start of its title, and for `start`, `implement`, `qa`, `review`, `blocked`, `unblock` and `finish` set the item's Project Status by the existing ladder (`notion-status.mjs` `decide`: To do → Planning → Implementing → QA → Done, Blocked off it, Done never moves).
+### 1036-FR-001 — `node .claude/scripts/tracker-sync.mjs <event>` MUST find the story's issue in george-hutanu/motor-fix-specs by the `ST-<n>` at the start of its title, and for `start`, `implement`, `qa`, `review`, `blocked`, `unblock` and `finish` set the item's Project Status by the existing ladder (`tracker/status.mjs` `decide`: To do → Planning → Implementing → QA → Done, Blocked off it, Done never moves).
 
 _From 1036-github-tracker-lifecycle._
 
@@ -59,16 +60,27 @@ _From 1036-github-tracker-lifecycle._
 
 _From 1036-github-tracker-lifecycle._
 
-### 1036-FR-013 — A feature whose folder holds `notion-sync.md` and no `tracker-sync.md` is Notion-tracked; every other feature is GitHub-tracked. `lifecycle.mjs` and `pr-lifecycle-gate.mjs` MUST follow that choice.
+### 1037-FR-003 — Every feature MUST be GitHub-tracked: `lifecycle.mjs` runs `tracker-sync.mjs` for every feature and accepts only `--tracker-done`; the stop gate's PR-link check reads only `tracker-sync.md`.
 
-_From 1036-github-tracker-lifecycle._
+_From 1037-remove-notion._
 
 ### 1036-FR-014 — `lifecycle.mjs open` MUST put the issue's URL in the draft body's story line; `ready` MUST write the issue to `handoff.md`.
 
 _From 1036-github-tracker-lifecycle._
 
-### 1036-FR-015 — `notion-ready.mjs check` MUST accept a `tracker-sync.md` log (its `TRACKER-SYNC PENDING: ready` line included).
+### 1037-FR-002 — The status ladder (`decide`, `recordPrior`) MUST live in `.claude/scripts/tracker/status.mjs` and the ready rule (`decideReady`, `readyLogged`, the `check` command) in `.claude/scripts/tracker/ready.mjs`, behaving as before; the run-state key is `prior_status`.
 
-_From 1036-github-tracker-lifecycle._
+_From 1037-remove-notion._
+
+### 1037-FR-007 — `debt-tasks.mjs` MUST treat only `— Issue: <url>` as filed.
+
+_From 1037-remove-notion._
+
+### 1037-FR-010 — `scripts/banned-words.ts` MUST fail when a tracked file's path or text contains a banned word (case-insensitive) and the file is not in `scripts/banned-words.json`, when a listed file holds more mentions than its count, when a listed file holds fewer (stale), and, with `--base <ref>`, when the list has an entry or a higher count than the base's list; CI's Changes job MUST run it on every pull request.
+
+_From 1037-remove-notion._
 
 ## Retired
+
+- `1036-FR-013` — superseded by `1037-FR-003` (2026-10-10)
+- `1036-FR-015` — superseded by `1037-FR-002` (2026-10-10)

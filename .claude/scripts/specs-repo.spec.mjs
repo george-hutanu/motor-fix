@@ -136,7 +136,7 @@ describe('commit', () => {
 
   it('commits the named paths only and pushes them to trunk', () => {
     mkdirSync(join(root, 'specs', '300-a'));
-    writeFileSync(join(root, 'specs', '300-a', 'notion-sync.md'), 'line\n');
+    writeFileSync(join(root, 'specs', '300-a', 'tracker-sync.md'), 'line\n');
     writeFileSync(join(root, 'specs', 'stray.md'), 'not mine\n');
     const r = commit({ root, message: 'chore(specs): ST-300 qa', paths: ['300-a'] });
     assert.deepEqual([r.ok, r.committed, r.pushed], [true, true, true], JSON.stringify(r));
@@ -206,7 +206,7 @@ describe('commit', () => {
     const c = lint();
     writeFileSync(join(c, 'docs', 'bad.md'), 'x\n');
     mkdirSync(join(root, 'specs', '300-a'));
-    writeFileSync(join(root, 'specs', '300-a', 'notion-sync.md'), 'line\n');
+    writeFileSync(join(root, 'specs', '300-a', 'tracker-sync.md'), 'line\n');
     const r = commit({ root, message: 'chore(specs): ST-300 qa', paths: ['300-a'] });
     assert.deepEqual([r.ok, r.pushed], [true, true], JSON.stringify(r));
   });
@@ -594,7 +594,6 @@ describe('migrate-trunk', () => {
     assert.equal(r.ok, true, JSON.stringify(r));
     assert.deepEqual([r.moved, r.pushed], [2, true]);
     assert.match(r.next, /docs-lint\.mjs --write/);
-    assert.doesNotMatch(r.next, /notion-export/);
     assert.deepEqual(git(remote, 'ls-tree', '--name-only', TRUNK).split('\n'), ['.github', '.gitignore', 'README.md', 'specs']);
     assert.deepEqual(git(remote, 'ls-tree', '--name-only', `${TRUNK}:specs`).split('\n'), ['100-old', '101-more']);
     assert.equal(spawnSync('git', ['cat-file', '-e', `${TRUNK}:docs/README.md`], { cwd: remote }).status === 0, false, 'docs/README.md is not a page: no front matter');

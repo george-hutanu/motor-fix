@@ -1,7 +1,7 @@
 ---
 name: spec-reviewer
 description: Reviews an implementation diff against the feature's spec.md, plan.md, tasks.md, and the motor-fix constitution. Reports findings by severity; CRITICAL/HIGH findings block completion. Invoke after /speckit-implement finishes a feature (or a phase), passing the feature directory and the diff range to review. Read-only — it never edits code.
-tools: Read, Grep, Glob, Bash, ToolSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-comments, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-search, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-fetch, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-comments, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-search, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-fetch, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-get-comments
+tools: Read, Grep, Glob, Bash
 model: fable
 ---
 
@@ -15,7 +15,7 @@ The invoking prompt names a feature directory (`specs/NNN-slug/`) and a diff
 range (or "working tree"). Gather your own evidence:
 
 - `git diff <range>` / `git status` for what actually changed (Bash is for
-  read-only git, `npx jest`, `npm run typecheck` and `npm run lint`
+  read-only git, `gh issue view`, `npx jest`, `npm run typecheck` and `npm run lint`
   only — never modify anything)
 - `specs/NNN-slug/spec.md` — requirements (FR-###), acceptance scenarios, edge cases
 - `specs/NNN-slug/plan.md` + `tasks.md` — the promised design and task list
@@ -26,18 +26,16 @@ range (or "working tree"). Gather your own evidence:
 - the feature page, architecture pages and decisions the spec or `context.md`
   cites, read from the specs clone (`.motor-fix-specs/`): `llms.txt` first,
   then `docs/reference/features/`, `docs/explanation/architecture/` and
-  `docs/explanation/decisions/` (a Notion id's file is in `docs/index.json`;
+  `docs/explanation/decisions/` (an old page id's file is in `docs/index.json`;
   Read and Grep, never an edit)
-- the feature's story in the Notion tracker, **comments included**, when the
-  spec links one (Notion read tools only — never a write). The local
-  artifacts are as current as the day they were written; the story is current
-  now. A comment that narrowed the ask after the spec was frozen is the finding
-  the implementing agent structurally cannot see. Load the Notion tools with one
-  `ToolSearch` first; if none comes back, your tool list names only connector
-  ids that are gone: put
-  `[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`
-  in the report's Notion line and review without the story, never as if it
-  said nothing
+- the feature's story issue in george-hutanu/motor-fix-specs, **comments
+  included**, when the spec names one (`gh issue view <n> -R
+  george-hutanu/motor-fix-specs --comments`, read only). The local artifacts
+  are as current as the day they were written; the story is current now. A
+  comment that narrowed the ask after the spec was frozen is the finding the
+  implementing agent structurally cannot see. When `gh` cannot read it, write
+  `[UNAVAILABLE: tracker — <reason>]` in the report's story line and review
+  without the story, never as if it said nothing
 - `.specify/memory/constitution.md` — the non-negotiable principles
 - the operational conventions the constitution defers to: AGENTS.md, already
   in your context (never Read it again)
@@ -151,7 +149,7 @@ VERDICT: APPROVE | BLOCK
 |---|----------|-------|-------|---------|----------|
 
 Checked: <n> FRs, <n> tasks, constitution I–VI, tests (<pass>/<total>),
-story <Notion page> re-read <date> (or "not fetched: <reason>").
+story <issue URL> re-read <date> (or "not fetched: <reason>").
 ```
 
 - Severity: CRITICAL (constitution MUST / broken behavior / weakened test),
