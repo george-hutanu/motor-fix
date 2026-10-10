@@ -9,6 +9,15 @@
 main {
   flex: 1 0 auto;
 }
+/* The tab bar's height on a phone, which the tab bar takes as its own and the consent bar sits on. */
+@media (max-width: 767.98px) {
+  :host {
+    --tab-bar: calc(1px + 8px + 52px + max(16px, var(--mf-safe-bottom)));
+  }
+  :host(.no-tab-bar) {
+    --tab-bar: 0px;
+  }
+}
 .bar {
   position: sticky;
   top: 0;

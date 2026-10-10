@@ -61,6 +61,12 @@ export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmatio
 export { meEmailConfirmationControllerAskAgain as meEmailConfirmationControllerAskAgain } from './fn/me/me-email-confirmation-controller-ask-again';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
+export type { ConsentsControllerRecord$Params as ConsentsControllerRecord$Params } from './fn/consents/consents-controller-record';
+export { consentsControllerRecord as consentsControllerRecord } from './fn/consents/consents-controller-record';
+export type { ConsentsControllerMine$Params as ConsentsControllerMine$Params } from './fn/consents/consents-controller-mine';
+export { consentsControllerMine as consentsControllerMine } from './fn/consents/consents-controller-mine';
+export type { ConsentsControllerRecordMine$Params as ConsentsControllerRecordMine$Params } from './fn/consents/consents-controller-record-mine';
+export { consentsControllerRecordMine as consentsControllerRecordMine } from './fn/consents/consents-controller-record-mine';
 export type { BellControllerList$Params as BellControllerList$Params } from './fn/notifications/bell-controller-list';
 export { bellControllerList as bellControllerList } from './fn/notifications/bell-controller-list';
 export type { BellControllerUnreadCount$Params as BellControllerUnreadCount$Params } from './fn/notifications/bell-controller-unread-count';

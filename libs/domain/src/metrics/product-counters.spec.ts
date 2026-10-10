@@ -1,10 +1,11 @@
-import { DOCUMENT_KINDS } from '@motor-fix/contracts';
+import { CONSENT_DECISIONS, DOCUMENT_KINDS } from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import {
   countApproval,
+  countConsentRecord,
   countDeclarationSigned,
   countDocumentOpened,
   countDocumentUploaded,
@@ -50,6 +51,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 // @traces 424-FR-017
 // @traces 312-FR-016
 // @traces 206-FR-016
+// @traces 244-FR-016 244-FR-018
 describe('the product counters', () => {
   it.each([
     [
@@ -151,6 +153,14 @@ describe('the product counters', () => {
       ] as const,
     ]),
     [() => countDeclarationSigned(), 'motorfix_declarations_signed_total', {}],
+    ...CONSENT_DECISIONS.map(
+      (decision) =>
+        [
+          () => countConsentRecord(decision),
+          'motorfix_consent_records_total',
+          { decision },
+        ] as const,
+    ),
   ] as const)('counts one %#: %s', async (count, name, labels) => {
     const before = await total(name, labels);
 
@@ -159,7 +169,7 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  it('keeps every series an instance can add under 50, with labels from fixed sets only', async () => {
+  it('keeps every series an instance can add under 60, with labels from fixed sets only', async () => {
     for (const outcome of ['results', 'none'] as const) countSearch(outcome);
     for (const method of ['password', 'phone', 'google', 'apple'] as const)
       countSignIn(method);
@@ -181,6 +191,9 @@ describe('the product counters', () => {
       countDocumentOpened(kind);
     });
     countDeclarationSigned();
+    CONSENT_DECISIONS.forEach((decision) => {
+      countConsentRecord(decision);
+    });
 
     const { resourceMetrics } = await memory.metricReader.collect();
     const series = resourceMetrics.scopeMetrics
@@ -193,7 +206,7 @@ describe('the product counters', () => {
         ),
       );
     expect(new Set(series).size).toBe(series.length);
-    expect(series.length).toBeLessThan(50);
+    expect(series.length).toBeLessThan(60);
     expect(series.join()).not.toMatch(/@|\d{6,}|[0-9a-f]{8}-/i);
   });
 });

@@ -37,6 +37,7 @@ import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
 import { segmentsOf } from '../../addresses';
+import { ConsentBar } from '../../consent/consent-bar/consent-bar';
 import { AddCar } from '../add-car/add-car';
 import { AdminFilters } from '../admin-filters/admin-filters';
 import type { FiltersChoice } from '../admin-filters-sheet/admin-filters-sheet';
@@ -92,6 +93,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
     AsWritten,
     Bell,
     ClockPipe,
+    ConsentBar,
     DashboardTabBar,
     EmailBanner,
     HlmToaster,

@@ -1,10 +1,11 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
-// @traces 879-FR-017
+// @traces 879-FR-017 244-FR-004
 import {
   faroUrl,
   grafanaUrl,
   PLACES_ENV,
   placesApiKey,
+  plausibleDomain,
   publicWebUrl,
   readEnv,
   STORAGE_ENV,
@@ -143,6 +144,28 @@ describe('faroUrl', () => {
     expect(run).toThrow(new Error('FARO_URL must be an absolute http(s) URL'));
     expect(run).not.toThrow(/secret-key|not-a-url/);
   });
+});
+
+describe('plausibleDomain', () => {
+  it('reads the site name the analytics count under', () => {
+    expect(plausibleDomain({ PLAUSIBLE_DOMAIN: ' motorfix.ro ' })).toBe(
+      'motorfix.ro',
+    );
+  });
+
+  it('returns nothing when unset or empty, so analytics stay off', () => {
+    expect(plausibleDomain({})).toBeUndefined();
+    expect(plausibleDomain({ PLAUSIBLE_DOMAIN: '' })).toBeUndefined();
+  });
+
+  it.each(['https://motorfix.ro', 'motor fix', 'a"b'])(
+    'refuses %s, which is not a bare domain',
+    (value) => {
+      expect(() => plausibleDomain({ PLAUSIBLE_DOMAIN: value })).toThrow(
+        new Error('PLAUSIBLE_DOMAIN must be a domain name'),
+      );
+    },
+  );
 });
 
 describe('grafanaUrl', () => {

@@ -147,6 +147,8 @@
     {
       // Biome reads Angular templates as plain HTML: it cannot see the href that routerLink or a bound [href] writes on these links.
       "includes": [
+        "apps/web/src/app/consent/consent-bar/consent-bar.html",
+        "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
         "apps/web/src/app/dashboard/driver-home/driver-home.html",
         "apps/web/src/app/dashboard/due-date-line/due-date-line.html",
@@ -157,6 +159,7 @@
         "apps/web/src/app/dashboard/requests-view/requests-view.html",
         "apps/web/src/app/maintenance/maintenance-page/maintenance-page.html",
         "apps/web/src/app/not-found/not-found.html",
+        "apps/web/src/app/public/footer/footer.html",
         "apps/web/src/app/public/frame/frame.html",
         "apps/web/src/app/public/confirm-email/confirm-email.html",
         "apps/web/src/app/public/garage-profile/garage-profile.html",
@@ -193,6 +196,7 @@
     {
       // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders.
       "includes": [
+        "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
         "apps/web/src/app/dashboard/notification-settings/notification-settings.html"
       ],
       "linter": {

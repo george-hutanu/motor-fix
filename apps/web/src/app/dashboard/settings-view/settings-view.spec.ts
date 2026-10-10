@@ -14,6 +14,9 @@ class PushPanelStub {}
 @Component({ selector: 'mf-notification-settings', template: '' })
 class NotificationSettingsStub {}
 
+@Component({ selector: 'mf-privacy-panel', template: '' })
+class PrivacyPanelStub {}
+
 const account = (capabilities: string[]) =>
   ({ capabilities, id: 'account-1' }) as unknown as MeDto;
 
@@ -23,7 +26,12 @@ function render(me: MeDto | null) {
   });
   TestBed.overrideComponent(SettingsView, {
     set: {
-      imports: [NotificationSettingsStub, PlatformRulesStub, PushPanelStub],
+      imports: [
+        NotificationSettingsStub,
+        PlatformRulesStub,
+        PrivacyPanelStub,
+        PushPanelStub,
+      ],
     },
   });
   const fixture = TestBed.createComponent(SettingsView);
@@ -67,5 +75,12 @@ describe('SettingsView', () => {
 
     expect(element.querySelector('mf-platform-rules')).toBeNull();
     expect(element.querySelector('mf-notification-settings')).not.toBeNull();
+  });
+
+  // @traces 244-FR-006
+  it('ends with the privacy panel and its cookie settings', async () => {
+    const element = await rendered(account(['garage.settings']));
+
+    expect(element.lastElementChild?.tagName).toBe('MF-PRIVACY-PANEL');
   });
 });

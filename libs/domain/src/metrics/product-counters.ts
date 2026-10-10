@@ -112,3 +112,13 @@ export function countGarageReport(outcome: GarageReportOutcome) {
     'Reports of a garage by a driver, by outcome',
   ).add(1, { outcome });
 }
+
+// One per analytics choice stored, visitor or signed in.
+export function countConsentRecord(
+  decision: 'granted' | 'refused' | 'withdrawn',
+) {
+  counter(
+    'motorfix_consent_records_total',
+    'Analytics consent choices stored, by decision',
+  ).add(1, { decision });
+}

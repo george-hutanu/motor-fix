@@ -10,7 +10,12 @@ import {
   isMainModule,
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
-import { faroUrl, publicWebUrl, readEnv } from '@motor-fix/contracts/env';
+import {
+  faroUrl,
+  plausibleDomain,
+  publicWebUrl,
+  readEnv,
+} from '@motor-fix/contracts/env';
 import { setRoute } from '@motor-fix/observability';
 import express from 'express';
 
@@ -30,6 +35,7 @@ const browserDistFolder = resolve(
 const app = express();
 const publicUrl = publicWebUrl();
 const faro = faroUrl();
+const analytics = plausibleDomain();
 // Read raw, not through readEnv: the build and the dev server import this
 // file without the runtime environment readEnv requires (see below).
 const collector = faro
@@ -55,7 +61,10 @@ app.use((req, res, next) => {
   setRoute('client-rendered');
   angularApp
     .handle(req)
-    .then((response) => response && withTelemetryMeta(response, collector))
+    .then(
+      (response) =>
+        response && withTelemetryMeta(response, collector, analytics),
+    )
     .then((response) =>
       response ? writeResponseToNodeResponse(response, res) : next(),
     )

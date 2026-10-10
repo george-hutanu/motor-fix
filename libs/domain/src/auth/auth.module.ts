@@ -18,6 +18,9 @@ import {
 } from './assistant/assistant.service';
 import { Attempts, AUTH_REDIS } from './attempts';
 import { AuthController } from './auth.controller';
+import { ConsentsController } from './consents/consents.controller';
+import { ConsentsService } from './consents/consents.service';
+import { ConsentThrottle } from './consents/consents.throttle';
 import { MAINTENANCE, MaintenanceFlag } from './maintenance';
 import { MeController } from './me.controller';
 import { OauthController } from './oauth/oauth.controller';
@@ -60,6 +63,7 @@ export class AuthModule implements OnApplicationShutdown {
         OauthController,
         MeController,
         AuditHistoryController,
+        ConsentsController,
       ],
       exports: [
         AccountLoader,
@@ -83,6 +87,7 @@ export class AuthModule implements OnApplicationShutdown {
         AssistantService,
         { provide: APP_GUARD, useExisting: ActorGuard },
         AuditHistoryService,
+        ConsentsService,
         OAuthService,
         SignInService,
         SignUpService,
@@ -102,6 +107,11 @@ export class AuthModule implements OnApplicationShutdown {
           inject: [AUTH_REDIS],
           provide: ASSISTANT_THROTTLE,
           useFactory: assistantThrottle,
+        },
+        {
+          inject: [AUTH_REDIS],
+          provide: ConsentThrottle,
+          useFactory: (redis: Redis) => new ConsentThrottle(redis),
         },
         { provide: MAINTENANCE, useClass: MaintenanceFlag },
         { provide: AUDIT_PORT, useClass: AuditService },

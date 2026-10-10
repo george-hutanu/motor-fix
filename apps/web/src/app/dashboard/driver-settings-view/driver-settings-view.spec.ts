@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { DriverSettingsView } from './driver-settings-view';
 import { DriverNotifications } from '../driver-notifications/driver-notifications';
+import { PrivacyPanel } from '../privacy-panel/privacy-panel';
 import { PushPanel } from '../push-panel/push-panel';
 
 @Component({ selector: 'mf-push-panel', template: '' })
@@ -11,11 +12,15 @@ class FakePushPanel {}
 @Component({ selector: 'mf-driver-notifications', template: '' })
 class FakeNotifications {}
 
+@Component({ selector: 'mf-privacy-panel', template: '' })
+class FakePrivacyPanel {}
+
 describe("the driver's settings", () => {
-  it("shows this device's push panel, then the notification switches", () => {
+  // @traces 244-FR-006
+  it("shows this device's push panel, the notification switches, then the privacy panel", () => {
     TestBed.overrideComponent(DriverSettingsView, {
-      add: { imports: [FakePushPanel, FakeNotifications] },
-      remove: { imports: [PushPanel, DriverNotifications] },
+      add: { imports: [FakePushPanel, FakeNotifications, FakePrivacyPanel] },
+      remove: { imports: [PushPanel, DriverNotifications, PrivacyPanel] },
     });
     const fixture = TestBed.createComponent(DriverSettingsView);
     fixture.detectChanges();
@@ -24,6 +29,7 @@ describe("the driver's settings", () => {
     expect([...element.children].map((c) => c.tagName.toLowerCase())).toEqual([
       'mf-push-panel',
       'mf-driver-notifications',
+      'mf-privacy-panel',
     ]);
   });
 });

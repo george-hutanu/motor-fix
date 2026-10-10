@@ -731,6 +731,109 @@
         ]
       }
     },
+    "/api/v1/consents": {
+      "post": {
+        "operationId": "ConsentsController_record",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordConsentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRecordedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "consent_time_ahead, or a field the body got wrong"
+          },
+          "429": {
+            "description": "consent_rate_limited"
+          }
+        },
+        "tags": [
+          "consents"
+        ]
+      }
+    },
+    "/api/v1/me/consents": {
+      "post": {
+        "operationId": "ConsentsController_recordMine",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordConsentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRecordedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "consent_time_ahead, or a field the body got wrong"
+          },
+          "429": {
+            "description": "consent_rate_limited"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "consents"
+        ]
+      },
+      "get": {
+        "operationId": "ConsentsController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyConsentsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "consents"
+        ]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "BellController_list",
@@ -5027,6 +5130,151 @@
           "items",
           "nextCursor",
           "total"
+        ]
+      },
+      "RecordConsentDto": {
+        "type": "object",
+        "properties": {
+          "browserConsentId": {
+            "type": "string",
+            "description": "Made once by the browser",
+            "format": "uuid"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "refused",
+              "withdrawn"
+            ]
+          },
+          "textVersion": {
+            "type": "string",
+            "description": "The text the choice was made under; only the current one",
+            "example": "2026-10-10"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "description": "When the choice was made, by the browser; at most 5 minutes ahead of the server",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "browserConsentId",
+          "decision",
+          "textVersion",
+          "language",
+          "at"
+        ]
+      },
+      "ConsentRecordedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "AnalyticsConsentDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "refused",
+              "withdrawn"
+            ]
+          },
+          "textVersion": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "decision",
+          "textVersion",
+          "language",
+          "at"
+        ]
+      },
+      "AcceptedTextDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "terms",
+              "privacy_notice"
+            ]
+          },
+          "textVersion": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "kind",
+          "textVersion",
+          "language",
+          "acceptedAt"
+        ]
+      },
+      "MyConsentsDto": {
+        "type": "object",
+        "properties": {
+          "analytics": {
+            "description": "The analytics choice with the latest time; null when none",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AnalyticsConsentDto"
+              }
+            ]
+          },
+          "accepted": {
+            "description": "The latest accepted version of each text",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcceptedTextDto"
+            }
+          }
+        },
+        "required": [
+          "analytics",
+          "accepted"
         ]
       },
       "NotificationDto": {
