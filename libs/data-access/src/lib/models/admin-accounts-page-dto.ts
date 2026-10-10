@@ -9,4 +9,9 @@ export interface AdminAccountsPageDto {
    */
   items: Array<AdminAccountDto>;
   nextCursor: string | null;
+
+  /**
+   * Every account the search and filters match, counted at this read; only when q, role or status is given
+   */
+  total?: number;
 }

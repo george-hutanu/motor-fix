@@ -1,0 +1,53 @@
+<form class="search" role="search" (submit)="$event.preventDefault()" [attr.aria-label]="'admin.users.search.label' | t">
+  <svg class="glass" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+    <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" />
+    <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+  </svg>
+  <input
+    #box
+    type="search"
+    autocomplete="off"
+    [attr.maxlength]="max"
+    [placeholder]="'admin.users.search.placeholder' | t"
+    [attr.aria-label]="'admin.users.search.label' | t"
+    [value]="text()"
+    (input)="type($any($event.target).value)"
+  />
+  @if (text()) {
+    <button type="button" class="clear-search" [attr.aria-label]="'admin.users.search.clear' | t" (click)="clear()">
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14">
+        <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+    </button>
+  }
+</form>
+<div class="wide">
+  <hlm-popover sideOffset="4">
+    <button type="button" class="roles" hlmPopoverTrigger>
+      <span>{{ rolesName() }}</span>
+      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12">
+        <path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+    </button>
+    <fieldset hlmPopoverContent class="ticks" *hlmPopoverPortal="let ctx" [attr.aria-label]="'admin.users.filters.roles' | t">
+      @for (option of roleOptions(); track option.key) {
+        <label class="tick">
+          <input type="checkbox" [value]="option.key" [checked]="roles().includes(option.key)" (change)="toggle(option.key, $any($event.target).checked)" />
+          {{ option.name }}
+        </label>
+      }
+    </fieldset>
+  </hlm-popover>
+  <select class="state" [attr.aria-label]="'admin.users.filters.state' | t" (change)="chooseState($any($event.target).value)">
+    <option value="" [selected]="status() === null">{{ 'admin.users.filters.allStates' | t }}</option>
+    @for (option of stateOptions(); track option.key) {
+      <option [value]="option.key" [selected]="option.key === status()">{{ option.name }}</option>
+    }
+  </select>
+</div>
+<button type="button" class="filter" [attr.aria-label]="'admin.users.filters.button' | t: { summary: summary() }" (click)="openSheet()">
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+    <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+  </svg>
+  <span>{{ summary() }}</span>
+</button>
