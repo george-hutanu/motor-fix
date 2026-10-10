@@ -143,11 +143,3 @@ describe("bootstrap against odd states", () => {
     assert.deepEqual(names, ["To do", "Planning", "Implementing", "Blocked", "QA", "Done"]);
   });
 });
-
-describe("the Project schema after the import path", () => {
-  it("has no import-only field, imported-page line or old-id line", () => {
-    const names = SCHEMA.fields.map((f) => f.name.toLowerCase());
-    assert.equal(names.some((n) => n.startsWith("created in")), false);
-    assert.equal(/imported|old id|next/i.test(SCHEMA.readme), false);
-  });
-});

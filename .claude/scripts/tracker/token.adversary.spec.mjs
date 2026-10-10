@@ -79,13 +79,14 @@ describe("the command line without a token", () => {
     const home = mkdtempSync(join(tmpdir(), "home-"));
     try {
       const r = spawnSync(process.execPath, [new URL("./bootstrap.mjs", import.meta.url).pathname, "--dry-run"], {
-        env: { PATH: "/nonexistent", HOME: home },
+        env: { PATH: "/nonexistent", HOME: home, GITHUB_TOKEN: "ghp_never" },
         encoding: "utf8",
       });
       assert.equal(r.status, 1);
       assert.match(r.stderr, /GH_PROJECT_TOKEN/);
       assert.match(r.stderr, /GH_TOKEN/);
       assert.ok(!r.stderr.includes("gh-motorfix"), "the owner's gh-motorfix login is never named or read");
+      assert.ok(!r.stdout.includes("ghp_never") && !r.stderr.includes("ghp_never"), "a token in the environment is never printed");
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
