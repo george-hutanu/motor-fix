@@ -28,16 +28,9 @@ import { PHONE_BREVO } from '../phone-sign-in/phone-sign-in.service';
 import { sendWhatsAppCode } from '../phone-sign-in/whatsapp-code';
 import type { Actor } from '../policy';
 import { PRISMA } from '../prisma';
-import { refusal } from '../sign-up.service';
+import { refusal, tooMany } from '../sign-up.service';
 
 type Db = PrismaClient | Prisma.TransactionClient;
-
-const tooMany = () =>
-  refusal(
-    HttpStatus.TOO_MANY_REQUESTS,
-    'too_many_attempts',
-    'Too many tries; try again later',
-  );
 
 const expired = () =>
   refusal(HttpStatus.GONE, 'code_expired', 'The code has expired');
@@ -93,6 +86,7 @@ export class PhoneChangeService {
         code,
       );
     } catch {
+      await this.attempts.uncountContactChange(accountId);
       throw refusal(
         HttpStatus.SERVICE_UNAVAILABLE,
         'send_failed',

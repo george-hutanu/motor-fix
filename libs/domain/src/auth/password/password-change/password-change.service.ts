@@ -16,7 +16,7 @@ import { Attempts } from '../../attempts';
 import type { Actor } from '../../policy';
 import { PRISMA } from '../../prisma';
 import { SignInService } from '../../sign-in.service';
-import { refusal, weakPassword } from '../../sign-up.service';
+import { refusal, tooMany, weakPassword } from '../../sign-up.service';
 import { hashPassword, verifyPassword } from '../password';
 import {
   RESET_OPTIONS,
@@ -137,13 +137,7 @@ export class PasswordChangeService {
       );
     }
     if (await this.attempts.passwordBlocked(accountId)) {
-      throw this.refused(
-        refusal(
-          HttpStatus.TOO_MANY_REQUESTS,
-          'too_many_attempts',
-          'Too many tries; try again later',
-        ),
-      );
+      throw this.refused(tooMany());
     }
     if (!(await verifyPassword(current, stored))) {
       await this.attempts.passwordFailed(accountId);

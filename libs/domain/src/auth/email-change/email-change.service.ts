@@ -20,10 +20,30 @@ import type { Actor } from '../policy';
 import { PRISMA } from '../prisma';
 
 const PURPOSE = 'email_change';
-export const CHANGE_LINK_TTL_MS = 24 * 60 * 60 * 1000;
+const CHANGE_LINK_TTL_MS = 24 * 60 * 60 * 1000;
 
+// Not sign-up's: importing that service would close an import cycle.
 const refusal = (status: HttpStatus, code: string, message: string) =>
   new HttpException({ code, message }, status);
+
+// The address of the account's latest e-mail change still waiting for its link.
+export const pendingEmail = async (
+  prisma: PrismaClient,
+  accountId: string,
+  at: Date,
+): Promise<string | null> => {
+  const row = await prisma.accountToken.findFirst({
+    orderBy: { createdAt: 'desc' },
+    select: { email: true },
+    where: {
+      accountId,
+      expiresAt: { gt: at },
+      purpose: PURPOSE,
+      usedAt: null,
+    },
+  });
+  return row?.email ?? null;
+};
 
 export const emailTaken = () =>
   refusal(
@@ -73,21 +93,6 @@ export class EmailChangeService {
     await this.issue(accountId, email, null);
   }
 
-  // The latest change still waiting for its link.
-  async pending(accountId: string): Promise<string | null> {
-    const row = await this.prisma.accountToken.findFirst({
-      orderBy: { createdAt: 'desc' },
-      select: { email: true },
-      where: {
-        accountId,
-        expiresAt: { gt: this.now() },
-        purpose: PURPOSE,
-        usedAt: null,
-      },
-    });
-    return row?.email ?? null;
-  }
-
   // Whether another account holds the address, whatever its case or status.
   async taken(email: string, accountId: string): Promise<boolean> {
     const holder = await this.prisma.account.findFirst({
@@ -134,6 +139,7 @@ export class EmailChangeService {
       }
     } catch (error) {
       this.logger.error(`e-mail change link not sent: ${String(error)}`);
+      await this.attempts.uncountContactChange(accountId);
       throw refusal(
         HttpStatus.SERVICE_UNAVAILABLE,
         'send_failed',

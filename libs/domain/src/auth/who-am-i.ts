@@ -2,6 +2,7 @@ import type { GarageAccessDto, MeDto } from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { capabilitiesOf } from './capabilities';
+import { pendingEmail } from './email-change/email-change.service';
 import { type Actor, landingFor } from './policy';
 import { PRISMA } from './prisma';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -14,36 +15,29 @@ export class WhoAmI {
 
   async read(actor: Actor): Promise<MeDto> {
     const { accountId } = actor;
-    const [{ emailVerifiedAt, phoneVerifiedAt, ...account }, password, change] =
-      await Promise.all([
-        this.prisma.account.findUniqueOrThrow({
-          select: {
-            city: true,
-            email: true,
-            emailVerifiedAt: true,
-            language: true,
-            name: true,
-            phone: true,
-            phoneVerifiedAt: true,
-          },
-          where: { id: accountId },
-        }),
-        this.prisma.accountIdentity.findFirst({
-          select: { id: true },
-          where: { accountId, method: 'password' },
-        }),
-        // The latest e-mail change still waiting for its link.
-        this.prisma.accountToken.findFirst({
-          orderBy: { createdAt: 'desc' },
-          select: { email: true },
-          where: {
-            accountId,
-            expiresAt: { gt: new Date() },
-            purpose: 'email_change',
-            usedAt: null,
-          },
-        }),
-      ]);
+    const [
+      { emailVerifiedAt, phoneVerifiedAt, ...account },
+      password,
+      pending,
+    ] = await Promise.all([
+      this.prisma.account.findUniqueOrThrow({
+        select: {
+          city: true,
+          email: true,
+          emailVerifiedAt: true,
+          language: true,
+          name: true,
+          phone: true,
+          phoneVerifiedAt: true,
+        },
+        where: { id: accountId },
+      }),
+      this.prisma.accountIdentity.findFirst({
+        select: { id: true },
+        where: { accountId, method: 'password' },
+      }),
+      pendingEmail(this.prisma, accountId, new Date()),
+    ]);
     return {
       ...account,
       capabilities: capabilitiesOf(actor.role, actor.permissions),
@@ -53,7 +47,7 @@ export class WhoAmI {
       hasPassword: password !== null,
       id: accountId,
       landing: landingFor(actor.role),
-      pendingEmail: change?.email ?? null,
+      pendingEmail: pending,
       phoneConfirmed: Boolean(account.phone && phoneVerifiedAt),
       role: actor.role,
       roles: actor.roles,

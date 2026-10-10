@@ -332,6 +332,19 @@ describe('the hourly limit', () => {
     expect(await changeTokens(id)).toHaveLength(5);
   });
 
+  it('does not count a link that could not be sent', async () => {
+    const id = await signedUp();
+    jest
+      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
+      .mockRejectedValueOnce(new Error('Redis did not answer'));
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    await ask(id, 'nou0@example.test').expect(503);
+
+    for (let i = 1; i <= 5; i++) {
+      await ask(id, `nou${i}@example.test`).expect(202);
+    }
+  });
+
   it('does not count a refused address', async () => {
     const id = await signedUp();
     for (let i = 0; i < 5; i++) await ask(id, OLD).expect(409);

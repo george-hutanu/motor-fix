@@ -64,6 +64,7 @@ const digest = (value: string) =>
 const keyOf = (kind: Kind, value: string) =>
   `auth:fail:${kind}:${digest(value)}`;
 const phoneHourKey = (phone: string) => `auth:code:hour:${digest(phone)}`;
+const changeKey = (accountId: string) => `auth:change:${digest(accountId)}`;
 const passwordKey = (accountId: string) => `auth:password:${digest(accountId)}`;
 
 // A counting transaction's replies. One that answers nothing or refuses a
@@ -212,7 +213,7 @@ export class Attempts {
   // change; false once it has had its 5 in the hour that began with its first.
   async admitContactChange(accountId: string): Promise<boolean> {
     try {
-      const key = `auth:change:${digest(accountId)}`;
+      const key = changeKey(accountId);
       const replies = await counted(
         this.redis.multi().incr(key).expire(key, HOUR_SECONDS, 'NX'),
       );
@@ -220,6 +221,16 @@ export class Attempts {
     } catch {
       this.unavailable('contact-change');
       return true;
+    }
+  }
+
+  // A link or code that never left does not count toward the account's hour.
+  async uncountContactChange(accountId: string): Promise<void> {
+    try {
+      const key = changeKey(accountId);
+      await this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX').exec();
+    } catch {
+      this.unavailable('contact-change');
     }
   }
 

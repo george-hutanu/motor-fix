@@ -27,6 +27,7 @@ import { Attempts, AUTH_REDIS } from '../attempts';
 import {
   EmailChangeService,
   emailTaken,
+  pendingEmail,
 } from '../email-change/email-change.service';
 import { PRISMA } from '../prisma';
 
@@ -261,7 +262,7 @@ export class EmailConfirmationService {
 
   // A change that waits is sent again first; else the current address.
   async askAgainFor(accountId: string): Promise<void> {
-    const pending = await this.changes.pending(accountId);
+    const pending = await pendingEmail(this.prisma, accountId, this.now());
     if (pending) {
       await this.changes.resend(accountId, pending);
       return;
@@ -301,8 +302,7 @@ export class EmailConfirmationService {
       where: { tokenHash: hashToken(token) },
     });
     if (
-      !row ||
-      row.account.status !== 'active' ||
+      row?.account.status !== 'active' ||
       (row.purpose === PURPOSE
         ? row.account.email !== row.email
         : row.purpose !== CHANGE)

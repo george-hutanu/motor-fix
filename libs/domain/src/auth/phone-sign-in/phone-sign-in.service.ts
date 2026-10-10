@@ -88,7 +88,13 @@ export class PhoneSignInService {
     }
     const code = newCode();
     try {
-      await this.send(phone, language, code);
+      await sendWhatsAppCode(
+        { brevo: this.brevo, config: this.phone, logger: this.logger },
+        'SIGN_IN_CODE',
+        phone,
+        language,
+        code,
+      );
     } catch (error) {
       // A code that never left does not use up the number's hourly share.
       await this.attempts.uncountPhoneCode(phone);
@@ -218,16 +224,6 @@ export class PhoneSignInService {
       },
     });
     if (count === 0) throw this.refused('code_invalid');
-  }
-
-  private send(phone: string, language: 'ro' | 'en', code: string) {
-    return sendWhatsAppCode(
-      { brevo: this.brevo, config: this.phone, logger: this.logger },
-      'SIGN_IN_CODE',
-      phone,
-      language,
-      code,
-    );
   }
 
   // The account holding the number: by its WhatsApp sign-in identity, else

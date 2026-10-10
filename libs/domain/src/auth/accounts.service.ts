@@ -21,7 +21,7 @@ export interface MyDetails {
 // Sorted, so the audit rows and the event list the fields in one order.
 const MY_DETAILS = ['city', 'language', 'name'] as const;
 
-export interface NewAccount {
+interface NewAccount {
   name: string;
   email?: string;
   phone?: string;

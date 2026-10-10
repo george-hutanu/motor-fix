@@ -10,7 +10,7 @@ import { render } from '../../notifications/templates';
 import { refusal } from '../sign-up.service';
 
 // The approved WhatsApp templates that carry a six-digit code.
-export type CodeTemplate = 'SIGN_IN_CODE' | 'PHONE_CHANGE_CODE';
+type CodeTemplate = 'SIGN_IN_CODE' | 'PHONE_CHANGE_CODE';
 
 // Why a code was not sent, for the log: never the number.
 function failureKind(error: unknown): string {

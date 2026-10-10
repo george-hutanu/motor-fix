@@ -339,6 +339,15 @@ describe('asking to change my phone', () => {
     expect(await changeOf(id)).toMatchObject({ phone: testPhone(6) });
   });
 
+  it('does not count a code that could not be sent', async () => {
+    const id = await driver('ro', null);
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    // Outside the test allowlist.
+    await ask(id, '+40799999999').expect(503);
+
+    for (const n of [2, 3, 4, 5, 6]) await ask(id, testPhone(n)).expect(202);
+  });
+
   it('does not count one account against another', async () => {
     const first = await driver('ro', null);
     for (const n of [2, 3, 4, 5, 6]) await ask(first, testPhone(n)).expect(202);

@@ -113,12 +113,7 @@ export function countGarageReport(outcome: GarageReportOutcome) {
   ).add(1, { outcome });
 }
 
-export type AccountChangeField =
-  | 'name'
-  | 'city'
-  | 'email'
-  | 'phone'
-  | 'password';
+type AccountChangeField = 'name' | 'city' | 'email' | 'phone' | 'password';
 
 // One saved change of the account's own details, by field.
 export function countAccountChange(field: AccountChangeField) {
