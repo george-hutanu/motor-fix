@@ -36,8 +36,8 @@ const row = (id: string, kind: string, text: string, link: string | null) => ({
 
 // A driver with two cars, the second one named by an ITP reminder in the
 // bell, and a test message that opens nothing.
-async function driverWithReminder(page: Page) {
-  await signInAs(page, 'driver', '/app/driver', ['driver.cars']);
+async function driverWithReminder(page: Page, capabilities = ['driver.cars']) {
+  await signInAs(page, 'driver', '/app/driver', capabilities);
   const reads: string[] = [];
   await page.route('**/api/v1/cars', (route) =>
     route.fulfill({
@@ -133,5 +133,82 @@ test.describe('opening a notification from the bell', () => {
     await expect.poll(() => reads).toEqual(['n-test']);
     await expect(message).toBeVisible();
     await expect(page).toHaveURL('/app/driver');
+  });
+
+  // @traces 032-FR-008
+  for (const [label, size] of [
+    ['a 390 px phone', { height: 844, width: 390 }],
+    ['a 320 px phone', { height: 640, width: 320 }],
+  ] as const) {
+    test(`shows the bell and badge on every driver view, and the sheet closes from its button, on ${label}`, async ({
+      page,
+    }) => {
+      await driverWithReminder(page, ['driver.cars', 'driver.requests']);
+      await page.route('**/api/v1/requests', (route) =>
+        route.fulfill({ json: { items: [] } }),
+      );
+      await page.setViewportSize(size);
+
+      for (const view of [
+        '/app/driver',
+        '/app/driver/cars',
+        '/app/driver/requests',
+      ]) {
+        await page.goto(view);
+        await settled(page);
+        await expect(page).toHaveURL(view);
+        const bell = page.getByRole('button', { name: /^Notificări, 2 / });
+        await expect(bell).toBeInViewport({ ratio: 1 });
+        await expect(page.locator('mf-bell .badge')).toHaveText('2');
+        await expect(page.locator('mf-bell .badge')).toBeInViewport({
+          ratio: 1,
+        });
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+      }
+
+      await page.getByRole('button', { name: /^Notificări/ }).click();
+      const list = page.getByRole('dialog', { name: 'Notificări' });
+      const itp = list.getByRole('button', { name: new RegExp(ITP) });
+      await expect(itp).toBeVisible();
+      const close = list.getByRole('button', { name: 'Închide' });
+      await expect(close).toBeInViewport({ ratio: 1 });
+
+      await close.click();
+
+      await expect(itp).toBeHidden();
+      await expect(page).toHaveURL('/app/driver/requests');
+    });
+  }
+
+  // @traces 032-FR-003
+  test('clears the badge once the only unread row is opened', async ({
+    page,
+  }) => {
+    await driverWithReminder(page);
+    let unread = 1;
+    await page.route('**/api/v1/notifications/unread-count', (route) =>
+      route.fulfill({ json: { count: unread } }),
+    );
+    await page.route('**/api/v1/notifications/n-itp/read', (route) => {
+      unread = 0;
+      return route.fulfill({
+        json: {
+          ...row('n-itp', 'DUE_ITP', ITP, `/app/driver/cars/${CAR}`),
+          readAt: new Date().toISOString(),
+        },
+      });
+    });
+    await page.setViewportSize({ height: 844, width: 390 });
+    const list = await openBell(page);
+    await expect(page.locator('mf-bell .badge')).toHaveText('1');
+
+    await list.getByRole('button', { name: new RegExp(ITP) }).click();
+
+    await expect(page).toHaveURL(`/app/driver/cars/${CAR}`);
+    await expect(page.locator('mf-bell .badge')).toHaveCount(0);
   });
 });

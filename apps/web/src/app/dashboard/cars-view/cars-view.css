@@ -39,12 +39,13 @@ p {
 .name {
   font-weight: 700;
 }
-button[hlmBtn] {
+/* The view's own buttons; the empty state centres the one it holds. */
+:host > button[hlmBtn] {
   width: 100%;
   white-space: normal;
 }
 @media (min-width: 390px) {
-  button[hlmBtn] {
+  :host > button[hlmBtn] {
     width: auto;
     align-self: flex-start;
   }
