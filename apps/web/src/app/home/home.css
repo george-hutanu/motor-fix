@@ -58,3 +58,73 @@
   width: 16rem;
   max-width: 100%;
 }
+
+.announce {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.dial {
+  align-items: center;
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+
+.gauge {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+  text-align: center;
+}
+
+.dial.dimmed .gauge {
+  opacity: 0.5;
+}
+
+.meter {
+  display: block;
+  /* The dial's arc opens at the bottom, so its square box ends in empty
+     space below the value: pull the caption up under the value. */
+  margin-block-end: calc(min(100%, 240px) * -0.2);
+  max-width: 240px;
+  width: 100%;
+}
+
+.reading {
+  color: var(--mf-text-secondary);
+  font-family: var(--mf-font-label);
+  font-size: max(12px, var(--mf-size-small));
+  letter-spacing: 0.2em;
+}
+
+.gauge .name {
+  font-weight: 700;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.gauge .name.skeleton {
+  height: 1.2em;
+  width: 12rem;
+}
+
+.line {
+  color: var(--mf-text-secondary);
+}
+
+.gauge button {
+  min-height: 44px;
+}
+
+@media (min-width: 768px) {
+  .dial {
+    grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  }
+}
