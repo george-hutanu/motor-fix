@@ -9,6 +9,7 @@ import {
 
 import { emailHtml } from './email-layout';
 import { TEMPLATES } from './templates/registry';
+import { DECISIONS } from './templates/verification-result';
 
 type Language = 'ro' | 'en';
 export type Channel = 'email' | 'bell' | 'push' | 'sms' | 'whatsapp';
@@ -238,6 +239,10 @@ function renderText(
 }
 
 export function templateName(kind: string, params: Params): string {
+  if (kind === 'VERIFICATION_RESULT') {
+    const decision = params['decision'];
+    return DECISIONS.has(decision) ? `${kind}.${decision}` : kind;
+  }
   if (kind !== 'ACCOUNT_EMAIL') return kind;
   const purpose = params['purpose'];
   return purpose === 'password_reset' || purpose === 'password_changed'

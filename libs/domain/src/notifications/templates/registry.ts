@@ -16,6 +16,11 @@ import {
   STAFF_JOINED,
 } from './staff';
 import { TEST_MESSAGE } from './test-message';
+import {
+  VERIFICATION_APPROVED,
+  VERIFICATION_MORE_REQUESTED,
+  VERIFICATION_REJECTED,
+} from './verification-result';
 import type { Registry } from '../templates';
 
 // Keyed by notification type, or `<type>.<variant>`; GENERIC fills in for a
@@ -42,4 +47,7 @@ export const TEMPLATES: Registry = {
   'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,
   STAFF_JOINED,
   TEST_MESSAGE,
+  'VERIFICATION_RESULT.approved': VERIFICATION_APPROVED,
+  'VERIFICATION_RESULT.more_requested': VERIFICATION_MORE_REQUESTED,
+  'VERIFICATION_RESULT.rejected': VERIFICATION_REJECTED,
 };

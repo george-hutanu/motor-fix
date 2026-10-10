@@ -17,6 +17,7 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countVerificationResult,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 
@@ -50,6 +51,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 // @traces 424-FR-017
 // @traces 312-FR-016
 // @traces 206-FR-016
+// @traces 209-FR-014
 describe('the product counters', () => {
   it.each([
     [
@@ -130,6 +132,14 @@ describe('the product counters', () => {
           { outcome },
         ] as const,
     ),
+    ...(['built', 'skipped'] as const).map(
+      (outcome) =>
+        [
+          () => countVerificationResult(outcome),
+          'motorfix_verification_result_total',
+          { outcome },
+        ] as const,
+    ),
     ...GARAGE_REPORT_OUTCOMES.map(
       (outcome) =>
         [
@@ -181,6 +191,9 @@ describe('the product counters', () => {
       countDocumentOpened(kind);
     });
     countDeclarationSigned();
+    (['built', 'skipped'] as const).forEach((outcome) => {
+      countVerificationResult(outcome);
+    });
 
     const { resourceMetrics } = await memory.metricReader.collect();
     const series = resourceMetrics.scopeMetrics
@@ -193,9 +206,9 @@ describe('the product counters', () => {
         ),
       );
     expect(new Set(series).size).toBe(series.length);
-    // A fixed ceiling, raised from 50 when the driver's decline message
-    // became the catalogue's next template: the e-mail counter keeps one
-    // series per template.
+    // A fixed ceiling, raised from 50 as the catalogue grew (the driver's
+    // decline message, the verification result): the e-mail counter keeps
+    // one series per template.
     expect(series.length).toBeLessThan(60);
     expect(series.join()).not.toMatch(/@|\d{6,}|[0-9a-f]{8}-/i);
   });

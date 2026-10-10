@@ -27,6 +27,7 @@ features:
   - 312-report-garage
   - 344-send-quote
   - 345-decline-request
+  - 209-status-change-emails
 ---
 
 # Capability: Notifications
@@ -590,6 +591,62 @@ _From 345-decline-request._
 ### 345-FR-010 — Templates for REQUEST_DECLINED MUST exist in Romanian and English for e-mail, push and WhatsApp (`template-check` passes): the body "<garage> nu poate prelua cererea: <clause>." / "<garage> cannot take your request: <clause>." with the clause per reason, `fully_booked` "este ocupat complet" / "it is fully booked", `job_not_done` "nu face această lucrare" / "it does not do this job", `make_model_engine_not_done` "nu lucrează pe această marcă, model sau motor" / "it does not work on this make, model or engine", `need_to_see_car` "trebuie să vadă mașina mai întâi" / "it needs to see the car first"; the e-mail subject "Un service a refuzat cererea ta" / "A garage declined your request", with the account link to the driver's request as the shipped templates link (555-FR). The reason labels and clauses MUST live in one map in the contracts library, Romanian and English, covering every reason and nothing else (a test fails when a reason lacks a label).
 
 _From 345-decline-request._
+
+### 209-FR-001 — The system MUST consume `verification.decided` from the outbox relay and, for each event whose `decision` is `approved`, `more_requested` or `rejected`, build one `VERIFICATION_RESULT` notification per garage owner, through the notifications service, with the outbox event id as the notification's event id and the file id as its subject id; the consumer MUST register `verification.decided` alone, so a reopen, a submission or an opening builds nothing.
+
+_From 209-status-change-emails._
+
+### 209-FR-002 — Recipients MUST be exactly the garage's members with role `owner` (GARAGE_MEMBER); receptionists, mechanics and every other account MUST NOT receive it. A garage with no owner, or whose owners are all deleted, MUST build nothing and MUST end the run without error.
+
+_From 209-status-change-emails._
+
+### 209-FR-003 — Each owner MUST get the message in their account's language (`ro` or `en`; anything else renders in Romanian), the admin's note passed as written in whatever language it was typed; owners of different languages MUST each get one message in their own language.
+
+_From 209-status-change-emails._
+
+### 209-FR-004 — The `VERIFICATION_RESULT` e-mail and bell entry MUST be sent whatever channels the owner muted (it is always sent, 194-FR-004); push and WhatsApp follow the existing routing (device, phone, the owner's choice); the notification settings MUST show it as locked on, not switchable.
+
+_From 209-status-change-emails._
+
+### 209-FR-005 — The system MUST carry a Romanian and an English template for `VERIFICATION_RESULT` for the e-mail, the push, the WhatsApp and the bell, with three variants selected by the decision (`VERIFICATION_RESULT.<decision>`): approved, more requested, rejected. Every variant MUST pass the CI template check (195-FR-009) with its example values, cedilla-free.
+
+_From 209-status-change-emails._
+
+### 209-FR-006 — The approved variant MUST say the garage is approved and on the map, with the button opening the garage dashboard (`/app/garage`) and the garage's public profile address (`/<language>/garages/<slug>`); it MUST name no admin and carry no reason label.
+
+_From 209-status-change-emails._
+
+### 209-FR-007 — The more-requested variant MUST give the reason as a label, quote the admin's note word for word, say the file is kept and can be completed without starting over (RO: "poți completa fără să o iei de la capăt"), and its button MUST open the garage dashboard (`/app/garage`).
+
+_From 209-status-change-emails._
+
+### 209-FR-008 — The rejected variant MUST give the reason as a label, quote the admin's note word for word, say the garage can correct the listing and send it again, and its button MUST open the garage dashboard (`/app/garage`).
+
+_From 209-status-change-emails._
+
+### 209-FR-009 — The reason label MUST be mapped from the stored reason code with these texts — `documents` "Documente" / "Documents", `rar` "Autorizație RAR" / "RAR authorisation", `address` "Adresă" / "Address", `photos` "Fotografii" / "Photos", `other` "Alt motiv" / "Other reason" — and any other or missing code MUST get the `other` label.
+
+_From 209-status-change-emails._
+
+### 209-FR-010 — The note MUST be HTML-escaped in the e-mail's HTML part and carried unchanged in the plain-text part; markup in the note MUST never be interpreted. The push body and the bell text MUST carry the decision only, never the note.
+
+_From 209-status-change-emails._
+
+### 209-FR-011 — A message MUST contain no data of another garage or of any driver, and no phone number or plate (the template check's privacy rule).
+
+_From 209-status-change-emails._
+
+### 209-FR-012 — The same event handed twice MUST write no second row and send no second message on any channel (194-FR-005 keyed by the event id); a failed run MUST be retried with exponential backoff as the request-received consumer is (6 attempts, from 1 minute), and a job lost from Redis is one message lost, not requeued.
+
+_From 209-status-change-emails._
+
+### 209-FR-013 — When the e-mail send fails for good, the `email` row MUST be `failed`, the `in_app` row MUST remain and show in the bell, and the verification file MUST be untouched; the dashboard status stays the record of truth.
+
+_From 209-status-change-emails._
+
+### 209-FR-015 — End to end, the system MUST be shown to deliver a Romanian decision e-mail to the test mailbox (the `@mailbox` flows): a `verification.decided` (approved) event recorded for a seeded garage's file leaves one Romanian `VERIFICATION_RESULT` approval e-mail to the owner in the mailbox and none to its other staff (no endpoint submits or decides a file today, plan.md R6); the auto-approval path (207-FR-009) reaching the consumer is proven by an integration test; the rejection's label and note are proven by the integration tests (FR-007..FR-010).
+
+_From 209-status-change-emails._
 
 ## Retired
 

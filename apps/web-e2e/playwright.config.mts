@@ -15,6 +15,9 @@ const SERVER_START = 180_000;
 // PHONE_SENDING=on, PHONE_ALLOWLIST=+4070000*, WHATSAPP_SENDER and
 // WHATSAPP_TEMPLATES) come from the environment, set by CI's E2E job and by
 // .env locally.
+// The test mailbox (mailbox.mjs); fixtures.ts holds the same address for the
+// flows. The config keeps its own copy because ci-workflow.spec.ts loads it
+// with plain node, which cannot resolve ./src/fixtures.js to its .ts source.
 const MAILBOX = 'http://127.0.0.1:3025';
 // The api reads the stand-in OpenID issuer (openid.mjs, web-e2e:openid) as
 // Google when GOOGLE_ISSUER points at it, with any GOOGLE_CLIENT_ID and
