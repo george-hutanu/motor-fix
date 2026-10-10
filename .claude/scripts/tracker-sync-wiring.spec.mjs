@@ -60,6 +60,8 @@ describe('the lifecycle docs', () => {
     '.claude/skills/speckit-review/SKILL.md',
     '.claude/skills/speckit-archive/SKILL.md',
     '.claude/skills/speckit-git-commit/SKILL.md',
+    '.claude/skills/speckit-pr-test/SKILL.md',
+    '.claude/skills/notion-ready/SKILL.md',
   ])('%s names the tracker sync', (path) => {
     assert.match(read(path), /speckit-tracker-sync|tracker-sync\.mjs/);
   });
