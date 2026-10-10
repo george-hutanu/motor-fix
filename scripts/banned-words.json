@@ -1,7 +1,7 @@
 {
   "allow": {
     ".specify/capabilities/platform.md": {
-      "count": 74,
+      "count": 61,
       "reason": "History: requirements of the documentation migration (1018, 1026), the import client (745) and the feature slugs that retired the old tracker."
     },
     ".specify/capabilities/tracker.md": {
