@@ -1,0 +1,29 @@
+{
+  "environment": "staging",
+  "checks": [
+    {
+      "job": "motorfix-web",
+      "target": "{PUBLIC_WEB_URL}/",
+      "frequency": 60000,
+      "timeout": 10000,
+      "enabled": true,
+      "probes": ["Frankfurt"],
+      "labels": [{ "name": "service", "value": "web" }],
+      "settings": {
+        "http": { "method": "GET", "validStatusCodes": [200], "ipVersion": "V4" }
+      }
+    },
+    {
+      "job": "motorfix-api",
+      "target": "{PUBLIC_WEB_URL}/health/ready",
+      "frequency": 60000,
+      "timeout": 10000,
+      "enabled": true,
+      "probes": ["Frankfurt"],
+      "labels": [{ "name": "service", "value": "api" }],
+      "settings": {
+        "http": { "method": "GET", "validStatusCodes": [200], "ipVersion": "V4" }
+      }
+    }
+  ]
+}

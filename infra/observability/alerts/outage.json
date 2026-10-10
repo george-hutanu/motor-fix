@@ -1,0 +1,70 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "outage",
+      "folder": "MotorFix",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "outage",
+          "title": "MotorFix service down",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "outage": "true",
+            "service": "{{ $labels.service }}"
+          },
+          "annotations": {
+            "summary": "The {{ $labels.service }} uptime check has failed every run for 3 minutes.",
+            "dashboard_uid": "motorfix-overview"
+          },
+          "notification_settings": {
+            "receiver": "motorfix-outage"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 180,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "label_replace(min by (job) (max_over_time(probe_success{job=~\"motorfix-(web|api)\"}[3m])), \"service\", \"$1\", \"job\", \"motorfix-(.+)\")",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [1]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
