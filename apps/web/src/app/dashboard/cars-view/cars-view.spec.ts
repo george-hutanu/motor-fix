@@ -213,21 +213,52 @@ describe('Mașinile mele', () => {
     expect(lines(cards(element)[1])).toHaveLength(2);
   });
 
-  it('shows the shared placeholder above the button with no car', async () => {
+  // @traces 030-FR-009
+  it('invites a driver with no car to add one, in the shared empty state', async () => {
     const { element, settle } = await render([]);
     await settle();
 
-    const placeholder = [...element.querySelectorAll('p')].find(
-      (p) => p.textContent?.trim() === 'Nimic aici încă.',
+    const empty = element.querySelector('mf-empty-state');
+    expect(text(empty as HTMLElement)).toContain(
+      'Adaugă prima ta mașină. O folosim ca să‑ți arătăm service‑urile potrivite și să‑ți amintim de ITP.',
     );
-    const add = button(element, 'Adaugă o mașină');
-    expect(placeholder).toBeDefined();
+    expect(empty?.querySelector('svg[data-icon="car"]')).not.toBeNull();
+    expect(button(empty as HTMLElement, 'Adaugă o mașină')).toBeDefined();
+    expect(text(element)).not.toContain('Nimic aici încă.');
     expect(cards(element)).toHaveLength(0);
-    expect(add).toBeDefined();
     expect(
-      placeholder!.compareDocumentPosition(add!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+      [...element.querySelectorAll('button')].filter(
+        (b) => text(b) === 'Adaugă o mașină',
+      ),
+    ).toHaveLength(1);
+  });
+
+  // @traces 030-FR-009
+  it('says it in English for an English reader', async () => {
+    const { element, settle } = await render([], 'en');
+    await settle();
+
+    expect(
+      text(element.querySelector('mf-empty-state') as HTMLElement),
+    ).toContain(
+      'Add your first car. We use it to show you the right garages and to remind you about the ITP.',
+    );
+  });
+
+  // @traces 030-FR-008
+  it('leaves the empty state once a car is saved, without reading again', async () => {
+    const { element, settle } = await render([]);
+    await settle();
+    open.mockResolvedValueOnce(car());
+
+    button(element, 'Adaugă o mașină')?.click();
+    // The dialog's code loads on the first tap, then the saved car shows.
+    await settle();
+    await settle();
+
+    expect(element.querySelector('mf-empty-state')).toBeNull();
+    expect(cards(element)).toHaveLength(1);
+    expect(list).toHaveBeenCalledTimes(1);
   });
 
   it('opens the dialog with the plates already held and puts the saved car first without reading again', async () => {

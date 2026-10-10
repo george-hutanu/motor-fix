@@ -52,8 +52,17 @@
     },
     "retry": "Reîncearcă"
   },
-  "home": {
-    "newRequest": "Cerere nouă"
+  "empty": {
+    "addFirstCar": "Adaugă prima ta mașină",
+    "cars": "Adaugă prima ta mașină. O folosim ca să‑ți arătăm service‑urile potrivite și să‑ți amintim de ITP.",
+    "findGarage": "Caută un service",
+    "findGarageForCar": "Caută un service pentru mașina ta",
+    "findOthers": "Caută altele",
+    "quotes": "Încă nu ai oferte. Trimite o cerere și compari ofertele aici.",
+    "repairs": "Nicio reparație încă. Reparațiile făcute prin MotorFix apar aici singure.",
+    "requests": "Nicio cerere încă. Cere oferte de la mai multe service‑uri deodată.",
+    "reviews": "Nicio recenzie încă. După o reparație prin MotorFix îți cerem părerea.",
+    "saved": "Nu ai salvat încă niciun service."
   },
   "notifications": {
     "alwaysSent": "Mereu trimise: programarea confirmată, ora nouă propusă de service, programarea anulată sau expirată, mașina e gata.",
@@ -87,8 +96,12 @@
     },
     "title": "Notificări"
   },
+  "panel": {
+    "activeRequest": "Cererea activă",
+    "quotes": "Oferte primite",
+    "repairs": "Istoric reparații"
+  },
   "requests": {
-    "empty": "Nicio cerere încă",
     "retry": "Încearcă din nou"
   }
 }

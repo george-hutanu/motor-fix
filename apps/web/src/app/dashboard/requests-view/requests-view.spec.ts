@@ -131,12 +131,30 @@ describe('Cererile mele', () => {
     expect(text(first)).toContain('a few seconds ago');
   });
 
-  it('says there is no request yet, with Cerere nouă to Home', async () => {
+  // @traces 030-FR-009
+  it('says there is no request yet in the shared empty state, with Caută un service to Home', async () => {
     const { element } = await render([[]]);
 
-    expect(text(element)).toContain('Nicio cerere încă');
-    const link = element.querySelector('a[href="/ro"]');
-    expect(link && text(link)).toBe('Cerere nouă');
+    const empty = element.querySelector('mf-empty-state') as HTMLElement;
+    expect(text(empty)).toContain(
+      'Nicio cerere încă. Cere oferte de la mai multe service‑uri deodată.',
+    );
+    expect(empty.querySelector('svg[data-icon="inbox"]')).not.toBeNull();
+    const link = empty.querySelector('a[href="/ro"]');
+    expect(link && text(link)).toBe('Caută un service');
+    expect(text(element)).not.toContain('Cerere nouă');
+  });
+
+  // @traces 030-FR-009
+  it('says it in English for an English reader', async () => {
+    const { element } = await render([[]], 'en');
+
+    const empty = element.querySelector('mf-empty-state') as HTMLElement;
+    expect(text(empty)).toContain(
+      'No requests yet. Ask several garages for a quote at once.',
+    );
+    const link = empty.querySelector('a[href="/en"]');
+    expect(link && text(link)).toBe('Find a garage');
   });
 
   it('reads the list again when a request is created elsewhere', async () => {

@@ -152,6 +152,7 @@
         "apps/web/src/app/dashboard/due-date-line/due-date-line.html",
         "apps/web/src/app/dashboard/frame/frame.html",
         "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
+        "apps/web/src/app/dashboard/view/view.html",
         "apps/web/src/app/dashboard/garage-requests/garage-requests-panel/garage-requests-panel.html",
         "apps/web/src/app/dashboard/requests-view/requests-view.html",
         "apps/web/src/app/maintenance/maintenance-page/maintenance-page.html",

@@ -6,3 +6,13 @@
   width: var(--mf-tap);
   height: var(--mf-tap);
 }
+
+/* The one action an empty state holds is projected into it, so its own
+   stylesheet cannot reach it. Until the driver's texts load the label is its
+   key, one unbreakable word. */
+mf-empty-state a[hlmBtn] {
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}

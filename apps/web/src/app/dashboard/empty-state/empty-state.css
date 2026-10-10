@@ -1,0 +1,22 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-width: 0;
+  text-align: center;
+}
+svg {
+  flex: none;
+  fill: none;
+  stroke: var(--mf-text-secondary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+p {
+  margin: 0;
+  max-width: 40ch;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
