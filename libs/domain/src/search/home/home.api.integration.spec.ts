@@ -93,12 +93,56 @@ describe('GET /home', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
+      best: expect.objectContaining({ slug: 'a', stance: 'works_on' }),
       brand: { id: dacia, name: 'Dacia', popularity: 7, slug: 'dacia' },
+      preview: [
+        expect.objectContaining({ slug: 'a' }),
+        expect.objectContaining({ slug: 'b' }),
+        expect.objectContaining({ slug: 'd', stance: 'does_not_take' }),
+      ],
       takers: 3,
       total: 6,
     });
   });
 
+  // @traces 226-FR-009
+  it('answers the best garage and the preview rows with every field Home shows', async () => {
+    await garage('taker', 'approved', 'works_on');
+    await prisma.garage.update({
+      data: {
+        businessKind: 'pfa',
+        cityKey: 'bucuresti',
+        cityName: 'București',
+        labourFromBani: 15000,
+        rating: 4.9,
+        reviewCount: 80,
+      },
+      where: { slug: 'taker' },
+    });
+
+    const res = await home({ brand: 'dacia' });
+
+    expect(res.body.best).toEqual({
+      businessKind: 'pfa',
+      city: 'București',
+      id: expect.any(String),
+      labourFromLei: 150,
+      name: 'taker',
+      rating: 4.9,
+      reviewCount: 80,
+      slug: 'taker',
+      stance: 'works_on',
+    });
+    expect(res.body.preview).toEqual([res.body.best]);
+  });
+
+  it('answers a null best and an empty preview when no garage is listed', async () => {
+    const res = await home({ brand: 'dacia' });
+
+    expect(res.body).toMatchObject({ best: null, preview: [] });
+  });
+
+  // @traces 226-FR-013
   it('lets the answer be cached for a minute', async () => {
     const res = await home({ brand: 'dacia' });
 
@@ -189,6 +233,25 @@ describe('GET /home near a place', () => {
     expect(res.body).toMatchObject({ takers: 2, total: 3 });
   });
 
+  // @traces 226-FR-009
+  it('ranks the garages in the area, each with its distance or its coming to you', async () => {
+    const res = await home({ brand: 'dacia', near: '46.771,23.624' });
+
+    expect(
+      res.body.preview.map(
+        (g: {
+          slug: string;
+          distanceKm: number | null;
+          comesToYou: boolean;
+        }) => [g.slug, g.distanceKm, g.comesToYou],
+      ),
+    ).toEqual([
+      ['in-taker', 1.1, false],
+      ['mobile-in', null, true],
+      ['in-refuser', 11.1, false],
+    ]);
+  });
+
   it('counts all of Romania without a place', async () => {
     const res = await home({ brand: 'dacia' });
 
@@ -210,6 +273,7 @@ describe('GET /home near a place', () => {
     expect(res.body).toMatchObject({ takers: 0, total: 0 });
   });
 
+  // @traces 226-FR-013
   it('writes nothing when it reads near a place', async () => {
     const before = await Promise.all([
       prisma.activityLog.count(),

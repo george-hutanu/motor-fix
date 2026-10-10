@@ -1,10 +1,11 @@
+import type { ListedGarageDto } from '@motor-fix/contracts';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import {
   SEARCH_RADIUS_DEFAULT_KM,
   type SearchPoint,
 } from '@motor-fix/contracts/search-place';
 
-import type { PrismaClient } from '../../generated/prisma/client';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
 export interface InArea {
   distanceM: number;
@@ -47,4 +48,32 @@ export async function garagesInArea(
       { distanceM: Number(row.distance_m), mobile: row.mobile },
     ]),
   );
+}
+
+// The garages that take the brand and the rest, in the area when there is one.
+export function groupsOf(
+  brandId: string,
+  area: Map<string, InArea> | undefined,
+): Record<'works_on' | 'other', Prisma.GarageWhereInput> {
+  const inArea = area && { id: { in: [...area.keys()] } };
+  const takers = { brandId, stance: 'works_on' as const };
+  return {
+    other: { brands: { none: takers }, ...inArea },
+    works_on: { brands: { some: takers }, ...inArea },
+  };
+}
+
+// A mobile mechanic's distance would tell where its seat is; it only says it
+// comes to the place.
+export function placed<T extends { id: string }>(
+  item: T,
+  area: Map<string, InArea> | undefined,
+): T & Pick<ListedGarageDto, 'comesToYou' | 'distanceKm'> {
+  const found = area?.get(item.id);
+  if (!found) return item;
+  return {
+    ...item,
+    comesToYou: found.mobile,
+    distanceKm: found.mobile ? null : Math.round(found.distanceM / 100) / 10,
+  };
 }

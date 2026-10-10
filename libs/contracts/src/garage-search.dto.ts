@@ -4,8 +4,12 @@ import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { GarageBrandAnswerDto } from './garage-brands.dto';
 import { NearQueryDto } from './near.dto';
 
-const GARAGE_BRAND_ANSWERS = ['works_on', 'does_not_take', 'unstated'] as const;
-type GarageBrandAnswer = (typeof GARAGE_BRAND_ANSWERS)[number];
+export const GARAGE_BRAND_ANSWERS = [
+  'works_on',
+  'does_not_take',
+  'unstated',
+] as const;
+export type GarageBrandAnswer = (typeof GARAGE_BRAND_ANSWERS)[number];
 
 export class GarageSearchQueryDto extends NearQueryDto {
   @ApiProperty({
