@@ -156,7 +156,7 @@ const EXPECTED: Record<
   'redis-memory': {
     expr: [
       'motorfix_redis_memory_used_bytes',
-      'clamp_min(max by (deployment_environment) (motorfix_redis_memory_max_bytes), 268435456)',
+      'clamp_min(max by (deployment_environment) (motorfix_redis_memory_max_bytes), 335544320)',
     ],
     for: '5m',
     from: 300,

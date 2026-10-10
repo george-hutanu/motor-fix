@@ -13,10 +13,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: grafana-alerts
-  cancel-in-progress: false
-
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -42,24 +38,53 @@ jobs:
         env:
           GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
           GRAFANA_URL: ${{ vars.GRAFANA_URL }}
-        # Grafana's answers go to /dev/null, so a refusal logs only curl's
-        # status line and never the request; each call gives up after a
-        # minute. A refused group is named and the others are still applied.
+        # curl's answers and messages go to /dev/null (a message names the
+        # host), so a failure logs the file, the group and curl's exit code
+        # only; each call gives up after a minute. Every file is checked
+        # first: a group named twice stops the run, since the second PUT would
+        # replace the first. A refused file or group is named and the others
+        # are still applied.
         run: |
           auth="Authorization: Bearer ${GRAFANA_SA_TOKEN}"
-          api="${GRAFANA_URL%/}/api"
-          curl --fail -sS --max-time 60 "$api/folders/motorfix" -H "$auth" > /dev/null 2>&1 ||
-            curl --fail-with-body -sS --max-time 60 -X POST "$api/folders" -H "$auth" -H 'Content-Type: application/json' --data '{"uid":"motorfix","title":"MotorFix"}' > /dev/null
+          base="$GRAFANA_URL"
+          while [ "${base%/}" != "$base" ]; do base="${base%/}"; done
+          api="$base/api"
+          call() { curl --fail -s --max-time 60 -H "$auth" "$@" > /dev/null 2>&1; }
+          shopt -s nullglob
+          files=(infra/observability/alerts/*.json)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No alert rule file in infra/observability/alerts."
+            exit 1
+          fi
+          twice=$(for f in "${files[@]}"; do jq -r '.groups[]?.name? // empty' "$f" 2> /dev/null || true; done | sort | uniq -d)
+          if [ -n "$twice" ]; then
+            echo "::error::Rule group named in more than one place: $(paste -sd ' ' - <<< "$twice")."
+            exit 1
+          fi
+          if ! call "$api/folders/motorfix" && ! call -X POST "$api/folders" -H 'Content-Type: application/json' --data '{"uid":"motorfix","title":"MotorFix"}'; then
+            echo "::error::The MotorFix folder could not be created."
+            exit 1
+          fi
+          to_groups='def secs: (capture("^(?<n>[0-9]+)(?<u>[smh])$") // error("interval")) | (.n | tonumber) * {s: 1, m: 60, h: 3600}[.u];
+            .groups | if type == "array" and length > 0 then .[] else error("groups") end
+            | .name as $g | if ($g | type) != "string" or $g == "" then error("name") else . end
+            | {title: $g, interval: (.interval | secs), rules: [.rules[] | . + {folderUID: "motorfix", ruleGroup: $g, orgID: 1}]}'
           failed=0
-          for f in infra/observability/alerts/*.json; do
-            while read -r body; do
+          for f in "${files[@]}"; do
+            if ! bodies=$(jq -c "$to_groups" "$f" 2> /dev/null); then
+              echo "::error::$f: not a rule file (JSON with a groups list, each named, with an interval like 1m and a rules list)."
+              failed=1
+              continue
+            fi
+            while IFS= read -r body; do
               group=$(jq -r .title <<< "$body")
-              if curl --fail-with-body -sS --max-time 60 -X PUT "$api/v1/provisioning/folder/motorfix/rule-groups/$group" -H "$auth" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$body" > /dev/null; then
+              path=$(jq -rn --arg g "$group" '$g | @uri')
+              if call -X PUT "$api/v1/provisioning/folder/motorfix/rule-groups/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$body"; then
                 echo "applied $f ($group)"
               else
-                echo "::error::$f: Grafana refused group $group"
+                echo "::error::$f: Grafana refused group $group (exit code 0)."
                 failed=1
               fi
-            done < <(jq -c '.groups[] | .name as $g | {title: $g, interval: (.interval | rtrimstr("m") | tonumber * 60), rules: [.rules[] | . + {folderUID: "motorfix", ruleGroup: $g, orgID: 1}]}' "$f")
+            done <<< "$bodies"
           done
           exit "$failed"

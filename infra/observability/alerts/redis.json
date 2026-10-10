@@ -76,7 +76,7 @@
             "service": "redis"
           },
           "annotations": {
-            "summary": "Redis has used more than 80% of its maximum memory (256 MiB when none is set) for 5 minutes ({{ $labels.deployment_environment }}).",
+            "summary": "Redis has used more than 80% of its maximum memory (or more than 256 MiB when none is set) for 5 minutes ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-redis"
           },
           "notification_settings": {
@@ -92,7 +92,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "max by (deployment_environment) (motorfix_redis_memory_used_bytes) / clamp_min(max by (deployment_environment) (motorfix_redis_memory_max_bytes), 268435456)",
+                "expr": "max by (deployment_environment) (motorfix_redis_memory_used_bytes) / clamp_min(max by (deployment_environment) (motorfix_redis_memory_max_bytes), 335544320)",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200

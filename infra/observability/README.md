@@ -114,7 +114,7 @@ leaves Grafana too, and a group whose file is gone is left alone. It uses
 `GRAFANA_SA_TOKEN` and `GRAFANA_URL`, as the release does, and without either
 it is skipped with a notice. A change made only in the Grafana UI is
 overwritten by the next run: edit the JSON instead. A file whose rule uid is
-already held by a rule imported by hand fails with the uid named; delete that
+already held by a rule imported by hand fails, naming the file and the group; delete that
 copy in Grafana once and run the workflow again.
 
 ## Inventory
