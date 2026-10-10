@@ -39,6 +39,7 @@ export type { CreateCarDto } from './models/create-car-dto';
 export type { CreateGarageReportDto } from './models/create-garage-report-dto';
 export type { CreateListingDraftDto } from './models/create-listing-draft-dto';
 export type { CreateQuoteRequestDto } from './models/create-quote-request-dto';
+export type { DeclineRequestDto } from './models/decline-request-dto';
 export type { DocumentPageAddressDto } from './models/document-page-address-dto';
 export type { DocumentUploadAddressDto } from './models/document-upload-address-dto';
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';

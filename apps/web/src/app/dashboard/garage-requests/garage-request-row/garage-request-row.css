@@ -42,7 +42,9 @@ time,
 }
 .actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: var(--mf-space-2);
 }
 .actions button {
   min-height: var(--mf-tap);

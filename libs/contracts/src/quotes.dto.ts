@@ -169,6 +169,10 @@ export class RecipientDto {
   @ApiProperty(NULLABLE_TIME)
   answeredAt!: string | null;
 
+  // Only once the garage's 5-minute undo window has closed.
+  @ApiProperty({ enum: DECLINE_REASON_CODES, nullable: true })
+  declineReason!: DeclineReasonCode | null;
+
   @ApiProperty({ format: 'date-time' })
   createdAt!: string;
 }
@@ -354,6 +358,13 @@ export class GarageRecipientDto {
 
   @ApiProperty({ enum: DECLINE_REASON_CODES, nullable: true })
   declineReason!: DeclineReasonCode | null;
+}
+
+// The garage's one reason for not taking a request.
+export class DeclineRequestDto {
+  @ApiProperty({ enum: DECLINE_REASON_CODES })
+  @IsIn(DECLINE_REASON_CODES)
+  reason!: DeclineReasonCode;
 }
 
 export class GarageQuoteDto extends OmitType(QuoteDto, ['garage'] as const) {}

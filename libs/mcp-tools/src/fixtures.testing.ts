@@ -83,6 +83,7 @@ export function context(
     featureOn: async (_garageId, key) => overrides.features?.[key] ?? true,
     garage: {
       daySheet: { get: unused },
+      decline: { decline: unused },
       figures: { get: unused },
       requests: { inbox: unused },
       schedule: { list: unused },

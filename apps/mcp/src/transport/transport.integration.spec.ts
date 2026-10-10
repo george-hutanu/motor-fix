@@ -181,7 +181,11 @@ describe('the MCP endpoint', () => {
       answers.push(await client.callTool({ arguments: args, name }));
 
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['get_my_account', ...GARAGE_READS.map(([name]) => name)].sort(),
+      [
+        'decline_quote_request',
+        'get_my_account',
+        ...GARAGE_READS.map(([name]) => name),
+      ].sort(),
     );
     for (const answer of answers) {
       expect(answer.isError).toBeFalsy();
