@@ -49,14 +49,25 @@ li {
   box-sizing: border-box;
   color: inherit;
   display: flex;
-  gap: var(--mf-space-3);
+  flex-direction: column;
+  gap: var(--mf-space-1);
   height: 100%;
   min-height: 44px;
   padding: var(--mf-space-4);
   text-decoration: none;
 }
 
-.body {
+/* The dial sits beside the name and the where line, as the board draws it;
+   the status, the lists and the facts run under both. */
+.top {
+  align-items: center;
+  display: flex;
+  gap: var(--mf-space-3);
+  margin-block-end: var(--mf-space-1);
+  min-width: 0;
+}
+
+.id {
   display: flex;
   flex: 1;
   flex-direction: column;

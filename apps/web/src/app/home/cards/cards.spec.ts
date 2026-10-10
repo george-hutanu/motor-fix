@@ -92,6 +92,21 @@ describe('HomeCards', () => {
     ).toBe('/ro/garages?brand=bmw&near=44.427,26.103');
   });
 
+  // @traces 227-FR-003
+  it('puts the dial beside the name and the where line, the status and lists under both', async () => {
+    const page = await render([garageOf()]);
+    const card = cards(page)[0];
+    const top = card?.querySelector('.top');
+
+    expect(top?.parentElement).toBe(card);
+    expect(top?.querySelector(':scope > mf-rating-dial')).not.toBeNull();
+    expect(top?.querySelector('.name')).not.toBeNull();
+    expect(top?.querySelector('.where')).not.toBeNull();
+    for (const part of ['mf-lamp', '.list', '.facts']) {
+      expect(card?.querySelector(part)?.parentElement).toBe(card);
+    }
+  });
+
   // @traces 227-FR-002
   it('shows one card per garage, in the order given, and no empty card', async () => {
     const page = await render([

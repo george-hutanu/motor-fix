@@ -783,6 +783,67 @@ for (const path of ['/ro', '/en']) {
   });
 }
 
+// @traces 227-FR-003
+for (const width of [390, 1280]) {
+  test(`sets each card's dial beside its name, the status under both, at ${width} px @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width });
+    await ready(page, '/ro');
+    await pickDacia(page);
+    await expect(cards(page)).toHaveCount(3);
+
+    for (const card of await cards(page).all()) {
+      const dial = await card.locator('mf-rating-dial').boundingBox();
+      const name = await card.locator('.name').boundingBox();
+      const lamp = await card.locator('mf-lamp').boundingBox();
+      if (!dial || !name || !lamp) throw new Error('card parts missing');
+      // Beside: the name starts right of the dial, within the dial's height.
+      expect(name.x).toBeGreaterThanOrEqual(dial.x + dial.width - 1);
+      expect(name.y).toBeGreaterThanOrEqual(dial.y - 1);
+      expect(name.y).toBeLessThan(dial.y + dial.height);
+      // Under both: the status starts below the dial, at the card's left edge.
+      expect(lamp.y).toBeGreaterThanOrEqual(dial.y + dial.height - 1);
+      expect(Math.abs(lamp.x - dial.x)).toBeLessThanOrEqual(1);
+    }
+  });
+}
+
+// @traces 227-FR-010
+for (const path of ['/ro', '/en']) {
+  test(`never leaves a word alone on the last line of a preview row's status at 320 px on ${path} @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await ready(page, path);
+    await pickDacia(page);
+
+    const lines = await previewRows(page)
+      .locator('mf-lamp')
+      .evaluateAll((lamps) =>
+        lamps.map((lamp) => {
+          const text = [...lamp.childNodes].find(
+            (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
+          );
+          if (!text?.textContent) return [];
+          const rows = new Map<number, string[]>();
+          for (const match of text.textContent.matchAll(/\S+/g)) {
+            const range = document.createRange();
+            range.setStart(text, match.index ?? 0);
+            range.setEnd(text, (match.index ?? 0) + match[0].length);
+            const top = Math.round(range.getBoundingClientRect().top);
+            rows.set(top, [...(rows.get(top) ?? []), match[0]]);
+          }
+          return [...rows.values()];
+        }),
+      );
+    expect(lines.length).toBe(3);
+    for (const rows of lines) {
+      if (rows.length > 1) expect(rows.at(-1)?.length).toBeGreaterThan(1);
+    }
+  });
+}
+
 // @traces 227-FR-010
 test('sets the preview as one panel of 64 px rows, the rating over the rate on the right @seeded', async ({
   page,

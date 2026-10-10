@@ -25,21 +25,23 @@
               [queryParams]="{ brand: brand().slug }"
               [attr.aria-label]="name(garage)"
             >
-              <mf-rating-dial size="small" aria-hidden="true" [value]="garage.rating" />
-              <span class="body">
-                <span class="name">{{ garage.name }}</span>
-                @if (where(garage); as where) {
-                  <span class="where">{{ where }}</span>
-                }
-                <mf-lamp [state]="garage.stance === 'works_on' ? 'green' : 'red'" [label]="stance(garage)" />
-                <span class="list"><span class="key">{{ 'public.home.cards.worksOn' | t }}</span> {{ names(garage.worksOn) }}</span>
-                <span class="list"><span class="key">{{ 'public.home.cards.doesNotTake' | t }}</span> {{ names(garage.doesNotTake) }}</span>
-                <span class="facts">
-                  @if (garage.labourFromLei !== null) {
-                    <span class="rate">{{ rate(garage.labourFromLei) }}</span>
+              <span class="top">
+                <mf-rating-dial size="small" aria-hidden="true" [value]="garage.rating" />
+                <span class="id">
+                  <span class="name">{{ garage.name }}</span>
+                  @if (where(garage); as where) {
+                    <span class="where">{{ where }}</span>
                   }
-                  <span class="reviews">{{ reviews(garage) }}</span>
                 </span>
+              </span>
+              <mf-lamp [state]="garage.stance === 'works_on' ? 'green' : 'red'" [label]="stance(garage)" />
+              <span class="list"><span class="key">{{ 'public.home.cards.worksOn' | t }}</span> {{ names(garage.worksOn) }}</span>
+              <span class="list"><span class="key">{{ 'public.home.cards.doesNotTake' | t }}</span> {{ names(garage.doesNotTake) }}</span>
+              <span class="facts">
+                @if (garage.labourFromLei !== null) {
+                  <span class="rate">{{ rate(garage.labourFromLei) }}</span>
+                }
+                <span class="reviews">{{ reviews(garage) }}</span>
               </span>
             </a>
           </li>
