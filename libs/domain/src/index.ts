@@ -81,6 +81,9 @@ export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-re
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
+export { DeclineService } from './quotes/decline/decline.service';
+export { DECLINE_WINDOW_CONSUMER } from './quotes/decline-window/decline-window';
+export { DeclineWindowModule } from './quotes/decline-window/decline-window.module';
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';
 export { QuotesModule } from './quotes/quotes.module';

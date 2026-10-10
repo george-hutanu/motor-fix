@@ -110,12 +110,17 @@ const NOT_CHANGES = new Set([
   'SignInService.rotate',
   'SignInService.touch',
   // A link's token; confirming it or the new password is the audited change.
+  'EmailChangeService.issue',
   'EmailConfirmationService.issue',
   'PasswordResetService.issue',
   // A sign-in code, and spending it on a session.
   'PhoneSignInService.issue',
   'PhoneSignInService.claim',
   'PhoneSignInService.rightCode',
+  // A phone change's code and its wrong tries; confirming it is the audited
+  // change.
+  'PhoneChangeService.request',
+  'PhoneChangeService.wrongTry',
   // An assistant's sign-in code and its exchange; the grant it leads to is
   // the audited change.
   'AssistantService.approve',

@@ -530,13 +530,18 @@ describe('GET /garage/requests?status=closed', () => {
     await moved('request_recipient', laterTo.id, ago(90 * 60_000), 'expired');
     const waiting = await world.request(andrei);
     await world.recipient(waiting.id, dinamo.garage.id);
+    // A decline closes for 24 hours only.
     const declined = await world.request(andrei);
-    await world.recipient(
+    const declinedTo = await world.recipient(
       declined.id,
       dinamo.garage.id,
       'declined',
       dinamo.owner,
     );
+    await prisma.requestRecipient.update({
+      data: { answeredAt: ago(25 * HOUR), declinedAt: ago(25 * HOUR) },
+      where: { id: declinedTo.id },
+    });
     const answered = await world.request(andrei);
     await world.quote(answered.id, dinamo.garage.id);
 
@@ -1071,5 +1076,97 @@ describe('GET /garage/requests?status=quoted', () => {
     expect(ids(first)).toEqual(made.slice(0, 20));
     expect(ids(second)).toEqual([made[20]]);
     expect(second.body.nextCursor).toBeNull();
+  });
+});
+
+// @traces 345-FR-012
+// @traces 345-FR-020
+describe('GET /garage/requests?status=closed after a decline', () => {
+  async function declinedAgo(ms: number, over: { status?: 'quoted' } = {}) {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const request = await world.request(andrei, over);
+    const recipient = await world.recipient(
+      request.id,
+      dinamo.garage.id,
+      'declined',
+      dinamo.receptionist,
+    );
+    const at = ago(ms);
+    await prisma.requestRecipient.update({
+      data: {
+        answeredAt: at,
+        declinedAt: at,
+        declineReason: 'need_to_see_car',
+      },
+      where: { id: recipient.id },
+    });
+    return { at, dinamo, request };
+  }
+
+  it('lists a decline of the last 24 hours as declined, closed when it was declined, with its reason', async () => {
+    const { at, dinamo, request } = await declinedAgo(2 * HOUR);
+
+    const res = await get(
+      '/garage/requests?status=closed',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(ids(res)).toEqual([request.id]);
+    expect(res.body.items[0]).toMatchObject({
+      closedAt: at.toISOString(),
+      closedReason: 'declined',
+      recipient: {
+        declinedAt: at.toISOString(),
+        declineReason: 'need_to_see_car',
+        status: 'declined',
+      },
+    });
+  });
+
+  it('takes declined over the request’s own close', async () => {
+    const { dinamo, request } = await declinedAgo(HOUR);
+    await prisma.quoteRequest.update({
+      data: {
+        closedAt: new Date(),
+        closedReason: 'cancelled',
+        status: 'closed',
+      },
+      where: { id: request.id },
+    });
+
+    const res = await get(
+      '/garage/requests?status=closed',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(res.body.items[0].closedReason).toBe('declined');
+  });
+
+  it('leaves a decline out once it is 24 hours and a minute old', async () => {
+    const { dinamo } = await declinedAgo(24 * HOUR + 60_000);
+
+    const res = await get(
+      '/garage/requests?status=closed',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(res.body.total).toBe(0);
+  });
+
+  it('never answers a declined row in the waiting or quoted reads', async () => {
+    const { dinamo } = await declinedAgo(HOUR, { status: 'quoted' });
+
+    const waiting = await get(
+      '/garage/requests?status=waiting',
+      bearer(dinamo.owner, 'garage'),
+    );
+    const quoted = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(waiting.body.total).toBe(0);
+    expect(quoted.body.total).toBe(0);
   });
 });

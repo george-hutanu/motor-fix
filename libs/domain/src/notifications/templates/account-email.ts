@@ -81,3 +81,35 @@ export const PASSWORD_CHANGED: Template = {
   example,
   values,
 };
+
+// To the old address when a new one is asked for; the button opens MotorFix,
+// where the holder can change the password, which ends the other sessions.
+export const EMAIL_CHANGE_NOTICE: Template = {
+  audience: 'any',
+  bell: {
+    en: 'A new e-mail address was asked for your account.',
+    ro: 'S-a cerut o adresă de e-mail nouă pentru contul tău.',
+  },
+  email: {
+    en: {
+      button: { label: 'Open MotorFix', link: 'link' },
+      lines: [
+        'Someone asked to change the e-mail address of your MotorFix account. It changes only once the link sent to the new address is opened.',
+      ],
+      reason:
+        'You get this e-mail because it is the address of this MotorFix account. If it was not you, change your password now.',
+      subject: 'A new e-mail address was asked for your account',
+    },
+    ro: {
+      button: { label: 'Deschide MotorFix', link: 'link' },
+      lines: [
+        'Cineva a cerut schimbarea adresei de e-mail a contului tău MotorFix. Adresa se schimbă doar după ce se deschide linkul trimis la adresa nouă.',
+      ],
+      reason:
+        'Primești acest e-mail pentru că este adresa acestui cont MotorFix. Dacă nu ai fost tu, schimbă parola acum.',
+      subject: 'S-a cerut o adresă de e-mail nouă pentru contul tău',
+    },
+  },
+  example,
+  values,
+};

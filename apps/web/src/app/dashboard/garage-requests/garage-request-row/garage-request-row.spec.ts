@@ -6,6 +6,7 @@ import { Overlays } from '@motor-fix/overlays';
 
 import { GarageRequestRow } from './garage-request-row';
 import { Session } from '../../session';
+import { DeclineRequestDialog } from '../decline-request-dialog/decline-request-dialog';
 import { requestRow, wait } from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 import { SendQuoteDialog } from '../send-quote-dialog/send-quote-dialog';
@@ -166,5 +167,118 @@ describe('the request row’s Trimite oferta button', () => {
     await settle();
 
     expect(sent).toHaveBeenCalledWith('req-1');
+  });
+});
+
+// @traces 345-FR-013
+// @traces 345-FR-015
+describe('the request row’s Refuză button', () => {
+  it.each([
+    ['owner', false],
+    ['receptionist', false],
+    ['mechanic', true],
+  ] as const)(
+    'shows next to Trimite oferta for a %s (can answer quotes: %s)',
+    async (role, can) => {
+      const { element } = await render(me(role, can));
+
+      const names = [...element.querySelectorAll('.actions button')].map((b) =>
+        b.textContent?.trim(),
+      );
+      expect(names).toEqual(['Trimite oferta', 'Refuză']);
+    },
+  );
+
+  it('is outlined like the board’s ghost button (1 px strong line), not bare text', async () => {
+    const { element } = await render(me('owner', false));
+
+    const decline = sendButton(element, 'Refuză');
+    expect(decline?.classList).toContain('spartan-button-variant-secondary');
+    expect(decline?.classList).not.toContain('spartan-button-variant-ghost');
+  });
+
+  it('is absent for a mechanic without can_answer_quotes, on a closed row and on an answered one', async () => {
+    const plain = await render(me('mechanic', false));
+    expect(sendButton(plain.element, 'Refuză')).toBeUndefined();
+    TestBed.resetTestingModule();
+
+    const closed = await render(me('owner'), {
+      row: requestRow({
+        closedAt: new Date().toISOString(),
+        closedReason: 'declined',
+      }),
+    });
+    expect(sendButton(closed.element, 'Refuză')).toBeUndefined();
+  });
+
+  it('reads Decline in English', async () => {
+    const { element } = await render(me('owner'), { language: 'en' });
+
+    expect(sendButton(element, 'Decline')).toBeDefined();
+  });
+
+  it('opens the decline dialog with the driver and the car', async () => {
+    const { element, settle } = await render(me('owner'));
+
+    sendButton(element, 'Refuză')?.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(DeclineRequestDialog, {
+      data: {
+        car: 'Dacia Logan · 2018',
+        driver: 'Vlad P.',
+        requestId: 'req-1',
+      },
+      shape: 'dialog',
+      title: 'garage.requests.decline.title',
+    });
+  });
+
+  it.each(['declined', 'refused'])(
+    're-reads the lists at once after a %s answer',
+    async (answer) => {
+      const { element, settle } = await render(me('owner'));
+      open.mockResolvedValueOnce(answer);
+
+      sendButton(element, 'Refuză')?.click();
+      await settle();
+
+      expect(reload).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('re-reads nothing when the dialog is cancelled', async () => {
+    const { element, settle } = await render(me('owner'));
+
+    sendButton(element, 'Refuză')?.click();
+    await settle();
+
+    expect(reload).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 345-FR-012
+describe('a declined row', () => {
+  it.each([
+    ['ro', 'Refuzată'],
+    ['en', 'Declined'],
+  ] as const)('says why it closed in %s', async (language, label) => {
+    const { element } = await render(me('owner'), {
+      language,
+      row: requestRow({
+        closedAt: new Date().toISOString(),
+        closedReason: 'declined',
+        recipient: {
+          answeredAt: new Date().toISOString(),
+          declinedAt: new Date().toISOString(),
+          declineReason: 'fully_booked',
+          source: 'search',
+          status: 'declined',
+        },
+      }),
+    });
+
+    expect(element.querySelector('.reason')?.textContent?.trim()).toBe(label);
+    expect(element.querySelector('.actions')).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import { GarageRefDto } from '../models/garage-ref-dto';
 export interface RecipientDto {
   answeredAt: string | null;
   createdAt: string;
+  declineReason: ('fully_booked' | 'job_not_done' | 'make_model_engine_not_done' | 'need_to_see_car') | null;
   garage: GarageRefDto;
   id: string;
   status: 'waiting' | 'quoted' | 'declined' | 'expired' | 'closed';

@@ -1,3 +1,4 @@
+import { DECLINE_REASON_TEXTS, isDeclineReason } from '@motor-fix/contracts';
 import {
   formatClock,
   formatDay,
@@ -12,7 +13,7 @@ import { DECISIONS } from './templates/verification-result';
 
 type Language = 'ro' | 'en';
 export type Channel = 'email' | 'bell' | 'push' | 'sms' | 'whatsapp';
-type Format = 'text' | 'link' | 'count' | 'num' | 'lei' | 'when';
+type Format = 'text' | 'link' | 'count' | 'num' | 'lei' | 'when' | 'reason';
 
 interface EmailText {
   subject: string;
@@ -110,6 +111,12 @@ function format(kind: Format, value: unknown, language: Language): string {
       const day = formatDay(value, language);
       return day === '—' ? day : `${day}, ${formatClock(value)}`;
     }
+    // A decline's reason code, as the clause after the garage's name.
+    case 'reason':
+      if (!isDeclineReason(value)) {
+        throw new Error(`unknown decline reason ${String(value)}`);
+      }
+      return DECLINE_REASON_TEXTS[value].clause[language];
     default:
       return String(value);
   }
@@ -238,7 +245,9 @@ export function templateName(kind: string, params: Params): string {
   }
   if (kind !== 'ACCOUNT_EMAIL') return kind;
   const purpose = params['purpose'];
-  return purpose === 'password_reset' || purpose === 'password_changed'
+  return purpose === 'password_reset' ||
+    purpose === 'password_changed' ||
+    purpose === 'email_change_notice'
     ? `ACCOUNT_EMAIL.${purpose}`
     : 'ACCOUNT_EMAIL.email_check';
 }

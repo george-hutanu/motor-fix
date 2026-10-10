@@ -97,6 +97,10 @@ export const garageOf = (me: MeDto | null) =>
       null)
     : null;
 
+// How long after its own password change a tab asks the server whether a
+// live sign-out ended it, rather than taking the word for it.
+const KEEP_THROUGH_REVOKE_MS = 30_000;
+
 // The signed-in account. The access token lives in this object's memory only;
 // the refresh token is a cookie the page cannot read, used to renew it.
 @Injectable({ providedIn: 'root' })
@@ -119,6 +123,8 @@ export class Session {
   readonly ended = new Subject<void>();
   private readonly tabs: BroadcastChannel | null = null;
   private accessToken: string | null = null;
+  // Until when this tab's own password change keeps it signed in.
+  private keepUntil = 0;
   private loading: Promise<MeDto | null> | null = null;
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
@@ -286,6 +292,28 @@ export class Session {
     this.started(accessToken);
     this.current.set(null);
     return this.load();
+  }
+
+  // A new password from the dashboard. The server then signs out every
+  // session but this one, and tells them all live: this tab checks that word
+  // with the server while the change is sent and for a while after.
+  async changePassword(body: {
+    currentPassword?: string;
+    newPassword: string;
+  }) {
+    this.keepUntil = Number.POSITIVE_INFINITY;
+    try {
+      await this.auth.passwordChangeControllerChange({ body });
+      this.keepUntil = Date.now() + KEEP_THROUGH_REVOKE_MS;
+    } catch (error) {
+      this.keepUntil = 0;
+      throw error;
+    }
+  }
+
+  // Whether a "sessions ended" word may be this tab's own password change.
+  keepsThroughRevoke(): boolean {
+    return Date.now() < this.keepUntil;
   }
 
   // One renewal at a time, whoever asks.

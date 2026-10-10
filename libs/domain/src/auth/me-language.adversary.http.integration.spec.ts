@@ -131,13 +131,15 @@ describe('PATCH /me with hostile bodies', () => {
     expect(await savedLanguage(id)).toBe('ro');
   });
 
-  it('refuses an empty body with 400 naming language', async () => {
+  // Every field of PATCH /me is optional since 139-edit-my-details.
+  // @traces 139-FR-004
+  it('takes an empty body and changes nothing', async () => {
     const id = await account('andrei', ['driver']);
 
     const res = await send('', bearer(id, 'driver'));
 
-    expect(res.status).toBe(400);
-    expect(JSON.stringify(res.body.message)).toContain('language');
+    expect(res.status).toBe(200);
+    expect(await savedLanguage(id)).toBe('ro');
   });
 });
 

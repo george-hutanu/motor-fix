@@ -1,0 +1,56 @@
+@if (step() === 'phone') {
+  <form [formGroup]="phoneForm" (ngSubmit)="phoneSave.submit()" novalidate>
+    <div class="field">
+      <label for="mf-phone-change">{{ 'driver.phoneChange.number' | t }}</label>
+      <input
+        hlmInput
+        id="mf-phone-change"
+        type="tel"
+        inputmode="tel"
+        autocomplete="tel"
+        formControlName="phone"
+        aria-describedby="mf-phone-change-error"
+      />
+      <mf-field-error id="mf-phone-change-error" [save]="phoneSave" [control]="phoneForm.controls.phone" />
+    </div>
+    <mf-task-error [save]="phoneSave" />
+    <button hlmBtn type="submit" [mfTaskSubmit]="phoneSave">
+      {{ 'driver.phoneChange.submit' | t }}
+    </button>
+  </form>
+} @else {
+  <form [formGroup]="codeForm" (ngSubmit)="codeSave.submit()" novalidate>
+    <p role="status">{{ 'driver.phoneChange.sent' | t: { phone: number() } }}</p>
+    <div class="field">
+      <label for="mf-phone-change-code">{{ 'driver.phoneChange.code.label' | t }}</label>
+      <input
+        #codeInput
+        hlmInput
+        class="code"
+        id="mf-phone-change-code"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="6"
+        formControlName="code"
+        aria-describedby="mf-phone-change-code-error"
+      />
+      <mf-field-error id="mf-phone-change-code-error" [save]="codeSave" [control]="codeForm.controls.code" />
+    </div>
+    <mf-task-error [save]="codeSave" />
+    <mf-task-error [save]="phoneSave" />
+    <button hlmBtn type="submit" [mfTaskSubmit]="codeSave">
+      {{ 'driver.phoneChange.confirm' | t }}
+    </button>
+    <p class="links">
+      <button
+        type="button"
+        class="link"
+        [disabled]="phoneSave.state() === 'sending' || codeSave.state() === 'sending'"
+        (click)="sendAgain()"
+      >
+        {{ 'driver.phoneChange.again' | t }}
+      </button>
+    </p>
+  </form>
+}

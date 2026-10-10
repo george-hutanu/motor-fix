@@ -177,7 +177,7 @@ describe('ConfirmEmail', () => {
     await settle(harness);
 
     expect(text(harness)).toContain(
-      'Ai cerut deja un link. Încearcă din nou puțin mai târziu.',
+      'Prea multe încercări. Încearcă din nou mai târziu.',
     );
     expect(button(harness, 'Trimite un link nou')).toBeDefined();
   });
@@ -195,7 +195,7 @@ describe('ConfirmEmail', () => {
     await settle(harness);
 
     expect(text(harness)).toContain(
-      'Din acest link nu mai putem trimite altul. Intră în cont și apasă „Retrimite”.',
+      'Din acest link nu mai putem trimite altul. Intră în cont și cere un link nou de acolo.',
     );
     expect(button(harness, 'Trimite un link nou')).toBeUndefined();
   });
@@ -231,5 +231,76 @@ describe('ConfirmEmail', () => {
       'Nu am putut trimite linkul. Încearcă din nou.',
     );
     expect(button(harness, 'Trimite un link nou')).toBeDefined();
+  });
+});
+
+// @traces 139-FR-008
+describe('the link of an e-mail change whose address was taken', () => {
+  it('says another account uses the address and offers no new link', async () => {
+    confirm = jest.fn(async () => {
+      throw problem(409, 'email_taken');
+    });
+
+    const harness = await open();
+
+    expect(text(harness)).toContain('Adresa e folosită de alt cont.');
+    expect(text(harness)).toContain(
+      'Alt cont MotorFix folosește acum această adresă',
+    );
+    expect(button(harness, 'Trimite un link nou')).toBeUndefined();
+    expect(resend).not.toHaveBeenCalled();
+  });
+
+  // @traces 139-FR-009
+  it('says the address is taken when a new link finds it taken meanwhile', async () => {
+    confirm = jest.fn(async () => {
+      throw problem(410, 'link_expired');
+    });
+    resend = jest.fn(async () => {
+      throw problem(409, 'email_taken');
+    });
+    const harness = await open();
+
+    button(harness, 'Trimite un link nou')?.click();
+    await settle(harness);
+
+    expect(text(harness)).toContain('Adresa e folosită de alt cont.');
+    expect(text(harness)).not.toContain('Adresa ta de e‑mail este confirmată.');
+  });
+
+  it('says it in English on the English address', async () => {
+    confirm = jest.fn(async () => {
+      throw problem(409, 'email_taken');
+    });
+
+    const harness = await open({ language: 'en' });
+
+    expect(
+      harness.routeNativeElement?.querySelector('h1')?.textContent?.trim(),
+    ).toBe('The address is used by another account.');
+  });
+});
+
+// @traces 139-FR-009
+describe('the expired page of either kind of link', () => {
+  // The answer does not say which kind the link was, so the line names both
+  // lifetimes: 72 hours from sign-up, 24 hours for a change of address.
+  it.each([
+    [
+      'ro',
+      'Un link de confirmare merge o singură dată: 72 de ore după înregistrare, 24 de ore când îți schimbi adresa.',
+    ],
+    [
+      'en',
+      'A confirmation link works once: for 72 hours after sign-up, or 24 hours when you change your address.',
+    ],
+  ] as const)('states both lifetimes (%s)', async (language, line) => {
+    confirm = jest.fn(async () => {
+      throw problem(410, 'link_expired');
+    });
+
+    const harness = await open({ language });
+
+    expect(text(harness)).toContain(line);
   });
 });
