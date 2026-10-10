@@ -34,7 +34,7 @@ import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
-import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
+import { ffMainCommand, lockPid, mainCheckoutState, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 import { removeWorktree } from "./worktree-remove.mjs";
 import { branchFeatureDir, locateFeature } from "./lib/feature.mjs";
 
@@ -160,9 +160,10 @@ export function holderOf({ main, self = false, lock, alive, qaLive, claim, thres
  * null when it is level, diverged or off main.
  */
 function mainVerdict(row) {
-  const command = `git -C ${row.path} merge --ff-only origin/main`;
+  const command = ffMainCommand(row.path);
+  if (row.dirty === null) return { verdict: "blocked", fix: null, reason: "git cannot read the main checkout" };
   if (row.dirty?.length > 0) return { verdict: `dirty: ${row.dirty.join(", ")}`, fix: null, reason: `${row.dirty.length} tracked file(s) edited; ${command}` };
-  if (row.branch === "main" && row.ahead === 0 && row.behind > 0) return { verdict: "behind", fix: "ff-main", reason: `behind origin/main by ${row.behind}; ${command}` };
+  if (row.ahead === 0 && row.behind > 0) return { verdict: "behind", fix: "ff-main", reason: `behind origin/main by ${row.behind}; ${command}` };
   return null;
 }
 
@@ -455,7 +456,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       qaRun,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
-    if (w.main) Object.assign(row, mainState(w.path, w.branch));
+    if (w.main) Object.assign(row, mainCheckoutState(w.path));
     // The run's state is asked of GitHub only when it decides the row: a ready
     // handed-off PR still at the head the run tests. Unreadable reads as unfinished.
     if (row.handoff && row.qaRun && pr?.state === "ready" && row.qaRun.head === pr.head && runOf) {
@@ -490,16 +491,6 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     orphanLocks: orphans.filter((w) => w.lock !== null).map((w) => w.path),
     plan: dispatchPlan(rows, { qaLive: qaRuns.length, qaCap, prsKnown: prs !== null }),
   };
-}
-
-/** Tracked files edited in the main checkout, and how far it is from origin/main when on main. No fetch: worktrees share its refs. */
-function mainState(path, branch) {
-  const status = git(path, ["status", "--porcelain", "--untracked-files=no"]);
-  const dirty = status === null ? [] : status.split("\n").filter(Boolean).map((l) => l.slice(3));
-  if (branch !== "main") return { dirty, ahead: null, behind: null };
-  const counts = (git(path, ["rev-list", "--left-right", "--count", "HEAD...origin/main"]) ?? "").trim().split(/\s+/);
-  const [ahead, behind] = counts.length === 2 && counts.every((c) => /^\d+$/.test(c)) ? counts.map(Number) : [null, null];
-  return { dirty, ahead, behind };
 }
 
 /** What the no-agent fixer would act on, in the order it acts: the gate reads this too, so the two cannot disagree. */

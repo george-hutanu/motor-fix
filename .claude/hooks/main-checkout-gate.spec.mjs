@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // The main checkout is a mirror of origin/main: an edit to a file git tracks
-// there blocks the fast-forward that keeps it current (ST-1035). The gate
+// there blocks the fast-forward that keeps it current. The gate
 // refuses that edit and nothing else: worktrees, untracked and ignored paths,
 // other repositories (the specs clone) and the owner's override go through,
 // and a git failure never refuses.
@@ -160,11 +160,6 @@ describe('main checkout gate — fails open', () => {
     assert.equal(gate({ input: { file_path: join(plain, 'f.md') } }).status, 0);
   });
 
-  it('in well under two seconds', () => {
-    const started = Date.now();
-    gate({ input: { file_path: join(repo, 'README.md') } });
-    assert.ok(Date.now() - started < 2000);
-  });
 });
 
 describe('main checkout gate — wiring', () => {

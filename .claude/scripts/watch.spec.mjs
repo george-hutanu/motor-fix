@@ -1706,7 +1706,7 @@ describe('listPrs', () => {
   });
 });
 
-// The main checkout is a mirror of origin/main (ST-1035): an edit to a tracked
+// The main checkout is a mirror of origin/main: an edit to a tracked
 // file there blocks the fast-forward, and a checkout left behind serves stale
 // gates and docs to every session that starts in it. The watch names both.
 describe('the main checkout row', () => {
@@ -1740,7 +1740,13 @@ describe('the main checkout row', () => {
 
   it('is not behind when it has commits of its own (diverged), nor off main', () => {
     assert.equal(fixOf(mainRow({ ahead: 1, behind: 2 }), opts).fix, null);
-    assert.equal(fixOf(mainRow({ branch: 'other', behind: null }), opts).fix, null);
+    assert.equal(fixOf(mainRow({ branch: 'other', ahead: null, behind: null }), opts).fix, null);
+  });
+
+  it('is blocked, never fast-forwarded, when git cannot read its status', () => {
+    const r = fixOf(mainRow({ dirty: null, behind: 2 }), opts);
+    assert.equal(r.verdict, 'blocked');
+    assert.equal(r.fix, null);
   });
 
   const capture = (fn) => {

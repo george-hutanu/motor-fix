@@ -161,7 +161,7 @@ describe('watch reminder — as a hook', () => {
   });
 });
 
-// ST-1035: a main checkout left behind origin/main, or holding an edit to a
+// A main checkout left behind origin/main, or holding an edit to a
 // tracked file, serves stale gates to every session that starts in it. The
 // reminder names it at session start, in the main checkout only.
 describe('watch reminder — the main checkout', () => {

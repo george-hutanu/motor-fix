@@ -12,7 +12,8 @@
 // SPECKIT_ALLOW_MAIN_EDIT=1 is the owner's escape hatch: the edit goes
 // through with one line on stderr. In a cloud session (CLAUDE_CODE_REMOTE=true)
 // the checkout is the story's own clone, so only an edit on `main` is refused.
-// Any git failure, unreadable payload or missing path lets the edit through.
+// Any git failure (each call is cut off at 1.5 s), unreadable payload or
+// missing path lets the edit through.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";

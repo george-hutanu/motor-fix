@@ -25,6 +25,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { waitHolder } from "../scripts/lib/watch-wait.mjs";
+import { ffMainCommand, mainCheckoutState } from "../scripts/lib/worktrees.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -86,12 +87,9 @@ export function readWatch(repo, timeout, env = process.env) {
 
 /** One line when the main checkout holds tracked edits or is behind origin/main on `main`; "" otherwise or when git fails. No fetch. */
 export function mainLine(repo) {
-  const command = `git -C ${repo} merge --ff-only origin/main`;
-  const status = git(repo, ["status", "--porcelain", "--untracked-files=no"]);
-  if (status) return `main checkout dirty: ${status.split("\n").map((l) => l.replace(/^\s*\S{1,2}\s+/, "")).join(", ")} — ${command}`;
-  if (git(repo, ["rev-parse", "--abbrev-ref", "HEAD"]) !== "main") return "";
-  const [ahead, behind] = (git(repo, ["rev-list", "--left-right", "--count", "HEAD...origin/main"]) ?? "").split(/\s+/).map(Number);
-  return ahead === 0 && behind > 0 ? `main checkout behind origin/main by ${behind} — ${command}` : "";
+  const { dirty, ahead, behind } = mainCheckoutState(repo);
+  if (dirty?.length > 0) return `main checkout dirty: ${dirty.join(", ")} — ${ffMainCommand(repo)}`;
+  return ahead === 0 && behind > 0 ? `main checkout behind origin/main by ${behind} — ${ffMainCommand(repo)}` : "";
 }
 
 export function runReminder({ repo, watch, armed = () => waitHolder(repo) }) {

@@ -30,7 +30,7 @@
         "strict"
       ],
       "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), and no live watch.mjs --wait holds the repository, print one line telling the session to arm the wait; silent otherwise, and always exits 0",
-      "fingerprint": "54bc3ff6721a"
+      "fingerprint": "df3f2fae0d56"
     },
     {
       "id": "session:start:github-identity",
@@ -133,7 +133,7 @@
       ],
       "description": "Refuse an edit to a file git tracks in the main checkout: it stays a mirror of origin/main, and every change rides a PR from a worktree (SPECKIT_ALLOW_MAIN_EDIT=1 overrides)",
       "fail_closed": true,
-      "fingerprint": "fd3d2128f0c2"
+      "fingerprint": "818aefd96709"
     },
     {
       "id": "post:edit:affected-tests",
