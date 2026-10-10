@@ -75,21 +75,19 @@ describe("assertProjectScope", () => {
 });
 
 describe("the command line without a token", () => {
-  for (const script of ["bootstrap.mjs"]) {
-    it(`${script} exits 1 on stderr naming where it looked and prints no token`, () => {
-      const home = mkdtempSync(join(tmpdir(), "home-"));
-      try {
-        const r = spawnSync(process.execPath, [new URL(`./${script}`, import.meta.url).pathname, "--dry-run"], {
-          env: { PATH: "/nonexistent", HOME: home },
-          encoding: "utf8",
-        });
-        assert.equal(r.status, 1);
-        assert.match(r.stderr, /GH_PROJECT_TOKEN/);
-        assert.match(r.stderr, /GH_TOKEN/);
-        assert.ok(!r.stderr.includes("gh-motorfix"), "the owner's gh-motorfix login is never named or read");
-      } finally {
-        rmSync(home, { recursive: true, force: true });
-      }
-    });
-  }
+  it("bootstrap.mjs exits 1 on stderr naming where it looked and prints no token", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-"));
+    try {
+      const r = spawnSync(process.execPath, [new URL("./bootstrap.mjs", import.meta.url).pathname, "--dry-run"], {
+        env: { PATH: "/nonexistent", HOME: home },
+        encoding: "utf8",
+      });
+      assert.equal(r.status, 1);
+      assert.match(r.stderr, /GH_PROJECT_TOKEN/);
+      assert.match(r.stderr, /GH_TOKEN/);
+      assert.ok(!r.stderr.includes("gh-motorfix"), "the owner's gh-motorfix login is never named or read");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
 });

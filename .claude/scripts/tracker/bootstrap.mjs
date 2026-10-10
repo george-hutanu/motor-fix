@@ -67,7 +67,7 @@ export const SCHEMA = {
     ...["Started", "QA from", "Merged at", "Planned start", "Planned end"].map(plain("DATE")),
     plain("NUMBER")("Story points"),
     plain("ITERATION")("Sprint"),
-    // The rest of a story's properties, one field each (data-model.md, "Property → GitHub").
+    // The rest of a story's properties, one field each.
     select("Role", ROLES.map((r) => [r])),
     select("Track", TRACKS.map((t) => [t])),
     select("Release", RELEASES.map((r, i) => [r, ["RED", "ORANGE", "GRAY"][i]])),
