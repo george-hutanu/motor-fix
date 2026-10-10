@@ -175,6 +175,14 @@ describe('the limits on sending a sign-in code', () => {
     expect(counts.get(byAddress)).toBe(1);
   });
 
+  it('leaves the number its hour when that hour ended before the give-back', async () => {
+    const { counts, redis } = countingRedis();
+
+    await new Attempts(redis).uncountPhoneCode(phone);
+
+    expect(counts.has(hour)).toBe(false);
+  });
+
   it('counts the number alone when the address cannot be read', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
@@ -260,6 +268,28 @@ describe('the hourly limit on links and codes for a contact change', () => {
     }
     expect(await attempts.admitContactChange(ACCOUNT)).toBe(false);
     expect(await attempts.admitContactChange(randomUUID())).toBe(true);
+  });
+
+  it('gives back a link or code that never left', async () => {
+    const { counts, redis } = countingRedis();
+    const attempts = new Attempts(redis);
+    await attempts.admitContactChange(ACCOUNT);
+
+    await attempts.uncountContactChange(ACCOUNT);
+
+    expect(counts.get(key)).toBe(0);
+  });
+
+  it('leaves the next hour its five when the hour ended before the give-back', async () => {
+    const { redis } = countingRedis();
+    const attempts = new Attempts(redis);
+
+    await attempts.uncountContactChange(ACCOUNT);
+
+    for (let i = 0; i < 5; i++) {
+      expect(await attempts.admitContactChange(ACCOUNT)).toBe(true);
+    }
+    expect(await attempts.admitContactChange(ACCOUNT)).toBe(false);
   });
 
   it('admits and logs when Redis does not answer', async () => {

@@ -200,13 +200,7 @@ export class Attempts {
 
   // A code that was never sent does not count toward the number's hour.
   async uncountPhoneCode(phone: string): Promise<void> {
-    try {
-      const key = phoneHourKey(phone);
-      // Should the hour have ended meanwhile, the key still expires.
-      await this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX').exec();
-    } catch {
-      this.unavailable('phone-code');
-    }
+    await this.uncount(phoneHourKey(phone), 'phone-code');
   }
 
   // Counts one e-mail link or phone code for the account's own contact
@@ -226,12 +220,7 @@ export class Attempts {
 
   // A link or code that never left does not count toward the account's hour.
   async uncountContactChange(accountId: string): Promise<void> {
-    try {
-      const key = changeKey(accountId);
-      await this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX').exec();
-    } catch {
-      this.unavailable('contact-change');
-    }
+    await this.uncount(changeKey(accountId), 'contact-change');
   }
 
   // Wrong current passwords at a password change: 5 refuse the next try
@@ -261,6 +250,19 @@ export class Attempts {
       await this.redis.del(passwordKey(accountId));
     } catch {
       this.unavailable('password');
+    }
+  }
+
+  // One off an hourly count. Should the hour have ended meanwhile, the key
+  // made at -1 is deleted, or the next hour would admit one more.
+  private async uncount(key: string, what: Limited) {
+    try {
+      const replies = await counted(
+        this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX'),
+      );
+      if (Number(replies[0]?.[1]) < 0) await this.redis.del(key);
+    } catch {
+      this.unavailable(what);
     }
   }
 
