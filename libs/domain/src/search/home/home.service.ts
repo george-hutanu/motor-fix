@@ -64,7 +64,14 @@ export class HomeService {
     const rows = await this.prisma.garage.findMany({
       orderBy: BEST_FIRST,
       select: {
-        brands: { select: { stance: true }, where: { brandId } },
+        brands: {
+          orderBy: { brand: { name: 'asc' } },
+          select: {
+            brand: { select: { name: true } },
+            brandId: true,
+            stance: true,
+          },
+        },
         businessKind: true,
         cityName: true,
         id: true,
@@ -72,13 +79,17 @@ export class HomeService {
         name: true,
         rating: true,
         reviewCount: true,
+        serviceRadiusKm: true,
         slug: true,
       },
       take,
       where: { ...publicGarages(), ...group },
     });
+    const named = (brands: (typeof rows)[number]['brands'], stance: string) =>
+      brands.filter((b) => b.stance === stance).map((b) => b.brand.name);
     return rows.map((row) => ({
       businessKind: row.businessKind,
+      doesNotTake: named(row.brands, 'does_not_take'),
       id: row.id,
       labourFromLei:
         row.labourFromBani === null
@@ -88,10 +99,16 @@ export class HomeService {
       rating: row.rating === null ? null : row.rating.toNumber(),
       reviewCount: row.reviewCount,
       slug: row.slug,
-      stance: row.brands[0]?.stance ?? 'unstated',
+      stance:
+        row.brands.find((b) => b.brandId === brandId)?.stance ?? 'unstated',
+      worksOn: named(row.brands, 'works_on'),
       // A mobile mechanic's city would tell where its seat is.
       ...(row.businessKind !== 'mobile' &&
         row.cityName !== null && { city: row.cityName }),
+      ...(row.businessKind === 'mobile' &&
+        row.serviceRadiusKm !== null && {
+          serviceRadiusKm: row.serviceRadiusKm,
+        }),
     }));
   }
 }

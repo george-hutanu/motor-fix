@@ -106,6 +106,7 @@ describe('GET /home', () => {
   });
 
   // @traces 226-FR-009
+  // @traces 227-FR-009
   it('answers the best garage and the preview rows with every field Home shows', async () => {
     await garage('taker', 'approved', 'works_on');
     await prisma.garage.update({
@@ -125,6 +126,7 @@ describe('GET /home', () => {
     expect(res.body.best).toEqual({
       businessKind: 'pfa',
       city: 'București',
+      doesNotTake: [],
       id: expect.any(String),
       labourFromLei: 150,
       name: 'taker',
@@ -132,6 +134,7 @@ describe('GET /home', () => {
       reviewCount: 80,
       slug: 'taker',
       stance: 'works_on',
+      worksOn: ['Dacia'],
     });
     expect(res.body.preview).toEqual([res.body.best]);
   });

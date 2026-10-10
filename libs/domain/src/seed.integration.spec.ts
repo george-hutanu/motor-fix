@@ -350,6 +350,30 @@ describe('seed of the listed garages', () => {
     }
   });
 
+  // @traces 227-FR-013
+  it('gives the cards on Home a long brand list, an empty refused list and a mobile radius', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const stances = async (slug: string) =>
+      (
+        await prisma.garageBrand.findMany({
+          select: { stance: true },
+          where: { garage: { slug } },
+        })
+      ).map(({ stance }) => stance);
+    expect(
+      (await stances('service-auto-militari')).filter((s) => s === 'works_on')
+        .length,
+    ).toBeGreaterThan(6);
+    expect(await stances('atelier-berceni')).not.toContain('does_not_take');
+    expect(
+      await prisma.garage.findUnique({
+        select: { businessKind: true, serviceRadiusKm: true },
+        where: { slug: 'mecanic-mobil-cluj' },
+      }),
+    ).toEqual({ businessKind: 'mobile', serviceRadiusKm: 20 });
+  });
+
   // @traces 163-FR-005
   it('places six listed garages in București and two in Cluj-Napoca, for the figures by city', async () => {
     expect(seed('test').status).toBe(0);
