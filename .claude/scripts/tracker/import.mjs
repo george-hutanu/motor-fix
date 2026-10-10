@@ -199,7 +199,7 @@ export function issuePlans(tracker, { subIssueMax = 100 } = {}) {
     titleOf: (id) => titleById.get(plainId(id)) ?? otherTitle(id) ?? tracker.features?.get(plainId(id)) ?? null,
     userOf: (id) => tracker.users?.get(id) ?? null,
   };
-  /** The URL of a feature's document in motor-fix-specs docs/ (ST-1018), or null. */
+  /** The URL of a feature's document in motor-fix-specs docs/ (its Diátaxis index), or null. */
   const docLink = (id) => {
     const path = tracker.docs?.get(plainId(id));
     return path ? fileUrl(path) : null;

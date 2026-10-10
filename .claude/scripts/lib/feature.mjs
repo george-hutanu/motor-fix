@@ -96,13 +96,13 @@ const isDir = (path) => {
 };
 
 /**
- * Where the feature folders sit, relative to the repository. ST-1026 moved
+ * Where the feature folders sit, relative to the repository. Trunk moved
  * them under motor-fix-specs' own specs/ tree and the clone to
  * .motor-fix-specs/, with `specs` a link to its specs/: `specs` again. An old
  * clone still at specs/ holds them at its root before trunk's move (`specs`)
  * and at specs/specs once it has fast-forwarded past it.
  */
-// TODO: drop specs/specs once every checkout's clone has moved to .motor-fix-specs (specs-repo.mjs ensure).
+// specs/specs goes once every checkout's clone has moved to .motor-fix-specs (specs-repo.mjs ensure).
 export function featuresRoot(repo) {
   return isDir(join(repo, "specs", "specs")) ? join("specs", "specs") : "specs";
 }

@@ -15,9 +15,9 @@ export const pullPath = (number) => `/repos/${OWNER}/${CODE_REPO}/pulls/${number
 export const closesLine = (number) => `Closes ${OWNER}/${ISSUE_REPO}#${number}`;
 
 /**
- * The checkout's clone of ISSUE_REPO. ST-1018 moves it to `.motor-fix-specs/`
- * (with `specs` a symlink into it) and has specs-repo.mjs export its place;
- * until then it is `specs/` itself.
+ * The checkout's clone of ISSUE_REPO: `.motor-fix-specs/` (with `specs` a
+ * symlink into it) once specs-repo.mjs has moved it there and exports its
+ * place; until then it is `specs/` itself.
  */
 export function specsClone(root, specsRepo = {}) {
   const exported = specsRepo.cloneDir?.(root) ?? (specsRepo.CLONE_DIR ? join(root, specsRepo.CLONE_DIR) : null);

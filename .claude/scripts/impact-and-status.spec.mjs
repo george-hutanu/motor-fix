@@ -324,7 +324,7 @@ describe('staleness', () => {
   });
 });
 
-// ST-1026: an old clone at specs/ past trunk's move holds the feature folders at specs/specs.
+// An old clone at specs/ past trunk's move holds the feature folders at specs/specs.
 describe('the moved specs layout', () => {
   it('lists the features under specs/specs', () => {
     const dir = fixture({ 'specs/specs/002-fixture/spec.md': '# Spec\n', 'specs/specs/002-fixture/tasks.md': '- [ ] T001 open\n', 'specs/docs/x.md': '# Doc\n' });

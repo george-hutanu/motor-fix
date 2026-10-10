@@ -77,7 +77,7 @@ describe('activeFeature on the branch', () => {
   });
 });
 
-// ST-1026 moved the feature folders of motor-fix-specs under its specs/ tree.
+// Trunk moved the feature folders of motor-fix-specs under its specs/ tree.
 // A checkout's clone moves to .motor-fix-specs/ with `specs` a link to its
 // specs/ (`specs/<feature>` as before), but an old clone still at specs/ that
 // has fast-forwarded past the move holds them at specs/specs/<feature>. The
