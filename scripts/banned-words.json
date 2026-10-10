@@ -1,75 +1,7 @@
 {
   "allow": {
-    ".claude/scripts/lib/notion.adversary.spec.mjs": {
-      "count": 7,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/lib/notion.mjs": {
-      "count": 33,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/lib/notion.spec.mjs": {
-      "count": 68,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/bootstrap.mjs": {
-      "count": 4,
-      "reason": "Bootstrap of the project the import fills; its old-tracker notes go with the import path (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/fixtures/notion.mjs": {
-      "count": 7,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/github.mjs": {
-      "count": 13,
-      "reason": "Refuses an old-tracker address as a GitHub target; goes with the import path (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/import.adversary.spec.mjs": {
-      "count": 35,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/import.mjs": {
-      "count": 56,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/import.spec.mjs": {
-      "count": 68,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/notion-content.mjs": {
-      "count": 8,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/notion-content.spec.mjs": {
-      "count": 23,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/notion-markdown.mjs": {
-      "count": 29,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/notion-markdown.spec.mjs": {
-      "count": 17,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/notion-read.adversary.spec.mjs": {
-      "count": 25,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/notion-read.mjs": {
-      "count": 5,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/notion-read.spec.mjs": {
-      "count": 17,
-      "reason": "The owner's final import from the old tracker reads through it; deleted after that import (george-hutanu/motor-fix-specs#1119)."
-    },
-    ".claude/scripts/tracker/token.adversary.spec.mjs": {
-      "count": 1,
-      "reason": "Proves the import's token stays out of output; goes with the import path (george-hutanu/motor-fix-specs#1119)."
-    },
     ".specify/capabilities/platform.md": {
-      "count": 74,
+      "count": 61,
       "reason": "History: requirements of the documentation migration (1018, 1026), the import client (745) and the feature slugs that retired the old tracker."
     },
     ".specify/capabilities/tracker.md": {
@@ -78,11 +10,11 @@
     },
     "scripts/pr-body-check.spec.ts": {
       "count": 6,
-      "reason": "Covers that legacy acceptance; dropped with it (george-hutanu/motor-fix-specs#1119)."
+      "reason": "Covers that legacy acceptance; dropped with it (george-hutanu/motor-fix-specs#1135)."
     },
     "scripts/pr-body-check.ts": {
       "count": 5,
-      "reason": "Accepts the old story heading and link on PRs opened before ST-1036; dropped once those PRs merge (george-hutanu/motor-fix-specs#1119)."
+      "reason": "Accepts the old story heading and link on PRs opened before ST-1036; dropped once #337 merges (george-hutanu/motor-fix-specs#1135)."
     }
   },
   "words": ["notion"]

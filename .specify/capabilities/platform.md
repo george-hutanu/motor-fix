@@ -69,6 +69,7 @@ features:
   - 1026-diataxis-docs
   - 1035-main-checkout-guard
   - 1037-remove-notion
+  - 1119-drop-tracker-import
   - 251-monitoring-backups
 ---
 
@@ -767,34 +768,6 @@ _From 678-measurable-sizing._
 ### 678-FR-016 — The change MUST stay in the harness (`.claude/`, `.specify/`), with no file under `apps/` or `libs/`.
 
 _From 678-measurable-sizing._
-
-### 745-FR-001 — The client MUST pace its outgoing requests with a shared token bucket so that the sustained rate is at most 3 requests per second per client, allowing a burst up to the bucket's capacity of 3, independent of any 429 answer; the clock (`now`) is injectable.
-
-_From 745-notion-api-limits._
-
-### 745-FR-002 — The client MUST retry an answer of 429, 502, 503, 504, or 409 with code `conflict_error`, honouring a numeric `Retry-After` when present (raising at once when it exceeds `NOTION_SYNC_MAX_WAIT_S`, as today) and otherwise waiting `500 ms · 2^attempt · (1 + random())` clamped to `NOTION_SYNC_MAX_WAIT_S`, with `random` injectable; `NOTION_SYNC_MAX_RETRIES` caps the attempts.
-
-_From 745-notion-api-limits._
-
-### 745-FR-003 — The client MUST retry a timeout or network error on `GET` under the same caps, and MUST NOT retry one on `POST`, `PATCH` or `DELETE`.
-
-_From 745-notion-api-limits._
-
-### 745-FR-004 — `writeProp` MUST split a `title` or `rich_text` value into objects of at most 2,000 Unicode code points, at most 100 objects per array, and MUST raise a `NotionError` for a text that cannot fit; the same splitter is exported for comments.
-
-_From 745-notion-api-limits._
-
-### 745-FR-006 — `writeProp` MUST raise a `NotionError` for a relation of more than 100 ids, never truncating it.
-
-_From 745-notion-api-limits._
-
-### 745-FR-007 — The client MUST expose a block-children append helper that sends at most 100 children per request, in order, and MUST refuse locally, with a `NotionError` and no call, any request whose UTF-8 JSON body exceeds 500 × 1024 bytes.
-
-_From 745-notion-api-limits._
-
-### 745-FR-008 — `query()` MUST send `page_size: 100` on every page request unless the caller supplies its own `page_size`; the block-children read in `level.mjs` MUST keep sending `page_size=100`.
-
-_From 745-notion-api-limits._
 
 ### 750-FR-001 — The end-to-end suite on CI MUST run its tests in parallel across the runner's cores, and every test in the suite MUST still run on every non-docs PR that affects `web`.
 
@@ -1758,3 +1731,11 @@ _From 251-monitoring-backups._
 - `1026-FR-020` — superseded by `1037-FR-005` (2026-10-10)
 - `1026-FR-021` — superseded by `1037-FR-016` (2026-10-10)
 - `1026-FR-022` — superseded by `1037-FR-015` (2026-10-10)
+
+- `745-FR-001` — removed by 1119-drop-tracker-import (2026-10-10)
+- `745-FR-002` — removed by 1119-drop-tracker-import (2026-10-10)
+- `745-FR-003` — removed by 1119-drop-tracker-import (2026-10-10)
+- `745-FR-004` — removed by 1119-drop-tracker-import (2026-10-10)
+- `745-FR-006` — removed by 1119-drop-tracker-import (2026-10-10)
+- `745-FR-007` — removed by 1119-drop-tracker-import (2026-10-10)
+- `745-FR-008` — removed by 1119-drop-tracker-import (2026-10-10)
