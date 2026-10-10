@@ -1,13 +1,29 @@
 <!--
-Sync Impact Report (v2.0.0)
+Sync Impact Report (v3.0.0)
+- Version change: 2.0.0 → 3.0.0 (MAJOR: Principle VII redefines the tracker
+  as the only one — the rule that a task started on the old tracker finishes
+  there is removed; Additional Constraints drops the old documentation space;
+  no other rule added, removed or redefined)
+- Source: ST-1037 (remove the old tracker from motor-fix and motor-fix-specs;
+  owner decision 2026-10-10).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line and VII
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ AGENTS.md — the tracker section, lifecycle steps, Plans, cloud sessions
+  - ✅ .claude/scripts/lifecycle.mjs, tracker-sync.mjs, tracker/status.mjs,
+    tracker/ready.mjs, hooks/pr-lifecycle-gate.mjs; the lifecycle skills;
+    .specify/extensions.yml; scripts/banned-words.ts (CI)
+  - ✅ .claude/scripts/constitution-card.spec.mjs — keeps them agreeing
+
+Previous report (v2.0.0)
 - Version change: 1.12.0 → 2.0.0 (MAJOR: Principle VII redefines where a
   task is tracked — its issue in the private george-hutanu/motor-fix-specs
-  and its item in GitHub Project "MotorFix" (#11), no longer Notion; the
+  and its item in GitHub Project "MotorFix" (#11), no longer the old tracker; the
   task's PR is written to the issue's PR field and its Closes line; a
-  deferred large fix is filed as an issue; a task that started on Notion
+  deferred large fix is filed as an issue; a task that started on the old tracker
   finishes there)
 - Source: ST-1036 (run the task lifecycle on GitHub issues and the MotorFix
-  Project instead of Notion).
+  Project instead of the old tracker).
 - Templates:
   - ✅ .specify/memory/constitution-card.md — the version line and VII
   - ✅ CLAUDE.local.md — the version line and the gates table
@@ -38,7 +54,7 @@ Previous report (v1.12.0)
 Previous report (v1.11.3)
 - Version change: 1.11.2 → 1.11.3 (PATCH: Additional Constraints names the
   specs repo's Diátaxis paths and `llms.txt` as the architecture source, the
-  Notion pages frozen and the export retired; no rule added, removed or
+  old tracker pages frozen and the export retired; no rule added, removed or
   redefined)
 - Source: ST-1026 (organise motor-fix-specs by Diátaxis, agent-first).
 - Templates:
@@ -46,8 +62,8 @@ Previous report (v1.11.3)
   - ✅ CLAUDE.local.md — the version line and the `/speckit-context` entry
   - ✅ AGENTS.md — "Product and stack", "Specs live in their own repo", Plans
   - ✅ .claude/skills/speckit-context, speckit-design-check,
-    speckit-notion-sync (plan); .claude/agents/org-researcher.md,
-    spec-reviewer.md — read `llms.txt` and the Diátaxis paths, no Notion
+    the old sync skill (plan); .claude/agents/org-researcher.md,
+    spec-reviewer.md — read `llms.txt` and the Diátaxis paths, no old-space
     fallback
   - ✅ .claude/scripts/docs-source.spec.mjs — keeps them agreeing
 
@@ -68,16 +84,16 @@ Previous report (v1.11.2)
 Previous report (v1.11.1)
 - Version change: 1.11.0 → 1.11.1 (PATCH: the documentation source moves —
   Additional Constraints names the Architecture pages as exported to the
-  specs repo's `docs/` instead of the Notion space; no rule added, removed or
+  specs repo's `docs/` instead of the old documentation space; no rule added, removed or
   redefined)
-- Source: ST-1018 (move the documentation from Notion to the specs repo).
+- Source: ST-1018 (move the documentation from the old space to the specs repo).
 - Templates:
   - ✅ .specify/memory/constitution-card.md — the version line
   - ✅ CLAUDE.local.md — the version line and the `/speckit-context` entry
   - ✅ AGENTS.md — "Product and stack", "Specs live in their own repo", Plans
   - ✅ .claude/skills/speckit-context, speckit-design-check,
-    speckit-notion-sync (plan); .claude/agents/org-researcher.md,
-    spec-reviewer.md — read `docs/`, the Notion space only as a tagged
+    the old sync skill (plan); .claude/agents/org-researcher.md,
+    spec-reviewer.md — read `docs/`, the old space only as a tagged
     fallback
   - ✅ .claude/scripts/docs-source.spec.mjs — keeps them agreeing
 
@@ -115,7 +131,7 @@ Previous report (v1.10.0)
   - ✅ .specify/templates/deferred-template.md — large fixes only, size test
   - ✅ .claude/agents/code-reviewer.md, spec-reviewer.md — routing table
   - ✅ .claude/skills/speckit-review, speckit-harden, speckit-auto,
-    speckit-pr-test, speckit-notion-sync — the route by fix size
+    speckit-pr-test, the old sync skill — the route by fix size
   - ✅ AGENTS.md — "Technical debt a review defers"; CLAUDE.local.md — the
     defer bullet and the version line
   - ✅ .specify/memory/constitution-card.md — v1.10.0
@@ -147,7 +163,7 @@ Previous report (v1.8.3)
 - Templates:
   - ✅ .github/pull_request_template.md — `## Observability` section
   - ✅ .specify/templates/plan-template.md — `## Observability` section
-  - ✅ AGENTS.md — rule line under "Notion is the tracker"
+  - ✅ AGENTS.md — rule line under the tracker section
   - ✅ .specify/memory/constitution-card.md names v1.8.3
   - ⚠ CLAUDE.local.md (untracked, owner's copy) still names v1.8.2
 -->
@@ -215,7 +231,7 @@ Sync Impact Report (v1.7.0)
 Sync Impact Report (v1.6.1)
 - Version change: 1.6.0 → 1.6.1 (PATCH: VII clarified — the In review stage
   is folded into QA. Marking a PR ready sets the task QA and its one stage
-  label `QA` at once; the PR tester's run keeps QA. Notion Status is Planning
+  label `QA` at once; the PR tester's run keeps QA. the old tracker's Status is Planning
   → Implementing → QA → Done, plus Blocked; the stage labels are `planning`,
   `in development`, `QA`, plus `blocked`. No step, gate or check removed: the
   QA step, the agent-review merge gate and the repair cap are unchanged)
@@ -223,12 +239,12 @@ Sync Impact Report (v1.6.1)
   into QA.
 - Templates:
   - ✅ AGENTS.md — lifecycle steps 4 and 6, the stage label list
-  - ✅ .claude/scripts/notion-status.mjs (`review` kept as an alias of `qa`;
+  - ✅ .claude/scripts/tracker/status.mjs (then under the old tracker's name) (`review` kept as an alias of `qa`;
     a legacy In review reads as QA), .claude/hooks/pr-lifecycle-gate.mjs (a
     ready PR is `QA`; a leftover `in review` label is removed),
     .claude/scripts/watch.mjs (a ready PR is in the qa phase), their specs and
     evals/cases/pr-lifecycle.json
-  - ✅ speckit-notion-sync (§2 table and ladder, §2b stage labels),
+  - ✅ the old sync skill (§2 table and ladder, §2b stage labels),
     speckit-auto (§14, hand-off steps 2 and 5), speckit-review,
     speckit-pr-test, .github/pull_request_template.md, the git extension's
     git-config.yml
@@ -237,15 +253,15 @@ Sync Impact Report (v1.6.1)
 
 Previous report (v1.6.0)
 - Version change: 1.5.0 → 1.6.0 (MINOR: VII steps 1 and 3 expanded — every
-  task carries the link to its own PR in Notion from the moment the draft
+  task carries the link to its own PR in the old tracker from the moment the draft
   opens, and every open PR carries its stage as a GitHub label —
   `planning`, `in development`, `in review`, `QA`, plus `blocked`; the stop:pr-lifecycle gate refuses an unlinked
   story PR and an open PR without its stage label; nothing removed)
-- Source: owner decision 2026-10-04: "update each notion ticket with its own PR
+- Source: owner decision 2026-10-04: "update each [tracker] ticket with its own PR
   link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well", "in development as well", "and other
   labels that you think are useful" (→ `blocked`), "once merged, remove
   labels", "planning label … for the beginning of the task until
-  speckit-implement", "in notion keep 2 columns instead of in progress:
+  speckit-implement", "in [the tracker] keep 2 columns instead of in progress:
   planning and implementing" (story Status and timeline Build status), "use more labels like: bug,
   feature, tech debt" (type, breaking, scope, epic, ui, dependencies);
   MotorFix stories gains a `PR` URL property, every existing story PR was
@@ -253,12 +269,12 @@ Previous report (v1.6.0)
 - Templates:
   - ✅ AGENTS.md — lifecycle steps 2, 4 and 6
   - ✅ .claude/hooks/pr-lifecycle-gate.mjs, evals/cases/pr-lifecycle.json
-  - ✅ speckit-notion-sync (`pr` event, label on `review`), speckit-git-commit,
+  - ✅ the old sync skill (`pr` event, label on `review`), speckit-git-commit,
     speckit-auto (hand-off steps 1 and 5), speckit-pr-test
 
 Previous report (v1.5.0)
 - Version change: 1.4.0 → 1.5.0 (MINOR: VII materially expanded — a QA step
-  by the PR tester between ready and merge, the Notion QA and Blocked states;
+  by the PR tester between ready and merge, the tracker's QA and Blocked states;
   Enforcement gains pre:bash:merge-gate; nothing removed)
 - Source: owner decision 2026-10-04 (ST-434): every ready PR is tested and
   reviewed by an agent before it merges; the merge waits for the
@@ -267,7 +283,7 @@ Previous report (v1.5.0)
   - ✅ AGENTS.md — lifecycle steps 5–7, Blocked, heavy-command line
   - ✅ CLAUDE.local.md — gate table
   - ✅ .claude/hooks/merge-gate.mjs, pr-lifecycle-gate.mjs, registry.json, settings.json
-  - ✅ speckit-auto, speckit-review, speckit-archive, speckit-notion-sync, speckit-pr-test
+  - ✅ speckit-auto, speckit-review, speckit-archive, the old sync skill, speckit-pr-test
 
 Previous report (v1.4.0)
 - Version change: 1.3.0 → 1.4.0 (MINOR: principle VII added, NON-NEGOTIABLE;
@@ -290,7 +306,7 @@ Previous report (v1.3.0)
   rules, so the file's number moves past every reference.)
 - Source: owner decision 2026-10-04 — PrimeNG 22 (the only line for Angular
   22) moved to the PrimeUI License, which needs a licence key; the owner wants
-  a fully free stack. Notion Architecture decisions A1 amended the same day.
+  a fully free stack. The Architecture decisions A1 amended the same day.
 - Templates:
   - ✅ .specify/templates/plan-template.md — Constitution Check III
   - ✅ .claude/agents/spec-reviewer.md — principle III check
@@ -302,19 +318,17 @@ Previous report (v1.3.0)
 Previous report (v1.1.0)
 - Version change: 1.0.0 → 1.1.0 (MINOR: four principles added, II and the
   Enforcement section materially expanded; nothing removed or redefined)
-- Source: the owner's product documentation in Notion (since v1.11.1
-  exported to the specs repo's `docs/`), Architecture > Technology stack
-  (https://app.notion.com/p/3ee607bff0d2819ab8e3ee6926a249f2) and
-  Architecture decisions
-  (https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a), read 2026-10-03.
-  Lint is Biome (owner's choice, overriding nothing in Notion, which leaves
-  lint unspecified); tests are Jest + Playwright as Notion proposes.
+- Source: the owner's product documentation in the old tracker (since v1.11.1
+  exported to the specs repo's `docs/`), Architecture > Technology stack and
+  Architecture decisions, read 2026-10-03.
+  Lint is Biome (owner's choice, overriding nothing in the documentation, which leaves
+  lint unspecified); tests are Jest + Playwright as the documentation proposes.
 - Modified principles: II. Test Discipline — names Jest for unit and API
   tests, Playwright for end-to-end
 - Added principles: III. The Given Stack; IV. One Repository, One Toolchain;
   V. Rules Live in One Place; VI. PostgreSQL Is the Truth
 - Added sections: none (Additional Constraints expanded: worker for slow work,
-  by-hand route per integration, EU data residency, Notion as the source for
+  by-hand route per integration, EU data residency, the documentation as the source for
   Proposed and To-decide choices)
 - Removed sections: none
 - Gates changed: post-edit-check.sh and stop-test-gate.sh run Biome + Jest
@@ -331,7 +345,7 @@ Previous report (v1.1.0)
     Nx, biome.json (project-local edits; re-apply after `specify integration
     upgrade`)
   - ✅ CLAUDE.local.md, AGENTS.md — stack and gate tables
-- Follow-up TODOs: none in this file. Notion's To-decide items T01–T12 stay open
+- Follow-up TODOs: none in this file. The documentation's To-decide items T01–T12 stay open
   by design (Additional Constraints).
 -->
 
@@ -402,8 +416,8 @@ The owner's stack is decided, not proposed:
 - A substitute for any of these, or a second framework doing the same job,
   MUST NOT land without an amendment.
 
-Rationale: the stack is the owner's, and every design page in Notion assumes
-it; a quiet substitute invalidates the documentation the build follows.
+Rationale: the stack is the owner's, and every design page in the
+documentation assumes it; a quiet substitute invalidates the documentation the build follows.
 
 ### IV. One Repository, One Toolchain
 
@@ -497,9 +511,9 @@ waits for the owner:
 
 The tracker is GitHub: each story, task and epic is an issue in the private
 `george-hutanu/motor-fix-specs`, its ST or EP id first in the title, with its
-Status and dates in Project "MotorFix" (#11). Ready to work is the `ready to
-work` label, on a To do issue whose every dependency is closed or Done. A task
-that started on Notion before this finishes there.
+Status and dates in Project "MotorFix" (#11), the only tracker. Ready to work
+is the `ready to work` label, on a To do issue whose every dependency is
+closed or Done.
 
 The main checkout is a mirror of `origin/main`: it holds no edits to tracked
 files, and every change rides a PR from a worktree. `SPECKIT_ALLOW_MAIN_EDIT=1`
@@ -530,7 +544,7 @@ tester, or with a passed PR left unmerged is not finished.
 - The architecture documentation in the specs repo (`.motor-fix-specs/`:
   `llms.txt` first, then `docs/explanation/architecture/`,
   `docs/explanation/decisions/` and `docs/reference/stack.md`), its only
-  source since the Notion pages froze, is the source of truth for
+  source, is the source of truth for
   the choices it marks Proposed (Prisma, BullMQ, server-sent events, PostGIS,
   signed uploads, and the rest); each is confirmed or replaced per feature in
   `/speckit-plan`, citing the `docs/` file. Its To-decide items (T01–T12, among them hosting, maps, e-mail,
@@ -656,4 +670,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-10
+**Version**: 3.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-10

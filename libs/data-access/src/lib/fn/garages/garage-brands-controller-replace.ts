@@ -7,7 +7,7 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { GarageBrandAnswerDto } from '../../models/garage-brand-answer-dto';
+import { GarageBrandOwnerAnswerDto } from '../../models/garage-brand-owner-answer-dto';
 import { ReplaceGarageBrandsDto } from '../../models/replace-garage-brands-dto';
 
 export interface GarageBrandsControllerReplace$Params {
@@ -15,7 +15,7 @@ export interface GarageBrandsControllerReplace$Params {
       body: ReplaceGarageBrandsDto
 }
 
-export function garageBrandsControllerReplace(http: HttpClient, rootUrl: string, params: GarageBrandsControllerReplace$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageBrandAnswerDto>> {
+export function garageBrandsControllerReplace(http: HttpClient, rootUrl: string, params: GarageBrandsControllerReplace$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageBrandOwnerAnswerDto>> {
   const rb = new RequestBuilder(rootUrl, garageBrandsControllerReplace.PATH, 'put');
   if (params) {
     rb.path('garageId', params.garageId, {});
@@ -27,7 +27,7 @@ export function garageBrandsControllerReplace(http: HttpClient, rootUrl: string,
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<GarageBrandAnswerDto>;
+      return r as StrictHttpResponse<GarageBrandOwnerAnswerDto>;
     })
   );
 }

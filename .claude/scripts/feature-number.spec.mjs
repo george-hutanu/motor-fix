@@ -82,11 +82,11 @@ describe('four-digit feature numbers', () => {
 
   it('parses four-digit ids and feature folders in a capability', () => {
     const cap = parseCapability(
-      capability('docs', { requirements: [[T('1018', '001'), 'exports']], retired: [[T('1018', '002'), 'gone']], features: ['1018-notion-docs'] }),
+      capability('docs', { requirements: [[T('1018', '001'), 'exports']], retired: [[T('1018', '002'), 'gone']], features: ['1018-docs-move'] }),
     );
     assert.deepEqual([...cap.requirements.keys()], [T('1018', '001')]);
     assert.deepEqual([...cap.retired.keys()], [T('1018', '002')]);
-    assert.deepEqual(cap.features, ['1018-notion-docs']);
+    assert.deepEqual(cap.features, ['1018-docs-move']);
   });
 
   it('parses four-digit ids in a Spec Delta Modifies and Removes', () => {

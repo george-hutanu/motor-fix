@@ -11,7 +11,7 @@ const DEFERRED = `# Deferred — feature
 Verified findings that are real but not this change.
 
 - [ ] \`.claude/scripts/pr-test/post.mjs:125\` — **medium** — \`--add\` writes the merged findings back (pr-tester lap 1 on PR #21, 2026-10-04).
-- [ ] \`.claude/hooks/merge-gate.mjs\` — **low** — a merge through graphql is not gated (pr-tester lap 1). — Notion: https://app.notion.com/p/abc123
+- [ ] \`.claude/hooks/merge-gate.mjs\` — **low** — a merge through graphql is not gated (pr-tester lap 1). — Issue: https://github.com/george-hutanu/motor-fix-specs/issues/abc123
 - [x] \`scripts/old.ts:3\` — **low** — already fixed (code-reviewer).
 - LOW (code-reviewer): \`scripts/test-suites.spec.ts\` proves the split only for two projects.
 - MEDIUM decision (code-reviewer): \`pull_request\` keeps its default types.
@@ -20,8 +20,8 @@ Verified findings that are real but not this change.
 `;
 
 const ctx = {
-  story: 'https://app.notion.com/p/3ef607bff0d2812185effb0ff2095302',
-  epic: 'https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707',
+  story: 'https://github.com/george-hutanu/motor-fix-specs/issues/3ef607bff0d2812185effb0ff2095302',
+  epic: 'https://github.com/george-hutanu/motor-fix-specs/issues/3ee607bff0d281188cb4c6724bd45707',
   pr: 'https://github.com/george-hutanu/motor-fix/pull/21',
   storyId: 'ST-434',
 };
@@ -48,16 +48,16 @@ describe('reading deferred.md', () => {
   });
 
   it('knows which are already filed or resolved', () => {
-    assert.equal(entries[1].notion, 'https://app.notion.com/p/abc123');
+    assert.equal(entries[1].issue, 'https://github.com/george-hutanu/motor-fix-specs/issues/abc123');
     assert.equal(entries[2].done, true);
     assert.deepEqual(entries.filter((e) => e.pending).map((e) => e.line), [entries[0].line, entries[3].line, entries[4].line, entries[5].line]);
   });
 });
 
-describe('the Notion task for a debt', () => {
+describe('the tracker task for a debt', () => {
   const [entry] = parseDeferred(DEFERRED);
 
-  it('is a To do Tech debt row in MotorFix stories, with the epic, and a priority from the severity', () => {
+  it('is a To do Tech debt task, with the epic, and a priority from the severity', () => {
     const t = taskFor(entry, ctx);
     assert.equal(t.properties['Issue type'], 'Tech debt');
     assert.equal(t.properties.Status, 'To do');
@@ -96,7 +96,7 @@ describe('the Notion task for a debt', () => {
 
   it('adds the feature relation only when one is known', () => {
     assert.equal(taskFor(entry, ctx).properties.Feature, undefined);
-    assert.deepEqual(JSON.parse(taskFor(entry, { ...ctx, feature: 'https://app.notion.com/p/f1' }).properties.Feature), ['https://app.notion.com/p/f1']);
+    assert.deepEqual(JSON.parse(taskFor(entry, { ...ctx, feature: 'https://github.com/george-hutanu/motor-fix-specs/issues/f1' }).properties.Feature), ['https://github.com/george-hutanu/motor-fix-specs/issues/f1']);
   });
 
   it('leaves the epic relation out for a story with no epic, never sending [null]', () => {
@@ -110,33 +110,35 @@ describe('the Notion task for a debt', () => {
 });
 
 describe('writing the task back', () => {
-  it('appends the Notion URL to that line only, so a re-run files nothing twice', () => {
+  it('appends the issue URL to that line only, so a re-run files nothing twice', () => {
     const entries = parseDeferred(DEFERRED);
-    const next = markFiled(DEFERRED, entries[0].line, 'https://app.notion.com/p/new1');
+    const next = markFiled(DEFERRED, entries[0].line, 'https://github.com/george-hutanu/motor-fix-specs/issues/new1');
     const again = parseDeferred(next);
-    assert.equal(again[0].notion, 'https://app.notion.com/p/new1');
+    assert.equal(again[0].issue, 'https://github.com/george-hutanu/motor-fix-specs/issues/new1');
     assert.equal(again[0].pending, false);
     assert.equal(next.split('\n').length, DEFERRED.split('\n').length);
-    assert.equal(markFiled(next, entries[0].line, 'https://app.notion.com/p/other'), next);
+    assert.equal(markFiled(next, entries[0].line, 'https://github.com/george-hutanu/motor-fix-specs/issues/other'), next);
   });
 
-  // @traces 1036-FR-009
+  // @traces 1036-FR-009 1037-FR-007
   it('marks a GitHub issue with its own label, and a bullet carrying one is filed', () => {
+    const other = parseDeferred('- **low** — `a.mjs` — one (code-reviewer) — Page: https://example.test/p/1\n');
+    assert.equal(other[0].pending, true, 'only an Issue address counts as filed');
     const entries = parseDeferred(DEFERRED);
     const url = 'https://github.com/george-hutanu/motor-fix-specs/issues/901';
     const next = markFiled(DEFERRED, entries[0].line, url, 'Issue');
     assert.ok(next.split('\n')[entries[0].line].endsWith(` — Issue: ${url}`));
     const again = parseDeferred(next);
-    assert.equal(again[0].notion, url);
+    assert.equal(again[0].issue, url);
     assert.equal(again[0].pending, false);
     assert.ok(!again[0].title.includes(url), 'the URL never reaches the title');
     assert.equal(markFiled(next, entries[0].line, 'https://github.com/george-hutanu/motor-fix-specs/issues/902', 'Issue'), next);
   });
 
   it('refuses a line that is not a bullet', () => {
-    assert.throws(() => markFiled(DEFERRED, 0, 'https://app.notion.com/p/x'), /not a bullet/);
-    assert.throws(() => markFiled(DEFERRED, 99, 'https://app.notion.com/p/x'), /not a bullet/);
-    assert.throws(() => markFiled(DEFERRED, Number('x'), 'https://app.notion.com/p/x'), /not a bullet/);
+    assert.throws(() => markFiled(DEFERRED, 0, 'https://github.com/george-hutanu/motor-fix-specs/issues/x'), /not a bullet/);
+    assert.throws(() => markFiled(DEFERRED, 99, 'https://github.com/george-hutanu/motor-fix-specs/issues/x'), /not a bullet/);
+    assert.throws(() => markFiled(DEFERRED, Number('x'), 'https://github.com/george-hutanu/motor-fix-specs/issues/x'), /not a bullet/);
   });
 });
 
@@ -157,8 +159,8 @@ describe('the command line', () => {
     assert.equal(main(['plan', file, '--story', ctx.story, '--epic', ctx.epic, '--pr', ctx.pr, '--id', 'ST-434']), 0);
     const plan = JSON.parse(out.at(-1));
     assert.equal(plan.length, 4);
-    assert.equal(main(['mark', file, '--line', String(plan[0].line), '--url', 'https://app.notion.com/p/n1']), 0);
-    assert.match(readFileSync(file, 'utf8'), /post\.mjs:125.*Notion: https:\/\/app\.notion\.com\/p\/n1/);
+    assert.equal(main(['mark', file, '--line', String(plan[0].line), '--url', 'https://github.com/george-hutanu/motor-fix-specs/issues/n1']), 0);
+    assert.match(readFileSync(file, 'utf8'), /post\.mjs:125.*Issue: https:\/\/github\.com\/george-hutanu\/motor-fix-specs\/issues\/n1/);
     out.length = 0;
     main(['plan', file, '--story', ctx.story, '--epic', ctx.epic, '--pr', ctx.pr, '--id', 'ST-434']);
     assert.equal(JSON.parse(out.at(-1)).length, 3);

@@ -3,10 +3,8 @@
 Read by the session that receives `NEXT: tail #<n>`, and by the tail agent, after `SKILL.md`.
 
 The tracker is the story's GitHub issue (`speckit-tracker-sync`, log
-`tracker-sync.md`). A feature that started on Notion (`notion-sync.md`, no
-`tracker-sync.md`) finishes there: read `speckit-notion-sync` and
-`notion-sync.md` wherever these steps name the tracker; `lifecycle.mjs`
-picks the same on its own.
+`tracker-sync.md`), for every feature: one whose folder still holds an older
+log moves to `tracker-sync.md` at its next event.
 
 ## The wait
 

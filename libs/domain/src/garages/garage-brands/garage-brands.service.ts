@@ -2,15 +2,10 @@ import {
   FUELS,
   type Fuel,
   fuelColumns,
-  type GarageBrandAnswerDto,
+  type GarageBrandOwnerAnswerDto,
   type ReplaceGarageBrandsDto,
 } from '@motor-fix/contracts';
-import {
-  ConflictException,
-  HttpStatus,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { assertCatalogued } from './write-garage-brands';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
@@ -23,7 +18,7 @@ import type {
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
-import { brandAnswer } from '../brand-answer';
+import { brandAnswerWithJobs } from '../brand-answer';
 
 export const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
@@ -66,7 +61,45 @@ function assertFuelsTaken(dto: ReplaceGarageBrandsDto) {
   );
 }
 
-type Wanted = { stance: GarageBrandStance; fuels?: Fuel[] };
+// Jobs, like fuels, belong to a taken brand only.
+function assertJobsTaken(dto: ReplaceGarageBrandsDto) {
+  const at = dto.brands.findIndex(
+    (b) => b.stance === 'does_not_take' && b.jobs !== undefined,
+  );
+  if (at === -1) return;
+  throw refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'Only a taken brand has jobs',
+    [{ code: 'jobs_on_refused', field: `brands[${at}].jobs` }],
+  );
+}
+
+// A brand is ticked only for jobs on the garage's price list.
+function assertJobsPriced(dto: ReplaceGarageBrandsDto, priceList: string[]) {
+  const at = dto.brands.findIndex((b) =>
+    b.jobs?.some((id) => !priceList.includes(id.toLowerCase())),
+  );
+  if (at === -1) return;
+  throw refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'A job is not on the price list',
+    [{ code: 'job_not_priced', field: `brands[${at}].jobs` }],
+  );
+}
+
+// The garage's jobs once each, in the order its price list shows them.
+async function priceListOf(tx: Prisma.TransactionClient, garageId: string) {
+  const prices = await tx.garagePrice.findMany({
+    orderBy: { position: 'asc' },
+    select: { jobTypeId: true },
+    where: { garageId },
+  });
+  return [...new Set(prices.map((p) => p.jobTypeId))];
+}
+
+type Wanted = { stance: GarageBrandStance; fuels?: Fuel[]; jobs?: string[] };
 
 // The rules that span a garage's brand row and its jobs; the one-row rules
 // (no fuel on a refused brand, the text limits) are CHECKs in the database.
@@ -84,24 +117,28 @@ export class GarageBrandsService {
     actor: Actor,
     garageId: string,
     dto: ReplaceGarageBrandsDto,
-  ): Promise<GarageBrandAnswerDto> {
+  ): Promise<GarageBrandOwnerAnswerDto> {
     assertGarageOwner(actor, garageId);
     assertFuelsTaken(dto);
+    assertJobsTaken(dto);
     return this.prisma.$transaction(async (tx) => {
       const garage = await lockGarage(tx, garageId);
       // Stored ids are lowercase; a uuid is accepted in either case.
       const wanted = new Map(
-        dto.brands.map(({ brandId, fuels, stance }) => [
+        dto.brands.map(({ brandId, fuels, jobs, stance }) => [
           brandId.toLowerCase(),
-          { fuels, stance },
+          { fuels, jobs: jobs?.map((id) => id.toLowerCase()), stance },
         ]),
       );
       await assertCatalogued(tx, [...wanted.keys()]);
+      const priceList = await priceListOf(tx, garageId);
+      assertJobsPriced(dto, priceList);
       const { changed, fields } = await this.applyStances(
         tx,
         actor,
         garageId,
         wanted,
+        priceList,
       );
       const texts = {
         brandNote: dto.brandNote ?? null,
@@ -132,41 +169,119 @@ export class GarageBrandsService {
         },
         where: { garageId },
       });
-      return brandAnswer(rows, texts);
+      const ticks = await tx.garageBrandJob.findMany({
+        select: { brandId: true, jobTypeId: true },
+        where: { garageId },
+      });
+      return brandAnswerWithJobs(rows, texts, ticks, priceList);
     });
   }
 
-  // Switches off the brands left out, then sets the others; returns the
-  // brands whose stance or fuels changed, and which of the two did.
+  // Switches off the brands left out, then sets the others and the jobs of
+  // each taken one; returns the brands whose stance, fuels or jobs changed,
+  // and which of them did.
   private async applyStances(
     tx: Prisma.TransactionClient,
     actor: Actor,
     garageId: string,
     wanted: Map<string, Wanted>,
+    priceList: string[],
   ) {
     const rows = await tx.garageBrand.findMany({ where: { garageId } });
     const changed: string[] = [];
-    const fields = new Set<'brands' | 'brand_fuels'>();
+    const fields = new Set<'brands' | 'brand_fuels' | 'brand_jobs'>();
     for (const row of rows.filter((r) => !wanted.has(r.brandId))) {
       await this.switchOff(tx, actor, row);
       changed.push(row.brandId);
       fields.add('brands');
     }
-    for (const [brandId, { fuels, stance }] of wanted) {
-      const change = await this.setStance(
+    for (const [brandId, brand] of wanted) {
+      const moved = await this.setBrand(
         tx,
         actor,
         garageId,
         brandId,
-        stance,
-        fuels,
+        brand,
+        priceList,
       );
-      if (!change.stance && !change.fuels) continue;
+      if (moved.length === 0) continue;
       changed.push(brandId);
-      if (change.stance) fields.add('brands');
-      if (change.fuels) fields.add('brand_fuels');
+      for (const field of moved) fields.add(field);
     }
     return { changed, fields };
+  }
+
+  // Sets one brand's stance, fuels and jobs; returns the event fields moved.
+  private async setBrand(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    garageId: string,
+    brandId: string,
+    { fuels, jobs, stance }: Wanted,
+    priceList: string[],
+  ) {
+    const change = await this.setStance(
+      tx,
+      actor,
+      garageId,
+      brandId,
+      stance,
+      fuels,
+    );
+    // A brand taken now does every job of the price list unless told.
+    const ticked = jobs ?? (change.stance ? priceList : undefined);
+    const jobsMoved =
+      stance === 'works_on' &&
+      ticked !== undefined &&
+      (await this.setJobs(tx, actor, garageId, brandId, ticked));
+    return [
+      ...(change.stance ? ['brands' as const] : []),
+      ...(change.fuels ? ['brand_fuels' as const] : []),
+      ...(jobsMoved ? ['brand_jobs' as const] : []),
+    ];
+  }
+
+  // Makes a taken brand's job rows exactly `ticked`, one entry per row
+  // created or deleted; says whether any moved.
+  private async setJobs(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    garageId: string,
+    brandId: string,
+    ticked: string[],
+  ) {
+    const held = (
+      await tx.garageBrandJob.findMany({
+        select: { jobTypeId: true },
+        where: { brandId, garageId },
+      })
+    ).map((r) => r.jobTypeId);
+    const gone = held.filter((id) => !ticked.includes(id));
+    const added = ticked.filter((id) => !held.includes(id));
+    await tx.garageBrandJob.deleteMany({
+      where: { brandId, garageId, jobTypeId: { in: gone } },
+    });
+    await tx.garageBrandJob.createMany({
+      data: added.map((jobTypeId) => ({ brandId, garageId, jobTypeId })),
+    });
+    const by = { actorId: actor.accountId, actorRole: actor.role, garageId };
+    await this.audit.recordMany(tx, [
+      ...gone.map((jobTypeId) => ({
+        ...by,
+        action: 'delete' as const,
+        oldValue: { brandId },
+        subjectId: jobTypeId,
+        subjectType: 'garage_brand_job',
+      })),
+      ...added.map((jobTypeId) => ({
+        ...by,
+        action: 'create' as const,
+        newValue: { brandId },
+        subjectId: jobTypeId,
+        subjectType: 'garage_brand_job',
+      })),
+    ]);
+    return gone.length + added.length > 0;
   }
 
   private async applyTexts(
@@ -229,15 +344,16 @@ export class GarageBrandsService {
       subjectId: brandId,
       subjectType: 'garage_brand',
     });
-    for (const job of jobs) {
-      await this.audit.record(tx, {
+    await this.audit.recordMany(
+      tx,
+      jobs.map((job) => ({
         ...change,
-        action: 'delete',
+        action: 'delete' as const,
         oldValue: { brandId },
         subjectId: job.jobTypeId,
         subjectType: 'garage_brand_job',
-      });
-    }
+      })),
+    );
   }
 
   async stanceFor(
@@ -306,49 +422,16 @@ export class GarageBrandsService {
       where: { brandId, garageId },
     });
     await tx.garageBrandJob.deleteMany({ where: { brandId, garageId } });
-    for (const job of jobs) {
-      await this.audit.record(tx, {
+    await this.audit.recordMany(
+      tx,
+      jobs.map((job) => ({
         ...change,
-        action: 'delete',
+        action: 'delete' as const,
         oldValue: { brandId },
         subjectId: job.jobTypeId,
         subjectType: 'garage_brand_job',
-      });
-    }
+      })),
+    );
     return result;
-  }
-
-  async addJob(
-    tx: Prisma.TransactionClient,
-    actor: Actor,
-    garageId: string,
-    brandId: string,
-    jobTypeId: string,
-  ) {
-    assertGarage(actor, garageId);
-    const row = await tx.garageBrand.findUnique({
-      select: { stance: true },
-      where: { garageId_brandId: { brandId, garageId } },
-    });
-    if (row?.stance !== 'works_on') {
-      throw new ConflictException({
-        code: 'brand_not_worked_on',
-        message: 'The garage does not work on this brand',
-      });
-    }
-    const { count } = await tx.garageBrandJob.createMany({
-      data: { brandId, garageId, jobTypeId },
-      skipDuplicates: true,
-    });
-    if (count === 0) return;
-    await this.audit.record(tx, {
-      action: 'create',
-      actorId: actor.accountId,
-      actorRole: actor.role,
-      garageId,
-      newValue: { brandId },
-      subjectId: jobTypeId,
-      subjectType: 'garage_brand_job',
-    });
   }
 }

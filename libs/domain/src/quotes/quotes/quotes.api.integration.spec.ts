@@ -294,6 +294,7 @@ describe('POST /quotes', () => {
         await real.record(tx, entry);
       },
       recordChanges: (...args) => real.recordChanges(...args),
+      recordMany: (...args) => real.recordMany(...args),
     };
     const service = new QuotesService(prisma, failing, outbox);
 

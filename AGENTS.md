@@ -35,9 +35,8 @@ The tracker is GitHub: each story, task and epic is an issue in the private
 `george-hutanu/motor-fix-specs`, its ST or EP id first in the title, with
 its Status, dates and PR in Project "MotorFix" (#11); `speckit-tracker-sync`
 (`.claude/scripts/tracker-sync.mjs`, log `specs/<feature>/tracker-sync.md`)
-writes them. A task that started on Notion (its folder holds
-`notion-sync.md` and no `tracker-sync.md`) finishes there through
-`speckit-notion-sync`; `lifecycle.mjs` picks the same on its own.
+writes them, for every task. A folder that still holds an older log moves
+to `tracker-sync.md` at its next event.
 
 - **Check the design before starting.** Before any code, read the story's
   boards in the clickable mock (the story's `Design` and `Design boards`
@@ -156,7 +155,7 @@ writes them. A task that started on Notion (its folder holds
   same stage as the tracker. Next to its one stage label a PR carries its type
   (`feature`, `bug`, `tech debt`, …, from the title), `breaking`, its scope,
   its epic, `ui` and `dependencies` where they apply (table in
-  `speckit-notion-sync`, §2b, which `speckit-tracker-sync` shares); the merge removes the stage labels.
+  `speckit-tracker-sync`, §2a); the merge removes the stage labels.
 
   No step waits for the user: opening the draft, pushing, marking it ready,
   merging on green CI and the tracker writes are all standing instructions. The
@@ -171,10 +170,11 @@ writes them. A task that started on Notion (its folder holds
   the Build brief, decisions taken on the owner's behalf, deferred follow-ups,
   open questions. `/speckit-archive` will not close a feature until the
   refresh is logged after its finish, in `tracker-sync.md` or the merged
-  PR's finish comment (`notion-ready.mjs check -`).
-- **Plans:** one build-timeline database per epic under Delivery › Plans in
-  Notion, and its build plan as a file in the specs repo's
-  `docs/reference/build-plans/` (`speckit-notion-sync plan`).
+  PR's finish comment (`tracker/ready.mjs check -`).
+- **Plans:** each epic's build plan is a file in the specs repo's
+  `docs/reference/build-plans/`, written with `llms.txt` in one specs-repo
+  commit (`speckit-tracker-sync plan`, §7); its waves and blocked-by edges
+  are the epic's sub-issues and their "blocked by" links.
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
   `after_specify`, `before_plan`, `before_implement`), and so do
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
@@ -264,7 +264,7 @@ its `docs/` holds the product documentation, organised by Diátaxis
 (`tutorials/`, `how-to/`, `reference/`, `explanation/`, decisions one file
 each in `explanation/decisions/`), the repo its only source; `llms.txt` at
 its root lists every page with its summary, so an agent reads it first, and
-`docs/index.json` maps each old Notion id to its file. Its
+`docs/index.json` maps each old page id to its file. Its
 `scripts/docs-lint.mjs` checks the pages; `specs-repo.mjs commit` runs it before a docs change goes in, and no Actions workflow runs it.
 `node .claude/scripts/specs-repo.mjs ensure` clones, adopts, moves an older
 clone at `specs/` into place or fast-forwards it (npm `prepare` and
@@ -286,11 +286,10 @@ that variable, so the laptop behaves as before.
   `npm ci`, the Docker daemon, `docker compose pull postgres redis` unless
   both images are there; it is idempotent and unverified until the first
   real cloud run). Variables, by
-  name only: `NOTION_TOKEN`, `JEV`, `GH_PROJECT_TOKEN` (the tracker's, since the proxy's `GH_TOKEN` cannot reach Project #11), and from `.env.example` the ones the
+  name only: `JEV`, `GH_PROJECT_TOKEN` (the tracker's, since the proxy's `GH_TOKEN` cannot reach Project #11), and from `.env.example` the ones the
   tests read (`DATABASE_URL`, `REDIS_URL`, `AUTH_TOKEN_SECRET`; CI's job env
   in `.github/workflows/ci.yml` lists the end-to-end set). Network level
-  Trusted, or a custom list that allows `api.notion.com` and
-  `api.typesafe.ai`.
+  Trusted, or a custom list that allows `api.typesafe.ai`.
 - **Node and Playwright.** The image puts Node 22 first on PATH;
   `cloud-setup.sh` puts an installed Node 24 first instead (one marked line
   at the top of `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set) and installs
@@ -299,8 +298,8 @@ that variable, so the laptop behaves as before.
   `proxy-injected`; nothing overwrites them, and no gh login is needed.
   The proxy refuses `workflow_dispatch`, commit statuses and GraphQL (so
   every `gh pr …` fails); REST pushes, reviews, comments, labels, ready and
-  merge go through. `lifecycle.mjs`, the `stop:pr-lifecycle` gate and
-  `notion-sync.mjs` fall back to REST on their own
+  merge go through. `lifecycle.mjs` and the `stop:pr-lifecycle` gate fall
+  back to REST on their own
   (`.claude/scripts/lib/gh-rest.mjs`); by hand, run
   `node .claude/scripts/gh.mjs` in place of `gh` for `pr
   list|view|create|edit|ready|comment|checks` (`--watch` too) and `label
@@ -327,10 +326,7 @@ that variable, so the laptop behaves as before.
   before reading it.
 - **Tools.** The Workflow and Artifact tools are unverified in the cloud:
   `/speckit-review` falls back to Agent-tool reviewers, and
-  `/speckit-design-check` logs a mock it cannot open. The Notion tool lists
-  in `.claude/agents/org-researcher.md`, `spec-reviewer.md` and
-  `.claude/settings.json` name connector-id prefixes; a cloud session's
-  connector prefix may differ and must be added to them.
+  `/speckit-design-check` logs a mock it cannot open.
 
 ## Folder structure
 

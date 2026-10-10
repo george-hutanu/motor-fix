@@ -32,7 +32,7 @@ const POINTER = [
   '.claude/skills/speckit-auto/tail.md',
   '.claude/skills/speckit-auto/hand-off.md',
   '.claude/skills/speckit-pr-test/SKILL.md',
-  '.claude/skills/speckit-notion-sync/SKILL.md',
+  '.claude/skills/speckit-tracker-sync/SKILL.md',
 ];
 const OLD = [
   'unless they are one-line fixes',

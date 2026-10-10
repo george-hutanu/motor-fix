@@ -6,6 +6,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { writeGaragePayments } from './write-garage-payments';
+import { AuditService } from '../../audit/audit.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
@@ -122,6 +123,7 @@ async function world({ courtesyCar = true } = {}) {
     nord,
     other: bearer(radu, 'garage'),
     owner: bearer(mihai, 'garage'),
+    ownerId: mihai,
     receptionist: bearer(ioana, 'receptionist'),
     tesla: await brand('Tesla'),
   };
@@ -835,7 +837,13 @@ describe('the garage table refusing impossible courtesy car rows', () => {
 
 describe('writing brands from a step 2 section', () => {
   const write = (w: World, section: Record<string, unknown>) =>
-    prisma.$transaction((tx) => writeGarageBrands(tx, w.nord.id, section));
+    prisma.$transaction((tx) =>
+      writeGarageBrands(tx, w.nord.id, section, {
+        actorId: w.ownerId,
+        audit: new AuditService(),
+        jobs: [],
+      }),
+    );
   const refused = async (promise: Promise<unknown>) => {
     const error = await promise.then(
       () => undefined,
