@@ -545,7 +545,7 @@ const signInWith = (email: string) =>
     .set('X-Forwarded-For', address())
     .send({ email, password: PASSWORD });
 
-// @traces 139-edit-my-details-FR-008
+// @traces 139-FR-008
 describe('opening the link of an e-mail change', () => {
   it('sets the new address, confirmed now, and records it with one event', async () => {
     const { id } = await signUp();
@@ -638,7 +638,7 @@ describe('opening the link of an e-mail change', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-009
+// @traces 139-FR-009
 describe('a change link that no longer works', () => {
   it('refuses a link older than 24 hours and keeps the address', async () => {
     const { id } = await signUp();
@@ -770,8 +770,8 @@ describe('a change link that no longer works', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-010
-// @traces 139-edit-my-details-FR-012
+// @traces 139-FR-010
+// @traces 139-FR-012
 describe('asking again from the panel', () => {
   it('sends a new link to the pending address and voids the older one', async () => {
     const { id } = await signUp();

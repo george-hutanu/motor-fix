@@ -149,7 +149,7 @@ describe('api conventions', () => {
     });
   });
 
-  // @traces 139-edit-my-details-FR-004
+  // @traces 139-FR-004
   it('describes the change of my details in the OpenAPI document, every field optional', async () => {
     app = await start();
 

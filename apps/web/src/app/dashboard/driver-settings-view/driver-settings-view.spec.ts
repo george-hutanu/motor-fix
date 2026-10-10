@@ -16,7 +16,7 @@ class FakePushPanel {}
 class FakeNotifications {}
 
 describe("the driver's settings", () => {
-  // @traces 139-edit-my-details-FR-001
+  // @traces 139-FR-001
   it("shows the driver's details, this device's push panel, then the notification switches", () => {
     TestBed.overrideComponent(DriverSettingsView, {
       add: { imports: [FakeMyDetails, FakePushPanel, FakeNotifications] },

@@ -166,7 +166,7 @@ describe('changing my language', () => {
     expect(await languageEntries(id)).toHaveLength(0);
   });
 
-  // @traces 139-edit-my-details-FR-004
+  // @traces 139-FR-004
   it('takes a body with no language, and changes nothing', async () => {
     const id = await account('andrei', ['driver']);
 

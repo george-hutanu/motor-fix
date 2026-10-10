@@ -88,9 +88,9 @@ afterEach(() => {
   });
 });
 
-// @traces 139-edit-my-details-FR-011
-// @traces 139-edit-my-details-FR-013
-// @traces 139-edit-my-details-FR-018
+// @traces 139-FR-011
+// @traces 139-FR-013
+// @traces 139-FR-018
 describe('the phone dialog', () => {
   it('asks for the number in a phone field that starts with +40', async () => {
     await open();

@@ -76,8 +76,8 @@ afterEach(() => {
   });
 });
 
-// @traces 139-edit-my-details-FR-006
-// @traces 139-edit-my-details-FR-007
+// @traces 139-FR-006
+// @traces 139-FR-007
 describe('the e-mail dialog', () => {
   it('asks for the new address with one e-mail field and a send button', async () => {
     await open();

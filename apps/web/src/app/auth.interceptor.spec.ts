@@ -113,7 +113,7 @@ describe('authInterceptor', () => {
     call.flush({});
   });
 
-  // @traces 139-edit-my-details-FR-014
+  // @traces 139-FR-014
   it('sends the token with the password change, a signed-in call under auth', () => {
     const { http, server } = setup('abc');
 
@@ -124,7 +124,7 @@ describe('authInterceptor', () => {
     call.flush({});
   });
 
-  // @traces 139-edit-my-details-FR-015
+  // @traces 139-FR-015
   it('passes a wrong password on without renewing, so it is not sent and counted twice', async () => {
     const { http, server, session } = setup('abc');
 

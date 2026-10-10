@@ -19,8 +19,8 @@ function check<T extends object>(type: new () => T, body: object) {
   return { dto, failed };
 }
 
-// @traces 139-edit-my-details-FR-004
-// @traces 139-edit-my-details-FR-005
+// @traces 139-FR-004
+// @traces 139-FR-005
 describe('the name and city of my details', () => {
   it('takes a name and a city, trimmed, with no language', () => {
     const { dto, failed } = check(UpdateMeDto, {
@@ -93,7 +93,7 @@ describe('the name and city of my details', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-006
+// @traces 139-FR-006
 describe('a new e-mail address', () => {
   it('is trimmed and lower-cased', () => {
     const { dto, failed } = check(EmailChangeDto, {
@@ -115,7 +115,7 @@ describe('a new e-mail address', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-011
+// @traces 139-FR-011
 describe('a new phone number', () => {
   it('reads a Romanian mobile as typed', () => {
     const { dto, failed } = check(PhoneChangeDto, { phone: '0722 123 456' });
@@ -139,8 +139,8 @@ describe('a new phone number', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-014
-// @traces 139-edit-my-details-FR-016
+// @traces 139-FR-014
+// @traces 139-FR-016
 describe('a password change', () => {
   it('takes the current and the new password', () => {
     expect(

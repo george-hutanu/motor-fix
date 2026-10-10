@@ -256,7 +256,7 @@ const updates = (id: string) =>
     where: { kind: 'account.updated', subjectId: id },
   });
 
-// @traces 139-edit-my-details-FR-004
+// @traces 139-FR-004
 describe('changing my name and city', () => {
   it('saves both, answers who am I, and records each field and one event', async () => {
     const id = await account('Andrei M', ['driver']);
@@ -363,7 +363,7 @@ describe('changing my name and city', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-005
+// @traces 139-FR-005
 describe('a name or city that cannot be saved', () => {
   it.each([
     ['a name of 1 character', { name: 'A' }, 'name'],
@@ -388,7 +388,7 @@ describe('a name or city that cannot be saved', () => {
   );
 });
 
-// @traces 139-edit-my-details-FR-017
+// @traces 139-FR-017
 describe('who may change the details', () => {
   it('answers 401 sign_in_required with no session', async () => {
     const res = await patch(null, { city: 'Iași' });
@@ -412,7 +412,7 @@ describe('who may change the details', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-003
+// @traces 139-FR-003
 describe('who am I, for the details panel', () => {
   it('says no phone, no pending address and no password for a Google account', async () => {
     const id = await account('Maria', ['driver']);

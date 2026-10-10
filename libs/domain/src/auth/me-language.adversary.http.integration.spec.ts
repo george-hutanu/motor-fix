@@ -132,7 +132,7 @@ describe('PATCH /me with hostile bodies', () => {
   });
 
   // Every field of PATCH /me is optional since 139-edit-my-details.
-  // @traces 139-edit-my-details-FR-004
+  // @traces 139-FR-004
   it('takes an empty body and changes nothing', async () => {
     const id = await account('andrei', ['driver']);
 

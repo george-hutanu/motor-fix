@@ -93,7 +93,7 @@ function countEverySeries() {
 }
 
 // @traces 206-FR-016
-// @traces 139-edit-my-details-FR-019
+// @traces 139-FR-019
 describe('the product counters', () => {
   it.each([
     [

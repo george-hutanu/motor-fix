@@ -235,7 +235,7 @@ const down = {
 
 const ACCOUNT = '0b6f3a52-6c1e-4d7a-9f1e-2f4c5a6b7c8d';
 
-// @traces 139-edit-my-details-FR-012
+// @traces 139-FR-012
 describe('the hourly limit on links and codes for a contact change', () => {
   const key = `auth:change:${sha256(ACCOUNT)}`;
 
@@ -276,7 +276,7 @@ describe('the hourly limit on links and codes for a contact change', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-015
+// @traces 139-FR-015
 describe('the limit on wrong current passwords', () => {
   const key = `auth:password:${sha256(ACCOUNT)}`;
 

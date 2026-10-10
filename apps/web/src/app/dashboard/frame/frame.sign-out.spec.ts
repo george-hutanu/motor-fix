@@ -236,7 +236,7 @@ describe('a session ended elsewhere', () => {
     expect(navigate).toHaveBeenLastCalledWith('/');
   });
 
-  // @traces 139-edit-my-details-FR-014
+  // @traces 139-FR-014
   it('stays signed in through the session.revoked its own password change sent', async () => {
     const { live, navigate, session } = await render('driver', '/app/driver');
     session.keepsThroughRevoke.mockReturnValue(true);

@@ -92,8 +92,8 @@ afterEach(() => {
   });
 });
 
-// @traces 139-edit-my-details-FR-014
-// @traces 139-edit-my-details-FR-015
+// @traces 139-FR-014
+// @traces 139-FR-015
 describe('the password dialog', () => {
   it('asks for the current and the new password, each with its autocomplete', async () => {
     await open();
@@ -189,7 +189,7 @@ describe('the password dialog', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-016
+// @traces 139-FR-016
 describe('setting a password', () => {
   it('asks only for the new password, under "Setează o parolă"', async () => {
     await open(false);

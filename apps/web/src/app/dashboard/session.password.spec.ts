@@ -34,7 +34,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve));
 
 afterEach(() => jest.useRealTimers());
 
-// @traces 139-edit-my-details-FR-014
+// @traces 139-FR-014
 describe('changing the password from this tab', () => {
   it('sends the passwords to the password change', async () => {
     const { answer, api, session } = setup();

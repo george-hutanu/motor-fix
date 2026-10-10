@@ -1,11 +1,11 @@
-// @traces 139-edit-my-details-FR-001
-// @traces 139-edit-my-details-FR-002
-// @traces 139-edit-my-details-FR-004
-// @traces 139-edit-my-details-FR-006
-// @traces 139-edit-my-details-FR-008
-// @traces 139-edit-my-details-FR-011
-// @traces 139-edit-my-details-FR-013
-// @traces 139-edit-my-details-FR-014
+// @traces 139-FR-001
+// @traces 139-FR-002
+// @traces 139-FR-004
+// @traces 139-FR-006
+// @traces 139-FR-008
+// @traces 139-FR-011
+// @traces 139-FR-013
+// @traces 139-FR-014
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
@@ -46,11 +46,24 @@ async function speak(page: Page, language: 'RO' | 'EN') {
     .click();
 }
 
+// Below 768 px the header has no sign-in button; the bottom bar's Cont tab
+// opens the dialog.
+async function openSignIn(page: Page) {
+  await ready(page, '/ro/garages');
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await page
+      .getByRole('navigation', { name: 'Navigare principală' })
+      .getByRole('link', { name: 'Cont' })
+      .click();
+  } else {
+    await page
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+  }
+}
+
 async function signedInSettings(page: Page, language: 'RO' | 'EN') {
-  await ready(page, '/ro');
-  await page
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
+  await openSignIn(page);
   await signIn(page, ACCOUNTS.driver);
   await expect(page).toHaveURL('/app/driver');
   // The live stream stays open, so the page never goes network-idle.
@@ -209,10 +222,7 @@ test.describe('changing the e-mail address @seeded @mailbox', () => {
       await page.context().clearCookies();
       await page.setViewportSize({ height: size.height, width: size.width });
 
-      await ready(page, '/ro');
-      await page
-        .getByRole('button', { exact: true, name: 'Autentificare' })
-        .click();
+      await openSignIn(page);
       await signIn(page, old, { password: OWN_PASSWORD });
       await expect(page).toHaveURL('/app/driver');
       await page.goto(SETTINGS);
@@ -248,10 +258,7 @@ test.describe('changing the e-mail address @seeded @mailbox', () => {
       const other = await browser.newContext();
       const again = await other.newPage();
       await again.setViewportSize({ height: size.height, width: size.width });
-      await ready(again, '/ro');
-      await again
-        .getByRole('button', { exact: true, name: 'Autentificare' })
-        .click();
+      await openSignIn(again);
       await signIn(again, old, { password: OWN_PASSWORD });
       await expect(
         again.getByText('E‑mailul sau parola nu sunt corecte.'),
@@ -322,10 +329,7 @@ test.describe('changing the phone number @seeded @mailbox', () => {
       await page.context().clearCookies();
       await page.setViewportSize({ height: size.height, width: size.width });
 
-      await ready(page, '/ro');
-      await page
-        .getByRole('button', { exact: true, name: 'Autentificare' })
-        .click();
+      await openSignIn(page);
       await signIn(page, email, { password: OWN_PASSWORD });
       await expect(page).toHaveURL('/app/driver');
       await page.goto(SETTINGS);
@@ -356,10 +360,7 @@ test.describe('changing the phone number @seeded @mailbox', () => {
       const other = await browser.newContext();
       const again = await other.newPage();
       await again.setViewportSize({ height: size.height, width: size.width });
-      await ready(again, '/ro');
-      await again
-        .getByRole('button', { exact: true, name: 'Autentificare' })
-        .click();
+      await openSignIn(again);
       const signInDialog = again.getByRole('dialog', { name: 'Autentificare' });
       await signInDialog
         .getByRole('button', { name: 'Continuă cu telefonul' })
@@ -405,10 +406,7 @@ test.describe('changing the password @seeded', () => {
       await page.context().clearCookies();
       await page.setViewportSize({ height: size.height, width: size.width });
 
-      await ready(page, '/ro');
-      await page
-        .getByRole('button', { exact: true, name: 'Autentificare' })
-        .click();
+      await openSignIn(page);
       await signIn(page, email, { password: OWN_PASSWORD });
       await expect(page).toHaveURL('/app/driver');
       await page.goto(SETTINGS);
@@ -444,10 +442,7 @@ test.describe('changing the password @seeded', () => {
       const other = await browser.newContext();
       const again = await other.newPage();
       await again.setViewportSize({ height: size.height, width: size.width });
-      await ready(again, '/ro');
-      await again
-        .getByRole('button', { exact: true, name: 'Autentificare' })
-        .click();
+      await openSignIn(again);
       await signIn(again, email, { password: OWN_PASSWORD });
       await expect(
         again.getByText('E‑mailul sau parola nu sunt corecte.'),

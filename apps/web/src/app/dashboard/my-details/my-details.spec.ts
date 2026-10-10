@@ -115,7 +115,7 @@ function type(input: HTMLInputElement, value: string) {
 
 beforeEach(() => jest.mocked(toast).mockClear());
 
-// @traces 139-edit-my-details-FR-001
+// @traces 139-FR-001
 describe('the details panel', () => {
   it('shows each detail, a dash for what is missing, and who sees the phone', async () => {
     const { element } = await render();
@@ -171,8 +171,8 @@ describe('the details panel', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-002
-// @traces 139-edit-my-details-FR-004
+// @traces 139-FR-002
+// @traces 139-FR-004
 describe('editing the name and the city', () => {
   it('turns the two rows into labelled fields with Save and Cancel, the name focused', async () => {
     const { element } = await render({ city: 'Iași' });
@@ -313,8 +313,8 @@ describe('editing the name and the city', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-002
-// @traces 139-edit-my-details-FR-010
+// @traces 139-FR-002
+// @traces 139-FR-010
 describe('the e-mail row', () => {
   it('opens the e-mail dialog and shows the pending address it answers', async () => {
     const { element } = await render();
@@ -412,8 +412,8 @@ describe('the e-mail row', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-011
-// @traces 139-edit-my-details-FR-013
+// @traces 139-FR-011
+// @traces 139-FR-013
 describe('the phone row', () => {
   it('opens the phone dialog and shows the confirmed number it answers, saying so', async () => {
     const { element } = await render({ phone: '+40711111111' });
@@ -452,8 +452,8 @@ describe('the phone row', () => {
   });
 });
 
-// @traces 139-edit-my-details-FR-014
-// @traces 139-edit-my-details-FR-016
+// @traces 139-FR-014
+// @traces 139-FR-016
 describe('the password row', () => {
   it('opens the change dialog for an account with a password and says the others were signed out', async () => {
     const { element } = await render();
