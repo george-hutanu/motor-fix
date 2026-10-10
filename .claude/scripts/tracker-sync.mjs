@@ -386,7 +386,9 @@ async function refreshReady(ctx, { epic, confirm }) {
 }
 
 async function readyEvent(ctx) {
-  return { ready: await refreshReady(ctx, { epic: await epicOf(ctx), confirm: ctx.flags.tick }) };
+  // No --tick and no --hold: the hold review has not run, so its candidates are listed, not held.
+  const reviewed = ctx.flags.tick.length > 0 || ctx.flags.hold.length > 0;
+  return { ready: await refreshReady(ctx, { epic: await epicOf(ctx), confirm: reviewed ? ctx.flags.tick : undefined }) };
 }
 
 const PLACEHOLDER = /^_\(fill in: the story link[^\n]*\)_[ \t]*$/m;

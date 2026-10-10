@@ -370,6 +370,14 @@ describe("Ready to work is computed from the real state of each dependency", () 
     assert.ok(!labelsOf(gh2, 63).includes("ready to work"));
   });
 
+  it("a bare ready lists its candidates for the hold review rather than holding them", async () => {
+    const gh = world();
+    const r = await run(["ready"], { gh });
+    assert.ok(r.json.ready.review.includes("ST-330"), JSON.stringify(r.json.ready));
+    assert.ok(!r.json.ready.held.some((h) => h.id === "ST-330"), JSON.stringify(r.json.ready));
+    assert.ok(!labelsOf(gh, 63).includes("ready to work"));
+  });
+
   it("never labels the epic or a feature issue, and removes the started story's own label", async () => {
     const gh = world({ issues: [], items: {} });
     issueOf(gh, 60).labels.push({ name: "ready to work" });
