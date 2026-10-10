@@ -46,8 +46,6 @@ const GARAGES = [
   { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
 ];
 
-// Listed garages, so Home and search have a known count: 3 of 6 take Dacia.
-// Approved in an earlier month, so the admin's growth this month stays 0.
 // The catalogue's own rows for the brands the listed garages name.
 const BRANDS = [
   { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
@@ -67,6 +65,8 @@ const BRANDS = [
   { key: 'tesla', name: 'Tesla', popularity: 12, slug: 'tesla' },
 ];
 
+// Listed garages, so Home and search have a known count: 5 of 8 take Dacia.
+// Approved in an earlier month, so the admin's growth this month stays 0.
 // Every listed garage has a place, so a search near Bucharest or Cluj-Napoca
 // finds them; the mobile mechanic's seat is never shown, only its area.
 const LISTED: {

@@ -4,7 +4,11 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { publicGarages } from '../../garages/public-garages/public-garages';
-import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import type {
+  GarageBrandStance,
+  Prisma,
+  PrismaClient,
+} from '../../generated/prisma/client';
 import { garagesInArea, groupsOf, placed } from '../area/search-area';
 
 // The one order of the dial and the preview: the best rating, unreviewed
@@ -71,6 +75,8 @@ export class HomeService {
             brandId: true,
             stance: true,
           },
+          // A brand retired from the catalogue is in neither list.
+          where: { brand: { active: true } },
         },
         businessKind: true,
         cityName: true,
@@ -85,8 +91,10 @@ export class HomeService {
       take,
       where: { ...publicGarages(), ...group },
     });
-    const named = (brands: (typeof rows)[number]['brands'], stance: string) =>
-      brands.filter((b) => b.stance === stance).map((b) => b.brand.name);
+    const named = (
+      brands: (typeof rows)[number]['brands'],
+      stance: GarageBrandStance,
+    ) => brands.filter((b) => b.stance === stance).map((b) => b.brand.name);
     return rows.map((row) => ({
       businessKind: row.businessKind,
       doesNotTake: named(row.brands, 'does_not_take'),

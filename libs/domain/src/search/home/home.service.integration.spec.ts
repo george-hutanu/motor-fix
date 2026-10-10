@@ -475,6 +475,33 @@ describe('HomeService.forBrand: the brand lists', () => {
   });
 
   // @traces 227-FR-009
+  it('leaves a brand retired from the catalogue out of both lists', async () => {
+    const saab = (
+      await prisma.brand.create({
+        data: { active: false, key: 'saab', name: 'Saab', slug: 'saab' },
+      })
+    ).id;
+    const rover = (
+      await prisma.brand.create({
+        data: { active: false, key: 'rover', name: 'Rover', slug: 'rover' },
+      })
+    ).id;
+    await garage('retired-brands', [
+      [dacia, 'works_on'],
+      [saab, 'works_on'],
+      [rover, 'does_not_take'],
+    ]);
+
+    const { preview } = await home.forBrand('dacia');
+
+    expect(preview[0]).toMatchObject({
+      doesNotTake: [],
+      slug: 'retired-brands',
+      worksOn: ['Dacia'],
+    });
+  });
+
+  // @traces 227-FR-009
   it('gives a mobile mechanic its service radius and a fixed garage none', async () => {
     await garage('fixed', [[dacia, 'works_on']]);
     await garage('mobile', [[dacia, 'works_on']]);
