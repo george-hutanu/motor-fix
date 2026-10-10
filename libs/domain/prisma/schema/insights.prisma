@@ -30,3 +30,20 @@ model GarageResponseStats {
 
   @@map("garage_response_stats")
 }
+
+// A garage's distinct profile visitors on one Europe/Bucharest day, total and
+// by source, written by the night job from the live counters; holds no
+// visitor, address or browser.
+model GarageDailyFigures {
+  garageId             String   @map("garage_id") @db.Uuid
+  garage               Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  day                  DateTime @db.Date
+  // CHECK in the migration: never below 0.
+  profileViews         Int      @map("profile_views")
+  // Only the sources above 0, e.g. {"search": 2}.
+  profileViewsBySource Json     @default("{}") @map("profile_views_by_source")
+  writtenAt            DateTime @map("written_at") @db.Timestamptz(3)
+
+  @@id([garageId, day])
+  @@map("garage_daily_figures")
+}

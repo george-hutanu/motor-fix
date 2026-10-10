@@ -67,3 +67,12 @@ export function addLocalDays(at: Date, n: number): Date {
   const wall = at.getTime() + offset(at.getTime()) + n * DAY;
   return new Date(wall - offset(wall - offset(wall)));
 }
+
+// The ISO week holding `day`, "2026-W41": weeks start on Monday and belong to
+// the year that holds their Thursday.
+export function isoWeek(day: string): string {
+  const thursday = addDays(weekStart(day), 3);
+  const year = thursday.slice(0, 4);
+  const week = Math.floor(daysBetween(`${year}-01-01`, thursday) / 7) + 1;
+  return `${year}-W${String(week).padStart(2, '0')}`;
+}

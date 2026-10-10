@@ -101,6 +101,7 @@ model Garage {
   bookings                   Booking[]
   jobs                       Job[]
   responseStats              GarageResponseStats?
+  dailyFigures               GarageDailyFigures[]
 
   @@index([cityKey])
   @@map("garage")

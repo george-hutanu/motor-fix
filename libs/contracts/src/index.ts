@@ -41,6 +41,7 @@ export * from './plate';
 export * from './platform-rules.dto';
 export * from './price-range';
 export * from './problem';
+export * from './profile-views.dto';
 export * from './public-holidays.dto';
 export * from './public-live.dto';
 export * from './push-subscriptions.dto';

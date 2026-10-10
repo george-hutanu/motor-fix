@@ -6,6 +6,7 @@ import {
   addDays,
   atLocal,
   daysBetween,
+  isoWeek,
   localDay,
   monthStart,
   weekStart,
@@ -40,6 +41,25 @@ export interface Figures {
   previous?: Counts & { period: Period };
 }
 
+interface ViewsQuery {
+  by: 'day' | 'week';
+  from: string;
+  to: string;
+}
+
+export interface ViewsBucket {
+  bySource: Record<string, number>;
+  // The day, "2026-10-05", or the ISO week, "2026-W41".
+  key: string;
+  views: number;
+}
+
+// A calendar day written in full, "2026-10-05".
+const isDay = (value: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  !Number.isNaN(Date.parse(value)) &&
+  new Date(value).toISOString().slice(0, 10) === value;
+
 // A year, leap day included.
 const MAX_SPAN_DAYS = 365;
 const MINUTE = 60_000;
@@ -58,6 +78,42 @@ function rangeOf(from?: string, to?: string): [Period, Period] {
     { from, to },
     { from: addDays(before, -span), to: before },
   ];
+}
+
+function viewsSpan(query: ViewsQuery): Period {
+  if (query.by !== 'day' && query.by !== 'week')
+    throw invalidInput('by is day or week');
+  if (!isDay(query.from) || !isDay(query.to))
+    throw invalidInput('from and to are days, 2026-10-05');
+  return rangeOf(query.from, query.to)[0];
+}
+
+interface ViewsRow {
+  day: Date;
+  profileViews: number;
+  profileViewsBySource: unknown;
+}
+
+function bucketsOf(
+  rows: ViewsRow[],
+  from: string,
+  to: string,
+  by: ViewsQuery['by'],
+): ViewsBucket[] {
+  const byDay = new Map(rows.map((r) => [r.day.toISOString().slice(0, 10), r]));
+  const buckets = new Map<string, ViewsBucket>();
+  for (let day = from; day <= to; day = addDays(day, 1)) {
+    const key = by === 'day' ? day : isoWeek(day);
+    const bucket = buckets.get(key) ?? { bySource: {}, key, views: 0 };
+    buckets.set(key, bucket);
+    const row = byDay.get(day);
+    if (!row) continue;
+    bucket.views += row.profileViews;
+    const sources = row.profileViewsBySource as Record<string, number>;
+    for (const [source, n] of Object.entries(sources))
+      bucket.bySource[source] = (bucket.bySource[source] ?? 0) + n;
+  }
+  return [...buckets.values()];
 }
 
 function periodsOf(query: FiguresQuery, today: string): [Period, Period] {
@@ -120,6 +176,26 @@ export class GarageFiguresService {
       period,
       previous: { ...(await this.count(garageId, before)), period: before },
     };
+  }
+
+  // The distinct visitors of the garage's profile per day or ISO week of the
+  // span, as the night wrote them. A week holds only the span's days, and a
+  // day without a row counts nothing.
+  async profileViews(
+    actor: Actor,
+    query: ViewsQuery,
+  ): Promise<{ buckets: ViewsBucket[] }> {
+    if (actor.role === 'mechanic') throw new NotFoundException();
+    requireCapability(actor, 'garage.requests');
+    const { from, to } = viewsSpan(query);
+    const rows = await this.prisma.garageDailyFigures.findMany({
+      select: { day: true, profileViews: true, profileViewsBySource: true },
+      where: {
+        day: { gte: new Date(from), lte: new Date(to) },
+        garageId: actor.garageId as string,
+      },
+    });
+    return { buckets: bucketsOf(rows, from, to, query.by) };
   }
 
   private async count(garageId: string, period: Period): Promise<Counts> {

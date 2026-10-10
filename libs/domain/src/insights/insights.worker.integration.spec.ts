@@ -107,6 +107,7 @@ describe('the night job', () => {
 
     expect(schedulers.map((s) => s.key).sort()).toEqual([
       'platform-daily',
+      'profile-views',
       'response-stats',
     ]);
     for (const scheduler of schedulers) {
@@ -130,6 +131,44 @@ describe('the night job', () => {
       attempts: 3,
       backoff: { delay: 60_000, type: 'exponential' },
     });
+  });
+
+  // @traces 143-FR-011 143-FR-012
+  it('keeps the profile views up to three times, a minute apart and doubling', async () => {
+    const app = await boot();
+
+    const views = await queue.getJobScheduler('profile-views');
+    await app.close();
+
+    expect(views).toMatchObject({
+      name: 'profile-views',
+      pattern: '0 1 * * *',
+      tz: 'Europe/Bucharest',
+    });
+    expect(views?.template?.opts).toMatchObject({
+      attempts: 3,
+      backoff: { delay: 60_000, type: 'exponential' },
+    });
+  });
+
+  // @traces 143-FR-011
+  it('writes the daily figures when the profile views job runs', async () => {
+    await prisma.garage.create({
+      data: { name: 'Service', slug: 'service-views', status: 'approved' },
+    });
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    const job = await queue.add('profile-views', {});
+    await job.waitUntilFinished(events, 10_000);
+    await events.close();
+    await app.close();
+
+    expect(await prisma.garageDailyFigures.count()).toBe(2);
+    expect(await prisma.platformDaily.count()).toBe(0);
   });
 
   it('writes the day when the job runs', async () => {

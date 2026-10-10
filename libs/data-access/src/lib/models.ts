@@ -115,6 +115,7 @@ export type { PlatformRuleChangesDto } from './models/platform-rule-changes-dto'
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { PlatformStatusDto } from './models/platform-status-dto';
+export type { ProfileViewDto } from './models/profile-view-dto';
 export type { ProvidersDto } from './models/providers-dto';
 export type { PublicBrandDto } from './models/public-brand-dto';
 export type { PublicGarageBrandDto } from './models/public-garage-brand-dto';
