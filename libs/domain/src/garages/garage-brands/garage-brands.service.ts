@@ -266,19 +266,26 @@ export class GarageBrandsService {
     await tx.garageBrandJob.deleteMany({
       where: { brandId, garageId, jobTypeId: { in: gone } },
     });
-    for (const jobTypeId of gone) {
-      await this.audit.record(tx, {
-        action: 'delete',
-        actorId: actor.accountId,
-        actorRole: actor.role,
-        garageId,
+    await tx.garageBrandJob.createMany({
+      data: added.map((jobTypeId) => ({ brandId, garageId, jobTypeId })),
+    });
+    const by = { actorId: actor.accountId, actorRole: actor.role, garageId };
+    await this.audit.recordMany(tx, [
+      ...gone.map((jobTypeId) => ({
+        ...by,
+        action: 'delete' as const,
         oldValue: { brandId },
         subjectId: jobTypeId,
         subjectType: 'garage_brand_job',
-      });
-    }
-    for (const jobTypeId of added)
-      await this.addJob(tx, actor, garageId, brandId, jobTypeId);
+      })),
+      ...added.map((jobTypeId) => ({
+        ...by,
+        action: 'create' as const,
+        newValue: { brandId },
+        subjectId: jobTypeId,
+        subjectType: 'garage_brand_job',
+      })),
+    ]);
     return gone.length + added.length > 0;
   }
 
@@ -342,15 +349,16 @@ export class GarageBrandsService {
       subjectId: brandId,
       subjectType: 'garage_brand',
     });
-    for (const job of jobs) {
-      await this.audit.record(tx, {
+    await this.audit.recordMany(
+      tx,
+      jobs.map((job) => ({
         ...change,
-        action: 'delete',
+        action: 'delete' as const,
         oldValue: { brandId },
         subjectId: job.jobTypeId,
         subjectType: 'garage_brand_job',
-      });
-    }
+      })),
+    );
   }
 
   async stanceFor(
@@ -419,15 +427,16 @@ export class GarageBrandsService {
       where: { brandId, garageId },
     });
     await tx.garageBrandJob.deleteMany({ where: { brandId, garageId } });
-    for (const job of jobs) {
-      await this.audit.record(tx, {
+    await this.audit.recordMany(
+      tx,
+      jobs.map((job) => ({
         ...change,
-        action: 'delete',
+        action: 'delete' as const,
         oldValue: { brandId },
         subjectId: job.jobTypeId,
         subjectType: 'garage_brand_job',
-      });
-    }
+      })),
+    );
     return result;
   }
 

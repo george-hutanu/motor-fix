@@ -47,10 +47,11 @@ const textUpTo = (value: unknown, max: number) =>
 
 const isFuels = isSetOf<Fuel>(FUELS);
 
+// A uuid's 36 characters fall inside the name bounds, so this covers both.
 const isJobRef = (ref: unknown) =>
   typeof ref === 'string' &&
-  (UUID.test(ref) ||
-    (ref.length >= JOB_NAME_MIN && ref.length <= JOB_NAME_MAX));
+  ref.length >= JOB_NAME_MIN &&
+  ref.length <= JOB_NAME_MAX;
 
 // A uuid is the same job in either case; a name only as written.
 const isUnticked = (refs: unknown) =>

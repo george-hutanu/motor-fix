@@ -52,7 +52,11 @@ export async function writeGarageBrands(
   tx: Prisma.TransactionClient,
   garageId: string,
   section: unknown,
-  starting: { actorId: string; audit: AuditPort; jobs: GarageJobRef[] },
+  {
+    actorId,
+    audit,
+    jobs,
+  }: { actorId: string; audit: AuditPort; jobs: GarageJobRef[] },
 ): Promise<void> {
   if (!isBrandsSection(section) || section.brands === undefined) {
     throw refusal(
@@ -61,7 +65,6 @@ export async function writeGarageBrands(
       'The brands, their fuels or the texts break a rule',
     );
   }
-  const { actorId, audit, jobs } = starting;
   const listed = [...new Set(jobs.map((j) => j.jobTypeId.toLowerCase()))];
   const rows = section.brands.flatMap(({ brandId, stance, unticked }, at) => {
     if (stance !== 'works_on' || listed.length === 0) return [];
@@ -88,8 +91,9 @@ export async function writeGarageBrands(
     })),
   });
   await tx.garageBrandJob.createMany({ data: rows });
-  for (const { brandId, jobTypeId } of rows) {
-    await audit.record(tx, {
+  await audit.recordMany(
+    tx,
+    rows.map(({ brandId, jobTypeId }) => ({
       action: 'create',
       actorId,
       actorRole: 'garage',
@@ -97,8 +101,8 @@ export async function writeGarageBrands(
       newValue: { brandId },
       subjectId: jobTypeId,
       subjectType: 'garage_brand_job',
-    });
-  }
+    })),
+  );
   await tx.garage.update({
     data: {
       brandNote: section.brandNote ?? null,
