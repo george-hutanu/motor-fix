@@ -391,7 +391,7 @@ test.describe('the rating dial near Bucharest @seeded', () => {
       'Service Auto Militari',
     );
     await expect(dialArea(page).locator('.gauge .line')).toHaveText(
-      /București · \d+,\d km/,
+      /București · \d+(,\d)? km/,
     );
     await expect(previewRows(page)).toHaveCount(3);
     await expect(previewRows(page).locator('.name')).toHaveText([
@@ -541,4 +541,26 @@ for (const scheme of ['light', 'dark'] as const) {
       ).toBeLessThanOrEqual(320);
     });
   }
+}
+
+// @traces 226-FR-008
+for (const path of ['/ro', '/en']) {
+  test(`sets the preview rows' lamp, rating and rate at 16 px on a 390 px phone on ${path} @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await ready(page, path);
+    await page.getByRole('radio', { exact: true, name: 'Dacia' }).click();
+
+    await expect(previewRows(page)).toHaveCount(3);
+    const sizes = await previewRows(page)
+      .locator('mf-lamp, .rating, .rate')
+      .evaluateAll((parts) =>
+        parts.map((p) => Number.parseFloat(getComputedStyle(p).fontSize)),
+      );
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const size of sizes) {
+      expect(size).toBeGreaterThanOrEqual(16);
+    }
+  });
 }

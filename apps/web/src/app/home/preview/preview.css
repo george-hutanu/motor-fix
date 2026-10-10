@@ -25,9 +25,17 @@ li {
   text-decoration: none;
 }
 
+/* Phones read the rows at the 16 px body size; the small size from tablet up. */
 mf-lamp,
 .facts {
-  font-size: max(12px, var(--mf-size-small));
+  font-size: var(--mf-size-body);
+}
+
+@media (min-width: 768px) {
+  mf-lamp,
+  .facts {
+    font-size: max(12px, var(--mf-size-small));
+  }
 }
 
 mf-lamp {
