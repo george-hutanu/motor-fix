@@ -450,14 +450,19 @@ async function book(
      RETURNING id`,
     [booking.rows[0]?.id, who.garageId, who.carId, who.driverId, who.mechanic],
   );
+  await recordStart(db, job.rows[0]?.id);
+}
+
+// The job's history as its mechanic started it: made to do, then in work.
+async function recordStart(db: Client, jobId: string | undefined) {
   await db.query(
     `INSERT INTO job_stage_entry (id, job_id, from_status, to_status, actor_id, actor_role, at)
-     SELECT gen_random_uuid(), $1, s.from_status::job_status, s.to_status::job_status,
+     SELECT gen_random_uuid(), j.id, s.from_status::job_status, s.to_status::job_status,
             m.account_id, 'mechanic'::audit_actor_role, now() + s.n * interval '1 millisecond'
-     FROM mechanic m,
+     FROM job j JOIN mechanic m ON m.id = j.mechanic_id,
           (VALUES (NULL, 'to_do', 0), ('to_do', 'in_work', 1)) AS s(from_status, to_status, n)
-     WHERE m.id = $2`,
-    [job.rows[0]?.id, who.mechanic],
+     WHERE j.id = $1`,
+    [jobId],
   );
 }
 
@@ -475,6 +480,23 @@ async function requests(db: Client) {
   if (!who) return;
   await send(db, who, 2, false);
   await book(db, who, await send(db, who, 1, true));
+}
+
+// A database seeded before ST-424 holds the mechanic's job to do, never
+// started and with no history, and requests() above adds nothing to it: start
+// it as book() does now, so QA can tick its steps there too (ST-1023). A job
+// with any history was moved by the app, and is left as it is.
+async function startOlderJob(db: Client) {
+  const job = await db.query<{ id: string }>(
+    `UPDATE job j SET status = 'in_work', started_at = now()
+     FROM car c, account a
+     WHERE c.id = j.car_id AND c.idempotency_key = 'seed'
+       AND a.id = c.owner_id AND a.email = 'cerere@example.test'
+       AND j.status = 'to_do' AND j.started_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM job_stage_entry e WHERE e.job_id = j.id)
+     RETURNING j.id`,
+  );
+  for (const { id } of job.rows) await recordStart(db, id);
 }
 
 // The oil service ticked for Dacia on the listed Bucharest garages that take
@@ -573,6 +595,7 @@ async function seed(db: Client, secret: string) {
      ON CONFLICT (file_id, kind) DO NOTHING`,
   );
   await requests(db);
+  await startOlderJob(db);
   await quoteable(db);
   // The checks a test run may switch off; production refused the seed above.
   await db.query(
