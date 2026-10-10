@@ -11,16 +11,13 @@
           [routerLink]="['/', i18n.language(), 'garages', garage.slug]"
           [queryParams]="{ brand: brand().slug }"
         >
-          <mf-lamp
-            [state]="garage.stance === 'works_on' ? 'green' : 'red'"
-            [label]="
-              (garage.stance === 'works_on'
-                ? 'public.home.preview.worksOn'
-                : 'public.home.preview.doesNotTake'
-              ) | t: { brand: brand().name }
-            "
-          />
-          <span class="name">{{ garage.name }}</span>
+          <span class="who">
+            <span class="name">{{ garage.name }}</span>
+            <mf-lamp
+              [state]="garage.stance === 'works_on' ? 'green' : 'red'"
+              [label]="status(garage)"
+            />
+          </span>
           <span class="facts">
             <span class="rating">{{ rating(garage) }}</span>
             @if (garage.labourFromLei !== null) {

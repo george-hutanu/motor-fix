@@ -1,0 +1,58 @@
+<section aria-labelledby="home-cards-heading">
+  <div class="head">
+    <h2 id="home-cards-heading">{{ 'public.home.cards.heading' | t: { brand: brand().name } }}</h2>
+    <a class="all" [routerLink]="results().commands" [queryParams]="results().queryParams">{{
+      'public.home.cards.link' | t
+    }}</a>
+  </div>
+  <div class="cards" [attr.aria-busy]="loading()">
+    @if (loading()) {
+      @for (card of skeletons; track card) {
+        <div class="card skeleton" aria-hidden="true"></div>
+      }
+    } @else if (failed()) {
+      <p role="alert">{{ 'public.home.failed' | t }}</p>
+      <button type="button" class="spartan-button spartan-button-variant-ghost" (click)="retry.emit()">
+        {{ 'public.home.retry' | t }}
+      </button>
+    } @else {
+      <ul>
+        @for (garage of garages(); track garage.id) {
+          <li>
+            <a
+              class="card"
+              [routerLink]="['/', i18n.language(), 'garages', garage.slug]"
+              [queryParams]="{ brand: brand().slug }"
+              [attr.aria-label]="name(garage)"
+            >
+              <span class="top">
+                <mf-rating-dial size="small" aria-hidden="true" [value]="garage.rating" />
+                <span class="id">
+                  <span class="name">{{ garage.name }}</span>
+                  @if (where(garage); as where) {
+                    @if (where.city && where.rest) {
+                      <span class="where"><span translate="no">{{ where.city }}</span>{{ where.rest }}</span>
+                    } @else if (where.city) {
+                      <span class="where" translate="no">{{ where.city }}</span>
+                    } @else {
+                      <span class="where">{{ where.rest }}</span>
+                    }
+                  }
+                </span>
+              </span>
+              <mf-lamp [state]="garage.stance === 'works_on' ? 'green' : 'red'" [label]="stance(garage)" />
+              <span class="list"><span class="key">{{ 'public.home.cards.worksOn' | t }}</span> {{ names(garage.worksOn) }}</span>
+              <span class="list"><span class="key">{{ 'public.home.cards.doesNotTake' | t }}</span> {{ names(garage.doesNotTake) }}</span>
+              <span class="facts">
+                @if (garage.labourFromLei !== null) {
+                  <span class="rate">{{ rate(garage.labourFromLei) }}</span>
+                }
+                <span class="reviews">{{ reviews(garage) }}</span>
+              </span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>

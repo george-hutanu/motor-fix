@@ -18,6 +18,11 @@ export interface HomeGarageDto {
    * Km from the place, one decimal; null for a mobile mechanic. Only with near
    */
   distanceKm?: number | null;
+
+  /**
+   * Names of the brands the garage refuses, A to Z
+   */
+  doesNotTake: Array<string>;
   id: string;
 
   /**
@@ -31,10 +36,20 @@ export interface HomeGarageDto {
    */
   rating: number | null;
   reviewCount: number;
+
+  /**
+   * A mobile mechanic's service radius in km; never for a fixed garage
+   */
+  serviceRadiusKm?: number;
   slug: string;
 
   /**
    * The garage's answer for the brand; unstated when it has not marked it
    */
   stance: 'works_on' | 'does_not_take' | 'unstated';
+
+  /**
+   * Names of the brands the garage works on, A to Z; an unmarked brand is in neither list
+   */
+  worksOn: Array<string>;
 }

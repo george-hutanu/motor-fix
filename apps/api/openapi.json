@@ -7064,6 +7064,33 @@
           "comesToYou": {
             "type": "boolean",
             "description": "True for a mobile mechanic whose area holds the place. Only with near"
+          },
+          "worksOn": {
+            "description": "Names of the brands the garage works on, A to Z; an unmarked brand is in neither list",
+            "example": [
+              "BMW",
+              "Dacia"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "doesNotTake": {
+            "description": "Names of the brands the garage refuses, A to Z",
+            "example": [
+              "Tesla"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's service radius in km; never for a fixed garage",
+            "maximum": 100,
+            "minimum": 1
           }
         },
         "required": [
@@ -7074,7 +7101,9 @@
           "rating",
           "reviewCount",
           "labourFromLei",
-          "businessKind"
+          "businessKind",
+          "worksOn",
+          "doesNotTake"
         ]
       },
       "HomeDto": {
