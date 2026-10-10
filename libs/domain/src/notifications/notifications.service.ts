@@ -164,15 +164,26 @@ export class NotificationsService {
     return queued;
   }
 
+  // `to` sends to an address the account does not hold yet: the link of an
+  // e-mail change goes to the new address.
   async sendAccountEmail(input: {
     accountId: string;
-    purpose: 'email_check' | 'password_reset' | 'password_changed';
+    purpose:
+      | 'email_check'
+      | 'email_change_notice'
+      | 'password_reset'
+      | 'password_changed';
     link: string;
+    to?: string;
   }): Promise<void> {
     await this.notify({
       eventId: randomUUID(),
       kind: 'ACCOUNT_EMAIL',
-      params: { link: input.link, purpose: input.purpose },
+      params: {
+        link: input.link,
+        purpose: input.purpose,
+        ...(input.to && { to: input.to }),
+      },
       recipients: [input.accountId],
       subjectId: input.accountId,
     });

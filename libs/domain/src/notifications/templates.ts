@@ -233,7 +233,9 @@ function renderText(
 export function templateName(kind: string, params: Params): string {
   if (kind !== 'ACCOUNT_EMAIL') return kind;
   const purpose = params['purpose'];
-  return purpose === 'password_reset' || purpose === 'password_changed'
+  return purpose === 'password_reset' ||
+    purpose === 'password_changed' ||
+    purpose === 'email_change_notice'
     ? `ACCOUNT_EMAIL.${purpose}`
     : 'ACCOUNT_EMAIL.email_check';
 }

@@ -7,9 +7,19 @@ import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
+import { countAccountChange } from '../metrics/product-counters';
 
 // Identities whose provider has already checked the e-mail.
 const VOUCHED = new Set(['google', 'apple']);
+
+export interface MyDetails {
+  language?: 'ro' | 'en';
+  name?: string;
+  city?: string | null;
+}
+
+// Sorted, so the audit rows and the event list the fields in one order.
+const MY_DETAILS = ['city', 'language', 'name'] as const;
 
 export interface NewAccount {
   name: string;
@@ -121,33 +131,57 @@ export class AccountsService {
     });
   }
 
-  async setLanguage(actor: Actor, language: 'ro' | 'en'): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+  // The account's own language, name and city: a field left out is kept,
+  // and nothing is written when nothing changed.
+  async updateMe(actor: Actor, patch: MyDetails): Promise<void> {
+    const saved = await this.prisma.$transaction(async (tx) => {
       const where = { id: actor.accountId };
       const before = await tx.account.findUniqueOrThrow({
-        select: { language: true },
+        select: { city: true, language: true, name: true },
         where,
       });
-      if (before.language === language) return;
-      // Only the change that still finds the old value writes, so two at once
-      // leave one audit entry.
+      // A fixed list: a field the caller sent beyond these is never written.
+      const changed = MY_DETAILS.filter(
+        (field) => patch[field] !== undefined && patch[field] !== before[field],
+      );
+      if (changed.length === 0) return [];
+      const data = Object.fromEntries(changed.map((f) => [f, patch[f]]));
+      // Only the change that still finds the old values writes, so two at
+      // once leave one audit entry per field.
       const { count } = await tx.account.updateMany({
-        data: { language },
-        where: { ...where, language: before.language },
+        data,
+        where: {
+          ...where,
+          ...Object.fromEntries(changed.map((f) => [f, before[f]])),
+        },
       });
-      if (count === 0) return;
+      if (count === 0) return [];
       await this.audit.recordChanges(
         tx,
         {
           actorId: actor.accountId,
           actorRole: actor.role,
+          ...(actor.via === 'assistant' && {
+            assistantGrantId: actor.assistantGrantId,
+            requestId: actor.requestId,
+          }),
           subjectId: actor.accountId,
           subjectType: 'account',
         },
         before,
-        { language },
+        data,
       );
+      await this.events.record(tx, {
+        audience: { accountId: actor.accountId, type: 'account' },
+        kind: 'account.updated',
+        payload: { accountId: actor.accountId, fields: changed },
+        subjectId: actor.accountId,
+      });
+      return changed;
     });
+    for (const field of saved) {
+      if (field !== 'language') countAccountChange(field);
+    }
   }
 
   async grantRole(

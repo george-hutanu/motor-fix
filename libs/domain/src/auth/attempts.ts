@@ -15,9 +15,17 @@ const RESET_WINDOW_SECONDS = 60 * 60;
 const RESET_LIMIT = { address: 10, email: 3 } as const;
 const HOUR_SECONDS = 60 * 60;
 const PHONE_CODE_LIMIT = { address: 20, hour: 5, minute: 1 } as const;
+const CONTACT_CHANGE_LIMIT = 5;
+const PASSWORD_LIMIT = 5;
 
 type Kind = keyof typeof LIMIT;
-type Limited = 'sign-in' | 'sign-up' | 'reset' | 'phone-code';
+type Limited =
+  | 'sign-in'
+  | 'sign-up'
+  | 'reset'
+  | 'phone-code'
+  | 'contact-change'
+  | 'password';
 
 // One client however its address is written: an IPv4 address also in its
 // IPv6-mapped form, and an IPv6 address by its /64, which one subscriber
@@ -56,6 +64,7 @@ const digest = (value: string) =>
 const keyOf = (kind: Kind, value: string) =>
   `auth:fail:${kind}:${digest(value)}`;
 const phoneHourKey = (phone: string) => `auth:code:hour:${digest(phone)}`;
+const passwordKey = (accountId: string) => `auth:password:${digest(accountId)}`;
 
 // Failed sign-ins per e-mail and per address, and sign-ups per address. Redis
 // only counts: when it is unreachable the limits are skipped rather than
@@ -192,6 +201,54 @@ export class Attempts {
       await this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX').exec();
     } catch {
       this.unavailable('phone-code');
+    }
+  }
+
+  // Counts one e-mail link or phone code for the account's own contact
+  // change; false once it has had its 5 in the hour that began with its first.
+  async admitContactChange(accountId: string): Promise<boolean> {
+    try {
+      const key = `auth:change:${digest(accountId)}`;
+      const replies = await this.redis
+        .multi()
+        .incr(key)
+        .expire(key, HOUR_SECONDS, 'NX')
+        .exec();
+      for (const [error] of replies ?? []) if (error) throw error;
+      return Number(replies?.[0]?.[1]) <= CONTACT_CHANGE_LIMIT;
+    } catch {
+      this.unavailable('contact-change');
+      return true;
+    }
+  }
+
+  // Wrong current passwords at a password change: 5 refuse the next try
+  // until 15 minutes after the last.
+  async passwordBlocked(accountId: string): Promise<boolean> {
+    try {
+      return (
+        Number(await this.redis.get(passwordKey(accountId))) >= PASSWORD_LIMIT
+      );
+    } catch {
+      this.unavailable('password');
+      return false;
+    }
+  }
+
+  async passwordFailed(accountId: string): Promise<void> {
+    try {
+      const key = passwordKey(accountId);
+      await this.redis.multi().incr(key).expire(key, WINDOW_SECONDS).exec();
+    } catch {
+      this.unavailable('password');
+    }
+  }
+
+  async passwordClear(accountId: string): Promise<void> {
+    try {
+      await this.redis.del(passwordKey(accountId));
+    } catch {
+      this.unavailable('password');
     }
   }
 

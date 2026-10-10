@@ -461,6 +461,15 @@
       "story": "ST-424"
     },
     {
+      "kind": "product-counter",
+      "name": "motorfix_account_changes_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts saved changes of an account's own details by field (name, city, email, phone, password); a change count has no failure mode of its own",
+      "story": "ST-139"
+    },
+    {
       "kind": "endpoint",
       "name": "garage-reports",
       "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.controller.ts",

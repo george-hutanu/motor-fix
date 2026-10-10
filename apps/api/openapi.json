@@ -4762,6 +4762,24 @@
             "description": "The city saved in Setări",
             "nullable": true
           },
+          "phone": {
+            "type": "string",
+            "description": "E.164",
+            "nullable": true
+          },
+          "phoneConfirmed": {
+            "type": "boolean",
+            "description": "Whether the phone is confirmed; false when there is none"
+          },
+          "pendingEmail": {
+            "type": "string",
+            "description": "The address of an e-mail change waiting for its link",
+            "nullable": true
+          },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "Whether the account can sign in by password"
+          },
           "roles": {
             "type": "array",
             "items": {
@@ -4821,6 +4839,10 @@
           "emailConfirmed",
           "language",
           "city",
+          "phone",
+          "phoneConfirmed",
+          "pendingEmail",
+          "hasPassword",
           "roles",
           "role",
           "garageId",
@@ -4838,11 +4860,21 @@
               "ro",
               "en"
             ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "city": {
+            "type": "string",
+            "description": "Trimmed; null or blank saves no city",
+            "maxLength": 60,
+            "minLength": 2,
+            "nullable": true
           }
-        },
-        "required": [
-          "language"
-        ]
+        }
       },
       "AuditActorDto": {
         "type": "object",

@@ -112,3 +112,18 @@ export function countGarageReport(outcome: GarageReportOutcome) {
     'Reports of a garage by a driver, by outcome',
   ).add(1, { outcome });
 }
+
+export type AccountChangeField =
+  | 'name'
+  | 'city'
+  | 'email'
+  | 'phone'
+  | 'password';
+
+// One saved change of the account's own details, by field.
+export function countAccountChange(field: AccountChangeField) {
+  counter(
+    'motorfix_account_changes_total',
+    "Changes to an account's own details, by field",
+  ).add(1, { field });
+}

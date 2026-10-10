@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
@@ -79,7 +79,17 @@ function countingRedis() {
     };
     return chain;
   };
-  const redis = { multi } as unknown as Redis;
+  const get = async (key: string) => {
+    sent.push(['get', key]);
+    const count = counts.get(key);
+    return count === undefined ? null : String(count);
+  };
+  const del = async (key: string) => {
+    sent.push(['del', key]);
+    counts.delete(key);
+    return 1;
+  };
+  const redis = { del, get, multi } as unknown as Redis;
   return { counts, redis, sent };
 }
 
@@ -212,5 +222,109 @@ describe('the sign-up limit', () => {
     expect(await new Attempts(redis).admitSignUp('198.51.100.7')).toBe(true);
 
     expect(sent).toContainEqual(['incr', key]);
+  });
+});
+
+const down = {
+  del: () => Promise.reject(new Error('Redis did not answer')),
+  get: () => Promise.reject(new Error('Redis did not answer')),
+  multi: () => {
+    throw new Error('Redis did not answer');
+  },
+} as unknown as Redis;
+
+const ACCOUNT = '0b6f3a52-6c1e-4d7a-9f1e-2f4c5a6b7c8d';
+
+// @traces 139-edit-my-details-FR-012
+describe('the hourly limit on links and codes for a contact change', () => {
+  const key = `auth:change:${sha256(ACCOUNT)}`;
+
+  it('counts the account by the hour that began with its first, under its digest', async () => {
+    const { redis, sent } = countingRedis();
+
+    expect(await new Attempts(redis).admitContactChange(ACCOUNT)).toBe(true);
+
+    expect(sent).toEqual([
+      ['multi'],
+      ['incr', key],
+      ['expire', key, 3600, 'NX'],
+    ]);
+  });
+
+  it('admits five in the hour and refuses the sixth', async () => {
+    const { redis } = countingRedis();
+    const attempts = new Attempts(redis);
+
+    for (let i = 0; i < 5; i++) {
+      expect(await attempts.admitContactChange(ACCOUNT)).toBe(true);
+    }
+    expect(await attempts.admitContactChange(ACCOUNT)).toBe(false);
+    expect(await attempts.admitContactChange(randomUUID())).toBe(true);
+  });
+
+  it('admits and logs when Redis does not answer', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+
+    expect(await new Attempts(down).admitContactChange(ACCOUNT)).toBe(true);
+
+    expect(warn).toHaveBeenCalledWith(
+      'contact-change attempt limits skipped: Redis unavailable',
+    );
+    warn.mockRestore();
+  });
+});
+
+// @traces 139-edit-my-details-FR-015
+describe('the limit on wrong current passwords', () => {
+  const key = `auth:password:${sha256(ACCOUNT)}`;
+
+  it('counts each failure for 15 minutes from the last one, under the digest', async () => {
+    const { redis, sent } = countingRedis();
+
+    await new Attempts(redis).passwordFailed(ACCOUNT);
+
+    expect(sent).toEqual([['multi'], ['incr', key], ['expire', key, 900]]);
+  });
+
+  it('refuses from the fifth failure on, and only that account', async () => {
+    const { redis } = countingRedis();
+    const attempts = new Attempts(redis);
+
+    for (let i = 0; i < 4; i++) {
+      await attempts.passwordFailed(ACCOUNT);
+      expect(await attempts.passwordBlocked(ACCOUNT)).toBe(false);
+    }
+    await attempts.passwordFailed(ACCOUNT);
+
+    expect(await attempts.passwordBlocked(ACCOUNT)).toBe(true);
+    expect(await attempts.passwordBlocked(randomUUID())).toBe(false);
+  });
+
+  it('starts again after a success', async () => {
+    const { redis } = countingRedis();
+    const attempts = new Attempts(redis);
+    for (let i = 0; i < 5; i++) await attempts.passwordFailed(ACCOUNT);
+
+    await attempts.passwordClear(ACCOUNT);
+
+    expect(await attempts.passwordBlocked(ACCOUNT)).toBe(false);
+  });
+
+  it('lets every try through and logs when Redis does not answer', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const attempts = new Attempts(down);
+
+    await attempts.passwordFailed(ACCOUNT);
+    expect(await attempts.passwordBlocked(ACCOUNT)).toBe(false);
+    await expect(attempts.passwordClear(ACCOUNT)).resolves.toBeUndefined();
+
+    expect(warn).toHaveBeenCalledWith(
+      'password attempt limits skipped: Redis unavailable',
+    );
+    warn.mockRestore();
   });
 });

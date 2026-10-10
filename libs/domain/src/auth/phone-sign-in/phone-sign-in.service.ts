@@ -15,15 +15,14 @@ import {
   codeHash,
   newCode,
 } from './phone-sign-in';
+import { sendWhatsAppCode } from './whatsapp-code';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { countSignIn } from '../../metrics/product-counters';
-import { type Brevo, BrevoError } from '../../notifications/brevo/brevo';
+import type { Brevo } from '../../notifications/brevo/brevo';
 import {
   PHONE_CONFIG,
   type PhoneConfig,
-  phoneBlockedReason,
 } from '../../notifications/phone-config';
-import { render } from '../../notifications/templates';
 import { AccountsService } from '../accounts.service';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { Attempts } from '../attempts';
@@ -56,11 +55,6 @@ const maintenance = () =>
     'maintenance',
     'MotorFix is down for maintenance',
   );
-
-// Why a code was not sent, for the log: never the number.
-function failureKind(error: unknown): string {
-  return error instanceof BrevoError ? error.reason : 'provider_error';
-}
 
 // Sign-in with a code sent by WhatsApp. Neither the number nor the code is
 // ever logged.
@@ -226,32 +220,13 @@ export class PhoneSignInService {
     if (count === 0) throw this.refused('code_invalid');
   }
 
-  private async send(phone: string, language: 'ro' | 'en', code: string) {
-    const message = render('SIGN_IN_CODE', 'whatsapp', language, {
+  private send(phone: string, language: 'ro' | 'en', code: string) {
+    return sendWhatsAppCode(
+      { brevo: this.brevo, config: this.phone, logger: this.logger },
+      'SIGN_IN_CODE',
+      phone,
+      language,
       code,
-      minutes: CODE_TTL_MS / 60_000,
-    });
-    const templateId = Object.hasOwn(this.phone.whatsappTemplates, message.name)
-      ? this.phone.whatsappTemplates[message.name]
-      : undefined;
-    const kind =
-      phoneBlockedReason(this.phone, phone) ??
-      (templateId === undefined
-        ? 'template_missing'
-        : await this.brevo
-            .sendWhatsApp({
-              params: message.params,
-              sender: this.phone.whatsappSender,
-              templateId,
-              to: phone,
-            })
-            .then(() => null, failureKind));
-    if (kind === null) return;
-    this.logger.error(`phone code not sent: whatsapp_failed (${kind})`);
-    throw refusal(
-      HttpStatus.BAD_GATEWAY,
-      'whatsapp_failed',
-      'The code could not be sent by WhatsApp',
     );
   }
 

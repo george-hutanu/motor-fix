@@ -11,6 +11,8 @@
     "retry": "Încearcă din nou",
     "sendNew": "Trimite un link nou",
     "sent": "Am trimis un link nou pe e‑mail.",
+    "taken": "Adresa e folosită deja",
+    "takenLine": "Alt cont MotorFix folosește acum această adresă, așa că nu am putut‑o trece pe contul tău.",
     "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
   },
   "consent": {

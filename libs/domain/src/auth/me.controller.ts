@@ -21,25 +21,48 @@ export class MeController {
   @Get()
   @ApiOkResponse({ type: MeDto })
   async me(@CurrentActor() actor: Actor): Promise<MeDto> {
-    const { emailVerifiedAt, ...account } =
-      await this.prisma.account.findUniqueOrThrow({
-        select: {
-          city: true,
-          email: true,
-          emailVerifiedAt: true,
-          language: true,
-          name: true,
-        },
-        where: { id: actor.accountId },
-      });
+    const { accountId } = actor;
+    const [{ emailVerifiedAt, phoneVerifiedAt, ...account }, password, change] =
+      await Promise.all([
+        this.prisma.account.findUniqueOrThrow({
+          select: {
+            city: true,
+            email: true,
+            emailVerifiedAt: true,
+            language: true,
+            name: true,
+            phone: true,
+            phoneVerifiedAt: true,
+          },
+          where: { id: accountId },
+        }),
+        this.prisma.accountIdentity.findFirst({
+          select: { id: true },
+          where: { accountId, method: 'password' },
+        }),
+        // The latest e-mail change still waiting for its link.
+        this.prisma.accountToken.findFirst({
+          orderBy: { createdAt: 'desc' },
+          select: { email: true },
+          where: {
+            accountId,
+            expiresAt: { gt: new Date() },
+            purpose: 'email_change',
+            usedAt: null,
+          },
+        }),
+      ]);
     return {
       ...account,
       capabilities: capabilitiesOf(actor.role, actor.permissions),
       emailConfirmed: Boolean(account.email && emailVerifiedAt),
-      garageAccess: await this.garageAccess(actor.accountId),
+      garageAccess: await this.garageAccess(accountId),
       garageId: actor.garageId,
-      id: actor.accountId,
+      hasPassword: password !== null,
+      id: accountId,
       landing: landingFor(actor.role),
+      pendingEmail: change?.email ?? null,
+      phoneConfirmed: Boolean(account.phone && phoneVerifiedAt),
       role: actor.role,
       roles: actor.roles,
     };
@@ -105,7 +128,7 @@ export class MeController {
     @CurrentActor() actor: Actor,
     @Body() body: UpdateMeDto,
   ): Promise<MeDto> {
-    await this.accounts.setLanguage(actor, body.language);
+    await this.accounts.updateMe(actor, body);
     return this.me(actor);
   }
 }

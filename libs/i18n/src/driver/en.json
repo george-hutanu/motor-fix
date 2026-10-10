@@ -51,6 +51,32 @@
     },
     "retry": "Try again"
   },
+  "details": {
+    "cancel": "Cancel",
+    "city": "City",
+    "edit": "Edit",
+    "email": "E-mail",
+    "field": {
+      "pattern": "Use only letters, digits and ordinary signs."
+    },
+    "name": "Name",
+    "phone": "Phone",
+    "phoneLine": "A garage sees your number only after you accept its quote.",
+    "problem": {
+      "code_expired": "The code has expired. Ask for a new one.",
+      "code_invalid": "That code is not right. Check the digits and try again.",
+      "email_taken": "Another MotorFix account already uses this address.",
+      "email_unchanged": "This is already your e-mail address.",
+      "phone_taken": "Another MotorFix account already uses this number.",
+      "phone_unchanged": "This is already your number.",
+      "recent_sign_in_required": "For your safety, sign in again, then try once more.",
+      "send_failed": "We could not send the code. Try again a little later.",
+      "too_many_attempts": "Too many tries. Try again a little later."
+    },
+    "save": "Save",
+    "saved": "Saved.",
+    "title": "Your details"
+  },
   "home": {
     "newRequest": "New request"
   },

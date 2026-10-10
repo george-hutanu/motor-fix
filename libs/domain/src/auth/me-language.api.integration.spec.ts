@@ -155,7 +155,6 @@ describe('changing my language', () => {
     ['RO', { language: 'RO' }],
     ['an empty value', { language: '' }],
     ['a number', { language: 1 }],
-    ['no language', {}],
   ])('refuses %s with 400 naming language', async (_, body) => {
     const id = await account('andrei', ['driver']);
 
@@ -163,6 +162,17 @@ describe('changing my language', () => {
 
     expect(res.status).toBe(400);
     expect(JSON.stringify(res.body.message)).toContain('language');
+    expect(await savedLanguage(id)).toBe('ro');
+    expect(await languageEntries(id)).toHaveLength(0);
+  });
+
+  // @traces 139-edit-my-details-FR-004
+  it('takes a body with no language, and changes nothing', async () => {
+    const id = await account('andrei', ['driver']);
+
+    const res = await patch({}, bearer(id, 'driver'));
+
+    expect(res.status).toBe(200);
     expect(await savedLanguage(id)).toBe('ro');
     expect(await languageEntries(id)).toHaveLength(0);
   });
@@ -269,10 +279,14 @@ describe('the city from Setări on who am I', () => {
       'emailConfirmed',
       'garageAccess',
       'garageId',
+      'hasPassword',
       'id',
       'landing',
       'language',
       'name',
+      'pendingEmail',
+      'phone',
+      'phoneConfirmed',
       'role',
       'roles',
     ]);
