@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
@@ -329,4 +332,37 @@ describe('HomeCards', () => {
     expect(said(page.querySelector('section h2'))).toBe('Who takes your BMW');
     expect(said(cards(page)[0].querySelector('.reviews'))).toBe('212 reviews');
   });
+});
+
+describe('the garage cards on a phone', () => {
+  // The Jest transform drops component styles, so they are read from the source.
+  const css = readFileSync(join(__dirname, 'cards.css'), 'utf8').replace(
+    /\s+/g,
+    ' ',
+  );
+  const topLevel = css.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '');
+  const tablet =
+    css.match(
+      /@media \(min-width: 768px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+    )?.[1] ?? '';
+
+  it.each(['.all', '.where', '.list', '.facts'])(
+    'keep %s at body size on a phone and turn it small only from a tablet up',
+    (selector) => {
+      const rules = [...topLevel.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+        .filter(([, sel]) =>
+          sel.split(',').some((part) => part.trim() === selector),
+        )
+        .map(([, , body]) => body);
+      expect(rules.length).toBeGreaterThan(0);
+      for (const body of rules) expect(body).not.toContain('font-size');
+
+      const small = [...tablet.matchAll(/([^{}]+)\{([^}]*)\}/g)].some(
+        ([, sel, body]) =>
+          sel.split(',').some((part) => part.trim() === selector) &&
+          /font-size: max\(12px, var\(--mf-size-small\)\)/.test(body),
+      );
+      expect(small).toBe(true);
+    },
+  );
 });

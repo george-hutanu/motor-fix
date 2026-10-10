@@ -21,7 +21,6 @@ h2 {
   align-items: center;
   color: var(--mf-amber-ink);
   display: inline-flex;
-  font-size: max(12px, var(--mf-size-small));
   min-height: 44px;
 }
 
@@ -74,8 +73,17 @@ li {
 .list,
 .facts {
   color: var(--mf-text-secondary);
-  font-size: max(12px, var(--mf-size-small));
   overflow-wrap: anywhere;
+}
+
+/* Body size on a phone, small from a tablet up. */
+@media (min-width: 768px) {
+  .all,
+  .where,
+  .list,
+  .facts {
+    font-size: max(12px, var(--mf-size-small));
+  }
 }
 
 .key {
