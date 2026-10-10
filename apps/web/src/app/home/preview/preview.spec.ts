@@ -142,6 +142,27 @@ describe('HomePreview', () => {
     expect(rows(page)).toHaveLength(0);
   });
   // @traces 227-FR-010
+  it.each([
+    ['works_on', 'Dacia', 'Lucrează pe\u00a0Dacia'],
+    ['does_not_take', 'Dacia', 'Nu primește\u00a0Dacia'],
+    ['does_not_take', 'Land Rover', 'Nu primește Land\u00a0Rover'],
+  ] as const)(
+    'keeps the last two words of a %s status for %s on one line',
+    async (stance, name, shown) => {
+      fixture = TestBed.createComponent(HomePreview);
+      fixture.componentRef.setInput('brand', { ...DACIA, name });
+      fixture.componentRef.setInput('garages', [garageOf({ stance })]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const lamp = (fixture.nativeElement as HTMLElement).querySelector(
+        'mf-lamp',
+      );
+
+      expect(lamp?.textContent?.trim()).toBe(shown);
+    },
+  );
+
+  // @traces 227-FR-010
   it('puts the name over the status on the left, the rating over the rate on the right', async () => {
     const [row] = rows(await render([garageOf()]));
 

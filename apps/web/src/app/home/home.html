@@ -88,7 +88,13 @@
       } @else if (answer()?.best; as best) {
         <span class="name">{{ best.name }}</span>
         @if (line(); as line) {
-          <span class="line">{{ line }}</span>
+          @if (line.city && line.rest) {
+            <span class="line"><span translate="no">{{ line.city }}</span>{{ line.rest }}</span>
+          } @else if (line.city) {
+            <span class="line" translate="no">{{ line.city }}</span>
+          } @else {
+            <span class="line">{{ line.rest }}</span>
+          }
         }
       } @else if (nobody(); as nobody) {
         <span class="name">{{ nobody }}</span>

@@ -30,7 +30,13 @@
                 <span class="id">
                   <span class="name">{{ garage.name }}</span>
                   @if (where(garage); as where) {
-                    <span class="where">{{ where }}</span>
+                    @if (where.city && where.rest) {
+                      <span class="where"><span translate="no">{{ where.city }}</span>{{ where.rest }}</span>
+                    } @else if (where.city) {
+                      <span class="where" translate="no">{{ where.city }}</span>
+                    } @else {
+                      <span class="where">{{ where.rest }}</span>
+                    }
                   }
                 </span>
               </span>

@@ -56,18 +56,28 @@ export class HomeCards {
     return [garage.name, this.stance(garage), this.rating(garage)].join(', ');
   }
 
-  protected where(garage: HomeGarageDto) {
+  // The city is a name from the garage's address, shown as written in either
+  // language (marked translate="no"); the rest is said in the current one.
+  protected where(
+    garage: HomeGarageDto,
+  ): { city: string; rest: string } | null {
     if (garage.businessKind === 'mobile') {
       const mobile = this.i18n.t('public.home.dial.mobile');
-      return garage.serviceRadiusKm === undefined
-        ? mobile
-        : `${mobile} · ${this.i18n.t('public.home.cards.area', { km: garage.serviceRadiusKm })}`;
+      return {
+        city: '',
+        rest:
+          garage.serviceRadiusKm === undefined
+            ? mobile
+            : `${mobile} · ${this.i18n.t('public.home.cards.area', { km: garage.serviceRadiusKm })}`,
+      };
     }
-    const parts = [garage.city];
-    if (typeof garage.distanceKm === 'number') {
-      parts.push(formatKm(garage.distanceKm, this.i18n.language()));
-    }
-    return parts.filter(Boolean).join(' · ') || null;
+    const city = garage.city ?? '';
+    const km =
+      typeof garage.distanceKm === 'number'
+        ? formatKm(garage.distanceKm, this.i18n.language())
+        : '';
+    if (!city && !km) return null;
+    return { city, rest: city && km ? ` · ${km}` : km };
   }
 
   protected names(list: string[]) {

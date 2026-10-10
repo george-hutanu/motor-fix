@@ -155,17 +155,21 @@ export class Home {
         })
       : this.i18n.t('public.home.dial.noTaker', { brand: answer.brand.name });
   });
+  // The city is a name from the garage's address, shown as written in either
+  // language (marked translate="no"); the rest is said in the current one.
   protected readonly line = computed(() => {
     const best = this.answer()?.best;
     if (!best) return null;
     if (best.businessKind === 'mobile') {
-      return this.i18n.t('public.home.dial.mobile');
+      return { city: '', rest: this.i18n.t('public.home.dial.mobile') };
     }
-    const parts = [best.city];
-    if (typeof best.distanceKm === 'number') {
-      parts.push(formatKm(best.distanceKm, this.i18n.language()));
-    }
-    return parts.filter(Boolean).join(' · ') || null;
+    const city = best.city ?? '';
+    const km =
+      typeof best.distanceKm === 'number'
+        ? formatKm(best.distanceKm, this.i18n.language())
+        : '';
+    if (!city && !km) return null;
+    return { city, rest: city && km ? ` · ${km}` : km };
   });
   protected readonly announce = computed(() => {
     const best = this.answer()?.best;

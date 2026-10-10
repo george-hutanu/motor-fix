@@ -1178,6 +1178,31 @@ describe('Home rating dial', () => {
     expect(bestLine()).toBe('București · 3,2 km');
   });
 
+  // @traces 227-FR-003
+  it('marks a line that is only the city as shown as written', async () => {
+    await render();
+    await choose('Dacia');
+    await reads[1].answer(3, 6, THREE);
+
+    const line = dialArea()?.querySelector('.line');
+    expect(line?.textContent?.trim()).toBe('București');
+    expect(line?.closest('[translate="no"]')).not.toBeNull();
+  });
+
+  // @traces 227-FR-003
+  it('marks the city beside the distance as shown as written', async () => {
+    store(HERE);
+    await render();
+    await reads[0].answer(3, 6, {
+      best: { ...MILITARI, comesToYou: false, distanceKm: 3.2 },
+      preview: [],
+    });
+
+    const city = dialArea()?.querySelector('.line [translate="no"]');
+    expect(city?.textContent?.trim()).toBe('București');
+    expect(bestLine()).toBe('București · 3,2 km');
+  });
+
   it('says a mobile mechanic comes to you, never its city', async () => {
     store(HERE);
     await render();

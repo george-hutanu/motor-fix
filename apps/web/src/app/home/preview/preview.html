@@ -15,12 +15,7 @@
             <span class="name">{{ garage.name }}</span>
             <mf-lamp
               [state]="garage.stance === 'works_on' ? 'green' : 'red'"
-              [label]="
-                (garage.stance === 'works_on'
-                  ? 'public.home.preview.worksOn'
-                  : 'public.home.preview.doesNotTake'
-                ) | t: { brand: brand().name }
-              "
+              [label]="status(garage)"
             />
           </span>
           <span class="facts">

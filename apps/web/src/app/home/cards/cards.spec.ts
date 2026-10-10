@@ -211,6 +211,26 @@ describe('HomeCards', () => {
   });
 
   // @traces 227-FR-003
+  it('marks the city as a name shown as written, never translated', async () => {
+    const [card] = cards(await render([garageOf()], { language: 'en' }));
+
+    const city = card.querySelector('.where [translate="no"]');
+    expect(said(city)).toBe('București');
+    expect(said(card.querySelector('.where'))).toBe('București · 2.4 km');
+  });
+
+  // @traces 227-FR-003
+  it('marks a where line that is only the city as shown as written', async () => {
+    const [card] = cards(
+      await render([garageOf({ distanceKm: undefined })], { language: 'en' }),
+    );
+
+    const where = card.querySelector('.where');
+    expect(said(where)).toBe('București');
+    expect(where?.closest('[translate="no"]')).not.toBeNull();
+  });
+
+  // @traces 227-FR-003
   it('leaves out the where line with no city and no distance', async () => {
     const [card] = cards(
       await render([garageOf({ city: undefined, distanceKm: undefined })]),
