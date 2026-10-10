@@ -52,11 +52,12 @@ const NO_STORY_LINK =
 
 // The retired tracker's name, read from the banned-words list so this file
 // never holds it.
-const [retired] = (
+const bannedWords = (
   JSON.parse(readFileSync(join(__dirname, 'banned-words.json'), 'utf8')) as {
     words: string[];
   }
 ).words;
+const [retired] = bannedWords;
 const Retired = retired.charAt(0).toUpperCase() + retired.slice(1);
 
 describe('the pull request template', () => {
@@ -282,6 +283,8 @@ describe('checkPrBody on a ready PR', () => {
 
   // @traces 1135-FR-002
   it('refuses a link to the retired tracker in the Story section', () => {
+    // The cases below name the retired tracker only if it is the list's one word.
+    expect(bannedWords).toHaveLength(1);
     for (const link of [
       `https://www.${retired}.so/motorfix/ST-1-abc`,
       `https://app.${retired}.com/p/0000000000000000000000000000000a (ST-1)`,

@@ -29,8 +29,9 @@ type Wanted = { labels: string[]; boxes: string[] };
 
 const TEMPLATE_PATH = '.github/pull_request_template.md';
 const TITLE = /^[a-z]+\([^()\s][^()]*\)!?: \S/;
+// The link must start a word, so one buried in another URL does not count.
 const STORY_LINK =
-  /https?:\/\/github\.com\/george-hutanu\/motor-fix-specs\/issues\/\d+/;
+  /(?:^|[\s(<[])https?:\/\/github\.com\/george-hutanu\/motor-fix-specs\/issues\/\d+(?!\w)/m;
 const BARE_NA = /^N\/?A[\s.:;,—–-]*$/i;
 const HEADING = /^ {0,3}## (.+?)(?:\s+#+)?\s*$/;
 const FENCE = /^\s*(```|~~~)/;
