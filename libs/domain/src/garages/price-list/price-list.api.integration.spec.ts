@@ -293,7 +293,10 @@ describe('GET /garages/:garageId/prices', () => {
   it('refuses an id that is not a uuid before any check', async () => {
     const w = await world();
 
-    expect((await read(w, w.owner, 'not-a-uuid')).status).toBe(400);
+    const res = await read(w, w.owner, 'not-a-uuid');
+
+    // Its code, validation_failed, comes from the api's ProblemFilter.
+    expect(res.status).toBe(400);
   });
 
   it('answers an assistant acting for the owner as it answers the owner', async () => {

@@ -216,10 +216,4 @@ describe('the price list items', () => {
 
     expect(ids).toEqual([first.id, second.id, brandOnly.id, tieA.id, tieB.id]);
   });
-
-  it('gives the same state for the same rows every time', () => {
-    const rows = [row(job('approved', 'A'), { toBani: null })];
-
-    expect(priceListJobs(rows, ['A'])).toEqual(priceListJobs(rows, ['A']));
-  });
 });

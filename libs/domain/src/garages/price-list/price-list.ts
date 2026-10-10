@@ -75,7 +75,9 @@ export function priceListJobs(
 ): PriceListItemDto[] {
   const byJob = new Map<string, PriceRow[]>();
   for (const row of rows) {
-    byJob.set(row.jobType.id, [...(byJob.get(row.jobType.id) ?? []), row]);
+    const jobRows = byJob.get(row.jobType.id);
+    if (jobRows) jobRows.push(row);
+    else byJob.set(row.jobType.id, [row]);
   }
   return [...byJob.values()]
     .map((jobRows) => {

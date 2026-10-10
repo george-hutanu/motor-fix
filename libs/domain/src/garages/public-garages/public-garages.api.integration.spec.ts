@@ -4,6 +4,8 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
+import { dropProfiles } from './public-garages.cache';
+import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
@@ -817,6 +819,22 @@ describe('the jobs a profile offers', () => {
     const hidden = await jobType('Diagnoză', 'Diagnosis');
     const noTop = await jobType('Verificare suspensie', 'Suspension check');
     const brandTop = await jobType('Kit distribuție', 'Timing kit');
+    const rejected = await prisma.jobType.create({
+      data: {
+        key: `job-${randomUUID()}`,
+        nameEn: 'Engine wash',
+        nameRo: 'Spălare motor',
+        status: 'rejected',
+      },
+    });
+    const pending = await prisma.jobType.create({
+      data: {
+        key: `job-${randomUUID()}`,
+        nameEn: 'Headlight aim',
+        nameRo: 'Reglaj faruri',
+        status: 'pending',
+      },
+    });
     const dacia = await catalogueBrand('Dacia');
     const price = (jobTypeId: string, position: number, extra = {}) =>
       prisma.garagePrice.create({
@@ -837,12 +855,47 @@ describe('the jobs a profile offers', () => {
     await price(noTop.id, 4, { toBani: null });
     await price(brandTop.id, 5, { toBani: null });
     await price(brandTop.id, 6, { brandId: dacia.id });
+    await price(rejected.id, 7);
+    await price(pending.id, 8);
 
     const res = await read(approved.slug);
 
     expect(res.body.jobTypes).toEqual([
       { id: oil.id, nameEn: 'Oil change', nameRo: 'Schimb ulei' },
       { id: brakes.id, nameEn: 'Brake pads', nameRo: 'Plăcuțe frână' },
+    ]);
+  });
+
+  it('lists a job once its top price is set and the cached profile is dropped', async () => {
+    const approved = await garage('approved');
+    const owner = await account('owner', ['garage']);
+    const suspension = await jobType(
+      'Verificare suspensie',
+      'Suspension check',
+    );
+    const row = await prisma.garagePrice.create({
+      data: {
+        fromBani: 35_000,
+        garageId: approved.id,
+        jobTypeId: suspension.id,
+        position: 0,
+        updatedBy: owner,
+      },
+    });
+    expect((await read(approved.slug)).body.jobTypes).toEqual([]);
+
+    await prisma.garagePrice.update({
+      data: { toBani: 48_000 },
+      where: { id: row.id },
+    });
+    await dropProfiles(app.get(AUTH_REDIS), [`public:garage:${approved.id}`]);
+
+    expect((await read(approved.slug)).body.jobTypes).toEqual([
+      {
+        id: suspension.id,
+        nameEn: 'Suspension check',
+        nameRo: 'Verificare suspensie',
+      },
     ]);
   });
 
