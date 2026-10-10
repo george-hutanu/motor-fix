@@ -8,8 +8,20 @@ const VERSION = '2026-10-10';
 const DAY = 86_400_000;
 
 const TEXT = {
-  en: { accept: 'Accept', bar: 'Usage statistics', refuse: 'Refuse' },
-  ro: { accept: 'Accept', bar: 'Statistici de utilizare', refuse: 'Refuz' },
+  en: {
+    accept: 'Accept',
+    bar: 'Usage statistics',
+    refuse: 'Refuse',
+    save: 'Save',
+    settings: 'Cookie settings',
+  },
+  ro: {
+    accept: 'Accept',
+    bar: 'Statistici de utilizare',
+    refuse: 'Refuz',
+    save: 'Salvează',
+    settings: 'Setări cookie',
+  },
 } as const;
 
 // Answers plausible.io here, so nothing leaves, and counts every call: the
@@ -64,7 +76,7 @@ const choice = (at: number, textVersion = VERSION) => ({
   textVersion,
 });
 
-// @traces 244-FR-001 244-FR-003 244-FR-004 244-FR-013
+// @traces 244-FR-001 244-FR-003 244-FR-004 244-FR-013 244-FR-017
 test.describe('the consent bar on a first visit', () => {
   for (const language of ['ro', 'en'] as const) {
     for (const path of ['', '/garages', '/list-your-garage']) {
@@ -155,38 +167,40 @@ test.describe('the consent bar on a first visit', () => {
   }
 });
 
-// @traces 244-FR-006 244-FR-007
+// @traces 244-FR-006 244-FR-007 244-FR-017
 test.describe('cookie settings', () => {
-  test('turn analytics off from the footer and on again, in English', async ({
-    page,
-  }) => {
-    const calls = await analyticsCalls(page);
-    await ready(page, '/en');
-    await bar(page, 'en')
-      .getByRole('button', { exact: true, name: 'Accept' })
-      .click();
-    await expect.poll(() => calls.length).toBeGreaterThan(0);
-
-    await page
-      .getByRole('button', { exact: true, name: 'Cookie settings' })
-      .click();
-    const dialog = page.getByRole('dialog', { name: 'Cookie settings' });
-    await dialog.getByRole('switch', { name: 'Usage statistics' }).click();
-    await dialog.getByRole('button', { exact: true, name: 'Save' }).click();
+  // Turns the switch over in the dialog and saves.
+  async function flip(page: Page, language: 'ro' | 'en') {
+    const { bar: name, save, settings } = TEXT[language];
+    await page.getByRole('button', { exact: true, name: settings }).click();
+    const dialog = page.getByRole('dialog', { name: settings });
+    await dialog.getByRole('switch', { name }).click();
+    await dialog.getByRole('button', { exact: true, name: save }).click();
     await expect(dialog).toBeHidden();
-    const off = calls.length;
+  }
 
-    await page.getByRole('link', { name: 'List your garage' }).first().click();
-    await settled(page);
-    expect(calls.length).toBe(off);
+  for (const language of ['ro', 'en'] as const) {
+    test(`turn analytics off from the footer and on again, ${language}`, async ({
+      page,
+    }) => {
+      const calls = await analyticsCalls(page);
+      await ready(page, `/${language}`);
+      await bar(page, language)
+        .getByRole('button', { exact: true, name: TEXT[language].accept })
+        .click();
+      await expect.poll(() => calls.length).toBeGreaterThan(0);
 
-    await page
-      .getByRole('button', { exact: true, name: 'Cookie settings' })
-      .click();
-    await dialog.getByRole('switch', { name: 'Usage statistics' }).click();
-    await dialog.getByRole('button', { exact: true, name: 'Save' }).click();
-    await expect.poll(() => calls.length).toBeGreaterThan(off);
-  });
+      await flip(page, language);
+      const off = calls.length;
+
+      await page.goto(`/${language}/list-your-garage`);
+      await settled(page);
+      expect(calls.length).toBe(off);
+
+      await flip(page, language);
+      await expect.poll(() => calls.length).toBeGreaterThan(off);
+    });
+  }
 
   test('a second tab follows a saved choice without a reload', async ({
     context,
@@ -230,6 +244,56 @@ test.describe('asking again', () => {
       await expect(bar(page, 'ro')).toBeHidden();
     });
   }
+});
+
+// @traces 244-FR-001 244-FR-006 244-FR-017
+test.describe('a garage profile and the dashboard @seeded', () => {
+  for (const language of ['ro', 'en'] as const) {
+    test(`asks before any analytics on a garage profile, ${language}`, async ({
+      page,
+    }) => {
+      const calls = await analyticsCalls(page);
+      await ready(page, `/${language}/garages/service-auto-militari`);
+
+      await expect(bar(page, language)).toBeVisible();
+      expect(calls).toEqual([]);
+    });
+  }
+
+  // The visitor's choice is newer than any the account holds, so it applies
+  // whatever another test left on the account.
+  test("turns analytics off from the driver's Setări", async ({ page }) => {
+    const calls = await analyticsCalls(page);
+    await ready(page, '/ro');
+    await bar(page, 'ro')
+      .getByRole('button', { exact: true, name: 'Accept' })
+      .click();
+    await page
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+    await signIn(page, ACCOUNTS.driver);
+    await expect(page).toHaveURL('/app/driver');
+    await settled(page);
+    await expect(bar(page, 'ro')).toBeHidden();
+    await expect.poll(() => calls.length).toBeGreaterThan(0);
+
+    await page.goto('/app/driver/settings');
+    await settled(page);
+    await page
+      .getByRole('button', { exact: true, name: 'Setări cookie' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Setări cookie' });
+    await dialog
+      .getByRole('switch', { name: 'Statistici de utilizare' })
+      .click();
+    await dialog.getByRole('button', { exact: true, name: 'Salvează' }).click();
+    await expect(dialog).toBeHidden();
+    const off = calls.length;
+
+    await page.goto('/app/driver');
+    await settled(page);
+    expect(calls.length).toBe(off);
+  });
 });
 
 // @traces 244-FR-012

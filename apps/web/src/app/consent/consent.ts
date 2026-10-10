@@ -14,6 +14,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import {
   ANALYTICS_CONSENT_MAX_AGE_DAYS,
   ANALYTICS_CONSENT_VERSION,
+  CONSENT_DECISIONS,
 } from '@motor-fix/contracts/consent';
 import {
   type AnalyticsConsentDto,
@@ -54,25 +55,37 @@ export function isValid(
   return now - Date.parse(choice.at) < MAX_AGE_MS;
 }
 
+const oneOf = <T extends string>(values: readonly T[], value: unknown) =>
+  values.includes(value as T);
+
+// Anything else in storage, edited or left by an older build, is no choice.
 function parse(raw: string | null): StoredChoice | null {
   if (!raw) return null;
+  let value: Partial<Record<keyof StoredChoice, unknown>> | null;
   try {
-    const value = JSON.parse(raw) as Partial<StoredChoice> | null;
-    return value &&
-      typeof value.browserConsentId === 'string' &&
-      typeof value.at === 'string' &&
-      typeof value.decision === 'string' &&
-      typeof value.textVersion === 'string'
-      ? ({
-          accountId: null,
-          language: 'ro',
-          pending: false,
-          ...value,
-        } as StoredChoice)
-      : null;
+    value = JSON.parse(raw);
   } catch {
     return null;
   }
+  if (
+    !value ||
+    typeof value.browserConsentId !== 'string' ||
+    typeof value.at !== 'string' ||
+    typeof value.textVersion !== 'string' ||
+    !oneOf(CONSENT_DECISIONS, value.decision)
+  )
+    return null;
+  return {
+    accountId: typeof value.accountId === 'string' ? value.accountId : null,
+    at: value.at,
+    browserConsentId: value.browserConsentId,
+    decision: value.decision as Decision,
+    language: oneOf(['ro', 'en'], value.language)
+      ? (value.language as StoredChoice['language'])
+      : 'ro',
+    pending: value.pending === true,
+    textVersion: value.textVersion,
+  };
 }
 
 function read(): StoredChoice | null {
@@ -141,7 +154,9 @@ export class Consent {
     if (!this.browser) return;
     this.choice.set(read());
     void this.i18n.enter('consent').finally(() => this.ready.set(true));
-    if (this.choice()?.pending) void this.send(this.choice() as StoredChoice);
+    // A choice bound to an account goes again once the session is known.
+    const waiting = this.choice();
+    if (waiting?.pending && !waiting.accountId) void this.send(waiting);
     this.start(this.router.navigated);
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) this.count();
@@ -226,7 +241,12 @@ export class Consent {
 
   private settle(choice: StoredChoice, pending: boolean) {
     const now = this.choice();
-    if (now?.at !== choice.at || now.decision !== choice.decision) return;
+    if (
+      now?.at !== choice.at ||
+      now.decision !== choice.decision ||
+      now.accountId !== choice.accountId
+    )
+      return;
     this.keep({ ...now, pending });
   }
 
@@ -238,8 +258,12 @@ export class Consent {
     try {
       latest = (await this.api.consentsControllerMine()).analytics;
     } catch {
+      // Asked again at the next sign-in state change.
+      this.reconciled = null;
       return;
     }
+    // Signed out, or in as someone else, while the answer was on its way.
+    if (this.session.current()?.id !== accountId) return;
     const browser = this.choice();
     const own = this.madeBy(browser, accountId);
     if (own && (!latest || Date.parse(own.at) > Date.parse(latest.at))) {

@@ -1,10 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Equals, IsIn, IsISO8601, IsUUID } from 'class-validator';
+import { Equals, IsIn, IsISO8601, IsUUID, Matches } from 'class-validator';
 
-import { ANALYTICS_CONSENT_VERSION } from './consent';
+import {
+  ANALYTICS_CONSENT_VERSION,
+  CONSENT_DECISIONS,
+  type ConsentDecision,
+} from './consent';
 
-export const CONSENT_DECISIONS = ['granted', 'refused', 'withdrawn'] as const;
-export type ConsentDecision = (typeof CONSENT_DECISIONS)[number];
+// A date and a time with its zone: a time without one would be read in the
+// server's own zone and shift the clock check.
+const DATE_TIME_WITH_ZONE =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/;
 const LANGUAGES = ['ro', 'en'] as const;
 
 // One choice made in the consent bar or "Setări cookie". The account is the
@@ -35,6 +41,7 @@ export class RecordConsentDto {
     format: 'date-time',
   })
   @IsISO8601({ strict: true })
+  @Matches(DATE_TIME_WITH_ZONE)
   at!: string;
 }
 

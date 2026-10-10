@@ -54,3 +54,14 @@ describe('the privacy panel of a dashboard', () => {
     );
   });
 });
+
+// @traces 244-FR-015
+describe('news e-mails beside the privacy panel', () => {
+  it('stay with their own switch: the panel holds no switch and no news control', async () => {
+    const host = await render();
+
+    expect(host.querySelectorAll('[role="switch"], input')).toHaveLength(0);
+    expect(host.querySelectorAll('button')).toHaveLength(1);
+    expect(host.textContent).not.toMatch(/news|noutăți/i);
+  });
+});

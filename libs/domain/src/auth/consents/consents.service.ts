@@ -29,7 +29,7 @@ export class ConsentsService {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-    @Inject(ConsentThrottle) private readonly throttle: ConsentThrottle,
+    private readonly throttle: ConsentThrottle,
   ) {}
 
   // Without an actor the choice is a visitor's and goes under no account.

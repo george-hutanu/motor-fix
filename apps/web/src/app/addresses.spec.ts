@@ -95,7 +95,7 @@ function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
   const frame = root.querySelector('mf-public-frame');
   expect(frame).not.toBeNull();
   for (const part of Array.from(frame?.children ?? [])) {
-    if (part.childElementCount === 0 && !part.textContent?.trim()) continue;
+    if (part.tagName === 'MF-CONSENT-BAR') continue;
     const landmark = part.matches(LANDMARKS)
       ? part
       : part.querySelector(LANDMARKS);

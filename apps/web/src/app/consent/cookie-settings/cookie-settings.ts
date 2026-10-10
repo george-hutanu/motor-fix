@@ -13,7 +13,7 @@ import { Consent } from '../consent';
   styleUrl: './cookie-settings.css',
   templateUrl: './cookie-settings.html',
 })
-export class CookieSettings {
+class CookieSettings {
   private readonly consent = inject(Consent);
   protected readonly i18n = inject(I18n);
   protected readonly task = injectOverlayTask<undefined, undefined>();

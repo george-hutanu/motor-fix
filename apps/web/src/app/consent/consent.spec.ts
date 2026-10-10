@@ -74,6 +74,7 @@ async function start({
   platform = 'browser',
   domain = 'motorfix.ro' as string | null,
   language = 'ro' as 'ro' | 'en',
+  calls = {} as Partial<typeof api>,
 } = {}) {
   withMeta(domain);
   api = {
@@ -83,6 +84,7 @@ async function start({
     })),
     consentsControllerRecord: jest.fn(async () => ({ id: 'r1' })),
     consentsControllerRecordMine: jest.fn(async () => ({ id: 'r2' })),
+    ...calls,
   };
   analytics = { load: jest.fn(), pageview: jest.fn() };
   events = new Subject();
@@ -161,6 +163,17 @@ describe('the first visit', () => {
 
     expect(consent.showBar()).toBe(false);
     expect(getItem).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an unknown decision', { decision: 'maybe' }],
+    ['no decision', { decision: undefined }],
+  ])('treats a stored choice with %s as none', async (_, change) => {
+    keep({ ...choice(), ...change } as StoredChoice);
+    const consent = await start();
+
+    expect(consent.showBar()).toBe(true);
+    expect(analytics.load).not.toHaveBeenCalled();
   });
 
   it('treats an unreadable or broken choice as none', async () => {
@@ -517,6 +530,87 @@ describe('after a sign-in', () => {
 
     await consent.accept();
     expect(api.consentsControllerRecordMine).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks the account again when the session is read again after a failed read', async () => {
+    const consent = await start();
+    api.consentsControllerMine = failWith(503);
+    signIn();
+    await settle();
+
+    expect(consent.showBar()).toBe(true);
+    expect(api.consentsControllerRecordMine).not.toHaveBeenCalled();
+
+    api.consentsControllerMine = account(null);
+    signIn();
+    await settle();
+    expect(api.consentsControllerMine).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for the session before sending a pending choice made signed in', async () => {
+    await signedIn(
+      choice({ accountId: ACCOUNT, at: ago(1), pending: true }),
+      null,
+    );
+
+    expect(api.consentsControllerRecord).not.toHaveBeenCalled();
+    expect(api.consentsControllerRecordMine).toHaveBeenCalledTimes(1);
+    expect(stored()?.pending).toBe(false);
+  });
+
+  it("keeps the account's copy pending when only the visitor's send succeeded", async () => {
+    keep(choice({ pending: true }));
+    let answer: (value: unknown) => void = () => undefined;
+    const late = new Promise((resolve) => {
+      answer = resolve;
+    });
+    const record = jest.fn(() => late);
+    const recordMine = failWith(503);
+    await start({
+      calls: {
+        consentsControllerMine: account(null),
+        consentsControllerRecord: record,
+        consentsControllerRecordMine: recordMine,
+      },
+    });
+    signIn();
+    await settle();
+    expect(recordMine).toHaveBeenCalledTimes(1);
+
+    answer({ id: 'r1' });
+    await settle();
+
+    expect(stored()).toMatchObject({ accountId: ACCOUNT, pending: true });
+  });
+
+  it('drops the account answer that arrives after the session moved to another account', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    const late = new Promise((resolve) => {
+      answer = resolve;
+    });
+    const mine = jest
+      .fn()
+      .mockImplementationOnce(() => late)
+      .mockImplementation(async () => ({ accepted: [], analytics: null }));
+    await start({ calls: { consentsControllerMine: mine } });
+    signIn();
+    await settle();
+    current.set(null);
+    signIn(OTHER);
+    await settle();
+
+    answer({
+      accepted: [],
+      analytics: {
+        at: ago(1),
+        decision: 'granted',
+        language: 'ro',
+        textVersion: ANALYTICS_CONSENT_VERSION,
+      },
+    });
+    await settle();
+
+    expect(stored()?.accountId).not.toBe(ACCOUNT);
   });
 
   it('never asks the account on a public page', async () => {

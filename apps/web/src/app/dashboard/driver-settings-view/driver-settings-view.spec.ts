@@ -16,7 +16,8 @@ class FakeNotifications {}
 class FakePrivacyPanel {}
 
 describe("the driver's settings", () => {
-  // @traces 244-FR-006
+  // @traces 244-FR-006 244-FR-015
+  // The news switch stays in the notification switches, before the panel.
   it("shows this device's push panel, the notification switches, then the privacy panel", () => {
     TestBed.overrideComponent(DriverSettingsView, {
       add: { imports: [FakePushPanel, FakeNotifications, FakePrivacyPanel] },
