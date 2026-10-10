@@ -489,7 +489,7 @@ describe('the same moment', () => {
       const [row] = await stored();
       expect(res.map((r) => r.status).sort()).toEqual([200, 409]);
       expect(row.status).not.toBe('requested');
-      expect(await reviews()).toBe(row.status === 'approved' ? false : true);
+      expect(await reviews()).toBe(row.status !== 'approved');
     },
   );
 });

@@ -167,3 +167,14 @@ mf-lamp {
   outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
   outline-offset: var(--mf-focus-offset);
 }
+.found {
+  margin: 0 0 var(--mf-space-2);
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.no-match {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mf-space-3);
+}
