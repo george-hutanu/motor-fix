@@ -5,8 +5,9 @@
 # DATABASE_URL. The workflow puts SEED_PASSWORD in front of it on stdin.
 #
 # With SEED_ONLY=1 in front too, it only seeds, which adds the seed accounts
-# that are missing and changes nothing else: the release's staging job does
-# this after each deploy, before the end-to-end run signs in as them.
+# that are missing and removes the quote requests they sent in the last day,
+# so the seeded driver's daily limit starts unused: the release's staging job
+# does this after each deploy, before the end-to-end run signs in as them.
 #
 # It refuses unless the container says it is staging twice over: APP_ENV,
 # which the app reads, and RAILWAY_ENVIRONMENT_NAME, which Railway sets.
