@@ -239,6 +239,9 @@ function renderText(
 }
 
 export function templateName(kind: string, params: Params): string {
+  if (kind === 'ADMIN_OUTAGE_ALERT') {
+    return params['state'] === 'back' ? `${kind}.back` : `${kind}.down`;
+  }
   if (kind === 'VERIFICATION_RESULT') {
     const decision = params['decision'];
     return DECISIONS.has(decision) ? `${kind}.${decision}` : kind;

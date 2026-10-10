@@ -1,4 +1,9 @@
-import { type Env, grafanaUrl, type StorageEnv } from '@motor-fix/contracts';
+import {
+  type Env,
+  grafanaUrl,
+  outageWebhookToken,
+  type StorageEnv,
+} from '@motor-fix/contracts';
 import {
   AdminAccountsModule,
   AuthModule,
@@ -48,6 +53,7 @@ export class AppModule {
       {
         databaseUrl: env.DATABASE_URL,
         email,
+        outageWebhookToken: outageWebhookToken(process.env),
         push: pushConfig(process.env),
         redisUrl: env.REDIS_URL,
       },

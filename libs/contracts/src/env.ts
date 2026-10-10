@@ -62,6 +62,13 @@ export function placesApiKey(
   return source[key]?.trim() || undefined;
 }
 
+// The bearer Grafana's outage contact point sends; unset refuses every call.
+export function outageWebhookToken(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  return source['OUTAGE_WEBHOOK_TOKEN']?.trim() || undefined;
+}
+
 // The web app's public address: unset in development and at build time.
 export function publicWebUrl(
   source: Record<string, string | undefined> = process.env,

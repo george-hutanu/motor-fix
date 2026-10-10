@@ -20,8 +20,9 @@ RUN npx nx run ${APP}:build --configuration=production
 # their build listed in its own package.json and lockfile.
 RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev; fi
 # The web build's source maps never reach the image: the browser's go to the
-# web-maps stage, which the release uploads to the error collector; the
-# server's are not kept.
+# web-maps stage, which the release uploads to the error collector; the web
+# server's are deleted. The Node apps keep theirs beside main.js, so a thrown
+# error's stack names the .ts line (node-app below).
 RUN mkdir /maps && if [ "${APP}" = web ]; then \
       find dist/apps/web/browser -name '*.map' -exec mv {} /maps/ \; \
       && find dist/apps/web -name '*.map' -delete; fi
@@ -51,4 +52,5 @@ FROM runtime AS web
 CMD ["node", "server/server.mjs"]
 
 FROM runtime AS node-app
+ENV NODE_OPTIONS=--enable-source-maps
 CMD ["node", "main.js"]
