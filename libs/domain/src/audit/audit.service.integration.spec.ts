@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { AuditService } from './audit.service';
 import { createPrisma } from '../auth/prisma';
 import { serialDatabase } from '../auth/serial-db.testing';
+import type { Prisma } from '../generated/prisma/client';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -514,5 +515,137 @@ describe('the history is append-only', () => {
       prisma.$executeRawUnsafe('TRUNCATE activity_log'),
     ).rejects.toThrow(/append-only/);
     expect(await entriesOf(subjectId)).toHaveLength(1);
+  });
+});
+
+// Counts the calls made through a transaction client, by model and method.
+const counted = (tx: Prisma.TransactionClient) => {
+  const calls: string[] = [];
+  const client = new Proxy(tx, {
+    get(target, model: string) {
+      const delegate = Reflect.get(target, model) as object;
+      if (typeof delegate !== 'object' || delegate === null) return delegate;
+      return new Proxy(delegate, {
+        get(inner, method: string) {
+          const fn = Reflect.get(inner, method) as unknown;
+          if (typeof fn !== 'function') return fn;
+          return (...args: unknown[]) => {
+            calls.push(`${model}.${method}`);
+            return (fn as (...a: unknown[]) => unknown).apply(inner, args);
+          };
+        },
+      });
+    },
+  });
+  return { calls, client };
+};
+
+describe('recordMany', () => {
+  it('writes one row per entry in one call', async () => {
+    const garageId = randomUUID();
+    const subjects = [randomUUID(), randomUUID(), randomUUID()];
+    let calls: string[] = [];
+
+    await prisma.$transaction(async (tx) => {
+      const spy = counted(tx);
+      calls = spy.calls;
+      await audit.recordMany(
+        spy.client,
+        subjects.map((subjectId) => ({
+          ...ion,
+          action: 'delete' as const,
+          garageId,
+          oldValue: { brandId: garageId },
+          subjectId,
+          subjectType: 'garage_brand_job',
+        })),
+      );
+    });
+
+    expect(calls).toEqual(['activityLog.createMany']);
+    for (const subjectId of subjects) {
+      expect(await entriesOf(subjectId)).toEqual([
+        expect.objectContaining({
+          action: 'delete',
+          actorName: 'Ion',
+          actorRole: 'owner',
+          garageId,
+          oldValue: { brandId: garageId },
+          subjectType: 'garage_brand_job',
+        }),
+      ]);
+    }
+  });
+
+  it('writes nothing for an empty list', async () => {
+    let calls: string[] = [];
+
+    await prisma.$transaction(async (tx) => {
+      const spy = counted(tx);
+      calls = spy.calls;
+      await audit.recordMany(spy.client, []);
+    });
+
+    expect(calls).toEqual([]);
+  });
+
+  it("looks the actor's name up once and gives it to every entry, stored as owner", async () => {
+    const subjects = [randomUUID(), randomUUID()];
+    const { id } = await prisma.account.create({
+      data: {
+        lastRole: 'garage',
+        name: 'Maria Stan',
+        roles: { create: [{ role: 'garage' }] },
+      },
+    });
+    let calls: string[] = [];
+
+    await prisma.$transaction(async (tx) => {
+      const spy = counted(tx);
+      calls = spy.calls;
+      await audit.recordMany(
+        spy.client,
+        subjects.map((subjectId) => ({
+          action: 'create' as const,
+          actorId: id,
+          actorRole: 'garage' as const,
+          subjectId,
+          subjectType: 'garage_brand_job',
+        })),
+      );
+    });
+
+    expect(calls).toEqual(['account.findUnique', 'activityLog.createMany']);
+    for (const subjectId of subjects) {
+      expect(await entriesOf(subjectId)).toEqual([
+        expect.objectContaining({
+          actorId: id,
+          actorName: 'Maria',
+          actorRole: 'owner',
+        }),
+      ]);
+    }
+  });
+
+  it('leaves no entry when the transaction rolls back', async () => {
+    const subjects = [randomUUID(), randomUUID()];
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await audit.recordMany(
+          tx,
+          subjects.map((subjectId) => ({
+            ...ion,
+            action: 'create' as const,
+            subjectId,
+            subjectType: 'garage_brand_job',
+          })),
+        );
+        throw new Error('the save failed');
+      }),
+    ).rejects.toThrow('the save failed');
+
+    for (const subjectId of subjects)
+      expect(await entriesOf(subjectId)).toEqual([]);
   });
 });

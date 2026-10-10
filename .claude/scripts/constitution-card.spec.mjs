@@ -70,11 +70,9 @@ describe('the constitution card', () => {
     const cardLine = card.split('\n').find((line) => line.startsWith('- **VII.'));
     for (const text of [seventh, cardLine]) {
       assert.match(text, /GitHub issue|issue in the private/);
-      assert.match(text, /started on Notion/);
     }
     assert.match(seventh, /Project "MotorFix" \(#11\)/);
     assert.match(seventh, /closed or Done/);
-    assert.doesNotMatch(seventh, /in Notion/);
     assert.ok(atLeast(full, 2, 0));
   });
 

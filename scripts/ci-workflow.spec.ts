@@ -1,5 +1,6 @@
 // @traces 875-FR-005 875-FR-006
 // @traces 879-FR-015
+// @traces 1037-FR-010
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -159,6 +160,14 @@ describe('ci workflow', () => {
 
     expect(firstCheck).toBeGreaterThan(0);
     expect(guarded.slice(firstCheck).every(Boolean)).toBe(true);
+  });
+
+  it('checks banned words on every PR, documentation-only ones included, against the base list', () => {
+    const banned = step(job('changes'), 'Banned words');
+    expect(setting(banned, 'if')).toBe("github.event_name == 'pull_request'");
+    expect(setting(banned, 'run')).toBe(
+      `node scripts/banned-words.ts --base origin/${gh('github.base_ref')}`,
+    );
   });
 
   it('runs Biome from the install, not a separate download', () => {

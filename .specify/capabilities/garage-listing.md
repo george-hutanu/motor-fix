@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -22,6 +22,7 @@ features:
   - 307-public-garage-profile
   - 206-documents-declaration
   - 163-figures-period-city
+  - 412-brand-job-ticks
 ---
 
 # Capability: Garage listing
@@ -775,6 +776,34 @@ _From 206-documents-declaration._
 ### 206-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis with the test store: the type, size and count limits at the upload address and at confirm (a .docx, 14 MB, the 11th page, a non-PDF under a PDF type); the 30-day rule (31 days ago, tomorrow, today, 30 days ago; an unchanged stale date accepted on save); upload addresses refused without a valid draft token and for a `submitted` draft; a save that reorders pages, one with a foreign key refused, one that leaves a held key out keeping it; the delete removing the key and the object; the attach creating the rows, the declaration, the audit entries and the events in one transaction, with no row for a missing document, and refused without the declaration; the admin download address issued to an admin with its `open` audit entry, 403 for the garage's receptionist and mechanic, 404 for a driver and another garage's owner. Unit tests in the web app cover the hints by kind of business, the refusal messages, the page reorder and removal, the issue-date error, the declaration's done state and the counter for all five items. A Playwright end-to-end test MUST, at the sweep's sizes, upload a PDF certificate and two photos of the authorisation, enter a valid date, tick the declaration with a name, read "5 din 5 completate", reload and read the same pages and tick; the admin "open both documents" part waits for ST-116 and ST-302 (Assumptions).
 
 _From 206-documents-declaration._
+
+### 412-FR-001 — Under every brand chip marked taken (`works_on`) in step 2, after the fuel toggles, the step MUST show one expandable row labelled "Lucrări: <n> din <m>" / "Jobs: <n> of <m>" (n ticked, m the garage's jobs) that opens to one checkbox per job of the garage's price list — the distinct jobs of the step-3 section, catalogue jobs named in the page's language and proposed jobs by their proposed name, in the price list's order — plus a "Bifează tot" / "Tick all" button (the row starts collapsed, its open state is not saved in the draft, and "Bifează tot" stays enabled and changes nothing when every job is already ticked); each checkbox's accessible name carries the brand and the job, every target is at least 44 px and the row fits a 320 px phone with no sideways scroll. A refused or unmarked brand shows no row.
+
+_From 412-brand-job-ticks._
+
+### 412-FR-002 — Every job MUST start ticked for a brand that becomes taken, and a job added to the price list afterwards MUST start ticked for every taken brand [R1]; unticking a job MUST record it, ticking it back or "Bifează tot" MUST remove the record, a brand tapped to refused or off MUST lose its records, and a job that leaves the step-3 section (removed or renamed) MUST lose its records on every brand.
+
+_From 412-brand-job-ticks._
+
+### 412-FR-003 — The step-2 section (`steps['2']`) MUST carry, on each `works_on` brand, an optional list of the jobs the owner **unticked**, each identified as the price list identifies it (a catalogue `jobTypeId`, or the proposed `name` for a job not in the catalogue), no job twice and at most `JOBS_MAX` (50, the price list's own bound) of them; an absent list means every job ticked (so a kept draft from before this story shows every taken brand fully ticked). The step-2 guard MUST refuse, with 400 and the stable validation code, a list on a `does_not_take` brand, a duplicate, a ref that is neither a uuid nor a name within the price list's name limit, and an unknown key.
+
+_From 412-brand-job-ticks._
+
+### 412-FR-004 — When the step-3 section has no job, each taken brand's row MUST read "Adaugă mai întâi lucrări în lista de prețuri" / "Add jobs to the price list first" with a link to step 3, and no checkbox.
+
+_From 412-brand-job-ticks._
+
+### 412-FR-005 — When the price list has at least one job and every job of a taken brand is unticked, the step MUST show under that brand the existing line "Nu vei primi cereri pentru <brand>" / "You will not receive requests for <brand>", announced politely, once for the brand even when its fuels are all unticked too; saving and completing the step stay allowed.
+
+_From 412-brand-job-ticks._
+
+### 412-FR-011 — Every label, count, button, hint and warning of the row MUST exist in Romanian and English under the step's strings (`listing.brands`), with plural forms where the language needs them; the job names come from the catalogue in the page's language and the proposed names as typed.
+
+_From 412-brand-job-ticks._
+
+### 412-FR-012 — Tests MUST cover, in Jest: the step-2 guard (good and bad shapes of FR-003); the row's count, "Bifează tot", the empty-list line, the one warning, the refused/off reset and the pre-story draft; on real PostgreSQL, the brands write of FR-006 (rows, audit entries, the refused ref, a proposed job's pending id), the `PUT` of FR-007 (set, unchanged, empty, a brand becoming taken, the 400s, 403 and 404, the audit entries and the `brand_jobs` event) and the routing regression of User Story 2 scenario 5 against rows written by FR-006 or FR-007. In Playwright: in the listing form, take Dacia, add jobs in step 3, untick one in step 2, reload from the continue link and read the ticks back. The brief's end-to-end run through submit and approval waits for the sending story (see Assumptions).
+
+_From 412-brand-job-ticks._
 
 ## Retired
 

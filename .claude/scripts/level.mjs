@@ -10,7 +10,6 @@
 //   node .claude/scripts/level.mjs set 1           write it to .specify/feature.json
 //   node .claude/scripts/level.mjs --json
 //   node .claude/scripts/level.mjs suggest "<work>" [--set]   classify; --set records a confident answer
-//   node .claude/scripts/level.mjs suggest ST-<n>|<url> [--set] size from the Notion story first
 //   node .claude/scripts/level.mjs point specs/NNN-x            point feature.json at a new feature, keeping its level
 //   node .claude/scripts/level.mjs check [--ready] [--json]    raise a level 0/1 to 2 when a fact contradicts it
 import { execFileSync, execSync } from "node:child_process";
@@ -21,7 +20,6 @@ import {
   DEFAULT_LEVEL,
   FR_THRESHOLD,
   LEVELS,
-  STORY_POINTS_THRESHOLD,
   activeFeature,
   featureKey,
   featureLevel,
@@ -473,140 +471,14 @@ export async function suggestText(description, { repo, argv = [], out = console.
   return 0;
 }
 
-const STORY_REF = /^ST-(\d+)$/i;
-const PAGE_REF = /^https?:\/\/[^/]*notion\.(?:so|site|com)\/.*?([0-9a-f]{32})(?:[?#].*)?$/i;
-
-const plain = (block) => (block?.[block.type]?.rich_text ?? []).map((t) => t.plain_text ?? t.text?.content ?? "").join("");
-const headingLevel = (block) => (/^heading_[123]$/.test(block?.type) ? Number(block.type.at(-1)) : 0);
-const rollupCount = (prop) => {
-  const r = prop?.rollup;
-  if (!r) return 0;
-  if (r.type === "array") return r.array?.length ?? 0;
-  if (r.type === "number") return r.number ?? 0;
-  return 0;
-};
-
-/** The Build brief's sections and whether each has content, or "not found". */
-async function briefOf(client, blocks) {
-  const at = blocks.findIndex((b) => headingLevel(b) && /build brief/i.test(plain(b)));
-  if (at === -1) return { brief: "not found", text: "" };
-  const head = blocks[at];
-  let body = [];
-  if (head.has_children) body = await client.children(head.id);
-  else for (const b of blocks.slice(at + 1)) {
-    if (headingLevel(b) && headingLevel(b) <= headingLevel(head)) break;
-    body.push(b);
-  }
-  const sections = [];
-  const text = [];
-  for (const b of body) {
-    const t = plain(b);
-    text.push(t);
-    if (headingLevel(b)) sections.push({ name: t, filled: Boolean(b.has_children) });
-    else if ((t.trim() || b.has_children || !b[b.type]?.rich_text) && sections.length) sections.at(-1).filled = true;
-  }
-  if (!sections.length) sections.push({ name: "Build brief", filled: text.some((t) => t.trim()) });
-  return { brief: sections, text: text.join(" ") };
-}
-
-/** Read a story's sizing facts from Notion, or say why it could not be read. */
-async function readStory(ref, { repo, env, fetchImpl }) {
-  const { NotionError, clientLimits, notionClient, notionToken, readProp } = await import("./lib/notion.mjs");
-  const token = notionToken(repo, env);
-  if (!token) return { error: "no NOTION_TOKEN" };
-  const client = notionClient({ token, fetchImpl, ...clientLimits(env) });
-  try {
-    let page;
-    const story = ref.match(STORY_REF);
-    if (story) {
-      const { STORIES } = await import("./notion-sync.mjs");
-      page = (await client.query(STORIES, { filter: { property: "ID", unique_id: { equals: Number(story[1]) } } }))[0];
-    } else page = await client.request("GET", `/pages/${ref.match(PAGE_REF)[1]}`);
-    if (!page) return { error: `${ref} not found` };
-    const { brief, text } = await briefOf(client, await client.children(page.id));
-    const title = Object.values(page.properties ?? {}).find((p) => p?.type === "title");
-    const points = readProp(page, "Story points");
-    return {
-      facts: {
-        type: readProp(page, "Issue type"),
-        labels: (page.properties?.Labels?.multi_select ?? []).map((l) => l.name),
-        design: rollupCount(page.properties?.Design),
-        boards: rollupCount(page.properties?.["Design boards"]),
-        points: typeof points === "number" ? points : null,
-        brief,
-      },
-      text: `${(title?.title ?? []).map((t) => t.plain_text ?? "").join("")} ${text}`.trim(),
-    };
-  } catch (error) {
-    if (error instanceof NotionError) return { error: error.short };
-    return { error: error?.message ?? String(error) };
-  }
-}
-
-/**
- * The Notion rules, applied over the free classifier's answer: a classifier 2
- * or more stands; boards, an empty or missing brief section, or more than
- * STORY_POINTS_THRESHOLD points mean at least 2; a bug with no boards and a
- * complete brief is 1. Labels and Design are facts only. Never lowers.
- */
-function sizeFromFacts(facts, classified) {
-  const floors = [];
-  if (facts.boards) floors.push(`boards: ${facts.boards}`);
-  if (facts.brief === "not found") floors.push("brief: not found");
-  else {
-    const empty = facts.brief.filter((s) => !s.filled).map((s) => s.name);
-    if (empty.length) floors.push(`brief empty: ${empty.join(", ")}`);
-  }
-  if (facts.points !== null && facts.points > STORY_POINTS_THRESHOLD) floors.push(`points: ${facts.points}`);
-  if (!classified.unsure && classified.level >= 2)
-    return { ...classified, by: "classifier", reason: [classified.reason, ...floors].join("; ") };
-  if (floors.length) return { level: 2, confidence: 0.8, by: "notion", reason: floors.join("; "), askText: Boolean(classified.unsure) };
-  if (facts.type === "Bug" && facts.brief.length && facts.brief.every((s) => s.filled))
-    return { level: 1, confidence: 0.8, by: "notion", reason: "a bug with no boards and a complete brief" };
-  return { unsure: true, reason: `no decisive facts: type ${facts.type ?? "none"}, no boards, brief complete` };
-}
-
-const describeFacts = (f) =>
-  [
-    `type ${f.type ?? "none"}`,
-    `labels ${f.labels.join(", ") || "none"}`,
-    `design ${f.design || "none"}`,
-    `boards ${f.boards || "none"}`,
-    `points ${f.points ?? "none"}`,
-    f.brief === "not found" ? "brief: not found" : `brief ${f.brief.map((s) => `${s.name} ${s.filled ? "filled" : "empty"}`).join(", ")}`,
-  ].join(" · ");
-
-/** `suggest <text>` or `suggest ST-<n>|<story URL>`: the story's Notion facts first, then today's path. */
-export async function suggestCommand(argv, { repo, env = process.env, fetchImpl, out = console.log } = {}) {
+/** `suggest <text>`: the free classifier, then Jev when it is unsure. */
+export async function suggestCommand(argv, { repo, fetchImpl, out = console.log } = {}) {
   const description = argv.filter((a) => !a.startsWith("--")).join(" ");
   if (!description) {
-    console.error('level: suggest needs a description or a story, e.g. level suggest "add a --json flag to the rule check" or level suggest ST-123');
+    console.error('level: suggest needs a description, e.g. level suggest "add a --json flag to the rule check"');
     return 1;
   }
-  if (!STORY_REF.test(description) && !PAGE_REF.test(description)) return suggestText(description, { repo, argv, out, fetchImpl });
-
-  const story = await readStory(description, { repo, env, fetchImpl });
-  if (story.error) {
-    out(`notion not read (${story.error}) — sizing from the text as given`);
-    return suggestText(description, { repo, argv, out, fetchImpl });
-  }
-  out(`facts: ${describeFacts(story.facts)}`);
-  const verdict = sizeFromFacts(story.facts, classifyLevel(story.text));
-  if (verdict.unsure) {
-    out(`unsure (notion: ${verdict.reason}) — sizing from the story's text`);
-    return suggestText(story.text, { repo, argv, out, fetchImpl });
-  }
-  // A floor only raises: with the classifier unsure, the text path is
-  // Jev, and a Jev answer above the floor stands.
-  if (verdict.askText) {
-    const jev = await suggestLevel(story.text, { repo, fetchImpl });
-    if (!jev.unavailable && jev.level > verdict.level) {
-      printLevel({ ...jev, by: "jev", reason: verdict.reason }, { repo, argv, out });
-      return 0;
-    }
-  }
-  printLevel(verdict, { repo, argv, out });
-  return 0;
+  return suggestText(description, { repo, argv, out, fetchImpl });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

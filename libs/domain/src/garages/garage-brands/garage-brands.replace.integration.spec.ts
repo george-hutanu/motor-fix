@@ -231,8 +231,8 @@ describe("replacing a garage's brand answer", () => {
       doesNotTake: [{ id: w.tesla, name: 'Tesla', slug: 'tesla' }],
       refusalPhrase: 'orice nu e BMW',
       worksOn: [
-        { id: w.mini, name: 'Mini', slug: 'mini' },
-        { id: w.bmw, name: 'BMW', slug: 'bmw' },
+        { id: w.mini, jobs: [], name: 'Mini', slug: 'mini' },
+        { id: w.bmw, jobs: [], name: 'BMW', slug: 'bmw' },
       ],
     });
   });
@@ -630,5 +630,303 @@ describe("a taken brand's fuels in the brand answer", () => {
     expect(
       [...(saved[0].payload as { fields: string[] }).fields].sort(),
     ).toEqual(['brand_fuels', 'brands']);
+  });
+});
+
+describe("a taken brand's jobs in the brand answer", () => {
+  async function jobType(key: string) {
+    return (
+      await prisma.jobType.create({
+        data: { key, nameEn: key, nameRo: key, status: 'approved' },
+      })
+    ).id;
+  }
+
+  // Oil, brakes and gearbox on the price list in that order; oil also has a
+  // BMW range, which lists it once.
+  async function priced(w: World) {
+    const oil = await jobType(`oil-${randomUUID()}`);
+    const brakes = await jobType(`brakes-${randomUUID()}`);
+    const gearbox = await jobType(`gearbox-${randomUUID()}`);
+    const price = (jobTypeId: string, position: number, brandId?: string) => ({
+      brandId,
+      fromBani: 30_000,
+      garageId: w.garage,
+      jobTypeId,
+      position,
+      updatedBy: w.owner.accountId,
+    });
+    await prisma.garagePrice.createMany({
+      data: [
+        price(oil, 0),
+        price(oil, 1, w.bmw),
+        price(brakes, 2),
+        price(gearbox, 3),
+      ],
+    });
+    return { brakes, gearbox, oil };
+  }
+
+  const setJobs = (
+    w: World,
+    marks: { brandId: string; stance: Stance; jobs?: string[] }[],
+  ) => brands.replace(w.owner, w.garage, { brands: marks });
+
+  const ticks = async (w: World, brandId: string) =>
+    (
+      await prisma.garageBrandJob.findMany({
+        select: { jobTypeId: true },
+        where: { brandId, garageId: w.garage },
+      })
+    )
+      .map((r) => r.jobTypeId)
+      .sort();
+
+  const jobEntries = async (w: World) =>
+    (await history(w)).filter((e) => e.subjectType === 'garage_brand_job');
+
+  async function refused(run: Promise<unknown>) {
+    const error = await run.then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(HttpException);
+    return {
+      body: (error as HttpException).getResponse(),
+      status: (error as HttpException).getStatus(),
+    };
+  }
+
+  // @traces 412-FR-007 412-FR-008
+  it('ticks exactly the jobs sent: one left out loses its row, audited, and the one event names brand_jobs', async () => {
+    const w = await world();
+    const { brakes, gearbox, oil } = await priced(w);
+    await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
+
+    await setJobs(w, [
+      { brandId: w.bmw, jobs: [oil, gearbox], stance: 'works_on' },
+    ]);
+
+    expect(await ticks(w, w.bmw)).toEqual([gearbox, oil].sort());
+    const entries = await jobEntries(w);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      action: 'delete',
+      actorId: w.owner.accountId,
+      actorRole: 'owner',
+      garageId: w.garage,
+      oldValue: { brandId: w.bmw },
+      subjectId: brakes,
+    });
+    const saved = await events();
+    expect(saved).toHaveLength(1);
+    expect(saved[0].payload).toMatchObject({
+      brandIds: [w.bmw],
+      fields: ['brand_jobs'],
+      garageId: w.garage,
+    });
+  });
+
+  // @traces 412-FR-008
+  it('records one create entry for a job ticked again', async () => {
+    const w = await world();
+    const { brakes, oil } = await priced(w);
+    await setJobs(w, [{ brandId: w.bmw, jobs: [oil], stance: 'works_on' }]);
+    await checkpoint();
+
+    await setJobs(w, [
+      { brandId: w.bmw, jobs: [oil, brakes], stance: 'works_on' },
+    ]);
+
+    expect(await ticks(w, w.bmw)).toEqual([brakes, oil].sort());
+    const entries = await jobEntries(w);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      action: 'create',
+      actorId: w.owner.accountId,
+      newValue: { brandId: w.bmw },
+      subjectId: brakes,
+    });
+  });
+
+  // @traces 412-FR-007
+  it('leaves the ticks of a brand already taken as they are when jobs are left out, recording nothing', async () => {
+    const w = await world();
+    const { oil } = await priced(w);
+    await setJobs(w, [{ brandId: w.bmw, jobs: [oil], stance: 'works_on' }]);
+    await checkpoint();
+
+    await setJobs(w, [{ brandId: w.bmw, stance: 'works_on' }]);
+
+    expect(await ticks(w, w.bmw)).toEqual([oil]);
+    expect(await history(w)).toEqual([]);
+    expect(await events()).toEqual([]);
+  });
+
+  // @traces 412-FR-007
+  it('gives a newly taken brand every job of the price list when jobs are left out, and none for an empty list', async () => {
+    const w = await world();
+    const { brakes, gearbox, oil } = await priced(w);
+
+    await setJobs(w, [
+      { brandId: w.bmw, stance: 'works_on' },
+      { brandId: w.mini, jobs: [], stance: 'works_on' },
+    ]);
+
+    expect(await ticks(w, w.bmw)).toEqual([brakes, gearbox, oil].sort());
+    expect(await ticks(w, w.mini)).toEqual([]);
+  });
+
+  // @traces 412-FR-007
+  it('deletes every tick of a taken brand for an empty list, each audited', async () => {
+    const w = await world();
+    await priced(w);
+    await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
+
+    await setJobs(w, [{ brandId: w.bmw, jobs: [], stance: 'works_on' }]);
+
+    expect(await ticks(w, w.bmw)).toEqual([]);
+    expect((await jobEntries(w)).map((e) => e.action)).toEqual([
+      'delete',
+      'delete',
+      'delete',
+    ]);
+  });
+
+  // @traces 412-FR-007
+  it('refuses jobs on a refused brand with jobs_on_refused, changing nothing', async () => {
+    const w = await world();
+    const { oil } = await priced(w);
+    await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
+
+    const answer = await refused(
+      setJobs(w, [
+        { brandId: w.bmw, jobs: [oil], stance: 'works_on' },
+        { brandId: w.tesla, jobs: [oil], stance: 'does_not_take' },
+      ]),
+    );
+
+    expect(answer.status).toBe(400);
+    expect(answer.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'jobs_on_refused', field: 'brands[1].jobs' }],
+    });
+    expect(await rows(w)).toEqual({ [w.bmw]: 'works_on' });
+    expect(await ticks(w, w.bmw)).toHaveLength(3);
+    expect(await history(w)).toEqual([]);
+    expect(await events()).toEqual([]);
+  });
+
+  // @traces 412-FR-007
+  it('refuses a job the price list does not hold with job_not_priced, changing nothing', async () => {
+    const w = await world();
+    const { oil } = await priced(w);
+    const unpriced = await jobType(`clutch-${randomUUID()}`);
+    await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
+
+    const answer = await refused(
+      setJobs(w, [
+        { brandId: w.bmw, jobs: [oil, unpriced], stance: 'works_on' },
+      ]),
+    );
+
+    expect(answer.status).toBe(400);
+    expect(answer.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'job_not_priced', field: 'brands[0].jobs' }],
+    });
+    expect(await ticks(w, w.bmw)).toHaveLength(3);
+    expect(await history(w)).toEqual([]);
+    expect(await events()).toEqual([]);
+  });
+
+  // @traces 412-FR-009
+  it('removes the ticks of a brand turned refused, one entry each', async () => {
+    const w = await world();
+    const { brakes, oil } = await priced(w);
+    await setJobs(w, [
+      { brandId: w.bmw, jobs: [oil, brakes], stance: 'works_on' },
+    ]);
+    await checkpoint();
+
+    await set(w, [[w.bmw, 'does_not_take']]);
+
+    expect(await ticks(w, w.bmw)).toEqual([]);
+    expect(
+      (await jobEntries(w)).map((e) => [e.action, e.subjectId]).sort(),
+    ).toEqual(
+      [
+        ['delete', brakes],
+        ['delete', oil],
+      ].sort(),
+    );
+  });
+
+  // @traces 412-FR-008
+  it('writes no entry and no event when the ticks sent equal the stored ones, in any order', async () => {
+    const w = await world();
+    const { gearbox, oil } = await priced(w);
+    await setJobs(w, [
+      { brandId: w.bmw, jobs: [oil, gearbox], stance: 'works_on' },
+    ]);
+    await checkpoint();
+
+    await setJobs(w, [
+      {
+        brandId: w.bmw.toUpperCase(),
+        jobs: [gearbox.toUpperCase(), oil],
+        stance: 'works_on',
+      },
+    ]);
+
+    expect(await ticks(w, w.bmw)).toEqual([gearbox, oil].sort());
+    expect(await history(w)).toEqual([]);
+    expect(await events()).toEqual([]);
+  });
+
+  // @traces 412-FR-010
+  it('leaves the garage status as it was after a tick change', async () => {
+    const w = await world();
+    const { oil } = await priced(w);
+    await prisma.garage.update({
+      data: { status: 'draft' },
+      where: { id: w.garage },
+    });
+    await set(w, [[w.bmw, 'works_on']]);
+
+    await setJobs(w, [{ brandId: w.bmw, jobs: [oil], stance: 'works_on' }]);
+
+    expect((await texts(w)).status).toBe('draft');
+  });
+
+  // @traces 412-FR-008
+  it('answers each taken brand with its ticked jobs in price-list order', async () => {
+    const w = await world();
+    const { brakes, gearbox, oil } = await priced(w);
+
+    const answer = await setJobs(w, [
+      { brandId: w.bmw, jobs: [gearbox, oil], stance: 'works_on' },
+      { brandId: w.mini, stance: 'works_on' },
+      { brandId: w.tesla, stance: 'does_not_take' },
+    ]);
+
+    expect(answer.worksOn).toEqual(
+      expect.arrayContaining([
+        { id: w.bmw, jobs: [oil, gearbox], name: 'BMW', slug: 'bmw' },
+        {
+          id: w.mini,
+          jobs: [oil, brakes, gearbox],
+          name: 'Mini',
+          slug: 'mini',
+        },
+      ]),
+    );
+    expect(answer.doesNotTake).toEqual([
+      { id: w.tesla, name: 'Tesla', slug: 'tesla' },
+    ]);
   });
 });

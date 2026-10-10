@@ -1,3 +1,4 @@
+// The owner's final import only: deleted after it runs (george-hutanu/motor-fix-specs#1119).
 // Copies the Notion backlog into the MotorFix GitHub Project, one way: an
 // issue per story, feature and epic in the private motor-fix-specs (repos.mjs) that
 // carries the whole page (every block, every comment, its files; a property

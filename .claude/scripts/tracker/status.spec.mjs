@@ -4,17 +4,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { decide, main } from './notion-status.mjs';
-import { readState } from './run-state.mjs';
+import { decide, main } from './status.mjs';
+import { readState } from '../run-state.mjs';
 
 const go = (event, current, prior = null) => decide({ event, current, prior });
 
 describe('the ladder: Planning → Implementing → QA → Done', () => {
-  it('moves the story and its timeline row forward on each event', () => {
+  it('moves the story forward on each event', () => {
     assert.deepEqual(go('start', 'To do'), {
       write: true,
       story: 'Planning',
-      timeline: 'Planning',
       prior: null,
       note: 'To do → Planning',
       stage: 'planning',
@@ -22,13 +21,10 @@ describe('the ladder: Planning → Implementing → QA → Done', () => {
     });
     const impl = go('implement', 'Planning');
     assert.equal(impl.story, 'Implementing');
-    assert.equal(impl.timeline, 'Implementing');
     const qa = go('qa', 'Implementing');
     assert.equal(qa.story, 'QA');
-    assert.equal(qa.timeline, 'QA');
     const done = go('finish', 'QA');
     assert.equal(done.story, 'Done');
-    assert.equal(done.timeline, 'Merged');
   });
 
   it('never moves backwards, and an equal value is not written', () => {
@@ -50,7 +46,6 @@ describe('In review is folded into QA (owner, 2026-10-04)', () => {
     const ready = go('review', 'Implementing');
     assert.equal(ready.write, true);
     assert.equal(ready.story, 'QA');
-    assert.equal(ready.timeline, 'QA');
     assert.equal(ready.stage, 'QA');
     assert.equal(ready.note, 'Implementing → QA');
   });
@@ -66,7 +61,6 @@ describe('In review is folded into QA (owner, 2026-10-04)', () => {
       for (const current of ['To do', 'Planning', 'Implementing', 'In review', 'QA', 'Blocked', 'In progress']) {
         const r = go(event, current, 'In review');
         assert.notEqual(r.story, 'In review', `${event} on ${current}`);
-        assert.notEqual(r.timeline, 'In review', `${event} on ${current}`);
         assert.doesNotMatch(r.labels, /in review/, `${event} on ${current}`);
       }
     }
@@ -88,7 +82,6 @@ describe('Blocked', () => {
     const r = go('blocked', 'QA');
     assert.equal(r.write, true);
     assert.equal(r.story, 'Blocked');
-    assert.equal(r.timeline, 'Blocked');
     assert.equal(r.prior, 'QA');
   });
 
@@ -104,7 +97,6 @@ describe('Blocked', () => {
     const r = go('unblock', 'Blocked', 'QA');
     assert.equal(r.write, true);
     assert.equal(r.story, 'QA');
-    assert.equal(r.timeline, 'QA');
     assert.equal(r.prior, null);
   });
 
@@ -201,20 +193,20 @@ describe('the command line keeps the prior status in run-state', () => {
   });
 
   it('stores it on blocked and gives it back on unblock', () => {
-    const repo = mkdtempSync(join(tmpdir(), 'notion-status-'));
+    const repo = mkdtempSync(join(tmpdir(), 'tracker-status-'));
     dirs.push(repo);
     const out = [];
     vi.spyOn(console, 'log').mockImplementation((line) => out.push(line));
     assert.equal(main(['blocked', '--current', 'QA'], repo), 0);
-    assert.equal(readState(repo).notion_prior_status, 'QA');
+    assert.equal(readState(repo).prior_status, 'QA');
     assert.equal(main(['unblock', '--current', 'Blocked'], repo), 0);
     assert.equal(JSON.parse(out.at(-1)).story, 'QA');
     assert.match(JSON.parse(out.at(-1)).labels, /--add-label "QA" .*--remove-label "blocked"/);
-    assert.equal(readState(repo).notion_prior_status, null);
+    assert.equal(readState(repo).prior_status, null);
   });
 
   it('reads the event whichever side of --current it is on', () => {
-    const repo = mkdtempSync(join(tmpdir(), 'notion-status-'));
+    const repo = mkdtempSync(join(tmpdir(), 'tracker-status-'));
     dirs.push(repo);
     const out = [];
     vi.spyOn(console, 'log').mockImplementation((line) => out.push(line));

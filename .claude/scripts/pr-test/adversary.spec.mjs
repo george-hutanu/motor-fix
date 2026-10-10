@@ -494,7 +494,7 @@ describe('a missing report, hostile reasons', () => {
       const calls = [];
       const gh = (args, o = {}) => {
         calls.push({ args, input: o.input });
-        if (args.join(' ').includes('pr view')) return { code: 0, stdout: JSON.stringify({ body: 'Notion story: x' }), stderr: '' };
+        if (args.join(' ').includes('pr view')) return { code: 0, stdout: JSON.stringify({ body: 'Story: x' }), stderr: '' };
         return { code: 0, stdout: '{}', stderr: '' };
       };
       postVerdict({ pr: r.pr, repo: r.repo, sha: r.sha, verdict: r.verdict, summary: r.summary, body: r.markdown, lap: r.lap, gh, cloud: false });

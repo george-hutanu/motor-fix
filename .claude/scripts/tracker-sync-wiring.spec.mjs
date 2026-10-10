@@ -5,7 +5,8 @@ import { join } from 'node:path';
 
 // The GitHub tracker's skill is prose an agent follows, and the spec-kit hooks
 // and lifecycle docs call it: these checks keep every event on the script, the
-// Notion path only for a feature that started there, and the hooks on it.
+// labels, finish comment, readiness and build plan in the skill, and the hooks
+// on it.
 
 const root = join(import.meta.dirname, '..', '..');
 const read = (path) => readFileSync(join(root, path), 'utf8');
@@ -18,12 +19,23 @@ describe('speckit-tracker-sync', () => {
       assert.ok(skill.includes(`tracker-sync.mjs ${event}`), `no script call for ${event}`);
   });
 
-  // @traces 1036-FR-013
-  it('sends a feature that started on Notion to speckit-notion-sync, and no other', () => {
-    assert.match(skill, /notion-sync\.md/);
+  // @traces 1037-FR-003
+  it('is the one tracker: every feature logs to tracker-sync.md', () => {
     assert.match(skill, /tracker-sync\.md/);
-    assert.match(skill, /speckit-notion-sync/);
-    assert.doesNotMatch(skill, /notion-update-page|notion-create-comment/, 'the GitHub path writes nothing to Notion');
+    assert.doesNotMatch(skill, /## 0\. Which tracker/);
+  });
+
+  // @traces 1037-FR-015
+  it('carries the PR labels, the finish comment, the ready refresh and the build plan', () => {
+    assert.match(skill, /## \d+[a-z]?\. PR labels/);
+    assert.match(skill, /`dependencies`/);
+    assert.match(skill, /## \d+[a-z]?\. Finish comment/);
+    assert.match(skill, /Build brief/);
+    assert.match(skill, /no comment/i);
+    assert.match(skill, /tracker\/ready\.mjs/);
+    assert.match(skill, /## \d+[a-z]?\. Build plan/);
+    assert.match(skill, /docs\/reference\/build-plans\//);
+    assert.match(skill, /llms\.txt/);
   });
 
   // @traces 1036-FR-012
@@ -45,9 +57,8 @@ describe('the spec-kit hooks', () => {
   const hooks = read('.specify/extensions.yml');
 
   // @traces 1036-FR-016
-  it('run the tracker sync at after_specify and before_implement, never the Notion one', () => {
+  it('run the tracker sync at after_specify and before_implement', () => {
     assert.match(hooks, /command: speckit\.tracker\.sync/);
-    assert.doesNotMatch(hooks, /command: speckit\.notion\.sync/);
   });
 });
 
@@ -61,8 +72,61 @@ describe('the lifecycle docs', () => {
     '.claude/skills/speckit-archive/SKILL.md',
     '.claude/skills/speckit-git-commit/SKILL.md',
     '.claude/skills/speckit-pr-test/SKILL.md',
-    '.claude/skills/notion-ready/SKILL.md',
   ])('%s names the tracker sync', (path) => {
     assert.match(read(path), /speckit-tracker-sync|tracker-sync\.mjs/);
+  });
+});
+
+describe('the archive and AGENTS.md', () => {
+  // @traces 1037-FR-002
+  it('the archive runs the ready check before closing', () => {
+    assert.match(read('.claude/skills/speckit-archive/SKILL.md'), /tracker\/ready\.mjs check/);
+  });
+
+  // @traces 1037-FR-002
+  it('AGENTS.md states the readiness rule and the finish comment rule', () => {
+    const agents = read('AGENTS.md');
+    assert.match(agents, /ready to work/i);
+    assert.match(agents, /tracker\/ready\.mjs check -/);
+    assert.match(agents, /comments on the task when there is something to record/);
+  });
+});
+
+describe('the story context', () => {
+  const context = read('.claude/skills/speckit-context/SKILL.md');
+  const researcher = read('.claude/agents/org-researcher.md');
+
+  // @traces 1037-FR-005
+  it('/speckit-context writes the issue, its comments, the epic and its issues to story.md with gh', () => {
+    assert.match(context, /specs\/<feature>\/story\.md/);
+    assert.match(context, /gh issue view/);
+    assert.match(context, /--comments/);
+  });
+
+  // @traces 1037-FR-005
+  it('the researcher reads the tracker from story.md and has no tracker tool', () => {
+    assert.match(researcher, /story\.md/);
+    const tools = researcher.match(/^tools:\s*(.+)$/m)?.[1] ?? '';
+    assert.doesNotMatch(tools, /mcp__/);
+  });
+
+  // @traces 1037-FR-016
+  it('the design check reads the Design pointers from the issue', () => {
+    const design = read('.claude/skills/speckit-design-check/SKILL.md');
+    assert.match(design, /gh issue view/);
+    assert.match(design, /Design boards/);
+    assert.match(design, /docs\/reference\/design\//);
+  });
+});
+
+describe('agents and settings', () => {
+  // @traces 1037-FR-004
+  it('name no tracker connector', () => {
+    const settings = read('.claude/settings.json');
+    assert.doesNotMatch(settings, /"mcp__claude_ai_|"mcp__[0-9a-f]{8}-/);
+    for (const agent of ['org-researcher', 'spec-reviewer']) {
+      const tools = read(`.claude/agents/${agent}.md`).match(/^tools:\s*(.+)$/m)?.[1] ?? '';
+      assert.doesNotMatch(tools, /mcp__/, agent);
+    }
   });
 });

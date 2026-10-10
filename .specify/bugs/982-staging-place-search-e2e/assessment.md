@@ -1,6 +1,6 @@
 # Bug Assessment: Home's address-search E2E tests expect the test-only stand-in on staging
 
-- **Slug**: 982-staging-place-search-e2e (auto-generated; Notion ST-982)
+- **Slug**: 982-staging-place-search-e2e (auto-generated; ST-982)
 - **Created**: 2026-10-08
 - **Source**: pasted text (release.yml run 37817123813, job 113455837425; run 37817447795, job 113461655406)
 - **Verdict**: valid

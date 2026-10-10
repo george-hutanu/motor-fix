@@ -5,7 +5,7 @@ import {
   inject,
   input,
 } from '@angular/core';
-import type { GarageBrandAnswerDto } from '@motor-fix/data-access';
+import type { GarageBrandOwnerAnswerDto } from '@motor-fix/data-access';
 import { AsWritten, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, type LampState } from '@motor-fix/ui-cockpit';
 
@@ -15,7 +15,7 @@ type Named = { id: string; name: string };
 
 // What the lamp and the lists read of a garage's answer about its brands.
 export type BrandAnswer = Pick<
-  GarageBrandAnswerDto,
+  GarageBrandOwnerAnswerDto,
   'brandNote' | 'refusalPhrase'
 > & { worksOn: Named[]; doesNotTake: Named[] };
 

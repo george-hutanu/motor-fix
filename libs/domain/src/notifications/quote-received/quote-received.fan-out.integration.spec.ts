@@ -379,6 +379,9 @@ describe('what the quote fan-out reports', () => {
       .map(([message]) => String(message))
       .filter((message) => message.includes(quote.id));
     expect(lines).toHaveLength(1);
-    expect(lines[0]).not.toMatch(/450|600|Piesele|Ioana|Dinamo/);
+    // The quote id is a random UUID and may itself hold 450 or 600.
+    expect(lines[0].replace(quote.id, '<id>')).not.toMatch(
+      /450|600|Piesele|Ioana|Dinamo/,
+    );
   });
 });

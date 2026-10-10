@@ -1,6 +1,8 @@
+// The owner's final import only: deleted after it runs (george-hutanu/motor-fix-specs#1119).
+// @traces 1037-FR-008
 import { afterEach, describe, it } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -1384,5 +1386,22 @@ describe("group issues when an epic outgrows GitHub's sub-issue limit", () => {
     ep1.title = "Foundations";
     const { lines } = await importInto(gh, { subIssueMax: 4, dryRun: true });
     assert.ok(lines.some((l) => /^plan\s+create 1 · /.test(l)), lines.join("\n"));
+  });
+});
+
+describe("the final import's read path", () => {
+  // Every file the banned-words list keeps for the import alone says, on its
+  // first line, that it goes once the owner's final import has run.
+  it("marks each of its files for deletion, naming the follow-up issue", () => {
+    const root = join(import.meta.dirname, "..", "..", "..");
+    const { allow } = JSON.parse(readFileSync(join(root, "scripts/banned-words.json"), "utf8"));
+    const kept = Object.entries(allow)
+      .filter(([, entry]) => entry.reason.startsWith("The owner's final import"))
+      .map(([path]) => path);
+    assert.ok(kept.length >= 10, kept.join(", "));
+    for (const path of kept) {
+      const first = readFileSync(join(root, path), "utf8").split("\n")[0];
+      assert.match(first, /deleted after it runs \(george-hutanu\/motor-fix-specs#1119\)/, path);
+    }
   });
 });

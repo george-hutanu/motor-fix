@@ -2,7 +2,7 @@
 
 - **Slug**: 985-qa-layout-preexisting
 - **Created**: 2026-10-08
-- **Source**: pasted text (Chief); Notion ST-985 https://app.notion.com/p/3f3607bff0d281d88016d83c8f039adc
+- **Source**: pasted text (Chief); ST-985
 - **Verdict**: valid
 - **Severity**: high
 
