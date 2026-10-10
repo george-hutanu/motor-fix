@@ -848,3 +848,32 @@ describe('Grafana alerts workflow', () => {
     }
   });
 });
+
+describe('the observability README', () => {
+  const readme = readFileSync(
+    join(root, 'infra', 'observability', 'README.md'),
+    'utf8',
+  );
+
+  // @traces 1024-FR-011
+  it('says where the rules live, whom they notify and how they reach Grafana', () => {
+    const section = readme.slice(
+      readme.indexOf('## Alert rules'),
+      readme.indexOf('\n## ', readme.indexOf('## Alert rules') + 1),
+    );
+    for (const fact of [
+      'infra/observability/alerts/',
+      ...OWN,
+      'folder `MotorFix`',
+      '`MotorFix owner`',
+      'Grafana alerts',
+      'workflow_dispatch',
+      'GRAFANA_SA_TOKEN',
+      'GRAFANA_URL',
+      'overwritten by the next run',
+    ]) {
+      expect([fact, section.includes(fact)]).toEqual([fact, true]);
+    }
+    expect(readme).not.toMatch(/ST-\d+ adds them/);
+  });
+});
