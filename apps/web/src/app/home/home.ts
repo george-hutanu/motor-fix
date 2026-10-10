@@ -32,6 +32,7 @@ import { formatKm, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { RatingDial, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
+import { BrandChoice } from './brand-choice/brand-choice';
 import { BrandPicker } from './brand-picker/brand-picker';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { HomeCards, type ResultsRoute } from './cards/cards';
@@ -88,12 +89,16 @@ export class Home {
     const searched = this.searched();
     return searched ? [searched, ...this.tiles().slice(0, 7)] : this.tiles();
   });
-  protected readonly selected = linkedSignal<BrandDto | undefined>(
-    () => this.tiles()[0],
-  );
+  private readonly choice = inject(BrandChoice);
+  private readonly kept = this.choice.kept();
+  // Back from another screen, the tile the person chose comes back.
+  protected readonly selected = linkedSignal<BrandDto | undefined>(() => {
+    const tiles = this.tiles();
+    return tiles.find((brand) => brand.slug === this.kept) ?? tiles[0];
+  });
   // Until a person reaches for the picker the brand changes on its own, and
   // a screen reader is not told each time.
-  protected readonly touched = signal(false);
+  protected readonly touched = signal(this.kept !== null);
   private readonly hydrated = signal(false);
 
   // The count is never read on the server: the page there carries the tiles,
@@ -267,6 +272,7 @@ export class Home {
 
   protected choose(slug: string) {
     this.selected.set(this.shown().find((brand) => brand.slug === slug));
+    this.choice.keep(slug === this.searched()?.slug ? null : slug);
   }
 
   protected pick(brand: BrandDto) {
@@ -276,6 +282,7 @@ export class Home {
     const tile = this.shown().find((b) => b.slug === brand.slug);
     if (!tile) this.searched.set(brand);
     this.selected.set(tile ?? brand);
+    this.choice.keep(tile && tile !== this.searched() ? tile.slug : null);
   }
 
   private advance() {

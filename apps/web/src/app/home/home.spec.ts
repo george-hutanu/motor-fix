@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import {
   type BrandDto,
   BrandsService,
@@ -721,6 +721,76 @@ describe('Home brand cycling', () => {
     expect(clear).toHaveBeenCalledTimes(1);
     await tick(60000);
     expect(slugsRead()).toEqual(['bmw']);
+  });
+});
+
+// @traces 227-FR-005
+describe('Home on the way back from a card', () => {
+  // Home created again inside the browser's back (or a new visit).
+  async function again(trigger: 'popstate' | 'imperative' = 'popstate') {
+    fixture.destroy();
+    Object.defineProperty(TestBed.inject(Router), 'currentNavigation', {
+      configurable: true,
+      value: signal({ trigger }),
+    });
+    await render();
+  }
+
+  it('keeps the tile the person chose, not the first one', async () => {
+    await render();
+    await choose('Dacia');
+
+    await again();
+
+    expect(checked()).toBe('Dacia');
+    expect(search()?.getAttribute('href')).toBe('/ro/garages?brand=dacia');
+  });
+
+  it('starts at the first tile on a new visit to Home', async () => {
+    await render();
+    await choose('Dacia');
+
+    await again('imperative');
+
+    expect(checked()).toBe('BMW');
+  });
+
+  it('shows the popular tiles again after a searched brand', async () => {
+    await render();
+    await choose('Dacia');
+    fixture.debugElement
+      .query(By.directive(BrandSearch))
+      .componentInstance.chosen.emit(ALFA);
+    await settle();
+
+    await again();
+
+    expect(tiles().map((t) => t.textContent?.trim())).toEqual(NAMES);
+    expect(checked()).toBe('BMW');
+  });
+
+  it('starts at the first tile while nobody chose, the cycle aside', async () => {
+    jest.useFakeTimers();
+    await render();
+    jest.advanceTimersByTime(5000);
+    await settle();
+
+    await again();
+
+    expect(checked()).toBe('BMW');
+  });
+
+  it('stays on the kept tile instead of cycling on', async () => {
+    await render();
+    await choose('Audi');
+    jest.useFakeTimers();
+
+    await again();
+    for (let step = 0; step < 8; step++) {
+      jest.advanceTimersByTime(5000);
+      await settle();
+      expect(checked()).toBe('Audi');
+    }
   });
 });
 
