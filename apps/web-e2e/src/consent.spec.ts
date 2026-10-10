@@ -312,6 +312,10 @@ test.describe('a garage profile and the dashboard @seeded', () => {
 });
 
 // @traces 244-FR-012
+// The account's newer choice applies at every sign-in and full load, and the
+// driver's Setări flow above turns analytics off on ACCOUNTS.driver while
+// this one may be running: this flow keeps an account no other flow records
+// a choice on.
 test.describe('the account carries the choice @seeded', () => {
   test('a choice made before sign-in applies on a fresh browser after sign-in', async ({
     browser,
@@ -332,7 +336,7 @@ test.describe('the account carries the choice @seeded', () => {
     await page
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
-    await signIn(page, ACCOUNTS.driver);
+    await signIn(page, ACCOUNTS.otherDriver);
     await expect(page).toHaveURL('/app/driver');
     // Signed in from a public page, whose live stream never ends: no
     // networkidle comes, so wait for the dashboard to be drawn.
@@ -347,7 +351,7 @@ test.describe('the account carries the choice @seeded', () => {
     await fresh
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
-    await signIn(fresh, ACCOUNTS.driver);
+    await signIn(fresh, ACCOUNTS.otherDriver);
     await expect(fresh).toHaveURL('/app/driver');
 
     await expect.poll(() => calls.length).toBeGreaterThan(0);
