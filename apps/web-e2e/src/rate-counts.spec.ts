@@ -76,10 +76,11 @@ test.describe('the global setup', () => {
     DATABASE_URL: process.env['DATABASE_URL'],
     REDIS_URL: process.env['REDIS_URL'],
   };
-  // Never the run's own database: resetting its accounts mid-run would race
-  // the flows that use them.
+  // Never the run's own stores: clearing its counts or resetting its accounts
+  // mid-run would race the flows that use them.
   test.beforeEach(() => {
-    process.env['DATABASE_URL'] = 'postgresql://127.0.0.1:1/none';
+    delete process.env['DATABASE_URL'];
+    delete process.env['REDIS_URL'];
   });
   test.afterEach(() => {
     for (const [name, value] of Object.entries(before)) {
@@ -88,23 +89,34 @@ test.describe('the global setup', () => {
     }
   });
 
-  test('lets the run go on when Redis does not answer', async () => {
-    process.env['REDIS_URL'] = 'redis://127.0.0.1:1';
+  // @traces 1130-FR-004
+  test('stops the run, naming Redis and not its address, when Redis does not answer', async () => {
+    process.env['REDIS_URL'] = 'redis://:secret@127.0.0.1:1';
 
-    await expect(globalSetup()).resolves.toBeUndefined();
+    const failed = await globalSetup().then(
+      () => 'went on',
+      (error: Error) => error.message,
+    );
+
+    expect(failed).toMatch(/Redis did not answer/);
+    expect(failed).not.toMatch(/secret|127\.0\.0\.1/);
   });
 
-  test('lets the run go on without REDIS_URL', async () => {
-    delete process.env['REDIS_URL'];
+  // @traces 1130-FR-004
+  test('stops the run, naming PostgreSQL and not its address, when PostgreSQL does not answer', async () => {
+    process.env['DATABASE_URL'] = 'postgresql://me:secret@127.0.0.1:1/none';
 
-    await expect(globalSetup()).resolves.toBeUndefined();
+    const failed = await globalSetup().then(
+      () => 'went on',
+      (error: Error) => error.message,
+    );
+
+    expect(failed).toMatch(/PostgreSQL did not answer/);
+    expect(failed).not.toMatch(/secret|127\.0\.0\.1/);
   });
 
-  test('lets the run go on when PostgreSQL does not answer, or without DATABASE_URL', async () => {
-    delete process.env['REDIS_URL'];
-    await expect(globalSetup()).resolves.toBeUndefined();
-
-    delete process.env['DATABASE_URL'];
+  // @traces 1130-FR-004
+  test('lets the run go on without REDIS_URL and DATABASE_URL', async () => {
     await expect(globalSetup()).resolves.toBeUndefined();
   });
 });
