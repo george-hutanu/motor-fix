@@ -17,7 +17,14 @@
 //   node scripts/banned-words.ts [--base <ref>]
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, readFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -145,6 +152,18 @@ function parseList(text: string, source: string): BannedList {
   return parsed as BannedList;
 }
 
+// Git's own test: a NUL in the first 8 KB marks a binary file, whose text is
+// not read at all (icons, fonts).
+function isBinary(full: string): boolean {
+  const head = Buffer.alloc(8000);
+  const fd = openSync(full, 'r');
+  try {
+    return head.subarray(0, readSync(fd, head, 0, head.length, 0)).includes(0);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 export function scanRepo(root: string): {
   files: Map<string, number>;
   list: BannedList;
@@ -170,10 +189,8 @@ export function scanRepo(root: string): {
     let text = '';
     // A deleted-but-staged file or a symlink has no text of its own; its path
     // still counts.
-    if (existsSync(full) && lstatSync(full).isFile()) {
-      const read = readFileSync(full, 'utf8');
-      if (!read.includes('\0')) text = read;
-    }
+    if (existsSync(full) && lstatSync(full).isFile() && !isBinary(full))
+      text = readFileSync(full, 'utf8');
     files.set(path, countMentions(path, text, list.words));
   }
   return { files, list };

@@ -116,7 +116,7 @@ describe('listErrors', () => {
       expect(errors).toEqual([expect.stringMatching(/a\.md.*origin\/main/)]);
     });
 
-    it('fails a word the base did not ban dropped from the list', () => {
+    it('fails a word the base bans that the list drops', () => {
       const errors = listErrors(files, list(now.allow, []), {
         list: now,
         ref: 'origin/main',
@@ -192,6 +192,15 @@ describe('the CLI on a repository', () => {
     const r = run();
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('src/a.ts');
+  });
+
+  it('counts only the path of a binary file', () => {
+    writeFileSync(
+      join(repo, 'icon.bin'),
+      Buffer.concat([Buffer.from([0, 1, 2]), Buffer.from('zorblax')]),
+    );
+    git('add', '-A');
+    expect(run().status).toBe(0);
   });
 
   it('counts the path of a file named after the word', () => {
