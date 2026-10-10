@@ -153,7 +153,7 @@ function parseList(text: string, source: string): BannedList {
 }
 
 // Git's own test: a NUL in the first 8 KB marks a binary file, whose text is
-// not read at all (icons, fonts).
+// not read at all (icons, fonts). Every other file is decoded as UTF-8.
 function isBinary(full: string): boolean {
   const head = Buffer.alloc(8000);
   const fd = openSync(full, 'r');
