@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import * as watch from '../watch.mjs';
-import { lockPid, parseWorktrees, processAlive } from './worktrees.mjs';
+import { ffMainCommand, lockPid, mainCheckoutState, parseWorktrees, processAlive } from './worktrees.mjs';
 
 const source = (name) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 
@@ -26,5 +26,27 @@ describe('lib/worktrees', () => {
     for (const name of ['worktree-remove.mjs', 'lifecycle.mjs']) {
       assert.doesNotMatch(source(name), /from "\.\/watch\.mjs"/, name);
     }
+  });
+});
+
+describe('the main checkout against origin/main', () => {
+  const fake = (answers) => (_path, args) => answers[args[0]] ?? null;
+
+  it('lists tracked edits and counts on main only', () => {
+    assert.deepEqual(mainCheckoutState('/r', fake({ status: ' M AGENTS.md\0M  docs/a.md\0', 'rev-parse': 'main\n', 'rev-list': '0\t2\n' })), { dirty: ['AGENTS.md', 'docs/a.md'], ahead: 0, behind: 2 });
+    assert.deepEqual(mainCheckoutState('/r', fake({ status: '', 'rev-parse': 'other\n', 'rev-list': '0\t2\n' })), { dirty: [], ahead: null, behind: null });
+  });
+
+  it('names a renamed file by its new path and a path with spaces as it is, unquoted', () => {
+    const status = 'R  docs/new name.md\0docs/old.md\0 M a b.txt\0';
+    assert.deepEqual(mainCheckoutState('/r', fake({ status, 'rev-parse': 'main\n', 'rev-list': '0\t0\n' })).dirty, ['docs/new name.md', 'a b.txt']);
+  });
+
+  it('reads an unreadable status as unknown, never as clean', () => {
+    assert.deepEqual(mainCheckoutState('/r', fake({ 'rev-parse': 'main\n', 'rev-list': '0\t2\n' })), { dirty: null, ahead: null, behind: null });
+  });
+
+  it('names the fast-forward command', () => {
+    assert.equal(ffMainCommand('/r'), 'git -C /r merge --ff-only origin/main');
   });
 });

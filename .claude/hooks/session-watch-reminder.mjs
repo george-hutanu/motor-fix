@@ -6,7 +6,11 @@
 // start one. So this hook only speaks: when two or more worktrees hold live or
 // in-flight work and no live wait holds the repository's record, it prints one
 // line telling the session to arm the wait (the speckit-watch skill says how).
-// Otherwise it prints nothing.
+// Otherwise it prints nothing about the watch.
+//
+// In the main checkout it also names, first, a checkout that holds edits to
+// tracked files or sits behind origin/main on `main`, with the fast-forward
+// command: the main checkout is a mirror of origin/main (Constitution VII).
 //
 // It stays cheap and never blocks a session:
 //   - a session isolated in a worktree never arms the watch, so the hook
@@ -21,6 +25,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { waitHolder } from "../scripts/lib/watch-wait.mjs";
+import { ffMainCommand, mainCheckoutState } from "../scripts/lib/worktrees.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -80,12 +85,20 @@ export function readWatch(repo, timeout, env = process.env) {
   }
 }
 
+/** One line when the main checkout holds tracked edits or is behind origin/main on `main`; "" otherwise or when git fails. No fetch. */
+export function mainLine(repo) {
+  const { dirty, ahead, behind } = mainCheckoutState(repo);
+  if (dirty?.length > 0) return `main checkout dirty: ${dirty.join(", ")} — ${ffMainCommand(repo)}`;
+  return ahead === 0 && behind > 0 ? `main checkout behind origin/main by ${behind} — ${ffMainCommand(repo)}` : "";
+}
+
 export function runReminder({ repo, watch, armed = () => waitHolder(repo) }) {
   const paths = git(repo, ["rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"])?.split("\n");
   if (paths?.length !== 2 || resolve(paths[0]) !== resolve(paths[1])) return "";
+  const first = mainLine(repo);
   const worktrees = (git(repo, ["worktree", "list", "--porcelain"]) ?? "").split("\n").filter((l) => l.startsWith("worktree ")).length;
-  if (worktrees < 3 || armed() !== null) return "";
-  return reminder(activeCount(watch()));
+  if (worktrees < 3 || armed() !== null) return first;
+  return [first, reminder(activeCount(watch()))].filter(Boolean).join("\n");
 }
 
 if (isEntryPoint(import.meta.url)) {

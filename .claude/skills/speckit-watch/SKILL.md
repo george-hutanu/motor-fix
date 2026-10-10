@@ -39,7 +39,8 @@ which uses the same scan, so a pass started by it always has something to do.
 
    Pass on any `--stale` from the arguments.
 
-2. `actions` lists what `--fix` did: dead locks released, merged clean
+2. `actions` lists what `--fix` did: `ff-main`, a clean main checkout
+   behind `origin/main` fast-forwarded; dead locks released, merged clean
    `remove`: worktrees whose PR merged or closed, quiet past the done
    threshold (30 min), and worktrees with no PR idle 7 days (`idle`), backed
    up and removed through `worktree-remove.mjs` (a dirty tree is saved as a
@@ -176,7 +177,7 @@ wait it never starts, since the gate stays silent.
 
 - The caps on QA runs and other dispatched agents are applied by
   `watch.mjs` (AGENTS.md states them); this skill dispatches exactly the plan.
-- The main worktree is the owner's; it is shown, never fixed.
+- The main checkout is the owner's: its row is `ok`, `behind` (fix `ff-main`: `--fix` runs `git merge --ff-only origin/main` there) or `dirty: <files>` (shown with the fast-forward command, never changed); no agent is ever dispatched for it.
 - `--fix` never forces, never deletes a branch, and never touches a tree with
   uncommitted changes.
 - Blocked work is shown and left alone: only `speckit-notion-sync unblock`, by

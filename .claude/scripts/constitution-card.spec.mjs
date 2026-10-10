@@ -43,6 +43,22 @@ describe('the constitution card', () => {
     assert.ok(Number(minor) >= 9);
   });
 
+  // @traces 1035-FR-009
+  it('states the main checkout rule under principle VII, in the constitution and the card', () => {
+    const card = readFileSync(CARD, 'utf8');
+    const start = full.indexOf('### VII.');
+    const seventh = full.slice(start, full.indexOf('\n## ', start));
+    const cardLine = card.split('\n').find((line) => line.startsWith('- **VII.'));
+    for (const text of [seventh, cardLine]) {
+      assert.match(text, /main checkout/);
+      assert.match(text, /main-checkout-gate|fast-forward/);
+    }
+    assert.match(cardLine, /main-checkout-gate\.mjs/);
+    assert.match(full, /\| VII main checkout \|[^\n]*main-checkout-gate\.mjs/);
+    const [, minor] = full.match(/^\*\*Version\*\*: 1\.(\d+)\.\d+/m);
+    assert.ok(Number(minor) >= 12);
+  });
+
   it('stays a card', () => {
     const bytes = Buffer.byteLength(readFileSync(CARD, 'utf8'));
     assert.ok(bytes <= MAX_BYTES, `${bytes} bytes, above ${MAX_BYTES}`);

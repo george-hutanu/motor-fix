@@ -55,6 +55,15 @@
         ]
       },
       {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:edit:main-checkout"
+          }
+        ]
+      },
+      {
         "matcher": "Agent",
         "hooks": [
           {
