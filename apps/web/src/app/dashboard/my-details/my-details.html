@@ -1,0 +1,116 @@
+@if (session.current(); as me) {
+  <section aria-labelledby="my-details-title">
+    <h2 id="my-details-title">{{ 'driver.details.title' | t }}</h2>
+    <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+      <dl>
+        <div class="row">
+          @if (editing()) {
+            <dt><label for="my-details-name">{{ 'driver.details.name' | t }}</label></dt>
+            <dd>
+              <input
+                #nameInput
+                hlmInput
+                id="my-details-name"
+                type="text"
+                autocomplete="name"
+                formControlName="name"
+                aria-describedby="my-details-name-error"
+              />
+              <mf-field-error id="my-details-name-error" [save]="save" [control]="form.controls.name" />
+            </dd>
+          } @else {
+            <dt>{{ 'driver.details.name' | t }}</dt>
+            <dd>{{ me.name || '—' }}</dd>
+          }
+        </div>
+        <div class="row">
+          <dt>{{ 'driver.details.phone' | t }}</dt>
+          <dd>{{ me.phone ?? '—' }}</dd>
+          <dd class="hint">{{ 'driver.details.phoneLine' | t }}</dd>
+          @if (!editing()) {
+            <dd class="actions">
+              <button hlmBtn variant="ghost" class="flush" type="button" (click)="changePhone()">
+                {{ 'driver.details.changePhone' | t }}
+              </button>
+            </dd>
+          }
+        </div>
+        <div class="row">
+          <dt>{{ 'driver.details.email' | t }}</dt>
+          <dd>{{ me.email ?? '—' }}</dd>
+          @if (me.email && !me.emailConfirmed) {
+            <dd class="tag">{{ 'driver.details.unconfirmed' | t }}</dd>
+          }
+          @if (me.pendingEmail) {
+            <dd class="hint">{{ 'driver.details.pending' | t: { address: me.pendingEmail } }}</dd>
+          }
+          @if (!editing()) {
+            <dd class="actions">
+              @if (me.pendingEmail || (me.email && !me.emailConfirmed)) {
+                <button hlmBtn variant="secondary" type="button" [disabled]="resending()" (click)="resend()">
+                  {{ 'driver.details.resend' | t }}
+                </button>
+              }
+              <button hlmBtn variant="ghost" class="flush" type="button" (click)="changeEmail()">
+                {{ 'driver.details.changeEmail' | t }}
+              </button>
+            </dd>
+          }
+        </div>
+        <div class="row">
+          @if (editing()) {
+            <dt><label for="my-details-city">{{ 'driver.details.city' | t }}</label></dt>
+            <dd>
+              <input
+                hlmInput
+                id="my-details-city"
+                type="text"
+                autocomplete="address-level2"
+                formControlName="city"
+                aria-describedby="my-details-city-error"
+              />
+              <mf-field-error id="my-details-city-error" [save]="save" [control]="form.controls.city" />
+            </dd>
+          } @else {
+            <dt>{{ 'driver.details.city' | t }}</dt>
+            <dd>{{ me.city ?? '—' }}</dd>
+          }
+        </div>
+        <div class="row">
+          <dt>{{ 'driver.details.password' | t }}</dt>
+          @if (me.hasPassword) {
+            <dd>{{ 'driver.details.passwordSet' | t }}</dd>
+          } @else {
+            <dd>{{ 'driver.details.passwordNotSet' | t }}</dd>
+          }
+          @if (!editing() && (me.hasPassword || me.email)) {
+            <dd class="actions">
+              @if (me.hasPassword) {
+                <button hlmBtn variant="ghost" class="flush" type="button" (click)="changePassword(true)">
+                  {{ 'driver.details.changePassword' | t }}
+                </button>
+              } @else {
+                <button hlmBtn variant="ghost" class="flush" type="button" (click)="changePassword(false)">
+                  {{ 'driver.details.setPassword' | t }}
+                </button>
+              }
+            </dd>
+          }
+        </div>
+      </dl>
+      @if (editing()) {
+        <mf-task-error [save]="save" />
+        <div class="actions">
+          <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'driver.details.save' | t }}</button>
+          <button hlmBtn variant="ghost" type="button" (click)="close()">{{ 'driver.details.cancel' | t }}</button>
+        </div>
+      } @else {
+        <div class="actions">
+          <button #editButton hlmBtn type="button" (click)="edit(me)">
+            {{ 'driver.details.edit' | t }}
+          </button>
+        </div>
+      }
+    </form>
+  </section>
+}

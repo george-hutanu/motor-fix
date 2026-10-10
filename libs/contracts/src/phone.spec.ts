@@ -8,6 +8,8 @@ describe('a phone number as the person types it', () => {
     ['with dots and brackets', '(0722) 123.456'],
     ['already E.164', '+40722123456'],
     ['with spaces around it', '  0722 123 456 '],
+    ['as 07xx after a +40 already there', '+400722123456'],
+    ['as 07xx after a +40 with a space', '+40 0722 123 456'],
   ])('reads %s as one number', (_, typed) => {
     expect(normalisePhone(typed)).toBe('+40722123456');
   });

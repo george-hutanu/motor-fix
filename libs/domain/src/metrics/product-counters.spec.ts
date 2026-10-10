@@ -4,6 +4,7 @@ import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import {
+  countAccountChange,
   countApproval,
   countDeclarationSigned,
   countDocumentOpened,
@@ -50,8 +51,54 @@ const total = (name: string, labels?: Record<string, string>) =>
 // @traces 879-FR-009 879-FR-010 879-FR-011
 // @traces 424-FR-017
 // @traces 312-FR-016
+const ACCOUNT_FIELDS = ['name', 'city', 'email', 'phone', 'password'] as const;
+
+const SEVEN_COUNTERS = [
+  'motorfix_searches_total',
+  'motorfix_sign_ins_total',
+  'motorfix_garage_sign_ups_total',
+  'motorfix_garage_approvals_total',
+  'motorfix_quotes_total',
+  'motorfix_emails_sent_total',
+  'motorfix_notifications_sent_total',
+];
+
+// Every series an instance can add, once each.
+function countEverySeries() {
+  for (const outcome of ['results', 'none'] as const) countSearch(outcome);
+  for (const method of ['password', 'phone', 'google', 'apple'] as const)
+    countSignIn(method);
+  countGarageSignUp();
+  for (const outcome of ['approved', 'rejected'] as const)
+    countApproval(outcome);
+  countQuote();
+  // Only a template with an e-mail text is ever counted as an e-mail sent.
+  for (const [template, text] of Object.entries(TEMPLATES)) {
+    if (text.email) countEmail(template);
+  }
+  for (const channel of ['push', 'in-app'] as const) countNotification(channel);
+  STEP_ACTIONS.forEach((action) => {
+    countJobStep(action);
+  });
+  GARAGE_REPORT_OUTCOMES.forEach((outcome) => {
+    countGarageReport(outcome);
+  });
+  DOCUMENT_KINDS.forEach((kind) => {
+    countDocumentUploaded(kind);
+    countDocumentOpened(kind);
+  });
+  countDeclarationSigned();
+  ACCOUNT_FIELDS.forEach((field) => {
+    countAccountChange(field);
+  });
+  (['built', 'skipped'] as const).forEach((outcome) => {
+    countVerificationResult(outcome);
+  });
+}
+
 // @traces 206-FR-016
 // @traces 251-FR-018
+// @traces 139-FR-019
 // @traces 209-FR-014
 describe('the product counters', () => {
   it.each([
@@ -125,6 +172,14 @@ describe('the product counters', () => {
           { action },
         ] as const,
     ),
+    ...ACCOUNT_FIELDS.map(
+      (field) =>
+        [
+          () => countAccountChange(field),
+          'motorfix_account_changes_total',
+          { field },
+        ] as const,
+    ),
     ...(['built', 'muted', 'skipped'] as const).map(
       (outcome) =>
         [
@@ -170,47 +225,31 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  it('keeps every series an instance can add under 60, with labels from fixed sets only', async () => {
-    for (const outcome of ['results', 'none'] as const) countSearch(outcome);
-    for (const method of ['password', 'phone', 'google', 'apple'] as const)
-      countSignIn(method);
-    countGarageSignUp();
-    for (const outcome of ['approved', 'rejected'] as const)
-      countApproval(outcome);
-    countQuote();
-    for (const template of Object.keys(TEMPLATES)) countEmail(template);
-    for (const channel of ['push', 'in-app'] as const)
-      countNotification(channel);
-    STEP_ACTIONS.forEach((action) => {
-      countJobStep(action);
-    });
-    GARAGE_REPORT_OUTCOMES.forEach((outcome) => {
-      countGarageReport(outcome);
-    });
-    DOCUMENT_KINDS.forEach((kind) => {
-      countDocumentUploaded(kind);
-      countDocumentOpened(kind);
-    });
-    countDeclarationSigned();
-    (['built', 'skipped'] as const).forEach((outcome) => {
-      countVerificationResult(outcome);
-    });
+  // The cap of 50 covers the seven counters the observability story added;
+  // every later counter keeps its own fixed set, and the instance as a whole
+  // stays under 100 series, far inside the metrics backend's free tier.
+  it('keeps the seven counters under 50 series and the instance under 100, every label from a fixed set', async () => {
+    countEverySeries();
 
     const { resourceMetrics } = await memory.metricReader.collect();
     const series = resourceMetrics.scopeMetrics
       .flatMap((scope) => scope.metrics)
       .filter((metric) => metric.descriptor.name.startsWith('motorfix_'))
       .flatMap((metric) =>
-        (metric.dataPoints as DataPoint<number>[]).map(
-          (point) =>
-            `${metric.descriptor.name}${JSON.stringify(point.attributes)}`,
-        ),
+        (metric.dataPoints as DataPoint<number>[]).map((point) => ({
+          name: metric.descriptor.name,
+          text: `${metric.descriptor.name}${JSON.stringify(point.attributes)}`,
+        })),
       );
-    expect(new Set(series).size).toBe(series.length);
-    // A fixed ceiling, raised from 50 as the catalogue grew (the driver's
-    // decline message, the verification result): the e-mail counter keeps
-    // one series per template.
-    expect(series.length).toBeLessThan(60);
-    expect(series.join()).not.toMatch(/@|\d{6,}|[0-9a-f]{8}-/i);
+    const texts = series.map((s) => s.text);
+    expect(new Set(texts).size).toBe(texts.length);
+    expect(
+      series.filter((s) => SEVEN_COUNTERS.includes(s.name)).length,
+    ).toBeLessThan(50);
+    expect(series.length).toBeLessThan(100);
+    expect(
+      series.filter((s) => s.name === 'motorfix_account_changes_total'),
+    ).toHaveLength(ACCOUNT_FIELDS.length);
+    expect(texts.join()).not.toMatch(/@|\d{6,}|[0-9a-f]{8}-/i);
   });
 });
