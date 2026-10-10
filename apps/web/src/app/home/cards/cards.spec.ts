@@ -365,4 +365,15 @@ describe('the garage cards on a phone', () => {
       expect(small).toBe(true);
     },
   );
+
+  it('sets the dial value at body size on a phone only', () => {
+    const phone =
+      css.match(
+        /@media \(max-width: 767\.98px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+    expect(phone).toMatch(
+      /mf-rating-dial \{ --mf-size-small: var\(--mf-size-body\); \}/,
+    );
+    expect(topLevel).not.toContain('mf-rating-dial');
+  });
 });

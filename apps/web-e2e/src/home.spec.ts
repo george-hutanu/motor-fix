@@ -753,6 +753,36 @@ for (const scheme of ['light', 'dark'] as const) {
   }
 }
 
+// @traces 227-FR-003
+// @traces 227-FR-008
+for (const path of ['/ro', '/en']) {
+  test(`sets the garage cards' text and dial value at 16 px on a 390 px phone on ${path} @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await ready(page, path);
+    await pickDacia(page);
+    await expect(cards(page)).toHaveCount(3);
+
+    const sizes = await cards(page)
+      .locator('.mf-dial-value, .name, .where, .list, .facts, mf-lamp')
+      .evaluateAll((parts) =>
+        parts.map((p) => Number.parseFloat(getComputedStyle(p).fontSize)),
+      );
+    expect(sizes.length).toBeGreaterThan(3);
+    for (const size of sizes) expect(size).toBeGreaterThanOrEqual(16);
+    for (const dial of await cards(page).locator('mf-rating-dial').all()) {
+      const outer = await dial.boundingBox();
+      const value = await dial.locator('.mf-dial-value').evaluate((v) => {
+        const range = document.createRange();
+        range.selectNodeContents(v);
+        return range.getBoundingClientRect().width;
+      });
+      expect(value).toBeLessThan(outer?.width ?? 0);
+    }
+  });
+}
+
 // @traces 227-FR-010
 test('sets the preview as one panel of 64 px rows, the rating over the rate on the right @seeded', async ({
   page,

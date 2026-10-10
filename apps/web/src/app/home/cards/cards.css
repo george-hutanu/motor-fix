@@ -76,6 +76,14 @@ li {
   overflow-wrap: anywhere;
 }
 
+/* The dial's value too: body size on a phone, the dial's own small size from
+   a tablet up. */
+@media (max-width: 767.98px) {
+  mf-rating-dial {
+    --mf-size-small: var(--mf-size-body);
+  }
+}
+
 /* Body size on a phone, small from a tablet up. */
 @media (min-width: 768px) {
   .all,
