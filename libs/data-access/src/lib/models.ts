@@ -68,6 +68,7 @@ export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
 export type { HomeDto } from './models/home-dto';
+export type { HomeGarageDto } from './models/home-garage-dto';
 export type { InviteTokenDto } from './models/invite-token-dto';
 export type { InviteViewDto } from './models/invite-view-dto';
 export type { JobDto } from './models/job-dto';

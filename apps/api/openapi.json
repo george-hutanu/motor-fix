@@ -6390,11 +6390,104 @@
           "counts"
         ]
       },
+      "HomeGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Service Auto Militari"
+          },
+          "slug": {
+            "type": "string",
+            "example": "service-auto-militari"
+          },
+          "stance": {
+            "type": "string",
+            "description": "The garage's answer for the brand; unstated when it has not marked it",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          },
+          "rating": {
+            "type": "number",
+            "description": "One decimal, 1.0 to 5.0; null until the garage has reviews",
+            "example": 4.9,
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "labourFromLei": {
+            "type": "integer",
+            "description": "The hourly labour price it starts from, in whole lei",
+            "nullable": true
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "description": "The address's city; never for a mobile mechanic, absent when unknown",
+            "example": "București"
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal; null for a mobile mechanic. Only with near",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "True for a mobile mechanic whose area holds the place. Only with near"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "stance",
+          "rating",
+          "reviewCount",
+          "labourFromLei",
+          "businessKind"
+        ]
+      },
       "HomeDto": {
         "type": "object",
         "properties": {
           "brand": {
             "$ref": "#/components/schemas/BrandDto"
+          },
+          "best": {
+            "description": "The best-rated garage that works on the brand in the area; null when none does",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HomeGarageDto"
+              }
+            ]
+          },
+          "preview": {
+            "description": "Up to three: the two best takers, then the best garage that refuses or never said; with no taker, up to three of those",
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeGarageDto"
+            }
           },
           "total": {
             "type": "integer",
@@ -6407,6 +6500,8 @@
         },
         "required": [
           "brand",
+          "best",
+          "preview",
           "total",
           "takers"
         ]
