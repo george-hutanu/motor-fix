@@ -11,6 +11,7 @@ import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { freshPhone } from './fresh-phone.js';
 
 const SETTINGS = '/app/driver/settings';
 const ME = '/api/v1/me';
@@ -299,11 +300,6 @@ async function whatsAppCode(
     .toMatch(/^\d{6}$/);
   return String(code);
 }
-
-// A number no account holds, under the allow-listed +4070000 prefix and
-// outside the seeded ones and the refused +40700009999, new on every run.
-const freshPhone = () =>
-  `+4070000${String(1000 + Math.floor(Math.random() * 8999))}`;
 
 test.describe('changing the phone number @seeded @mailbox', () => {
   for (const size of SIZES) {

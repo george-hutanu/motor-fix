@@ -234,6 +234,9 @@ jobs:
       # Pages carry the browser telemetry tag; the tests answer the
       # collector themselves (apps/web-e2e/src/fixtures.ts), so nothing leaves.
       FARO_URL: https://faro.invalid/collect/e2e
+      # Pages name an analytics domain, so a granted choice loads the
+      # analytics script; the tests answer plausible.io themselves.
+      PLAUSIBLE_DOMAIN: e2e.motorfix.invalid
       # The photo flows upload to the compose MinIO, started in the steps below.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1

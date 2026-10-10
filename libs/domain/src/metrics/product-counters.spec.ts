@@ -1,4 +1,4 @@
-import { DOCUMENT_KINDS } from '@motor-fix/contracts';
+import { CONSENT_DECISIONS, DOCUMENT_KINDS } from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
@@ -6,6 +6,7 @@ import type { DataPoint } from '@opentelemetry/sdk-metrics';
 import {
   countAccountChange,
   countApproval,
+  countConsentRecord,
   countDeclarationSigned,
   countDocumentOpened,
   countDocumentUploaded,
@@ -88,6 +89,9 @@ function countEverySeries() {
     countDocumentOpened(kind);
   });
   countDeclarationSigned();
+  CONSENT_DECISIONS.forEach((decision) => {
+    countConsentRecord(decision);
+  });
   ACCOUNT_FIELDS.forEach((field) => {
     countAccountChange(field);
   });
@@ -97,6 +101,7 @@ function countEverySeries() {
 }
 
 // @traces 206-FR-016
+// @traces 244-FR-016 244-FR-018
 // @traces 251-FR-018
 // @traces 139-FR-019
 // @traces 209-FR-014
@@ -217,6 +222,14 @@ describe('the product counters', () => {
       ] as const,
     ]),
     [() => countDeclarationSigned(), 'motorfix_declarations_signed_total', {}],
+    ...CONSENT_DECISIONS.map(
+      (decision) =>
+        [
+          () => countConsentRecord(decision),
+          'motorfix_consent_records_total',
+          { decision },
+        ] as const,
+    ),
   ] as const)('counts one %#: %s', async (count, name, labels) => {
     const before = await total(name, labels);
 

@@ -52,15 +52,24 @@ function injectTag(tag: string): TransformStream<Uint8Array, Uint8Array> {
 }
 
 // Tells the browser where to send its telemetry, for which release and
-// environment, in one tag before `</head>` of a rendered page. With no collector set the page
-// carries no tag and the browser loads no telemetry at all.
+// environment, and which domain its analytics count for, in tags before
+// `</head>` of a rendered page. With neither set the page carries no tag: the
+// browser loads no telemetry, and analytics stay off whatever the visitor
+// chose.
 export async function withTelemetryMeta(
   response: Response,
   collector: { environment: string; url: string; version: string } | undefined,
+  analytics?: string,
 ): Promise<Response> {
   const html = response.headers.get('content-type')?.startsWith('text/html');
-  if (!collector || !html || !response.body) return response;
-  const tag = `<meta name="mf-telemetry" content="${attribute(collector.url)}" data-version="${attribute(collector.version)}" data-environment="${attribute(collector.environment)}">`;
+  if ((!collector && !analytics) || !html || !response.body) return response;
+  const tag =
+    (collector
+      ? `<meta name="mf-telemetry" content="${attribute(collector.url)}" data-version="${attribute(collector.version)}" data-environment="${attribute(collector.environment)}">`
+      : '') +
+    (analytics
+      ? `<meta name="mf-analytics" content="${attribute(analytics)}">`
+      : '');
   const headers = new Headers(response.headers);
   headers.delete('content-length');
   return new Response(response.body.pipeThrough(injectTag(tag)), {

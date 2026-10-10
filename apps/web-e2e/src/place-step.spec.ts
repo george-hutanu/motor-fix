@@ -77,6 +77,19 @@ async function kept(
   return (await keptPlace(page)) as Record<string, unknown>;
 }
 
+// At 320 by 640 the consent bar, Save and the tab bar pinned at the bottom
+// leave the pin under them, where a drag by the mouse lands on a bar: answer
+// the bar first, as a visitor does on their first page.
+async function answerConsent(page: Page) {
+  await page
+    .getByRole('region', { name: 'Statistici de utilizare' })
+    .getByRole('button', { exact: true, name: 'Refuz' })
+    .click();
+  await expect(
+    page.getByRole('region', { name: 'Statistici de utilizare' }),
+  ).toBeHidden();
+}
+
 // Read from the live map, which the page exposes under the test style only.
 const framing = (page: Page, km: number) =>
   page.evaluate(
@@ -125,6 +138,7 @@ test.describe('step 5 of list your garage, the place step', () => {
     await page.setViewportSize({ height: 640, width: 320 });
     const outside = await stub(page);
     await ready(page, '/ro/list-your-garage');
+    await answerConsent(page);
 
     await address(page).fill('Str. Ștefan cel Mare 12, Sector 2');
     await step(page)
@@ -221,6 +235,7 @@ test.describe('step 5 of list your garage, the place step', () => {
       await page.setViewportSize({ height: 640, width: 320 });
       await stub(page);
       await ready(page, '/ro/list-your-garage');
+      await answerConsent(page);
       await page
         .locator('mf-details-step')
         .getByRole('group', { name: 'Tipul afacerii' })

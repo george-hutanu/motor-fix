@@ -26,6 +26,10 @@ export const FILES: Record<Area, Loaders> = {
     en: () => import('./cockpit/en.json').then((m) => m.default),
     ro: () => import('./cockpit/ro.json').then((m) => m.default),
   },
+  consent: {
+    en: () => import('./consent/en.json').then((m) => m.default),
+    ro: () => import('./consent/ro.json').then((m) => m.default),
+  },
   driver: {
     en: () => import('./driver/en.json').then((m) => m.default),
     ro: () => import('./driver/ro.json').then((m) => m.default),

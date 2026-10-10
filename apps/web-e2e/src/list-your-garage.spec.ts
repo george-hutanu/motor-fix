@@ -25,7 +25,7 @@ async function open(page: Page, path: string) {
 // The sections are empty until later stories fill them; give them the height
 // their content will have so the page scrolls past each heading.
 async function fill(page: Page) {
-  await page.addStyleTag({ content: 'section { min-height: 900px; }' });
+  await page.addStyleTag({ content: 'main section { min-height: 900px; }' });
 }
 
 // The smooth jump has ended once the page stops moving.
