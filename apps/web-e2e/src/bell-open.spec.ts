@@ -105,7 +105,9 @@ test.describe('opening a notification from the bell', () => {
       await expect(page).toHaveURL(`/app/driver/cars/${CAR}`);
       const logan = page.locator('[data-car]', { hasText: 'Dacia Logan' });
       await expect(logan).toBeFocused();
-      await expect(logan).toBeInViewport();
+      // A tap does not match :focus-visible; the ring is still drawn.
+      await expect(logan).toHaveCSS('outline-style', 'solid');
+      await expect(logan).toBeInViewport({ ratio: 1 });
       expect(reads).toEqual(['n-itp']);
       expect(
         await page.evaluate(

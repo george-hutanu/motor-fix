@@ -22,6 +22,12 @@ article {
   gap: var(--mf-space-1);
   padding: var(--mf-space-4);
 }
+/* The card a bell row opened takes focus after a tap too, which
+   :focus-visible does not match, so it carries the kit's ring itself. */
+article:focus {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
 .skeleton {
   height: 112px;
   background: var(--mf-line);
