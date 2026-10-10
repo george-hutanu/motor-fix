@@ -68,11 +68,14 @@ aside nav a[aria-current="page"] {
   flex-direction: column;
   min-width: 0;
 }
+/* Inset as far as each view's own margin, so the title and the bell line
+   up with the cards under them. */
 header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--mf-space-3);
+  padding-inline: var(--mf-space-4);
 }
 header h1 {
   flex: 1 1 auto;

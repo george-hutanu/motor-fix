@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import type { LiveMessage } from '@motor-fix/contracts';
 import {
   type NotificationDto,
@@ -50,6 +51,7 @@ function setup(count = 0, items: NotificationDto[] = []) {
   open = jest.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       { provide: NotificationsService, useValue: api },
       { provide: Live, useValue: { events } },
       { provide: Overlays, useValue: { open } },
@@ -123,6 +125,31 @@ describe('Bell', () => {
     });
     expect(api.bellControllerList).toHaveBeenCalledWith({ language: 'ro' });
     expect(api.bellControllerUnreadCount).toHaveBeenCalled();
+  });
+
+  // @traces 032-FR-001 032-FR-003
+  it('goes to the view the list closed on, once the close has settled', async () => {
+    const { button, fixture } = await render(1, [row('a')]);
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
+    open.mockResolvedValueOnce('/app/driver/cars/c1');
+
+    button.click();
+    await settle(fixture);
+
+    expect(navigate).toHaveBeenCalledWith('/app/driver/cars/c1');
+  });
+
+  // @traces 032-FR-002
+  it('stays where it is when the list is dismissed', async () => {
+    const { button, fixture } = await render(1, [row('a')]);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+    button.click();
+    await settle(fixture);
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('toasts a new notification and refreshes', async () => {

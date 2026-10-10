@@ -73,14 +73,13 @@ async function render(
   const store = TestBed.inject(BellStore);
   if (load) await store.load();
   const host = TestBed.createComponent(Host);
-  void host.componentInstance.overlays.open(BellList, {
-    data: store,
-    shape: 'drawer',
-    title: 'shell.bell.title',
-  });
+  const closed = host.componentInstance.overlays.open<string, BellStore>(
+    BellList,
+    { data: store, shape: 'drawer', title: 'shell.bell.title' },
+  );
   await settle();
   const element = panel().querySelector('mf-bell-list') as HTMLElement;
-  return { element, store };
+  return { closed, element, store };
 }
 
 const button = (element: HTMLElement, name: string) =>
@@ -162,20 +161,22 @@ describe('BellList', () => {
   });
 
   // @traces 032-FR-001 032-FR-003
-  it('opens the view a tapped row links to and closes the list', async () => {
-    const { element } = await render(async () => ({
+  it('closes the list on the view a tapped row links to, for the bell to open', async () => {
+    const { closed, element } = await render(async () => ({
       items: [row('a', { kind: 'DUE_ITP', link: '/app/driver/cars/c1' })],
       nextCursor: null,
     }));
-    const navigate = jest
-      .spyOn(TestBed.inject(Router), 'navigateByUrl')
-      .mockResolvedValue(true);
+    // The list's close steps back in history and the router replays that
+    // address after it: a navigation started before the close settles is
+    // undone, so the list never navigates itself.
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
     element.querySelector<HTMLButtonElement>('li button')?.click();
     await settle();
 
     expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
-    expect(navigate).toHaveBeenCalledWith('/app/driver/cars/c1');
+    await expect(closed).resolves.toBe('/app/driver/cars/c1');
+    expect(navigate).not.toHaveBeenCalled();
     expect(panel()).toBeNull();
   });
 
@@ -197,7 +198,7 @@ describe('BellList', () => {
 
   // @traces 032-FR-001
   it('still opens the view of a row already read, without reading it again', async () => {
-    const { element } = await render(async () => ({
+    const { closed, element } = await render(async () => ({
       items: [
         row('a', {
           kind: 'QUOTE_RECEIVED',
@@ -207,15 +208,11 @@ describe('BellList', () => {
       ],
       nextCursor: null,
     }));
-    const navigate = jest
-      .spyOn(TestBed.inject(Router), 'navigateByUrl')
-      .mockResolvedValue(true);
-
     element.querySelector<HTMLButtonElement>('li button')?.click();
     await settle();
 
     expect(api.bellControllerRead).not.toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith('/app/driver/requests/r1');
+    await expect(closed).resolves.toBe('/app/driver/requests/r1');
   });
 
   it('marks all read', async () => {

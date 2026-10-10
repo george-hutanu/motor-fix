@@ -5,7 +5,6 @@ import {
   effect,
   inject,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import type { NotificationDto } from '@motor-fix/data-access';
 import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask } from '@motor-fix/overlays';
@@ -27,7 +26,10 @@ export function ago(at: string, now: Date, i18n: I18n): string {
 }
 
 // The person's notifications, newest first; opening one marks it read and,
-// when it names a view, closes the list and goes there.
+// when it names a view, closes the list on that address. The bell goes there
+// once the close has settled: the close steps back over the list's history
+// entry and the router replays that address, which would undo a navigation
+// started here.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -36,10 +38,9 @@ export function ago(at: string, now: Date, i18n: I18n): string {
   templateUrl: './bell-list.html',
 })
 export class BellList {
-  private readonly task = injectOverlayTask<BellStore, void>();
+  private readonly task = injectOverlayTask<BellStore, string | undefined>();
   protected readonly store = this.task.data;
   private readonly i18n = inject(I18n);
-  private readonly router = inject(Router);
   private readonly now = new Date();
   protected readonly unread = computed(() =>
     this.store.items().some((n) => !n.readAt),
@@ -48,15 +49,14 @@ export class BellList {
   constructor() {
     // The overlay outlives a navigation, so it does not close with the bell.
     effect(() => {
-      if (this.store.ended()) this.task.close();
+      if (this.store.ended()) this.task.close(undefined);
     });
   }
 
   protected open(item: NotificationDto) {
     void this.store.read(item.id);
     if (!item.link) return;
-    this.task.close();
-    void this.router.navigateByUrl(item.link);
+    this.task.close(item.link);
   }
 
   protected when(at: string) {

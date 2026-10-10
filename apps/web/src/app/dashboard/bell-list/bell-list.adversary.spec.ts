@@ -59,14 +59,13 @@ async function render(
   const store = TestBed.inject(BellStore);
   await store.load();
   const host = TestBed.createComponent(Host);
-  void host.componentInstance.overlays.open(BellList, {
-    data: store,
-    shape: 'drawer',
-    title: 'shell.bell.title',
-  });
+  const closed = host.componentInstance.overlays.open<string, BellStore>(
+    BellList,
+    { data: store, shape: 'drawer', title: 'shell.bell.title' },
+  );
   await settle();
   const element = panel()?.querySelector('mf-bell-list') as HTMLElement;
-  return { api, element };
+  return { api, closed, element };
 }
 
 const tap = async (element: HTMLElement, index = 0) => {
@@ -79,19 +78,16 @@ afterEach(() => TestBed.resetTestingModule());
 describe('BellList taps under failure', () => {
   // @traces 032-FR-003
   it('still opens the view and closes the list when marking read fails', async () => {
-    const { element } = await render(
+    const { closed, element } = await render(
       [row('a', { link: '/app/driver/cars/c1' })],
       async () => {
         throw new Error('offline');
       },
     );
-    const navigate = jest
-      .spyOn(TestBed.inject(Router), 'navigateByUrl')
-      .mockResolvedValue(true);
 
     await tap(element);
 
-    expect(navigate).toHaveBeenCalledWith('/app/driver/cars/c1');
+    await expect(closed).resolves.toBe('/app/driver/cars/c1');
     expect(panel()).toBeNull();
   });
 
@@ -109,18 +105,14 @@ describe('BellList taps under failure', () => {
 
   // @traces 032-FR-001
   it('opens each row its own address when two rows are tapped in turn', async () => {
-    const { element } = await render([
+    const { closed, element } = await render([
       row('a', { link: '/app/driver/cars/c1' }),
       row('b', { kind: 'REVIEW_INVITE', link: '/app/driver/reviews' }),
     ]);
-    const navigate = jest
-      .spyOn(TestBed.inject(Router), 'navigateByUrl')
-      .mockResolvedValue(true);
 
     await tap(element, 1);
 
-    expect(navigate).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledWith('/app/driver/reviews');
+    await expect(closed).resolves.toBe('/app/driver/reviews');
   });
 
   // @traces 032-FR-001
@@ -141,18 +133,15 @@ describe('BellList taps under failure', () => {
 
   // @traces 032-FR-005
   it('shows a row whose link names a car that no longer exists and navigates without error', async () => {
-    const { element } = await render([
+    const { closed, element } = await render([
       row('a', { link: '/app/driver/cars/removed-car', text: 'ITP gone' }),
     ]);
-    const navigate = jest
-      .spyOn(TestBed.inject(Router), 'navigateByUrl')
-      .mockResolvedValue(true);
 
     expect(element.querySelector('.text')?.textContent?.trim()).toBe(
       'ITP gone',
     );
     await tap(element);
 
-    expect(navigate).toHaveBeenCalledWith('/app/driver/cars/removed-car');
+    await expect(closed).resolves.toBe('/app/driver/cars/removed-car');
   });
 });
