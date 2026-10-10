@@ -135,9 +135,11 @@ test.describe('step 2 of list your garage, the brands', () => {
   }) => {
     const OIL = 'Schimb de ulei și filtre';
     const prices = page.locator('mf-prices-step');
-    const dacia = step(page).locator('.chips > li', {
-      has: chip(page, 'Dacia'),
-    });
+    // A `has` locator is resolved inside each row, so it starts at the row's
+    // own chip button, not at mf-brands-step.
+    const dacia = step(page)
+      .locator('.chips > li')
+      .filter({ has: page.locator('button', { hasText: 'Dacia' }) });
     const row = dacia.locator('details.jobs');
     const box = (name: string) =>
       row.getByRole('checkbox', { exact: true, name: `Dacia, ${name}` });
