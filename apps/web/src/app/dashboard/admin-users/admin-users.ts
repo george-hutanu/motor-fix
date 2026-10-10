@@ -45,9 +45,12 @@ const one = (value: unknown) =>
   typeof value === 'string' ? value : Array.isArray(value) ? value[0] : '';
 
 // The address's q, role and status as the list reads them, and whether it
-// held a value the list does not know.
+// held a value the list does not know or a search too short to read.
 function narrowingOf(params: Params) {
-  const settled = settleSearch(one(params['q']) ?? '').slice(0, SEARCH_MAX);
+  const typed = one(params['q']) ?? '';
+  const settled = settleSearch(typed).slice(0, SEARCH_MAX);
+  // A q too short to search (one character, or spaces only) is no search.
+  const short = typed !== '' && settled.length < SEARCH_MIN;
   const role = params['role'];
   const { roles, unknown } = readRoles(
     role === undefined ? [] : Array.isArray(role) ? role : [role],
@@ -60,7 +63,7 @@ function narrowingOf(params: Params) {
       roles,
       status,
     } satisfies Narrowing,
-    unknown: unknown.length > 0 || (Boolean(state) && status === null),
+    unknown: short || unknown.length > 0 || (Boolean(state) && status === null),
   };
 }
 

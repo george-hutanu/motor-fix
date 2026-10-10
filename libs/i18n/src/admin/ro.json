@@ -128,7 +128,8 @@
     },
     "search": {
       "clear": "Golește căutarea",
-      "label": "Caută după nume, e‑mail sau telefon"
+      "label": "Caută după nume, e‑mail sau telefon",
+      "placeholder": "Nume, e‑mail sau telefon"
     },
     "state": {
       "active": "activ",

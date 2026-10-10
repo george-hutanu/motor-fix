@@ -122,7 +122,8 @@
     },
     "search": {
       "clear": "Clear the search",
-      "label": "Search by name, e‑mail or phone"
+      "label": "Search by name, e‑mail or phone",
+      "placeholder": "Name, e‑mail or phone"
     },
     "state": {
       "active": "active",

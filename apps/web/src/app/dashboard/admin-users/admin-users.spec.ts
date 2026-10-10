@@ -613,6 +613,24 @@ describe('the search on the address', () => {
     ).toBe(true);
   });
 
+  it('drops a one-character or blank search from the address, in place, reading the whole list', async () => {
+    await open('ro', `${VIEW}?city=cluj-napoca&q=a&role=mechanic`);
+
+    expect(reads.at(-1)).toEqual({ role: ['mechanic'] });
+    expect(reads.some((r) => r.q !== undefined)).toBe(false);
+    expect(url()).toBe(`${VIEW}?city=cluj-napoca&role=mechanic`);
+    expect(
+      TestBed.inject(Router).lastSuccessfulNavigation()?.extras.replaceUrl,
+    ).toBe(true);
+  });
+
+  it('drops a search of spaces only from the address', async () => {
+    await open('ro', `${VIEW}?q=%20%20%20`);
+
+    expect(reads.some((r) => r.q !== undefined)).toBe(false);
+    expect(url()).toBe(VIEW);
+  });
+
   it('keeps the first 80 characters of a longer search on the address', async () => {
     await open('ro', `${VIEW}?q=${'a'.repeat(90)}`);
 

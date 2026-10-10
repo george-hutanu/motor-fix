@@ -123,17 +123,14 @@ select:focus-visible,
   accent-color: var(--mf-amber);
 }
 @media (min-width: 768px) {
+  /* The drop-downs wrap under the box rather than run past the edge. */
   :host {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
   }
   .search {
     flex: 1 1 18rem;
-  }
-  input[type="search"],
-  .roles,
-  select {
-    font-size: var(--mf-size-small);
   }
   .filter {
     display: none;
@@ -141,10 +138,15 @@ select:focus-visible,
   .wide {
     display: flex;
     flex: none;
+    max-width: 100%;
     align-items: center;
     gap: var(--mf-space-2);
   }
 }
 fieldset.ticks {
   margin: 0;
+}
+/* The trigger's few words fit its box: no ellipsis to cut them by a pixel. */
+.wide .roles span {
+  overflow: visible;
 }

@@ -102,11 +102,15 @@ const fakeClock = () =>
 
 // @traces 002-FR-008 002-FR-013
 describe('the search box', () => {
-  it('is a search field named by its visible label, in a search landmark of the same name', async () => {
+  it('is a search field whose name holds its visible text, in a search landmark of the same name', async () => {
     const { element } = await open();
 
     const input = box(element);
-    expect(input.placeholder).toBe('Caută după nume, e‑mail sau telefon');
+    // Short enough to show whole at 320 px; the name contains it (label in name).
+    expect(input.placeholder).toBe('Nume, e‑mail sau telefon');
+    expect(input.getAttribute('aria-label')?.toLowerCase()).toContain(
+      input.placeholder.toLowerCase(),
+    );
     expect(input.getAttribute('aria-label')).toBe(
       'Caută după nume, e‑mail sau telefon',
     );
@@ -119,7 +123,10 @@ describe('the search box', () => {
   it('reads in English', async () => {
     const { element } = await open('en');
 
-    expect(box(element).placeholder).toBe('Search by name, e‑mail or phone');
+    expect(box(element).placeholder).toBe('Name, e‑mail or phone');
+    expect(box(element).getAttribute('aria-label')).toBe(
+      'Search by name, e‑mail or phone',
+    );
   });
 
   it('shows the text from the address', async () => {
