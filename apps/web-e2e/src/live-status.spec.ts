@@ -51,32 +51,39 @@ async function openWithUpdate(
 
 type Box = { height: number; width: number; x: number; y: number };
 
+// Frames a layout gets to settle in, about two seconds at 60 frames a second.
+const SETTLE_FRAMES = 120;
+
 // The boxes of `selectors`, read together in one frame once the fonts have
 // loaded and two frames in a row lay them out the same. The line's text shows
 // before the frame around it settles (a web font swapping in can wrap the
 // header onto a second row), so boxes read one call apart can come from two
 // different layouts.
 async function settled(page: Page, ...selectors: string[]): Promise<Box[]> {
-  await page.evaluate(() => document.fonts.ready.then(() => undefined));
-  return page.evaluate(async (wanted) => {
-    const read = () =>
-      JSON.stringify(
-        wanted.map((selector) => {
-          const found = document.querySelector(selector);
-          if (!found) throw new Error(`${selector} is not on the page`);
-          const { height, width, x, y } = found.getBoundingClientRect();
-          return { height, width, x, y };
-        }),
-      );
-    const frame = () => new Promise((done) => requestAnimationFrame(done));
-    let last = read();
-    for (;;) {
-      await frame();
-      const now = read();
-      if (now === last) return JSON.parse(now) as Box[];
-      last = now;
-    }
-  }, selectors);
+  return page.evaluate(
+    async ([wanted, frames]) => {
+      await document.fonts.ready;
+      const read = () =>
+        JSON.stringify(
+          wanted.map((selector) => {
+            const found = document.querySelector(selector);
+            if (!found) throw new Error(`${selector} is not on the page`);
+            const { height, width, x, y } = found.getBoundingClientRect();
+            return { height, width, x, y };
+          }),
+        );
+      const frame = () => new Promise((done) => requestAnimationFrame(done));
+      let last = read();
+      for (let i = 0; i < frames; i++) {
+        await frame();
+        const now = read();
+        if (now === last) return JSON.parse(now) as Box[];
+        last = now;
+      }
+      throw new Error(`the layout did not settle in ${frames} frames: ${last}`);
+    },
+    [selectors, SETTLE_FRAMES] as const,
+  );
 }
 
 for (const [name, width, height] of [
