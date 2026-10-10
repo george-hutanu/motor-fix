@@ -211,9 +211,10 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  // 879-FR-010 caps the seven counters it added; every later one keeps its
-  // own fixed set, checked here too.
-  it('keeps the series of the seven counters under 50, every label from a fixed set', async () => {
+  // The cap of 50 covers the seven counters the observability story added;
+  // every later counter keeps its own fixed set, and the instance as a whole
+  // stays under 100 series, far inside the metrics backend's free tier.
+  it('keeps the seven counters under 50 series and the instance under 100, every label from a fixed set', async () => {
     countEverySeries();
 
     const { resourceMetrics } = await memory.metricReader.collect();
@@ -231,6 +232,7 @@ describe('the product counters', () => {
     expect(
       series.filter((s) => SEVEN_COUNTERS.includes(s.name)).length,
     ).toBeLessThan(50);
+    expect(series.length).toBeLessThan(100);
     expect(
       series.filter((s) => s.name === 'motorfix_account_changes_total'),
     ).toHaveLength(ACCOUNT_FIELDS.length);
