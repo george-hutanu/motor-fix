@@ -41,11 +41,12 @@ describe("projectToken under hostile input", () => {
     );
   });
 
-  it("does not pass GITHUB_TOKEN to gh either", () => {
+  it("does not pass GITHUB_TOKEN, a blank GH_TOKEN or a config directory to gh", () => {
     let seen;
-    projectToken({ env: { HOME: "/h", GITHUB_TOKEN: "other", GH_TOKEN: "other2" }, run: (_f, _a, o) => ((seen = o.env), { code: 0, stdout: SECRET, stderr: "" }) });
+    projectToken({ env: { HOME: "/h", GITHUB_TOKEN: "other", GH_TOKEN: " " }, run: (_f, _a, o) => ((seen = o.env), { code: 0, stdout: SECRET, stderr: "" }) });
     assert.equal(seen.GITHUB_TOKEN, undefined);
     assert.equal(seen.GH_TOKEN, undefined);
+    assert.equal(seen.GH_CONFIG_DIR, undefined);
   });
 
   it("includes the refresh command naming the project scope", () => {
@@ -84,7 +85,8 @@ describe("the command line without a token", () => {
         });
         assert.equal(r.status, 1);
         assert.match(r.stderr, /GH_PROJECT_TOKEN/);
-        assert.ok(r.stderr.includes(join(home, ".config/gh-motorfix")));
+        assert.match(r.stderr, /GH_TOKEN/);
+        assert.ok(!r.stderr.includes("gh-motorfix"), "the owner's gh-motorfix login is never named or read");
         assert.ok(!r.stdout.includes("ntn_never") && !r.stderr.includes("ntn_never"));
       } finally {
         rmSync(home, { recursive: true, force: true });

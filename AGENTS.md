@@ -26,48 +26,56 @@ that way for `~/code`.
   credentials: the hook exports nothing, `apply` sets the author only, and
   `check` skips credential pinning (see "Cloud sessions").
 
-## Notion is the tracker, and design comes first
+## The tracker is GitHub, and design comes first
 
 These hold for every piece of work in this repo: a story, a task, a bug, an
 epic or a plan, whether run through spec-kit or by hand.
 
+The tracker is GitHub: each story, task and epic is an issue in the private
+`george-hutanu/motor-fix-specs`, its ST or EP id first in the title, with
+its Status, dates and PR in Project "MotorFix" (#11); `speckit-tracker-sync`
+(`.claude/scripts/tracker-sync.mjs`, log `specs/<feature>/tracker-sync.md`)
+writes them. A task that started on Notion (its folder holds
+`notion-sync.md` and no `tracker-sync.md`) finishes there through
+`speckit-notion-sync`; `lifecycle.mjs` picks the same on its own.
+
 - **Check the design before starting.** Before any code, read the story's
-  boards in the clickable mock (the `Design` and `Design boards` properties
-  in Notion) and the Build brief's Screens section, and write
+  boards in the clickable mock (the story's `Design` and `Design boards`
+  fields) and the Build brief's Screens section, and write
   `specs/<feature>/design.md`. Skill: `speckit-design-check`.
 - **Every task follows the same lifecycle, in this order.** This is a hard
   rule, Constitution VII, enforced by the `stop:pr-lifecycle` and
   `pre:bash:merge-gate` gates:
-  1. Take the task and set it to Planning in Notion (`speckit-notion-sync start`);
+  1. Take the task and set it to Planning (`speckit-tracker-sync start`);
      it moves to Implementing when `/speckit-implement` begins
-     (`speckit-notion-sync implement`, the `before_implement` hook).
+     (`speckit-tracker-sync implement`, the `before_implement` hook).
   2. Open a draft PR for its branch at the start (`speckit-git-commit`; before
      planning has a commit, an empty `chore(<scope>): ST-<n> start …` one),
      its body made from `.github/pull_request_template.md`:
      `gh pr create --draft --label planning --body-file <body>`, never
      `--body` or `--fill`.
-     Then write the PR's link onto the task's `PR` property in Notion
-     (`speckit-notion-sync pr <n>`): every task links its own PR.
+     Then write the PR's link onto the issue's `PR` field and the PR's
+     `Closes` line (`speckit-tracker-sync pr <n>`): every task links its own PR.
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
   4. When it is done (tests, typecheck and lint green, review with no
      CRITICAL/HIGH left), fill in every section of the template
      (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
      review (`gh pr ready`) and set the task to QA
-     (`speckit-notion-sync qa`, which also sets the PR's one stage label
+     (`speckit-tracker-sync qa`, which also sets the PR's one stage label
      to `QA`). There is no In review stage: ready is QA. A feature's own
      records go out before it is ready: the Spec Delta merge
      (`.specify/capabilities/`) is committed on the branch, and the
      archive's status line, a retrospective if one was written and
-     `specs/<feature>/notion-sync.md` are pushed to the specs repo (see
+     `specs/<feature>/tracker-sync.md` are pushed to the specs repo (see
      "Specs live in their own repo"); the `qa` line follows right after,
      before CI is waited for and QA starts.
 
      Then the story's agent starts QA and hands off. It dispatches the PR QA
      run for the head without waiting for it
      (`.claude/scripts/pr-test/dispatch.mjs <n> --no-wait`), writes
-     `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the Notion
-     page ids, the `QA run:` line, open decisions, deferred items; git
+     `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the story's
+     issue, the `QA run:` line, open decisions, deferred items; git
      ignores it) and returns `NEXT: tail #<n> after QA run <id>`, its last
      action. No agent is alive while CI and the run work: a context that
      sleeps past the 5-minute prompt cache is written again in full. The
@@ -111,13 +119,13 @@ epic or a plan, whether run through spec-kit or by hand.
      (`.claude/scripts/pr-test/carry.mjs`); the merge gate verifies the carry.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
-     is never merged. Then set the task to Done (`speckit-notion-sync finish`).
+     is never merged. Then set the task to Done (`speckit-tracker-sync finish`, which closes its issue).
      The orchestrating session then fast-forwards the main checkout
      (`git -C <main> merge --ff-only origin/main`); when the watch reports it
      `behind`, `/speckit-watch`'s `ff-main` safe fix does it. The main
      checkout holds no edits to tracked files (`pre:edit:main-checkout`).
      What only exists after the merge (the merge sha, the finish, ready and
-     comment lines) goes to Notion and into one comment on the merged PR
+     comment lines) goes to the tracker and into one comment on the merged PR
      (`gh pr comment <n>`), never a commit of its own; whatever must reach a
      file rides on the next PR.
      A PR opened by Dependabot (its author on GitHub, not its title or branch)
@@ -135,34 +143,34 @@ epic or a plan, whether run through spec-kit or by hand.
   Nx project or harness area the branch does not touch; the file or module
   the change touches is never one. Only a large fix is routed `defer`: a
   bullet in `specs/<feature>/deferred.md` naming the arm it meets, filed as a
-  To do task in Notion (`speckit-notion-sync debt`) before the merge; each
-  bullet carries its task's URL so it is never filed twice.
+  To do issue in the tracker (`speckit-tracker-sync debt`) before the merge; each
+  bullet carries its issue's URL so it is never filed twice.
 
   Whenever the work cannot go on without something outside it (a Hard Stop,
   red CI the agent cannot fix, the repair cap, an unresolved Blocked by), set
-  the task to Blocked with the reason as a Notion comment and a PR comment
-  (`speckit-notion-sync blocked <reason>`); `speckit-notion-sync unblock`
+  the task to Blocked with the reason as an issue comment and a PR comment
+  (`speckit-tracker-sync blocked <reason>`); `speckit-tracker-sync unblock`
   returns it to where it was. Each step also moves the PR's label —
   `planning` until `/speckit-implement`, then `in development`, then `QA`
   from the moment it is ready, plus `blocked` — so GitHub shows the
-  same stage as Notion. Next to its one stage label a PR carries its type
+  same stage as the tracker. Next to its one stage label a PR carries its type
   (`feature`, `bug`, `tech debt`, …, from the title), `breaking`, its scope,
   its epic, `ui` and `dependencies` where they apply (table in
-  `speckit-notion-sync`, §2b); the merge removes the stage labels.
+  `speckit-notion-sync`, §2b, which `speckit-tracker-sync` shares); the merge removes the stage labels.
 
   No step waits for the user: opening the draft, pushing, marking it ready,
-  merging on green CI and the Notion writes are all standing instructions. The
-  Notion writes cover the story, its row in the epic's build timeline under
-  Delivery › Plans, and the epic itself (In progress at its first story, Done
-  at its last).
+  merging on green CI and the tracker writes are all standing instructions. The
+  tracker writes cover the story's issue and the epic's (Implementing at its
+  first story, Done and closed at its last).
 - **Ready to work stays current, and a finished task says what happened.**
-  Every `start` and `finish` ends with `notion-ready <epic>`, which ticks the
-  Ready to work checkbox on the tasks that just became unblocked and unticks
-  the one that started; readiness never goes in Labels. Every `finish` also
+  Every `start` and `finish` ends with a ready refresh, which puts the
+  `ready to work` label on the To do issues whose every dependency is now
+  closed or Done (after the hold review) and takes it off the one that
+  started. Every `finish` also
   comments on the task when there is something to record: deviations from
   the Build brief, decisions taken on the owner's behalf, deferred follow-ups,
   open questions. `/speckit-archive` will not close a feature until the
-  refresh is logged after its finish, in `notion-sync.md` or the merged
+  refresh is logged after its finish, in `tracker-sync.md` or the merged
   PR's finish comment (`notion-ready.mjs check -`).
 - **Plans:** one build-timeline database per epic under Delivery › Plans in
   Notion, and its build plan as a file in the specs repo's
@@ -170,7 +178,7 @@ epic or a plan, whether run through spec-kit or by hand.
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
   `after_specify`, `before_plan`, `before_implement`), and so do
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
-  yourself. After every merge to `main`, run `speckit-notion-sync finish`.
+  yourself. After every merge to `main`, run `speckit-tracker-sync finish`.
 - **Observability ships with the change.** A story that adds a service,
   resource, queue, outside call, endpoint or product action adds its metrics,
   logs, traces, dashboard panel and alert (or says why not) in the same PR,
@@ -182,8 +190,8 @@ epic or a plan, whether run through spec-kit or by hand.
   header lists the rules) checks a draft's headings and a ready PR's every
   section, and names what is missing. Write `N/A` and the reason where a
   section does not apply. Agent review is filled in by the automated reviewer.
-- A Notion or mock failure never blocks the build. It is logged in
-  `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
+- A tracker or mock failure never blocks the build. It is logged in
+  `specs/<feature>/tracker-sync.md` or `design.md` and retried on the next run.
 
 ## Agent replies
 
@@ -278,7 +286,7 @@ that variable, so the laptop behaves as before.
   `npm ci`, the Docker daemon, `docker compose pull postgres redis` unless
   both images are there; it is idempotent and unverified until the first
   real cloud run). Variables, by
-  name only: `NOTION_TOKEN`, `JEV`, and from `.env.example` the ones the
+  name only: `NOTION_TOKEN`, `JEV`, `GH_PROJECT_TOKEN` (the tracker's, since the proxy's `GH_TOKEN` cannot reach Project #11), and from `.env.example` the ones the
   tests read (`DATABASE_URL`, `REDIS_URL`, `AUTH_TOKEN_SECRET`; CI's job env
   in `.github/workflows/ci.yml` lists the end-to-end set). Network level
   Trusted, or a custom list that allows `api.notion.com` and
