@@ -22,7 +22,7 @@ export const REQUEST_DECLINED: Template = {
       button: { label: 'Vezi cererea', link: 'link' },
       lines: [
         '{garage} nu poate prelua cererea: {reason}.',
-        'Celelalte service-uri cărora le-ai scris pot răspunde în continuare.',
+        'Celelalte service‑uri cărora le‑ai scris pot răspunde în continuare.',
       ],
       reason: 'Primești acest e‑mail pentru că ai cerut oferte pe MotorFix.',
       subject: 'Un service a refuzat cererea ta',

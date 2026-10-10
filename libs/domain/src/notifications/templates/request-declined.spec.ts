@@ -102,6 +102,20 @@ describe('the declined request message to the driver', () => {
     ]);
   });
 
+  it('joins hyphenated Romanian words with U+2011, never an ASCII hyphen', () => {
+    const template = TEMPLATES[KIND];
+    const ro = JSON.stringify([
+      template?.bell?.ro,
+      template?.email?.ro,
+      template?.push?.ro,
+    ]);
+
+    expect(ro).not.toMatch(/\p{L}-\p{L}/u);
+    expect(render(KIND, 'email', 'ro', params('fully_booked')).text).toContain(
+      'Celelalte service\u2011uri cărora le\u2011ai scris',
+    );
+  });
+
   it('refuses a reason that is not one of the four', () => {
     expect(() => render(KIND, 'push', 'ro', params('too_far'))).toThrow(
       /reason/,

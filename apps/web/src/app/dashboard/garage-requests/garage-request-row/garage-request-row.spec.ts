@@ -189,6 +189,14 @@ describe('the request row’s Refuză button', () => {
     },
   );
 
+  it('is outlined like the board’s ghost button (1 px strong line), not bare text', async () => {
+    const { element } = await render(me('owner', false));
+
+    const decline = sendButton(element, 'Refuză');
+    expect(decline?.classList).toContain('spartan-button-variant-secondary');
+    expect(decline?.classList).not.toContain('spartan-button-variant-ghost');
+  });
+
   it('is absent for a mechanic without can_answer_quotes, on a closed row and on an answered one', async () => {
     const plain = await render(me('mechanic', false));
     expect(sendButton(plain.element, 'Refuză')).toBeUndefined();
