@@ -166,3 +166,114 @@ describe('the failure log', () => {
     },
   );
 });
+
+describe('GET /admin/accounts with a search and filters', () => {
+  const SEARCH = '/admin/accounts?q=0722%20123%20456&role=driver&status=active';
+
+  // @traces 002-FR-001
+  it('answers the matches with their total and nothing personal', async () => {
+    const auth = await as('admin');
+    const id = await account('Andrei Marin', ['driver'], {
+      email: 'andrei.marin@gmail.com',
+    });
+    await prisma.account.update({
+      data: { phone: '+40722123456' },
+      where: { id },
+    });
+
+    const res = await get(SEARCH, auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(res.body.items.map((i: { name: string }) => i.name)).toEqual([
+      'Andrei Marin',
+    ]);
+    expect(JSON.stringify(res.body)).not.toMatch(/gmail|722123456/);
+  });
+
+  // @traces 002-FR-005
+  it('reads repeated and comma-separated roles alike', async () => {
+    const auth = await as('admin');
+    await account('Șofer', ['driver']);
+    await account('Mecanic', ['mechanic']);
+
+    const repeated = await get(
+      '/admin/accounts?role=driver&role=mechanic',
+      auth,
+    );
+    const joined = await get('/admin/accounts?role=driver,mechanic', auth);
+
+    expect(repeated.status).toBe(200);
+    expect(repeated.body.total).toBe(2);
+    expect(joined.body).toEqual(repeated.body);
+  });
+
+  // @traces 002-FR-002
+  it.each([
+    [`q=${'a'.repeat(81)}`, 'invalid_query'],
+    ['role=pilot', 'invalid_filter'],
+    ['status=deleted', 'invalid_filter'],
+    ['status=active&status=suspended', 'invalid_filter'],
+  ])('answers %s with 400 %s', async (query, code) => {
+    const res = await get(`/admin/accounts?${query}`, await as('admin'));
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe(code);
+  });
+
+  // @traces 002-FR-007
+  it.each(NON_ADMIN)('answers 404 to a %s searching', async (role) => {
+    const res = await get(SEARCH, await as(role));
+
+    expect(res.status).toBe(404);
+    expect(res.body.items).toBeUndefined();
+  });
+
+  it('answers 401 to a search without a session', async () => {
+    const res = await get(SEARCH);
+
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('sign_in_required');
+  });
+
+  it('answers 403 account_suspended to a suspended admin searching', async () => {
+    const res = await get(SEARCH, await as('admin', 'suspended'));
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('account_suspended');
+    expect(res.body.items).toBeUndefined();
+  });
+
+  it('records nothing in the change history', async () => {
+    const auth = await as('admin');
+    const before = await prisma.activityLog.count();
+
+    await get(SEARCH, auth);
+
+    expect(await prisma.activityLog.count()).toBe(before);
+  });
+
+  // @traces 002-FR-014
+  it('logs a failed search without its query', async () => {
+    const lines: unknown[] = [];
+    jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation((message: unknown) => {
+        lines.push(message);
+      });
+
+    const res = await get(
+      '/admin/accounts?q=andrei.marin%40gmail.com&status=gone',
+      await as('admin'),
+    );
+    jest.restoreAllMocks();
+
+    expect(res.status).toBe(400);
+    expect(lines).toContainEqual({
+      message: 'admin accounts request failed',
+      route: 'GET /admin/accounts',
+      status: 400,
+    });
+    expect(JSON.stringify(lines)).not.toMatch(/andrei|gmail/);
+  });
+});

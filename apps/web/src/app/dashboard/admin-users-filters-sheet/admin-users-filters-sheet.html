@@ -1,0 +1,19 @@
+<fieldset class="group">
+  <legend class="label">{{ 'admin.users.filters.roles' | t }}</legend>
+  @for (option of roleOptions(); track option.key) {
+    <label class="option">
+      <input type="checkbox" [value]="option.key" [checked]="roles().includes(option.key)" (change)="toggle(option.key, $any($event.target).checked)" />
+      {{ option.name }}
+    </label>
+  }
+</fieldset>
+<div class="group" role="radiogroup" [attr.aria-label]="'admin.users.filters.state' | t">
+  <p class="label" aria-hidden="true">{{ 'admin.users.filters.state' | t }}</p>
+  @for (option of stateOptions(); track option.key) {
+    <label class="option">
+      <input type="radio" name="mf-users-state" [value]="option.key ?? ''" [checked]="option.key === status()" (change)="status.set(option.key)" />
+      {{ option.name }}
+    </label>
+  }
+</div>
+<button hlmBtn type="button" (click)="apply()">{{ 'admin.users.filters.apply' | t }}</button>

@@ -77,6 +77,10 @@ model Account {
   jobStepsDone            JobStep[]                @relation("JobStepDoneBy")
 
   @@index([createdAt(sort: Desc), id(sort: Desc)])
+  // The admin's search. The migration also holds account_fold(text) and a
+  // trigram index on account_fold(name), which Prisma cannot declare.
+  @@index([email(ops: raw("gin_trgm_ops"))], map: "account_email_trgm_idx", type: Gin)
+  @@index([phone(ops: raw("gin_trgm_ops"))], map: "account_phone_trgm_idx", type: Gin)
   @@map("account")
 }
 

@@ -28,8 +28,19 @@
     <p class="totals">{{ totals() }}</p>
   }
 }
+<mf-admin-users-filters
+  class="controls"
+  [q]="narrowing().q"
+  [roles]="narrowing().roles"
+  [status]="narrowing().status"
+  (search)="search($event)"
+  (filter)="filter($event)"
+/>
 <div class="panels">
   <mf-panel [heading]="'admin.users.recent' | t">
+    @if (isNarrowed()) {
+      <p class="found" aria-live="polite">{{ found() }}</p>
+    }
     @switch (listState()) {
       @case ('loading') {
         <ul class="list" aria-busy="true" [attr.aria-label]="'admin.users.loading' | t">
@@ -45,7 +56,12 @@
         </div>
       }
       @default {
-        @if (rows().length === 0) {
+        @if (rows().length === 0 && isNarrowed()) {
+          <div class="no-match">
+            <p class="empty">{{ 'admin.users.noMatch' | t }}</p>
+            <button type="button" class="retry" (click)="clear()">{{ 'admin.users.clear' | t }}</button>
+          </div>
+        } @else if (rows().length === 0) {
           <p class="empty">{{ 'admin.users.empty' | t }}</p>
         } @else {
           <ul class="list" [attr.aria-busy]="moreState() === 'loading' ? 'true' : null">

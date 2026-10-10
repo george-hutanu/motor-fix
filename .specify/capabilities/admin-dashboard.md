@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-09
+updated: 2026-10-10
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -11,6 +11,7 @@ features:
   - 260-rule-off-confirm
   - 163-figures-period-city
   - 384-response-rate
+  - 002-find-account-search
 ---
 
 # Capability: Admin dashboard
@@ -259,9 +260,9 @@ _From 261-maintenance-mode._
 
 _From 261-maintenance-mode._
 
-### 001-FR-001 — `GET /api/v1/admin/accounts?cursor` MUST answer the accounts whose status is `active` or `suspended` (never `deleted`), newest first by creation time, then id, 20 per page as `{ items, nextCursor }`, with an opaque cursor for the next page (base64url of the last item's creation time and id; the next page holds the items older than it, or as old with a smaller id), so no account is repeated or skipped between two consecutive pages of a list to which accounts are only added; `nextCursor` is null when no account follows the page. A cursor that does not decode (not base64url, or not a valid creation time and id once decoded) MUST answer 400 `invalid_cursor`; a cursor that decodes always answers what follows it, even if its account is gone. The list carries no `total` (A30 is proposed; the view shows none).
+### 002-FR-001 — `GET /api/v1/admin/accounts` MUST accept, beside `cursor`, the optional query parameters `q` (the search text), `role` (one or more of `driver`, `garage`, `receptionist`, `mechanic`, `admin`, repeated or comma-separated) and `status` (one of `active`, `watch`, `suspended`), and answer the accounts that satisfy every given one, with ST-1's order (newest first by creation time, then id), page size (20), cursor and item shape unchanged (001-FR-001, 001-FR-002); `nextCursor` chains within the same search and filters. A deleted account MUST never be answered, whatever it once held, for any search or filter.
 
-_From 001-admin-recent-accounts._
+_From 002-find-account-search._
 
 ### 001-FR-002 — Each item MUST carry `id`, `name`, `roles` (the account's roles, in the order driver, garage, receptionist, mechanic, admin), `garageName` (the name of the garage of the account's owner or receptionist membership, or of its mechanic card, or null), `carsCount` (the account's cars, for a driver), `status` (`active` or `suspended`), `since` (the time the state began: for `active` the creation time; for `suspended` the time of the last recorded change of the account's status to `suspended` in the activity log, or null when none is recorded; the entry matched is `subjectType: 'account'`, `field: 'status'`, `newValue` `"suspended"`, the way platform-figures matches a garage's approval), `createdAt`, and `count`: `{ kind: 'requests' | 'reviews' | 'age', value }` — `requests` with the driver's number of requests for an account whose first role is driver, `reviews` with the garage's number of reviews for a garage owner, with the number of reviews naming the mechanic for a mechanic, and `age` with the account's age in whole days (rounded down, so an account created today reads 0) for a receptionist, an admin and any account whose creation time is later than now minus 7 × 24 hours, whatever its role. The first role in the order above decides `count` and the source of `garageName` (driver+garage counts `requests`; garage takes the owner membership, receptionist its membership, mechanic its card); `roles` come from the account's roles only. An item MUST NOT carry the e-mail, the phone, a plate or anything else about the person.
 
@@ -299,9 +300,9 @@ _From 001-admin-recent-accounts._
 
 _From 001-admin-recent-accounts._
 
-### 001-FR-011 — The list MUST load its next page when a sentinel after the last loaded row comes into view (so pages chain without a scroll while the sentinel stays in view), appending the rows below, until `nextCursor` is null; a page load in flight is never doubled. While the first page loads the panel shows skeleton rows; with no account at all it reads "Niciun cont încă." / "No accounts yet."; when the first page fails it shows "Lista nu s-a încărcat" / "The list did not load" with a "Reîncearcă" / "Try again" button (a native button, reachable and activated by keyboard) that reads it again; when a later page fails the loaded rows stay and the same button sits at the foot of the list. The charts load and show whatever the list does.
+### 002-FR-011 — With a search or a filter in force the panel MUST show, above the rows, the count line from `total` in the number's plural form (Romanian `one` "1 cont găsit", `few` "{n} conturi găsite", `other` "{n} de conturi găsite"; English `one` "1 account found", `other` "{n} accounts found"; numbers grouped by the language), in a live region so a screen reader hears each new result; with neither, no count line and the panel exactly as ST-1 built it (001-FR-008 to 001-FR-011: rows, scroll paging, loading, empty "Niciun cont încă.", failure with "Reîncearcă").
 
-_From 001-admin-recent-accounts._
+_From 002-find-account-search._
 
 ### 001-FR-012 — The panel "Creștere, ultimele 12 luni" / "Growth, last 12 months" MUST render the overview's growth component (ST-162) unchanged: same read, same labels, latest values, tooltips, loading and failure behaviour.
 
@@ -455,6 +456,66 @@ _From 384-response-rate._
 
 _From 384-response-rate._
 
+### 002-FR-001 — `GET /api/v1/admin/accounts` MUST accept, beside `cursor`, the optional query parameters `q` (the search text), `role` (one or more of `driver`, `garage`, `receptionist`, `mechanic`, `admin`, repeated or comma-separated) and `status` (one of `active`, `watch`, `suspended`), and answer the accounts that satisfy every given one, with ST-1's order (newest first by creation time, then id), page size (20), cursor and item shape unchanged (001-FR-001, 001-FR-002); `nextCursor` chains within the same search and filters. A deleted account MUST never be answered, whatever it once held, for any search or filter.
+
+_From 002-find-account-search._
+
+### 002-FR-002 — `q` MUST be trimmed and its inner whitespace collapsed to one space; after that, a `q` of fewer than 2 characters MUST be treated as absent, and one longer than 80 characters MUST answer 400 `invalid_query`. A `role` value outside the five, a `status` outside the three, or a repeated `status` MUST answer 400 `invalid_filter`. Every error is RFC 9457 problem details with a `code`, as the route already does.
+
+_From 002-find-account-search._
+
+### 002-FR-003 — A text `q` MUST match an account when it is contained (case-insensitive, accent-insensitive) in the account's name, or in the name of any garage the account works at (every owner or receptionist membership and the mechanic card, whichever garage the row itself names), or when it is contained, case-insensitive, in the account's e-mail. Accent folding MUST map at least ș, ş, ț, ţ, ă, â, î (upper and lower) to s, t, a, i, and is applied to the stored text and to the query alike; the query is first normalised to NFC, so a letter typed as a base letter plus a combining mark matches as the precomposed one. The query is literal text: `%`, `_` and `\` in it match themselves and are never wildcards.
+
+_From 002-find-account-search._
+
+### 002-FR-004 — A phone `q` — one that, after removing spaces, dots, dashes, parentheses and a leading `+` or `00`, consists of 4 to 15 digits — MUST also be matched against the account's phone: the query is rewritten as sign-in rewrites a number (393-FR-001: separators dropped, a leading `0` becomes `+40`, a leading `00` becomes `+`, a `+` keeps its country) but without sign-in's E.164 check, so a partial such as "0722" becomes `+40722`, and an account matches when its stored phone, digits only, contains the normalised query's digits. The text match of FR-003 still applies to the same `q`, so a phone-looking query also finds a name or e-mail containing those digits.
+
+_From 002-find-account-search._
+
+### 002-FR-005 — The `role` filter MUST answer the accounts holding at least one of the given roles, each account once; the `status` filter MUST answer, for `active` and `suspended`, the accounts with that status, and for `watch`, the accounts with an open watch, of which there are none until ST-4 defines one (an empty page with `total` 0, never an error). A `role` given as an empty value (`role=`) or repeating a role is read as the roles named once each; an empty `role` alone is no role filter. The filters combine with each other and with `q` by intersection.
+
+_From 002-find-account-search._
+
+### 002-FR-006 — When `q`, `role` or `status` is given, every page MUST carry `total`, the number of accounts the whole search and filters match (deleted ones excluded), counted at that page's read; a read with none of them MUST carry no `total`, as today. The search MUST use indexes so that its cost does not grow in proportion to the number of accounts for the name, e-mail and phone matches (the plan chooses them; SC-005 is the target).
+
+_From 002-find-account-search._
+
+### 002-FR-007 — The route's admin-only policy MUST be unchanged for every parameter (001-FR-005: 404 `not_found` for any other role, 401 `sign_in_required` without a token, 403 `account_suspended`); the query parameters MUST be validated at the edge from the contracts library, with the generated client regenerated. Searching is a read: it MUST write no audit entry, and no log line (failure or otherwise) MUST carry `q`, an e-mail or a phone (001-FR-014's failure log carries the route and status only), and neither the web server's request logs nor any client-side telemetry event MUST carry the view's address `q`.
+
+_From 002-find-account-search._
+
+### 002-FR-008 — The "Utilizatori" view MUST show, above the panel "Conturi recente", a search box labelled "Caută după nume, e‑mail sau telefon" / "Search by name, e‑mail or phone" (the label as the placeholder and the accessible name; `type=search`, `autocomplete=off`, a clear control), a role filter and a state filter, in one row from 768 px (the search box, then a role drop-down in which several roles can be ticked, then a state drop-down with "Toate stările" / "All states", "activ" / "active", "sub observație" / "under watch", "suspendat" / "suspended"; the role drop-down reads "Toate rolurile" / "All roles" with none ticked, the one role's name with one, "{n} roluri" / "{n} roles" with more) and, below 768 px, the search box over one filter button that opens a bottom sheet with the same roles (as ticks) and states (as one choice), "Aplică" / "Apply" closing it with the choice and Escape or the close button with no change, the same pattern as the admin header's filters. Role labels: "șofer", "service", "recepție", "mecanic", "admin" / "driver", "garage", "reception", "mechanic", "admin".
+
+_From 002-find-account-search._
+
+### 002-FR-009 — The view MUST read the list 300 ms after the last change to the search box's text (a change within that time restarts the wait), and at once when a filter changes; a search text of fewer than 2 characters after trimming MUST be sent as no search. A read in flight when another starts MUST be discarded, as MUST a next-page read in flight when the search or filters change; the list never mixes two reads' rows.
+
+_From 002-find-account-search._
+
+### 002-FR-010 — The search text and the filters MUST live in the view's address as `q`, `role` (comma-separated) and `status`, written as the admin changes them (a history entry per applied change: each filter apply and each search text committed after the 300 ms wait, so the browser's back button restores the previous state), without touching the shell's other address values; opening the view with them in the address MUST fill the controls and read the narrowed list; an unknown `role` or `status` value in the address MUST be dropped from the address and not sent. The view MUST keep the first 80 characters of a longer search text.
+
+_From 002-find-account-search._
+
+### 002-FR-011 — With a search or a filter in force the panel MUST show, above the rows, the count line from `total` in the number's plural form (Romanian `one` "1 cont găsit", `few` "{n} conturi găsite", `other` "{n} de conturi găsite"; English `one` "1 account found", `other` "{n} accounts found"; numbers grouped by the language), in a live region so a screen reader hears each new result; with neither, no count line and the panel exactly as ST-1 built it (001-FR-008 to 001-FR-011: rows, scroll paging, loading, empty "Niciun cont încă.", failure with "Reîncearcă").
+
+_From 002-find-account-search._
+
+### 002-FR-012 — With a search or a filter in force and no match the panel MUST read "Niciun cont nu se potrivește." / "No account matches." with a native button "Șterge filtrele" / "Clear the filters" that empties the search box, unticks every role, sets the state to all, writes the address and reads the unfiltered list, then puts focus in the search box. While a search reads its first page the panel shows the skeleton rows under the controls, the controls staying usable; when the read fails it shows ST-1's failure state with "Reîncearcă", which reads the same search again.
+
+_From 002-find-account-search._
+
+### 002-FR-013 — On a 320 px phone the view MUST NOT scroll sideways; the search box, filter button, drop-downs and sheet MUST follow the Cockpit theme's tokens in light and dark, with a visible focus ring, every control reachable and operable by keyboard (the role drop-down's ticks included), and the controls' text 12 px or larger and every tap target on a phone at least 44 px high. The search box is in a landmark with the accessible name of its label, the drop-down's and sheet's controls are named by their visible labels, the sheet moves focus into itself when it opens and returns it to the filter button when it closes, and no state is conveyed by colour alone. Every text MUST exist in Romanian and English in the shared i18n files, a Romanian hyphenated word using U+2011 ("e‑mail"), and switching the language re-renders the controls, count line and empty state without a reload or a re-read.
+
+_From 002-find-account-search._
+
+### 002-FR-014 — No new route, service, queue or outside call is added, so no new inventory entry is owed; the existing route's request, duration and error metrics (001-FR-014) MUST cover the parameterised reads, and the PR's Observability section says so.
+
+_From 002-find-account-search._
+
+### 002-FR-015 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the name match with and without accents in the query and in the stored name, upper and lower case; a partial e-mail; every phone form of scenario 1.3, a foreign country code and a 4-digit partial ("0722"); a 2-digit query not matching a phone; the garage-name match for an owner, a mechanic and a receptionist, and an account working at two garages found by either name; `role` with one and with two values, an account holding both counted once; `status` for each value, `watch` answering none; each filter combined with `q`; `total` present and right with a filter, absent without; the cursor chaining within a search; a deleted account never matching by name, e-mail or phone; a one-character `q` reading as none; 400 for a `q` over 80 characters and for an unknown role or status; 404 for each non-admin role, 401 without a token; and that the failure log carries no query. Web unit tests cover the 300 ms wait and its restart, the 2-character minimum, the discarded in-flight read, the address round trip (write, read, unknown values dropped), the count line's plural forms and the clear button. A Playwright end-to-end test, as the seeded admin, searches for a seeded driver by phone written with spaces and reads that one row, then filters the mechanics by "activ" and reads them, on a phone (through the sheet) and a desktop, in both languages, and reloads to read the same state.
+
+_From 002-find-account-search._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -472,3 +533,6 @@ _From 384-response-rate._
 - `161-FR-009` — superseded by `163-FR-006` (2026-10-09)
 - `162-FR-001` — superseded by `163-FR-001` (2026-10-09)
 - `162-FR-002` — superseded by `163-FR-006` (2026-10-09)
+
+- `001-FR-001` — superseded by `002-FR-001` (2026-10-10)
+- `001-FR-011` — superseded by `002-FR-011` (2026-10-10)
