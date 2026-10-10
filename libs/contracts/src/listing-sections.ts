@@ -15,7 +15,14 @@ import { isStep6Section, type Step6Section } from './listing-verification';
 import { type BrandsSection, isBrandsSection } from './marked-brands';
 import { normalisePhone } from './phone';
 import { isPlaceSection, type PlaceSection } from './place-section';
-import { checkPriceRange } from './price-range';
+import {
+  checkPriceRange,
+  JOB_NAME_MAX,
+  JOB_NAME_MIN,
+  JOBS_MAX,
+} from './price-range';
+
+export { JOB_NAME_MAX, JOB_NAME_MIN, JOBS_MAX };
 
 export const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
 export type BusinessKind = (typeof BUSINESS_KINDS)[number];
@@ -27,9 +34,6 @@ export const NAME_MAX = 80;
 export const KNOWN_FOR_MAX = 160;
 // Room for a number typed with spaces, dashes or brackets.
 export const PHONE_MAX = 30;
-export const JOB_NAME_MIN = 2;
-export const JOB_NAME_MAX = 80;
-export const JOBS_MAX = 50;
 export const ENTRIES_MAX = 500;
 export const MECHANIC_NAME_MIN = 2;
 export const MECHANIC_NAME_MAX = 60;
