@@ -11,7 +11,6 @@ import {
   toLanguageAddress,
 } from './addresses';
 import { areaGuard } from './dashboard/area.guard';
-import { dashboardRoutes } from './dashboard/views';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
 import { signedInToDashboard } from './public/account.guard';
@@ -57,7 +56,9 @@ export const routes: Routes = [
   },
   ...(['driver', 'garage', 'admin'] as const).map((area) => ({
     canMatch: [areaGuard(area)],
-    children: dashboardRoutes(area),
+    // The views on demand too: every dashboard screen out of the first download.
+    loadChildren: () =>
+      import('./dashboard/views').then((m) => m.dashboardRoutes(area)),
     loadComponent: frame,
     path: `app/${area}`,
   })),
