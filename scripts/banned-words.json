@@ -10,11 +10,11 @@
     },
     "scripts/pr-body-check.spec.ts": {
       "count": 6,
-      "reason": "Covers that legacy acceptance; dropped with it (george-hutanu/motor-fix-specs#1119)."
+      "reason": "Covers that legacy acceptance; dropped with it (george-hutanu/motor-fix-specs#1135)."
     },
     "scripts/pr-body-check.ts": {
       "count": 5,
-      "reason": "Accepts the old story heading and link on PRs opened before ST-1036; dropped once those PRs merge (george-hutanu/motor-fix-specs#1119)."
+      "reason": "Accepts the old story heading and link on PRs opened before ST-1036; dropped once #337 and #338 merge (george-hutanu/motor-fix-specs#1135)."
     }
   },
   "words": ["notion"]
