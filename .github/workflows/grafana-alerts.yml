@@ -1,0 +1,96 @@
+name: Grafana alerts
+
+# Applies infra/observability/alerts/*.json to Grafana's MotorFix folder, one
+# rule group per call, so Grafana holds exactly what the repository holds.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/observability/alerts/**'
+      - '.github/workflows/grafana-alerts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run at a time, none cancelled: a run from an older ref that ended last
+# would leave Grafana holding older rules.
+concurrency:
+  group: grafana-alerts
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Only whether both are set; the token itself reaches the apply step
+      # alone.
+      GRAFANA: ${{ secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Skip the alerts
+        if: env.GRAFANA != 'true'
+        env:
+          NO_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN == '' }}
+          NO_URL: ${{ vars.GRAFANA_URL == '' }}
+        run: |
+          missing=""
+          [ "$NO_TOKEN" = "true" ] && missing="GRAFANA_SA_TOKEN"
+          [ "$NO_URL" = "true" ] && missing="${missing:+$missing and }GRAFANA_URL"
+          echo "::notice::The alert rules are not applied: $missing not set."
+      - name: Apply the alerts
+        if: env.GRAFANA == 'true'
+        env:
+          GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
+          GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+        # curl's answers and messages go to /dev/null (a message names the
+        # host), so a failure logs the file, the group and curl's exit code
+        # only; each call gives up after a minute. Every file is checked
+        # first: a group named twice stops the run, since the second PUT would
+        # replace the first. A refused file or group is named and the others
+        # are still applied.
+        run: |
+          auth="Authorization: Bearer ${GRAFANA_SA_TOKEN}"
+          base="$GRAFANA_URL"
+          while [ "${base%/}" != "$base" ]; do base="${base%/}"; done
+          api="$base/api"
+          call() { curl --fail -s --max-time 60 -H "$auth" "$@" > /dev/null 2>&1; }
+          shopt -s nullglob
+          files=(infra/observability/alerts/*.json)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No alert rule file in infra/observability/alerts."
+            exit 1
+          fi
+          twice=$(for f in "${files[@]}"; do jq -r '.groups[]?.name? // empty' "$f" 2> /dev/null || true; done | sort | uniq -d)
+          if [ -n "$twice" ]; then
+            echo "::error::Rule group named in more than one place: $(paste -sd ' ' - <<< "$twice")."
+            exit 1
+          fi
+          if ! call "$api/folders/motorfix" && ! call -X POST "$api/folders" -H 'Content-Type: application/json' --data '{"uid":"motorfix","title":"MotorFix"}'; then
+            echo "::error::The MotorFix folder could not be created."
+            exit 1
+          fi
+          to_groups='def secs: (capture("^(?<n>[0-9]+)(?<u>[smh])$") // error("interval")) | (.n | tonumber) * {s: 1, m: 60, h: 3600}[.u];
+            .groups | if type == "array" and length > 0 then .[] else error("groups") end
+            | .name as $g | if ($g | type) != "string" or $g == "" then error("name") else . end
+            | {title: $g, interval: (.interval | secs), rules: [.rules[] | . + {folderUID: "motorfix", ruleGroup: $g, orgID: 1}]}'
+          failed=0
+          for f in "${files[@]}"; do
+            if ! bodies=$(jq -c "$to_groups" "$f" 2> /dev/null); then
+              echo "::error::$f: not a rule file (JSON with a groups list, each named, with an interval like 1m and a rules list)."
+              failed=1
+              continue
+            fi
+            while IFS= read -r body; do
+              group=$(jq -r .title <<< "$body")
+              path=$(jq -rn --arg g "$group" '$g | @uri')
+              if call -X PUT "$api/v1/provisioning/folder/motorfix/rule-groups/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$body"; then
+                echo "applied $f ($group)"
+              else
+                echo "::error::$f: Grafana refused group $group (exit code $?)."
+                failed=1
+              fi
+            done <<< "$bodies"
+          done
+          exit "$failed"
