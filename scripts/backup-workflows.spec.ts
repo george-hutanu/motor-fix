@@ -144,7 +144,8 @@ describe('the restore drill workflow', () => {
   it('tears its database down whatever happens', () => {
     const text = read('scripts', 'backup', 'restore-drill.sh');
     expect(text).toMatch(/trap [^\n]*EXIT/);
-    expect(text).toContain('docker rm -f mf-restore-drill');
+    expect(text).toContain('DB=mf-restore-drill');
+    expect(text).toContain('docker rm -f "$DB" "$REDIS" "$MINIO"');
   });
 });
 

@@ -28,7 +28,7 @@ started=$(date +%s)
     } 3< <(printf '%s' "$BACKUP_GPG_PASSPHRASE")
 
 size=$(wc -c <"$work/dump.gpg" | tr -d " ")
-jq -e '(.tables | type == "object") and (.server_version | type == "string")' \
+jq -e '(.tables | type == "object") and (.tables | length > 0) and (.server_version | type == "string")' \
   "$work/head.json" >/dev/null
 jq -c --arg environment "$ENVIRONMENT" --arg timestamp "${key#*/}" --argjson size "$size" \
   '{environment: $environment, timestamp: $timestamp, server_version, tables, dump_size_bytes: $size}' \

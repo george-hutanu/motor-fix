@@ -19,6 +19,8 @@ const ALL = {
   BACKUP_S3_ENDPOINT: 'https://s3.example.test',
   BACKUP_S3_REGION: 'auto',
   BACKUP_S3_SECRET_ACCESS_KEY: 's',
+  RAILWAY_API_TOKEN: 't',
+  RAILWAY_ENVIRONMENT_ID: 'e',
   RAILWAY_SERVICE_POSTGRES: 'svc',
 };
 

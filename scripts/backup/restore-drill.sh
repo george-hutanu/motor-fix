@@ -34,7 +34,7 @@ teardown() {
     kill "$api" 2>/dev/null || true
     wait "$api" 2>/dev/null || true
   fi
-  docker rm -f mf-restore-drill "$REDIS" "$MINIO" >/dev/null 2>&1 || true
+  docker rm -f "$DB" "$REDIS" "$MINIO" >/dev/null 2>&1 || true
   rm -rf "$work"
 }
 trap teardown EXIT
@@ -83,7 +83,7 @@ fi
 step decrypt
 
 major=$(jq -r '.server_version' "$work/manifest.json" | cut -d. -f1)
-docker rm -f mf-restore-drill >/dev/null 2>&1 || true
+docker rm -f "$DB" "$REDIS" "$MINIO" >/dev/null 2>&1 || true
 docker run -d --name "$DB" -p 127.0.0.1::5432 \
   -e POSTGRES_PASSWORD=drill -e POSTGRES_DB=drill "${DRILL_IMAGE:-postgres:$major}" >/dev/null
 # Over TCP: the image's first-start server listens on its socket only.
@@ -113,6 +113,7 @@ node scripts/backup.ts compare "$work/manifest.json" "$work/counts.json"
 echo "drill: $(jq 'length' "$work/counts.json") tables hold the manifest's rows"
 step compare
 
+# Uncached: the drill proves today's code builds and boots, not a cached build.
 npx nx run api:build --configuration=production --skip-nx-cache >"$work/build.log" 2>&1 \
   || { tail -n 40 "$work/build.log" >&2; exit 1; }
 step build
@@ -125,7 +126,7 @@ docker run -d --name "$MINIO" -p 127.0.0.1::9000 \
   pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data >/dev/null
 docker run --rm --network "container:$MINIO" --entrypoint sh \
   pgsty/mc:RELEASE.2026-09-16T00-00-00Z -c \
-  'until mc alias set local http://127.0.0.1:9000 drill drill-secret >/dev/null; do sleep 1; done && mc mb -q local/drill' >/dev/null
+  'for _ in $(seq 60); do mc alias set local http://127.0.0.1:9000 drill drill-secret >/dev/null && break; sleep 1; done && mc mb -q local/drill' >/dev/null
 db_port=$(docker port "$DB" 5432/tcp | head -n 1 | cut -d: -f2)
 redis_port=$(docker port "$REDIS" 6379/tcp | head -n 1 | cut -d: -f2)
 minio_port=$(docker port "$MINIO" 9000/tcp | head -n 1 | cut -d: -f2)

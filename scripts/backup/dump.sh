@@ -4,7 +4,7 @@
 # Prints the manifest's first half on line 1 ({"server_version", "tables"},
 # every public table with its row count) and then the custom-format dump as
 # base64, both read in one exported snapshot, so the counts are the dump's.
-# Nothing is written to the service's disk.
+# The dump is never written to the service's disk.
 
 set -eu
 
@@ -65,6 +65,8 @@ SQL
 # sh has no pipefail: a failed pg_dump leaves a mark the exit code reads.
 { pg_dump -Fc --snapshot="$snapshot" || : >"$work/failed"; } | base64
 if [ -e "$work/failed" ]; then
+  # Not base64, so the runner's decode fails even if the exit code is lost.
+  echo '!dump failed'
   echo "dump failed: pg_dump exited non-zero" >&2
   exit 1
 fi

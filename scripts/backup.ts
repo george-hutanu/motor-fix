@@ -26,6 +26,8 @@ const REQUIRED = [
   'BACKUP_S3_ACCESS_KEY_ID',
   'BACKUP_S3_SECRET_ACCESS_KEY',
   'BACKUP_GPG_PASSPHRASE',
+  'RAILWAY_ENVIRONMENT_ID',
+  'RAILWAY_API_TOKEN',
 ];
 
 type Env = Record<string, string | undefined>;
@@ -43,7 +45,14 @@ const stamp = (at: Date) =>
     .replace(/\.\d{3}Z$/, 'Z')
     .replace(/[-:]/g, '');
 
+// The environment is a path segment of the bucket key, so only the two that
+// exist are accepted.
+const ENVIRONMENTS = ['staging', 'production'];
+
 export function backupKey(environment: string, at: Date): string {
+  if (!ENVIRONMENTS.includes(environment)) {
+    throw new Error(`unknown environment ${JSON.stringify(environment)}`);
+  }
   return `${environment}/${stamp(at)}`;
 }
 
@@ -77,12 +86,14 @@ export function compare(
   manifest: Record<string, number>,
   restored: Record<string, number>,
 ): string[] {
+  const has = (side: Record<string, number>, name: string) =>
+    Object.hasOwn(side, name);
   const names = [
     ...new Set([...Object.keys(manifest), ...Object.keys(restored)]),
   ].sort();
   return names.flatMap((name) => {
-    if (!(name in restored)) return [`table ${name}: missing in restore`];
-    if (!(name in manifest)) return [`table ${name}: missing in manifest`];
+    if (!has(restored, name)) return [`table ${name}: missing in restore`];
+    if (!has(manifest, name)) return [`table ${name}: missing in manifest`];
     return manifest[name] === restored[name]
       ? []
       : [
@@ -95,8 +106,9 @@ export function report(steps: string): string {
   const rows = steps
     .split('\n')
     .map((line) => line.trim().split(/\s+/))
-    .filter(([name, seconds]) => name && seconds !== undefined)
-    .map(([name, seconds]) => [name as string, Number(seconds)] as const);
+    .filter(([name]) => name)
+    .map(([name, seconds]) => [name as string, Number(seconds)] as const)
+    .filter(([, seconds]) => Number.isFinite(seconds));
   const total = rows.reduce((sum, [, seconds]) => sum + seconds, 0);
   return [...rows, ['total', total] as const]
     .map(
@@ -105,7 +117,9 @@ export function report(steps: string): string {
     .join('\n');
 }
 
-const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
+// A manifest saved by an editor may start with a byte order mark.
+const readJson = (path: string) =>
+  JSON.parse(readFileSync(path, 'utf8').replace(/^\uFEFF/, ''));
 const stdin = () => readFileSync(0, 'utf8');
 const when = (iso: string | undefined) => (iso ? new Date(iso) : new Date());
 
@@ -115,7 +129,11 @@ const print = (lines: string[]) => {
 
 const COMMANDS: Record<string, (args: string[]) => number> = {
   compare: ([manifest = '', counts = '']) => {
-    const lines = compare(readJson(manifest).tables, readJson(counts));
+    const tables = readJson(manifest).tables ?? {};
+    const lines = compare(tables, readJson(counts));
+    if (Object.keys(tables).length === 0) {
+      lines.unshift('manifest names no tables');
+    }
     print(lines);
     return lines.length ? 1 : 0;
   },
