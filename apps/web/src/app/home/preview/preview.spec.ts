@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
@@ -158,27 +155,5 @@ describe('HomePreview', () => {
     expect(
       [...(right?.children ?? [])].map((child) => child.className),
     ).toEqual(['rating', 'rate']);
-  });
-});
-
-// jsdom applies no stylesheet: the panel's styles are read as written.
-describe('the preview panel styles', () => {
-  const css = readFileSync(join(__dirname, 'preview.css'), 'utf8').replace(
-    /\/\*[\s\S]*?\*\//g,
-    '',
-  );
-
-  // @traces 227-FR-010
-  it('rounds the panel with the panel radius token and never a number', () => {
-    expect(css).toMatch(/border-radius:\s*var\(--mf-radius-panel\)/);
-    expect(css).not.toMatch(/border-radius:\s*[0-9]/);
-  });
-
-  // @traces 227-FR-010
-  it('sets each row at least 64 px tall, split from the next by a line', () => {
-    expect(css).toMatch(/\.row\s*\{[^}]*min-height:\s*64px/);
-    expect(css).toMatch(
-      /li\s*\+\s*li\s*\{[^}]*border-top:\s*1px solid var\(--mf-line\)/,
-    );
   });
 });

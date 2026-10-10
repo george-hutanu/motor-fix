@@ -683,6 +683,7 @@ test.describe('the garage cards near Bucharest @seeded', () => {
       'href',
       '/ro/garages?brand=tesla',
     );
+    await expect(cards(page)).toHaveCount(3);
     for (const lamp of await cards(page).locator('mf-lamp').all()) {
       await expect(lamp).toHaveText('Nu primește Tesla');
     }
