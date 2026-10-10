@@ -127,7 +127,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
     expect(await rows('DUE_ITP')).toHaveLength(1);
   });
 
-  // @traces 032-notifications-bell-FR-007
+  // @traces 032-FR-007
   it('names the car and its date, so the bell can say which ITP is due', async () => {
     await runOn('2026-11-10');
 
@@ -293,7 +293,7 @@ describe('a booking reminder', () => {
     const bell = await rows('BOOKING_REMINDER');
     expect(bell).toHaveLength(1);
     expect(bell[0]).toMatchObject({ accountId: driver, subjectId: bookingId });
-    // @traces 032-notifications-bell-FR-007
+    // @traces 032-FR-007
     expect(bell[0].params).toEqual({ dueOn: '2026-11-11' });
   });
 

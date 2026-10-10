@@ -48,7 +48,7 @@ const REVIEW_KINDS = [
   'REVIEW_APPEAL_DECIDED',
 ];
 
-// @traces 032-notifications-bell-FR-001 032-notifications-bell-FR-003
+// @traces 032-FR-001 032-FR-003
 describe('the view a bell row opens', () => {
   it.each(CAR_KINDS)('opens %s at its car in Mașinile mele', (kind) => {
     expect(bellLink({ kind, params: {}, subjectId: CAR })).toBe(
@@ -80,7 +80,7 @@ describe('the view a bell row opens', () => {
   });
 });
 
-// @traces 032-notifications-bell-FR-002
+// @traces 032-FR-002
 describe('a row that opens nothing', () => {
   it.each([
     'TEST_MESSAGE',
@@ -97,7 +97,7 @@ describe('a row that opens nothing', () => {
   });
 });
 
-// @traces 032-notifications-bell-FR-005
+// @traces 032-FR-005
 describe('a row whose subject cannot be named', () => {
   it('opens Mașinile mele at the top for a car reminder with no car', () => {
     expect(bellLink({ kind: 'DUE_ITP', params: {}, subjectId: null })).toBe(

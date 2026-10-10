@@ -290,7 +290,7 @@ describe('Cererile mele opened at a request', () => {
       'data-request',
     );
 
-  // @traces 032-notifications-bell-FR-004
+  // @traces 032-FR-004
   it('scrolls the request named in the address into view and focuses its row', async () => {
     await open('/requests/req-2');
 
@@ -299,7 +299,7 @@ describe('Cererile mele opened at a request', () => {
     expect(scrolled.mock.contexts[0]).toBe(document.activeElement);
   });
 
-  // @traces 032-notifications-bell-FR-004
+  // @traces 032-FR-004
   it('does not scroll again when the list is read again live', async () => {
     const harness = await open('/requests/req-2');
 
@@ -315,7 +315,7 @@ describe('Cererile mele opened at a request', () => {
     expect(scrolled).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 032-notifications-bell-FR-004 032-notifications-bell-FR-005
+  // @traces 032-FR-004 032-FR-005
   it('opens at the top with nothing focused for a request not listed', async () => {
     await open('/requests/gone');
 

@@ -111,7 +111,7 @@ const post = (path: string, accountId: string) =>
     .set('Authorization', bearer(accountId));
 
 describe('the bell list', () => {
-  // @traces 032-notifications-bell-FR-003
+  // @traces 032-FR-003
   it('gives each row the driver view it opens, on the list and on a read', async () => {
     const andrei = await account('andrei');
     const car = randomUUID();

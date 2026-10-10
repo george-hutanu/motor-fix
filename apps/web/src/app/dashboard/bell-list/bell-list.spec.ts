@@ -161,7 +161,7 @@ describe('BellList', () => {
     expect(element.querySelector('li')?.classList).not.toContain('unread');
   });
 
-  // @traces 032-notifications-bell-FR-001 032-notifications-bell-FR-003
+  // @traces 032-FR-001 032-FR-003
   it('opens the view a tapped row links to and closes the list', async () => {
     const { element } = await render(async () => ({
       items: [row('a', { kind: 'DUE_ITP', link: '/app/driver/cars/c1' })],
@@ -179,7 +179,7 @@ describe('BellList', () => {
     expect(panel()).toBeNull();
   });
 
-  // @traces 032-notifications-bell-FR-002
+  // @traces 032-FR-002
   it('keeps the list open for a row that links nowhere', async () => {
     const { element } = await render(async () => ({
       items: [row('a')],
@@ -195,7 +195,7 @@ describe('BellList', () => {
     expect(panel()).not.toBeNull();
   });
 
-  // @traces 032-notifications-bell-FR-001
+  // @traces 032-FR-001
   it('still opens the view of a row already read, without reading it again', async () => {
     const { element } = await render(async () => ({
       items: [

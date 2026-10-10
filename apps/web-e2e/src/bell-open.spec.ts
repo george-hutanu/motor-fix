@@ -84,7 +84,7 @@ async function openBell(page: Page) {
   return page.getByRole('dialog', { name: 'Notificări' });
 }
 
-// @traces 032-notifications-bell-FR-003 032-notifications-bell-FR-004 032-notifications-bell-FR-008
+// @traces 032-FR-003 032-FR-004 032-FR-008
 test.describe('opening a notification from the bell', () => {
   for (const [label, size] of [
     ['a desktop', { height: 900, width: 1280 }],
@@ -115,7 +115,7 @@ test.describe('opening a notification from the bell', () => {
     });
   }
 
-  // @traces 032-notifications-bell-FR-002
+  // @traces 032-FR-002
   test('only marks read a row that opens nothing, and keeps the list open', async ({
     page,
   }) => {

@@ -372,7 +372,7 @@ describe('Mașinile mele opened at a car', () => {
   const focused = () =>
     (document.activeElement as HTMLElement | null)?.getAttribute('data-car');
 
-  // @traces 032-notifications-bell-FR-004
+  // @traces 032-FR-004
   it('scrolls the car named in the address into view and focuses its card', async () => {
     await open('/cars/car-2');
 
@@ -381,7 +381,7 @@ describe('Mașinile mele opened at a car', () => {
     expect(scrolled.mock.contexts[0]).toBe(document.activeElement);
   });
 
-  // @traces 032-notifications-bell-FR-004
+  // @traces 032-FR-004
   it('moves to another car when the address names another', async () => {
     const harness = await open('/cars/car-2');
 
@@ -391,7 +391,7 @@ describe('Mașinile mele opened at a car', () => {
     expect(focused()).toBe('car-1');
   });
 
-  // @traces 032-notifications-bell-FR-004 032-notifications-bell-FR-005
+  // @traces 032-FR-004 032-FR-005
   it('opens at the top with nothing focused for a car no longer listed', async () => {
     const harness = await open('/cars/removed');
 
@@ -402,7 +402,7 @@ describe('Mașinile mele opened at a car', () => {
     );
   });
 
-  // @traces 032-notifications-bell-FR-004
+  // @traces 032-FR-004
   it('focuses nothing on the bare view address', async () => {
     await open('/cars');
 

@@ -483,7 +483,7 @@ describe('the bell text', () => {
   });
 });
 
-// @traces 032-notifications-bell-FR-006
+// @traces 032-FR-006
 describe('the ITP bell text', () => {
   const params = { car: 'Dacia Logan', dueOn: '2026-12-10' };
 
