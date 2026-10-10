@@ -14,6 +14,7 @@ import { PasswordChangeService } from './password-change.service';
 import { AuditService } from '../../../audit/audit.service';
 import { noEvents } from '../../../events/event.port';
 import { NotificationsModule } from '../../../notifications/notifications.module';
+import { NotificationsService } from '../../../notifications/notifications.service';
 import {
   databaseUrl,
   fixtures,
@@ -332,6 +333,32 @@ describe('changing my password', () => {
 
     await until('the notice', async () => (await notices(id)).length > 0);
     expect(await notices(id)).toHaveLength(1);
+  });
+
+  it('keeps the change and logs it when the notice cannot be queued', async () => {
+    await person();
+    const laptop = await device();
+    const send = jest
+      .spyOn(NotificationsService.prototype, 'sendAccountEmail')
+      .mockRejectedValueOnce(new Error('queue down'));
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+
+    try {
+      await change(laptop, { currentPassword: OLD, newPassword: NEW }).expect(
+        204,
+      );
+
+      expect(error).toHaveBeenCalledWith(
+        'password changed e-mail not sent: queue down',
+      );
+      await signIn(EMAIL, NEW).expect(200);
+      await signIn(EMAIL, OLD).expect(401);
+    } finally {
+      send.mockRestore();
+      error.mockRestore();
+    }
   });
 
   it('tells the account open dashboards their sessions ended', async () => {
