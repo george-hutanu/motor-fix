@@ -604,3 +604,328 @@ describe('the fuels under a taken brand on a phone', () => {
     );
   });
 });
+
+const job = (n: number, nameRo: string, nameEn: string) => ({
+  id: `11111111-0000-4000-8000-${String(n).padStart(12, '0')}`,
+  key: `job-${n}`,
+  nameEn,
+  nameRo,
+});
+const OIL = job(1, 'Schimb de ulei și filtre', 'Oil and filter change');
+const BRAKES = job(2, 'Frâne față', 'Front brakes');
+const GEARBOX = job(3, 'Cutie de viteze', 'Gearbox');
+const NAMED = new Map([OIL, BRAKES, GEARBOX].map((j) => [j.id, j]));
+
+async function withJobs(
+  fixture: Fixture,
+  jobs: { jobTypeId?: string; name?: string; brandId?: string }[],
+) {
+  fixture.componentRef.setInput('jobs', jobs);
+  fixture.componentRef.setInput('jobNames', NAMED);
+  await settle(fixture);
+}
+
+const THREE = [
+  { jobTypeId: OIL.id },
+  { jobTypeId: BRAKES.id },
+  { jobTypeId: GEARBOX.id },
+];
+const jobRow = (step: HTMLElement, name: string) =>
+  chip(step, name)
+    .closest('li')
+    ?.querySelector<HTMLDetailsElement>('details.jobs') ?? null;
+const jobCount = (step: HTMLElement, name: string) =>
+  text(jobRow(step, name)?.querySelector('summary'));
+const ticks = (step: HTMLElement, name: string) => [
+  ...(jobRow(step, name)?.querySelectorAll<HTMLInputElement>(
+    'input[type="checkbox"]',
+  ) ?? []),
+];
+const tick = (step: HTMLElement, name: string, label: string) => {
+  const found = ticks(step, name).find(
+    (t) => t.getAttribute('aria-label') === `${name}, ${label}`,
+  );
+  if (!found) throw new Error(`no job ${label} under ${name}`);
+  return found;
+};
+const tickAllButton = (step: HTMLElement, name: string) =>
+  [
+    ...(jobRow(step, name)?.querySelectorAll<HTMLButtonElement>('button') ??
+      []),
+  ].find((b) => text(b) === 'Bifează tot' || text(b) === 'Tick all');
+const quietLines = (step: HTMLElement, name: string) => [
+  ...(chip(step, name).closest('li')?.querySelectorAll('[role="status"]') ??
+    []),
+];
+
+async function untick(fixture: Fixture, box: HTMLInputElement) {
+  box.click();
+  await settle(fixture);
+}
+
+describe('step 2, the jobs of a taken brand', () => {
+  // @traces 412-FR-001 412-FR-002
+  it('shows a closed row after the fuels, counting every job ticked, opening to the jobs in price-list order', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+
+    await tap(fixture, step, 'Dacia');
+
+    const row = jobRow(step, 'Dacia');
+    expect(row).not.toBeNull();
+    expect(row?.open).toBe(false);
+    const li = chip(step, 'Dacia').closest('li') as HTMLElement;
+    expect(
+      (li.querySelector('.fuels') as Node).compareDocumentPosition(
+        row as Node,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(jobCount(step, 'Dacia')).toBe('Lucrări: 3 din 3');
+    expect(
+      ticks(step, 'Dacia').map((t) => t.getAttribute('aria-label')),
+    ).toEqual([
+      'Dacia, Schimb de ulei și filtre',
+      'Dacia, Frâne față',
+      'Dacia, Cutie de viteze',
+    ]);
+    for (const t of ticks(step, 'Dacia')) expect(t.checked).toBe(true);
+  });
+
+  // @traces 412-FR-002 412-FR-003
+  it('records a job unticked for the brand, lowering the count, and removes the record when ticked back', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+    await tap(fixture, step, 'Dacia');
+
+    await untick(fixture, tick(step, 'Dacia', 'Schimb de ulei și filtre'));
+
+    expect(jobCount(step, 'Dacia')).toBe('Lucrări: 2 din 3');
+    expect(fixture.componentInstance.value().brands).toEqual([
+      {
+        brandId: CATALOGUE[6].id,
+        name: 'Dacia',
+        stance: 'works_on',
+        unticked: [OIL.id],
+      },
+    ]);
+
+    await untick(fixture, tick(step, 'Dacia', 'Schimb de ulei și filtre'));
+    expect(fixture.componentInstance.value().brands[0]).not.toHaveProperty(
+      'unticked',
+    );
+  });
+
+  // @traces 412-FR-001 412-FR-002
+  it('ticks every job back with "Bifează tot"', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+    await tap(fixture, step, 'Dacia');
+    await untick(fixture, tick(step, 'Dacia', 'Frâne față'));
+    await untick(fixture, tick(step, 'Dacia', 'Cutie de viteze'));
+
+    const button = tickAllButton(step, 'Dacia') as HTMLButtonElement;
+    expect(button.type).toBe('button');
+    await press(fixture, button);
+
+    expect(jobCount(step, 'Dacia')).toBe('Lucrări: 3 din 3');
+    for (const t of ticks(step, 'Dacia')) expect(t.checked).toBe(true);
+    expect(fixture.componentInstance.value().brands[0]).not.toHaveProperty(
+      'unticked',
+    );
+  });
+
+  // @traces 412-FR-001
+  it('keeps "Bifează tot" enabled and changes nothing when every job is ticked', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+    await tap(fixture, step, 'Dacia');
+    const before = fixture.componentInstance.value();
+
+    const button = tickAllButton(step, 'Dacia') as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    await press(fixture, button);
+
+    expect(fixture.componentInstance.value()).toBe(before);
+  });
+
+  // @traces 412-FR-002
+  it('lists a job added to the price list ticked under every taken brand', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE.slice(0, 2));
+    await tap(fixture, step, 'Dacia');
+    await tap(fixture, step, 'BMW');
+    await untick(fixture, tick(step, 'Dacia', 'Frâne față'));
+
+    await withJobs(fixture, THREE);
+
+    expect(jobCount(step, 'Dacia')).toBe('Lucrări: 2 din 3');
+    expect(jobCount(step, 'BMW')).toBe('Lucrări: 3 din 3');
+    expect(tick(step, 'Dacia', 'Cutie de viteze').checked).toBe(true);
+    expect(tick(step, 'BMW', 'Cutie de viteze').checked).toBe(true);
+  });
+
+  // @traces 412-FR-004
+  it('asks for jobs in the price list first, with a way to step 3 and no checkbox, when the price list is empty', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, []);
+    const asked: number[] = [];
+    fixture.componentInstance.goTo.subscribe((n) => asked.push(n));
+
+    await tap(fixture, step, 'Dacia');
+
+    const li = chip(step, 'Dacia').closest('li') as HTMLElement;
+    expect(li.querySelector('details.jobs')).toBeNull();
+    expect(li.querySelector('input[type="checkbox"]')).toBeNull();
+    const link = [...li.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => text(b) === 'Adaugă mai întâi lucrări în lista de prețuri',
+    ) as HTMLButtonElement;
+    expect(link).toBeDefined();
+    expect(quietLines(step, 'Dacia')).toHaveLength(0);
+
+    await press(fixture, link);
+    expect(asked).toEqual([3]);
+  });
+
+  // @traces 412-FR-005
+  it('says once, politely, that no requests come for a brand with every job unticked, and the step stays usable', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+    await tap(fixture, step, 'Dacia');
+
+    for (const label of [
+      'Schimb de ulei și filtre',
+      'Frâne față',
+      'Cutie de viteze',
+    ])
+      await untick(fixture, tick(step, 'Dacia', label));
+
+    expect(jobCount(step, 'Dacia')).toBe('Lucrări: 0 din 3');
+    expect(quietLines(step, 'Dacia').map(text)).toEqual([
+      'Nu vei primi cereri pentru Dacia',
+    ]);
+
+    for (const label of ['Benzină', 'Diesel', 'Hibrid', 'Electric'])
+      await press(fixture, fuel(step, 'Dacia', label));
+    expect(quietLines(step, 'Dacia').map(text)).toEqual([
+      'Nu vei primi cereri pentru Dacia',
+    ]);
+  });
+
+  // @traces 412-FR-002
+  it('drops the unticked jobs of a brand refused, and lists them all ticked once it is taken again', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+    await tap(fixture, step, 'Dacia');
+    await untick(fixture, tick(step, 'Dacia', 'Frâne față'));
+    await untick(fixture, tick(step, 'Dacia', 'Cutie de viteze'));
+
+    await tap(fixture, step, 'Dacia');
+    expect(jobRow(step, 'Dacia')).toBeNull();
+    expect(fixture.componentInstance.value().brands[0]).not.toHaveProperty(
+      'unticked',
+    );
+
+    await tap(fixture, step, 'Dacia', 2);
+    expect(jobCount(step, 'Dacia')).toBe('Lucrări: 3 din 3');
+  });
+
+  // @traces 412-FR-001
+  it('shows no job row under a refused or an unmarked brand', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+
+    await tap(fixture, step, 'Tesla', 2);
+
+    expect(jobRow(step, 'Tesla')).toBeNull();
+    expect(jobRow(step, 'BMW')).toBeNull();
+  });
+
+  // @traces 412-FR-001 412-FR-003
+  it('lists a proposed job by its name and records it by that name', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, [{ jobTypeId: OIL.id }, { name: 'Reglaj faruri' }]);
+    await tap(fixture, step, 'Dacia');
+
+    await untick(fixture, tick(step, 'Dacia', 'Reglaj faruri'));
+
+    expect(fixture.componentInstance.value().brands[0].unticked).toEqual([
+      'Reglaj faruri',
+    ]);
+  });
+
+  // @traces 412-FR-001
+  it('lists a job once, whatever brand ranges it has', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, [
+      { jobTypeId: OIL.id },
+      { brandId: CATALOGUE[6].id, jobTypeId: OIL.id },
+    ]);
+
+    await tap(fixture, step, 'Dacia');
+
+    expect(ticks(step, 'Dacia')).toHaveLength(1);
+  });
+
+  // @traces 412-FR-003
+  it('shows a brand kept before job ticks with every job ticked', async () => {
+    const { fixture, step } = await open();
+    await withJobs(fixture, THREE);
+
+    fixture.componentInstance.value.set({
+      brands: [{ brandId: CATALOGUE[0].id, name: 'BMW', stance: 'works_on' }],
+    });
+    await settle(fixture);
+
+    expect(jobCount(step, 'BMW')).toBe('Lucrări: 3 din 3');
+  });
+
+  // @traces 412-FR-011
+  it('shows the row, the job names, "Tick all" and the line in English, keeping every tick', async () => {
+    const { fixture, i18n, step } = await open();
+    await withJobs(fixture, THREE);
+    await tap(fixture, step, 'Dacia');
+    await untick(fixture, tick(step, 'Dacia', 'Frâne față'));
+    const before = fixture.componentInstance.value();
+
+    await i18n.use('en');
+    await settle(fixture);
+
+    expect(jobCount(step, 'Dacia')).toBe('Jobs: 2 of 3');
+    expect(
+      ticks(step, 'Dacia').map((t) => t.getAttribute('aria-label')),
+    ).toEqual([
+      'Dacia, Oil and filter change',
+      'Dacia, Front brakes',
+      'Dacia, Gearbox',
+    ]);
+    expect(tick(step, 'Dacia', 'Front brakes').checked).toBe(false);
+    expect(tickAllButton(step, 'Dacia')).toBeDefined();
+    expect(fixture.componentInstance.value()).toEqual(before);
+  });
+
+  // @traces 412-FR-011
+  it('asks for jobs first in English', async () => {
+    const { fixture, step } = await open('en');
+    await withJobs(fixture, []);
+
+    await tap(fixture, step, 'Dacia');
+
+    expect(text(chip(step, 'Dacia').closest('li'))).toContain(
+      'Add jobs to the price list first',
+    );
+  });
+});
+
+describe('the job row on a phone', () => {
+  const css = readFileSync(join(__dirname, 'brands-step.css'), 'utf8');
+
+  // @traces 412-FR-001
+  it('gives every job, "Bifează tot" and the row heading a target at least the tap size', () => {
+    expect(css).toMatch(
+      /\.jobs summary[^{]*\{[^}]*min-height:\s*var\(--mf-tap\)/,
+    );
+    expect(css).toMatch(
+      /\.jobs label[^{]*\{[^}]*min-height:\s*var\(--mf-tap\)/,
+    );
+  });
+});

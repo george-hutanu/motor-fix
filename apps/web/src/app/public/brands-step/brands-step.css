@@ -25,7 +25,7 @@ ul {
   padding: 0;
   list-style: none;
 }
-ul button {
+button {
   display: inline-flex;
   align-items: center;
   gap: var(--mf-space-2);
@@ -45,7 +45,7 @@ ul button[aria-pressed="true"] {
   border-color: var(--mf-text-secondary);
   font-weight: 600;
 }
-ul button:focus-visible {
+button:focus-visible {
   outline: 2px solid var(--mf-focus);
   outline-offset: 2px;
 }
@@ -66,6 +66,33 @@ ul button:focus-visible {
 }
 .quiet {
   color: var(--mf-text-secondary);
+}
+.jobs {
+  display: grid;
+  gap: var(--mf-space-2);
+  max-width: 100%;
+}
+.jobs summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  cursor: pointer;
+}
+.jobs ul {
+  display: grid;
+  gap: 0;
+}
+.jobs label {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.jobs input {
+  width: auto;
+  min-height: 0;
 }
 /* A phone reads the fuels, the no-requests line, the counters and the lamps at the body size; the small size starts at a tablet. */
 @media (min-width: 768px) {

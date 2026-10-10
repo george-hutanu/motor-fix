@@ -1,9 +1,15 @@
 import {
   brandsOf,
+  dropUnlisted,
   fuelsOf,
+  jobsOf,
   type MarkedBrand,
   mark,
+  refOf,
+  tickAll,
   toggleFuel,
+  toggleJob,
+  untickedOf,
 } from './brands-section';
 
 const DACIA = { id: 'b-dacia', name: 'Dacia' };
@@ -115,5 +121,127 @@ describe('step 2 as the draft holds it', () => {
 
   it('opens with nothing marked when the section carries an unknown key', () => {
     expect(brandsOf(draft({ brands: [], extra: 1 }))).toEqual({ brands: [] });
+  });
+});
+
+describe("a taken brand's jobs", () => {
+  const OIL = '1c6a9e2b-3d4f-4a5b-8c7d-9e0f1a2b3c4d';
+  const BRAKES = '2d7b0f3c-4e5a-4b6c-9d8e-0f1a2b3c4d5e';
+  const withOff = (
+    brand: { id: string; name: string },
+    unticked: string[],
+  ): MarkedBrand => ({ ...taken(brand), unticked });
+
+  // @traces 412-FR-001
+  it('lists the distinct jobs of the price list in its order, brand ranges folded into their job', () => {
+    expect(
+      jobsOf([
+        { fromBani: 100, jobTypeId: OIL, toBani: 200 },
+        { brandId: DACIA.id, fromBani: 300, jobTypeId: OIL },
+        { name: 'Reglaj faruri' },
+        { brandId: BMW.id, name: 'Reglaj faruri' },
+        { jobTypeId: BRAKES },
+      ]),
+    ).toEqual([
+      { jobTypeId: OIL },
+      { name: 'Reglaj faruri' },
+      { jobTypeId: BRAKES },
+    ]);
+  });
+
+  // @traces 412-FR-003
+  it('names a catalogue job by its id and a proposed job by its name', () => {
+    expect(refOf({ jobTypeId: OIL })).toBe(OIL);
+    expect(refOf({ name: 'Reglaj faruri' })).toBe('Reglaj faruri');
+  });
+
+  // @traces 412-FR-002 412-FR-003
+  it('has nothing unticked on a brand just taken, or kept from before job ticks', () => {
+    expect(untickedOf(mark([], DACIA, 'works_on')[0])).toEqual([]);
+    expect(untickedOf(taken(DACIA))).toEqual([]);
+  });
+
+  // @traces 412-FR-002
+  it('records a job unticked, and removes the record when it is ticked back', () => {
+    const off = toggleJob([taken(DACIA)], DACIA.id, OIL);
+    expect(off).toEqual([withOff(DACIA, [OIL])]);
+
+    expect(toggleJob(off, DACIA.id, OIL)).toEqual([taken(DACIA)]);
+  });
+
+  // @traces 412-FR-002
+  it('records a proposed job by its name', () => {
+    expect(toggleJob([taken(DACIA)], DACIA.id, 'Reglaj faruri')).toEqual([
+      withOff(DACIA, ['Reglaj faruri']),
+    ]);
+  });
+
+  // @traces 412-FR-002
+  it('leaves the other brands as they are', () => {
+    const bmw = taken(BMW);
+
+    expect(toggleJob([taken(DACIA), bmw], DACIA.id, OIL)[1]).toBe(bmw);
+  });
+
+  // @traces 412-FR-002
+  it('ticks every job back, leaving no record', () => {
+    expect(tickAll([withOff(DACIA, [OIL, BRAKES])], DACIA.id)).toEqual([
+      taken(DACIA),
+    ]);
+  });
+
+  // @traces 412-FR-001
+  it('changes nothing when every job is already ticked', () => {
+    const brands = [taken(DACIA)];
+
+    expect(tickAll(brands, DACIA.id)).toBe(brands);
+  });
+
+  // @traces 412-FR-002
+  it('drops the records of a brand refused or switched off, and starts all ticked when taken again', () => {
+    const refused = mark([withOff(DACIA, [OIL])], DACIA, 'does_not_take');
+    expect(refused).toEqual([
+      { brandId: DACIA.id, name: 'Dacia', stance: 'does_not_take' },
+    ]);
+
+    const back = mark(mark(refused, DACIA, undefined), DACIA, 'works_on');
+    expect(untickedOf(back[0])).toEqual([]);
+  });
+
+  // @traces 412-FR-002
+  it('keeps the records of a brand marked taken again in place', () => {
+    expect(mark([withOff(DACIA, [OIL])], DACIA, 'works_on')).toEqual([
+      withOff(DACIA, [OIL]),
+    ]);
+  });
+
+  // @traces 412-FR-002
+  it('drops, on every brand, the records of a job no longer on the price list', () => {
+    const brands = [
+      withOff(DACIA, [OIL, 'Reglaj faruri']),
+      withOff(BMW, ['Reglaj faruri']),
+    ];
+
+    expect(dropUnlisted(brands, [OIL, 'Reglaj far'])).toEqual([
+      withOff(DACIA, [OIL]),
+      taken(BMW),
+    ]);
+  });
+
+  // @traces 412-FR-002
+  it('gives back the same list when every record still names a job', () => {
+    const brands = [withOff(DACIA, [OIL]), taken(BMW)];
+
+    expect(dropUnlisted(brands, [OIL, BRAKES])).toBe(brands);
+  });
+
+  // @traces 412-FR-003
+  it('opens a kept section with its unticked jobs', () => {
+    const ID = '2f1c6a0e-8b1d-4c3a-9e57-0d6f1b2c3a4d';
+    const brands = [
+      { brandId: ID, name: 'Dacia', stance: 'works_on', unticked: [OIL] },
+    ];
+
+    expect(brandsOf({ steps: { 2: { brands } } })).toEqual({ brands });
   });
 });

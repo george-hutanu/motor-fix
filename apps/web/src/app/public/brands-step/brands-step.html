@@ -45,7 +45,32 @@
             </li>
           }
         </ul>
-        @if (!ticked.length) {
+        @if (jobList().length) {
+          @let off = untickedFor(brand.id);
+          <details class="jobs">
+            <summary>{{ 'public.listing.brands.jobs.count' | t: { ticked: jobsTicked(brand.id), total: jobList().length } }}</summary>
+            <ul>
+              @for (job of jobList(); track refOf(job)) {
+                @let ref = refOf(job);
+                <li>
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="!off.includes(ref)"
+                      [attr.aria-label]="brand.name + ', ' + jobLabel(job)"
+                      (change)="tickJob(brand.id, ref)"
+                    />
+                    {{ jobLabel(job) }}
+                  </label>
+                </li>
+              }
+            </ul>
+            <button type="button" (click)="tickEvery(brand.id)">{{ 'public.listing.brands.jobs.tickAll' | t }}</button>
+          </details>
+        } @else {
+          <p><button type="button" (click)="goTo.emit(3)">{{ 'public.listing.brands.jobs.empty' | t }}</button></p>
+        }
+        @if (getsNothing(brand.id, ticked)) {
           <p class="quiet" role="status">{{ 'public.listing.brands.noRequests' | t: { brand: brand.name } }}</p>
         }
       }

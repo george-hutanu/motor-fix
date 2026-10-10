@@ -146,3 +146,16 @@ export function dropUntaken(
   );
   return kept.length === jobs.length ? section : { ...section, jobs: kept };
 }
+
+// A proposed job carries its own name; a catalogue one is named per language,
+// once its name has been looked up.
+export function jobName(
+  entry: Pick<PriceEntry, 'jobTypeId' | 'name'>,
+  known: ReadonlyMap<string, { nameEn: string; nameRo: string }>,
+  language: string,
+) {
+  if (entry.name !== undefined) return entry.name;
+  const job = known.get(entry.jobTypeId ?? '');
+  if (!job) return '';
+  return language === 'en' ? job.nameEn : job.nameRo;
+}

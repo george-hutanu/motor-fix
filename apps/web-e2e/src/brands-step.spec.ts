@@ -1,8 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 
+import { settled } from './accounts.js';
 import { test } from './fixtures.js';
 
 // @traces 040-FR-013
+// @traces 412-FR-012
 
 const step = (page: Page) => page.locator('mf-brands-step');
 const chip = (page: Page, name: string) =>
@@ -127,4 +129,50 @@ test.describe('step 2 of list your garage, the brands', () => {
       }
     }
   }
+
+  test('unticks a job for Dacia, keeps it unticked after a reload, and ticks all again after a refusal', async ({
+    page,
+  }) => {
+    const OIL = 'Schimb de ulei și filtre';
+    const prices = page.locator('mf-prices-step');
+    const dacia = step(page).locator('.chips > li', {
+      has: chip(page, 'Dacia'),
+    });
+    const row = dacia.locator('details.jobs');
+    const box = (name: string) =>
+      row.getByRole('checkbox', { exact: true, name: `Dacia, ${name}` });
+
+    await open(page);
+    await tap(page, 'Dacia');
+    // The step-3 job list reaches the draft with its first change.
+    await expect(prices.locator('li.job .name').first()).toBeVisible();
+    await prices
+      .getByRole('textbox', { exact: true, name: `${OIL}, de la` })
+      .fill('300');
+    await expect(row.locator('summary')).toHaveText('Lucrări: 3 din 3');
+
+    await row.locator('summary').click();
+    await box(OIL).uncheck();
+    await expect(row.locator('summary')).toHaveText('Lucrări: 2 din 3');
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Object.keys(localStorage).some((key) =>
+            (localStorage.getItem(key) ?? '').includes('"unticked"'),
+          ),
+        ),
+      )
+      .toBe(true);
+
+    await page.reload();
+    await settled(page);
+
+    await expect(row.locator('summary')).toHaveText('Lucrări: 2 din 3');
+    await row.locator('summary').click();
+    await expect(box(OIL)).not.toBeChecked();
+    await expect(row.getByRole('checkbox', { checked: true })).toHaveCount(2);
+
+    await tap(page, 'Dacia', 3);
+    await expect(row.locator('summary')).toHaveText('Lucrări: 3 din 3');
+  });
 });
