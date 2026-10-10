@@ -173,6 +173,47 @@ describe('the details panel', () => {
     expect(button(element, 'Edit')).toBeDefined();
   });
 
+  it.each([
+    ['at rest', {}, false],
+    [
+      'with an unconfirmed address and a pending change',
+      { emailConfirmed: false, pendingEmail: 'nou@example.ro' },
+      false,
+    ],
+    ['while editing', {}, true],
+  ])(
+    'keeps each row a term and its descriptions only, %s',
+    async (_, me, editing) => {
+      const { element } = await render(me as Partial<MeDto>);
+      if (editing) {
+        button(element, 'Modifică')?.click();
+        await settle();
+      }
+
+      const children = [...element.querySelectorAll('dl > .row > *')].map(
+        (child) => child.tagName,
+      );
+      expect(children.length).toBeGreaterThan(0);
+      expect(children.filter((tag) => tag !== 'DT' && tag !== 'DD')).toEqual(
+        [],
+      );
+    },
+  );
+
+  it('sets the row actions flush with the row and makes Modifică the primary button', async () => {
+    const { element } = await render({ email: 'andrei@example.ro' });
+
+    for (const name of [
+      'Schimbă numărul',
+      'Schimbă e‑mailul',
+      'Schimbă parola',
+    ])
+      expect(button(element, name)?.classList).toContain('flush');
+    expect(button(element, 'Modifică')?.classList).toContain(
+      'spartan-button-variant-default',
+    );
+  });
+
   it('shows nothing before the session is known', async () => {
     const { element, fixture } = await render();
     current.set(null);

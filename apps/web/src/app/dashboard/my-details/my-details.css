@@ -14,7 +14,6 @@ section {
 }
 
 h2,
-p,
 dl,
 dd {
   margin: 0;
@@ -49,7 +48,14 @@ input {
 
 .hint {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
+}
+
+/* Body size on a phone, small beside the value from a tablet up. */
+@media (min-width: 768px) {
+  .hint,
+  .tag {
+    font-size: var(--mf-size-small);
+  }
 }
 
 .actions {
@@ -62,10 +68,14 @@ input {
   min-height: 44px;
 }
 
+/* A row's action starts where its label and value start. */
+.actions .flush {
+  padding-inline: 0;
+}
+
 .tag {
   align-self: flex-start;
   padding: 0 var(--mf-space-2);
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
-  font-size: var(--mf-size-small);
 }

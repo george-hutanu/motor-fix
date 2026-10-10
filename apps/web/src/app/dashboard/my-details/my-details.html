@@ -26,35 +26,35 @@
         <div class="row">
           <dt>{{ 'driver.details.phone' | t }}</dt>
           <dd>{{ me.phone ?? '—' }}</dd>
-          <p class="hint">{{ 'driver.details.phoneLine' | t }}</p>
+          <dd class="hint">{{ 'driver.details.phoneLine' | t }}</dd>
           @if (!editing()) {
-            <div class="actions">
-              <button hlmBtn variant="ghost" type="button" (click)="changePhone()">
+            <dd class="actions">
+              <button hlmBtn variant="ghost" class="flush" type="button" (click)="changePhone()">
                 {{ 'driver.details.changePhone' | t }}
               </button>
-            </div>
+            </dd>
           }
         </div>
         <div class="row">
           <dt>{{ 'driver.details.email' | t }}</dt>
           <dd>{{ me.email ?? '—' }}</dd>
           @if (me.email && !me.emailConfirmed) {
-            <p class="tag">{{ 'driver.details.unconfirmed' | t }}</p>
+            <dd class="tag">{{ 'driver.details.unconfirmed' | t }}</dd>
           }
           @if (me.pendingEmail) {
-            <p class="hint">{{ 'driver.details.pending' | t: { address: me.pendingEmail } }}</p>
+            <dd class="hint">{{ 'driver.details.pending' | t: { address: me.pendingEmail } }}</dd>
           }
           @if (!editing()) {
-            <div class="actions">
+            <dd class="actions">
               @if (me.pendingEmail || (me.email && !me.emailConfirmed)) {
                 <button hlmBtn variant="secondary" type="button" [disabled]="resending()" (click)="resend()">
                   {{ 'driver.details.resend' | t }}
                 </button>
               }
-              <button hlmBtn variant="ghost" type="button" (click)="changeEmail()">
+              <button hlmBtn variant="ghost" class="flush" type="button" (click)="changeEmail()">
                 {{ 'driver.details.changeEmail' | t }}
               </button>
-            </div>
+            </dd>
           }
         </div>
         <div class="row">
@@ -84,17 +84,17 @@
             <dd>{{ 'driver.details.passwordNotSet' | t }}</dd>
           }
           @if (!editing() && (me.hasPassword || me.email)) {
-            <div class="actions">
+            <dd class="actions">
               @if (me.hasPassword) {
-                <button hlmBtn variant="ghost" type="button" (click)="changePassword(true)">
+                <button hlmBtn variant="ghost" class="flush" type="button" (click)="changePassword(true)">
                   {{ 'driver.details.changePassword' | t }}
                 </button>
               } @else {
-                <button hlmBtn variant="ghost" type="button" (click)="changePassword(false)">
+                <button hlmBtn variant="ghost" class="flush" type="button" (click)="changePassword(false)">
                   {{ 'driver.details.setPassword' | t }}
                 </button>
               }
-            </div>
+            </dd>
           }
         </div>
       </dl>
@@ -106,7 +106,7 @@
         </div>
       } @else {
         <div class="actions">
-          <button #editButton hlmBtn variant="secondary" type="button" (click)="edit(me)">
+          <button #editButton hlmBtn type="button" (click)="edit(me)">
             {{ 'driver.details.edit' | t }}
           </button>
         </div>
