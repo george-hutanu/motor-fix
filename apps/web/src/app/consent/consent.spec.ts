@@ -509,6 +509,20 @@ describe('after a sign-in', () => {
     expect(stored()?.decision).toBe('granted');
   });
 
+  it("applies the account's choice when both were made at the same time", async () => {
+    const at = ago(2);
+    const consent = await signedIn(choice({ accountId: ACCOUNT, at }), {
+      at,
+      decision: 'refused',
+      language: 'ro',
+      textVersion: ANALYTICS_CONSENT_VERSION,
+    });
+
+    expect(stored()?.decision).toBe('refused');
+    expect(consent.granted()).toBe(false);
+    expect(api.consentsControllerRecordMine).not.toHaveBeenCalled();
+  });
+
   it('never stores a choice made under another account, and shows the bar when this one has none', async () => {
     const consent = await signedIn(choice({ accountId: OTHER }), null);
 

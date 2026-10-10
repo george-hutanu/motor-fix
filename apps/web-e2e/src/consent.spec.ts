@@ -169,7 +169,6 @@ test.describe('the consent bar on a first visit', () => {
 
 // @traces 244-FR-006 244-FR-007 244-FR-017
 test.describe('cookie settings', () => {
-  // Turns the switch over in the dialog and saves.
   async function flip(page: Page, language: 'ro' | 'en') {
     const { bar: name, save, settings } = TEXT[language];
     await page.getByRole('button', { exact: true, name: settings }).click();
