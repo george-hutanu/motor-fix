@@ -26,7 +26,9 @@ interface Visitor {
 // brand that only holds the letters (CUBOT X30) is a visitor.
 const BOT =
   /bot(?:[/;)-]|$)|crawl|spider|slurp|fetch|headless|lighthouse|curl|wget|python|java\/|preview/i;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// A garage id; the night job reads the same ids back out of the counter keys.
+export const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 // The address as one client: an IPv4 address also in its IPv6-mapped form,
 // and an IPv6 address whole, not by the /64 the throttle groups it in, since

@@ -5,8 +5,7 @@ import type { Redis } from 'ioredis';
 import { addDays, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { recordRows } from '../profile-views/profile-views.metrics';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+import { UUID } from '../profile-views/profile-views.service';
 
 interface Counted {
   garageId: string;
