@@ -1,0 +1,27 @@
+{
+  "bar": {
+    "accept": "Accept",
+    "label": "Statistici de utilizare",
+    "privacy": "Nota de informare",
+    "refuse": "Refuz",
+    "text": "MotorFix ar vrea să măsoare cum e folosit site‑ul, ca să‑l facem mai bun. Nu vindem și nu transmitem datele tale."
+  },
+  "dialog": {
+    "cancel": "Renunță",
+    "line": "Măsurăm paginile vizitate, fără cookie‑uri și fără să te identificăm.",
+    "privacy": "Nota de informare",
+    "save": "Salvează",
+    "switch": "Statistici de utilizare",
+    "title": "Setări cookie"
+  },
+  "footer": {
+    "label": "Informații legale",
+    "privacy": "Nota de informare",
+    "settings": "Setări cookie",
+    "terms": "Termeni de utilizare"
+  },
+  "panel": {
+    "settings": "Setări cookie",
+    "title": "Confidențialitate"
+  }
+}

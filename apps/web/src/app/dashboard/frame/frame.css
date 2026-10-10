@@ -160,6 +160,12 @@ aside nav a {
 main {
   flex: 1 0 auto;
 }
+/* The tab bar's height on a phone, which the tab bar takes as its own and the consent bar sits on. */
+@media (max-width: 767.98px) {
+  :host {
+    --tab-bar: calc(1px + 8px + 48px + max(16px, var(--mf-safe-bottom)));
+  }
+}
 .chip-skeleton {
   width: 20px;
   height: 20px;

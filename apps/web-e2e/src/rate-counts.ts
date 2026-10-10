@@ -5,6 +5,11 @@
 // clears those counts first (global-setup.ts); CI starts a fresh Redis each run.
 export const SIGN_UP_KEYS = 'auth:signup:address:*';
 export const DRAFT_KEYS = 'listing-drafts:create:*';
+// Analytics choices stored per address, 20 an hour
+// (libs/domain/src/auth/consents/consents.throttle.ts): every spec that
+// answers the consent bar stores one from the same address, so the suite
+// uses them up within a run, and the consent flows clear them per test.
+export const CONSENT_KEYS = 'consents:record:*';
 // SCAN ends when its cursor comes back to 0; the cap ends it should a Redis
 // never answer so. 1000 pages of 100 is far beyond a local test database.
 const MAX_PAGES = 1000;

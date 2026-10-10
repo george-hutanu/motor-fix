@@ -1,0 +1,10 @@
+<label class="row">
+  <span id="cookie-statistics">{{ 'consent.dialog.switch' | t }}</span>
+  <hlm-switch inputId="cookie-statistics-switch" aria-labelledby="cookie-statistics" [checked]="on()" (checkedChange)="on.set($event)" />
+</label>
+<p>{{ 'consent.dialog.line' | t }}</p>
+<p><a [routerLink]="['/', i18n.language(), 'privacy']" (click)="task.close(undefined)">{{ 'consent.dialog.privacy' | t }}</a></p>
+<div class="actions">
+  <button hlmBtn type="button" (click)="save()">{{ 'consent.dialog.save' | t }}</button>
+  <button hlmBtn variant="ghost" type="button" (click)="task.close(undefined)">{{ 'consent.dialog.cancel' | t }}</button>
+</div>

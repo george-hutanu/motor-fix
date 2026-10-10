@@ -1,0 +1,5 @@
+<nav [attr.aria-label]="'consent.footer.label' | t">
+  <a [routerLink]="['/', i18n.language(), 'terms']">{{ 'consent.footer.terms' | t }}</a>
+  <a [routerLink]="['/', i18n.language(), 'privacy']">{{ 'consent.footer.privacy' | t }}</a>
+  <button type="button" (click)="settings()">{{ 'consent.footer.settings' | t }}</button>
+</nav>
