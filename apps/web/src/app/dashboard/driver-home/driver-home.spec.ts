@@ -451,6 +451,17 @@ describe('the panels’ states', () => {
     expect(invitation(element, 'search')).toBeNull();
   });
 
+  it('links no heading to a view whose list could not be read', async () => {
+    const { element } = await render({
+      cars: new Error('down'),
+      requests: new Error('down'),
+    });
+
+    for (const key of ['activeRequest', 'quotes', 'cars', 'repairs']) {
+      expect(panel(element, key)?.querySelector('h2 a')).toBeNull();
+    }
+  });
+
   it('shows the error in Mașinile mele when the cars cannot be read', async () => {
     const { element } = await render({ cars: new Error('down') });
 

@@ -1,6 +1,6 @@
 @switch (firstRow()) {
   @case ('loading') {
-    <div class="skeleton wide" aria-busy="true"><span aria-hidden="true"></span></div>
+    <div class="skeleton wide" aria-busy="true"></div>
   }
   @case ('failed') {
     <mf-panel class="wide" data-panel="activeRequest" [heading]="'driver.panel.activeRequest' | t">
@@ -36,11 +36,11 @@
 <mf-panel
   data-panel="quotes"
   [heading]="'driver.panel.quotes' | t"
-  [link]="quotes()?.length ? ['/app', 'driver', 'requests'] : undefined"
+  [link]="state(quotes()) === 'filled' ? ['/app', 'driver', 'requests'] : undefined"
 >
   @switch (state(quotes())) {
     @case ('loading') {
-      <div class="skeleton" aria-busy="true"><span aria-hidden="true"></span></div>
+      <div class="skeleton" aria-busy="true"></div>
     }
     @case ('failed') {
       <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
@@ -60,7 +60,7 @@
 >
   @switch (state(cars())) {
     @case ('loading') {
-      <div class="skeleton" aria-busy="true"><span aria-hidden="true"></span></div>
+      <div class="skeleton" aria-busy="true"></div>
     }
     @case ('failed') {
       <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
@@ -77,11 +77,11 @@
   class="wide"
   data-panel="repairs"
   [heading]="'driver.panel.repairs' | t"
-  [link]="repairs()?.length ? ['/app', 'driver', 'requests'] : undefined"
+  [link]="state(repairs()) === 'filled' ? ['/app', 'driver', 'requests'] : undefined"
 >
   @switch (state(repairs())) {
     @case ('loading') {
-      <div class="skeleton" aria-busy="true"><span aria-hidden="true"></span></div>
+      <div class="skeleton" aria-busy="true"></div>
     }
     @case ('failed') {
       <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
