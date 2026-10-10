@@ -172,7 +172,7 @@
       "source": "libs/domain/src/notifications/email-config.ts",
       "dashboard": "motorfix-worker",
       "alerts": "none",
-      "reason": "ST-880 adds the alerts",
+      "reason": "carries e-mail and the WhatsApp sign-in and phone-change codes (ST-139: sent straight from the API, a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as a 502); ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -467,6 +467,26 @@
       "dashboard": "motorfix-product",
       "alerts": "none",
       "reason": "counts saved changes of an account's own details by field (name, city, email, phone, password); a change count has no failure mode of its own",
+      "story": "ST-139"
+    },
+    {
+      "kind": "endpoint",
+      "name": "my-details",
+      "source": "libs/domain/src/auth/me.controller.ts",
+      "metric": "http.server.request.duration by http.route PATCH /api/v1/me, POST /api/v1/me/email, /api/v1/me/phone, /api/v1/me/phone/confirm and /api/v1/auth/confirm-email (the change link)",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the brevo entry and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 502; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation; ST-880 adds the alerts",
+      "story": "ST-139"
+    },
+    {
+      "kind": "endpoint",
+      "name": "auth-password",
+      "source": "libs/domain/src/auth/password/password-change/password-change.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/auth/password",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "each refusal logs one 'password change refused: <code>' line and a failed notice e-mail logs 'password changed e-mail not sent'; a saved change counts on motorfix_account_changes_total{field=\"password\"}; ST-880 adds the alerts",
       "story": "ST-139"
     },
     {
