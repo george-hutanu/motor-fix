@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
-import { openCookieSettings } from './cookie-settings';
+import { openCookieSettings } from './open-cookie-settings';
 import { Consent } from '../consent';
 
 @Component({ template: '' })

@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { injectOverlayTask, type Overlays } from '@motor-fix/overlays';
+import { injectOverlayTask } from '@motor-fix/overlays';
 import { HlmButton, HlmSwitch } from '@motor-fix/ui-cockpit';
 
 import { Consent } from '../consent';
@@ -13,7 +13,7 @@ import { Consent } from '../consent';
   styleUrl: './cookie-settings.css',
   templateUrl: './cookie-settings.html',
 })
-class CookieSettings {
+export class CookieSettings {
   private readonly consent = inject(Consent);
   protected readonly i18n = inject(I18n);
   protected readonly task = injectOverlayTask<undefined, undefined>();
@@ -24,11 +24,4 @@ class CookieSettings {
     await this.consent.save(this.on());
     this.task.close(undefined);
   }
-}
-
-export function openCookieSettings(overlays: Overlays): Promise<unknown> {
-  return overlays.open(CookieSettings, {
-    shape: 'dialog',
-    title: 'consent.dialog.title',
-  });
 }

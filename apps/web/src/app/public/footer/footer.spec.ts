@@ -4,6 +4,7 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
 import { PublicFooter } from './footer';
+import { CookieSettings } from '../../consent/cookie-settings/cookie-settings';
 
 let overlays: { open: jest.Mock };
 
@@ -57,9 +58,12 @@ describe('the public footer', () => {
     const host = await render();
 
     host.querySelector('button')?.click();
+    // The dialog loads with its first opening.
+    for (let i = 0; i < 50 && !overlays.open.mock.calls.length; i++)
+      await new Promise((resolve) => setTimeout(resolve));
 
     expect(overlays.open).toHaveBeenCalledWith(
-      expect.anything(),
+      CookieSettings,
       expect.objectContaining({ title: 'consent.dialog.title' }),
     );
   });

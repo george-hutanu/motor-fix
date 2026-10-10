@@ -2,6 +2,7 @@ import { type BrowserContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, settled, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { clearConsentCounts } from './global-setup.js';
 
 const KEY = 'mf_consent';
 const VERSION = '2026-10-10';
@@ -80,6 +81,11 @@ const choice = (at: number, textVersion = VERSION) => ({
 });
 
 // @traces 244-FR-001 244-FR-003 244-FR-004 244-FR-013 244-FR-017
+// The api stores 20 choices an hour from one address, and every spec that
+// answers the bar stores one from the suite's: each flow here starts with
+// that count cleared, so its own records are taken.
+test.beforeEach(clearConsentCounts);
+
 test.describe('the consent bar on a first visit', () => {
   for (const language of ['ro', 'en'] as const) {
     for (const path of ['', '/garages', '/list-your-garage']) {
@@ -316,6 +322,13 @@ test.describe('the account carries the choice @seeded', () => {
     await bar(page, 'ro')
       .getByRole('button', { exact: true, name: 'Accept' })
       .click();
+    // The visitor's choice goes on the account once the session is known;
+    // the fresh browser can only find it there after that.
+    const bound = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/v1/me/consents') &&
+        response.request().method() === 'POST',
+    );
     await page
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
@@ -324,6 +337,7 @@ test.describe('the account carries the choice @seeded', () => {
     // Signed in from a public page, whose live stream never ends: no
     // networkidle comes, so wait for the dashboard to be drawn.
     await expect(signOut(page)).toBeVisible();
+    expect((await bound).ok()).toBe(true);
 
     const other = await browser.newContext();
     const calls = await analyticsCalls(other);
@@ -336,12 +350,12 @@ test.describe('the account carries the choice @seeded', () => {
     await signIn(fresh, ACCOUNTS.driver);
     await expect(fresh).toHaveURL('/app/driver');
 
+    await expect.poll(() => calls.length).toBeGreaterThan(0);
     await expect(
       fresh.getByRole('region', {
         name: /^(Statistici de utilizare|Usage statistics)$/,
       }),
     ).toBeHidden();
-    await expect.poll(() => calls.length).toBeGreaterThan(0);
     await other.close();
   });
 });

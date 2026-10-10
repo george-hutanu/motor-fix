@@ -3,7 +3,7 @@ import { TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
-import { openCookieSettings } from '../../consent/cookie-settings/cookie-settings';
+import { openCookieSettings } from '../../consent/cookie-settings/open-cookie-settings';
 
 // "Confidențialitate" in a dashboard's Setări: the way to the cookie settings.
 @Component({
