@@ -253,7 +253,7 @@ its `docs/` holds the product documentation, organised by Diátaxis
 each in `explanation/decisions/`), the repo its only source; `llms.txt` at
 its root lists every page with its summary, so an agent reads it first, and
 `docs/index.json` maps each old Notion id to its file. Its
-`scripts/docs-lint.mjs` checks the pages and runs in its CI.
+`scripts/docs-lint.mjs` checks the pages; `specs-repo.mjs commit` runs it before a docs change goes in, and no Actions workflow runs it.
 `node .claude/scripts/specs-repo.mjs ensure` clones, adopts, moves an older
 clone at `specs/` into place or fast-forwards it (npm `prepare` and
 SessionStart run it `--soft`); `commit "<message>" -- <feature>` (or a

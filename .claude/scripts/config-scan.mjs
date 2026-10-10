@@ -12,6 +12,7 @@
 //   node scripts/config-scan.mjs --json    machine form
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { featuresRoot } from "./lib/feature.mjs";
 
 const HIGH = "high";
 const MEDIUM = "medium";
@@ -135,7 +136,7 @@ export function scanMcp(config, file) {
 /** Context gathered from Jira/Slack/email is untrusted input; it must say so. */
 export function scanIngestedContext(repo) {
   const findings = [];
-  const specs = join(repo, "specs");
+  const specs = join(repo, featuresRoot(repo));
   if (!existsSync(specs)) return findings;
   for (const feature of readdirSync(specs, { withFileTypes: true }).filter((d) => d.isDirectory())) {
     const file = join(specs, feature.name, "context.md");

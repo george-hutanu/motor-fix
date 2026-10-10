@@ -26,7 +26,7 @@
 //   node .claude/scripts/watch.mjs claim <worktree> <fix>
 import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
@@ -34,6 +34,7 @@ import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 import { removeWorktree } from "./worktree-remove.mjs";
+import { branchFeatureDir, locateFeature } from "./lib/feature.mjs";
 
 // done is the grace period before a merged worktree is removed: its
 // tail agent may still be finishing there, and holds it while within it.
@@ -265,8 +266,9 @@ const mtime = (file) => {
 
 function featureOf(w) {
   const dir = readJson(join(w.path, ".specify", "feature.json"))?.feature_directory;
-  if (typeof dir === "string" && dir) return dir;
-  return w.branch && existsSync(join(w.path, "specs", w.branch)) ? `specs/${w.branch}` : null;
+  // Either specs layout (lib/feature.mjs featuresRoot): the folder where it is in this worktree.
+  if (typeof dir === "string" && dir) return relative(w.path, locateFeature(w.path, dir)) || dir;
+  return w.branch ? branchFeatureDir(w.path, w.branch) : null;
 }
 
 function artifactsOf(path, feature) {

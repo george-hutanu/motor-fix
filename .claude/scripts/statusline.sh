@@ -14,13 +14,18 @@ repo="${repo:-$PWD}"
 
 feature=""
 if [ -f "$repo/.specify/feature.json" ]; then
-  feature="$(sed -n 's/.*"feature_directory": *"specs\/\([^"]*\)".*/\1/p' "$repo/.specify/feature.json")"
+  feature="$(sed -n 's/.*"feature_directory": *"\(\.motor-fix-specs\/\)\{0,1\}specs\/\(specs\/\)\{0,1\}\([^"]*\)".*/\3/p' "$repo/.specify/feature.json")"
 fi
 
+# Either specs layout (lib/feature.mjs featuresRoot): an old clone past trunk's move holds specs/specs/<feature>.
 tasks=""
-if [ -n "$feature" ] && [ -f "$repo/specs/$feature/tasks.md" ]; then
-  open="$(grep -c '^ *- \[ \]' "$repo/specs/$feature/tasks.md" || true)"
-  total="$(grep -c '^ *- \[[ Xx]\]' "$repo/specs/$feature/tasks.md" || true)"
+tasks_file=""
+for root in "$repo/specs/specs" "$repo/specs"; do
+  if [ -n "$feature" ] && [ -f "$root/$feature/tasks.md" ]; then tasks_file="$root/$feature/tasks.md"; break; fi
+done
+if [ -n "$tasks_file" ]; then
+  open="$(grep -c '^ *- \[ \]' "$tasks_file" || true)"
+  total="$(grep -c '^ *- \[[ Xx]\]' "$tasks_file" || true)"
   tasks="open ${open}/${total}"
 fi
 

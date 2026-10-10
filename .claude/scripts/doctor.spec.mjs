@@ -120,6 +120,16 @@ describe('doctor — feature state', () => {
     assert.match(detail(results, 'feature/active'), /003-real/);
   });
 
+  it('accepts a pointer to specs/<feature> in an old clone past the move, and an exemption found there', () => {
+    write('specs/specs/003-real/spec.md', '# spec\n');
+    write('.specify/feature.json', { feature_directory: 'specs/003-real' });
+    write('.specify/trace-baseline.json', { grandfathered: ['003-real'], artifact_legacy: [] });
+    const results = checkFeatureState(repo);
+    assert.equal(status(results, 'feature/pointer'), 'ok');
+    assert.equal(status(results, 'feature/baseline'), 'ok');
+    assert.match(detail(results, 'feature/active'), /003-real/);
+  });
+
   it('warns about an exemption for a feature that no longer exists', () => {
     write('.specify/trace-baseline.json', { grandfathered: ['004-deleted'], artifact_legacy: [] });
     const results = checkFeatureState(repo);

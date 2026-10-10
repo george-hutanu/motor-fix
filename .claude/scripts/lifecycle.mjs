@@ -39,7 +39,7 @@ import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
 import { parseDeferred } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { ghRun } from "./lib/gh-rest.mjs";
-import { activeFeature, featureKey } from "./lib/feature.mjs";
+import { activeFeature, featureKey, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
 import { featuresDir } from "./specs-repo.mjs";
@@ -183,7 +183,7 @@ function context(io, flags, did) {
   const own = /^(\d{3,})-/.exec(ctx.branch)?.[1];
   if (own && own !== ctx.feature.num) {
     const dir = `specs/${ctx.branch}`;
-    if (!existsSync(join(io.repo, dir, "spec.md")))
+    if (!existsSync(join(locateFeature(io.repo, dir, "spec.md"), "spec.md")))
       throw new Stop("feature", `.specify/feature.json points at ${relative(io.repo, ctx.feature.dir)}, and this branch has no ${dir}/spec.md: write it, or set feature_directory to this branch's feature`);
     if (process.env.SPECIFY_FEATURE_DIRECTORY)
       throw new Stop("feature", `SPECIFY_FEATURE_DIRECTORY names ${relative(io.repo, ctx.feature.dir)}, not this branch's ${dir}: unset it or point it there`);
@@ -193,7 +193,7 @@ function context(io, flags, did) {
   }
   ctx.rel = relative(io.repo, ctx.feature.dir);
   // The feature folder as the specs repository names it.
-  ctx.specsRel = relative(join(io.repo, "specs"), ctx.feature.dir);
+  ctx.specsRel = relative(join(io.repo, featuresRoot(io.repo)), ctx.feature.dir);
   // Where git finds those folders: .motor-fix-specs/specs once trunk has moved, the clone root before.
   ctx.specsGit = relative(io.repo, featuresDir(io.repo)) || "specs";
   ctx.story = `ST-${Number(ctx.feature.num)}`;

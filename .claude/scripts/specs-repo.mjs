@@ -21,7 +21,10 @@
 //   node .claude/scripts/specs-repo.mjs commit "<message>" [--root <checkout>] [-- <paths…>]
 //       add the paths (relative to specs/, or docs/… at the clone root; all
 //       by default), commit, then push to trunk, rebasing on a newer trunk and
-//       retrying when refused. Migrates first when trunk has moved.
+//       retrying when refused. Migrates first when trunk has moved. A
+//       commit that stages docs/, llms.txt or the lint itself runs the clone's
+//       scripts/docs-lint.mjs first and refuses on a finding, unstaging what
+//       it added: the docs lint runs here, never in Actions.
 //   node .claude/scripts/specs-repo.mjs status [--root <checkout>]
 //   node .claude/scripts/specs-repo.mjs migrate-trunk --dry-run | --yes [--root <checkout>]
 //       the one-off trunk move (owner-run): every feature folder under specs/
@@ -410,6 +413,18 @@ function inClone(root, clone, path) {
   return rel === ".." || rel.startsWith("../") || rel === ".git" || rel.startsWith(".git/") ? null : rel;
 }
 
+/** Staged paths the docs lint judges: the pages, their index and the lint itself. */
+const LINTED = /^(?:docs\/|llms\.txt$|scripts\/docs-lint)/;
+
+/** The clone's docs lint over the working tree, when the staged change touches what it judges; null when clean or not owed. */
+function docsLint(clone) {
+  const staged = git(clone, ["diff", "--cached", "--name-only"]).out.split("\n");
+  if (!staged.some((f) => LINTED.test(f)) || !existsSync(join(clone, "scripts", "docs-lint.mjs"))) return null;
+  const r = spawnSync(process.execPath, ["scripts/docs-lint.mjs"], { cwd: clone, encoding: "utf8" });
+  if (r.status === 0) return null;
+  return `${r.stdout ?? ""}${r.stderr ?? ""}`.trim().split("\n").slice(-20).join("\n") || `exit ${r.status}`;
+}
+
 export function commit({ root = process.cwd(), message, paths = [] } = {}) {
   let clone = cloneAt(root);
   if (!clone) return { ok: false, error: `${CLONE} is not a clone of motor-fix-specs: run node .claude/scripts/specs-repo.mjs ensure` };
@@ -428,6 +443,11 @@ export function commit({ root = process.cwd(), message, paths = [] } = {}) {
   if (add.code !== 0) return { ok: false, error: `add: ${add.err}` };
   let committed = false;
   if (git(clone, ["diff", "--cached", "--quiet"]).code !== 0) {
+    const finding = docsLint(clone);
+    if (finding) {
+      git(clone, ["reset", "-q", "--", ...(paths.length ? targets.map(([, t]) => t) : ["."])]);
+      return { ok: false, error: `docs-lint (node scripts/docs-lint.mjs in ${CLONE}):\n${finding}` };
+    }
     const c = git(clone, ["commit", "-q", "-m", message]);
     if (c.code !== 0) return { ok: false, error: `commit: ${c.err || c.out}` };
     committed = true;
