@@ -254,11 +254,11 @@ describe('checkPrBody on a ready PR', () => {
     expect(ready(filled(), 'fix(web)!: ST-2 breaking')).toEqual([]);
   });
 
-  // @traces 1036-FR-014
-  it('wants a tracker issue link, a Notion link or N/A with a reason in the Story section', () => {
+  // @traces 1036-FR-014 1037-FR-009
+  it('wants a tracker issue link, an older link or N/A with a reason in the Story section', () => {
     const body = withSection(filled(), 'Story', 'ST-1');
     expect(ready(body)).toEqual([
-      '"## Story" has no link to the story (its issue in george-hutanu/motor-fix-specs, or its Notion page), or N/A and the reason.',
+      '"## Story" has no link to the story (its issue in george-hutanu/motor-fix-specs), or N/A and the reason.',
     ]);
     const na = withSection(filled(), 'Story', 'N/A: dependency bump');
     expect(ready(na)).toEqual([]);

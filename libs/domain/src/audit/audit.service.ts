@@ -38,32 +38,50 @@ const json = (value: unknown) =>
     ? Prisma.DbNull
     : (JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue);
 
+const row = (
+  entry: AuditEntry,
+  actorName: string,
+): Prisma.ActivityLogCreateManyInput => ({
+  action: entry.action,
+  actorId: entry.actorId,
+  actorName,
+  actorRole: recordedRole(entry.actorRole),
+  assistantGrantId: entry.assistantGrantId,
+  carId: entry.carId,
+  field: entry.field,
+  garageId: entry.garageId,
+  internal: entry.internal ?? false,
+  isKeyChange: KEY_CHANGES.has(`${entry.subjectType}.${entry.field}`),
+  jobId: entry.jobId,
+  kind: entry.kind,
+  newValue: json(entry.newValue),
+  oldValue: json(entry.oldValue),
+  requestId: entry.requestId,
+  subjectId: entry.subjectId,
+  subjectType: entry.subjectType,
+  text: entry.text,
+  viaAssistant: entry.assistantGrantId !== undefined,
+});
+
 @Injectable()
 export class AuditService implements AuditPort {
   async record(tx: Prisma.TransactionClient, entry: AuditEntry) {
     await tx.activityLog.create({
-      data: {
-        action: entry.action,
-        actorId: entry.actorId,
-        actorName: await this.actorName(tx, entry),
-        actorRole: recordedRole(entry.actorRole),
-        assistantGrantId: entry.assistantGrantId,
-        carId: entry.carId,
-        field: entry.field,
-        garageId: entry.garageId,
-        internal: entry.internal ?? false,
-        isKeyChange: KEY_CHANGES.has(`${entry.subjectType}.${entry.field}`),
-        jobId: entry.jobId,
-        kind: entry.kind,
-        newValue: json(entry.newValue),
-        oldValue: json(entry.oldValue),
-        requestId: entry.requestId,
-        subjectId: entry.subjectId,
-        subjectType: entry.subjectType,
-        text: entry.text,
-        viaAssistant: entry.assistantGrantId !== undefined,
-      },
+      data: row(entry, await this.actorName(tx, entry)),
     });
+  }
+
+  async recordMany(tx: Prisma.TransactionClient, entries: AuditEntry[]) {
+    if (entries.length === 0) return;
+    const names = new Map<string, string>();
+    const data = [];
+    for (const entry of entries) {
+      const key = `${entry.actorRole}:${entry.actorId ?? ''}:${entry.actorName ?? ''}`;
+      const name = names.get(key) ?? (await this.actorName(tx, entry));
+      names.set(key, name);
+      data.push(row(entry, name));
+    }
+    await tx.activityLog.createMany({ data });
   }
 
   async recordChanges(

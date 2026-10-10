@@ -36,7 +36,7 @@ describe('the hand-off', () => {
 
   it('gives the tail lifecycle steps 5-7, on the default model', () => {
     const tail = section(auto, '## The tail');
-    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /lifecycle\.mjs merge --pr <n>/, /tracker's `finish`/, /notion-ready|archive check/])
+    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /lifecycle\.mjs merge --pr <n>/, /tracker's `finish`/, /tracker\/ready|archive check/])
       assert.match(tail, step);
     assert.match(tail, /stays on Opus/);
     assert.doesNotMatch(tail, /model: "sonnet"/);
@@ -66,7 +66,7 @@ describe('the feature records go to the specs repo', () => {
   const viaSpecsRepo = /specs-repo\.mjs commit/;
 
   it('pushes the log through the specs repo and comments it on the PR after the merge', () => {
-    const step = section(read('.claude/skills/speckit-notion-sync/SKILL.md'), '## 3. Record it');
+    const step = section(read('.claude/skills/speckit-tracker-sync/SKILL.md'), '## 6. Record it');
     assert.match(step, viaSpecsRepo);
     assert.match(step, /gh pr comment/);
     assert.match(step, /After the merge/);
@@ -77,7 +77,7 @@ describe('the feature records go to the specs repo', () => {
     assert.match(phase, /before the feature's PR goes ready/);
     assert.match(phase, viaSpecsRepo);
     assert.match(phase, /gh pr view <n> --json comments/);
-    assert.match(phase, /notion-ready\.mjs check -/);
+    assert.match(phase, /tracker\/ready\.mjs check -/);
   });
 
   it('commits a retrospective and every QA lap report to the specs repo, never the branch', () => {
@@ -148,7 +148,7 @@ describe('AGENTS.md says how to run in a cloud session', () => {
 
   it('names the setup script, the environment and the network it needs', () => {
     const cloud = cloudSection();
-    for (const fact of [/scripts\/cloud-setup\.sh/, /CLAUDE_CODE_REMOTE/, /NOTION_TOKEN/, /\bJEV\b/, /\.env\.example/, /api\.notion\.com/, /api\.typesafe\.ai/, /proxy-injected/])
+    for (const fact of [/scripts\/cloud-setup\.sh/, /CLAUDE_CODE_REMOTE/, /\bJEV\b/, /\.env\.example/, /api\.typesafe\.ai/, /proxy-injected/])
       assert.match(cloud, fact);
   });
 
@@ -159,11 +159,10 @@ describe('AGENTS.md says how to run in a cloud session', () => {
     assert.match(cloud, /watch\.mjs/);
   });
 
-  it('names the fallbacks and the connector prefix', () => {
+  it('names the fallbacks', () => {
     const cloud = cloudSection();
     assert.match(cloud, /Workflow/);
     assert.match(cloud, /Artifact/);
-    assert.match(cloud, /connector/i);
     assert.match(read('.claude/skills/speckit-review/SKILL.md'), /Workflow tool is not available/);
   });
 });

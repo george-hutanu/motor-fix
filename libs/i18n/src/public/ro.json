@@ -140,6 +140,11 @@
         "ticked": "o lucrezi"
       },
       "hint": "O apăsare: led verde, lucrezi pe ea. Încă una: led roșu, nu o primești. A treia o stinge.",
+      "jobs": {
+        "count": "Lucrări: {ticked} din {total}",
+        "empty": "Adaugă mai întâi lucrări în lista de prețuri",
+        "tickAll": "Bifează tot"
+      },
       "left": {
         "few": "{count} caractere rămase",
         "one": "{count} caracter rămas",

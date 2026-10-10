@@ -41,11 +41,10 @@ describe('the task-runner definition', () => {
     const fm = frontmatter(read(AGENT));
     assert.equal(field(fm, 'name'), 'task-runner');
     assert.equal(field(fm, 'model'), 'opus');
-    assert.equal(field(fm, 'tools'), undefined, 'an allowlist cannot match the Notion connector under every id');
+    assert.equal(field(fm, 'tools'), undefined, 'an allowlist cannot match a connector under every id');
     const denied = list(field(fm, 'disallowedTools'));
     for (const tool of HEAVY) assert.ok(denies(denied, tool), `${tool} is not denied`);
     for (const tool of NEEDED) assert.ok(!denies(denied, tool), `${tool} is denied`);
-    assert.ok(!denied.some((d) => /notion/i.test(d)), 'a Notion server or tool is denied');
     assert.ok(!denied.some((d) => d.includes('*')), 'a wildcard in the list is ignored by the harness');
   });
 

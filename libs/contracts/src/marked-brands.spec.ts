@@ -1,3 +1,4 @@
+import { JOB_NAME_MAX, JOB_NAME_MIN, JOBS_MAX } from './listing-sections';
 import {
   FUELS,
   fuelColumns,
@@ -137,5 +138,76 @@ describe("a taken brand's fuel columns", () => {
       hybrid: true,
       petrol: true,
     });
+  });
+});
+
+describe("a taken brand's unticked jobs", () => {
+  const OIL = '1c6a9e2b-3d4f-4a5b-8c7d-9e0f1a2b3c4d';
+  const GEARBOX = '2d7b0f3c-4e5a-4b6c-9d8e-0f1a2b3c4d5e';
+
+  // @traces 412-FR-003
+  it.each([
+    ['no unticked list', taken()],
+    ['an empty unticked list', taken({ unticked: [] })],
+    ['catalogue jobs by id', taken({ unticked: [OIL, GEARBOX] })],
+    ['an id in capitals', taken({ unticked: [OIL.toUpperCase()] })],
+    ['a proposed job by name', taken({ unticked: ['Reglaj faruri'] })],
+    [
+      'names at the shortest and longest the price list allows',
+      taken({
+        unticked: ['n'.repeat(JOB_NAME_MIN), 'm'.repeat(JOB_NAME_MAX)],
+      }),
+    ],
+    [
+      'as many jobs as a price list holds',
+      taken({
+        unticked: Array.from({ length: JOBS_MAX }, (_, i) => `Lucrare ${i}`),
+      }),
+    ],
+    [
+      'unticked jobs beside some fuels',
+      taken({ fuels: ['petrol'], unticked: [OIL] }),
+    ],
+  ])('accepts %s', (_, brand) => {
+    expect(isBrandsSection({ brands: [brand] })).toBe(true);
+  });
+
+  // @traces 412-FR-003
+  it.each([
+    [
+      'unticked jobs on a refused brand',
+      taken({ stance: 'does_not_take', unticked: [OIL] }),
+    ],
+    [
+      'an empty unticked list on a refused brand',
+      taken({ stance: 'does_not_take', unticked: [] }),
+    ],
+    ['the same id twice', taken({ unticked: [OIL, OIL] })],
+    [
+      'the same id twice, once in capitals',
+      taken({ unticked: [OIL, OIL.toUpperCase()] }),
+    ],
+    ['the same name twice', taken({ unticked: ['Frâne', 'Frâne'] })],
+    [
+      'a name one letter too short',
+      taken({ unticked: ['n'.repeat(JOB_NAME_MIN - 1)] }),
+    ],
+    [
+      'a name one letter too long',
+      taken({ unticked: ['m'.repeat(JOB_NAME_MAX + 1)] }),
+    ],
+    ['a ref that is not text', taken({ unticked: [12] })],
+    ['an unticked list that is not a list', taken({ unticked: OIL })],
+    [
+      'one job more than a price list holds',
+      taken({
+        unticked: Array.from(
+          { length: JOBS_MAX + 1 },
+          (_, i) => `Lucrare ${i}`,
+        ),
+      }),
+    ],
+  ])('refuses %s', (_, brand) => {
+    expect(isBrandsSection({ brands: [brand] })).toBe(false);
   });
 });

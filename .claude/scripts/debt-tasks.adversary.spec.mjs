@@ -6,8 +6,8 @@ import { join } from 'node:path';
 
 import { main, parseDeferred, taskFor } from './debt-tasks.mjs';
 
-const STORY = 'https://app.notion.com/p/story1';
-const EPIC = 'https://app.notion.com/p/epic1';
+const STORY = 'https://github.com/george-hutanu/motor-fix-specs/issues/story1';
+const EPIC = 'https://github.com/george-hutanu/motor-fix-specs/issues/epic1';
 const PR = 'https://github.com/george-hutanu/motor-fix/pull/9';
 const base = { story: STORY, pr: PR, storyId: 'ST-9' };
 const entry = parseDeferred('- **medium** — `a.mjs:1` — a follow-up (code-reviewer)')[0];
@@ -28,8 +28,8 @@ describe('a debt task for a story with no epic', () => {
   });
 
   it('keeps the Feature relation when there is a feature but no epic', () => {
-    const t = taskFor(entry, { ...base, feature: 'https://app.notion.com/p/f1' });
-    assert.deepEqual(JSON.parse(t.properties.Feature), ['https://app.notion.com/p/f1']);
+    const t = taskFor(entry, { ...base, feature: 'https://github.com/george-hutanu/motor-fix-specs/issues/f1' });
+    assert.deepEqual(JSON.parse(t.properties.Feature), ['https://github.com/george-hutanu/motor-fix-specs/issues/f1']);
     assert.equal('Epic' in t.properties, false);
   });
 
@@ -82,7 +82,7 @@ describe('plan on the command line without an epic', () => {
   });
 
   it('plans every pending bullet with no Epic and keeps already filed ones out', () => {
-    const file = fileWith('- **low** — `a.mjs` — one (code-reviewer)\n- **low** — `b.mjs` — two (code-reviewer) — Notion: https://app.notion.com/p/x\n- **low** — `c.mjs` — three (code-reviewer)\n');
+    const file = fileWith('- **low** — `a.mjs` — one (code-reviewer)\n- **low** — `b.mjs` — two (code-reviewer) — Issue: https://github.com/george-hutanu/motor-fix-specs/issues/x\n- **low** — `c.mjs` — three (code-reviewer)\n');
     const r = plan(['plan', file, '--story', STORY, '--pr', PR, '--id', 'ST-9']);
     assert.equal(r.code, 0);
     assert.equal(r.plan.length, 2);

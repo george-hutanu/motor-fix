@@ -12,7 +12,7 @@ function fakeGh(rules = []) {
     calls.push({ args, input: opts.input });
     const line = args.join(' ');
     for (const [pattern, answer] of rules) if (pattern.test(line)) return typeof answer === 'function' ? answer(args, opts) : answer;
-    if (/pr view/.test(line)) return { code: 0, stdout: JSON.stringify({ body: 'Notion story: x' }), stderr: '' };
+    if (/pr view/.test(line)) return { code: 0, stdout: JSON.stringify({ body: 'Story: x' }), stderr: '' };
     return { code: 0, stdout: '{}', stderr: '' };
   };
   return { calls, gh };

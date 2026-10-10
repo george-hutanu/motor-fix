@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { CdkDropList } from '@angular/cdk/drag-drop';
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -796,5 +799,15 @@ describe('the declaration', () => {
     const { step } = await open();
 
     expect(box(step).closest('label')?.classList).toContain('choice');
+    // The sweep measures the checkbox itself: its box is drawn smaller inside.
+    // The shared mf-check rule (styles.css) draws it; tap-checkbox.spec.ts.
+    expect(box(step).classList).toContain('mf-check');
+    const global = readFileSync(join(__dirname, '../../../styles.css'), 'utf8');
+    expect(global).toMatch(
+      /input\[type="checkbox"\]\.mf-check \{[^}]*\swidth:\s*var\(--mf-tap\)/,
+    );
+    expect(global).toMatch(
+      /input\[type="checkbox"\]\.mf-check \{[^}]*\sheight:\s*var\(--mf-tap\)/,
+    );
   });
 });

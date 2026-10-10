@@ -5,6 +5,7 @@
 
 import { isSetOf } from './garage-hours';
 import { FUELS } from './plate';
+import { JOB_NAME_MAX, JOB_NAME_MIN, JOBS_MAX } from './price-range';
 
 export { FUELS };
 export type Fuel = (typeof FUELS)[number];
@@ -18,6 +19,9 @@ export interface MarkedBrand {
   name: string;
   stance: Stance;
   fuels?: Fuel[];
+  // The price list's jobs the garage does not do on this brand: a catalogue
+  // job by its id, a proposed one by its name. Absent means every job.
+  unticked?: string[];
 }
 
 export interface BrandsSection {
@@ -43,16 +47,31 @@ const textUpTo = (value: unknown, max: number) =>
 
 const isFuels = isSetOf<Fuel>(FUELS);
 
+// A uuid's 36 characters fall inside the name bounds, so this covers both.
+const isJobRef = (ref: unknown) =>
+  typeof ref === 'string' &&
+  ref.length >= JOB_NAME_MIN &&
+  ref.length <= JOB_NAME_MAX;
+
+// A uuid is the same job in either case; a name only as written.
+const isUnticked = (refs: unknown) =>
+  Array.isArray(refs) &&
+  refs.length <= JOBS_MAX &&
+  refs.every(isJobRef) &&
+  new Set(refs.map((ref: string) => (UUID.test(ref) ? ref.toLowerCase() : ref)))
+    .size === refs.length;
+
 function isMarkedBrand(value: unknown): value is MarkedBrand {
   if (!isRecord(value)) return false;
-  const { brandId, fuels, name, stance } = value;
+  const { brandId, fuels, name, stance, unticked } = value;
   return (
-    onlyKeys(value, ['brandId', 'name', 'stance', 'fuels']) &&
+    onlyKeys(value, ['brandId', 'name', 'stance', 'fuels', 'unticked']) &&
     typeof brandId === 'string' &&
     UUID.test(brandId) &&
     typeof name === 'string' &&
     (stance === 'works_on' || stance === 'does_not_take') &&
-    (fuels === undefined || (stance === 'works_on' && isFuels(fuels)))
+    (fuels === undefined || (stance === 'works_on' && isFuels(fuels))) &&
+    (unticked === undefined || (stance === 'works_on' && isUnticked(unticked)))
   );
 }
 

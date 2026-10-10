@@ -233,33 +233,35 @@ describe('PR lifecycle gate — the feature folder', () => {
   // @traces 725-FR-002
   it('sees the PR link in a zero-padded folder, with and without feature.json', () =>
     withRepo((dir) => {
-      folder(dir, '083-sign-in-apple-google', { 'notion-sync.md': linked });
+      folder(dir, '083-sign-in-apple-google', { 'tracker-sync.md': linked });
       assert.equal(prLinked(dir, '83-sign-in-apple-google', 136), true);
       assert.equal(prLinked(dir, '83-sign-in-apple-google', 137), false);
       point(dir, 'specs/083-sign-in-apple-google');
       assert.equal(prLinked(dir, '83-sign-in-apple-google', 136), true);
     }));
 
-  // @traces 1036-FR-013
-  it('sees the PR link that tracker-sync.md logged', () =>
+  // @traces 1037-FR-003
+  it('sees the PR link that tracker-sync.md logged, and no other log', () =>
     withRepo((dir) => {
       folder(dir, '1036-github-tracker-lifecycle', { 'tracker-sync.md': '- 2026-10-10 · pr · ST-1036 · PR #335 https://github.com/george-hutanu/motor-fix/pull/335\n' });
       assert.equal(prLinked(dir, '1036-github-tracker-lifecycle', 335), true);
       assert.equal(prLinked(dir, '1036-github-tracker-lifecycle', 336), false);
+      folder(dir, '1037-remove-old-tracker', { 'old-sync.md': '- 2026-10-10 · pr · ST-1037 · PR #339\n' });
+      assert.equal(prLinked(dir, '1037-remove-old-tracker', 339), false);
     }));
 });
 
 describe('PR lifecycle gate — the PR link on the story', () => {
-  it('refuses a story branch whose open PR is not recorded on its Notion story, draft or ready', () => {
+  it('refuses a story branch whose open PR is not recorded on its tracker issue, draft or ready', () => {
     for (const pr of [ready({ isDraft: true }), ready()]) {
       const why = decide(task({ pr, prLinked: false }));
       assert.match(why, /PR #6/);
-      assert.match(why, /speckit-notion-sync pr/);
+      assert.match(why, /speckit-tracker-sync pr/);
     }
   });
 
-  // @traces 1036-FR-013
-  it('names the GitHub sync first, and the Notion one for a feature that started there', () => {
+  // @traces 1037-FR-003
+  it('names the tracker sync and the issue', () => {
     const why = decide(task({ prLinked: false }));
     assert.match(why, /speckit-tracker-sync pr 6/);
     assert.match(why, /tracker issue/);

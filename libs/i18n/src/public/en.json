@@ -136,6 +136,11 @@
         "ticked": "you work on it"
       },
       "hint": "Tap once: green lamp, you work on it. Again: red lamp, you do not take it. A third tap switches it off.",
+      "jobs": {
+        "count": "Jobs: {ticked} of {total}",
+        "empty": "Add jobs to the price list first",
+        "tickAll": "Tick all"
+      },
       "left": {
         "one": "{count} character left",
         "other": "{count} characters left"

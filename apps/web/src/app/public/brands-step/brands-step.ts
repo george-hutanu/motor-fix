@@ -5,19 +5,25 @@ import {
   computed,
   DestroyRef,
   inject,
+  input,
   model,
   output,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import type { PriceEntry } from '@motor-fix/contracts/listing-sections';
 import {
   FUELS,
   NOTE_MAX,
   PHRASE_MAX,
 } from '@motor-fix/contracts/marked-brands';
-import { type BrandDto, BrandsService } from '@motor-fix/data-access';
+import {
+  type BrandDto,
+  BrandsService,
+  type JobTypeDto,
+} from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
+import { HlmButton, HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
 
 import {
   type BrandsSection,
@@ -26,12 +32,19 @@ import {
   cut,
   type Fuel,
   fuelsOf,
+  type Job,
+  jobsOf,
   letters,
   mark,
   next,
+  refOf,
   type Stance,
+  tickAll,
   toggleFuel,
+  toggleJob,
+  untickedOf,
 } from '../brands-section';
+import { jobName } from '../prices-step/prices-rows';
 
 const POPULAR = 12;
 // The search waits for the owner to stop typing.
@@ -39,13 +52,14 @@ const DEBOUNCE_MS = 250;
 
 type Brand = Pick<BrandDto, 'id' | 'name'>;
 type Text = 'brandNote' | 'refusalPhrase';
+type JobName = Pick<JobTypeDto, 'nameEn' | 'nameRo'>;
 
 // Step 2 of listing a garage: each brand taken, refused or left off, plus a
 // short note and a refusal phrase. It holds the draft's section and saves
 // nothing.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmInput, HlmLabel, Lamp, TranslatePipe],
+  imports: [HlmButton, HlmInput, HlmLabel, Lamp, TranslatePipe],
   selector: 'mf-brands-step',
   styleUrl: './brands-step.css',
   templateUrl: './brands-step.html',
@@ -63,8 +77,15 @@ export class BrandsStep {
   readonly value = model<BrandsSection>({ brands: [] });
   // The ids of the popular and searched brands, in the order the chips show them.
   readonly order = output<string[]>();
+  // The price list's entries from step 3, and the catalogue names of its jobs.
+  readonly jobs = input<readonly PriceEntry[]>([]);
+  readonly jobNames = input<ReadonlyMap<string, JobName>>(new Map());
+  // The step the owner asks to open.
+  readonly goTo = output<number>();
 
   protected readonly fuelList = FUELS;
+  protected readonly refOf = refOf;
+  protected readonly jobList = computed(() => jobsOf(this.jobs()));
   protected readonly note: Text = 'brandNote';
   protected readonly phrase: Text = 'refusalPhrase';
 
@@ -135,6 +156,35 @@ export class BrandsStep {
       ...v,
       brands: toggleFuel(v.brands, id, fuel),
     }));
+  }
+
+  protected jobLabel(job: Job) {
+    return jobName(job, this.jobNames(), this.i18n.language());
+  }
+
+  protected untickedFor(id: string): string[] {
+    const held = this.value().brands.find((b) => b.brandId === id);
+    return held ? untickedOf(held) : [];
+  }
+
+  protected jobsTicked(id: string) {
+    const off = this.untickedFor(id);
+    return this.jobList().filter((job) => !off.includes(refOf(job))).length;
+  }
+
+  // Nothing reaches a taken brand with every fuel or every job unticked.
+  protected getsNothing(id: string, fuels: Fuel[]) {
+    return !fuels.length || (this.jobList().length > 0 && !this.jobsTicked(id));
+  }
+
+  protected tickJob(id: string, ref: string) {
+    this.value.update((v) => ({ ...v, brands: toggleJob(v.brands, id, ref) }));
+  }
+
+  protected tickEvery(id: string) {
+    const brands = tickAll(this.value().brands, id);
+    if (brands !== this.value().brands)
+      this.value.update((v) => ({ ...v, brands }));
   }
 
   protected tap(brand: Brand) {

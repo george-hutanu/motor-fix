@@ -21,17 +21,13 @@ $ARGUMENTS
 
 ```bash
 node .claude/scripts/level.mjs suggest "<the work, one sentence>" --set
-node .claude/scripts/level.mjs suggest ST-<n> --set     # or the story's Notion URL
 ```
 
-Given a story, it reads the story's Notion page first and prints one `facts:`
-line (type, labels, design, boards, points, each Build brief section filled or
-empty). Three rules, which never lower the classifier: a classifier answer of 2
-or more stands; boards, a missing or empty brief section, or more than 5 story
-points make it at least 2; a Bug with no boards and a complete brief is 1. No
-decisive fact prints `unsure (notion: …)` and sizes the story's text. When
-Notion cannot be read (no `NOTION_TOKEN`, a network error, no such story) it
-prints one `notion not read (<why>)` line and goes on exactly as with text.
+It sizes only the text it is given and reads no tracker: a bare `ST-<n>` or
+issue URL is sized as those words, which is almost always `unsure`. For a
+story, pass its title and the gist of its Build brief (`gh issue view <n> -R
+george-hutanu/motor-fix-specs`); boards, a missing Build brief section or a
+large story are reasons to answer 2 yourself when the classifier is unsure.
 
 A local classifier answers first and costs nothing. It decides only the clear
 cases: an edit to text or to a name only the code reads is 0, anything touching

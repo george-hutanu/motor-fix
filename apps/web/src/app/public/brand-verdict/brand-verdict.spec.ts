@@ -1,10 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { GarageBrandAnswerDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
-import { BrandVerdict, verdict } from './brand-verdict';
+import { type BrandAnswer, BrandVerdict, verdict } from './brand-verdict';
 
 const ref = (name: string, i: number) => ({
   id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
@@ -16,9 +15,7 @@ const AUDI = ref('Audi', 2);
 const DACIA = ref('Dacia', 3);
 const TESLA = ref('Tesla', 4);
 
-const answer = (
-  over: Partial<GarageBrandAnswerDto> = {},
-): GarageBrandAnswerDto => ({
+const answer = (over: Partial<BrandAnswer> = {}): BrandAnswer => ({
   brandNote: null,
   doesNotTake: [],
   refusalPhrase: null,
@@ -27,7 +24,7 @@ const answer = (
 });
 
 type Inputs = {
-  answer?: GarageBrandAnswerDto | null;
+  answer?: BrandAnswer | null;
   brand?: { id: string; name: string } | null;
   mode?: 'card' | 'profile';
 };

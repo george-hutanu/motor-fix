@@ -1,3 +1,4 @@
+import type { PriceEntry } from '@motor-fix/contracts/listing-sections';
 import {
   type BrandsSection as DraftBrands,
   FUELS,
@@ -28,10 +29,14 @@ export function mark(
   const marked = { brandId: brand.id, name: brand.name, stance };
   const held = brands.find((b) => b.brandId === brand.id);
   if (!held) return [...brands, marked];
-  // Taken again keeps its fuels; refused drops them.
-  const kept =
-    stance === 'works_on' && held.stance === 'works_on' && held.fuels
-      ? { ...marked, fuels: held.fuels }
+  // Taken again keeps its fuels and unticked jobs; refused drops them.
+  const kept: MarkedBrand =
+    stance === 'works_on' && held.stance === 'works_on'
+      ? {
+          ...marked,
+          ...(held.fuels && { fuels: held.fuels }),
+          ...(held.unticked && { unticked: held.unticked }),
+        }
       : marked;
   return brands.map((b) => (b.brandId === brand.id ? kept : b));
 }
@@ -53,6 +58,71 @@ export function toggleFuel(
     );
     return { ...b, fuels };
   });
+}
+
+// A job of the price list, once whatever brand ranges it has, in its order.
+export type Job = Pick<PriceEntry, 'jobTypeId' | 'name'>;
+
+// A catalogue job by its id, a proposed one by its name: the draft's ref.
+export const refOf = (job: Job): string => job.jobTypeId ?? job.name ?? '';
+
+export function jobsOf(entries: readonly PriceEntry[]): Job[] {
+  const seen = new Set<string>();
+  const jobs: Job[] = [];
+  for (const { jobTypeId, name } of entries) {
+    const job: Job = jobTypeId ? { jobTypeId } : { name };
+    if (seen.has(refOf(job))) continue;
+    seen.add(refOf(job));
+    jobs.push(job);
+  }
+  return jobs;
+}
+
+export const untickedOf = (brand: MarkedBrand): string[] =>
+  brand.unticked ? [...brand.unticked] : [];
+
+// An empty record is left out, so the brand reads as every job ticked.
+const withUnticked = (brand: MarkedBrand, unticked: string[]): MarkedBrand => {
+  const { unticked: _, ...rest } = brand;
+  return unticked.length > 0 ? { ...rest, unticked } : rest;
+};
+
+export function toggleJob(
+  brands: MarkedBrand[],
+  brandId: string,
+  ref: string,
+): MarkedBrand[] {
+  return brands.map((b) => {
+    if (b.brandId !== brandId) return b;
+    const held = untickedOf(b);
+    return withUnticked(
+      b,
+      held.includes(ref) ? held.filter((r) => r !== ref) : [...held, ref],
+    );
+  });
+}
+
+export function tickAll(brands: MarkedBrand[], brandId: string): MarkedBrand[] {
+  if (!brands.some((b) => b.brandId === brandId && b.unticked)) return brands;
+  return brands.map((b) => (b.brandId === brandId ? withUnticked(b, []) : b));
+}
+
+// A job taken off or renamed in step 3 leaves no record behind.
+export function dropUnlisted(
+  brands: MarkedBrand[],
+  refs: readonly string[],
+): MarkedBrand[] {
+  const listed = new Set(refs);
+  const stale = (b: MarkedBrand) => b.unticked?.some((r) => !listed.has(r));
+  if (!brands.some(stale)) return brands;
+  return brands.map((b) =>
+    stale(b)
+      ? withUnticked(
+          b,
+          untickedOf(b).filter((r) => listed.has(r)),
+        )
+      : b,
+  );
 }
 
 export function counts(brands: MarkedBrand[]) {

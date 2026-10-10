@@ -60,16 +60,16 @@
     }
   },
   {
-    "id": "pr-lifecycle-refuses-a-story-pr-not-linked-from-notion",
+    "id": "pr-lifecycle-refuses-a-story-pr-not-linked-from-its-issue",
     "hook": "stop:pr-lifecycle",
-    "why": "every story carries its own PR link from the moment the PR opens; a draft on a story branch with no recorded link sends the session to speckit-notion-sync pr",
+    "why": "every story carries its own PR link from the moment the PR opens; a draft on a story branch with no recorded link sends the session to speckit-tracker-sync pr",
     "payload": {},
     "env": {
       "SPECKIT_PR_STATE": "{\"branch\": \"390-audit-history\", \"ahead\": 2, \"unpushed\": 0, \"blocked\": false, \"prLinked\": false, \"pr\": {\"number\": 12, \"state\": \"OPEN\", \"isDraft\": true, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
     },
     "expect": {
       "exit": 2,
-      "stderr": "speckit-notion-sync pr 12"
+      "stderr": "speckit-tracker-sync pr 12"
     }
   },
   {
@@ -78,7 +78,7 @@
     "why": "the owner watches GitHub for PRs in QA; a ready PR is in QA from the moment it is marked ready, and one without the `QA` label is invisible there",
     "payload": {},
     "env": {
-      "SPECKIT_PR_STATE": "{\"branch\": \"chore-notion-tool-names\", \"ahead\": 2, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 27, \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+      "SPECKIT_PR_STATE": "{\"branch\": \"chore-tool-names\", \"ahead\": 2, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 27, \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
     },
     "expect": {
       "exit": 2,

@@ -41,7 +41,7 @@ const outputOf = (text) => {
 };
 
 // Skills whose text dispatches a task-runner or general-purpose agent, or runs as one.
-const DISPATCHERS = ['speckit-watch', 'speckit-auto', 'speckit-plan', 'notion-ready'];
+const DISPATCHERS = ['speckit-watch', 'speckit-auto', 'speckit-plan'];
 
 describe('the agent reply envelope', () => {
   it('is defined once in AGENTS.md as four lines', () => {

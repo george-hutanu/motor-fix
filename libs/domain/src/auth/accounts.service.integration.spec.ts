@@ -22,6 +22,10 @@ function ports() {
       ReturnType<AuditPort['recordChanges']>,
       Parameters<AuditPort['recordChanges']>
     >(async () => undefined),
+    recordMany: jest.fn<
+      ReturnType<AuditPort['recordMany']>,
+      Parameters<AuditPort['recordMany']>
+    >(async () => undefined),
   };
   const events = {
     record: jest.fn<
