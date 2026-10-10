@@ -7,6 +7,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -26,6 +27,7 @@ export class PriceListController {
     summary:
       "The garage's price list: each job, whether drivers see it and, when not, why",
   })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
   @ApiOkResponse({ type: PriceListDto })
   @ApiBadRequestResponse({ description: 'validation_failed: not a uuid' })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
