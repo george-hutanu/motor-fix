@@ -164,15 +164,26 @@ export class NotificationsService {
     return queued;
   }
 
+  // `to` sends to an address the account does not hold yet: the link of an
+  // e-mail change goes to the new address.
   async sendAccountEmail(input: {
     accountId: string;
-    purpose: 'email_check' | 'password_reset' | 'password_changed';
+    purpose:
+      | 'email_check'
+      | 'email_change_notice'
+      | 'password_reset'
+      | 'password_changed';
     link: string;
+    to?: string;
   }): Promise<void> {
     await this.notify({
       eventId: randomUUID(),
       kind: 'ACCOUNT_EMAIL',
-      params: { link: input.link, purpose: input.purpose },
+      params: {
+        link: input.link,
+        purpose: input.purpose,
+        ...(input.to && { to: input.to }),
+      },
       recipients: [input.accountId],
       subjectId: input.accountId,
     });
@@ -562,11 +573,14 @@ export class NotificationsService {
         status: 'sent',
       },
     });
+    // A change link goes to the address it asks for, not the account's.
+    const to = input.params?.['to'];
+    const email = typeof to === 'string' ? to : account.email;
     const channels = outsideChannels(
       input.kind,
       choice.muted,
       {
-        email: Boolean(account.email),
+        email: Boolean(email),
         phone: Boolean(account.phone && account.phoneVerifiedAt),
         push: await this.hasDevice(tx, accountId),
         whatsapp: choice.whatsapp,
@@ -575,7 +589,7 @@ export class NotificationsService {
     );
     const next: NextJob[] = [];
     for (const channel of channels) {
-      const job = await this.outsideRow(tx, type, base, channel, account, at);
+      const job = await this.outsideRow(tx, type, base, channel, email, at);
       if (job) next.push(job);
     }
     return { bell, next };
@@ -586,11 +600,11 @@ export class NotificationsService {
     type: NotificationType,
     base: Omit<Prisma.NotificationUncheckedCreateInput, 'channel' | 'status'>,
     channel: SentChannel,
-    account: { email: string | null },
+    email: string | null,
     at: Date,
   ): Promise<NextJob | null> {
     return channel === 'email'
-      ? this.emailRow(tx, type, base, account.email, at)
+      ? this.emailRow(tx, type, base, email, at)
       : this.phoneRow(tx, type, base, channel, at);
   }
 

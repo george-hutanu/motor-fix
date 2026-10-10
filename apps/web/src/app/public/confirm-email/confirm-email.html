@@ -24,6 +24,11 @@
         </button>
       }
     }
+    @case ('taken') {
+      <h1>{{ 'public.confirmEmail.taken' | t }}</h1>
+      <p>{{ 'public.confirmEmail.takenLine' | t }}</p>
+      <a hlmBtn variant="secondary" [routerLink]="['/', i18n.language()]">{{ 'public.confirmEmail.home' | t }}</a>
+    }
     @case ('error') {
       <h1>{{ 'public.confirmEmail.error' | t }}</h1>
       <button hlmBtn type="button" (click)="confirm()">{{ 'public.confirmEmail.retry' | t }}</button>

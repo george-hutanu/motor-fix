@@ -1,10 +1,16 @@
-import { EMAIL_CHECK, PASSWORD_CHANGED, PASSWORD_RESET } from './account-email';
+import {
+  EMAIL_CHANGE_NOTICE,
+  EMAIL_CHECK,
+  PASSWORD_CHANGED,
+  PASSWORD_RESET,
+} from './account-email';
 import { ADMIN_GARAGE_REPORTED } from './admin-garage-reported';
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
 import { DUE_ITP } from './due-itp';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
 import { NEWS } from './news';
+import { PHONE_CHANGE_CODE } from './phone-change-code';
 import { PUSH_TEST } from './push-test';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
 import { REQUEST_DECLINED } from './request-declined';
@@ -26,6 +32,7 @@ import type { Registry } from '../templates';
 // Keyed by notification type, or `<type>.<variant>`; GENERIC fills in for a
 // type with no e-mail or bell text.
 export const TEMPLATES: Registry = {
+  'ACCOUNT_EMAIL.email_change_notice': EMAIL_CHANGE_NOTICE,
   'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
   'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,
   'ACCOUNT_EMAIL.password_reset': PASSWORD_RESET,
@@ -37,6 +44,7 @@ export const TEMPLATES: Registry = {
   LISTING_CONTINUE_LINK,
   LISTING_REMINDER,
   NEWS,
+  PHONE_CHANGE_CODE,
   PUSH_TEST,
   QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,

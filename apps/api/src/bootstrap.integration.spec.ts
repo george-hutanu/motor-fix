@@ -149,7 +149,8 @@ describe('api conventions', () => {
     });
   });
 
-  it('describes the language change in the OpenAPI document', async () => {
+  // @traces 139-FR-004
+  it('describes the change of my details in the OpenAPI document, every field optional', async () => {
     app = await start();
 
     const document = openApiDocument(app);
@@ -164,11 +165,15 @@ describe('api conventions', () => {
 
     expect(operation?.responses['200']).toBeDefined();
     expect(schema && 'properties' in schema && schema.properties).toEqual({
+      city: expect.objectContaining({
+        maxLength: 60,
+        minLength: 2,
+        nullable: true,
+      }),
       language: expect.objectContaining({ enum: ['ro', 'en'] }),
+      name: expect.objectContaining({ maxLength: 80, minLength: 2 }),
     });
-    expect(schema && 'required' in schema && schema.required).toEqual([
-      'language',
-    ]);
+    expect(schema && 'required' in schema).toBe(false);
   });
 
   it('serves the audit history under the prefix, behind sign-in', async () => {

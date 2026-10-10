@@ -22,11 +22,15 @@ import { PlatformStatus } from './maintenance/platform-status';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 // Only the page's own API gets the token; the session calls work by cookie.
-// Approving an assistant is the one auth call made as the signed-in person.
+// Approving an assistant and changing the password are the auth calls made
+// as the signed-in person.
+const AS_THE_PERSON = new Set([
+  '/api/v1/auth/assistant/approve',
+  '/api/v1/auth/password',
+]);
 const carriesToken = (url: string) =>
   url.startsWith('/api/') &&
-  (!url.startsWith('/api/v1/auth/') ||
-    url === '/api/v1/auth/assistant/approve');
+  (!url.startsWith('/api/v1/auth/') || AS_THE_PERSON.has(url));
 
 // Signed out is a normal answer to "who am I", never a reason to ask.
 const isWhoAmI = (req: HttpRequest<unknown>) =>
@@ -39,6 +43,11 @@ const signInRequired = (error: unknown) => {
   const problem = toProblem(error);
   return problem.status === 401 && problem.code === 'sign_in_required';
 };
+
+// A wrong password is the answer, not an expired token: sending it again
+// would count a second wrong try.
+const wrongPassword = (error: unknown) =>
+  toProblem(error).code === 'invalid_credentials';
 
 const inMaintenance = (error: unknown) => {
   const problem = toProblem(error);
@@ -80,7 +89,9 @@ export const authInterceptor: HttpInterceptorFn = (
   return next(token ? withToken(req, token) : req).pipe(
     catchError((error: unknown) => {
       const expired =
-        error instanceof HttpErrorResponse && error.status === 401;
+        error instanceof HttpErrorResponse &&
+        error.status === 401 &&
+        !wrongPassword(error);
       // A call with a token renews on any 401; one without only when the
       // server says a session is needed and a remembered cookie may hold one.
       if (!(expired && (token || (mayAsk && signInRequired(error))))) {
