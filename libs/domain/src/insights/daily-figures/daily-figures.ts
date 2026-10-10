@@ -19,6 +19,7 @@ interface Counted {
 async function countedIds(redis: Redis, day: string): Promise<string[]> {
   const ids = new Set<string>();
   let cursor = '0';
+  // SCAN has walked every key once it hands back cursor 0.
   do {
     const [next, keys] = await redis.scan(
       cursor,

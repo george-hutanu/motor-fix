@@ -22,8 +22,10 @@ interface Visitor {
   userAgent: string | undefined;
 }
 
+// A crawler's name ends in `bot` (Googlebot/2.1, AdsBot-Google); a phone
+// brand that only holds the letters (CUBOT X30) is a visitor.
 const BOT =
-  /bot|crawl|spider|slurp|fetch|headless|lighthouse|curl|wget|python|java\/|preview/i;
+  /bot(?:[/;)-]|$)|crawl|spider|slurp|fetch|headless|lighthouse|curl|wget|python|java\/|preview/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 // The address as one client: an IPv4 address also in its IPv6-mapped form,

@@ -109,11 +109,16 @@ function bucketsOf(
     const row = byDay.get(day);
     if (!row) continue;
     bucket.views += row.profileViews;
-    const sources = row.profileViewsBySource as Record<string, number>;
-    for (const [source, n] of Object.entries(sources))
-      bucket.bySource[source] = (bucket.bySource[source] ?? 0) + n;
+    addSources(bucket.bySource, row.profileViewsBySource);
   }
   return [...buckets.values()];
+}
+
+// The split is JSONB: anything but a map of numbers adds nothing to it.
+function addSources(into: Record<string, number>, sources: unknown): void {
+  if (!sources || typeof sources !== 'object' || Array.isArray(sources)) return;
+  for (const [source, n] of Object.entries(sources))
+    if (typeof n === 'number') into[source] = (into[source] ?? 0) + n;
 }
 
 function periodsOf(query: FiguresQuery, today: string): [Period, Period] {

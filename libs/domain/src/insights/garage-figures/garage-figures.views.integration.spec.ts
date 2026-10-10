@@ -84,6 +84,27 @@ describe('profile views by day', () => {
     ]);
   });
 
+  it('counts a row whose split is not a map in the total alone', async () => {
+    const t = await team('Atelier Dinamo');
+    await prisma.garageDailyFigures.create({
+      data: {
+        day: new Date('2026-10-05'),
+        garageId: t.garage.id,
+        profileViews: 2,
+        profileViewsBySource: [1, 1],
+        writtenAt: new Date(),
+      },
+    });
+
+    const { buckets } = await service.profileViews(owner(t), {
+      by: 'day',
+      from: '2026-10-05',
+      to: '2026-10-05',
+    });
+
+    expect(buckets).toEqual([{ bySource: {}, key: '2026-10-05', views: 2 }]);
+  });
+
   it("never shows another garage's views", async () => {
     const t = await team('Atelier Dinamo');
     const other = await team('Service Militari');

@@ -95,6 +95,7 @@ describe('the bot rule', () => {
     'WhatsApp link preview',
     'SomeCrawler/1.0',
     'GOOGLEBOT',
+    'AdsBot-Google (+http://www.google.com/adsbot.html)',
   ])('drops %s', (agent) => {
     expect(isBot(agent)).toBe(true);
   });
@@ -105,6 +106,7 @@ describe('the bot rule', () => {
     'Mozilla/5.0 (Windows NT 10.0; rv:130.0) Gecko/20100101 Firefox/130.0',
     'Mozilla/5.0 (Linux; Android 14) Chrome/126.0 Mobile Safari/537.36',
     'Mozilla/5.0 JavaScript-capable',
+    'Mozilla/5.0 (Linux; Android 12; CUBOT X50) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36',
   ])('keeps %s', (agent) => {
     expect(isBot(agent)).toBe(false);
   });
