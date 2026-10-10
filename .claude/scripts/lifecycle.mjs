@@ -3,9 +3,9 @@
 // lifecycle"), printing one JSON line: what it did, or the first thing that
 // stopped it and the fix.
 //
-//   node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <subject>" [--body-file <f>] [--story ST-<n>] [--notion-done]
-//   node .claude/scripts/lifecycle.mjs ready --body-file <f> [--decisions "<text>"] [--story ST-<n>] [--notion-done]
-//   node .claude/scripts/lifecycle.mjs merge [--pr <n>] [--story ST-<n>] [--notion-done]
+//   node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <subject>" [--body-file <f>] [--story ST-<n>] [--tracker-done]
+//   node .claude/scripts/lifecycle.mjs ready --body-file <f> [--decisions "<text>"] [--story ST-<n>] [--tracker-done]
+//   node .claude/scripts/lifecycle.mjs merge [--pr <n>] [--story ST-<n>] [--tracker-done]
 //   node .claude/scripts/lifecycle.mjs handoff [--pr <n>]            post handoff.md as a marked PR comment (cloud only)
 //   node .claude/scripts/lifecycle.mjs handoff --restore [--pr <n>]  write a missing handoff.md from the newest one
 //
@@ -18,9 +18,12 @@
 // fed to the Bash gates settings.json registers (run-hook.mjs <id>), exactly as
 // Claude Code would: a refusal is the gate's own. In a cloud session gh's pr
 // commands then run through REST (lib/gh-rest.mjs), the gates still judging
-// the gh command as written. Notion goes through
-// notion-sync.mjs; its exit 3 (no NOTION_TOKEN) stops the step with the
-// connector events left and the `--notion-done` rerun that finishes it.
+// the gh command as written. The tracker events go through tracker-sync.mjs
+// (the story's GitHub issue and Project #11), or notion-sync.mjs for a feature
+// that started on Notion (tracker/repos.mjs trackerOf); a failing event stops
+// the step with the events left and the `--tracker-done` rerun (`--notion-done`
+// is the same switch) that finishes it. notion-sync's exit 3 (no NOTION_TOKEN)
+// leaves the events to the connector.
 // specs/ is its own repository (specs-repo.mjs): the feature records, the qa
 // line and the finish lines are committed and pushed there, never on the
 // motor-fix branch; only .specify/capabilities rides in the PR.
@@ -43,11 +46,11 @@ import { activeFeature, featureKey, featuresRoot, locateFeature } from "./lib/fe
 import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
 import { featuresDir } from "./specs-repo.mjs";
+import { trackerOf } from "./tracker/repos.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
-const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --notion-done; handoff [--restore] [--pr <n>])";
+const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --tracker-done; handoff [--restore] [--pr <n>])";
 const HANDOFF_MARK = "<!-- speckit-handoff -->";
-const NOTION = ".claude/scripts/notion-sync.mjs";
 const SELF = "node .claude/scripts/lifecycle.mjs";
 const LEVEL = ".claude/scripts/level.mjs";
 const SPECS = ".claude/scripts/specs-repo.mjs";
@@ -102,19 +105,19 @@ function realIo() {
 }
 
 // The flags each step reads: a switch is true when present, any other flag takes the next argument.
-const SWITCHES = new Set(["notion-done", "restore"]);
+const SWITCHES = new Set(["notion-done", "tracker-done", "restore"]);
 const FLAGS = {
-  open: ["title", "body-file", "story", "notion-done"],
-  ready: ["body-file", "decisions", "story", "notion-done"],
-  merge: ["pr", "story", "notion-done"],
-  handoff: ["pr", "restore", "notion-done"],
+  open: ["title", "body-file", "story", "notion-done", "tracker-done"],
+  ready: ["body-file", "decisions", "story", "notion-done", "tracker-done"],
+  merge: ["pr", "story", "notion-done", "tracker-done"],
+  handoff: ["pr", "restore", "notion-done", "tracker-done"],
 };
 
 // A flag the step does not read stops the call before it runs anything, and
 // --help/-h anywhere returns the usage: `merge --help` once merged a PR.
 function parse(argv) {
   const [name, ...rest] = argv;
-  const flags = { "notion-done": false, restore: false };
+  const flags = { "notion-done": false, "tracker-done": false, restore: false };
   if (!Object.hasOwn(FLAGS, name)) throw new Stop("usage", USAGE);
   if (rest.some((arg) => arg === "--help" || arg === "-h")) return { name, flags, help: true };
   for (let i = 0; i < rest.length; i++) {
@@ -201,19 +204,23 @@ function context(io, flags, did) {
     ctx.git("push", "-u", "origin", ctx.branch);
     did.push("pushed");
   };
-  // Every Notion event in order; exit 3 or no script stops with what is left.
+  // The feature's tracker: GitHub, or Notion for a feature that started there.
+  ctx.tracker = trackerOf(ctx.feature.dir);
+  const short = ctx.tracker.name === "github" ? "tracker-sync" : "notion-sync";
+  ctx.done = `--${ctx.tracker.name === "github" ? "tracker" : "notion"}-done`;
+  // Every tracker event in order; a failure, Notion's exit 3 or no script stops with what is left.
   // `later` are events this call does not run but a stop must still list.
-  ctx.notion = (events, rerun, later = []) => {
-    if (flags["notion-done"]) return [];
+  ctx.track = (events, rerun, later = []) => {
+    if (flags["notion-done"] || flags["tracker-done"]) return [];
     const outputs = [];
     for (const [i, args] of events.entries()) {
-      const label = ([event, arg]) => `speckit-notion-sync ${event === "pr" ? `pr ${arg}` : event}`;
+      const label = ([event, arg]) => `speckit-${short} ${event === "pr" ? `pr ${arg}` : event}`;
       const left = () => ({ left: [...events.slice(i), ...later].map(label), then: rerun });
-      if (!existsSync(join(io.repo, NOTION))) throw new Stop("notion-sync", "notion-sync.mjs is not on this branch: run the events through the connector, then the rerun", left());
-      const r = ctx.node([NOTION, ...args, "--story", ctx.story], [0, 1, 3, 64]);
-      if (r.code === 3) throw new Stop(`notion-sync ${args[0]}`, "no NOTION_TOKEN: run the events through the connector (speckit-notion-sync §4), then the rerun", left());
-      if (r.code !== 0) throw new Stop(`notion-sync ${args[0]}`, (r.stderr || r.stdout).trim().slice(-400));
-      did.push(`notion ${args[0]}`);
+      if (!existsSync(join(io.repo, ctx.tracker.script))) throw new Stop(short, `${short}.mjs is not on this branch: run the events by hand, then the rerun`, left());
+      const r = ctx.node([ctx.tracker.script, ...args, "--story", ctx.story], [0, 1, 3, 64]);
+      if (r.code === 3 && short === "notion-sync") throw new Stop(`notion-sync ${args[0]}`, "no NOTION_TOKEN: run the events through the connector (speckit-notion-sync §4), then the rerun", left());
+      if (r.code !== 0) throw new Stop(`${short} ${args[0]}`, (r.stderr || r.stdout).trim().slice(-400));
+      did.push(`${ctx.tracker.name === "github" ? "tracker" : "notion"} ${args[0]}`);
       outputs.push(lastJson(r.stdout));
     }
     return outputs;
@@ -298,13 +305,13 @@ function open(ctx, flags) {
     if (!pr) throw new Stop("gh pr create", `no PR URL in its output: ${out.stdout.trim().slice(-200)}`);
     ctx.did.push(`opened draft #${pr}`);
   }
-  const rerun = `${SELF} open --title ${quote(title)} --notion-done`;
-  const [start] = ctx.notion([["start", "--pr", String(pr)], ["pr", String(pr)]], rerun);
+  const rerun = `${SELF} open --title ${quote(title)} ${ctx.done}`;
+  const [start] = ctx.track([["start", "--pr", String(pr)], ["pr", String(pr)]], rerun);
   return { pr, review: start?.ready?.review ?? [] };
 }
 
 function draftBody(ctx) {
-  const page = storyPage(ctx);
+  const page = ctx.tracker.name === "notion" ? storyPage(ctx) : null;
   const body = readFileSync(join(ctx.repo, ".github", "pull_request_template.md"), "utf8")
     .replace(/_\(fill in: the story link[^\n]*\)_/, page ? `https://app.notion.com/p/${page} (${ctx.story})` : "$&")
     .replace(/_\(fill in: specs\/NNN-slug[^\n]*\)_/, ctx.rel);
@@ -329,7 +336,7 @@ function ready(ctx, flags) {
   if (view.code !== 0) throw new Stop(`gh pr view ${ctx.branch}`, `the branch has no PR: run ${SELF} open --title "<title>" first`);
   const pr = JSON.parse(view.stdout);
   settleStory(ctx, flags, pr.title);
-  const rerun = [SELF, "ready", "--body-file", quote(bodyFile), ...(flags.decisions ? ["--decisions", quote(flags.decisions)] : []), "--notion-done"].join(" ");
+  const rerun = [SELF, "ready", "--body-file", quote(bodyFile), ...(flags.decisions ? ["--decisions", quote(flags.decisions)] : []), ctx.done].join(" ");
   // The level against what was built: a promoted level 0/1 that still owes
   // phases stays a draft. A check that crashes (exit 1) is not a refusal.
   const level = ctx.node([LEVEL, "check", "--ready", "--json"], [0, 1, 2]);
@@ -337,7 +344,7 @@ function ready(ctx, flags) {
   const deferredFile = join(ctx.feature.dir, "deferred.md");
   const unfiled = existsSync(deferredFile) ? parseDeferred(readFileSync(deferredFile, "utf8")).filter((e) => e.pending) : [];
   const qa = ["qa", "--pr", String(pr.number)];
-  if (unfiled.length) ctx.notion([["debt", "--pr", String(pr.number)]], rerun, [qa]);
+  if (unfiled.length) ctx.track([["debt", "--pr", String(pr.number)]], rerun, [qa]);
 
   ctx.commitSpecs([ctx.specsRel], `chore(specs): ${ctx.story} feature records`);
   if (existsSync(join(ctx.repo, ".specify", "capabilities")) && ctx.commitStaged([".specify/capabilities"], `chore(specs): ${ctx.story} capability records`)) ctx.push();
@@ -350,17 +357,19 @@ function ready(ctx, flags) {
     ctx.gh("pr", "ready", String(pr.number));
     ctx.did.push("ready");
   }
-  ctx.notion([qa], rerun);
-  ctx.commitSpecs([`${ctx.specsRel}/notion-sync.md`], `chore(specs): ${ctx.story} qa`);
+  const [qaOut] = ctx.track([qa], rerun);
+  ctx.commitSpecs([`${ctx.specsRel}/${ctx.tracker.log}`], `chore(specs): ${ctx.story} qa`);
 
   const head = ctx.git("rev-parse", "HEAD").stdout.trim();
-  const deferred = !existsSync(deferredFile) ? "none" : unfiled.length && flags["notion-done"] ? unfiled.map((e) => e.title).join("; ") : "all filed";
+  const deferred = !existsSync(deferredFile) ? "none" : unfiled.length && (flags["notion-done"] || flags["tracker-done"]) ? unfiled.map((e) => e.title).join("; ") : "all filed";
   writeFileSync(
     join(ctx.feature.dir, "handoff.md"),
     [
       `# Hand-off — ${ctx.feature.name}`,
       `- PR: #${pr.number} ${pr.url} · branch ${ctx.branch} · worktree ${resolve(ctx.repo)} · head ${head}`,
-      `- Notion: story ${storyPage(ctx) ?? ctx.story} · timeline row and epic in ${ctx.rel}/notion-sync.md`,
+      ctx.tracker.name === "github"
+        ? `- Tracker: issue ${qaOut?.url ?? ctx.story} (${ctx.story}) · events in ${ctx.rel}/tracker-sync.md`
+        : `- Notion: story ${storyPage(ctx) ?? ctx.story} · timeline row and epic in ${ctx.rel}/notion-sync.md`,
       `- Open decisions: ${flags.decisions ?? "none"}`,
       `- Deferred: ${deferred}`,
       "",
@@ -437,9 +446,9 @@ function merge(ctx, flags) {
   const { stack: testStack, worktree } = stopTestStack(ctx, cloud ? view.head : view.headRefName);
   const commentFile = join(ctx.feature.dir, "finish-comment.md");
   const hasComment = existsSync(commentFile);
-  const [finish] = ctx.notion([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} --notion-done`);
+  const [finish] = ctx.track([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} ${ctx.done}`);
 
-  const log = `${ctx.specsRel}/notion-sync.md`;
+  const log = `${ctx.specsRel}/${ctx.tracker.log}`;
   const lines = ctx.git("-C", ctx.specsGit, "diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
   const body = ["## Finish log", "", `Merged as ${sha}.`, ...(hasComment ? ["", readFileSync(commentFile, "utf8").trim()] : []), "", ...lines, ""].join("\n");
   // Commit the log to the specs repository first: a rerun after a failed

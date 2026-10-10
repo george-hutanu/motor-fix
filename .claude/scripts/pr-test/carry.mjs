@@ -1,7 +1,7 @@
 // Carry an `agent-review` success over a head that changes documentation only.
 //
 // A commit that adds only documentation after the PR tester passed a commit
-// (the `deferred.md` task URLs after `speckit-notion-sync debt` are the usual
+// (the `deferred.md` task URLs after `speckit-tracker-sync debt` are the usual
 // one) would otherwise cost a full tester lap that judges nothing new. Instead
 // the earlier verdict is carried: the head gets `agent-review` success with the
 // description `carried from <sha>: docs-only change`, and the PR's "Agent

@@ -12,6 +12,11 @@ const MAX_BYTES = 3000;
 
 const principlesOf = (text, pattern) => [...text.matchAll(pattern)].map((m) => `${m[1]}. ${m[2].trim()}`);
 const versionOf = (text, pattern) => text.match(pattern)?.[1];
+/** The constitution is at `major.minor` or later. */
+const atLeast = (text, major, minor) => {
+  const [, a, b] = text.match(/^\*\*Version\*\*: (\d+)\.(\d+)\.\d+/m);
+  return Number(a) > major || (Number(a) === major && Number(b) >= minor);
+};
 
 describe('the constitution card', () => {
   const full = readFileSync(join(memory, 'constitution.md'), 'utf8');
@@ -39,8 +44,38 @@ describe('the constitution card', () => {
       assert.match(text, /<name>\.html/);
       assert.match(text, /structure-check/);
     }
-    const [, minor] = full.match(/^\*\*Version\*\*: 1\.(\d+)\.\d+/m);
-    assert.ok(Number(minor) >= 9);
+    assert.ok(atLeast(full, 1, 9));
+  });
+
+  // @traces 1035-FR-009
+  it('states the main checkout rule under principle VII, in the constitution and the card', () => {
+    const card = readFileSync(CARD, 'utf8');
+    const start = full.indexOf('### VII.');
+    const seventh = full.slice(start, full.indexOf('\n## ', start));
+    const cardLine = card.split('\n').find((line) => line.startsWith('- **VII.'));
+    for (const text of [seventh, cardLine]) {
+      assert.match(text, /main checkout/);
+      assert.match(text, /main-checkout-gate|fast-forward/);
+    }
+    assert.match(cardLine, /main-checkout-gate\.mjs/);
+    assert.match(full, /\| VII main checkout \|[^\n]*main-checkout-gate\.mjs/);
+    assert.ok(atLeast(full, 1, 12));
+  });
+
+  // @traces 1036-FR-017
+  it('tracks the task on its GitHub issue under principle VII, in the constitution and the card', () => {
+    const card = readFileSync(CARD, 'utf8');
+    const start = full.indexOf('### VII.');
+    const seventh = full.slice(start, full.indexOf('\n## ', start));
+    const cardLine = card.split('\n').find((line) => line.startsWith('- **VII.'));
+    for (const text of [seventh, cardLine]) {
+      assert.match(text, /GitHub issue|issue in the private/);
+      assert.match(text, /started on Notion/);
+    }
+    assert.match(seventh, /Project "MotorFix" \(#11\)/);
+    assert.match(seventh, /closed or Done/);
+    assert.doesNotMatch(seventh, /in Notion/);
+    assert.ok(atLeast(full, 2, 0));
   });
 
   it('stays a card', () => {

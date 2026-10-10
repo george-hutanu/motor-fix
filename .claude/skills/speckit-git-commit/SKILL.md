@@ -93,8 +93,8 @@ auto_commit:
 
   It makes the empty `chore(<scope>): ST-<n> start …` commit, pushes, opens
   the draft from the PR template (labels `planning`, type, scope), then runs
-  Notion `start` and `pr <n>`, and prints one JSON line. On a stop, do its
-  `fix`; on `left`, run those events through `speckit-notion-sync`, then its
+  the tracker's `start` and `pr <n>`, and prints one JSON line. On a stop, do its
+  `fix`; on `left`, run those events through `speckit-tracker-sync`, then its
   `then`.
 - `specs/` is not tracked by motor-fix: it is each checkout's clone of the
   private `motor-fix-specs` repo (branch `trunk`). Spec files are committed and
@@ -110,5 +110,5 @@ auto_commit:
 - [ ] Message is a one-line Conventional Commit with a scope, no body, no trailers
 - [ ] Only the intended files staged — no `git add -A` sweeping unrelated work
 - [ ] Pushed to the feature's own branch, not forced, not `main`
-- [ ] On the branch's first commit: story Planning in Notion first, then a draft PR from the template (`--body-file`) linking it, and that PR's link on the story in Notion
+- [ ] On the branch's first commit: story's issue Planning first, then a draft PR from the template (`--body-file`) linking it, and that PR's link on the story's issue
 

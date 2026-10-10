@@ -4,6 +4,8 @@
 // and — when it has gone quiet with nobody holding it — the one fix that gets
 // it moving again. `/speckit-watch` runs it on a loop and dispatches the fixes
 // that need an agent; `--fix` applies the ones that do not.
+// The main checkout's row says whether it is `behind` origin/main (safe fix
+// `ff-main`) or holds tracked edits (`dirty: <files>`, never changed).
 //
 // Everything is derived on each pass from what is already on disk and on
 // GitHub: `git worktree list`, each worktree's `.specify/run-state.json` and
@@ -32,7 +34,7 @@ import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
-import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
+import { ffMainCommand, lockPid, mainCheckoutState, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 import { removeWorktree } from "./worktree-remove.mjs";
 import { branchFeatureDir, locateFeature } from "./lib/feature.mjs";
 
@@ -152,9 +154,24 @@ export function holderOf({ main, self = false, lock, alive, qaLive, claim, thres
   return lock.startsWith("claude agent ") && now - activityAt > threshold * MIN ? "none" : "live";
 }
 
+/**
+ * The main checkout is a mirror of origin/main: a tracked edit there is shown
+ * (never changed), and a clean one behind origin/main gets the fast-forward.
+ * null when it is level, diverged or off main.
+ */
+function mainVerdict(row) {
+  const command = ffMainCommand(row.path);
+  if (row.dirty === null) return { verdict: "blocked", fix: null, reason: "git cannot read the main checkout" };
+  if (row.dirty?.length > 0) return { verdict: `dirty: ${row.dirty.join(", ")}`, fix: null, reason: `${row.dirty.length} tracked file(s) edited; ${command}` };
+  if (row.ahead === 0 && row.behind > 0) return { verdict: "behind", fix: "ff-main", reason: `behind origin/main by ${row.behind}; ${command}` };
+  return null;
+}
+
 export function fixOf(row, { now, thresholds }) {
   const pr = row.pr && row.pr !== "unknown" ? row.pr : null;
   if (row.gitFailed) return { verdict: "blocked", fix: null, reason: "git cannot read this worktree" };
+  const mainOne = row.main ? mainVerdict(row) : null;
+  if (mainOne) return mainOne;
   if (row.phase === "blocked") return { verdict: "blocked", fix: null, reason: "run-state blocked" };
   // A worktree whose PR merged or closed is removed once quiet: the removal
   // backs uncommitted work up, so only commits no remote has withhold it.
@@ -439,6 +456,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       qaRun,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
+    if (w.main) Object.assign(row, mainCheckoutState(w.path));
     // The run's state is asked of GitHub only when it decides the row: a ready
     // handed-off PR still at the head the run tests. Unreadable reads as unfinished.
     if (row.handoff && row.qaRun && pr?.state === "ready" && row.qaRun.head === pr.head && runOf) {
@@ -478,6 +496,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
 /** What the no-agent fixer would act on, in the order it acts: the gate reads this too, so the two cannot disagree. */
 export function dueFixes(report) {
   const due = [];
+  for (const r of report.rows.filter((x) => x.fix === "ff-main" && x.main)) due.push({ fix: "ff-main", path: r.path });
   for (const r of report.rows.filter((x) => x.holder === "dead")) due.push({ fix: "unlock", path: r.path });
   // A merged worktree whose subagent went quiet still carries its session's
   // lock, which the removal refuses while that session lives: release it on
@@ -492,22 +511,24 @@ export function dueFixes(report) {
 }
 
 /**
- * The fixes that need no agent. Never the main worktree; a removal goes
+ * The fixes that need no agent. In the main worktree only the fast-forward
+ * of a clean checkout behind origin/main; a removal goes
  * through worktree-remove.mjs, which backs up first and refuses what it must;
  * a carry writes only a commit status and the PR's Agent review section.
  */
 export function applyFixes(repo, report, { postCarry: post = postCarry, remove = removeWorktree } = {}) {
   const actions = [];
-  const run = (what, args) => {
+  const run = (what, args, cwd = repo) => {
     try {
-      execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+      execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
       actions.push({ what, ok: true });
     } catch (e) {
       actions.push({ what, ok: false, error: String(e.stderr ?? e.message).trim() });
     }
   };
   for (const d of dueFixes(report)) {
-    if (d.fix === "unlock") run(`unlock ${d.path}`, ["worktree", "unlock", d.path]);
+    if (d.fix === "ff-main") run(`ff-main ${d.path}`, ["merge", "--ff-only", "origin/main"], d.path);
+    else if (d.fix === "unlock") run(`unlock ${d.path}`, ["worktree", "unlock", d.path]);
     else if (d.fix === "prune") run(`prune ${d.path}`, ["worktree", "prune"]);
     else if (d.fix === "remove") {
       if (d.unlock) run(`unlock ${d.path}`, ["worktree", "unlock", d.path]);

@@ -133,7 +133,7 @@ const GATES = [
   ['--missing', 'tail.md'],
   ['RUN', 'tail.md'],
   ['stays on Opus', 'tail.md'],
-  ['Notion `finish`', 'tail.md'],
+  ["tracker's `finish`", 'tail.md'],
   // lifecycle-wiring.spec.mjs
   ['node .claude/scripts/lifecycle.mjs ready --body-file', 'hand-off.md'],
   ['node .claude/scripts/lifecycle.mjs merge --pr <n>', 'tail.md'],
@@ -161,7 +161,7 @@ const FORBIDDEN = [
   ['apps/client', 'stale app name'],
   ['git-excluded', 'specs/ is tracked'],
   ['.git/info/exclude', 'specs/ is tracked'],
-  ['Jira', 'the tracker is Notion'],
+  ['Jira', 'the tracker is GitHub issues'],
   ['`mutation-runner` per touched package', 'mutation runs only in CI'],
 ];
 

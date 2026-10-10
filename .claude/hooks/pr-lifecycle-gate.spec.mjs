@@ -239,6 +239,14 @@ describe('PR lifecycle gate — the feature folder', () => {
       point(dir, 'specs/083-sign-in-apple-google');
       assert.equal(prLinked(dir, '83-sign-in-apple-google', 136), true);
     }));
+
+  // @traces 1036-FR-013
+  it('sees the PR link that tracker-sync.md logged', () =>
+    withRepo((dir) => {
+      folder(dir, '1036-github-tracker-lifecycle', { 'tracker-sync.md': '- 2026-10-10 · pr · ST-1036 · PR #335 https://github.com/george-hutanu/motor-fix/pull/335\n' });
+      assert.equal(prLinked(dir, '1036-github-tracker-lifecycle', 335), true);
+      assert.equal(prLinked(dir, '1036-github-tracker-lifecycle', 336), false);
+    }));
 });
 
 describe('PR lifecycle gate — the PR link on the story', () => {
@@ -248,6 +256,13 @@ describe('PR lifecycle gate — the PR link on the story', () => {
       assert.match(why, /PR #6/);
       assert.match(why, /speckit-notion-sync pr/);
     }
+  });
+
+  // @traces 1036-FR-013
+  it('names the GitHub sync first, and the Notion one for a feature that started there', () => {
+    const why = decide(task({ prLinked: false }));
+    assert.match(why, /speckit-tracker-sync pr 6/);
+    assert.match(why, /tracker issue/);
   });
 
   it('asks for the link before the merge', () => {

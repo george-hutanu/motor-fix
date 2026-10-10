@@ -30,7 +30,7 @@
         "strict"
       ],
       "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), and no live watch.mjs --wait holds the repository, print one line telling the session to arm the wait; silent otherwise, and always exits 0",
-      "fingerprint": "d70b4e5e9eaf"
+      "fingerprint": "df3f2fae0d56"
     },
     {
       "id": "session:start:github-identity",
@@ -123,6 +123,19 @@
       "fingerprint": "0e73553405a6"
     },
     {
+      "id": "pre:edit:main-checkout",
+      "event": "PreToolUse",
+      "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+      "script": "main-checkout-gate.mjs",
+      "profiles": [
+        "standard",
+        "strict"
+      ],
+      "description": "Refuse an edit to a file git tracks in the main checkout: it stays a mirror of origin/main, and every change rides a PR from a worktree (SPECKIT_ALLOW_MAIN_EDIT=1 overrides)",
+      "fail_closed": true,
+      "fingerprint": "818aefd96709"
+    },
+    {
       "id": "post:edit:affected-tests",
       "event": "PostToolUse",
       "matcher": "Edit|Write|MultiEdit",
@@ -157,7 +170,7 @@
         "strict"
       ],
       "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head, unless it was handed off to a tail agent), or with a ready PR whose checks and agent review passed but that is not merged",
-      "fingerprint": "da3a36a77134"
+      "fingerprint": "36724e7b7249"
     },
     {
       "id": "stop:telemetry",

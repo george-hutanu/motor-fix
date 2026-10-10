@@ -23,6 +23,7 @@ import { GitHubError, githubClient, MAX_PAGES } from "./github.mjs";
 import * as specsRepo from "../specs-repo.mjs";
 import { folderCache, folderStore, hasStoredFiles, pageLoader } from "./notion-content.mjs";
 import { fileUrl, refsOf, renderPage, resolveRefs, withoutNotion } from "./notion-markdown.mjs";
+import { ADD_ITEM, setFieldsMutation } from "./issues.mjs";
 import { readTracker } from "./notion-read.mjs";
 import { reporter } from "./progress.mjs";
 import { CODE_REPO, closesLine, ISSUE_REPO, OWNER, pullPath, specsClone } from "./repos.mjs";
@@ -544,7 +545,6 @@ const ITEMS = `query Items($id: ID!, $after: String) { node(id: $id) { ... on Pr
 const CREATE_ISSUE =
   "mutation CreateIssue($input: CreateIssueInput!) { createIssue(input: $input) { issue { id databaseId number title body projectItems(first: 20) { nodes { id project { id } } } } } }";
 const USER_ID = "query UserId($login: String!) { user(login: $login) { id } }";
-const ADD_ITEM = "mutation AddItem($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) { item { id } } }";
 
 /** Every Project item: its id, issue number and field values by name. */
 async function projectItems(github, id) {
@@ -561,16 +561,6 @@ async function projectItems(github, id) {
     after = page.pageInfo.endCursor;
   }
   return items;
-}
-
-/** One aliased mutation that sets every listed field of an item. */
-function setFieldsMutation(count) {
-  const vars = Array.from({ length: count }, (_, i) => `, $f${i}: ID!, $v${i}: ProjectV2FieldValue!`).join("");
-  const sets = Array.from(
-    { length: count },
-    (_, i) => `f${i}: updateProjectV2ItemFieldValue(input: { projectId: $projectId, itemId: $itemId, fieldId: $f${i}, value: $v${i} }) { projectV2Item { id } }`,
-  ).join(" ");
-  return `mutation SetFields($projectId: ID!, $itemId: ID!${vars}) { ${sets} }`;
 }
 
 /** What is missing for the import to run, or null. */

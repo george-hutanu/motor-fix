@@ -12,8 +12,9 @@ The size test: A fix is large when it needs its own design or decision, a data
 migration, a different area or epic, or work clearly bigger than the story
 itself. A bullet that names none of these arms is not large: fix it in the PR.
 
-One line per finding, each filed as a Notion To do task before the merge
-(`speckit-notion-sync debt` appends its URL). `.claude/scripts/retro-evidence.mjs`
+One line per finding, each filed as a To do issue in the tracker before the merge
+(`speckit-tracker-sync debt` appends `— Issue: <url>`; `speckit-notion-sync debt`
+and `— Notion: <url>` for a feature that started on Notion). `.claude/scripts/retro-evidence.mjs`
 reads the checkboxes, so an item stays open until someone closes it, and
 `/speckit-retro` reports what is still open.
 

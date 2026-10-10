@@ -55,10 +55,11 @@ export function decideReady(items) {
 }
 
 // Log lines are `- <date> · <event> · …`, some written without the ` · ` after
-// the date. A failed refresh is logged `[NOTION-SYNC PENDING: ready …]`, as a
+// the date. A failed refresh is logged `[NOTION-SYNC PENDING: ready …]` (or
+// TRACKER-SYNC, on GitHub), as a
 // bullet like every other line or bare.
 const EVENT = /^- \d{4}-\d{2}-\d{2}(?: ·)? (\w+)\b/;
-const PENDING_READY = /^(?:- )?\[NOTION-SYNC PENDING: ready\b/;
+const PENDING_READY = /^(?:- )?\[(?:NOTION|TRACKER)-SYNC PENDING: ready\b/;
 
 export function readyLogged(text) {
   let finish = -1;
@@ -68,8 +69,8 @@ export function readyLogged(text) {
     if (event === 'finish') finish = index;
     if (event === 'ready') ready = index;
   });
-  if (finish === -1) return { ok: false, reason: 'no finish line: run `speckit-notion-sync finish` once the PR has merged' };
-  if (ready < finish) return { ok: false, reason: 'no ready line after the last finish: run `notion-ready <epic>` and log it' };
+  if (finish === -1) return { ok: false, reason: 'no finish line: run `speckit-tracker-sync finish` (`speckit-notion-sync finish` for a story started on Notion) once the PR has merged' };
+  if (ready < finish) return { ok: false, reason: 'no ready line after the last finish: run `speckit-tracker-sync ready` (`notion-ready <epic>` on Notion) and log it' };
   return { ok: true, reason: 'ready refreshed after finish' };
 }
 

@@ -13,12 +13,13 @@
 //   node .claude/scripts/debt-tasks.mjs mark <deferred.md> --line <n> --url <notion url>
 //     writes the task's URL onto that bullet, so no later run files it again
 //
-// A bullet already carrying "— Notion: <url>", or ticked `[x]`, is not pending.
+// A bullet already carrying "— Notion: <url>" or "— Issue: <url>", or ticked `[x]`, is not pending.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const SEVERITIES = ["blocker", "high", "medium", "low"];
 const PRIORITY = { blocker: "Highest", high: "High", medium: "Medium", low: "Low" };
-const NOTION = /\s+—\s+Notion:\s+(\S+)\s*$/;
+// The filed task's address: "— Notion: <url>" (Notion) or "— Issue: <url>" (GitHub).
+const NOTION = /\s+—\s+(?:Notion|Issue):\s+(\S+)\s*$/;
 
 export function parseDeferred(markdown) {
   const lines = markdown.split("\n");
@@ -83,11 +84,11 @@ export function taskFor(entry, { story, epic, feature, pr, storyId }) {
   return { line: entry.line, properties, content };
 }
 
-export function markFiled(markdown, line, url) {
+export function markFiled(markdown, line, url, label = "Notion") {
   const lines = markdown.split("\n");
   if (!/^- /.test(lines[line] ?? "")) throw new Error(`line ${line} is not a bullet of deferred.md`);
   if (NOTION.test(lines[line])) return markdown;
-  lines[line] = `${lines[line]} — Notion: ${url}`;
+  lines[line] = `${lines[line]} — ${label}: ${url}`;
   return lines.join("\n");
 }
 

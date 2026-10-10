@@ -2,6 +2,12 @@
 
 Read after phase 17. Then write the report (`report.md`).
 
+The tracker is the story's GitHub issue (`speckit-tracker-sync`, log
+`tracker-sync.md`). A feature that started on Notion (`notion-sync.md`, no
+`tracker-sync.md`) finishes there: read `speckit-notion-sync` and
+`notion-sync.md` wherever these steps name the tracker; `lifecycle.mjs`
+picks the same on its own.
+
 ## Hand-off
 
 When phases 14–17 are done, the review left no CRITICAL/HIGH and the last
@@ -15,14 +21,14 @@ and QA lap is where most of a story's cost went.
    rollback, every box ticked; Agent review stays `Pending.`.
 2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>" [--story ST-<n>]`
    commits and pushes the feature records (phase 17's status line and Spec
-   Delta merge, `notion-sync.md`), files unfiled deferred bullets, runs
-   `pr-body-check.ts`, publishes the body, marks the PR ready, runs Notion
+   Delta merge, `tracker-sync.md`), files unfiled deferred bullets, runs
+   `pr-body-check.ts`, publishes the body, marks the PR ready, runs the tracker's
    `qa` (story and PR label → QA), commits and pushes the `qa` line, and
    writes the note below; in a cloud session it also posts it on the PR as
    a comment whose first line is `<!-- speckit-handoff -->` (git ignores the
    note, and a cloud session resumes on a fresh VM without it). Elsewhere
    the worktree keeps the note and nothing is posted. On a stop, do its `fix` and run it again; on
-   `left`, run those events through `speckit-notion-sync`, then its `then`.
+   `left`, run those events through `speckit-tracker-sync`, then its `then`.
    Its first check is `level.mjs check --ready`: a level 2 or 3 feature
    missing an owed artifact stops with the phases that write it. Run them,
    commit, and run `ready` again.
@@ -42,7 +48,7 @@ and QA lap is where most of a story's cost went.
    ```markdown
    # Hand-off — <feature>
    - PR: #<n> <url> · branch <branch> · worktree <absolute path> · head <sha>
-   - Notion: story <page id> · timeline row and epic in specs/<feature>/notion-sync.md
+   - Tracker: issue <url> (ST-<n>) · events in specs/<feature>/tracker-sync.md (a Notion story's page id and notion-sync.md for a feature that started there)
    - QA run: <id> · head <sha> · lap 1 · <url>
    - Open decisions: <each, with its source file> | none
    - Deferred: <each deferred.md bullet not yet filed (large fixes only, AGENTS.md's size test), or "all filed"> | none
