@@ -97,7 +97,8 @@ export const garageOf = (me: MeDto | null) =>
       null)
     : null;
 
-// How long after its own password change a tab ignores the live sign-out.
+// How long after its own password change a tab asks the server whether a
+// live sign-out ended it, rather than taking the word for it.
 const KEEP_THROUGH_REVOKE_MS = 30_000;
 
 // The signed-in account. The access token lives in this object's memory only;
@@ -294,8 +295,8 @@ export class Session {
   }
 
   // A new password from the dashboard. The server then signs out every
-  // session but this one, and tells them all live: this tab keeps going
-  // through that word while the change is sent and for a while after.
+  // session but this one, and tells them all live: this tab checks that word
+  // with the server while the change is sent and for a while after.
   async changePassword(body: {
     currentPassword?: string;
     newPassword: string;
@@ -310,7 +311,7 @@ export class Session {
     }
   }
 
-  // Whether a "sessions ended" word is this tab's own password change.
+  // Whether a "sessions ended" word may be this tab's own password change.
   keepsThroughRevoke(): boolean {
     return Date.now() < this.keepUntil;
   }

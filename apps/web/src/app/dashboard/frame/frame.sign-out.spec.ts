@@ -39,6 +39,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
     current,
     ended: new Subject<void>(),
     keepsThroughRevoke: jest.fn(() => false),
+    renew: jest.fn(async () => true),
     revoked: jest.fn(() => current.set(null)),
     shown: current,
     signOut: jest.fn(async () => current.set(null)),
@@ -232,12 +233,13 @@ describe('a session ended elsewhere', () => {
 
     expect(live.close).toHaveBeenCalled();
     expect(session.revoked).toHaveBeenCalledTimes(1);
+    expect(session.renew).not.toHaveBeenCalled();
     expect(session.signOut).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenLastCalledWith('/');
   });
 
   // @traces 139-FR-014
-  it('stays signed in through the session.revoked its own password change sent', async () => {
+  it('stays signed in through the session.revoked its own password change sent, once its session still renews', async () => {
     const { live, navigate, session } = await render('driver', '/app/driver');
     session.keepsThroughRevoke.mockReturnValue(true);
     navigate.mockClear();
@@ -249,9 +251,28 @@ describe('a session ended elsewhere', () => {
     });
     await flush();
 
+    expect(session.renew).toHaveBeenCalledTimes(1);
     expect(session.revoked).not.toHaveBeenCalled();
     expect(live.close).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalledWith('/');
+  });
+
+  // @traces 139-FR-014
+  it('still signs out on a session.revoked right after its own password change when its session no longer renews', async () => {
+    const { live, navigate, session } = await render('driver', '/app/driver');
+    session.keepsThroughRevoke.mockReturnValue(true);
+    session.renew.mockResolvedValue(false);
+
+    live.events.next({
+      at: new Date().toISOString(),
+      id: 'event-3',
+      kind: 'session.revoked',
+    });
+    await flush();
+
+    expect(session.revoked).toHaveBeenCalledTimes(1);
+    expect(live.close).toHaveBeenCalled();
+    expect(navigate).toHaveBeenLastCalledWith('/');
   });
 
   it('closes the live connection and opens Home when another tab signed out', async () => {
