@@ -40,6 +40,10 @@ async function sessionEndsWhileWorking(page: Page) {
   await page.route('**/api/v1/push-subscriptions/key', (route) =>
     route.fulfill({ json: { publicKey: null } }),
   );
+  // The dashboard reads the account's consents on load: none recorded.
+  await page.route('**/api/v1/me/consents', (route) =>
+    route.fulfill({ json: { accepted: [], analytics: null } }),
+  );
   await page.route('**/api/v1/notifications/unread-count', (route) =>
     route.fulfill({ json: { count: 0 } }),
   );

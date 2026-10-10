@@ -69,6 +69,12 @@ export type { PhoneChangeControllerConfirm$Params as PhoneChangeControllerConfir
 export { phoneChangeControllerConfirm as phoneChangeControllerConfirm } from './fn/me/phone-change-controller-confirm';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
+export type { ConsentsControllerRecord$Params as ConsentsControllerRecord$Params } from './fn/consents/consents-controller-record';
+export { consentsControllerRecord as consentsControllerRecord } from './fn/consents/consents-controller-record';
+export type { ConsentsControllerMine$Params as ConsentsControllerMine$Params } from './fn/consents/consents-controller-mine';
+export { consentsControllerMine as consentsControllerMine } from './fn/consents/consents-controller-mine';
+export type { ConsentsControllerRecordMine$Params as ConsentsControllerRecordMine$Params } from './fn/consents/consents-controller-record-mine';
+export { consentsControllerRecordMine as consentsControllerRecordMine } from './fn/consents/consents-controller-record-mine';
 export type { BellControllerList$Params as BellControllerList$Params } from './fn/notifications/bell-controller-list';
 export { bellControllerList as bellControllerList } from './fn/notifications/bell-controller-list';
 export type { BellControllerUnreadCount$Params as BellControllerUnreadCount$Params } from './fn/notifications/bell-controller-unread-count';

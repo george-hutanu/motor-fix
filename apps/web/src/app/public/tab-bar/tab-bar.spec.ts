@@ -160,14 +160,17 @@ describe('the public tab bar', () => {
     expect(page().textContent).toContain('Pagina vine în curând.');
   });
 
-  it('keeps every public screen in a main landmark, the bar after it', async () => {
+  it('keeps every public screen in a main landmark, the bar after it and the footer', async () => {
     for (const address of ['/ro', '/ro/garages', '/ro/account']) {
       await open(address);
       const main = page().querySelectorAll('main');
 
       expect(main).toHaveLength(1);
       expect(main[0].querySelector('mf-public-tab-bar')).toBeNull();
-      expect(main[0].nextElementSibling?.tagName).toBe('MF-PUBLIC-TAB-BAR');
+      expect(main[0].nextElementSibling?.tagName).toBe('MF-PUBLIC-FOOTER');
+      expect(
+        page().querySelector('mf-public-frame > mf-public-tab-bar'),
+      ).not.toBeNull();
       expect(main[0].textContent?.trim()).not.toBe('');
     }
   });

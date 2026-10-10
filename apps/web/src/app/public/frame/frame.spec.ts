@@ -125,3 +125,31 @@ describe('the public site bar', () => {
     expect(css).toMatch(/overflow-x: clip/);
   });
 });
+
+// @traces 244-FR-002 244-FR-006
+describe('the public frame around the consent bar', () => {
+  it('puts the footer and the consent bar after the page and before the tab bar', async () => {
+    await open('/ro');
+
+    const order = [
+      ...((harness.fixture.nativeElement as HTMLElement).querySelector(
+        'mf-public-frame',
+      )?.children ?? []),
+    ].map((child) => child.tagName.toLowerCase());
+    expect(order.slice(order.indexOf('main'))).toEqual([
+      'main',
+      'mf-public-footer',
+      'mf-consent-bar',
+      'mf-public-tab-bar',
+    ]);
+  });
+
+  it('gives the tab bar a height on a phone for the consent bar to sit on, none without one', () => {
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8');
+
+    expect(css).toMatch(
+      /@media \(max-width: 767\.98px\)\s*\{\s*:host\s*\{\s*--tab-bar:/,
+    );
+    expect(css).toMatch(/:host\(\.no-tab-bar\)\s*\{\s*--tab-bar: 0px/);
+  });
+});

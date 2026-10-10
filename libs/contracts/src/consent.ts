@@ -7,3 +7,13 @@ export const CURRENT_CONSENT = {
   privacyVersion: PRIVACY_VERSION,
   termsVersion: TERMS_VERSION,
 } as const;
+
+// The analytics consent text's version: a new date with each approved change
+// of the bar's or the dialog's wording asks every visitor again. A choice
+// older than the age below is asked again too.
+export const ANALYTICS_CONSENT_VERSION = '2026-10-10';
+export const ANALYTICS_CONSENT_MAX_AGE_DAYS = 365;
+
+// What an analytics choice can say: "withdrawn" is "granted" turned off later.
+export const CONSENT_DECISIONS = ['granted', 'refused', 'withdrawn'] as const;
+export type ConsentDecision = (typeof CONSENT_DECISIONS)[number];
