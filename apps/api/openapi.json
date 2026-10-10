@@ -1995,6 +1995,67 @@
         ]
       }
     },
+    "/api/v1/garage/requests/{id}/decline": {
+      "post": {
+        "operationId": "GarageRequestsController_decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageRecipientDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a missing or unknown reason, a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic who may not answer quotes"
+          },
+          "404": {
+            "description": "not_found: not sent to this garage"
+          },
+          "409": {
+            "description": "already_answered: the garage answered already; request_not_open: the request, the garage’s row or the garage is closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decline a request with one of the four reasons",
+        "tags": [
+          "garage-requests"
+        ]
+      }
+    },
     "/api/v1/quote-requests": {
       "post": {
         "operationId": "QuoteRequestsController_send",
@@ -6680,6 +6741,16 @@
             "format": "date-time",
             "nullable": true
           },
+          "declineReason": {
+            "type": "string",
+            "enum": [
+              "fully_booked",
+              "job_not_done",
+              "make_model_engine_not_done",
+              "need_to_see_car"
+            ],
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6690,6 +6761,7 @@
           "garage",
           "status",
           "answeredAt",
+          "declineReason",
           "createdAt"
         ]
       },
@@ -7226,6 +7298,7 @@
             "type": "string",
             "description": "Set on the rows of a closed read",
             "enum": [
+              "declined",
               "expired",
               "garage_suspended",
               "cancelled",
@@ -7588,6 +7661,7 @@
             "type": "string",
             "description": "Set on the rows of a closed read",
             "enum": [
+              "declined",
               "expired",
               "garage_suspended",
               "cancelled",
@@ -7649,6 +7723,23 @@
           "car",
           "description",
           "booking"
+        ]
+      },
+      "DeclineRequestDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "fully_booked",
+              "job_not_done",
+              "make_model_engine_not_done",
+              "need_to_see_car"
+            ]
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "CreateQuoteRequestDto": {

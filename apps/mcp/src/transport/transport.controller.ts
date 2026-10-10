@@ -3,13 +3,16 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   AccountLoader,
+  AuditService,
   type createPrisma,
   DaySheetService,
+  DeclineService,
   GarageFiguresService,
   GarageRequestsService,
   GarageScheduleService,
   MAINTENANCE,
   type MaintenanceReader,
+  outbox,
   PRISMA,
 } from '@motor-fix/domain';
 import {
@@ -82,6 +85,7 @@ export class TransportController {
         )?.enabled ?? true,
       garage: {
         daySheet: new DaySheetService(prisma),
+        decline: new DeclineService(prisma, new AuditService(), outbox),
         figures: new GarageFiguresService(prisma),
         requests: new GarageRequestsService(prisma),
         schedule: new GarageScheduleService(prisma),

@@ -210,8 +210,9 @@ export class GarageRequestsService {
   }
 
   // The rows closed for this garage in the last 24 hours, newest first,
-  // one page. A recipient has no close column: the close time is its newest
-  // status move, else the request's, else when it was sent to the garage.
+  // one page. A decline closes at declined_at. Otherwise a recipient has no
+  // close column: the close time is its newest status move, else the
+  // request's, else when it was sent to the garage.
   private async closed(garageId: string): Promise<GarageRequestListDto> {
     const hits = await this.prisma.$queryRaw<
       { closed_at: Date; id: string; total: bigint }[]
@@ -220,7 +221,8 @@ export class GarageRequestsService {
       FROM request_recipient rr
       JOIN quote_request qr ON qr.id = rr.request_id
       CROSS JOIN LATERAL (
-        SELECT COALESCE(
+        SELECT CASE WHEN rr.status = 'declined' THEN rr.declined_at
+        ELSE COALESCE(
           (SELECT max(a.at) FROM activity_log a
             WHERE a.subject_type = 'request_recipient'
               AND a.subject_id = rr.id AND a.field = 'status'),
@@ -228,11 +230,11 @@ export class GarageRequestsService {
             WHERE a.subject_type = 'quote_request'
               AND a.subject_id = qr.id AND a.field = 'status'),
           rr.created_at
-        ) AS closed_at
+        ) END AS closed_at
       ) c
       WHERE rr.garage_id = ${garageId}::uuid
         AND (
-          rr.status IN ('expired', 'closed')
+          rr.status IN ('expired', 'closed', 'declined')
           OR (rr.status = 'waiting' AND qr.status NOT IN ('sent', 'quoted'))
         )
         AND c.closed_at > now() - interval '24 hours'

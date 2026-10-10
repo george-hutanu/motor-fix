@@ -108,15 +108,22 @@ test.describe('the brand picker @seeded', () => {
   test('moves to the next brand within 5.5 s, and stays put after a tap', async ({
     page,
   }) => {
+    // The page's own clock: a loaded runner delays real timers past any
+    // margin, so the test moves time itself rather than sleep through it.
+    await page.clock.install();
     await ready(page, '/ro');
     const second = picker(page).getByRole('radio').nth(1);
 
+    // The cycle starts at hydration, before ready() returns: 5.5 s of the
+    // page's time from here holds the first move; the short wait after is
+    // only the render.
+    await page.clock.runFor(5500);
     await expect(second).toHaveAttribute('aria-checked', 'true', {
-      timeout: 5500,
+      timeout: 2000,
     });
 
     await tile(page, 'Dacia').click();
-    await page.waitForTimeout(12_000);
+    await page.clock.runFor(12_000);
     await expect(tile(page, 'Dacia')).toHaveAttribute('aria-checked', 'true');
   });
 

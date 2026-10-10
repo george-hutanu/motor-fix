@@ -12,6 +12,10 @@ export interface ToolError {
 }
 
 const MESSAGES: Record<string, Record<Language, string>> = {
+  already_answered: {
+    en: 'Someone has already answered this request.',
+    ro: 'Altcineva a răspuns deja la această cerere.',
+  },
   already_decided: {
     en: 'This has already been decided.',
     ro: 'Acest lucru a fost deja hotărât.',
@@ -40,6 +44,10 @@ const MESSAGES: Record<string, Record<Language, string>> = {
     en: 'There was no activity in this period.',
     ro: 'Nu a fost nicio activitate în această perioadă.',
   },
+  forbidden: {
+    en: 'The person is not allowed to do this.',
+    ro: 'Persoana nu are dreptul să facă acest lucru.',
+  },
   internal_error: {
     en: 'Something went wrong. Try again later.',
     ro: 'Ceva nu a mers. Încearcă din nou mai târziu.',
@@ -59,6 +67,10 @@ const MESSAGES: Record<string, Record<Language, string>> = {
   not_found: {
     en: 'Not found.',
     ro: 'Nu a fost găsit.',
+  },
+  request_not_open: {
+    en: 'The request is no longer open.',
+    ro: 'Cererea nu mai este deschisă.',
   },
   service_unavailable: {
     en: 'MotorFix is not available right now. Try again later.',

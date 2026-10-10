@@ -98,6 +98,7 @@ const sent = (names: string[]): RequestDto =>
     recipients: names.map((name, i) => ({
       answeredAt: null,
       createdAt: '2026-10-09T09:00:00.000Z',
+      declineReason: null,
       garage: { id: `g-${i}`, name, slug: `g-${i}` },
       id: `r-${i}`,
       status: 'waiting',
