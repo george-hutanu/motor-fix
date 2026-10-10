@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, ready } from './accounts.js';
+import { ACCOUNTS, ownAddress, ready } from './accounts.js';
 import { test } from './fixtures.js';
 
 type Axe = {
@@ -33,18 +33,6 @@ const surface = (page: Page, name: string) =>
 const fresh = () =>
   `nou-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
 
-let addresses = 0;
-// Sign-up is limited per address per hour, and every test here comes from
-// this machine: each test signs up from an address of its own (TEST-NET-3).
-async function ownAddress(page: Page) {
-  const address = `203.0.113.${(Date.now() + ++addresses) % 250}`;
-  await page.route('**/api/v1/auth/sign-up', (route) =>
-    route.continue({
-      headers: { ...route.request().headers(), 'x-forwarded-for': address },
-    }),
-  );
-}
-
 async function openSignUp(page: Page, language: 'ro' | 'en' = 'ro') {
   const titles = TITLE[language];
   await page.getByRole('button', { exact: true, name: titles.signIn }).click();
@@ -62,7 +50,7 @@ test.describe('creating an account for real @seeded', () => {
   test('a visitor creates a driver account from Home and lands signed in on the driver dashboard', async ({
     page,
   }) => {
-    await ownAddress(page);
+    await ownAddress(page, '203.0.113');
     await ready(page, '/ro');
     const form = await openSignUp(page);
     await expect(page).toHaveURL(/\/ro\/?$/);
@@ -88,7 +76,7 @@ test.describe('creating an account for real @seeded', () => {
   test('an e-mail that is taken says so next to the button, and the typed name stays', async ({
     page,
   }) => {
-    await ownAddress(page);
+    await ownAddress(page, '203.0.113');
     await ready(page, '/ro');
     const form = await openSignUp(page);
 
@@ -111,7 +99,7 @@ test.describe('creating an account for real @seeded', () => {
   test('a common password is refused under the password field', async ({
     page,
   }) => {
-    await ownAddress(page);
+    await ownAddress(page, '203.0.113');
     await ready(page, '/ro');
     const form = await openSignUp(page);
 
@@ -130,7 +118,7 @@ test.describe('creating an account for real @seeded', () => {
   });
 
   test('a double tap creates one account', async ({ page }) => {
-    await ownAddress(page);
+    await ownAddress(page, '203.0.113');
     const calls: string[] = [];
     page.on('request', (r) => {
       if (r.url().includes('/api/v1/auth/sign-up')) calls.push(r.url());
@@ -152,7 +140,7 @@ test.describe('creating an account for real @seeded', () => {
   test('the dialog reads English and creates the account in English', async ({
     page,
   }) => {
-    await ownAddress(page);
+    await ownAddress(page, '203.0.113');
     await ready(page, '/en/garages');
     const form = await openSignUp(page, 'en');
 

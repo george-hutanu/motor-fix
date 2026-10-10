@@ -1,9 +1,10 @@
 ---
 capability: cockpit-charts
-updated: 2026-10-04
+updated: 2026-10-10
 features:
   - 052-chart-style
   - 470-chart-reduced-motion
+  - 508-chart-motion-tests
 ---
 
 # Capability: Cockpit charts
@@ -103,5 +104,17 @@ _From 470-chart-reduced-motion._
 ### 470-FR-004 — The chart unit and end-to-end tests that predate 470 MUST stay green, and the "grows the bars in" end-to-end test MUST NOT gain an injected style beyond the one it carried before 470.
 
 _From 470-chart-reduced-motion._
+
+### 508-FR-001 — The test "grows the bars in without reduced motion" MUST take its "early" reading while the growth is demonstrably under way or not yet started, and its "late" reading after the growth has demonstrably completed, with neither moment chosen by a fixed wall-clock wait; it MUST still assert the two readings differ.
+
+_From 508-chart-motion-tests._
+
+### 508-FR-002 — The test "follows reduced motion switched while the charts are on screen" MUST switch reduced motion on at a moment it has established lies inside the retried chart's growth, and MUST still assert that the chart then differs from its growing state and stays unchanged afterwards.
+
+_From 508-chart-motion-tests._
+
+### 508-FR-003 — The change MUST touch only `apps/web-e2e/src/charts.spec.ts` (and, if needed, its fixtures): no product code, no new injected style beyond the one the "grows the bars in" test already carries (470-FR-004), and every other test in the file unchanged in behaviour.
+
+_From 508-chart-motion-tests._
 
 ## Retired

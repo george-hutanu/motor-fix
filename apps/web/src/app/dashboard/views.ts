@@ -3,6 +3,7 @@ import type { Routes } from '@angular/router';
 
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
+import type { EmptyIcon } from './empty-state/empty-state';
 import { PushView } from './push-view/push-view';
 import { garageOf, Session } from './session';
 import { SettingsView } from './settings-view/settings-view';
@@ -33,6 +34,9 @@ export interface DashboardView {
   feature?: string;
   // What will appear here, until its story builds the body.
   empty?: string;
+  // ...or, for a view whose story says what it shows with nothing yet, its
+  // empty state: the icon, the text and, if any, the label of a link to Home.
+  emptyState?: { icon: EmptyIcon; text: string; action?: string };
   // The view's body carries this device's push panel.
   push?: boolean;
   // ...and, under it, the person's staff notification choices.
@@ -153,6 +157,7 @@ export const DASHBOARDS: Record<
       },
       {
         capability: 'driver.reviews',
+        emptyState: { icon: 'star', text: 'driver.empty.reviews' },
         label: 'shell.frame.nav.driver.reviews',
         path: 'reviews',
         tab: 'shell.frame.tab.reviews',
@@ -160,6 +165,11 @@ export const DASHBOARDS: Record<
       },
       {
         capability: 'driver.saved_garages',
+        emptyState: {
+          action: 'driver.empty.findOthers',
+          icon: 'bookmark',
+          text: 'driver.empty.saved',
+        },
         label: 'shell.frame.nav.driver.savedGarages',
         path: 'saved',
         tab: 'shell.frame.tab.saved',

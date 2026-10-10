@@ -406,8 +406,9 @@ describe('Frame', () => {
     await harness.navigateByUrl('/app/driver/cars');
     await settle(harness);
     expect(title(element)).toBe('Mașinile mele');
+    // @traces 030-FR-009
     expect(element.querySelector('main')?.textContent).toContain(
-      'Nimic aici încă.',
+      'Adaugă prima ta mașină. O folosim ca să‑ți arătăm service‑urile potrivite și să‑ți amintim de ITP.',
     );
   });
 
