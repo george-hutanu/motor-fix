@@ -9,11 +9,11 @@ apply, write N/A and the reason. Comments like this one may stay.
 
 _(fill in: what this PR does and why, in two or three sentences)_
 
-## Notion story
+## Story
 
-_(fill in: the story link, e.g. https://app.notion.com/p/… (ST-n))_
+_(fill in: the story link, e.g. https://github.com/george-hutanu/motor-fix-specs/issues/<n> (ST-n))_
 
-<!-- The tracker issue (private george-hutanu/motor-fix-specs) this PR closes when it merges into main; leave the line as it is until the tracker is the GitHub Project. -->
+<!-- The story's issue (private george-hutanu/motor-fix-specs) this PR closes when it merges into main; speckit-tracker-sync pr fills in its number. -->
 Closes george-hutanu/motor-fix-specs#
 
 ## Spec folder
@@ -49,7 +49,7 @@ _(fill in: what could break, and how to undo it)_
 - [ ] Title is a Conventional Commit with a scope: `type(scope): ST-n subject`
 - [ ] Tests were written first and failed before the code
 - [ ] Design checked: `specs/<feature>/design.md`, or the story has no screens
-- [ ] Notion in sync: the story is Planning, then Implementing, QA once ready, Done on merge
+- [ ] Tracker in sync: the story's issue is Planning, then Implementing, QA once ready, Done on merge
 
 ## Agent review
 

@@ -20,6 +20,11 @@ $ARGUMENTS
 The epic is the text of `$ARGUMENTS` without flags; default **Foundations**.
 `--dry-run` reports what would change and writes nothing.
 
+On the GitHub tracker readiness is the `ready to work` label, refreshed by
+`speckit-tracker-sync ready` (its §4), which applies the same rule and the
+same hold review read here. This skill serves only a feature that started on
+Notion and finishes there.
+
 ## Where things live
 
 | What | Notion |

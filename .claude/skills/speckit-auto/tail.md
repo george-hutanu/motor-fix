@@ -2,6 +2,12 @@
 
 Read by the session that receives `NEXT: tail #<n>`, and by the tail agent, after `SKILL.md`.
 
+The tracker is the story's GitHub issue (`speckit-tracker-sync`, log
+`tracker-sync.md`). A feature that started on Notion (`notion-sync.md`, no
+`tracker-sync.md`) finishes there: read `speckit-notion-sync` and
+`notion-sync.md` wherever these steps name the tracker; `lifecycle.mjs`
+picks the same on its own.
+
 ## The wait
 
 No agent is alive while CI and the QA run work. The session that receives
@@ -81,38 +87,38 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    - **A failing lap** (blocking findings, a failing check, or a medium or
      low finding whose fix is small or medium by the size test in AGENTS.md,
      "Technical debt a review defers"): fix every one, tests first, commit
-     and push the fix, then the lap's report and any new `notion-sync.md`
+     and push the fix, then the lap's report and any new `tracker-sync.md`
      lines through the specs repo
      (`node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`), then
      `node .claude/scripts/run-state.mjs repair`, which counts the lap in
      `.specify/run-state.json` so the cap holds across tails. When it exits 1
-     the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
+     the run is blocked (`repair-loop-exceeded`): `speckit-tracker-sync
      blocked` with the open findings, the same as a PR comment, and stop: the
      PR is never merged at the cap. Otherwise dispatch the new head's run
      with `--no-wait` as above, rewrite the note's `QA run:` line, post it
      (`lifecycle.mjs handoff --pr <n>`), and end with
      `NEXT: tail #<n> after QA run <id>`.
-4. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
+4. After a passing lap, `speckit-tracker-sync debt` files every deferred bullet
    not yet filed (reviewers' and the tester's; each a large fix by the size
-   test) as a To do task in Notion. Its
+   test) as a To do issue in the tracker. Its
    URLs change `deferred.md`, which lives in the specs repo: commit and push
    it there (`node .claude/scripts/specs-repo.mjs commit "<message>" --
    <feature>`). The PR head does not change, so no new lap or carry is needed.
 5. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), write
-   `specs/<feature>/finish-comment.md` (`speckit-notion-sync` §2e) when there
+   `specs/<feature>/finish-comment.md` (`speckit-tracker-sync` §5) when there
    is something to record, then `node .claude/scripts/lifecycle.mjs merge --pr <n>`
    (in a cloud session it merges over REST, `gh api -X PUT …/pulls/<n>/merge`;
    never merge past a blocking finding of the tester's, which the workflow's
    status there does not carry).
    It refuses exactly when the merge gate does (its message is the `fix`);
-   otherwise it merges, runs Notion `finish`, posts one finish comment on the
-   merged PR, restores `notion-sync.md` and deletes `handoff.md`. On `left`,
-   run those events through `speckit-notion-sync`, then its `then`.
-6. Run the hold review on its `review` candidates (`speckit-notion-sync` §2d)
+   otherwise it merges, runs the tracker's `finish`, posts one finish comment on the
+   merged PR, restores `tracker-sync.md` and deletes `handoff.md`. On `left`,
+   run those events through `speckit-tracker-sync`, then its `then`.
+6. Run the hold review on its `review` candidates (`speckit-tracker-sync` §4)
    and the archive check (`speckit-archive`, Phase 4 step 5); when it exits 1,
-   do what its reason says and check again, once. A Notion write still PENDING
-   is retried by the next `speckit-notion-sync` run and does not hold the
+   do what its reason says and check again, once. A tracker write still PENDING
+   is retried by the next `speckit-tracker-sync` run and does not hold the
    tail. Last, when the merge result's `worktree.removed` is false because
    it was this tail's own checkout, `ExitWorktree` (keep) and run
    `node <worktree>/.claude/scripts/worktree-remove.mjs <worktree>` from the
@@ -120,10 +126,10 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    removes it later. Reply with the envelope: `PR: #<n> merged <sha7>`.
 
 A PR with no checks, or one still failing at the limit, is a Hard Stop: it
-stays ready and unmerged, the story goes to Blocked (`speckit-notion-sync
+stays ready and unmerged, the story goes to Blocked (`speckit-tracker-sync
 blocked <reason>`), and the reply says which check and why. Every Hard Stop
 does the same: record `run-state.mjs set --status blocked --blocking <condition>`,
-then `speckit-notion-sync blocked <condition>`; a resumed tail starts with
-`speckit-notion-sync unblock`.
+then `speckit-tracker-sync blocked <condition>`; a resumed tail starts with
+`speckit-tracker-sync unblock`.
 
 None of these steps asks the user.

@@ -128,25 +128,25 @@ tail agent), and commit nothing.
    the feature, and archiving without one loses the reason it was accepted.
 3. Commit `.specify/capabilities/` on the branch as
    `chore: archive <feature> into the <capability> capability` and push; commit
-   the feature folder (status line, `notion-sync.md` as it stands) to the specs
+   the feature folder (status line, `tracker-sync.md` as it stands) to the specs
    repository: `node .claude/scripts/specs-repo.mjs commit "chore(specs): ST-<n> archive" -- <feature>`.
-4. Invoke `speckit-notion-sync finish` (from QA, after the PR tester passed and
-   the PR merged): the story goes to Done, its timeline row to Merged, and the
+4. Invoke `speckit-tracker-sync finish` (from QA, after the PR tester passed and
+   the PR merged): the story's issue goes to Done and closes, and the
    epic to Done once every story in it is Done. Skip this if the merge to
    `main` already ran it. Its log lines go into one comment on the merged PR,
-   not a commit (`speckit-notion-sync`, §3).
+   not a commit (`speckit-tracker-sync`, §6).
 5. The archive check, over the log and the merged PR's comments, must exit 0:
 
    ```bash
-   { cat specs/<feature>/notion-sync.md; gh pr view <n> --json comments --jq '.comments[].body'; } \
+   { cat specs/<feature>/tracker-sync.md; gh pr view <n> --json comments --jq '.comments[].body'; } \
      | node .claude/scripts/notion-ready.mjs check -
    ```
 
    Ready to work was refreshed (or logged PENDING) after the last `finish`.
-   When it exits 1, do what its reason says — usually run `notion-ready <epic>`
-   and add the line to the PR's finish comment (`speckit-notion-sync`, §2d) —
+   When it exits 1, do what its reason says — usually run `speckit-tracker-sync ready`
+   and add the line to the PR's finish comment (`speckit-tracker-sync`, §4) —
    and check again. The feature is not closed until it passes. A feature with
-   no PR checks the file alone: `notion-ready.mjs check specs/<feature>/notion-sync.md`.
+   no PR checks the file alone: `notion-ready.mjs check specs/<feature>/tracker-sync.md`.
 
 ## What this never does
 

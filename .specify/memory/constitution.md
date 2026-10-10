@@ -1,5 +1,24 @@
 <!--
-Sync Impact Report (v1.12.0)
+Sync Impact Report (v2.0.0)
+- Version change: 1.12.0 → 2.0.0 (MAJOR: Principle VII redefines where a
+  task is tracked — its issue in the private george-hutanu/motor-fix-specs
+  and its item in GitHub Project "MotorFix" (#11), no longer Notion; the
+  task's PR is written to the issue's PR field and its Closes line; a
+  deferred large fix is filed as an issue; a task that started on Notion
+  finishes there)
+- Source: ST-1036 (run the task lifecycle on GitHub issues and the MotorFix
+  Project instead of Notion).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line and VII
+  - ✅ CLAUDE.local.md — the version line and the gates table
+  - ✅ AGENTS.md — "The tracker is GitHub" section and lifecycle steps
+  - ✅ .github/pull_request_template.md, scripts/pr-body-check.ts — "## Story"
+  - ✅ .claude/scripts/tracker-sync.mjs, lifecycle.mjs,
+    hooks/pr-lifecycle-gate.mjs; .claude/skills/speckit-tracker-sync and the
+    lifecycle skills; .specify/extensions.yml
+  - ✅ .claude/scripts/constitution-card.spec.mjs — keeps them agreeing
+
+Previous report (v1.12.0)
 - Version change: 1.11.3 → 1.12.0 (MINOR: Principle VII adds a rule — the
   main checkout is a mirror of `origin/main`, holds no edits to tracked
   files, and is fast-forwarded by the orchestrating session after each
@@ -443,13 +462,13 @@ notifications in step, even when Redis is down.
 Every task, current or future, runs this lifecycle on its own, and no step
 waits for the owner:
 
-1. Set the task Planning in Notion (Implementing once `/speckit-implement`
-   starts), then open a draft PR for its branch,
+1. Set the task Planning on its tracker issue (Implementing once
+   `/speckit-implement` starts), then open a draft PR for its branch,
    labelled `planning` until `/speckit-implement` starts and `in development`
    from then on,
-   and write that PR's link onto the task's own `PR` property in Notion. Every
-   story and task links its own PR; one opened later for the same task is
-   added as a comment, never in place of the first.
+   and write that PR's link onto the issue's own `PR` field and the PR's
+   `Closes` line. Every story and task links its own PR; one opened later for
+   the same task is added as a comment, never in place of the first.
 2. Push every commit to that branch as the work goes: never forced, never to
    `main`.
 3. When the work is done (tests, typecheck and lint green, review with no
@@ -469,12 +488,18 @@ waits for the owner:
    `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
 6. Merge the PR when `agent-review` is success on its head commit and every
    other check passes; a pending, failing or missing check is never merged.
-   Then set the task Done. A PR opened by Dependabot (read from its author on
+   Then set the task Done and close its issue. A PR opened by Dependabot (read from its author on
    GitHub) whose every commit Dependabot wrote skips step 5 and merges on every other check green with no
    `agent-review` status; a pending, failing or missing check still refuses it.
    The orchestrating session then fast-forwards the main checkout
    (`git -C <main> merge --ff-only origin/main`; `/speckit-watch`'s `ff-main`
    safe fix does it when the watch reports it `behind`).
+
+The tracker is GitHub: each story, task and epic is an issue in the private
+`george-hutanu/motor-fix-specs`, its ST or EP id first in the title, with its
+Status and dates in Project "MotorFix" (#11). Ready to work is the `ready to
+work` label, on a To do issue whose every dependency is closed or Done. A task
+that started on Notion before this finishes there.
 
 The main checkout is a mirror of `origin/main`: it holds no edits to tracked
 files, and every change rides a PR from a worktree. `SPECKIT_ALLOW_MAIN_EDIT=1`
@@ -586,7 +611,7 @@ prompt-level, and `spec-reviewer` is where deviations surface.
   harden, QA or PR-tester laps is different: a small or medium fix is made
   in the same PR, even when the problem existed before or sits next to the
   change; only a large fix is deferred (`specs/<feature>/deferred.md` and a
-  Notion tech-debt task). A fix is large when it needs its own design or
+  tech-debt issue in the tracker). A fix is large when it needs its own design or
   decision, a data migration, a different area or epic, or work clearly
   bigger than the story itself.
 - **Ambiguity.** Implement the reading the wording and surrounding code
@@ -631,4 +656,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.12.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-10
+**Version**: 2.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-10

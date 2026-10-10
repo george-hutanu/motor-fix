@@ -31,6 +31,7 @@ const MODELS = {
   'speckit-design-check': 'sonnet',
   'speckit-context': 'sonnet',
   'speckit-notion-sync': 'sonnet',
+  'speckit-tracker-sync': 'sonnet',
   'speckit-agent-context-update': 'sonnet',
   'speckit-archive': 'sonnet',
   'speckit-doctor': 'sonnet',
