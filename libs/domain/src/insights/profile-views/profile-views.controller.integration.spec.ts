@@ -477,7 +477,8 @@ describe('what a view leaves in Redis', () => {
     expect(everything).not.toContain('127.0.0.1');
   });
 
-  it("keeps one secret for the day, gone with the day's counters", async () => {
+  // @traces 143-FR-004
+  it('keeps one secret for the day, discarded when the Bucharest day ends', async () => {
     at('2030-06-14T08:00:00Z');
     const g = await garage();
 
@@ -489,8 +490,7 @@ describe('what a view leaves in Redis', () => {
     expect(await redis.get('insights:pv:secret:2030-06-14')).toBe(first);
     expect(
       Number(await redis.call('EXPIRETIME', 'insights:pv:secret:2030-06-14')),
-    ).toBeLessThanOrEqual(new Date('2030-06-16T21:00:00Z').getTime() / 1000);
-    expect(await redis.ttl('insights:pv:secret:2030-06-14')).toBeGreaterThan(0);
+    ).toBe(new Date('2030-06-14T21:00:00Z').getTime() / 1000);
   });
 
   it('gives the same visitor a new key on the next day', async () => {

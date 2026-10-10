@@ -134,7 +134,7 @@ describe('the night job', () => {
   });
 
   // @traces 143-FR-011 143-FR-012
-  it('keeps the profile views up to three times, a minute apart and doubling', async () => {
+  it('runs the profile views once and retries them three times, a minute apart and doubling', async () => {
     const app = await boot();
 
     const views = await queue.getJobScheduler('profile-views');
@@ -146,7 +146,7 @@ describe('the night job', () => {
       tz: 'Europe/Bucharest',
     });
     expect(views?.template?.opts).toMatchObject({
-      attempts: 3,
+      attempts: 4,
       backoff: { delay: 60_000, type: 'exponential' },
     });
   });

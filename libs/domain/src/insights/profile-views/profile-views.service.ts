@@ -138,7 +138,7 @@ export class ProfileViewsService {
     const keys = counterKeys(garageId, source, now);
     const expiresAt = Math.floor(keys.expiresAt.getTime() / 1000);
     const accountId = visitor.actor?.accountId;
-    const secret = accountId ? '' : await this.secret(localDay(now), expiresAt);
+    const secret = accountId ? '' : await this.secret(localDay(now));
     const key = visitorKey({ ...visitor, accountId }, secret);
     if (!key) return 'no_key';
     const replies =
@@ -164,9 +164,11 @@ export class ProfileViewsService {
     return members + mechanics > 0;
   }
 
-  // One random secret per day, written by whichever view comes first.
-  private async secret(day: string, expiresAt: number): Promise<string> {
+  // One random secret per day, written by whichever view comes first and
+  // discarded when the Bucharest day ends (FR-004).
+  private async secret(day: string): Promise<string> {
     const key = `insights:pv:secret:${day}`;
+    const expiresAt = Math.floor(atLocal(addDays(day, 1), 0).getTime() / 1000);
     const replies =
       (await this.redis
         .multi()

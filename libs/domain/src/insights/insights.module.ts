@@ -148,11 +148,15 @@ export class InsightsModule
       name: SNAPSHOT,
       opts: { attempts: 1, removeOnComplete: true, removeOnFail: 10 },
     });
-    for (const name of [RESPONSE_STATS, PROFILE_VIEWS]) {
+    // Response figures: three attempts; profile views: three retries (143-FR-012).
+    for (const [name, attempts] of [
+      [RESPONSE_STATS, 3],
+      [PROFILE_VIEWS, 4],
+    ] as const) {
       await this.jobs.upsertJobScheduler(name, NIGHTLY, {
         name,
         opts: {
-          attempts: 3,
+          attempts,
           backoff: { delay: 60_000, type: 'exponential' },
           removeOnComplete: true,
           removeOnFail: 10,
