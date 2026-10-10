@@ -102,6 +102,7 @@ function countEverySeries() {
 
 // @traces 206-FR-016
 // @traces 244-FR-016 244-FR-018
+// @traces 251-FR-018
 // @traces 139-FR-019
 // @traces 209-FR-014
 describe('the product counters', () => {

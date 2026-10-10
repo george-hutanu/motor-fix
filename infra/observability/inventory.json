@@ -716,6 +716,20 @@
       "alerts": "none",
       "reason": "counts each analytics consent choice stored, by decision; a choice count has no failure mode of its own; the consents endpoint carries the api error-rate and latency rules",
       "story": "ST-244"
+    },
+    {
+      "kind": "endpoint",
+      "name": "outage-alerts",
+      "source": "libs/domain/src/notifications/outage/outage.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/monitoring/outage-alerts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "outage",
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "Grafana's outage contact point calls it; one Outage log line per alert (service, state, fingerprint, admins, sent), never the token or an address; the uptime checks (infra/observability/uptime/checks.json) and the outage rule watch the services it reports on",
+      "story": "ST-251"
     }
   ]
 }

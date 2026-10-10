@@ -3,6 +3,7 @@
 import {
   faroUrl,
   grafanaUrl,
+  outageWebhookToken,
   PLACES_ENV,
   placesApiKey,
   plausibleDomain,
@@ -276,6 +277,15 @@ describe('telemetry', () => {
 
     expect(run).toThrow('APP_ENV');
     expect(run).not.toThrow(/c2VjcmV0/);
+  });
+});
+
+// @traces 251-FR-005
+describe('outageWebhookToken', () => {
+  it('reads the token trimmed, and nothing when unset or blank', () => {
+    expect(outageWebhookToken({ OUTAGE_WEBHOOK_TOKEN: ' t-1 ' })).toBe('t-1');
+    expect(outageWebhookToken({})).toBeUndefined();
+    expect(outageWebhookToken({ OUTAGE_WEBHOOK_TOKEN: ' ' })).toBeUndefined();
   });
 });
 
