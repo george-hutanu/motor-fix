@@ -584,6 +584,39 @@ describe('seed of a request through to a job', () => {
 
     expect(await chain()).toEqual(once);
   });
+
+  // Staging kept the job an older seed wrote (to do, never started, no
+  // history), and the release's seed-only run must still start it: a job
+  // that is not started refuses every tick.
+  it('starts the job an older seed left to do, with its history, when run again', async () => {
+    expect(seed('test').status).toBe(0);
+    const started = await chain();
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM job_stage_entry WHERE job_id IN (SELECT id FROM job)`,
+    );
+    await prisma.$executeRawUnsafe(
+      `UPDATE job SET status = 'to_do', started_at = NULL`,
+    );
+
+    expect(seed('test').status).toBe(0);
+
+    // Started again now, so only that it has a start is compared.
+    const shape = (c: unknown) =>
+      JSON.stringify(c, (k, v) => (k === 'startedAt' && v ? 'set' : v));
+    expect(shape(await chain())).toEqual(shape(started));
+  });
+
+  it('leaves a job with a history as it is, whatever its stage', async () => {
+    expect(seed('test').status).toBe(0);
+    await prisma.$executeRawUnsafe(
+      `UPDATE job SET status = 'to_do', started_at = NULL`,
+    );
+    const moved = await chain();
+
+    expect(seed('test').status).toBe(0);
+
+    expect(await chain()).toEqual(moved);
+  });
 });
 
 describe('seed of the platform rules', () => {
