@@ -105,8 +105,8 @@ export class EmailChangeService {
     return holder !== null;
   }
 
-  // Sent first, so a link that cannot leave keeps no pending change; then
-  // older links expire and the new one is written.
+  // The link is sent first, so a link that cannot leave keeps no pending
+  // change; then older links expire and the new one is written.
   private async issue(accountId: string, email: string, notify: string | null) {
     if (await this.taken(email, accountId)) throw emailTaken();
     const { webUrl } = this.options;
@@ -130,13 +130,6 @@ export class EmailChangeService {
         purpose: 'email_check',
         to: email,
       });
-      if (notify) {
-        await this.notifications.sendAccountEmail({
-          accountId,
-          link: `${webUrl}/${language}`,
-          purpose: 'email_change_notice',
-        });
-      }
     } catch (error) {
       this.logger.error(`e-mail change link not sent: ${String(error)}`);
       await this.attempts.uncountContactChange(accountId);
@@ -168,5 +161,18 @@ export class EmailChangeService {
         },
       });
     });
+    // After the commit, as the password reset does: the link stands, so a
+    // notice that cannot leave is logged and the change kept.
+    if (notify) {
+      await this.notifications
+        .sendAccountEmail({
+          accountId,
+          link: `${webUrl}/${language}`,
+          purpose: 'email_change_notice',
+        })
+        .catch((error: unknown) =>
+          this.logger.error(`e-mail change notice not sent: ${String(error)}`),
+        );
+    }
   }
 }

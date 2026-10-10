@@ -317,6 +317,26 @@ describe('an address that cannot be asked for', () => {
       .expect(200);
     expect(me.body.pendingEmail).toBeNull();
   });
+
+  it('keeps the change, and logs, when only the notice to the old address cannot be sent', async () => {
+    const id = await signedUp();
+    const send = app.get(NotificationsService).sendAccountEmail;
+    jest
+      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
+      .mockImplementation(async function (this: unknown, message) {
+        if (message.purpose === 'email_change_notice')
+          throw new Error('Redis did not answer');
+        return send.call(this, message);
+      });
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+
+    await ask(id, NEW).expect(202);
+
+    expect(await changeTokens(id)).toHaveLength(1);
+    expect(error).toHaveBeenCalled();
+  });
 });
 
 describe('the hourly limit', () => {
