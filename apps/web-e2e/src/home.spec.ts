@@ -358,6 +358,17 @@ const dialArea = (page: Page) => page.locator('mf-home .dial');
 const dialValue = (page: Page) =>
   dialArea(page).locator('mf-rating-dial .mf-dial-value');
 const previewRows = (page: Page) => page.locator('mf-home-preview a.row');
+// Picks Dacia and waits for Dacia's own rows: the rows already on screen for
+// the dial's first brand also count three, and the list swaps to skeletons
+// while Dacia's answer loads, so a count alone can read the outgoing rows.
+const pickDacia = async (page: Page) => {
+  await page.getByRole('radio', { exact: true, name: 'Dacia' }).click();
+  await expect(previewRows(page)).toHaveCount(3);
+  for (const row of await previewRows(page).all()) {
+    await expect(row).toHaveAttribute('href', /[?&]brand=dacia(&|$)/);
+  }
+  await expect(previewRows(page).locator('mf-lamp')).toHaveCount(3);
+};
 const useLocation = async (page: Page) => {
   await line(page).getByRole('button').click();
   await placeDialog(page)
@@ -534,9 +545,8 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ height: 640, width: 320 });
       await ready(page, path);
-      await page.getByRole('radio', { exact: true, name: 'Dacia' }).click();
+      await pickDacia(page);
 
-      await expect(previewRows(page)).toHaveCount(3);
       for (const box of await previewRows(page).evaluateAll((rows) =>
         rows.map((r) => r.getBoundingClientRect().height),
       )) {
@@ -560,9 +570,8 @@ for (const path of ['/ro', '/en']) {
   }) => {
     await page.setViewportSize({ height: 844, width: 390 });
     await ready(page, path);
-    await page.getByRole('radio', { exact: true, name: 'Dacia' }).click();
+    await pickDacia(page);
 
-    await expect(previewRows(page)).toHaveCount(3);
     const sizes = await previewRows(page)
       .locator('mf-lamp, .rating, .rate')
       .evaluateAll((parts) =>
