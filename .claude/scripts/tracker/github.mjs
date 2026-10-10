@@ -4,6 +4,8 @@
 // A relative REST path resolves under the issue repository (repos.mjs).
 
 import { NOTION_URL } from "./notion-markdown.mjs";
+
+const notionCount = (text) => text.match(new RegExp(NOTION_URL.source, "gi"))?.length ?? 0;
 import { ISSUE_REPO, OWNER } from "./repos.mjs";
 
 const API = "https://api.github.com";
@@ -90,9 +92,9 @@ export function githubClient({
    * timeout or a 5xx is tried TRIES times like a read. A 422 to a try after one
    * whose answer was lost means the earlier try landed.
    */
-  async function send(method, path, body, content, idempotent = !content) {
+  async function send(method, path, body, content, idempotent = !content, kept = "") {
     const label = `${method} ${path}`;
-    if (body !== undefined && NOTION_URL.test(JSON.stringify(body))) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
+    if (body !== undefined && notionCount(JSON.stringify(body)) > notionCount(kept)) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
     const url = urlOf(path);
     if (content) stats.content++;
     let lost = false;
@@ -156,9 +158,12 @@ export function githubClient({
     }
   }
 
-  /** A REST call; a PATCH is idempotent, a POST only when the caller says so (`{ idempotent: true }`). */
-  const rest = async (method, path, body, { idempotent = method === "GET" || method === "PATCH" } = {}) =>
-    (await send(method, path, body, method !== "GET", idempotent)).data;
+  /**
+   * A REST call; a PATCH is idempotent, a POST only when the caller says so (`{ idempotent: true }`).
+   * `kept`: text GitHub already holds that the call sends back (a PR body), whose Notion addresses may go back; none may be added.
+   */
+  const rest = async (method, path, body, { idempotent = method === "GET" || method === "PATCH", kept = "" } = {}) =>
+    (await send(method, path, body, method !== "GET", idempotent, kept)).data;
 
   /** Every page of a REST list, following the Link header. */
   async function pages(path) {

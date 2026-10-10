@@ -982,7 +982,7 @@ export async function runImport({
         const line = closesLine(issue.get(plan.key).number);
         const body = pull.body ?? "";
         const next = PLACEHOLDER.test(body) ? body.replace(PLACEHOLDER, line) : `${body}${body ? "\n" : ""}${line}`;
-        await github.rest("PATCH", pullPath(plan.pr), { body: next });
+        await github.rest("PATCH", pullPath(plan.pr), { body: next }, { kept: body });
         return `PR #${plan.pr}`;
       });
     }

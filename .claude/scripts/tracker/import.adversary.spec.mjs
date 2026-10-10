@@ -305,6 +305,17 @@ describe("public repository hygiene", () => {
     await assert.rejects(github.graphql("mutation X { a }", { body: "app.notion.com" }), (e) => e.type === "notion");
   });
 
+  it("lets a write send back the Notion addresses GitHub already holds, and no more", async () => {
+    const gh = await bootstrapped({ pulls: [{ number: 50, body: "story: https://app.notion.com/p/1" }] });
+    const github = clientOf(gh);
+    const kept = "story: https://app.notion.com/p/1";
+    await github.rest("PATCH", "/repos/george-hutanu/motor-fix/pulls/50", { body: `${kept}\nCloses x#1` }, { kept });
+    await assert.rejects(
+      github.rest("PATCH", "/repos/george-hutanu/motor-fix/pulls/50", { body: `${kept}\nhttps://www.notion.so/new` }, { kept }),
+      (e) => e.type === "notion",
+    );
+  });
+
   it("rewrites an issue an earlier version created with Notion links", async () => {
     const gh = await bootstrapped({ issues: [{ number: 3, title: "ST-1 Driver signs in", body: "<!-- motorfix:ST-1 -->\nNotion: https://app.notion.com/p/50000000000000000000000000000001", labels: [] }] });
     const { exit } = await importInto(gh);

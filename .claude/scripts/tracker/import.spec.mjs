@@ -271,6 +271,14 @@ describe("a full import", () => {
     assert.equal(gh.state.pulls.get(40).body, "Fixes the loop.");
   });
 
+  it("adds the Closes line to a PR body that already links its Notion story", async () => {
+    const body = "## Notion story\n\nhttps://app.notion.com/p/50000000000000000000000000000002\n\nCloses george-hutanu/motor-fix-specs#\n";
+    const gh = await bootstrapped({ pulls: [{ number: 50, body }] });
+    const { exit, lines } = await importInto(gh);
+    assert.equal(exit, 0, lines.join("\n"));
+    assert.equal(gh.state.pulls.get(50).body, body.replace("#\n", `#${issueOf(gh, "ST-2").number}\n`));
+  });
+
   it("fills the template's empty cross-repository Closes line in place", async () => {
     const gh = await bootstrapped({ pulls: [{ number: 50, body: "## Notion story\n\nCloses george-hutanu/motor-fix-specs#\n\n## Notes" }] });
     await importInto(gh);
