@@ -1,0 +1,103 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2) var(--mf-space-4);
+  justify-content: space-between;
+  margin-block-end: var(--mf-space-3);
+}
+
+h2 {
+  font-size: var(--mf-size-body);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.all {
+  align-items: center;
+  color: var(--mf-amber-ink);
+  display: inline-flex;
+  font-size: max(12px, var(--mf-size-small));
+  min-height: 44px;
+}
+
+.cards {
+  min-width: 0;
+}
+
+ul,
+.cards:has(.skeleton) {
+  display: grid;
+  gap: var(--mf-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  min-width: 0;
+}
+
+.card {
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+  box-sizing: border-box;
+  color: inherit;
+  display: flex;
+  gap: var(--mf-space-3);
+  height: 100%;
+  min-height: 44px;
+  padding: var(--mf-space-4);
+  text-decoration: none;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+
+.name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.where,
+.list,
+.facts {
+  color: var(--mf-text-secondary);
+  font-size: max(12px, var(--mf-size-small));
+  overflow-wrap: anywhere;
+}
+
+.key {
+  color: var(--mf-text);
+  font-weight: 600;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.card.skeleton {
+  background: currentColor;
+  border: 0;
+  height: 160px;
+  opacity: 0.15;
+}
+
+.cards > p {
+  margin: 0 0 var(--mf-space-2);
+}

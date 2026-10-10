@@ -33,13 +33,15 @@
     (touched)="touched.set(true)"
   />
   <mf-brand-search (reached)="touched.set(true)" (chosen)="pick($event)" />
-  <a
-    class="spartan-button spartan-button-variant-default search"
-    [routerLink]="['/', i18n.language(), 'garages']"
-    [queryParams]="{ brand: brand.slug }"
-  >
-    {{ 'public.home.search' | t }}
-  </a>
+  @if (results(); as results) {
+    <a
+      class="spartan-button spartan-button-variant-default search"
+      [routerLink]="results.commands"
+      [queryParams]="results.queryParams"
+    >
+      {{ 'public.home.search' | t }}
+    </a>
+  }
   <div
     class="count"
     [attr.aria-live]="touched() ? 'polite' : 'off'"
@@ -110,6 +112,16 @@
     }
   </section>
   <section class="car" [attr.aria-label]="'public.home.car' | t"></section>
+  @if (results(); as results) {
+    <mf-home-cards
+      [brand]="brand"
+      [garages]="answer()?.preview ?? []"
+      [loading]="busy()"
+      [failed]="!!home.error()"
+      [results]="results"
+      (retry)="home.reload()"
+    />
+  }
 }
 <p>{{ health()?.version ?? ('shell.version.unknown' | t) }}</p>
 <p>{{ 'shell.health.status' | t: checks() }}</p>

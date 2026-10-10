@@ -34,6 +34,7 @@ import { RatingDial, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandPicker } from './brand-picker/brand-picker';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
+import { HomeCards, type ResultsRoute } from './cards/cards';
 import { type Place, PlaceStore } from './place/place-store';
 import { HomePreview } from './preview/preview';
 import { Session } from '../dashboard/session';
@@ -54,6 +55,7 @@ const report = (error: unknown) =>
   imports: [
     BrandPicker,
     BrandSearch,
+    HomeCards,
     HomePreview,
     RatingDial,
     RouterLink,
@@ -104,6 +106,15 @@ export class Home {
       const place = this.place();
       return place ? { brand, near: nearOf(place) } : { brand };
     },
+  });
+  protected readonly results = computed<ResultsRoute | null>(() => {
+    const brand = this.selected();
+    return brand
+      ? {
+          commands: ['/', this.i18n.language(), 'garages'],
+          queryParams: { brand: brand.slug },
+        }
+      : null;
   });
   protected readonly busy = computed(
     () => this.server || this.home.isLoading(),

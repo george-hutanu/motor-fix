@@ -1,10 +1,11 @@
 ul {
-  display: flex;
-  flex-direction: column;
-  gap: var(--mf-space-2);
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
   list-style: none;
   margin: 0;
   min-width: 0;
+  overflow: hidden;
   padding: 0;
 }
 
@@ -12,17 +13,27 @@ li {
   min-width: 0;
 }
 
+li + li {
+  border-top: 1px solid var(--mf-line);
+}
+
 .row {
-  border: 1px solid var(--mf-line);
-  border-radius: 8px;
+  align-items: center;
   box-sizing: border-box;
   color: inherit;
   display: grid;
-  gap: var(--mf-space-1) var(--mf-space-3);
+  gap: var(--mf-space-3);
   grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 44px;
-  padding: var(--mf-space-2) var(--mf-space-3);
+  min-height: 64px;
+  padding: var(--mf-space-2) var(--mf-space-4);
   text-decoration: none;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
 }
 
 /* Phones read the rows at the 16 px body size; the small size from tablet up. */
@@ -38,10 +49,6 @@ mf-lamp,
   }
 }
 
-mf-lamp {
-  grid-column: 1 / -1;
-}
-
 .name {
   font-weight: 600;
   min-width: 0;
@@ -50,15 +57,19 @@ mf-lamp {
 
 .facts {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--mf-space-2);
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+  gap: var(--mf-space-1);
   text-align: end;
+}
+
+.rate {
+  color: var(--mf-text-secondary);
 }
 
 .row.skeleton {
   background: currentColor;
-  border: 0;
-  height: 56px;
+  height: 64px;
   opacity: 0.15;
 }

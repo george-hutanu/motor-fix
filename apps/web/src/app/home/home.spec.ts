@@ -1027,6 +1027,7 @@ describe('Home place from the Setări city', () => {
 const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   businessKind: 'company',
   city: 'București',
+  doesNotTake: [],
   id: 'militari',
   labourFromLei: 180,
   name: 'Service Auto Militari',
@@ -1034,6 +1035,7 @@ const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   reviewCount: 120,
   slug: 'service-auto-militari',
   stance: 'works_on',
+  worksOn: ['Dacia'],
   ...over,
 });
 const MILITARI = garageOf();
@@ -1175,6 +1177,7 @@ describe('Home rating dial', () => {
 
 // @traces 226-FR-004
 // @traces 226-FR-005
+// @traces 227-FR-011
 describe('Home rating dial with nothing to name', () => {
   it('rests at "—" and says nobody nearby takes the brand, with the refusing rows', async () => {
     await render();
@@ -1182,7 +1185,7 @@ describe('Home rating dial with nothing to name', () => {
 
     await reads[1].answer(0, 1, { best: null, preview: [COLENTINA] });
 
-    const nobody = 'Niciun service din zonă nu primește încă Dacia';
+    const nobody = 'Niciun service din zonă nu primește Dacia';
     expect(dialValue()).toBe('—');
     expect(bestName()).toBe(nobody);
     expect(
@@ -1199,7 +1202,7 @@ describe('Home rating dial with nothing to name', () => {
 
     await reads[1].answer(0, 0);
 
-    expect(bestName()).toBe('No garage nearby takes Dacia yet');
+    expect(bestName()).toBe('No garage nearby takes Dacia');
   });
 
   it('says no garage is within 25 km of the place, and offers to change it', async () => {
@@ -1227,7 +1230,7 @@ describe('Home rating dial with nothing to name', () => {
 
     await reads[0].answer(0, 0);
 
-    expect(bestName()).toBe('Niciun service din zonă nu primește încă BMW');
+    expect(bestName()).toBe('Niciun service din zonă nu primește BMW');
   });
 
   it('dims the dial while it loads, with a skeleton name and three skeleton rows', async () => {
@@ -1264,5 +1267,74 @@ describe('Home rating dial with nothing to name', () => {
 
     expect(dialValue()).toBe('4,9');
     expect(rows()).toHaveLength(3);
+  });
+});
+
+const cardsArea = () => page().querySelector<HTMLElement>('mf-home-cards');
+const cards = () => [
+  ...page().querySelectorAll<HTMLAnchorElement>('mf-home-cards a.card'),
+];
+const allLink = () =>
+  page().querySelector<HTMLAnchorElement>('mf-home-cards a.all');
+
+// @traces 227-FR-001
+// @traces 227-FR-002
+// @traces 227-FR-006
+describe('Home garage cards', () => {
+  it('follows the car section with one card per preview garage, from the same read', async () => {
+    await render();
+    await choose('Dacia');
+
+    await reads[1].answer(3, 6, THREE);
+
+    expect(
+      page().querySelector('section.car')?.nextElementSibling?.localName,
+    ).toBe('mf-home-cards');
+    expect(cards().map((card) => card.getAttribute('href'))).toEqual(
+      rows().map((row) => row.getAttribute('href')),
+    );
+    expect(slugsRead()).toEqual(['bmw', 'dacia']);
+  });
+
+  it('points its link where the main button points', async () => {
+    await render();
+    await choose('Dacia');
+    await reads[1].answer(0, 0);
+
+    expect(allLink()?.getAttribute('href')).toBe(
+      search()?.getAttribute('href'),
+    );
+    expect(allLink()?.getAttribute('href')).toBe('/ro/garages?brand=dacia');
+    expect(cards()).toHaveLength(0);
+  });
+
+  it('shows skeleton cards while the read loads, and none of the last brand', async () => {
+    await render();
+    await reads[0].answer(3, 6, THREE);
+    await choose('Dacia');
+
+    expect(cardsArea()?.querySelectorAll('.card.skeleton')).toHaveLength(3);
+    expect(cards()).toHaveLength(0);
+  });
+
+  it('says the read failed in the cards too, and its retry reads again', async () => {
+    await render();
+    await reads[0].fail(new HttpErrorResponse({ status: 503 }));
+
+    expect(cardsArea()?.querySelector('[role="alert"]')?.textContent).toContain(
+      'Nu am putut încărca service‑urile',
+    );
+    cardsArea()?.querySelector<HTMLButtonElement>('button')?.click();
+    await settle();
+    await reads[1].answer(3, 6, THREE);
+
+    expect(slugsRead()).toEqual(['bmw', 'bmw']);
+    expect(cards()).toHaveLength(3);
+  });
+
+  it('is absent with no brand selected', async () => {
+    await render([]);
+
+    expect(cardsArea()).toBeNull();
   });
 });

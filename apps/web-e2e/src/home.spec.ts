@@ -130,15 +130,20 @@ test.describe('the brand picker @seeded', () => {
     await ready(page, '/ro');
 
     await tile(page, 'Dacia').click();
+    const count = page.locator('mf-home .count');
     await expect(
-      page.getByText('Nu am putut încărca service‑urile'),
+      count.getByText('Nu am putut încărca service‑urile'),
     ).toBeVisible();
+    // @traces 227-FR-006
+    await expect(page.locator('mf-home-cards [role="alert"]')).toHaveText(
+      /Nu am putut încărca service‑urile/,
+    );
     await expect(
       page.getByRole('link', { name: 'Caută service‑uri' }),
     ).toHaveAttribute('href', '/ro/garages?brand=dacia');
 
     fail = false;
-    await page.getByRole('button', { name: 'Reîncearcă' }).click();
+    await count.getByRole('button', { name: 'Reîncearcă' }).click();
 
     await expect(
       page.getByText('5 din 8 service‑uri primesc Dacia'),
@@ -434,6 +439,7 @@ test.describe('the rating dial near Bucharest @seeded', () => {
   });
 
   // @traces 226-FR-004
+  // @traces 227-FR-011
   test('rests at "—" when nobody near takes the brand, with only refusing rows', async ({
     page,
   }) => {
@@ -444,7 +450,7 @@ test.describe('the rating dial near Bucharest @seeded', () => {
 
     await expect(dialValue(page)).toHaveText('—');
     await expect(dialArea(page).locator('.gauge .name')).toHaveText(
-      'Niciun service din zonă nu primește încă Tesla',
+      'Niciun service din zonă nu primește Tesla',
     );
     await expect(previewRows(page)).toHaveCount(3);
     for (const lamp of await previewRows(page).locator('mf-lamp').all()) {
@@ -604,3 +610,162 @@ for (const width of [320, 834]) {
     expect(caption - value).toBeLessThanOrEqual(40);
   });
 }
+
+// @traces 227-FR-001
+// @traces 227-FR-002
+// @traces 227-FR-003
+// @traces 227-FR-004
+// @traces 227-FR-005
+const cards = (page: Page) => page.locator('mf-home-cards a.card');
+const cardsLink = (page: Page) =>
+  page
+    .locator('mf-home-cards')
+    .getByRole('link', { name: 'Vezi toate pe hartă' });
+
+test.describe('the garage cards near Bucharest @seeded', () => {
+  test.use({
+    geolocation: { latitude: 44.4268, longitude: 26.1025 },
+    permissions: ['geolocation'],
+  });
+
+  test('shows the preview garages as cards, from the one read, and opens them', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await useLocation(page);
+    const reads = homeReads(page);
+    await pickDacia(page);
+
+    await expect(
+      page.getByRole('heading', { name: 'Cine primește Dacia' }),
+    ).toBeVisible();
+    await expect(cards(page)).toHaveCount(3);
+    await expect(cards(page).locator('.name')).toHaveText(
+      await previewRows(page).locator('.name').allTextContents(),
+    );
+    await expect(cards(page).locator('mf-lamp')).toHaveText([
+      'Lucrează pe Dacia',
+      'Lucrează pe Dacia',
+      'Nu primește Dacia',
+    ]);
+    expect(reads).toEqual(['dacia']);
+
+    const militari = cards(page).first();
+    await expect(militari.locator('.where')).toHaveText(
+      /București · \d+(,\d)? km/,
+    );
+    await expect(militari.locator('.list').first()).toContainText('+2');
+    await expect(cards(page).nth(1).locator('.list').nth(1)).toHaveText(
+      /Nu primește\s*—/,
+    );
+
+    await militari.click();
+    await expect(page).toHaveURL(
+      '/ro/garages/service-auto-militari?brand=dacia',
+    );
+    await page.goBack();
+    await cardsLink(page).click();
+    await expect(page).toHaveURL('/ro/garages?brand=dacia');
+  });
+
+  test('keeps the heading and the link when nobody near takes the brand', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await useLocation(page);
+
+    await chooseTesla(page);
+
+    await expect(
+      page.getByRole('heading', { name: 'Cine primește Tesla' }),
+    ).toBeVisible();
+    await expect(cardsLink(page)).toHaveAttribute(
+      'href',
+      '/ro/garages?brand=tesla',
+    );
+    for (const lamp of await cards(page).locator('mf-lamp').all()) {
+      await expect(lamp).toHaveText('Nu primește Tesla');
+    }
+  });
+});
+
+test.describe('the garage cards in Cluj-Napoca @seeded', () => {
+  test.use({
+    geolocation: { latitude: 46.7712, longitude: 23.6236 },
+    permissions: ['geolocation'],
+  });
+
+  test('shows the mobile mechanic by its area, never an address', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    await useLocation(page);
+
+    const mobile = cards(page).filter({ hasText: 'Mecanic Mobil Cluj' });
+    await expect(mobile.locator('.where')).toHaveText(
+      'Mecanic mobil · vine la tine · zonă de 20 km',
+    );
+  });
+});
+
+// @traces 227-FR-008
+for (const scheme of ['light', 'dark'] as const) {
+  for (const path of ['/ro', '/en']) {
+    test(`fits the garage cards on a 320 px phone on ${path}, ${scheme} @seeded`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ height: 640, width: 320 });
+      await ready(page, path);
+      await pickDacia(page);
+      await expect(cards(page)).toHaveCount(3);
+
+      const boxes = await cards(page).evaluateAll((all) =>
+        all.map((card) => {
+          const box = card.getBoundingClientRect();
+          return { height: box.height, left: Math.round(box.left) };
+        }),
+      );
+      expect(new Set(boxes.map((box) => box.left)).size).toBe(1);
+      for (const box of boxes) expect(box.height).toBeGreaterThanOrEqual(44);
+      const sizes = await page
+        .locator('mf-home-cards')
+        .locator('h2, a, span, mf-lamp')
+        .evaluateAll((parts) =>
+          parts
+            .filter((part) => part.textContent?.trim())
+            .map((part) => Number.parseFloat(getComputedStyle(part).fontSize)),
+        );
+      for (const size of sizes) expect(size).toBeGreaterThanOrEqual(12);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(320);
+    });
+  }
+}
+
+// @traces 227-FR-010
+test('sets the preview as one panel of 64 px rows, the rating over the rate on the right @seeded', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 900, width: 1280 });
+  await ready(page, '/ro');
+  await pickDacia(page);
+
+  for (const row of await previewRows(page).all()) {
+    const box = await row.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(64);
+    const rating = await row.locator('.rating').boundingBox();
+    const rate = await row.locator('.rate').boundingBox();
+    const name = await row.locator('.name').boundingBox();
+    if (!rating || !rate || !name || !box) throw new Error('row parts missing');
+    expect(rating.y + rating.height).toBeLessThanOrEqual(rate.y + 1);
+    expect(rating.x).toBeGreaterThan(name.x + name.width - 1);
+  }
+  expect(
+    await page
+      .locator('mf-home-preview ul')
+      .evaluate((list) => getComputedStyle(list).borderTopLeftRadius),
+  ).toBe('20px');
+});

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
@@ -20,6 +23,7 @@ const DACIA: BrandDto = {
 const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   businessKind: 'company',
   city: 'București',
+  doesNotTake: [],
   id: 'militari',
   labourFromLei: 180,
   name: 'Service Auto Militari',
@@ -27,6 +31,7 @@ const garageOf = (over: Partial<HomeGarageDto> = {}): HomeGarageDto => ({
   reviewCount: 120,
   slug: 'service-auto-militari',
   stance: 'works_on',
+  worksOn: ['Dacia'],
   ...over,
 });
 
@@ -138,5 +143,42 @@ describe('HomePreview', () => {
 
     expect(page.querySelectorAll('.row.skeleton')).toHaveLength(3);
     expect(rows(page)).toHaveLength(0);
+  });
+  // @traces 227-FR-010
+  it('puts the name over the status on the left, the rating over the rate on the right', async () => {
+    const [row] = rows(await render([garageOf()]));
+
+    const left = row.querySelector('.who');
+    const right = row.querySelector('.facts');
+    expect(
+      [...(left?.children ?? [])].map(
+        (child) => child.className || child.localName,
+      ),
+    ).toEqual(['name', 'mf-lamp']);
+    expect(
+      [...(right?.children ?? [])].map((child) => child.className),
+    ).toEqual(['rating', 'rate']);
+  });
+});
+
+// jsdom applies no stylesheet: the panel's styles are read as written.
+describe('the preview panel styles', () => {
+  const css = readFileSync(join(__dirname, 'preview.css'), 'utf8').replace(
+    /\/\*[\s\S]*?\*\//g,
+    '',
+  );
+
+  // @traces 227-FR-010
+  it('rounds the panel with the panel radius token and never a number', () => {
+    expect(css).toMatch(/border-radius:\s*var\(--mf-radius-panel\)/);
+    expect(css).not.toMatch(/border-radius:\s*[0-9]/);
+  });
+
+  // @traces 227-FR-010
+  it('sets each row at least 64 px tall, split from the next by a line', () => {
+    expect(css).toMatch(/\.row\s*\{[^}]*min-height:\s*64px/);
+    expect(css).toMatch(
+      /li\s*\+\s*li\s*\{[^}]*border-top:\s*1px solid var\(--mf-line\)/,
+    );
   });
 });
