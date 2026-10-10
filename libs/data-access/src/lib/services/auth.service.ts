@@ -51,6 +51,8 @@ import { OauthControllerStartApple$Params } from '../fn/auth/oauth-controller-st
 import { oauthControllerStartGoogle } from '../fn/auth/oauth-controller-start-google';
 import { OauthControllerStartGoogle$Params } from '../fn/auth/oauth-controller-start-google';
 import { OAuthPendingDto } from '../models/o-auth-pending-dto';
+import { passwordChangeControllerChange } from '../fn/auth/password-change-controller-change';
+import { PasswordChangeControllerChange$Params } from '../fn/auth/password-change-controller-change';
 import { passwordResetControllerAsk } from '../fn/auth/password-reset-controller-ask';
 import { PasswordResetControllerAsk$Params } from '../fn/auth/password-reset-controller-ask';
 import { passwordResetControllerCheck } from '../fn/auth/password-reset-controller-check';
@@ -616,6 +618,31 @@ export class AuthService extends BaseService {
   passwordResetControllerComplete(params: PasswordResetControllerComplete$Params, context?: HttpContext): Promise<SessionDto> {
     const resp = this.passwordResetControllerComplete$Response(params, context);
     return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
+  }
+
+  /** Path part for operation `passwordChangeControllerChange()` */
+  static readonly PasswordChangeControllerChangePath = '/api/v1/auth/password';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `passwordChangeControllerChange()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordChangeControllerChange$Response(params: PasswordChangeControllerChange$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = passwordChangeControllerChange(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `passwordChangeControllerChange$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordChangeControllerChange(params: PasswordChangeControllerChange$Params, context?: HttpContext): Promise<void> {
+    const resp = this.passwordChangeControllerChange$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `phoneSignInControllerPhoneCode()` */

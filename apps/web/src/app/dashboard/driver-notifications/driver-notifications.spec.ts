@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
 import {
@@ -312,5 +315,28 @@ describe('turning MotorFix news on and off', () => {
         newsConsentTextVersion: '2026-12-01',
       },
     });
+  });
+});
+
+describe('the notification hints on a phone', () => {
+  // The Jest transform drops component styles, so they are read from the source.
+  const css = readFileSync(
+    join(__dirname, 'driver-notifications.css'),
+    'utf8',
+  ).replace(/\s+/g, ' ');
+
+  it('keep body size on a phone and turn small only from a tablet up', () => {
+    const topLevel = css.replace(
+      /@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g,
+      '',
+    );
+    const hint = topLevel.match(/(?:^|\})\s*\.hint\s*\{([^}]*)\}/)?.[1];
+    expect(hint).toBeDefined();
+    expect(hint).not.toContain('font-size');
+
+    const tablet = css.match(
+      /@media \(min-width: 768px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+    )?.[1];
+    expect(tablet).toMatch(/\.hint\s*\{[^}]*font-size: var\(--mf-size-small\)/);
   });
 });

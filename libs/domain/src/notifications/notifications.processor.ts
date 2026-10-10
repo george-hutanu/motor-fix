@@ -184,9 +184,16 @@ export class NotificationsProcessor {
     row: AccountRow,
     attemptsMade: number,
   ): Promise<boolean | undefined> {
-    const to = await this.allowed([row], row.account);
-    if (!to) return;
     const values = params(row);
+    // An account e-mail may name its own address (an e-mail change's link).
+    const address = values['to'];
+    const to = await this.allowed(
+      [row],
+      typeof address === 'string'
+        ? { ...row.account, email: address }
+        : row.account,
+    );
+    if (!to) return;
     return this.write(
       [row],
       to,

@@ -25,10 +25,30 @@ export interface MeDto {
    */
   garageAccess: Array<GarageAccessDto>;
   garageId: string | null;
+
+  /**
+   * Whether the account can sign in by password
+   */
+  hasPassword: boolean;
   id: string;
   landing: '/app/driver' | '/app/garage' | '/app/admin';
   language: 'ro' | 'en';
   name: string;
+
+  /**
+   * The address of an e-mail change waiting for its link
+   */
+  pendingEmail: string | null;
+
+  /**
+   * E.164
+   */
+  phone: string | null;
+
+  /**
+   * Whether the phone is confirmed; false when there is none
+   */
+  phoneConfirmed: boolean;
 
   /**
    * The role in use

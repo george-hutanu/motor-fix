@@ -97,7 +97,7 @@ test.describe('an expired confirmation link', () => {
     await page.getByRole('button', { name: 'Trimite un link nou' }).click();
     await expect(
       page.getByText(
-        'Din acest link nu mai putem trimite altul. Intră în cont și apasă „Retrimite”.',
+        'Din acest link nu mai putem trimite altul. Intră în cont și cere un link nou de acolo.',
       ),
     ).toBeVisible();
   });
