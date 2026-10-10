@@ -7,6 +7,7 @@ export * from './auth.dto';
 export * from './brands.dto';
 export * from './cars.dto';
 export * from './consent';
+export * from './consents.dto';
 export * from './env';
 export * from './events';
 export * from './files';

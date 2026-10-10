@@ -117,6 +117,41 @@ overwritten by the next run: edit the JSON instead. A file whose rule uid is
 already held by a rule imported by hand fails, naming the file and the group; delete that
 copy in Grafana once and run the workflow again.
 
+## Uptime checks and the outage alert
+
+Two Grafana Synthetic Monitoring HTTP checks watch staging from outside
+(`uptime/checks.json`): Home (`motorfix-web`) and `/health/ready`
+(`motorfix-api`, which answers 200 only while PostgreSQL, Redis and storage
+answer),
+each once a minute from one probe, failing after 10 seconds or on anything
+but 200. That is 86,400 runs a month against the free tier's 100,000, so a
+third check, or a second probe, does not fit.
+
+The rule in `alerts/outage.json` fires when every run of a check failed for
+3 minutes, one alert per service labelled `outage: "true"`, and resolves on
+the first passing run. Its contact point `motorfix-outage` sends both to the
+API's webhook, `POST /api/v1/monitoring/outage-alerts`, which sends every
+active admin one e-mail and one push for "down" and again for "back"
+(`ADMIN_OUTAGE_ALERT`, which no saved choice or quiet hours can mute). The
+same alert sent again sends nothing more.
+
+Set up by hand in Grafana Cloud, once per stack (nothing here calls its API):
+
+1. Synthetic Monitoring › Checks: create the two checks from
+   `uptime/checks.json`, `{PUBLIC_WEB_URL}` replaced by the environment's
+   public web address.
+2. Alerting › Contact points: `motorfix-outage`, a webhook to
+   `{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts` with the header
+   `Authorization: Bearer <token>`, and an e-mail integration listing every
+   admin's address (the fallback when the API itself is down; kept current
+   by hand when an admin joins or leaves).
+3. The API service in Railway: `OUTAGE_WEBHOOK_TOKEN`, the same token. Unset,
+   the webhook refuses every call.
+4. Alerting › Alert rules: import `alerts/outage.json`.
+
+A failed nightly backup run (`.github/workflows/backup.yml`) is the backup
+alert: GitHub e-mails the owner about the failed run.
+
 ## Inventory
 
 `inventory.json` lists every app, Railway service, queue and outside service

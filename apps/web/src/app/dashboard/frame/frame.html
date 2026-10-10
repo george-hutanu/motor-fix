@@ -80,6 +80,7 @@
     @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
   </p>
   <main><router-outlet /></main>
+  <mf-consent-bar />
   <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" />
 </div>
 <hlm-toaster />

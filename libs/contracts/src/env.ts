@@ -62,6 +62,13 @@ export function placesApiKey(
   return source[key]?.trim() || undefined;
 }
 
+// The bearer Grafana's outage contact point sends; unset refuses every call.
+export function outageWebhookToken(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  return source['OUTAGE_WEBHOOK_TOKEN']?.trim() || undefined;
+}
+
 // The web app's public address: unset in development and at build time.
 export function publicWebUrl(
   source: Record<string, string | undefined> = process.env,
@@ -80,6 +87,19 @@ export function faroUrl(
   source: Record<string, string | undefined> = process.env,
 ): string | undefined {
   return optionalUrl('FARO_URL', source);
+}
+
+// The site name Plausible counts page views under: unset means the browser
+// never loads analytics, whatever the visitor chose.
+export function plausibleDomain(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const value = source['PLAUSIBLE_DOMAIN']?.trim();
+  if (!value) return undefined;
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(value)) {
+    throw new Error('PLAUSIBLE_DOMAIN must be a domain name');
+  }
+  return value;
 }
 
 // The Grafana stack the admin panel links to; unset means no link. Grafana's
