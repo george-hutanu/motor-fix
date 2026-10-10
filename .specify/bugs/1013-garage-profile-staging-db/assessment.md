@@ -1,6 +1,6 @@
 # Bug Assessment: the suspended mobile mechanic E2E describe needs PostgreSQL, and staging has none
 
-- **Slug**: 1013-garage-profile-staging-db (Notion ST-1013)
+- **Slug**: 1013-garage-profile-staging-db (ST-1013)
 - **Created**: 2026-10-09
 - **Source**: pasted text (release.yml run 37877012434, main 49a9137)
 - **Verdict**: valid

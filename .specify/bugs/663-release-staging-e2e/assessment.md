@@ -2,7 +2,7 @@
 
 - **Slug**: 663-release-staging-e2e
 - **Created**: 2026-10-05
-- **Source**: pasted text (Release workflow runs; Notion ST-663)
+- **Source**: pasted text (Release workflow runs; ST-663)
 - **Verdict**: valid
 - **Severity**: high
 

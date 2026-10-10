@@ -139,14 +139,14 @@ tail agent), and commit nothing.
 
    ```bash
    { cat specs/<feature>/tracker-sync.md; gh pr view <n> --json comments --jq '.comments[].body'; } \
-     | node .claude/scripts/notion-ready.mjs check -
+     | node .claude/scripts/tracker/ready.mjs check -
    ```
 
    Ready to work was refreshed (or logged PENDING) after the last `finish`.
    When it exits 1, do what its reason says — usually run `speckit-tracker-sync ready`
    and add the line to the PR's finish comment (`speckit-tracker-sync`, §4) —
    and check again. The feature is not closed until it passes. A feature with
-   no PR checks the file alone: `notion-ready.mjs check specs/<feature>/tracker-sync.md`.
+   no PR checks the file alone: `tracker/ready.mjs check specs/<feature>/tracker-sync.md`.
 
 ## What this never does
 

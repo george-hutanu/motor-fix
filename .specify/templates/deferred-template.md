@@ -13,8 +13,7 @@ migration, a different area or epic, or work clearly bigger than the story
 itself. A bullet that names none of these arms is not large: fix it in the PR.
 
 One line per finding, each filed as a To do issue in the tracker before the merge
-(`speckit-tracker-sync debt` appends `— Issue: <url>`; `speckit-notion-sync debt`
-and `— Notion: <url>` for a feature that started on Notion). `.claude/scripts/retro-evidence.mjs`
+(`speckit-tracker-sync debt` appends `— Issue: <url>`). `.claude/scripts/retro-evidence.mjs`
 reads the checkboxes, so an item stays open until someone closes it, and
 `/speckit-retro` reports what is still open.
 

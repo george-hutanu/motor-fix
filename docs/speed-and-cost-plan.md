@@ -18,7 +18,7 @@ cheaper. Anything that writes or judges business logic keeps its model.
 | 3 | PR tester leaves unit and e2e suites to CI (`run.mjs` runs them only with `--tests`) | ~5–10 min of a heavy slot per lap | Less log read | Same: CI runs both on the merge result |
 | 4 | Wait for CI in the background (`run_in_background`), never a foreground `sleep` loop | Agent keeps working | Fewer idle turns | – |
 | 5 | `pr-tester` pinned to `model: opus`; speckit-watch dispatches `merge` fixes on Sonnet; an empty watch pass ends after one line | – | High | Implementation and every verdict stay on Opus or Fable |
-| 6 | speckit-auto runs independent phases at once: Notion context beside clarify's challenger; ticket refresh, agent context and retro evidence beside review | Medium | – | Same inputs |
+| 6 | speckit-auto runs independent phases at once: story context beside clarify's challenger; ticket refresh, agent context and retro evidence beside review | Medium | – | Same inputs |
 | 7 | Autocompact at 20% of the window instead of 40% | – | Medium: sessions peaked at 170–220k and never compacted | Same: `pre:compact:flush` and speckit-auto's recovery keep the run state |
 | 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache. Affected integration specs run against the worktree's own PostgreSQL and Redis, started and migrated by the hook (~15 s cold, ~3 s warm); `JEST_SUITE` is refused | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
 | 9 | Local compose uses `imresamu/postgis:17-3.5` (multi-arch, same PostGIS) | High: no amd64 emulation, no `exec format error` | Fewer retry turns | Same database; CI keeps `postgis/postgis` |
@@ -33,7 +33,7 @@ Measured from session transcripts: 97% of token cost is context (cache read
 |---|---|---|---|---|
 | 10 | One reply envelope (`STATUS`, `PR`, `NEXT`, `FILES`) for every agent and dispatched task agent, 25 lines at most, long reports in a named file (AGENTS.md "Agent replies", `agent-replies.spec.mjs`) | – | Every reply is re-read on each later turn of its caller | Same: `VERDICT:` lines and tables kept for their parsers |
 | 11 | Reads only what decides the next step: CI waits print the non-passing checks, failing jobs `--log-failed \| tail -n 80`, test runs their summary and failures | – | Less log in context | Same: every check still runs |
-| 12 | `notion-ready` and its read-only Notion fallback on Sonnet; watch dispatches that only move state on Sonnet | – | Medium | Implementation, reviewers and the PR tester keep their models |
+| 12 | The ready refresh and its read-only tracker reads on Sonnet; watch dispatches that only move state on Sonnet | – | Medium | Implementation, reviewers and the PR tester keep their models |
 | 15 | A head that differs from the last tested commit by documentation only (`scripts/docs-only.ts`) carries its `agent-review` success instead of a new tester lap (`pr-test/carry.mjs`, speckit-pr-test step 2, `watch.mjs` fix `carry-review`); the merge gate re-checks the named commit's success, its ancestry and the docs-only diff before it merges (spec, evals) | One tester lap per story (the `deferred.md` URLs commit) | One Opus lap | Same: a carry never crosses a code change or a failing verdict, and the gate verifies it rather than trusting it |
 
 ## Done since: the tail hand-off
@@ -45,7 +45,7 @@ QA laps re-read after a >5 min idle gap (74% of them, median 9 min).
 | # | Change | Speed | Cost | Quality |
 |---|---|---|---|---|
 | 13 | Split a story's agent at the hand-off: `/speckit-auto` ends at ready with `specs/<feature>/handoff.md` and `NEXT: tail #<n>`; a fresh tail agent (Opus) runs CI, QA laps, the merge and the finish; `/speckit-watch` has a `tail` fix for a handed-off PR nobody holds | Same | The tail re-reads a note, not the story's whole context, on every wait and lap | Same: every step and check of Constitution VII kept, the tail on the same model |
-| 14 | Finish logs in the story's own PR: records committed before ready, post-merge lines in a comment on the merged PR (`notion-ready.mjs check -` reads it) | One PR fewer per story | No `docs(specs)` PR, its CI and its QA lap per story | Same: the archive check still refuses a feature without the refresh |
+| 14 | Finish logs in the story's own PR: records committed before ready, post-merge lines in a comment on the merged PR (`tracker/ready.mjs check -` reads it) | One PR fewer per story | No `docs(specs)` PR, its CI and its QA lap per story | Same: the archive check still refuses a feature without the refresh |
 
 ## Done since: CI under the free plan's runner cap
 

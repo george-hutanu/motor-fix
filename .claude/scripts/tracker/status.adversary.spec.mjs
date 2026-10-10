@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { decide } from './notion-status.mjs';
+import { decide } from './status.mjs';
 
 const STAGES = ['planning', 'in development', 'QA'];
 const ALL = [...STAGES, 'blocked'];

@@ -11,13 +11,12 @@ const root = join(import.meta.dirname, '..', '..');
 const FEATURE = '696-lifecycle-script';
 const BRANCH = FEATURE;
 const TITLE = 'chore(harness): ST-696 lifecycle steps as one script call each';
-const STORY_URL = 'https://app.notion.com/p/3f0607bff0d2812e96e9c2882339f2bd';
 const PR_URL = 'https://github.com/george-hutanu/motor-fix/pull/141';
 
 let repo;
 let featureDir;
 
-function fixture({ notionScript = true } = {}) {
+function fixture({ trackerScript = true } = {}) {
   repo = mkdtempSync(join(tmpdir(), 'lifecycle-'));
   featureDir = join(repo, 'specs', FEATURE);
   mkdirSync(featureDir, { recursive: true });
@@ -25,14 +24,14 @@ function fixture({ notionScript = true } = {}) {
   mkdirSync(join(repo, '.github'), { recursive: true });
   mkdirSync(join(repo, '.claude', 'scripts'), { recursive: true });
   writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ feature_directory: `specs/${FEATURE}` }));
-  writeFileSync(join(featureDir, 'spec.md'), `# Spec\n\n**Notion story**: ST-696, ${STORY_URL} (Task)\n`);
-  writeFileSync(join(featureDir, 'notion-sync.md'), `# Notion sync — ${FEATURE}\n\n- 2026-10-05 · start · ST-696 · To do → Planning\n`);
-  writeFileSync(join(repo, '.github', 'pull_request_template.md'), '## Why\n\n_(fill in: why)_\n\n## Notion story\n\n_(fill in: the story link)_\n\n## Spec folder\n\n_(fill in: specs/NNN-slug)_\n');
-  if (notionScript) writeFileSync(join(repo, '.claude', 'scripts', 'notion-sync.mjs'), '// stub\n');
+  writeFileSync(join(featureDir, 'spec.md'), '# Spec\n\n**Story**: ST-696 (Task)\n');
+  writeFileSync(join(featureDir, 'tracker-sync.md'), `# Tracker sync — ${FEATURE}\n\n- 2026-10-05 · start · ST-696 · To do → Planning\n`);
+  writeFileSync(join(repo, '.github', 'pull_request_template.md'), '## Why\n\n_(fill in: why)_\n\n## Story\n\n_(fill in: the story link)_\n\n## Spec folder\n\n_(fill in: specs/NNN-slug)_\n');
+  if (trackerScript) writeFileSync(join(repo, '.claude', 'scripts', 'tracker-sync.mjs'), '// stub\n');
 }
 
 /**
- * Stubbed git, gh, gates and Notion CLI. `answers` maps a command prefix to a
+ * Stubbed git, gh, gates and tracker CLI. `answers` maps a command prefix to a
  * result; the first prefix that matches wins. Every call and gate is recorded.
  */
 function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = [], refuse = null } = {}) {
@@ -48,8 +47,8 @@ function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = 
     ['gh pr view 141 --json number,state,url', { stdout: JSON.stringify({ number: 141, state: 'OPEN', url: PR_URL }) }],
     ['gh pr view 141 --json mergeCommit', { stdout: 'feed1234beef\n' }],
     [`gh pr view ${branch} --json number,title,isDraft,url`, { stdout: JSON.stringify({ number: 141, title: TITLE, isDraft: true, url: PR_URL }) }],
-    ['node .claude/scripts/notion-sync.mjs start', { stdout: '{"ready":{"review":["ST-30"]}}\n' }],
-    ['node .claude/scripts/notion-sync.mjs finish', { stdout: '{"ready":{"review":["ST-31"]}}\n' }],
+    ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"ready":{"review":["ST-30"]}}\n' }],
+    ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"ready":{"review":["ST-31"]}}\n' }],
   ];
   const table = [...answers, ...base];
   const run = (file, args, opts = {}) => {
@@ -73,7 +72,7 @@ const ofTool = (calls) => calls.filter((c) => !c.startsWith('gh auth token'));
 describe('open', () => {
   beforeEach(() => fixture());
 
-  it('makes the start commit, pushes, opens the labelled draft, then runs Notion start and pr', () => {
+  it('makes the start commit, pushes, opens the labelled draft, then runs the tracker start and pr', () => {
     const h = harness({ answers: [['git rev-list --count origin/main..HEAD', { stdout: '0\n' }], ['gh pr list', { stdout: '\n' }]] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
@@ -86,8 +85,8 @@ describe('open', () => {
     assert.match(calls[3], new RegExp(`^gh pr list --head ${BRANCH} --state open`));
     assert.equal(calls[4], 'gh label create scope: harness --force');
     assert.match(calls[5], /^gh pr create --draft --base main --head 696-lifecycle-script --title chore\(harness\): ST-696 lifecycle steps as one script call each --body-file \S+ --label planning --label tooling --label scope: harness$/);
-    assert.equal(calls[6], 'node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696');
-    assert.equal(calls[7], 'node .claude/scripts/notion-sync.mjs pr 141 --story ST-696');
+    assert.equal(calls[6], 'node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696');
+    assert.equal(calls[7], 'node .claude/scripts/tracker-sync.mjs pr 141 --story ST-696');
     assert.deepEqual(result.review, ['ST-30']);
   });
 
@@ -102,7 +101,7 @@ describe('open', () => {
     });
     step(['open', '--title', TITLE], h.io);
     assert.match(body, /## Why/);
-    assert.ok(body.includes(STORY_URL), body);
+    assert.ok(body.includes('_(fill in: the story link)_'), body);
     assert.ok(body.includes(`specs/${FEATURE}`), body);
   });
 
@@ -120,34 +119,34 @@ describe('open', () => {
     assert.ok(!h.calls.some((c) => c.startsWith('git commit')));
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr create')));
     assert.ok(h.calls.includes(`git push -u origin ${BRANCH}`));
-    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs pr 141 --story ST-696'));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs pr 141 --story ST-696'));
   });
 
-  it('stops at Notion exit 3 and lists the connector events left and the rerun', () => {
+  it('stops at a failing tracker event and lists the events left and the rerun', () => {
     const h = harness({
-      answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/notion-sync.mjs start', { code: 3, stdout: 'notion-sync: no NOTION_TOKEN, use the connector\n' }]],
+      answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 1, stdout: 'tracker-sync: GitHub refused\n' }]],
     });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.left, ['speckit-notion-sync start', 'speckit-notion-sync pr 141']);
-    assert.equal(result.then, `node .claude/scripts/lifecycle.mjs open --title "${TITLE}" --notion-done`);
-    assert.equal(h.calls.at(-1), 'node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696');
+    assert.deepEqual(result.left, ['speckit-tracker-sync start', 'speckit-tracker-sync pr 141']);
+    assert.equal(result.then, `node .claude/scripts/lifecycle.mjs open --title "${TITLE}" --tracker-done`);
+    assert.equal(h.calls.at(-1), 'node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696');
   });
 
-  it('treats a missing notion-sync.mjs like no token', () => {
-    fixture({ notionScript: false });
+  it('treats a missing tracker-sync.mjs like a failing event', () => {
+    fixture({ trackerScript: false });
     const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.left, ['speckit-notion-sync start', 'speckit-notion-sync pr 141']);
-    assert.ok(!h.calls.some((c) => c.startsWith('node .claude/scripts/notion-sync.mjs')));
+    assert.deepEqual(result.left, ['speckit-tracker-sync start', 'speckit-tracker-sync pr 141']);
+    assert.ok(!h.calls.some((c) => c.startsWith('node .claude/scripts/tracker-sync.mjs')));
   });
 
-  it('--notion-done skips the Notion events', () => {
+  it('--tracker-done skips the tracker events', () => {
     const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
-    const result = step(['open', '--title', TITLE, '--notion-done'], h.io);
+    const result = step(['open', '--title', TITLE, '--tracker-done'], h.io);
     assert.equal(result.ok, true);
-    assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
+    assert.ok(!h.calls.some((c) => c.includes('tracker-sync')));
   });
 
   it("points a feature.json left on the last feature at this branch's spec folder before anything runs", () => {
@@ -159,7 +158,7 @@ describe('open', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(JSON.parse(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8')).feature_directory, `specs/${FEATURE}`);
     assert.equal(result.did[0], `feature.json → specs/${FEATURE}`);
-    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
   });
 
   it('stops with a fix, not a stack, on a malformed feature.json', () => {
@@ -235,12 +234,12 @@ describe('ready', () => {
       `node scripts/pr-body-check.ts --body-file ${body} --title ${TITLE}`,
       `gh pr edit 141 --body-file ${body}`,
       'gh pr ready 141',
-      'node .claude/scripts/notion-sync.mjs qa --pr 141 --story ST-696',
-      `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 qa -- ${FEATURE}/notion-sync.md`,
+      'node .claude/scripts/tracker-sync.mjs qa --pr 141 --story ST-696',
+      `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 qa -- ${FEATURE}/tracker-sync.md`,
     ]);
     const note = readFileSync(join(featureDir, 'handoff.md'), 'utf8');
     assert.match(note, /PR: #141 https:\/\/github.com\/george-hutanu\/motor-fix\/pull\/141 · branch 696-lifecycle-script · worktree \S+ · head abcdef1234567890/);
-    assert.match(note, /story 3f0607bff0d2812e96e9c2882339f2bd/);
+    assert.match(note, /- Tracker: issue ST-696 \(ST-696\) · events in specs\/696-lifecycle-script\/tracker-sync\.md/);
     assert.match(note, /Open decisions: none/);
     assert.ok(result.did.includes('handoff comment skipped (not a cloud session)'), JSON.stringify(result.did));
   });
@@ -271,11 +270,11 @@ describe('ready', () => {
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr ready')));
   });
 
-  it('files unfiled deferred bullets through Notion debt before the records commit', () => {
+  it('files unfiled deferred bullets through the tracker debt before the records commit', () => {
     writeFileSync(join(featureDir, 'deferred.md'), '# Deferred\n\n- MEDIUM: tidy `x.mjs` (code-reviewer)\n');
     const h = harness({ answers: [staged([1, 1])] });
     step(['ready', '--body-file', body], h.io);
-    const debt = h.calls.indexOf('node .claude/scripts/notion-sync.mjs debt --pr 141 --story ST-696');
+    const debt = h.calls.indexOf('node .claude/scripts/tracker-sync.mjs debt --pr 141 --story ST-696');
     assert.ok(debt > -1, h.calls.join('\n'));
     assert.ok(debt < h.calls.indexOf(`${'node .claude/scripts/specs-repo.mjs commit'} chore(specs): ST-696 feature records -- ${FEATURE}`));
   });
@@ -297,13 +296,13 @@ describe('ready', () => {
     assert.ok(!h.calls.includes('gh pr ready 141'));
   });
 
-  it('stops at Notion exit 3 with the qa event left and the rerun', () => {
-    const h = harness({ answers: [staged([0]), ['node .claude/scripts/notion-sync.mjs qa', { code: 3, stdout: 'notion-sync: no NOTION_TOKEN, use the connector\n' }]] });
+  it('stops at a failing qa event with the event left and the rerun', () => {
+    const h = harness({ answers: [staged([0]), ['node .claude/scripts/tracker-sync.mjs qa', { code: 1, stdout: 'tracker-sync: GitHub refused\n' }]] });
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.left, ['speckit-notion-sync qa']);
-    assert.equal(result.then, `node .claude/scripts/lifecycle.mjs ready --body-file ${body} --notion-done`);
-    assert.equal(h.calls.at(-1), 'node .claude/scripts/notion-sync.mjs qa --pr 141 --story ST-696');
+    assert.deepEqual(result.left, ['speckit-tracker-sync qa']);
+    assert.equal(result.then, `node .claude/scripts/lifecycle.mjs ready --body-file ${body} --tracker-done`);
+    assert.equal(h.calls.at(-1), 'node .claude/scripts/tracker-sync.mjs qa --pr 141 --story ST-696');
     assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
   });
 
@@ -468,9 +467,9 @@ describe('merge', () => {
     assert.equal(calls[2], 'gh pr view 141 --json mergeCommit --jq .mergeCommit.oid');
     assert.equal(calls[3], 'git worktree list --porcelain');
     assert.equal(calls[4], `node scripts/test-services.ts down ${repo}`);
-    assert.equal(calls[5], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
-    assert.equal(calls[6], `git -C specs diff -U0 -- ${FEATURE}/notion-sync.md`);
-    assert.equal(calls[7], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`);
+    assert.equal(calls[5], `node .claude/scripts/tracker-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
+    assert.equal(calls[6], `git -C specs diff -U0 -- ${FEATURE}/tracker-sync.md`);
+    assert.equal(calls[7], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`);
     assert.match(calls[8], /^gh pr comment 141 --body-file \S+$/);
     assert.equal(calls.length, 9);
     assert.match(comment, /^## Finish log/);
@@ -493,8 +492,8 @@ describe('merge', () => {
     const h = harness({ answers: [['git -C .motor-fix-specs/specs diff -U0 --', diff[1]]] });
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.includes(`git -C .motor-fix-specs/specs diff -U0 -- ${FEATURE}/notion-sync.md`), h.calls.join('\n'));
-    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`));
+    assert.ok(h.calls.includes(`git -C .motor-fix-specs/specs diff -U0 -- ${FEATURE}/tracker-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`));
   });
 
   // An old clone still at specs/ that fast-forwarded past trunk's move holds
@@ -511,14 +510,14 @@ describe('merge', () => {
     const h = harness({ answers: [['git -C specs/specs diff -U0 --', diff[1]]] });
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.includes(`git -C specs/specs diff -U0 -- ${FEATURE}/notion-sync.md`), h.calls.join('\n'));
-    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`));
+    assert.ok(h.calls.includes(`git -C specs/specs diff -U0 -- ${FEATURE}/tracker-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`));
   });
 
   it('passes --no-comment when there is no finish-comment.md', () => {
     const h = harness({ answers: [diff] });
     step(['merge'], h.io);
-    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 141 --no-comment --story ST-696'));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs finish --pr 141 --no-comment --story ST-696'));
   });
 
   it('refuses exactly when the merge gate does, prints its refusal, and runs nothing after it', () => {
@@ -536,21 +535,21 @@ describe('merge', () => {
 
   it('skips the merge on a PR already merged and finishes the rest', () => {
     const h = harness({ answers: [diff, ['gh pr view --json number,state,url', { stdout: JSON.stringify({ number: 141, state: 'MERGED', url: PR_URL }) }]] });
-    const result = step(['merge', '--notion-done'], h.io);
+    const result = step(['merge', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr merge')));
-    assert.ok(!h.calls.some((c) => c.includes('notion-sync.mjs')));
+    assert.ok(!h.calls.some((c) => c.includes('tracker-sync.mjs')));
     assert.ok(h.calls.some((c) => c.startsWith('gh pr comment 141')));
     assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`), 'a rerun stops the stack again');
   });
 
-  it('stops at Notion exit 3 after the merge with finish left and the rerun', () => {
-    const h = harness({ answers: [['node .claude/scripts/notion-sync.mjs finish', { code: 3, stdout: 'notion-sync: no NOTION_TOKEN, use the connector\n' }]] });
+  it('stops at a failing finish after the merge with finish left and the rerun', () => {
+    const h = harness({ answers: [['node .claude/scripts/tracker-sync.mjs finish', { code: 1, stdout: 'tracker-sync: GitHub refused\n' }]] });
     const result = step(['merge', '--pr', '141'], h.io);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.left, ['speckit-notion-sync finish']);
-    assert.equal(result.then, 'node .claude/scripts/lifecycle.mjs merge --pr 141 --notion-done');
-    assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`), 'the stack is stopped before the Notion finish can stop the step');
+    assert.deepEqual(result.left, ['speckit-tracker-sync finish']);
+    assert.equal(result.then, 'node .claude/scripts/lifecycle.mjs merge --pr 141 --tracker-done');
+    assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`), 'the stack is stopped before the tracker finish can stop the step');
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr comment')));
     assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
   });
@@ -566,13 +565,13 @@ describe('merge stops the merged worktree test stack', () => {
   const down = (out) => ['node scripts/test-services.ts down', out];
   const stopped = { stdout: '{"project":"mf-test-696-lifecycle-script-abc123","stopped":true}\n' };
 
-  it('stops the stack of the worktree carrying the PR head branch, before the Notion finish, and reports it', () => {
+  it('stops the stack of the worktree carrying the PR head branch, before the tracker finish, and reports it', () => {
     const h = harness({ answers: [diff, viewHead, worktrees, down(stopped)] });
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const at = h.calls.indexOf(`node scripts/test-services.ts down ${WT}`);
     assert.ok(at > h.calls.indexOf('gh pr merge 141 --merge'), 'after the merge');
-    assert.ok(at < h.calls.findIndex((c) => c.includes('notion-sync.mjs finish')), 'before the finish');
+    assert.ok(at < h.calls.findIndex((c) => c.includes('tracker-sync.mjs finish')), 'before the finish');
     assert.deepEqual(result.test_stack, { project: 'mf-test-696-lifecycle-script-abc123', stopped: true });
     assert.ok(result.did.includes('test stack mf-test-696-lifecycle-script-abc123 stopped'));
   });
@@ -592,7 +591,7 @@ describe('merge stops the merged worktree test stack', () => {
   const finishesAnyway = (h, result) => {
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(result.test_stack.stopped, false);
-    assert.ok(h.calls.some((c) => c.includes('notion-sync.mjs finish')));
+    assert.ok(h.calls.some((c) => c.includes('tracker-sync.mjs finish')));
     assert.ok(h.calls.some((c) => c.startsWith('node .claude/scripts/specs-repo.mjs commit')));
     assert.ok(h.calls.some((c) => c.startsWith('gh pr comment 141')));
     assert.ok(result.did.some((d) => d.startsWith('test stack not stopped: ')), JSON.stringify(result.did));
@@ -636,7 +635,7 @@ describe('merge stops the merged worktree test stack', () => {
     const cloud = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
     const rest = ['gh api repos/{owner}/{repo}/pulls/141 --jq', { stdout: `${JSON.stringify({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef', title: TITLE, head: BRANCH })}\n` }];
     const h = harness({ env: cloud, answers: [diff, rest, worktrees, down(stopped)] });
-    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    const result = step(['merge', '--pr', '141', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(h.calls.some((c) => c.startsWith('gh api repos/{owner}/{repo}/pulls/141 --jq') && c.includes('head: .head.ref')));
     assert.ok(h.calls.includes(`node scripts/test-services.ts down ${WT}`));
@@ -726,7 +725,7 @@ describe('merge removes the merged worktree as its last step', () => {
   });
 
   it('removes nothing when the step stops before its end', () => {
-    const h = harness({ answers: [viewHead, list(WT), ['node .claude/scripts/notion-sync.mjs finish', { code: 3, stdout: 'no token\n' }]] });
+    const h = harness({ answers: [viewHead, list(WT), ['node .claude/scripts/tracker-sync.mjs finish', { code: 1, stdout: 'no token\n' }]] });
     const result = step(['merge', '--pr', '141'], h.io);
     assert.equal(result.ok, false);
     assert.ok(!h.calls.some((c) => c.includes('worktree-remove')));
@@ -781,7 +780,7 @@ describe('merge in a cloud session: REST only', () => {
 
   it('skips the merge on a PR already merged', () => {
     const h = harness({ env: cloud, answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' })] });
-    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    const result = step(['merge', '--pr', '141', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(!h.calls.some((c) => c.startsWith('gh api -X PUT')));
   });
@@ -799,7 +798,7 @@ describe('merge in a cloud session: REST only', () => {
       env: cloud,
       answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' }), ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', { code: 1, stderr: 'HTTP 502' }]],
     });
-    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    const result = step(['merge', '--pr', '141', '--tracker-done'], h.io);
     assert.equal(result.ok, false);
     assert.match(result.then, /^gh api -X POST "repos\/\{owner\}\/\{repo\}\/issues\/141\/comments" -F body=@\S+ && rm/);
   });
@@ -845,12 +844,12 @@ describe('gates, main and identity', () => {
 
   it('runs gh with the caller GH_TOKEN, or george-hutanu\'s token when unset', () => {
     const own = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
-    step(['open', '--title', TITLE, '--notion-done'], own.io);
+    step(['open', '--title', TITLE, '--tracker-done'], own.io);
     assert.ok(own.envs.filter((e) => e.cmd.startsWith('gh ')).every((e) => e.env.GH_TOKEN === 'tok-george'));
     assert.ok(!own.calls.includes('gh auth token -u george-hutanu'));
 
     const none = harness({ env: {}, answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
-    step(['open', '--title', TITLE, '--notion-done'], none.io);
+    step(['open', '--title', TITLE, '--tracker-done'], none.io);
     assert.equal(none.calls[0], 'gh auth token -u george-hutanu');
     assert.ok(none.envs.filter((e) => e.cmd.startsWith('gh ') && !e.cmd.startsWith('gh auth')).every((e) => e.env.GH_TOKEN === 'tok-from-gh'));
   });
@@ -898,7 +897,7 @@ describe('gates, main and identity', () => {
     [['merge', '--restore'], /unknown flag --restore for merge/],
     [['merge', '188'], /unexpected argument 188/],
     [['merge', '--pr'], /--pr needs a value/],
-    [['merge', '--pr', '--notion-done'], /--pr needs a value/],
+    [['merge', '--pr', '--tracker-done'], /--pr needs a value/],
   ])('refuses %j before it runs anything', (argv, why) => {
     const h = harness();
     const result = step(argv, h.io);
@@ -983,24 +982,24 @@ describe('temp files, the token stop, reruns and the finish order', () => {
   it('carries --decisions into the ready rerun', () => {
     const body = join(repo, 'body.md');
     writeFileSync(body, '## Why\n');
-    const h = harness({ answers: [['node .claude/scripts/notion-sync.mjs qa', { code: 3 }]] });
+    const h = harness({ answers: [['node .claude/scripts/tracker-sync.mjs qa', { code: 1 }]] });
     const result = step(['ready', '--body-file', body, '--decisions', 'keep "x" as is'], h.io);
-    assert.equal(result.then, `node .claude/scripts/lifecycle.mjs ready --body-file ${body} --decisions "keep \\"x\\" as is" --notion-done`);
+    assert.equal(result.then, `node .claude/scripts/lifecycle.mjs ready --body-file ${body} --decisions "keep \\"x\\" as is" --tracker-done`);
   });
 
   it('quotes the title and the body path in the reruns', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/notion-sync.mjs start', { code: 3 }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 1 }]] });
     const title = 'feat(api): ST-696 a $HOME `x` "y"';
-    assert.equal(step(['open', '--title', title], h.io).then, 'node .claude/scripts/lifecycle.mjs open --title "feat(api): ST-696 a \\$HOME \\`x\\` \\"y\\"" --notion-done');
+    assert.equal(step(['open', '--title', title], h.io).then, 'node .claude/scripts/lifecycle.mjs open --title "feat(api): ST-696 a \\$HOME \\`x\\` \\"y\\"" --tracker-done');
     const spaced = join(repo, 'my body.md');
     writeFileSync(spaced, '## Why\n');
-    const r = harness({ answers: [['node .claude/scripts/notion-sync.mjs qa', { code: 3 }]] });
-    assert.equal(step(['ready', '--body-file', spaced], r.io).then, `node .claude/scripts/lifecycle.mjs ready --body-file "${spaced}" --notion-done`);
+    const r = harness({ answers: [['node .claude/scripts/tracker-sync.mjs qa', { code: 1 }]] });
+    assert.equal(step(['ready', '--body-file', spaced], r.io).then, `node .claude/scripts/lifecycle.mjs ready --body-file "${spaced}" --tracker-done`);
   });
 
   it('takes the start commit ST from the title when it has one', () => {
     const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], ['gh pr list', { stdout: '141\n' }]] });
-    step(['open', '--title', 'fix(web): ST-701 a fix', '--notion-done'], h.io);
+    step(['open', '--title', 'fix(web): ST-701 a fix', '--tracker-done'], h.io);
     assert.ok(h.calls.includes('git commit --allow-empty -m chore(web): ST-701 start a fix'), h.calls.join('\n'));
   });
 
@@ -1009,7 +1008,7 @@ describe('temp files, the token stop, reruns and the finish order', () => {
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, false);
     assert.match(result.stopped, /^gh pr create/);
-    assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
+    assert.ok(!h.calls.some((c) => c.includes('tracker-sync')));
   });
 
   it('commits the log to the specs repository before posting the finish comment', () => {
@@ -1104,15 +1103,14 @@ describe('the story: --story, the PR title, feature.json, then the folder number
   const view = (title, prState = 'OPEN') => ['gh pr view --json number,state,url,title', { stdout: JSON.stringify({ number: 244, state: prState, url: PR_URL, title }) }];
   const readyView = (title) => [`gh pr view ${OTHER} --json number,title,isDraft,url`, { stdout: JSON.stringify({ number: 244, title, isDraft: true, url: PR_URL }) }];
   const diff = ['git -C specs diff -U0 --', { stdout: '' }];
-  const sideEffects = (calls) => calls.filter((c) => /^(git push|git commit|gh pr merge|gh pr ready|gh pr edit|gh pr create|node \.claude\/scripts\/(notion-sync|specs-repo)\.mjs)/.test(c));
+  const sideEffects = (calls) => calls.filter((c) => /^(git push|git commit|gh pr merge|gh pr ready|gh pr edit|gh pr create|node \.claude\/scripts\/(tracker-sync|specs-repo)\.mjs)/.test(c));
 
   beforeEach(() => {
     fixture();
     mkdirSync(join(repo, 'specs', OTHER), { recursive: true });
     writeFileSync(join(repo, 'specs', OTHER, 'spec.md'), '# Spec\n');
-    // @traces 1036-FR-013
-    // A feature that started on Notion finishes there.
-    writeFileSync(join(repo, 'specs', OTHER, 'notion-sync.md'), '# Notion sync\n');
+    // @traces 1037-FR-003
+    writeFileSync(join(repo, 'specs', OTHER, 'tracker-sync.md'), '# Tracker sync\n');
     writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ level: 1, level_for: `specs/${OTHER}`, feature_directory: `specs/${OTHER}` }));
   });
 
@@ -1122,17 +1120,17 @@ describe('the story: --story, the PR title, feature.json, then the folder number
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(h.calls.find((c) => !c.startsWith('git rev-parse') && !c.startsWith('gh auth')), 'gh pr view --json number,state,url,title,headRefName');
-    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
-    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
     assert.ok(!h.calls.some((c) => c.includes('ST-854')), h.calls.join('\n'));
   });
 
   // @traces 891-FR-001 891-FR-005
   it('falls back to the folder number, with no refusal, when no other source names a story', () => {
     const h = harness({ branch: OTHER, answers: [diff, view('chore(harness): a title without a story')] });
-    const result = step(['merge', '--notion-done'], h.io);
+    const result = step(['merge', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-854 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-854 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
   });
 
   // @traces 891-FR-001 891-FR-002
@@ -1142,7 +1140,7 @@ describe('the story: --story, the PR title, feature.json, then the folder number
     const result = step(['merge', '--pr', '244'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.match(h.calls.find((c) => c.startsWith('gh api repos/{owner}/{repo}/pulls/244 --jq')), /title/);
-    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
+    assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
   });
 
   // @traces 891-FR-004 891-FR-005
@@ -1150,21 +1148,21 @@ describe('the story: --story, the PR title, feature.json, then the folder number
     const o = harness({ branch: OTHER, answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '244\n' }]] });
     const opened = step(['open', '--title', 'fix(harness): precompact PR signal', '--story', 'ST-660'], o.io);
     assert.equal(opened.ok, true, JSON.stringify(opened));
-    assert.ok(o.calls.includes('node .claude/scripts/notion-sync.mjs start --pr 244 --story ST-660'), o.calls.join('\n'));
+    assert.ok(o.calls.includes('node .claude/scripts/tracker-sync.mjs start --pr 244 --story ST-660'), o.calls.join('\n'));
     assert.deepEqual(state(), { level: 1, level_for: `specs/${OTHER}`, feature_directory: `specs/${OTHER}`, story: 'ST-660', story_for: `specs/${OTHER}` });
     const m = harness({ branch: OTHER, answers: [diff, view('fix(harness): precompact PR signal')] });
-    const merged = step(['merge', '--notion-done'], m.io);
+    const merged = step(['merge', '--tracker-done'], m.io);
     assert.equal(merged.ok, true, JSON.stringify(merged));
-    assert.ok(m.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), m.calls.join('\n'));
+    assert.ok(m.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), m.calls.join('\n'));
   });
 
   // @traces 891-FR-001 891-FR-004 891-FR-005
   it('ignores a recorded story whose story_for names another feature', () => {
     writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ feature_directory: `specs/${OTHER}`, story: 'ST-661', story_for: `specs/${FEATURE}` }));
     const h = harness({ branch: OTHER, answers: [diff, view(T660)] });
-    const result = step(['merge', '--notion-done'], h.io);
+    const result = step(['merge', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
   });
 
   // @traces 891-FR-002 891-FR-003 891-FR-005
@@ -1198,9 +1196,9 @@ describe('the story: --story, the PR title, feature.json, then the folder number
   // @traces 891-FR-003
   it('compares stories by number, so ST-0660 and ST-660 agree', () => {
     const h = harness({ branch: OTHER, answers: [diff, view(T660)] });
-    const result = step(['merge', '--story', 'ST-0660', '--notion-done'], h.io);
+    const result = step(['merge', '--story', 'ST-0660', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
   });
 
   // @traces 891-FR-004 891-FR-005
@@ -1216,12 +1214,11 @@ describe('the story: --story, the PR title, feature.json, then the folder number
 });
 
 // @traces 1036-FR-013 1036-FR-014
-describe('a feature tracked on GitHub (no notion-sync.md) runs tracker-sync.mjs', () => {
+describe('every feature runs tracker-sync.mjs', () => {
   const ISSUE = 'https://github.com/george-hutanu/motor-fix-specs/issues/60';
   let body;
   beforeEach(() => {
     fixture();
-    rmSync(join(featureDir, 'notion-sync.md'));
     writeFileSync(join(featureDir, 'spec.md'), '# Spec\n\n**Story**: ST-696\n');
     writeFileSync(join(repo, '.claude', 'scripts', 'tracker-sync.mjs'), '// stub\n');
     body = join(repo, 'body.md');
@@ -1234,13 +1231,12 @@ describe('a feature tracked on GitHub (no notion-sync.md) runs tracker-sync.mjs'
     ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"event":"finish"}\n' }],
   ];
 
-  it('open runs start and pr through tracker-sync.mjs, never notion-sync.mjs', () => {
+  it('open runs start and pr through tracker-sync.mjs', () => {
     const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ...tracker] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
     assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs pr 141 --story ST-696'));
-    assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
     assert.deepEqual(result.review, ['ST-40']);
   });
 
@@ -1263,7 +1259,6 @@ describe('a feature tracked on GitHub (no notion-sync.md) runs tracker-sync.mjs'
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 qa -- ${FEATURE}/tracker-sync.md`), h.calls.join('\n'));
     const note = readFileSync(join(featureDir, 'handoff.md'), 'utf8');
     assert.ok(note.includes(`- Tracker: issue ${ISSUE} (ST-696) · events in specs/${FEATURE}/tracker-sync.md`), note);
-    assert.ok(!/Notion/.test(note), note);
   });
 
   it('merge runs finish and posts the lines tracker-sync.md gained', () => {

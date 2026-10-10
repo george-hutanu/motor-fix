@@ -67,6 +67,32 @@ ul button:focus-visible {
 .quiet {
   color: var(--mf-text-secondary);
 }
+.jobs {
+  display: grid;
+  gap: var(--mf-space-2);
+  max-width: 100%;
+}
+.jobs > button {
+  justify-self: start;
+}
+.jobs summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  cursor: pointer;
+}
+.jobs ul {
+  display: grid;
+  gap: 0;
+}
+.jobs label {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
 /* A phone reads the fuels, the no-requests line, the counters and the lamps at the body size; the small size starts at a tablet. */
 @media (min-width: 768px) {
   .fuels button,

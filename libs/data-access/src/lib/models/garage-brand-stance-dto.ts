@@ -8,5 +8,10 @@ export interface GarageBrandStanceDto {
    * A taken brand only. Left out: unchanged, or all four for a brand taken now; empty: none
    */
   fuels?: Array<'petrol' | 'diesel' | 'hybrid' | 'electric'>;
+
+  /**
+   * A taken brand only: the jobs of the price list it is ticked for. Left out: unchanged, or every job for a brand taken now; empty: none
+   */
+  jobs?: Array<string>;
   stance: 'works_on' | 'does_not_take';
 }

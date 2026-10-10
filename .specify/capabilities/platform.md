@@ -68,6 +68,7 @@ features:
   - 1018-notion-docs-to-specs
   - 1026-diataxis-docs
   - 1035-main-checkout-guard
+  - 1037-remove-notion
 ---
 
 # Capability: Platform
@@ -104,7 +105,7 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-008 — Errors MUST be returned (Notion A28, proposed; confirmed in the plan) as RFC 9457 problem details (`application/problem+json`) with a stable `code`; an unknown error MUST answer 500 with code `internal_error` and no stack trace.
+### 421-FR-008 — Errors MUST be returned (Build brief A28, proposed; confirmed in the plan) as RFC 9457 problem details (`application/problem+json`) with a stable `code`; an unknown error MUST answer 500 with code `internal_error` and no stack trace.
 
 _From 421-monorepo-platform._
 
@@ -168,7 +169,7 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-024 — Prisma (Notion A6, proposed; confirmed in the plan) MUST manage the schema, one schema file per module in `domain`, with empty files for `auth`, `notifications`, `audit` and `events`. The first migration MUST create no product table.
+### 421-FR-024 — Prisma (Build brief A6, proposed; confirmed in the plan) MUST manage the schema, one schema file per module in `domain`, with empty files for `auth`, `notifications`, `audit` and `events`. The first migration MUST create no product table.
 
 _From 421-monorepo-platform._
 
@@ -414,7 +415,7 @@ _From 659-merge-gate-carry-deadline._
 
 _From 659-merge-gate-carry-deadline._
 
-### 673-FR-001 — `.claude/agents/task-runner.md` MUST pin `model: opus`, MUST NOT carry a `tools:` allowlist, and its `disallowedTools` MUST deny the artifact comment and data, browser, Chrome, simulator, visualize and session-management tools while denying none of Bash, Read, Edit, Write, Grep, Glob, Skill, Agent, ToolSearch, Monitor, TaskStop, EnterWorktree, PushNotification, Artifact (the design check's mock read), the WebStorm inspections (harden) or any Notion tool.
+### 673-FR-001 — `.claude/agents/task-runner.md` MUST pin `model: opus`, MUST NOT carry a `tools:` allowlist, and its `disallowedTools` MUST deny the artifact comment and data, browser, Chrome, simulator, visualize and session-management tools while denying none of Bash, Read, Edit, Write, Grep, Glob, Skill, Agent, ToolSearch, Monitor, TaskStop, EnterWorktree, PushNotification, Artifact (the design check's mock read) or the WebStorm inspections (harden).
 
 _From 673-story-tail-agents._
 
@@ -530,7 +531,7 @@ _From 704-auto-phase-model-pins._
 
 _From 704-auto-phase-model-pins._
 
-### 704-FR-003 — A dispatched phase agent MUST produce the same artifacts, run the same spec-kit hooks and answer the same gates as the inline phase does today (the "Gate override" rules of `/speckit-auto` phases 2–8), and MUST open its reply with the four `STATUS:/PR:/NEXT:/FILES:` lines of AGENTS.md "Agent replies"; the run MUST treat a `failure` or `blocked` status as the inline phase's failure, never as a pass, and a `partial` one as a pass only when FILES names the phase's artifact and what failed is a Notion or mock write. A failed phase agent is not retried.
+### 704-FR-003 — A dispatched phase agent MUST produce the same artifacts, run the same spec-kit hooks and answer the same gates as the inline phase does today (the "Gate override" rules of `/speckit-auto` phases 2–8), and MUST open its reply with the four `STATUS:/PR:/NEXT:/FILES:` lines of AGENTS.md "Agent replies"; the run MUST treat a `failure` or `blocked` status as the inline phase's failure, never as a pass, and a `partial` one as a pass only when FILES names the phase's artifact and what failed is a tracker or mock write. A failed phase agent is not retried.
 
 _From 704-auto-phase-model-pins._
 
@@ -554,23 +555,19 @@ _From 704-auto-phase-model-pins._
 
 _From 704-auto-phase-model-pins._
 
-### 696-FR-001 — `lifecycle.mjs open --title <t>` MUST, in this order: make the empty start commit when the branch has no commit ahead of `origin/main`; push with upstream to the feature branch; when the branch has no open PR, open a draft from the PR template with `planning`, the title's type label (`breaking` when the title has `!`) and `scope: <scope>`; then run the Notion `start` and `pr <n>` events.
+### 696-FR-001 — `lifecycle.mjs open --title <t>` MUST, in this order: make the empty start commit when the branch has no commit ahead of `origin/main`; push with upstream to the feature branch; when the branch has no open PR, open a draft from the PR template with `planning`, the title's type label (`breaking` when the title has `!`) and `scope: <scope>`; then run the tracker `start` and `pr <n>` events.
 
 _From 696-lifecycle-script._
 
-### 696-FR-002 — `lifecycle.mjs ready --body-file <f>` MUST, in this order: file the unfiled `deferred.md` bullets with the Notion `debt` event; commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the Notion `qa` event; commit and push the `qa` line; write `handoff.md`.
+### 696-FR-002 — `lifecycle.mjs ready --body-file <f>` MUST, in this order: file the unfiled `deferred.md` bullets with the tracker `debt` event; commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the tracker `qa` event; commit and push the `qa` line; write `handoff.md`.
 
 _From 696-lifecycle-script._
 
-### 696-FR-003 — `lifecycle.mjs merge` MUST run the merge gate on `gh pr merge <n> --merge` and refuse exactly when it refuses; otherwise merge, then run the Notion `finish` event, post one finish comment on the merged PR, restore `notion-sync.md` and delete `handoff.md`.
+### 696-FR-003 — `lifecycle.mjs merge` MUST run the merge gate on `gh pr merge <n> --merge` and refuse exactly when it refuses; otherwise merge, then run the tracker `finish` event, post one finish comment on the merged PR, restore `tracker-sync.md` and delete `handoff.md`.
 
 _From 696-lifecycle-script._
 
 ### 696-FR-004 — Every step MUST print exactly one JSON line on stdout: `ok`, the step, what it did, and on a stop `stopped` (the command or check) and `fix`.
-
-_From 696-lifecycle-script._
-
-### 696-FR-005 — When the Notion CLI exits 3, the step MUST stop and list the connector events left and the `--notion-done` rerun that completes the step.
 
 _From 696-lifecycle-script._
 
@@ -698,37 +695,9 @@ _From 432-mutation-floors._
 
 _From 725-lifecycle-gate-feature-dir._
 
-### 725-FR-002 — `prLinked` MUST read `notion-sync.md` from the resolved folder.
-
-_From 725-lifecycle-gate-feature-dir._
-
 ### 725-FR-003 — `handedOff` MUST read `handoff.md` from the resolved folder.
 
 _From 725-lifecycle-gate-feature-dir._
-
-### 693-FR-001 — Both agents carry the current server's read tools: `org-researcher` lists `notion-search`, `notion-fetch`, `notion-get-comments`, `notion-query-data-sources` and `notion-get-tool-access`; `spec-reviewer` lists `notion-search`, `notion-fetch` and `notion-get-comments`. Today's id, `fd62790a-b7ca-480e-9cf5-9073c1192ba8`, is on both lists when this merges.
-
-_From 693-notion-agent-tools._
-
-### 693-FR-002 — No Notion write tool (a name starting `notion-create`, `notion-update`, `notion-move`, `notion-duplicate`, `notion-delete` or `notion-upload`, which covers `notion-create-comment`; the read tool `notion-get-comments` stays allowed), nor a whole-server grant (`mcp__<id>` or `mcp__<id>__*`), ever appears in either agent's tools or, for a Notion server, in `permissions.allow`.
-
-_From 693-notion-agent-tools._
-
-### 693-FR-003 — `.claude/scripts/notion-agent-tools.mjs` owns the list, with three commands: `check` (exit 1, one line per finding, when a Notion agent lists a server another lacks, a read tool outside its set, lacks one of its set for a listed server, or lists a write tool or whole-server grant, and when `.claude/settings.json` `permissions.allow` lacks a server the agents list or allows a Notion write tool or grant; exit 0 otherwise); `add <server-id or mcp__<id>__notion-* name>` (adds each agent its own read set and the union to `permissions.allow`; idempotent; refuses any other name); `detect` (reads the newest 20 transcripts under `~/.claude/projects/<project slug>/`, main checkout's slug first, collects `mcp__<id>__notion-*` names from their deferred tool lists only, exits 1 naming each id the agents lack, 0 when none is or with a note when no transcript exists).
-
-_From 693-notion-agent-tools._
-
-### 693-FR-004 — `doctor.mjs` runs `detect` and reports a missing id as a `warn` result, never a failure; a `check` finding (lists out of step, a write tool) is a `fail`.
-
-_From 693-notion-agent-tools._
-
-### 693-FR-005 — `org-researcher` and `spec-reviewer` check for a Notion tool first and, when none is present, report `[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`; the researcher writes it to `context.md` and its reply, the reviewer to its report and continues without Notion. `/speckit-context` and speckit-auto phase 3 tell the caller to run `detect` then `add` on that line.
-
-_From 693-notion-agent-tools._
-
-### 693-FR-006 — Harness specs cover the script (`check`, `add`, `detect` on fixture agent files and fixture transcripts) under vitest; the existing `.claude/agents/agent-replies.spec.mjs` and `npm run test:harness` stay green.
-
-_From 693-notion-agent-tools._
 
 ### 610-FR-001 — `isDependabot` MUST also require every commit's committer login to be `web-flow` or `dependabot[bot]` and its signature to be verified; a commit with no committer data is not Dependabot's.
 
@@ -782,15 +751,7 @@ _From 678-measurable-sizing._
 
 _From 678-measurable-sizing._
 
-### 678-FR-011 — `level.mjs suggest` given a story id (`ST-<n>`) or a Notion story URL MUST, before any classifier, Jev or model call, read the story's Issue type, Labels, Design, Design boards, Story points when present, and whether each Build brief section has content, and MUST print the level with the facts it used, or `unsure` with the reason and the facts read.
-
-_From 678-measurable-sizing._
-
 ### 678-FR-012 — The sizing rules MUST be: the free word classifier runs on the story's text first; a Bug with no Design boards and every Build brief section filled is level 1 with no Jev or model call, unless the classifier answered 2 or more, which stands; a story with Design boards, an empty or missing Build brief section, or Story points above the threshold is never below 2; any other combination is `unsure` and continues with today's path on the story's text. Labels and Design are read and printed as facts but decide nothing. A rule MUST only ever raise the answer above what the text path would give, never lower it.
-
-_From 678-measurable-sizing._
-
-### 678-FR-013 — When Notion cannot be read (no token, network failure, page not found), `suggest` MUST print one line saying so and why, then behave as `suggest "<text>"` does today, exit 0. `--set` MUST keep writing only a confident answer.
 
 _From 678-measurable-sizing._
 
@@ -819,10 +780,6 @@ _From 745-notion-api-limits._
 _From 745-notion-api-limits._
 
 ### 745-FR-004 — `writeProp` MUST split a `title` or `rich_text` value into objects of at most 2,000 Unicode code points, at most 100 objects per array, and MUST raise a `NotionError` for a text that cannot fit; the same splitter is exported for comments.
-
-_From 745-notion-api-limits._
-
-### 745-FR-005 — `notion-sync` MUST post a comment body over 2,000 code points as `rich_text` objects produced by the shared splitter, and MAY keep posting a body of at most 2,000 code points as `markdown`.
 
 _From 745-notion-api-limits._
 
@@ -886,7 +843,7 @@ _From 766-cloud-rest-fallback._
 
 _From 766-cloud-rest-fallback._
 
-### 766-FR-003 — `pr-lifecycle-gate.mjs` and `notion-sync.mjs` MUST read and write the PR through FR-001.
+### 766-FR-003 — `pr-lifecycle-gate.mjs` and `tracker-sync.mjs` MUST read and write the PR through FR-001.
 
 _From 766-cloud-rest-fallback._
 
@@ -1182,10 +1139,6 @@ _From 691-author-skills-card._
 
 _From 437-diff-audit-origin-main._
 
-### 849-FR-001 — Each status event `start`, `implement`, `qa`, `finish`, `blocked` and `unblock` that notion-sync runs for a story MUST upsert that story's Work timeline row: query the data source by `Key` = `ST-<n>`, update the first match, else create a row with Task (title) and Key both `ST-<n>`. `review` and every non-status event (`pr`, `debt`, `ready`, `log`, `check`) MUST NOT touch the Work timeline.
-
-_From 849-work-timeline-row._
-
 ### 849-FR-002 — The step MUST write State and dates as mapped: `start` → In progress, Started = now only when empty; `implement` → In progress (Started as `start`); `qa` → QA, QA from = now only when empty; `finish` → Merged, Merged at = now; `blocked` → Blocked; `unblock` → QA when the row has QA from, else In progress. No other state (in particular `Queued`) is ever written.
 
 _From 849-work-timeline-row._
@@ -1195,10 +1148,6 @@ _From 849-work-timeline-row._
 _From 849-work-timeline-row._
 
 ### 849-FR-004 — The step MUST set `PR` to the story's PR URL when the event knows it (the story's `PR` property, else `--pr <n>` as the repository's PR URL) and omit it otherwise, and MUST set the `Ticket` relation (to the stories data source `326eee3c-abec-41d9-9f96-eb3bd545a802`) to the story's own page; it MUST never send the `Session` property (to the row or the story), nor any property the mapping does not name, so what the owner set by hand is kept.
-
-_From 849-work-timeline-row._
-
-### 849-FR-005 — The Work timeline write MUST fail open: any error (request, HTTP status, body) is caught inside `.claude/scripts/lib/work-timeline.mjs` (which holds the data source id `3706e923-2faa-42bc-aab2-8a2d5ab5d9d3` and the Notion version `2025-09-03` as constants and is called from notion-sync's status event after the story's own writes), logged as one line in `specs/<feature>/notion-sync.md` through the event's existing log, and never thrown, never changes the event's output or exit code, and never queues a PENDING replay line. A successful write logs one line with the row's change.
 
 _From 849-work-timeline-row._
 
@@ -1269,7 +1218,7 @@ _From 884-railway-egress._
 
 _From 884-railway-egress._
 
-### 884-FR-008 — The pull request MUST state the before figures (GB per staging end-to-end run and GB/day, with the measurement window) and the projected after figures with their arithmetic; the finish on the merged PR and the Notion story MUST record the GB sent by staging `web` during the first completed staging E2E run whose deployed digest includes the merge (read from Railway's metrics API at the finish, values never printed) and the resulting GB/day, or say "not measured" when it cannot be read.
+### 884-FR-008 — The pull request MUST state the before figures (GB per staging end-to-end run and GB/day, with the measurement window) and the projected after figures with their arithmetic; the finish on the merged PR and the story's issue MUST record the GB sent by staging `web` during the first completed staging E2E run whose deployed digest includes the merge (read from Railway's metrics API at the finish, values never printed) and the resulting GB/day, or say "not measured" when it cannot be read.
 
 _From 884-railway-egress._
 
@@ -1284,7 +1233,7 @@ _From 891-lifecycle-story-override._
 
 _From 891-lifecycle-story-override._
 
-### 891-FR-003 — When any two explicit sources (flag, title, honoured feature.json) name different stories (compared by number, so `ST-0660` and `ST-660` agree), the step MUST stop with exit 1 before any side effect (no push, no `gh pr ready`, no merge, no Notion event, no feature.json write) with a message naming both sources and their values and the fix (`--story` or fixing the title). The folder number never causes a refusal.
+### 891-FR-003 — When any two explicit sources (flag, title, honoured feature.json) name different stories (compared by number, so `ST-0660` and `ST-660` agree), the step MUST stop with exit 1 before any side effect (no push, no `gh pr ready`, no merge, no tracker event, no feature.json write) with a message naming both sources and their values and the fix (`--story` or fixing the title). The folder number never causes a refusal.
 
 _From 891-lifecycle-story-override._
 
@@ -1412,11 +1361,11 @@ _From 962-gate-fail-closed._
 
 _From 962-gate-fail-closed._
 
-### 974-FR-001 — Once the PR is merged, the lifecycle merge step MUST stop the test stack of the worktree that carries the PR's head branch (the current checkout when none does), before the Notion finish, keeping its volumes, and MUST name the stack in its result (`test_stack`).
+### 974-FR-001 — Once the PR is merged, the lifecycle merge step MUST stop the test stack of the worktree that carries the PR's head branch (the current checkout when none does), before the tracker finish, keeping its volumes, and MUST name the stack in its result (`test_stack`).
 
 _From 974-stop-test-stack-on-merge._
 
-### 974-FR-002 — An absent, failing or hanging Docker (each call bounded by a 60 s timeout) MUST never fail the merge step, the Notion finish that follows it, or the sweep: the failure is one logged line and the step goes on; a `down` that fails for one stack does not stop the sweep reaching the others, and an unavailable `gh` skips only the PR-based judgements.
+### 974-FR-002 — An absent, failing or hanging Docker (each call bounded by a 60 s timeout) MUST never fail the merge step, the tracker finish that follows it, or the sweep: the failure is one logged line and the step goes on; a `down` that fails for one stack does not stop the sweep reaching the others, and an unavailable `gh` skips only the PR-based judgements.
 
 _From 974-stop-test-stack-on-merge._
 
@@ -1564,13 +1513,13 @@ _From 1018-notion-docs-to-specs._
 
 _From 1026-diataxis-docs._
 
-### 1026-FR-020 — `/speckit-context` and `org-researcher` MUST read documentation from `llms.txt` and `docs/` by the Diátaxis paths (features under `docs/reference/features/`, decisions under `docs/explanation/decisions/`, architecture under `docs/explanation/` and `docs/reference/`), cite `docs/<path>`, and keep taking the story, its comments, epic and siblings from the tracker, resolving a story's Feature relation (a Notion page id) through `docs/index.json`; `spec-reviewer` MUST read the same documentation from the repo. Every line offering Notion as a documentation fallback (the `(fallback until docs/ exists)` tag and its sentences) MUST be removed from these three definitions.
+### 1037-FR-005 — `/speckit-context` MUST write the story's issue, its comments, its epic's issue and the epic's other issues (`gh`, read only) to `specs/<feature>/story.md` before the `org-researcher` runs, and the researcher MUST read the tracker from that file only; `spec-reviewer` reads the issue with `gh issue view`.
 
-_From 1026-diataxis-docs._
+_From 1037-remove-notion._
 
-### 1026-FR-022 — `speckit-notion-sync plan` MUST write a new epic's execution plan under `docs/reference/build-plans/ep-<n>-<kebab title>.md` with the page front matter, regenerate `llms.txt` with the lint's `--write`, and commit and push both to `trunk` in one commit; it MUST NOT create a Notion plan page; the build timeline is unchanged.
+### 1037-FR-015 — A new epic's build plan MUST be written by `speckit-tracker-sync` (its `plan` step) under `docs/reference/build-plans/`, with `llms.txt` regenerated, in one specs-repo commit.
 
-_From 1026-diataxis-docs._
+_From 1037-remove-notion._
 
 ### 1026-FR-023 — AGENTS.md, CLAUDE.local.md and the constitution MUST name the specs repo's `docs/` by its Diátaxis areas and `llms.txt` as the agents' entry wherever they named `docs/`, `docs/execution-plans/` or the export; CLAUDE.local.md MUST NOT grow past `.specify/context-baseline.json`; the constitution change MUST be a patch bump (v1.11.2 → v1.11.3) with a Sync Impact Report naming the lines, no rule added, removed or reworded, and the constitution card updated so `constitution-card.spec.mjs` passes.
 
@@ -1648,9 +1597,9 @@ _From 1026-diataxis-docs._
 
 _From 1026-diataxis-docs._
 
-### 1026-FR-021 — `speckit-design-check` MUST read a story's Design and Design boards pointers to their board pages under `docs/reference/design/` (through the feature page's links, or the board list of FR-013), cite them under `Checked`, treat the artifact as an optional live view, and no longer read the mock or any documentation from Notion; the story's Design and Design boards values still come from the tracker (they are pointers), resolved to the repo copy.
+### 1037-FR-016 — `speckit-design-check` MUST read the story's Design and Design boards pointers from its issue and resolve them to `docs/reference/design/`.
 
-_From 1026-diataxis-docs._
+_From 1037-remove-notion._
 
 ### 1026-FR-024 — `.claude/scripts/notion-export.mjs`, `.claude/scripts/notion-export/` (the render module and its fixtures), `notion-export.spec.mjs`, `notion-export.adversary.spec.mjs`, `notion-export-download.adversary.spec.mjs` and `render.spec.mjs` MUST be removed from motor-fix, together with every line, npm script, permission entry or instruction that names them; the harness spec that fails when the Notion space is named as a documentation source MUST drop its `(fallback until docs/ exists)` exemption and keep failing on the space's name in the rewired files (this feature's records excepted).
 
@@ -1704,6 +1653,18 @@ _From 1035-main-checkout-guard._
 
 _From 1035-main-checkout-guard._
 
+### 1037-FR-001 — `.claude/scripts/notion-sync.mjs`, `notion-status.mjs`, `notion-ready.mjs`, `notion-agent-tools.mjs`, `lib/work-timeline.mjs`, their specs, the `speckit-notion-sync` and `notion-ready` skills and doctor's agent-tools check MUST be deleted.
+
+_From 1037-remove-notion._
+
+### 1037-FR-004 — No `.claude/agents/*.md` tools list and no `.claude/settings.json` permission or server entry MAY name an old-tracker server or tool; no allow entry is added.
+
+_From 1037-remove-notion._
+
+### 1037-FR-006 — `level.mjs suggest` given `ST-<n>` or a URL MUST size the text it was given (no tracker read).
+
+_From 1037-remove-notion._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -1755,3 +1716,20 @@ _From 1035-main-checkout-guard._
 - `1018-FR-015` — superseded by `1026-FR-022` (2026-10-09)
 - `1018-FR-016` — superseded by `1026-FR-023` (2026-10-09)
 - `1018-FR-017` — superseded by `1026-FR-018` (2026-10-09)
+
+- `693-FR-001` — removed by 1037-remove-notion (2026-10-10)
+- `693-FR-002` — removed by 1037-remove-notion (2026-10-10)
+- `693-FR-003` — removed by 1037-remove-notion (2026-10-10)
+- `693-FR-004` — removed by 1037-remove-notion (2026-10-10)
+- `693-FR-005` — removed by 1037-remove-notion (2026-10-10)
+- `693-FR-006` — removed by 1037-remove-notion (2026-10-10)
+- `678-FR-011` — removed by 1037-remove-notion (2026-10-10)
+- `678-FR-013` — removed by 1037-remove-notion (2026-10-10)
+- `745-FR-005` — removed by 1037-remove-notion (2026-10-10)
+- `849-FR-001` — removed by 1037-remove-notion (2026-10-10)
+- `849-FR-005` — removed by 1037-remove-notion (2026-10-10)
+- `696-FR-005` — removed by 1037-remove-notion (2026-10-10)
+- `725-FR-002` — removed by 1037-remove-notion (2026-10-10)
+- `1026-FR-020` — superseded by `1037-FR-005` (2026-10-10)
+- `1026-FR-021` — superseded by `1037-FR-016` (2026-10-10)
+- `1026-FR-022` — superseded by `1037-FR-015` (2026-10-10)

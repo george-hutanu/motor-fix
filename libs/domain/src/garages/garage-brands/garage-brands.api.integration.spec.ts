@@ -154,8 +154,8 @@ describe('PUT /garages/:garageId/brands', () => {
       doesNotTake: [{ id: w.tesla.id, name: 'Tesla', slug: w.tesla.slug }],
       refusalPhrase: 'orice nu e BMW',
       worksOn: [
-        { id: w.mini.id, name: 'Mini', slug: w.mini.slug },
-        { id: w.bmw.id, name: 'BMW', slug: w.bmw.slug },
+        { id: w.mini.id, jobs: [], name: 'Mini', slug: w.mini.slug },
+        { id: w.bmw.id, jobs: [], name: 'BMW', slug: w.bmw.slug },
       ],
     });
   });
@@ -272,5 +272,133 @@ describe('PUT /garages/:garageId/brands', () => {
     const res = await put(w, { brands: [] }, null);
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe("PUT /garages/:garageId/brands with a taken brand's jobs", () => {
+  // Oil change then front brakes on Service Auto Nord's price list.
+  async function priced(w: World) {
+    const job = async (key: string) =>
+      (
+        await prisma.jobType.create({
+          data: {
+            key: `${key}-${randomUUID()}`,
+            nameEn: key,
+            nameRo: key,
+            status: 'approved',
+          },
+        })
+      ).id;
+    const oil = await job('oil');
+    const brakes = await job('brakes');
+    const owner = await prisma.garageMember.findFirstOrThrow({
+      where: { garageId: w.nord.id, role: 'owner' },
+    });
+    await prisma.garagePrice.createMany({
+      data: [oil, brakes].map((jobTypeId, position) => ({
+        fromBani: 30_000,
+        garageId: w.nord.id,
+        jobTypeId,
+        position,
+        updatedBy: owner.accountId,
+      })),
+    });
+    return { brakes, oil };
+  }
+
+  const ticks = (w: World) =>
+    prisma.garageBrandJob.count({ where: { garageId: w.nord.id } });
+
+  // @traces 412-FR-007
+  it.each([
+    ['jobs that are not a list', (oil: string) => oil],
+    ['a job id that is not a uuid', () => ['oil']],
+    ['the same job twice', (oil: string) => [oil, oil]],
+  ])('answers 400 to %s and changes nothing', async (_, jobs) => {
+    const w = await world();
+    const { oil } = await priced(w);
+
+    const res = await put(w, {
+      brands: [{ brandId: w.bmw.id, jobs: jobs(oil), stance: 'works_on' }],
+    });
+
+    expect(res.status).toBe(400);
+    expect(await rows(w)).toBe(0);
+    expect(await ticks(w)).toBe(0);
+  });
+
+  // @traces 412-FR-007
+  it('answers 400 jobs_on_refused to jobs on a refused brand', async () => {
+    const w = await world();
+    const { oil } = await priced(w);
+
+    const res = await put(w, {
+      brands: [{ brandId: w.tesla.id, jobs: [oil], stance: 'does_not_take' }],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'jobs_on_refused', field: 'brands[0].jobs' }],
+    });
+    expect(await rows(w)).toBe(0);
+  });
+
+  // @traces 412-FR-007
+  it('answers 400 job_not_priced to a job the price list does not hold', async () => {
+    const w = await world();
+    await priced(w);
+
+    const res = await put(w, {
+      brands: [{ brandId: w.bmw.id, jobs: [randomUUID()], stance: 'works_on' }],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'job_not_priced', field: 'brands[0].jobs' }],
+    });
+    expect(await rows(w)).toBe(0);
+  });
+
+  // @traces 412-FR-007
+  it('answers 403 to the receptionist sending jobs, changing nothing', async () => {
+    const w = await world();
+    const { oil } = await priced(w);
+
+    const res = await put(
+      w,
+      { brands: [{ brandId: w.bmw.id, jobs: [oil], stance: 'works_on' }] },
+      w.receptionist,
+    );
+
+    expect(res.status).toBe(403);
+    expect(await ticks(w)).toBe(0);
+  });
+
+  // @traces 412-FR-008
+  it('answers with the ticked jobs in price-list order, and the public read shows no jobs', async () => {
+    const w = await world();
+    const { brakes, oil } = await priced(w);
+
+    const res = await put(w, {
+      brands: [
+        { brandId: w.bmw.id, jobs: [brakes, oil], stance: 'works_on' },
+        { brandId: w.mini.id, jobs: [brakes], stance: 'works_on' },
+      ],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.worksOn).toEqual([
+      { id: w.mini.id, jobs: [brakes], name: 'Mini', slug: w.mini.slug },
+      { id: w.bmw.id, jobs: [oil, brakes], name: 'BMW', slug: w.bmw.slug },
+    ]);
+    const read = await http().get(`/garages/${w.nord.slug}`);
+    expect(read.status).toBe(200);
+    const fuels = ['petrol', 'diesel', 'hybrid', 'electric'];
+    expect(read.body.worksOn).toEqual([
+      { fuels, id: w.mini.id, name: 'Mini', slug: w.mini.slug },
+      { fuels, id: w.bmw.id, name: 'BMW', slug: w.bmw.slug },
+    ]);
   });
 });

@@ -5,7 +5,7 @@ argument-hint: "What to audit: a path, a component, or a URL. Add 'fix 1-3' to r
 compatibility: "Requires the apple-design-skill skill (.claude/skills/apple-design-skill) and Node 18+ for the two helper scripts"
 metadata:
   author: "speckit-demo"
-  source: "adapted from The Apple Design Audit (striped-thief-c4a.notion.site/The-Apple-Design-Audit-3ce73bd1b02b8122a076c77bb34ac264)"
+  source: "adapted from The Apple Design Audit"
 user-invocable: true
 disable-model-invocation: false
 ---

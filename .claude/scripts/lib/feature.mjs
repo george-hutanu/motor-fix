@@ -51,8 +51,6 @@ export const DEFAULT_LEVEL = 2;
 // Constants, not settings: tune them here once the ledger shows a number.
 // More functional requirements than this is more than one coherent unit.
 export const FR_THRESHOLD = 5;
-// More story points than this, when Notion carries any, is never below level 2.
-export const STORY_POINTS_THRESHOLD = 5;
 // A file here changes a contract, the data or the generated client.
 export const CONTRACT_PATHS = [/^libs\/contracts\//, /^libs\/data-access\//, /^apps\/api\/openapi\.json$/, /(^|\/)schema\.prisma$/, /(^|\/)migrations\//];
 

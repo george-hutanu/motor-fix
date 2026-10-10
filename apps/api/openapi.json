@@ -2836,13 +2836,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GarageBrandAnswerDto"
+                  "$ref": "#/components/schemas/GarageBrandOwnerAnswerDto"
                 }
               }
             }
           },
           "400": {
-            "description": "validation_failed: a bad or unknown brand, a text too long"
+            "description": "validation_failed: a bad or unknown brand, a text too long, a job not on the price list (job_not_priced), jobs on a refused brand (jobs_on_refused)"
           },
           "401": {
             "description": "sign_in_required"
@@ -8347,6 +8347,15 @@
                 "electric"
               ]
             }
+          },
+          "jobs": {
+            "description": "A taken brand only: the jobs of the price list it is ticked for. Left out: unchanged, or every job for a brand taken now; empty: none",
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
@@ -8379,13 +8388,44 @@
           "brands"
         ]
       },
-      "GarageBrandAnswerDto": {
+      "OwnerBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "jobs": {
+            "description": "Ticked job type ids, in price-list order",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "jobs"
+        ]
+      },
+      "GarageBrandOwnerAnswerDto": {
         "type": "object",
         "properties": {
           "worksOn": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/BrandRefDto"
+              "$ref": "#/components/schemas/OwnerBrandDto"
             }
           },
           "doesNotTake": {

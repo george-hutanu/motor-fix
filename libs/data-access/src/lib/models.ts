@@ -47,7 +47,7 @@ export type { DraftDocumentDto } from './models/draft-document-dto';
 export type { DriverNameDto } from './models/driver-name-dto';
 export type { GarageAccessDto } from './models/garage-access-dto';
 export type { GarageBookingDto } from './models/garage-booking-dto';
-export type { GarageBrandAnswerDto } from './models/garage-brand-answer-dto';
+export type { GarageBrandOwnerAnswerDto } from './models/garage-brand-owner-answer-dto';
 export type { GarageBrandStanceDto } from './models/garage-brand-stance-dto';
 export type { GarageCarDto } from './models/garage-car-dto';
 export type { GarageDriverDto } from './models/garage-driver-dto';
@@ -98,6 +98,7 @@ export type { NotificationPreferenceDto } from './models/notification-preference
 export type { NotificationPreferencesDto } from './models/notification-preferences-dto';
 export type { OAuthCompleteDto } from './models/o-auth-complete-dto';
 export type { OAuthPendingDto } from './models/o-auth-pending-dto';
+export type { OwnerBrandDto } from './models/owner-brand-dto';
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';

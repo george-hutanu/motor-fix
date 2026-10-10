@@ -6,9 +6,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { decideReady, readyLogged } from './notion-ready.mjs';
+import { decideReady, readyLogged } from './ready.mjs';
 
-const SCRIPT = fileURLToPath(new URL('./notion-ready.mjs', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('./ready.mjs', import.meta.url));
 const item = (id, over = {}) => ({ id, status: 'To do', priority: 'Medium', blockers: [], hold: null, ticked: false, ...over });
 const ids = (list) => list.map((entry) => entry.id ?? entry);
 const cli = (args, input) => spawnSync('node', [SCRIPT, ...args], { input, encoding: 'utf8' });
@@ -163,17 +163,17 @@ describe('reading the sync log', () => {
   });
 
   it('reads CRLF around a PENDING ready line', () => {
-    assert.equal(readyLogged([finish, '[NOTION-SYNC PENDING: ready Foundations — down]'].join('\r\n')).ok, true);
+    assert.equal(readyLogged([finish, '[TRACKER-SYNC PENDING: ready Foundations — down]'].join('\r\n')).ok, true);
   });
 
   it('does not count a PENDING comment as a ready line', () => {
-    const r = readyLogged([finish, '[NOTION-SYNC PENDING: comment ST-1 — usage limit]'].join('\n'));
+    const r = readyLogged([finish, '[TRACKER-SYNC PENDING: comment ST-1 — usage limit]'].join('\n'));
     assert.equal(r.ok, false);
   });
 
   it('does not count PENDING lines for other events as a ready line', () => {
     for (const event of ['finish ST-1', 'start ST-1', 'debt feature line 3', 'blocked ST-1', 'comment ST-1']) {
-      assert.equal(readyLogged([finish, `[NOTION-SYNC PENDING: ${event} — error]`].join('\n')).ok, false, event);
+      assert.equal(readyLogged([finish, `[TRACKER-SYNC PENDING: ${event} — error]`].join('\n')).ok, false, event);
     }
   });
 
@@ -221,7 +221,7 @@ describe('reading the sync log', () => {
     const r = readyLogged(finish);
     assert.equal(r.ok, false);
     assert.equal(typeof r.reason, 'string');
-    assert.match(r.reason, /notion-ready/);
+    assert.match(r.reason, /tracker\/ready|speckit-tracker-sync ready/);
   });
 
 });
@@ -229,7 +229,7 @@ describe('reading the sync log', () => {
 describe('the command line', () => {
   const dirs = [];
   const tmp = () => {
-    const d = mkdtempSync(join(tmpdir(), 'notion-ready-'));
+    const d = mkdtempSync(join(tmpdir(), 'tracker-ready-'));
     dirs.push(d);
     return d;
   };
@@ -274,7 +274,7 @@ describe('the command line', () => {
   });
 
   it('check exits 0 when the log has a ready line after the finish', () => {
-    const file = join(tmp(), 'notion-sync.md');
+    const file = join(tmp(), 'tracker-sync.md');
     writeFileSync(file, '- 2026-10-04 · finish · ST-1\n- 2026-10-04 · ready · Foundations\n');
     try {
       assert.equal(cli(['check', file]).status, 0);
@@ -284,19 +284,19 @@ describe('the command line', () => {
   });
 
   it('check exits 1 and says what to run when the ready line is missing', () => {
-    const file = join(tmp(), 'notion-sync.md');
+    const file = join(tmp(), 'tracker-sync.md');
     writeFileSync(file, '- 2026-10-04 · finish · ST-1\n');
     try {
       const r = cli(['check', file]);
       assert.equal(r.status, 1);
-      assert.match(r.stdout + r.stderr, /notion-ready/);
+      assert.match(r.stdout + r.stderr, /tracker\/ready|speckit-tracker-sync ready/);
     } finally {
       cleanup();
     }
   });
 
   it('check exits 1 on an empty file', () => {
-    const file = join(tmp(), 'notion-sync.md');
+    const file = join(tmp(), 'tracker-sync.md');
     writeFileSync(file, '');
     try {
       assert.equal(cli(['check', file]).status, 1);
@@ -332,7 +332,7 @@ describe('the command line', () => {
   });
 
   it('check reads a CRLF file', () => {
-    const file = join(tmp(), 'notion-sync.md');
+    const file = join(tmp(), 'tracker-sync.md');
     writeFileSync(file, '- 2026-10-04 · finish · ST-1\r\n- 2026-10-04 · ready · Foundations\r\n');
     try {
       assert.equal(cli(['check', file]).status, 0);
@@ -355,15 +355,15 @@ describe('the command line', () => {
 
 describe('the command line from wherever it is called', () => {
   it('still runs, and still fails a log with no ready line, through a symlinked path', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'notion-ready-link-'));
+    const dir = mkdtempSync(join(tmpdir(), 'tracker-ready-link-'));
     try {
-      const link = join(dir, 'notion-ready.mjs');
+      const link = join(dir, 'ready.mjs');
       symlinkSync(SCRIPT, link);
-      const log = join(dir, 'notion-sync.md');
+      const log = join(dir, 'tracker-sync.md');
       writeFileSync(log, '- 2026-10-04 · finish · ST-1 story · QA → Done\n');
       const r = spawnSync('node', [link, 'check', log], { encoding: 'utf8' });
       assert.equal(r.status, 1);
-      assert.match(r.stderr, /notion-ready/);
+      assert.match(r.stderr, /tracker\/ready|speckit-tracker-sync ready/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

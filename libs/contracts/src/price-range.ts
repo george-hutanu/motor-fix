@@ -4,6 +4,10 @@ import type { FieldProblem } from './problem';
 const BANI_PER_LEU = 100;
 export const PRICE_MIN_BANI = 100;
 export const PRICE_MAX_BANI = 10_000_000;
+// A price list's jobs, and a proposed job's name; step 2 reads them too.
+export const JOB_NAME_MIN = 2;
+export const JOB_NAME_MAX = 80;
+export const JOBS_MAX = 50;
 const DURATION_MIN_MINUTES = 15;
 const DURATION_MAX_MINUTES = 4_800;
 const DURATION_STEP_MINUTES = 15;

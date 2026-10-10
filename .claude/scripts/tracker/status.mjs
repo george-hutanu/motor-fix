@@ -1,18 +1,17 @@
 #!/usr/bin/env node
-// Which Notion status a lifecycle event writes, decided here so the rules are
-// tested rather than re-read from prose on every run. `speckit-notion-sync`
-// asks this script, then makes the Notion writes it names.
+// Which status a lifecycle event writes to the story's tracker issue, decided
+// here so the rules are tested rather than re-read from prose on every run.
+// `tracker-sync.mjs` asks it, then makes the writes it names.
 //
 // The story ladder is To do → Planning → Implementing → QA → Done:
 // Planning from the task's start until /speckit-implement, Implementing from
 // there, QA from the moment the PR is marked ready. There is no In review
 // stage (folded into QA by the owner, 2026-10-04): `review` is kept as an
 // alias of `qa` so a running agent that still sends it lands on QA. A legacy
-// In progress reads as Implementing and a legacy In review as QA. The build
-// timeline row mirrors it (Not started … Merged). Blocked sits off the ladder:
-// `blocked` records the status it left in run-state, and only `unblock` leaves
-// Blocked, returning to that status — the one backwards move. Nothing moves a
-// Done story.
+// In progress reads as Implementing and a legacy In review as QA. Blocked sits
+// off the ladder: `blocked` records the status it left in run-state, and only
+// `unblock` leaves Blocked, returning to that status — the one backwards move.
+// Nothing moves a Done story.
 //
 // The PR mirrors the story with exactly one stage label: `stage` names it
 // (a Blocked story keeps the one it left, with `blocked` beside it; To do and
@@ -21,13 +20,12 @@
 // decision, written or not, so a late, repeated or catch-up event converges
 // instead of stacking a second stage label.
 //
-//   node .claude/scripts/notion-status.mjs <event> --current "<story Status>"
+//   node .claude/scripts/tracker/status.mjs <event> --current "<story Status>"
 //   events: start | implement | review | qa | finish | blocked | unblock
-// Prints { write, story, timeline, prior, note, stage, labels } as JSON.
-import { readState, writeState } from "./run-state.mjs";
+// Prints { write, story, prior, note, stage, labels } as JSON.
+import { readState, writeState } from "../run-state.mjs";
 
 export const LADDER = ["To do", "Planning", "Implementing", "QA", "Done"];
-const TIMELINE = { "To do": "Not started", Planning: "Planning", Implementing: "Implementing", QA: "QA", Done: "Merged", Blocked: "Blocked" };
 const TARGET = { start: "Planning", implement: "Implementing", review: "QA", qa: "QA", finish: "Done" };
 const STAGE = { Planning: "planning", Implementing: "in development", QA: "QA" };
 
@@ -41,7 +39,7 @@ function stageLabels(story, prior) {
   return { stage, labels: [...add.map((l) => `--add-label "${l}"`), ...remove.map((l) => `--remove-label "${l}"`)].join(" ") };
 }
 
-const result = (write, story, prior, note) => ({ write, story, timeline: TIMELINE[story] ?? null, prior, note, ...stageLabels(story, prior) });
+const result = (write, story, prior, note) => ({ write, story, prior, note, ...stageLabels(story, prior) });
 
 const RETIRED = { "In progress": "Implementing", "In review": "QA" };
 const LEGACY = (status) => (Object.hasOwn(RETIRED, status) ? RETIRED[status] : status);
@@ -73,7 +71,7 @@ export function decide({ event, current: raw, prior: rawPrior = null }) {
 
 /** After the writes land: `blocked` records the status it left, for `unblock` to read back. */
 export function recordPrior(repo, event, decision) {
-  if (decision.write && (event === "blocked" || event === "unblock")) writeState(repo, { ...readState(repo), notion_prior_status: decision.prior });
+  if (decision.write && (event === "blocked" || event === "unblock")) writeState(repo, { ...readState(repo), prior_status: decision.prior });
 }
 
 export function main(argv, repo) {
@@ -81,14 +79,14 @@ export function main(argv, repo) {
   const current = i === -1 ? undefined : argv[i + 1];
   const event = argv.find((a, j) => !a.startsWith("--") && (i === -1 || j !== i + 1));
   if (!event || !current) {
-    console.error('usage: notion-status.mjs <start|implement|review|qa|finish|blocked|unblock> --current "<story Status>"');
+    console.error('usage: tracker/status.mjs <start|implement|review|qa|finish|blocked|unblock> --current "<story Status>"');
     return 1;
   }
   let decision;
   try {
-    decision = decide({ event, current, prior: readState(repo).notion_prior_status ?? null });
+    decision = decide({ event, current, prior: readState(repo).prior_status ?? null });
   } catch (error) {
-    console.error(`notion-status: ${error.message}`);
+    console.error(`tracker/status: ${error.message}`);
     return 1;
   }
   recordPrior(repo, event, decision);
