@@ -46,7 +46,8 @@ const GARAGES = [
   { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
 ];
 
-// The catalogue's own rows for the brands the listed garages name.
+// The catalogue's own rows: the brands the listed garages name, and
+// Mercedes-Benz, which none names, so the brand pickers offer an unmarked one.
 const BRANDS = [
   { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
   {
