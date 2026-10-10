@@ -90,6 +90,9 @@
 
 .meter {
   display: block;
+  /* The dial's arc opens at the bottom, so its square box ends in empty
+     space below the value: pull the caption up under the value. */
+  margin-block-end: calc(min(100%, 240px) * -0.2);
   max-width: 240px;
   width: 100%;
 }

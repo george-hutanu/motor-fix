@@ -574,3 +574,24 @@ for (const path of ['/ro', '/en']) {
     }
   });
 }
+
+// @traces 226-FR-003
+for (const width of [320, 834]) {
+  test(`keeps the NOTĂ caption right under the dial's value at ${width} px @seeded`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 1000, width });
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    await expect(dialArea(page).locator('.gauge .name')).not.toBeEmpty();
+
+    const value = await dialValue(page).evaluate(
+      (v) => v.getBoundingClientRect().bottom,
+    );
+    const caption = await dialArea(page)
+      .locator('.gauge .reading')
+      .evaluate((r) => r.getBoundingClientRect().top);
+    expect(caption - value).toBeGreaterThanOrEqual(0);
+    expect(caption - value).toBeLessThanOrEqual(40);
+  });
+}
