@@ -89,6 +89,19 @@ export function faroUrl(
   return optionalUrl('FARO_URL', source);
 }
 
+// The site name Plausible counts page views under: unset means the browser
+// never loads analytics, whatever the visitor chose.
+export function plausibleDomain(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const value = source['PLAUSIBLE_DOMAIN']?.trim();
+  if (!value) return undefined;
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(value)) {
+    throw new Error('PLAUSIBLE_DOMAIN must be a domain name');
+  }
+  return value;
+}
+
 // The Grafana stack the admin panel links to; unset means no link. Grafana's
 // own sign-in guards the dashboards, so the URL carries no credential.
 export function grafanaUrl(

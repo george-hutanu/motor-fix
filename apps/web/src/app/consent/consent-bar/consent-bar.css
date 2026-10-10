@@ -1,0 +1,44 @@
+/* In flow, so it takes its own room and covers nothing; on a phone it rests on the tab bar, whose height the frame gives as --tab-bar. */
+:host {
+  display: block;
+  position: sticky;
+  bottom: var(--tab-bar, 0px);
+  z-index: 10;
+}
+section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-3) var(--mf-space-4);
+  border-top: 1px solid var(--mf-line);
+  background: var(--mf-bg);
+  color: var(--mf-text);
+}
+p {
+  flex: 1 1 18rem;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+a {
+  color: inherit;
+  text-decoration: underline;
+}
+.answers {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--mf-space-2);
+  justify-content: flex-end;
+}
+button {
+  flex: 1 1 0;
+  min-height: 44px;
+  white-space: normal;
+}
+@media (min-width: 768px) {
+  button {
+    flex: 0 0 auto;
+    min-width: 8rem;
+  }
+}

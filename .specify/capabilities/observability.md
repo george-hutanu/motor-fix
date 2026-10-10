@@ -17,6 +17,7 @@ features:
   - 374-assistant-requests
   - 1016-mcp-staging
   - 344-send-quote
+  - 244-analytics-news-consent
   - 209-status-change-emails
   - 251-monitoring-backups
   - 1024-alert-rules
@@ -388,6 +389,10 @@ _From 879-dashboards._
 
 _From 879-dashboards._
 
+### 244-FR-018 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from fixed sets (876-FR-011), and the series all product counters add per instance, the consent counter included, MUST stay under 60, asserted by a unit test. (Replaces 879-FR-010's "seven counters under 50": its test already counted every product counter and stood at 49, so the three consent series need the room; 60 stays far inside the 1.5k-of-10k series budget.)
+
+_From 244-analytics-news-consent._
+
 ### 251-FR-018 — No counter label MAY carry a user, garage, request or record id, an e-mail, phone, plate, address or free text; labels take values only from fixed sets, and the series the product counters add per instance MUST stay under 60, asserted by a unit test. The outage alert's two e-mail templates add two series; with ST-209's status e-mails, merged first and already asserting under 60, the total is 56.
 
 _From 251-monitoring-backups._
@@ -459,6 +464,10 @@ _From 1016-mcp-staging._
 ### 344-FR-018 — Observability: the endpoint is listed in `infra/observability/inventory.json` with its route duration metric; the send (a product action) MUST emit one counter of quotes sent by outcome (`sent`, `refused`, `already_answered`, `request_not_open`; `refused` counts the refusals the service raises, 400 low-above-high or past slot, 403 and 404, while a body the validation pipe refuses and a missing `Idempotency-Key` are counted by the route's own 4xx metric) and one histogram of the response time (`answered_at` − `created_at`, in minutes, no identifiers) on the `motorfix-product` dashboard; the consumer of FR-016 is listed with one counter of QUOTE_RECEIVED messages built per outcome (`built`, `muted`) on the `motorfix-queues` dashboard; one structured log line per send with the quote id, the request id and the outcome (never the range, the note or the driver); no alert (no agreed threshold; ST-880 adds alert rules). The PR's Observability section names them.
 
 _From 344-send-quote._
+
+### 244-FR-016 — The three operations (`POST /api/v1/consents`, `POST /api/v1/me/consents`, `GET /api/v1/me/consents`) and the outside call to Plausible MUST ship with their observability in the same PR: the request-duration metric by route for the three routes, one log line per stored record (decision, kind, signed in or not, never the browser id or the account id in clear), a counter of records by decision, a panel on the API dashboard and an entry each in `infra/observability/inventory.json` (the endpoints and the Plausible outside call, which is a browser-side call and says so as its reason), with an alert or the reason there is none.
+
+_From 244-analytics-news-consent._
 
 ### 209-FR-014 — Observability: the consumer MUST count the messages it builds per outcome (`built`, `skipped` — no owner or no decision to tell about) in one product counter on the `motorfix-queues` dashboard, log one line per event with the file id, the decision and how many owners it reached (never the note, the address or the e-mail), run inside the worker's existing trace as its own span, and be listed in `infra/observability/inventory.json` as a queue with its counter, dashboard panel and an alert rule on the queue's final job failures; `node scripts/observability-inventory.ts` MUST pass. The PR's Observability section names them.
 
@@ -554,5 +563,7 @@ _From 1024-alert-rules._
 
 - `875-FR-007` — superseded by `879-FR-016` (2026-10-08)
 - `881-FR-002` — superseded by `879-FR-012` (2026-10-08)
+
+- `879-FR-010` — superseded by `244-FR-018` (2026-10-10)
 
 - `879-FR-010` — superseded by `251-FR-018` (2026-10-10)

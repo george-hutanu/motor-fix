@@ -1,0 +1,30 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+  min-height: 44px;
+  font-weight: 700;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+a {
+  color: inherit;
+  text-decoration: underline;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+button {
+  flex: 1 1 auto;
+  min-height: 44px;
+}

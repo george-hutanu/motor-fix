@@ -1,0 +1,27 @@
+{
+  "bar": {
+    "accept": "Accept",
+    "label": "Usage statistics",
+    "privacy": "Privacy notice",
+    "refuse": "Refuse",
+    "text": "MotorFix would like to measure how the site is used, to make it better. We never sell or pass on your data."
+  },
+  "dialog": {
+    "cancel": "Cancel",
+    "line": "We count the pages visited, with no cookies and without identifying you.",
+    "privacy": "Privacy notice",
+    "save": "Save",
+    "switch": "Usage statistics",
+    "title": "Cookie settings"
+  },
+  "footer": {
+    "label": "Legal information",
+    "privacy": "Privacy notice",
+    "settings": "Cookie settings",
+    "terms": "Terms of use"
+  },
+  "panel": {
+    "settings": "Cookie settings",
+    "title": "Privacy"
+  }
+}

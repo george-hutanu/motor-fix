@@ -1,8 +1,14 @@
 import { Redis } from 'ioredis';
 import { Client } from 'pg';
 
+import { newPhoneBase, PHONE_BASE_VARIABLE } from './fresh-phone.js';
 import { resetGarageOnly } from './garage-only.js';
-import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './rate-counts.js';
+import {
+  CONSENT_KEYS,
+  clearCounts,
+  DRAFT_KEYS,
+  SIGN_UP_KEYS,
+} from './rate-counts.js';
 
 // A set store that does not answer stops the run here rather than letting
 // it fail later on a stale count or account, far from the cause. The message
@@ -21,7 +27,9 @@ function unreachable(
   );
 }
 
-async function clearRateCounts(): Promise<void> {
+async function clearRateCounts(
+  patterns: Record<string, string>,
+): Promise<void> {
   const url = process.env['REDIS_URL'];
   if (!url) {
     console.log('global-setup: REDIS_URL unset, counts not cleared');
@@ -36,15 +44,25 @@ async function clearRateCounts(): Promise<void> {
   redis.on('error', () => undefined);
   try {
     await redis.connect();
-    const signUps = await clearCounts(redis, SIGN_UP_KEYS);
-    if (signUps) console.log(`global-setup: cleared ${signUps} sign-up counts`);
-    const drafts = await clearCounts(redis, DRAFT_KEYS);
-    if (drafts) console.log(`global-setup: cleared ${drafts} draft counts`);
+    for (const [name, pattern] of Object.entries(patterns)) {
+      const cleared = await clearCounts(redis, pattern);
+      if (cleared)
+        console.log(`global-setup: cleared ${cleared} ${name} counts`);
+    }
   } catch (error) {
     throw unreachable('Redis', 'REDIS_URL', 'the rate-limit counts', error);
   } finally {
     redis.disconnect();
   }
+}
+
+// The consent flows' own start: the address's analytics choices so far,
+// stored by every spec that answered the bar, are cleared. Against a
+// deployed environment (BASE_URL), whose Redis is not the run's, it does
+// nothing.
+export async function clearConsentCounts(): Promise<void> {
+  if (process.env['BASE_URL']) return;
+  await clearRateCounts({ consent: CONSENT_KEYS });
 }
 
 async function resetAccounts(): Promise<void> {
@@ -80,6 +98,12 @@ async function resetAccounts(): Promise<void> {
 // skipped: the api skips its limits then too, and the seeded accounts stay as
 // they are. A store that is set but does not answer stops the run.
 export default async function globalSetup(): Promise<void> {
-  await clearRateCounts();
+  // One start for the run's fresh phone numbers, which every worker reads.
+  process.env[PHONE_BASE_VARIABLE] ??= newPhoneBase();
+  await clearRateCounts({
+    consent: CONSENT_KEYS,
+    draft: DRAFT_KEYS,
+    'sign-up': SIGN_UP_KEYS,
+  });
   await resetAccounts();
 }

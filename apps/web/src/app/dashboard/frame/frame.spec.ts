@@ -1118,6 +1118,26 @@ describe('the garage header', () => {
   });
 });
 
+// @traces 244-FR-002
+describe('Frame consent bar', () => {
+  it("sits after the view and before the tab bar, on the tab bar's height on a phone", async () => {
+    const { element } = await render('driver', '/app/driver', []);
+
+    const order = [...(element.querySelector('.view')?.children ?? [])].map(
+      (child) => child.tagName.toLowerCase(),
+    );
+    expect(order.slice(order.indexOf('main'))).toEqual([
+      'main',
+      'mf-consent-bar',
+      'mf-dashboard-tab-bar',
+    ]);
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8');
+    expect(css).toMatch(
+      /@media \(max-width: 767\.98px\)\s*\{\s*:host\s*\{\s*--tab-bar:/,
+    );
+  });
+});
+
 describe('Frame account buttons', () => {
   it('are styled tap targets in body text, padded on the 4 px grid', () => {
     const css = readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(

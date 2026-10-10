@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
 import { MAILBOX, test } from './fixtures.js';
+import { freshPhone } from './fresh-phone.js';
 
 // The WhatsApp messages as the api sent them, read from the test mailbox the
 // local run starts (mailbox.mjs); a deployed address has none.
@@ -26,11 +27,6 @@ async function lastCode(page: Page, phone: string): Promise<string> {
     .toMatch(/^\d{6}$/);
   return String(code);
 }
-
-// A number no account holds, under the allow-listed +4070000 prefix and
-// outside the seeded ones and the refused +40700009999, new on every run.
-const freshPhone = () =>
-  `+4070000${String(1000 + Math.floor(Math.random() * 8999))}`;
 
 test.describe('signing in with a phone number @seeded @mailbox', () => {
   test('a garage owner asks for a code, types it and lands on the garage', async ({

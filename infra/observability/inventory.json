@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 108,
+    "count": 111,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -376,6 +376,16 @@
       "story": "ST-365"
     },
     {
+      "kind": "outside-service",
+      "name": "plausible",
+      "host": "plausible.io",
+      "source": "apps/web/src/app/consent/plausible/plausible.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "only the visitor's browser calls it, and only after a valid Accept; nothing on the server waits on it, Plausible's own site shows the page views, and the consent choices it rests on are counted on motorfix-product (motorfix_consent_records_total)",
+      "story": "ST-244"
+    },
+    {
       "kind": "product-counter",
       "name": "mcp_tool_calls_total{tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats|decline_quote_request\"}",
       "source": "libs/mcp-tools/src/catalogue.ts",
@@ -721,6 +731,24 @@
       ],
       "reason": "counts the daily rows the night writes and the days it logs as gaps, with one ProfileViews log line per day naming the day and the count; a failed night is the profile-views-job-failed alert",
       "story": "ST-143"
+    },
+    {
+      "kind": "endpoint",
+      "name": "consents",
+      "source": "libs/domain/src/auth/consents/consents.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/consents and /api/v1/me/consents",
+      "dashboard": "motorfix-api",
+      "alerts": ["api-error-rate", "api-latency"],
+      "story": "ST-244"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_consent_records_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each analytics consent choice stored, by decision; a choice count has no failure mode of its own; the consents endpoint carries the api error-rate and latency rules",
+      "story": "ST-244"
     },
     {
       "kind": "endpoint",
