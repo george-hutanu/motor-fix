@@ -4,9 +4,21 @@
 // A relative REST path resolves under the issue repository (repos.mjs).
 
 import { NOTION_URL } from "./notion-markdown.mjs";
-
-const notionCount = (text) => text.match(new RegExp(NOTION_URL.source, "gi"))?.length ?? 0;
 import { ISSUE_REPO, OWNER } from "./repos.mjs";
+
+/** Each Notion address in a request's JSON, whole, so one held address cannot stand in for another. */
+const notionAddresses = (json) => (json.match(/[^\s"\\<>()[\]]+/g) ?? []).filter((t) => NOTION_URL.test(t));
+
+/** Whether `json` names a Notion address beyond those `kept` (text GitHub already holds) names. */
+function addsNotion(json, kept) {
+  const held = notionAddresses(JSON.stringify(kept));
+  for (const address of notionAddresses(json)) {
+    const at = held.indexOf(address);
+    if (at === -1) return true;
+    held.splice(at, 1);
+  }
+  return false;
+}
 
 const API = "https://api.github.com";
 export const PACE_MS = 7200;
@@ -94,7 +106,7 @@ export function githubClient({
    */
   async function send(method, path, body, content, idempotent = !content, kept = "") {
     const label = `${method} ${path}`;
-    if (body !== undefined && notionCount(JSON.stringify(body)) > notionCount(kept)) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
+    if (body !== undefined && addsNotion(JSON.stringify(body), kept)) throw new GitHubError("notion", `${label}: refused, the request names a Notion address`);
     const url = urlOf(path);
     if (content) stats.content++;
     let lost = false;

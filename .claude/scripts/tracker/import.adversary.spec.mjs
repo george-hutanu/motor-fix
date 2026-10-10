@@ -314,6 +314,10 @@ describe("public repository hygiene", () => {
       github.rest("PATCH", "/repos/george-hutanu/motor-fix/pulls/50", { body: `${kept}\nhttps://www.notion.so/new` }, { kept }),
       (e) => e.type === "notion",
     );
+    await assert.rejects(
+      github.rest("PATCH", "/repos/george-hutanu/motor-fix/pulls/50", { body: "story: https://app.notion.com/p/2" }, { kept }),
+      (e) => e.type === "notion",
+    );
   });
 
   it("rewrites an issue an earlier version created with Notion links", async () => {
