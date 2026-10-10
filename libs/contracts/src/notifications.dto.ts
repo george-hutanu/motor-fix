@@ -69,6 +69,15 @@ export class NotificationDto {
   @ApiProperty({ description: 'Rendered in the language asked' })
   text!: string;
 
+  @ApiProperty({
+    description:
+      'The driver view the row opens, e.g. /app/driver/cars/<id>; null when it opens nothing',
+    example: '/app/driver/cars/6f1c2a3e-1d4b-4a8e-9c1f-2b3d4e5f6a7b',
+    nullable: true,
+    type: String,
+  })
+  link!: string | null;
+
   @ApiProperty({ format: 'date-time' })
   at!: string;
 

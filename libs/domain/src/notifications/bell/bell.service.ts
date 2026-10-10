@@ -12,6 +12,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { bellLink } from './bell.link';
 import { LIVE_CHANNEL } from '../../events/live/live.hub';
 import type { Notification, PrismaClient } from '../../generated/prisma/client';
 import {
@@ -138,6 +139,7 @@ function view(row: Notification, language: string): NotificationDto {
     at: row.createdAt.toISOString(),
     id: row.id,
     kind: row.kind,
+    link: bellLink(row),
     readAt: row.readAt?.toISOString() ?? null,
     subjectId: row.subjectId,
     text: bellText(row.kind, language, row.params as Record<string, unknown>),

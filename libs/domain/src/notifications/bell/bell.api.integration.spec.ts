@@ -81,6 +81,7 @@ async function bell(
     kind?: string;
     params?: Record<string, unknown>;
     readAt?: Date;
+    subjectId?: string;
   } = {},
 ) {
   const row = await prisma.notification.create({
@@ -93,6 +94,7 @@ async function bell(
       params: (options.params ?? {}) as object,
       readAt: options.readAt,
       status: 'sent',
+      subjectId: options.subjectId,
     },
   });
   return row.id;
@@ -109,6 +111,39 @@ const post = (path: string, accountId: string) =>
     .set('Authorization', bearer(accountId));
 
 describe('the bell list', () => {
+  // @traces 032-notifications-bell-FR-003
+  it('gives each row the driver view it opens, on the list and on a read', async () => {
+    const andrei = await account('andrei');
+    const car = randomUUID();
+    const requestId = randomUUID();
+    const due = await bell(andrei, {
+      kind: 'DUE_ITP',
+      params: { dueOn: '2026-11-09' },
+      subjectId: car,
+    });
+    await bell(andrei, {
+      ago: 1000,
+      kind: 'QUOTE_RECEIVED',
+      params: {
+        garage: 'Service Ionescu',
+        link: `https://motorfix.ro/app/driver/requests/${requestId}`,
+        range: '300–450',
+      },
+      subjectId: randomUUID(),
+    });
+    await bell(andrei, { ago: 2000 });
+
+    const res = await get('/notifications', andrei).expect(200);
+    expect(res.body.items.map((n: { link: string | null }) => n.link)).toEqual([
+      `/app/driver/cars/${car}`,
+      `/app/driver/requests/${requestId}`,
+      null,
+    ]);
+
+    const read = await post(`/notifications/${due}/read`, andrei).expect(200);
+    expect(read.body.link).toBe(`/app/driver/cars/${car}`);
+  });
+
   it("lists the person's own bell rows newest first, 20 a page", async () => {
     const andrei = await account('andrei');
     const other = await account('other');
@@ -127,6 +162,7 @@ describe('the bell list', () => {
       at: expect.any(String),
       id: ids[0],
       kind: 'TEST_MESSAGE',
+      link: null,
       readAt: null,
       subjectId: null,
       text: 'Mesaj de test: notificările funcționează.',
