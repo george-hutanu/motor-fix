@@ -11,6 +11,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { AddCar } from './add-car';
+import { openAddCar } from './open-add-car';
 
 @Component({ template: '' })
 class Host {
@@ -427,5 +428,19 @@ describe('saving', () => {
 
     expect(text()).toContain('Alege o marcă din listă.');
     expect(button('Adaugă mașina')).toBeDefined();
+  });
+});
+
+describe('openAddCar', () => {
+  it('opens the add-car dialog with the plates already held and answers what it closes with', async () => {
+    const open = jest.fn(async () => 'cancelled' as const);
+    const overlays = { open } as unknown as Overlays;
+
+    await expect(openAddCar(overlays, ['CJ12ABC'])).resolves.toBe('cancelled');
+    expect(open).toHaveBeenCalledWith(AddCar, {
+      data: { plates: ['CJ12ABC'] },
+      shape: 'dialog',
+      title: 'driver.cars.add.title',
+    });
   });
 });

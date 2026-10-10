@@ -20,6 +20,19 @@ export const ACCOUNTS = {
   twoRoles: 'doua-roluri@example.test',
 } as const;
 
+let addresses = 0;
+// Sign-up is limited per address per hour, and every test comes from this
+// machine: each sign-up comes from an address of its own, on the TEST-NET
+// block a spec names so two specs never share one.
+export async function ownAddress(page: Page, net: string) {
+  const address = `${net}.${(Date.now() + ++addresses) % 250}`;
+  await page.route('**/api/v1/auth/sign-up', (route) =>
+    route.continue({
+      headers: { ...route.request().headers(), 'x-forwarded-for': address },
+    }),
+  );
+}
+
 // Waits for the page to take clicks: the server-rendered HTML arrives first.
 export async function ready(page: Page, path: string) {
   await page.goto(path);

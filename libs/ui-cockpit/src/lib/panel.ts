@@ -1,7 +1,9 @@
 import { _IdGenerator } from '@angular/cdk/a11y';
 import { Component, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
+  imports: [RouterLink],
   selector: 'mf-panel',
   styles: `
     .mf-panel {
@@ -48,11 +50,21 @@ import { Component, inject, input } from '@angular/core';
       margin: 0 0 var(--mf-space-4);
       color: var(--mf-text-secondary);
     }
+    h2 a {
+      color: inherit;
+      text-underline-offset: 0.2em;
+    }
   `,
   template: `
     <section class="mf-panel" [attr.aria-labelledby]="heading() ? headingId : null">
       @if (heading()) {
-        <h2 class="mf-label" [id]="headingId">{{ heading() }}</h2>
+        <h2 class="mf-label" [id]="headingId">
+          @if (link(); as to) {
+            <a [routerLink]="to">{{ heading() }}</a>
+          } @else {
+            {{ heading() }}
+          }
+        </h2>
       }
       <ng-content />
     </section>
@@ -60,5 +72,7 @@ import { Component, inject, input } from '@angular/core';
 })
 export class Panel {
   readonly heading = input<string>();
+  // The view the heading opens, if the panel stands for one.
+  readonly link = input<string[] | string>();
   protected readonly headingId = inject(_IdGenerator).getId('mf-panel-title-');
 }

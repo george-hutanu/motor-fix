@@ -1,1 +1,101 @@
-<a hlmBtn [routerLink]="['/', language()]">{{ 'driver.home.newRequest' | t }}</a>
+@switch (firstRow()) {
+  @case ('loading') {
+    <div class="skeleton wide" aria-busy="true"></div>
+  }
+  @case ('failed') {
+    <mf-panel class="wide" data-panel="activeRequest" [heading]="'driver.panel.activeRequest' | t">
+      <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    </mf-panel>
+  }
+  @case ('active') {
+    <mf-panel
+      class="wide"
+      data-panel="activeRequest"
+      [heading]="'driver.panel.activeRequest' | t"
+      [link]="['/app', 'driver', 'requests']"
+    />
+  }
+  @case ('invite') {
+    <div class="invitations wide">
+      @if (!hasCar()) {
+        <mf-panel data-invitation="car">
+          <mf-empty-state icon="car" text="driver.empty.addFirstCar">
+            <button hlmBtn type="button" (click)="addCar()">{{ 'driver.cars.add.title' | t }}</button>
+          </mf-empty-state>
+        </mf-panel>
+      }
+      <mf-panel data-invitation="search">
+        <mf-empty-state icon="search" text="driver.empty.findGarageForCar">
+          <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t }}</a>
+        </mf-empty-state>
+      </mf-panel>
+    </div>
+  }
+}
+
+<mf-panel
+  data-panel="quotes"
+  [heading]="'driver.panel.quotes' | t"
+  [link]="state(quotes()) === 'filled' ? ['/app', 'driver', 'requests'] : undefined"
+>
+  @switch (state(quotes())) {
+    @case ('loading') {
+      <div class="skeleton" aria-busy="true"></div>
+    }
+    @case ('failed') {
+      <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    }
+    @case ('empty') {
+      <mf-empty-state icon="quote" text="driver.empty.quotes">
+        <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t }}</a>
+      </mf-empty-state>
+    }
+  }
+</mf-panel>
+
+<mf-panel
+  data-panel="cars"
+  [heading]="'shell.frame.title.driver.cars' | t"
+  [link]="hasCar() ? ['/app', 'driver', 'cars'] : undefined"
+>
+  @switch (state(cars())) {
+    @case ('loading') {
+      <div class="skeleton" aria-busy="true"></div>
+    }
+    @case ('failed') {
+      <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    }
+    @case ('empty') {
+      <mf-empty-state icon="car" text="driver.empty.cars">
+        <button hlmBtn type="button" (click)="addCar()">{{ 'driver.cars.add.title' | t }}</button>
+      </mf-empty-state>
+    }
+  }
+</mf-panel>
+
+<mf-panel
+  class="wide"
+  data-panel="repairs"
+  [heading]="'driver.panel.repairs' | t"
+  [link]="state(repairs()) === 'filled' ? ['/app', 'driver', 'requests'] : undefined"
+>
+  @switch (state(repairs())) {
+    @case ('loading') {
+      <div class="skeleton" aria-busy="true"></div>
+    }
+    @case ('failed') {
+      <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    }
+    @case ('empty') {
+      <mf-empty-state icon="wrench" text="driver.empty.repairs" />
+    }
+  }
+</mf-panel>
+
+@if (saved()) {
+  <mf-panel class="wide" data-panel="saved" [heading]="'shell.frame.title.driver.saved' | t">
+    <mf-empty-state icon="bookmark" text="driver.empty.saved">
+      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findOthers' | t }}</a>
+    </mf-empty-state>
+  </mf-panel>
+}

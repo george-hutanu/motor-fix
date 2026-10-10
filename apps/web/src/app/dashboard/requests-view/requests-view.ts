@@ -13,6 +13,7 @@ import {
 import { I18n, relativeTime, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
+import { EmptyState } from '../empty-state/empty-state';
 import { liveResource } from '../live';
 
 interface Row {
@@ -27,7 +28,7 @@ interface Row {
 // request events so one sent in another tab shows up without a reload.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, RouterLink, TranslatePipe],
+  imports: [EmptyState, HlmButton, RouterLink, TranslatePipe],
   selector: 'mf-requests-view',
   styleUrl: './requests-view.css',
   templateUrl: './requests-view.html',

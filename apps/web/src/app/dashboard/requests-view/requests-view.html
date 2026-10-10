@@ -14,10 +14,9 @@
       }
     </ul>
   } @else {
-    <div class="empty">
-      <p>{{ 'driver.requests.empty' | t }}</p>
-      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.home.newRequest' | t }}</a>
-    </div>
+    <mf-empty-state icon="inbox" text="driver.empty.requests">
+      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t }}</a>
+    </mf-empty-state>
   }
 } @else if (list.failed()) {
   <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
