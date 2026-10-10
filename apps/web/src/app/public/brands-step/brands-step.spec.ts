@@ -929,7 +929,15 @@ describe('the job row on a phone', () => {
       /\.jobs label[^{]*\{[^}]*min-height:\s*var\(--mf-tap\)/,
     );
     // The sweep measures the checkbox itself: its box is drawn smaller inside.
-    expect(css).toMatch(/\.jobs input \{[^}]*\swidth:\s*var\(--mf-tap\)/);
-    expect(css).toMatch(/\.jobs input \{[^}]*\sheight:\s*var\(--mf-tap\)/);
+    // The shared mf-check rule (styles.css) draws it; tap-checkbox.spec.ts.
+    const html = readFileSync(join(__dirname, 'brands-step.html'), 'utf8');
+    expect(html).toMatch(/class="mf-check"\s+type="checkbox"/);
+    const global = readFileSync(join(__dirname, '../../../styles.css'), 'utf8');
+    expect(global).toMatch(
+      /input\[type="checkbox"\]\.mf-check \{[^}]*\swidth:\s*var\(--mf-tap\)/,
+    );
+    expect(global).toMatch(
+      /input\[type="checkbox"\]\.mf-check \{[^}]*\sheight:\s*var\(--mf-tap\)/,
+    );
   });
 });

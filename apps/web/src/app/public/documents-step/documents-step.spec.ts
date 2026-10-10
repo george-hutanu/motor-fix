@@ -800,8 +800,14 @@ describe('the declaration', () => {
 
     expect(box(step).closest('label')?.classList).toContain('choice');
     // The sweep measures the checkbox itself: its box is drawn smaller inside.
-    const css = readFileSync(join(__dirname, 'documents-step.css'), 'utf8');
-    expect(css).toMatch(/\.choice input \{[^}]*\swidth:\s*var\(--mf-tap\)/);
-    expect(css).toMatch(/\.choice input \{[^}]*\sheight:\s*var\(--mf-tap\)/);
+    // The shared mf-check rule (styles.css) draws it; tap-checkbox.spec.ts.
+    expect(box(step).classList).toContain('mf-check');
+    const global = readFileSync(join(__dirname, '../../../styles.css'), 'utf8');
+    expect(global).toMatch(
+      /input\[type="checkbox"\]\.mf-check \{[^}]*\swidth:\s*var\(--mf-tap\)/,
+    );
+    expect(global).toMatch(
+      /input\[type="checkbox"\]\.mf-check \{[^}]*\sheight:\s*var\(--mf-tap\)/,
+    );
   });
 });
