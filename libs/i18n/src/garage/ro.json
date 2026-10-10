@@ -126,6 +126,21 @@
       "one": "{count} fără răspuns",
       "other": "{count} fără răspuns"
     },
+    "decline": {
+      "button": "Refuză",
+      "cancel": "Renunță",
+      "declined": "Cerere refuzată",
+      "offline": "Ești offline",
+      "problem": {
+        "already_answered": "Altcineva a răspuns deja la această cerere",
+        "forbidden": "Nu ai dreptul să răspunzi la cereri",
+        "not_found": "Cererea nu mai este disponibilă",
+        "request_not_open": "Cererea nu mai este deschisă"
+      },
+      "reasons": "Motivul refuzului",
+      "submit": "Refuză",
+      "title": "De ce refuzați cererea?"
+    },
     "empty": "Nicio cerere nouă. Te anunțăm când apare una.",
     "heading": "Cereri de ofertă",
     "loading": "Se încarcă cererile",

@@ -125,6 +125,21 @@
       "one": "{count} unanswered",
       "other": "{count} unanswered"
     },
+    "decline": {
+      "button": "Decline",
+      "cancel": "Cancel",
+      "declined": "Request declined",
+      "offline": "You are offline",
+      "problem": {
+        "already_answered": "Someone else already answered this request",
+        "forbidden": "You are not allowed to answer requests",
+        "not_found": "The request is no longer available",
+        "request_not_open": "The request is no longer open"
+      },
+      "reasons": "Reason for declining",
+      "submit": "Decline",
+      "title": "Why are you declining the request?"
+    },
     "empty": "No new requests. We will tell you when one arrives.",
     "heading": "Quote requests",
     "loading": "Loading the requests",

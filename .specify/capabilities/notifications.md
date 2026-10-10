@@ -27,6 +27,7 @@ features:
   - 312-report-garage
   - 344-send-quote
   - 139-edit-my-details
+  - 345-decline-request
   - 209-status-change-emails
 ---
 
@@ -587,6 +588,14 @@ _From 344-send-quote._
 ### 139-FR-018 — Every e-mail notice MUST be queued through the notifications queue and the phone code sent directly as the sign-in code is, all in the account's language, and every new text, including one for each refusal code this story adds (`email_taken`, `email_unchanged`, `phone_taken`, `phone_unchanged`, `send_failed`, `code_invalid`, `code_expired`, `recent_sign_in_required`, `too_many_attempts`, `invalid_credentials`, `weak_password`), MUST exist in Romanian and English, Romanian words joined by a hyphen using U+2011; text the person typed MUST never be shown back as markup.
 
 _From 139-edit-my-details._
+
+### 345-FR-009 — REQUEST_DECLINED MUST be built through the shipped notifications service as the catalogue lists it (event; e-mail, push, WhatsApp; group `offers`; the driver's per-channel mute honoured, the no-device fallback and quiet hours as the catalogue already applies to this group), one message per decline, parameters the garage's name and the reason code only (never the description, the plate or a phone); a muted channel sends nothing and the recipient is still marked told. A provider failure leaves the NOTIFICATION `failed` for the shipped retry.
+
+_From 345-decline-request._
+
+### 345-FR-010 — Templates for REQUEST_DECLINED MUST exist in Romanian and English for e-mail, push and WhatsApp (`template-check` passes): the body "<garage> nu poate prelua cererea: <clause>." / "<garage> cannot take your request: <clause>." with the clause per reason, `fully_booked` "este ocupat complet" / "it is fully booked", `job_not_done` "nu face această lucrare" / "it does not do this job", `make_model_engine_not_done` "nu lucrează pe această marcă, model sau motor" / "it does not work on this make, model or engine", `need_to_see_car` "trebuie să vadă mașina mai întâi" / "it needs to see the car first"; the e-mail subject "Un service a refuzat cererea ta" / "A garage declined your request", with the account link to the driver's request as the shipped templates link (555-FR). The reason labels and clauses MUST live in one map in the contracts library, Romanian and English, covering every reason and nothing else (a test fails when a reason lacks a label).
+
+_From 345-decline-request._
 
 ### 209-FR-001 — The system MUST consume `verification.decided` from the outbox relay and, for each event whose `decision` is `approved`, `more_requested` or `rejected`, build one `VERIFICATION_RESULT` notification per garage owner, through the notifications service, with the outbox event id as the notification's event id and the file id as its subject id; the consumer MUST register `verification.decided` alone, so a reopen, a submission or an opening builds nothing.
 

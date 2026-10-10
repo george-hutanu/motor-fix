@@ -85,6 +85,7 @@ export type RequestClosedReason = (typeof REQUEST_CLOSED_REASONS)[number];
 // Why a garage's request closed for it, tried in this order; a close that
 // matches none reads as account_closed's "Request closed".
 export const GARAGE_CLOSE_REASONS = [
+  'declined',
   'expired',
   'garage_suspended',
   'cancelled',
@@ -101,6 +102,7 @@ export const GARAGE_CLOSE_REASON_LABELS: Record<
     accepted_elsewhere: 'The customer accepted another quote',
     account_closed: 'Request closed',
     cancelled: 'Request cancelled by the customer',
+    declined: 'Declined',
     expired: 'Request expired',
     garage_suspended: 'Garage suspended',
   },
@@ -108,6 +110,7 @@ export const GARAGE_CLOSE_REASON_LABELS: Record<
     accepted_elsewhere: 'Clientul a acceptat altă ofertă',
     account_closed: 'Cerere închisă',
     cancelled: 'Cerere anulată de client',
+    declined: 'Refuzată',
     expired: 'Cerere expirată',
     garage_suspended: 'Service suspendat',
   },
@@ -134,6 +137,47 @@ export const DECLINE_REASON_CODES = [
   'need_to_see_car',
 ] as const;
 export type DeclineReasonCode = (typeof DECLINE_REASON_CODES)[number];
+
+export const isDeclineReason = (value: unknown): value is DeclineReasonCode =>
+  (DECLINE_REASON_CODES as readonly unknown[]).includes(value);
+
+type Words = { en: string; ro: string };
+
+// The garage's choice in the decline dialog (label) and the words the
+// driver's message puts after "<garage> cannot take your request:" (clause).
+export const DECLINE_REASON_TEXTS: Record<
+  DeclineReasonCode,
+  { clause: Words; label: Words }
+> = {
+  fully_booked: {
+    clause: { en: 'it is fully booked', ro: 'este ocupat complet' },
+    label: { en: 'We are fully booked', ro: 'Suntem ocupați complet' },
+  },
+  job_not_done: {
+    clause: { en: 'it does not do this job', ro: 'nu face această lucrare' },
+    label: { en: "We don't do this job", ro: 'Nu facem această lucrare' },
+  },
+  make_model_engine_not_done: {
+    clause: {
+      en: 'it does not work on this make, model or engine',
+      ro: 'nu lucrează pe această marcă, model sau motor',
+    },
+    label: {
+      en: "We don't work on this make, model or engine",
+      ro: 'Nu lucrăm pe această marcă, model sau motor',
+    },
+  },
+  need_to_see_car: {
+    clause: {
+      en: 'it needs to see the car first',
+      ro: 'trebuie să vadă mașina mai întâi',
+    },
+    label: {
+      en: 'We need to see the car first',
+      ro: 'Trebuie să vedem mașina mai întâi',
+    },
+  },
+};
 
 export const CANCELLED_BY_SIDES = ['driver', 'garage', 'system'] as const;
 export type CancelledBySide = (typeof CANCELLED_BY_SIDES)[number];

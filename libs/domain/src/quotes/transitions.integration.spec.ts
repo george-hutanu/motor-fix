@@ -308,6 +308,32 @@ describe('moveRecipient', () => {
   });
 });
 
+// @traces 345-FR-006
+it('clears a told decline together with its other columns on the undo move', async () => {
+  const request = await world.request(driver);
+  const row = await world.recipient(request.id, garageId, 'declined', owner);
+  await prisma.requestRecipient.update({
+    data: { declineToldAt: new Date() },
+    where: { id: row.id },
+  });
+
+  await prisma.$transaction((tx) =>
+    moveRecipient(tx, ports, {
+      actor: byGarage(),
+      event: {
+        audience: { driverAccountId: driver, garageId, type: 'quote' },
+        kind: 'request.declined',
+      },
+      id: row.id,
+      to: 'waiting',
+    }),
+  );
+
+  expect(
+    await prisma.requestRecipient.findUniqueOrThrow({ where: { id: row.id } }),
+  ).toMatchObject({ declinedAt: null, declineToldAt: null, status: 'waiting' });
+});
+
 // @traces 220-FR-005
 // @traces 220-FR-008
 describe('moveQuote', () => {
