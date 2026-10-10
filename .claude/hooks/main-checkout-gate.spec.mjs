@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -69,7 +69,7 @@ beforeAll(() => {
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 describe('main checkout gate — refuses', () => {
-  // @traces 1035-main-checkout-guard-FR-001
+  // @traces 1035-FR-001
   it('an edit to a tracked file in the main checkout, naming the file, the rule and the override', () => {
     const run = gate({ input: { file_path: join(repo, 'README.md') } });
     assert.equal(run.status, 2);
@@ -97,7 +97,7 @@ describe('main checkout gate — refuses', () => {
 });
 
 describe('main checkout gate — lets through', () => {
-  // @traces 1035-main-checkout-guard-FR-002
+  // @traces 1035-FR-002
   const passes = (args) => {
     const run = gate(args);
     assert.equal(run.status, 0, run.stderr);
@@ -141,7 +141,7 @@ describe('main checkout gate — lets through', () => {
 });
 
 describe('main checkout gate — fails open', () => {
-  // @traces 1035-main-checkout-guard-FR-003
+  // @traces 1035-FR-003
   it('with no path in the payload', () => {
     assert.equal(gate({ input: {} }).status, 0);
   });
@@ -164,5 +164,45 @@ describe('main checkout gate — fails open', () => {
     const started = Date.now();
     gate({ input: { file_path: join(repo, 'README.md') } });
     assert.ok(Date.now() - started < 2000);
+  });
+});
+
+describe('main checkout gate — wiring', () => {
+  const claude = join(import.meta.dirname, '..');
+  const root = join(claude, '..');
+
+  // @traces 1035-FR-004
+  it('is registered as a refusing pre-edit gate for every edit tool and called from settings', () => {
+    const { hooks } = JSON.parse(readFileSync(join(claude, 'hooks', 'registry.json'), 'utf8'));
+    const entry = hooks.find((h) => h.id === 'pre:edit:main-checkout');
+    assert.ok(entry, 'no registry entry');
+    assert.equal(entry.event, 'PreToolUse');
+    assert.equal(entry.matcher, 'Edit|Write|MultiEdit|NotebookEdit');
+    assert.equal(entry.script, 'main-checkout-gate.mjs');
+    assert.deepEqual(entry.profiles, ['standard', 'strict']);
+    assert.equal(entry.fail_closed, true);
+    const groups = JSON.parse(readFileSync(join(claude, 'settings.json'), 'utf8')).hooks.PreToolUse;
+    const group = groups.find((g) => g.hooks.some((h) => h.command.endsWith('run-hook.mjs pre:edit:main-checkout')));
+    assert.equal(group?.matcher, 'Edit|Write|MultiEdit|NotebookEdit');
+  });
+
+  // @traces 1035-FR-008
+  it('is described where the lifecycle and the watch are', () => {
+    const agents = readFileSync(join(root, 'AGENTS.md'), 'utf8');
+    const seventh = agents.slice(agents.indexOf('  7. Merge on'), agents.indexOf('  Technical debt'));
+    assert.match(seventh, /git -C <main> merge --ff-only origin\/main/);
+    assert.match(seventh, /ff-main/);
+    const watch = readFileSync(join(claude, 'skills', 'speckit-watch', 'SKILL.md'), 'utf8');
+    assert.doesNotMatch(watch, /shown, never fixed/);
+    assert.match(watch, /`behind` \(fix `ff-main`/);
+    assert.match(watch, /`dirty: <files>`/);
+  });
+
+  // @traces 1035-FR-010
+  it('has its eval cases: a tracked file refused, a new file let through', () => {
+    const file = join(claude, 'evals', 'cases', 'main-checkout-gate.json');
+    assert.ok(existsSync(file));
+    const cases = JSON.parse(readFileSync(file, 'utf8'));
+    assert.deepEqual(cases.map((c) => [c.hook, c.expect.exit]), [['pre:edit:main-checkout', 2], ['pre:edit:main-checkout', 0]]);
   });
 });

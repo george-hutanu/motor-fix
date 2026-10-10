@@ -1714,7 +1714,7 @@ describe('the main checkout row', () => {
   const mainRow = (over = {}) => row({ path: '/repo', main: true, holder: 'owner', branch: 'main', dirty: [], ahead: 0, behind: 0, ...over });
   const ff = 'git -C /repo merge --ff-only origin/main';
 
-  // @traces 1035-main-checkout-guard-FR-005
+  // @traces 1035-FR-005
   it('is ok when clean and level with origin/main', () => {
     const r = fixOf(mainRow(), opts);
     assert.equal(r.verdict, 'ok');
@@ -1783,7 +1783,7 @@ describe('the main checkout row', () => {
     }
   });
 
-  // @traces 1035-main-checkout-guard-FR-006
+  // @traces 1035-FR-006
   it('--gate names ff-main for a clean, behind main checkout', () => {
     const f = fixture();
     try {

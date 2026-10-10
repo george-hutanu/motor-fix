@@ -43,7 +43,7 @@ describe('the constitution card', () => {
     assert.ok(Number(minor) >= 9);
   });
 
-  // @traces 1035-main-checkout-guard-FR-009
+  // @traces 1035-FR-009
   it('states the main checkout rule under principle VII, in the constitution and the card', () => {
     const card = readFileSync(CARD, 'utf8');
     const start = full.indexOf('### VII.');

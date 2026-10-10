@@ -194,7 +194,7 @@ describe('watch reminder — the main checkout', () => {
   };
   const ff = () => `git -C ${repo} merge --ff-only origin/main`;
 
-  // @traces 1035-main-checkout-guard-FR-007
+  // @traces 1035-FR-007
   it('says nothing when clean and level with origin/main', () => {
     assert.equal(mainLine(repo), '');
     assert.equal(runReminder({ repo, watch: quiet, armed: () => null }), '');
