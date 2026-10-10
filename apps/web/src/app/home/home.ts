@@ -28,7 +28,7 @@ import {
   HomeService,
   PlacesService,
 } from '@motor-fix/data-access';
-import { formatKm, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { RatingDial, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -38,6 +38,7 @@ import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { HomeCards, type ResultsRoute } from './cards/cards';
 import { type Place, PlaceStore } from './place/place-store';
 import { HomePreview } from './preview/preview';
+import { garageWhere } from './where/where';
 import { Session } from '../dashboard/session';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
@@ -155,21 +156,10 @@ export class Home {
         })
       : this.i18n.t('public.home.dial.noTaker', { brand: answer.brand.name });
   });
-  // The city is a name from the garage's address, shown as written in either
-  // language (marked translate="no"); the rest is said in the current one.
+  // The best garage's city (as written) and distance; see garageWhere.
   protected readonly line = computed(() => {
     const best = this.answer()?.best;
-    if (!best) return null;
-    if (best.businessKind === 'mobile') {
-      return { city: '', rest: this.i18n.t('public.home.dial.mobile') };
-    }
-    const city = best.city ?? '';
-    const km =
-      typeof best.distanceKm === 'number'
-        ? formatKm(best.distanceKm, this.i18n.language())
-        : '';
-    if (!city && !km) return null;
-    return { city, rest: city && km ? ` · ${km}` : km };
+    return best ? garageWhere(best, this.i18n) : null;
   });
   protected readonly announce = computed(() => {
     const best = this.answer()?.best;

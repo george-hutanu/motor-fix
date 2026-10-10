@@ -1,14 +1,10 @@
 import { Component, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
-import {
-  formatKm,
-  formatLei,
-  formatRating,
-  I18n,
-  TranslatePipe,
-} from '@motor-fix/i18n';
+import { formatLei, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
+
+import { garageWhere } from '../where/where';
 
 // Where the main button of Home goes, so the section's link goes there too.
 export interface ResultsRoute {
@@ -56,28 +52,9 @@ export class HomeCards {
     return [garage.name, this.stance(garage), this.rating(garage)].join(', ');
   }
 
-  // The city is a name from the garage's address, shown as written in either
-  // language (marked translate="no"); the rest is said in the current one.
-  protected where(
-    garage: HomeGarageDto,
-  ): { city: string; rest: string } | null {
-    if (garage.businessKind === 'mobile') {
-      const mobile = this.i18n.t('public.home.dial.mobile');
-      return {
-        city: '',
-        rest:
-          garage.serviceRadiusKm === undefined
-            ? mobile
-            : `${mobile} · ${this.i18n.t('public.home.cards.area', { km: garage.serviceRadiusKm })}`,
-      };
-    }
-    const city = garage.city ?? '';
-    const km =
-      typeof garage.distanceKm === 'number'
-        ? formatKm(garage.distanceKm, this.i18n.language())
-        : '';
-    if (!city && !km) return null;
-    return { city, rest: city && km ? ` · ${km}` : km };
+  // The city as written, the distance or a mobile mechanic's area.
+  protected where(garage: HomeGarageDto) {
+    return garageWhere(garage, this.i18n, { area: true });
   }
 
   protected names(list: string[]) {

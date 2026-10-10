@@ -845,6 +845,46 @@ for (const path of ['/ro', '/en']) {
 }
 
 // @traces 227-FR-010
+for (const path of ['/ro', '/en']) {
+  for (const brand of ['Dacia', 'BMW']) {
+    test(`never splits a word of a preview row's status across lines at 320 px on ${path} for ${brand} @seeded`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height: 640, width: 320 });
+      await ready(page, path);
+      await page.getByRole('radio', { exact: true, name: brand }).click();
+      await expect(previewRows(page).first()).toHaveAttribute(
+        'href',
+        new RegExp(`[?&]brand=${brand.toLowerCase()}(&|$)`),
+      );
+
+      const split = await previewRows(page)
+        .locator('mf-lamp')
+        .evaluateAll((lamps) =>
+          lamps.flatMap((lamp) => {
+            const text = [...lamp.childNodes].find(
+              (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
+            );
+            if (!text?.textContent) return ['no status text'];
+            const lines = (start: number, end: number) => {
+              const range = document.createRange();
+              range.setStart(text, start);
+              range.setEnd(text, end);
+              return new Set(
+                [...range.getClientRects()].map((r) => Math.round(r.top)),
+              ).size;
+            };
+            return [...text.textContent.matchAll(/[^\s\u00a0]+/g)]
+              .filter((m) => lines(m.index, m.index + m[0].length) > 1)
+              .map((m) => m[0]);
+          }),
+        );
+      expect(split).toEqual([]);
+    });
+  }
+}
+
+// @traces 227-FR-010
 test('sets the preview as one panel of 64 px rows, the rating over the rate on the right @seeded', async ({
   page,
 }) => {

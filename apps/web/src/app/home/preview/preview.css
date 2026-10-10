@@ -23,15 +23,18 @@ li + li {
   color: inherit;
   display: grid;
   gap: var(--mf-space-3);
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* The facts column takes at most 40 % of the row and wraps its rate, so the
+     status keeps room for its last two words on a 320 px phone. */
+  grid-template-columns: minmax(0, 1fr) fit-content(40%);
   min-height: 64px;
   padding: var(--mf-space-2) var(--mf-space-4);
   text-decoration: none;
 }
 
 /* A narrow phone wraps the status in balanced lines; its last two words never
-   part (a no-break space, see status()), and a word too long for the column
-   still breaks rather than pushing the row sideways. */
+   part (a no-break space, see status()), and only a word too long for the
+   whole column breaks (break-word, never anywhere: balance would otherwise
+   split a brand name mid-word to even the lines). */
 .who {
   display: flex;
   flex-direction: column;
@@ -41,7 +44,7 @@ li + li {
 
 mf-lamp {
   max-width: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   text-wrap: balance;
 }
 
