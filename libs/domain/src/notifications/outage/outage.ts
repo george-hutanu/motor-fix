@@ -51,7 +51,7 @@ function readAlert(value: unknown): ReadAlert {
   return {
     outage: {
       at,
-      eventId: `outage:${fingerprint}:${startsAt}:${state}`,
+      eventId: `outage:${fingerprint}:${started}:${state}`,
       fingerprint,
       service:
         typeof service === 'string' && service

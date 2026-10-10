@@ -21,7 +21,7 @@ describe('reading a Grafana alert payload', () => {
       {
         outage: {
           at: '2026-10-10T03:04:05.000Z',
-          eventId: 'outage:5f1a2b3c4d5e6f70:2026-10-10T03:04:05Z:down',
+          eventId: 'outage:5f1a2b3c4d5e6f70:2026-10-10T03:04:05.000Z:down',
           fingerprint: '5f1a2b3c4d5e6f70',
           service: 'web',
           state: 'down',
@@ -35,7 +35,7 @@ describe('reading a Grafana alert payload', () => {
       {
         outage: {
           at: '2026-10-10T03:09:00.000Z',
-          eventId: 'outage:5f1a2b3c4d5e6f70:2026-10-10T03:04:05Z:back',
+          eventId: 'outage:5f1a2b3c4d5e6f70:2026-10-10T03:04:05.000Z:back',
           fingerprint: '5f1a2b3c4d5e6f70',
           service: 'web',
           state: 'back',
@@ -54,6 +54,17 @@ describe('reading a Grafana alert payload', () => {
     expect(later).toHaveProperty('outage.eventId');
     expect((later as { outage: { eventId: string } }).outage.eventId).not.toBe(
       (first as { outage: { eventId: string } }).outage.eventId,
+    );
+  });
+
+  it('gives one outage the same event id whatever format its start time comes in', () => {
+    const [plain] = readAlerts({ alerts: [firing] }) ?? [];
+    const [offset] =
+      readAlerts({
+        alerts: [{ ...firing, startsAt: '2026-10-10T06:04:05+03:00' }],
+      }) ?? [];
+    expect((offset as { outage: { eventId: string } }).outage.eventId).toBe(
+      (plain as { outage: { eventId: string } }).outage.eventId,
     );
   });
 
