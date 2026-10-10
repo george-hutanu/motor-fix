@@ -440,6 +440,21 @@
     "google": "Continue with Google",
     "or": "or"
   },
+  "reportGarage": {
+    "cancel": "Cancel",
+    "count": "{typed} / {max}",
+    "field": "What happened at this garage?",
+    "link": "Report this garage",
+    "problem": {
+      "garage_already_reported": "You have already reported this garage.",
+      "too_many_reports": "You have sent too many reports. Try again later."
+    },
+    "retry": "Try again",
+    "rule": "20 to 1000 characters.",
+    "send": "Send the report",
+    "thanks": "Thank you. Your report has reached the MotorFix team.",
+    "title": "What happened?"
+  },
   "requestQuote": {
     "addCar": "Add a car",
     "backToSearch": "Back to search",

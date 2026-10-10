@@ -626,6 +626,54 @@ describe('reopening', () => {
     ]);
   });
 
+  // @traces 312-FR-008 312-FR-012
+  it('records a report as the reason when the system reopens an approved file', async () => {
+    const file = await fileIn('approved');
+
+    await inTx((tx) => service().reopen(tx, SYSTEM, file.id, 'garage_report'));
+
+    const after = await prisma.verificationFile.findUniqueOrThrow({
+      where: { id: file.id },
+    });
+    expect(after).toMatchObject({
+      reopenedBy: null,
+      reopenReason: 'garage_report',
+      status: 'in_review',
+    });
+    expect(after.reopenedAt).not.toBeNull();
+    const reopening = (await history(file.id)).find(
+      (e) => e.kind === 'verification_reopened',
+    );
+    expect(reopening).toMatchObject({
+      actorRole: 'system',
+      text: 'garage_report',
+    });
+    const [event] = (await events(file.id)).filter(
+      (e) => e.kind === 'verification.reopened',
+    );
+    expect(event?.payload).toEqual({
+      fileId: file.id,
+      garageId,
+      reason: 'garage_report',
+    });
+    expect(event?.audience).toEqual(['admin', `garage:${garageId}`]);
+  });
+
+  it('leaves the reason empty when an admin reopens', async () => {
+    const file = await fileIn('approved');
+
+    await inTx((tx) => service().reopen(tx, dan, file.id));
+
+    const after = await prisma.verificationFile.findUniqueOrThrow({
+      where: { id: file.id },
+    });
+    expect(after.reopenReason).toBeNull();
+    const [event] = (await events(file.id)).filter(
+      (e) => e.kind === 'verification.reopened',
+    );
+    expect(event?.payload).toEqual({ fileId: file.id, garageId });
+  });
+
   it('refuses to reopen a file that is not the newest', async () => {
     const older = await fileIn('rejected', new Date('2026-10-01T08:00:00Z'));
     await fileIn('rejected', new Date('2026-10-02T08:00:00Z'));

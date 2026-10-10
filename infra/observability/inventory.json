@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 101,
+    "count": 102,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -459,6 +459,25 @@
       "alerts": "none",
       "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); ST-880 adds the alerts",
       "story": "ST-424"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-reports",
+      "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:id/reports",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "refusals show on the request-duration metric by route and status code; ST-880 adds the alerts",
+      "story": "ST-312"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_garage_reports_total",
+      "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.service.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "outcomes created, already_reported and refused (both 409); 404 and 429 read from the request-duration metric by route and status; ST-880 adds the alert rules",
+      "story": "ST-312"
     },
     {
       "kind": "endpoint",

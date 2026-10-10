@@ -114,9 +114,12 @@ test.describe('the admin dashboard @seeded', () => {
       await page.setViewportSize({ height, width });
       await signInAsAdmin(page);
 
+      // The seed leaves two files waiting; garage-report.spec.ts, running
+      // beside this one, may reopen a third for a few seconds. A regular
+      // expression is tested against the raw text, line breaks included.
       await expect(
         page.getByText(
-          'MotorFix · Toată țara · 2 service‑uri așteaptă verificarea',
+          /MotorFix\s+·\s+Toată\s+țara\s+·\s+[23]\s+service‑uri\s+așteaptă\s+verificarea/,
         ),
       ).toBeVisible();
       await expect(
@@ -127,7 +130,7 @@ test.describe('the admin dashboard @seeded', () => {
           ? page.locator('mf-dashboard-tab-bar')
           : page.getByRole('navigation', { name: 'Meniu' });
       await expect(
-        menu.getByRole('link', { name: 'Service‑uri, 2 în așteptare' }),
+        menu.getByRole('link', { name: /^Service‑uri, [23] în așteptare$/ }),
       ).toBeVisible();
       await expect(
         menu.getByRole('link', { name: /Utilizatori/ }),

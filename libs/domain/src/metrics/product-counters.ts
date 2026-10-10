@@ -16,6 +16,7 @@ export type JobStepAction =
   | 'removed'
   | 'ticked'
   | 'unticked';
+export type GarageReportOutcome = 'created' | 'already_reported' | 'refused';
 
 // Looked up on every count, never cached: a counter kept from before the
 // meter provider is registered would stay a no-op for the life of the
@@ -102,5 +103,12 @@ export function countQuoteReceived(outcome: 'built' | 'muted') {
   counter(
     'motorfix_quote_received_total',
     'Sent quotes announced to their driver, by outcome',
+  ).add(1, { outcome });
+}
+
+export function countGarageReport(outcome: GarageReportOutcome) {
+  counter(
+    'motorfix_garage_reports_total',
+    'Reports of a garage by a driver, by outcome',
   ).add(1, { outcome });
 }

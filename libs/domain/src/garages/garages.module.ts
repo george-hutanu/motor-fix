@@ -28,6 +28,11 @@ import {
   INVITE_EMAIL,
   StaffInviteService,
 } from './staff-invite/staff-invite.service';
+import { GarageReportsController } from './verification/garage-reports/garage-reports.controller';
+import {
+  GARAGE_REPORTS_OPTIONS,
+  GarageReportsService,
+} from './verification/garage-reports/garage-reports.service';
 import { VerificationService } from './verification/verification.service';
 import { VerificationChecksController } from './verification/verification-checks/verification-checks.controller';
 import { VerificationChecksService } from './verification/verification-checks/verification-checks.service';
@@ -59,6 +64,7 @@ export class GaragesModule {
         AdminOverviewController,
         GarageBrandsController,
         GarageInvitesController,
+        GarageReportsController,
         GarageSettingsController,
         InvitesController,
         LegalDocumentsController,
@@ -82,6 +88,11 @@ export class GaragesModule {
         GarageMechanicsService,
         GaragePlaceService,
         GaragePricesService,
+        GarageReportsService,
+        {
+          provide: GARAGE_REPORTS_OPTIONS,
+          useValue: { webUrl: email.webUrl },
+        },
         GarageSettingsService,
         LegalDocumentsService,
         ListingDraftsService,

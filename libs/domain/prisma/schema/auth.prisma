@@ -52,6 +52,7 @@ model Account {
   identities              AccountIdentity[]
   refreshTokens           RefreshToken[]
   memberships             GarageMember[]
+  garageReports           GarageReport[]
   mechanic                Mechanic?
   notifications           Notification[]
   notificationPreferences NotificationPreference[]

@@ -4,6 +4,7 @@ updated: 2026-10-09
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
+  - 312-report-garage
   - 384-response-rate
 ---
 
@@ -140,6 +141,22 @@ _From 310-photo-gallery._
 ### 310-FR-014 — Nothing in this story uploads, reorders or deletes photos (110 and the owner's later dashboard story), and job photos (MF-22) are out of scope; the only new front-end code is the section and the Cockpit viewer, with no new runtime dependency (Principle I, III).
 
 _From 310-photo-gallery._
+
+### 312-FR-001 — The public garage profile MUST show, after its last section, one quiet text link reading "Raportează service-ul" / "Report this garage", only while the session is a driver's or there is no session and the browser last saw no garage-side or admin role (the rule the "Cere ofertă" button already applies); a garage-side or admin role hides it. It MUST be reachable by keyboard and at least 44 px tall as a target.
+
+_From 312-report-garage._
+
+### 312-FR-002 — For a signed-in driver the link MUST open the shared task (`dialog` shape: centred from 768 px, the bottom sheet below, 158-FR-010) titled "Ce s-a întâmplat?" / "What happened?", holding one multi-line text field with a visible 20–1,000 character rule and a live count, a send button "Trimite raportarea" / "Send the report", and the task's usual ways to cancel. Sending MUST show progress and refuse a second press until the answer arrives. The task MUST be operable by keyboard and screen reader: the field has a programmatic label, its error and the outcome lines are announced (live region), focus moves into the task on open and returns to the link on close.
+
+_From 312-report-garage._
+
+### 312-FR-003 — For a visitor with no session the link MUST first open the sign-in gate over the page; once the person is signed in as a driver the report task MUST open on the same profile, at the same address, with no navigation; a cancelled sign-in opens nothing, and a sign-in as an account that is not a driver opens nothing and hides the link.
+
+_From 312-report-garage._
+
+### 312-FR-004 — The task MUST validate the text before sending — fewer than 20 or more than 1,000 characters shows an error under the field and sends nothing — and MUST answer the API's outcomes: 201 closes the task and replaces the link with "Mulțumim. Raportarea a ajuns la echipa MotorFix." / "Thank you. Your report has reached the MotorFix team."; 409 shows "Ai raportat deja acest service." / "You have already reported this garage." in the task; 429 shows "Ai trimis prea multe raportări. Încearcă mai târziu." / "You have sent too many reports. Try again later."; 404 closes the task and hides the link with no message (the server's answer is final); a network failure, a 5xx or any other 4xx keeps the task open with the text kept and offers "Încearcă din nou" / "Try again". Every text exists in Romanian and English.
+
+_From 312-report-garage._
 
 ### 384-FR-007 — The public profile read (`GET /api/v1/garages/{slug}`) MUST carry `responseRate`: `{ state: 'new' }` when the garage has no stats row or `lifetime_requests` < RESPONSE_RATE_MIN_REQUESTS (10); `{ state: 'rate', rate: <0..100> }` when `lifetime_requests` ≥ 10 and `requests_30d` > 0; `{ state: 'none' }` when `lifetime_requests` ≥ 10 and `requests_30d` = 0. The answer's cached copy carries it like every other field (307-FR-006); the relay's drop on `response_stats.updated` keeps it current; the cache key's shape version is bumped since the answer's shape changed.
 

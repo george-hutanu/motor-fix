@@ -25,6 +25,9 @@
       "@motor-fix/contracts/garage-hours": [
         "./libs/contracts/src/garage-hours.ts"
       ],
+      "@motor-fix/contracts/garage-report-text": [
+        "./libs/contracts/src/garage-report-text.ts"
+      ],
       "@motor-fix/contracts/legal-documents": [
         "./libs/contracts/src/legal-documents/legal-documents.ts"
       ],

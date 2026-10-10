@@ -9,6 +9,7 @@ import {
   countDocumentOpened,
   countDocumentUploaded,
   countEmail,
+  countGarageReport,
   countGarageSignUp,
   countJobStep,
   countNotification,
@@ -28,6 +29,12 @@ const STEP_ACTIONS = [
   'unticked',
 ] as const;
 
+const GARAGE_REPORT_OUTCOMES = [
+  'created',
+  'already_reported',
+  'refused',
+] as const;
+
 const memory = inMemory();
 const started = startTelemetry(
   'api',
@@ -41,6 +48,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 
 // @traces 879-FR-009 879-FR-010 879-FR-011
 // @traces 424-FR-017
+// @traces 312-FR-016
 // @traces 206-FR-016
 describe('the product counters', () => {
   it.each([
@@ -122,6 +130,14 @@ describe('the product counters', () => {
           { outcome },
         ] as const,
     ),
+    ...GARAGE_REPORT_OUTCOMES.map(
+      (outcome) =>
+        [
+          () => countGarageReport(outcome),
+          'motorfix_garage_reports_total',
+          { outcome },
+        ] as const,
+    ),
     ...DOCUMENT_KINDS.flatMap((kind) => [
       [
         () => countDocumentUploaded(kind),
@@ -156,6 +172,9 @@ describe('the product counters', () => {
       countNotification(channel);
     STEP_ACTIONS.forEach((action) => {
       countJobStep(action);
+    });
+    GARAGE_REPORT_OUTCOMES.forEach((outcome) => {
+      countGarageReport(outcome);
     });
     DOCUMENT_KINDS.forEach((kind) => {
       countDocumentUploaded(kind);

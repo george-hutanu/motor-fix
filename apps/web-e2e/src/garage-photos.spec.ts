@@ -134,10 +134,20 @@ test.describe('the photos of a garage profile @seeded', () => {
   }) => {
     await hydrated(page, `/ro/garages/${slug}`);
     await expect(tiles(page)).toHaveCount(3);
+    // A font or picture still loading moves the page by a few pixels after
+    // the scroll is read.
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          await document.fonts.ready;
+          return [...document.images].every((image) => image.complete);
+        }),
+      )
+      .toBe(true);
+    await tiles(page).nth(1).focus();
     await tiles(page).nth(1).scrollIntoViewIfNeeded();
     const scrolled = await page.evaluate(() => window.scrollY);
 
-    await tiles(page).nth(1).focus();
     await page.keyboard.press('Enter');
     await expect(view(page)).toContainText('2 / 3');
     await page.keyboard.press('ArrowRight');
