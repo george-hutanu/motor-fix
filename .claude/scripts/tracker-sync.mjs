@@ -421,7 +421,7 @@ async function linkPr(ctx) {
   }
   const pull = await github.rest("GET", pullPath(n));
   const body = linkedBody(pull.body ?? "", story, st);
-  if (body !== (pull.body ?? "")) await github.rest("PATCH", pullPath(n), { body }, { kept: pull.body ?? "" });
+  if (body !== (pull.body ?? "")) await github.rest("PATCH", pullPath(n), { body });
   const code = epicLabel(story);
   if (code) {
     const what = `epic label PR #${n}`;
