@@ -68,8 +68,14 @@ describe('HomeService.forBrand', () => {
     await garage('other-brand-only', [[tesla, 'works_on']]);
     await garage('silent');
 
-    expect(await home.forBrand('dacia')).toMatchObject({
+    expect(await home.forBrand('dacia')).toEqual({
+      best: expect.objectContaining({ stance: 'works_on' }),
       brand: { id: dacia, name: 'Dacia', popularity: 7, slug: 'dacia' },
+      preview: [
+        expect.objectContaining({ slug: 'takes' }),
+        expect.objectContaining({ slug: 'takes-both' }),
+        expect.objectContaining({ slug: 'other-brand-only' }),
+      ],
       takers: 2,
       total: 5,
     });
