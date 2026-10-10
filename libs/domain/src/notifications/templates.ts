@@ -230,7 +230,13 @@ function renderText(
   }
 }
 
+const DECISIONS = new Set<unknown>(['approved', 'more_requested', 'rejected']);
+
 export function templateName(kind: string, params: Params): string {
+  if (kind === 'VERIFICATION_RESULT') {
+    const decision = params['decision'];
+    return DECISIONS.has(decision) ? `${kind}.${decision}` : kind;
+  }
   if (kind !== 'ACCOUNT_EMAIL') return kind;
   const purpose = params['purpose'];
   return purpose === 'password_reset' || purpose === 'password_changed'

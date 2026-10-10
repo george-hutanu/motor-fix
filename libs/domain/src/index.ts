@@ -78,6 +78,7 @@ export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push/push-config';
 export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-received.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
+export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';

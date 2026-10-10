@@ -122,5 +122,9 @@ Rules that keep it there:
   storage figures add at most 150 series per environment, every label value in
   use (`libs/observability/src/datastores/series.spec.ts` holds the ceiling);
   slow statements are WARN log records, never labels.
+- **Product counters.** The `motorfix_*` counters add fewer than 60 series
+  per instance, one e-mail series per template key included
+  (`libs/domain/src/metrics/product-counters.spec.ts` holds the ceiling); a
+  story that passes it cuts a label before raising it.
 - Check usage in Grafana Cloud's billing dashboard when a story adds a signal;
   past half of any limit, cut before adding.
