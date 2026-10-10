@@ -129,9 +129,9 @@ _From 221-quote-request._
 
 _From 221-quote-request._
 
-### 1025-FR-001 — After a quote request is sent, the confirmation MUST show, for each recipient garage that qualifies under FR-002, one short line stating that the garage usually answers the same day: Romanian "{garage} răspunde de obicei în aceeași zi.", English "{garage} usually answers the same day." Both texts MUST exist in Romanian and English; the two sentences contain no hyphenated word, so the U+2011 rule of the existing texts ("service‑uri") does not apply to them.
+### 221-FR-013 — The API MUST answer 201 with the request as the driver reads it (the request DTO of 220-FR-012, with its recipients as garage id, name, slug and status); the dialog MUST then replace its form with the confirmation "Trimis către <garage>." / "Sent to <garage>." for one garage, "Trimis către <n> service‑uri." / "Sent to <n> garages." with the names listed for several, and a link "Vezi Cererile mele" / "See My requests" to the driver's requests view; closing the dialog returns to the profile with the button back. Each recipient that qualifies under 1025-FR-002 also gets the 1025-FR-001 line.
 
-_From 1025-answers-same-day._
+_From 221-quote-request; modified by 1025-answers-same-day._
 
 ### 030-FR-009 — The views MUST show, with no data, exactly this text and action:
 
@@ -382,5 +382,3 @@ _From 1025-answers-same-day._
 - `343-FR-004` — superseded by `345-FR-012` (2026-10-10)
 - `344-FR-009` — superseded by `345-FR-013` (2026-10-10)
 - `343-FR-009` — superseded by `345-FR-016` (2026-10-10)
-
-- `221-FR-013` — superseded by `1025-FR-001` (2026-10-10)

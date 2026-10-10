@@ -1,12 +1,11 @@
 ---
 capability: garage-profile
-updated: 2026-10-10
+updated: 2026-10-09
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
   - 312-report-garage
   - 384-response-rate
-  - 1025-answers-same-day
 ---
 
 # Capability: Garage profile
