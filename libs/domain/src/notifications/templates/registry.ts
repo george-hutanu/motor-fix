@@ -1,5 +1,9 @@
 import { EMAIL_CHECK, PASSWORD_CHANGED, PASSWORD_RESET } from './account-email';
 import { ADMIN_GARAGE_REPORTED } from './admin-garage-reported';
+import {
+  ADMIN_OUTAGE_ALERT_BACK,
+  ADMIN_OUTAGE_ALERT_DOWN,
+} from './admin-outage-alert';
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
 import { DUE_ITP } from './due-itp';
 import { GENERIC, GENERIC_GROUPED } from './generic';
@@ -24,6 +28,8 @@ export const TEMPLATES: Registry = {
   'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,
   'ACCOUNT_EMAIL.password_reset': PASSWORD_RESET,
   ADMIN_GARAGE_REPORTED,
+  'ADMIN_OUTAGE_ALERT.back': ADMIN_OUTAGE_ALERT_BACK,
+  'ADMIN_OUTAGE_ALERT.down': ADMIN_OUTAGE_ALERT_DOWN,
   ADMIN_RULE_APPROVAL_NEEDED,
   DUE_ITP,
   GENERIC,

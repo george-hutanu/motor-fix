@@ -231,6 +231,9 @@ function renderText(
 }
 
 export function templateName(kind: string, params: Params): string {
+  if (kind === 'ADMIN_OUTAGE_ALERT') {
+    return params['state'] === 'back' ? `${kind}.back` : `${kind}.down`;
+  }
   if (kind !== 'ACCOUNT_EMAIL') return kind;
   const purpose = params['purpose'];
   return purpose === 'password_reset' || purpose === 'password_changed'

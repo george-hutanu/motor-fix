@@ -16,7 +16,7 @@ import { mutedChannels, rowsType } from './preferences/preferences';
 import { PUSH_CONFIG, type PushConfig } from './push/push-config';
 import { isQuiet, nextMorning } from './quiet-hours';
 import { outsideChannels, type SentChannel } from './routing';
-import { STAFF_TYPES } from './staff-lists';
+import { locked, STAFF_TYPES } from './staff-lists';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
 import { LIVE_CHANNEL } from '../events/live/live.hub';
@@ -489,18 +489,20 @@ export class NotificationsService {
   }
 
   // Read outside the send's transaction, so a store that fails cannot abort
-  // it: the message then goes as if nothing were saved.
+  // it: the message then goes as if nothing were saved. A locked channel is
+  // never muted, whatever an older saved choice says.
   private async muted(
     kind: string,
     accountId: string,
     garageId: string | null,
   ): Promise<Set<OutsideChannel>> {
+    let muted: Set<OutsideChannel>;
     try {
       const rows = await this.prisma.notificationPreference.findMany({
         select: { channel: true, enabled: true, garageId: true, type: true },
         where: { accountId, garageId, type: rowsType(kind) },
       });
-      return mutedChannels(
+      muted = mutedChannels(
         kind,
         rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel })),
         garageId,
@@ -509,8 +511,9 @@ export class NotificationsService {
       this.logger.warn(
         `preferences for ${kind} not read, sending on the default channel: ${String(error)}`,
       );
-      return mutedChannels(kind, [], garageId);
+      muted = mutedChannels(kind, [], garageId);
     }
+    return new Set([...muted].filter((channel) => !locked(kind, channel)));
   }
 
   // The bell row and the outside rows of one recipient; null when nothing is
