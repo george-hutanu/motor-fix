@@ -19,6 +19,10 @@ import { MeDto } from '../models/me-dto';
 import { meEmailConfirmationControllerAskAgain } from '../fn/me/me-email-confirmation-controller-ask-again';
 import { MeEmailConfirmationControllerAskAgain$Params } from '../fn/me/me-email-confirmation-controller-ask-again';
 import { PendingEmailDto } from '../models/pending-email-dto';
+import { phoneChangeControllerConfirm } from '../fn/me/phone-change-controller-confirm';
+import { PhoneChangeControllerConfirm$Params } from '../fn/me/phone-change-controller-confirm';
+import { phoneChangeControllerRequest } from '../fn/me/phone-change-controller-request';
+import { PhoneChangeControllerRequest$Params } from '../fn/me/phone-change-controller-request';
 
 @Injectable({ providedIn: 'root' })
 export class MeService extends BaseService {
@@ -124,6 +128,56 @@ export class MeService extends BaseService {
   meEmailConfirmationControllerAskAgain(params?: MeEmailConfirmationControllerAskAgain$Params, context?: HttpContext): Promise<void> {
     const resp = this.meEmailConfirmationControllerAskAgain$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `phoneChangeControllerRequest()` */
+  static readonly PhoneChangeControllerRequestPath = '/api/v1/me/phone';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `phoneChangeControllerRequest()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneChangeControllerRequest$Response(params: PhoneChangeControllerRequest$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = phoneChangeControllerRequest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `phoneChangeControllerRequest$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneChangeControllerRequest(params: PhoneChangeControllerRequest$Params, context?: HttpContext): Promise<void> {
+    const resp = this.phoneChangeControllerRequest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `phoneChangeControllerConfirm()` */
+  static readonly PhoneChangeControllerConfirmPath = '/api/v1/me/phone/confirm';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `phoneChangeControllerConfirm()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneChangeControllerConfirm$Response(params: PhoneChangeControllerConfirm$Params, context?: HttpContext): Promise<StrictHttpResponse<MeDto>> {
+    const obs = phoneChangeControllerConfirm(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `phoneChangeControllerConfirm$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneChangeControllerConfirm(params: PhoneChangeControllerConfirm$Params, context?: HttpContext): Promise<MeDto> {
+    const resp = this.phoneChangeControllerConfirm$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
   }
 
 }

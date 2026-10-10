@@ -28,6 +28,7 @@ import {
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 import { EmailChangeDialog } from './email-change-dialog/email-change-dialog';
+import { PhoneChangeDialog } from './phone-change-dialog/phone-change-dialog';
 import { characters } from '../../characters';
 import { Session } from '../session';
 
@@ -44,7 +45,8 @@ const city = (control: AbstractControl): ValidationErrors | null =>
     : characters(2, 60, true)(control);
 
 // "Datele tale": the driver's name, phone, e-mail and city, the name and the
-// city edited in place, the e-mail changed through a link.
+// city edited in place, the e-mail changed through a link, the phone through
+// a WhatsApp code.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -118,6 +120,17 @@ export class MyDetails {
     const me = this.session.current();
     if (me && typeof answer === 'object') {
       this.session.current.set({ ...me, pendingEmail: answer.pendingEmail });
+    }
+  }
+
+  protected async changePhone() {
+    const answer = await this.overlays.open<MeDto | 'cancelled'>(
+      PhoneChangeDialog,
+      { shape: 'dialog', title: 'driver.phoneChange.title' },
+    );
+    if (typeof answer === 'object') {
+      this.session.current.set(answer);
+      toast(this.i18n.t('driver.phoneChange.saved'));
     }
   }
 

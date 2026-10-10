@@ -26,6 +26,13 @@
         <div class="row">
           <dt>{{ 'driver.details.phone' | t }}</dt>
           <dd>{{ me.phone ?? '—' }}</dd>
+          @if (!editing()) {
+            <div class="actions">
+              <button hlmBtn variant="ghost" type="button" (click)="changePhone()">
+                {{ 'driver.details.changePhone' | t }}
+              </button>
+            </div>
+          }
         </div>
         <div class="row">
           <dt>{{ 'driver.details.email' | t }}</dt>

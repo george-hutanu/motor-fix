@@ -8,6 +8,7 @@ import { toast } from '@motor-fix/ui-cockpit';
 
 import { EmailChangeDialog } from './email-change-dialog/email-change-dialog';
 import { MyDetails } from './my-details';
+import { PhoneChangeDialog } from './phone-change-dialog/phone-change-dialog';
 import { Session } from '../session';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -401,5 +402,45 @@ describe('the e-mail row', () => {
     const { element } = await render({ emailConfirmed: false }, 'en');
 
     expect(element.textContent).toContain('Not confirmed');
+  });
+});
+
+// @traces 139-edit-my-details-FR-011
+// @traces 139-edit-my-details-FR-013
+describe('the phone row', () => {
+  it('opens the phone dialog and shows the confirmed number it answers, saying so', async () => {
+    const { element } = await render({ phone: '+40711111111' });
+    open.mockResolvedValueOnce({
+      ...ANDREI,
+      phone: '+40722123456',
+      phoneConfirmed: true,
+    });
+
+    button(element, 'Schimbă numărul')?.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(
+      PhoneChangeDialog,
+      expect.objectContaining({ shape: 'dialog' }),
+    );
+    expect(current()?.phone).toBe('+40722123456');
+    expect(rows(element)).toContain('Telefon: +40722123456');
+    expect(toast).toHaveBeenCalledWith('Am schimbat numărul.');
+  });
+
+  it('keeps the number when the dialog is cancelled', async () => {
+    const { element } = await render({ phone: '+40711111111' });
+
+    button(element, 'Schimbă numărul')?.click();
+    await settle();
+
+    expect(current()?.phone).toBe('+40711111111');
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('offers a number to an account with none, in English too', async () => {
+    const { element } = await render({ phone: null }, 'en');
+
+    expect(button(element, 'Change number')).toBeDefined();
   });
 });

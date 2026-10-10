@@ -109,7 +109,9 @@ export type { PasswordResetCompleteDto } from './models/password-reset-complete-
 export type { PasswordResetDto } from './models/password-reset-dto';
 export type { PaymentMethodsDto } from './models/payment-methods-dto';
 export type { PendingEmailDto } from './models/pending-email-dto';
+export type { PhoneChangeDto } from './models/phone-change-dto';
 export type { PhoneCodeDto } from './models/phone-code-dto';
+export type { PhoneConfirmDto } from './models/phone-confirm-dto';
 export type { PhoneSessionDto } from './models/phone-session-dto';
 export type { PhoneSignInDto } from './models/phone-sign-in-dto';
 export type { PhotoUploadAddressDto } from './models/photo-upload-address-dto';
@@ -256,6 +258,10 @@ export type { EmailChangeControllerRequest$Params as EmailChangeControllerReques
 export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
 export { meEmailConfirmationControllerAskAgain as meEmailConfirmationControllerAskAgain } from './fn/me/me-email-confirmation-controller-ask-again';
+export type { PhoneChangeControllerRequest$Params as PhoneChangeControllerRequest$Params } from './fn/me/phone-change-controller-request';
+export { phoneChangeControllerRequest as phoneChangeControllerRequest } from './fn/me/phone-change-controller-request';
+export type { PhoneChangeControllerConfirm$Params as PhoneChangeControllerConfirm$Params } from './fn/me/phone-change-controller-confirm';
+export { phoneChangeControllerConfirm as phoneChangeControllerConfirm } from './fn/me/phone-change-controller-confirm';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
 export type { BellControllerList$Params as BellControllerList$Params } from './fn/notifications/bell-controller-list';

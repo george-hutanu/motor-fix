@@ -103,7 +103,9 @@ export type { PasswordResetCompleteDto } from './models/password-reset-complete-
 export type { PasswordResetDto } from './models/password-reset-dto';
 export type { PaymentMethodsDto } from './models/payment-methods-dto';
 export type { PendingEmailDto } from './models/pending-email-dto';
+export type { PhoneChangeDto } from './models/phone-change-dto';
 export type { PhoneCodeDto } from './models/phone-code-dto';
+export type { PhoneConfirmDto } from './models/phone-confirm-dto';
 export type { PhoneSessionDto } from './models/phone-session-dto';
 export type { PhoneSignInDto } from './models/phone-sign-in-dto';
 export type { PhotoUploadAddressDto } from './models/photo-upload-address-dto';

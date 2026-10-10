@@ -117,6 +117,10 @@ const NOT_CHANGES = new Set([
   'PhoneSignInService.issue',
   'PhoneSignInService.claim',
   'PhoneSignInService.rightCode',
+  // A phone change's code and its wrong tries; confirming it is the audited
+  // change.
+  'PhoneChangeService.request',
+  'PhoneChangeService.wrongTry',
   // An assistant's sign-in code and its exchange; the grant it leads to is
   // the audited change.
   'AssistantService.approve',

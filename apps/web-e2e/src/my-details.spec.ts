@@ -3,6 +3,8 @@
 // @traces 139-edit-my-details-FR-004
 // @traces 139-edit-my-details-FR-006
 // @traces 139-edit-my-details-FR-008
+// @traces 139-edit-my-details-FR-011
+// @traces 139-edit-my-details-FR-013
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
@@ -260,6 +262,119 @@ test.describe('changing the e-mail address @seeded @mailbox', () => {
         again
           .getByRole('region', { exact: true, name: 'Datele tale' })
           .getByText(fresh, { exact: true }),
+      ).toBeVisible();
+      await other.close();
+    });
+  }
+});
+
+// The code the nth WhatsApp message to the number carried, from the same
+// test mailbox (Brevo's WhatsApp API as mailbox.mjs records it).
+async function whatsAppCode(
+  page: Page,
+  phone: string,
+  nth: number,
+): Promise<string> {
+  let code: string | undefined;
+  await expect
+    .poll(
+      async () => {
+        const res = await page.request.get(
+          `${MAILBOX}/whatsapp?to=${encodeURIComponent(phone.slice(1))}`,
+        );
+        const sent: { params: string[] }[] = await res.json();
+        code = sent[nth - 1]?.params[0];
+        return code;
+      },
+      { message: `no WhatsApp message ${nth} sent`, timeout: 20_000 },
+    )
+    .toMatch(/^\d{6}$/);
+  return String(code);
+}
+
+// A number no account holds, under the allow-listed +4070000 prefix and
+// outside the seeded ones and the refused +40700009999, new on every run.
+const freshPhone = () =>
+  `+4070000${String(1000 + Math.floor(Math.random() * 8999))}`;
+
+test.describe('changing the phone number @seeded @mailbox', () => {
+  for (const size of SIZES) {
+    test(`confirms the new number with its WhatsApp code and signs in with it on a ${size.name}`, async ({
+      browser,
+      page,
+    }) => {
+      const email = unique('telefon-nou');
+      const phone = freshPhone();
+      // As a Romanian types it: 0700 00x xxx.
+      const typed = `0${phone.slice(3, 6)} ${phone.slice(6, 9)} ${phone.slice(9)}`;
+      const created = await page.request.post('/api/v1/auth/sign-up', {
+        data: {
+          consent: CURRENT_CONSENT,
+          email,
+          language: 'ro',
+          name: 'Andrei Telefon',
+          password: OWN_PASSWORD,
+        },
+        headers: { 'x-forwarded-for': `203.0.113.${Date.now() % 250}` },
+      });
+      expect(created.status()).toBe(201);
+      await page.context().clearCookies();
+      await page.setViewportSize({ height: size.height, width: size.width });
+
+      await ready(page, '/ro');
+      await page
+        .getByRole('button', { exact: true, name: 'Autentificare' })
+        .click();
+      await signIn(page, email, { password: OWN_PASSWORD });
+      await expect(page).toHaveURL('/app/driver');
+      await page.goto(SETTINGS);
+      const panel = page.getByRole('region', {
+        exact: true,
+        name: 'Datele tale',
+      });
+      await panel
+        .getByRole('button', { exact: true, name: 'Schimbă numărul' })
+        .click();
+      const dialog = page.getByRole('dialog', {
+        name: 'Schimbă numărul de telefon',
+      });
+      await dialog.getByLabel('Număr de telefon').fill(typed);
+      await dialog.getByRole('button', { name: 'Trimite codul' }).click();
+      await dialog.getByLabel('Cod').fill(await whatsAppCode(page, phone, 1));
+      await dialog
+        .getByRole('button', { exact: true, name: 'Confirmă' })
+        .click();
+      await expect(dialog).toBeHidden();
+      await expect(panel.getByText(phone, { exact: true })).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        ),
+      ).toBeLessThanOrEqual(0);
+
+      const other = await browser.newContext();
+      const again = await other.newPage();
+      await again.setViewportSize({ height: size.height, width: size.width });
+      await ready(again, '/ro');
+      await again
+        .getByRole('button', { exact: true, name: 'Autentificare' })
+        .click();
+      const signInDialog = again.getByRole('dialog', { name: 'Autentificare' });
+      await signInDialog
+        .getByRole('button', { name: 'Continuă cu telefonul' })
+        .click();
+      await signInDialog.getByLabel('Număr de telefon').fill(phone);
+      await signInDialog.getByRole('button', { name: 'Trimite codul' }).click();
+      await signInDialog
+        .getByLabel('Cod')
+        .fill(await whatsAppCode(again, phone, 2));
+      await signInDialog.getByRole('button', { name: 'Intră în cont' }).click();
+      await expect(again).toHaveURL('/app/driver');
+      await again.goto(SETTINGS);
+      await expect(
+        again
+          .getByRole('region', { exact: true, name: 'Datele tale' })
+          .getByText(email, { exact: true }),
       ).toBeVisible();
       await other.close();
     });

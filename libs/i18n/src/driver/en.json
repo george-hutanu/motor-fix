@@ -54,6 +54,7 @@
   "details": {
     "cancel": "Cancel",
     "changeEmail": "Change e-mail",
+    "changePhone": "Change number",
     "city": "City",
     "edit": "Edit",
     "email": "E-mail",
@@ -130,6 +131,36 @@
       }
     },
     "title": "Notifications"
+  },
+  "phoneChange": {
+    "again": "Send a new code",
+    "code": {
+      "field": {
+        "pattern": "Enter the 6 digits from the message."
+      },
+      "label": "Code",
+      "problem": {
+        "code_expired": "The code has expired. Ask for a new one.",
+        "code_invalid": "Wrong code.",
+        "phone_taken": "The number is used by another MotorFix account.",
+        "too_many_attempts": "Too many tries. Try again later."
+      }
+    },
+    "confirm": "Confirm",
+    "field": {
+      "pattern": "Enter a valid phone number."
+    },
+    "number": "Phone number",
+    "problem": {
+      "phone_taken": "The number is used by another MotorFix account.",
+      "phone_unchanged": "This is your current number.",
+      "send_failed": "We could not send it. Try again.",
+      "too_many_attempts": "Too many tries. Try again later."
+    },
+    "saved": "Number changed.",
+    "sent": "We sent a code on WhatsApp to {phone}.",
+    "submit": "Send the code",
+    "title": "Change the phone number"
   },
   "requests": {
     "empty": "No requests yet",

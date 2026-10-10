@@ -1336,6 +1336,92 @@
         ]
       }
     },
+    "/api/v1/me/phone": {
+      "post": {
+        "operationId": "PhoneChangeController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The code went out by WhatsApp"
+          },
+          "409": {
+            "description": "phone_taken, phone_unchanged"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          },
+          "503": {
+            "description": "send_failed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/phone/confirm": {
+      "post": {
+        "operationId": "PhoneChangeController_confirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneConfirmDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_invalid"
+          },
+          "409": {
+            "description": "phone_taken"
+          },
+          "410": {
+            "description": "code_expired"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/auth/phone-code": {
       "post": {
         "operationId": "PhoneSignInController_phoneCode",
@@ -5784,6 +5870,34 @@
         "required": [
           "token",
           "password"
+        ]
+      },
+      "PhoneChangeDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "As typed: spaces, dots, dashes and brackets dropped, 00 and a national 0 read as +40; must then be E.164",
+            "example": "0722 123 456",
+            "maxLength": 32,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "PhoneConfirmDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The six digits sent by WhatsApp",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "code"
         ]
       },
       "PhoneCodeDto": {
