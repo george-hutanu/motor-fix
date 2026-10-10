@@ -11,12 +11,14 @@ import { I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
+import { openAddCar } from '../add-car/open-add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
+import { EmptyState } from '../empty-state/empty-state';
 
 // "Mașinile mele": a card per car, newest first, and the button that adds one.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DueDateLine, HlmButton, KmPipe, TranslatePipe],
+  imports: [DueDateLine, EmptyState, HlmButton, KmPipe, TranslatePipe],
   selector: 'mf-cars-view',
   styleUrl: './cars-view.css',
   templateUrl: './cars-view.html',
@@ -50,13 +52,7 @@ export class CarsView implements OnInit {
   // The saved car goes first without reading the list again.
   protected async add() {
     const plates = (this.cars() ?? []).flatMap((c) => c.plate ?? []);
-    // Loaded on the first tap: the dialog stays out of the initial bundle.
-    const { AddCar } = await import('../add-car/add-car');
-    const car = await this.overlays.open<CarDto, { plates: string[] }>(AddCar, {
-      data: { plates },
-      shape: 'dialog',
-      title: 'driver.cars.add.title',
-    });
+    const car = await openAddCar(this.overlays, plates);
     if (car !== 'cancelled') this.cars.update((list) => [car, ...(list ?? [])]);
   }
 }

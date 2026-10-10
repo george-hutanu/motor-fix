@@ -1,1 +1,9 @@
-<p>{{ text() | t }}</p>
+@if (state(); as empty) {
+  <mf-empty-state [icon]="empty.icon" [text]="empty.text">
+    @if (empty.action === 'home') {
+      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findOthers' | t }}</a>
+    }
+  </mf-empty-state>
+} @else {
+  <p>{{ text() | t }}</p>
+}

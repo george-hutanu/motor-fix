@@ -59,6 +59,23 @@ const paths = (area: 'driver' | 'garage' | 'admin', capabilities: string[]) =>
   allowedViews(area, capabilities).map((view) => view.path);
 
 describe('the dashboard view lists', () => {
+  // @traces 030-FR-009, 030-FR-011
+  it('gives the driver reviews and saved garages their own empty state', () => {
+    const byPath = (path: string) =>
+      DASHBOARDS.driver.views.find((view) => view.path === path);
+
+    expect(byPath('reviews')?.emptyState).toEqual({
+      icon: 'star',
+      text: 'driver.empty.reviews',
+    });
+    expect(byPath('saved')?.emptyState).toEqual({
+      action: 'home',
+      icon: 'bookmark',
+      text: 'driver.empty.saved',
+    });
+    expect(byPath('saved')?.capability).toBe('driver.saved_garages');
+  });
+
   // @traces 028-FR-001
   it('lists the driver views in menu order, each with its address, labels and capability', () => {
     expect(DASHBOARDS.driver.views).toEqual([
@@ -87,6 +104,7 @@ describe('the dashboard view lists', () => {
       },
       {
         capability: 'driver.reviews',
+        emptyState: { icon: 'star', text: 'driver.empty.reviews' },
         label: 'shell.frame.nav.driver.reviews',
         path: 'reviews',
         tab: 'shell.frame.tab.reviews',
@@ -94,6 +112,11 @@ describe('the dashboard view lists', () => {
       },
       {
         capability: 'driver.saved_garages',
+        emptyState: {
+          action: 'home',
+          icon: 'bookmark',
+          text: 'driver.empty.saved',
+        },
         label: 'shell.frame.nav.driver.savedGarages',
         path: 'saved',
         tab: 'shell.frame.tab.saved',
@@ -569,6 +592,11 @@ async function open(
   });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
+  // A view's own texts load in the turns after it opens.
+  for (let i = 0; i < 3; i++) {
+    await new Promise((resolve) => setTimeout(resolve));
+    harness.detectChanges();
+  }
   return { element: harness.routeNativeElement as HTMLElement, harness };
 }
 
@@ -584,15 +612,30 @@ describe('the dashboard view routes', () => {
     expect(element.textContent).not.toContain('Nimic aici încă.');
   });
 
-  // @traces 097-FR-004
-  it('keeps the shared placeholder for a driver view with no empty state of its own', async () => {
+  // @traces 030-FR-009
+  it('opens the driver reviews with their own empty state, not the shared placeholder', async () => {
     const { element } = await open(
       '/app/driver/reviews',
       ['driver.reviews'],
       'driver',
     );
 
-    expect(element.textContent).toContain('Nimic aici încă.');
+    expect(element.textContent).toContain(
+      'Nicio recenzie încă. După o reparație prin MotorFix îți cerem părerea.',
+    );
+    expect(element.textContent).not.toContain('Nimic aici încă.');
+  });
+
+  // @traces 030-FR-011
+  it('opens the saved garages with their own empty state only for a driver who may', async () => {
+    const { element } = await open(
+      '/app/driver/saved',
+      ['driver.saved_garages'],
+      'driver',
+    );
+
+    expect(TestBed.inject(Router).url).toBe('/app/driver/saved');
+    expect(element.textContent).toContain('Nu ai salvat încă niciun service.');
   });
 
   // @traces 097-FR-001

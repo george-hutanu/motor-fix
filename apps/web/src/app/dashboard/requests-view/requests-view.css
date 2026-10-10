@@ -46,13 +46,8 @@ p {
   font-weight: 600;
   color: var(--mf-text);
 }
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--mf-space-3);
-}
-.empty a[hlmBtn] {
+mf-empty-state a[hlmBtn] {
+  min-height: var(--mf-tap);
   text-decoration: none;
   max-width: 100%;
   /* Until the driver's texts load the label is its key, one unbreakable word. */

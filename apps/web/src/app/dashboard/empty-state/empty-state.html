@@ -1,0 +1,12 @@
+<svg
+  aria-hidden="true"
+  focusable="false"
+  viewBox="0 0 24 24"
+  width="32"
+  height="32"
+  [attr.data-icon]="icon()"
+>
+  <path [attr.d]="paths[icon()]" />
+</svg>
+<p>{{ text() | t }}</p>
+<ng-content />
