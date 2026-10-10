@@ -3759,6 +3759,55 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/prices": {
+      "get": {
+        "operationId": "PriceListController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's price list: each job, whether drivers see it and, when not, why",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{slug}": {
       "get": {
         "operationId": "PublicGaragesController_bySlug",
@@ -9609,6 +9658,71 @@
           "sentAt"
         ]
       },
+      "PriceListItemDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Verificare suspensie și geometrie"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Suspension and alignment check"
+          },
+          "public": {
+            "type": "boolean",
+            "description": "Drivers see the job on the garage profile"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Only when the job is not public: the first that applies, in this order",
+            "enum": [
+              "rejected",
+              "awaiting_approval",
+              "not_authorised",
+              "hidden_by_garage",
+              "no_top_price"
+            ]
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fromBani": {
+            "type": "integer",
+            "description": "The default range's starting price; absent only when the job has no default range"
+          },
+          "toBani": {
+            "type": "integer",
+            "description": "The default range's top price, when set"
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "public"
+        ]
+      },
+      "PriceListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Every job of the garage's price list, once, in the list's order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceListItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "PublicBrandDto": {
         "type": "object",
         "properties": {
@@ -9859,7 +9973,7 @@
             ]
           },
           "jobTypes": {
-            "description": "The jobs of the visible price list, in its order; empty without one",
+            "description": "The public jobs of the price list, in its order; empty without one",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PublicJobTypeDto"
