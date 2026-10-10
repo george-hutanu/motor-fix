@@ -130,9 +130,9 @@ describe('the dashboard view lists', () => {
         unreleased: true,
       },
       {
-        body: DriverSettingsView,
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
+        load: expect.any(Function),
         path: 'settings',
         push: true,
         subtitle: 'shell.frame.subtitle.driver.settings',
@@ -152,6 +152,16 @@ describe('the dashboard view lists', () => {
     expect(requests.body).toBeUndefined();
     expect(await home.load?.()).toBe(DriverHome);
     expect(await requests.load?.()).toBe(RequestsView);
+  });
+
+  // @traces 139-FR-001
+  // The driver's Setări carries the details form and its three dialogs; it
+  // loads with its view, so the first page stays under the budget.
+  it("loads the driver's settings only when their view opens", async () => {
+    const settings = DASHBOARDS.driver.views.find((v) => v.path === 'settings');
+
+    expect(settings?.body).toBeUndefined();
+    await expect(settings?.load?.()).resolves.toBe(DriverSettingsView);
   });
 
   // @traces 163-FR-008
