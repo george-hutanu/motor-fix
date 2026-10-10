@@ -10,15 +10,66 @@ async function open(
   colorScheme: 'dark' | 'light',
   width: number,
   reducedMotion: 'reduce' | 'no-preference' = 'reduce',
+  paused = false,
 ) {
   await page.setViewportSize({ height: 900, width });
   await page.emulateMedia({ colorScheme, reducedMotion });
   await page.goto('/cockpit');
   await expect(page.locator(bar).first()).toBeVisible();
   await expect(page.locator(line).first()).toBeVisible();
-  // The server sends the canvas undrawn; Chart.js sets its size on the first draw.
   for (const canvas of [bar, line])
-    await expect(page.locator(canvas).first()).toHaveAttribute('width', /\d/);
+    await drawn(page, page.locator(canvas).first(), paused);
+}
+
+// Chart.js grows a chart in over 1000 ms of the page's clock (chart-config.ts).
+// The tests that watch the growth pause that clock before the page's first
+// script, so time moves only when the test moves it: each reading lands at a
+// known point of the growth, however slow the machine.
+const GROWTH = 1000;
+const FRAME = 16;
+
+async function pauseClock(page: Page) {
+  const start = new Date('2027-01-01T08:00:00');
+  await page.clock.install({ time: start });
+  await page.clock.pauseAt(start);
+}
+
+// The server sends the canvas undrawn; Chart.js sets its size on the first
+// draw. A paused clock holds the page's own timers too, Angular's rendering
+// among them, so it moves one frame at a time until that draw: a chart is
+// read within a frame or two of its start.
+async function drawn(page: Page, canvas: Locator, paused: boolean) {
+  if (!paused) return expect(canvas).toHaveAttribute('width', /\d/);
+  await expect
+    .poll(
+      async () => {
+        await page.clock.runFor(FRAME);
+        return (await canvas.getAttribute('width')) ?? '';
+      },
+      { intervals: [FRAME] },
+    )
+    .toMatch(/\d/);
+}
+
+// The page hears a reduced-motion switch at its next rendering, not when
+// emulateMedia returns: wait for the change event, then move the paused clock
+// a frame so Angular renders it.
+async function switchMotion(
+  page: Page,
+  reducedMotion: 'reduce' | 'no-preference',
+) {
+  const change = await page.evaluateHandle(() => ({
+    heard: new Promise<void>((done) =>
+      matchMedia('(prefers-reduced-motion: reduce)').addEventListener(
+        'change',
+        () => done(),
+        { once: true },
+      ),
+    ),
+  }));
+  await page.emulateMedia({ reducedMotion });
+  await change.evaluate((c) => c.heard);
+  await page.clock.runFor(FRAME);
 }
 
 const shot = (page: Page) => page.locator(bar).first().screenshot();
@@ -94,10 +145,11 @@ test('redraws in the light tokens and back when the device switches theme', asyn
 test('draws the charts complete at once with reduced motion', async ({
   page,
 }) => {
-  await open(page, 'dark', 1280, 'reduce');
+  await pauseClock(page);
+  await open(page, 'dark', 1280, 'reduce', true);
   const first = await shot(page);
 
-  await page.waitForTimeout(1500);
+  await page.clock.runFor(GROWTH);
 
   expect(await shot(page)).toEqual(first);
 });
@@ -112,10 +164,11 @@ test('grows the bars in without reduced motion', async ({ page }) => {
       document.head.append(still);
     });
   });
-  await open(page, 'dark', 1280, 'no-preference');
+  await pauseClock(page);
+  await open(page, 'dark', 1280, 'no-preference', true);
   const early = await shot(page);
 
-  await page.waitForTimeout(1500);
+  await page.clock.runFor(GROWTH);
 
   expect(await shot(page)).not.toEqual(early);
 });
@@ -127,25 +180,19 @@ test('follows reduced motion switched while the charts are on screen', async ({
   // the reading up while the bars grow.
   const pixels = (chart: Locator) =>
     chart.locator('canvas').evaluate((c: HTMLCanvasElement) => c.toDataURL());
-  const nextFrame = () =>
-    page.evaluate(
-      () =>
-        new Promise((done) =>
-          requestAnimationFrame(() => requestAnimationFrame(done)),
-        ),
-    );
-  await open(page, 'dark', 1280, 'reduce');
+  await pauseClock(page);
+  await open(page, 'dark', 1280, 'reduce', true);
   const failed = page.locator('mf-bar-chart').nth(2);
 
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await switchMotion(page, 'no-preference');
   await failed.getByRole('button', { name: 'Reîncearcă' }).click();
-  await expect(failed.locator('canvas')).toHaveAttribute('width', /\d/);
+  await drawn(page, failed.locator('canvas'), true);
+  await page.clock.runFor(GROWTH / 2);
   const growing = await pixels(failed);
 
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await nextFrame();
+  await switchMotion(page, 'reduce');
   const still = await pixels(failed);
-  await page.waitForTimeout(1200);
+  await page.clock.runFor(GROWTH);
 
   expect(await pixels(failed)).toEqual(still);
   expect(still).not.toEqual(growing);
