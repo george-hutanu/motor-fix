@@ -165,6 +165,14 @@ describe("status events move the story's issue in Project #11", () => {
     }
   });
 
+  it("refuses to guess when two issues start with the story's id, and moves neither", async () => {
+    const gh = world({ story: "Planning", issues: [issue(70, "ST-1036 follow-up: delete the import", ["type: tech debt"])] });
+    const r = await run(["implement", "--pr", "335"], { gh });
+    assert.equal(gh.itemValues(60).Status, "Planning");
+    assert.notEqual(gh.itemValues(70)?.Status, "Implementing");
+    assert.match([...r.out, ...r.err].join("\n"), /#60.*#70|#70.*#60/);
+  });
+
   it("a Done issue never moves", async () => {
     const gh = world({ story: "Done" });
     const r = await run(["start", "--pr", "335"], { gh });
