@@ -363,6 +363,24 @@ describe("debt files each deferred bullet as a To do issue", () => {
     await run(["debt", "--pr", "335"], { gh, repo });
     assert.equal(gh.state.issues.length, count);
   });
+
+  it("a failure after the issue was created leaves it pending, and the rerun reuses that issue instead of filing a second", async () => {
+    const gh = world();
+    const repo = repoWith({ deferred: DEFERRED });
+    const refuse = async (url, init) =>
+      /\/sub_issues$/.test(new URL(url).pathname) && init.method === "POST"
+        ? new Response(JSON.stringify({ message: "Forbidden" }), { status: 403, headers: { "content-type": "application/json" } })
+        : gh.fetchImpl(url, init);
+    const first = await run(["debt", "--pr", "335"], { gh, repo, fetchImpl: refuse });
+    assert.equal(first.code, 0, first.err.join("\n"));
+    const count = gh.state.issues.length;
+    assert.ok(first.log.includes("[TRACKER-SYNC PENDING: debt"), first.log);
+    const again = await run(["debt", "--pr", "335"], { gh, repo });
+    assert.equal(again.code, 0, again.err.join("\n"));
+    assert.equal(gh.state.issues.length, count, "no second issue");
+    const made = gh.state.issues.find((i) => /retry loop has no cap/.test(i.title));
+    assert.ok(readFileSync(join(repo, FEATURE, "deferred.md"), "utf8").includes(`— Issue: ${ISSUES}${made.number}`));
+  });
 });
 
 // @traces 1036-FR-010

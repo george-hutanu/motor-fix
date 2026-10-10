@@ -22,6 +22,16 @@ describe("projectToken", () => {
     assert.equal(calls.length, 0);
   });
 
+  it("skips the cloud proxy's placeholder GH_TOKEN in a cloud session", () => {
+    const calls = [];
+    const run = (file, args, opts) => {
+      calls.push({ file, args, opts });
+      return { code: 1, stdout: "", stderr: "" };
+    };
+    assert.throws(() => projectToken({ env: { CLAUDE_CODE_REMOTE: "true", GH_TOKEN: "proxy-injected" }, run }), (e) => e instanceof TokenError && e.message.includes("GH_PROJECT_TOKEN"));
+    assert.equal(projectToken({ env: { CLAUDE_CODE_REMOTE: "true", GH_TOKEN: "proxy-injected", GH_PROJECT_TOKEN: SECRET }, run }), SECRET);
+  });
+
   it("asks gh for george-hutanu's token last, never the gh-motorfix config directory", () => {
     const calls = [];
     const run = (file, args, opts) => {

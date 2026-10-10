@@ -286,7 +286,7 @@ that variable, so the laptop behaves as before.
   `npm ci`, the Docker daemon, `docker compose pull postgres redis` unless
   both images are there; it is idempotent and unverified until the first
   real cloud run). Variables, by
-  name only: `NOTION_TOKEN`, `JEV`, and from `.env.example` the ones the
+  name only: `NOTION_TOKEN`, `JEV`, `GH_PROJECT_TOKEN` (the tracker's, since the proxy's `GH_TOKEN` cannot reach Project #11), and from `.env.example` the ones the
   tests read (`DATABASE_URL`, `REDIS_URL`, `AUTH_TOKEN_SECRET`; CI's job env
   in `.github/workflows/ci.yml` lists the end-to-end set). Network level
   Trusted, or a custom list that allows `api.notion.com` and

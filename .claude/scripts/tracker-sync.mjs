@@ -18,8 +18,8 @@
 //
 // Prints one JSON line. Exit 0 (a GitHub failure is logged PENDING and retried
 // on the next run; a token without the project scope prints one line naming
-// the fix), 1 when `check` fails, 64 on a usage error. The token never reaches
-// output or the log.
+// the fix), 1 when `check` fails or `pr <n>` cannot read the PR, 64 on a usage
+// error. The token never reaches output or the log.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -32,7 +32,7 @@ import { decideReady } from "./notion-ready.mjs";
 import { decide, recordPrior } from "./notion-status.mjs";
 import { readState } from "./run-state.mjs";
 import { GitHubError, githubClient } from "./tracker/github.mjs";
-import { epicLabel, isContainer, issueUrl, READY_LABEL, statusOf, tracker } from "./tracker/issues.mjs";
+import { epicLabel, isContainer, READY_LABEL, statusOf, tracker } from "./tracker/issues.mjs";
 import { closesLine, pullPath } from "./tracker/repos.mjs";
 import { assertProjectScope, projectToken, REFRESH, TokenError } from "./tracker/token.mjs";
 

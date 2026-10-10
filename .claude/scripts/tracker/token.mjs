@@ -1,6 +1,7 @@
 // The token for the tracker scripts: GH_PROJECT_TOKEN when set, else the
 // session's GH_TOKEN (george-hutanu's, which holds the project scope), else
-// george-hutanu's own gh login. A scope it lacks is named with its fix.
+// george-hutanu's own gh login. A cloud session needs GH_PROJECT_TOKEN. A scope
+// it lacks is named with its fix.
 import { spawnRun } from "../lib/gh-rest.mjs";
 import { GitHubError } from "./github.mjs";
 
@@ -10,7 +11,8 @@ export const REFRESH = "gh auth refresh -h github.com -u george-hutanu -s projec
 
 export function projectToken({ env = process.env, run = (file, args, opts) => spawnRun({ env: opts.env })(file, args) } = {}) {
   if (env.GH_PROJECT_TOKEN?.trim()) return env.GH_PROJECT_TOKEN.trim();
-  if (env.GH_TOKEN?.trim()) return env.GH_TOKEN.trim();
+  // A cloud session's GH_TOKEN is the proxy's placeholder, and the proxy refuses GraphQL.
+  if (env.GH_TOKEN?.trim() && env.CLAUDE_CODE_REMOTE !== "true") return env.GH_TOKEN.trim();
   // gh's own login for george-hutanu: no token variable or config directory may stand in for it.
   const { GH_TOKEN, GITHUB_TOKEN, GH_CONFIG_DIR, ...rest } = env;
   const r = run("gh", ["auth", "token", "-u", "george-hutanu"], { env: rest });

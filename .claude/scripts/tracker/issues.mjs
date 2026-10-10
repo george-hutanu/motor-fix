@@ -156,9 +156,13 @@ export function tracker(github) {
   const comment = (issue, body) => github.rest("POST", `issues/${issue.number}/comments`, { body });
   const close = (issue) => github.rest("PATCH", `issues/${issue.number}`, { state: "closed", state_reason: "completed" });
 
-  /** A new issue, in the Project with `fields`, and under `parent` when one is given. */
+  /**
+   * A new issue, in the Project with `fields`, and under `parent` when one is
+   * given. An open issue already titled `title` (left by a run that failed
+   * after its POST) is finished instead, so a rerun never files it twice.
+   */
   async function create({ title, body, labels, fields, parent }) {
-    const made = await github.rest("POST", "issues", { title, body, labels });
+    const made = (await allIssues()).find((i) => i.state === "open" && i.title === title) ?? (await github.rest("POST", "issues", { title, body, labels }));
     const issue = { nodeId: made.node_id, id: made.id, number: made.number, title: made.title, url: made.html_url ?? issueUrl(made.number), open: true, labels, itemId: null, values: {} };
     await setFields(issue, fields);
     let placed = true;
@@ -174,5 +178,5 @@ export function tracker(github) {
     return { ...issue, placed };
   }
 
-  return { project: theProject, find, labelled, ensureItem, setFields, addLabels, removeLabel, comment, close, create };
+  return { project: theProject, find, labelled, setFields, addLabels, removeLabel, comment, close, create };
 }

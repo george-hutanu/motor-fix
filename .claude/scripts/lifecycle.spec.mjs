@@ -1110,7 +1110,8 @@ describe('the story: --story, the PR title, feature.json, then the folder number
     fixture();
     mkdirSync(join(repo, 'specs', OTHER), { recursive: true });
     writeFileSync(join(repo, 'specs', OTHER, 'spec.md'), '# Spec\n');
-    // A feature that started on Notion finishes there (1036-FR-013).
+    // @traces 1036-FR-013
+    // A feature that started on Notion finishes there.
     writeFileSync(join(repo, 'specs', OTHER, 'notion-sync.md'), '# Notion sync\n');
     writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ level: 1, level_for: `specs/${OTHER}`, feature_directory: `specs/${OTHER}` }));
   });

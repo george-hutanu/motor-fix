@@ -5,7 +5,7 @@ argument-hint: "start | implement | pr <n> | qa | review (alias of qa) | blocked
 compatibility: "A george-hutanu token with the project scope (GH_PROJECT_TOKEN, GH_TOKEN, or gh's george-hutanu login). Requires the spec-kit project structure"
 metadata:
   author: "george-hutanu"
-  source: "project-local — GitHub tracker sync for motor-fix (ST-1036)"
+  source: "project-local — GitHub tracker sync for motor-fix"
 user-invocable: true
 disable-model-invocation: false
 model: sonnet
