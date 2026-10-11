@@ -141,6 +141,8 @@ export type { PublicGarageDto } from './models/public-garage-dto';
 export type { PublicGaragePhotoDto } from './models/public-garage-photo-dto';
 export type { PublicHolidayDto } from './models/public-holiday-dto';
 export type { PublicJobTypeDto } from './models/public-job-type-dto';
+export type { PublicLabourDto } from './models/public-labour-dto';
+export type { PublicPriceRowDto } from './models/public-price-row-dto';
 export type { PushKeyDto } from './models/push-key-dto';
 export type { PushKeysDto } from './models/push-keys-dto';
 export type { PushSubscriptionDto } from './models/push-subscription-dto';

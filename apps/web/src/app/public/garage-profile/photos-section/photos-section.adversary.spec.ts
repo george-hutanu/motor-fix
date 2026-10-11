@@ -26,6 +26,7 @@ const GARAGE: PublicGarageDto = {
   name: 'Atelier Dinamo',
   paymentMethods: { card: false, cash: false, transfer: false },
   photos: many(3),
+  prices: [],
   rating: null,
   refusalPhrase: null,
   responseRate: { state: 'new' },
