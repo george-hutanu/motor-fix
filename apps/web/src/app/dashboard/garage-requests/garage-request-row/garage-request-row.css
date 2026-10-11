@@ -1,7 +1,7 @@
 :host {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 6px var(--mf-space-4);
+  gap: var(--mf-space-1) var(--mf-space-4);
   align-items: start;
   padding: var(--mf-space-3) var(--mf-space-2);
   border-top: 1px solid var(--mf-line);
@@ -15,7 +15,7 @@
 p {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -50,19 +50,26 @@ time,
   min-height: var(--mf-tap);
   white-space: normal;
 }
-@media (max-width: 900px) {
-  :host {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* Each line has its cell, so the open button can cover the text's cells and
+   leave Trimite oferta and Refuză clear: two controls never share a place. */
+.who {
+  grid-area: 1 / 1;
 }
-:host {
-  position: relative;
+.jobs {
+  grid-area: 1 / 2;
+}
+.when {
+  grid-area: 1 / 3;
+}
+.actions {
+  grid-area: 1 / 4;
 }
 .open {
-  position: absolute;
-  inset: 0;
+  grid-area: 1 / 1 / 2 / 4;
+  align-self: stretch;
+  padding: 0;
   border: 0;
-  border-radius: inherit;
+  border-radius: var(--mf-radius-chip);
   background: transparent;
   cursor: pointer;
 }
@@ -70,6 +77,27 @@ time,
   outline: 2px solid var(--mf-focus, currentColor);
   outline-offset: -2px;
 }
-.actions {
-  position: relative;
+@media (max-width: 900px) {
+  :host {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .jobs {
+    grid-area: 2 / 1;
+  }
+  .when {
+    grid-area: 3 / 1;
+  }
+  .actions {
+    grid-area: 4 / 1;
+  }
+  .open {
+    grid-area: 1 / 1 / 4 / 2;
+  }
+}
+/* A phone reads nothing under body size. */
+@media (max-width: 767.98px) {
+  .car,
+  .when {
+    font-size: var(--mf-size-body);
+  }
 }

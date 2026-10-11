@@ -92,7 +92,7 @@ test.describe('reading a request @seeded', () => {
     await expect(drawer).toContainText('orice mecanic');
     await expect(drawer).toContainText('expiră în 6 zile');
     await page.keyboard.press('Escape');
-    await expect(drawer).toBeHidden();
+    await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL('/app/garage');
 
     await page
@@ -104,7 +104,7 @@ test.describe('reading a request @seeded', () => {
       .locator('mf-garage-requests-panel')
       .locator(`[data-live-id="${id}"]`);
     await waiting.getByRole('button', { name: /^Deschide cererea / }).click();
-    await expect(drawer).toBeVisible();
+    await expect(drawer).toContainText(`Scârțâie la frânare ${tag}`);
     await drawer.getByRole('button', { name: 'Trimite oferta' }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Trimite oferta' });
@@ -112,8 +112,8 @@ test.describe('reading a request @seeded', () => {
     await dialog.getByLabel('Ora', { exact: true }).fill('09:00');
     await dialog.getByRole('button', { exact: true, name: 'Trimite' }).click();
 
-    await expect(dialog).toBeHidden();
-    await expect(drawer).toBeHidden();
+    await expect(dialog).toHaveCount(0);
+    await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL('/app/garage/requests');
     await expect(waiting).toHaveCount(0, { timeout: 5_000 });
   });
@@ -133,6 +133,6 @@ test.describe('reading a request @seeded', () => {
     await expect(page.locator('mf-garage-requests-panel')).toBeVisible();
 
     await page.goBack();
-    await expect(drawer).toBeHidden();
+    await expect(drawer).toHaveCount(0);
   });
 });

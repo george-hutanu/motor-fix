@@ -136,7 +136,7 @@ test.describe('declining a request @seeded', () => {
     await expect(page.getByText('Cerere refuzată')).toBeVisible({
       timeout: 5_000,
     });
-    const closed = panel(page).locator(`[data-live-id="${id}"]`);
+    const closed = panel(page).locator(`[data-live-id="${id}"][data-closed]`);
     await expect(closed).toContainText('Refuzată', { timeout: 5_000 });
     await expect(
       closed.getByRole('button', { exact: true, name: 'Refuză' }),

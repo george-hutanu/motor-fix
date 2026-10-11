@@ -57,7 +57,15 @@ export class GarageRequestsFeed {
 
   // The server's 404: this session may not see the garage's requests.
   readonly visible = computed(() => this.allowed() && !this.waiting.gone());
-  readonly rows = computed(() => this.shown(this.waiting.value())?.items);
+  // The lists answer apart: a request the closed list already holds is shown
+  // there only, though the waiting list's last answer still has it.
+  readonly rows = computed(() => {
+    const items = this.shown(this.waiting.value())?.items;
+    const closed = new Set(this.closed()?.map((row) => row.id));
+    return closed.size && items
+      ? items.filter((row) => !closed.has(row.id))
+      : items;
+  });
   readonly total = computed(() => this.shown(this.waiting.value())?.total);
   readonly nextCursor = computed(
     () => this.shown(this.waiting.value())?.nextCursor,

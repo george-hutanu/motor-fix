@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
@@ -234,5 +237,21 @@ describe('the Oferte trimise panel kept current', () => {
 
     expect(ids(element)).toEqual(['req-q0', 'req-q1']);
     expect(element.querySelector('.mf-live-changed')).toBeNull();
+  });
+});
+
+// The PR tester measured this panel off the 4 px grid and the type scale.
+describe('the quotes-sent-panel stylesheet', () => {
+  const css = readFileSync(join(__dirname, 'quotes-sent-panel.css'), 'utf8');
+
+  it('pads and spaces on the 4 px grid', () => {
+    for (const [, value] of css.matchAll(/(?:gap|padding|margin):\s*([^;]+);/g))
+      for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
+        expect(Number.parseFloat(px) % 4).toBe(0);
+  });
+
+  it('sizes its text from the Cockpit type scale', () => {
+    for (const [, value] of css.matchAll(/font-size:\s*([^;]+);/g))
+      expect(value.trim()).toMatch(/^var\(--mf-size-[a-z]+\)$/);
   });
 });

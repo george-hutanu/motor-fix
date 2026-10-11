@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -347,4 +350,35 @@ describe('opening a request from its row', () => {
       expect(navigate).not.toHaveBeenCalled();
     },
   );
+});
+
+// The PR tester measured the open button drawn over Trimite oferta and
+// Refuză (two controls in one place) and the row's gaps off the 4 px grid.
+describe('the request row’s layout', () => {
+  const css = readFileSync(join(__dirname, 'garage-request-row.css'), 'utf8');
+  const rule = (selector: string) =>
+    [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+      .filter(([, head]) => head.trim() === selector)
+      .map(([, , body]) => body)
+      .join(';');
+
+  it('lays the open button over the row’s text only, never over its buttons', () => {
+    expect(rule('.open')).not.toMatch(/position:\s*absolute/);
+    expect(rule('.open')).toMatch(/grid-area:\s*1\s*\/\s*1\s*\/\s*2\s*\/\s*4/);
+    expect(rule('.actions')).toMatch(/grid-area:\s*1\s*\/\s*4/);
+  });
+
+  it('sets the car, mechanic and age at body size on a phone', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+    expect(phone).toMatch(
+      /\.car,\s*\.when\s*\{\s*font-size:\s*var\(--mf-size-body\);/,
+    );
+  });
+
+  it('spaces the row and its lines on the 4 px grid', () => {
+    for (const [, value] of css.matchAll(/(?:gap|padding):\s*([^;]+);/g))
+      for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
+        expect(Number.parseFloat(px) % 4).toBe(0);
+    expect(rule('.open')).toMatch(/padding:\s*0/);
+  });
 });

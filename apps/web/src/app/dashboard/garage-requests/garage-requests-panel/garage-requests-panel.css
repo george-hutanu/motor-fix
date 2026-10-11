@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-4);
-  padding: var(--mf-space-5) 22px;
+  padding: var(--mf-space-5) var(--mf-space-6);
   background: var(--mf-panel);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
@@ -31,7 +31,7 @@ h2 {
 .counter,
 .reconnecting,
 .stale {
-  font-size: 14px;
+  font-size: var(--mf-size-small);
   color: var(--mf-text-secondary);
 }
 p {

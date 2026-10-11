@@ -189,6 +189,16 @@ describe('DashboardTabBar on the admin dashboard', () => {
     );
   });
 
+  // axe's label-content-name-mismatch reads the tab's text as one word,
+  // "Service‑uri4", unless a space parts the label from the chip.
+  it('keeps the visible label and count part of the tab’s name', async () => {
+    const { element } = await openAdmin(4);
+
+    expect(tabs(element)[1]?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Service‑uri 4',
+    );
+  });
+
   it('shows no count at zero, nor while the count is unknown', async () => {
     const { element, harness, host } = await openAdmin(0);
 

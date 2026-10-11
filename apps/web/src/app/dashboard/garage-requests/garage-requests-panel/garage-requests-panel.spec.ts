@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -366,5 +369,24 @@ describe('the requests panel with a limit', () => {
     expect(text(element.querySelector('a[href="/app/garage/requests"]'))).toBe(
       'See all',
     );
+  });
+});
+
+// The PR tester measured this panel off the 4 px grid and the type scale.
+describe('the garage-requests-panel stylesheet', () => {
+  const css = readFileSync(
+    join(__dirname, 'garage-requests-panel.css'),
+    'utf8',
+  );
+
+  it('pads and spaces on the 4 px grid', () => {
+    for (const [, value] of css.matchAll(/(?:gap|padding|margin):\s*([^;]+);/g))
+      for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
+        expect(Number.parseFloat(px) % 4).toBe(0);
+  });
+
+  it('sizes its text from the Cockpit type scale', () => {
+    for (const [, value] of css.matchAll(/font-size:\s*([^;]+);/g))
+      expect(value.trim()).toMatch(/^var\(--mf-size-[a-z]+\)$/);
   });
 });
