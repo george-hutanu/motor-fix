@@ -64,7 +64,7 @@ async function runOn(day: string) {
 }
 
 let sequence = 0;
-const updated = (
+const updated = async (
   carId: string,
   changed: string[],
   dates: Partial<
@@ -72,18 +72,26 @@ const updated = (
   >,
 ) => {
   sequence += 1;
+  const after = {
+    itpUntil: null,
+    rcaUntil: null,
+    rovinietaUntil: null,
+    ...dates,
+  };
+  // The edit writes its event with the car, so the car already holds these.
+  const at = (d: string | null) => d && new Date(`${d}T00:00:00Z`);
+  await prisma.car.update({
+    data: {
+      itpUntil: at(after.itpUntil),
+      rcaUntil: at(after.rcaUntil),
+      rovinietaUntil: at(after.rovinietaUntil),
+    },
+    where: { id: carId },
+  });
   return {
     id: `adv-${sequence}`,
     kind: 'car.updated' as const,
-    payload: {
-      carId,
-      changed,
-      itpUntil: null,
-      ownerId: driver,
-      rcaUntil: null,
-      rovinietaUntil: null,
-      ...dates,
-    },
+    payload: { carId, changed, ownerId: driver, ...after },
     subjectId: carId,
   };
 };
@@ -290,7 +298,7 @@ describe('car.updated events out of the shape the relay sends them in', () => {
     await set(carId, 'rca', '2026-12-01', '2026-10-01');
 
     await reminders.onCarEvent(
-      updated(carId, ['itpUntil', 'rcaUntil', 'rovinietaUntil'], {
+      await updated(carId, ['itpUntil', 'rcaUntil', 'rovinietaUntil'], {
         itpUntil: '2027-01-10',
         rcaUntil: null,
         rovinietaUntil: '2027-02-10',
@@ -308,7 +316,7 @@ describe('car.updated events out of the shape the relay sends them in', () => {
 
   it('cancels nothing when a cleared date has no reminder yet, twice over', async () => {
     const carId = await car(driver);
-    const event = updated(carId, ['itpUntil'], { itpUntil: null });
+    const event = await updated(carId, ['itpUntil'], { itpUntil: null });
 
     await reminders.onCarEvent(event);
     await reminders.onCarEvent(event);
@@ -321,7 +329,7 @@ describe('car.updated events out of the shape the relay sends them in', () => {
     await set(carId, 'itp', '2026-12-10', '2026-10-01');
 
     await reminders.onCarEvent(
-      updated(carId, ['odometerKm'], { itpUntil: '2030-01-01' }),
+      await updated(carId, ['odometerKm'], { itpUntil: '2030-01-01' }),
     );
 
     expect((await reminder(carId))?.dueOn).toEqual(
@@ -338,9 +346,41 @@ describe('car.updated events out of the shape the relay sends them in', () => {
     await reminders.onCarEvent(removed(carId));
 
     await reminders.onCarEvent(
-      updated(carId, ['itpUntil'], { itpUntil: '2027-01-10' }),
+      await updated(carId, ['itpUntil'], { itpUntil: '2027-01-10' }),
     );
 
     expect(await prisma.reminder.count({ where: { carId } })).toBe(0);
+  });
+
+  it('keeps the newer date when an older edit is delivered again after it', async () => {
+    const carId = await car(driver);
+    const older = await updated(carId, ['itpUntil'], {
+      itpUntil: '2026-11-01',
+    });
+    const newer = await updated(carId, ['itpUntil'], {
+      itpUntil: '2027-11-01',
+    });
+
+    await reminders.onCarEvent(older);
+    await reminders.onCarEvent(newer);
+    await reminders.onCarEvent(older);
+
+    expect((await reminder(carId))?.dueOn).toEqual(
+      new Date('2027-11-01T00:00:00Z'),
+    );
+  });
+
+  it('does not recreate a reminder the owner cleared when an older edit is retried', async () => {
+    const carId = await car(driver);
+    const older = await updated(carId, ['rcaUntil'], {
+      rcaUntil: '2026-12-01',
+    });
+    const cleared = await updated(carId, ['rcaUntil'], { rcaUntil: null });
+
+    await reminders.onCarEvent(older);
+    await reminders.onCarEvent(cleared);
+    await reminders.onCarEvent(older);
+
+    expect(await reminder(carId, 'rca')).toBeNull();
   });
 });

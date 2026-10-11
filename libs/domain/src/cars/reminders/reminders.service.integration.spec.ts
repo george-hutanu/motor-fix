@@ -17,6 +17,20 @@ import {
 const redisUrl = redisUrlFor(3);
 const { account, prisma, reset } = fixtures();
 
+// The edit writes its event with the car, so the car already holds the dates
+// the event carries when the worker reads it.
+type Dates = Record<'itpUntil' | 'rcaUntil' | 'rovinietaUntil', string | null>;
+const saveDates = (carId: string, dates: Dates) =>
+  prisma.car.update({
+    data: {
+      itpUntil: dates.itpUntil && new Date(`${dates.itpUntil}T00:00:00Z`),
+      rcaUntil: dates.rcaUntil && new Date(`${dates.rcaUntil}T00:00:00Z`),
+      rovinietaUntil:
+        dates.rovinietaUntil && new Date(`${dates.rovinietaUntil}T00:00:00Z`),
+    },
+    where: { id: carId },
+  });
+
 // A reminder's car must exist (the foreign key); any car of the account will do.
 const car = async (ownerId: string) => {
   const brand = await prisma.brand.upsert({
@@ -471,25 +485,24 @@ describe('the car events', () => {
   let carId: string;
   let sequence = 0;
 
-  const updated = (
+  const updated = async (
     changed: string[],
     dates: Partial<
       Record<'itpUntil' | 'rcaUntil' | 'rovinietaUntil', string | null>
     >,
   ) => {
     sequence += 1;
+    const after = {
+      itpUntil: null,
+      rcaUntil: null,
+      rovinietaUntil: null,
+      ...dates,
+    };
+    await saveDates(carId, after);
     return {
       id: String(sequence),
       kind: 'car.updated',
-      payload: {
-        carId,
-        changed,
-        itpUntil: null,
-        ownerId: driver,
-        rcaUntil: null,
-        rovinietaUntil: null,
-        ...dates,
-      },
+      payload: { carId, changed, ownerId: driver, ...after },
       subjectId: carId,
     };
   };
@@ -511,7 +524,7 @@ describe('the car events', () => {
 
   it('sets a reminder for each changed date, and none for the rest', async () => {
     await reminders.onCarEvent(
-      updated(['itpUntil', 'rcaUntil', 'odometerKm'], {
+      await updated(['itpUntil', 'rcaUntil', 'odometerKm'], {
         itpUntil: '2027-11-13',
         rcaUntil: '2026-10-20',
         rovinietaUntil: '2027-03-01',
@@ -532,13 +545,13 @@ describe('the car events', () => {
 
   it('moves a reminder to the new date and resets what was sent', async () => {
     await reminders.onCarEvent(
-      updated(['itpUntil'], { itpUntil: '2026-11-01' }),
+      await updated(['itpUntil'], { itpUntil: '2026-11-01' }),
     );
     await runOn('2026-10-08');
     expect(await reminder(carId)).toMatchObject({ sent30: true });
 
     await reminders.onCarEvent(
-      updated(['itpUntil'], { itpUntil: '2027-11-13' }),
+      await updated(['itpUntil'], { itpUntil: '2027-11-13' }),
     );
     expect(await reminder(carId)).toMatchObject({
       dueOn: new Date('2027-11-13T00:00:00Z'),
@@ -549,13 +562,13 @@ describe('the car events', () => {
 
   it('cancels the reminder of a date that was cleared', async () => {
     await reminders.onCarEvent(
-      updated(['itpUntil', 'rcaUntil'], {
+      await updated(['itpUntil', 'rcaUntil'], {
         itpUntil: '2026-11-01',
         rcaUntil: '2026-11-07',
       }),
     );
     await reminders.onCarEvent(
-      updated(['itpUntil'], { rcaUntil: '2026-11-07' }),
+      await updated(['itpUntil'], { rcaUntil: '2026-11-07' }),
     );
     expect(
       await prisma.reminder.findMany({
@@ -569,13 +582,15 @@ describe('the car events', () => {
 
   it('changes nothing for an edit of other fields', async () => {
     await reminders.onCarEvent(
-      updated(['odometerKm', 'plate'], { itpUntil: '2026-11-01' }),
+      await updated(['odometerKm', 'plate'], { itpUntil: '2026-11-01' }),
     );
     expect(await prisma.reminder.count()).toBe(0);
   });
 
   it('gives the same rows when an event is delivered twice', async () => {
-    const event = updated(['rovinietaUntil'], { rovinietaUntil: '2026-12-01' });
+    const event = await updated(['rovinietaUntil'], {
+      rovinietaUntil: '2026-12-01',
+    });
     await reminders.onCarEvent(event);
     await reminders.onCarEvent(event);
     expect(await prisma.reminder.count({ where: { carId } })).toBe(1);
@@ -587,7 +602,7 @@ describe('the car events', () => {
   // @traces 092-FR-007
   it('removes every reminder of a removed car, twice over', async () => {
     await reminders.onCarEvent(
-      updated(['itpUntil', 'rcaUntil'], {
+      await updated(['itpUntil', 'rcaUntil'], {
         itpUntil: '2026-11-01',
         rcaUntil: '2026-11-02',
       }),
@@ -610,13 +625,13 @@ describe('the car events', () => {
       where: { id: carId },
     });
     await reminders.onCarEvent(
-      updated(['itpUntil'], { itpUntil: '2026-11-01' }),
+      await updated(['itpUntil'], { itpUntil: '2026-11-01' }),
     );
     expect(await prisma.reminder.count()).toBe(0);
   });
 
   it('changes nothing for a car that is not there', async () => {
-    const event = updated(['itpUntil'], { itpUntil: '2026-11-01' });
+    const event = await updated(['itpUntil'], { itpUntil: '2026-11-01' });
     event.payload.carId = randomUUID();
     event.subjectId = event.payload.carId;
     await reminders.onCarEvent(event);

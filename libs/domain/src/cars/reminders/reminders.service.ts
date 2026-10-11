@@ -92,13 +92,20 @@ export class RemindersService {
   }
 
   // A relayed car event: an edit's changed dates move, set or cancel their
-  // reminders; a removal deletes them all. Delivered twice, it writes the
-  // same rows. An edit that reaches a car removed since changes nothing.
+  // reminders; a removal deletes them all. The dates are read from the car,
+  // not the event, so a retried older edit cannot move a reminder back or
+  // recreate one cleared since; delivered twice, it writes the same rows. An
+  // edit that reaches a car removed since changes nothing.
   async onCarEvent(event: CarEvent): Promise<void> {
     const { carId } = event.payload;
     if (event.kind === 'car.removed') return this.removeCar(carId);
     const car = await this.prisma.car.findUnique({
-      select: { removedAt: true },
+      select: {
+        itpUntil: true,
+        rcaUntil: true,
+        removedAt: true,
+        rovinietaUntil: true,
+      },
       where: { id: carId },
     });
     if (!car || car.removedAt) return;
@@ -106,7 +113,7 @@ export class RemindersService {
     const payload = event.payload as CarUpdated;
     for (const [field, kind] of CAR_DATES) {
       if (!payload.changed.includes(field)) continue;
-      const dueOn = payload[field];
+      const dueOn = day(car[field]);
       if (dueOn === null) {
         await this.prisma.reminder.deleteMany({ where: { carId, kind } });
       } else {

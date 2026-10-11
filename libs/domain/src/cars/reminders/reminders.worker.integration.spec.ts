@@ -246,6 +246,11 @@ describe('the reminders worker and the car events', () => {
     ]);
     expect(CAR_REMINDERS_CONSUMER.queue).toBe(REMINDERS_QUEUE);
 
+    // The edit saved the date with its event; the worker reads it from the car.
+    await prisma.car.update({
+      data: { rcaUntil: new Date('2030-01-20T00:00:00Z') },
+      where: { id: carId },
+    });
     await queue.add(
       'event',
       {
