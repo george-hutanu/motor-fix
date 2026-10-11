@@ -2,7 +2,7 @@
 #   docker build --build-arg APP=web --target web .
 #   docker build --build-arg APP=<api|worker|mcp> --target node-app .
 # Keep in step with .nvmrc.
-ARG NODE_VERSION=24
+ARG NODE_VERSION=26
 
 FROM node:${NODE_VERSION}-slim AS build
 WORKDIR /repo

@@ -282,7 +282,7 @@ A story can run in a Claude Code cloud session (claude.ai/code), where
 `CLAUDE_CODE_REMOTE=true`. Every cloud difference in the scripts is gated on
 that variable, so the laptop behaves as before.
 
-- **Environment.** Setup script: `bash scripts/cloud-setup.sh` (Node 24,
+- **Environment.** Setup script: `bash scripts/cloud-setup.sh` (Node 26,
   `npm ci`, the Docker daemon, `docker compose pull postgres redis` unless
   both images are there; it is idempotent and unverified until the first
   real cloud run). Variables, by
@@ -291,7 +291,7 @@ that variable, so the laptop behaves as before.
   in `.github/workflows/ci.yml` lists the end-to-end set). Network level
   Trusted, or a custom list that allows `api.typesafe.ai`.
 - **Node and Playwright.** The image puts Node 22 first on PATH;
-  `cloud-setup.sh` puts an installed Node 24 first instead (one marked line
+  `cloud-setup.sh` puts an installed Node 26 first instead (one marked line
   at the top of `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set) and installs
   the chromium revision the installed `playwright-core` pins.
 - **GitHub.** `GH_TOKEN` and `GITHUB_TOKEN` hold the proxy's placeholder
