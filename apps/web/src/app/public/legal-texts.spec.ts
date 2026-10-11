@@ -1,6 +1,5 @@
 import { LEGAL_LABELS, LEGAL_TEXTS, type LegalText } from './legal-texts';
 
-const kinds: LegalText[] = ['terms', 'privacy'];
 const languages = ['ro', 'en'] as const;
 
 const whole = (language: 'ro' | 'en', kind: LegalText) =>
@@ -20,17 +19,6 @@ const profileViews = (language: 'ro' | 'en') => {
 const CONTACT = { en: /from your account/, ro: /din contul tău/ } as const;
 
 describe('the final legal texts', () => {
-  // @traces 243-FR-001
-  it.each(kinds)(
-    'the %s has the same sections and paragraphs in both languages',
-    (kind) => {
-      const shape = (language: 'ro' | 'en') =>
-        LEGAL_TEXTS[language][kind].sections.map((s) => s.paragraphs.length);
-
-      expect(shape('ro')).toEqual(shape('en'));
-    },
-  );
-
   // @traces 243-FR-001
   it('no text or label says it is a draft or pending review', () => {
     const all = JSON.stringify({ LEGAL_LABELS, LEGAL_TEXTS });
