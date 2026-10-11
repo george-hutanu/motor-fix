@@ -53,7 +53,26 @@ h1 {
 }
 
 li {
+  border-radius: var(--mf-radius-panel);
   min-width: 0;
+}
+
+/* A suspended garage's card fades before it leaves; reduced motion drops it at once. */
+li.leaving {
+  opacity: 0;
+}
+
+.chip {
+  background: var(--mf-amber-tint);
+  border: 0;
+  border-radius: 999px;
+  color: var(--mf-amber-ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  margin-block-start: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  padding-inline: var(--mf-space-4);
 }
 
 .skeleton {
@@ -73,6 +92,10 @@ li {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  li {
+    transition: opacity 300ms var(--mf-motion-ease);
+  }
+
   .skeleton {
     animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite;
   }

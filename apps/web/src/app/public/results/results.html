@@ -2,12 +2,15 @@
   @if (answer(); as answer) {
     <h1>{{ 'public.results.title' | t: { brand: answer.brand.name } }}</h1>
     <p class="summary">
-      <span class="tally">{{ tally() }}</span>
+      <span class="tally" [mfLiveChange]="tally()">{{ tally() }}</span>
       @if (area(); as area) {
         <span class="area">{{ area }}</span>
       }
       <button type="button" class="change" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
     </p>
+    @if (newer()) {
+      <button type="button" class="chip" (click)="reload()">{{ 'public.results.reload' | t }}</button>
+    }
   } @else {
     <h1>
       <span class="sr-only">{{ 'public.results.loading' | t }}</span>
@@ -27,7 +30,13 @@
     @if (answer(); as answer) {
       <ul class="cards" [attr.aria-label]="'public.results.list' | t">
         @for (garage of answer.items; track garage.id) {
-          <li><mf-result-card [brand]="answer.brand" [garage]="garage" /></li>
+          <li
+            [class.leaving]="leaving().has(garage.id)"
+            [mfLiveChange]="garage"
+            [mfLiveChangeSay]="'public.results.live.updated' | t: { name: garage.name }"
+          >
+            <mf-result-card [brand]="answer.brand" [garage]="garage" />
+          </li>
         }
       </ul>
     }

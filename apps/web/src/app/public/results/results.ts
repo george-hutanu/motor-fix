@@ -1,35 +1,70 @@
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { isPlatformServer } from '@angular/common';
 import {
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
+  linkedSignal,
   PLATFORM_ID,
   resource,
   untracked,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
 import {
   nearOf,
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
 import {
   type GarageSearchControllerForBrand$Params,
+  type GarageSearchPageDto,
   SearchService,
 } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ResultCard } from './result-card/result-card';
+import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
+import { followPublicView, PublicLive } from '../live';
 
 // A link from a saved car names the brand by its id; every other one by slug.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const WIDE = 50;
+// A suspended card's fade, and the burst of events that makes one read.
+const FADE_MS = 300;
+const BURST_MS = 300;
+
+const REVIEW_KINDS: readonly EventKind[] = EVENT_KINDS.filter((kind) =>
+  kind.startsWith('review.'),
+);
+const REVIEWS: ReadonlySet<string> = new Set(REVIEW_KINDS);
+// What re-reads a loaded card: its reviews, its profile, its return.
+const CARD_KINDS: ReadonlySet<string> = new Set([
+  ...REVIEW_KINDS,
+  'garage.updated',
+  'garage.restored',
+]);
+const KINDS: readonly EventKind[] = [
+  ...REVIEW_KINDS,
+  'garage.updated',
+  'garage.restored',
+  'garage.suspended',
+  'verification.decided',
+];
+
+type Page = GarageSearchPageDto;
+type Query = Omit<GarageSearchControllerForBrand$Params, 'ids' | 'log'>;
+
+const sameIds = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((id, i) => id === b[i]);
 
 @Component({
-  imports: [ResultCard, TranslatePipe],
+  imports: [LiveChange, ResultCard, TranslatePipe],
   selector: 'mf-results',
   styleUrl: './results.css',
   templateUrl: './results.html',
@@ -41,6 +76,10 @@ export class Results {
   private readonly search = inject(SearchService);
   private readonly overlays = inject(Overlays);
   private readonly store = inject(PlaceStore);
+  private readonly live = inject(PublicLive);
+  private readonly announcer = inject(LiveAnnouncer);
+  private readonly reduced = inject(REDUCED_MOTION);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly i18n = inject(I18n);
 
   private readonly bar = toSignal(this.route.queryParamMap, {
@@ -59,27 +98,50 @@ export class Results {
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
 
+  // The search the bar names, without what marks a single read.
+  private readonly query = computed((): Query | undefined => {
+    const brand = this.brand();
+    if (this.server || !brand) return undefined;
+    const near = this.near();
+    const radius = this.radius();
+    return {
+      ...(UUID.test(brand) ? { brandId: brand } : { brand }),
+      ...(near ? { near } : {}),
+      ...(radius ? { radius } : {}),
+    };
+  });
+
   // Never on the server: it renders the skeletons, the browser searches.
   protected readonly results = resource({
     loader: ({ params }) => this.search.garageSearchControllerForBrand(params),
     params: (): GarageSearchControllerForBrand$Params | undefined => {
-      const brand = this.brand();
-      if (this.server || !brand) return undefined;
-      const near = this.near();
-      const radius = this.radius();
-      return {
-        ...(UUID.test(brand) ? { brandId: brand } : { brand }),
-        log: '1',
-        ...(near ? { near } : {}),
-        ...(radius ? { radius } : {}),
-      };
+      const query = this.query();
+      return query && { ...query, log: '1' };
     },
   });
 
-  protected readonly answer = computed(() =>
+  private readonly searched = computed(() =>
     this.results.isLoading() || !this.results.hasValue()
       ? undefined
       : this.results.value(),
+  );
+  // What the page shows: the search's answer, changed in place by the stream.
+  protected readonly answer = linkedSignal<Page | undefined, Page | undefined>({
+    computation: (page) => page,
+    source: this.searched,
+  });
+  // The cards fading out, and whether the search has found more since.
+  protected readonly leaving = linkedSignal<unknown, ReadonlySet<string>>({
+    computation: () => new Set(),
+    source: this.searched,
+  });
+  protected readonly newer = linkedSignal<unknown, boolean>({
+    computation: () => false,
+    source: this.searched,
+  });
+  private readonly loaded = computed(
+    () => this.answer()?.items.map((garage) => garage.id) ?? [],
+    { equal: sameIds },
   );
 
   // 'empty' and 'failed' draw no block of their own yet.
@@ -122,6 +184,14 @@ export class Results {
       : this.i18n.t('public.results.area', { km, place: place.label });
   });
 
+  // What the next read takes in: cards by id, the counts, the first page.
+  private readonly wanted = new Set<string>();
+  private countsWanted = false;
+  private pageWanted = false;
+  private reading = false;
+  private burst: ReturnType<typeof setTimeout> | undefined;
+  private readonly fades = new Set<ReturnType<typeof setTimeout>>();
+
   constructor() {
     if (this.server) return;
     // The kept place goes into the bar, so the link shared opens this search.
@@ -129,6 +199,25 @@ export class Results {
       const kept = this.store.place();
       if (!kept || this.bar().get('near')) return;
       untracked(() => void this.write({ near: nearOf(kept) }));
+    });
+    followPublicView(() => ({
+      brand: this.answer()?.brand.id,
+      garages: this.loaded(),
+    }));
+    this.live
+      .on(KINDS)
+      .pipe(takeUntilDestroyed())
+      .subscribe((message) => this.heard(message.kind, message.id));
+    // The stream may have missed events while it was closed.
+    this.live.resync.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!untracked(this.answer)) return;
+      for (const id of untracked(this.loaded)) this.wanted.add(id);
+      this.countsWanted = true;
+      void this.flush();
+    });
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(this.burst);
+      for (const fade of this.fades) clearTimeout(fade);
     });
   }
 
@@ -145,6 +234,134 @@ export class Results {
     if (place === 'cancelled') return;
     this.store.set(place);
     await this.write({ near: nearOf(place), radius: null });
+  }
+
+  // "Reîncarcă": the first page again, in place of the list shown.
+  protected reload() {
+    this.newer.set(false);
+    this.pageWanted = true;
+    void this.flush();
+  }
+
+  private heard(kind: string, id: string) {
+    const page = untracked(this.answer);
+    if (!page) return;
+    const loaded = page.items.some((garage) => garage.id === id);
+    if (kind === 'garage.suspended' && loaded) return this.leave(id);
+    if (CARD_KINDS.has(kind) && loaded) this.wanted.add(id);
+    // A review names itself, not its garage; only loaded garages send them.
+    else if (REVIEWS.has(kind))
+      for (const garage of page.items) this.wanted.add(garage.id);
+    else this.countsWanted = true;
+    clearTimeout(this.burst);
+    this.burst = setTimeout(() => void this.flush(), BURST_MS);
+  }
+
+  // One read at a time; what arrives during a read is read after it.
+  private async flush() {
+    if (this.reading) return;
+    this.reading = true;
+    try {
+      while (this.pageWanted || this.wanted.size > 0 || this.countsWanted) {
+        if (this.pageWanted) {
+          this.pageWanted = false;
+          this.wanted.clear();
+          this.countsWanted = false;
+          await this.read(undefined, (page, now) => reuse(now, page));
+        } else if (this.wanted.size > 0) {
+          const ids = [...this.wanted].join(',');
+          this.wanted.clear();
+          await this.read(ids, (page, now) =>
+            this.counted(page, this.withCards(page, now)),
+          );
+        } else {
+          this.countsWanted = false;
+          await this.read(undefined, (page, now) => this.counted(page, now));
+        }
+      }
+    } finally {
+      this.reading = false;
+    }
+  }
+
+  // A read that fails keeps the page as it is; one answered after the search
+  // changed is dropped.
+  private async read(
+    ids: string | undefined,
+    apply: (page: Page, now: Page) => Page,
+  ) {
+    const query = untracked(this.query);
+    if (!query) return;
+    let page: Page;
+    try {
+      page = await this.search.garageSearchControllerForBrand({
+        ...query,
+        ...(ids ? { ids } : {}),
+      });
+    } catch {
+      return;
+    }
+    const now = untracked(this.answer);
+    if (this.destroyRef.destroyed || !now || untracked(this.query) !== query)
+      return;
+    this.answer.set(apply(page, now));
+  }
+
+  // The cards read again replace theirs where they stand; the order holds.
+  private withCards(page: Page, now: Page): Page {
+    const fresh = new Map(page.items.map((garage) => [garage.id, garage]));
+    const items = now.items.map((garage) =>
+      reuse(garage, fresh.get(garage.id) ?? garage),
+    );
+    return items.every((garage, i) => garage === now.items[i])
+      ? now
+      : { ...now, items };
+  }
+
+  // More found waits behind "Reîncarcă"; fewer, or another split, shows.
+  private counted(page: Page, now: Page): Page {
+    if (page.total > now.total) {
+      this.newer.set(true);
+      return now;
+    }
+    this.newer.set(false);
+    const counts = reuse(now.counts, page.counts);
+    return counts === now.counts && page.total === now.total
+      ? now
+      : { ...now, counts, total: page.total };
+  }
+
+  private leave(id: string) {
+    const garage = untracked(this.answer)?.items.find((g) => g.id === id);
+    if (!garage || untracked(this.leaving).has(id)) return;
+    void this.announcer.announce(
+      this.i18n.t('public.results.live.removed', { name: garage.name }),
+      'polite',
+    );
+    if (untracked(this.reduced)) return this.drop(id);
+    this.leaving.update((ids) => new Set(ids).add(id));
+    const fade = setTimeout(() => {
+      this.fades.delete(fade);
+      this.drop(id);
+    }, FADE_MS);
+    this.fades.add(fade);
+  }
+
+  private drop(id: string) {
+    this.leaving.update((ids) => new Set([...ids].filter((i) => i !== id)));
+    const now = untracked(this.answer);
+    const garage = now?.items.find((g) => g.id === id);
+    if (!now || !garage) return;
+    const takes = garage.stance === 'works_on';
+    this.answer.set({
+      ...now,
+      counts: {
+        doesNotTake: now.counts.doesNotTake - (takes ? 0 : 1),
+        worksOn: now.counts.worksOn - (takes ? 1 : 0),
+      },
+      items: now.items.filter((g) => g.id !== id),
+      total: now.total - 1,
+    });
   }
 
   private write(queryParams: Record<string, string | null>) {

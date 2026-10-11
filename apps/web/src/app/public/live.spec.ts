@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { PublicLive, publicLiveResource } from './live';
+import { followPublicView, PublicLive, publicLiveResource } from './live';
 
 globalThis.TextEncoder ??= NodeEncoder as typeof TextEncoder;
 globalThis.TextDecoder ??= NodeDecoder as unknown as typeof TextDecoder;
@@ -501,6 +501,77 @@ describe('publicLiveResource', () => {
     await settle();
 
     expect(ref.value()).toBeUndefined();
+    expect(TestBed.inject(PublicLive).state()).toBe('closed');
+  });
+});
+
+// @traces 267-brand-results-FR-018
+describe('a results view naming its garages', () => {
+  const ids = (count: number) =>
+    Array.from({ length: count }, (_, n) => `g-${n + 1}`);
+  const query = () =>
+    Object.fromEntries(new URL(urls().at(-1) ?? '', 'http://x').searchParams);
+
+  it('names every loaded garage in one comma-separated garages parameter, with the brand', async () => {
+    const live = setUp();
+
+    live.register({ brand: 'b-1', garages: ['g-1', 'g-2', 'g-3'] });
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(query()).toEqual({ brand: 'b-1', garages: 'g-1,g-2,g-3' });
+  });
+
+  it('names twenty garages at most', async () => {
+    const live = setUp();
+
+    live.register({ garages: ids(25) });
+    await settle();
+
+    expect(query()['garages']).toBe(ids(20).join(','));
+  });
+
+  it('names a garage once when the view names it twice', async () => {
+    const live = setUp();
+
+    live.register({ garage: 'g-1', garages: ['g-2', 'g-1', 'g-2'] });
+    await settle();
+
+    expect(query()['garages']?.split(',').sort()).toEqual(['g-1', 'g-2']);
+  });
+
+  it('opens no garages parameter for an empty list', async () => {
+    const live = setUp();
+
+    live.register({ brand: 'b-1', garages: [] });
+    await settle();
+
+    expect(query()).toEqual({ brand: 'b-1' });
+  });
+
+  it('re-opens when the loaded garages change, not for an equal list, and leaves with its view', async () => {
+    setUp();
+    const loaded = signal(['g-1', 'g-2']);
+    const injector = view();
+    runInInjectionContext(injector, () =>
+      followPublicView(() => ({ brand: 'b-1', garages: loaded() })),
+    );
+    await settle();
+    expect(query()).toEqual({ brand: 'b-1', garages: 'g-1,g-2' });
+
+    loaded.set(['g-1', 'g-2']);
+    TestBed.tick();
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    loaded.set(['g-1']);
+    TestBed.tick();
+    await settle();
+    expect(urls()).toHaveLength(2);
+    expect(query()).toEqual({ brand: 'b-1', garages: 'g-1' });
+
+    injector.destroy();
+    await settle();
     expect(TestBed.inject(PublicLive).state()).toBe('closed');
   });
 });
