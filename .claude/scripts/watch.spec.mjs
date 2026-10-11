@@ -922,20 +922,46 @@ describe('a ready PR whose head is docs-only since its last verdict', () => {
   });
 });
 
-describe('a handed-off ready PR waits for CI and its QA run with no agent alive', () => {
+describe('a handed-off ready PR waits for its QA run, then for CI before the merge, with no agent alive', () => {
   const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
   const HEAD = 'd'.repeat(40);
   const ready = (entries) => summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: entries }));
   const handed = (over = {}) =>
     row({ phase: 'qa', head: HEAD, handoff: true, qaRun: { id: '77', head: HEAD, lap: 1 }, activity: { at: NOW - 5 * MIN, source: 'commit' }, ...over });
 
-  it('waits, with no fix, while CI is pending, even long past the quiet threshold', () => {
+  // @traces 1171-FR-003
+  it('offers the tail as soon as the QA run has completed, while CI is still pending or has no checks yet', () => {
     for (const at of [NOW - 5 * MIN, NOW - 300 * MIN]) {
-      const r = fixOf(handed({ activity: { at, source: 'commit' }, pr: ready([check(null, 'IN_PROGRESS')]), qaRunState: { status: 'completed', conclusion: 'success' } }), opts);
+      for (const entries of [[check(null, 'IN_PROGRESS')], []]) {
+        const r = fixOf(handed({ activity: { at, source: 'commit' }, pr: ready(entries), qaRunState: { status: 'completed', conclusion: 'success' } }), opts);
+        assert.equal(r.verdict, 'stale');
+        assert.equal(r.fix, 'tail');
+        assert.match(r.reason, /QA run 77 completed/);
+      }
+    }
+  });
+
+  // @traces 1171-FR-003
+  it('waits for CI, with no fix, once the head has agent-review success and a check is still pending', () => {
+    for (const at of [NOW - 5 * MIN, NOW - 300 * MIN]) {
+      const r = fixOf(handed({ activity: { at, source: 'commit' }, pr: ready([check(null, 'IN_PROGRESS'), review('SUCCESS')]), qaRunState: { status: 'completed' } }), opts);
       assert.equal(r.verdict, 'waiting');
       assert.equal(r.fix, null);
       assert.match(r.reason, /CI/);
     }
+  });
+
+  // @traces 1171-FR-004
+  it('merges a green PR with agent-review success at once, without the quiet threshold', () => {
+    const passed = summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }));
+    for (const over of [{}, { handoff: false, qaRun: null }]) {
+      const r = fixOf(handed({ ...over, activity: { at: NOW - 1 * MIN, source: 'commit' }, pr: passed, qaRunState: { status: 'completed' } }), opts);
+      assert.equal(r.verdict, 'stale');
+      assert.equal(r.fix, 'merge');
+    }
+    // Not when the worktree holds work the PR head does not, nor while someone holds it.
+    assert.equal(fixOf(handed({ activity: { at: NOW - 1 * MIN, source: 'commit' }, pr: passed, head: 'e'.repeat(40) }), opts).fix, null);
+    assert.equal(fixOf(handed({ holder: 'live', pr: passed }), opts).fix, null);
   });
 
   it('waits while the QA run is queued or in progress, even long past the quiet threshold', () => {
@@ -977,10 +1003,9 @@ describe('a handed-off ready PR waits for CI and its QA run with no agent alive'
     assert.equal(r.fix, null);
   });
 
-  it('waits on a PR with no checks only until the quiet threshold, then falls back to the tail', () => {
+  it('waits on the QA run whatever CI says, a PR with no checks included', () => {
     const none = summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: [] }));
-    assert.equal(fixOf(handed({ pr: none, qaRunState: { status: 'completed' } }), opts).verdict, 'waiting');
-    assert.equal(fixOf(handed({ activity: { at: NOW - 120 * MIN, source: 'commit' }, pr: none, qaRunState: { status: 'completed' } }), opts).fix, 'tail');
+    assert.equal(fixOf(handed({ activity: { at: NOW - 120 * MIN, source: 'commit' }, pr: none, qaRunState: { status: 'in_progress' } }), opts).verdict, 'waiting');
   });
 
   it('keeps today\'s rule with no run recorded, or a run about an older head', () => {

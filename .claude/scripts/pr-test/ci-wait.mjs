@@ -1,18 +1,19 @@
-// Wait for a PR's CI, and its QA run, to finish before the tail starts.
+// Two waits, one each side of the PR tester's review:
 //
-//   node .claude/scripts/pr-test/ci-wait.mjs <n> [--run <id>]
+//   node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>   before the tail: the QA run only
+//   node .claude/scripts/pr-test/ci-wait.mjs <n>              before the merge: CI only
 //
-// `gh pr checks <n> --watch` ends at once when the head has no checks yet,
-// which is every head in the seconds after a push, so a wait built on it
-// could hand the tail a CI that had not started. This one polls until the
-// head has checks and none is pending (a PR that has none after
-// SPECKIT_CI_NO_CHECKS_MIN minutes, by default 10, is the tail's Hard Stop),
-// then until the run has completed. Neither waits past SPECKIT_CI_WAIT_MIN
-// minutes in all, by default 120: a run with no free runner, or a status a
-// cancelled run left pending, ends the wait with exit 1 too. It prints only what did not pass, one
-// "<check>: <bucket>" line each and "QA run: <conclusion>", so empty output
-// means green. Exit 0 finished, 1 a limit reached, 2 gh failed, 3 the PR
-// conflicts with main.
+// With --run it polls until that run has completed and prints
+// "QA run: <conclusion>"; CI is not waited for, so a run that finishes first
+// starts the review while CI still works. Without it, `gh pr checks <n> --watch`
+// would end at once when the head has no checks yet, which is every head in
+// the seconds after a push, so this polls until the head has checks and none
+// is pending (a PR that has none after SPECKIT_CI_NO_CHECKS_MIN minutes, by
+// default 10, is the tail's Hard Stop) and prints one "<check>: <bucket>" line
+// per check that did not pass, so empty output means green. Neither waits past
+// SPECKIT_CI_WAIT_MIN minutes, by default 120: a run with no free runner, or a
+// status a cancelled run left pending, ends the wait with exit 1 too. Exit 0
+// finished, 1 a limit reached, 2 gh failed, 3 the PR conflicts with main.
 //
 // GitHub runs no CI on a PR that conflicts with main, so the PR's mergeable
 // state is read before every poll: CONFLICTING ends the wait at once with
@@ -49,9 +50,10 @@ async function conflictOrFailure(gh, pr) {
   return mergeable === "CONFLICTING" ? CONFLICT : null;
 }
 
-/** Polls `gh` until CI (and the run, when given) has finished, or a limit is reached; never throws. */
+/** Polls `gh` until the run (when given) or else CI has finished, or a limit is reached; never throws. */
 export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 15_000 }) {
   const start = now();
+  if (run) return waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs });
   let checks;
   for (;;) {
     const stop = await conflictOrFailure(gh, pr);
@@ -67,16 +69,19 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
     if (now() - start >= waitMs) return { code: 1, lines: [`CI: still pending on #${pr} after ${minutes(waitMs)} min: ${pending.join(", ")}`] };
     await sleep(pollMs);
   }
-  const lines = checks.filter((c) => c.bucket !== "pass" && c.bucket !== "skipping").map((c) => `${c.name}: ${c.bucket}`);
-  if (!run) return { code: 0, lines };
+  return { code: 0, lines: checks.filter((c) => c.bucket !== "pass" && c.bucket !== "skipping").map((c) => `${c.name}: ${c.bucket}`) };
+}
+
+/** The QA run's wait: until it has completed, whatever CI is doing. */
+async function waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs }) {
   for (;;) {
     const stop = await conflictOrFailure(gh, pr);
     if (stop) return stop;
     const out = await gh(["run", "view", String(run), "--json", "status,conclusion"]);
     const state = out.code === 0 ? parsed(out.stdout) : undefined;
-    if (!state) return { code: 2, lines: [...lines, `QA run: ${String(out.stderr).trim() || "unreadable gh output"}`] };
-    if (state.status === "completed") return { code: 0, lines: [...lines, `QA run: ${state.conclusion}`] };
-    if (now() - start >= waitMs) return { code: 1, lines: [...lines, `QA run: still ${state.status} after ${minutes(waitMs)} min`] };
+    if (!state) return { code: 2, lines: [`QA run: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+    if (state.status === "completed") return { code: 0, lines: [`QA run: ${state.conclusion}`] };
+    if (now() - start >= waitMs) return { code: 1, lines: [`QA run: still ${state.status} after ${minutes(waitMs)} min`] };
     await sleep(pollMs);
   }
 }
