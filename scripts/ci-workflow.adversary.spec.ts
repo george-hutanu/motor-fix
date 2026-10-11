@@ -180,12 +180,16 @@ describe('CI workflow still performs every check', () => {
     expect(e2e.indexOf('domain:seed')).toBeGreaterThan(
       e2e.indexOf('prisma migrate deploy'),
     );
-    expect(e2e).toMatch(/if: failure\(\)\n\s+uses: actions\/upload-artifact/);
+    expect(e2e).toMatch(
+      /if: \$\{\{ !cancelled\(\) \}\}\n\s+uses: actions\/upload-artifact/,
+    );
   });
 });
 
 describe('docs-only pull requests', () => {
-  it.each(['checks', 'tests', 'e2e', 'docker'])(
+  // e2e runs by hand only and docker on an image input, neither of which a
+  // documentation-only PR is.
+  it.each(['checks', 'tests'])(
     'skips %s when only documentation changed',
     (id) => {
       const block = jobBlock(ci, id);
@@ -297,16 +301,23 @@ describe('workflow shape', () => {
 
   it('keeps the compose stack and the docker builds off main', () => {
     expect(jobBlock(ci, 'docker')).toContain(
-      "github.event_name == 'pull_request'",
+      "github.event_name == 'pull_request' && needs.changes.outputs.docker == 'true'",
     );
     expect(jobBlock(ci, 'checks')).toMatch(
-      /Compose stack\n\s+if: \$\{\{ !cancelled\(\) && github\.event_name == 'pull_request' \}\}/,
+      /Compose stack\n\s+if: \$\{\{ !cancelled\(\) && github\.event_name == 'pull_request' && needs\.changes\.outputs\.compose == 'true' \}\}/,
+    );
+  });
+
+  it('runs the end-to-end suite on demand only, never on a PR or a release', () => {
+    expect(ci).toMatch(/^on:\n(?: {2}\S.*\n)*? {2}workflow_dispatch:\n/m);
+    expect(jobBlock(ci, 'e2e')).toMatch(
+      /\n {4}if: github\.event_name == 'workflow_dispatch'\n/,
     );
   });
 
   it('tears the compose stack down even when a check failed', () => {
     expect(jobBlock(ci, 'checks')).toMatch(
-      /if: \$\{\{ always\(\) && github\.event_name == 'pull_request' \}\}\n\s+run: docker compose (?:--profile observability )?down/,
+      /if: \$\{\{ always\(\) && github\.event_name == 'pull_request' && needs\.changes\.outputs\.compose == 'true' \}\}\n\s+run: docker compose (?:--profile observability )?down/,
     );
   });
 
@@ -410,10 +421,12 @@ describe('release workflow', () => {
     expect(production).toContain('environment: production');
   });
 
-  it('runs the staging end-to-end suite against the deployed address', () => {
+  it('runs the core flows, not the full suite, against the deployed address', () => {
     const staging = jobBlock(release, 'staging');
     expect(staging).toContain(`BASE_URL: $${'{{'} vars.PUBLIC_WEB_URL }}`);
-    expect(staging).toContain('--skip-nx-cache');
+    expect(staging).toContain(
+      'run: npx nx run web-e2e:e2e --skip-nx-cache --grep @core\n',
+    );
   });
 
   it('triggers only on pushes to main', () => {

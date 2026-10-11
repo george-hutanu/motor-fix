@@ -56,8 +56,9 @@ describe('merge gate — the decision', () => {
     assert.equal(decideMerge(pr([...green, review('SUCCESS')])), null);
   });
 
+  // A PR skips E2E tests (on demand only) and the path-filtered Docker builds.
   it('counts skipped and neutral checks as green', () => {
-    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
+    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Docker build (web)', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
   });
 
   // The PR tester now runs beside CI rather than after it, so agent-review
@@ -129,6 +130,32 @@ describe('merge gate — the decision', () => {
     const rollup = [
       { ...run('build', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
       { ...run('build', 'SUCCESS', 'COMPLETED', '2026-10-05T07:05:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
+  // E2E runs only on demand (gh workflow run ci.yml): a later PR re-run on the
+  // same head skips it again, which must not hide the on-demand run's failure.
+  it('does not let a later skipped run hide a failed run of the same check', () => {
+    const rollup = [
+      { ...run('E2E tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('E2E tests', 'SKIPPED', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS', 'COMPLETED', '2026-10-05T07:12:00Z'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.match(decideMerge(pr(rollup)), /CI failed.*CI \/ E2E tests/);
+    assert.match(decideMerge(pr([rollup[1], rollup[0], rollup[2], rollup[3]])), /CI failed.*CI \/ E2E tests/);
+  });
+
+  it('lets a later run that passed replace a failed one, and a skip follow a cancelled one', () => {
+    const rollup = [
+      { ...run('E2E tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('E2E tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
+      { ...run('E2E tests', 'SKIPPED', 'COMPLETED', '2026-10-05T07:20:00Z'), workflowName: 'CI' },
+      { ...run('Docker build (web)', 'CANCELLED', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('Docker build (web)', 'SKIPPED', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
       { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
       review('SUCCESS'),
     ];

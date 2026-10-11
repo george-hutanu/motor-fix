@@ -42,8 +42,9 @@ const started = (page: Page) =>
   page.waitForFunction(() => 'faro' in window, undefined, { timeout: 15_000 });
 
 test.describe('browser telemetry', () => {
-  // A server with no collector configured (a release's run against staging
-  // before one is set) renders no telemetry tag and sends nothing to test.
+  // A server with no collector configured (a run by hand against staging, with
+  // BASE_URL, before one is set) renders no telemetry tag and sends nothing
+  // to test.
   test.beforeEach(async ({ request }) => {
     // An error page carries no tag either, and must not pass for no collector.
     const page = await request.get('/ro');

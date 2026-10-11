@@ -226,12 +226,12 @@ describe('CI workflow after the title check moved out', () => {
     expect(block(ci, 'on', 0)).not.toMatch(/edited/);
   });
 
-  it('keeps workflow_call and pull_request as its only triggers', () => {
+  it('keeps pull_request, workflow_call and the on-demand workflow_dispatch as its only triggers', () => {
     expect(
       block(ci, 'on', 0)
         .split('\n')
         .filter((l) => /^ {2}\S/.test(l)),
-    ).toEqual(['  pull_request:', '  workflow_call:']);
+    ).toEqual(['  pull_request:', '  workflow_call:', '  workflow_dispatch:']);
   });
 
   it('still cancels a running PR run on a new push but never on a called run', () => {

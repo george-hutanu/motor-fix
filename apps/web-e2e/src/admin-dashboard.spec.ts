@@ -108,7 +108,7 @@ test.describe('the admin dashboard @seeded', () => {
     ['a 390 px phone', 390, 844],
     ['a desktop', 1280, 800],
   ] as const) {
-    test(`shows the seeded admin the garages waiting on ${device}`, async ({
+    test(`shows the seeded admin the garages waiting on ${device} @core`, async ({
       page,
     }) => {
       await page.setViewportSize({ height, width });
