@@ -112,6 +112,8 @@ export function strykerOptions(
     tsconfigFile: existsSync(lib) ? lib : join(root, 'tsconfig.app.json'),
     ...own,
     ...(scope && {
+      // A shard whose folders hold no spec still runs, its mutants uncovered.
+      allowEmpty: true,
       mutate: scope.mutate,
       thresholds: { ...own.thresholds, break: null },
     }),
@@ -135,6 +137,7 @@ function jestOptions(root: string, scope?: Scope): Record<string, unknown> {
   const config = {
     ...(own && { testEnvironment: resolve(root, own) }),
     ...(scope && {
+      passWithNoTests: true,
       testMatch: scope.testMatch,
       testPathIgnorePatterns: scope.testPathIgnorePatterns,
     }),

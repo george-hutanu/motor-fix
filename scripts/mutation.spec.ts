@@ -234,12 +234,28 @@ describe('strykerOptions for a shard', () => {
     ]);
     expect(options.jest).toEqual({
       config: {
+        passWithNoTests: true,
         testEnvironment: join(process.cwd(), 'libs/x/src/env.cjs'),
         testMatch: ['**/libs/x/src/auth/**/*.{spec,test}.ts'],
         testPathIgnorePatterns: ['/node_modules/'],
       },
       configFile: 'libs/x/jest.config.cts',
     });
+  });
+
+  // A shard whose folders hold no spec still runs: its mutants count as not
+  // covered, so the project's combined score is not lifted past its floor.
+  it('lets a shard run with no specs, and an unsharded run refuse it', () => {
+    const shard = strykerOptions('x', 'libs/x', false, undefined, 'auth');
+    const whole = strykerOptions('x', 'libs/x', false);
+
+    expect(shard.allowEmpty).toBe(true);
+    expect(shard.jest).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({ passWithNoTests: true }),
+      }),
+    );
+    expect(whole.allowEmpty).toBeUndefined();
   });
 
   it('gives rest every spec outside the named shards', () => {

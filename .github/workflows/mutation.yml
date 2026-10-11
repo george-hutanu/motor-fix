@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
-      # PR CI holds up to 8 of the free plan's 20 concurrent runners per PR;
+      # PR CI holds up to 7 of the free plan's 20 concurrent runners per PR;
       # 5 mutation jobs leave room for one PR and a second beside it.
       max-parallel: 5
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
