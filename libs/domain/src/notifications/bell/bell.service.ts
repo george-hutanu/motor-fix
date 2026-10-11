@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 
 import { bellLink } from './bell.link';
+import type { Role } from '../../auth/capabilities';
 import { LIVE_CHANNEL } from '../../events/live/live.hub';
 import type { Notification, PrismaClient } from '../../generated/prisma/client';
 import {
@@ -35,9 +36,11 @@ export class BellService {
     @Inject(LIVE_PUBLISHER) private readonly publisher: Publisher,
   ) {}
 
+  // `role` is the dashboard asking: only the driver's maps a row to a view.
   async list(
     accountId: string,
     query: NotificationListQueryDto,
+    role: Role,
   ): Promise<NotificationPageDto> {
     const where = this.shown(accountId);
     if (
@@ -66,7 +69,7 @@ export class BellService {
     ]);
     const page = rows.slice(0, PAGE);
     return {
-      items: page.map((row) => view(row, language)),
+      items: page.map((row) => view(row, language, role)),
       nextCursor: rows.length > PAGE ? (page.at(-1)?.id ?? null) : null,
     };
   }
@@ -78,7 +81,11 @@ export class BellService {
   }
 
   // The first read time stays: a second open changes nothing.
-  async read(accountId: string, id: string): Promise<NotificationDto> {
+  async read(
+    accountId: string,
+    id: string,
+    role: Role,
+  ): Promise<NotificationDto> {
     const where = { accountId, channel: 'in_app' as const, id };
     const { count } = await this.prisma.notification.updateMany({
       data: { readAt: new Date() },
@@ -90,7 +97,7 @@ export class BellService {
     ]);
     if (!row) throw new NotFoundException();
     if (count) await this.announce(accountId, id);
-    return view(row, language);
+    return view(row, language, role);
   }
 
   async readAll(accountId: string): Promise<void> {
@@ -134,12 +141,18 @@ export class BellService {
   }
 }
 
-function view(row: Notification, language: string): NotificationDto {
+// The same kinds also reach garage staff, so a row read from any other
+// dashboard opens nothing and is only marked read.
+function view(
+  row: Notification,
+  language: string,
+  role: Role,
+): NotificationDto {
   return {
     at: row.createdAt.toISOString(),
     id: row.id,
     kind: row.kind,
-    link: bellLink(row),
+    link: role === 'driver' ? bellLink(row) : null,
     readAt: row.readAt?.toISOString() ?? null,
     subjectId: row.subjectId,
     text: bellText(row.kind, language, row.params as Record<string, unknown>),

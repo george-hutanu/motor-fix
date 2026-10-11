@@ -8,6 +8,7 @@ import request from 'supertest';
 import { BellService } from './bell.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
+import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { until } from '../../waits.testing';
 import { NotificationsModule } from '../notifications.module';
@@ -64,8 +65,8 @@ beforeEach(async () => {
   published.length = 0;
 });
 
-const bearer = (accountId: string) =>
-  `Bearer ${signAccessToken({ accountId, role: 'driver' }, tokenSecret)}`;
+const bearer = (accountId: string, role: Role = 'driver') =>
+  `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -100,15 +101,15 @@ async function bell(
   return row.id;
 }
 
-const get = (path: string, accountId: string) =>
+const get = (path: string, accountId: string, role?: Role) =>
   request(app.getHttpServer())
     .get(path)
-    .set('Authorization', bearer(accountId));
+    .set('Authorization', bearer(accountId, role));
 
-const post = (path: string, accountId: string) =>
+const post = (path: string, accountId: string, role?: Role) =>
   request(app.getHttpServer())
     .post(path)
-    .set('Authorization', bearer(accountId));
+    .set('Authorization', bearer(accountId, role));
 
 describe('the bell list', () => {
   // @traces 032-FR-003
@@ -142,6 +143,31 @@ describe('the bell list', () => {
 
     const read = await post(`/notifications/${due}/read`, andrei).expect(200);
     expect(read.body.link).toBe(`/app/driver/cars/${car}`);
+  });
+
+  // @traces 032-FR-003
+  it('gives no driver view to a row read from another dashboard', async () => {
+    const ionescu = await account('ionescu', ['garage']);
+    const requestId = randomUUID();
+    const message = await bell(ionescu, {
+      kind: 'MESSAGE_RECEIVED',
+      params: { link: `https://motorfix.ro/app/driver/requests/${requestId}` },
+      subjectId: randomUUID(),
+    });
+    await bell(ionescu, { ago: 1000, kind: 'REVIEW_DECIDED' });
+
+    const res = await get('/notifications', ionescu, 'garage').expect(200);
+    expect(res.body.items.map((n: { link: string | null }) => n.link)).toEqual([
+      null,
+      null,
+    ]);
+
+    const read = await post(
+      `/notifications/${message}/read`,
+      ionescu,
+      'garage',
+    ).expect(200);
+    expect(read.body.link).toBeNull();
   });
 
   it("lists the person's own bell rows newest first, 20 a page", async () => {
@@ -322,7 +348,9 @@ describe('marking read', () => {
       publish: () => Promise.reject(new Error('redis down')),
     });
 
-    await expect(down.read(andrei, id)).resolves.toMatchObject({ id });
+    await expect(down.read(andrei, id, 'driver')).resolves.toMatchObject({
+      id,
+    });
     await expect(down.readAll(andrei)).resolves.toBeUndefined();
 
     expect(await down.unreadCount(andrei)).toBe(0);
