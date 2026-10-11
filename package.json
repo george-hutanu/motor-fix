@@ -81,7 +81,7 @@
     "@types/compression": "1.8.1",
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
-    "@types/node": "24.19.1",
+    "@types/node": "26.6.5",
     "@types/supertest": "7.2.1",
     "@types/web-push": "3.6.4",
     "axe-core": "4.14.0",
@@ -107,7 +107,7 @@
     "webpack-dev-server": "^5.2.6"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=26.0.0"
   },
   "name": "motor-fix",
   "overrides": {

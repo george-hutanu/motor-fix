@@ -52,7 +52,7 @@ QA laps re-read after a >5 min idle gap (74% of them, median 9 min).
 Measured on 2026-10-06 over the last 40 CI runs: GitHub's free plan allows 20
 concurrent jobs per account, and every long evening wait (up to 30 min for a
 runner) began while 18–27 of our own jobs were running. Other Node versions or
-runner labels do not help: CI runs only Node 24 (`.nvmrc`), and every label
+runner labels do not help: CI runs only the one Node version in `.nvmrc`, and every label
 counts toward the same cap. Baseline run 37454922580: 14 jobs, 7 workspace
 installs, CI OK at 675 s, of which E2E 629 s on one Playwright worker.
 

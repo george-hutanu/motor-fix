@@ -84,7 +84,7 @@ export function setup({ node = '22', docker = false, nvm = false, n = true, chro
   const run = (extra = {}) => spawnSync('/bin/bash', [join(repo, 'scripts', 'cloud-setup.sh')], {
     cwd: root,
     encoding: 'utf8',
-    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home, CLAUDE_CODE_REMOTE: 'true', CLOUD_SETUP_NODE_SEARCH: `${root}/opt/nvm/versions/node/v24*/bin`, PLAYWRIGHT_BROWSERS_PATH: join(root, 'pw'), ...extra },
+    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home, CLAUDE_CODE_REMOTE: 'true', CLOUD_SETUP_NODE_SEARCH: `${root}/opt/nvm/versions/node/v26*/bin`, PLAYWRIGHT_BROWSERS_PATH: join(root, 'pw'), ...extra },
   });
   const lines = (file) => readFileSync(file, 'utf8').trim().split('\n').filter(Boolean);
   const sudo = () => (existsSync(join(state, 'sudo')) ? lines(join(state, 'sudo')) : []);
