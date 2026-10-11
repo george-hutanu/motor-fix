@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
 
+import type { GarageSearchCache } from './garage-search.cache';
 import { GarageSearchService } from './garage-search.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { Prisma } from '../../generated/prisma/client';
@@ -10,6 +11,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import { SearchLogService } from '../search-log/search-log.service';
 
 type Stance = 'works_on' | 'does_not_take';
 type Status = 'approved' | 'draft' | 'suspended';
@@ -19,7 +21,16 @@ const reader = countedMetrics();
 const searches = (outcome: string) =>
   counterTotal(reader, 'motorfix_searches_total', { outcome });
 const { prisma } = fixtures();
-const search = new GarageSearchService(prisma);
+// PostgreSQL's answer every time: the cases change rows between reads, and
+// garage-search.cache.integration.spec.ts covers the cache.
+const uncached = {
+  page: (_key, read) => read(),
+} satisfies Pick<GarageSearchCache, 'page'> as unknown as GarageSearchCache;
+const search = new GarageSearchService(
+  prisma,
+  uncached,
+  new SearchLogService(prisma),
+);
 serialDatabase(databaseUrl);
 
 let dacia: string;

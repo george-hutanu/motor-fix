@@ -2,12 +2,14 @@ import {
   FACILITIES,
   type GarageSearchPageDto,
   type ListedGarageDto,
+  nearOf,
   type SearchPoint,
 } from '@motor-fix/contracts';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
+import { GarageSearchCache } from './garage-search.cache';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { brandAnswer } from '../../garages/brand-answer';
@@ -15,6 +17,7 @@ import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { countSearch } from '../../metrics/product-counters';
 import { garagesInArea, groupsOf, placed } from '../area/search-area';
+import { SearchLogService } from '../search-log/search-log.service';
 
 const PAGE = 20;
 const GROUPS = ['works_on', 'other'] as const;
@@ -152,15 +155,41 @@ type Groups = ReturnType<typeof groupsOf>;
 
 @Injectable()
 export class GarageSearchService {
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    private readonly cache: GarageSearchCache,
+    private readonly searchLog: SearchLogService,
+  ) {}
 
+  // A page, from the cache when the same search was read in the last 60
+  // seconds. `log` marks a new search: its row is written after the answer,
+  // which never waits for it.
   async forBrand(
     key: BrandKey,
     cursor?: string,
     point?: SearchPoint,
     radiusKm?: number,
+    log = false,
   ): Promise<GarageSearchPageDto> {
     const brand = await this.brandOf(key);
+    const page = await this.cache.page(
+      { brandId: brand.id, cursor, near: point && nearOf(point), radiusKm },
+      () => this.searched(brand, cursor, point, radiusKm),
+    );
+    countFirstPage(cursor, page.items.length);
+    // Left to the next turn of the event loop: the answer goes out first.
+    if (log) {
+      setImmediate(() => this.searchLog.record({ brandId: brand.id, point }));
+    }
+    return page;
+  }
+
+  private async searched(
+    brand: GarageSearchPageDto['brand'],
+    cursor?: string,
+    point?: SearchPoint,
+    radiusKm?: number,
+  ): Promise<GarageSearchPageDto> {
     const brandId = brand.id;
     const after =
       cursor === undefined
@@ -188,7 +217,6 @@ export class GarageSearchService {
     }
     const items = rows.slice(0, PAGE).map((item) => placed(item, area));
     const last = items.at(-1);
-    countFirstPage(cursor, items.length);
     return {
       brand,
       ...found,

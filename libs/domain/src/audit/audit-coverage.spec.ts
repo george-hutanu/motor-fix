@@ -165,6 +165,9 @@ const NOT_CHANGES = new Set([
   'ListingDocumentsService.remove',
   // Runs inside the sending transaction, which audits the new garage.
   'GaragePhotosService.saveRows',
+  // A visitor's search, counted for the Demand view: no account and no
+  // change to anyone's data, so no audit entry by the search's rule.
+  'SearchLogService.record',
 ]);
 
 const uncovered = (source: string) =>

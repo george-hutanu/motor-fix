@@ -41,6 +41,12 @@ export class GarageSearchController {
     if (query.ids !== undefined) {
       return this.search.byIds(brand, query.ids.split(','), near, query.radius);
     }
-    return this.search.forBrand(brand, query.cursor, near, query.radius);
+    return this.search.forBrand(
+      brand,
+      query.cursor,
+      near,
+      query.radius,
+      query.log === '1',
+    );
   }
 }
