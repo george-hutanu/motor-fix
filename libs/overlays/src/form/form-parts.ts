@@ -129,7 +129,7 @@ export class TaskSubmit {
     }
     p {
       margin: 0;
-      font-size: 18px;
+      font-size: var(--mf-size-subheading);
       font-weight: 700;
       text-wrap: balance;
     }

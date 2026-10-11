@@ -117,7 +117,7 @@
         "team": "Here you will see your garage's mechanics and what each one may do."
       }
     },
-    "counter": "{label}, {waiting} waiting",
+    "counter": "{waiting} waiting",
     "empty": "Nothing here yet.",
     "home": "MotorFix, home page",
     "invite": "Invite to the team",

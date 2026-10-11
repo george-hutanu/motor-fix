@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -789,5 +792,24 @@ describe('step 5, the courtesy car', () => {
     expect(radio(step, 'Paid')?.checked).toBe(true);
     expect(text(price(step)!.closest('label'))).toContain('Price per day');
     expect(price(step)?.value).toBe('120');
+  });
+});
+
+describe('type scale', () => {
+  // @traces 975-type-scale-FR-002
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(join(__dirname, 'hours-step.css'), 'utf8');
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `input:not([type="checkbox"], [type="radio"])` at the field size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*input:not\(\[type="checkbox"\], \[type="radio"\]\) \{[^}]*font-size: var\(--mf-size-field\);/,
+    );
   });
 });

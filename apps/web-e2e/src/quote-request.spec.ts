@@ -40,7 +40,7 @@ const car = (quote: ReturnType<typeof dialog>) =>
 // @seeded: a driver sends a request from a garage's profile against the real API.
 // @traces 221-SC-001 221-SC-002 221-SC-007 221-FR-003
 test.describe('a quote request from a garage profile @seeded', () => {
-  test('goes out from the profile, shows in Cererile mele without a reload and reaches the garage', async ({
+  test('goes out from the profile, shows in Cererile mele without a reload and reaches the garage @core', async ({
     page,
     request,
   }) => {

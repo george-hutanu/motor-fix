@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { GarageJobsService, type JobSummaryDto } from '@motor-fix/data-access';
@@ -243,5 +246,23 @@ describe('Lucrări', () => {
     await settle();
 
     expect(list).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('type scale on a phone', () => {
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(join(__dirname, 'jobs-view.css'), 'utf8');
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+  const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
+  const tablet = at < 0 ? '' : stylesheet.slice(at);
+
+  it('sets no text under the body size on a phone', () => {
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+  });
+
+  it('sets the muted line and the stage smaller from a tablet up', () => {
+    expect(tablet).toMatch(/\.muted \{\s*font-size: var\(--mf-size-small\);/);
+    expect(tablet).toMatch(/\.stage \{\s*font-size: var\(--mf-size-label\);/);
   });
 });

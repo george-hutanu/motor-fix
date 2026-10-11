@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
@@ -732,5 +735,26 @@ describe('PlatformRules, live requests', () => {
 
     const region = rendered.element.querySelector('[aria-live="polite"]');
     expect(region?.textContent).toContain('Așteaptă aprobarea altui admin');
+  });
+});
+
+describe('type scale on a phone', () => {
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'platform-rules.css'),
+    'utf8',
+  );
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+  const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
+  const tablet = at < 0 ? '' : stylesheet.slice(at);
+
+  it('sets no text under the body size on a phone', () => {
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+  });
+
+  it('sets the hints small and the tags at the label size from a tablet up', () => {
+    expect(tablet).toMatch(/\.hint \{\s*font-size: var\(--mf-size-small\);/);
+    expect(tablet).toMatch(/\.tag \{\s*font-size: var\(--mf-size-label\);/);
   });
 });

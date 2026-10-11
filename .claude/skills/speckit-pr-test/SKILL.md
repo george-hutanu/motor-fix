@@ -28,8 +28,9 @@ finished (the hand-off note's `QA run:` line) instead of dispatching one.
 CI proves the code compiles and its own tests pass. Nobody has yet booted the
 change and used it. This step does, on every PR, before it merges. It starts
 as soon as the PR is ready and runs beside CI, not after it: the two check
-different things, and the merge gate waits for both. It leaves the unit and
-end-to-end suites to CI's jobs rather than running them a second time. Its
+different things, and the merge gate waits for both. It leaves the unit
+suites to CI's jobs and the end-to-end suite to its on-demand run and the
+release's core flows, rather than running them a second time. Its
 verdict is a commit status the merge gate (`pre:bash:merge-gate`) and the Stop
 gate (`stop:pr-lifecycle`) read. A push after it ran leaves the new head
 without a status, so the test runs again.
@@ -70,7 +71,7 @@ without a status, so the test runs again.
    through `.claude/scripts/pr-test/dispatch.mjs` (`gh workflow run`, the
    run found by the nonce in its title, then `gh run watch`): a GitHub runner boots the PR head with PostgreSQL, Redis
    and MinIO from the PR's own compose file, sweeps the screens, runs its flows
-   and the API calls (the unit and end-to-end suites are CI's), and uploads the
+   and the API calls (the unit suites are CI's; the end-to-end suite runs on demand and, its core flows, at release), and uploads the
    report and screenshots as an artifact. The
    agent downloads it into its `--out` (through a fresh folder of its own, so
    re-running a lap into the same `--out` is never refused), reviews the diff against the spec and the constitution

@@ -42,7 +42,7 @@ const gh = (ref: string) => `\${{ ${ref} }}`;
 const DOCS_ONLY = "needs.changes.outputs.docs-only != 'true'";
 
 describe('ci workflow', () => {
-  it('runs six jobs, so a PR holds at most eight runners', () => {
+  it('runs six jobs, so a PR holds at most seven runners', () => {
     expect(jobIds).toEqual([
       'changes',
       'checks',
@@ -86,7 +86,6 @@ describe('ci workflow', () => {
   it.each([
     ['checks', 'Checks'],
     ['tests', 'Unit and integration tests'],
-    ['e2e', 'E2E tests'],
   ])('%s is skipped on a documentation-only PR', (id, name) => {
     const block = job(id);
 
@@ -95,9 +94,67 @@ describe('ci workflow', () => {
     expect(setting(block, 'if')).toBe(DOCS_ONLY);
   });
 
-  it('builds the docker images on PRs only, skipped when docs-only', () => {
+  // The end-to-end suite costs a runner on every PR and, against staging,
+  // most of the web service's egress: it runs by hand only.
+  it('runs the E2E job on demand only, and uploads its report whatever the result', () => {
+    const block = job('e2e');
+
+    expect(setting(block, 'name')).toBe('E2E tests');
+    expect(setting(block, 'if')).toBe(
+      "github.event_name == 'workflow_dispatch'",
+    );
+    expect(workflow).toContain(
+      'on:\n  pull_request:\n  workflow_call:\n  workflow_dispatch:\n',
+    );
+    expect(block).toMatch(
+      /- if: \$\{\{ !cancelled\(\) \}\}\n {8}uses: actions\/upload-artifact@\S+\n {8}with:\n {10}name: playwright-report\n/,
+    );
+  });
+
+  it('builds the docker images on a PR that changes an image input, and by hand', () => {
     expect(setting(job('docker'), 'if')).toBe(
-      `github.event_name == 'pull_request' && ${DOCS_ONLY}`,
+      "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.docker == 'true')",
+    );
+  });
+
+  it('classifies the changed paths on a PR and hands every filter on', () => {
+    const block = job('changes');
+
+    expect(block).toContain(
+      `run: node scripts/ci-paths.ts origin/${gh('github.base_ref')}`,
+    );
+    for (const [name, id] of [
+      ['docs-only', 'classify'],
+      ['docker', 'paths'],
+      ['compose', 'paths'],
+      ['harness', 'paths'],
+    ]) {
+      expect(setting(block, name)).toBe(gh(`steps.${id}.outputs.${name}`));
+    }
+  });
+
+  // Off a PR the filter outputs are empty, so != 'false' runs them there.
+  const HARNESS = gh(
+    "!cancelled() && needs.changes.outputs.harness != 'false'",
+  );
+
+  it.each(['harness-playwright', 'harness-browser'])(
+    'installs the harness browser only when the harness runs (%s)',
+    (id) => {
+      const block = job('checks');
+
+      expect(setting(block.slice(block.indexOf(`- id: ${id}\n`)), 'if')).toBe(
+        HARNESS,
+      );
+    },
+  );
+
+  it('runs the harness specs only when a harness input changed, or off a PR', () => {
+    expect(setting(step(job('checks'), 'Harness'), 'if')).toBe(HARNESS);
+    expect(setting(step(job('checks'), 'Browser for the harness'), 'if')).toBe(
+      gh(
+        "!cancelled() && needs.changes.outputs.harness != 'false' && steps.harness-browser.outputs.cache-hit != 'true'",
+      ),
     );
   });
 
@@ -175,9 +232,15 @@ describe('ci workflow', () => {
     expect(step(job('checks'), 'Biome')).toContain('npx biome ci');
   });
 
-  it('keeps the compose stack a PR check, not a release one', () => {
+  it('keeps the compose stack a PR check that runs when the stack changed', () => {
+    const when =
+      "github.event_name == 'pull_request' && needs.changes.outputs.compose == 'true'";
+
     expect(setting(step(job('checks'), 'Compose stack'), 'if')).toBe(
-      gh("!cancelled() && github.event_name == 'pull_request'"),
+      gh(`!cancelled() && ${when}`),
+    );
+    expect(setting(step(job('checks'), 'Stop the compose stack'), 'if')).toBe(
+      gh(`always() && ${when}`),
     );
   });
 

@@ -14,7 +14,7 @@
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-3);
   font: inherit;
-  font-size: max(16px, 1rem);
+  font-size: var(--mf-size-body);
   color: var(--mf-text);
   background: var(--mf-bg);
   border: 1px solid var(--mf-line-strong);
@@ -50,7 +50,7 @@ select:focus-visible,
     min-height: var(--mf-tap);
     padding: 0 var(--mf-space-2);
     font: inherit;
-    font-size: var(--mf-size-small);
+    font-size: var(--mf-size-field);
     color: var(--mf-text);
     background: var(--mf-bg);
     border: 1px solid var(--mf-line-strong);
