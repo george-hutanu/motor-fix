@@ -129,8 +129,8 @@ export class RequestDrawer {
     const reason =
       request.recipient.status === 'quoted'
         ? 'quoted'
-        : (request.closedReason ??
-          (request.recipient.status === 'waiting' ? null : 'unknown'));
+        : request.closedReason ||
+          (request.recipient.status === 'waiting' ? null : 'unknown');
     if (!reason) return null;
     return `${DETAIL}.closed.${REASONS.has(reason) ? reason : 'unknown'}`;
   });
