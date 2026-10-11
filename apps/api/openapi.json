@@ -2302,6 +2302,9 @@
           "400": {
             "description": "validation_failed"
           },
+          "403": {
+            "description": "forbidden: a mechanic who may not answer quotes"
+          },
           "404": {
             "description": "not_found: not sent to this garage"
           }
@@ -8016,7 +8019,7 @@
           },
           "closedReason": {
             "type": "string",
-            "description": "Set on the rows of a closed read",
+            "description": "Set when the request no longer waits for the garage: on the rows of a closed read, and on the detail",
             "enum": [
               "declined",
               "expired",
@@ -8031,7 +8034,7 @@
             "type": "string",
             "format": "date-time",
             "nullable": true,
-            "description": "Set with closedReason"
+            "description": "Set with closedReason on list rows only; null on the detail"
           },
           "driver": {
             "$ref": "#/components/schemas/DriverNameDto"
@@ -8379,7 +8382,7 @@
           },
           "closedReason": {
             "type": "string",
-            "description": "Set on the rows of a closed read",
+            "description": "Set when the request no longer waits for the garage: on the rows of a closed read, and on the detail",
             "enum": [
               "declined",
               "expired",
@@ -8394,7 +8397,7 @@
             "type": "string",
             "format": "date-time",
             "nullable": true,
-            "description": "Set with closedReason"
+            "description": "Set with closedReason on list rows only; null on the detail"
           },
           "recipient": {
             "$ref": "#/components/schemas/GarageRecipientDto"
@@ -9973,6 +9976,54 @@
           "nameEn"
         ]
       },
+      "PublicLabourDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "integer"
+          },
+          "toBani": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
+      "PublicPriceRowDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fromBani": {
+            "type": "integer",
+            "description": "The brand's range when the garage set one for the brand in context, else the default"
+          },
+          "toBani": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "fromBani",
+          "toBani"
+        ]
+      },
       "PublicGaragePhotoDto": {
         "type": "object",
         "properties": {
@@ -10120,6 +10171,21 @@
               "$ref": "#/components/schemas/PublicJobTypeDto"
             }
           },
+          "labour": {
+            "description": "Absent when either end of the labour range is unset",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicLabourDto"
+              }
+            ]
+          },
+          "prices": {
+            "description": "The public jobs with the range for the brand in context, in the list order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicPriceRowDto"
+            }
+          },
           "photos": {
             "description": "In the owner's order; empty when no photo is ready to be seen",
             "type": "array",
@@ -10142,6 +10208,7 @@
           "responseRate",
           "paymentMethods",
           "jobTypes",
+          "prices",
           "photos"
         ]
       },

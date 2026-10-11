@@ -14,6 +14,7 @@ export {
   daysUntil,
   formatClock,
   formatDay,
+  formatDuration,
   formatKm,
   formatLei,
   formatLeiRange,
@@ -22,8 +23,10 @@ export {
   formatPct,
   formatRating,
   formatSlot,
+  formatWholeLeiRange,
   relativeTime,
   requestAge,
+  requestExpiry,
 } from './formats';
 export { I18n, provideI18n } from './i18n';
 export {

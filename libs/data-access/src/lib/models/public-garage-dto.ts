@@ -8,6 +8,8 @@ import { PublicBrandDto } from '../models/public-brand-dto';
 import { PublicGarageBrandDto } from '../models/public-garage-brand-dto';
 import { PublicGaragePhotoDto } from '../models/public-garage-photo-dto';
 import { PublicJobTypeDto } from '../models/public-job-type-dto';
+import { PublicLabourDto } from '../models/public-labour-dto';
+import { PublicPriceRowDto } from '../models/public-price-row-dto';
 import { ResponseRateDto } from '../models/response-rate-dto';
 export interface PublicGarageDto {
 
@@ -41,6 +43,11 @@ export interface PublicGarageDto {
   jobTypes: Array<PublicJobTypeDto>;
 
   /**
+   * Absent when either end of the labour range is unset
+   */
+  labour?: PublicLabourDto;
+
+  /**
    * A workshop only.
    */
   latitude?: number;
@@ -56,6 +63,11 @@ export interface PublicGarageDto {
    * In the owner's order; empty when no photo is ready to be seen
    */
   photos: Array<PublicGaragePhotoDto>;
+
+  /**
+   * The public jobs with the range for the brand in context, in the list order; empty without one
+   */
+  prices: Array<PublicPriceRowDto>;
 
   /**
    * Out of 5, one decimal; null until reviews exist

@@ -23,7 +23,12 @@ import type { PrismaClient } from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
 import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
-import { PRICE_ROW_SELECT, priceListJobs } from '../price-list/price-list';
+import {
+  PRICE_ROW_SELECT,
+  type PriceRow,
+  priceListJobs,
+  publicPriceRows,
+} from '../price-list/price-list';
 
 // The one scope of every read a visitor can reach: spread into the `where`
 // of a garage read. A test fails when a public handler's read skips it.
@@ -47,6 +52,46 @@ const brandSlug = (brand: unknown) =>
   !CONTROL.test(brand)
     ? brand
     : undefined;
+
+// What the profile shows of the price list: the jobs a request can ask for,
+// the labour rate when both ends are set, and each public job's range for the
+// brand in context, listed as the garage ticked them for it.
+function priceListOf(
+  brands: {
+    brand: { id: string };
+    jobs: { jobTypeId: string }[];
+    stance: string;
+  }[],
+  labourFromBani: number | null,
+  labourToBani: number | null,
+  prices: PriceRow[],
+  rarActivities: string[],
+  brandId: string | undefined,
+): Pick<PublicGarageDto, 'jobTypes' | 'labour' | 'prices'> {
+  const held = brands.find((row) => row.brand.id === brandId);
+  const ticks = held?.jobs.map((job) => job.jobTypeId) ?? [];
+  const jobs = priceListJobs(prices, rarActivities);
+  return {
+    jobTypes: jobs
+      .filter((job) => job.public)
+      .map(({ jobTypeId, nameEn, nameRo }) => ({
+        id: jobTypeId,
+        nameEn,
+        nameRo,
+      })),
+    ...(labourFromBani !== null &&
+      labourToBani !== null && {
+        labour: { fromBani: labourFromBani, toBani: labourToBani },
+      }),
+    prices: publicPriceRows(
+      prices,
+      jobs,
+      brandId === undefined
+        ? undefined
+        : { id: brandId, refused: held?.stance === 'does_not_take', ticks },
+    ),
+  };
+}
 
 // Writes the answer only while the garage's generation is still the one the
 // read saw before it went to PostgreSQL: a drop in between wins.
@@ -146,6 +191,7 @@ export class PublicGaragesService {
             diesel: true,
             electric: true,
             hybrid: true,
+            jobs: { select: { jobTypeId: true } },
             petrol: true,
             stance: true,
           },
@@ -159,6 +205,8 @@ export class PublicGaragesService {
         },
         id: true,
         knownFor: true,
+        labourFromBani: true,
+        labourToBani: true,
         latitude: true,
         longitude: true,
         name: true,
@@ -199,6 +247,8 @@ export class PublicGaragesService {
       facilities,
       id,
       knownFor,
+      labourFromBani,
+      labourToBani,
       latitude,
       longitude,
       name,
@@ -223,13 +273,14 @@ export class PublicGaragesService {
       name,
       slug: held,
       ...brandAnswerWithFuels(brands, texts),
-      jobTypes: priceListJobs(prices, rarActivities)
-        .filter((job) => job.public)
-        .map(({ jobTypeId, nameEn, nameRo }) => ({
-          id: jobTypeId,
-          nameEn,
-          nameRo,
-        })),
+      ...priceListOf(
+        brands,
+        labourFromBani,
+        labourToBani,
+        prices,
+        rarActivities,
+        inContext?.id,
+      ),
       paymentMethods: {
         card: paymentCard,
         cash: paymentCash,

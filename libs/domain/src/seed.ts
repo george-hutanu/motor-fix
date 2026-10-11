@@ -218,6 +218,35 @@ const PEOPLE: Person[] = [
     name: 'Vlad Stan',
     roles: ['mechanic'],
   },
+  // A mechanic at the garage that takes requests who may not answer them, so
+  // a test can send it one and be refused the read.
+  {
+    at: { as: 'mechanic', garage: 'service-auto-militari' },
+    email: 'mecanic-militari@example.test',
+    lastRole: 'mechanic',
+    name: 'Dan Militaru',
+    roles: ['mechanic'],
+  },
+  // A receptionist and a mechanic who may answer quotes at the same garage,
+  // so a test can read a request as every permitted role.
+  {
+    at: { as: 'receptionist', garage: 'service-auto-militari' },
+    email: 'receptie-militari@example.test',
+    lastRole: 'receptionist',
+    name: 'Elena Militaru',
+    roles: ['receptionist'],
+  },
+  {
+    at: {
+      answersQuotes: true,
+      as: 'mechanic',
+      garage: 'service-auto-militari',
+    },
+    email: 'mecanic-oferte-militari@example.test',
+    lastRole: 'mechanic',
+    name: 'Sorin Militaru',
+    roles: ['mechanic'],
+  },
   {
     at: { answersQuotes: true, as: 'mechanic', garage: 'atelier-test' },
     email: 'mecanic-oferte@example.test',
@@ -598,16 +627,106 @@ async function quoteable(db: Client) {
        AND g.slug IN ('service-auto-militari', 'atelier-berceni', 'auto-pipera', 'atelier-test')
      ON CONFLICT DO NOTHING`,
   );
+  await priceList(db);
+}
+
+// Service Auto Militari's price list as the mock shows it: six jobs, the
+// suspension check without a top price so drivers never see it, a BMW range
+// for the front brakes and every job but the timing chain ticked for BMW. The
+// names are the catalogue's, which the API's loader reconciles by key on boot.
+const MILITARI_PRICES = [
+  [
+    'diagnosis',
+    'Diagnoză și citire coduri de eroare',
+    'Diagnosis and fault-code read',
+    15000,
+    22000,
+    30,
+  ],
+  [
+    'oil-service',
+    'Schimb de ulei și filtre',
+    'Oil and filter service',
+    25000,
+    40000,
+    60,
+  ],
+  [
+    'front-brakes',
+    'Plăcuțe și discuri de frână față',
+    'Front brake pads and discs',
+    89000,
+    140000,
+    120,
+  ],
+  [
+    'timing-chain',
+    'Kit lanț de distribuție',
+    'Timing chain kit',
+    420000,
+    680000,
+    480,
+  ],
+  ['ac-regas', 'Încărcare freon climă', 'Air-con regas', 28000, 36000, 45],
+  [
+    'suspension-alignment',
+    'Verificare suspensie și geometrie',
+    'Suspension check and alignment',
+    35000,
+    null,
+    90,
+  ],
+] as const;
+
+async function priceList(db: Client) {
+  const price = (
+    job: string,
+    brand: string | null,
+    range: [number, number | null],
+    duration: number | null,
+    position: number,
+  ) =>
+    db.query(
+      `INSERT INTO garage_price (id, garage_id, job_type_id, brand_id, from_bani, to_bani, duration_minutes, position, updated_at, updated_by)
+       SELECT gen_random_uuid(), g.id, j.id, b.id, $3, $4, $5, $6, now(), a.id
+       FROM garage g
+       JOIN job_type j ON j.key = $1
+       JOIN account a ON a.email = 'militari@example.test'
+       LEFT JOIN brand b ON b.key = $2
+       WHERE g.slug = 'service-auto-militari'
+       ON CONFLICT (garage_id, job_type_id, brand_id) DO UPDATE
+       SET from_bani = EXCLUDED.from_bani, to_bani = EXCLUDED.to_bani,
+           duration_minutes = EXCLUDED.duration_minutes, position = EXCLUDED.position`,
+      [job, brand, ...range, duration, position],
+    );
+  for (const [position, row] of MILITARI_PRICES.entries()) {
+    const [job, nameRo, nameEn, from, to, duration] = row;
+    await db.query(
+      `INSERT INTO job_type (id, key, name_ro, name_en, status, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, 'approved', now())
+       ON CONFLICT (key) DO NOTHING`,
+      [job, nameRo, nameEn],
+    );
+    await price(job, null, [from, to], duration, position);
+  }
+  await price('front-brakes', 'bmw', [110000, 170000], null, 2);
   await db.query(
-    `INSERT INTO garage_price (id, garage_id, job_type_id, from_bani, to_bani, duration_minutes, position, updated_at, updated_by)
-     SELECT gen_random_uuid(), g.id, j.id, 25000, 40000, 60, 0, now(), a.id
-     FROM garage g
-     JOIN job_type j ON j.key = 'oil-service'
-     JOIN account a ON a.email = 'militari@example.test'
-     WHERE g.slug = 'service-auto-militari'
-       AND NOT EXISTS (
-         SELECT 1 FROM garage_price p WHERE p.garage_id = g.id AND p.job_type_id = j.id
-       )`,
+    `UPDATE garage SET labour_to_bani = COALESCE(labour_to_bani, 24000)
+     WHERE slug = 'service-auto-militari'`,
+  );
+  await db.query(
+    `INSERT INTO garage_brand_job (garage_id, brand_id, job_type_id)
+     SELECT gb.garage_id, gb.brand_id, j.id
+     FROM garage_brand gb
+     JOIN garage g ON g.id = gb.garage_id AND g.slug = 'service-auto-militari'
+     JOIN brand b ON b.id = gb.brand_id AND b.key = 'bmw'
+     JOIN job_type j ON j.key = ANY($1)
+     ON CONFLICT DO NOTHING`,
+    [
+      MILITARI_PRICES.map(([job]) => job).filter(
+        (job) => job !== 'timing-chain',
+      ),
+    ],
   );
 }
 

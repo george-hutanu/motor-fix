@@ -1,4 +1,6 @@
 {
+  "concurrency": 2,
+  "testRunnerNodeArgs": ["--max-old-space-size=5120"],
   "thresholds": {
     "break": 79,
     "high": 80,

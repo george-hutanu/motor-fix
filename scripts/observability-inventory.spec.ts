@@ -14,6 +14,10 @@ import {
   writeEndpointCount,
 } from './observability-inventory.ts';
 
+// Under an in-place mutation run (scripts/mutation.ts) the repository's own
+// sources are instrumented, so a spec that reads them or times a scan skips.
+const repoIt = process.env['MUTATION_IN_PLACE'] ? it.skip : it;
+
 type Entry = Record<string, unknown>;
 
 const NONE = { alerts: 'none', dashboard: 'none', reason: 'added later' };
@@ -363,7 +367,7 @@ describe('the CLI', () => {
     });
   });
 
-  it('passes on this repository with one summary line', () => {
+  repoIt('passes on this repository with one summary line', () => {
     const result = run('--root', join(__dirname, '..'));
     expect(result.code).toBe(0);
     expect(result.out).toMatch(

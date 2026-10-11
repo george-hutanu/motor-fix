@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -126,7 +126,7 @@ bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: instal
 worker, `/health/live` and `/health/ready` (storage included), the seed, the viewport
 sweep (4 viewports — desktop, tablet, 390 and 320 px phones — × light/dark ×
 ro/en, axe, overflow, console, network, a screenshot each), your flows, and last
-the changed API operations, which may change the seeded rows; the unit suites are CI's and the end-to-end suite runs on demand and, its core flows, at release. It holds no
+the changed API operations, which may change the seeded rows; the unit suites are CI's, the integration suite runs on demand and at release, and the end-to-end suite runs on demand and, its core flows, at release. It holds no
 secret; the posting is yours.
 
 `--out` then holds `report.json`, `report.md`, `run.log`, `logs/`, `shots/`

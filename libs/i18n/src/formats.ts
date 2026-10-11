@@ -85,6 +85,41 @@ export function formatLeiRange(
   return lei(ends[0] === ends[1] ? [ends[0]] : ends, language);
 }
 
+// A price range read in whole lei, as drivers and owners see a price list:
+// each end in bani is rounded to the nearest leu before it is written.
+export function formatWholeLeiRange(
+  from: unknown,
+  to: unknown,
+  language: Language,
+): string {
+  if (!isNumber(from) || !isNumber(to)) return MISSING;
+  return formatLeiRange(
+    Math.round(from / 100) * 100,
+    Math.round(to / 100) * 100,
+    language,
+  );
+}
+
+// A working day is eight hours, so a job of whole working days reads in days.
+const WORKDAY_MINUTES = 480;
+
+const DAY_WORDS: Record<Language, readonly [string, string]> = {
+  en: ['day', 'days'],
+  ro: ['zi', 'zile'],
+};
+
+export function formatDuration(minutes: unknown, language: Language): string {
+  if (!isNumber(minutes) || minutes <= 0) return '';
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes % WORKDAY_MINUTES === 0) {
+    const days = minutes / WORKDAY_MINUTES;
+    return `${days} ${DAY_WORDS[language][days === 1 ? 0 : 1]}`;
+  }
+  const rest = minutes % 60;
+  const hours = `${Math.floor(minutes / 60)} h`;
+  return rest > 0 ? `${hours} ${rest}` : hours;
+}
+
 export function formatRating(value: unknown, language: Language): string {
   return isNumber(value) ? digits(value, language, 1, 1) : MISSING;
 }
@@ -316,6 +351,48 @@ export function requestAge(
     return AGO[language].hours(Math.floor(elapsed / (60 * MINUTE)));
   }
   return dayAndTime(date, language, now, { [-1]: YESTERDAY[language] });
+}
+
+const UNTIL: Record<
+  Language,
+  {
+    days(count: number): string;
+    hours(count: number): string;
+    soon: string;
+    past: string;
+  }
+> = {
+  en: {
+    days: (n) => `expires in ${n} ${n === 1 ? 'day' : 'days'}`,
+    hours: (n) => `expires in ${n} ${n === 1 ? 'hour' : 'hours'}`,
+    past: 'expired',
+    soon: 'expires in less than an hour',
+  },
+  ro: {
+    days: (n) => `expiră în ${n} ${de(n)}${n === 1 ? 'zi' : 'zile'}`,
+    hours: (n) => `expiră în ${n} ${de(n)}${n === 1 ? 'oră' : 'ore'}`,
+    past: 'a expirat',
+    soon: 'expiră în mai puțin de o oră',
+  },
+};
+
+// How long a request still waits for an answer, rounded down: whole days from
+// a day on, whole hours under it, then less than an hour, then expired.
+export function requestExpiry(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const left = date.getTime() - now.getTime();
+  const words = UNTIL[language];
+  if (left <= 0) return words.past;
+  if (left >= 24 * 60 * MINUTE) {
+    return words.days(Math.floor(left / (24 * 60 * MINUTE)));
+  }
+  if (left >= 60 * MINUTE) return words.hours(Math.floor(left / (60 * MINUTE)));
+  return words.soon;
 }
 
 const TODAY: Record<Language, string> = { en: 'today', ro: 'azi' };

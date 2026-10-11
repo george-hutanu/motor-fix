@@ -136,3 +136,35 @@ describe('the unit and integration suites', () => {
     ).toBe(false);
   });
 });
+
+// @traces 1170-FR-001 1170-FR-005
+// A commit and PR CI run one suite only, so a project whose specs are all in
+// the other suite has none to run; that is a pass, not "No tests found".
+describe('a chosen suite', () => {
+  const preset = (suite: string | undefined) => {
+    const saved = process.env['JEST_SUITE'];
+    if (suite === undefined) delete process.env['JEST_SUITE'];
+    else process.env['JEST_SUITE'] = suite;
+    try {
+      let config: { passWithNoTests?: boolean } = {};
+      jest.isolateModules(() => {
+        config = require('../jest.preset.cjs');
+      });
+      return config;
+    } finally {
+      if (saved === undefined) delete process.env['JEST_SUITE'];
+      else process.env['JEST_SUITE'] = saved;
+    }
+  };
+
+  it.each(['unit', 'integration'])(
+    'passes %s with no tests to run',
+    (suite) => {
+      expect(preset(suite).passWithNoTests).toBe(true);
+    },
+  );
+
+  it('keeps the whole run strict when no suite is chosen', () => {
+    expect(preset(undefined).passWithNoTests).toBeUndefined();
+  });
+});

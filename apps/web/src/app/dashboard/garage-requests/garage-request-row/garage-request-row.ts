@@ -1,10 +1,14 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  type ElementRef,
   inject,
   input,
+  viewChild,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { GARAGE_CLOSE_REASON_LABELS } from '@motor-fix/contracts/request-status';
 import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
 import { I18n, requestAge, TranslatePipe } from '@motor-fix/i18n';
@@ -12,22 +16,13 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { garageOf, Session } from '../../session';
-import {
-  type DeclineRequestData,
-  DeclineRequestDialog,
-  type DeclineRequestResult,
-} from '../decline-request-dialog/decline-request-dialog';
 import { GarageRequestsFeed } from '../garage-requests-feed';
-import {
-  type SendQuoteData,
-  SendQuoteDialog,
-  type SendQuoteResult,
-} from '../send-quote-dialog/send-quote-dialog';
+import { declineRequest, sendQuote } from '../request-actions';
 
 // One request as the garage sees it: who, the car, the jobs, the mechanic and
 // the age; a closed one says why it closed in place of the mechanic and age.
 // An open, unanswered row offers Trimite oferta and Refuză to whoever may
-// answer quotes.
+// answer quotes, and opens the whole request anywhere else it is clicked.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -45,6 +40,16 @@ export class GarageRequestRow {
   private readonly session = inject(Session);
   private readonly overlays = inject(Overlays);
   private readonly feed = inject(GarageRequestsFeed, { optional: true });
+  private readonly router = inject(Router);
+  private readonly opener = viewChild<ElementRef<HTMLButtonElement>>('opener');
+
+  constructor() {
+    // The drawer this row opened closed back to its page, drawn anew.
+    afterNextRender(() => {
+      if (this.feed?.takeFocus(this.row().id))
+        this.opener()?.nativeElement.focus();
+    });
+  }
 
   protected readonly canSend = computed(() => {
     const row = this.row();
@@ -71,33 +76,22 @@ export class GarageRequestRow {
     return reason ? GARAGE_CLOSE_REASON_LABELS[this.language()][reason] : null;
   });
 
-  protected async send() {
-    const result = await this.overlays.open<SendQuoteResult, SendQuoteData>(
-      SendQuoteDialog,
-      {
-        data: { requestId: this.row().id },
-        shape: 'dialog',
-        title: 'garage.quotes.send.title',
-      },
-    );
-    if (result === 'sent') this.feed?.sent(this.row().id);
-    else if (result === 'refused') this.feed?.reload();
+  protected readonly name = computed(() => {
+    const { car, driver } = this.row();
+    return `${driver.shortName} · ${car.brand} ${car.model} · ${car.year}`;
+  });
+
+  protected open() {
+    void this.router.navigate(['/app/garage/requests', this.row().id], {
+      state: { origin: this.router.url },
+    });
   }
 
-  protected async decline() {
-    const row = this.row();
-    const result = await this.overlays.open<
-      DeclineRequestResult,
-      DeclineRequestData
-    >(DeclineRequestDialog, {
-      data: {
-        car: `${row.car.brand} ${row.car.model} · ${row.car.year}`,
-        driver: row.driver.shortName,
-        requestId: row.id,
-      },
-      shape: 'dialog',
-      title: 'garage.requests.decline.title',
-    });
-    if (result === 'declined' || result === 'refused') this.feed?.reload();
+  protected send() {
+    void sendQuote(this.overlays, this.feed, this.row().id);
+  }
+
+  protected decline() {
+    void declineRequest(this.overlays, this.feed, this.row());
   }
 }

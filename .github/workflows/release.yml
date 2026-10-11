@@ -12,11 +12,15 @@ jobs:
   # Merges in quick succession queue their checks instead of each holding
   # five runners of the free plan's 20 at once. A waiting run is replaced by
   # a newer one (its own images and staging then skip); a running one finishes.
+  # A PR runs only the unit suite, so the release asks for the integration
+  # suite here: nothing is built or deployed until it passed.
   checks:
     concurrency:
       group: release-checks
       cancel-in-progress: false
     uses: ./.github/workflows/ci.yml
+    with:
+      integration: true
 
   images:
     needs: checks

@@ -101,7 +101,8 @@ to `tracker-sync.md` at its next event.
      (`/speckit-pr-test <n>`, the `pr-tester` subagent) reviews it once it
      has finished (`--run <id>`);
      the task and the PR's stage label stay QA. It leaves the unit suites to
-     CI, which runs them on the merge result, and the end-to-end suite to its
+     CI, which runs them on the merge result, the integration suite to its
+     on-demand run and the release, and the end-to-end suite to its
      on-demand run and the release's core flows. The run is
      the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
      GitHub runner boots the PR head, tests it in a browser and against the
@@ -412,29 +413,34 @@ source for anything the constitution does not fix.
   ESM-only, so the Nest projects' `test` targets run Jest with
   `--experimental-vm-modules`.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
-  project; the harness specs keep `npm run test:harness`; `test:mutation`
-  and `test:mutation:affected` run Stryker one project at a time, against the
-  floor in each project's `stryker.config.json`, which only rises. A spec that
+  project; the harness specs keep `npm run test:harness`. Stryker runs only
+  in the Mutation workflow, never on a laptop: one job per project or per
+  shard of one (each project's `test:mutation` target, the shards in
+  `scripts/mutation-shards.json`), against the floor in each project's
+  `stryker.config.json`, which only rises. The root `test:mutation` and
+  `test:mutation:affected` scripts stay (431-FR-006), never for a laptop. A spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`;
   `npm run test:unit` leaves those out and `npm run test:integration` runs
   only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
   tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
-  and `REDIS_URL` from `.env.example`. The pre-commit hook needs neither: when
-  an affected project has integration specs it starts and migrates the
-  worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
-  project `mf-test-<worktree>-<hash>`, left running between commits; Docker
-  required), and it refuses a commit with `JEST_SUITE` set. Removing a
+  and `REDIS_URL` from `.env.example`. Like the end-to-end suite they run on
+  demand, never per PR or per commit: the pre-commit hook sets
+  `JEST_SUITE=unit` and needs no Docker. To run them by hand, `eval
+  "$(node scripts/test-services.ts origin/main)"` starts and migrates the
+  worktree's own PostgreSQL and Redis (compose project
+  `mf-test-<worktree>-<hash>`, left running), then
+  `JEST_SUITE=integration npx nx affected -t test`. Removing a
   worktree takes its stack down with its volumes, and each `/speckit-watch`
   pass runs `test-services.ts sweep`, which stops those of merged, closed or
   deleted worktrees; neither fails on Docker. By hand,
   `node scripts/test-services.ts down [<worktree>] [--volumes]` stops one
   stack (the current checkout's by default).
-- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
+- PR CI: `.github/workflows/ci.yml`, seven jobs, so a PR holds at most seven
   of the free plan's 20 concurrent runners: Checks (one runner and one
   install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
   and Compose stack, where `docker-compose.yml` boots and creates the bucket;
-  each step runs even after an earlier one failed), Unit and integration tests
-  (PostgreSQL+PostGIS and Redis services), Docker build (`web`, `node-app`,
+  each step runs even after an earlier one failed), Unit tests (no
+  services), Docker build (`web`, `node-app`,
   reading the layer cache that `release.yml` writes on `main`, and
   `keycloak`), then `CI OK`, which fails when any of them did; a skipped
   job or step counts as passed there and at the merge gate. A PR that
@@ -445,18 +451,25 @@ source for anything the constitution does not fix.
   `.nvmrc`, `docker/`, `infra/keycloak/`, `libs/domain/prisma/`,
   `apps/*/project.json`, build config), Compose stack only on `docker-compose*.yml` or `infra/`, Harness
   and its browser only on `.claude/`, `.specify/`, `.husky/`, `.github/`,
-  `scripts/` or `package*.json`; a change to `ci.yml` runs all three. The
-  sixth job, E2E tests (Playwright `web-e2e`, four workers, servers started
+  `scripts/` or `package*.json`; a change to `ci.yml` runs all three. Integration tests
+  (PostgreSQL+PostGIS and Redis services, the migrations applied) runs only
+  on demand and when a caller asks for it (the `workflow_call` input
+  `integration`, which `release.yml` sets, so a release runs the suite before
+  anything is built). The seventh job, E2E tests (Playwright `web-e2e`, four workers, servers started
   in the job; a test that passes only on a retry fails; the report uploaded),
   runs only on demand: `gh workflow run ci.yml --ref <branch>` runs every
-  job on every project, E2E and Docker build included. Locally the suite is
+  job on every project, Integration, E2E and Docker build included. Locally the suite is
   `npx nx run web-e2e:e2e` under `scripts/heavy.sh`. The PR title (Conventional Commit) is checked by its
   own workflow, `.github/workflows/pr-title.yml`, which also runs when the
   PR is edited, so a corrected title re-checks without re-running CI. PRs
   run `nx affected`; `release.yml` calls the
   same workflow, which then runs every project. Mutation testing never runs
-  in PR CI: `.github/workflows/mutation.yml` runs it nightly on `main` and on
-  `workflow_dispatch`.
+  in PR CI: `.github/workflows/mutation.yml` runs it every 3 days on `main`
+  and on `workflow_dispatch` (`projects`, `shards`, `full`), one job per
+  project or per shard of one split in `scripts/mutation-shards.json`, five
+  at a time, each with its own PostgreSQL, Redis, cache and report and its
+  own time limit; a summary job holds each project's combined score to its
+  floor.
 - Release: `.github/workflows/release.yml` builds one image per app (root
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
   core flows there (tests tagged `@core`: search to a quote request, the

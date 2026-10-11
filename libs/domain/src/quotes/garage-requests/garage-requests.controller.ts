@@ -57,6 +57,9 @@ export class GarageRequestsController {
   @Get(':id')
   @ApiOkResponse({ type: GarageRequestDto })
   @ApiBadRequestResponse({ description: 'validation_failed' })
+  @ApiForbiddenResponse({
+    description: 'forbidden: a mechanic who may not answer quotes',
+  })
   @ApiNotFoundResponse({ description: 'not_found: not sent to this garage' })
   get(
     @CurrentActor() actor: Actor,
