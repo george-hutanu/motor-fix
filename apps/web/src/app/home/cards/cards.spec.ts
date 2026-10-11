@@ -64,6 +64,14 @@ const cards = (page: HTMLElement) => [
 ];
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
+// The name a screen reader reads: the text, without what is hidden from it.
+const spoken = (el: Element) => {
+  const copy = el.cloneNode(true) as Element;
+  for (const hidden of copy.querySelectorAll('[aria-hidden="true"]')) {
+    hidden.remove();
+  }
+  return said(copy);
+};
 const lists = (card: Element) =>
   [...card.querySelectorAll('.list')].map((list) => said(list));
 
@@ -315,12 +323,22 @@ describe('HomeCards', () => {
   it('names a card by the garage, its answer for the brand and its rating', async () => {
     const [card] = cards(await render([garageOf()]));
 
-    expect(card.getAttribute('aria-label')).toBe(
-      'Service Auto Militari, Lucrează pe BMW, 4,9',
-    );
+    // Named by its own text, so the name holds what the card shows (axe
+    // label-content-name-mismatch); the rating is read out beside the name.
+    expect(card.hasAttribute('aria-label')).toBe(false);
+    const name = spoken(card);
+    expect(name).toMatch(/^Service Auto Militari\s*Rating 4,9 din 5/);
+    expect(name).toContain('Lucrează pe BMW');
     expect(
       card.querySelector('mf-rating-dial')?.getAttribute('aria-hidden'),
     ).toBe('true');
+  });
+
+  // @traces 227-FR-014
+  it('reads no rating for a garage nobody has reviewed', async () => {
+    const [card] = cards(await render([garageOf({ rating: null })]));
+
+    expect(card.querySelector('.sr-only')).toBeNull();
   });
 
   // @traces 227-FR-006

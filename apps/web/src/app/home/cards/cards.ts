@@ -42,14 +42,14 @@ export class HomeCards {
     );
   }
 
-  protected rating(garage: HomeGarageDto) {
+  // What the dial shows, read beside the name; nothing before a review, which
+  // the reviews line already says.
+  protected rated(garage: HomeGarageDto) {
     return garage.rating === null
-      ? this.i18n.t('public.home.preview.noReviews')
-      : formatRating(garage.rating, this.i18n.language());
-  }
-
-  protected name(garage: HomeGarageDto) {
-    return [garage.name, this.stance(garage), this.rating(garage)].join(', ');
+      ? null
+      : this.i18n.t('shell.gauge.rating', {
+          value: formatRating(garage.rating, this.i18n.language()),
+        });
   }
 
   // The city as written, the distance or a mobile mechanic's area.

@@ -119,7 +119,7 @@
         "team": "Aici vei vedea mecanicii service‑ului și ce poate face fiecare."
       }
     },
-    "counter": "{label}, {waiting} în așteptare",
+    "counter": "{waiting} în așteptare",
     "empty": "Nimic aici încă.",
     "home": "MotorFix, pagina principală",
     "invite": "Invită în echipă",

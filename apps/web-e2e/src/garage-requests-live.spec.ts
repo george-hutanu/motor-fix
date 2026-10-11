@@ -75,7 +75,7 @@ const tab = (page: Page) =>
     .getByRole('navigation', { name: 'Panou service' })
     .getByRole('link', { name: /^Cereri/ });
 const count = (label: string | null) =>
-  Number(/, (\d+) în așteptare$/.exec(label ?? '')?.[1] ?? Number.NaN);
+  Number(/(\d+) în așteptare$/.exec(label ?? '')?.[1] ?? Number.NaN);
 
 // @seeded: a driver's request reaches a signed-in garage without a reload.
 test.describe('a garage’s quote requests, live @seeded', () => {
@@ -116,7 +116,7 @@ test.describe('a garage’s quote requests, live @seeded', () => {
     await expect
       .poll(
         async () =>
-          count(await entry(page).getAttribute('aria-label')) ===
+          count(await entry(page).locator('.sr-only').textContent()) ===
           (await waiting(request, owner)),
         { timeout: 5_000 },
       )
@@ -130,7 +130,7 @@ test.describe('a garage’s quote requests, live @seeded', () => {
     await expect
       .poll(
         async () =>
-          count(await tab(page).getAttribute('aria-label')) ===
+          count(await tab(page).locator('.sr-only').textContent()) ===
           (await waiting(request, owner)),
         { timeout: 5_000 },
       )

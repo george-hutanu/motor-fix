@@ -31,7 +31,12 @@ export class SignInDialog {
 
   // overMaintenance: /admin, where admins sign in while the site is down.
   async start({ overMaintenance = false } = {}): Promise<void> {
-    const me = await this.session.load();
+    // At /admin a browser that has seen no account asks for no session: a
+    // visitor's ask is refused, and the console reports that 401 as an error.
+    const me =
+      overMaintenance && !this.session.roleHint()
+        ? null
+        : await this.session.load();
     if (me) {
       await this.router.navigateByUrl(me.landing);
       return;

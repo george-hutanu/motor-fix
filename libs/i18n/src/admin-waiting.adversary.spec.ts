@@ -36,12 +36,12 @@ describe('the admin header line in each plural form', () => {
     expect(await line('ro', 3)).not.toContain('-');
   });
 
-  it('fills the counter label with the label and the full number', async () => {
+  it('fills the counter with the full number, read after the visible label', async () => {
     const i18n = TestBed.inject(I18n);
     await i18n.use('en');
 
-    expect(
-      i18n.t('shell.frame.counter', { label: 'Garages', waiting: 1234 }),
-    ).toBe('Garages, 1234 waiting');
+    expect(i18n.t('shell.frame.counter', { waiting: 1234 })).toBe(
+      '1234 waiting',
+    );
   });
 });

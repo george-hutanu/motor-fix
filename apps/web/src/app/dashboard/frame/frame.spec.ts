@@ -25,6 +25,15 @@ import { Live } from '../live';
 import { Session } from '../session';
 import { dashboardRoutes } from '../views';
 
+// The name a screen reader reads: the text, without what is hidden from it.
+const spoken = (el: Element | null | undefined) => {
+  const copy = el?.cloneNode(true) as Element | undefined;
+  for (const hidden of copy?.querySelectorAll('[aria-hidden="true"]') ?? []) {
+    hidden.remove();
+  }
+  return copy?.textContent?.replace(/\s+/g, ' ').trim();
+};
+
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
   toast: jest.fn(),
@@ -768,9 +777,8 @@ describe('the admin header', () => {
     expect(
       garagesEntry(element)?.querySelector('.chip')?.textContent?.trim(),
     ).toBe('4');
-    expect(garagesEntry(element)?.getAttribute('aria-label')).toBe(
-      'Service‑uri, 4 în așteptare',
-    );
+    expect(garagesEntry(element)?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(garagesEntry(element))).toBe('Service‑uri 4 în așteptare');
     expect(element.querySelectorAll('aside nav .chip')).toHaveLength(1);
     expect(element.querySelectorAll('mf-dashboard-tab-bar .chip')).toHaveLength(
       1,
@@ -781,7 +789,8 @@ describe('the admin header', () => {
     const { element } = await admin(0);
 
     expect(garagesEntry(element)?.querySelector('.chip')).toBeNull();
-    expect(garagesEntry(element)?.getAttribute('aria-label')).toBeNull();
+    expect(garagesEntry(element)?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(garagesEntry(element))).not.toMatch(/așteptare|waiting/);
     expect(element.querySelectorAll('.chip-skeleton')).toHaveLength(0);
   });
 
@@ -838,9 +847,8 @@ describe('the admin header', () => {
     await TestBed.inject(I18n).use('en');
     await settle(harness);
 
-    expect(garagesEntry(element)?.getAttribute('aria-label')).toBe(
-      'Garages, 4 waiting',
-    );
+    expect(garagesEntry(element)?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(garagesEntry(element))).toBe('Garages 4 waiting');
   });
 
   it('shows no admin line on another dashboard and reads no overview there', async () => {
@@ -1190,8 +1198,9 @@ describe('the requests count on the garage menu and bar', () => {
     expect(requestReads).toHaveBeenCalledWith({ status: 'waiting' });
     expect(chip(requestsEntry(element))).toBe('3');
     expect(chip(requestsTab(element))).toBe('3');
-    expect(requestsEntry(element)?.getAttribute('aria-label')).toBe(
-      'Cereri de ofertă, 3 în așteptare',
+    expect(requestsEntry(element)?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(requestsEntry(element))).toBe(
+      'Cereri de ofertă 3 în așteptare',
     );
     expect(element.querySelectorAll('aside nav .chip')).toHaveLength(1);
   });
@@ -1201,7 +1210,8 @@ describe('the requests count on the garage menu and bar', () => {
 
     expect(chip(requestsEntry(element))).toBeUndefined();
     expect(chip(requestsTab(element))).toBeUndefined();
-    expect(requestsEntry(element)?.getAttribute('aria-label')).toBeNull();
+    expect(requestsEntry(element)?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(requestsEntry(element))).not.toMatch(/așteptare|waiting/);
   });
 
   it('moves the count when a request arrives, without a reload', async () => {

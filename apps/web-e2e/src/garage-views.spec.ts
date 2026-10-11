@@ -79,7 +79,7 @@ const shown = (label: string) =>
   COUNTED.includes(label) ? new RegExp(`^${label}\\s*\\d*$`) : label;
 const named = (label: string) =>
   COUNTED.includes(label)
-    ? new RegExp(`^${label}(, \\d+ (în așteptare|waiting))?$`)
+    ? new RegExp(`^${label}( \\d+ (în așteptare|waiting))?$`)
     : label;
 
 const title = (page: Page) => page.getByRole('heading', { level: 1 });
