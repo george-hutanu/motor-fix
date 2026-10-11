@@ -5,6 +5,10 @@ import { dirname, join } from 'node:path';
 
 import { checkInventory } from './observability-inventory.ts';
 
+// Under an in-place mutation run (scripts/mutation.ts) the repository's own
+// sources are instrumented, so a spec that reads them or times a scan skips.
+const repoIt = process.env['MUTATION_IN_PLACE'] ? it.skip : it;
+
 type Entry = Record<string, unknown>;
 
 const NONE = { alerts: 'none', dashboard: 'none', reason: 'added later' };
@@ -309,14 +313,17 @@ describe('queues and clients in comments', () => {
 });
 
 describe('size and command line', () => {
-  it('scans a very long single-line string and a large comment in bounded time', () => {
-    const big = `const a = '${'x'.repeat(5_000_000)}';\n/*${' https://hid.eu\n'.repeat(200_000)}*/\nfetch('https://real.eu');\n`;
-    const started = Date.now();
-    expect(scan(big)).toEqual(missing('real.eu'));
-    expect(Date.now() - started).toBeLessThan(10_000);
-  });
+  repoIt(
+    'scans a very long single-line string and a large comment in bounded time',
+    () => {
+      const big = `const a = '${'x'.repeat(5_000_000)}';\n/*${' https://hid.eu\n'.repeat(200_000)}*/\nfetch('https://real.eu');\n`;
+      const started = Date.now();
+      expect(scan(big)).toEqual(missing('real.eu'));
+      expect(Date.now() - started).toBeLessThan(10_000);
+    },
+  );
 
-  it('scans a file of many short lines in bounded time', () => {
+  repoIt('scans a file of many short lines in bounded time', () => {
     const lines = "const a = 'it''s';\n".repeat(300_000);
     const started = Date.now();
     expect(scan(`${lines}fetch('https://real.eu');\n`)).toEqual(

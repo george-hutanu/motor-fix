@@ -141,10 +141,47 @@
       "submit": "Refuză",
       "title": "De ce refuzați cererea?"
     },
+    "detail": {
+      "car": "Mașina",
+      "closed": {
+        "accepted_elsewhere": "Cererea s‑a închis: clientul a ales alt service",
+        "account_closed": "Cererea s‑a închis: contul clientului a fost închis",
+        "cancelled": "Cererea s‑a închis: clientul a anulat‑o",
+        "declined": "Cererea s‑a închis: un coleg a refuzat‑o",
+        "expired": "Cererea s‑a închis: a expirat",
+        "garage_suspended": "Cererea s‑a închis: service‑ul este suspendat",
+        "quoted": "Cererea s‑a închis: un coleg a trimis o ofertă",
+        "unknown": "Cererea s‑a închis."
+      },
+      "customer": "Clientul",
+      "description": "Descriere",
+      "error": "Nu am putut încărca cererea. Încearcă din nou.",
+      "forbidden": "Nu ai dreptul să citești cererile",
+      "fuel": {
+        "diesel": "motorină",
+        "electric": "electric",
+        "hybrid": "hibrid",
+        "petrol": "benzină"
+      },
+      "jobs": "Lucrări",
+      "mechanic": "Mecanic",
+      "noDescription": "Clientul nu a adăugat o descriere.",
+      "notFound": "Cererea nu mai este disponibilă",
+      "notOffered": {
+        "few": "Nu faceți aceste lucrări pe {brand}",
+        "one": "Nu faceți această lucrare pe {brand}",
+        "other": "Nu faceți aceste lucrări pe {brand}"
+      },
+      "phone": "Telefon",
+      "plate": "Număr de înmatriculare",
+      "received": "primită {age}",
+      "title": "Cerere de ofertă"
+    },
     "empty": "Nicio cerere nouă. Te anunțăm când apare una.",
     "heading": "Cereri de ofertă",
     "loading": "Se încarcă cererile",
     "notOffered": "nu faceți",
+    "open": "Deschide cererea {name}",
     "reconnecting": "Reconectare…",
     "retry": "Încearcă din nou",
     "seeAll": "Vezi toate",

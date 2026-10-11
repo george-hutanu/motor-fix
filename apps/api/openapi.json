@@ -2399,6 +2399,9 @@
           "400": {
             "description": "validation_failed"
           },
+          "403": {
+            "description": "forbidden: a mechanic who may not answer quotes"
+          },
           "404": {
             "description": "not_found: not sent to this garage"
           }
@@ -8144,7 +8147,7 @@
           },
           "closedReason": {
             "type": "string",
-            "description": "Set on the rows of a closed read",
+            "description": "Set when the request no longer waits for the garage: on the rows of a closed read, and on the detail",
             "enum": [
               "declined",
               "expired",
@@ -8159,7 +8162,7 @@
             "type": "string",
             "format": "date-time",
             "nullable": true,
-            "description": "Set with closedReason"
+            "description": "Set with closedReason on list rows only; null on the detail"
           },
           "driver": {
             "$ref": "#/components/schemas/DriverNameDto"
@@ -8507,7 +8510,7 @@
           },
           "closedReason": {
             "type": "string",
-            "description": "Set on the rows of a closed read",
+            "description": "Set when the request no longer waits for the garage: on the rows of a closed read, and on the detail",
             "enum": [
               "declined",
               "expired",
@@ -8522,7 +8525,7 @@
             "type": "string",
             "format": "date-time",
             "nullable": true,
-            "description": "Set with closedReason"
+            "description": "Set with closedReason on list rows only; null on the detail"
           },
           "recipient": {
             "$ref": "#/components/schemas/GarageRecipientDto"

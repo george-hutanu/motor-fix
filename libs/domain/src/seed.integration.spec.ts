@@ -118,6 +118,16 @@ describe('seed', () => {
         roles: ['garage'],
         status: 'active',
       },
+      'mecanic-militari@example.test': {
+        lastRole: 'mechanic',
+        roles: ['mechanic'],
+        status: 'active',
+      },
+      'mecanic-oferte-militari@example.test': {
+        lastRole: 'mechanic',
+        roles: ['mechanic'],
+        status: 'active',
+      },
       'mecanic-oferte@example.test': {
         lastRole: 'mechanic',
         roles: ['mechanic'],
@@ -131,6 +141,11 @@ describe('seed', () => {
       'militari@example.test': {
         lastRole: 'garage',
         roles: ['garage'],
+        status: 'active',
+      },
+      'receptie-militari@example.test': {
+        lastRole: 'receptionist',
+        roles: ['receptionist'],
         status: 'active',
       },
       'receptie@example.test': {
@@ -193,6 +208,18 @@ describe('seed', () => {
     const militari = by('militari@example.test')?.memberships[0];
     expect(militari?.role).toBe('owner');
     expect(militari?.garageId).not.toBe(owner?.garageId);
+    // A mechanic there who may not answer quotes, for the reads it is refused.
+    const refused = by('mecanic-militari@example.test')?.mechanic;
+    expect(refused?.garageId).toBe(militari?.garageId);
+    expect(refused?.canAnswerQuotes).toBe(false);
+    // A receptionist and a mechanic who may answer quotes there, for the
+    // reads every permitted role of a recipient garage is given.
+    const desk = by('receptie-militari@example.test')?.memberships[0];
+    expect(desk?.role).toBe('receptionist');
+    expect(desk?.garageId).toBe(militari?.garageId);
+    const permitted = by('mecanic-oferte-militari@example.test')?.mechanic;
+    expect(permitted?.garageId).toBe(militari?.garageId);
+    expect(permitted?.canAnswerQuotes).toBe(true);
   });
 
   it('gives every account the test password as an argon2id hash', async () => {

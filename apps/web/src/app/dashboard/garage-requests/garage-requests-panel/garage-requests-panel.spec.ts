@@ -372,6 +372,7 @@ describe('the requests panel with a limit', () => {
   });
 });
 
+// The PR tester measured this panel off the 4 px grid and the type scale.
 describe('type scale', () => {
   // @traces 975-type-scale-FR-001
   // @traces 975-type-scale-FR-003
@@ -380,6 +381,25 @@ describe('type scale', () => {
     join(__dirname, 'garage-requests-panel.css'),
     'utf8',
   );
+
+  it('pads and spaces on the 4 px grid', () => {
+    for (const [, value] of stylesheet.matchAll(
+      /(?:gap|padding|margin):\s*([^;]+);/g,
+    ))
+      for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
+        expect(Number.parseFloat(px) % 4).toBe(0);
+  });
+
+  // Lap 4: at 320 px the 24 px sides left a row's Trimite oferta too
+  // narrow for its label on one line.
+  it('pads its sides at 16 px on a phone', () => {
+    const phone = stylesheet.slice(
+      stylesheet.indexOf('@media (max-width: 767.98px)'),
+    );
+    expect(phone).toMatch(
+      /\.panel\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,
+    );
+  });
 
   it('takes every text size from a Cockpit size token', () => {
     const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];

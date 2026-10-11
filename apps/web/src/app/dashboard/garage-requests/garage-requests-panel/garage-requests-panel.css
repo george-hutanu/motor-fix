@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-4);
-  padding: var(--mf-space-5) 22px;
+  padding: var(--mf-space-5) var(--mf-space-6);
   background: var(--mf-panel);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
@@ -76,4 +76,10 @@ p {
 .see-all:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus);
   outline-offset: var(--mf-focus-offset);
+}
+/* A phone keeps 16 px sides, so a row's buttons have room for their labels. */
+@media (max-width: 767.98px) {
+  .panel {
+    padding-inline: var(--mf-space-4);
+  }
 }

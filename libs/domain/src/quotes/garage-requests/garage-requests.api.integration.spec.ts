@@ -880,13 +880,28 @@ describe('GET /garage/requests/:id', () => {
     for (const auth of [
       bearer(militari.owner, 'garage'),
       bearer(militari.answering, 'mechanic'),
-      bearer(dinamo.plain, 'mechanic'),
       bearer(andrei, 'driver'),
     ]) {
       expect((await get(`/garage/requests/${request.id}`, auth)).status).toBe(
         404,
       );
     }
+  });
+
+  // @traces 347-FR-008
+  it('answers 403 to a mechanic of the asked garage without permission to answer', async () => {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const request = await world.request(andrei);
+    await world.recipient(request.id, dinamo.garage.id);
+
+    const res = await get(
+      `/garage/requests/${request.id}`,
+      bearer(dinamo.plain, 'mechanic'),
+    );
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('forbidden');
   });
 });
 

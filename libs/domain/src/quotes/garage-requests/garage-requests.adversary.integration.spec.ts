@@ -77,20 +77,25 @@ describe('GET /garage/requests as each caller', () => {
     },
   );
 
-  it('answers 404 never 403 to the mechanic without the permission', async () => {
+  // @traces 347-FR-008
+  it('answers the mechanic without the permission 404 on the list and 403 on the detail, with nothing of the request', async () => {
     const s = await setting();
     const { request } = await sentTo(s);
     const auth = bearer(s.dinamo.plain, 'mechanic');
 
-    for (const path of ['/garage/requests', `/garage/requests/${request.id}`]) {
+    for (const [path, status] of [
+      ['/garage/requests', 404],
+      [`/garage/requests/${request.id}`, 403],
+    ] as const) {
       const res = await get(path, auth);
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(status);
       expect(res.body.items).toBeUndefined();
       expect(JSON.stringify(res.body)).not.toContain(DESCRIPTION);
     }
   });
 
-  it('answers 404 to a mechanic whose permission was switched off after the token was issued', async () => {
+  // @traces 347-FR-008
+  it('answers 403 to a mechanic whose permission was switched off after the token was issued', async () => {
     const s = await setting();
     const { request } = await sentTo(s);
     await prisma.mechanic.update({
@@ -103,7 +108,7 @@ describe('GET /garage/requests as each caller', () => {
       bearer(s.dinamo.answering, 'mechanic'),
     );
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 
   it('answers 404 to the owning driver and to another driver', async () => {
@@ -637,9 +642,14 @@ describe('GET /garage/requests writes nothing', () => {
     await get('/garage/requests');
 
     expect(await writes()).toEqual(before);
+    // Only the first time the garage saw the request is noted.
+    const unseen = (all: typeof rows) =>
+      all.map(({ firstSeenAt: _, ...row }) => row);
     expect(
-      await prisma.requestRecipient.findMany({ orderBy: { id: 'asc' } }),
-    ).toEqual(rows);
+      unseen(
+        await prisma.requestRecipient.findMany({ orderBy: { id: 'asc' } }),
+      ),
+    ).toEqual(unseen(rows));
   });
 });
 

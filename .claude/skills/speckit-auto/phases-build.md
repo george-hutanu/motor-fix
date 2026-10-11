@@ -55,8 +55,8 @@ Invoke `speckit-harden`. It runs the mechanical audits (`artifact-lint.mjs`,
 `diff-audit.mjs`), then two subagents: `test-adversary` (tests from outside
 the author's model) and `code-reviewer` (the durability read) — then fixes
 what they find. Mutation testing is not part of this phase: it never runs on
-this machine or in PR CI, only in `.github/workflows/mutation.yml` (nightly on
-`main`, or `workflow_dispatch` with `projects`).
+this machine or in PR CI, only in `.github/workflows/mutation.yml` (every 3 days on
+`main`, or `workflow_dispatch` with `projects` and `shards`).
 
 Gate overrides:
 

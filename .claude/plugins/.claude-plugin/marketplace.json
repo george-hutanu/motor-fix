@@ -1,0 +1,11 @@
+{
+  "name": "motorfix",
+  "owner": { "name": "george-hutanu" },
+  "plugins": [
+    {
+      "description": "Chief's PR ledger, dispatch guard, build board and quieter transcripts for motor-fix",
+      "name": "motorfix-chief",
+      "source": "./motorfix-chief"
+    }
+  ]
+}

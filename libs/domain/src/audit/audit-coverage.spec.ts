@@ -143,6 +143,9 @@ const NOT_CHANGES = new Set([
   // Reading a notification is not recorded (the bell's story).
   'BellService.read',
   'BellService.readAll',
+  // Reading a quote request notes when the garage first saw it; a read is
+  // not a change to anyone's data.
+  'GarageRequestsService.get',
   // Reminders follow a car's or a booking's dates: the stories that change
   // those audit the change, and sending a reminder is not one.
   'RemindersService.cancelBooking',

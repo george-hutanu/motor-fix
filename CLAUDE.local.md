@@ -37,7 +37,7 @@ feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
 
 ## Gates
 
-Constitution v3.1.0 (`.specify/memory/constitution.md`) maps each rule to its
+Constitution v3.2.0 (`.specify/memory/constitution.md`) maps each rule to its
 check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |
@@ -53,7 +53,7 @@ check; its Enforcement section is the authority. In short:
 | `agent-model-router.mjs` | before an Agent call | routes `code-reviewer`/`spec-reviewer` to sonnet or fable by diff size; rewrites `model` or does nothing, never refuses (`SPECKIT_MODEL_ROUTER=0` to stop it) |
 | `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus instincts above the confidence threshold |
 | `session-telemetry.mjs` | before the agent finishes | counts-only ledger per session in `.specify/telemetry/` |
-| `.husky/pre-commit` | every real commit | identity check, then affected `typecheck` + `test` and `lint` in a `scripts/heavy.sh` slot |
+| `.husky/pre-commit` | every real commit | identity check, then affected `typecheck` + unit `test` and `lint` in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*`, `e2e/` and skip Biome or Jest
 until that tool is installed. The harness's own specs run on vitest, apart.
