@@ -3,7 +3,7 @@ Mode: harden — every task in tasks.md is checked off.
 - `/speckit-harden` is the gate between implement and review: mechanical audits,
   adversarial tests, mutation score, durability read, fixes re-verified.
 - Mutation is owned by the Nx project it covers and runs only in the Mutation
-  workflow (`gh workflow run mutation.yml -f projects=<project>`), never on
+  workflow (`gh workflow run mutation.yml --ref <branch> -f projects=<project>`), never on
   this machine; the `mutation-runner` agent reads its report. The `break`
   floor in that project's `stryker.config.json` is a ratchet — raise it after a harden pass, never lower
   it. A surviving mutant is a missing assertion unless it is genuinely
