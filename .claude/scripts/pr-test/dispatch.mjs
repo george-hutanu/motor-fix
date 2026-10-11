@@ -13,7 +13,7 @@
 // --local. The workflow runs only for people with write access, with read-only
 // permissions and no secret, so the flows code it imports can reach nothing.
 //
-//   node .claude/scripts/pr-test/dispatch.mjs <pr> [--flows <file.mjs>] [--routes /,/cockpit]
+//   node .claude/scripts/pr-test/dispatch.mjs <pr> [--flows <file.mjs> [--spec <spec.md>]] [--routes /,/cockpit]
 //        [--lap <n>] [--out <dir>] [--ref main] [--no-wait | --run <id>]
 //
 // No agent waits on a run (its prompt cache would go cold): --no-wait dispatches,
@@ -38,6 +38,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
+import { activeFeature } from "../lib/feature.mjs";
+import { checkFlows } from "./precheck.mjs";
 import { qaRunLine } from "./qa-run.mjs";
 
 export const WORKFLOW = "pr-qa.yml";
@@ -46,7 +48,7 @@ export const FLOWS_LIMIT = 60000;
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
-const VALUED = ["--flows", "--routes", "--lap", "--out", "--ref", "--run"];
+const VALUED = ["--flows", "--spec", "--routes", "--lap", "--out", "--ref", "--run"];
 
 export function parseArgs(argv) {
   const flag = (n, d) => {
@@ -56,6 +58,7 @@ export function parseArgs(argv) {
   return {
     pr: argv.find((a, i) => /^\d+$/.test(a) && !VALUED.includes(argv[i - 1])),
     flows: flag("flows"),
+    spec: flag("spec"),
     routes: flag("routes", "/,/cockpit"),
     lap: flag("lap", "1"),
     out: flag("out"),
@@ -196,7 +199,7 @@ async function awaitPrRun(opt, sha) {
 async function main(argv) {
   const opt = parseArgs(argv);
   if (!opt.pr) {
-    console.error("usage: dispatch.mjs <pr> [--flows file.mjs] [--routes …] [--lap n] [--out dir] [--ref main] [--no-wait | --run <id>]");
+    console.error("usage: dispatch.mjs <pr> [--flows file.mjs [--spec spec.md]] [--routes …] [--lap n] [--out dir] [--ref main] [--no-wait | --run <id>]");
     return 64;
   }
   if (opt.run !== undefined && !/^\d+$/.test(opt.run)) {
@@ -224,6 +227,15 @@ async function main(argv) {
     return readRun({ pr: opt.pr, sha, out, run: { databaseId: Number(opt.run), url: run.url }, conclusion: run.conclusion });
   }
   if (cloud) return awaitPrRun(opt, sha);
+  if (opt.flows) {
+    // The flows' own lap-1 failures, caught before a run is spent on them (precheck.mjs).
+    const problems = await checkFlows({ flows: opt.flows, spec: opt.spec ?? (activeFeature(repoRoot) && join(activeFeature(repoRoot).dir, "spec.md")) });
+    if (problems.length) {
+      for (const p of problems) console.error(`dispatch: ${p}`);
+      console.error("dispatch: the flows fail the pre-check; nothing was dispatched");
+      return 64;
+    }
+  }
   const flows = opt.flows ? encodeFlows(readFileSync(opt.flows, "utf8")) : null;
   const nonce = `${opt.pr}-${sha.slice(0, 7)}-${Date.now().toString(36)}`;
   const { args, input } = dispatchCommand({ ref: opt.ref, inputs: dispatchInputs({ pr: opt.pr, sha, lap: opt.lap, routes: opt.routes, flows, nonce }) });
