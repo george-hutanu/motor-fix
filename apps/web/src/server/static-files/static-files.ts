@@ -4,9 +4,11 @@ import express, { type Express } from 'express';
 // the release to upload, and they never leave the server.
 const SOURCE_MAP = /\.map$/i;
 
-// The build names a file it fingerprints `<name>-<8 base32 characters>.<ext>`
-// (outputHashing "all"): new content always gets a new name.
-const HASHED = /-[A-Z0-9]{8}\.[^./]+$/;
+// The build fingerprints a file as `<name>-<8 characters>.<ext>` (outputHashing
+// "all"): capitals and digits for the entry files and media, base64url for
+// the lazy chunks (`chunk-C0-vUTPR.js`, `chunk--0e6RH5t.js`). A suffix with no
+// capital or digit (`icon-maskable.png`) is a plain name, not a hash.
+const HASHED = /-(?=[\w-]{0,7}[A-Z0-9])[\w-]{8}\.[^./]+$/;
 
 // A hashed file is kept for a year. Every other file (the service worker, its
 // manifest, the icons) is revalidated on each use, so a deploy reaches a

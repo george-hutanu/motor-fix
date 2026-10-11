@@ -27,11 +27,19 @@ beforeAll(async () => {
   mkdirSync(join(folder, 'chunks'));
   mkdirSync(join(folder, 'media'));
   mkdirSync(join(folder, 'icons'));
+  mkdirSync(join(folder, 'map'));
   writeFileSync(join(folder, 'main-AB12CD34.js'), 'console.log(1);');
   writeFileSync(join(folder, 'chunk-Q7RZ2XKM.js'), 'console.log(2);');
   writeFileSync(join(folder, 'styles-5BXW7YTA.css'), 'body{}');
   writeFileSync(join(folder, 'media', 'inter-VQ3M6E2P.woff2'), 'font');
   writeFileSync(join(folder, 'main-AB12.js'), 'console.log(3);');
+  for (const name of [
+    'chunk-C0-vUTPR.js',
+    'chunk--0e6RH5t.js',
+    'chunk-y3Qh5uwH.js',
+    'chunk-BzM_4dnW.js',
+  ])
+    writeFileSync(join(folder, name), name);
   for (const name of [
     'ngsw-worker.js',
     'ngsw.json',
@@ -39,6 +47,8 @@ beforeAll(async () => {
     'index.csr.html',
     'favicon.ico',
     'icons/icon-192.png',
+    'icons/icon-maskable.png',
+    'map/maplibre-gl-worker.mjs',
   ])
     writeFileSync(join(folder, name), name);
   writeFileSync(join(folder, 'main-AB12.js.map'), '{"version":3}');
@@ -61,7 +71,7 @@ afterAll(async () => {
 
 const YEAR = 'public, max-age=31536000, immutable';
 
-// @traces 877-FR-015
+// @traces 877-FR-015 1201-FR-007
 describe('the web server static files', () => {
   // @traces 1201-FR-001
   it.each([
@@ -69,6 +79,10 @@ describe('the web server static files', () => {
     '/chunk-Q7RZ2XKM.js',
     '/styles-5BXW7YTA.css',
     '/media/inter-VQ3M6E2P.woff2',
+    '/chunk-C0-vUTPR.js',
+    '/chunk--0e6RH5t.js',
+    '/chunk-y3Qh5uwH.js',
+    '/chunk-BzM_4dnW.js',
   ])(
     'keeps the content-hashed file %s for a year without asking again',
     async (path) => {
@@ -91,6 +105,8 @@ describe('the web server static files', () => {
     '/index.csr.html',
     '/favicon.ico',
     '/icons/icon-192.png',
+    '/icons/icon-maskable.png',
+    '/map/maplibre-gl-worker.mjs',
     '/main-AB12.js',
     '/ngsw-worker.js?v=2',
   ])('makes the browser ask again before reusing %s', async (path) => {
