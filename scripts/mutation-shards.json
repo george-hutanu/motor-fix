@@ -10,15 +10,15 @@
       "timeout": 90
     },
     "contracts": {
-      "measured": "21 min (run 38037093986)",
-      "timeout": 45
+      "measured": "40 min mutating, 42 min job, scored 91.77 under its floor (run 38132926917)",
+      "timeout": 60
     },
     "domain": {
       "measured": "unsharded over 360 min (run 37360166653); rest shard 30 min mutating, 31 min job, after pg_stat_statements was preloaded (run 38135952989)",
       "shards": {
         "auth-core": {
           "folders": ["auth/*", "auth/oauth"],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "auth-flows": {
@@ -31,7 +31,7 @@
             "auth/consents",
             "auth/email-change"
           ],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "garages-core": {
@@ -42,7 +42,7 @@
             "garages/garage-brands",
             "garages/staff-invite"
           ],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "garages-listing": {
@@ -57,12 +57,12 @@
             "garages/place",
             "garages/mechanics"
           ],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "insights-events-admin": {
           "folders": ["insights", "events", "admin"],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "notifications-channels": {
@@ -78,12 +78,12 @@
             "notifications/request-received",
             "notifications/quote-received"
           ],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "notifications-core": {
           "folders": ["notifications/*"],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "places-catalogue": {
@@ -93,7 +93,7 @@
         },
         "quotes-workshop": {
           "folders": ["quotes", "workshop"],
-          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
           "timeout": 360
         }
       },
@@ -120,11 +120,11 @@
       "timeout": 45
     },
     "overlays": {
-      "measured": "10 min (run 38037093986)",
+      "measured": "13 min mutating, 14 min job (run 38132926917)",
       "timeout": 30
     },
     "scripts": {
-      "measured": "in place, its initial test run failed on specs reading the instrumented repository after 4 min (run 38132926917); those specs skip under MUTATION_IN_PLACE since",
+      "measured": "in place, 24 min mutating, 25 min job, scored 65.48 (run 38142763848)",
       "timeout": 90
     },
     "ui-cockpit": {
@@ -132,7 +132,7 @@
       "timeout": 45
     },
     "web": {
-      "measured": "unsharded 143 min (run 37360189195); rest shard over 120 min: cancelled at its limit (run 38132926917). Its stryker.config.json runs 2 test runners with a 5120 MB heap: the initial run ran out of memory at the default heap (run 38037093986)",
+      "measured": "unsharded 143 min (run 37360189195); rest shard over 120 min: cancelled at its limit (run 38132926917); 360 is provisional until a run finishes within it. Its stryker.config.json runs 2 test runners with a 5120 MB heap: the initial run ran out of memory at the default heap (run 38037093986)",
       "shards": {
         "dashboard-admin": {
           "folders": [
@@ -150,7 +150,7 @@
         },
         "dashboard-core": {
           "folders": ["app/dashboard/*", "app/dashboard/frame"],
-          "measured": "over 120 min: cancelled at its limit (run 38132926917)",
+          "measured": "over 120 min: cancelled at its limit (run 38132926917); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "dashboard-garage": {
@@ -173,7 +173,7 @@
             "app/dashboard/push-panel",
             "app/dashboard/email-banner"
           ],
-          "measured": "over 120 min: cancelled at its limit (run 38132926917)",
+          "measured": "over 120 min: cancelled at its limit (run 38132926917); 360 is provisional until a run finishes within it",
           "timeout": 360
         },
         "public-core": {

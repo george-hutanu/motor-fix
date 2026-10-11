@@ -416,7 +416,8 @@ source for anything the constitution does not fix.
   in the Mutation workflow, never on a laptop: one job per project or per
   shard of one (each project's `test:mutation` target, the shards in
   `scripts/mutation-shards.json`), against the floor in each project's
-  `stryker.config.json`, which only rises. A spec that
+  `stryker.config.json`, which only rises. The root `test:mutation` and
+  `test:mutation:affected` scripts stay (431-FR-006), never for a laptop. A spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`;
   `npm run test:unit` leaves those out and `npm run test:integration` runs
   only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
