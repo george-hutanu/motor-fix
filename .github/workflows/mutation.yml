@@ -1,14 +1,20 @@
 name: Mutation
 
 # Kept out of pull-request CI and off developer machines: a full run is too
-# heavy for either. Runs nightly on main and on demand.
+# heavy for either. Runs every 3 days and on demand, one job per project, or
+# per shard of a project split in scripts/mutation-shards.json, then a
+# summary job that holds each project's combined score to its floor.
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 */3 * *'
   workflow_dispatch:
     inputs:
       projects:
         description: Comma-separated Nx projects (empty runs every project)
+        required: false
+        default: ''
+      shards:
+        description: Comma-separated project:shard pairs, e.g. domain:auth-core,domain:rest (empty runs every shard)
         required: false
         default: ''
       full:
@@ -20,10 +26,36 @@ permissions:
   contents: read
 
 jobs:
-  mutation:
+  plan:
     runs-on: ubuntu-latest
-    # Full run wall time + 30%, capped at GitHub's 360: measured domain alone over 360 min (run 37360166653, cancelled), web 143 min (37360189195).
-    timeout-minutes: 360
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Plan one job per project or shard
+        id: plan
+        env:
+          PROJECTS: ${{ inputs.projects }}
+          SHARDS: ${{ inputs.shards }}
+        run: node scripts/mutation-plan.ts
+
+  mutate:
+    needs: plan
+    name: mutate ${{ matrix.id }}
+    runs-on: ubuntu-latest
+    # Each entry's own limit, from scripts/mutation-shards.json, where it sits
+    # beside the measured run it comes from.
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      # PR CI holds up to 8 of the free plan's 20 concurrent runners per PR;
+      # 5 mutation jobs leave room for one PR and a second beside it.
+      max-parallel: 5
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     services:
       postgres:
         image: postgis/postgis:17-3.5
@@ -51,32 +83,56 @@ jobs:
       - run: npm ci
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
+      # Keys end in / so mcp's never restores mcp-tools' results.
       - name: Restore the mutation results of earlier runs
         if: ${{ !inputs.full }}
         uses: actions/cache/restore@v6
         with:
           path: reports/mutation
-          key: mutation-${{ github.ref_name }}-${{ github.run_id }}
+          key: mutation/${{ matrix.id }}/${{ github.ref_name }}/${{ github.run_id }}
           restore-keys: |
-            mutation-${{ github.ref_name }}-
-            mutation-
-      - name: Mutation score per project
+            mutation/${{ matrix.id }}/${{ github.ref_name }}/
+            mutation/${{ matrix.id }}/
+      - name: Mutation score
         id: mutation
         env:
-          PROJECTS: ${{ inputs.projects }}
+          PROJECT: ${{ matrix.project }}
+          ROOT: ${{ matrix.root }}
+          SHARD: ${{ matrix.shard }}
           INCREMENTAL: ${{ inputs.full && 'false' || 'true' }}
-        run: npx nx run-many -t test:mutation --parallel=1 --output-style=static ${PROJECTS:+--projects=$PROJECTS} -- --incremental=$INCREMENTAL
+        run: node scripts/mutation.ts "$PROJECT" "$ROOT" --incremental=$INCREMENTAL ${SHARD:+--shard=$SHARD}
       # Saved even when the step fails, so the next run resumes instead of starting over.
       - name: Save the mutation results
         if: always() && steps.mutation.outcome != 'skipped'
         uses: actions/cache/save@v6
         with:
           path: reports/mutation
-          key: mutation-${{ github.ref_name }}-${{ github.run_id }}
-      - name: Upload the reports
+          key: mutation/${{ matrix.id }}/${{ github.ref_name }}/${{ github.run_id }}
+      - name: Upload the report
         if: always() && steps.mutation.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
-          name: mutation-reports
+          name: mutation-${{ matrix.id }}
           path: reports/mutation
           if-no-files-found: ignore
+
+  summary:
+    needs: [plan, mutate]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Download every job's report
+        uses: actions/download-artifact@v7
+        with:
+          pattern: mutation-*
+          path: reports/mutation-all
+      - name: Combined score per project
+        env:
+          MATRIX: ${{ needs.plan.outputs.matrix }}
+          RESULT: ${{ needs.mutate.result }}
+        run: node scripts/mutation-summary.ts reports/mutation-all
