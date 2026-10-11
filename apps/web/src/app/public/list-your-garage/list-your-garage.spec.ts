@@ -2023,9 +2023,11 @@ describe('sending for verification', () => {
     const buttons = [...page.querySelectorAll('.actions button')];
 
     expect(buttons[0]).toBe(sendButton(page));
-    expect(text(sendButton(page).querySelector('.label'))).toBe(
+    expect(text(sendButton(page).querySelector('.send-label'))).toBe(
       'Trimite spre verificare',
     );
+    // Not the page's grey `.label`: on the primary fill it fails contrast.
+    expect(sendButton(page).querySelector('.label')).toBeNull();
     // The board's arrow, unread: the button's name stays its label.
     const arrow = sendButton(page).querySelector('.arrow');
     expect(text(arrow)).toBe('→');

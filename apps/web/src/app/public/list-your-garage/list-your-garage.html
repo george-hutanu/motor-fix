@@ -204,7 +204,7 @@
         />
         <div class="actions">
           <button hlmBtn type="button" class="send" [attr.aria-disabled]="inFlight() || null" [attr.aria-busy]="inFlight() || null" (click)="send()">
-            <span class="label">{{ 'public.listing.check.send' | t }}</span>
+            <span class="send-label">{{ 'public.listing.check.send' | t }}</span>
             <span class="arrow" aria-hidden="true">→</span>
           </button>
           <button hlmBtn variant="secondary" type="button" (click)="save()">{{ 'public.listing.save' | t }}</button>

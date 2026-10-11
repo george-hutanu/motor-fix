@@ -9,7 +9,9 @@ import { test } from './fixtures.js';
 const step = (page: Page) => page.locator('mf-brands-step');
 const chip = (page: Page, name: string) =>
   step(page).locator('.chips button', { hasText: name });
-const counter = (page: Page) => step(page).locator('[aria-live="polite"]');
+// The counter, not the polite error region below it.
+const counter = (page: Page) =>
+  step(page).locator('[aria-live="polite"]:not(#listing-brands-error)');
 
 async function open(page: Page, path = '/ro/list-your-garage') {
   await page.goto(path);
