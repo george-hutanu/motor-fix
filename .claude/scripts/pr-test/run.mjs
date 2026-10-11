@@ -46,7 +46,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { callEndpoints, changedEndpoints, SEEDED, seedPassword, signIn } from "./endpoints.mjs";
 import { diffShots, parseJson, readReport, visualOutcome } from "./baseline.mjs";
-import { appsFor, cutOffFinding, markPreExisting, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, trustBaseline, verdict } from "./findings.mjs";
+import { appsFor, cutOffFinding, markPreExisting, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, trustBaseline, verdict, workerCacheOutcome } from "./findings.mjs";
 import {
   APP_SCRIPTS,
   EXTERNAL_PORTS,
@@ -351,6 +351,14 @@ async function main(argv) {
       log(`ready ${name}: ${res.status} ${body.slice(0, 200)}`);
       const outcome = readinessOutcome({ name, status: res.status, body, storage: plan.storage, url: origin + HEALTH.ready });
       if (outcome.note) notes.push(outcome.note);
+      if (outcome.finding) findings.push(outcome.finding);
+    }
+    {
+      const url = `${webURL}/ngsw-worker.js`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) }).catch(() => ({ status: 0, headers: new Headers() }));
+      const cacheControl = res.headers.get("cache-control");
+      log(`worker cache: ${res.status} ${cacheControl}`);
+      const outcome = workerCacheOutcome({ status: res.status, cacheControl, url });
       if (outcome.finding) findings.push(outcome.finding);
     }
 

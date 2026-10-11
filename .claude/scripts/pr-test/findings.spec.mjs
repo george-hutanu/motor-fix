@@ -16,6 +16,7 @@ import {
   touchesWeb,
   trustBaseline,
   verdict,
+  workerCacheOutcome,
 } from './findings.mjs';
 
 const where = { route: '/', viewport: 'mobile', scheme: 'dark', lang: 'en', screenshot: 'shots/home-mobile-dark-en.png' };
@@ -351,5 +352,33 @@ describe('layout findings', () => {
     const marked = markPreExisting(now, [], { measured: false });
     assert.equal(marked[0].severity, 'medium');
     assert.equal(marked[0].preExisting, true);
+  });
+});
+
+// @traces 1201-FR-006
+describe('the service worker cache check', () => {
+  const url = 'http://127.0.0.1:4000/ngsw-worker.js';
+  const check = (status, cacheControl) => workerCacheOutcome({ status, cacheControl, url });
+
+  it('passes when the worker is served no-cache', () => {
+    assert.deepEqual(check(200, 'no-cache'), {});
+    assert.deepEqual(check(200, 'no-cache, max-age=0'), {});
+  });
+
+  it.each([
+    [200, 'public, max-age=31536000, immutable'],
+    [200, 'no-cache, immutable'],
+    [200, 'public, max-age=60'],
+    [200, 'no-cache, max-age=600'],
+    [200, null],
+    [200, ''],
+    [404, 'no-cache'],
+    [0, null],
+  ])('blocks on status %s with Cache-Control %s', (status, cacheControl) => {
+    const { finding } = check(status, cacheControl);
+    assert.equal(finding.severity, 'high');
+    assert.match(finding.title, /ngsw-worker\.js/);
+    assert.match(finding.steps[0], new RegExp(String(status)));
+    assert.ok(finding.steps[0].includes(url));
   });
 });
