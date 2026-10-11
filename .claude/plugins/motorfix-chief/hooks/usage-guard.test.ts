@@ -2,6 +2,8 @@ import { expect, test } from 'claude-code/testing';
 
 import { ok, stubs } from './lib/stubs.ts';
 
+// @traces 1168-FR-011
+
 const CHIEF = '/m/.git\n/m/.git\n';
 const RESET = '2026-10-11T17:00:00Z';
 const FABLE_OFF = ['node', '.claude/scripts/fable.mjs', 'off'];
@@ -36,7 +38,7 @@ const start = ($) =>
 const fableRuns = (s) =>
   s.runs.filter((r) => r.argv.join(' ') === FABLE_OFF.join(' '));
 
-test('one warning at the first 80 % of a window; accepting runs fable.mjs off once (FR-011)', async ($, on) => {
+test('one warning at the first 80 % of a window; accepting runs fable.mjs off once', async ($, on) => {
   const s = stubs(on, { run: () => ok(CHIEF) });
   const asked = dialog(on, 'Remap fable to Opus');
   await start($);

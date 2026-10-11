@@ -1,14 +1,14 @@
-// Part 7, the owner card (R8, FR-012, FR-021): an AskUserQuestion from Chief
+// Part 7, the owner card: an AskUserQuestion from Chief
 // whose question holds exactly one fenced command becomes a pane with that
 // command as one chain, a Copy button, and a Done / Not done answer. Anything
-// else, a worker, a cloud session or another surface passes unchanged (FR-017).
+// else, a worker, a cloud session or another surface passes unchanged.
 import { role } from './chief-control.js';
 import { commandBlock } from './lib/parse.js';
 import { CARD, canDraw } from './lib/surface.js';
 
 export const ASK = 'Run the command in your terminal, then answer: is it done?';
 // A line ending in one of these continues on the next one.
-const CONTINUED = /(\\|&&|\|\||\|)$/;
+const CONTINUED = /(&&|\|\||\|)$/;
 
 // The card on show, while its ask waits on the owner.
 let shown = null;

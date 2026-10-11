@@ -3,7 +3,7 @@
 
 export const HOLD_MS = 110 * 60_000;
 export const LAP_CAP = 10;
-// The guard's claim, written before its Agent call goes through (FR-020).
+// The guard's claim, written before its Agent call goes through.
 export const PENDING = 'pending';
 export const MARKER = '<!-- motorfix-chief ledger -->';
 export const DEAD = new Set(['completed', 'failed', 'killed']);
@@ -30,7 +30,7 @@ export const merge = (row, patch, now) => ({
   updatedAt: now,
 });
 
-// FR-006: in the dispatching session the agent list decides; a claim, or a row
+// In the dispatching session the agent list decides; a claim, or a row
 // from another session, holds until it is 110 minutes old.
 export function holding(row, { session, agents, now }) {
   if (!row?.holder) return false;
@@ -39,6 +39,17 @@ export function holding(row, { session, agents, now }) {
   const agent = agents.find((a) => a.id === row.holder);
   return Boolean(agent) && !DEAD.has(agent.status);
 }
+
+// A holder this session dispatched whose agent has ended or is gone: the row
+// is freed when read.
+export function deadHolder(row, { session, agents }) {
+  if (!row?.holder || row.holder === PENDING || row.holderSession !== session)
+    return false;
+  const agent = agents.find((a) => a.id === row.holder);
+  return !agent || DEAD.has(agent.status);
+}
+
+export const FREED = { holder: null, holderSession: null };
 
 export const ageText = (ms) =>
   ms < 2 * 60 * 60_000
@@ -64,7 +75,7 @@ export function ledgerBlock(rows, ctx) {
 
 const CI_STATES = new Set(['pass', 'fail', 'pending']);
 
-// FR-022: a value outside the column's set is drawn as its default.
+// A value outside the column's set is drawn as its default.
 export const boardRow = (r, ctx) => ({
   age: ageText(ctx.now - r.updatedAt),
   ci: CI_STATES.has(r.ci) ? r.ci : 'none',

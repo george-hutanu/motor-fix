@@ -2,10 +2,12 @@ import { expect, test } from 'claude-code/testing';
 
 import { stageCall } from './stage.js';
 
+// @traces 1168-FR-010
+
 const T = 'node .claude/scripts/tracker-sync.mjs';
 const L = 'node .claude/scripts/lifecycle.mjs';
 
-test('tracker and lifecycle verbs map to the PR stage labels (FR-010)', () => {
+test('tracker and lifecycle verbs map to the PR stage labels', () => {
   expect(stageCall(`${T} start`)).toEqual({ stage: 'planning' });
   expect(stageCall(`${T} implement`)).toEqual({ stage: 'in development' });
   expect(stageCall(`${T} qa`)).toEqual({ stage: 'QA' });

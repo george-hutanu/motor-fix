@@ -1,7 +1,7 @@
-// Part 6, the usage-limit guard (FR-011, FR-018): the first time a rate-limit
+// Part 6, the usage-limit guard: the first time a rate-limit
 // window reaches 80 %, once per window kind and reset time across sessions,
 // ask whether to remap fable to Opus; only a yes runs `fable.mjs off`, as an
-// argument list in the main checkout. Drawn only where the mod draws (FR-017).
+// argument list in the main checkout. Drawn only where the mod draws.
 import { role } from './chief-control.js';
 import { canDraw } from './lib/surface.js';
 

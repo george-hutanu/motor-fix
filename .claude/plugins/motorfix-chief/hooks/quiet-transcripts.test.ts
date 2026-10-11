@@ -2,6 +2,8 @@ import { expect, test } from 'claude-code/testing';
 
 import { ok, stubs } from './lib/stubs.ts';
 
+// @traces 1168-FR-013
+
 const PLUGIN = 'motorfix-chief';
 const CHIEF = '/m/.git\n/m/.git\n';
 const bash = (stdout: string, extra = {}) => ({
@@ -37,7 +39,7 @@ function shell(on) {
 const texts = async (ui) =>
   (await ui.findAll({ type: 'Text' })).map((t) => t.text);
 
-test('a ci-wait result draws one pill per check, and one green pill when empty (FR-013, SC-005)', async ($, on) => {
+test('a ci-wait result draws one pill per check, and one green pill when empty', async ($, on) => {
   stubs(on, { run: () => ok(CHIEF) });
   const ran = shell(on);
   await start($);

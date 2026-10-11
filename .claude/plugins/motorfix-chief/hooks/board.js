@@ -1,11 +1,11 @@
-// Part 4, the build board (FR-009, FR-017, FR-022): a pane and an above-prompt
+// Part 4, the build board: a pane and an above-prompt
 // band in Chief, one row per PR and four buttons, each running one repo
-// command as an argument list. Fast-forward main never pushes (FR-018).
+// command as an argument list. Fast-forward main never pushes.
 import { role } from './chief-control.js';
 import { boardRow, holding } from './lib/ledger.js';
 import { canDraw } from './lib/surface.js';
 
-// The pane opens from Chief control's session.start: one hook per event (R1).
+// The pane opens from Chief control's session.start: one hook per event.
 
 const TIMEOUT_MS = 5 * 60_000;
 
@@ -30,9 +30,12 @@ async function context($) {
 export const rowText = (r) =>
   `#${r.pr} ${r.stage} lap ${r.lap} ci ${r.ci} holder ${r.holder} age ${r.age}`;
 
-// Ready (QA), CI and the QA run both passed, and nobody holds it.
-const tailable = (r, ctx) =>
-  r.stage === 'QA' && r.ci === 'pass' && r.qaRun && !holding(r, ctx);
+// Ready (QA), offered a tail for its current head (CI and the QA run both
+// passed), and nobody holds it.
+async function tailable($, r, ctx) {
+  if (r.stage !== 'QA' || r.ci !== 'pass' || holding(r, ctx)) return false;
+  return Boolean(await $.store.get(`offer:${r.pr}:${r.head ?? 'nohead'}`));
+}
 
 function show($, text) {
   output = text.trim();
@@ -66,7 +69,10 @@ async function fastForward($) {
 
 async function tailReady($) {
   const ctx = await context($);
-  const ready = (await readRows($)).filter((r) => tailable(r, ctx));
+  const ready = [];
+  for (const r of await readRows($)) {
+    if (await tailable($, r, ctx)) ready.push(r);
+  }
   if (!ready.length) {
     await $.ui.toast('motorfix-chief: no ready PR to tail');
     return;

@@ -44,7 +44,7 @@ const frontmatter = (text) => {
 const dirs = (root) =>
   existsSync(root) ? readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) : [];
 
-// The mods under .claude/plugins are fingerprinted like the gates (FR-016):
+// The mods under .claude/plugins are fingerprinted like the gates:
 // every file but a plugin test and the types the engine writes when it loads one.
 const MODS = join(".claude", "plugins");
 export function modFingerprints(repo) {

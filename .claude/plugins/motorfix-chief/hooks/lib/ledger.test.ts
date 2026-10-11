@@ -4,6 +4,7 @@ import {
   ageText,
   blank,
   boardRow,
+  deadHolder,
   HOLD_MS,
   holding,
   ledgerBlock,
@@ -125,4 +126,26 @@ test('a board row shows stage, lap, CI, holder and age in their fixed values', (
     pr: 9,
     stage: 'none',
   });
+});
+
+test('a holder of this session whose agent finished, failed, was killed or is gone is dead', () => {
+  const ctx = { now: 0, session: 'sess-a' };
+  for (const status of ['completed', 'failed', 'killed'])
+    expect(
+      deadHolder(row(), { ...ctx, agents: [{ id: 'agent-7f3', status }] }),
+    ).toBe(true);
+  expect(deadHolder(row(), { ...ctx, agents: [] })).toBe(true);
+  expect(
+    deadHolder(row(), {
+      ...ctx,
+      agents: [{ id: 'agent-7f3', status: 'running' }],
+    }),
+  ).toBe(false);
+  expect(deadHolder(row({ holder: PENDING }), { ...ctx, agents: [] })).toBe(
+    false,
+  );
+  expect(
+    deadHolder(row({ holderSession: 'sess-b' }), { ...ctx, agents: [] }),
+  ).toBe(false);
+  expect(deadHolder(blank(363), { ...ctx, agents: [] })).toBe(false);
 });

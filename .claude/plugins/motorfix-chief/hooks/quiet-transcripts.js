@@ -1,8 +1,8 @@
-// Part 8, quiet transcripts (FR-013, SC-005): display only, the model's text is
+// Part 8, quiet transcripts: display only, the model's text is
 // untouched. A ci-wait result draws one pill per check (one "green" for empty
 // output, nothing for the lone `PR QA: cancel`), and an Agent reply opening
 // with the four-line envelope folds to STATUS, PR and NEXT. Everything else,
-// and every surface but terminal and desktop (FR-017), keeps the engine's own.
+// and every surface but terminal and desktop, keeps the engine's own.
 import { ciWaitCalls, role } from './chief-control.js';
 import { ciLines, replyBlock } from './lib/parse.js';
 import { canDraw } from './lib/surface.js';

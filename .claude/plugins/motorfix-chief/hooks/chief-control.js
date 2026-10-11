@@ -1,9 +1,17 @@
 // Part 1, Chief Control: the ledger from Bash calls, the ledger in context after
-// a compaction, the 15-minute watch gate, and the tail offer (FR-002..FR-005,
-// FR-010, FR-023), and part 3's forward, which shares its prompt.submit hook.
+// a compaction, the 15-minute watch gate, the tail offer and the chief key, and
+// part 3's forward, which shares its prompt.submit hook.
 // Agent dispatches reach the ledger through the guard.
-import { blank, DEAD, key, ledgerBlock, merge } from './lib/ledger.js';
-import { bashCall, qaRunLine, taskNotification } from './lib/parse.js';
+import {
+  blank,
+  DEAD,
+  deadHolder,
+  FREED,
+  key,
+  ledgerBlock,
+  merge,
+} from './lib/ledger.js';
+import { bashCall, ciLines, qaRunLine, taskNotification } from './lib/parse.js';
 import { fromRevParse, REV_PARSE } from './lib/role.js';
 import { stageCall } from './lib/stage.js';
 import { canDraw, PANE } from './lib/surface.js';
@@ -49,7 +57,7 @@ async function patch($, pr, fields) {
   return next;
 }
 
-// FR-004: one offer per PR and head, once CI and the QA run both finished green.
+// One offer per PR and head, once CI and the QA run both finished green.
 async function offer($, pr, run) {
   const row = await patch($, pr, { ci: 'pass', qaRun: run });
   const id = `offer:${pr}:${row.head ?? 'nohead'}`;
@@ -85,8 +93,14 @@ async function afterCiWait($, call, r) {
     waits.set(r.result.backgroundTaskId, call);
     return r;
   }
+  // ci-wait --run exits 0 and prints "QA run: <conclusion>" once the run ends;
+  // only no lines, or a successful QA run alone, is a pass.
   const passed =
-    !r.isError && !r.result?.interrupted && !(r.result?.stdout ?? '').trim();
+    !r.isError &&
+    !r.result?.interrupted &&
+    ciLines(r.result?.stdout ?? '').every(
+      (l) => l.name === 'QA run' && l.state === 'success',
+    );
   return withContext(r, await finished($, call, passed));
 }
 
@@ -102,9 +116,9 @@ export async function bashHook($, e, next) {
   return afterCiWait($, call, await next(e));
 }
 
-// Part 3 (FR-008, research R9): a helper's result that reached this session
+// Part 3: a helper's result that reached this session
 // while the runner that spawned it still runs goes to that runner instead.
-// Here, not in a file of its own: one prompt.submit hook per plugin (R1).
+// Here, not in a file of its own: one prompt.submit hook per plugin.
 async function forward($, id, text) {
   const agents = await $.agent.list();
   const helper = agents.find((a) => a.id === id);
@@ -133,7 +147,7 @@ export async function submitHook($, e, next) {
   return withContext(await next(e), lines);
 }
 
-// R11: refresh the ledger from watch.mjs, then gate only with two or more active worktrees.
+// Refresh the ledger from watch.mjs, then gate only with two or more active worktrees.
 async function refresh($) {
   const r = await $.process.run(['node', WATCH, '--json'], {
     cwd: role.main,
@@ -192,7 +206,7 @@ async function onStart($, e) {
     startedAt: await $.clock.now(),
   });
   if (role.remote !== 'true') $.clock.every(TICK_MS, () => tick($));
-  // Part 4: the board's pane; one session.start hook per plugin (R1).
+  // Part 4: the board's pane; one session.start hook per plugin.
   if (canDraw(e.surface, role.remote)) await $.ui.open(PANE).catch(() => {});
 }
 
@@ -205,11 +219,22 @@ async function onEnd($) {
 export async function contextHook($, e, next) {
   const r = await next(e);
   if (!role.chief) return r;
-  const text = ledgerBlock(await readRows($), {
+  const ctx = {
     agents: await $.agent.list(),
     now: await $.clock.now(),
     session: await $.session.id(),
-  });
+  };
+  const rows = [];
+  for (const row of await readRows($)) {
+    if (!deadHolder(row, ctx)) {
+      rows.push(row);
+      continue;
+    }
+    const freed = merge(row, FREED, ctx.now);
+    await $.store.set(key(row.pr), freed);
+    rows.push(freed);
+  }
+  const text = ledgerBlock(rows, ctx);
   return { ...r, blocks: [...r.blocks, { name: 'motorfixLedger', text }] };
 }
 

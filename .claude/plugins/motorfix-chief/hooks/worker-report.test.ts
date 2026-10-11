@@ -2,13 +2,20 @@ import { expect, test } from 'claude-code/testing';
 
 import { ok, stubs } from './lib/stubs.ts';
 
+// @traces 1168-FR-010
+
 const TREE = '/m/.worktrees/1168-chief-mods';
 const WORKER = '/m/.git/worktrees/1168-chief-mods\n/m/.git\n';
 const CHIEF = '/m/.git\n/m/.git\n';
 const WATCH = JSON.stringify({
   rows: [
     { main: true, path: '/m', pr: null },
-    { main: false, path: TREE, pr: { number: 370, state: 'open' } },
+    {
+      head: 'abc1234def5678abc1234def5678abc1234def56',
+      main: false,
+      path: TREE,
+      pr: { number: 370, state: 'open' },
+    },
   ],
 });
 const RECORDED = {
@@ -16,10 +23,10 @@ const RECORDED = {
   'pr:370': { pr: 370, stage: 'in development', updatedAt: 0 },
 };
 
-// rev-parse answers as a worker (or Chief), HEAD is abc1234, watch.mjs finds the PR.
+// rev-parse answers as a worker (or Chief); watch.mjs finds the PR and the
+// worktree's head.
 const runner = (revParse: string) => (argv: readonly string[]) => {
   if (argv.includes('--git-common-dir')) return ok(revParse);
-  if (argv.includes('HEAD')) return ok('abc1234\n');
   if (argv.includes('--json')) return ok(WATCH);
   return ok();
 };
@@ -45,7 +52,7 @@ const endTurn = ($, extra = {}) =>
     ...extra,
   });
 
-test('a stage change in a worker turn sends one line to Chief at turn end (FR-010)', async ($, on) => {
+test('a stage change in a worker turn sends one line to Chief at turn end', async ($, on) => {
   const s = stubs(on, { run: runner(WORKER), store: { ...RECORDED } });
   engine(on);
   await start($);
@@ -57,6 +64,7 @@ test('a stage change in a worker turn sends one line to Chief at turn end (FR-01
     { text: '#370 in development → QA abc1234', to: 'sess-chief' },
   ]);
   expect((s.store.get('pr:370') as { stage: string }).stage).toBe('QA');
+  expect(s.runs.some((r) => r.argv.includes('HEAD'))).toBe(false);
   await endTurn($);
   expect(s.sent).toHaveLength(1);
 });

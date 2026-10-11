@@ -1,5 +1,5 @@
 // Pure readers of the text the mod sees: dispatch prompts, Bash commands and
-// their output, agent replies and notifications. No `$` here (research R2).
+// their output, agent replies and notifications. No `$` here.
 
 const unique = (list) => [...new Set(list)];
 

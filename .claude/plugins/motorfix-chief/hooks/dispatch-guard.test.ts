@@ -2,6 +2,8 @@ import { expect, test } from 'claude-code/testing';
 
 import { refusal, stubs } from './lib/stubs.ts';
 
+// @traces 1168-FR-006 1168-FR-007 1168-FR-020
+
 const MIN = 60_000;
 const launched = (agentId: string) => () => ({
   result: {
@@ -32,7 +34,7 @@ const held = (patch = {}) => ({
   ...patch,
 });
 
-test('a task-runner for a PR whose holder is live here is denied, naming the holder (SC-001)', async ($, on) => {
+test('a task-runner for a PR whose holder is live here is denied, naming the holder', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
     store: { 'pr:363': held() },
@@ -109,7 +111,7 @@ test('a PR with no row gets one, with the worktree the prompt names', async ($, 
   });
 });
 
-test('two dispatches for the same PR at once resolve to one holder (FR-020)', async ($, on) => {
+test('two dispatches for the same PR at once resolve to one holder', async ($, on) => {
   const s = stubs(on);
   let n = 0;
   on('tool.call', { tool: 'Agent' }, () => launched(`agent-${++n}`)());
@@ -128,7 +130,7 @@ test('a call the engine refuses releases the claim', async ($, on) => {
   expect(s.store.get('pr:363')).toMatchObject({ holder: null });
 });
 
-test('general-purpose for a story run, tail or watch fix is denied (FR-007)', async ($, on) => {
+test('general-purpose for a story run, tail or watch fix is denied', async ($, on) => {
   stubs(on);
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   for (const prompt of [

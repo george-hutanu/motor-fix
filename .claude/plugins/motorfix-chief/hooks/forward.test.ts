@@ -2,6 +2,8 @@ import { expect, test } from 'claude-code/testing';
 
 import { ok, stubs } from './lib/stubs.ts';
 
+// @traces 1168-FR-008
+
 const CHIEF = '/m/.git\n/m/.git\n';
 const HELPER = {
   id: 'helper-1',
@@ -15,7 +17,7 @@ const note = (id: string) =>
 const start = ($) =>
   $.session.start({ cwd: '/m', isInteractive: true, surface: 'terminal' });
 
-test("a helper's result reaches its waiting runner and leaves the main session (FR-008)", async ($, on) => {
+test("a helper's result reaches its waiting runner and leaves the main session", async ($, on) => {
   const s = stubs(on, { agents: [HELPER, RUNNER], run: () => ok(CHIEF) });
   await start($);
   const r = await $.prompt.submit({ text: note('helper-1') });

@@ -11,6 +11,8 @@ type Options = {
   env?: Record<string, string>;
   run?: (argv: readonly string[]) => Run | Promise<Run>;
   delivered?: boolean;
+  // An engine noun that throws when called, to prove a hook fails open.
+  failing?: string;
 };
 
 // What a refused tool call comes back as in a test: `isError`, the reason as `text`.
@@ -36,7 +38,10 @@ export function stubs(on, options: Options = {}) {
   on('store.get', (_$, e) => value(store.get(e.key)));
   on('store.set', (_$, e) => value(void store.set(e.key, e.value)));
   on('store.delete', (_$, e) => value(void store.delete(e.key)));
-  on('store.keys', () => value([...store.keys()]));
+  on('store.keys', () => {
+    if (options.failing === 'store.keys') throw new Error('store unavailable');
+    return value([...store.keys()]);
+  });
   on('agent.list', () => value(agents));
   on('session.id', () => value(options.session ?? 'sess-a'));
   on('env.get', (_$, e) => value(options.env?.[e.name]));

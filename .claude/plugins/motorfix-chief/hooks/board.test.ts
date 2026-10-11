@@ -2,6 +2,8 @@ import { expect, test } from 'claude-code/testing';
 
 import { ok, stubs } from './lib/stubs.ts';
 
+// @traces 1168-FR-009 1168-FR-017 1168-FR-018 1168-FR-022
+
 const MIN = 60_000;
 const CHIEF = '/m/.git\n/m/.git\n';
 const WORKER = '/m/.git/worktrees/363-slug\n/m/.git\n';
@@ -43,6 +45,7 @@ const row = (pr: number, patch = {}) => ({
   ...patch,
 });
 const LEDGER = {
+  'offer:368:nohead': { answer: null, offeredAt: 0, runId: 77 },
   'pr:12': row(12, { stage: 'planning' }),
   'pr:363': row(363, {
     ci: 'pass',
@@ -60,7 +63,7 @@ const texts = async (ui) =>
 const start = ($, surface = 'terminal', cwd = '/m') =>
   $.session.start({ cwd, isInteractive: true, surface });
 
-test('the band shows one row per PR with fixed column values, and four buttons (FR-009, FR-022)', async ($, on) => {
+test('the band shows one row per PR with fixed column values, and four buttons', async ($, on) => {
   const s = stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
     run: () => ok(CHIEF),
@@ -97,7 +100,7 @@ test('the pane lists the same rows and opens at Chief start', async ($, on) => {
   expect(await ui.findAll({ type: 'Button' })).toHaveLength(4);
 });
 
-test('nothing is drawn off desktop and terminal, in a cloud session, or in a worker (FR-017)', async ($, on) => {
+test('nothing is drawn off desktop and terminal, in a cloud session, or in a worker', async ($, on) => {
   let gitOut = CHIEF;
   let env = {};
   stubs(on, {
@@ -121,7 +124,7 @@ test('nothing is drawn off desktop and terminal, in a cloud session, or in a wor
   expect(await texts(ui)).toEqual(['engine']);
 });
 
-test('Status, Watch pass and Fast-forward main run their one command as argument lists, never a push (FR-009, FR-018)', async ($, on) => {
+test('Status, Watch pass and Fast-forward main run their one command as argument lists, never a push', async ($, on) => {
   const s = stubs(on, { run: () => ok(CHIEF), store: LEDGER });
   await start($);
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...PANE });
@@ -152,4 +155,19 @@ test('Tail ready PRs offers one tail per ready, finished, unheld PR', async ($, 
   expect(s.submitted).toEqual([
     'motorfix-chief: tail these ready PRs, one task-runner each.\ntail #368 after QA run 77',
   ]);
+});
+
+test('Tail ready PRs offers nothing for a PR whose head has no recorded tail offer', async ($, on) => {
+  const s = stubs(on, {
+    run: () => ok(CHIEF),
+    store: {
+      'offer:5:abc1234': { answer: null, offeredAt: 0, runId: 9 },
+      'pr:5': row(5, { ci: 'pass', head: 'def5678', qaRun: 9, stage: 'QA' }),
+      'pr:6': row(6, { ci: 'pass', qaRun: 10, stage: 'QA' }),
+    },
+  });
+  await start($);
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...BAND });
+  await ui.press({ key: 'tail' });
+  expect(s.submitted).toEqual([]);
 });

@@ -1,7 +1,15 @@
 // Part 2, the dispatch guard (contracts/denials.md): one agent per PR, and a
 // story run, tail or watch fix only as task-runner. A deny is the model's only
-// answer; nothing here approves anything (FR-014).
-import { blank, holding, key, merge, PENDING } from './lib/ledger.js';
+// answer; nothing here approves anything.
+import {
+  blank,
+  deadHolder,
+  FREED,
+  holding,
+  key,
+  merge,
+  PENDING,
+} from './lib/ledger.js';
 import { needsTaskRunner, prTokens, worktreeTokens } from './lib/parse.js';
 
 export const GENERAL_DENY =
@@ -37,7 +45,7 @@ function claimed(prompt, rows) {
 }
 
 // One check-and-claim at a time in this session, so two dispatches at once
-// cannot both find the PR free (FR-020).
+// cannot both find the PR free.
 let queue = Promise.resolve();
 const serial = (fn) => {
   const run = queue.then(fn, fn);
@@ -59,7 +67,16 @@ async function claim($, prompt) {
     now: await $.clock.now(),
     session: await $.session.id(),
   };
-  const targets = claimed(prompt, rows);
+  const targets = [];
+  for (const r of claimed(prompt, rows)) {
+    if (!deadHolder(r, ctx)) {
+      targets.push(r);
+      continue;
+    }
+    const freed = merge(r, FREED, ctx.now);
+    await $.store.set(key(r.pr), freed);
+    targets.push(freed);
+  }
   const busy = targets.filter((r) => holding(r, ctx));
   if (busy.length)
     return { deny: busy.map((r) => heldLine(r, ctx)).join('\n') };

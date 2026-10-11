@@ -10,6 +10,7 @@ import {
   checkHooks,
   checkSkillsAndAgents,
 } from './doctor.mjs';
+// @traces 1168-FR-016
 
 // Doctor is the check that catches a gate which stopped firing. These build a
 // throwaway repo skeleton and break one thing at a time — the real repo is
@@ -104,7 +105,7 @@ describe('doctor — hooks', () => {
   });
 });
 
-describe('doctor — mods (FR-016)', () => {
+describe('doctor — mods', () => {
   const MOD = '.claude/plugins/motorfix-chief';
   const registry = () => JSON.parse(readFileSync(join(repo, '.claude/hooks/registry.json'), 'utf8'));
   beforeEach(() => {

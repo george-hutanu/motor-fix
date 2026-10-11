@@ -159,6 +159,29 @@ for (const status of ['completed', 'failed', 'killed']) {
   });
 }
 
+test('a denied dispatch still clears the dead holder of the other PR it read', async ($, on) => {
+  const s = stubs(on, {
+    agents: [
+      { id: 'agent-7f3', status: 'running' },
+      { id: 'agent-old', status: 'killed' },
+    ],
+    store: {
+      'pr:363': held(),
+      'pr:368': row(368, {
+        holder: 'agent-old',
+        holderSession: 'sess-a',
+        stage: 'QA',
+      }),
+    },
+  });
+  on('tool.call', { tool: 'Agent' }, launched('agent-new'));
+  expect(refusal(await $.tool.call(agent('tail #368 and tail #363')))).toMatch(
+    /#363/,
+  );
+  expect(s.store.get('pr:368')).toMatchObject({ holder: null });
+  expect(s.store.get('pr:363')).toMatchObject({ holder: 'agent-7f3' });
+});
+
 test('a holder missing from the agent list is free', async ($, on) => {
   stubs(on, { agents: [], store: { 'pr:363': held() } });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
@@ -761,6 +784,7 @@ test('Tail ready PRs offers nothing for a failing CI, a missing QA run or a held
     agents: [{ id: 'agent-7f3', status: 'running' }],
     run: () => ok(CHIEF),
     store: {
+      'offer:4:nohead': { answer: null, offeredAt: 0, runId: 7 },
       'pr:1': row(1, { ci: 'fail', qaRun: 5, stage: 'QA' }),
       'pr:2': row(2, { ci: 'pass', qaRun: null, stage: 'QA' }),
       'pr:3': row(3, { ci: 'pending', qaRun: 6, stage: 'QA' }),
@@ -783,6 +807,8 @@ test('Tail ready PRs offers every ready PR in one prompt, in PR order', async ($
   const s = stubs(on, {
     run: () => ok(CHIEF),
     store: {
+      'offer:3:nohead': { answer: null, offeredAt: 0, runId: 6 },
+      'offer:20:nohead': { answer: null, offeredAt: 0, runId: 8 },
       'pr:3': row(3, { ci: 'pass', qaRun: 6, stage: 'QA' }),
       'pr:20': row(20, { ci: 'pass', qaRun: 8, stage: 'QA' }),
     },
@@ -854,7 +880,6 @@ test('a vscode or remote desktop session draws no pane and opens none', async ($
 const runner =
   (revParse: string, watch: string) => (argv: readonly string[]) => {
     if (argv.includes('--git-common-dir')) return ok(revParse);
-    if (argv.includes('HEAD')) return ok('abc1234\n');
     if (argv.includes('--json')) return ok(watch);
     return ok();
   };
@@ -875,7 +900,14 @@ const endTurn = ($, extra = {}) =>
     ...extra,
   });
 const WATCH = JSON.stringify({
-  rows: [{ main: false, path: TREE, pr: { number: 370, state: 'open' } }],
+  rows: [
+    {
+      head: 'abc1234def5678',
+      main: false,
+      path: TREE,
+      pr: { number: 370, state: 'open' },
+    },
+  ],
 });
 const RECORDED = {
   chief: { sessionId: 'sess-chief', startedAt: 0 },
@@ -1351,4 +1383,11 @@ test('two dispatches for one PR written as "#363" and "PR 363" resolve to one ho
     $.tool.call(agent('PR 363 resume')),
   ]);
   expect(results.filter((r) => refusal(r))).toHaveLength(1);
+});
+
+test('a store that throws after a compaction leaves the context blocks as they were (fail open)', async ($, on) => {
+  stubs(on, { failing: 'store.keys', run: () => ok(CHIEF) });
+  await start($);
+  const r = await $.prompt.context({ blocks: [] });
+  expect(r.blocks).toEqual([]);
 });

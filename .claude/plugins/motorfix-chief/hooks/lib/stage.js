@@ -1,4 +1,4 @@
-// Part 5's reading of a worker's own Bash calls (FR-010): which stage label a
+// Part 5's reading of a worker's own Bash calls: which stage label a
 // tracker or lifecycle command moves the PR to, and the PR it names. Pure.
 const TRACKER = {
   blocked: 'blocked',

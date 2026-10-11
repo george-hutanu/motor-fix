@@ -1,4 +1,4 @@
-// Who this session is (research R10): Chief runs in the main checkout, whose
+// Who this session is: Chief runs in the main checkout, whose
 // git dir is the common dir; a worktree's git dir sits under it. Each part
 // runs `git rev-parse` itself at session.start (`$` never crosses an import)
 // and reads its output here.

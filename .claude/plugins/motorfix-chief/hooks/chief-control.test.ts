@@ -2,6 +2,8 @@ import { expect, test } from 'claude-code/testing';
 
 import { ok, stubs } from './lib/stubs.ts';
 
+// @traces 1168-FR-002 1168-FR-003 1168-FR-004 1168-FR-005 1168-FR-010 1168-FR-023
+
 const MIN = 60_000;
 const CHIEF = '/m/.git\n/m/.git\n';
 const WORKER = '/m/.git/worktrees/363-slug\n/m/.git\n';
@@ -37,7 +39,7 @@ const bash =
     result: { interrupted: false, stderr: '', stdout, ...extra },
   });
 
-test('Chief records its session at start and removes it at end (FR-010)', async ($, on) => {
+test('Chief records its session at start and removes it at end', async ($, on) => {
   const s = stubs(on, { run: () => ok(CHIEF), session: 'sess-chief' });
   await start($);
   expect(s.store.get('chief')).toMatchObject({ sessionId: 'sess-chief' });
@@ -45,7 +47,7 @@ test('Chief records its session at start and removes it at end (FR-010)', async 
   expect(s.store.has('chief')).toBe(false);
 });
 
-test('a worker session writes no chief key and runs no gate (FR-003)', async ($, on) => {
+test('a worker session writes no chief key and runs no gate', async ($, on) => {
   const s = stubs(on, { run: () => ok(WORKER) });
   await start($, '/m/.worktrees/363-slug');
   await s.clock.advance(60 * MIN);
@@ -53,7 +55,7 @@ test('a worker session writes no chief key and runs no gate (FR-003)', async ($,
   expect(s.runs.filter((r) => isGate(r.argv))).toHaveLength(0);
 });
 
-test('dispatch.mjs fills the row from its QA-run line (FR-002)', async ($, on) => {
+test('dispatch.mjs fills the row from its QA-run line', async ($, on) => {
   const s = stubs(on, {
     store: { 'pr:363': row(363, { holder: 'agent-7f3' }) },
   });
@@ -74,9 +76,9 @@ test('dispatch.mjs fills the row from its QA-run line (FR-002)', async ($, on) =
   });
 });
 
-test('a foreground ci-wait with --run that comes back empty sets ci pass and offers the tail once per head (FR-004)', async ($, on) => {
+test('a foreground ci-wait with --run whose QA run succeeded sets ci pass and offers the tail once per head', async ($, on) => {
   const s = stubs(on, { store: { 'pr:363': row(363, { head: 'abc1234' }) } });
-  on('tool.call', { tool: 'Bash' }, bash('', ''));
+  on('tool.call', { tool: 'Bash' }, bash('', 'QA run: success\n'));
   const call = () =>
     $.tool.call({
       command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99',
@@ -106,6 +108,14 @@ test('a ci-wait without --run, or one that prints a failing check, offers nothin
   });
   expect(failed.context ?? []).toHaveLength(0);
   expect(s.store.get('pr:363')).toMatchObject({ ci: 'fail' });
+  out = 'QA run: failure\n';
+  const qaFailed = await $.tool.call({
+    command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 100',
+    tool: 'Bash',
+  });
+  expect(qaFailed.context ?? []).toHaveLength(0);
+  expect(s.store.get('pr:363')).toMatchObject({ ci: 'fail' });
+  expect(s.store.get('offer:363:abc1234')).toBeUndefined();
 });
 
 test('a background ci-wait --run offers the tail on its notification, only on exit 0', async ($, on) => {
@@ -124,7 +134,7 @@ test('a background ci-wait --run offers the tail on its notification, only on ex
   expect(s.store.get('pr:363')).toMatchObject({ ci: 'pass' });
 });
 
-test('the ledger block after compaction lists every row in PR order (SC-002, FR-023)', async ($, on) => {
+test('the ledger block after compaction lists every row in PR order', async ($, on) => {
   stubs(on, {
     run: () => ok(CHIEF),
     store: {
@@ -142,6 +152,35 @@ test('the ledger block after compaction lists every row in PR order (SC-002, FR-
   ]);
 });
 
+test('the ledger read clears a holder whose agent this session dispatched has ended', async ($, on) => {
+  const s = stubs(on, {
+    agents: [{ id: 'agent-7f3', status: 'completed' }],
+    run: () => ok(CHIEF),
+    store: {
+      'pr:363': row(363, {
+        holder: 'agent-7f3',
+        holderSession: 'sess-a',
+        stage: 'QA',
+      }),
+      'pr:368': row(368, {
+        holder: 'agent-9',
+        holderSession: 'sess-b',
+        stage: 'QA',
+      }),
+    },
+  });
+  await start($);
+  const r = await $.prompt.context({ blocks: [] });
+  expect(s.store.get('pr:363')).toMatchObject({
+    holder: null,
+    holderSession: null,
+  });
+  expect(s.store.get('pr:368')).toMatchObject({ holder: 'agent-9' });
+  expect(r.blocks.find((b) => b.name === 'motorfixLedger')?.text).toContain(
+    '#363 QA lap 0/10 run – ci – head – holder – ',
+  );
+});
+
 test('an empty ledger gives the one empty line', async ($, on) => {
   stubs(on, { run: () => ok(CHIEF) });
   await start($);
@@ -151,7 +190,7 @@ test('an empty ledger gives the one empty line', async ($, on) => {
   );
 });
 
-test('the gate runs every 15 minutes in Chief with two active worktrees and wakes on exit 2 (SC-003)', async ($, on) => {
+test('the gate runs every 15 minutes in Chief with two active worktrees and wakes on exit 2', async ($, on) => {
   const s = stubs(on, {
     run: (argv) => {
       if (isJson(argv))

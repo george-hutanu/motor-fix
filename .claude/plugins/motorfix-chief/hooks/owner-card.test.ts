@@ -3,6 +3,8 @@ import { expect, test } from 'claude-code/testing';
 import { ok, stubs } from './lib/stubs.ts';
 import { ASK } from './owner-card.js';
 
+// @traces 1168-FR-012 1168-FR-017 1168-FR-021
+
 const CHIEF = '/m/.git\n/m/.git\n';
 const WORKER = '/m/.git/worktrees/363-slug\n/m/.git\n';
 const PLUGIN = 'motorfix-chief';
@@ -72,7 +74,7 @@ const codeOf = async (ui) =>
 const start = ($, surface = 'terminal', cwd = '/m') =>
   $.session.start({ cwd, isInteractive: true, surface });
 
-test('Chief shows the chained command in a code element; Copy copies exactly it; Done closes the card (FR-012, FR-021)', async ($, on) => {
+test('Chief shows the chained command in a code element; Copy copies exactly it; Done closes the card', async ($, on) => {
   const s = stubs(on, { run: () => ok(CHIEF) });
   const d = dialog(on);
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -151,7 +153,7 @@ test('a question with no command block, or with two, passes unchanged', async ($
   expect(s.opened).not.toContain('motorfix-card');
 });
 
-test('a worker session, a cloud session or another surface passes the question unchanged (FR-017, FR-021)', async ($, on) => {
+test('a worker session, a cloud session or another surface passes the question unchanged', async ($, on) => {
   let gitOut = WORKER;
   let env = {};
   const s = stubs(on, {

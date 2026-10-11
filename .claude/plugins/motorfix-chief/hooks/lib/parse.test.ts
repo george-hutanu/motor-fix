@@ -16,7 +16,7 @@ test('prTokens finds every PR a dispatch prompt names, once each', () => {
   expect(
     prTokens('Tail PR #363, then tail #368; see /pull/370 and PR 363'),
   ).toEqual([363, 368, 370]);
-  expect(prTokens('issue #1168 and ST-1168')).toEqual([]);
+  expect(prTokens('issue #42 and ST-42')).toEqual([]);
 });
 
 test('worktreeTokens finds worktree names in absolute and relative paths', () => {

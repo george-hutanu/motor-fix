@@ -27,7 +27,7 @@ export function register(on) {
   on('session.end', endHook);
   on('tool.call', { tool: 'Bash' }, bashHook).catch(failOpen);
   on('prompt.submit', submitHook).catch(failOpen);
-  on('prompt.context', contextHook);
+  on('prompt.context', contextHook).catch(failOpen);
   on('ui.render', { component: 'AbovePrompt' }, bandHook);
   on('ui.render', { component: 'Pane', requestId: PANE.id }, paneHook);
   on('tool.call', { tool: 'AskUserQuestion' }, cardHook).catch(failOpen);
