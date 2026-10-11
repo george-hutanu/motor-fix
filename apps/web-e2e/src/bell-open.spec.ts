@@ -159,6 +159,13 @@ test.describe('opening a notification from the bell', () => {
         await expect(page).toHaveURL(view);
         const bell = page.getByRole('button', { name: /^Notificări, 2 / });
         await expect(bell).toBeInViewport({ ratio: 1 });
+        const bar = await page.locator('header').first().boundingBox();
+        const at = await bell.boundingBox();
+        // At the right of the top bar: past its 16 px inset only by the
+        // 6 px the badge hangs over the corner.
+        expect(
+          bar && at && bar.x + bar.width - (at.x + at.width),
+        ).toBeLessThanOrEqual(24);
         await expect(page.locator('mf-bell .badge')).toHaveText('2');
         await expect(page.locator('mf-bell .badge')).toBeInViewport({
           ratio: 1,
