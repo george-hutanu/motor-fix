@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
@@ -334,5 +335,78 @@ describe('Mașinile mele', () => {
     expect(list).toHaveBeenCalledTimes(2);
     expect(cards(element)).toHaveLength(1);
     expect(text(element)).not.toContain('Ceva nu a mers.');
+  });
+});
+
+describe('Mașinile mele opened at a car', () => {
+  let scrolled: jest.Mock;
+
+  async function open(url: string, items = [car(), car({ id: 'car-2' })]) {
+    scrolled = jest.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: CarsService,
+          useValue: { carsControllerList: async () => ({ items }) },
+        },
+        { provide: Overlays, useValue: { open: jest.fn() } },
+        provideRouter([
+          { children: [{ component: CarsView, path: '**' }], path: 'cars' },
+        ]),
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url);
+    await settled(harness);
+    return harness;
+  }
+
+  async function settled(harness: RouterTestingHarness) {
+    for (let i = 0; i < 4; i++) {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+  }
+
+  const focused = () =>
+    (document.activeElement as HTMLElement | null)?.getAttribute('data-car');
+
+  // @traces 032-FR-004
+  it('scrolls the car named in the address into view and focuses its card', async () => {
+    await open('/cars/car-2');
+
+    expect(focused()).toBe('car-2');
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    expect(scrolled.mock.contexts[0]).toBe(document.activeElement);
+  });
+
+  // @traces 032-FR-004
+  it('moves to another car when the address names another', async () => {
+    const harness = await open('/cars/car-2');
+
+    await harness.navigateByUrl('/cars/car-1');
+    await settled(harness);
+
+    expect(focused()).toBe('car-1');
+  });
+
+  // @traces 032-FR-004 032-FR-005
+  it('opens at the top with nothing focused for a car no longer listed', async () => {
+    const harness = await open('/cars/removed');
+
+    expect(focused()).toBeNull();
+    expect(scrolled).not.toHaveBeenCalled();
+    expect(harness.routeNativeElement?.textContent).not.toContain(
+      'Ceva nu a mers.',
+    );
+  });
+
+  // @traces 032-FR-004
+  it('focuses nothing on the bare view address', async () => {
+    await open('/cars');
+
+    expect(focused()).toBeNull();
+    expect(scrolled).not.toHaveBeenCalled();
   });
 });

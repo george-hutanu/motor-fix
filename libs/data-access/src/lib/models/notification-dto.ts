@@ -9,6 +9,11 @@ export interface NotificationDto {
    * A catalogue type, e.g. QUOTE_RECEIVED
    */
   kind: string;
+
+  /**
+   * The driver view the row opens, e.g. /app/driver/cars/<id>; null when it opens nothing
+   */
+  link: string | null;
   readAt: string | null;
 
   /**

@@ -14,6 +14,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 import { openAddCar } from '../add-car/open-add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
+import { focusCard } from '../focus-card';
 
 // "Mașinile mele": a card per car, newest first, and the button that adds one.
 @Component({
@@ -34,6 +35,7 @@ export class CarsView implements OnInit {
 
   constructor() {
     void this.i18n.enter('driver');
+    focusCard('data-car', this.cars);
   }
 
   ngOnInit() {

@@ -68,11 +68,23 @@ aside nav a[aria-current="page"] {
   flex-direction: column;
   min-width: 0;
 }
+/* Inset as far as each view's own margin, so the title and the bell line
+   up with the cards under them. */
 header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--mf-space-3);
+  padding-inline: var(--mf-space-4);
+}
+/* The language switch and the bell stay together at the right of the bar,
+   on the title's row or, when a phone wraps it, on the row under it. */
+.tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--mf-space-3);
+  margin-inline-start: auto;
 }
 header h1 {
   flex: 1 1 auto;

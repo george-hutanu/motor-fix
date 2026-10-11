@@ -30,6 +30,7 @@ features:
   - 345-decline-request
   - 209-status-change-emails
   - 251-monitoring-backups
+  - 032-notifications-bell
 ---
 
 # Capability: Notifications
@@ -186,9 +187,9 @@ _From 199-notification-bell._
 
 _From 199-notification-bell._
 
-### 199-FR-009 — Tapping a row MUST mark it read.
+### 032-FR-001 — In the driver dashboard, tapping a notification MUST mark it read and open the driver view its kind maps to: DUE_ITP, DUE_RCA, DUE_ROVINIETA, TYRES_SEASON, SERVICE_DUE, REPAIR_UPDATED and CAR_TRANSFER_ACCEPTED open Mașinile mele; QUOTE_RECEIVED, QUOTE_CHANGED, QUOTE_WITHDRAWN, QUOTE_EXPIRED, REQUEST_DECLINED, REQUEST_EXPIRED, MESSAGE_RECEIVED, NO_SHOW_RECORDED, FINAL_PRICE_CORRECTED, LIVE_STARTED, GARAGE_SUSPENDED_NOTICE and every `BOOKING_*`, `JOB_*` and `MEDIA_*` kind open Cererile mele; REVIEW_INVITE, REVIEW_REPLIED, REVIEW_DECIDED and REVIEW_APPEAL_DECIDED open Recenziile mele. `BOOKING_*`, `JOB_*` and `MEDIA_*` stand for the catalogue's kinds of those prefixes today, each written out by name in `contracts/bell-link.md` (the map's one table, which wins on any difference); there is no prefix match, so a kind added later is unmapped (FR-002) until its story adds it.
 
-_From 199-notification-bell._
+_From 032-notifications-bell._
 
 ### 199-FR-010 — On `notification.created` the bell MUST show a 5-second toast with the row's text and refresh its badge and list without a reload; on `notification.read` it MUST refresh them.
 
@@ -658,6 +659,34 @@ _From 209-status-change-emails._
 
 _From 251-monitoring-backups._
 
+### 032-FR-002 — Any other kind MUST only be marked read; the list stays open and nothing navigates.
+
+_From 032-notifications-bell._
+
+### 032-FR-003 — Each bell row MUST carry the in-app address it opens, or none, derived on the server from FR-001's map: `/app/driver/cars/<car>` for the car kinds (the car being the subject), `/app/driver/requests/<request>` for the request kinds whose notification holds its request's address, the view alone otherwise. When a row with an address is tapped, the list MUST close and that address MUST open, so the view can be reopened or shared at that card.
+
+_From 032-notifications-bell._
+
+### 032-FR-004 — Mașinile mele and Cererile mele MUST scroll the card named in their address into view (wholly visible in the viewport at 320 px and at desktop) and give it keyboard focus, with the kit's visible focus ring, once their list has loaded, on a first load or a later one; an address naming no card, or a card not in the list, MUST change nothing.
+
+_From 032-notifications-bell._
+
+### 032-FR-005 — A notification whose subject no longer exists MUST still show and, when tapped, MUST open its view at the top with no error; a request-kind notification whose subject is not itself a request MUST open Cererile mele at the request it belongs to, or at the top when none is found.
+
+_From 032-notifications-bell._
+
+### 032-FR-006 — The DUE_ITP bell text MUST name the car (brand and model) and the date the ITP is due, in Romanian and English, formatted with the app's day format in each language (a `day` template value rendered by `formatDay`) from the stored calendar date, so the day shown never shifts with the reader's time zone; the text MUST pass the templates' CI check (both languages, declared values only, no plate) and MUST fall back to the generic text when a value is missing.
+
+_From 032-notifications-bell._
+
+### 032-FR-007 — The reminder that sends DUE_ITP MUST pass the car's brand and model with the due date, so the text renders.
+
+_From 032-notifications-bell._
+
+### 032-FR-008 — On a 320 px and a 390 px phone the bell with its badge MUST be visible at the right of the top bar of every driver view, with no sideways scroll, and the list MUST open as the shared bottom sheet with a close button; on desktop the list MUST keep opening in the shared drawer.
+
+_From 032-notifications-bell._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -668,3 +697,5 @@ _From 251-monitoring-backups._
 - `194-FR-013` — superseded by `196-FR-014` (2026-10-05)
 
 - `560-FR-001` — superseded by `806-FR-001` (2026-10-07)
+
+- `199-FR-009` — superseded by `032-FR-001` (2026-10-10)

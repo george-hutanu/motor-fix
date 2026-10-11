@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import {
   type NotificationDto,
   NotificationsService,
@@ -213,6 +214,7 @@ export class BellStore {
 export class Bell {
   private readonly store = inject(BellStore);
   private readonly overlays = inject(Overlays);
+  private readonly router = inject(Router);
   private readonly i18n = inject(I18n);
   protected readonly badge = computed(() => {
     const count = this.store.count();
@@ -225,13 +227,15 @@ export class Bell {
       : this.i18n.t('shell.bell.title');
   });
 
-  protected openList() {
+  // A row that names a view closes the list on its address; going there
+  // waits for the close, whose step back the router replays first.
+  protected async openList() {
     void this.store.load();
     void this.store.refreshCount();
-    void this.overlays.open(BellList, {
-      data: this.store,
-      shape: 'drawer',
-      title: 'shell.bell.title',
-    });
+    const link = await this.overlays.open<string | undefined, BellStore>(
+      BellList,
+      { data: this.store, shape: 'drawer', title: 'shell.bell.title' },
+    );
+    if (link && link !== 'cancelled') void this.router.navigateByUrl(link);
   }
 }

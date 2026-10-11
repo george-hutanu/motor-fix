@@ -72,7 +72,7 @@
         } @else if (open().subtitle; as line) {<p class="line">{{ line | t }}</p>}
       </div>
     }
-    <mf-language-switch /><mf-bell />
+    <div class="tools"><mf-language-switch /><mf-bell /></div>
   </header>
   <p class="live-offline" role="status">@if (offline()) { {{ 'shell.live.offline' | t }} }</p>
   <mf-email-banner />

@@ -23,7 +23,7 @@
         <ul>
           @for (item of store.items(); track item.id) {
             <li [class.unread]="!item.readAt">
-              <button type="button" (click)="store.read(item.id)">
+              <button type="button" (click)="open(item)">
                 <span>
                   @if (!item.readAt) {
                     <span class="dot" aria-hidden="true"></span><span class="hidden">{{ 'shell.bell.unread' | t }}, </span>

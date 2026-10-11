@@ -39,7 +39,7 @@ export class BellController {
     @CurrentActor() actor: Actor,
     @Query() query: NotificationListQueryDto,
   ): Promise<NotificationPageDto> {
-    return this.bell.list(actor.accountId, query);
+    return this.bell.list(actor.accountId, query, actor.role);
   }
 
   @Get('unread-count')
@@ -64,6 +64,6 @@ export class BellController {
     @CurrentActor() actor: Actor,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<NotificationDto> {
-    return this.bell.read(actor.accountId, id);
+    return this.bell.read(actor.accountId, id, actor.role);
   }
 }

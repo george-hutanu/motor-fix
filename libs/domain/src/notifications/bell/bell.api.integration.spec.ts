@@ -8,6 +8,7 @@ import request from 'supertest';
 import { BellService } from './bell.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
+import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { until } from '../../waits.testing';
 import { NotificationsModule } from '../notifications.module';
@@ -64,8 +65,8 @@ beforeEach(async () => {
   published.length = 0;
 });
 
-const bearer = (accountId: string) =>
-  `Bearer ${signAccessToken({ accountId, role: 'driver' }, tokenSecret)}`;
+const bearer = (accountId: string, role: Role = 'driver') =>
+  `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -81,6 +82,7 @@ async function bell(
     kind?: string;
     params?: Record<string, unknown>;
     readAt?: Date;
+    subjectId?: string;
   } = {},
 ) {
   const row = await prisma.notification.create({
@@ -93,22 +95,81 @@ async function bell(
       params: (options.params ?? {}) as object,
       readAt: options.readAt,
       status: 'sent',
+      subjectId: options.subjectId,
     },
   });
   return row.id;
 }
 
-const get = (path: string, accountId: string) =>
+const get = (path: string, accountId: string, role?: Role) =>
   request(app.getHttpServer())
     .get(path)
-    .set('Authorization', bearer(accountId));
+    .set('Authorization', bearer(accountId, role));
 
-const post = (path: string, accountId: string) =>
+const post = (path: string, accountId: string, role?: Role) =>
   request(app.getHttpServer())
     .post(path)
-    .set('Authorization', bearer(accountId));
+    .set('Authorization', bearer(accountId, role));
 
 describe('the bell list', () => {
+  // @traces 032-FR-003
+  it('gives each row the driver view it opens, on the list and on a read', async () => {
+    const andrei = await account('andrei');
+    const car = randomUUID();
+    const requestId = randomUUID();
+    const due = await bell(andrei, {
+      kind: 'DUE_ITP',
+      params: { dueOn: '2026-11-09' },
+      subjectId: car,
+    });
+    await bell(andrei, {
+      ago: 1000,
+      kind: 'QUOTE_RECEIVED',
+      params: {
+        garage: 'Service Ionescu',
+        link: `https://motorfix.ro/app/driver/requests/${requestId}`,
+        range: '300–450',
+      },
+      subjectId: randomUUID(),
+    });
+    await bell(andrei, { ago: 2000 });
+
+    const res = await get('/notifications', andrei).expect(200);
+    expect(res.body.items.map((n: { link: string | null }) => n.link)).toEqual([
+      `/app/driver/cars/${car}`,
+      `/app/driver/requests/${requestId}`,
+      null,
+    ]);
+
+    const read = await post(`/notifications/${due}/read`, andrei).expect(200);
+    expect(read.body.link).toBe(`/app/driver/cars/${car}`);
+  });
+
+  // @traces 032-FR-003
+  it('gives no driver view to a row read from another dashboard', async () => {
+    const ionescu = await account('ionescu', ['garage']);
+    const requestId = randomUUID();
+    const message = await bell(ionescu, {
+      kind: 'MESSAGE_RECEIVED',
+      params: { link: `https://motorfix.ro/app/driver/requests/${requestId}` },
+      subjectId: randomUUID(),
+    });
+    await bell(ionescu, { ago: 1000, kind: 'REVIEW_DECIDED' });
+
+    const res = await get('/notifications', ionescu, 'garage').expect(200);
+    expect(res.body.items.map((n: { link: string | null }) => n.link)).toEqual([
+      null,
+      null,
+    ]);
+
+    const read = await post(
+      `/notifications/${message}/read`,
+      ionescu,
+      'garage',
+    ).expect(200);
+    expect(read.body.link).toBeNull();
+  });
+
   it("lists the person's own bell rows newest first, 20 a page", async () => {
     const andrei = await account('andrei');
     const other = await account('other');
@@ -127,6 +188,7 @@ describe('the bell list', () => {
       at: expect.any(String),
       id: ids[0],
       kind: 'TEST_MESSAGE',
+      link: null,
       readAt: null,
       subjectId: null,
       text: 'Mesaj de test: notificările funcționează.',
@@ -286,7 +348,9 @@ describe('marking read', () => {
       publish: () => Promise.reject(new Error('redis down')),
     });
 
-    await expect(down.read(andrei, id)).resolves.toMatchObject({ id });
+    await expect(down.read(andrei, id, 'driver')).resolves.toMatchObject({
+      id,
+    });
     await expect(down.readAll(andrei)).resolves.toBeUndefined();
 
     expect(await down.unreadCount(andrei)).toBe(0);
