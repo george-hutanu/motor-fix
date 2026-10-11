@@ -108,7 +108,7 @@ test.describe('the admin dashboard @seeded', () => {
     ['a 390 px phone', 390, 844],
     ['a desktop', 1280, 800],
   ] as const) {
-    test(`shows the seeded admin the garages waiting on ${device}`, async ({
+    test(`shows the seeded admin the garages waiting on ${device} @core`, async ({
       page,
     }) => {
       await page.setViewportSize({ height, width });
@@ -130,7 +130,7 @@ test.describe('the admin dashboard @seeded', () => {
           ? page.locator('mf-dashboard-tab-bar')
           : page.getByRole('navigation', { name: 'Meniu' });
       await expect(
-        menu.getByRole('link', { name: /^Service‑uri, [23] în așteptare$/ }),
+        menu.getByRole('link', { name: /^Service‑uri [23] în așteptare$/ }),
       ).toBeVisible();
       await expect(
         menu.getByRole('link', { name: /Utilizatori/ }),
@@ -304,7 +304,7 @@ test.describe('the admin dashboard in English', () => {
           ? page.locator('mf-dashboard-tab-bar')
           : page.getByRole('navigation', { name: 'Menu' });
       await expect(
-        menu.getByRole('link', { name: 'Garages, 2 waiting' }),
+        menu.getByRole('link', { name: 'Garages 2 waiting' }),
       ).toBeVisible();
     });
   }
@@ -363,7 +363,7 @@ test('switches the admin header and counter to English without a reload', async 
   await expect(
     page
       .getByRole('navigation', { name: 'Menu' })
-      .getByRole('link', { name: 'Garages, 2 waiting' }),
+      .getByRole('link', { name: 'Garages 2 waiting' }),
   ).toBeVisible();
   expect(
     await page.evaluate(() => (window as unknown as { kept?: boolean }).kept),

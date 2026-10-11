@@ -22,7 +22,7 @@
   align-items: center;
   gap: var(--mf-space-2);
   min-height: var(--mf-tap);
-  font-size: max(16px, 1rem);
+  font-size: var(--mf-size-body);
   overflow-wrap: anywhere;
   cursor: pointer;
 }

@@ -18,7 +18,6 @@ p {
 .hint,
 .counter {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
 }
 form,
 .body {
@@ -73,14 +72,12 @@ textarea {
 }
 .error {
   color: var(--mf-red-ink);
-  font-size: var(--mf-size-small);
 }
 .error:empty {
   display: none;
 }
 .warning {
   color: var(--mf-amber-ink);
-  font-size: var(--mf-size-small);
 }
 .under {
   display: flex;
@@ -118,5 +115,17 @@ textarea {
 @media (max-width: 600px) {
   .prices {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
+  .mechanic,
+  .left-out,
+  .hint,
+  .counter,
+  .error,
+  .warning {
+    font-size: var(--mf-size-small);
   }
 }

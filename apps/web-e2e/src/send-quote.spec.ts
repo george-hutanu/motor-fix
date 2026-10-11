@@ -82,7 +82,7 @@ test.describe('sending a quote @seeded', () => {
   // @traces 344-FR-014
   // @traces 344-FR-015
   // @traces 344-FR-019
-  test('the owner sends 650–800 lei, 2 h, tomorrow 09:00 from the pre-filled dialog; the row moves to Oferte trimise and the driver sees the quote', async ({
+  test('the owner sends 650–800 lei, 2 h, tomorrow 09:00 from the pre-filled dialog; the row moves to Oferte trimise and the driver sees the quote @core', async ({
     browser,
     page,
     request,

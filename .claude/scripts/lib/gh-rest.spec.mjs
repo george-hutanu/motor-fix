@@ -185,12 +185,12 @@ describe('pr view', () => {
   it('builds statusCheckRollup from the head commit check runs and statuses', () => {
     const f = fake({
       'GET pulls/160': pull(),
-      'GET commits/head1/check-runs?per_page=100': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }, { name: 'E2E tests', status: 'in_progress', conclusion: null }] },
+      'GET commits/head1/check-runs?per_page=100': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }, { name: 'Unit and integration tests', status: 'in_progress', conclusion: null }] },
       'GET commits/head1/status': { statuses: [{ context: 'agent-review', state: 'success' }] },
     });
     assert.deepEqual(JSON.parse(gh(['pr', 'view', '160', '--json', 'statusCheckRollup'], f).stdout).statusCheckRollup, [
       { __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS' },
-      { __typename: 'CheckRun', name: 'E2E tests', status: 'IN_PROGRESS', conclusion: '' },
+      { __typename: 'CheckRun', name: 'Unit and integration tests', status: 'IN_PROGRESS', conclusion: '' },
       { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS' },
     ]);
   });

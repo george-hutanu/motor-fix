@@ -25,6 +25,8 @@ const themeOf = (t: Record<string, string>): ChartTheme => ({
   amber: t['--mf-amber-ink'],
   bg: t['--mf-bg'],
   font: t['--mf-font-body'],
+  // The size tokens sit in the root block only; no scheme overrides them.
+  labelSize: Number.parseFloat(darkTokens['--mf-size-label']),
   line: t['--mf-line'],
   text: t['--mf-text'],
   textSecondary: t['--mf-text-secondary'],
@@ -153,7 +155,10 @@ describe('chartConfig', () => {
     for (const axis of ['x', 'y']) {
       const { ticks } = bar().options.scales[axis];
       expect(ticks.color).toBe(dark.textSecondary);
-      expect(ticks.font).toMatchObject({ family: dark.font, size: 12 });
+      expect(ticks.font).toMatchObject({
+        family: dark.font,
+        size: dark.labelSize,
+      });
     }
     expect(bar().options.scales.x.ticks).toMatchObject({
       autoSkip: true,
@@ -188,7 +193,7 @@ describe('chartConfig', () => {
     expect(tooltip('ro')).toMatchObject({
       backgroundColor: dark.text,
       bodyColor: dark.bg,
-      bodyFont: { family: dark.font, size: 12, weight: 600 },
+      bodyFont: { family: dark.font, size: dark.labelSize, weight: 600 },
       displayColors: false,
     });
   });
@@ -246,12 +251,34 @@ describe('readTheme', () => {
   it('reads the chart colours and font from the tokens on an element', () => {
     // jsdom drops a quoted font list, so this element's font token is bare.
     const el = document.createElement('div');
-    for (const [name, value] of Object.entries(lightTokens))
+    for (const [name, value] of Object.entries({
+      ...darkTokens,
+      ...lightTokens,
+    }))
       el.style.setProperty(name, value);
     el.style.setProperty('--mf-font-body', 'system-ui');
     document.body.append(el);
 
     expect(readTheme(el)).toEqual({ ...light, font: 'system-ui' });
+    el.remove();
+  });
+
+  // @traces 975-type-scale-FR-005
+  // @traces 975-type-scale-FR-008
+  it('reads the label size from the label token, as a number of pixels', () => {
+    const el = document.createElement('div');
+    el.style.setProperty('--mf-size-label', '12px');
+    document.body.append(el);
+
+    expect(readTheme(el).labelSize).toBe(12);
+    el.remove();
+  });
+
+  it('leaves the label size to Chart.js when the token is missing', () => {
+    const el = document.createElement('div');
+    document.body.append(el);
+
+    expect(readTheme(el).labelSize).toBeUndefined();
     el.remove();
   });
 });

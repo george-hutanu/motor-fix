@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
@@ -188,5 +191,37 @@ describe("the accounts' filters sheet", () => {
       roles: ['mechanic'],
       status: 'active',
     });
+  });
+});
+
+describe('type scale', () => {
+  // @traces 975-type-scale-FR-001
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'admin-users-filters-sheet.css'),
+    'utf8',
+  );
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `.option` at the body size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*\.option \{[^}]*font-size: var\(--mf-size-body\);/,
+    );
+  });
+
+  // @traces 975-type-scale-FR-003
+  it('keeps the label-size eyebrows out of paragraphs', () => {
+    const template = readFileSync(
+      join(__dirname, 'admin-users-filters-sheet.html'),
+      'utf8',
+    );
+    expect(template).not.toMatch(/<p class="label"/);
   });
 });

@@ -75,11 +75,9 @@ li {
 }
 .hint {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
 }
 .tag {
   align-self: flex-start;
-  font-size: var(--mf-size-label);
   padding: 0 var(--mf-space-2);
   border: 1px solid var(--mf-line-strong);
   border-radius: 999px;
@@ -100,5 +98,15 @@ button[hlmBtn] {
   button[hlmBtn] {
     width: auto;
     align-self: flex-start;
+  }
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
+  .hint {
+    font-size: var(--mf-size-small);
+  }
+  .tag {
+    font-size: var(--mf-size-label);
   }
 }
