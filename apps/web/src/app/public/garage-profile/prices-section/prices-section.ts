@@ -27,7 +27,9 @@ const leiRange = (fromBani: number, toBani: number, language: Language) =>
 
 // The garage's price list on its profile. A switch marks a job the driver
 // needs; its state lives only in the open page, keyed by job, so a re-read
-// keeps the jobs still listed and forgets the ones that left.
+// keeps the jobs still listed and forgets the ones that left. The template
+// reads the state on every render, the empty list included, so a list that
+// empties and refills starts with every switch off.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.aria-label]': 'label()' },

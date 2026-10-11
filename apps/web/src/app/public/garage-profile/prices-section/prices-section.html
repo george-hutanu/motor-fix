@@ -1,3 +1,4 @@
+@let switched = on();
 <h2>{{ 'public.garageProfile.prices.title' | t }}</h2>
 @if (rows().length === 0) {
   <p class="empty">{{ 'public.garageProfile.prices.empty' | t }}</p>
@@ -5,8 +6,8 @@
   <p class="intro">{{ 'public.garageProfile.prices.intro' | t }}@if (labour()) { {{ labour() }}}</p>
   <p class="includes">{{ 'public.garageProfile.prices.includes' | t }}</p>
   @for (row of rows(); track row.id) {
-    <label class="row" [class.on]="on().has(row.id)">
-      <hlm-switch [inputId]="'mf-price-job-' + row.id" [checked]="on().has(row.id)" [aria-label]="row.name" (checkedChange)="toggle(row.id, $event)" />
+    <label class="row" [class.on]="switched.has(row.id)">
+      <hlm-switch [inputId]="'mf-price-job-' + row.id" [checked]="switched.has(row.id)" [aria-label]="row.name" (checkedChange)="toggle(row.id, $event)" />
       <span class="job">
         <span class="name">{{ row.name }}</span>
         @if (row.duration) {
