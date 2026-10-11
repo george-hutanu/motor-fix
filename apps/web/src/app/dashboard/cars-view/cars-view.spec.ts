@@ -618,6 +618,7 @@ describe('a car card', () => {
         data: {
           car: car({ id: 'car-1', plate: 'CJ12ABC' }),
           focus,
+          gone: expect.any(Function),
           plates: ['CJ12ABC'],
         },
         shape: 'dialog',
@@ -644,7 +645,11 @@ describe('a car card', () => {
     await settle();
 
     expect(open).toHaveBeenCalledWith(AddCar, {
-      data: { car: car({ id: 'car-1' }), plates: [] },
+      data: {
+        car: car({ id: 'car-1' }),
+        gone: expect.any(Function),
+        plates: [],
+      },
       shape: 'dialog',
       title: 'driver.cars.edit.title',
     });
@@ -656,6 +661,30 @@ describe('a car card', () => {
     expect(sentences(cards(element)[1])[0]).toBe(
       'ITP valabil până în noiembrie 2027',
     );
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 092-FR-010
+  it('drops the card when the edit dialog finds the car removed meanwhile', async () => {
+    const { element, settle } = await render([
+      car({ id: 'car-2', model: 'X1' }),
+      car({ id: 'car-1' }),
+    ]);
+    await settle();
+    open.mockImplementationOnce(async (_, { data }) => {
+      data.gone();
+      return 'cancelled';
+    });
+
+    trigger(cards(element)[1])?.click();
+    await settle();
+    items()[0].click();
+    await settle();
+    await settle();
+
+    expect(cards(element).map((c) => c.getAttribute('data-car'))).toEqual([
+      'car-2',
+    ]);
     expect(list).toHaveBeenCalledTimes(1);
   });
 

@@ -59,6 +59,8 @@ export interface CarTaskData {
   plates: string[];
   car?: CarDto;
   focus?: DateField;
+  // Called once when the car turns out removed meanwhile, so the list drops it.
+  gone?: () => void;
 }
 
 const nextYear = () => new Date().getFullYear() + 1;
@@ -225,8 +227,10 @@ export class AddCar {
       });
     }
     effect(() => {
-      if (this.save.problem()?.code === 'stale_version')
-        untracked(() => void this.reload());
+      const code = this.save.problem()?.code;
+      if (code === 'stale_version') untracked(() => void this.reload());
+      else if (code === 'not_found' && this.car())
+        untracked(() => this.markGone());
     });
   }
 
@@ -276,7 +280,7 @@ export class AddCar {
       const { items } = await this.cars.carsControllerList();
       const current = items.find((c) => c.id === id);
       if (!current) {
-        this.gone.set(true);
+        this.markGone();
         return;
       }
       this.car.set(current);
@@ -284,6 +288,12 @@ export class AddCar {
     } catch {
       // The stale message stays; the next save answers 409 again.
     }
+  }
+
+  private markGone() {
+    if (this.gone()) return;
+    this.gone.set(true);
+    this.task.data.gone?.();
   }
 
   protected fuelKey(fuel: (typeof FUELS)[number]) {

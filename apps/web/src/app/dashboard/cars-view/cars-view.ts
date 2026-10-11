@@ -73,6 +73,7 @@ export class CarsView implements OnInit {
     const saved = await openAddCar(this.overlays, plates, {
       car,
       ...(focus && { focus }),
+      gone: () => this.drop(car),
     });
     if (saved !== 'cancelled')
       this.cars.update((list) =>
@@ -82,8 +83,11 @@ export class CarsView implements OnInit {
 
   // Once the removal is confirmed and done, the card leaves at once.
   protected async remove(car: CarDto) {
-    if ((await openRemoveCar(this.overlays, car)) === true)
-      this.cars.update((list) => list?.filter((c) => c.id !== car.id));
+    if ((await openRemoveCar(this.overlays, car)) === true) this.drop(car);
+  }
+
+  private drop(car: CarDto) {
+    this.cars.update((list) => list?.filter((c) => c.id !== car.id));
   }
 
   // The arrows move between the menu's items, wrapping.

@@ -459,6 +459,7 @@ const stored: CarDto = {
 let update: jest.Mock;
 let listCars: jest.Mock;
 let edited: Promise<OverlayResult<CarDto>>;
+let gone: jest.Mock;
 
 async function openEdit(
   language: 'ro' | 'en' = 'ro',
@@ -472,6 +473,7 @@ async function openEdit(
     updatedAt: '2026-10-08T08:00:00.000Z',
   }));
   listCars = jest.fn(async () => ({ items: [car] }));
+  gone = jest.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: BrandsService, useValue: { brandsControllerSearch: search } },
@@ -490,6 +492,7 @@ async function openEdit(
   const host = TestBed.createComponent(Host);
   edited = openAddCar(host.componentInstance.overlays, ['B123ABC', 'CJ12XYZ'], {
     car,
+    gone,
     ...(focus && { focus }),
   });
   await settle();
@@ -747,6 +750,35 @@ describe('the edit dialog', () => {
     await settle();
 
     expect(text()).toContain('Nu mai găsim ce voiai să salvezi.');
+    expect(gone).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 092-FR-010
+  it('tells the list the car is gone when a save answers not found', async () => {
+    await openEdit();
+    update.mockRejectedValueOnce(
+      refusal(404, { code: 'not_found', message: 'No such car' }),
+    );
+    type(field('Model'), '330d');
+    await settle();
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(text()).toContain('Nu mai găsim ce voiai să salvezi.');
+    expect(gone).toHaveBeenCalledTimes(1);
+    expect(field('Model').value).toBe('330d');
+  });
+
+  // @traces 092-FR-010
+  it('does not call the car gone on any other refusal', async () => {
+    await openEdit();
+    update.mockRejectedValueOnce(refusal(500, { code: 'internal' }));
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(gone).not.toHaveBeenCalled();
   });
 
   // @traces 092-FR-002
