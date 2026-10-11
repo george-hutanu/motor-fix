@@ -825,7 +825,7 @@ _From 766-cloud-rest-fallback._
 
 _From 766-cloud-rest-fallback._
 
-### 766-FR-005 — `scripts/cloud-setup.sh` MUST put a Node 24 first on PATH and persist it for the session (one marked line in `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set), reusing an installed Node 24 before installing one, and MUST install the chromium revision the installed `playwright-core` pins when it is missing; AGENTS.md "Cloud sessions" MUST say so and name `gh.mjs`.
+### 766-FR-005 — `scripts/cloud-setup.sh` MUST put a Node 26 first on PATH and persist it for the session (one marked line in `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set), reusing an installed Node 26 before installing one, and MUST install the chromium revision the installed `playwright-core` pins when it is missing; AGENTS.md "Cloud sessions" MUST say so and name `gh.mjs`.
 
 _From 766-cloud-rest-fallback._
 
