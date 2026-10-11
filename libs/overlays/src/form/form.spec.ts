@@ -665,7 +665,7 @@ describe('retrying', () => {
   });
 });
 
-describe('type scale (ST-975)', () => {
+describe('type scale', () => {
   // @traces 975-type-scale-FR-001
   // @traces 975-type-scale-FR-008
   const source = readFileSync(join(__dirname, 'form-parts.ts'), 'utf8');

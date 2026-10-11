@@ -16,7 +16,6 @@ input {
 .message {
   margin: 0;
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
   overflow-wrap: anywhere;
 }
 .message:empty {
@@ -52,4 +51,11 @@ input {
 button:focus-visible {
   outline: 2px solid var(--mf-focus);
   outline-offset: 2px;
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
+  .message {
+    font-size: var(--mf-size-small);
+  }
 }

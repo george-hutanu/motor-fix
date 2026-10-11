@@ -435,18 +435,13 @@ describe("the phone's filter button", () => {
   });
 });
 
-describe('type scale (ST-975)', () => {
+describe('type scale', () => {
   // @traces 975-type-scale-FR-002
   // @traces 975-type-scale-FR-008
   const stylesheet = readFileSync(
     join(__dirname, 'admin-users-filters.css'),
     'utf8',
   );
-  /** The body of the first top-level rule whose selector ends with `selector`. */
-  const rule = (selector: string) =>
-    new RegExp(
-      `(?:^|\\n)[^{}\\n]*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`,
-    ).exec(stylesheet)?.[1] ?? '';
 
   it('takes every text size from a Cockpit size token', () => {
     const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
@@ -456,12 +451,14 @@ describe('type scale (ST-975)', () => {
   });
 
   it('sets `input[type="search"]` at the field size', () => {
-    expect(rule('input[type="search"]')).toContain(
-      'font-size: var(--mf-size-field);',
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*input\[type="search"\] \{[^}]*font-size: var\(--mf-size-field\);/,
     );
   });
 
   it('sets `select` at the field size', () => {
-    expect(rule('select')).toContain('font-size: var(--mf-size-field);');
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*select \{[^}]*font-size: var\(--mf-size-field\);/,
+    );
   });
 });

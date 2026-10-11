@@ -249,7 +249,7 @@ describe('Lucrări', () => {
   });
 });
 
-describe('type scale on a phone (ST-975)', () => {
+describe('type scale on a phone', () => {
   // @traces 975-type-scale-FR-003
   // @traces 975-type-scale-FR-008
   const stylesheet = readFileSync(join(__dirname, 'jobs-view.css'), 'utf8');

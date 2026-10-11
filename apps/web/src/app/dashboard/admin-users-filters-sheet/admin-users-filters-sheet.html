@@ -8,7 +8,7 @@
   }
 </fieldset>
 <div class="group" role="radiogroup" [attr.aria-label]="'admin.users.filters.state' | t">
-  <p class="label" aria-hidden="true">{{ 'admin.users.filters.state' | t }}</p>
+  <div class="label" aria-hidden="true">{{ 'admin.users.filters.state' | t }}</div>
   @for (option of stateOptions(); track option.key) {
     <label class="option">
       <input type="radio" name="mf-users-state" [value]="option.key ?? ''" [checked]="option.key === status()" (change)="status.set(option.key)" />
