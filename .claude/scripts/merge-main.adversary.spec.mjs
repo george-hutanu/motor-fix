@@ -43,6 +43,9 @@ function world(files) {
     const c = join(root, name);
     sh(root, 'clone', '-q', origin, c);
     sh(c, 'checkout', '-q', '-b', `feat-${name}`);
+    // The script's own merge commit needs an identity; CI runners have no global one.
+    sh(c, 'config', 'user.name', 't');
+    sh(c, 'config', 'user.email', 't@t');
     return c;
   };
   return { root, origin, seed, clone };
