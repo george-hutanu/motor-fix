@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import {
   type NotificationDto,
   NotificationsService,
@@ -20,6 +21,7 @@ const row = (id: string, overrides: Partial<NotificationDto> = {}) =>
     at: minutesAgo(5),
     id,
     kind: 'TEST_MESSAGE',
+    link: null,
     readAt: null,
     subjectId: null,
     text: `Text ${id}`,
@@ -63,6 +65,7 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       BellStore,
+      provideRouter([]),
       { provide: NotificationsService, useValue: api },
       { provide: Live, useValue: { events: new Subject() } },
     ],
@@ -70,14 +73,13 @@ async function render(
   const store = TestBed.inject(BellStore);
   if (load) await store.load();
   const host = TestBed.createComponent(Host);
-  void host.componentInstance.overlays.open(BellList, {
-    data: store,
-    shape: 'drawer',
-    title: 'shell.bell.title',
-  });
+  const closed = host.componentInstance.overlays.open<string, BellStore>(
+    BellList,
+    { data: store, shape: 'drawer', title: 'shell.bell.title' },
+  );
   await settle();
   const element = panel().querySelector('mf-bell-list') as HTMLElement;
-  return { element, store };
+  return { closed, element, store };
 }
 
 const button = (element: HTMLElement, name: string) =>
@@ -156,6 +158,61 @@ describe('BellList', () => {
 
     expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
     expect(element.querySelector('li')?.classList).not.toContain('unread');
+  });
+
+  // @traces 032-FR-001 032-FR-003
+  it('closes the list on the view a tapped row links to, for the bell to open', async () => {
+    const { closed, element } = await render(async () => ({
+      items: [row('a', { kind: 'DUE_ITP', link: '/app/driver/cars/c1' })],
+      nextCursor: null,
+    }));
+    // The list's close steps back in history and the router replays that
+    // address after it: a navigation started before the close settles is
+    // undone, so the list never navigates itself.
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+    element.querySelector<HTMLButtonElement>('li button')?.click();
+    await settle();
+
+    expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
+    await expect(closed).resolves.toBe('/app/driver/cars/c1');
+    expect(navigate).not.toHaveBeenCalled();
+    expect(panel()).toBeNull();
+  });
+
+  // @traces 032-FR-002
+  it('keeps the list open for a row that links nowhere', async () => {
+    const { element } = await render(async () => ({
+      items: [row('a')],
+      nextCursor: null,
+    }));
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+    element.querySelector<HTMLButtonElement>('li button')?.click();
+    await settle();
+
+    expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
+    expect(navigate).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
+  });
+
+  // @traces 032-FR-001
+  it('still opens the view of a row already read, without reading it again', async () => {
+    const { closed, element } = await render(async () => ({
+      items: [
+        row('a', {
+          kind: 'QUOTE_RECEIVED',
+          link: '/app/driver/requests/r1',
+          readAt: minutesAgo(1),
+        }),
+      ],
+      nextCursor: null,
+    }));
+    element.querySelector<HTMLButtonElement>('li button')?.click();
+    await settle();
+
+    expect(api.bellControllerRead).not.toHaveBeenCalled();
+    await expect(closed).resolves.toBe('/app/driver/requests/r1');
   });
 
   it('marks all read', async () => {

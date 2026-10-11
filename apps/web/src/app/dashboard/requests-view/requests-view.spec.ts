@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   type RequestSummaryDto,
@@ -231,5 +232,94 @@ describe('Cererile mele', () => {
     await settle();
 
     expect(rows(element)).toHaveLength(1);
+  });
+});
+
+describe('Cererile mele opened at a request', () => {
+  let scrolled: jest.Mock;
+
+  async function open(url: string) {
+    events = new Subject();
+    scrolled = jest.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    list = jest.fn(async () => {
+      const items = [row(), row({ id: 'req-2' })];
+      return { items, nextCursor: null, total: items.length };
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            children: [{ component: RequestsView, path: '**' }],
+            path: 'requests',
+          },
+        ]),
+        {
+          provide: RequestsService,
+          useValue: { requestsControllerList: list },
+        },
+        {
+          provide: Live,
+          useValue: {
+            events,
+            on: (kinds: readonly EventKind[]) =>
+              events.pipe(
+                filter((m) => (kinds as readonly string[]).includes(m.kind)),
+              ),
+            resync: new Subject<void>(),
+          },
+        },
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url);
+    await settled(harness);
+    return harness;
+  }
+
+  async function settled(harness: RouterTestingHarness) {
+    for (let i = 0; i < 4; i++) {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+      await wait(0);
+    }
+  }
+
+  const focused = () =>
+    (document.activeElement as HTMLElement | null)?.getAttribute(
+      'data-request',
+    );
+
+  // @traces 032-FR-004
+  it('scrolls the request named in the address into view and focuses its row', async () => {
+    await open('/requests/req-2');
+
+    expect(focused()).toBe('req-2');
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    expect(scrolled.mock.contexts[0]).toBe(document.activeElement);
+  });
+
+  // @traces 032-FR-004
+  it('does not scroll again when the list is read again live', async () => {
+    const harness = await open('/requests/req-2');
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'req-3',
+      kind: 'request.created',
+    });
+    await wait(400);
+    await settled(harness);
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(scrolled).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 032-FR-004 032-FR-005
+  it('opens at the top with nothing focused for a request not listed', async () => {
+    await open('/requests/gone');
+
+    expect(focused()).toBeNull();
+    expect(scrolled).not.toHaveBeenCalled();
   });
 });

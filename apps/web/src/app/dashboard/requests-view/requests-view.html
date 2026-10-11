@@ -2,7 +2,7 @@
   @if (list.length) {
     <ul class="rows">
       @for (row of list; track row.id) {
-        <li data-request>
+        <li [attr.data-request]="row.id" tabindex="-1">
           <p class="car">{{ row.car }}</p>
           <p class="what">{{ row.what }}</p>
           <p class="meta">

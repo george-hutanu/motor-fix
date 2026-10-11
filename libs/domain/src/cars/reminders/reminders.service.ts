@@ -2,11 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { dueStage, type ReminderStage, seasonOf } from './reminders';
 import { addDays, localDay } from '../../bucharest';
-import type {
-  Prisma,
-  PrismaClient,
-  Reminder,
-} from '../../generated/prisma/client';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   NOTIFICATIONS_PRISMA,
   NotificationsService,
@@ -17,6 +13,12 @@ const DUE_KINDS: DueKind[] = ['itp', 'service', 'rca', 'rovinieta'];
 
 const date = (day: string) => new Date(`${day}T00:00:00Z`);
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+
+// The car a reminder is about, by name, so its message can say which one.
+const WITH_CAR = {
+  car: { select: { brand: { select: { name: true } }, model: true } },
+} as const;
+type Due = Prisma.ReminderGetPayload<{ include: typeof WITH_CAR }>;
 
 // What a sent stage records on its reminder.
 function sentFlags(
@@ -95,6 +97,7 @@ export class RemindersService {
   async run(today: string): Promise<number> {
     const season = seasonOf(today);
     const candidates = await this.prisma.reminder.findMany({
+      include: WITH_CAR,
       where: {
         OR: [
           {
@@ -126,14 +129,16 @@ export class RemindersService {
 
   // The pipeline writes one message per event and person, so a run repeated
   // before the flag is set sends nothing twice.
-  private async send(reminder: Reminder, today: string): Promise<boolean> {
+  private async send(reminder: Due, today: string): Promise<boolean> {
     const dueOn = day(reminder.dueOn);
     const due = dueStage({ ...reminder, dueOn }, today);
     if (!due) return false;
     await this.notifications.notify({
       eventId: `reminder:${reminder.id}:${due.stage}:${dueOn ?? today.slice(0, 4)}`,
       kind: due.type,
-      params: { dueOn },
+      params: reminder.car
+        ? { car: `${reminder.car.brand.name} ${reminder.car.model}`, dueOn }
+        : { dueOn },
       recipients: [reminder.accountId],
       subjectId: reminder.carId ?? reminder.bookingId,
     });

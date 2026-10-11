@@ -13,7 +13,15 @@ import { DECISIONS } from './templates/verification-result';
 
 type Language = 'ro' | 'en';
 export type Channel = 'email' | 'bell' | 'push' | 'sms' | 'whatsapp';
-type Format = 'text' | 'link' | 'count' | 'num' | 'lei' | 'when' | 'reason';
+type Format =
+  | 'text'
+  | 'link'
+  | 'count'
+  | 'num'
+  | 'lei'
+  | 'when'
+  | 'day'
+  | 'reason';
 
 interface EmailText {
   subject: string;
@@ -97,6 +105,14 @@ function count(value: unknown, language: Language): string {
   return rest === 0 || rest >= 20 ? `${text} de` : text;
 }
 
+// A day comes as JSON text. 2026-02-30 parses as 2 March, so a date-only
+// value must name its own day.
+function realDay(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  if (value.length !== 10) return true;
+  return new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
+}
+
 function format(kind: Format, value: unknown, language: Language): string {
   switch (kind) {
     case 'count':
@@ -107,6 +123,15 @@ function format(kind: Format, value: unknown, language: Language): string {
       return Array.isArray(value)
         ? formatLeiRange(value[0], value[1], language)
         : formatLei(value, language);
+    // A calendar date, such as a due date: the day alone. A value that is no
+    // real day fails, so the bell falls back to its generic text.
+    case 'day': {
+      const text = formatDay(value, language);
+      if (text === '—' || !realDay(value)) {
+        throw new Error(`not a day: ${String(value)}`);
+      }
+      return text;
+    }
     case 'when': {
       const day = formatDay(value, language);
       return day === '—' ? day : `${day}, ${formatClock(value)}`;

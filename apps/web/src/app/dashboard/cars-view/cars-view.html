@@ -9,7 +9,7 @@
   @if (list.length) {
     <div class="cards">
       @for (car of list; track car.id) {
-        <article data-car>
+        <article [attr.data-car]="car.id" tabindex="-1">
           <p class="name">{{ car.brandName }} {{ car.model }}</p>
           <p>{{ car.year }} · {{ car.odometerKm | km }}</p>
           <mf-due-date-line
