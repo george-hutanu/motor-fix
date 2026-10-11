@@ -111,6 +111,18 @@ test('a PR with no row gets one, with the worktree the prompt names', async ($, 
   });
 });
 
+test('a prompt naming several worktrees gives its new rows none of them', async ($, on) => {
+  const s = stubs(on);
+  on('tool.call', { tool: 'Agent' }, launched('agent-new'));
+  await $.tool.call(
+    agent(
+      'Tail PR #370 in /m/.worktrees/1168-chief-mods and PR #371 in /m/.worktrees/1170-other',
+    ),
+  );
+  expect(s.store.get('pr:370')).toMatchObject({ worktree: null });
+  expect(s.store.get('pr:371')).toMatchObject({ worktree: null });
+});
+
 test('two dispatches for the same PR at once resolve to one holder', async ($, on) => {
   const s = stubs(on);
   let n = 0;

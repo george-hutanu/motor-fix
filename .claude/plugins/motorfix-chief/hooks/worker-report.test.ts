@@ -81,6 +81,23 @@ test('the PR named on the command wins, and a merge reports merged', async ($, o
   expect(s.sent.map((m) => m.text)).toEqual(['#368 QA → merged abc1234']);
 });
 
+test("a later turn that names no PR reports the worktree's own, not the earlier turn's", async ($, on) => {
+  const s = stubs(on, {
+    run: runner(WORKER),
+    store: { ...RECORDED, 'pr:368': { pr: 368, stage: 'QA', updatedAt: 0 } },
+  });
+  engine(on);
+  await start($);
+  await sh($, 'node .claude/scripts/lifecycle.mjs merge --pr 368');
+  await endTurn($);
+  await sh($, 'node .claude/scripts/tracker-sync.mjs qa');
+  await endTurn($);
+  expect(s.sent.map((m) => m.text)).toEqual([
+    '#368 QA → merged abc1234',
+    '#370 in development → QA abc1234',
+  ]);
+});
+
 test('a turn with no stage change, a subagent turn and Chief itself send nothing', async ($, on) => {
   const s = stubs(on, { run: runner(WORKER), store: { ...RECORDED } });
   engine(on);

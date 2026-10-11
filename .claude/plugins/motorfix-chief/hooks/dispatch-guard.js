@@ -34,9 +34,11 @@ function claimed(prompt, rows) {
   const byTree = rows.filter((r) =>
     trees.some((t) => r.worktree?.endsWith(`/.worktrees/${t}`)),
   );
-  const worktree = trees.length
-    ? (prompt.match(/[^\s'"`]*\.worktrees\/[\w.-]*[\w-]/)?.[0] ?? null)
-    : null;
+  // Only an unambiguous worktree goes on a new row: with several, which is whose is unknown.
+  const worktree =
+    trees.length === 1
+      ? (prompt.match(/[^\s'"`]*\.worktrees\/[\w.-]*[\w-]/)?.[0] ?? null)
+      : null;
   const wanted = new Set([...prs, ...byTree.map((r) => r.pr)]);
   return [...wanted].map((pr) => {
     const row = rows.find((r) => r.pr === pr);

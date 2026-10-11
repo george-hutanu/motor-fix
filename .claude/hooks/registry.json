@@ -216,10 +216,10 @@
     "motorfix-chief/.gitignore": "6df82eb6cc4b",
     "motorfix-chief/hooks/board.js": "3d4f94034f28",
     "motorfix-chief/hooks/chief-control.js": "d5e49a60f718",
-    "motorfix-chief/hooks/dispatch-guard.js": "9866084a29db",
+    "motorfix-chief/hooks/dispatch-guard.js": "ebed2d10de6d",
     "motorfix-chief/hooks/hooks.json": "f36f3680952a",
     "motorfix-chief/hooks/lib/ledger.js": "6394b32c2b12",
-    "motorfix-chief/hooks/lib/parse.js": "5a91574347b3",
+    "motorfix-chief/hooks/lib/parse.js": "09d94d6a5d47",
     "motorfix-chief/hooks/lib/role.js": "1c4bd1c50aec",
     "motorfix-chief/hooks/lib/stage.js": "ea6e10863645",
     "motorfix-chief/hooks/lib/stubs.ts": "22b42c7f8a6f",
@@ -228,6 +228,6 @@
     "motorfix-chief/hooks/quiet-transcripts.js": "b49740651ade",
     "motorfix-chief/hooks/register.js": "12bac4ff9876",
     "motorfix-chief/hooks/usage-guard.js": "9d1171e5b7ac",
-    "motorfix-chief/hooks/worker-report.js": "c704d5752b14"
+    "motorfix-chief/hooks/worker-report.js": "f41fae3ae1af"
   }
 }

@@ -3,7 +3,7 @@
 
 const unique = (list) => [...new Set(list)];
 
-// "PR #363", "PR 363", "tail #363", ".../pull/363": an issue's "#1168" is not a PR.
+// "PR #12", "PR 12", "tail #12", ".../pull/12": a bare issue number "#34" is not a PR.
 export const prTokens = (text) =>
   unique(
     [

@@ -42,6 +42,7 @@ export async function turnHook($, e, next) {
   const { pr, stage } = turn;
   if (e.agentId || role.chief || !stage) return r;
   turn.stage = undefined;
+  turn.pr = undefined;
   await report($, stage, pr).catch(() => {});
   return r;
 }
