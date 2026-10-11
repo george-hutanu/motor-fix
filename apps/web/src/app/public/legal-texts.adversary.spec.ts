@@ -266,7 +266,7 @@ describe('profile view section, every fact in both languages', () => {
       ['per arrival source', /way of arriving|arrival source/i],
       [
         'not stored logged or sent to monitoring',
-        /not stored, logged or sent to the monitoring provider/i,
+        /we do not store or log them, and our servers do not send them to the monitoring provider/i,
       ],
       ['no cookie', /cookie/i],
       ['nothing placed on device', /Nothing is placed on your device/i],
@@ -301,7 +301,7 @@ describe('profile view section, every fact in both languages', () => {
       ['per arrival source', /felul în care s.a ajuns/i],
       [
         'not stored logged or sent to monitoring',
-        /nu le stocăm, nu le înregistrăm în jurnale și nu le trimitem furnizorului de monitorizare/i,
+        /nu le stocăm, nu le înregistrăm în jurnale, iar serverele noastre nu le trimit furnizorului de monitorizare/i,
       ],
       ['no cookie', /cookie/i],
       ['nothing placed on device', /Nu punem nimic pe dispozitivul tău/i],
@@ -507,6 +507,33 @@ describe('required facts of the other sections in both languages', () => {
       const consents =
         LEGAL_TEXTS[language].privacy.sections[8]!.paragraphs.join('\n');
       for (const p of patterns) expect(consents).toMatch(p);
+    },
+  );
+});
+
+describe('monitoring provider, what it sees from the browser', () => {
+  const sees: Record<Language, RegExp> = {
+    en: /Grafana Cloud[^.]*\.[^.]*connection address/i,
+    ro: /Grafana Cloud[^.]*\.[^.]*adresa conexiunii/i,
+  };
+
+  // @traces 243-FR-003
+  it.each(languages)(
+    'the %s notice says Grafana Cloud sees the connection address of browser reports',
+    (language) => {
+      expect(whole(language, 'privacy')).toMatch(sees[language]);
+    },
+  );
+
+  // @traces 243-FR-015
+  it.each(languages)(
+    'the %s profile-view section no longer says the address never reaches monitoring at all',
+    (language) => {
+      expect(profileViews(language)).not.toMatch(
+        language === 'en'
+          ? /not stored, logged or sent to the monitoring provider/i
+          : /nu le înregistrăm în jurnale și nu le trimitem furnizorului/i,
+      );
     },
   );
 });
