@@ -316,3 +316,68 @@ describe('GET /search/garages near a place', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// @traces 267-brand-results-FR-005
+describe('GET /search/garages with a radius', () => {
+  it('widens to 50 km for fixed garages and refuses any other radius', async () => {
+    await placed('Alfa', 0.01, 'works_on');
+    await placed('Beta', 0.3, 'works_on');
+
+    const wide = await search({ brandId: dacia, near: NEAR, radius: '50' });
+    const odd = await search({ brandId: dacia, near: NEAR, radius: '30' });
+    const plain = await search({ brandId: dacia, near: NEAR, radius: '25' });
+
+    expect(wide.body.items.map((i: { name: string }) => i.name)).toEqual([
+      'Alfa',
+      'Beta',
+    ]);
+    expect(plain.body.total).toBe(1);
+    expect(odd.status).toBe(400);
+  });
+
+  it('is never kept by a cache on the way', async () => {
+    const res = await search({ brandId: dacia });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+});
+
+// @traces 267-brand-results-FR-006
+describe('GET /search/garages with ids', () => {
+  it('answers a visitor the public garages among the ids, in the order of the search, with its counts', async () => {
+    const alfa = await placed('Alfa', 0.01, 'works_on');
+    const beta = await placed('Beta', 0.01, 'does_not_take');
+    await placed('Gama', 0.01, 'works_on');
+    const hidden = await prisma.garage.create({
+      data: { name: 'Delta', slug: 'delta', status: 'suspended' },
+    });
+
+    const res = await search({
+      brand: 'dacia',
+      ids: [beta, hidden.id, randomUUID(), alfa].join(','),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.items.map((i: { id: string }) => i.id)).toEqual([
+      alfa,
+      beta,
+    ]);
+    expect(res.body).toMatchObject({
+      counts: { doesNotTake: 1, worksOn: 2 },
+      nextCursor: null,
+      total: 3,
+    });
+  });
+
+  it('refuses 21 ids and an id that is not a uuid', async () => {
+    const many = Array.from({ length: 21 }, () => randomUUID()).join(',');
+
+    const tooMany = await search({ brandId: dacia, ids: many });
+    const bad = await search({ brandId: dacia, ids: 'alfa' });
+
+    expect(tooMany.status).toBe(400);
+    expect(bad.status).toBe(400);
+  });
+});

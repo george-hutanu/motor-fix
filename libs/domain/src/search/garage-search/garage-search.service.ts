@@ -31,6 +31,36 @@ interface Cursor {
 
 interface After extends Cursor {
   name: string;
+  rating: Prisma.Decimal | null;
+  reviewCount: number;
+}
+
+// Rating high to low with the unrated last, more reviews first, then name and
+// id. An unrated garage has no reviews (garage_rating_reviewed).
+const ORDER = [
+  { rating: { nulls: 'last', sort: 'desc' } },
+  { reviewCount: 'desc' },
+  { name: 'asc' },
+  { id: 'asc' },
+] satisfies Prisma.GarageOrderByWithRelationInput[];
+
+// Every garage after the boundary in that order.
+function beyond({
+  i,
+  name,
+  rating,
+  reviewCount,
+}: After): Prisma.GarageWhereInput {
+  const later = [{ name: { gt: name } }, { id: { gt: i }, name }];
+  if (rating === null) return { OR: later, rating: null };
+  return {
+    OR: [
+      { rating: null },
+      { rating: { lt: rating } },
+      { rating, reviewCount: { lt: reviewCount } },
+      { OR: later, rating, reviewCount },
+    ],
+  };
 }
 
 const invalidCursor = () =>
@@ -118,6 +148,8 @@ function cardOf(
   };
 }
 
+type Groups = ReturnType<typeof groupsOf>;
+
 @Injectable()
 export class GarageSearchService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
@@ -126,6 +158,7 @@ export class GarageSearchService {
     key: BrandKey,
     cursor?: string,
     point?: SearchPoint,
+    radiusKm?: number,
   ): Promise<GarageSearchPageDto> {
     const brand = await this.brandOf(key);
     const brandId = brand.id;
@@ -133,24 +166,24 @@ export class GarageSearchService {
       cursor === undefined
         ? undefined
         : await this.after(decode(cursor, brandId));
-    const area = await this.area(point);
+    const area = await this.area(point, radiusKm);
     const groups = groupsOf(brandId, area);
-    const [worksOn, doesNotTake] = await Promise.all([
-      this.prisma.garage.count({
-        where: { ...publicGarages(), ...groups.works_on },
-      }),
-      this.prisma.garage.count({
-        where: { ...publicGarages(), ...groups.other },
-      }),
-    ]);
+    const found = await this.counted(groups);
     const rows: ListedGarageDto[] = [];
     if (after?.g !== 'other') {
-      rows.push(...(await this.read(brandId, groups.works_on, after)));
+      rows.push(
+        ...(await this.read(brandId, groups.works_on, after, PAGE + 1)),
+      );
     }
     if (rows.length <= PAGE) {
       const resume = after?.g === 'other' ? after : undefined;
       rows.push(
-        ...(await this.read(brandId, groups.other, resume, rows.length)),
+        ...(await this.read(
+          brandId,
+          groups.other,
+          resume,
+          PAGE + 1 - rows.length,
+        )),
       );
     }
     const items = rows.slice(0, PAGE).map((item) => placed(item, area));
@@ -158,7 +191,7 @@ export class GarageSearchService {
     countFirstPage(cursor, items.length);
     return {
       brand,
-      counts: { doesNotTake, worksOn },
+      ...found,
       items,
       nextCursor:
         rows.length > PAGE && last
@@ -168,7 +201,34 @@ export class GarageSearchService {
               i: last.id,
             })
           : null,
-      total: worksOn + doesNotTake,
+    };
+  }
+
+  // The cards a page already shows, read again: the public ones among the
+  // ids, in the search's order and with its counts. Not a search of its own,
+  // so it is never counted.
+  async byIds(
+    key: BrandKey,
+    ids: string[],
+    point?: SearchPoint,
+    radiusKm?: number,
+  ): Promise<GarageSearchPageDto> {
+    const brand = await this.brandOf(key);
+    const area = await this.area(point, radiusKm);
+    const groups = groupsOf(brand.id, area);
+    const only = (group: Prisma.GarageWhereInput) => ({
+      AND: [group, { id: { in: ids } }],
+    });
+    const [found, takers, others] = await Promise.all([
+      this.counted(groups),
+      this.read(brand.id, only(groups.works_on), undefined, ids.length),
+      this.read(brand.id, only(groups.other), undefined, ids.length),
+    ]);
+    return {
+      brand,
+      ...found,
+      items: [...takers, ...others].map((item) => placed(item, area)),
+      nextCursor: null,
     };
   }
 
@@ -181,40 +241,48 @@ export class GarageSearchService {
     return brand;
   }
 
-  private async area(point: SearchPoint | undefined) {
-    return point && garagesInArea(this.prisma, point);
+  private async area(point: SearchPoint | undefined, radiusKm?: number) {
+    return point && garagesInArea(this.prisma, point, radiusKm);
   }
 
-  // The boundary's name only, by id: a garage suspended since the last page
-  // still marks where the next one starts, and is never listed again.
+  private async counted(groups: Groups) {
+    const [worksOn, doesNotTake] = await Promise.all([
+      this.prisma.garage.count({
+        where: { ...publicGarages(), ...groups.works_on },
+      }),
+      this.prisma.garage.count({
+        where: { ...publicGarages(), ...groups.other },
+      }),
+    ]);
+    return { counts: { doesNotTake, worksOn }, total: worksOn + doesNotTake };
+  }
+
+  // The boundary's place in the order, by id: a garage suspended since the
+  // last page still marks where the next one starts, and is never listed
+  // again.
   private async after(cursor: Cursor): Promise<After> {
     const last = await this.prisma.garage.findUnique({
-      select: { name: true },
+      select: { name: true, rating: true, reviewCount: true },
       where: { id: cursor.i },
     });
     if (!last) throw invalidCursor();
-    return { ...cursor, name: last.name };
+    return { ...cursor, ...last };
   }
 
   private async read(
     brandId: string,
     group: Prisma.GarageWhereInput,
     after: After | undefined,
-    already = 0,
+    take: number,
   ): Promise<ListedGarageDto[]> {
     const garages = await this.prisma.garage.findMany({
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: ORDER,
       select: CARD,
-      take: PAGE + 1 - already,
+      take,
       where: {
         ...publicGarages(),
         ...group,
-        ...(after && {
-          OR: [
-            { name: { gt: after.name } },
-            { id: { gt: after.i }, name: after.name },
-          ],
-        }),
+        ...(after && beyond(after)),
       },
     });
     return garages.map((garage) => cardOf(brandId, garage));

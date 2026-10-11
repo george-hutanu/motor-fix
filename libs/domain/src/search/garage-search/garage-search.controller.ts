@@ -3,7 +3,7 @@ import {
   GarageSearchQueryDto,
   parseNear,
 } from '@motor-fix/contracts';
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Header, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
@@ -21,22 +21,26 @@ export class GarageSearchController {
 
   @Get()
   @Public()
+  // Garages leave the list at any time; no cache on the way keeps an answer.
+  @Header('Cache-Control', 'no-store')
   @ApiOkResponse({ type: GarageSearchPageDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, or near not a lat,lng in Romania; invalid_cursor: not a page of this search',
+      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or ids not up to 20 distinct uuids; invalid_cursor: not a page of this search',
   })
   @ApiNotFoundResponse({
     description: 'not_found: no brand with that slug or id',
   })
   forBrand(@Query() query: GarageSearchQueryDto): Promise<GarageSearchPageDto> {
-    return this.search.forBrand(
-      // The query holds exactly one of the two.
+    // The query holds exactly one of the two.
+    const brand =
       query.brand === undefined
         ? (query.brandId as string)
-        : { slug: query.brand },
-      query.cursor,
-      parseNear(query.near),
-    );
+        : { slug: query.brand };
+    const near = parseNear(query.near);
+    if (query.ids !== undefined) {
+      return this.search.byIds(brand, query.ids.split(','), near, query.radius);
+    }
+    return this.search.forBrand(brand, query.cursor, near, query.radius);
   }
 }
