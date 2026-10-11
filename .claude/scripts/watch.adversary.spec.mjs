@@ -1063,6 +1063,9 @@ describe('--fix never harms work', () => {
     writeFileSync(join(untracked, 'wip.txt'), 'x\n');
     mkdirSync(join(nested, 'sub', 'dir'), { recursive: true });
     writeFileSync(join(nested, 'sub', 'dir', 'wip.txt'), 'x\n');
+    // The written files on the fixture's clock, which later() is judged against, not the real one.
+    for (const p of [join(mod, 'README.md'), join(staged, 'new.txt'), join(untracked, 'wip.txt'), join(nested, 'sub', 'dir', 'wip.txt'), join(nested, 'sub', 'dir'), join(nested, 'sub')])
+      utimesSync(p, NOW / 1000, NOW / 1000);
     const prs = [mod, staged, untracked, nested].map((p, i) => mergedFor(p, `93${i + 1}-${['mod', 'staged', 'untracked', 'nested'][i]}`, 40 + i));
     const before = branches(f);
     const report = collect(f.repo, env({ gh: () => prs, now: later() }));

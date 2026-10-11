@@ -101,13 +101,13 @@ describe('release workflow', () => {
   // Staging is seeded only by the hand-started reset, so a seed account added
   // after the last reset (sofer2@, comutare@) was missing there and the specs
   // signing in as it failed the release. The seed only adds what is missing.
-  it('seeds staging after the deploy and before the end-to-end run', () => {
+  it('seeds staging after the deploy and before the core-flow run', () => {
     const block = job('staging');
     const deploy = block.indexOf(
       'run: exec node scripts/railway-deploy.ts staging',
     );
     const seed = block.indexOf('name: Seed staging inside the api');
-    const e2e = block.indexOf('name: End to end on staging');
+    const e2e = block.indexOf('name: Core flows on staging');
     const step = block.slice(seed, block.indexOf('- name:', seed + 1));
 
     expect(deploy).toBeGreaterThan(0);
@@ -255,5 +255,30 @@ describe('release workflow', () => {
 
   it('never gives production the MCP or identity server', () => {
     expect(job('production')).not.toMatch(/MCP|KEYCLOAK|keycloak/);
+  });
+});
+
+// The constitution's three core flows run before every release: search to a
+// quote request, the quote, and a listing to its approval. Each keeps at
+// least one test tagged @core, the tag the release's staging step selects.
+describe('the core flows a release runs', () => {
+  const e2e = join(__dirname, '..', 'apps', 'web-e2e', 'src');
+  const tagged = (file: string) =>
+    readFileSync(join(e2e, file), 'utf8').match(/@core['`]/g)?.length ?? 0;
+
+  it('selects the tests tagged @core on staging', () => {
+    expect(job('staging')).toContain(
+      'run: npx nx run web-e2e:e2e --skip-nx-cache --grep @core\n',
+    );
+  });
+
+  it.each([
+    ['search to a quote request', 'home.spec.ts'],
+    ['search to a quote request', 'quote-request.spec.ts'],
+    ['the quote', 'send-quote.spec.ts'],
+    ['a listing to its approval', 'admin-dashboard.spec.ts'],
+    ['a listing to its approval', 'garage-views.spec.ts'],
+  ])('%s keeps a @core test in %s', (_flow, file) => {
+    expect(tagged(file)).toBeGreaterThan(0);
   });
 });

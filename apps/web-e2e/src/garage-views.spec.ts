@@ -226,7 +226,7 @@ test.describe('garage views @seeded', () => {
   });
 
   // @traces 097-FR-008
-  test('the owner of a garage not yet approved reads that its profile is being checked', async ({
+  test('the owner of a garage not yet approved reads that its profile is being checked @core', async ({
     page,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });

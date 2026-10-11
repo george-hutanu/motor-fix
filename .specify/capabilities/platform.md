@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-10
+updated: 2026-10-11
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -71,6 +71,7 @@ features:
   - 1037-remove-notion
   - 1119-drop-tracker-import
   - 251-monitoring-backups
+  - 1167-constitution-e2e-on-demand
 ---
 
 # Capability: Platform
@@ -187,11 +188,11 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite against staging, and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
+### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
 _From 1016-mcp-staging._
 
-### 000-FR-014 — (replaces 516-FR-002) Once staging and its end-to-end suite pass, the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
+### 000-FR-014 — (replaces 516-FR-002) Once staging and its `@core` end-to-end flows pass, the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
 _From 1016-mcp-staging._
 
@@ -769,13 +770,13 @@ _From 678-measurable-sizing._
 
 _From 678-measurable-sizing._
 
-### 750-FR-001 — The end-to-end suite on CI MUST run its tests in parallel across the runner's cores, and every test in the suite MUST still run on every non-docs PR that affects `web`.
+### 750-FR-001 — The end-to-end suite on CI MUST run its tests in parallel across the runner's cores; it runs on demand (`workflow_dispatch`, which runs every test in the suite), not on every PR, and its core flows (tagged `@core`) MUST run against staging before every release.
 
-_From 750-ci-speed._
+_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
 
-### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, integration, e2e, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails.
+### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, integration, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails; the end-to-end suite runs on demand (750-FR-001).
 
-_From 750-ci-speed._
+_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
 
 ### 750-FR-003 — A failing check inside a shared job MUST be identifiable by name from the job's failed log, and the other checks of that job MUST still run and report.
 
