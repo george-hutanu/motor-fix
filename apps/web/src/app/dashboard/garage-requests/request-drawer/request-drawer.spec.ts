@@ -442,19 +442,21 @@ describe('the drawer once the request closed', () => {
     expect(button(element, 'Refuză')?.disabled).toBe(true);
   });
 
+  // The server names each event by its own subject: the recipient row for a
+  // decline, the new quote for a send, never this request's id.
   it.each([
-    'quote.sent',
-    'request.declined',
-    'request.cancelled',
-    'request.expired',
-    'quote.accepted',
+    ['quote.sent', 'quote-9'],
+    ['request.declined', 'recipient-3'],
+    ['request.cancelled', 'req-1'],
+    ['request.expired', 'req-1'],
+    ['quote.accepted', 'quote-9'],
   ] as const)(
-    're-reads on %s for this request and shows the banner, keeping the fields',
-    async (kind) => {
+    're-reads on %s (subject %s) and shows the banner, keeping the fields',
+    async (kind, subject) => {
       const { element, settle } = await render();
       read.mockResolvedValueOnce(closed('cancelled'));
 
-      live.emit(kind, 'req-1');
+      live.emit(kind, subject);
       await wait(350);
       await settle();
 
@@ -466,14 +468,15 @@ describe('the drawer once the request closed', () => {
     },
   );
 
-  it('changes nothing on an event for another request', async () => {
+  it('keeps a waiting request open on an event that closed another one', async () => {
     const { element, settle } = await render();
 
     live.emit('request.cancelled', 'req-other');
     await wait(350);
     await settle();
 
-    expect(read).toHaveBeenCalledTimes(1);
     expect(banner(element)).toBeNull();
+    expect(button(element, 'Trimite oferta')?.disabled).toBe(false);
+    expect(text(element)).toContain('Vlad P.');
   });
 });

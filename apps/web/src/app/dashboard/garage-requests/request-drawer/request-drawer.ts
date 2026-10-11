@@ -34,7 +34,9 @@ export interface RequestDrawerData {
 // meanwhile: the opener re-reads its lists.
 export type RequestDrawerResult = 'sent' | 'declined' | 'refused';
 
-// The events that may close the request while it is open.
+// The events that may close the request while it is open. Each names its own
+// subject (the recipient row, the new quote), not this request, so any of
+// them in the garage's stream re-reads it.
 const CLOSING: readonly EventKind[] = [
   'quote.sent',
   'request.declined',
@@ -73,7 +75,6 @@ export class RequestDrawer {
   protected readonly view = liveResource(
     () => this.api.garageRequestsControllerGet({ id: this.id }),
     CLOSING,
-    () => this.id,
   );
   protected readonly request = computed(() => this.view.value());
 
