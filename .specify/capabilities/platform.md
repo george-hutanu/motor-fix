@@ -74,6 +74,7 @@ features:
   - 1167-constitution-e2e-on-demand
   - 1159-mutation-shards
   - 1170-integration-on-demand
+  - 1168-chief-mods
 ---
 
 # Capability: Platform
@@ -1757,6 +1758,98 @@ _From 1170-integration-on-demand._
 ### 1170-FR-006 — `scripts/test-services.ts` (`<base>`, `down`, `sweep`) stays, for running the integration suite by hand; its header and its no-Docker message describe the manual run, not the hook.
 
 _From 1170-integration-on-demand._
+
+### 1168-FR-001 — The repository MUST hold one plugin at `.claude/plugins/motorfix-chief/` with a manifest, a hooks file naming one register module, and one module file per part (part 3 excepted: it shares Chief Control's one `prompt.submit` hook in `chief-control.js`, amended in the build), enabled through an in-repo marketplace entry in `.claude/settings.json`; `claude plugin validate .claude/plugins/motorfix-chief` MUST pass, and the plugin MUST carry no code or package from outside this repo.
+
+_From 1168-chief-mods._
+
+### 1168-FR-002 — The mod MUST keep a ledger in persistent machine-wide storage, one row per PR with holder agent id, worktree, QA run id, lap count and head sha, filled from Agent dispatches and from `dispatch.mjs` and `ci-wait.mjs` Bash calls, and MUST present the same rows after a compaction and after a restart of the session.
+
+_From 1168-chief-mods._
+
+### 1168-FR-003 — In the orchestrating session (cwd equal to the main checkout) the mod MUST, every 15 minutes from its own timer, check whether two or more worktrees are active and, if so, run `node .claude/scripts/watch.mjs --gate` with a 10-minute timeout, never overlapping itself; gate exit 2 MUST wake the session with one `/speckit-watch` prompt carrying the gate's lines, exit 0 MUST do nothing, exit 1 or a timeout MUST show one toast. A worker session MUST run no gate.
+
+_From 1168-chief-mods._
+
+### 1168-FR-004 — When a `ci-wait.mjs <n> --run <id>` call (CI and the QA run both waited for) exits 0 and lists no check that did not pass and no QA run other than `success` (a background call's notification is checked by asking `ci-wait.mjs` again; amended in the build), the mod MUST offer the tail of PR #n as one prompt or one button, once per head sha; a `ci-wait.mjs` call without `--run` offers nothing.
+
+_From 1168-chief-mods._
+
+### 1168-FR-005 — The mod MUST put the ledger's rows into the model's context with the first message after a compaction, and the ledger MUST be the only source of that block.
+
+_From 1168-chief-mods._
+
+### 1168-FR-006 — A `tool.call` hook on the `Agent` tool (the only event whose deny text reaches the model) MUST deny an Agent call for a `task-runner` whose prompt names a PR or worktree held in the ledger by a live agent, and the denial text MUST name the holder and the PR. A row records the session that dispatched its holder: in that session a holder `$.agent.list()` no longer shows live MUST not block; a row owned by another session holds until that session frees it or the row is older than 110 minutes (the watch window).
+
+_From 1168-chief-mods._
+
+### 1168-FR-007 — An Agent call for `general-purpose` whose prompt describes a story run (`/speckit-auto`), a tail, or a `/speckit-watch` fix MUST be denied with a line saying `task-runner` is required; every other agent type MUST pass unchanged.
+
+_From 1168-chief-mods._
+
+### 1168-FR-008 — *(conditional)* If a spike shows that a message arriving from a helper identifies the parent runner that awaits it, the mod MUST forward that message to that runner, mark it consumed and note the forward in the ledger; if the spike shows it cannot, the part MUST be dropped, the spike's evidence recorded in `specs/1168-chief-mods/research.md` and the drop named in the PR's Notes, and nothing MUST simulate the forward. The spike's result is this requirement's acceptance.
+
+_From 1168-chief-mods._
+
+### 1168-FR-009 — On a desktop or terminal surface the mod MUST draw a pane and an above-prompt band with one row per PR (stage, lap `k/10`, CI state, holder, age) and the buttons Status, Watch pass, Fast-forward main and Tail ready PRs; each button MUST run only the repo command named for it (`status.mjs`, one `watch.mjs` pass, `git -C <main> merge --ff-only origin/main`, a tail offer per ready, finished, unheld PR), and Fast-forward main MUST never push.
+
+_From 1168-chief-mods._
+
+### 1168-FR-010 — The orchestrating session MUST record its session id under a `chief` store key at start and remove it at end. In a worker session bound to a PR, the mod MUST send that session one line `#<n> <old stage> → <new stage> <sha7>` at the end of a turn in which the PR's stage changed, and nothing when it did not; no `chief` key or an undelivered send is "not reachable": logged once and not retried in that turn.
+
+_From 1168-chief-mods._
+
+### 1168-FR-011 — The mod MUST show one warning when any rate-limit window reported by `session.measure` first reaches 80 % (once per window kind and reset time), offering `node .claude/scripts/fable.mjs off`, and MUST run it only when the offer is accepted.
+
+_From 1168-chief-mods._
+
+### 1168-FR-012 — The mod MUST show an owner command as one chained command in a code element with a Copy button whose press copies exactly that text, and MUST hold the card until the owner answers Done; a dismissed card is recorded as not done.
+
+_From 1168-chief-mods._
+
+### 1168-FR-013 — The mod MUST render a `ci-wait.mjs` result as one pill per check (name, state; one "green" pill for empty output), render nothing for the `PR QA: cancel` notice, and fold an Agent result that opens with the four-line reply block to its STATUS, PR and NEXT lines, leaving the text the model receives unchanged; every other result keeps its default rendering.
+
+_From 1168-chief-mods._
+
+### 1168-FR-014 — The mod MUST register no `tool.check` handler, MUST never call the session's permission authorization, and the change MUST edit no `permissions` block in any settings file.
+
+_From 1168-chief-mods._
+
+### 1168-FR-015 — Every one of the 16 gates in `.claude/hooks/registry.json` MUST remain a settings hook invoked through `run-hook.mjs` after the change, with its script and fingerprint unchanged; the mod MUST register no handler that replaces a gate's decision.
+
+_From 1168-chief-mods._
+
+### 1168-FR-016 — `node .claude/scripts/doctor.mjs` MUST fail on an edit to any mod file (every file under `.claude/plugins/motorfix-chief/` except `*.test.ts`, plus the marketplace manifest) whose fingerprint was not re-recorded, and `--bless-hooks` MUST record the mod files like the gate scripts.
+
+_From 1168-chief-mods._
+
+### 1168-FR-017 — On a surface other than desktop or terminal, or when `CLAUDE_CODE_REMOTE=true`, the mod MUST draw nothing and MUST still register every non-drawing part.
+
+_From 1168-chief-mods._
+
+### 1168-FR-018 — Every subprocess the mod starts MUST be given as an argument list, never a shell string, and MUST be one of this repo's scripts, the fast-forward merge named in FR-009, or the read-only `git rev-parse` that decides the session's role (R10, amended in the build); the mod MUST issue no `git push`.
+
+_From 1168-chief-mods._
+
+### 1168-FR-019 — The plugin's tests (`*.test.ts`, run by `claude plugin test`) and `claude plugin validate` MUST run in CI's Harness step (`.github/workflows/ci.yml`) and locally through the harness npm script; if the Claude CLI cannot be installed on the GitHub runner, the same tests MUST run under the existing vitest harness and the PR's Notes MUST say why.
+
+_From 1168-chief-mods._
+
+### 1168-FR-020 — A dispatch prompt that names several PRs or worktrees MUST be denied when any one of them is held by a live agent, and the denial MUST name each held PR; two dispatches arriving together in one session MUST resolve to one holder, the second reading the first's row and being denied (the guard writes the row before it lets the first call through; across sessions the store is not atomic, so the 110-minute row rule of FR-006 is the bound). A lap is the count of QA runs dispatched for the PR (`dispatch.mjs` `lap <n>` line), starting at 0 and capped at 10; it is not reset by a new head.
+
+_From 1168-chief-mods._
+
+### 1168-FR-021 — An owner card MUST be raised from an `AskUserQuestion` call by Chief whose question carries a command block; a card with no command block, or any `AskUserQuestion` from a worker session, MUST pass unchanged.
+
+_From 1168-chief-mods._
+
+### 1168-FR-022 — The board's columns MUST take these values: stage from the ledger's stage field; lap `k/10`; CI state one of `pass`, `fail`, `pending`, `none`; holder an agent id or `none`; age the time since the row's last update in whole minutes under two hours, then whole hours.
+
+_From 1168-chief-mods._
+
+### 1168-FR-023 — The block put into context after a compaction MUST list one line per ledger row (PR, holder, worktree, QA run, lap, head) and, for an empty ledger, one line saying so.
+
+_From 1168-chief-mods._
 
 ## Retired
 
