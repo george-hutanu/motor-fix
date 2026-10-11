@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { HttpErrorResponse } from '@angular/common/http';
-import { PLATFORM_ID, RESPONSE_INIT } from '@angular/core';
+import { PLATFORM_ID, RESPONSE_INIT, TransferState } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -12,7 +12,7 @@ import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
-import { GarageProfile } from './garage-profile';
+import { GarageProfile, profileKey } from './garage-profile';
 import { PublicLive } from '../live';
 
 const MOBILE: PublicGarageDto = {
@@ -391,6 +391,97 @@ describe('the price list on the profile', () => {
     });
     expect(prices()?.textContent).toContain('990–1.500 lei');
     expect(prices()?.textContent).not.toContain('890–1.400 lei');
+  });
+});
+
+// The server's answer rides to the browser, so hydration finds the same
+// section it rendered and a switch tapped early is not lost.
+// @traces 355-price-list-ranges-FR-011
+// @traces 355-price-list-ranges-FR-013
+describe('the price list carried over from the server render', () => {
+  const BRAKES = {
+    durationMinutes: 120,
+    fromBani: 89_000,
+    jobTypeId: 'j-brakes',
+    nameEn: 'Front brake pads and discs',
+    nameRo: 'Plăcuțe și discuri de frână față',
+    toBani: 140_000,
+  };
+  const prices = () =>
+    page().querySelector<HTMLElement>('section[data-slot="prices"]');
+
+  it('hands the answer it rendered on the server to the browser', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { component: GarageProfile, path: ':lang/garages/:garage' },
+        ]),
+        { provide: GaragesService, useValue: api },
+        { provide: PublicLive, useValue: live },
+        { provide: PLATFORM_ID, useValue: 'server' },
+        { provide: RESPONSE_INIT, useValue: {} },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    harness = await RouterTestingHarness.create();
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+    const garage = { ...FIXED, prices: [BRAKES] };
+    await reads[0]?.answer(garage);
+
+    expect(
+      TestBed.inject(TransferState).get(
+        profileKey('service-auto-militari', 'bmw'),
+        null,
+      ),
+    ).toEqual(garage);
+  });
+
+  it('shows the carried answer on its first render, with no skeleton', async () => {
+    const garage = { ...FIXED, prices: [BRAKES] };
+    TestBed.inject(TransferState).set(
+      profileKey('service-auto-militari', 'bmw'),
+      garage,
+    );
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+
+    expect(page().querySelector('[aria-busy="true"]')).toBeNull();
+    expect(prices()?.textContent).toContain('890–1.400 lei');
+  });
+
+  it('keeps the same section and its switch through the read that follows', async () => {
+    const garage = { ...FIXED, prices: [BRAKES] };
+    TestBed.inject(TransferState).set(
+      profileKey('service-auto-militari', 'bmw'),
+      garage,
+    );
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+    const section = prices();
+    section?.querySelector<HTMLElement>('[role="switch"]')?.click();
+    await settle();
+
+    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
+
+    expect(prices()).toBe(section);
+    expect(
+      prices()?.querySelector('[role="switch"]')?.getAttribute('aria-checked'),
+    ).toBe('true');
+  });
+
+  it('uses a carried answer once, so a later visit reads afresh', async () => {
+    TestBed.inject(TransferState).set(
+      profileKey('service-auto-militari', undefined),
+      { ...FIXED, prices: [BRAKES] },
+    );
+    await open('/ro/garages/service-auto-militari');
+
+    expect(
+      TestBed.inject(TransferState).hasKey(
+        profileKey('service-auto-militari', undefined),
+      ),
+    ).toBe(false);
   });
 });
 
