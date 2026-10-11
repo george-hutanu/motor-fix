@@ -24,7 +24,7 @@ and QA lap is where most of a story's cost went.
    names a module that does not load, a `networkidle` wait and every
    acceptance scenario no flow names (`US<k> scenario <m>`, or a
    `// not a flow: US<k> scenario <m> — <reason>` line); fix each until it
-   exits 0. These were most of the failed first laps measured (ST-1171).
+   exits 0. These were most of the failed first laps measured.
 2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>" [--story ST-<n>]`
    commits and pushes the feature records (phase 17's status line and Spec
    Delta merge, `tracker-sync.md`), files unfiled deferred bullets, runs
