@@ -197,7 +197,7 @@ export function fixOf(row, { now, thresholds }) {
   const quiet = (now - row.activity.at) / MIN;
   const limit = thresholds[row.phase];
   // A head the tester passed needs only CI: it merges the moment every check
-  // is green, with no quiet threshold (ST-1171), and waits, with no fix, while
+  // is green, with no quiet threshold, and waits, with no fix, while
   // one is still pending.
   const atPrHead = row.clean && row.head && row.head === pr?.head;
   if (pr?.state === "ready" && pr.agentReview === "success") {

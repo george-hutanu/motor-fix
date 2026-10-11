@@ -1,4 +1,4 @@
-// How long a ready PR waits for its first QA review, and how many laps it takes (ST-1171).
+// How long a ready PR waits for its first QA review, and how many laps it takes.
 //
 //   node .claude/scripts/pr-test/latency.mjs <n> [<n>…]
 //
@@ -53,7 +53,8 @@ export function measure(pr, api = ghJson) {
   const [info] = api(`repos/{owner}/{repo}/pulls/${pr}`);
   const events = api(`repos/{owner}/{repo}/issues/${pr}/timeline?per_page=100`);
   const reviews = api(`repos/{owner}/{repo}/pulls/${pr}/reviews?per_page=100`);
-  // A PR opened as a draft has a ready_for_review event; one opened ready has none.
+  // A PR that was ever a draft (a ready_for_review or convert_to_draft event, or a draft now) is
+  // measured from its ready_for_review; one never drafted, from its creation.
   const draftAtCreation = events.some((e) => e.event === "ready_for_review" || e.event === "convert_to_draft") || info.draft;
   return { pr: Number(pr), ...latencyOf({ ready: readyAt({ events, createdAt: info.created_at, draftAtCreation }), reviews }) };
 }

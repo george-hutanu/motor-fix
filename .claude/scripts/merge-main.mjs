@@ -1,4 +1,4 @@
-// Merge origin/main into the current branch, resolving the conflicts no person needs to (ST-1171).
+// Merge origin/main into the current branch, resolving the conflicts no person needs to.
 //
 //   node .claude/scripts/merge-main.mjs
 //

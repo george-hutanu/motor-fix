@@ -200,7 +200,7 @@ const BY_KEY = ["axe", "console"];
  */
 export function markPreExisting(findings, baseline, { measured = true, routes, coverage, stale = false } = {}) {
   const before = new Set(baseline.filter((f) => f.kind === "layout").map(layoutKey));
-  // An accessibility or console finding main's run reported under the same key is main's (ST-1171).
+  // An accessibility or console finding main's run reported under the same key is main's.
   const mains = new Set(baseline.filter((f) => BY_KEY.includes(f.kind)).map(findingKey));
   const unswept = (route) => Array.isArray(routes) && !routes.includes(route);
   const uncovered = (f) => {

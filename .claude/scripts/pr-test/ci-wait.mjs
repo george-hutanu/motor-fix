@@ -1,4 +1,4 @@
-// Two waits, one each side of the PR tester's review (ST-1171):
+// Two waits, one each side of the PR tester's review:
 //
 //   node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>   before the tail: the QA run only
 //   node .claude/scripts/pr-test/ci-wait.mjs <n>              before the merge: CI only

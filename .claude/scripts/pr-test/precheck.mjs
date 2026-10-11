@@ -1,4 +1,4 @@
-// Check a QA flows file before it is dispatched, with no browser (ST-1171).
+// Check a QA flows file before it is dispatched, with no browser.
 //
 //   node .claude/scripts/pr-test/precheck.mjs --flows <file.mjs> [--spec <spec.md>]
 //
@@ -12,6 +12,8 @@
 // `// not a flow: US<k> scenario <m> — <reason>` line. One line per problem;
 // exit 0 clean, 1 on any problem, 64 on a usage error. dispatch.mjs --flows
 // runs the same check and dispatches nothing while it fails.
+// The flows file is the dispatching agent's own: loading it runs its top level
+// here, in this process and its environment, not in the workflow's sandbox.
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";

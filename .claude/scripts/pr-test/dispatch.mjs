@@ -229,7 +229,8 @@ async function main(argv) {
   if (cloud) return awaitPrRun(opt, sha);
   if (opt.flows) {
     // The flows' own lap-1 failures, caught before a run is spent on them (precheck.mjs).
-    const problems = await checkFlows({ flows: opt.flows, spec: opt.spec ?? (activeFeature(repoRoot) && join(activeFeature(repoRoot).dir, "spec.md")) });
+    const feature = activeFeature(repoRoot);
+    const problems = await checkFlows({ flows: opt.flows, spec: opt.spec ?? (feature && join(feature.dir, "spec.md")) });
     if (problems.length) {
       for (const p of problems) console.error(`dispatch: ${p}`);
       console.error("dispatch: the flows fail the pre-check; nothing was dispatched");
