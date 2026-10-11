@@ -93,14 +93,15 @@ jobs:
           restore-keys: |
             mutation/${{ matrix.id }}/${{ github.ref_name }}/
             mutation/${{ matrix.id }}/
+      # Through npx, which applies .npmrc's --experimental-vm-modules: Jest
+      # cannot load the ESM-only Angular and Nest packages without it.
       - name: Mutation score
         id: mutation
         env:
           PROJECT: ${{ matrix.project }}
-          ROOT: ${{ matrix.root }}
           SHARD: ${{ matrix.shard }}
           INCREMENTAL: ${{ inputs.full && 'false' || 'true' }}
-        run: node scripts/mutation.ts "$PROJECT" "$ROOT" --incremental=$INCREMENTAL ${SHARD:+--shard=$SHARD}
+        run: npx nx run "$PROJECT:test:mutation" --output-style=static -- --incremental=$INCREMENTAL ${SHARD:+--shard=$SHARD}
       # Saved even when the step fails, so the next run resumes instead of starting over.
       - name: Save the mutation results
         if: always() && steps.mutation.outcome != 'skipped'

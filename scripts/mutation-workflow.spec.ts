@@ -66,12 +66,14 @@ describe('the mutate job', () => {
     expect(mutate).toMatch(/^ {6}redis:\n {8}image: redis:/m);
     const migrate = mutate.indexOf('prisma migrate deploy');
     expect(migrate).toBeGreaterThan(-1);
-    expect(migrate).toBeLessThan(mutate.indexOf('node scripts/mutation.ts'));
+    expect(migrate).toBeLessThan(mutate.indexOf(':test:mutation'));
   });
 
-  it('runs one project or shard, incrementally unless full is set', () => {
+  // npx applies .npmrc's --experimental-vm-modules, without which Jest
+  // cannot load the ESM-only Angular and Nest packages (run 38126969341).
+  it('runs one project or shard through npx, incrementally unless full is set', () => {
     expect(mutate).toMatch(
-      /run: node scripts\/mutation\.ts "\$PROJECT" "\$ROOT" --incremental=\$INCREMENTAL \$\{SHARD:\+--shard=\$SHARD\}$/m,
+      /run: npx nx run "\$PROJECT:test:mutation" --output-style=static -- --incremental=\$INCREMENTAL \$\{SHARD:\+--shard=\$SHARD\}$/m,
     );
     expect(mutate).toMatch(
       /INCREMENTAL: \$\{\{ inputs\.full && 'false' \|\| 'true' \}\}$/m,
