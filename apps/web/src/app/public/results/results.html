@@ -11,7 +11,7 @@
     @if (newer()) {
       <button type="button" class="chip" (click)="reload()">{{ 'public.results.reload' | t }}</button>
     }
-  } @else {
+  } @else if (state() === 'loading') {
     <h1>
       <span class="sr-only">{{ 'public.results.loading' | t }}</span>
       <span class="line skeleton" aria-hidden="true"></span>
@@ -40,5 +40,36 @@
         }
       </ul>
     }
+  }
+  @case ('empty') {
+    <section class="state" aria-live="polite">
+      @if (near()) {
+        <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
+      } @else {
+        <h2>{{ 'public.results.none' | t }}</h2>
+      }
+      <div class="actions">
+        @if (widen(); as wide) {
+          <button type="button" class="primary" (click)="widenTo(wide)">{{ 'public.results.widen' | t: { km: wide } }}</button>
+        }
+        <button type="button" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
+      </div>
+    </section>
+  }
+  @case ('failed') {
+    <section class="state" role="alert">
+      <h1>{{ 'public.results.failed' | t }}</h1>
+      <div class="actions">
+        <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
+      </div>
+    </section>
+  }
+  @case ('missing') {
+    <section class="state" role="alert">
+      <h1>{{ 'public.results.failed' | t }}</h1>
+      <div class="actions">
+        <a class="primary" [routerLink]="['/', i18n.language()]">{{ 'public.results.newSearch' | t }}</a>
+      </div>
+    </section>
   }
 }

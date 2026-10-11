@@ -1,4 +1,5 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, type Route, Router } from '@angular/router';
@@ -63,15 +64,20 @@ const pageOf = (
 type Read = {
   params: GarageSearchControllerForBrand$Params;
   answer: (page?: GarageSearchPageDto) => Promise<void>;
+  fail: (status?: number) => Promise<void>;
 };
 let reads: Read[];
 const searchApi = {
   garageSearchControllerForBrand: jest.fn(
     (params: GarageSearchControllerForBrand$Params) =>
-      new Promise<GarageSearchPageDto>((resolve) => {
+      new Promise<GarageSearchPageDto>((resolve, reject) => {
         reads.push({
           answer: async (page = pageOf()) => {
             resolve(page);
+            await settle();
+          },
+          fail: async (status = 500) => {
+            reject(new HttpErrorResponse({ status }));
             await settle();
           },
           params,
@@ -305,6 +311,191 @@ describe('Results', () => {
       expect(said(page().querySelector('.summary .tally'))).toBe(
         "32 garages found · 31 work on BMW · 1 doesn't take it",
       );
+    });
+  });
+
+  describe('when nothing comes back', () => {
+    beforeEach(() => configure());
+
+    const empty = (over: Partial<GarageSearchPageDto> = {}) =>
+      pageOf({
+        counts: { doesNotTake: 0, worksOn: 0 },
+        items: [],
+        total: 0,
+        ...over,
+      });
+    const state = () => page().querySelector('.state');
+    const headings = () => page().querySelectorAll('h1');
+    const actions = () =>
+      [...(state()?.querySelectorAll('button, a') ?? [])].map(said);
+    const tap = async (text: string) => {
+      const action = [...(state()?.querySelectorAll('button') ?? [])].find(
+        (b) => said(b) === text,
+      );
+      expect(action).toBeDefined();
+      action?.click();
+      await settle();
+    };
+
+    // @traces 267-brand-results-FR-016
+    it('says the results could not be loaded when the search fails, with "Reîncearcă"', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail();
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Nu am putut încărca rezultatele',
+      );
+      expect(actions()).toEqual(['Reîncearcă']);
+      expect(page().querySelector('.card.skeleton')).toBeNull();
+      expect(headings()).toHaveLength(1);
+    });
+
+    // @traces 267-brand-results-FR-016
+    it('shows the same failure when the API cannot be reached', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail(0);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Nu am putut încărca rezultatele',
+      );
+      expect(actions()).toEqual(['Reîncearcă']);
+    });
+
+    // @traces 267-brand-results-FR-016
+    it('runs the same search again on "Reîncearcă", without logging it, and shows skeletons meanwhile', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail();
+
+      await tap('Reîncearcă');
+
+      expect(searches()).toEqual([
+        { brand: 'bmw', log: '1', near: '44.447,26.117' },
+        { brand: 'bmw', near: '44.447,26.117' },
+      ]);
+      expect(page().querySelectorAll('.card.skeleton')).toHaveLength(6);
+      await reads[1]?.answer();
+      expect(page().querySelectorAll('mf-result-card')).toHaveLength(2);
+      expect(state()).toBeNull();
+    });
+
+    // @traces 267-brand-results-FR-016
+    it('offers "Căutare nouă" to Home instead of a retry when the brand is unknown', async () => {
+      await open('/ro/garages?brand=nu-exista');
+      await reads[0]?.fail(404);
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Nu am putut încărca rezultatele',
+      );
+      expect(actions()).toEqual(['Căutare nouă']);
+      expect(state()?.querySelector('a')?.getAttribute('href')).toBe('/ro');
+      expect(headings()).toHaveLength(1);
+    });
+
+    // @traces 267-brand-results-FR-016
+    it('offers "Căutare nouă" and searches nothing when the bar names no brand', async () => {
+      await open('/ro/garages');
+
+      expect(searches()).toEqual([]);
+      expect(actions()).toEqual(['Căutare nouă']);
+    });
+
+    // @traces 267-brand-results-FR-017
+    it('reads "Niciun service în 25 km" with "Caută în 50 km" and "Schimbă locul" when nothing is near the place', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(empty());
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Niciun service în 25 km',
+      );
+      expect(actions()).toEqual(['Caută în 50 km', 'Schimbă locul']);
+      expect(said(page().querySelector('.summary .tally'))).toBe(
+        '0 service‑uri găsite · 0 lucrează pe BMW · 0 nu o primesc',
+      );
+    });
+
+    // @traces 267-brand-results-FR-017
+    it('widens to 50 km on "Caută în 50 km" without logging, and offers only "Schimbă locul" after it', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(empty());
+
+      await tap('Caută în 50 km');
+      await settle();
+
+      expect(searches().at(-1)).toEqual({
+        brand: 'bmw',
+        near: '44.447,26.117',
+        radius: 50,
+      });
+      expect(TestBed.inject(Router).url).toBe(
+        '/ro/garages?brand=bmw&near=44.447,26.117&radius=50',
+      );
+      await reads.at(-1)?.answer(empty());
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Niciun service în 50 km',
+      );
+      expect(actions()).toEqual(['Schimbă locul']);
+      expect(said(page().querySelector('.summary .area'))).toBe(
+        'în 50 km de Strada Lizeanu 2, București',
+      );
+    });
+
+    // @traces 267-brand-results-FR-017
+    it('opens the place dialog from the empty state, and the place chosen runs a new logged search at 25 km', async () => {
+      await open('/ro/garages?brand=bmw&near=46.77,23.59&radius=50');
+      await reads[0]?.answer(empty());
+
+      await tap('Schimbă locul');
+      expect(overlays.open).toHaveBeenCalledWith(
+        PlaceDialog,
+        expect.objectContaining({ title: 'public.home.place.title' }),
+      );
+      dialog(PLACE);
+      await settle();
+      await settle();
+
+      expect(searches().at(-1)).toEqual({
+        brand: 'bmw',
+        log: '1',
+        near: '44.447,26.117',
+      });
+    });
+
+    // @traces 267-brand-results-FR-017
+    it('reads "Niciun service găsit" with "Schimbă locul" only without a place, ignoring the radius', async () => {
+      await open('/ro/garages?brand=bmw&radius=50');
+      await reads[0]?.answer(empty());
+
+      expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'Niciun service găsit',
+      );
+      expect(actions()).toEqual(['Schimbă locul']);
+    });
+
+    // @traces 267-brand-results-FR-016
+    // @traces 267-brand-results-FR-017
+    it('speaks English in the empty and failed states', async () => {
+      keep(PLACE);
+      await open('/en/garages?brand=bmw', { language: 'en' });
+      await reads[0]?.answer(empty());
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        'No garage within 25 km',
+      );
+      expect(actions()).toEqual(['Search within 50 km', 'Change place']);
+
+      await tap('Search within 50 km');
+      await settle();
+      await reads.at(-1)?.fail();
+
+      expect(said(state()?.querySelector('h1, h2'))).toBe(
+        "We couldn't load the results",
+      );
+      expect(actions()).toEqual(['Try again']);
     });
   });
 

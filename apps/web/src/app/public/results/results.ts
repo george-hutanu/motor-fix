@@ -12,7 +12,7 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
 import {
   nearOf,
@@ -30,6 +30,7 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { ResultCard } from './result-card/result-card';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
+import { httpStatus } from '../../http-status';
 import { followPublicView, PublicLive } from '../live';
 
 // A link from a saved car names the brand by its id; every other one by slug.
@@ -64,7 +65,7 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
 
 @Component({
-  imports: [LiveChange, ResultCard, TranslatePipe],
+  imports: [LiveChange, ResultCard, RouterLink, TranslatePipe],
   selector: 'mf-results',
   styleUrl: './results.css',
   templateUrl: './results.html',
@@ -88,7 +89,7 @@ export class Results {
   private readonly brand = computed(() => this.bar().get('brand') ?? '');
   // The place in the bar, else the one the browser keeps; a string, so the
   // bar catching up with the kept place starts no second search.
-  private readonly near = computed(() => {
+  protected readonly near = computed(() => {
     const near = this.bar().get('near');
     if (near) return near;
     const place = this.store.place();
@@ -111,13 +112,20 @@ export class Results {
     };
   });
 
+  // Only a new search is logged: the opening one and a place chosen here,
+  // never a retry or a widening.
+  private logNext = true;
+
   // Never on the server: it renders the skeletons, the browser searches.
   protected readonly results = resource({
-    loader: ({ params }) => this.search.garageSearchControllerForBrand(params),
-    params: (): GarageSearchControllerForBrand$Params | undefined => {
-      const query = this.query();
-      return query && { ...query, log: '1' };
+    loader: ({ params }) => {
+      const log = this.logNext;
+      this.logNext = false;
+      return this.search.garageSearchControllerForBrand(
+        log ? { ...params, log: '1' } : params,
+      );
     },
+    params: () => this.query(),
   });
 
   private readonly searched = computed(() =>
@@ -144,13 +152,23 @@ export class Results {
     { equal: sameIds },
   );
 
-  // 'empty' and 'failed' draw no block of their own yet.
   protected readonly state = computed(() => {
     if (this.server || this.results.isLoading()) return 'loading';
     const answer = this.answer();
-    if (!answer) return 'failed';
-    return answer.items.length === 0 ? 'empty' : 'list';
+    if (answer) return answer.items.length === 0 ? 'empty' : 'list';
+    // No brand, or one the catalogue does not hold: a retry would not help.
+    if (!this.query() || httpStatus(this.results.error()) === 404)
+      return 'missing';
+    return 'failed';
   });
+
+  // The 50 km search is offered once, near a place, before it has run.
+  protected readonly widen = computed(() =>
+    this.near() && !this.radius() ? WIDE : null,
+  );
+  protected readonly km = computed(
+    () => this.radius() ?? SEARCH_RADIUS_DEFAULT_KM,
+  );
 
   protected readonly skeletons = [0, 1, 2, 3, 4, 5];
 
@@ -174,7 +192,7 @@ export class Results {
   protected readonly area = computed(() => {
     const near = this.near();
     if (!near) return null;
-    const km = this.radius() ?? SEARCH_RADIUS_DEFAULT_KM;
+    const km = this.km();
     const place = this.store.place();
     if (!place || nearOf(place) !== near) {
       return this.i18n.t('public.results.areaPicked', { km });
@@ -232,8 +250,17 @@ export class Results {
       title: 'public.home.place.title',
     });
     if (place === 'cancelled') return;
+    if (nearOf(place) !== this.near() || this.radius()) this.logNext = true;
     this.store.set(place);
     await this.write({ near: nearOf(place), radius: null });
+  }
+
+  protected retry() {
+    this.results.reload();
+  }
+
+  protected widenTo(radius: number) {
+    void this.write({ radius: String(radius) });
   }
 
   // "Reîncarcă": the first page again, in place of the list shown.

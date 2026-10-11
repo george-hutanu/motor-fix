@@ -91,6 +91,46 @@ li.leaving {
   max-width: 16em;
 }
 
+/* Nothing found or a failure: one line and its actions, where the list would be. */
+.state {
+  padding-block: var(--mf-space-6);
+  text-align: center;
+}
+
+.state h2 {
+  font-size: var(--mf-size-heading);
+  margin: 0 0 var(--mf-space-4);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+  justify-content: center;
+}
+
+.actions > * {
+  align-items: center;
+  background: none;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: 999px;
+  color: var(--mf-text);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 600;
+  min-height: var(--mf-tap);
+  padding-inline: var(--mf-space-4);
+  text-decoration: none;
+}
+
+.actions > .primary {
+  background: var(--mf-amber);
+  border-color: var(--mf-amber);
+  color: var(--mf-on-amber);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   li {
     transition: opacity 300ms var(--mf-motion-ease);
