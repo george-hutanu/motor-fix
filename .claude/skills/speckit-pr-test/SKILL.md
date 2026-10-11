@@ -2,7 +2,7 @@
 name: "speckit-pr-test"
 description: "Test and review a ready PR like a QA engineer before it merges: run the pr-tester subagent, which tests the PR head on GitHub Actions (the PR QA workflow) and reviews it here, post its review and the agent-review commit status, move the story's tracker issue to QA, and drive the fix-and-retest loop until agent-review is success or the repair cap blocks the run. Mandatory between 'mark ready' and 'merge' (Constitution VII); /speckit-auto and /speckit-review run it."
 argument-hint: "<PR number> [--dry-run] [--local]"
-compatibility: "Requires gh and Node 24; the boot and sweep run on GitHub Actions. --local also needs Playwright's Chromium and Docker or local PostgreSQL/Redis binaries"
+compatibility: "Requires gh and Node 26; the boot and sweep run on GitHub Actions. --local also needs Playwright's Chromium and Docker or local PostgreSQL/Redis binaries"
 metadata:
   author: "george-hutanu"
   source: "project-local — QA step of the PR lifecycle"
