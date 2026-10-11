@@ -215,17 +215,19 @@
     "motorfix-chief/.claude-plugin/plugin.json": "0dda7c3ca12d",
     "motorfix-chief/.gitignore": "6df82eb6cc4b",
     "motorfix-chief/hooks/board.js": "27c7fb50d42a",
-    "motorfix-chief/hooks/chief-control.js": "0596e8e84a39",
+    "motorfix-chief/hooks/chief-control.js": "17f5ddfa730e",
     "motorfix-chief/hooks/dispatch-guard.js": "49b179e64590",
     "motorfix-chief/hooks/hooks.json": "f36f3680952a",
     "motorfix-chief/hooks/lib/ledger.js": "5bc287609bf0",
     "motorfix-chief/hooks/lib/parse.js": "91251764c4f1",
     "motorfix-chief/hooks/lib/role.js": "e3e911f56b08",
-    "motorfix-chief/hooks/lib/stubs.ts": "3984cb93fb00",
+    "motorfix-chief/hooks/lib/stage.js": "43bb69755014",
+    "motorfix-chief/hooks/lib/stubs.ts": "eb6e790a289d",
     "motorfix-chief/hooks/lib/surface.js": "3f806c780113",
     "motorfix-chief/hooks/owner-card.js": "bbad969d8594",
     "motorfix-chief/hooks/quiet-transcripts.js": "9b248fbd9dfd",
-    "motorfix-chief/hooks/register.js": "2606a573fddc",
-    "motorfix-chief/hooks/usage-guard.js": "1e381e868732"
+    "motorfix-chief/hooks/register.js": "5fcd3f2d9888",
+    "motorfix-chief/hooks/usage-guard.js": "1e381e868732",
+    "motorfix-chief/hooks/worker-report.js": "c122aff735aa"
   }
 }

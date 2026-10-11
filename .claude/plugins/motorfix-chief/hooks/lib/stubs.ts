@@ -10,6 +10,7 @@ type Options = {
   session?: string;
   env?: Record<string, string>;
   run?: (argv: readonly string[]) => Run | Promise<Run>;
+  delivered?: boolean;
 };
 
 // What a refused tool call comes back as in a test: `isError`, the reason as `text`.
@@ -26,6 +27,7 @@ export function stubs(on, options: Options = {}) {
   const opened: string[] = [];
   const closed: string[] = [];
   const copied: string[] = [];
+  const logs: string[] = [];
   const agents = options.agents ?? [];
   // The clock starts at 0 and moves only when the test advances it.
   const clock = mock.clock(on);
@@ -39,9 +41,12 @@ export function stubs(on, options: Options = {}) {
   on('session.id', () => value(options.session ?? 'sess-a'));
   on('env.get', (_$, e) => value(options.env?.[e.name]));
   on('ui.toast', (_$, e) => value(void toasts.push(e.text)));
+  on('ui.log', (_$, e) => value(void logs.push(e.text)));
   on('session.send', (_$, e) => {
     sent.push({ text: e.text, to: e.to });
-    return value({ isDelivered: true });
+    return options.delivered === false
+      ? { isDelivered: false, reason: 'not running' }
+      : { isDelivered: true };
   });
   on('prompt.submit', (_$, e) => {
     submitted.push(e.text);
@@ -73,6 +78,7 @@ export function stubs(on, options: Options = {}) {
     clock,
     closed,
     copied,
+    logs,
     opened,
     runs,
     sent,

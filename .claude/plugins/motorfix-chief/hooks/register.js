@@ -16,6 +16,7 @@ import { CARD, PANE } from './lib/surface.js';
 import { cardHook, cardPaneHook } from './owner-card.js';
 import { resultHook } from './quiet-transcripts.js';
 import { measureHook } from './usage-guard.js';
+import { turnHook } from './worker-report.js';
 
 // A gating hook that fails lets the call through: the mod never blocks on its own error.
 const failOpen = (_$, e, next) => next(e);
@@ -33,4 +34,5 @@ export function register(on) {
   on('ui.render', { component: 'Pane', requestId: CARD.id }, cardPaneHook);
   on('ui.render', { component: 'ToolResult' }, resultHook);
   on('session.measure', measureHook);
+  on('turn.complete', turnHook);
 }

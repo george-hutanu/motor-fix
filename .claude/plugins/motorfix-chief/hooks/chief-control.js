@@ -4,6 +4,7 @@
 import { blank, key, ledgerBlock, merge } from './lib/ledger.js';
 import { bashCall, qaRunLine, taskNotification } from './lib/parse.js';
 import { fromRevParse, REV_PARSE } from './lib/role.js';
+import { stageCall } from './lib/stage.js';
 import { canDraw, PANE } from './lib/surface.js';
 
 const TICK_MS = 15 * 60_000;
@@ -15,6 +16,7 @@ const CLOSED = new Set(['merged', 'closed']);
 // (task id → PR and run).
 export const role = {
   chief: false,
+  cwd: null,
   main: null,
   remote: null,
   surface: null,
@@ -23,6 +25,14 @@ export const role = {
 const waits = new Map();
 // The ci-wait calls' tool_use_ids, so Quiet transcripts (part 8) knows their results.
 export const ciWaitCalls = new Set();
+// Part 5: the stage this turn moved the PR to, and the PR a command named.
+export const turn = { pr: undefined, stage: undefined };
+
+function noteStage(command, r) {
+  const change = !r.isError && stageCall(command);
+  if (change) Object.assign(turn, change);
+  return r;
+}
 
 async function readRows($) {
   const keys = (await $.store.keys()).filter((k) => k.startsWith('pr:'));
@@ -80,7 +90,7 @@ async function afterCiWait($, call, r) {
 
 export async function bashHook($, e, next) {
   const call = bashCall(e.command ?? '');
-  if (!call) return next(e);
+  if (!call) return noteStage(e.command ?? '', await next(e));
   if (call.kind === 'dispatch') return afterDispatch($, call, await next(e));
   if (e.tool_use_id) ciWaitCalls.add(e.tool_use_id);
   await patch($, call.pr, {
@@ -149,6 +159,7 @@ async function tick($) {
 async function onStart($, e) {
   role.remote = (await $.env.get('CLAUDE_CODE_REMOTE')) ?? null;
   role.surface = e.surface ?? null;
+  role.cwd = e.cwd ?? null;
   const r = await $.process.run(REV_PARSE, { cwd: e.cwd, timeoutMs: 10_000 });
   Object.assign(role, fromRevParse(r.exitCode === 0 ? r.stdout : ''));
   if (!role.chief) return;
