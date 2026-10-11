@@ -81,6 +81,8 @@ export class RemindersService {
               ${input.dueOn}::date - 30 < ${input.today}::date,
               ${input.dueOn}::date - 7 < ${input.today}::date)
       ON CONFLICT (car_id, kind) DO UPDATE SET
+        id = CASE WHEN reminder.due_on = EXCLUDED.due_on THEN reminder.id
+                  ELSE EXCLUDED.id END,
         account_id = EXCLUDED.account_id,
         due_on = EXCLUDED.due_on,
         sent_30 = (reminder.sent_30 AND reminder.due_on = EXCLUDED.due_on)

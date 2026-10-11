@@ -90,6 +90,7 @@ export class CarsController {
   }
 
   @Patch(':id')
+  @Requires('driver.cars')
   @UseGuards(JsonOnly)
   @ApiOperation({
     summary: "Change some of the caller's car's fields; null clears one",

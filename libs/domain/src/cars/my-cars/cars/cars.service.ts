@@ -80,7 +80,7 @@ function assertNotTooFar(
   }
 }
 
-type Changes = Partial<Record<Editable, string | number | null>>;
+type Changes = Partial<Pick<UpdateCarDto, Editable>>;
 
 // The caller's own car, not removed, locked until the transaction ends.
 async function ownCar(
@@ -118,19 +118,21 @@ async function lockedCar(
 // The sent fields that differ from the car, after the add dialog's
 // normalisation: an empty engine is the missing one.
 function changes(dto: UpdateCarDto, before: CarDto): Changes {
+  const sent = dto.engine === '' ? { ...dto, engine: null } : dto;
   const after: Changes = {};
-  for (const field of EDITABLE) {
-    const value = dto[field];
-    if (value === undefined) continue;
-    const next = field === 'engine' ? value || null : value;
-    if (next !== before[field]) after[field] = next;
-  }
+  const take = <K extends Editable>(field: K) => {
+    const value = sent[field];
+    if (value !== undefined && !Object.is(value, before[field])) {
+      after[field] = value;
+    }
+  };
+  for (const field of EDITABLE) take(field);
   return after;
 }
 
-async function activeBrand(tx: Prisma.TransactionClient, brandId: unknown) {
+async function activeBrand(tx: Prisma.TransactionClient, brandId: string) {
   const brand = await tx.brand.findFirst({
-    where: { active: true, id: brandId as string },
+    where: { active: true, id: brandId },
   });
   if (!brand) {
     throw invalid('brandId', 'unknown_brand', 'No such brand in the catalogue');
@@ -142,12 +144,12 @@ function carData(
   version: Date,
 ): Prisma.CarUncheckedUpdateInput {
   const data: Prisma.CarUncheckedUpdateInput = {
-    ...(after as Prisma.CarUncheckedUpdateInput),
+    ...after,
     // A version later than the one read, even within one millisecond.
     updatedAt: new Date(Math.max(Date.now(), version.getTime() + 1)),
   };
   for (const field of DATES) {
-    if (field in after) data[field] = date(after[field] as string | null);
+    if (field in after) data[field] = date(after[field] ?? null);
   }
   return data;
 }
@@ -319,6 +321,9 @@ export class CarsService {
     requireCapability(actor, 'driver.cars');
     const ownerId = actor.accountId;
     await this.prisma.$transaction(async (tx) => {
+      // A request is sent under the owner's account lock: taking it first
+      // means one sent meanwhile is counted below, not missed.
+      await tx.$queryRaw`SELECT id FROM account WHERE id = ${ownerId}::uuid FOR UPDATE`;
       await ownCar(tx, id, ownerId);
       const open = await tx.quoteRequest.count({
         where: { carId: id, status: { in: [...OPEN_REQUEST] } },

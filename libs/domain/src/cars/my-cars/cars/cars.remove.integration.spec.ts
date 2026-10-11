@@ -245,6 +245,38 @@ describe('DELETE /cars/:id', () => {
 
 // @traces 092-FR-003
 describe('a car with an open request', () => {
+  // @traces 092-FR-003
+  it('is refused when a request for it commits while the removal waits', async () => {
+    const { auth, id } = await driver();
+    const car = await saved(auth);
+    let removal: Promise<request.Response> | undefined;
+
+    // A request being sent holds the driver's account row, as sending one does.
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM account WHERE id = ${id}::uuid FOR UPDATE`;
+      removal = remove(auth, car.id).then((res) => res);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await tx.quoteRequest.create({
+        data: {
+          carBrand: 'BMW',
+          carFuel: 'diesel',
+          carId: car.id,
+          carModel: '320d',
+          carYear: 2019,
+          driverId: id,
+          expiresAt: new Date(Date.now() + 7 * 86_400_000),
+          idempotencyKey: randomUUID(),
+          status: 'sent',
+        },
+      });
+    });
+    const res = await removal;
+
+    expect(res?.status).toBe(409);
+    expect(res?.body.code).toBe('open_request');
+    expect((await row(car.id))?.removedAt).toBeNull();
+  });
+
   it.each(['sent', 'quoted', 'booked', 'in_work'] as const)(
     'is refused with 409 open_request while a request is %s, and stays',
     async (status) => {
