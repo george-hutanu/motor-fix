@@ -10,16 +10,41 @@
     <div class="cards">
       @for (car of list; track car.id) {
         <article [attr.data-car]="car.id" tabindex="-1">
-          <p class="name">{{ car.brandName }} {{ car.model }}</p>
+          <div class="head">
+            <p class="name">{{ car.brandName }} {{ car.model }}</p>
+            <hlm-popover align="end" sideOffset="4">
+              <button
+                type="button"
+                class="more"
+                hlmPopoverTrigger
+                [attr.aria-haspopup]="'menu'"
+                [attr.aria-label]="'driver.cars.menu.name' | t: { car: car.brandName + ' ' + car.model }"
+              >
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <circle cx="4" cy="10" r="1.75" />
+                  <circle cx="10" cy="10" r="1.75" />
+                  <circle cx="16" cy="10" r="1.75" />
+                </svg>
+              </button>
+              <div hlmPopoverContent class="menu" role="menu" *hlmPopoverPortal="let ctx" (keydown)="moveIn($event)">
+                <button type="button" role="menuitem" (click)="ctx.close(); edit(car)">{{ 'driver.cars.menu.edit' | t }}</button>
+                <button type="button" role="menuitem" (click)="ctx.close()">{{ 'driver.cars.menu.remove' | t }}</button>
+              </div>
+            </hlm-popover>
+          </div>
           <p>{{ car.year }} · {{ car.odometerKm | km }}</p>
+          @if (car.plate) {
+            <p>{{ grouped(car.plate) }}</p>
+          }
           <mf-due-date-line
             [expiry]="car.itpUntil"
             keyPrefix="driver.cars.itp"
             [link]="{ label: 'driver.cars.findGarage', name: 'driver.cars.findGarageFor', params: { car: car.brandName + ' ' + car.model }, path: ['/', language(), 'garages'], query: { brand: car.brandId } }"
+            [addable]="true"
+            (add)="edit(car, 'itpUntil')"
           />
-          @if (car.plate) {
-            <p>{{ grouped(car.plate) }}</p>
-          }
+          <mf-due-date-line [expiry]="car.rcaUntil" keyPrefix="driver.cars.rca" [addable]="true" (add)="edit(car, 'rcaUntil')" />
+          <mf-due-date-line [expiry]="car.rovinietaUntil" keyPrefix="driver.cars.rovinieta" [addable]="true" (add)="edit(car, 'rovinietaUntil')" />
         </article>
       }
     </div>

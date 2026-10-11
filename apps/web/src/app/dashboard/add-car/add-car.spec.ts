@@ -445,3 +445,338 @@ describe('openAddCar', () => {
     });
   });
 });
+
+const stored: CarDto = {
+  ...saved,
+  engine: '2.0 TDI',
+  itpUntil: '2026-11-13',
+  plate: 'B123ABC',
+  rcaUntil: null,
+  rovinietaUntil: '2027-01-31',
+  updatedAt: '2026-10-08T07:00:00.000Z',
+};
+
+let update: jest.Mock;
+let listCars: jest.Mock;
+let edited: Promise<OverlayResult<CarDto>>;
+
+async function openEdit(
+  language: 'ro' | 'en' = 'ro',
+  car: CarDto = stored,
+  focus?: 'itpUntil' | 'rcaUntil' | 'rovinietaUntil',
+): Promise<void> {
+  search = jest.fn(async () => page(CATALOGUE));
+  create = jest.fn(async () => saved);
+  update = jest.fn(async () => ({
+    ...car,
+    updatedAt: '2026-10-08T08:00:00.000Z',
+  }));
+  listCars = jest.fn(async () => ({ items: [car] }));
+  TestBed.configureTestingModule({
+    providers: [
+      { provide: BrandsService, useValue: { brandsControllerSearch: search } },
+      {
+        provide: CarsService,
+        useValue: {
+          carsControllerCreate: create,
+          carsControllerList: listCars,
+          carsControllerUpdate: update,
+        },
+      },
+    ],
+  });
+  await TestBed.inject(I18n).enter('driver');
+  if (language === 'en') await TestBed.inject(I18n).use('en');
+  const host = TestBed.createComponent(Host);
+  edited = openAddCar(host.componentInstance.overlays, ['B123ABC', 'CJ12XYZ'], {
+    car,
+    ...(focus && { focus }),
+  });
+  await settle();
+  await settle();
+}
+
+const radio = (label: string) => field(label).checked;
+
+describe('the edit dialog', () => {
+  // @traces 092-edit-remove-car-FR-010
+  it('opens with the car filled in, under its own title and button', async () => {
+    await openEdit();
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Modifică mașina',
+    );
+    expect(field('Marcă').value).toBe('BMW');
+    expect(field('Model').value).toBe('320d');
+    expect(field('An').value).toBe('2019');
+    expect(field('Kilometri').value).toBe('148.200');
+    expect(radio('Motorină')).toBe(true);
+    expect(field('Număr de înmatriculare').value).toBe('B123ABC');
+    expect(field('Motor').value).toBe('2.0 TDI');
+    expect(field('ITP valabil până la').value).toBe('2026-11-13');
+    expect(field('RCA valabilă până la').value).toBe('');
+    expect(field('Rovinietă valabilă până la').value).toBe('2027-01-31');
+    expect(button('Salvează')?.type).toBe('submit');
+    expect(button('Adaugă mașina')).toBeUndefined();
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('reads English', async () => {
+    await openEdit('en');
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Edit the car',
+    );
+    expect(field('Kilometres').value).toBe('148,200');
+    expect(button('Save')?.type).toBe('submit');
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('does not warn that the car’s own plate is already held', async () => {
+    await openEdit();
+
+    expect(text()).not.toContain('Ai deja o mașină cu acest număr.');
+    type(field('Număr de înmatriculare'), 'CJ 12 XYZ');
+    await settle();
+    expect(text()).toContain('Ai deja o mașină cu acest număr.');
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('puts the focus on the date the card asked for', async () => {
+    await openEdit('ro', stored, 'rcaUntil');
+
+    expect(document.activeElement).toBe(field('RCA valabilă până la'));
+  });
+
+  // @traces 092-edit-remove-car-FR-002
+  it('sends only the changed fields, a cleared one as null, with the version it loaded', async () => {
+    await openEdit();
+    type(field('ITP valabil până la'), '2027-11-13');
+    type(field('Număr de înmatriculare'), '');
+    type(field('Motor'), '   ');
+    await settle();
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledWith({
+      body: {
+        engine: null,
+        itpUntil: '2027-11-13',
+        plate: null,
+        version: '2026-10-08T07:00:00.000Z',
+      },
+      id: 'car-1',
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('sends the version alone when nothing changed', async () => {
+    await openEdit();
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('closes with the answered car', async () => {
+    await openEdit();
+    type(field('Model'), '330d');
+    await settle();
+
+    button('Salvează')?.click();
+    await settle();
+
+    await expect(edited).resolves.toEqual({
+      ...stored,
+      updatedAt: '2026-10-08T08:00:00.000Z',
+    });
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('asks before saving fewer kilometres than saved, and saves after Salvează', async () => {
+    await openEdit();
+    type(field('Kilometri'), '140.000');
+    await settle();
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).not.toHaveBeenCalled();
+    expect(text()).toContain(
+      'Kilometrajul e mai mic decât cel salvat (148.200 km). Sigur?',
+    );
+    expect(button('Renunță')).toBeDefined();
+    const confirm = [...panel().querySelectorAll('button')].filter(
+      (b) => b.textContent?.trim() === 'Salvează',
+    );
+    confirm.at(-1)?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { odometerKm: 140000, version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('returns to the form on Renunță and sends nothing', async () => {
+    await openEdit();
+    type(field('Kilometri'), '140000');
+    await settle();
+    button('Salvează')?.click();
+    await settle();
+
+    button('Renunță')?.click();
+    await settle();
+
+    expect(update).not.toHaveBeenCalled();
+    expect(text()).not.toContain('Kilometrajul e mai mic');
+    expect(field('Kilometri').value).toBe('140000');
+    expect(panel()).not.toBeNull();
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('asks the kilometres question in English', async () => {
+    await openEdit('en');
+    type(field('Kilometres'), '140000');
+    await settle();
+
+    button('Save')?.click();
+    await settle();
+
+    expect(text()).toContain(
+      'The reading is lower than the saved one (148,200 km). Are you sure?',
+    );
+    expect(button('Cancel')).toBeDefined();
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('does not ask when the kilometres go up', async () => {
+    await openEdit();
+    type(field('Kilometri'), '150000');
+    await settle();
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { odometerKm: 150000, version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('shows the button busy while saving', async () => {
+    await openEdit();
+    update.mockReturnValueOnce(new Promise(() => undefined));
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(
+      panel().querySelector('button[type="submit"]')?.getAttribute('aria-busy'),
+    ).toBe('true');
+  });
+
+  // @traces 092-edit-remove-car-FR-010
+  it('keeps the values and shows the reason when the save fails', async () => {
+    await openEdit();
+    update.mockRejectedValueOnce(refusal(500, { code: 'internal' }));
+    type(field('Model'), '330d');
+    await settle();
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(field('Model').value).toBe('330d');
+    expect(text()).toContain('Ceva nu a mers. Încearcă din nou.');
+    expect(button('Salvează')).toBeDefined();
+  });
+
+  // @traces 092-edit-remove-car-FR-002
+  it('reloads the car after a conflict, says so and saves with the new version', async () => {
+    await openEdit();
+    const current = {
+      ...stored,
+      model: '330d',
+      updatedAt: '2026-10-08T07:30:00.000Z',
+    };
+    listCars.mockResolvedValueOnce({ items: [current] });
+    update.mockRejectedValueOnce(
+      refusal(409, { code: 'stale_version', message: 'stale' }),
+    );
+    type(field('ITP valabil până la'), '2027-11-13');
+    await settle();
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(listCars).toHaveBeenCalledTimes(1);
+    expect(field('Model').value).toBe('330d');
+    expect(field('ITP valabil până la').value).toBe('2026-11-13');
+    expect(text()).toContain(
+      'Mașina a fost modificată între timp. Verifică datele și salvează din nou.',
+    );
+
+    type(field('Motor'), '3.0');
+    await settle();
+    button('Salvează')?.click();
+    await settle();
+    expect(update).toHaveBeenLastCalledWith({
+      body: { engine: '3.0', version: '2026-10-08T07:30:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  // @traces 092-edit-remove-car-FR-002
+  it('says the car is gone when a conflict finds it no longer listed', async () => {
+    await openEdit();
+    listCars.mockResolvedValueOnce({ items: [] });
+    update.mockRejectedValueOnce(
+      refusal(409, { code: 'stale_version', message: 'stale' }),
+    );
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(text()).toContain('Nu mai găsim ce voiai să salvezi.');
+  });
+
+  // @traces 092-edit-remove-car-FR-002
+  it('says the car changed, in English', async () => {
+    await openEdit('en');
+    update.mockRejectedValueOnce(
+      refusal(409, { code: 'stale_version', message: 'stale' }),
+    );
+
+    button('Save')?.click();
+    await settle();
+
+    expect(text()).toContain(
+      'The car was changed in the meantime. Check the details and save again.',
+    );
+  });
+});
+
+describe('openAddCar for a car', () => {
+  // @traces 092-edit-remove-car-FR-010
+  it('opens the dialog for that car under the edit title', async () => {
+    const open = jest.fn(async () => 'cancelled' as const);
+    const overlays = { open } as unknown as Overlays;
+
+    await openAddCar(overlays, ['B123ABC'], { car: stored, focus: 'itpUntil' });
+
+    expect(open).toHaveBeenCalledWith(AddCar, {
+      data: { car: stored, focus: 'itpUntil', plates: ['B123ABC'] },
+      shape: 'dialog',
+      title: 'driver.cars.edit.title',
+    });
+  });
+});
