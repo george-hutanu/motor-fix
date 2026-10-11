@@ -385,6 +385,15 @@ describe('the garage-requests-panel stylesheet', () => {
         expect(Number.parseFloat(px) % 4).toBe(0);
   });
 
+  // Lap 4: at 320 px the 24 px sides left a row's Trimite oferta too
+  // narrow for its label on one line.
+  it('pads its sides at 16 px on a phone', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+    expect(phone).toMatch(
+      /\.panel\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,
+    );
+  });
+
   it('sizes its text from the Cockpit type scale', () => {
     for (const [, value] of css.matchAll(/font-size:\s*([^;]+);/g))
       expect(value.trim()).toMatch(/^var\(--mf-size-[a-z]+\)$/);

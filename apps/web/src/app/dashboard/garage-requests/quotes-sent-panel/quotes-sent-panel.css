@@ -52,3 +52,9 @@ h2 {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+/* A phone keeps 16 px sides, as the requests panel above it does. */
+@media (max-width: 767.98px) {
+  .panel {
+    padding-inline: var(--mf-space-4);
+  }
+}

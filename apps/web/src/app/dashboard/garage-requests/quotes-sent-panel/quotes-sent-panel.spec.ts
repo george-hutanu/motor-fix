@@ -250,6 +250,15 @@ describe('the quotes-sent-panel stylesheet', () => {
         expect(Number.parseFloat(px) % 4).toBe(0);
   });
 
+  // Lap 4: the requests panel above it pads 16 px on a phone; the two
+  // panels on one page keep the same sides.
+  it('pads its sides at 16 px on a phone, like the requests panel', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+    expect(phone).toMatch(
+      /\.panel\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,
+    );
+  });
+
   it('sizes its text from the Cockpit type scale', () => {
     for (const [, value] of css.matchAll(/font-size:\s*([^;]+);/g))
       expect(value.trim()).toMatch(/^var\(--mf-size-[a-z]+\)$/);

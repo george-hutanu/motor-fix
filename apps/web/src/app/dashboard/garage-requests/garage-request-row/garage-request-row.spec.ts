@@ -375,6 +375,19 @@ describe('the request row’s layout', () => {
     );
   });
 
+  // Lap 4: at 320 px Trimite oferta wrapped one word per line and Refuză
+  // dropped to a line of its own beside nothing.
+  it('stacks Trimite oferta and Refuză full width on a phone, the row unpadded at the sides', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+    expect(phone).toMatch(/:host\s*\{[^}]*padding-inline:\s*0;/);
+    expect(phone).toMatch(
+      /\.actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/,
+    );
+    expect(phone).toMatch(
+      /\.actions button\s*\{[^}]*width:\s*100%;[^}]*padding-inline:\s*var\(--mf-space-3\);/,
+    );
+  });
+
   it('spaces the row and its lines on the 4 px grid', () => {
     for (const [, value] of css.matchAll(/(?:gap|padding):\s*([^;]+);/g))
       for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])

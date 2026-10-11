@@ -94,8 +94,20 @@ time,
     grid-area: 1 / 1 / 4 / 2;
   }
 }
-/* A phone reads nothing under body size. */
+/* A phone reads nothing under body size. Trimite oferta and Refuză stack
+   full width, so the label keeps one line at 320 px. */
 @media (max-width: 767.98px) {
+  :host {
+    padding-inline: 0;
+  }
+  .actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .actions button {
+    width: 100%;
+    padding-inline: var(--mf-space-3);
+  }
   .car,
   .when {
     font-size: var(--mf-size-body);

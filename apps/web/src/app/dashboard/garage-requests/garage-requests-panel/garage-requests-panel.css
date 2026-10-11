@@ -85,3 +85,9 @@ p {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+/* A phone keeps 16 px sides, so a row's buttons have room for their labels. */
+@media (max-width: 767.98px) {
+  .panel {
+    padding-inline: var(--mf-space-4);
+  }
+}
