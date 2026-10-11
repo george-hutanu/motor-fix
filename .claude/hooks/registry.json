@@ -214,12 +214,14 @@
     ".claude-plugin/marketplace.json": "b41d9fe81262",
     "motorfix-chief/.claude-plugin/plugin.json": "0dda7c3ca12d",
     "motorfix-chief/.gitignore": "6df82eb6cc4b",
-    "motorfix-chief/hooks/dispatch-guard.js": "5870fb606da5",
-    "motorfix-chief/hooks/hooks.json": "f5a5e8c51a22",
+    "motorfix-chief/hooks/chief-control.js": "7b6cea54dde2",
+    "motorfix-chief/hooks/dispatch-guard.js": "49b179e64590",
+    "motorfix-chief/hooks/hooks.json": "f36f3680952a",
     "motorfix-chief/hooks/lib/ledger.js": "5bc287609bf0",
     "motorfix-chief/hooks/lib/parse.js": "91251764c4f1",
     "motorfix-chief/hooks/lib/role.js": "e3e911f56b08",
-    "motorfix-chief/hooks/lib/stubs.ts": "ffcc7af982e8",
-    "motorfix-chief/hooks/lib/surface.js": "bd198f73e08b"
+    "motorfix-chief/hooks/lib/stubs.ts": "f0db8cf35373",
+    "motorfix-chief/hooks/lib/surface.js": "bd198f73e08b",
+    "motorfix-chief/hooks/register.js": "afbc77c7cb14"
   }
 }

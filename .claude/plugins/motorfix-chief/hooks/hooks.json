@@ -1,1 +1,1 @@
-{ "modules": ["./dispatch-guard.js"] }
+{ "modules": ["./register.js"] }

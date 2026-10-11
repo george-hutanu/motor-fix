@@ -1,0 +1,23 @@
+// The one hooks module (hooks.json): each part's hooks live in its own file and
+// are wired here, in the order contracts/denials.md gives. A hook may be
+// imported; `$` and `on` never cross a file as arguments.
+import {
+  bashHook,
+  contextHook,
+  endHook,
+  startHook,
+  submitHook,
+} from './chief-control.js';
+import { agentHook } from './dispatch-guard.js';
+
+// A gating hook that fails lets the call through: the mod never blocks on its own error.
+const failOpen = (_$, e, next) => next(e);
+
+export function register(on) {
+  on('tool.call', { tool: 'Agent' }, agentHook).catch(failOpen);
+  on('session.start', startHook);
+  on('session.end', endHook);
+  on('tool.call', { tool: 'Bash' }, bashHook).catch(failOpen);
+  on('prompt.submit', submitHook).catch(failOpen);
+  on('prompt.context', contextHook);
+}

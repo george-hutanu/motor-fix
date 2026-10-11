@@ -44,6 +44,9 @@ export function stubs(on, options: Options = {}) {
     submitted.push(e.text);
     return { text: e.text };
   });
+  on('session.start', (_$, e) => ({ cwd: e.cwd }));
+  on('session.end', () => ({ sessionId: options.session ?? 'sess-a' }));
+  on('prompt.context', (_$, e) => ({ blocks: e.blocks }));
   on('process.run', async (_$, e) => {
     runs.push({ argv: e.argv, init: e.init });
     return value(options.run ? await options.run(e.argv) : ok());

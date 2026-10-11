@@ -101,14 +101,11 @@ async function dispatch($, e, next, prompt) {
   return r;
 }
 
-export function register(on) {
-  on('tool.call', { tool: 'Agent' }, ($, e, next) => {
-    const prompt = `${e.description ?? ''}\n${e.prompt ?? ''}`;
-    if (e.subagent_type === 'general-purpose' && needsTaskRunner(prompt))
-      return { deny: GENERAL_DENY };
-    if (e.subagent_type !== 'task-runner') return next(e);
-    return dispatch($, e, next, prompt);
-  })
-    // A guard that fails lets the dispatch through: it never blocks on its own error.
-    .catch(($, e, next) => next(e));
+// tool.call{tool=Agent}, listed first in register.js.
+export function agentHook($, e, next) {
+  const prompt = `${e.description ?? ''}\n${e.prompt ?? ''}`;
+  if (e.subagent_type === 'general-purpose' && needsTaskRunner(prompt))
+    return { deny: GENERAL_DENY };
+  if (e.subagent_type !== 'task-runner') return next(e);
+  return dispatch($, e, next, prompt);
 }
