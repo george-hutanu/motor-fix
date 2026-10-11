@@ -40,7 +40,19 @@ export function classify(path) {
   return "other";
 }
 
-/** Each conflict hunk replaced by both sides' lines, ours first, a line of theirs already in ours dropped. */
+/** Their lines minus one copy per matching line of ours; a blank line is layout, never a duplicate, and is kept. */
+function theirsNotInOurs(ours, theirs) {
+  const left = new Map();
+  for (const l of ours) if (l.trim()) left.set(l, (left.get(l) ?? 0) + 1);
+  return theirs.filter((l) => {
+    const n = left.get(l) ?? 0;
+    if (!l.trim() || n === 0) return true;
+    left.set(l, n - 1);
+    return false;
+  });
+}
+
+/** Each conflict hunk replaced by both sides' lines, ours first, a line of theirs already in ours dropped (blank lines kept). */
 export function unionConflicts(text) {
   const out = [];
   let state = null;
@@ -54,7 +66,7 @@ export function unionConflicts(text) {
     } else if (state && line.startsWith("|||||||")) state = "base";
     else if (state && line === "=======") state = "theirs";
     else if (state && line.startsWith(">>>>>>>")) {
-      out.push(...ours, ...theirs.filter((l) => !ours.includes(l)));
+      out.push(...ours, ...theirsNotInOurs(ours, theirs));
       state = null;
     } else if (state === "ours") ours.push(line);
     else if (state === "theirs") theirs.push(line);

@@ -243,6 +243,11 @@ describe('merge-main pieces', () => {
     assert.equal(unionConflicts(t), 'a\nmine\nshared\ntheirs\nz\n');
   });
 
+  it('keeps their blank lines and a line they repeat, dropping only a line ours already has once per copy', () => {
+    const t = '<<<<<<< ours\n## A\n\n- one\n=======\n## B\n\n- two\n- two\n- one\n>>>>>>> theirs\n';
+    assert.equal(unionConflicts(t), '## A\n\n- one\n## B\n\n- two\n- two\n');
+  });
+
   it('unions an empty side of a hunk', () => {
     const t = '<<<<<<< ours\n=======\ntheirs\n>>>>>>> theirs\n';
     assert.equal(unionConflicts(t), 'theirs\n');
