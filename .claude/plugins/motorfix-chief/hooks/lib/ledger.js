@@ -1,5 +1,5 @@
 // The ledger's rows and the rules over them (data-model.md, contracts/store-keys.md).
-// Pure but readRows: callers pass the session id, the agent list and the time.
+// Pure: callers pass the session id, the agent list and the time.
 
 export const HOLD_MS = 110 * 60_000;
 export const LAP_CAP = 10;
@@ -70,9 +70,3 @@ export const boardRow = (r, ctx) => ({
   pr: r.pr,
   stage: r.stage ?? 'none',
 });
-
-// Every ledger row in the machine-wide store.
-export async function readRows($) {
-  const keys = (await $.store.keys()).filter((k) => k.startsWith('pr:'));
-  return (await Promise.all(keys.map((k) => $.store.get(k)))).filter(Boolean);
-}
