@@ -250,12 +250,17 @@ describe('a car with an open request', () => {
     const { auth, id } = await driver();
     const car = await saved(auth);
     let removal: Promise<request.Response> | undefined;
+    let settled = false;
 
     // A request being sent holds the driver's account row, as sending one does.
     await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM account WHERE id = ${id}::uuid FOR UPDATE`;
-      removal = remove(auth, car.id).then((res) => res);
+      removal = remove(auth, car.id).then((res) => {
+        settled = true;
+        return res;
+      });
       await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(settled).toBe(false);
       await tx.quoteRequest.create({
         data: {
           carBrand: 'BMW',
