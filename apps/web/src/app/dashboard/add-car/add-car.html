@@ -97,8 +97,8 @@
     <mf-task-error [save]="save" />
   }
   @if (askingKm()) {
-    <div class="question" role="alert">
-      <p>{{ kmQuestion() }}</p>
+    <div class="question">
+      <p role="alert">{{ kmQuestion() }}</p>
       <div class="actions">
         <button hlmBtn variant="secondary" type="button" (click)="askingKm.set(false)">{{ 'driver.cars.edit.cancel' | t }}</button>
         <button hlmBtn type="button" [mfTaskSubmit]="save" (click)="confirmKm()">{{ 'driver.cars.edit.submit' | t }}</button>

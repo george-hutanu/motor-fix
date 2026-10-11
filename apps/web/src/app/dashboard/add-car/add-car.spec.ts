@@ -661,6 +661,24 @@ describe('the edit dialog', () => {
   });
 
   // @traces 092-FR-010
+  it('announces only the kilometres question, not its buttons', async () => {
+    await openEdit();
+    type(field('Kilometri'), '140000');
+    await settle();
+    button('Salvează')?.click();
+    await settle();
+
+    const alerts = [...panel().querySelectorAll('[role="alert"]')];
+    const question = alerts.find((a) =>
+      a.textContent?.includes('Kilometrajul e mai mic'),
+    );
+    expect(question?.textContent?.trim()).toBe(
+      'Kilometrajul e mai mic decât cel salvat (148.200 km). Sigur?',
+    );
+    expect(question?.querySelector('button')).toBeNull();
+  });
+
+  // @traces 092-FR-010
   it('does not ask when the kilometres go up', async () => {
     await openEdit();
     type(field('Kilometri'), '150000');
