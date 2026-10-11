@@ -1,4 +1,5 @@
 {
+  "concurrency": 1,
   "thresholds": {
     "break": 0,
     "high": 80,

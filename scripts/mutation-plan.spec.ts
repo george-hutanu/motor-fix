@@ -1,7 +1,13 @@
 // @traces 1159-FR-001 1159-FR-002 1159-FR-003 1159-FR-005 1159-FR-015
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, matchesGlob } from 'node:path';
 
 import {
   assignFiles,
@@ -13,6 +19,15 @@ import {
 } from './mutation-plan.ts';
 
 let repo: string;
+
+const matches = (glob: string, path: string) => matchesGlob(path, glob);
+
+function specFiles(base: string, root: string): string[] {
+  return readdirSync(join(base, root, 'src'), { recursive: true })
+    .map(String)
+    .filter((file) => /\.(spec|test)\.ts$/.test(file))
+    .map((file) => `${root}/src/${file}`);
+}
 
 function write(path: string, content = '') {
   mkdirSync(join(repo, path, '..'), { recursive: true });
@@ -331,6 +346,36 @@ describe('the repository shard file', () => {
 
       expect([...assigned.keys()].sort()).toEqual(mutatedFiles(real, root));
     }
+  });
+
+  // A shard with no spec of its own would stop Stryker before any mutant ran.
+  it('gives every shard of the repository at least one spec of its own', () => {
+    const { projects } = readShardFile(real);
+    const roots = new Map(
+      mutationProjects(real).map((p) => [p.name, p.root] as const),
+    );
+    const empty = Object.entries(projects).flatMap(([name, own]) => {
+      if (!own.shards) return [];
+      const folders = Object.fromEntries(
+        Object.entries(own.shards).map(([s, v]) => [s, v.folders]),
+      );
+      const scope = (shard: string) =>
+        shardScope(roots.get(name) ?? '', folders, shard);
+      const specs = (shard: string) => {
+        const { testMatch, testPathIgnorePatterns } = scope(shard);
+        const ignored = testPathIgnorePatterns.map((p) => new RegExp(p));
+        return specFiles(real, roots.get(name) ?? '').filter(
+          (file) =>
+            testMatch.some((glob) => matches(glob, `/${file}`)) &&
+            !ignored.some((re) => re.test(`/${file}`)),
+        );
+      };
+      return [...Object.keys(folders), 'rest']
+        .filter((shard) => specs(shard).length === 0)
+        .map((shard) => `${name}:${shard}`);
+    });
+
+    expect(empty).toEqual([]);
   });
 
   it('shards domain and web, the two projects that outran one job', () => {
