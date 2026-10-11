@@ -4,9 +4,11 @@ import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { ProfileViewsModule } from './profile-views.module';
+import { visitorKey } from './profile-views.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { addDays, localDay } from '../../bucharest';
 import { redisUrlFor } from '../../notifications/notifications.testing';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
 
@@ -217,10 +219,37 @@ describe('a signed-in visitor with a bot agent', () => {
   });
 });
 
+// The total is a HyperLogLog: under the day's random secret two of sixty
+// visitors share a register about one run in ten and count as 59. Pin a
+// secret under which the first `n` visitors of this suite are told apart
+// exactly, so 60 means sixty counted and 61 would show a sixty-first.
+async function pinSecretFor(n: number) {
+  const agents = Array.from({ length: n }, (_, i) => `${CHROME} ${i}`);
+  for (let attempt = 0; ; attempt++) {
+    const secret = `pinned-${attempt}`;
+    const probe = `probe:${attempt}`;
+    for (const userAgent of agents) {
+      await redis.pfadd(
+        probe,
+        visitorKey({ address: '127.0.0.1', userAgent }, secret) ?? '',
+      );
+    }
+    const exact = (await redis.pfcount(probe)) === n;
+    await redis.del(probe);
+    if (!exact) continue;
+    const today = localDay(new Date());
+    for (const day of [today, addDays(today, 1)]) {
+      await redis.set(`insights:pv:secret:${day}`, secret);
+    }
+    return;
+  }
+}
+
 // @traces 143-FR-010
 describe('the limit of sixty a minute', () => {
   it('counts sixty distinct visitors and never the sixty-first', async () => {
     const g = await world.garage('Atelier Dinamo');
+    await pinSecretFor(61);
 
     for (let i = 0; i < 60; i++) {
       expect((await post(g.id, `${CHROME} ${i}`).send({})).status).toBe(204);
