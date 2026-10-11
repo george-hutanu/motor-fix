@@ -69,10 +69,11 @@ const offeredKey = (brand: string, jobTypeId: string) =>
 
 type Closed = { closedAt: string | null; closedReason: GarageCloseReason };
 
-// The closed list's rule, as its raw query in closed() states it in SQL: keep
-// the two in step.
-const CLOSED_FOR_GARAGE = new Set(['expired', 'closed', 'declined']);
-const OPEN_REQUEST = new Set(['sent', 'quoted']);
+// The closed list's rule, read by get() here and by closed()'s raw query.
+const CLOSED_FOR_GARAGE_STATUSES = ['expired', 'closed', 'declined'];
+const OPEN_REQUEST_STATUSES = ['sent', 'quoted'];
+const CLOSED_FOR_GARAGE = new Set(CLOSED_FOR_GARAGE_STATUSES);
+const OPEN_REQUEST = new Set(OPEN_REQUEST_STATUSES);
 
 // Why the request no longer waits for the garage, by the closed list's rule;
 // a suspended garage cannot answer a request still waiting for it either. The
@@ -274,9 +275,11 @@ export class GarageRequestsService {
       ) c
       WHERE rr.garage_id = ${garageId}::uuid
         AND (
-          -- CLOSED_FOR_GARAGE and OPEN_REQUEST state the same rule for get().
-          rr.status IN ('expired', 'closed', 'declined')
-          OR (rr.status = 'waiting' AND qr.status NOT IN ('sent', 'quoted'))
+          rr.status::text = ANY(${CLOSED_FOR_GARAGE_STATUSES})
+          OR (
+            rr.status = 'waiting'
+            AND NOT (qr.status::text = ANY(${OPEN_REQUEST_STATUSES}))
+          )
         )
         AND c.closed_at > now() - interval '24 hours'
       ORDER BY qr.created_at DESC, qr.id DESC
