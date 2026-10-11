@@ -88,7 +88,7 @@ async function ownCar(
   id: string,
   ownerId: string,
 ): Promise<CarRow> {
-  await tx.$queryRaw`SELECT id FROM car WHERE id = ${id}::uuid FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM car WHERE id = ${id}::uuid AND owner_id = ${ownerId}::uuid AND removed_at IS NULL FOR UPDATE`;
   const car = await tx.car.findFirst({
     include: withBrand,
     where: { id, ownerId, removedAt: null },

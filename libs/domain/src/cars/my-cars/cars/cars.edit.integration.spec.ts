@@ -473,6 +473,29 @@ describe('whose car an edit reaches', () => {
     expect((await row(car.id)).odometerKm).toBe(148200);
   });
 
+  it('answers another driver at once, without waiting on the owner’s lock of the car', async () => {
+    const ana = await driver('ana');
+    const car = await saved(ana.auth);
+    const bogdan = await driver('bogdan');
+    let answer: request.Response | undefined;
+
+    // The owner's own edit holds the car's row.
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM car WHERE id = ${car.id}::uuid FOR UPDATE`;
+      const call = edit(bogdan.auth, car.id, {
+        odometerKm: 1,
+        version: car.updatedAt,
+      }).then((res) => {
+        answer = res;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      expect(answer?.status).toBe(404);
+      return call;
+    });
+
+    expect(answer?.body.code).toBe('not_found');
+  });
+
   it('answers 400 validation_failed to an id that is not one', async () => {
     const { auth } = await driver();
     const car = await saved(auth);
