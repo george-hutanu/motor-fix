@@ -159,6 +159,28 @@ for (const out of [
   });
 }
 
+test('a background recheck that cannot read CI leaves ci pending, offers nothing and says so', async ($, on) => {
+  const s = stubs(on, {
+    run: (argv) =>
+      argv.join(' ') === CI_WAIT
+        ? { exitCode: 2, stderr: 'gh failed', stdout: 'CI: unreadable\n' }
+        : ok(),
+    store: { 'pr:363': row(363, { head: 'abc1234' }) },
+  });
+  on('tool.call', { tool: 'Bash' }, bash('', '', { backgroundTaskId: 'bt14' }));
+  await $.tool.call({
+    command: CI_WAIT,
+    run_in_background: true,
+    tool: 'Bash',
+  });
+  const r = await $.prompt.submit({ text: note(0) });
+  expect(r.context ?? []).toHaveLength(0);
+  expect(s.store.get('pr:363')).toMatchObject({ ci: 'pending' });
+  expect(s.toasts).toEqual([
+    'motorfix-chief: could not re-read CI for #363; run ci-wait.mjs 363 --run 99 again',
+  ]);
+});
+
 test('the ledger block after compaction lists every row in PR order', async ($, on) => {
   stubs(on, {
     run: () => ok(CHIEF),

@@ -215,7 +215,7 @@
     "motorfix-chief/.claude-plugin/plugin.json": "0dda7c3ca12d",
     "motorfix-chief/.gitignore": "6df82eb6cc4b",
     "motorfix-chief/hooks/board.js": "3d4f94034f28",
-    "motorfix-chief/hooks/chief-control.js": "7ff5144aa978",
+    "motorfix-chief/hooks/chief-control.js": "d5e49a60f718",
     "motorfix-chief/hooks/dispatch-guard.js": "9866084a29db",
     "motorfix-chief/hooks/hooks.json": "f36f3680952a",
     "motorfix-chief/hooks/lib/ledger.js": "6394b32c2b12",

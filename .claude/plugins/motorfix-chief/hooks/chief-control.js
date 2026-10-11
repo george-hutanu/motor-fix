@@ -101,6 +101,7 @@ const RECHECK_MS = 2 * 60_000;
 
 // A background wait's output never reaches the plugin: on its exit-0
 // notification ci-wait is asked again, and answers at once since all finished.
+// Its answer: true (green), false (red), or undefined when it could not tell.
 async function recheck($, wait) {
   const argv = ['node', CI_WAIT, String(wait.pr)];
   if (wait.run) argv.push('--run', String(wait.run));
@@ -108,7 +109,7 @@ async function recheck($, wait) {
     cwd: role.main ?? undefined,
     timeoutMs: RECHECK_MS,
   });
-  return r.exitCode === 0 && green(r.stdout);
+  return r.exitCode === 0 ? green(r.stdout) : undefined;
 }
 
 async function afterCiWait($, call, r) {
@@ -161,7 +162,14 @@ export async function submitHook($, e, next) {
   if (!wait) return next(e);
   waits.delete(note.id);
   const passed =
-    note.exitCode === 0 && (await recheck($, wait).catch(() => false));
+    note.exitCode === 0 ? await recheck($, wait).catch(() => undefined) : false;
+  if (passed === undefined) {
+    const again = wait.run ? `${wait.pr} --run ${wait.run}` : `${wait.pr}`;
+    await $.ui.toast(
+      `motorfix-chief: could not re-read CI for #${wait.pr}; run ci-wait.mjs ${again} again`,
+    );
+    return next(e);
+  }
   const lines = await finished($, wait, passed);
   return withContext(await next(e), lines);
 }
