@@ -1,0 +1,85 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  margin: 0;
+}
+dt {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.jobs {
+  margin: 0;
+  padding-inline-start: var(--mf-space-4);
+}
+.not-offered {
+  margin-top: var(--mf-space-2);
+  color: var(--mf-text-secondary);
+}
+.not-offered p {
+  margin: 0;
+}
+.description {
+  white-space: pre-line;
+}
+.empty,
+.times {
+  color: var(--mf-text-secondary);
+}
+.times {
+  margin: 0;
+  font-size: var(--mf-size-small);
+}
+.banner,
+.offline,
+.refused {
+  margin: 0;
+  padding: var(--mf-space-3);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-panel);
+}
+.failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mf-space-2);
+}
+.failed p {
+  margin: 0;
+}
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+}
+.skeleton span {
+  display: block;
+  height: 1em;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.actions {
+  position: sticky;
+  bottom: 0;
+  padding-block: var(--mf-space-3);
+  border-top: 1px solid var(--mf-line);
+  background: var(--mf-panel-raised);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.actions button,
+.failed button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}

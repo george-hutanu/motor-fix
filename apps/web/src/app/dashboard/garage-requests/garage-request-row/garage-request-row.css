@@ -55,3 +55,21 @@ time,
     grid-template-columns: minmax(0, 1fr);
   }
 }
+:host {
+  position: relative;
+}
+.open {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.open:focus-visible {
+  outline: 2px solid var(--mf-focus, currentColor);
+  outline-offset: -2px;
+}
+.actions {
+  position: relative;
+}

@@ -1,15 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import {
   type GarageRequestListDto,
   GarageRequestsService,
   type MeDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 
 import { GarageRequestsView } from './garage-requests-view';
 import { Live } from '../../live';
@@ -22,6 +23,10 @@ import {
   wait,
 } from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
+import { RequestDrawer } from '../request-drawer/request-drawer';
+
+@Component({ template: '' })
+class Blank {}
 
 // The sentinel's observer, fired by the test.
 let observers: { callback: IntersectionObserverCallback; target?: Element }[];
@@ -48,6 +53,7 @@ class FakeObserver {
 
 let live: ReturnType<typeof fakeLive>;
 let list: jest.Mock;
+let open: jest.Mock;
 
 const page = (from: number, count: number) =>
   Array.from({ length: count }, (_, i) =>
@@ -71,8 +77,10 @@ async function render(
     waiting?: GarageRequestListDto[];
   } = {},
   language: 'ro' | 'en' = 'ro',
+  url?: { path: string; origin?: string },
 ) {
   observers = [];
+  open = jest.fn(async () => 'cancelled');
   (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver =
     FakeObserver;
   live = fakeLive();
@@ -87,12 +95,21 @@ async function render(
   );
   const me = signal({
     capabilities: ['garage.requests'],
+    garageAccess: [
+      {
+        garageId: 'garage-1',
+        permissions: { canAnswerQuotes: false },
+        role: 'owner',
+        status: 'approved',
+      },
+    ],
     garageId: 'garage-1',
   } as unknown as MeDto);
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([]),
+      provideRouter([{ component: Blank, path: '**' }]),
       GarageRequestsFeed,
+      { provide: Overlays, useValue: { open } },
       { provide: Live, useValue: live },
       { provide: Session, useValue: { current: me, shown: me } },
       {
@@ -102,6 +119,12 @@ async function render(
     ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
+  const router = TestBed.inject(Router);
+  if (url) {
+    await router.navigateByUrl(url.path, {
+      state: url.origin ? { origin: url.origin } : {},
+    });
+  }
   const fixture = TestBed.createComponent(GarageRequestsView);
   const element = fixture.nativeElement as HTMLElement;
   const settle = async () => {
@@ -112,7 +135,7 @@ async function render(
     }
   };
   await settle();
-  return { element, settle };
+  return { element, router, settle };
 }
 
 const waitingIds = (element: HTMLElement) =>
@@ -449,5 +472,128 @@ describe('the closed rows’ contrast', () => {
     const panel = token(tokens, '--mf-panel');
 
     expect(contrast(text, panel)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+const DRAWER = {
+  data: { id: 'req-1' },
+  shape: 'drawer',
+  title: 'garage.requests.detail.title',
+};
+
+// @traces 347-FR-001 347-FR-006 347-FR-007
+describe('a request opened from the Cereri de ofertă view', () => {
+  it('goes to the request’s address from its row and opens the drawer on it', async () => {
+    const { element, router, settle } = await render();
+
+    element
+      .querySelector<HTMLButtonElement>('li[data-live-id="req-1"] button.open')
+      ?.click();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(RequestDrawer, DRAWER);
+    expect(router.url).toBe('/');
+  });
+
+  it.each([
+    ['sent', 'sent'],
+    ['declined', 'reload'],
+    ['refused', 'reload'],
+  ] as const)(
+    'after a %s answer, updates the lists and returns',
+    async (answer, call) => {
+      let resolve: (value: string) => void = () => {};
+      const answered = new Promise<string>((r) => {
+        resolve = r;
+      });
+      const { router, settle } = await render();
+      const feed = TestBed.inject(GarageRequestsFeed);
+      const spy = jest.spyOn(feed, call).mockImplementation(() => undefined);
+      open.mockReturnValueOnce(answered);
+      await router.navigateByUrl('/app/garage/requests/req-2', {
+        state: { origin: '/app/garage' },
+      });
+      await settle();
+
+      resolve(answer);
+      await settle();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      if (call === 'sent') expect(spy).toHaveBeenCalledWith('req-2');
+      expect(router.url).toBe('/app/garage');
+    },
+  );
+});
+
+// @traces 347-FR-007
+describe('the request’s address', () => {
+  it('opens the view with the drawer on that request', async () => {
+    const { element } = await render({}, 'ro', {
+      path: '/app/garage/requests/req-1',
+    });
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(RequestDrawer, DRAWER);
+    expect(element.querySelector('mf-garage-requests-panel')).not.toBeNull();
+  });
+
+  it('opens one drawer when the same address comes again', async () => {
+    let close: (value: string) => void = () => {};
+    const { router, settle } = await render({}, 'ro');
+    open.mockReturnValueOnce(
+      new Promise((r) => {
+        close = r;
+      }),
+    );
+    await router.navigateByUrl('/app/garage/requests/req-1');
+    await settle();
+    await router.navigateByUrl('/app/garage/requests/req-1');
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    close('cancelled');
+  });
+
+  it('opens no second drawer while one is open', async () => {
+    let close: (value: string) => void = () => {};
+    const { router, settle } = await render({}, 'ro');
+    open.mockReturnValueOnce(
+      new Promise((r) => {
+        close = r;
+      }),
+    );
+    await router.navigateByUrl('/app/garage/requests/req-1');
+    await settle();
+    await router.navigateByUrl('/app/garage/requests/req-2');
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    close('cancelled');
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(open.mock.calls[1][1]).toMatchObject({ data: { id: 'req-2' } });
+    // The second drawer (closed at once by the mock) still returns to the view.
+    expect(router.url).toBe('/app/garage/requests');
+  });
+
+  it('returns to where the request was opened from when the drawer closes', async () => {
+    const { router, settle } = await render({}, 'ro', {
+      origin: '/app/garage',
+      path: '/app/garage/requests/req-1',
+    });
+    await settle();
+
+    expect(router.url).toBe('/app/garage');
+  });
+
+  it('returns to the requests view when nothing says where it came from', async () => {
+    const { router, settle } = await render({}, 'ro', {
+      path: '/app/garage/requests/req-1',
+    });
+    await settle();
+
+    expect(router.url).toBe('/app/garage/requests');
+    expect(open).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,5 +1,6 @@
 import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import type { GarageRequestSummaryDto, MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
@@ -58,6 +59,7 @@ async function render(
   sent = jest.fn();
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       { provide: Session, useValue: { current: shown, shown } },
       { provide: Overlays, useValue: { open } },
       { provide: GarageRequestsFeed, useValue: { reload, sent } },
@@ -71,13 +73,16 @@ async function render(
   await fixture.whenStable();
   fixture.detectChanges();
   const element = fixture.nativeElement as HTMLElement;
+  const navigate = jest
+    .spyOn(TestBed.inject(Router), 'navigate')
+    .mockResolvedValue(true);
   const settle = async () => {
     for (let i = 0; i < 3; i++) {
       await wait(0);
       fixture.detectChanges();
     }
   };
-  return { element, settle };
+  return { element, navigate, settle };
 }
 
 const sendButton = (element: HTMLElement, name = 'Trimite oferta') =>
@@ -281,4 +286,65 @@ describe('a declined row', () => {
     expect(element.querySelector('.reason')?.textContent?.trim()).toBe(label);
     expect(element.querySelector('.actions')).toBeNull();
   });
+});
+
+// @traces 347-FR-001
+describe('opening a request from its row', () => {
+  const opener = (element: HTMLElement) =>
+    element.querySelector<HTMLButtonElement>('button.open');
+
+  it('offers a button named after the customer and the car on a waiting row', async () => {
+    const { element } = await render(me('owner'));
+
+    expect(opener(element)?.getAttribute('type')).toBe('button');
+    expect(opener(element)?.getAttribute('aria-label')).toBe(
+      'Deschide cererea Vlad P. · Dacia Logan · 2018',
+    );
+  });
+
+  it('reads Open the request in English', async () => {
+    const { element } = await render(me('owner'), { language: 'en' });
+
+    expect(opener(element)?.getAttribute('aria-label')).toBe(
+      'Open the request Vlad P. · Dacia Logan · 2018',
+    );
+  });
+
+  it('goes to the request’s address, carrying where it came from', async () => {
+    const { element, navigate, settle } = await render(me('owner'));
+
+    opener(element)?.click();
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith(['/app/garage/requests', 'req-1'], {
+      state: { origin: '/' },
+    });
+  });
+
+  it('is absent on a closed row and for a mechanic who may not answer quotes', async () => {
+    const closed = await render(me('owner'), {
+      row: requestRow({
+        closedAt: new Date().toISOString(),
+        closedReason: 'cancelled',
+      }),
+    });
+    expect(opener(closed.element)).toBeNull();
+    TestBed.resetTestingModule();
+
+    const plain = await render(me('mechanic', false));
+    expect(opener(plain.element)).toBeNull();
+  });
+
+  it.each(['Trimite oferta', 'Refuză'])(
+    'leaves the address alone when %s is clicked',
+    async (name) => {
+      const { element, navigate, settle } = await render(me('owner'));
+
+      sendButton(element, name)?.click();
+      await settle();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
 });
