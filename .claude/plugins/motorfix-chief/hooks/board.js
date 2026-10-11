@@ -12,6 +12,7 @@ const TIMEOUT_MS = 5 * 60_000;
 // The last button's output, shown in the pane until the next press.
 let output = '';
 
+// Its own copy, as in chief-control.js: `$` does not cross a file.
 async function readRows($) {
   const keys = (await $.store.keys()).filter((k) => k.startsWith('pr:'));
   const rows = [];

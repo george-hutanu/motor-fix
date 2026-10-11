@@ -53,6 +53,7 @@ const serial = (fn) => {
   return run;
 };
 
+// Its own copy, as in chief-control.js: `$` does not cross a file.
 async function readRows($) {
   const keys = (await $.store.keys()).filter((k) => k.startsWith('pr:'));
   const rows = [];

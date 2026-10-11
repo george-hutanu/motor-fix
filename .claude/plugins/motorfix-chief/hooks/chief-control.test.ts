@@ -118,21 +118,46 @@ test('a ci-wait without --run, or one that prints a failing check, offers nothin
   expect(s.store.get('offer:363:abc1234')).toBeUndefined();
 });
 
-test('a background ci-wait --run offers the tail on its notification, only on exit 0', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { head: 'abc1234' }) } });
+// A background wait's output never reaches the plugin, so on its notification
+// the plugin asks ci-wait.mjs again (everything has finished, so it answers at once).
+const CI_WAIT = 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99';
+const note = (code: number) =>
+  `<task-notification>\n<task-id>bt14</task-id>\n<status>completed</status>\n<summary>Background command "x" completed (exit code ${code})</summary>\n</task-notification>`;
+async function waitInBackground($, on, recheck: string) {
+  const s = stubs(on, {
+    run: (argv) => (argv.join(' ') === CI_WAIT ? ok(recheck) : ok()),
+    store: { 'pr:363': row(363, { head: 'abc1234' }) },
+  });
   on('tool.call', { tool: 'Bash' }, bash('', '', { backgroundTaskId: 'bt14' }));
   await $.tool.call({
-    command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99',
+    command: CI_WAIT,
     run_in_background: true,
     tool: 'Bash',
   });
   expect(s.store.get('pr:363')).toMatchObject({ ci: 'pending' });
-  const note = (code: number) =>
-    `<task-notification>\n<task-id>bt14</task-id>\n<status>completed</status>\n<summary>Background command "x" completed (exit code ${code})</summary>\n</task-notification>`;
+  return s;
+}
+
+test('a background ci-wait --run that exits 0 and reads green again offers the tail', async ($, on) => {
+  const s = await waitInBackground($, on, 'QA run: success\n');
   const r = await $.prompt.submit({ text: note(0) });
   expect(r.context?.join('\n')).toContain('tail #363 after QA run 99');
   expect(s.store.get('pr:363')).toMatchObject({ ci: 'pass' });
+  expect(s.runs.map((x) => x.argv.join(' '))).toContain(CI_WAIT);
 });
+
+for (const out of [
+  'QA run: failure\n',
+  'Unit and integration tests: fail\nQA run: success\n',
+]) {
+  test(`a background ci-wait --run that exits 0 but reads ${JSON.stringify(out)} offers nothing`, async ($, on) => {
+    const s = await waitInBackground($, on, out);
+    const r = await $.prompt.submit({ text: note(0) });
+    expect(r.context ?? []).toHaveLength(0);
+    expect(s.store.get('pr:363')).toMatchObject({ ci: 'fail' });
+    expect(s.store.get('offer:363:abc1234')).toBeUndefined();
+  });
+}
 
 test('the ledger block after compaction lists every row in PR order', async ($, on) => {
   stubs(on, {
@@ -240,7 +265,7 @@ test('a gate still running is never started twice', async ($, on) => {
   release();
 });
 
-test('one active worktree runs no gate; exit 1 shows one toast; a merged PR leaves the ledger', async ($, on) => {
+test('one active worktree runs no gate; exit 1 shows one toast; a merged PR leaves the ledger with its tail offers', async ($, on) => {
   let prs = [
     { number: 363, state: 'merged' },
     { number: 370, state: 'draft' },
@@ -251,13 +276,23 @@ test('one active worktree runs no gate; exit 1 shows one toast; a merged PR leav
       if (isGate(argv)) return { exitCode: 1, stderr: 'boom', stdout: '' };
       return ok(CHIEF);
     },
-    store: { 'pr:363': row(363), 'pr:370': row(370) },
+    store: {
+      'offer:363:abc1234': { answer: null, offeredAt: 0, runId: 5 },
+      'offer:363:def5678': { answer: null, offeredAt: 0, runId: 6 },
+      'offer:370:abc1234': { answer: null, offeredAt: 0, runId: 8 },
+      'offer:3630:abc1234': { answer: null, offeredAt: 0, runId: 7 },
+      'pr:363': row(363),
+      'pr:370': row(370),
+    },
   });
   await start($);
   await s.clock.advance(15 * MIN);
   expect(s.runs.filter((r) => isGate(r.argv))).toHaveLength(0);
   expect(s.store.has('pr:363')).toBe(false);
   expect(s.store.has('pr:370')).toBe(true);
+  expect(
+    [...s.store.keys()].filter((k) => k.startsWith('offer:')).sort(),
+  ).toEqual(['offer:3630:abc1234', 'offer:370:abc1234']);
   prs = [
     { number: 370, state: 'draft' },
     { number: 371, state: 'ready' },

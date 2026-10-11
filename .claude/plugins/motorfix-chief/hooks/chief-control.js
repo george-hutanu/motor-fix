@@ -43,6 +43,8 @@ function noteStage(command, r) {
   return r;
 }
 
+// Each part keeps its own copy: the engine hands `$` only to the hooks of the
+// file that registered them, so a helper taking `$` is not shared across files.
 async function readRows($) {
   const keys = (await $.store.keys()).filter((k) => k.startsWith('pr:'));
   const rows = [];
@@ -88,19 +90,34 @@ async function afterDispatch($, call, r) {
 }
 
 // ci-wait prints nothing when every check (and the QA run, with --run) passed.
+// ci-wait --run exits 0 and prints "QA run: <conclusion>" once the run ends,
+// and lists any check that did not pass: only no lines, or a successful QA run
+// alone, is green.
+const green = (stdout) =>
+  ciLines(stdout).every((l) => l.name === 'QA run' && l.state === 'success');
+
+const CI_WAIT = '.claude/scripts/pr-test/ci-wait.mjs';
+const RECHECK_MS = 2 * 60_000;
+
+// A background wait's output never reaches the plugin: on its exit-0
+// notification ci-wait is asked again, and answers at once since all finished.
+async function recheck($, wait) {
+  const argv = ['node', CI_WAIT, String(wait.pr)];
+  if (wait.run) argv.push('--run', String(wait.run));
+  const r = await $.process.run(argv, {
+    cwd: role.main ?? undefined,
+    timeoutMs: RECHECK_MS,
+  });
+  return r.exitCode === 0 && green(r.stdout);
+}
+
 async function afterCiWait($, call, r) {
   if (r.result?.backgroundTaskId) {
     waits.set(r.result.backgroundTaskId, call);
     return r;
   }
-  // ci-wait --run exits 0 and prints "QA run: <conclusion>" once the run ends;
-  // only no lines, or a successful QA run alone, is a pass.
   const passed =
-    !r.isError &&
-    !r.result?.interrupted &&
-    ciLines(r.result?.stdout ?? '').every(
-      (l) => l.name === 'QA run' && l.state === 'success',
-    );
+    !r.isError && !r.result?.interrupted && green(r.result?.stdout ?? '');
   return withContext(r, await finished($, call, passed));
 }
 
@@ -143,7 +160,9 @@ export async function submitHook($, e, next) {
   const wait = note && waits.get(note.id);
   if (!wait) return next(e);
   waits.delete(note.id);
-  const lines = await finished($, wait, note.exitCode === 0);
+  const passed =
+    note.exitCode === 0 && (await recheck($, wait).catch(() => false));
+  const lines = await finished($, wait, passed);
   return withContext(await next(e), lines);
 }
 
@@ -155,9 +174,18 @@ async function refresh($) {
   });
   if (r.exitCode !== 0) return 0;
   const rows = JSON.parse(r.stdout).rows ?? [];
-  for (const w of rows)
-    if (w.pr?.number && CLOSED.has(w.pr.state))
-      await $.store.delete(key(w.pr.number));
+  const gone = rows
+    .filter((w) => w.pr?.number && CLOSED.has(w.pr.state))
+    .map((w) => w.pr.number);
+  if (gone.length) {
+    // A merged or closed PR leaves the ledger with every tail offer it had.
+    const offers = (await $.store.keys()).filter((k) => k.startsWith('offer:'));
+    for (const pr of gone) {
+      await $.store.delete(key(pr));
+      for (const k of offers.filter((o) => o.startsWith(`offer:${pr}:`)))
+        await $.store.delete(k);
+    }
+  }
   return rows.filter(
     (w) =>
       !w.main &&
