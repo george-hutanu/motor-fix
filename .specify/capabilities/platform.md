@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-10
+updated: 2026-10-11
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -71,6 +71,7 @@ features:
   - 1037-remove-notion
   - 1119-drop-tracker-import
   - 251-monitoring-backups
+  - 1167-constitution-e2e-on-demand
 ---
 
 # Capability: Platform
@@ -769,13 +770,13 @@ _From 678-measurable-sizing._
 
 _From 678-measurable-sizing._
 
-### 750-FR-001 — The end-to-end suite on CI MUST run its tests in parallel across the runner's cores, and every test in the suite MUST still run on every non-docs PR that affects `web`.
+### 750-FR-001 — The end-to-end suite on CI MUST run its tests in parallel across the runner's cores; it runs on demand (`workflow_dispatch`, which runs every test in the suite), not on every PR, and its core flows (tagged `@core`) MUST run against staging before every release.
 
-_From 750-ci-speed._
+_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
 
-### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, integration, e2e, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails.
+### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, integration, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails; the end-to-end suite runs on demand (750-FR-001).
 
-_From 750-ci-speed._
+_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
 
 ### 750-FR-003 — A failing check inside a shared job MUST be identifiable by name from the job's failed log, and the other checks of that job MUST still run and report.
 
