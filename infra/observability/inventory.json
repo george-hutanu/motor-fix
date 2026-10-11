@@ -12,7 +12,9 @@
       "alerts": [
         "api-down",
         "api-error-rate",
-        "api-latency"
+        "api-latency",
+        "api-search-cache-fallback-rate",
+        "api-search-log-failure-rate"
       ],
       "story": "ST-881"
     },
@@ -70,7 +72,9 @@
       "alerts": [
         "api-down",
         "api-error-rate",
-        "api-latency"
+        "api-latency",
+        "api-search-cache-fallback-rate",
+        "api-search-log-failure-rate"
       ],
       "story": "ST-881"
     },
@@ -504,6 +508,28 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_search_cache_total",
+      "source": "libs/domain/src/search/garage-search/garage-search.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-search-cache-fallback-rate"
+      ],
+      "reason": "counts each garage search page read by cache outcome (hit, miss, fallback when Redis failed and PostgreSQL answered), with one warn log line when Redis first fails and one when it is back; a fallback rate above 5% for 10 minutes is the api-search-cache-fallback-rate alert",
+      "story": "ST-267"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_search_log_total",
+      "source": "libs/domain/src/search/garage-search/garage-search.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-search-log-failure-rate"
+      ],
+      "reason": "counts each search log row written or lost, with one warn log line naming the error when a write fails; the search still answers; a failure rate above 5% for 10 minutes is the api-search-log-failure-rate alert",
+      "story": "ST-267"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_sign_ins_total",
       "source": "libs/domain/src/auth/sign-in.service.ts",
       "dashboard": "motorfix-product",
@@ -766,6 +792,19 @@
       ],
       "reason": "Grafana's outage contact point calls it; one Outage log line per alert (service, state, fingerprint, admins, sent), never the token or an address; the uptime checks (infra/observability/uptime/checks.json) and the outage rule watch the services it reports on",
       "story": "ST-251"
+    },
+    {
+      "kind": "endpoint",
+      "name": "search-garages",
+      "source": "libs/domain/src/search/garage-search/garage-search.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/search/garages",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, and new searches still count in motorfix_searches_total",
+      "story": "ST-267"
     }
   ]
 }
