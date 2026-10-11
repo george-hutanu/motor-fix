@@ -212,7 +212,8 @@
       // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders.
       "includes": [
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
-        "apps/web/src/app/dashboard/notification-settings/notification-settings.html"
+        "apps/web/src/app/dashboard/notification-settings/notification-settings.html",
+        "apps/web/src/app/public/garage-profile/prices-section/prices-section.html"
       ],
       "linter": {
         "rules": {

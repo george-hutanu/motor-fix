@@ -40,6 +40,14 @@
       "next": "Next",
       "previous": "Previous"
     },
+    "prices": {
+      "empty": "The garage has not published its prices yet.",
+      "includes": "Prices include parts and labour, VAT included, and are a guide.",
+      "intro": "Switch on what you need. Prices are ranges, because the job depends on the car.",
+      "label": "Price list",
+      "labour": "Labour is {range} / hour.",
+      "title": "Price list"
+    },
     "rate": "Answers {rate}% of requests within a day",
     "refuses": "Does not work on {brand}",
     "retry": "Try again",

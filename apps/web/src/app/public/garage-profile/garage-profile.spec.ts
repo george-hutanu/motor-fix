@@ -240,7 +240,9 @@ describe('the garage profile', () => {
     await reads[0]?.answer(FIXED);
 
     const slots = [
-      ...page().querySelectorAll<HTMLElement>('section[data-slot]'),
+      ...page().querySelectorAll<HTMLElement>(
+        'section[data-slot]:not([data-slot="prices"])',
+      ),
     ];
     expect(slots.length).toBeGreaterThan(0);
     for (const slot of slots) expect(slot.textContent?.trim()).toBe('');
@@ -324,6 +326,71 @@ describe('the garage profile', () => {
     expect(text()).toContain('Acest service nu mai este disponibil');
     expect(page().querySelector('h1')?.textContent).not.toContain('Titan');
     expect(response.status).toBe(410);
+  });
+});
+
+// @traces 355-price-list-ranges-FR-006
+// @traces 355-price-list-ranges-FR-012
+// @traces 355-price-list-ranges-FR-013
+describe('the price list on the profile', () => {
+  const BRAKES = {
+    durationMinutes: 120,
+    fromBani: 89_000,
+    jobTypeId: 'j-brakes',
+    nameEn: 'Front brake pads and discs',
+    nameRo: 'Plăcuțe și discuri de frână față',
+    toBani: 140_000,
+  };
+  const prices = () =>
+    page().querySelector<HTMLElement>('section[data-slot="prices"]');
+  const send = (kind: string) =>
+    messages.next({ at: '2026-10-08T12:00:00.000Z', id: 'x', kind });
+
+  it("fills the prices slot with the answer's rows", async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
+
+    expect(prices()?.getAttribute('aria-label')).toBe('Lista de prețuri');
+    expect(prices()?.querySelector('h2')?.textContent?.trim()).toBe(
+      'Lista de prețuri',
+    );
+    expect(prices()?.textContent).toContain('890–1.400 lei');
+  });
+
+  it('shows no price list while the first read is open', async () => {
+    await open('/ro/garages/service-auto-militari');
+
+    expect(page().querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(prices()).toBeNull();
+  });
+
+  it.each([404, 410])('shows no price list for a %d', async (status) => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.fail(status);
+
+    expect(prices()).toBeNull();
+    expect(text()).not.toContain('Lista de prețuri');
+  });
+
+  it('shows the new range in place when the price list changes', async () => {
+    jest.useFakeTimers();
+    await open('/ro/garages/service-auto-militari?brand=dacia');
+    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
+
+    send('price_list.updated');
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[1]?.answer({
+      ...FIXED,
+      prices: [{ ...BRAKES, fromBani: 99_000, toBani: 150_000 }],
+    });
+
+    expect(reads[1]?.query).toEqual({
+      brand: 'dacia',
+      slug: 'service-auto-militari',
+    });
+    expect(prices()?.textContent).toContain('990–1.500 lei');
+    expect(prices()?.textContent).not.toContain('890–1.400 lei');
   });
 });
 

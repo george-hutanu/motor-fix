@@ -27,6 +27,7 @@ import { map } from 'rxjs';
 
 import { Gone } from './gone/gone';
 import { PhotosSection } from './photos-section/photos-section';
+import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { sourceOf } from './view-source';
@@ -53,6 +54,7 @@ const GONE = [404, 410];
     Lamp,
     LiveChange,
     PhotosSection,
+    PricesSection,
     RatingDial,
     ReportGarageLink,
     RequestQuoteButton,
