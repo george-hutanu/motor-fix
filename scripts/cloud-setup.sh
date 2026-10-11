@@ -4,8 +4,8 @@
 # "Cloud sessions"). It brings a fresh VM to a working checkout, and skips
 # whatever is already done, so a second run installs nothing:
 #
-#   1. Node 24 (package.json engines; the VM ships 22 first on PATH, from
-#      /etc/profile.d): a Node 24 already installed (CLOUD_SETUP_NODE_SEARCH,
+#   1. Node 26 (package.json engines; the VM ships 22 first on PATH, from
+#      /etc/profile.d): a Node 26 already installed (CLOUD_SETUP_NODE_SEARCH,
 #      by default /usr/bin, /usr/local/bin, then nvm's under /opt/nvm, ~/.nvm
 #      and $NVM_DIR; the last one found wins, so nvm's newest),
 #      else nvm, else n, else NodeSource's apt repository. Its directory goes
@@ -28,7 +28,7 @@
 # sudo runs with -n, so a VM that wants a password fails instead of hanging.
 set -euo pipefail
 
-NODE_MAJOR=24
+NODE_MAJOR=26
 cd "$(dirname "$0")/.."
 
 log() { echo "cloud-setup: $*"; }

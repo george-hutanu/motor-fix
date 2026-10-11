@@ -2,7 +2,7 @@
 name: "speckit-watch"
 description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, take a handed-off PR to merge as its tail, re-run QA, fix red CI or merge, within the caps the watcher applies. The orchestrating session keeps one background `watch.mjs --wait` armed once two or more tasks run at once; it wakes the model only when the gate finds something to do."
 argument-hint: "[--stale <phase>=<minutes>,…]"
-compatibility: "Requires git, gh (george-hutanu via GH_TOKEN), Node 24"
+compatibility: "Requires git, gh (george-hutanu via GH_TOKEN), Node 26"
 metadata:
   author: "george-hutanu"
   source: "project-local — watcher for parallel agent work"

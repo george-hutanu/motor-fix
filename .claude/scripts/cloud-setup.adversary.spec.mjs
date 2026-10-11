@@ -4,8 +4,8 @@ import { cleanup, IMAGES, setup } from './cloud-setup.fixture.mjs';
 
 afterEach(cleanup);
 
-/** Docker is up and Node 24 is in place; the rest is the fixture's image controls. */
-const scene = (images) => setup({ node: '24', docker: true, ...images });
+/** Docker is up and Node 26 is in place; the rest is the fixture's image controls. */
+const scene = (images) => setup({ node: '26', docker: true, ...images });
 
 const [PG, RD] = IMAGES;
 
