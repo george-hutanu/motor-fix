@@ -1,0 +1,213 @@
+{
+  "$comment": "One Mutation workflow job per project, or per shard of a project listed with shards (scripts/mutation-plan.ts). A shard is a list of folders under the project's src: 'x' takes x and everything under it, 'x/*' only the files directly in x, '*' only the files directly in src. An automatic 'rest' shard takes every file no named shard holds; it is never listed. A project's own timeout is its job's, or its rest shard's. Each timeout (minutes) sits beside the measured run it comes from: measured time plus at least 30%, at most 360.",
+  "default": {
+    "measured": "no run yet: the figure for a project not listed here",
+    "timeout": 60
+  },
+  "projects": {
+    "api": {
+      "measured": "41 min incremental, concurrency 1 (run 38037093986)",
+      "timeout": 90
+    },
+    "contracts": {
+      "measured": "21 min (run 38037093986)",
+      "timeout": 45
+    },
+    "domain": {
+      "measured": "unsharded over 360 min (run 37360166653); rest shard not run yet",
+      "shards": {
+        "auth-core": {
+          "folders": ["auth/*", "auth/oauth"],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "auth-flows": {
+          "folders": [
+            "auth/password",
+            "auth/email-confirmation",
+            "auth/phone-sign-in",
+            "auth/assistant",
+            "auth/phone-change",
+            "auth/consents",
+            "auth/email-change"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "garages-core": {
+          "folders": [
+            "garages/*",
+            "garages/verification",
+            "garages/listing-drafts",
+            "garages/garage-brands",
+            "garages/staff-invite"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "garages-listing": {
+          "folders": [
+            "garages/documents",
+            "garages/photos",
+            "garages/public-garages",
+            "garages/prices",
+            "garages/garage-settings",
+            "garages/price-list",
+            "garages/details",
+            "garages/place",
+            "garages/mechanics"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "insights-events-admin": {
+          "folders": ["insights", "events", "admin"],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "notifications-channels": {
+          "folders": [
+            "notifications/templates",
+            "notifications/preferences",
+            "notifications/news",
+            "notifications/bell",
+            "notifications/push",
+            "notifications/outage",
+            "notifications/brevo",
+            "notifications/verification-result",
+            "notifications/request-received",
+            "notifications/quote-received"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "notifications-core": {
+          "folders": ["notifications/*"],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "places-catalogue": {
+          "folders": ["storage", "cars", "catalogue", "search", "places"],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "quotes-workshop": {
+          "folders": ["quotes", "workshop"],
+          "measured": "not run yet",
+          "timeout": 120
+        }
+      },
+      "timeout": 120
+    },
+    "i18n": {
+      "measured": "5 min (run 38037093986)",
+      "timeout": 30
+    },
+    "mcp": {
+      "measured": "20 min at concurrency 2 (run 38037093986); concurrency 1 since",
+      "timeout": 90
+    },
+    "mcp-tools": {
+      "measured": "18 min (run 38037093986)",
+      "timeout": 45
+    },
+    "media": {
+      "measured": "under 1 min incremental (run 38037093986)",
+      "timeout": 30
+    },
+    "observability": {
+      "measured": "21 min (run 38037093986)",
+      "timeout": 45
+    },
+    "overlays": {
+      "measured": "10 min (run 38037093986)",
+      "timeout": 30
+    },
+    "scripts": {
+      "measured": "initial test run failed in the sandbox (run 38037093986); in place not run yet",
+      "timeout": 90
+    },
+    "ui-cockpit": {
+      "measured": "19 min (run 38037093986)",
+      "timeout": 45
+    },
+    "web": {
+      "measured": "unsharded 143 min (run 37360189195); rest shard not run yet",
+      "shards": {
+        "dashboard-admin": {
+          "folders": [
+            "app/dashboard/admin-users",
+            "app/dashboard/admin-users-filters",
+            "app/dashboard/admin-users-filters-sheet",
+            "app/dashboard/admin-filters",
+            "app/dashboard/admin-filters-sheet",
+            "app/dashboard/admin-panel",
+            "app/dashboard/admin-growth",
+            "app/dashboard/platform-rules"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "dashboard-core": {
+          "folders": ["app/dashboard/*", "app/dashboard/frame"],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "dashboard-garage": {
+          "folders": [
+            "app/dashboard/garage-requests",
+            "app/dashboard/job-steps",
+            "app/dashboard/my-details",
+            "app/dashboard/add-car",
+            "app/dashboard/live-in-place",
+            "app/dashboard/invite-staff",
+            "app/dashboard/jobs-view",
+            "app/dashboard/requests-view",
+            "app/dashboard/cars-view",
+            "app/dashboard/due-date-line",
+            "app/dashboard/driver-home",
+            "app/dashboard/driver-notifications",
+            "app/dashboard/notification-settings",
+            "app/dashboard/bell",
+            "app/dashboard/bell-list",
+            "app/dashboard/push-panel",
+            "app/dashboard/email-banner"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "public-core": {
+          "folders": [
+            "app/public/*",
+            "app/public/garage-profile",
+            "app/public/garage-preview",
+            "app/public/list-your-garage",
+            "app/public/brand-verdict"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        },
+        "public-steps": {
+          "folders": [
+            "app/public/place-step",
+            "app/public/draft",
+            "app/public/prices-step",
+            "app/public/documents-step",
+            "app/public/hours-step",
+            "app/public/photos-step",
+            "app/public/brands-step",
+            "app/public/details-step",
+            "app/public/mechanics-step"
+          ],
+          "measured": "not run yet",
+          "timeout": 120
+        }
+      },
+      "timeout": 120
+    },
+    "worker": {
+      "measured": "under 1 min (run 38037093986)",
+      "timeout": 30
+    }
+  }
+}
