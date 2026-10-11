@@ -146,6 +146,7 @@ const NOT_CHANGES = new Set([
   // Reminders follow a car's or a booking's dates: the stories that change
   // those audit the change, and sending a reminder is not one.
   'RemindersService.cancelBooking',
+  'RemindersService.onCarEvent',
   'RemindersService.removeCar',
   'RemindersService.send',
   'RemindersService.setBooking',

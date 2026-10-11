@@ -1,3 +1,4 @@
+import type { EventKind } from '@motor-fix/contracts';
 import {
   observeQueue,
   observeWorker,
@@ -15,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { type Job, type JobsOptions, Queue, Worker } from 'bullmq';
 
-import { RemindersService } from './reminders.service';
+import { type CarEvent, RemindersService } from './reminders.service';
 import { inJob } from '../../logging';
 import {
   bucharestDaily,
@@ -48,6 +49,19 @@ const RUN: JobsOptions = {
 interface Daily {
   day: string;
 }
+
+// A car's edit or removal, relayed onto the reminders queue: its reminders
+// follow the new dates or go. Tried 5 more times, 1 to 16 minutes later.
+export const CAR_REMINDERS_CONSUMER = {
+  jobs: {
+    attempts: 6,
+    backoff: { delay: 60_000, type: 'exponential' },
+    removeOnComplete: true,
+    removeOnFail: true,
+  } as JobsOptions,
+  kinds: ['car.updated', 'car.removed'] as readonly EventKind[],
+  queue: REMINDERS_QUEUE,
+};
 
 // One job a day, under the id of its day, so a restart or a second worker
 // cannot queue a day twice; a day run twice still sends nothing twice.
@@ -146,12 +160,20 @@ export class RemindersModule
           },
         },
         {
-          inject: [RemindersScheduler],
+          inject: [RemindersScheduler, RemindersService],
           provide: REMINDERS_WORKER,
-          useFactory: (scheduler: RemindersScheduler) => {
-            const worker = new Worker<Daily>(
+          useFactory: (
+            scheduler: RemindersScheduler,
+            reminders: RemindersService,
+          ) => {
+            const worker = new Worker<Daily | CarEvent>(
               REMINDERS_QUEUE,
-              (job) => inJob(job, () => scheduler.handle(job)),
+              (job) =>
+                inJob(job, () =>
+                  job.name === 'event'
+                    ? reminders.onCarEvent(job.data as CarEvent)
+                    : scheduler.handle(job as Job<Daily>),
+                ),
               {
                 connection: {
                   maxRetriesPerRequest: null,
@@ -160,8 +182,10 @@ export class RemindersModule
                 telemetry: queueTelemetry(),
               },
             );
+            // A car event that fails for good is the relay's to report.
             worker.on('failed', (job, error) => {
-              if (job) inJob(job, () => scheduler.failed(job, error));
+              if (job?.name === 'daily')
+                inJob(job, () => scheduler.failed(job as Job<Daily>, error));
             });
             observeWorker(worker);
             return worker;

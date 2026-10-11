@@ -1,4 +1,9 @@
-import type { CarDto, CarListDto, CreateCarDto } from '@motor-fix/contracts';
+import type {
+  CarDto,
+  CarListDto,
+  CreateCarDto,
+  UpdateCarDto,
+} from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
@@ -17,7 +22,7 @@ const withBrand = { brand: { select: { name: true } } } as const;
 type CarRow = Prisma.CarGetPayload<{ include: typeof withBrand }>;
 
 const day = (at: Date | null) => at?.toISOString().slice(0, 10) ?? null;
-const date = (value: string | undefined) =>
+const date = (value: string | null | undefined) =>
   value ? new Date(`${value}T00:00:00Z`) : null;
 
 function answer(car: CarRow): CarDto {
@@ -34,9 +39,23 @@ function answer(car: CarRow): CarDto {
     plate: car.plate,
     rcaUntil: day(car.rcaUntil),
     rovinietaUntil: day(car.rovinietaUntil),
+    updatedAt: car.updatedAt.toISOString(),
     year: car.year,
   };
 }
+
+// The fields an edit may change, as the car answer shows them.
+const EDITABLE = [
+  'brandId',
+  'model',
+  'year',
+  'odometerKm',
+  'fuel',
+  'engine',
+  'plate',
+  ...DATES,
+] as const;
+type Editable = (typeof EDITABLE)[number];
 
 const invalid = (field: string, code: string, message: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, [
@@ -44,7 +63,9 @@ const invalid = (field: string, code: string, message: string) =>
   ]);
 
 // Five years from today in Bucharest, the same day of the month.
-function assertNotTooFar(dto: CreateCarDto) {
+function assertNotTooFar(
+  dto: Partial<Record<(typeof DATES)[number], string | null>>,
+) {
   const today = localDay(new Date());
   const latest = `${Number(today.slice(0, 4)) + 5}${today.slice(4)}`;
   const field = DATES.find((f) => (dto[f] ?? '') > latest);
@@ -56,6 +77,76 @@ function assertNotTooFar(dto: CreateCarDto) {
     );
   }
 }
+
+type Changes = Partial<Record<Editable, string | number | null>>;
+
+// The caller's own car, locked, at the version the edit was read from.
+async function lockedCar(
+  tx: Prisma.TransactionClient,
+  id: string,
+  ownerId: string,
+  version: string,
+): Promise<CarRow> {
+  await tx.$queryRaw`SELECT id FROM car WHERE id = ${id}::uuid FOR UPDATE`;
+  const car = await tx.car.findFirst({
+    include: withBrand,
+    where: { id, ownerId, removedAt: null },
+  });
+  if (!car) throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such car');
+  if (car.updatedAt.getTime() !== new Date(version).getTime()) {
+    throw refusal(
+      HttpStatus.CONFLICT,
+      'stale_version',
+      'The car was changed since this version',
+    );
+  }
+  return car;
+}
+
+// The sent fields that differ from the car, after the add dialog's
+// normalisation: an empty engine is the missing one.
+function changes(dto: UpdateCarDto, before: CarDto): Changes {
+  const after: Changes = {};
+  for (const field of EDITABLE) {
+    const value = dto[field];
+    if (value === undefined) continue;
+    const next = field === 'engine' ? value || null : value;
+    if (next !== before[field]) after[field] = next;
+  }
+  return after;
+}
+
+async function activeBrand(tx: Prisma.TransactionClient, brandId: unknown) {
+  const brand = await tx.brand.findFirst({
+    where: { active: true, id: brandId as string },
+  });
+  if (!brand) {
+    throw invalid('brandId', 'unknown_brand', 'No such brand in the catalogue');
+  }
+}
+
+function carData(
+  after: Changes,
+  version: Date,
+): Prisma.CarUncheckedUpdateInput {
+  const data: Prisma.CarUncheckedUpdateInput = {
+    ...(after as Prisma.CarUncheckedUpdateInput),
+    // A version later than the one read, even within one millisecond.
+    updatedAt: new Date(Math.max(Date.now(), version.getTime() + 1)),
+  };
+  for (const field of DATES) {
+    if (field in after) data[field] = date(after[field] as string | null);
+  }
+  return data;
+}
+
+const editEntry = (actor: Actor, carId: string) => ({
+  actorId: actor.accountId,
+  actorRole: actor.role,
+  carId,
+  subjectId: carId,
+  subjectType: 'car',
+});
 
 // A garage account that is not a driver yet becomes one with its first car.
 const joinsAsDriver = (actor: Actor) =>
@@ -155,6 +246,58 @@ export class CarsService {
         subjectId: car.id,
       });
       return shown;
+    });
+  }
+
+  // A merge patch on the version the person read: an older version is
+  // refused, an edit that changes nothing writes nothing. The car row is
+  // locked first, so of two edits on one version only one goes through.
+  async update(actor: Actor, id: string, dto: UpdateCarDto): Promise<CarDto> {
+    requireCapability(actor, 'driver.cars');
+    assertNotTooFar(dto);
+    return this.prisma.$transaction(async (tx) => {
+      const car = await lockedCar(tx, id, actor.accountId, dto.version);
+      const before = answer(car);
+      const after = changes(dto, before);
+      const changed = Object.keys(after) as Editable[];
+      if (changed.length === 0) return before;
+      if (after.brandId !== undefined) await activeBrand(tx, after.brandId);
+      const saved = answer(
+        await tx.car.update({
+          data: carData(after, car.updatedAt),
+          include: withBrand,
+          where: { id },
+        }),
+      );
+      // One entry per changed field. The plate is the owner's alone: its
+      // entry says it changed, not to what.
+      const { plate, ...rest } = after;
+      const entry = editEntry(actor, id);
+      await this.audit.recordChanges(tx, entry, { ...before }, rest);
+      if (plate !== undefined) {
+        await this.audit.record(tx, {
+          ...entry,
+          action: 'update',
+          field: 'plate',
+          newValue: null,
+          oldValue: null,
+        });
+      }
+      // No plate and no model: the outbox is read beyond the owner.
+      await this.events.record(tx, {
+        audience: { ownerAccountId: actor.accountId, type: 'car' },
+        kind: 'car.updated',
+        payload: {
+          carId: id,
+          changed,
+          itpUntil: saved.itpUntil,
+          ownerId: actor.accountId,
+          rcaUntil: saved.rcaUntil,
+          rovinietaUntil: saved.rovinietaUntil,
+        },
+        subjectId: id,
+      });
+      return saved;
     });
   }
 

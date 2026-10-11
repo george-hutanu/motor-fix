@@ -55,7 +55,10 @@ const rows = (kind: string, channel = 'in_app') =>
     where: { channel: channel as 'in_app', kind },
   });
 
-const reminder = (carId: string, kind: 'itp' | 'tyres_winter' = 'itp') =>
+const reminder = (
+  carId: string,
+  kind: 'itp' | 'rca' | 'rovinieta' | 'tyres_winter' = 'itp',
+) =>
   prisma.reminder.findUniqueOrThrow({
     where: { carId_kind: { carId, kind } },
   });
@@ -97,6 +100,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
       carId,
       dueOn: '2026-12-10',
       kind: 'itp',
+      today: '2026-10-01',
     });
   });
 
@@ -159,6 +163,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
       carId,
       dueOn: '2027-01-20',
       kind: 'itp',
+      today: '2026-12-03',
     });
     expect(await reminder(carId)).toMatchObject({
       sent7: false,
@@ -176,6 +181,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
       carId,
       dueOn: '2026-12-10',
       kind: 'itp',
+      today: '2026-11-10',
     });
     expect(await reminder(carId)).toMatchObject({ sent30: true });
     expect(await runOn('2026-11-11')).toBe(0);
@@ -194,6 +200,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
       carId,
       dueOn: '2026-12-11',
       kind: 'itp',
+      today: '2026-10-01',
     });
     expect(await prisma.reminder.count({ where: { carId } })).toBe(1);
   });
@@ -228,6 +235,7 @@ describe('a run that fails part-way', () => {
         carId: await car(driver),
         dueOn: '2026-12-10',
         kind: 'itp',
+        today: '2026-10-01',
       });
     }
     notifications.now = MORNING('2026-11-10');
@@ -261,6 +269,7 @@ describe('every 30 and 7 day kind', () => {
         carId,
         dueOn: '2026-12-10',
         kind,
+        today: '2026-10-01',
       });
     }
     expect(await runOn('2026-11-10')).toBe(3);
@@ -351,5 +360,324 @@ describe('the tyre reminders', () => {
     await runOn('2026-11-01');
     await reminders.setTyres({ accountId: driver, carId });
     expect(await runOn('2026-11-02')).toBe(0);
+  });
+});
+
+// @traces 092-edit-remove-car-FR-008
+describe('a date set by an edit', () => {
+  let driver: string;
+  let carId: string;
+
+  beforeEach(async () => {
+    driver = await account('irina');
+    carId = await car(driver);
+  });
+
+  it("marks as sent the stage whose day has passed, and sends today's stage", async () => {
+    // RCA until 20 October, set on 8 October: the 30-day stage (20 September)
+    // has passed, the 7-day one (13 October) has not.
+    await reminders.setCarDue({
+      accountId: driver,
+      carId,
+      dueOn: '2026-10-20',
+      kind: 'rca',
+      today: '2026-10-08',
+    });
+    expect(await reminder(carId, 'rca')).toMatchObject({
+      sent7: false,
+      sent30: true,
+    });
+    expect(await runOn('2026-10-08')).toBe(0);
+    expect(await runOn('2026-10-13')).toBe(1);
+    expect(await rows('DUE_RCA')).toHaveLength(1);
+  });
+
+  it('leaves unsent a stage whose day is today', async () => {
+    await reminders.setCarDue({
+      accountId: driver,
+      carId,
+      dueOn: '2026-11-07',
+      kind: 'rca',
+      today: '2026-10-08',
+    });
+    expect(await reminder(carId, 'rca')).toMatchObject({
+      sent7: false,
+      sent30: false,
+    });
+    expect(await runOn('2026-10-08')).toBe(1);
+  });
+
+  it('marks both stages sent for a date whose 7-day stage has passed', async () => {
+    await reminders.setCarDue({
+      accountId: driver,
+      carId,
+      dueOn: '2026-10-12',
+      kind: 'itp',
+      today: '2026-10-08',
+    });
+    expect(await reminder(carId)).toMatchObject({ sent7: true, sent30: true });
+    expect(await runOn('2026-10-08')).toBe(0);
+  });
+
+  it('sends the 30-day stage once on 14 October 2027 and the 7-day once on 6 November for ITP until 13 November 2027', async () => {
+    await reminders.setCarDue({
+      accountId: driver,
+      carId,
+      dueOn: '2027-11-13',
+      kind: 'itp',
+      today: '2026-10-08',
+    });
+    expect(await reminder(carId)).toMatchObject({
+      sent7: false,
+      sent30: false,
+    });
+    expect(await runOn('2027-10-14')).toBe(1);
+    expect(await runOn('2027-10-14')).toBe(0);
+    expect(await runOn('2027-11-06')).toBe(1);
+    expect(await runOn('2027-11-06')).toBe(0);
+    expect(await rows('DUE_ITP')).toHaveLength(2);
+  });
+
+  it('resets the flags again when the date is changed and changed back', async () => {
+    await reminders.setCarDue({
+      accountId: driver,
+      carId,
+      dueOn: '2026-11-20',
+      kind: 'itp',
+      today: '2026-10-08',
+    });
+    await runOn('2026-10-21');
+    expect(await reminder(carId)).toMatchObject({ sent30: true });
+    for (const dueOn of ['2026-12-20', '2026-11-20']) {
+      await reminders.setCarDue({
+        accountId: driver,
+        carId,
+        dueOn,
+        kind: 'itp',
+        today: '2026-10-21',
+      });
+    }
+    expect(await reminder(carId)).toMatchObject({
+      sent7: false,
+      sent30: false,
+    });
+    expect(await runOn('2026-10-21')).toBe(1);
+  });
+});
+
+// @traces 092-edit-remove-car-FR-006
+describe('the car events', () => {
+  let driver: string;
+  let carId: string;
+  let sequence = 0;
+
+  const updated = (
+    changed: string[],
+    dates: Partial<
+      Record<'itpUntil' | 'rcaUntil' | 'rovinietaUntil', string | null>
+    >,
+  ) => {
+    sequence += 1;
+    return {
+      id: String(sequence),
+      kind: 'car.updated',
+      payload: {
+        carId,
+        changed,
+        itpUntil: null,
+        ownerId: driver,
+        rcaUntil: null,
+        rovinietaUntil: null,
+        ...dates,
+      },
+      subjectId: carId,
+    };
+  };
+  const removed = () => {
+    sequence += 1;
+    return {
+      id: String(sequence),
+      kind: 'car.removed',
+      payload: { carId, ownerId: driver },
+      subjectId: carId,
+    };
+  };
+
+  beforeEach(async () => {
+    driver = await account('mihai');
+    carId = await car(driver);
+    notifications.now = MORNING('2026-10-08');
+  });
+
+  it('sets a reminder for each changed date, and none for the rest', async () => {
+    await reminders.onCarEvent(
+      updated(['itpUntil', 'rcaUntil', 'odometerKm'], {
+        itpUntil: '2027-11-13',
+        rcaUntil: '2026-10-20',
+        rovinietaUntil: '2027-03-01',
+      }),
+    );
+    expect(await reminder(carId)).toMatchObject({
+      accountId: driver,
+      dueOn: new Date('2027-11-13T00:00:00Z'),
+      sent7: false,
+      sent30: false,
+    });
+    expect(await reminder(carId, 'rca')).toMatchObject({
+      sent7: false,
+      sent30: true,
+    });
+    expect(await prisma.reminder.count({ where: { carId } })).toBe(2);
+  });
+
+  it('moves a reminder to the new date and resets what was sent', async () => {
+    await reminders.onCarEvent(
+      updated(['itpUntil'], { itpUntil: '2026-11-01' }),
+    );
+    await runOn('2026-10-08');
+    expect(await reminder(carId)).toMatchObject({ sent30: true });
+
+    await reminders.onCarEvent(
+      updated(['itpUntil'], { itpUntil: '2027-11-13' }),
+    );
+    expect(await reminder(carId)).toMatchObject({
+      dueOn: new Date('2027-11-13T00:00:00Z'),
+      sent7: false,
+      sent30: false,
+    });
+  });
+
+  it('cancels the reminder of a date that was cleared', async () => {
+    await reminders.onCarEvent(
+      updated(['itpUntil', 'rcaUntil'], {
+        itpUntil: '2026-11-01',
+        rcaUntil: '2026-11-07',
+      }),
+    );
+    await reminders.onCarEvent(
+      updated(['itpUntil'], { rcaUntil: '2026-11-07' }),
+    );
+    expect(
+      await prisma.reminder.findMany({
+        select: { kind: true },
+        where: { carId },
+      }),
+    ).toEqual([{ kind: 'rca' }]);
+    expect(await runOn('2026-10-08')).toBe(1);
+    expect(await rows('DUE_ITP')).toHaveLength(0);
+  });
+
+  it('changes nothing for an edit of other fields', async () => {
+    await reminders.onCarEvent(
+      updated(['odometerKm', 'plate'], { itpUntil: '2026-11-01' }),
+    );
+    expect(await prisma.reminder.count()).toBe(0);
+  });
+
+  it('gives the same rows when an event is delivered twice', async () => {
+    const event = updated(['rovinietaUntil'], { rovinietaUntil: '2026-12-01' });
+    await reminders.onCarEvent(event);
+    await reminders.onCarEvent(event);
+    expect(await prisma.reminder.count({ where: { carId } })).toBe(1);
+    expect(await reminder(carId, 'rovinieta')).toMatchObject({
+      sent30: false,
+    });
+  });
+
+  // @traces 092-edit-remove-car-FR-007
+  it('removes every reminder of a removed car, twice over', async () => {
+    await reminders.onCarEvent(
+      updated(['itpUntil', 'rcaUntil'], {
+        itpUntil: '2026-11-01',
+        rcaUntil: '2026-11-02',
+      }),
+    );
+    await reminders.setTyres({ accountId: driver, carId });
+    await prisma.car.update({
+      data: { removedAt: new Date() },
+      where: { id: carId },
+    });
+    const event = removed();
+    await reminders.onCarEvent(event);
+    await reminders.onCarEvent(event);
+    expect(await prisma.reminder.count({ where: { carId } })).toBe(0);
+  });
+
+  // @traces 092-edit-remove-car-FR-007
+  it('changes nothing for an edit of a car removed since', async () => {
+    await prisma.car.update({
+      data: { removedAt: new Date() },
+      where: { id: carId },
+    });
+    await reminders.onCarEvent(
+      updated(['itpUntil'], { itpUntil: '2026-11-01' }),
+    );
+    expect(await prisma.reminder.count()).toBe(0);
+  });
+
+  it('changes nothing for a car that is not there', async () => {
+    const event = updated(['itpUntil'], { itpUntil: '2026-11-01' });
+    event.payload.carId = randomUUID();
+    event.subjectId = event.payload.carId;
+    await reminders.onCarEvent(event);
+    expect(await prisma.reminder.count()).toBe(0);
+  });
+});
+
+// @traces 092-edit-remove-car-FR-007
+describe('the daily run and a removed car', () => {
+  let driver: string;
+  let carId: string;
+
+  beforeEach(async () => {
+    driver = await account('radu');
+    carId = await car(driver);
+    await reminders.setCarDue({
+      accountId: driver,
+      carId,
+      dueOn: '2026-12-10',
+      kind: 'itp',
+      today: '2026-10-01',
+    });
+  });
+
+  it('skips a reminder whose car is removed', async () => {
+    await prisma.car.update({
+      data: { removedAt: new Date() },
+      where: { id: carId },
+    });
+    expect(await runOn('2026-11-10')).toBe(0);
+    expect(await rows('DUE_ITP')).toHaveLength(0);
+  });
+
+  it('sends nothing for a car removed between the read and the send', async () => {
+    // The run reads its candidates, then the car is removed before it sends.
+    const racing = new Proxy(prisma, {
+      get(target, key) {
+        const value = Reflect.get(target, key);
+        if (key !== 'reminder') {
+          return typeof value === 'function' ? value.bind(target) : value;
+        }
+        return new Proxy(value, {
+          get(delegate, name) {
+            const inner = Reflect.get(delegate, name);
+            if (name !== 'findMany') {
+              return typeof inner === 'function' ? inner.bind(delegate) : inner;
+            }
+            return async (args: unknown) => {
+              const found = await inner.call(delegate, args);
+              await target.car.update({
+                data: { removedAt: new Date() },
+                where: { id: carId },
+              });
+              return found;
+            };
+          },
+        });
+      },
+    });
+    reminders = new RemindersService(racing, notifications);
+    expect(await runOn('2026-11-10')).toBe(0);
+    expect(await rows('DUE_ITP')).toHaveLength(0);
   });
 });

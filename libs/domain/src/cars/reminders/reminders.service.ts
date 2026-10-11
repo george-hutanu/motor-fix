@@ -11,6 +11,27 @@ import {
 type DueKind = 'itp' | 'service' | 'rca' | 'rovinieta';
 const DUE_KINDS: DueKind[] = ['itp', 'service', 'rca', 'rovinieta'];
 
+type CarDate = 'itpUntil' | 'rcaUntil' | 'rovinietaUntil';
+const CAR_DATES: [CarDate, DueKind][] = [
+  ['itpUntil', 'itp'],
+  ['rcaUntil', 'rca'],
+  ['rovinietaUntil', 'rovinieta'],
+];
+
+interface CarUpdated extends Record<CarDate, string | null> {
+  carId: string;
+  ownerId: string;
+  changed: string[];
+}
+
+// A car event as the outbox relay queues it.
+export interface CarEvent {
+  id: string;
+  kind: string;
+  payload: { carId: string; ownerId: string } | CarUpdated;
+  subjectId: string;
+}
+
 const date = (day: string) => new Date(`${day}T00:00:00Z`);
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
 
@@ -43,22 +64,59 @@ export class RemindersService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  // A new date resets what was sent for the old one.
+  // A new date resets what was sent for the old one, and a stage whose day
+  // passed before `today` (Europe/Bucharest) counts as sent: a date set late
+  // never sends a stage that is already behind it. Today's stage still goes.
   async setCarDue(input: {
     accountId: string;
     carId: string;
     kind: DueKind;
     dueOn: string;
+    today: string;
   }): Promise<void> {
     await this.prisma.$executeRaw`
-      INSERT INTO reminder (id, account_id, car_id, kind, due_on)
+      INSERT INTO reminder (id, account_id, car_id, kind, due_on, sent_30, sent_7)
       VALUES (gen_random_uuid(), ${input.accountId}::uuid, ${input.carId}::uuid,
-              ${input.kind}::reminder_kind, ${input.dueOn}::date)
+              ${input.kind}::reminder_kind, ${input.dueOn}::date,
+              ${input.dueOn}::date - 30 < ${input.today}::date,
+              ${input.dueOn}::date - 7 < ${input.today}::date)
       ON CONFLICT (car_id, kind) DO UPDATE SET
         account_id = EXCLUDED.account_id,
         due_on = EXCLUDED.due_on,
-        sent_30 = reminder.sent_30 AND reminder.due_on = EXCLUDED.due_on,
-        sent_7 = reminder.sent_7 AND reminder.due_on = EXCLUDED.due_on`;
+        sent_30 = (reminder.sent_30 AND reminder.due_on = EXCLUDED.due_on)
+                  OR EXCLUDED.sent_30,
+        sent_7 = (reminder.sent_7 AND reminder.due_on = EXCLUDED.due_on)
+                 OR EXCLUDED.sent_7`;
+  }
+
+  // A relayed car event: an edit's changed dates move, set or cancel their
+  // reminders; a removal deletes them all. Delivered twice, it writes the
+  // same rows. An edit that reaches a car removed since changes nothing.
+  async onCarEvent(event: CarEvent): Promise<void> {
+    const { carId } = event.payload;
+    if (event.kind === 'car.removed') return this.removeCar(carId);
+    const car = await this.prisma.car.findUnique({
+      select: { removedAt: true },
+      where: { id: carId },
+    });
+    if (!car || car.removedAt) return;
+    const today = localDay(this.notifications.now());
+    const payload = event.payload as CarUpdated;
+    for (const [field, kind] of CAR_DATES) {
+      if (!payload.changed.includes(field)) continue;
+      const dueOn = payload[field];
+      if (dueOn === null) {
+        await this.prisma.reminder.deleteMany({ where: { carId, kind } });
+      } else {
+        await this.setCarDue({
+          accountId: payload.ownerId,
+          carId,
+          dueOn,
+          kind,
+          today,
+        });
+      }
+    }
   }
 
   async setTyres(input: { accountId: string; carId: string }): Promise<void> {
@@ -101,9 +159,12 @@ export class RemindersService {
       where: {
         OR: [
           {
+            AND: [
+              { OR: [{ sent30: false }, { sent7: false }] },
+              { OR: [{ carId: null }, { car: { removedAt: null } }] },
+            ],
             dueOn: { gte: date(today), lte: date(addDays(today, 30)) },
             kind: { in: DUE_KINDS },
-            OR: [{ sent30: false }, { sent7: false }],
           },
           { dueOn: date(addDays(today, 1)), kind: 'booking', sentAt: null },
           ...(season
@@ -133,6 +194,8 @@ export class RemindersService {
     const dueOn = day(reminder.dueOn);
     const due = dueStage({ ...reminder, dueOn }, today);
     if (!due) return false;
+    // A car removed since the run read its reminders is told nothing.
+    if (reminder.carId && (await this.removed(reminder.carId))) return false;
     await this.notifications.notify({
       eventId: `reminder:${reminder.id}:${due.stage}:${dueOn ?? today.slice(0, 4)}`,
       kind: due.type,
@@ -148,5 +211,13 @@ export class RemindersService {
       where: { dueOn: reminder.dueOn, id: reminder.id },
     });
     return true;
+  }
+
+  private async removed(carId: string): Promise<boolean> {
+    const car = await this.prisma.car.findUnique({
+      select: { removedAt: true },
+      where: { id: carId },
+    });
+    return !car || car.removedAt !== null;
   }
 }

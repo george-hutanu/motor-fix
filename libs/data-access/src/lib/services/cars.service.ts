@@ -15,6 +15,8 @@ import { carsControllerCreate } from '../fn/cars/cars-controller-create';
 import { CarsControllerCreate$Params } from '../fn/cars/cars-controller-create';
 import { carsControllerList } from '../fn/cars/cars-controller-list';
 import { CarsControllerList$Params } from '../fn/cars/cars-controller-list';
+import { carsControllerUpdate } from '../fn/cars/cars-controller-update';
+import { CarsControllerUpdate$Params } from '../fn/cars/cars-controller-update';
 
 @Injectable({ providedIn: 'root' })
 export class CarsService extends BaseService {
@@ -85,6 +87,39 @@ export class CarsService extends BaseService {
    */
   carsControllerCreate(params: CarsControllerCreate$Params, context?: HttpContext): Promise<CarDto> {
     const resp = this.carsControllerCreate$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CarDto>): CarDto => r.body);
+  }
+
+  /** Path part for operation `carsControllerUpdate()` */
+  static readonly CarsControllerUpdatePath = '/api/v1/cars/{id}';
+
+  /**
+   * Change some of the caller's car's fields; null clears one.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `carsControllerUpdate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  carsControllerUpdate$Response(params: CarsControllerUpdate$Params, context?: HttpContext): Promise<StrictHttpResponse<CarDto>> {
+    const obs = carsControllerUpdate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Change some of the caller's car's fields; null clears one.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `carsControllerUpdate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  carsControllerUpdate(params: CarsControllerUpdate$Params, context?: HttpContext): Promise<CarDto> {
+    const resp = this.carsControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<CarDto>): CarDto => r.body);
   }
 

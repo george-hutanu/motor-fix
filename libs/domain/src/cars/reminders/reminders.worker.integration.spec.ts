@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
 
 import {
+  CAR_REMINDERS_CONSUMER,
   REMINDERS_CLOCK,
   REMINDERS_QUEUE,
   RemindersModule,
@@ -198,6 +199,7 @@ describe('the reminders worker with shortened days', () => {
       carId,
       dueOn: addDays(clock.today(new Date()), 31),
       kind: 'itp',
+      today: clock.today(new Date()),
     });
 
     const bell = () =>
@@ -216,5 +218,77 @@ describe('the reminders worker with shortened days', () => {
 
     const sent = await bell();
     expect(sent.map((n) => n.eventId.split(':')[2])).toEqual(['30', '7']);
+  });
+});
+
+// @traces 092-edit-remove-car-FR-006
+describe('the reminders worker and the car events', () => {
+  it('takes a relayed car event to the reminders, beside the daily run', async () => {
+    const notifications = NotificationsModule.registerWorker({
+      databaseUrl,
+      email: testConfig('http://127.0.0.1:9', { EMAIL_SENDING: 'off' }),
+      phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+      redisUrl,
+    });
+    const app = await Test.createTestingModule({
+      imports: [
+        RemindersModule.registerWorker({ dayMs: 250, notifications, redisUrl }),
+      ],
+    }).compile();
+    await app.init();
+
+    const driver = await account('gabriela', ['driver'], { email: null });
+    const carId = await car(driver);
+    const run = jest.spyOn(app.get(RemindersService), 'run');
+    expect(CAR_REMINDERS_CONSUMER.kinds).toEqual([
+      'car.updated',
+      'car.removed',
+    ]);
+    expect(CAR_REMINDERS_CONSUMER.queue).toBe(REMINDERS_QUEUE);
+
+    await queue.add(
+      'event',
+      {
+        id: '41',
+        kind: 'car.updated',
+        payload: {
+          carId,
+          changed: ['rcaUntil'],
+          itpUntil: null,
+          ownerId: driver,
+          rcaUntil: '2030-01-20',
+          rovinietaUntil: null,
+        },
+        subjectId: carId,
+      },
+      { ...CAR_REMINDERS_CONSUMER.jobs, jobId: 'event-41' },
+    );
+    await until(
+      'the RCA reminder of the event',
+      async () => (await prisma.reminder.count({ where: { carId } })) === 1,
+      20_000,
+    );
+
+    await prisma.car.update({
+      data: { removedAt: new Date() },
+      where: { id: carId },
+    });
+    await queue.add(
+      'event',
+      {
+        id: '42',
+        kind: 'car.removed',
+        payload: { carId, ownerId: driver },
+        subjectId: carId,
+      },
+      { ...CAR_REMINDERS_CONSUMER.jobs, jobId: 'event-42' },
+    );
+    await until(
+      'the reminders of the removed car gone',
+      async () => (await prisma.reminder.count({ where: { carId } })) === 0,
+      20_000,
+    );
+    await until('a daily run', async () => run.mock.calls.length > 0, 20_000);
+    await app.close();
   });
 });

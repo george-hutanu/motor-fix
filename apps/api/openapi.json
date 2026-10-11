@@ -1859,6 +1859,64 @@
         ]
       }
     },
+    "/api/v1/cars/{id}": {
+      "patch": {
+        "operationId": "CarsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field or id, unknown_brand, too_far_ahead or a missing version"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: no such car of the caller, or not a driver"
+          },
+          "409": {
+            "description": "stale_version: the car changed since that version"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change some of the caller's car's fields; null clears one",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
     "/api/v1/brands": {
       "get": {
         "operationId": "BrandsController_search",
@@ -6773,6 +6831,11 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "The version an edit sends back",
+            "format": "date-time"
           }
         },
         "required": [
@@ -6788,7 +6851,8 @@
           "itpUntil",
           "rcaUntil",
           "rovinietaUntil",
-          "createdAt"
+          "createdAt",
+          "updatedAt"
         ]
       },
       "CarListDto": {
@@ -6804,6 +6868,78 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "UpdateCarDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The updatedAt of the car as read; an older one is refused",
+            "format": "date-time"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 40,
+            "minLength": 1
+          },
+          "year": {
+            "type": "integer",
+            "description": "From 1950 to next year",
+            "minimum": 1950
+          },
+          "odometerKm": {
+            "type": "integer",
+            "maximum": 2000000,
+            "minimum": 0
+          },
+          "fuel": {
+            "type": "string",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "engine": {
+            "type": "string",
+            "description": "Trimmed; null or blank clears it",
+            "maxLength": 30,
+            "nullable": true
+          },
+          "plate": {
+            "type": "string",
+            "description": "Stored in upper case without spaces or hyphens; null clears it",
+            "example": "B123ABC",
+            "nullable": true
+          },
+          "itpUntil": {
+            "type": "string",
+            "description": "At most five years ahead; null clears it",
+            "format": "date",
+            "nullable": true
+          },
+          "rcaUntil": {
+            "type": "string",
+            "description": "At most five years ahead; null clears it",
+            "format": "date",
+            "nullable": true
+          },
+          "rovinietaUntil": {
+            "type": "string",
+            "description": "At most five years ahead; null clears it",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "version"
         ]
       },
       "BrandDto": {
