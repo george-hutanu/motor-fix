@@ -22,7 +22,7 @@ const frontmatter = (md) => md.split('---')[1];
 const RUN = 'node .claude/scripts/pr-test/run.mjs';
 const DISPATCH = 'node .claude/scripts/pr-test/dispatch.mjs';
 
-describe('the tester leaves the unit and end-to-end suites to CI', () => {
+describe('the tester runs neither the unit suites (CI runs them) nor the end-to-end suite (on demand and at release)', () => {
   it('neither the agent nor the skill says the run executes them', () => {
     for (const md of [agent, skill]) assert.doesNotMatch(md, /affected[\s\n]+tests|nx affected -t test|and the e2e suite|tests and e2e/);
   });

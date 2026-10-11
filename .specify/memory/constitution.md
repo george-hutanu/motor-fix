@@ -1,5 +1,21 @@
 <!--
-Sync Impact Report (v3.0.0)
+Sync Impact Report (v3.1.0)
+- Version change: 3.0.0 → 3.1.0 (MINOR: wording only — Principle II and VII
+  step 5 say where each suite runs: unit and integration tests in CI on every
+  PR; the full end-to-end suite on demand (`gh workflow run ci.yml`, or
+  locally), never by the PR tester; the three core flows (`@core`) against
+  staging before every release, so II's "covered end to end before every
+  release" stands as written. No principle, gate or check removed)
+- Source: ST-1167, following ST-1154 (#365), which moved the end-to-end suite
+  out of per-PR CI.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line and II
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ AGENTS.md, .claude/agents/pr-tester.md, .claude/skills/speckit-pr-test,
+    .claude/scripts/pr-test/run.mjs — already say so (ST-1154)
+  - ✅ .specify/templates/, .specify/contexts/ — no per-PR end-to-end claim
+
+Previous report (v3.0.0)
 - Version change: 2.0.0 → 3.0.0 (MAJOR: Principle VII redefines the tracker
   as the only one — the rule that a task started on the old tracker finishes
   there is removed; Additional Constraints drops the old documentation space;
@@ -186,7 +202,8 @@ Sync Impact Report (v1.8.1)
   laptop, and posts its verdict from the run's report; `--local` keeps the
   laptop run, behind the heavy lock, for when Actions is unavailable. No step,
   gate or check removed: the QA step, the agent-review merge gate and the
-  repair cap are unchanged; the unit and end-to-end suites stay CI's)
+  repair cap are unchanged; the unit suites stay CI's, and the end-to-end
+  suite, CI's then, runs on demand since v3.1.0)
 - Source: owner decision 2026-10-04: the repo is public, so Actions is free;
   move the PR tester's heavy part off the 16 GB laptop.
 - Templates:
@@ -217,7 +234,8 @@ Sync Impact Report (v1.8.0)
 Sync Impact Report (v1.7.0)
 - Version change: 1.6.1 → 1.7.0 (MINOR: VII steps 4–6 reordered and
   enforced — the PR tester starts when the PR is ready and runs beside CI,
-  not after it; the unit and end-to-end suites are CI's, the tester no longer
+  not after it; the unit suites are CI's (the end-to-end suite, CI's then,
+  runs on demand since v3.1.0), the tester no longer
   reruns them; the merge gate now also refuses while any other check is
   failing, pending or missing. No check removed: each suite runs once, in CI)
 - Source: owner decision 2026-10-05: make the lifecycle faster and cheaper
@@ -381,8 +399,11 @@ might be useful later" is not a defense.
 - Unit and API tests run on Jest from the root config, colocated with the
   source they cover (`foo.ts` / `foo.spec.ts`). API tests run against real
   PostgreSQL and Redis in containers, never mocks of either.
+- Unit and integration tests run in CI on every PR.
 - End-to-end flows run on Playwright in the app's `*-e2e` project; the three
-  core flows are covered end to end before every release.
+  core flows are covered end to end before every release, against staging.
+  The full end-to-end suite runs on demand (`gh workflow run ci.yml`, or
+  locally), not on every PR.
 - Tests follow Principle I: cover real behavior and contracts, no padding
   suites for coverage numbers.
 - Source carries no internal identifiers — no FR id, feature number, task id,
@@ -497,7 +518,9 @@ waits for the owner:
    `--local` on the laptop when Actions is unavailable), tests it in a browser
    and against the API, reviews the diff against the spec and this
    constitution, and sets the `agent-review` commit status. The unit and
-   end-to-end suites are CI's; the tester does not run them again. Blocking findings
+   integration suites are CI's, on every PR; the full end-to-end suite runs
+   on demand and its three core flows against staging before every release;
+   the tester runs neither. Blocking findings
    are fixed (tests first) and the tester runs again on the new head, at most
    `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
 6. Merge the PR when `agent-review` is success on its head commit and every
@@ -670,4 +693,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 3.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-10
+**Version**: 3.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-11
