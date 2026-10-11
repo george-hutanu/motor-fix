@@ -333,6 +333,30 @@ describe('toProblem', () => {
     });
   });
 
+  // @traces 115-listing-checklist-FR-010
+  it('keeps the warnings a refusal carries beside its errors', () => {
+    expect(
+      toProblem(
+        problem(422, {
+          code: 'listing_incomplete',
+          errors: [{ code: 'required', field: 'steps.1.name' }],
+          warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
+        }),
+      ),
+    ).toEqual({
+      code: 'listing_incomplete',
+      errors: [{ code: 'required', field: 'steps.1.name' }],
+      status: 422,
+      warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
+    });
+  });
+
+  it('drops warnings that are not a list of field and code', () => {
+    expect(
+      toProblem(problem(422, { code: 'listing_incomplete', warnings: 'x' })),
+    ).toEqual({ code: 'listing_incomplete', status: 422 });
+  });
+
   // A call that answers nothing on success reads its failure as text.
   it('reads a problem the API sent as text', () => {
     expect(
