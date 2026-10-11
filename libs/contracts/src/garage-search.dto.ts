@@ -22,6 +22,26 @@ import { SEARCH_RADII, type SearchRadius } from './search-place';
 // The cards one page shows, so the most an `ids` re-read names.
 export const SEARCH_IDS_MAX = 20;
 
+// Up to one page of different garage ids, comma-separated; a repeated key
+// arrives as a list and is refused.
+export const IsGarageIdList = (field: string) =>
+  ValidateBy({
+    name: 'garageIds',
+    validator: {
+      defaultMessage: () =>
+        `${field} must be up to ${SEARCH_IDS_MAX} different uuids, comma-separated`,
+      validate: (value: unknown) => {
+        if (typeof value !== 'string') return false;
+        const list = value.split(',');
+        return (
+          list.length <= SEARCH_IDS_MAX &&
+          new Set(list.map((id) => id.toLowerCase())).size === list.length &&
+          list.every((id) => isUUID(id))
+        );
+      },
+    },
+  });
+
 export const GARAGE_BRAND_ANSWERS = [
   'works_on',
   'does_not_take',
@@ -77,22 +97,7 @@ export class GarageSearchQueryDto extends NearQueryDto {
   })
   @IsOptional()
   @IsString()
-  @ValidateBy({
-    name: 'garageIds',
-    validator: {
-      defaultMessage: () =>
-        `ids must be up to ${SEARCH_IDS_MAX} different uuids, comma-separated`,
-      validate: (value: unknown) => {
-        if (typeof value !== 'string') return false;
-        const list = value.split(',');
-        return (
-          list.length <= SEARCH_IDS_MAX &&
-          new Set(list.map((id) => id.toLowerCase())).size === list.length &&
-          list.every((id) => isUUID(id))
-        );
-      },
-    },
-  })
+  @IsGarageIdList('ids')
   ids?: string;
 
   @ApiPropertyOptional({

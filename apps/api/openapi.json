@@ -4451,9 +4451,9 @@
             "name": "garages",
             "required": false,
             "in": "query",
-            "description": "The garage a profile shows",
+            "description": "The garage a profile shows, or up to 20 garages a page of results shows, comma-separated",
             "schema": {
-              "format": "uuid",
+              "example": "9f1c2a7b-0000-4000-8000-000000000001",
               "type": "string"
             }
           },

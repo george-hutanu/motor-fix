@@ -1,6 +1,8 @@
 import { EventEmitter } from 'node:events';
 
-import { EVENT_KINDS } from '@motor-fix/contracts';
+import { EVENT_KINDS, PublicLiveQueryDto } from '@motor-fix/contracts';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
 
 import { audienceOf, type LiveSubject } from './audience';
 import { LiveHub } from './live/live.hub';
@@ -285,5 +287,37 @@ describe('LiveHub public stream hostile input', () => {
       ['platform_rule.changed'],
       ['platform_rule.changed'],
     ]);
+  });
+});
+
+const uuid = (n: number) =>
+  `9f1c2a7b-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const uuids = (count: number) =>
+  Array.from({ length: count }, (_, n) => uuid(n + 1));
+const refused = (query: Record<string, unknown>) =>
+  validateSync(plainToInstance(PublicLiveQueryDto, query), {
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  }).length > 0;
+
+// @traces 267-brand-results-FR-018
+describe('the public stream query naming garages', () => {
+  it('takes one garage and a page of twenty, comma-separated', () => {
+    expect(refused({ garages: uuid(1) })).toBe(false);
+    expect(refused({ garages: uuids(20).join(',') })).toBe(false);
+  });
+
+  it.each([
+    ['21 garages', uuids(21).join(',')],
+    ['a repeated garage', `${uuid(1)},${uuid(2)},${uuid(1)}`],
+    ['the same garage in upper case', `${uuid(1)},${uuid(1).toUpperCase()}`],
+    ['a slug among the ids', `${uuid(1)},atelier-dinamo`],
+    ['an empty entry', `${uuid(1)},,${uuid(2)}`],
+    ['a trailing comma', `${uuid(1)},`],
+    ['nothing', ''],
+    ['a repeated key', [uuid(1), uuid(2)]],
+    ['a number', 7],
+  ])('refuses %s', (_, garages) => {
+    expect(refused({ garages })).toBe(true);
   });
 });

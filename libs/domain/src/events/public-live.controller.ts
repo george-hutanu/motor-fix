@@ -69,12 +69,13 @@ export class PublicLiveController {
   }
 
   private async channels({ brand, garages, mechanics }: PublicLiveQueryDto) {
-    const [garage, mechanic, known] = await Promise.all([
-      garages &&
-        this.prisma.garage.findFirst({
-          select: { id: true },
-          where: { id: garages, ...publicGarages() },
-        }),
+    const [shown, mechanic, known] = await Promise.all([
+      garages
+        ? this.prisma.garage.findMany({
+            select: { id: true },
+            where: { id: { in: garages.split(',') }, ...publicGarages() },
+          })
+        : [],
       mechanics &&
         this.prisma.mechanic.findFirst({
           select: { id: true },
@@ -89,7 +90,7 @@ export class PublicLiveController {
     ]);
     return [
       'system',
-      ...(garage ? [`public:garage:${garage.id}`] : []),
+      ...shown.map((garage) => `public:garage:${garage.id}`),
       ...(mechanic ? [`public:mechanic:${mechanic.id}`] : []),
       ...(known ? [`public:search:${known.id}`, 'public:search'] : []),
     ];
