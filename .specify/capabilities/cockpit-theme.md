@@ -1,11 +1,12 @@
 ---
 capability: cockpit-theme
-updated: 2026-10-08
+updated: 2026-10-11
 features:
   - 050-cockpit-theme
   - 158-small-action-sheet
   - 953-ui-review-checks
   - 954-input-border-contrast
+  - 975-type-scale
 ---
 
 # Capability: Cockpit theme
@@ -97,6 +98,42 @@ _From 954-input-border-contrast._
 ### 954-FR-007 — The decorative divider colour (`--mf-line`: panel borders, table rules, separators) MUST NOT change: it bounds no control and is outside WCAG 1.4.11.
 
 _From 954-input-border-contrast._
+
+### 975-FR-001 — Every text in the web app (`apps/web`) and the libraries it renders (`libs/ui-cockpit`, `libs/overlays`, `libs/i18n`) MUST render at a size equal, within 0.5 px, to one of the Cockpit type-scale tokens (`--mf-size-label`, `small`, `body`, `field`, `subheading`, `heading`, `title`, `display`), and MUST take that size from the token, not from a literal in px, rem or a number. The known sites are the ones under Evidence; a site the discovery run finds falls under this rule too.
+
+_From 975-type-scale._
+
+### 975-FR-002 — No text in scope MUST render under 12 px at any viewport, and no text input, textarea or select MUST render under 16 px at any viewport.
+
+_From 975-type-scale._
+
+### 975-FR-003 — On the phone viewports (390 and 320 px), text inside a paragraph, list item, table cell, table header, button, standalone link or an element in the button or link role MUST render at 16 px or more, except a `small`, `sub` or `sup` element and an inline link inside running text. The listing form's hint paragraphs (13 px when the issue was written) MUST meet this; ST-397 already set them to body on a phone (plan.md, Sites, "Not sites"), so no edit is expected.
+
+_From 975-type-scale._
+
+### 975-FR-004 — The listing page's label rule (`list-your-garage.css:12`) MUST set the label family and a scale size the browser applies; a `font` shorthand without a size (dropped as invalid) MUST NOT remain.
+
+_From 975-type-scale._
+
+### 975-FR-005 — The chart font sizes (axis ticks and tooltip body) MUST each be the label token's value read from the theme at run time, as the chart's family already is, not a literal number; when the token cannot be read the size is left `undefined` (Chart.js's default), never a literal fallback.
+
+_From 975-type-scale._
+
+### 975-FR-006 — The language switch (`libs/i18n/src/switch.ts`, restyled by ST-307) MUST keep its 44 px segmented control; its text MUST be on the scale and above the floor; it MUST NOT be restyled.
+
+_From 975-type-scale._
+
+### 975-FR-007 — The dashboard tab-bar labels (`apps/web/src/app/dashboard/tab-bar/`) MUST stay as they are (12 px, `--mf-size-label`) until ST-1136 / ST-1139 are decided; this change MUST NOT edit that folder, and their `min-text` finding is the one accepted exception.
+
+_From 975-type-scale._
+
+### 975-FR-008 — Each touched component MUST carry an assertion in its existing colocated spec that its stylesheet or template sets the size from a token (the pattern of `apps/web/src/app/home/cards/cards.spec.ts:410` and `libs/ui-cockpit/src/lib/rating-dial.spec.ts:113`), written before the fix (Constitution II).
+
+_From 975-type-scale._
+
+### 975-FR-009 — No new token MUST be added to the scale and no token value MUST change (cockpit-theme 953-FR-021); an off-scale size moves to the nearest token that keeps the screen's hierarchy (18 → 20 px subheading; 14 → 16 px body or 13 px small, by role).
+
+_From 975-type-scale._
 
 ## Retired
 
