@@ -7,6 +7,7 @@ import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { HomeCards, type ResultsRoute } from './cards';
+import { spoken } from '../../spoken.testing';
 
 const BMW: BrandDto = { id: 'b', name: 'BMW', popularity: 1, slug: 'bmw' };
 
@@ -64,14 +65,6 @@ const cards = (page: HTMLElement) => [
 ];
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
-// The name a screen reader reads: the text, without what is hidden from it.
-const spoken = (el: Element) => {
-  const copy = el.cloneNode(true) as Element;
-  for (const hidden of copy.querySelectorAll('[aria-hidden="true"]')) {
-    hidden.remove();
-  }
-  return said(copy);
-};
 const lists = (card: Element) =>
   [...card.querySelectorAll('.list')].map((list) => said(list));
 

@@ -21,18 +21,10 @@ import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { Frame } from './frame';
+import { spoken } from '../../spoken.testing';
 import { Live } from '../live';
 import { Session } from '../session';
 import { dashboardRoutes } from '../views';
-
-// The name a screen reader reads: the text, without what is hidden from it.
-const spoken = (el: Element | null | undefined) => {
-  const copy = el?.cloneNode(true) as Element | undefined;
-  for (const hidden of copy?.querySelectorAll('[aria-hidden="true"]') ?? []) {
-    hidden.remove();
-  }
-  return copy?.textContent?.replace(/\s+/g, ' ').trim();
-};
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),

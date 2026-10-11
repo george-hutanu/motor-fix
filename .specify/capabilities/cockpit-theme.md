@@ -123,7 +123,7 @@ _From 975-type-scale._
 
 _From 975-type-scale._
 
-### 975-FR-007 — The dashboard tab-bar labels (`apps/web/src/app/dashboard/tab-bar/`) MUST stay as they are (12 px, `--mf-size-label`) until ST-1136 / ST-1139 are decided; this change MUST NOT edit that folder, and their `min-text` finding is the one accepted exception.
+### 975-FR-007 — The dashboard tab-bar labels (`apps/web/src/app/dashboard/tab-bar/`) MUST stay at their size (12 px, `--mf-size-label`) until ST-1136 / ST-1139 are decided, and their `min-text` finding is the one accepted exception. The only edit this change makes in that folder is the counted tab's accessible name: its count is screen-reader-only text inside the link instead of an `aria-label`, so the name contains the visible label (WCAG 2.5.3, QA lap 1); no size, spacing or layout there changes.
 
 _From 975-type-scale._
 
