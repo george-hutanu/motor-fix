@@ -225,7 +225,7 @@ describe('a signed-in visitor with a bot agent', () => {
 // exactly, so 60 means sixty counted and 61 would show a sixty-first.
 async function pinSecretFor(n: number) {
   const agents = Array.from({ length: n }, (_, i) => `${CHROME} ${i}`);
-  for (let attempt = 0; ; attempt++) {
+  for (let attempt = 0; attempt < 100; attempt++) {
     const secret = `pinned-${attempt}`;
     const probe = `probe:${attempt}`;
     for (const userAgent of agents) {
@@ -243,6 +243,7 @@ async function pinSecretFor(n: number) {
     }
     return;
   }
+  throw new Error(`no secret in 100 tells ${n} visitors apart exactly`);
 }
 
 // @traces 143-FR-010
