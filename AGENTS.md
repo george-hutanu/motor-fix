@@ -100,8 +100,9 @@ to `tracker-sync.md` at its next event.
      it: its run is dispatched at ready, and the PR tester
      (`/speckit-pr-test <n>`, the `pr-tester` subagent) reviews it once it
      has finished (`--run <id>`);
-     the task and the PR's stage label stay QA. It leaves the unit and
-     end-to-end suites to CI, which runs them on the merge result. The run is
+     the task and the PR's stage label stay QA. It leaves the unit suites to
+     CI, which runs them on the merge result, and the end-to-end suite to its
+     on-demand run and the release's core flows. The run is
      the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
      GitHub runner boots the PR head, tests it in a browser and against the
      API and uploads the report and screenshots; then, locally, the tester reviews the
@@ -428,19 +429,28 @@ source for anything the constitution does not fix.
   deleted worktrees; neither fails on Docker. By hand,
   `node scripts/test-services.ts down [<worktree>] [--volumes]` stops one
   stack (the current checkout's by default).
-- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most eight
+- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
   of the free plan's 20 concurrent runners: Checks (one runner and one
   install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
   and Compose stack, where `docker-compose.yml` boots and creates the bucket;
   each step runs even after an earlier one failed), Unit and integration tests
-  (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright `web-e2e`,
-  four workers, servers started in the job; a test that passes only on a
-  retry fails), Docker build (`web`, `node-app`, reading the layer cache that
-  `release.yml` writes on `main`, and `keycloak`), then `CI OK`, which
-  fails when any of them did. A PR that changes documentation only
-  (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
-  `.github/`, or `docs/`) runs only the Changes and `CI OK` jobs; the
-  others are skipped. The PR title (Conventional Commit) is checked by its
+  (PostgreSQL+PostGIS and Redis services), Docker build (`web`, `node-app`,
+  reading the layer cache that `release.yml` writes on `main`, and
+  `keycloak`), then `CI OK`, which fails when any of them did; a skipped
+  job or step counts as passed there and at the merge gate. A PR that
+  changes documentation only (`scripts/docs-only.ts`: Markdown outside
+  `.claude/`, `.specify/` and `.github/`, or `docs/`) runs only the
+  Changes and `CI OK` jobs. `scripts/ci-paths.ts` filters the rest by path:
+  Docker build only on an image input (a Dockerfile, `package*.json`,
+  `.nvmrc`, `docker/`, `infra/keycloak/`, `apps/*/project.json`, build
+  config), Compose stack only on `docker-compose*.yml` or `infra/`, Harness
+  and its browser only on `.claude/`, `.specify/`, `.husky/`, `.github/`,
+  `scripts/` or `package*.json`; a change to `ci.yml` runs all three. The
+  sixth job, E2E tests (Playwright `web-e2e`, four workers, servers started
+  in the job; a test that passes only on a retry fails; the report uploaded),
+  runs only on demand: `gh workflow run ci.yml --ref <branch>` runs every
+  job on every project, E2E and Docker build included. Locally the suite is
+  `npx nx run web-e2e:e2e` under `scripts/heavy.sh`. The PR title (Conventional Commit) is checked by its
   own workflow, `.github/workflows/pr-title.yml`, which also runs when the
   PR is edited, so a corrected title re-checks without re-running CI. PRs
   run `nx affected`; `release.yml` calls the
@@ -449,7 +459,10 @@ source for anything the constitution does not fix.
   `workflow_dispatch`.
 - Release: `.github/workflows/release.yml` builds one image per app (root
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
-  end-to-end suite there, and promotes the same digests to production with
+  core flows there (tests tagged `@core`: search to a quote request, the
+  quote, a listing to its approval; `--grep @core`), and promotes the same digests to production with
   no manual approval: a merge reaches production only when CI and staging
   both passed. Release checks run one at a time (`release-checks`); a waiting
-  one is replaced by the newest merge, which carries it.
+  one is replaced by the newest merge, which carries it. The full suite
+  against staging runs by hand: `BASE_URL=<staging> E2E_PASSWORD=<seed
+  password> npx nx run web-e2e:e2e`.
