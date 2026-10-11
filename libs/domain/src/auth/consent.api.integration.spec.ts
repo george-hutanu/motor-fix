@@ -199,15 +199,18 @@ describe('consent at sign-up', () => {
     },
   );
 
-  // @traces 243-FR-012
-  it('refuses a sign-up that accepted the replaced texts of 2026-10-05', async () => {
-    const res = await signUp({
-      consent: { privacyVersion: '2026-10-05', termsVersion: '2026-10-05' },
-    });
+  // @traces 243-FR-012 1203-FR-006
+  it.each(['2026-10-05', '2026-10-11'])(
+    'refuses a sign-up that accepted the replaced texts of %s',
+    async (version) => {
+      const res = await signUp({
+        consent: { privacyVersion: version, termsVersion: version },
+      });
 
-    refusedForConsent(res);
-    await nothingWritten();
-  });
+      refusedForConsent(res);
+      await nothingWritten();
+    },
+  );
 
   it('refuses a version that is not a string by validation and writes nothing', async () => {
     const res = await signUp({

@@ -20,7 +20,7 @@ const numbers = (text: string) =>
   (text.match(/\d+/g) ?? []).filter((n) => n !== '1').sort();
 
 describe('legal texts, structure and hygiene', () => {
-  // @traces 243-FR-012
+  // @traces 243-FR-012 1203-FR-005
   it.each(kinds)(
     'the %s of both languages carries the shared version',
     (kind) => {
@@ -28,16 +28,17 @@ describe('legal texts, structure and hygiene', () => {
 
       expect(LEGAL_TEXTS.ro[kind].version).toBe(expected);
       expect(LEGAL_TEXTS.en[kind].version).toBe(expected);
-      expect(expected).toBe('2026-10-11');
+      expect(expected).toBe('2026-10-12');
     },
   );
 
-  // @traces 243-FR-012
+  // @traces 243-FR-012 1203-FR-005
   it.each(languages)(
-    'no %s text still names the draft version date',
+    'no %s text still names a replaced version date',
     (language) => {
       for (const kind of kinds)
-        expect(whole(language, kind)).not.toContain('2026-10-05');
+        for (const replaced of ['2026-10-05', '2026-10-11'])
+          expect(whole(language, kind)).not.toContain(replaced);
     },
   );
 
@@ -109,7 +110,10 @@ describe('legal texts, structure and hygiene', () => {
     (kind) => {
       const en = whole('en', kind);
       const ro = whole('ro', kind);
-      expect(en.replace(/rovinietă/g, '')).not.toMatch(/[ăîșțâ]/i);
+      // The operator's name and seat are written as registered, in Romanian.
+      const names =
+        /rovinietă|HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ|București|Bucureștii/g;
+      expect(en.replace(names, '')).not.toMatch(/[ăîșțâ]/i);
       expect(ro).toMatch(/[ăîșțâ]/i);
       expect(ro).not.toBe(en);
     },

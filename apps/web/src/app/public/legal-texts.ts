@@ -31,8 +31,8 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Who runs MotorFix and how to reach us',
           paragraphs: [
-            'MotorFix runs this service and decides how the personal data in it is used: it is the controller of that data. The company’s legal name, registration number and address will be added to this notice, as a new version, once the company is set up.',
-            'For anything about your data, write to us from your account. If you have no account, create one and write to us from it; we use it only to answer you, and you may ask us to close it afterwards.',
+            'MotorFix is run by HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ, a sole trader registered in Romania, which decides how the personal data in the service is used: it is the controller of that data. Its tax identification number (CUI) is 55178146, its trade register number F2026034954005 (EUID ROONRC.F2026034954005), and its professional seat is at București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5.',
+            'For anything in this notice, a request about your data included, write to us at hutanugeorge40@gmail.com: no account is needed. If you have an account, you may also write to us from your account.',
           ],
         },
         {
@@ -195,7 +195,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Governing law and contact',
           paragraphs: [
-            'These terms are governed by Romanian law. You can write to us from your account about anything in them.',
+            'These terms are governed by Romanian law. MotorFix is provided by HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ, a sole trader registered in Romania, with tax identification number (CUI) 55178146, trade register number F2026034954005 (EUID ROONRC.F2026034954005) and professional seat at București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5. You can write to us about anything in these terms at hutanugeorge40@gmail.com, or from your account.',
           ],
         },
       ],
@@ -209,8 +209,8 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Cine se ocupă de MotorFix și cum ne contactezi',
           paragraphs: [
-            'MotorFix administrează acest serviciu și decide cum sunt folosite datele personale din el: este operatorul acestor date. Denumirea legală a firmei, numărul de înregistrare și adresa vor fi adăugate în această notă, ca versiune nouă, după înființarea firmei.',
-            'Pentru orice privește datele tale, ne scrii din contul tău. Dacă nu ai cont, îți creezi unul și ne scrii din el; îl folosim doar ca să îți răspundem și ne poți cere apoi să îl închidem.',
+            'MotorFix este administrat de HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ, care decide cum sunt folosite datele personale din serviciu: este operatorul acestor date. Codul unic de înregistrare (CUI) este 55178146, numărul de ordine în Registrul Comerțului este F2026034954005 (EUID ROONRC.F2026034954005), iar sediul profesional este în București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5.',
+            'Pentru orice privește această notă, inclusiv o cerere despre datele tale, ne scrii la hutanugeorge40@gmail.com: nu ai nevoie de cont. Dacă ai cont, ne poți scrie și din contul tău.',
           ],
         },
         {
@@ -373,7 +373,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Legea aplicabilă și contact',
           paragraphs: [
-            'Acești termeni sunt guvernați de legea română. Ne poți scrie din contul tău despre orice din ei.',
+            'Acești termeni sunt guvernați de legea română. MotorFix este oferit de HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ, cu codul unic de înregistrare (CUI) 55178146, numărul de ordine în Registrul Comerțului F2026034954005 (EUID ROONRC.F2026034954005) și sediul profesional în București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5. Ne poți scrie despre orice din ei la hutanugeorge40@gmail.com sau din contul tău.',
           ],
         },
       ],

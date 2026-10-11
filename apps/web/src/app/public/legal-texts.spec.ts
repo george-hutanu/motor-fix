@@ -83,3 +83,79 @@ describe('the final legal texts', () => {
     },
   );
 });
+
+describe('the operator and how to reach it', () => {
+  const OPERATOR = [
+    'HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ',
+    '55178146',
+    'ROONRC.F2026034954005',
+    'București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5',
+    'hutanugeorge40@gmail.com',
+  ];
+  const REGISTER = {
+    en: /trade register number F2026034954005/i,
+    ro: /Registrul Comerțului[^.]*F2026034954005/,
+  } as const;
+
+  const first = (language: 'ro' | 'en') =>
+    LEGAL_TEXTS[language].privacy.sections[0]!.paragraphs.join('\n');
+  const contact = (language: 'ro' | 'en') =>
+    LEGAL_TEXTS[language].terms.sections.at(-1)!.paragraphs.join('\n');
+
+  // @traces 1203-FR-001 1203-FR-002
+  it.each(languages)(
+    'the %s privacy notice names the operator as controller and its e-mail in the first section',
+    (language) => {
+      const text = first(language);
+      for (const fact of OPERATOR) expect(text).toContain(fact);
+      expect(text).toMatch(REGISTER[language]);
+      expect(text).toMatch(language === 'en' ? /controller/ : /operator/);
+    },
+  );
+
+  // @traces 1203-FR-002
+  it.each([
+    ['en', /no account is needed/i, /from your account/],
+    ['ro', /nu ai nevoie de cont/i, /din contul tău/],
+  ] as const)(
+    'the %s privacy notice takes data requests by e-mail without an account and still from the account',
+    (language, noAccount, fromAccount) => {
+      const text = first(language);
+      expect(text).toMatch(noAccount);
+      expect(text).toMatch(fromAccount);
+    },
+  );
+
+  // @traces 1203-FR-002 1203-FR-003
+  it.each([
+    ['en', /once the company is set up/i, /create one and write/i],
+    ['ro', /după înființarea firmei/i, /îți creezi unul și ne scrii/i],
+  ] as const)(
+    'the %s privacy notice no longer promises later details or asks for an account to write',
+    (language, promise, createAccount) => {
+      const text = whole(language, 'privacy');
+      expect(text).not.toMatch(promise);
+      expect(text).not.toMatch(createAccount);
+    },
+  );
+
+  // @traces 1203-FR-004
+  it.each([
+    ['en', /Romanian law/],
+    ['ro', /legea română/],
+  ] as const)(
+    'the %s terms name the same operator and e-mail under the governing law',
+    (language, law) => {
+      const text = contact(language);
+      for (const fact of OPERATOR) expect(text).toContain(fact);
+      expect(text).toMatch(REGISTER[language]);
+      expect(text).toMatch(law);
+      expect(text).toMatch(CONTACT[language]);
+    },
+  );
+
+  // @traces 1203-FR-008
+  it('no text uses a cedilla where Romanian takes a comma below', () => {
+    expect(JSON.stringify(LEGAL_TEXTS)).not.toMatch(/[ŞşŢţ]/);
+  });
+});
