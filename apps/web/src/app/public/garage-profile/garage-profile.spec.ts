@@ -847,3 +847,33 @@ describe('the profile on the Cockpit type scale', () => {
     );
   });
 });
+
+// @traces 1025-FR-007
+describe('the profile page and the same-day line', () => {
+  it('keeps the same-day sentence to the send confirmation, even for a high rate', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({
+      ...MOBILE,
+      responseRate: { rate: 95, state: 'rate' },
+    });
+
+    expect(page().textContent).not.toMatch(/aceeași zi/);
+    expect(page().querySelector('.rate')?.textContent?.trim()).toBe(
+      'Răspunde la 95% din cereri într‑o zi',
+    );
+  });
+
+  it('keeps it off the English profile too', async () => {
+    await TestBed.inject(I18n).use('en');
+    await open('/en/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer({
+      ...MOBILE,
+      responseRate: { rate: 95, state: 'rate' },
+    });
+
+    expect(page().textContent).not.toMatch(/same day/);
+    expect(page().querySelector('.rate')?.textContent?.trim()).toBe(
+      'Answers 95% of requests within a day',
+    );
+  });
+});

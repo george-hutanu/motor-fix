@@ -694,3 +694,75 @@ describe('routing', () => {
     );
   });
 });
+
+// The nightly figures as the stats job would have written them.
+async function stats(garageId: string, lifetime: number, rate: number) {
+  await prisma.garageResponseStats.create({
+    data: {
+      answeredWithinDay30d: rate,
+      computedAt: new Date(),
+      garageId,
+      lifetimeRequests: lifetime,
+      rate,
+      requests30d: 100,
+    },
+  });
+}
+
+// @traces 1025-FR-002
+// @traces 1025-FR-003
+// @traces 1025-FR-004
+// @traces 1025-FR-005
+describe('whether each garage usually answers the same day', () => {
+  it('answers it per recipient from the garage’s public rate, a garage without figures included', async () => {
+    const { auth, body, car, garage, oil } = await scene();
+    const below = await taker('Atelier Berceni', car.brandId, [oil.id]);
+    const fresh = await taker('Service Nou', car.brandId, [oil.id]);
+    const bare = await taker('Atelier Fără Cifre', car.brandId, [oil.id]);
+    await stats(garage.id, 12, 70);
+    await stats(below.id, 12, 69);
+    await stats(fresh.id, 9, 100);
+    const garageIds = [garage.id, below.id, fresh.id, bare.id];
+
+    const res = await send(
+      { ...body, garageIds, sources: garageIds.map(() => 'search') },
+      auth,
+    );
+
+    expect(res.status).toBe(201);
+    expect(
+      Object.fromEntries(
+        res.body.recipients.map(
+          (r: { garage: { id: string }; answersSameDay: boolean }) => [
+            r.garage.id,
+            r.answersSameDay,
+          ],
+        ),
+      ),
+    ).toEqual({
+      [bare.id]: false,
+      [below.id]: false,
+      [fresh.id]: false,
+      [garage.id]: true,
+    });
+  });
+
+  it('answers false for a garage with figures but no request counted lately', async () => {
+    const { auth, body, garage } = await scene();
+    await prisma.garageResponseStats.create({
+      data: {
+        answeredWithinDay30d: 0,
+        computedAt: new Date(),
+        garageId: garage.id,
+        lifetimeRequests: 40,
+        rate: null,
+        requests30d: 0,
+      },
+    });
+
+    const res = await send(body, auth);
+
+    expect(res.status).toBe(201);
+    expect(res.body.recipients[0].answersSameDay).toBe(false);
+  });
+});

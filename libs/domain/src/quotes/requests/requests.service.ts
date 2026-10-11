@@ -11,12 +11,17 @@ import { PRISMA } from '../../auth/prisma';
 import type {
   Booking,
   Garage,
+  GarageResponseStats,
   JobType,
   PrismaClient,
   QuoteRequest,
   RequestJob,
   RequestRecipient,
 } from '../../generated/prisma/client';
+import {
+  answersSameDayOf,
+  responseRateOf,
+} from '../../insights/response-stats/response-stats';
 import { DECLINE_UNDO_MINUTES } from '../quotes-config';
 import {
   assertCursor,
@@ -111,7 +116,7 @@ export class RequestsService {
           orderBy: { sentAt: 'asc' },
         },
         recipients: {
-          include: { garage: true },
+          include: { garage: { include: { responseStats: true } } },
           orderBy: { createdAt: 'asc' },
         },
       },
@@ -140,7 +145,9 @@ const UNDO_MS = DECLINE_UNDO_MINUTES * 60_000;
 // garage waiting until its window has closed, then the decline and its
 // reason, never who declined.
 function recipientOf(
-  recipient: RequestRecipient & { garage: Garage },
+  recipient: RequestRecipient & {
+    garage: Garage & { responseStats: GarageResponseStats | null };
+  },
   now: Date,
 ): RequestDto['recipients'][number] {
   const declined =
@@ -150,6 +157,9 @@ function recipientOf(
   const hidden = recipient.status === 'declined' && !declined;
   return {
     answeredAt: hidden ? null : iso(recipient.answeredAt),
+    answersSameDay: answersSameDayOf(
+      responseRateOf(recipient.garage.responseStats),
+    ),
     createdAt: recipient.createdAt.toISOString(),
     declineReason: declined ? recipient.declineReason : null,
     garage: garageRef(recipient.garage),
