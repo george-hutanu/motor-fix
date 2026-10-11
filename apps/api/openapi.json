@@ -2003,13 +2003,60 @@
             }
           },
           {
-            "name": "brandId",
-            "required": true,
+            "name": "brand",
+            "required": false,
             "in": "query",
-            "description": "The brand, by its catalogue id",
+            "description": "The brand, by its catalogue slug; exactly one of brand and brandId",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "example": "bmw",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brandId",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue id; exactly one of brand and brandId",
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "radius",
+            "required": false,
+            "in": "query",
+            "description": "Km around near that a fixed garage may be; a mobile mechanic counts by its own area. Ignored without near",
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "enum": [
+                25,
+                50
+              ]
+            }
+          },
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "description": "Up to 20 garage ids, comma-separated: answers those of them that are public, in the search's order, with no cursor",
+            "schema": {
+              "example": "9f1c2a7b-0000-4000-8000-000000000001",
+              "type": "string"
+            }
+          },
+          {
+            "name": "log",
+            "required": false,
+            "in": "query",
+            "description": "Marks a new search, which the search log counts once; a re-read, retry or wider search leaves it out",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
             }
           },
           {
@@ -2035,10 +2082,10 @@
             }
           },
           "400": {
-            "description": "validation_failed: brandId missing or not a uuid, or near not a lat,lng in Romania; invalid_cursor: not a page of this search"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or ids not up to 20 distinct uuids; invalid_cursor: not a page of this search"
           },
           "404": {
-            "description": "not_found: no brand with that id"
+            "description": "not_found: no brand with that slug or id"
           }
         },
         "tags": [
@@ -7002,6 +7049,50 @@
           "comesToYou": {
             "type": "boolean",
             "description": "True for a mobile mechanic whose area holds the place. Only with near"
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviewed",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "integer"
+          },
+          "labourFromLei": {
+            "type": "integer",
+            "description": "The hourly labour rate it starts from, in whole lei",
+            "nullable": true
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "description": "The address's city; never for a mobile mechanic",
+            "example": "Militari"
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's area, in km; only for one"
+          },
+          "facilities": {
+            "type": "array",
+            "description": "The facilities it lists, in catalogue order",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
           }
         },
         "required": [
@@ -7012,7 +7103,12 @@
           "id",
           "name",
           "slug",
-          "stance"
+          "stance",
+          "rating",
+          "reviewCount",
+          "labourFromLei",
+          "businessKind",
+          "facilities"
         ]
       },
       "BrandCountsDto": {
@@ -7035,8 +7131,11 @@
       "GarageSearchPageDto": {
         "type": "object",
         "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandRefDto"
+          },
           "items": {
-            "description": "Garages that work on the brand first, then the rest; inside a group by name, then id; 20 at most",
+            "description": "Garages that work on the brand first, then the rest; inside a group by rating (unrated last), then reviews, name and id; 20 at most",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ListedGarageDto"
@@ -7055,6 +7154,7 @@
           }
         },
         "required": [
+          "brand",
           "items",
           "nextCursor",
           "total",
