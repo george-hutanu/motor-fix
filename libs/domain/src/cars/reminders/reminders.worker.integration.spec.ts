@@ -187,9 +187,9 @@ describe('the reminders schedule at start-up', () => {
         opts: { attempts: 6 },
       }) as Job;
 
-    s.failedEvent(job(5), new Error('database down'));
+    s.failed(job(5), new Error('database down'));
     expect(error).not.toHaveBeenCalled();
-    s.failedEvent(job(6), new Error('database down'));
+    s.failed(job(6), new Error('database down'));
     expect(error).toHaveBeenCalledWith(
       expect.stringMatching(/car\.updated.*41.*database down/),
     );

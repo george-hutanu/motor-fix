@@ -92,18 +92,15 @@ export class RemindersScheduler {
     for (const task of this.tasks) await task.run(this.now());
   }
 
-  failed(job: Job<Daily>, error: Error): void {
+  failed(job: Job<Daily | CarEvent>, error: Error): void {
     if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
-    this.logger.error(
-      `reminders run of ${job.data.day} failed: ${error.message}`,
-    );
-  }
-
-  failedEvent(job: Job<CarEvent>, error: Error): void {
-    if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
-    this.logger.error(
-      `reminders lost ${job.data.kind} event ${job.data.id}: ${error.message}`,
-    );
+    if (job.name === 'event') {
+      const { id, kind } = job.data as CarEvent;
+      this.logger.error(`reminders lost ${kind} event ${id}: ${error.message}`);
+    } else {
+      const { day } = job.data as Daily;
+      this.logger.error(`reminders run of ${day} failed: ${error.message}`);
+    }
   }
 
   private queueNext(now: Date) {
@@ -192,12 +189,7 @@ export class RemindersModule
             // A job that fails for good is dropped (removeOnFail), so it is
             // logged once here: a lost car event leaves its reminders as they were.
             worker.on('failed', (job, error) => {
-              if (job?.name === 'daily')
-                inJob(job, () => scheduler.failed(job as Job<Daily>, error));
-              if (job?.name === 'event')
-                inJob(job, () =>
-                  scheduler.failedEvent(job as Job<CarEvent>, error),
-                );
+              if (job) inJob(job, () => scheduler.failed(job, error));
             });
             observeWorker(worker);
             return worker;
