@@ -1,6 +1,7 @@
 // @traces 875-FR-005 875-FR-006
 // @traces 879-FR-015
 // @traces 1037-FR-010
+// @traces 1170-FR-001 1170-FR-002 1170-FR-003
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -42,11 +43,14 @@ const gh = (ref: string) => `\${{ ${ref} }}`;
 const DOCS_ONLY = "needs.changes.outputs.docs-only != 'true'";
 
 describe('ci workflow', () => {
-  it('runs six jobs, so a PR holds at most seven runners', () => {
+  // Integration and E2E run on demand, so a PR still holds at most seven
+  // runners: Changes, Checks, Unit tests, three Docker builds, CI OK.
+  it('runs seven jobs, so a PR holds at most seven runners', () => {
     expect(jobIds).toEqual([
       'changes',
       'checks',
-      'tests',
+      'unit',
+      'integration',
       'e2e',
       'docker',
       'ci-ok',
@@ -75,17 +79,17 @@ describe('ci workflow', () => {
     expect(setting(build, 'file')).toBe(gh('matrix.file'));
   });
 
-  it('installs the workspace in three jobs only', () => {
+  it('installs the workspace in four jobs only', () => {
     const installing = jobIds.filter((id) =>
       job(id).includes('uses: ./.github/actions/setup'),
     );
 
-    expect(installing).toEqual(['checks', 'tests', 'e2e']);
+    expect(installing).toEqual(['checks', 'unit', 'integration', 'e2e']);
   });
 
   it.each([
     ['checks', 'Checks'],
-    ['tests', 'Unit and integration tests'],
+    ['unit', 'Unit tests'],
   ])('%s is skipped on a documentation-only PR', (id, name) => {
     const block = job(id);
 
@@ -104,10 +108,36 @@ describe('ci workflow', () => {
       "github.event_name == 'workflow_dispatch'",
     );
     expect(workflow).toContain(
-      'on:\n  pull_request:\n  workflow_call:\n  workflow_dispatch:\n',
+      '\n        default: false\n  workflow_dispatch:\n',
     );
     expect(block).toMatch(
       /- if: \$\{\{ !cancelled\(\) \}\}\n {8}uses: actions\/upload-artifact@\S+\n {8}with:\n {10}name: playwright-report\n/,
+    );
+  });
+
+  // The unit suite needs no database: a PR's test job has no service containers.
+  it('runs the unit suite on a PR with no PostgreSQL or Redis', () => {
+    const block = job('unit');
+
+    expect(block).not.toMatch(/^ {4}services:/m);
+    expect(block).not.toContain('DATABASE_URL');
+    expect(block).not.toContain('REDIS_URL');
+    expect(block).not.toContain('JEST_SUITE: integration');
+  });
+
+  // Like E2E, the integration suite runs by hand; a caller (the release) asks
+  // for it by input, since a workflow_call carries the caller's event name.
+  it('runs the integration job on demand and when the caller asks, never on a PR', () => {
+    const block = job('integration');
+
+    expect(setting(block, 'name')).toBe('Integration tests');
+    expect(setting(block, 'needs')).toBe('changes');
+    expect(setting(block, 'if')).toBe(
+      "github.event_name == 'workflow_dispatch' || inputs.integration",
+    );
+    expect(block).toMatch(/^ {4}services: &services$/m);
+    expect(workflow).toContain(
+      'on:\n  pull_request:\n  workflow_call:\n    inputs:\n      integration:\n        type: boolean\n        default: false\n',
     );
   });
 
@@ -178,12 +208,7 @@ describe('ci workflow', () => {
       'Compose stack',
       'docker compose up -d --wait postgres redis minio',
     ],
-    ['tests', 'Unit tests', 'npx nx $NX_SCOPE -t test --passWithNoTests'],
-    [
-      'tests',
-      'Integration tests',
-      'npx nx $NX_SCOPE -t test --passWithNoTests',
-    ],
+    ['unit', 'Unit tests', 'npx nx $NX_SCOPE -t test --passWithNoTests'],
   ])(
     '%s runs the %s step even after an earlier one failed',
     (id, name, command) => {
@@ -270,14 +295,14 @@ describe('ci workflow', () => {
   });
 
   it.each([
-    ['Unit tests', 'unit'],
-    ['Integration tests', 'integration'],
-  ])('the %s step picks its Jest suite', (name, suite) => {
-    expect(setting(step(job('tests'), name), 'JEST_SUITE')).toBe(suite);
+    ['unit', 'Unit tests', 'unit'],
+    ['integration', 'Integration tests', 'integration'],
+  ])("the %s job's %s step picks its Jest suite", (id, name, suite) => {
+    expect(setting(step(job(id), name), 'JEST_SUITE')).toBe(suite);
   });
 
   it('migrates the database before the integration tests', () => {
-    const block = job('tests');
+    const block = job('integration');
 
     expect(block).toContain('postgis/postgis:17-3.5');
     expect(block.indexOf('prisma migrate deploy')).toBeGreaterThan(0);
@@ -288,7 +313,7 @@ describe('ci workflow', () => {
 
   // @traces 878-FR-013
   it('preloads pg_stat_statements and restarts PostgreSQL before migrating', () => {
-    const block = job('tests');
+    const block = job('integration');
     const preload = step(block, 'Preload pg_stat_statements');
 
     expect(preload).toContain(gh('job.services.postgres.id'));

@@ -114,7 +114,8 @@ describe('noDockerMessage', () => {
       'POSTGRES_PORT=0 REDIS_PORT=0 docker compose -p mf-test-x-abc123 up -d --wait postgres redis',
     );
     expect(message).toContain('npx prisma migrate deploy');
-    expect(message).toMatch(/JEST_SUITE/);
+    expect(message).toContain('JEST_SUITE=integration npx nx affected -t test');
+    expect(message).not.toMatch(/pre-commit|the hook|commit again/);
   });
 });
 

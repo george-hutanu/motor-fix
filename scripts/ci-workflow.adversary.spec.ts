@@ -106,19 +106,17 @@ describe('CI workflow still performs every check', () => {
     expect(checks).toContain('--ignore-scripts');
   });
 
-  it('runs the unit and integration suites in separate steps with their own JEST_SUITE', () => {
-    const tests = jobBlock(ci, 'tests');
-    expect(tests.match(/JEST_SUITE: /g)).toHaveLength(2);
-    expect(tests).not.toMatch(
-      /^ {4}env:[\s\S]*?JEST_SUITE[\s\S]*?^ {4}steps:/m,
-    );
-    const unit = tests.slice(
-      tests.indexOf('- name: Unit tests'),
-      tests.indexOf('- name: Migrate'),
-    );
-    const integration = tests.slice(tests.indexOf('- name: Integration tests'));
+  it('runs the unit and integration suites in separate jobs with their own JEST_SUITE', () => {
+    const unit = jobBlock(ci, 'unit');
+    const integration = jobBlock(ci, 'integration');
+    for (const block of [unit, integration]) {
+      expect(block.match(/JEST_SUITE: /g)).toHaveLength(1);
+      expect(block).not.toMatch(
+        /^ {4}env:[\s\S]*?JEST_SUITE[\s\S]*?^ {4}steps:/m,
+      );
+    }
     expect(unit).toMatch(/JEST_SUITE: unit/);
-    expect(unit).not.toMatch(/integration/);
+    expect(unit).not.toMatch(/integration|services:|DATABASE_URL/);
     expect(integration).toMatch(/JEST_SUITE: integration/);
     expect(integration).not.toMatch(/JEST_SUITE: unit/);
   });
@@ -132,14 +130,14 @@ describe('CI workflow still performs every check', () => {
   });
 
   it('migrates the database before the integration tests', () => {
-    const tests = jobBlock(ci, 'tests');
+    const tests = jobBlock(ci, 'integration');
     expect(tests.indexOf('prisma migrate deploy')).toBeGreaterThan(-1);
     expect(tests.indexOf('prisma migrate deploy')).toBeLessThan(
       tests.indexOf('JEST_SUITE: integration'),
     );
   });
 
-  it.each(['tests', 'e2e'])(
+  it.each(['integration', 'e2e'])(
     'gives %s the database, redis and their urls',
     (id) => {
       const block = jobBlock(ci, id);
@@ -153,7 +151,7 @@ describe('CI workflow still performs every check', () => {
   );
 
   it('declares postgres and redis once with health checks and published ports', () => {
-    const tests = jobBlock(ci, 'tests');
+    const tests = jobBlock(ci, 'integration');
     const services = tests.slice(
       tests.indexOf('services:'),
       tests.indexOf('\n    env:'),
@@ -189,7 +187,7 @@ describe('CI workflow still performs every check', () => {
 describe('docs-only pull requests', () => {
   // e2e runs by hand only and docker on an image input, neither of which a
   // documentation-only PR is.
-  it.each(['checks', 'tests'])(
+  it.each(['checks', 'unit'])(
     'skips %s when only documentation changed',
     (id) => {
       const block = jobBlock(ci, id);
@@ -198,7 +196,7 @@ describe('docs-only pull requests', () => {
     },
   );
 
-  it('declares exactly the jobs changes, checks, tests, e2e, docker and ci-ok', () => {
+  it('declares exactly the jobs changes, checks, unit, integration, e2e, docker and ci-ok', () => {
     const lines = ci.split('\n');
     const at = lines.indexOf('jobs:');
     const ids = lines
@@ -208,7 +206,8 @@ describe('docs-only pull requests', () => {
     expect(ids).toEqual([
       'changes',
       'checks',
-      'tests',
+      'unit',
+      'integration',
       'e2e',
       'docker',
       'ci-ok',
@@ -243,7 +242,8 @@ describe('CI OK gate', () => {
       'checks',
       'docker',
       'e2e',
-      'tests',
+      'integration',
+      'unit',
     ]);
   });
 
@@ -308,8 +308,17 @@ describe('workflow shape', () => {
     );
   });
 
+  it('runs the integration suite on demand and when a caller asks, never on a PR', () => {
+    expect(jobBlock(ci, 'integration')).toMatch(
+      /\n {4}if: github\.event_name == 'workflow_dispatch' \|\| inputs\.integration\n/,
+    );
+    expect(ci).toMatch(
+      /^ {2}workflow_call:\n {4}inputs:\n {6}integration:\n {8}type: boolean\n {8}default: false\n/m,
+    );
+  });
+
   it('runs the end-to-end suite on demand only, never on a PR or a release', () => {
-    expect(ci).toMatch(/^on:\n(?: {2}\S.*\n)*? {2}workflow_dispatch:\n/m);
+    expect(ci).toMatch(/^on:\n(?: {2,}\S.*\n)*? {2}workflow_dispatch:\n/m);
     expect(jobBlock(ci, 'e2e')).toMatch(
       /\n {4}if: github\.event_name == 'workflow_dispatch'\n/,
     );
@@ -403,6 +412,14 @@ describe('release workflow', () => {
     );
     expect(checks).toContain('uses: ./.github/workflows/ci.yml');
     expect(release).not.toMatch(/^concurrency:/m);
+  });
+
+  // The integration suite no longer runs on a PR: a release runs it before
+  // anything is built, so main never deploys untested.
+  it('asks CI for the integration suite before building anything', () => {
+    expect(jobBlock(release, 'checks')).toMatch(
+      /uses: \.\/\.github\/workflows\/ci\.yml\n {4}with:\n {6}integration: true\n/,
+    );
   });
 
   it('chains images after checks, staging after images and production after both', () => {

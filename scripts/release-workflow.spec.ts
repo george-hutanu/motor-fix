@@ -46,6 +46,17 @@ describe('release workflow', () => {
     expect(setting(block, 'cancel-in-progress')).toBe('false');
   });
 
+  // @traces 1170-FR-004
+  // A PR no longer runs the integration suite, so the release asks CI for it
+  // and nothing is built or deployed until it passed.
+  it('runs the integration suite in its checks, before the images', () => {
+    const block = job('checks');
+
+    expect(setting(block, 'uses')).toBe('./.github/workflows/ci.yml');
+    expect(block).toMatch(/^ {4}with:\n {6}integration: true$/m);
+    expect(setting(job('images'), 'needs')).toBe('checks');
+  });
+
   // Only main's builds can write a cache PRs can read, so the images job
   // writes the scopes the PR's Docker build job reads.
   function image(id: string): string {
