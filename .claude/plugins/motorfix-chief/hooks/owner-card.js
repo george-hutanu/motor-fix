@@ -3,10 +3,10 @@
 // command as one chain, a Copy button, and a Done / Not done answer. Anything
 // else, a worker, a cloud session or another surface passes unchanged (FR-017).
 import { role } from './chief-control.js';
+import { commandBlock } from './lib/parse.js';
 import { CARD, canDraw } from './lib/surface.js';
 
 export const ASK = 'Run the command in your terminal, then answer: is it done?';
-const FENCE = /```[^\n]*\n([\s\S]*?)\n?```/g;
 // A line ending in one of these continues on the next one.
 const CONTINUED = /(\\|&&|\|\||\|)$/;
 
@@ -33,8 +33,8 @@ function commandOf(e) {
   const text = (e.questions ?? [])
     .map((q) => `${q.question ?? ''}\n${q.description ?? ''}`)
     .join('\n');
-  const blocks = [...text.matchAll(FENCE)];
-  return blocks.length === 1 ? chain(blocks[0][1]) : null;
+  const block = commandBlock(text);
+  return block ? chain(block) : null;
 }
 
 async function answerOf($) {

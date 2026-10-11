@@ -108,17 +108,17 @@ test('nothing is drawn off desktop and terminal, in a cloud session, or in a wor
   for (const surface of ['vscode', 'mobile'] as const) {
     await start($, surface);
     const ui = await $.ui.mount({ plugin: PLUGIN, surface, ...BAND });
-    expect(await texts(ui)).toEqual([]);
+    expect(await texts(ui)).toEqual(['engine']);
   }
   env = { CLAUDE_CODE_REMOTE: 'true' };
   await start($);
   let ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...BAND });
-  expect(await texts(ui)).toEqual([]);
+  expect(await texts(ui)).toEqual(['engine']);
   env = {};
   gitOut = WORKER;
   await start($, 'terminal', '/m/.worktrees/363-slug');
   ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...BAND });
-  expect(await texts(ui)).toEqual([]);
+  expect(await texts(ui)).toEqual(['engine']);
 });
 
 test('Status, Watch pass and Fast-forward main run their one command as argument lists, never a push (FR-009, FR-018)', async ($, on) => {

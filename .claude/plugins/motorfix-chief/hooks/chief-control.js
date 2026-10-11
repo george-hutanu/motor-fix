@@ -21,6 +21,8 @@ export const role = {
   ticking: false,
 };
 const waits = new Map();
+// The ci-wait calls' tool_use_ids, so Quiet transcripts (part 8) knows their results.
+export const ciWaitCalls = new Set();
 
 async function readRows($) {
   const keys = (await $.store.keys()).filter((k) => k.startsWith('pr:'));
@@ -80,6 +82,7 @@ export async function bashHook($, e, next) {
   const call = bashCall(e.command ?? '');
   if (!call) return next(e);
   if (call.kind === 'dispatch') return afterDispatch($, call, await next(e));
+  if (e.tool_use_id) ciWaitCalls.add(e.tool_use_id);
   await patch($, call.pr, {
     ci: 'pending',
     ...(call.run ? { qaRun: call.run } : {}),

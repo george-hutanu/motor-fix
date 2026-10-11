@@ -59,8 +59,11 @@ export function stubs(on, options: Options = {}) {
     copied.push(e.text);
     return value({ isCopied: true });
   });
-  // The engine's own drawing, beneath the plugin: an empty box.
-  on('ui.render', ($, e) => h($.ui.resolve(e).Box, {}));
+  // The engine's own drawing, beneath the plugin: one Text, "engine".
+  on('ui.render', ($, e) => {
+    const { Box, Text } = $.ui.resolve(e);
+    return h(Box, {}, h(Text, {}, 'engine'));
+  });
   on('process.run', async (_$, e) => {
     runs.push({ argv: e.argv, init: e.init });
     return value(options.run ? await options.run(e.argv) : ok());
