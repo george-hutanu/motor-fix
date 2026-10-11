@@ -218,6 +218,15 @@ const PEOPLE: Person[] = [
     name: 'Vlad Stan',
     roles: ['mechanic'],
   },
+  // A mechanic at the garage that takes requests who may not answer them, so
+  // a test can send it one and be refused the read.
+  {
+    at: { as: 'mechanic', garage: 'service-auto-militari' },
+    email: 'mecanic-militari@example.test',
+    lastRole: 'mechanic',
+    name: 'Dan Militaru',
+    roles: ['mechanic'],
+  },
   {
     at: { answersQuotes: true, as: 'mechanic', garage: 'atelier-test' },
     email: 'mecanic-oferte@example.test',

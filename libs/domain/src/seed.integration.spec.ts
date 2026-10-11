@@ -118,6 +118,11 @@ describe('seed', () => {
         roles: ['garage'],
         status: 'active',
       },
+      'mecanic-militari@example.test': {
+        lastRole: 'mechanic',
+        roles: ['mechanic'],
+        status: 'active',
+      },
       'mecanic-oferte@example.test': {
         lastRole: 'mechanic',
         roles: ['mechanic'],
@@ -193,6 +198,10 @@ describe('seed', () => {
     const militari = by('militari@example.test')?.memberships[0];
     expect(militari?.role).toBe('owner');
     expect(militari?.garageId).not.toBe(owner?.garageId);
+    // A mechanic there who may not answer quotes, for the reads it is refused.
+    const refused = by('mecanic-militari@example.test')?.mechanic;
+    expect(refused?.garageId).toBe(militari?.garageId);
+    expect(refused?.canAnswerQuotes).toBe(false);
   });
 
   it('gives every account the test password as an argon2id hash', async () => {
