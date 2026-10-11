@@ -27,9 +27,7 @@
     {{ 'public.listing.photos.choose' | t }}
   </button>
 </div>
-@if (message(); as said) {
-  <p id="photos-error" [class]="said.warning ? 'warning' : 'error'" role="status">{{ said.key | t }}</p>
-}
+<p id="photos-error" [class]="message()?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ message() ? (message()!.key | t) : '' }}</p>
 @if (refused()) {
   <p class="error" role="status">{{ 'public.listing.photos.refused' | t }}</p>
 }

@@ -207,7 +207,7 @@
       "rarNeeded": "Write the RAR authorisation number",
       "required": "Fill this in",
       "seatAddressNeeded": "Choose the registered seat's address",
-      "seatPositionNeeded": "Pick the seat from the list or pin it on the map",
+      "seatPositionNeeded": "Pick the seat on the map",
       "send": "Send for review"
     },
     "cui": "Company tax ID",

@@ -29,13 +29,7 @@
     />
     <span class="unit">{{ 'public.listing.prices.lei' | t }}</span>
   </div>
-  @if (judged.shown; as message) {
-    @if (message.warning) {
-      <p class="warning">{{ message.key | t }}</p>
-    } @else {
-      <p class="error" role="status">{{ message.key | t }}</p>
-    }
-  }
+  <p [class]="judged.shown?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ judged.shown ? (judged.shown.key | t) : '' }}</p>
 </ng-template>
 
 <ng-template #named let-path="path">

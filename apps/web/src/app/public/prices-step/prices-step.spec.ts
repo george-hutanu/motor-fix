@@ -418,7 +418,7 @@ describe('step 3, the prices', () => {
 
     await typeIn(fixture, from, '150');
     await typeIn(fixture, to, '600');
-    expect(jobRows(step)[0].querySelector('.error')).toBeNull();
+    expect(text(jobRows(step)[0].querySelector('.error'))).toBe('');
     expect(text(jobRows(step)[0].querySelector('.warning'))).toBe(
       'Maximul e de peste 3 ori minimul. Verifică intervalul.',
     );
@@ -515,6 +515,9 @@ describe('step 3, judged by the page', () => {
     expect(step.querySelector('.labour .error')?.getAttribute('role')).toBe(
       'status',
     );
+    expect(
+      step.querySelector('.labour .error')?.getAttribute('aria-live'),
+    ).toBe('polite');
     expect(step.querySelector('[role="alert"]')).toBeNull();
     expect(shown.at(-1)).toBe(true);
   });
@@ -528,7 +531,7 @@ describe('step 3, judged by the page', () => {
     const [from, to] = lei(jobRows(step)[0]);
 
     await typeIn(fixture, to, '');
-    expect(jobRows(step)[0].querySelector('.error')).toBeNull();
+    expect(text(jobRows(step)[0].querySelector('.error'))).toBe('');
     await leave(fixture, from);
     expect(text(jobRows(step)[0].querySelector('.error'))).toBe(
       'Completează prețul',
@@ -541,7 +544,7 @@ describe('step 3, judged by the page', () => {
       'Prețul minim trebuie să fie mai mic decât maximul',
     );
     await typeIn(fixture, to, '250');
-    expect(jobRows(step)[0].querySelector('.error')).toBeNull();
+    expect(text(jobRows(step)[0].querySelector('.error'))).toBe('');
     expect(to.hasAttribute('aria-invalid')).toBe(false);
     expect(shown.at(-1)).toBe(false);
   });
@@ -600,7 +603,7 @@ describe('step 3, judged by the page', () => {
     expect(text(jobRows(step)[0].querySelector('.error'))).toBe(
       'Completează prețul',
     );
-    expect(jobRows(step)[1].querySelector('.error')).toBeNull();
+    expect(text(jobRows(step)[1].querySelector('.error'))).toBe('');
   });
 
   // @traces 115-FR-006
@@ -621,6 +624,6 @@ describe('step 3, judged by the page', () => {
     expect(text(step.querySelector('.labour .error'))).toBe(
       'Completează prețul',
     );
-    expect(jobRows(step)[0].querySelector('.error')).toBeNull();
+    expect(text(jobRows(step)[0].querySelector('.error'))).toBe('');
   });
 });

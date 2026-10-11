@@ -872,6 +872,30 @@ describe('step 5, the page judges the hours', () => {
   });
 
   // @traces 115-FR-006
+  it('keeps the week, payments and price messages in polite live regions that are there before they show', async () => {
+    const { fixture, step } = await open();
+    fixture.componentInstance.value.set({
+      courtesyCar: { paid: true },
+      facilities: ['courtesy_car'],
+      hours: CLOSED_WEEK,
+    });
+    await settle(fixture);
+    const ids = ['hours-error', 'payments-error', 'courtesy-price-error'];
+    for (const id of ids) {
+      const region = step.querySelector(`#${id}`);
+      expect(region?.getAttribute('role')).toBe('status');
+      expect(region?.getAttribute('aria-live')).toBe('polite');
+      expect(text(region)).toBe('');
+    }
+
+    fixture.componentRef.setInput('showAll', true);
+    await settle(fixture);
+
+    for (const id of ids)
+      expect(text(step.querySelector(`#${id}`))).not.toBe('');
+  });
+
+  // @traces 115-FR-006
   it('shows a restored wrong price at once, without leaving it', async () => {
     const { fixture, step } = await open();
 
@@ -901,7 +925,7 @@ describe('step 5, the page judges the hours', () => {
     expect(shown.at(-1)).toBe(true);
 
     await click(fixture, tick(step, 'sun-closed'));
-    expect(week?.querySelector('.error')).toBeNull();
+    expect(text(week?.querySelector('#hours-error'))).toBe('');
     expect(shown.at(-1)).toBe(false);
   });
 

@@ -72,7 +72,7 @@ const button = (tile: HTMLElement | undefined, name: RegExp) =>
     (b) => name.test(text(b)) || name.test(b.getAttribute('aria-label') ?? ''),
   ) as HTMLButtonElement;
 const announced = (step: HTMLElement) =>
-  text(step.querySelector('[aria-live="polite"]'));
+  text(step.querySelector('.announce[aria-live="polite"]'));
 
 const photo = (name: string, type = 'image/jpeg', size = 2048) => {
   const file = new File([new Uint8Array(8)], name, { type });
@@ -554,7 +554,10 @@ describe('the page judges the photos', () => {
     const opened = await open();
     const shown = judged(opened);
     await opened.settle();
-    expect(opened.step.querySelector('#photos-error')).toBeNull();
+    const region = opened.step.querySelector('#photos-error');
+    expect(region?.getAttribute('role')).toBe('status');
+    expect(region?.getAttribute('aria-live')).toBe('polite');
+    expect(text(region)).toBe('');
     expect(shown).not.toContain(true);
 
     opened.fixture.componentRef.setInput('showAll', true);
@@ -586,7 +589,7 @@ describe('the page judges the photos', () => {
     const [asked] = askedForAddress(opened.http);
     await upload(opened, asked as TestRequest, 1);
 
-    expect(opened.step.querySelector('#photos-error')).toBeNull();
+    expect(text(opened.step.querySelector('#photos-error'))).toBe('');
     expect(shown.at(-1)).toBe(false);
   });
 

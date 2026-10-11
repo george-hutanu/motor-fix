@@ -80,9 +80,7 @@
     </div>
   }
 </details>
-@if (week) {
-  <p id="hours-error" [class]="week.warning ? 'warning' : 'error'" role="status">{{ week.key | t }}</p>
-}
+<p id="hours-error" [class]="week?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ week ? (week.key | t) : '' }}</p>
 </div>
 
 <h3>{{ 'public.listing.hours.closedDays' | t }}</h3>
@@ -168,9 +166,7 @@
                 {{ 'public.listing.prices.lei' | t }}
               </span>
             </label>
-            @if (messages().price; as message) {
-              <p id="courtesy-price-error" [class]="message.warning ? 'warning' : 'error'" role="status">{{ message.key | t }}</p>
-            }
+            <p id="courtesy-price-error" [class]="messages().price?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ messages().price ? (messages().price!.key | t) : '' }}</p>
           }
         </div>
       }
@@ -199,7 +195,5 @@
     </li>
   }
 </ul>
-@if (payment) {
-  <p id="payments-error" [class]="payment.warning ? 'warning' : 'error'" role="status">{{ payment.key | t }}</p>
-}
+<p id="payments-error" [class]="payment?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ payment ? (payment.key | t) : '' }}</p>
 </div>

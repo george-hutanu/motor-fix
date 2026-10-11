@@ -219,3 +219,9 @@ ul {
     font-size: var(--mf-size-small);
   }
 }
+
+/* The message regions stay in the page, empty, so a reader announces what lands in them. */
+.error:empty,
+.warning:empty {
+  display: none;
+}

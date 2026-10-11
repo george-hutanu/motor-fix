@@ -469,6 +469,10 @@ describe('step 5, the place', () => {
   // @traces 115-FR-003 115-FR-008
   it('asks a mobile mechanic for the seat in the seat texts, the default radius standing in', async () => {
     const opened = await open({}, 'mobile');
+    const region = opened.step.querySelector('#place-outside');
+    expect(region?.getAttribute('role')).toBe('status');
+    expect(region?.getAttribute('aria-live')).toBe('polite');
+    expect(text(region)).toBe('');
 
     opened.fixture.componentRef.setInput('showAll', true);
     await settle(opened.fixture);
@@ -477,7 +481,7 @@ describe('step 5, the place', () => {
       'Alege adresa sediului înregistrat',
     );
     expect(text(opened.step.querySelector('#place-outside'))).toBe(
-      'Alege sediul din listă sau fixeaz‑l pe hartă',
+      'Alege sediul pe hartă',
     );
     const area = radius(opened.step) as HTMLInputElement;
     expect(area.value).toBe('20');

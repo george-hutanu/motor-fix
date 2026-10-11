@@ -72,9 +72,7 @@
   @if (mapDown()) {
     <p class="error" role="alert">{{ 'public.listing.place.mapDown' | t }}</p>
   }
-  @if (messages().position; as message) {
-    <p [class]="message.warning ? 'warning' : 'error'" id="place-outside" [attr.role]="message.warning ? null : 'alert'">{{ message.key | t }}</p>
-  }
+  <p [class]="messages().position?.warning ? 'warning' : 'error'" id="place-outside" role="status" aria-live="polite">{{ messages().position ? (messages().position!.key | t) : '' }}</p>
   <p class="hint" id="place-map-hint">
     @if (hasPin()) {
       {{ 'public.listing.place.dragHint' | t }}
