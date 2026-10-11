@@ -81,6 +81,17 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Service containers take no command, so the slow-statement view is
+      # preloaded here, as in CI: the data-store specs read it.
+      - name: Preload pg_stat_statements
+        run: |
+          docker exec ${{ job.services.postgres.id }} psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'"
+          docker restart ${{ job.services.postgres.id }}
+          for i in $(seq 1 30); do
+            docker exec ${{ job.services.postgres.id }} pg_isready -U postgres && break
+            sleep 1
+          done
+          docker exec ${{ job.services.postgres.id }} pg_isready -U postgres
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       # Keys end in / so mcp's never restores mcp-tools' results.
@@ -95,13 +106,14 @@ jobs:
             mutation/${{ matrix.id }}/
       # Through npx, which applies .npmrc's --experimental-vm-modules: Jest
       # cannot load the ESM-only Angular and Nest packages without it.
+      # Streamed, so a job cancelled at its limit still shows Stryker's progress.
       - name: Mutation score
         id: mutation
         env:
           PROJECT: ${{ matrix.project }}
           SHARD: ${{ matrix.shard }}
           INCREMENTAL: ${{ inputs.full && 'false' || 'true' }}
-        run: npx nx run "$PROJECT:test:mutation" --output-style=static -- --incremental=$INCREMENTAL ${SHARD:+--shard=$SHARD}
+        run: npx nx run "$PROJECT:test:mutation" --output-style=stream -- --incremental=$INCREMENTAL ${SHARD:+--shard=$SHARD}
       # Saved even when the step fails, so the next run resumes instead of starting over.
       - name: Save the mutation results
         if: always() && steps.mutation.outcome != 'skipped'

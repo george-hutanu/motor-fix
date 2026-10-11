@@ -14,12 +14,12 @@
       "timeout": 45
     },
     "domain": {
-      "measured": "unsharded over 360 min (run 37360166653); rest shard not run yet",
+      "measured": "unsharded over 360 min (run 37360166653); rest shard failed its initial test run without pg_stat_statements (run 38127622063)",
       "shards": {
         "auth-core": {
           "folders": ["auth/*", "auth/oauth"],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         },
         "auth-flows": {
           "folders": [
@@ -31,8 +31,8 @@
             "auth/consents",
             "auth/email-change"
           ],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         },
         "garages-core": {
           "folders": [
@@ -42,8 +42,8 @@
             "garages/garage-brands",
             "garages/staff-invite"
           ],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         },
         "garages-listing": {
           "folders": [
@@ -57,13 +57,13 @@
             "garages/place",
             "garages/mechanics"
           ],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         },
         "insights-events-admin": {
           "folders": ["insights", "events", "admin"],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         },
         "notifications-channels": {
           "folders": [

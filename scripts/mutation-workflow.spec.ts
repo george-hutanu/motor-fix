@@ -69,11 +69,27 @@ describe('the mutate job', () => {
     expect(migrate).toBeLessThan(mutate.indexOf(':test:mutation'));
   });
 
+  // The data-store metrics specs read pg_stat_statements, which a service
+  // container cannot preload by command: without it domain's rest shard
+  // fails its initial test run (run 38127622063).
+  it('preloads pg_stat_statements before migrating, as CI does', () => {
+    const preload = mutate.indexOf(
+      "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'",
+    );
+    expect(preload).toBeGreaterThan(-1);
+    expect(mutate).toMatch(
+      /docker restart \$\{\{ job\.services\.postgres\.id \}\}/,
+    );
+    expect(preload).toBeLessThan(mutate.indexOf('prisma migrate deploy'));
+  });
+
+  // Streamed, so a job cancelled at its limit still shows how far Stryker
+  // got: static output printed nothing before the cancel (run 38127622063).
   // npx applies .npmrc's --experimental-vm-modules, without which Jest
   // cannot load the ESM-only Angular and Nest packages (run 38126969341).
   it('runs one project or shard through npx, incrementally unless full is set', () => {
     expect(mutate).toMatch(
-      /run: npx nx run "\$PROJECT:test:mutation" --output-style=static -- --incremental=\$INCREMENTAL \$\{SHARD:\+--shard=\$SHARD\}$/m,
+      /run: npx nx run "\$PROJECT:test:mutation" --output-style=stream -- --incremental=\$INCREMENTAL \$\{SHARD:\+--shard=\$SHARD\}$/m,
     );
     expect(mutate).toMatch(
       /INCREMENTAL: \$\{\{ inputs\.full && 'false' \|\| 'true' \}\}$/m,

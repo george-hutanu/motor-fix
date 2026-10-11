@@ -413,8 +413,9 @@ source for anything the constitution does not fix.
   `--experimental-vm-modules`.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
   project; the harness specs keep `npm run test:harness`. Stryker runs only
-  in the Mutation workflow, never on a laptop (`test:mutation` and
-  `test:mutation:affected` stay for it), against the floor in each project's
+  in the Mutation workflow, never on a laptop: one job per project or per
+  shard of one (each project's `test:mutation` target, the shards in
+  `scripts/mutation-shards.json`), against the floor in each project's
   `stryker.config.json`, which only rises. A spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`;
   `npm run test:unit` leaves those out and `npm run test:integration` runs
