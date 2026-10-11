@@ -158,25 +158,44 @@ test.describe('the price list on a garage profile @seeded', () => {
   // the owner's editors will; the worker's relay carries it to the open page.
   // Last in this serial file, so no row above reads the changed range. A
   // deployed address, whose run has no DATABASE_URL, skips it.
-  let db: Client;
+  let db: Client | undefined;
 
-  const setTop = async (toBani: number) => {
-    await db.query('BEGIN');
-    const { rows: changed } = await db.query<{ garage_id: string }>(
-      `UPDATE garage_price p SET to_bani = $1
-       FROM garage g, job_type j
-       WHERE p.garage_id = g.id AND p.job_type_id = j.id AND p.brand_id IS NULL
-         AND g.slug = 'service-auto-militari' AND j.key = 'ac-regas'
-       RETURNING p.garage_id`,
-      [toBani],
-    );
-    const garageId = changed[0]?.garage_id ?? '';
-    await db.query(
-      `INSERT INTO outbox_event (kind, subject_id, audience)
-       VALUES ('price_list.updated', $1, $2)`,
-      [garageId, [`garage:${garageId}`, `public:garage:${garageId}`]],
-    );
-    await db.query('COMMIT');
+  test.beforeAll(async () => {
+    if (!process.env['DATABASE_URL']) return;
+    db = new Client({ connectionString: process.env['DATABASE_URL'] });
+    await db.connect();
+  });
+
+  test.afterAll(async () => {
+    await db?.end();
+  });
+
+  const setTop = async (client: Client, toBani: number) => {
+    await client.query('BEGIN');
+    try {
+      const { rows: changed } = await client.query<{ garage_id: string }>(
+        `UPDATE garage_price p SET to_bani = $1
+         FROM garage g, job_type j
+         WHERE p.garage_id = g.id AND p.job_type_id = j.id
+           AND p.brand_id IS NULL
+           AND g.slug = 'service-auto-militari' AND j.key = 'ac-regas'
+         RETURNING p.garage_id`,
+        [toBani],
+      );
+      const garageId = changed[0]?.garage_id;
+      if (garageId === undefined) {
+        throw new Error('the seeded A/C regas range is missing');
+      }
+      await client.query(
+        `INSERT INTO outbox_event (kind, subject_id, audience)
+         VALUES ('price_list.updated', $1, $2)`,
+        [garageId, [`garage:${garageId}`, `public:garage:${garageId}`]],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
   };
 
   test('shows a changed range in place and keeps the switches on', async ({
@@ -186,8 +205,8 @@ test.describe('the price list on a garage profile @seeded', () => {
       !process.env['DATABASE_URL'],
       'changes a range straight in PostgreSQL, which needs DATABASE_URL',
     );
-    db = new Client({ connectionString: process.env['DATABASE_URL'] });
-    await db.connect();
+    const client = db;
+    if (client === undefined) throw new Error('no PostgreSQL client');
     const stream = page.waitForResponse(
       (r) =>
         r.url().includes('/api/v1/live/public?') &&
@@ -207,7 +226,7 @@ test.describe('the price list on a garage profile @seeded', () => {
     });
 
     try {
-      await setTop(39_000);
+      await setTop(client, 39_000);
 
       await expect(regas.locator('.range')).toHaveText('280–390 lei', {
         timeout: 15_000,
@@ -215,8 +234,7 @@ test.describe('the price list on a garage profile @seeded', () => {
       await expect(toggle).toHaveAttribute('aria-checked', 'true');
       expect(navigations).toBe(0);
     } finally {
-      await setTop(36_000);
-      await db.end();
+      await setTop(client, 36_000);
     }
   });
 });
