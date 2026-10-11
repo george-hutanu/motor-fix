@@ -44,7 +44,6 @@
       "empty": "Service‑ul nu și‑a publicat încă prețurile.",
       "includes": "Prețurile includ piese și manoperă, cu TVA, și sunt orientative.",
       "intro": "Pornește ce ai nevoie. Prețurile sunt intervale, pentru că lucrarea depinde de mașină.",
-      "label": "Lista de prețuri",
       "labour": "Manopera este {range} / oră.",
       "title": "Lista de prețuri"
     },

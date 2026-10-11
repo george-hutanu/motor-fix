@@ -58,8 +58,10 @@ async function render(
 }
 
 const cards = (page: HTMLElement) => [
-  ...page.querySelectorAll<HTMLAnchorElement>('a.card'),
+  ...page.querySelectorAll<HTMLElement>('.card:not(.skeleton)'),
 ];
+const link = (card: Element) =>
+  card.querySelector<HTMLAnchorElement>('a.name') as HTMLAnchorElement;
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
 const lists = (card: Element) =>
@@ -231,7 +233,7 @@ describe('HomeCards under hostile input', () => {
   it('encodes a slug that carries reserved characters', async () => {
     const [card] = cards(await render([garageOf({ slug: 'a b/c?d' })]));
 
-    expect(card.getAttribute('href')).toBe(
+    expect(link(card).getAttribute('href')).toBe(
       '/ro/garages/a%20b%2Fc%3Fd?brand=bmw',
     );
   });
@@ -246,7 +248,7 @@ describe('HomeCards under hostile input', () => {
     };
     const [card] = cards(await render([garageOf()], { brand: dacia }));
 
-    expect(card.getAttribute('href')).toBe(
+    expect(link(card).getAttribute('href')).toBe(
       '/ro/garages/service-auto-militari?brand=dacia',
     );
     expect(said(card.querySelector('mf-lamp'))).toBe('Lucrează pe Dacia');
@@ -260,7 +262,7 @@ describe('HomeCards under hostile input', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(cards(page)[0].getAttribute('href')).toBe(
+    expect(link(cards(page)[0]).getAttribute('href')).toBe(
       '/en/garages/service-auto-militari?brand=bmw',
     );
   });
@@ -336,7 +338,7 @@ describe('HomeCards under hostile input', () => {
   it('names a card in English', async () => {
     const [card] = cards(await render([garageOf()], { language: 'en' }));
 
-    expect(card.getAttribute('aria-label')).toBe(
+    expect(link(card).getAttribute('aria-label')).toBe(
       'Service Auto Militari, Works on BMW, 4.9',
     );
   });
@@ -370,7 +372,7 @@ describe('HomeCards under hostile input', () => {
     expect(
       page.querySelector<HTMLAnchorElement>('a.all')?.getAttribute('href'),
     ).toBe('/ro/garages?brand=dacia');
-    expect(cards(page)[0].getAttribute('href')).toBe(
+    expect(link(cards(page)[0]).getAttribute('href')).toBe(
       '/ro/garages/service-auto-militari?brand=dacia',
     );
   });

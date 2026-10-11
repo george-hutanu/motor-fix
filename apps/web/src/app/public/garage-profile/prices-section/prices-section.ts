@@ -34,7 +34,7 @@ export class PricesSection {
   private readonly i18n = inject(I18n);
 
   protected readonly label = computed(() =>
-    this.i18n.t('public.garageProfile.prices.label'),
+    this.i18n.t('public.garageProfile.prices.title'),
   );
   protected readonly labour = computed(() => {
     const labour = this.garage().labour;

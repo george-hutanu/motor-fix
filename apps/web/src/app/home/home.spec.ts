@@ -1367,7 +1367,7 @@ describe('Home rating dial with nothing to name', () => {
 
 const cardsArea = () => page().querySelector<HTMLElement>('mf-home-cards');
 const cards = () => [
-  ...page().querySelectorAll<HTMLAnchorElement>('mf-home-cards a.card'),
+  ...page().querySelectorAll<HTMLAnchorElement>('mf-home-cards .card a.name'),
 ];
 const allLink = () =>
   page().querySelector<HTMLAnchorElement>('mf-home-cards a.all');
