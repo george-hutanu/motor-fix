@@ -163,6 +163,8 @@ model RequestRecipient {
   declineToldAt   DateTime?       @map("decline_told_at") @db.Timestamptz(3)
   remindedDay2At  DateTime?       @map("reminded_day2_at") @db.Timestamptz(3)
   remindedDay5At  DateTime?       @map("reminded_day5_at") @db.Timestamptz(3)
+  // The first time anyone at the garage read the whole request; never changed.
+  firstSeenAt     DateTime?       @map("first_seen_at") @db.Timestamptz(3)
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   request         QuoteRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
   garage          Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)

@@ -295,6 +295,20 @@ describe('GarageRequestsFeed: the closed rows', () => {
     expect(feed.closed()?.map((r) => r.id)).toEqual(['req-0']);
   });
 
+  // The three lists answer apart: a request closed a moment ago can come back
+  // closed before the waiting list has dropped it, and then showed twice.
+  it('shows a request the closed list holds in that list only', async () => {
+    const feed = await start({
+      closed: [listOf([requestRow({ closedReason: 'declined', id: 'req-1' })])],
+      waiting: [
+        listOf([requestRow({ id: 'req-1' }), requestRow({ id: 'req-2' })]),
+      ],
+    });
+
+    expect(feed.rows()?.map((r) => r.id)).toEqual(['req-2']);
+    expect(feed.closed()?.map((r) => r.id)).toEqual(['req-1']);
+  });
+
   it('reads them again on the same events as the waiting rows', async () => {
     const feed = await start({
       closed: [

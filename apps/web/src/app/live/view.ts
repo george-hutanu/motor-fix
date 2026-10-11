@@ -11,6 +11,8 @@ import { debounceTime, type Observable } from 'rxjs';
 
 import { reuse } from '../dashboard/live-in-place/live-in-place';
 
+const REFUSED = [400, 403];
+
 export interface LiveView<T> {
   // The last data read; a re-read changes only its parts that changed.
   readonly value: Signal<T | undefined>;
@@ -69,7 +71,10 @@ export function liveView<T>(
       return;
     }
     if (value() === undefined) error.set(failure);
-    if (retryAfter !== undefined)
+    // A malformed or forbidden read answers the same a minute later.
+    const refused =
+      failure instanceof HttpErrorResponse && REFUSED.includes(failure.status);
+    if (retryAfter !== undefined && !refused)
       retry = setTimeout(() => void read(), retryAfter);
   };
   const readOnce = async () => {

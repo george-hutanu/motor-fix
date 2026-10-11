@@ -140,10 +140,46 @@
       "submit": "Decline",
       "title": "Why are you declining the request?"
     },
+    "detail": {
+      "car": "Car",
+      "closed": {
+        "accepted_elsewhere": "The request closed: the customer chose another garage",
+        "account_closed": "The request closed: the customer’s account was closed",
+        "cancelled": "The request closed: the customer cancelled it",
+        "declined": "The request closed: a colleague declined it",
+        "expired": "The request closed: it expired",
+        "garage_suspended": "The request closed: the garage is suspended",
+        "quoted": "The request closed: a colleague sent a quote",
+        "unknown": "The request closed."
+      },
+      "customer": "Customer",
+      "description": "Description",
+      "error": "We could not load the request. Try again.",
+      "forbidden": "You are not allowed to read requests",
+      "fuel": {
+        "diesel": "diesel",
+        "electric": "electric",
+        "hybrid": "hybrid",
+        "petrol": "petrol"
+      },
+      "jobs": "Jobs",
+      "mechanic": "Mechanic",
+      "noDescription": "The customer added no description.",
+      "notFound": "The request is no longer available",
+      "notOffered": {
+        "one": "You do not do this job on {brand}",
+        "other": "You do not do these jobs on {brand}"
+      },
+      "phone": "Phone",
+      "plate": "Number plate",
+      "received": "received {age}",
+      "title": "Quote request"
+    },
     "empty": "No new requests. We will tell you when one arrives.",
     "heading": "Quote requests",
     "loading": "Loading the requests",
     "notOffered": "not offered",
+    "open": "Open the request {name}",
     "reconnecting": "Reconnecting…",
     "retry": "Try again",
     "seeAll": "See all",

@@ -218,6 +218,35 @@ const PEOPLE: Person[] = [
     name: 'Vlad Stan',
     roles: ['mechanic'],
   },
+  // A mechanic at the garage that takes requests who may not answer them, so
+  // a test can send it one and be refused the read.
+  {
+    at: { as: 'mechanic', garage: 'service-auto-militari' },
+    email: 'mecanic-militari@example.test',
+    lastRole: 'mechanic',
+    name: 'Dan Militaru',
+    roles: ['mechanic'],
+  },
+  // A receptionist and a mechanic who may answer quotes at the same garage,
+  // so a test can read a request as every permitted role.
+  {
+    at: { as: 'receptionist', garage: 'service-auto-militari' },
+    email: 'receptie-militari@example.test',
+    lastRole: 'receptionist',
+    name: 'Elena Militaru',
+    roles: ['receptionist'],
+  },
+  {
+    at: {
+      answersQuotes: true,
+      as: 'mechanic',
+      garage: 'service-auto-militari',
+    },
+    email: 'mecanic-oferte-militari@example.test',
+    lastRole: 'mechanic',
+    name: 'Sorin Militaru',
+    roles: ['mechanic'],
+  },
   {
     at: { answersQuotes: true, as: 'mechanic', garage: 'atelier-test' },
     email: 'mecanic-oferte@example.test',

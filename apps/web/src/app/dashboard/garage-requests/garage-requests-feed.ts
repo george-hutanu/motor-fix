@@ -54,10 +54,21 @@ export class GarageRequestsFeed {
   private readonly toasted = new Set<string>();
   // Requests answered from this tab, until their quoted row has been shown.
   private readonly mine = new Set<string>();
+  // The request whose drawer closed back to a page drawn anew: its row there
+  // takes the focus, since the overlay's opener is gone.
+  private refocus: string | null = null;
 
   // The server's 404: this session may not see the garage's requests.
   readonly visible = computed(() => this.allowed() && !this.waiting.gone());
-  readonly rows = computed(() => this.shown(this.waiting.value())?.items);
+  // The lists answer apart: a request the closed list already holds is shown
+  // there only, though the waiting list's last answer still has it.
+  readonly rows = computed(() => {
+    const items = this.shown(this.waiting.value())?.items;
+    const closed = new Set(this.closed()?.map((row) => row.id));
+    return closed.size && items
+      ? items.filter((row) => !closed.has(row.id))
+      : items;
+  });
   readonly total = computed(() => this.shown(this.waiting.value())?.total);
   readonly nextCursor = computed(
     () => this.shown(this.waiting.value())?.nextCursor,
@@ -115,6 +126,17 @@ export class GarageRequestsFeed {
     this.waiting.reload();
     this.closedRows.reload();
     this.quotedRows.reload();
+  }
+
+  returnFocusTo(id: string) {
+    this.refocus = id;
+  }
+
+  // Whether the row of `id` should take the focus; asked once, then forgotten.
+  takeFocus(id: string): boolean {
+    if (this.refocus !== id) return false;
+    this.refocus = null;
+    return true;
   }
 
   // A quote sent from this tab: re-read now, and show its row even on a

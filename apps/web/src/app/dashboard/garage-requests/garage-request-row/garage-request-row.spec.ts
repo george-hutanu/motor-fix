@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import type { GarageRequestSummaryDto, MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
@@ -47,6 +48,8 @@ const me = (role: Role, canAnswerQuotes = false) =>
 let open: jest.Mock;
 let reload: jest.Mock;
 let sent: jest.Mock;
+// The request whose row the feed asks to take the focus back.
+let refocus: string | null = null;
 
 async function render(
   account: MeDto,
@@ -61,9 +64,21 @@ async function render(
   sent = jest.fn();
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       { provide: Session, useValue: { current: shown, shown } },
       { provide: Overlays, useValue: { open } },
-      { provide: GarageRequestsFeed, useValue: { reload, sent } },
+      {
+        provide: GarageRequestsFeed,
+        useValue: {
+          reload,
+          sent,
+          takeFocus: (id: string) => {
+            if (id !== refocus) return false;
+            refocus = null;
+            return true;
+          },
+        },
+      },
     ],
   });
   await TestBed.inject(I18n).enter('garage');
@@ -74,13 +89,16 @@ async function render(
   await fixture.whenStable();
   fixture.detectChanges();
   const element = fixture.nativeElement as HTMLElement;
+  const navigate = jest
+    .spyOn(TestBed.inject(Router), 'navigate')
+    .mockResolvedValue(true);
   const settle = async () => {
     for (let i = 0; i < 3; i++) {
       await wait(0);
       fixture.detectChanges();
     }
   };
-  return { element, settle };
+  return { element, navigate, settle };
 }
 
 const sendButton = (element: HTMLElement, name = 'Trimite oferta') =>
@@ -88,7 +106,10 @@ const sendButton = (element: HTMLElement, name = 'Trimite oferta') =>
     (b) => b.textContent?.trim() === name,
   );
 
-afterEach(() => TestBed.resetTestingModule());
+afterEach(() => {
+  refocus = null;
+  TestBed.resetTestingModule();
+});
 
 // @traces 344-FR-009
 describe('the request row’s Trimite oferta button', () => {
@@ -283,6 +304,128 @@ describe('a declined row', () => {
 
     expect(element.querySelector('.reason')?.textContent?.trim()).toBe(label);
     expect(element.querySelector('.actions')).toBeNull();
+  });
+});
+
+// @traces 347-FR-001
+describe('opening a request from its row', () => {
+  const opener = (element: HTMLElement) =>
+    element.querySelector<HTMLButtonElement>('button.open');
+
+  it('offers a button named after the customer and the car on a waiting row', async () => {
+    const { element } = await render(me('owner'));
+
+    expect(opener(element)?.getAttribute('type')).toBe('button');
+    expect(opener(element)?.getAttribute('aria-label')).toBe(
+      'Deschide cererea Vlad P. · Dacia Logan · 2018',
+    );
+  });
+
+  it('reads Open the request in English', async () => {
+    const { element } = await render(me('owner'), { language: 'en' });
+
+    expect(opener(element)?.getAttribute('aria-label')).toBe(
+      'Open the request Vlad P. · Dacia Logan · 2018',
+    );
+  });
+
+  it('goes to the request’s address, carrying where it came from', async () => {
+    const { element, navigate, settle } = await render(me('owner'));
+
+    opener(element)?.click();
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith(['/app/garage/requests', 'req-1'], {
+      state: { origin: '/' },
+    });
+  });
+
+  // Lap 7: opened from Panou, the drawer closed back to a new Panou whose row
+  // the overlay could not focus; the row that opened it takes the focus back.
+  it('takes the focus back when the drawer it opened closes to its page again', async () => {
+    refocus = 'req-1';
+    const { element, settle } = await render(me('owner'));
+    await settle();
+
+    expect(document.activeElement).toBe(opener(element));
+  });
+
+  it('leaves the focus alone when no drawer of its request just closed', async () => {
+    refocus = 'req-2';
+    const { element, settle } = await render(me('owner'));
+    await settle();
+
+    expect(document.activeElement).not.toBe(opener(element));
+  });
+
+  it('is absent on a closed row and for a mechanic who may not answer quotes', async () => {
+    const closed = await render(me('owner'), {
+      row: requestRow({
+        closedAt: new Date().toISOString(),
+        closedReason: 'cancelled',
+      }),
+    });
+    expect(opener(closed.element)).toBeNull();
+    TestBed.resetTestingModule();
+
+    const plain = await render(me('mechanic', false));
+    expect(opener(plain.element)).toBeNull();
+  });
+
+  it.each(['Trimite oferta', 'Refuză'])(
+    'leaves the address alone when %s is clicked',
+    async (name) => {
+      const { element, navigate, settle } = await render(me('owner'));
+
+      sendButton(element, name)?.click();
+      await settle();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
+});
+
+// The PR tester measured the open button drawn over Trimite oferta and
+// Refuză (two controls in one place) and the row's gaps off the 4 px grid.
+describe('the request row’s layout', () => {
+  const css = readFileSync(join(__dirname, 'garage-request-row.css'), 'utf8');
+  const rule = (selector: string) =>
+    [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+      .filter(([, head]) => head.trim() === selector)
+      .map(([, , body]) => body)
+      .join(';');
+
+  it('lays the open button over the row’s text only, never over its buttons', () => {
+    expect(rule('.open')).not.toMatch(/position:\s*absolute/);
+    expect(rule('.open')).toMatch(/grid-area:\s*1\s*\/\s*1\s*\/\s*2\s*\/\s*4/);
+    expect(rule('.actions')).toMatch(/grid-area:\s*1\s*\/\s*4/);
+  });
+
+  // Lap 4: at 320 px Trimite oferta wrapped one word per line and Refuză
+  // dropped to a line of its own beside nothing.
+  it('stacks Trimite oferta and Refuză full width on a phone, the row unpadded at the sides', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+    expect(phone).toMatch(/:host\s*\{[^}]*padding-inline:\s*0;/);
+    expect(phone).toMatch(
+      /\.actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/,
+    );
+    expect(phone).toMatch(
+      /\.actions button\s*\{[^}]*width:\s*100%;[^}]*padding-inline:\s*var\(--mf-space-3\);/,
+    );
+  });
+
+  it('draws the open button’s focus ring with the focus tokens', () => {
+    expect(css).toMatch(
+      /\.open:focus-visible\s*\{[^}]*outline:\s*var\(--mf-focus-width\) solid var\(--mf-focus\);/,
+    );
+  });
+
+  it('spaces the row and its lines on the 4 px grid', () => {
+    for (const [, value] of css.matchAll(/(?:gap|padding):\s*([^;]+);/g))
+      for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
+        expect(Number.parseFloat(px) % 4).toBe(0);
+    expect(rule('.open')).toMatch(/padding:\s*0/);
   });
 });
 
