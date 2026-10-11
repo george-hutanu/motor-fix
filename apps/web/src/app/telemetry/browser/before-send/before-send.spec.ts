@@ -131,7 +131,7 @@ describe('beforeSend', () => {
     expect(JSON.stringify(sent)).not.toMatch(/Ab12Cd34|user-1/);
   });
 
-  // @traces 243-FR-010
+  // @traces 243-FR-015
   it('sends no browser description, only its name, version and system', () => {
     const sent = createBeforeSend('phone')(exception('boom'));
 

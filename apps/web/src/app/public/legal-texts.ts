@@ -87,7 +87,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Security and anti-abuse measures',
           paragraphs: [
-            'To stop abuse we count the requests that come from one connection address, keeping only a one-way hash of the address, never the address itself: for 60 seconds for profile views, place searches and assistant sign-ins, for 15 minutes for failed sign-ins, and for 1 hour for sign-ups, password resets, consent records and garage listings in progress.',
+            "To stop abuse we count the requests that come from one connection address, keeping only a one-way hash of the address, never the address itself: for 60 seconds for profile views, place searches and assistant sign-ins, for 15 minutes for failed sign-ins, and for 1 hour for sign-ups, password resets, consent records, garage listings in progress and WhatsApp sign-in codes. While you watch a garage's live page, your address is held in memory only, to limit how many live pages one address opens at once, and is dropped when the page closes.",
             'A car’s number plate is hidden from everyone but the garage working on the car.',
           ],
         },
@@ -265,7 +265,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Măsuri de securitate și împotriva abuzurilor',
           paragraphs: [
-            'Ca să oprim abuzurile, numărăm cererile venite de la aceeași adresă de conexiune, păstrând doar o amprentă într‑un singur sens a adresei, niciodată adresa însăși: timp de 60 de secunde pentru vizualizările de profil, căutările de locuri și autentificările asistenților, timp de 15 minute pentru autentificările eșuate și timp de o oră pentru conturile noi, resetările de parolă, acordurile și înscrierile de service în curs.',
+            'Ca să oprim abuzurile, numărăm cererile venite de la aceeași adresă de conexiune, păstrând doar o amprentă într‑un singur sens a adresei, niciodată adresa însăși: timp de 60 de secunde pentru vizualizările de profil, căutările de locuri și autentificările asistenților, timp de 15 minute pentru autentificările eșuate și timp de o oră pentru conturile noi, resetările de parolă, acordurile, înscrierile de service în curs și codurile de autentificare prin WhatsApp. Cât timp urmărești pagina live a unui service, adresa ta este ținută doar în memorie, ca să limităm câte pagini live deschide aceeași adresă deodată, și este ștearsă când pagina se închide.',
             'Numărul de înmatriculare al unei mașini este ascuns tuturor, în afară de service‑ul care lucrează la mașină.',
           ],
         },

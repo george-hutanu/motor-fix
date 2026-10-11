@@ -51,6 +51,8 @@ describe('the final legal texts', () => {
         /1 hour/,
         /standard contractual clauses/i,
         /cookie settings/i,
+        /WhatsApp sign-in codes/,
+        /live page.*in memory only/,
       ],
     ],
     [
@@ -66,6 +68,8 @@ describe('the final legal texts', () => {
         /o oră/,
         /clauzele contractuale standard/i,
         /Setări cookie/,
+        /codurile de autentificare prin WhatsApp/,
+        /pagina live.*doar în memorie/,
       ],
     ],
   ] as const)(
