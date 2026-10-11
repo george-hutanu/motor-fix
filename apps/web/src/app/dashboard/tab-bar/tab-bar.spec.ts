@@ -8,6 +8,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { I18n } from '@motor-fix/i18n';
 
 import { DashboardTabBar } from './tab-bar';
+import { spoken } from '../../spoken.testing';
 import { allowedViews, DASHBOARDS } from '../views';
 
 @Component({ template: '' })
@@ -184,16 +185,16 @@ describe('DashboardTabBar on the admin dashboard', () => {
     const { element } = await openAdmin(4);
 
     expect(chips(element)).toEqual([null, '4', null, null]);
-    expect(tabs(element)[1]?.getAttribute('aria-label')).toBe(
-      'Service‑uri, 4 în așteptare',
-    );
+    expect(tabs(element)[1]?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(tabs(element)[1])).toBe('Service‑uri 4 în așteptare');
   });
 
   it('shows no count at zero, nor while the count is unknown', async () => {
     const { element, harness, host } = await openAdmin(0);
 
     expect(chips(element)).toEqual([null, null, null, null]);
-    expect(tabs(element)[1]?.getAttribute('aria-label')).toBeNull();
+    expect(tabs(element)[1]?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(tabs(element)[1])).not.toMatch(/așteptare|waiting/);
     host.counts.set({});
     harness.detectChanges();
     expect(chips(element)).toEqual([null, null, null, null]);
@@ -203,9 +204,8 @@ describe('DashboardTabBar on the admin dashboard', () => {
     const { element } = await openAdmin(120);
 
     expect(chips(element)[1]).toBe('99+');
-    expect(tabs(element)[1]?.getAttribute('aria-label')).toBe(
-      'Service‑uri, 120 în așteptare',
-    );
+    expect(tabs(element)[1]?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(tabs(element)[1])).toBe('Service‑uri 120 în așteptare');
   });
 
   it('shows 99 itself in the chip', async () => {
@@ -219,9 +219,8 @@ describe('DashboardTabBar on the admin dashboard', () => {
     await TestBed.inject(I18n).use('en');
     harness.detectChanges();
 
-    expect(tabs(element)[1]?.getAttribute('aria-label')).toBe(
-      'Garages, 1 waiting',
-    );
+    expect(tabs(element)[1]?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(tabs(element)[1])).toBe('Garages 1 waiting');
   });
 });
 

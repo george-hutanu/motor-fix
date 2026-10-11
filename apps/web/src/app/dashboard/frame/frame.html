@@ -9,8 +9,7 @@
         routerLinkActive=""
         ariaCurrentWhenActive="page"
         [routerLinkActiveOptions]="{ exact: !view.path }"
-        [attr.aria-label]="count ? ('shell.frame.counter' | t: { label: (view.label | t), waiting: count }) : null"
-      >{{ view.label | t }}@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</a>
+      >{{ view.label | t }}@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span><span class="sr-only"> {{ 'shell.frame.counter' | t: { waiting: count } }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</a>
     }
   </nav>
   <div class="account">

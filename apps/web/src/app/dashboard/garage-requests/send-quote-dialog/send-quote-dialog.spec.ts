@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -736,5 +739,31 @@ describe('the send-quote dialog: sending', () => {
 
     await expect(result).resolves.toBe('cancelled');
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('type scale on a phone', () => {
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'send-quote-dialog.css'),
+    'utf8',
+  );
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+
+  it('keeps its paragraphs at the body size on a phone', () => {
+    // Only the price labels (a `label`, not a paragraph) stay small on a phone.
+    const small = [
+      ...stylesheet
+        .slice(0, at)
+        .matchAll(/([^{}]+)\{[^}]*font-size: var\(--mf-size-small\)/g),
+    ].map((m) => m[1].trim());
+    expect(small).toEqual(['.group .field > label']);
+  });
+
+  it('sets them small from a tablet up', () => {
+    expect(stylesheet.slice(at)).toMatch(
+      /\.mechanic,\s*\.left-out,\s*\.hint,\s*\.counter,\s*\.error,\s*\.warning \{\s*font-size: var\(--mf-size-small\);/,
+    );
   });
 });

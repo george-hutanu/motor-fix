@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type {
@@ -429,5 +432,33 @@ describe("the phone's filter button", () => {
     expect(sheet()).toBeNull();
     expect(host.filtered).toEqual([]);
     expect(document.activeElement).toBe(filterButton(element));
+  });
+});
+
+describe('type scale', () => {
+  // @traces 975-type-scale-FR-002
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'admin-users-filters.css'),
+    'utf8',
+  );
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `input[type="search"]` at the field size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*input\[type="search"\] \{[^}]*font-size: var\(--mf-size-field\);/,
+    );
+  });
+
+  it('sets `select` at the field size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*select \{[^}]*font-size: var\(--mf-size-field\);/,
+    );
   });
 });

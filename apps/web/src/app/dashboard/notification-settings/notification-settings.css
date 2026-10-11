@@ -19,7 +19,7 @@ p {
   overflow-wrap: anywhere;
 }
 h3 {
-  font-size: 1rem;
+  font-size: var(--mf-size-body);
 }
 .title {
   margin: var(--mf-space-4) var(--mf-space-4) 0;
@@ -47,7 +47,6 @@ li {
 }
 .hint {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
 }
 .channels {
   display: flex;
@@ -74,7 +73,11 @@ button[hlmBtn] {
     align-self: flex-start;
   }
 }
+/* Body size on a phone, the smaller tokens from a tablet up. */
 @media (min-width: 768px) {
+  .hint {
+    font-size: var(--mf-size-small);
+  }
   li {
     flex-direction: row;
     align-items: center;

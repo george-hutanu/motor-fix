@@ -73,13 +73,16 @@ const VIEWS = [
 ] as const;
 
 // Cereri de ofertă carries the number of waiting requests once there are any:
-// its text then ends in it, and its name says it.
+// its text then ends in the chip's number (99+ past 99) and the screen-reader-only
+// "<n> în așteptare", which also completes its name.
 const COUNTED = ['Cereri de ofertă', 'Cereri', 'Requests'];
 const shown = (label: string) =>
-  COUNTED.includes(label) ? new RegExp(`^${label}\\s*\\d*$`) : label;
+  COUNTED.includes(label)
+    ? new RegExp(`^${label}\\s*(\\d+\\+?\\s*\\d+ (în așteptare|waiting))?$`)
+    : label;
 const named = (label: string) =>
   COUNTED.includes(label)
-    ? new RegExp(`^${label}(, \\d+ (în așteptare|waiting))?$`)
+    ? new RegExp(`^${label}( \\d+ (în așteptare|waiting))?$`)
     : label;
 
 const title = (page: Page) => page.getByRole('heading', { level: 1 });

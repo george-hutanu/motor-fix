@@ -27,6 +27,7 @@ function setup(signedIn: MeDto | null, ...answers: Answer[]) {
     current,
     keepShownWhile: jest.fn(<T>(open: Promise<T>) => open),
     load: jest.fn(async () => current()),
+    roleHint: signal<MeDto['role'] | null>(signedIn ? 'garage' : null),
     takeReturnTo: jest.fn((): string | null => null),
   };
   const open = jest.fn(async (..._: unknown[]) => {
@@ -86,6 +87,26 @@ describe('SignInDialog', () => {
     await dialog.start({ overMaintenance: true });
 
     expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  // A visitor's ask is refused (401), which the console reports as an error.
+  it('asks for no session at /admin on a browser that has seen no account', async () => {
+    const { dialog, open, session } = setup(null, 'cancelled');
+
+    await dialog.start({ overMaintenance: true });
+
+    expect(session.load).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes an account this browser has seen from /admin to its dashboard', async () => {
+    const { dialog, navigate, open, session } = setup(GARAGE, 'cancelled');
+
+    await dialog.start({ overMaintenance: true });
+
+    expect(session.load).toHaveBeenCalledTimes(1);
+    expect(open).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/app/garage');
   });
 
   it('opens the dialog over the current screen for a visitor', async () => {

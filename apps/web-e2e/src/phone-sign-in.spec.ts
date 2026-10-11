@@ -69,6 +69,15 @@ test.describe('signing in with a phone number @seeded @mailbox', () => {
 
     await expect(dialog.getByLabel('Nume')).toBeFocused();
     await dialog.getByLabel('Nume').fill('Ion Popescu');
+    // @traces 243-FR-008
+    await expect(
+      dialog.getByRole('link', { name: 'Termenii de utilizare' }),
+    ).toHaveAttribute('href', '/ro/terms');
+    await expect(
+      dialog.getByRole('link', {
+        name: 'Nota de informare privind datele personale',
+      }),
+    ).toHaveAttribute('href', '/ro/privacy');
     await dialog.getByRole('checkbox').check();
     await dialog.getByRole('button', { name: 'Creează contul' }).click();
 
