@@ -24,6 +24,8 @@ import { join, resolve } from 'node:path';
 
 import {
   excluded,
+  projectConfig,
+  projectFloor,
   readShardFile,
   type Scope,
   shardScope,
@@ -56,27 +58,6 @@ function scopeOf(project: string, root: string, shard: string): Scope {
     throw new Error(`${project} has no shards in scripts/mutation-shards.json`);
   return shardScope(root, shards, shard);
 }
-
-type ProjectConfig = Record<string, unknown> & {
-  thresholds: Record<string, unknown> & { break: number };
-};
-
-/** <root>/stryker.config.json, refused when it holds no numeric floor. */
-function projectConfig(root: string): ProjectConfig {
-  const file = join(root, 'stryker.config.json');
-  let own: { thresholds?: { break?: unknown } } | null = null;
-  try {
-    own = JSON.parse(readFileSync(file, 'utf8'));
-  } catch {}
-  if (typeof own?.thresholds?.break !== 'number')
-    throw new Error(
-      `${file} is missing, is not JSON, or sets no thresholds.break`,
-    );
-  return own as ProjectConfig;
-}
-
-export const projectFloor = (root: string): number =>
-  projectConfig(root).thresholds.break;
 
 // The cache restores the last run's reports with its incremental file: a job
 // cut off before it writes its own must leave none of them to be read as this

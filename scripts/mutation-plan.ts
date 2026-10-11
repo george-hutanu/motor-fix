@@ -49,6 +49,27 @@ export function excluded(root: string): string[] {
   ];
 }
 
+export type ProjectConfig = Record<string, unknown> & {
+  thresholds: Record<string, unknown> & { break: number };
+};
+
+/** <root>/stryker.config.json, refused when it holds no numeric floor. */
+export function projectConfig(root: string): ProjectConfig {
+  const file = join(root, 'stryker.config.json');
+  let own: { thresholds?: { break?: unknown } } | null = null;
+  try {
+    own = JSON.parse(readFileSync(file, 'utf8'));
+  } catch {}
+  if (typeof own?.thresholds?.break !== 'number')
+    throw new Error(
+      `${file} is missing, is not JSON, or sets no thresholds.break`,
+    );
+  return own as ProjectConfig;
+}
+
+export const projectFloor = (root: string): number =>
+  projectConfig(root).thresholds.break;
+
 export function readShardFile(repo: string): ShardFile {
   const file = join(repo, SHARD_FILE);
   if (!existsSync(file)) return { default: DEFAULT, projects: {} };

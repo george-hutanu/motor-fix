@@ -14,12 +14,12 @@ import {
   flags,
   hasSpecs,
   mutationScore,
-  projectFloor,
   reportsDir,
   scoreRecord,
   strykerOptions,
   summaryRows,
 } from './mutation.ts';
+import { projectFloor } from './mutation-plan.ts';
 
 describe('flags', () => {
   it('reads the flags as typed and as Nx forwards them', () => {

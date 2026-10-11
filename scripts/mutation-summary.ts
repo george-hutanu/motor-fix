@@ -9,7 +9,7 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { type Entry, plan } from './mutation-plan.ts';
+import { type Entry, plan, projectFloor } from './mutation-plan.ts';
 
 export type Counts = {
   killed: number;
@@ -123,13 +123,11 @@ function main() {
   const full = plan(repo, {});
   const planned = plannedJobs(process.env['MATRIX']);
   const roots = new Map(full.map((e) => [e.project, e.root] as const));
-  const floorOf = (project: string) =>
-    JSON.parse(
-      readFileSync(
-        join(repo, roots.get(project) ?? '', 'stryker.config.json'),
-        'utf8',
-      ),
-    ).thresholds.break;
+  const floorOf = (project: string) => {
+    const root = roots.get(project);
+    if (!root) throw new Error(`${project} has no test:mutation target`);
+    return projectFloor(join(repo, root));
+  };
   const { problems, rows } = summarize({
     floorOf,
     full,
