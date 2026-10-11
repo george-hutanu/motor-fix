@@ -204,6 +204,39 @@ describe('ProblemFilter', () => {
     expect(res.body).toMatchObject({ code: 'validation_failed', errors });
   });
 
+  // @traces 115-listing-checklist-FR-010
+  it('keeps the field warnings a refusal carries beside its errors', () => {
+    const errors = [{ code: 'required', field: 'steps.1.phone' }];
+    const warnings = [
+      { code: 'document_missing', field: 'documents.onrc_certificate' },
+    ];
+    const res = send(
+      new HttpException(
+        { code: 'listing_incomplete', errors, other: [1], warnings },
+        422,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'listing_incomplete',
+      errors,
+      warnings,
+    });
+    expect(res.body).not.toHaveProperty('other');
+  });
+
+  it.each([
+    ['no list', {}],
+    ['an empty list', { warnings: [] }],
+    ['a malformed list', { warnings: [{ code: 'x' }] }],
+  ])('sends no field warnings for %s', (_, extra) => {
+    const body = { code: 'listing_incomplete', ...extra };
+
+    expect(send(new HttpException(body, 422)).body).not.toHaveProperty(
+      'warnings',
+    );
+  });
+
   it('keeps the cause of an unknown error in the log only', () => {
     const log = jest
       .spyOn(Logger.prototype, 'error')

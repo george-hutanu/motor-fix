@@ -3798,6 +3798,53 @@
         ]
       }
     },
+    "/api/v1/listing-drafts/{id}/check": {
+      "post": {
+        "operationId": "ListingDraftsController_check",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingCheckDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          },
+          "422": {
+            "description": "listing_incomplete, with errors and warnings"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/prices": {
       "get": {
         "operationId": "PriceListController_read",
@@ -9717,6 +9764,39 @@
         },
         "required": [
           "sentAt"
+        ]
+      },
+      "FieldProblemDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "cui_in_use"
+          },
+          "field": {
+            "type": "string",
+            "description": "The draft path of the value",
+            "example": "steps.6.cui"
+          }
+        },
+        "required": [
+          "code",
+          "field"
+        ]
+      },
+      "ListingCheckDto": {
+        "type": "object",
+        "properties": {
+          "warnings": {
+            "description": "Notes that do not stop the listing from being sent",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldProblemDto"
+            }
+          }
+        },
+        "required": [
+          "warnings"
         ]
       },
       "PriceListItemDto": {

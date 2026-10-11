@@ -49,6 +49,7 @@ export type { DocumentUploadRequestDto } from './models/document-upload-request-
 export type { DraftDocumentDto } from './models/draft-document-dto';
 export type { DriverNameDto } from './models/driver-name-dto';
 export type { EmailChangeDto } from './models/email-change-dto';
+export type { FieldProblemDto } from './models/field-problem-dto';
 export type { GarageAccessDto } from './models/garage-access-dto';
 export type { GarageBookingDto } from './models/garage-booking-dto';
 export type { GarageBrandOwnerAnswerDto } from './models/garage-brand-owner-answer-dto';
@@ -85,6 +86,7 @@ export type { JobSummaryDto } from './models/job-summary-dto';
 export type { JobTypeDto } from './models/job-type-dto';
 export type { JobTypeListDto } from './models/job-type-list-dto';
 export type { ListedGarageDto } from './models/listed-garage-dto';
+export type { ListingCheckDto } from './models/listing-check-dto';
 export type { ListingDraftCreatedDto } from './models/listing-draft-created-dto';
 export type { ListingDraftDto } from './models/listing-draft-dto';
 export type { ListingDraftSavedDto } from './models/listing-draft-saved-dto';
