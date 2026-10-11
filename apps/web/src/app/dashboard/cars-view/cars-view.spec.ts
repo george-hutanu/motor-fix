@@ -10,6 +10,7 @@ import { Overlays } from '@motor-fix/overlays';
 
 import { CarsView } from './cars-view';
 import { AddCar } from '../add-car/add-car';
+import { RemoveCar } from '../remove-car/remove-car';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
   brandId: 'bmw',
@@ -690,4 +691,38 @@ describe('a car card', () => {
       'Rovinietă: adaugă data',
     ]);
   });
+
+  // @traces 092-edit-remove-car-FR-011
+  it.each([
+    [true, ['car-2']],
+    ['cancelled', ['car-2', 'car-1']],
+  ] as const)(
+    'asks before removing from Șterge mașina; on %s the cards are %j without reading again',
+    async (answer, left) => {
+      const { element, settle } = await render([
+        car({ id: 'car-2', model: 'X1' }),
+        car({ id: 'car-1' }),
+      ]);
+      await settle();
+      open.mockResolvedValueOnce(answer);
+
+      trigger(cards(element)[1])?.click();
+      await settle();
+      items()[1].click();
+      await settle();
+      await settle();
+
+      expect(open).toHaveBeenCalledWith(
+        RemoveCar,
+        expect.objectContaining({
+          data: { car: car({ id: 'car-1' }) },
+          shape: 'dialog',
+        }),
+      );
+      expect(cards(element).map((c) => c.getAttribute('data-car'))).toEqual(
+        left,
+      );
+      expect(list).toHaveBeenCalledTimes(1);
+    },
+  );
 });

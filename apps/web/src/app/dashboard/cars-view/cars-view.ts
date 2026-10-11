@@ -16,6 +16,7 @@ import { openAddCar } from '../add-car/open-add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
+import { openRemoveCar } from '../remove-car/open-remove-car';
 
 // "Mașinile mele": a card per car, newest first, and the button that adds one.
 @Component({
@@ -77,6 +78,12 @@ export class CarsView implements OnInit {
       this.cars.update((list) =>
         list?.map((c) => (c.id === saved.id ? saved : c)),
       );
+  }
+
+  // Once the removal is confirmed and done, the card leaves at once.
+  protected async remove(car: CarDto) {
+    if ((await openRemoveCar(this.overlays, car)) === true)
+      this.cars.update((list) => list?.filter((c) => c.id !== car.id));
   }
 
   // The arrows move between the menu's items, wrapping.

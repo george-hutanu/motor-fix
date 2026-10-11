@@ -28,7 +28,7 @@
               </button>
               <div hlmPopoverContent class="menu" role="menu" *hlmPopoverPortal="let ctx" (keydown)="moveIn($event)">
                 <button type="button" role="menuitem" (click)="ctx.close(); edit(car)">{{ 'driver.cars.menu.edit' | t }}</button>
-                <button type="button" role="menuitem" (click)="ctx.close()">{{ 'driver.cars.menu.remove' | t }}</button>
+                <button type="button" role="menuitem" (click)="ctx.close(); remove(car)">{{ 'driver.cars.menu.remove' | t }}</button>
               </div>
             </hlm-popover>
           </div>
