@@ -148,7 +148,7 @@ export class InsightsModule
       name: SNAPSHOT,
       opts: { attempts: 1, removeOnComplete: true, removeOnFail: 10 },
     });
-    // Response figures: three attempts; profile views: three retries (143-FR-012).
+    // Response figures: three attempts; profile views: three retries.
     for (const [name, attempts] of [
       [RESPONSE_STATS, 3],
       [PROFILE_VIEWS, 4],

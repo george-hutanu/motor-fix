@@ -167,7 +167,7 @@ export class ProfileViewsService {
   }
 
   // One random secret per day, written by whichever view comes first and
-  // discarded when the Bucharest day ends (FR-004).
+  // discarded when the Bucharest day ends.
   private async secret(day: string): Promise<string> {
     const key = `insights:pv:secret:${day}`;
     const expiresAt = Math.floor(atLocal(addDays(day, 1), 0).getTime() / 1000);
