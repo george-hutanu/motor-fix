@@ -78,29 +78,29 @@
             "notifications/request-received",
             "notifications/quote-received"
           ],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         },
         "notifications-core": {
           "folders": ["notifications/*"],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         },
         "places-catalogue": {
           "folders": ["storage", "cars", "catalogue", "search", "places"],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "120 min job, finished at its limit (run 38127622063)",
+          "timeout": 160
         },
         "quotes-workshop": {
           "folders": ["quotes", "workshop"],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38127622063)",
+          "timeout": 360
         }
       },
       "timeout": 120
     },
     "i18n": {
-      "measured": "5 min (run 38037093986)",
+      "measured": "7 min job (run 38132926917)",
       "timeout": 30
     },
     "mcp": {
@@ -108,7 +108,7 @@
       "timeout": 90
     },
     "mcp-tools": {
-      "measured": "18 min (run 38037093986)",
+      "measured": "30 min job (run 38132926917)",
       "timeout": 45
     },
     "media": {
@@ -116,7 +116,7 @@
       "timeout": 30
     },
     "observability": {
-      "measured": "21 min (run 38037093986)",
+      "measured": "19 min job, scored 66.83 under its floor (run 38132926917)",
       "timeout": 45
     },
     "overlays": {
@@ -128,11 +128,11 @@
       "timeout": 90
     },
     "ui-cockpit": {
-      "measured": "19 min (run 38037093986)",
+      "measured": "25 min job (run 38132926917)",
       "timeout": 45
     },
     "web": {
-      "measured": "unsharded 143 min (run 37360189195); rest shard not run yet. Its stryker.config.json runs 2 test runners with a 5120 MB heap: the initial run ran out of memory at the default heap (run 38037093986)",
+      "measured": "unsharded 143 min (run 37360189195); rest shard over 120 min: cancelled at its limit (run 38132926917). Its stryker.config.json runs 2 test runners with a 5120 MB heap: the initial run ran out of memory at the default heap (run 38037093986)",
       "shards": {
         "dashboard-admin": {
           "folders": [
@@ -203,10 +203,10 @@
           "timeout": 120
         }
       },
-      "timeout": 120
+      "timeout": 360
     },
     "worker": {
-      "measured": "under 1 min (run 38037093986)",
+      "measured": "2 min job (run 38132926917)",
       "timeout": 30
     }
   }
