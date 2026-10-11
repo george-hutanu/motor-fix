@@ -1,3 +1,4 @@
+import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
 import { expect, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
@@ -9,7 +10,6 @@ const fresh = () =>
 const TEXT = {
   en: {
     create: 'Create account',
-    draft: 'Draft text, pending legal review.',
     newAccount: 'Create an account',
     password: 'Password',
     privacy: 'Privacy notice',
@@ -17,10 +17,10 @@ const TEXT = {
     signUp: 'New account',
     terms: 'Terms of use',
     tick: 'Tick to continue.',
+    version: 'Version',
   },
   ro: {
     create: 'Creează contul',
-    draft: 'Text provizoriu, în curs de revizuire juridică.',
     newAccount: 'Creează un cont',
     password: 'Parolă',
     privacy: 'Nota de informare privind datele personale',
@@ -28,6 +28,7 @@ const TEXT = {
     signUp: 'Cont nou',
     terms: 'Termenii de utilizare',
     tick: 'Bifează pentru a continua.',
+    version: 'Versiunea',
   },
 } as const;
 
@@ -87,13 +88,14 @@ test.describe('consent to the terms and the privacy notice @seeded', () => {
       const t = TEXT[language];
       const form = await openSignUp(page, language);
 
-      for (const [name, path, title] of [
+      for (const [name, path, title, version] of [
         [
           t.terms,
           'terms',
           language === 'ro' ? 'Termeni de utilizare' : t.terms,
+          TERMS_VERSION,
         ],
-        [t.privacy, 'privacy', t.privacy],
+        [t.privacy, 'privacy', t.privacy, PRIVACY_VERSION],
       ] as const) {
         const link = form.getByRole('link', { name });
         // A link inside the sentence keeps the line's height, so the
@@ -107,10 +109,37 @@ test.describe('consent to the terms and the privacy notice @seeded', () => {
         await tab.waitForLoadState();
         await expect(tab).toHaveURL(new RegExp(`/${language}/${path}$`));
         await expect(tab.getByRole('heading', { level: 1 })).toHaveText(title);
-        await expect(tab.getByText(t.draft)).toBeVisible();
+        // @traces 243-FR-001
+        await expect(tab.getByRole('note')).toHaveCount(0);
+        await expect(tab.locator('article')).not.toContainText(
+          /provizoriu|draft|pending legal/i,
+        );
+        await expect(tab.locator('article')).toContainText(
+          `${t.version} ${version}`,
+        );
         await tab.close();
       }
       await expect(form.getByRole('checkbox')).not.toBeChecked();
+    });
+  }
+
+  for (const [language, label, terms, privacy] of [
+    ['ro', 'Informații legale', 'Termeni de utilizare', 'Nota de informare'],
+    ['en', 'Legal information', 'Terms of use', 'Privacy notice'],
+  ] as const) {
+    // @traces 243-FR-008
+    test(`the footer links both texts in its language (${language})`, async ({
+      page,
+    }) => {
+      await ready(page, `/${language}`);
+      const footer = page.getByRole('navigation', { name: label });
+
+      await expect(
+        footer.getByRole('link', { exact: true, name: terms }),
+      ).toHaveAttribute('href', `/${language}/terms`);
+      await expect(
+        footer.getByRole('link', { exact: true, name: privacy }),
+      ).toHaveAttribute('href', `/${language}/privacy`);
     });
   }
 

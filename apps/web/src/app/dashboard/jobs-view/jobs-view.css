@@ -65,7 +65,6 @@ p {
 }
 .muted {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
 }
 .stage {
   margin-inline-start: auto;
@@ -73,7 +72,6 @@ p {
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-chip);
   font-family: var(--mf-font-label);
-  font-size: var(--mf-size-label);
   letter-spacing: var(--mf-label-tracking);
   text-transform: uppercase;
 }
@@ -87,4 +85,14 @@ p {
 }
 .progress {
   margin-inline-start: auto;
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
+  .muted {
+    font-size: var(--mf-size-small);
+  }
+  .stage {
+    font-size: var(--mf-size-label);
+  }
 }

@@ -64,6 +64,40 @@ export class PublicJobTypeDto {
   nameEn!: string;
 }
 
+// The garage's hourly labour rate, in bani; only when both ends are set.
+export class PublicLabourDto {
+  @ApiProperty({ type: 'integer' })
+  fromBani!: number;
+
+  @ApiProperty({ type: 'integer' })
+  toBani!: number;
+}
+
+// One job drivers see on the profile, with the range for the brand in context.
+export class PublicPriceRowDto {
+  @ApiProperty({ format: 'uuid' })
+  jobTypeId!: string;
+
+  @ApiProperty()
+  nameRo!: string;
+
+  @ApiProperty()
+  nameEn!: string;
+
+  @ApiPropertyOptional({ minimum: 1, type: 'integer' })
+  durationMinutes?: number;
+
+  @ApiProperty({
+    description:
+      "The brand's range when the garage set one for the brand in context, else the default",
+    type: 'integer',
+  })
+  fromBani!: number;
+
+  @ApiProperty({ type: 'integer' })
+  toBani!: number;
+}
+
 // A garage photo as anyone may see it: two signed addresses, never its key.
 export class PublicGaragePhotoDto {
   @ApiProperty({ format: 'uuid' })
@@ -170,6 +204,19 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: [PublicJobTypeDto],
   })
   jobTypes!: PublicJobTypeDto[];
+
+  @ApiPropertyOptional({
+    description: 'Absent when either end of the labour range is unset',
+    type: PublicLabourDto,
+  })
+  labour?: PublicLabourDto;
+
+  @ApiProperty({
+    description:
+      'The public jobs with the range for the brand in context, in the list order; empty without one',
+    type: [PublicPriceRowDto],
+  })
+  prices!: PublicPriceRowDto[];
 
   @ApiProperty({
     description:

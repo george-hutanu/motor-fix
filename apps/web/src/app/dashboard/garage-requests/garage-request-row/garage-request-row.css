@@ -24,10 +24,6 @@ p {
   font-weight: 700;
 }
 .car,
-.when {
-  font-size: var(--mf-size-small);
-}
-.car,
 .mechanic,
 time,
 .mark {
@@ -53,5 +49,13 @@ time,
 @media (max-width: 900px) {
   :host {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
+  .car,
+  .when {
+    font-size: var(--mf-size-small);
   }
 }

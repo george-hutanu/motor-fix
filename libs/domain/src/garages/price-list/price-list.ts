@@ -1,4 +1,8 @@
-import type { PriceListItemDto, PriceListReason } from '@motor-fix/contracts';
+import type {
+  PriceListItemDto,
+  PriceListReason,
+  PublicPriceRowDto,
+} from '@motor-fix/contracts';
 
 import type { JobTypeStatus } from '../../generated/prisma/client';
 
@@ -104,4 +108,54 @@ export function priceListJobs(
         ...(defaultRow?.toBani != null && { toBani: defaultRow.toBani }),
       };
     });
+}
+
+// A brand's own range for a job, only when it has both ends.
+const brandRange = (
+  rows: readonly PriceRow[],
+  jobTypeId: string,
+  brandId: string | undefined,
+) => {
+  if (brandId === undefined) return undefined;
+  return rows.find(
+    (row) =>
+      row.jobType.id === jobTypeId &&
+      row.brandId === brandId &&
+      row.toBani != null,
+  );
+};
+
+// The jobs drivers see on a profile, in the list's order (`jobs` is
+// priceListJobs' answer for the same rows). With a brand in context its
+// complete range replaces the default, unless the garage does not take the
+// brand (`refused`), and once the garage ticked any job for it only the ticked
+// jobs are listed; visibility, order and duration always come from the
+// default row.
+export function publicPriceRows(
+  rows: readonly PriceRow[],
+  jobs: readonly PriceListItemDto[],
+  brand?: { id: string; refused?: boolean; ticks: readonly string[] },
+): PublicPriceRowDto[] {
+  const ticks = new Set(brand?.ticks);
+  const listed = (jobTypeId: string) =>
+    ticks.size === 0 || ticks.has(jobTypeId);
+  return jobs.flatMap((item) => {
+    const { durationMinutes, fromBani, jobTypeId, nameEn, nameRo, toBani } =
+      item;
+    if (!item.public || fromBani === undefined || toBani == null) return [];
+    if (!listed(jobTypeId)) return [];
+    const own = brand?.refused
+      ? undefined
+      : brandRange(rows, jobTypeId, brand?.id);
+    return [
+      {
+        jobTypeId,
+        nameEn,
+        nameRo,
+        ...(durationMinutes !== undefined && { durationMinutes }),
+        fromBani: own?.fromBani ?? fromBani,
+        toBani: own?.toBani ?? toBani,
+      },
+    ];
+  });
 }

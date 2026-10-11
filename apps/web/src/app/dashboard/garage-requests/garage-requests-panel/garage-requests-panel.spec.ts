@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -365,6 +368,29 @@ describe('the requests panel with a limit', () => {
 
     expect(text(element.querySelector('a[href="/app/garage/requests"]'))).toBe(
       'See all',
+    );
+  });
+});
+
+describe('type scale', () => {
+  // @traces 975-type-scale-FR-001
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'garage-requests-panel.css'),
+    'utf8',
+  );
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `.stale` at the body size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*\.stale \{[^}]*font-size: var\(--mf-size-body\);/,
     );
   });
 });

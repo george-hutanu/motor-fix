@@ -1,32 +1,48 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+// @traces 1159-FR-004 1159-FR-009 1159-FR-012 1159-FR-016 1159-FR-019
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  clearReports,
   flags,
   hasSpecs,
+  IN_PLACE_ENV,
+  markInPlace,
   mutationScore,
+  reportsDir,
+  scoreRecord,
   strykerOptions,
   summaryRows,
 } from './mutation.ts';
+import { projectFloor } from './mutation-plan.ts';
 
 describe('flags', () => {
   it('reads the flags as typed and as Nx forwards them', () => {
-    expect(flags(['--incremental', '--mutate', 'a.ts'])).toEqual({
-      incremental: true,
-      only: 'a.ts',
-    });
-    expect(flags(['--incremental=true', '--mutate=a.ts'])).toEqual({
-      incremental: true,
-      only: 'a.ts',
-    });
+    expect(
+      flags(['--incremental', '--mutate', 'a.ts', '--shard', 'auth']),
+    ).toEqual({ incremental: true, only: 'a.ts', shard: 'auth' });
+    expect(
+      flags(['--incremental=true', '--mutate=a.ts', '--shard=auth']),
+    ).toEqual({ incremental: true, only: 'a.ts', shard: 'auth' });
   });
 
   it('defaults to a full run of the whole project', () => {
-    expect(flags([])).toEqual({ incremental: false, only: undefined });
-    expect(flags(['--incremental=false'])).toEqual({
+    expect(flags([])).toEqual({
       incremental: false,
       only: undefined,
+      shard: undefined,
+    });
+    expect(flags(['--incremental=false', '--shard='])).toEqual({
+      incremental: false,
+      only: undefined,
+      shard: undefined,
     });
   });
 });
@@ -182,6 +198,240 @@ describe('strykerOptions', () => {
 
     expect(() => strykerOptions('x', 'libs/x', false)).toThrow(
       'libs/x/stryker.config.json',
+    );
+  });
+});
+
+describe('strykerOptions for a shard', () => {
+  beforeEach(() => {
+    write('libs/x/stryker.config.json', floor(70));
+    write(
+      'libs/x/jest.config.cts',
+      "module.exports = {\n  testEnvironment: '<rootDir>/src/env.cjs',\n};\n",
+    );
+    write(
+      'scripts/mutation-shards.json',
+      JSON.stringify({
+        default: { measured: 'm', timeout: 60 },
+        projects: {
+          x: {
+            measured: 'm',
+            shards: { auth: { folders: ['auth'], measured: 'm', timeout: 60 } },
+            timeout: 60,
+          },
+        },
+      }),
+    );
+  });
+
+  it('mutates only the shard and runs only its specs', () => {
+    const options = strykerOptions('x', 'libs/x', false, undefined, 'auth');
+
+    expect(options.mutate).toEqual([
+      'libs/x/src/auth/**/*.ts',
+      '!libs/x/src/**/*.spec.ts',
+      '!libs/x/src/**/*.test.ts',
+      '!libs/x/src/**/generated/**',
+      '!libs/x/src/**/test-setup.ts',
+    ]);
+    expect(options.jest).toEqual({
+      config: {
+        passWithNoTests: true,
+        testEnvironment: join(process.cwd(), 'libs/x/src/env.cjs'),
+        testMatch: ['**/libs/x/src/auth/**/*.{spec,test}.ts'],
+        testPathIgnorePatterns: ['/node_modules/'],
+      },
+      configFile: 'libs/x/jest.config.cts',
+    });
+  });
+
+  // A shard whose folders hold no spec still runs: its mutants count as not
+  // covered, so the project's combined score is not lifted past its floor.
+  it('lets a shard run with no specs, and an unsharded run refuse it', () => {
+    const shard = strykerOptions('x', 'libs/x', false, undefined, 'auth');
+    const whole = strykerOptions('x', 'libs/x', false);
+
+    expect(shard.allowEmpty).toBe(true);
+    expect(shard.jest).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({ passWithNoTests: true }),
+      }),
+    );
+    expect(whole.allowEmpty).toBeUndefined();
+  });
+
+  it('gives rest every spec outside the named shards', () => {
+    const options = strykerOptions('x', 'libs/x', false, undefined, 'rest');
+
+    expect(options.jest).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          testMatch: ['**/libs/x/src/**/*.{spec,test}.ts'],
+          testPathIgnorePatterns: ['/node_modules/', '/libs/x/src/auth/'],
+        }),
+      }),
+    );
+  });
+
+  it('keeps reports and the incremental file per shard', () => {
+    const options = strykerOptions('x', 'libs/x', true, undefined, 'auth');
+
+    expect(options.incrementalFile).toBe(
+      'reports/mutation/x/auth/incremental.json',
+    );
+    expect(options.htmlReporter).toEqual({
+      fileName: 'reports/mutation/x/auth/index.html',
+    });
+    expect(options.jsonReporter).toEqual({
+      fileName: 'reports/mutation/x/auth/mutation.json',
+    });
+    expect(options.reporters).toEqual(
+      expect.arrayContaining(['html', 'json', 'clear-text']),
+    );
+  });
+
+  // A shard's partial score is never held to the floor: the summary job
+  // compares the combined score of all shards.
+  it("turns Stryker's break off for a shard and leaves it on without one", () => {
+    expect(
+      strykerOptions('x', 'libs/x', false, undefined, 'auth').thresholds,
+    ).toEqual({ break: null, high: 80, low: 60 });
+    expect(strykerOptions('x', 'libs/x', false).thresholds).toEqual({
+      break: 70,
+      high: 80,
+      low: 60,
+    });
+  });
+
+  it('refuses a shard the project does not have, and a shard of an unsharded project', () => {
+    write('libs/y/stryker.config.json', floor(0));
+
+    expect(() =>
+      strykerOptions('x', 'libs/x', false, undefined, 'nope'),
+    ).toThrow('nope');
+    expect(() =>
+      strykerOptions('y', 'libs/y', false, undefined, 'auth'),
+    ).toThrow('y');
+  });
+});
+
+describe('strykerOptions shared limits', () => {
+  // The initial test run of a big project (domain: 329 specs) outran
+  // Stryker's 5-minute default (run 38037093986).
+  it('gives every project an initial test run longer than the 5-minute default', () => {
+    write('libs/x/stryker.config.json', floor(0));
+
+    expect(
+      strykerOptions('x', 'libs/x', false).dryRunTimeoutMinutes,
+    ).toBeGreaterThan(5);
+  });
+
+  it('treats a missing Jest config as none and raises any other read error', () => {
+    write('libs/x/stryker.config.json', floor(0));
+    expect(strykerOptions('x', 'libs/x', false).jest).toEqual({
+      configFile: 'libs/x/jest.config.cts',
+    });
+
+    mkdirSync(join(repo, 'libs/x/jest.config.cts'));
+    expect(() => strykerOptions('x', 'libs/x', false)).toThrow('EISDIR');
+  });
+});
+
+// Scripts mutate in place: its specs that read the repository's own sources
+// or time a scan would see instrumented code (run 38132926917), so the run
+// tells them so.
+describe('markInPlace', () => {
+  it('marks an in-place run in the environment its test runners inherit', () => {
+    const env: Record<string, string | undefined> = {};
+    markInPlace({ inPlace: true }, env);
+    expect(env[IN_PLACE_ENV]).toBe('1');
+    expect(IN_PLACE_ENV).toBe('MUTATION_IN_PLACE');
+  });
+
+  it('leaves a sandboxed run unmarked', () => {
+    const env: Record<string, string | undefined> = {};
+    markInPlace({}, env);
+    markInPlace({ inPlace: false }, env);
+    expect(env).toEqual({});
+  });
+});
+
+describe('reportsDir', () => {
+  it('names the folder by project, and by shard when there is one', () => {
+    expect(reportsDir('domain')).toBe('reports/mutation/domain');
+    expect(reportsDir('domain', 'auth')).toBe('reports/mutation/domain/auth');
+  });
+});
+
+describe('projectFloor', () => {
+  it('reads the floor from the project stryker.config.json', () => {
+    write('libs/x/stryker.config.json', floor(70));
+
+    expect(projectFloor('libs/x')).toBe(70);
+  });
+
+  it('refuses a config with no floor and names the file', () => {
+    write('libs/x/stryker.config.json', JSON.stringify({ mutate: [] }));
+
+    expect(() => projectFloor('libs/x')).toThrow('libs/x/stryker.config.json');
+  });
+});
+
+describe('clearReports', () => {
+  // The cache restores the last run's reports: a job cut off before it
+  // writes its own must leave no score for the summary to take as this run's.
+  it('removes the last run score and reports, keeping the incremental file', () => {
+    for (const name of [
+      'score.json',
+      'mutation.json',
+      'index.html',
+      'incremental.json',
+    ])
+      write(`reports/mutation/x/${name}`, '{}');
+
+    clearReports('reports/mutation/x');
+
+    expect(existsSync(join(repo, 'reports/mutation/x/score.json'))).toBe(false);
+    expect(existsSync(join(repo, 'reports/mutation/x/mutation.json'))).toBe(
+      false,
+    );
+    expect(existsSync(join(repo, 'reports/mutation/x/index.html'))).toBe(false);
+    expect(existsSync(join(repo, 'reports/mutation/x/incremental.json'))).toBe(
+      true,
+    );
+  });
+
+  it('does nothing when there are no reports yet', () => {
+    expect(() => clearReports('reports/mutation/none')).not.toThrow();
+  });
+});
+
+describe('scoreRecord', () => {
+  it('counts each kind of mutant with the floor, minutes and score', () => {
+    expect(
+      scoreRecord(
+        'domain',
+        'auth',
+        ['Killed', 'Killed', 'Timeout', 'Survived', 'NoCoverage', 'Ignored'],
+        55,
+        90_000,
+      ),
+    ).toEqual({
+      floor: 55,
+      killed: 2,
+      minutes: 1.5,
+      noCoverage: 1,
+      project: 'domain',
+      score: 60,
+      shard: 'auth',
+      survived: 1,
+      timeout: 1,
+    });
+  });
+
+  it('leaves the shard empty and the score null for an unsharded run with no valid mutant', () => {
+    expect(scoreRecord('media', '', [], 85, 0)).toEqual(
+      expect.objectContaining({ score: null, shard: '' }),
     );
   });
 });

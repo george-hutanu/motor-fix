@@ -39,6 +39,30 @@ describe('ScrubSpanProcessor', () => {
     });
   });
 
+  // @traces 243-FR-015
+  it("drops the client's address and browser description from spans and events", () => {
+    const client = {
+      'client.address': '203.0.113.7',
+      'http.client_ip': '203.0.113.7',
+      'http.user_agent': 'Mozilla/5.0 Chrome/126.0',
+      'net.peer.ip': '203.0.113.7',
+      'net.peer.port': 51234,
+      'net.sock.peer.addr': '203.0.113.7',
+      'net.sock.peer.port': 51234,
+      'network.peer.address': '203.0.113.7',
+      'network.peer.port': 51234,
+      'user_agent.original': 'Mozilla/5.0 Chrome/126.0',
+    };
+    const span = tracer.startSpan('POST', {
+      attributes: { ...client, 'http.request.method': 'POST' },
+    });
+    span.addEvent('received', client);
+    span.end();
+
+    expect(exported().attributes).toEqual({ 'http.request.method': 'POST' });
+    expect(exported().events[0]!.attributes).toEqual({});
+  });
+
   it('masks personal values in the name, attributes, events and status message', () => {
     const span = tracer.startSpan('notify ana@example.ro', {
       attributes: { count: 2, 'job.data': 'to 0722 123 456' },

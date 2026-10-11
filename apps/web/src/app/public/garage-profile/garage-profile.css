@@ -121,6 +121,14 @@ h1 {
   text-align: center;
 }
 
+/* The sections stand clear of the hero and of each other. */
+.sections {
+  display: grid;
+  gap: var(--mf-space-6);
+  margin-top: var(--mf-space-6);
+  min-width: 0;
+}
+
 .sections section:empty {
   display: none;
 }

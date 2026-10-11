@@ -53,19 +53,20 @@ describe('the terms and the privacy notice', () => {
     },
   );
 
-  it('marks the Romanian text as a draft pending legal review', async () => {
-    const page = await open('/ro/privacy');
+  // @traces 243-FR-001 243-FR-013
+  it.each([
+    ['/ro/privacy', 'Versiunea', PRIVACY_VERSION],
+    ['/en/terms', 'Version', TERMS_VERSION],
+  ])(
+    '%s shows no draft note, only its version',
+    async (path, word, version) => {
+      const page = await open(path);
 
-    expect(text(page)).toContain(
-      'Text provizoriu, în curs de revizuire juridică.',
-    );
-  });
-
-  it('marks the English text as a draft pending legal review', async () => {
-    const page = await open('/en/terms');
-
-    expect(text(page)).toContain('Draft text, pending legal review.');
-  });
+      expect(page.querySelector('.draft, [role="note"]')).toBeNull();
+      expect(text(page)).not.toMatch(/provizoriu|draft|pending legal/i);
+      expect(text(page)).toContain(`${word} ${version}`);
+    },
+  );
 
   it('renders the whole text on the server', async () => {
     const page = await open('/ro/terms', 'server');

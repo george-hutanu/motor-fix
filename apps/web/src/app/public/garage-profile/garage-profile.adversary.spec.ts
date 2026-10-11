@@ -22,6 +22,7 @@ const FIXED: PublicGarageDto = {
   name: 'Service Auto Militari',
   paymentMethods: { card: false, cash: false, transfer: false },
   photos: [],
+  prices: [],
   rating: null,
   refusalPhrase: null,
   responseRate: { state: 'new' },

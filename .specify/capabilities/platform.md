@@ -72,6 +72,7 @@ features:
   - 1119-drop-tracker-import
   - 251-monitoring-backups
   - 1167-constitution-e2e-on-demand
+  - 1159-mutation-shards
   - 1168-chief-mods
 ---
 
@@ -241,13 +242,13 @@ _From 431-mutation-testing._
 
 _From 431-mutation-testing._
 
-### 431-FR-007 — A standalone CI workflow, not the pull-request workflow, MUST run every project's mutation target (or the projects named when it is started by hand) nightly on `main` and on demand, one project at a time, in incremental mode with the incremental files cached between runs, against PostgreSQL and Redis service containers like the test step's; it MUST write one score line per project into the job summary and upload the reports as an artifact.
+### 1159-FR-014 — The workflow MUST run on the cron `0 2 */3 * *` and on `workflow_dispatch` with inputs `projects`, `full` and `shards`; it MUST NOT run on pull requests.
 
-_From 431-mutation-testing._
+_From 1159-mutation-shards._
 
-### 431-FR-008 — The mutation workflow MUST fail when any project is below its floor or the job exceeds its time limit; each project's run MUST start by printing the project's name, so the failing or cut-off project is named in the output.
+### 1159-FR-019 — Each job MUST print its project (and shard) name first, so a failing or cut-off job is named in its output (kept from 431-FR-008).
 
-_From 431-mutation-testing._
+_From 1159-mutation-shards._
 
 ### 431-FR-009 — A project's `thresholds.break` MUST start at 5 points below a measured score, rounded down, where one exists, and at 0 otherwise (no spec files, or not yet measured); `low` and `high` MUST be 60 and 80.
 
@@ -1665,6 +1666,74 @@ _From 251-monitoring-backups._
 
 _From 251-monitoring-backups._
 
+### 1159-FR-001 — A plan step MUST compute the workflow's job matrix: one entry per Nx project with a `test:mutation` target, and for a project listed in `scripts/mutation-shards.json`, one entry per named shard plus one `rest` entry instead.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-002 — `scripts/mutation-shards.json` MUST map a project to named shards, each a list of that project's source folders (`x` for `x` and everything under it, `x/*` for the files directly in `x`, `*` for the files directly in `src`); a shard name is lower-case letters, digits and `-`, and a folder is a plain path (no `..`, trailing slash or glob characters); the plan MUST fail naming any folder that does not exist, any folder listed in two shards of a project, any shard named `rest`, and any shard whose job id equals another job's.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-003 — The `rest` shard of a sharded project MUST cover every mutated source file of the project that no named shard's folders contain, so that the shards of a project together contain each of its mutated files exactly once.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-004 — A shard job MUST mutate only its shard's files and MUST run only the spec files inside its shard's folders (for `rest`, the spec files outside every named shard's folders).
+
+_From 1159-mutation-shards._
+
+### 1159-FR-005 — Each matrix entry MUST carry its own job timeout, and each job's timeout MUST be at most 360 minutes and written beside the measured run time it derives from (measured time plus at least 30 %, or a figure marked provisional until the first full run measures it).
+
+_From 1159-mutation-shards._
+
+### 1159-FR-006 — Each job MUST have its own incremental-cache key and upload its own report, both named by project (and shard); with `full` set, no earlier results are restored.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-007 — A summary job MUST run after every matrix job, even when some failed, and MUST write one line per project into the job summary with the combined score (killed or timed-out mutants over valid mutants, summed over shards, as a percentage rounded to two decimals; `n/a` when the shards hold no valid mutant), the floor and the shards that ran.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-008 — The summary job MUST fail when a project whose shards all ran has a combined score under the floor read from that project's `stryker.config.json` `thresholds.break`, and when any matrix job did not succeed; it MUST NOT fail on a project whose shards did not all run only because of the partial score, nor on a project with no score (`n/a`) because of its floor. A planned job that left no `score.json` fails the summary naming the job.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-009 — A sharded job MUST disable Stryker's own break threshold; an unsharded job MUST keep it. No `thresholds.break`, `low` or `high` in any `stryker.config.json` MAY be lowered by this change.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-010 — The matrix job MUST set `max-parallel` to 5.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-011 — Every matrix job MUST have its own PostgreSQL and Redis service containers and migrate its database before mutating; integration specs MUST stay in the mutation run; Stryker's concurrency MUST be 1 for each project whose `src` holds an `*.integration.spec.ts`.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-012 — Stryker's initial test run timeout MUST be longer than its 5-minute default for every project, set in one place (30 minutes, in `scripts/mutation.ts`).
+
+_From 1159-mutation-shards._
+
+### 1159-FR-013 — The scripts project's mutation run MUST run its specs in the checked-out repository (no copied sandbox), so specs that read git see the repository; its working files and results MUST stay out of git.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-015 — The plan MUST honour `projects` (comma-separated, empty = all) and `shards` (comma-separated `project:shard`, empty = all shards of the selected projects), and MUST fail naming an unknown project, a project without a mutation target or an unknown shard.
+
+_From 1159-mutation-shards._
+
+### 1159-FR-016 — The script that reads a project's Jest options MUST ignore only a missing-file error and MUST raise every other error (ST-968).
+
+_From 1159-mutation-shards._
+
+### 1159-FR-017 — `scripts/mutation-setup.spec.ts` MUST leave the process working directory as it found it (ST-967).
+
+_From 1159-mutation-shards._
+
+### 1159-FR-018 — The PR CI paragraph of `AGENTS.md`, the `speckit-harden` skill and the `mutation-runner` agent MUST say that mutation runs in the Mutation workflow (every 3 days and on demand, sharded, one job per project or shard) and never locally, and MUST NOT describe a local run (ST-711).
+
+_From 1159-mutation-shards._
+
 ### 1168-FR-001 — The repository MUST hold one plugin at `.claude/plugins/motorfix-chief/` with a manifest, a hooks file naming one register module, and one module file per part (part 3 excepted: it shares Chief Control's one `prompt.submit` hook in `chief-control.js`, amended in the build), enabled through an in-repo marketplace entry in `.claude/settings.json`; `claude plugin validate .claude/plugins/motorfix-chief` MUST pass, and the plugin MUST carry no code or package from outside this repo.
 
 _From 1168-chief-mods._
@@ -1833,3 +1902,6 @@ _From 1168-chief-mods._
 - `745-FR-006` — removed by 1119-drop-tracker-import (2026-10-10)
 - `745-FR-007` — removed by 1119-drop-tracker-import (2026-10-10)
 - `745-FR-008` — removed by 1119-drop-tracker-import (2026-10-10)
+
+- `431-FR-007` — superseded by `1159-FR-014` (2026-10-11)
+- `431-FR-008` — superseded by `1159-FR-019` (2026-10-11)
