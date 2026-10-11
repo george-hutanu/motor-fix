@@ -4886,12 +4886,12 @@
         "properties": {
           "termsVersion": {
             "type": "string",
-            "example": "2026-10-05",
+            "example": "2026-10-11",
             "maxLength": 32
           },
           "privacyVersion": {
             "type": "string",
-            "example": "2026-10-05",
+            "example": "2026-10-11",
             "maxLength": 32
           }
         },

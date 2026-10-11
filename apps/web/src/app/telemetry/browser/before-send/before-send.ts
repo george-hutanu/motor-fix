@@ -15,8 +15,8 @@ export function viewportClass(width: number): Viewport {
 const clean = (text: string) => scrub(text.replace(URL_TAIL, '$1'));
 
 // Runs on every item before it leaves the browser: personal values masked,
-// URLs cut to their path, no session or user, the viewport class on each
-// measurement, and at most twenty errors per page load.
+// URLs cut to their path, no session, user or user-agent, the viewport class
+// on each measurement, and at most twenty errors per page load.
 export function createBeforeSend(viewport: Viewport) {
   let errors = 0;
   return (item: TransportItem): TransportItem | null => {
@@ -25,6 +25,10 @@ export function createBeforeSend(viewport: Viewport) {
     const sent = scrubDeep(item, clean);
     delete sent.meta.session;
     delete sent.meta.user;
+    // The privacy notice says the browser description never reaches
+    // monitoring; its name, version and system are enough to triage.
+    delete sent.meta.browser?.userAgent;
+    delete sent.meta.browser?.brands;
     if (sent.type === TransportItemType.MEASUREMENT) {
       const payload = sent.payload as { context?: Record<string, unknown> };
       payload.context = { ...payload.context, viewport };
