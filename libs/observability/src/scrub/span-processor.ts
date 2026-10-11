@@ -7,8 +7,22 @@ import type {
 
 import { scrub, scrubDeep } from './scrub';
 
-// Statement texts and query strings can hold any value a person typed.
-const DROPPED = ['db.query.text', 'db.statement', 'url.query'];
+// Statement texts and query strings can hold any value a person typed. The
+// client's address and browser description stay out of monitoring: the
+// privacy notice says they are used only to count views and limit abuse.
+const DROPPED = [
+  'db.query.text',
+  'db.statement',
+  'url.query',
+  'client.address',
+  'network.peer.address',
+  'network.peer.port',
+  'user_agent.original',
+  'http.client_ip',
+  'net.peer.ip',
+  'http.user_agent',
+  'net.sock.peer.addr',
+];
 
 function clean(attributes: Attributes): Attributes {
   const kept = Object.fromEntries(
