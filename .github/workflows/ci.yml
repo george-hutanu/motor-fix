@@ -133,6 +133,7 @@ jobs:
         run: |
           npm run lint:harness
           npm run test:harness
+          npm run test:mods
       # The local stack (docker-compose.yml) the PR tester boots: every image
       # still pulls, the services come up healthy and the one-shot setup creates
       # the bucket. The setup stays out of --wait, which fails when it exits

@@ -26,6 +26,8 @@
       "apps/**",
       "libs/**",
       "scripts/**",
+      ".claude/plugins/**",
+      "!.claude/plugins/**/.claude-plugin/types",
       "*.ts",
       "*.js",
       "*.json",

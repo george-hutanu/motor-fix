@@ -123,6 +123,14 @@
       }
     ]
   },
+  "extraKnownMarketplaces": {
+    "motorfix": {
+      "source": { "source": "directory", "path": "./.claude/plugins" }
+    }
+  },
+  "enabledPlugins": {
+    "motorfix-chief@motorfix": true
+  },
   "attribution": {
     "commit": "",
     "pr": ""
