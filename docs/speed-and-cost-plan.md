@@ -59,6 +59,7 @@ installs, CI OK at 675 s, of which E2E 629 s on one Playwright worker.
 | # | Change | Speed | Cost | Quality |
 |---|---|---|---|---|
 | 16 | `ci.yml` from 14 jobs to 7 runners (Checks, Unit and integration tests, E2E tests, Docker build web and api, Changes, CI OK) with 3 installs; E2E on 4 Playwright workers; `release.yml` runs one release check at a time and its `images` job writes the Docker layer cache PRs read | Run 37492214599: CI OK at 389 s (from 675 s), E2E 305 s (from 629 s), 3 installs | Half the runners per push, so fewer evening waits | Same checks, each still named in the log; a test that passes only on a retry now fails PR CI |
+| 17 | The integration suite (PostgreSQL+PostGIS and Redis) leaves every PR and every commit, as the end-to-end suite did: PR CI's "Unit tests" job has no services, an "Integration tests" job runs on demand and in the release before the images; the pre-commit hook sets `JEST_SUITE=unit` and starts no Docker stack | No service containers per PR, no compose stack per commit | Fewer runner minutes; no Docker memory on the 16 GB laptop | The suite still gates every release; `scripts/test-services.ts` keeps the by-hand run |
 
 ## Left for later
 

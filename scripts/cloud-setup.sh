@@ -19,8 +19,8 @@
 #      $PLAYWRIGHT_BROWSERS_PATH lacks it (the image sets
 #      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD, which the install clears).
 #   3. The Docker daemon up (waiting CLOUD_SETUP_DOCKER_WAIT seconds, default
-#      30), then the postgres and redis images pulled for the integration tests
-#      and the pre-commit hook (scripts/test-services.ts), unless both are
+#      30), then the postgres and redis images pulled for a by-hand run of
+#      the integration tests (scripts/test-services.ts), unless both are
 #      already present.
 #
 # It does not check CLAUDE_CODE_REMOTE (whether a cloud setup script sees it is

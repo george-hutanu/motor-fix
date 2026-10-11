@@ -1,5 +1,22 @@
 <!--
-Sync Impact Report (v3.1.0)
+Sync Impact Report (v3.2.0)
+- Version change: 3.1.0 → 3.2.0 (MINOR: Principle II and VII step 5 move the
+  integration suite (API tests on real PostgreSQL and Redis) off every PR and
+  every commit: unit tests run in CI on every PR; the integration suite runs
+  on demand (`gh workflow run ci.yml`, or locally with
+  `scripts/test-services.ts`) and in CI before every release, before anything
+  is built. The Enforcement row for `.husky/pre-commit` names the unit suite.
+  No principle or gate removed; II's "real PostgreSQL and Redis" stands)
+- Source: ST-1170, following ST-1154 and ST-1167, which did the same for the
+  end-to-end suite.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line and II
+  - ✅ CLAUDE.local.md — the version line and the pre-commit row
+  - ✅ AGENTS.md, .claude/agents/pr-tester.md, .claude/skills/speckit-pr-test,
+    .claude/scripts/pr-test/run.mjs — the integration suite on demand
+  - ✅ .specify/templates/, .specify/contexts/ — no per-PR integration claim
+
+Previous report (v3.1.0)
 - Version change: 3.0.0 → 3.1.0 (MINOR: wording only — Principle II and VII
   step 5 say where each suite runs: unit and integration tests in CI on every
   PR; the full end-to-end suite on demand (`gh workflow run ci.yml`, or
@@ -399,7 +416,9 @@ might be useful later" is not a defense.
 - Unit and API tests run on Jest from the root config, colocated with the
   source they cover (`foo.ts` / `foo.spec.ts`). API tests run against real
   PostgreSQL and Redis in containers, never mocks of either.
-- Unit and integration tests run in CI on every PR.
+- Unit tests run in CI on every PR. The integration suite (the API tests on
+  real PostgreSQL and Redis) runs on demand (`gh workflow run ci.yml`, or
+  locally) and in CI before every release, not on every PR or commit.
 - End-to-end flows run on Playwright in the app's `*-e2e` project; the three
   core flows are covered end to end before every release, against staging.
   The full end-to-end suite runs on demand (`gh workflow run ci.yml`, or
@@ -517,10 +536,10 @@ waits for the owner:
    commit: it boots the change on a GitHub Actions runner (the PR QA workflow;
    `--local` on the laptop when Actions is unavailable), tests it in a browser
    and against the API, reviews the diff against the spec and this
-   constitution, and sets the `agent-review` commit status. The unit and
-   integration suites are CI's, on every PR; the full end-to-end suite runs
-   on demand and its three core flows against staging before every release;
-   the tester runs neither. Blocking findings
+   constitution, and sets the `agent-review` commit status. The unit suites
+   are CI's, on every PR; the integration suite runs on demand and before
+   every release; the full end-to-end suite runs on demand and its three core
+   flows against staging before every release; the tester runs none of them. Blocking findings
    are fixed (tests first) and the tester runs again on the new head, at most
    `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
 6. Merge the PR when `agent-review` is success on its head commit and every
@@ -615,7 +634,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester, or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
 | IV folder rules | `scripts/structure-check.ts` (CI Checks job, `.husky/pre-commit`); `config-protection.mjs` | fails on a flat submodule or a component that is not a `<name>/` folder with external `<name>.html`/`<name>.css` unless `scripts/structure-baseline.json` lists it, on a stale baseline entry, and on an entry the base branch's baseline lacks; the hook refuses an edit that grows the baseline |
-| Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit, in a `scripts/heavy.sh` slot |
+| Full verification | `.husky/pre-commit` | identity, then the affected `typecheck` and unit `test` (`JEST_SUITE=unit`) and `npm run lint` on every real commit, in a `scripts/heavy.sh` slot; no Docker |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
 while that tool is not installed yet (before the Nx scaffold lands) rather than
@@ -693,4 +712,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 3.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-11
+**Version**: 3.2.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-11
