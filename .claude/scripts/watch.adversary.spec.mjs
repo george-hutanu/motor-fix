@@ -83,7 +83,8 @@ function fixture() {
   writeFileSync(join(repo, '.specify', '.gitignore'), 'feature.json\n');
   writeFileSync(join(repo, '.gitignore'), '.specify/**/.cache/\n.specify/run-state.json\n');
   git(repo, 'add', '.');
-  git(repo, 'commit', '-q', '-m', 'init');
+  const at = new Date(NOW).toISOString();
+  execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: repo, env: { ...process.env, GIT_COMMITTER_DATE: at, GIT_AUTHOR_DATE: at } });
   git(root, 'init', '-q', '--bare', 'origin.git');
   git(repo, 'remote', 'add', 'origin', join(root, 'origin.git'));
   git(repo, 'push', '-q', 'origin', 'main');
@@ -638,7 +639,7 @@ describe('collect against gh that misbehaves', () => {
       { number: 6, state: 'MERGED', headRefOid: sha, statusCheckRollup: [] },
       { number: 7, state: 'MERGED', headRefName: '', headRefOid: sha, statusCheckRollup: [] },
     ];
-    const report = collect(f.repo, env({ gh: () => junk, now: Date.now() + 10_000 * MIN }));
+    const report = collect(f.repo, env({ gh: () => junk, now: NOW + 10_000 * MIN }));
     const r = rowOf(report, d);
     assert.ok(r.pr === null || r.pr === undefined, JSON.stringify(r.pr));
     assert.notEqual(r.fix, 'remove');
@@ -653,7 +654,7 @@ describe('collect against gh that misbehaves', () => {
     const merged = pr({ number: 5, headRefName: '901-a', state: 'MERGED', headRefOid: sha });
     const open = pr({ number: 9, headRefName: '901-a', state: 'OPEN', headRefOid: sha });
     for (const list of [[merged, open], [open, merged]]) {
-      const report = collect(f.repo, env({ gh: () => list, now: Date.now() + 10_000 * MIN }));
+      const report = collect(f.repo, env({ gh: () => list, now: NOW + 10_000 * MIN }));
       const r = rowOf(report, a);
       assert.equal(r.pr.number, 9);
       assert.notEqual(r.fix, 'remove');
@@ -958,7 +959,7 @@ describe('holder from locks and QA runs, with real worktrees', () => {
     const f = fixture();
     const a = f.add('agent-a', '922-b');
     f.scratch(22, 4242);
-    const report = collect(f.repo, env({ gh: () => [pr({ number: 22, headRefName: '922-b', state: 'MERGED', headRefOid: head(a) })], pidAlive: () => true, now: Date.now() + 10_000 * MIN }));
+    const report = collect(f.repo, env({ gh: () => [pr({ number: 22, headRefName: '922-b', state: 'MERGED', headRefOid: head(a) })], pidAlive: () => true, now: NOW + 10_000 * MIN }));
     assert.notEqual(rowOf(report, a).fix, 'remove');
     apply(f.repo, report);
     assert.ok(existsSync(a));
@@ -1048,7 +1049,7 @@ describe('the QA cap with live claims and live runs, with real worktrees', () =>
 
 describe('--fix never harms work', () => {
   const mergedFor = (a, branch, number = 22) => pr({ number, headRefName: branch, state: 'MERGED', headRefOid: head(a) });
-  const later = () => Date.now() + 10_000 * MIN;
+  const later = () => NOW + 10_000 * MIN;
 
   it('backs up a modified tracked file, a staged file, an untracked file and a file in an untracked directory before removing', () => {
     const f = fixture();
@@ -1346,7 +1347,7 @@ describe('a pass with nothing to do writes nothing', () => {
 
   it('changes no file, lock, ref or worktree record', () => {
     const { f } = quietSetup();
-    const deps = { cwd: f.repo, ...env({ now: Date.now(), alive: (pid) => pid === 4242 }) };
+    const deps = { cwd: f.repo, ...env({ now: NOW, alive: (pid) => pid === 4242 }) };
     const before = snapshot(f.root);
     const first = run(() => main(['--fix'], deps));
     assert.equal(first.status, 0);
@@ -1357,7 +1358,7 @@ describe('a pass with nothing to do writes nothing', () => {
 
   it('writes no claim and no cache directory', () => {
     const { f, live, hand, fresh } = quietSetup();
-    run(() => main(['--fix'], { cwd: f.repo, ...env({ now: Date.now(), alive: (pid) => pid === 4242 }) }));
+    run(() => main(['--fix'], { cwd: f.repo, ...env({ now: NOW, alive: (pid) => pid === 4242 }) }));
     for (const p of [live, hand, fresh, f.repo]) assert.ok(!existsSync(join(p, '.specify', '.cache')), p);
   });
 
@@ -1383,7 +1384,7 @@ describe('a pass with nothing to do writes nothing', () => {
     const before = snapshot(f.root);
     const listBefore = listed(f);
     for (const argv of [[], ['--json']]) {
-      const { status } = run(() => main(argv, { cwd: f.repo, ...env({ gh, now: Date.now() + 10_000 * MIN }) }));
+      const { status } = run(() => main(argv, { cwd: f.repo, ...env({ gh, now: NOW + 10_000 * MIN }) }));
       assert.equal(status, 0);
     }
     assert.deepEqual(snapshot(f.root), before);
@@ -1396,7 +1397,7 @@ describe('the command, hostile arguments', () => {
     const f = fixture();
     const merged = f.add('merged', '922-merged');
     const gh = () => [pr({ number: 22, headRefName: '922-merged', state: 'MERGED', headRefOid: head(merged) })];
-    const { status } = run(() => main(['--fix', '--stale'], { cwd: f.repo, ...env({ gh, now: Date.now() + 10_000 * MIN }) }));
+    const { status } = run(() => main(['--fix', '--stale'], { cwd: f.repo, ...env({ gh, now: NOW + 10_000 * MIN }) }));
     assert.equal(status, 1);
     assert.ok(existsSync(merged));
   });
@@ -1405,7 +1406,7 @@ describe('the command, hostile arguments', () => {
     const f = fixture();
     const merged = f.add('merged', '922-merged');
     const gh = () => [pr({ number: 22, headRefName: '922-merged', state: 'MERGED', headRefOid: head(merged) })];
-    const { status } = run(() => main(['--stale', '--fix'], { cwd: f.repo, ...env({ gh, now: Date.now() + 10_000 * MIN }) }));
+    const { status } = run(() => main(['--stale', '--fix'], { cwd: f.repo, ...env({ gh, now: NOW + 10_000 * MIN }) }));
     assert.equal(status, 1);
     assert.ok(existsSync(merged));
   });
@@ -1458,7 +1459,7 @@ describe('the command, hostile arguments', () => {
     const merged = f.add('merged', '922-merged');
     lock(f, dead, DEAD_LOCK);
     const gh = () => [pr({ number: 22, headRefName: '922-merged', state: 'MERGED', headRefOid: head(merged) })];
-    const { out } = run(() => main(['--fix'], { cwd: f.repo, ...env({ gh, now: Date.now() + 10_000 * MIN }) }));
+    const { out } = run(() => main(['--fix'], { cwd: f.repo, ...env({ gh, now: NOW + 10_000 * MIN }) }));
     assert.match(out, /unlock/i);
     assert.match(out, /remove/i);
     assert.ok(out.includes('921-dead') || out.includes(dead));
@@ -1544,7 +1545,7 @@ describe('boundaries of the repository itself', () => {
     const f = fixture();
     git(f.repo, 'checkout', '-q', '-b', '921-x');
     const gh = () => [pr({ number: 21, headRefName: '921-x', isDraft: true, headRefOid: head(f.repo), statusCheckRollup: [check('FAILURE')] })];
-    const report = collect(f.repo, env({ gh, now: Date.now() + 10_000 * MIN }));
+    const report = collect(f.repo, env({ gh, now: NOW + 10_000 * MIN }));
     assert.equal(rowOf(report, f.repo).verdict, 'ok');
     assert.deepEqual(report.plan, []);
   });
