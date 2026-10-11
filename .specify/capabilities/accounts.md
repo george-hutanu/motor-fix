@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-10
+updated: 2026-10-11
 features:
   - 079-account-model
   - 082-sign-in
@@ -25,6 +25,7 @@ features:
   - 030-new-account-empty-states
   - 139-edit-my-details
   - 244-analytics-news-consent
+  - 243-terms-privacy
 ---
 
 # Capability: Accounts
@@ -405,9 +406,9 @@ _From 132-sign-up-consent._
 
 _From 132-sign-up-consent._
 
-### 132-FR-008 — `/{lang}/terms` and `/{lang}/privacy` MUST show the terms of use and the privacy notice in the address's language to anyone without an account, rendered on the server, with the text version and a notice that the text is a draft pending legal review; both MUST be listed in the sitemap for both languages, and MUST NOT scroll sideways on a 320 px phone.
+### 243-FR-013 — The texts MUST live in code with the pages that show them, not in the interface language files, add no dependency, and change no page layout: `/{lang}/terms` and `/{lang}/privacy` show the text in the address's language to anyone without an account, rendered on the server and listed in the sitemap for both languages; the page shows the title, the version label and date, and the sections (132-FR-008's layout minus the draft note), and MUST NOT scroll sideways on a 320 px phone in either language.
 
-_From 132-sign-up-consent._
+_From 243-terms-privacy._
 
 ### 563-FR-001 — The route sweep MUST call every route outside the public list with an access token that is genuine in every respect (signed with the application's secret, for an existing active account, with a valid role) except that its expiry is in the past; its role is `driver`, a role the account holds.
 
@@ -757,6 +758,50 @@ _From 139-edit-my-details._
 
 _From 139-edit-my-details._
 
+### 243-FR-001 — The terms of use and the privacy notice MUST each exist as a final text in Romanian and in English, with the same sections in the same order in both languages, each section a heading and one or more paragraphs, and no text or label anywhere on the pages or in the sign-up flow saying the text is a draft or pending legal review.
+
+_From 243-terms-privacy._
+
+### 243-FR-002 — The privacy notice MUST name the operator and the contact route for data matters (FR-011), and MUST list every kind of personal data MotorFix keeps at launch, each with why it is kept: the account (name, e-mail address, phone number, language, the sign-in methods: e-mail and password, Google, Apple, a phone number with a code sent by WhatsApp); cars (brand, model, year, fuel, odometer, due dates for ITP, RCA and rovinietă, and the number plate, kept private and shown only to the garage working on the car and on its day sheets); quote requests, quotes, bookings, the one message per request, the garage's reply, and up to 3 photos on each; the repair history, repairs logged elsewhere and their invoices, sharing the history with a garage one booking at a time, and passing a car's history to a buyer; reviews (the author shown as a first name and initial, e.g. "Andrei M."), reports and appeals; the audit history of every change, including changes made through an AI assistant later; garage legal documents and verification results; garage staff (mechanics, receptionists) and mechanics' public pages; notifications and the channel chosen for each, and the device label of a push subscription (taken from the browser description); consent records (terms, privacy notice, news, analytics) with the version accepted and when; the account's city, last activity and whether e-mail to it bounced; an unfinished garage listing with its e-mail address. Items not yet built (messages, reviews, appeals, car photos) are worded so they apply when the person uses them.
+
+_From 243-terms-privacy._
+
+### 243-FR-003 — The privacy notice MUST name every provider that processes personal data on MotorFix's behalf, each under a data processing agreement, and what it does: hosting in a European Union region (Railway); e-mail, SMS and WhatsApp messages (Brevo); file storage for photos and documents in an EU region (S3-compatible object storage); push messages through the browser vendor's push service, content end-to-end encrypted; monitoring and error reports from the servers and the browser (Grafana Cloud, EU region); web analytics only with the visitor's consent (Plausible); map tiles loaded by the browser (OpenFreeMap, which sees the visitor's connection address); address search called by MotorFix's server (Geoapify, which never sees the visitor's address); Google and Apple sign-in, as the method the person chooses. It MUST say that personal data is stored in the European Union and that, where a provider or its parent company is outside the EEA, transfers rely on the European Commission's standard contractual clauses or the EU-US Data Privacy Framework.
+
+_From 243-terms-privacy._
+
+### 243-FR-004 — The privacy notice MUST state the retention periods as the longest MotorFix keeps the data: legal documents and the audit history are kept while the garage or the account is active, then 5 years; photos are kept 90 days where that applies (quote request and reply photos; workshop photos stay while the listing shows them); account data while the account exists and, after it is closed, only as long as the law requires, closing and erasure being asked for by the contact route and handled by MotorFix until a self-service way exists; unfinished garage listings 90 days after their last change; consent records as long as needed to prove the acceptance; the anonymous profile-view data as FR-009 says.
+
+_From 243-terms-privacy._
+
+### 243-FR-005 — The privacy notice MUST state the legal basis for each use (the contract with the person for the account and the service; legal obligations for what the law requires MotorFix to keep; consent for news and for analytics, withdrawable at any time; legitimate interest for profile-view counts, the security measures and the verification of garages) and MUST list the person's rights: access, rectification, erasure, restriction, portability, objection, withdrawal of a consent without affecting what came before, and a complaint to the National Supervisory Authority for Personal Data Processing (ANSPDCP), with the contact route of FR-011 for exercising them.
+
+_From 243-terms-privacy._
+
+### 243-FR-006 — The privacy notice MUST say which security and anti-abuse measures touch personal data: requests from one connection address are counted under a one-way hash of the address, never the address, for 60 seconds (profile views, place search, assistant sign-in), 15 minutes (failed sign-ins) or 1 hour (sign-ups, password resets, consent records, listing drafts, WhatsApp sign-in codes); the address of a visitor watching a garage's live page is held in memory only while that page is open, to cap the live pages one address opens at once; the number plate is hidden from everyone but the garage working on the car. It MUST include a cookies-and-storage section: the strictly necessary sign-in cookies (the session cookie, kept up to 30 days with "remember me", else until the browser closes; the 10-minute cookies of a Google or Apple sign-in), browser storage for the analytics choice, the chosen place, an unfinished garage listing and actions waiting for a connection, and that Plausible loads only after consent.
+
+_From 243-terms-privacy._
+
+### 243-FR-007 — The terms of use MUST cover, in both languages: what MotorFix is and that garages are independent and answer for their own work and their quotes; who may create an account (a person of 18 or over, or a garage through a person entitled to act for it) and the account holder's duties (true details, one account, keeping sign-in to themselves, telling MotorFix of misuse); what drivers may do (cars, requests, bookings, repair history, sharing and transferring a history) and what garages may do (listing, quotes, day sheets, staff, mechanics' public pages); that a garage lists itself with true legal documents, that MotorFix verifies them and may approve, refuse or suspend a listing, and how a garage appeals; the review rules (only about work actually done, the author shown as a first name and initial, reports and appeals, and MotorFix's right to remove a review that breaks the rules); that MotorFix is free at launch for drivers and garages, takes no payments and is not a party to the repair contract, and that how it earns money is decided later and announced as a new version of these terms; acceptable use and what leads to suspension or closure; liability limits within what Romanian law allows; closing an account; changes to the terms, published as a new dated version; governing law (Romanian) and the contact route.
+
+_From 243-terms-privacy._
+
+### 243-FR-008 — Both texts MUST be reachable without a session from the footer of every public page and from every sign-up screen (the three that carry the tick today), in the language of the screen, at `/{lang}/terms` and `/{lang}/privacy` (132-FR-005, 132-FR-008, unchanged); this story verifies those links and fixes them only where one is missing.
+
+_From 243-terms-privacy._
+
+### 243-FR-011 — The texts MUST name "MotorFix" as the operator and the contact route that exists today (writing from the account, as the drafts say; a visitor without an account writes to the address the owner gives once the company is set up, until then the same route from a new account); the company's legal name, registration and address are added as a new version once the owner names them.
+
+_From 243-terms-privacy._
+
+### 243-FR-012 — The versions of both texts MUST change to `2026-10-11` in the one place the pages, the sign-up tick and the acceptance check read them, so that the pages show the new version, a new account's acceptance records it, and a sign-up naming the old version is refused (132-FR-001).
+
+_From 243-terms-privacy._
+
+### 243-FR-014 — The news consent (#834) and the analytics consent (#150) texts MUST be referred to from the privacy notice as separate, withdrawable consents, and the notice MUST say where each is changed (the account's notification settings or the link in each news e-mail for news, where the product changes it today; the cookie settings for analytics).
+
+_From 243-terms-privacy._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -780,3 +825,5 @@ _From 139-edit-my-details._
 - `020-FR-001` — superseded by `139-FR-004` (2026-10-10)
 - `020-FR-005` — superseded by `139-FR-004` (2026-10-10)
 - `097-FR-005` — superseded by `139-FR-003` (2026-10-10)
+
+- `132-FR-008` — superseded by `243-FR-013` (2026-10-11)

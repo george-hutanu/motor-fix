@@ -48,6 +48,15 @@ test.describe('sign in with Google @openid', () => {
     await expect(step.locator('mf-overlay-panel')).toBeVisible();
     await expect(step).toContainText('Google');
     await expect(step.getByLabel('Nume')).toHaveValue('Elena Pop');
+    // @traces 243-FR-008
+    await expect(
+      step.getByRole('link', { name: 'Termenii de utilizare' }),
+    ).toHaveAttribute('href', '/ro/terms');
+    await expect(
+      step.getByRole('link', {
+        name: 'Nota de informare privind datele personale',
+      }),
+    ).toHaveAttribute('href', '/ro/privacy');
     await step.getByRole('button', { name: 'Creează contul' }).click();
     await expect(step).toContainText('Bifează');
     await step.getByRole('checkbox').check();

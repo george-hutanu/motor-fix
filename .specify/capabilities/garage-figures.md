@@ -1,8 +1,9 @@
 ---
 capability: garage-figures
-updated: 2026-10-10
+updated: 2026-10-11
 features:
   - 143-profile-views
+  - 243-terms-privacy
 ---
 
 # Capability: garage-figures
@@ -66,3 +67,15 @@ _From 143-profile-views._
 ### 143-FR-015 — A view is a read, not a change: no audit entry, no outbox event, no notification and no live update is produced by a beacon or by the job.
 
 _From 143-profile-views._
+
+### 243-FR-009 — The privacy notice MUST include a section on profile-view counts stating: that MotorFix counts how many distinct people see a garage's public profile per day, to show the garage its reach; that a signed-in visitor is counted by their account; that a visitor without an account is counted by a one-way key computed from the connection address and the browser description under a secret that is created fresh every day (Romanian time), is kept only in short-lived memory and is discarded at that day's end; that the address and browser description are used for that key and the abuse throttle of FR-006 only, and are not stored, logged or sent to the monitoring provider; that the key is kept only in daily counters that are discarded within two days, and only the daily totals per garage and arrival source are kept thereafter; that nothing is stored on the visitor's device and nothing is read from it, so no consent is asked; that the counting rests on MotorFix's legitimate interest (GDPR Art. 6(1)(f)) in showing garages how many people saw their profile; that bots, the garage's own staff and MotorFix's administrators are not counted; and that the person may object, by the contact route of FR-011.
+
+_From 243-terms-privacy._
+
+### 243-FR-010 — Every statement of FR-009 MUST be true of the running system, and an automated test MUST pin the code facts the notice relies on: the anonymous key is a keyed one-way hash of the connection address and the browser description and nothing else; a signed-in visitor's key is the account id; the daily secret is random, 32 bytes, lives only in the in-memory store and expires at the end of its Romanian day; the daily counters expire at the midnight that ends the second day after their day; the night job writes only daily totals per garage and source; the abuse throttle keeps a one-way hash of the address for 60 seconds and no longer; no cookie or device storage is used by the beacon. Should any code fact contradict a reasonable, accurate notice, the code changes in this story so the notice is true.
+
+_From 243-terms-privacy._
+
+### 243-FR-015 — Monitoring traces sent to the monitoring provider MUST NOT carry the client's connection address or browser description (the span attributes `client.address`, `network.peer.address`, `user_agent.original`, their older names and the request-header forms of the address and browser description are dropped from span, event and link attributes before export, and the browser error reports carry no user-agent string), so the profile-view section's statement that the address and browser description are used only for the daily key holds; a test MUST pin it.
+
+_From 243-terms-privacy._

@@ -4,6 +4,14 @@ import { createBeforeSend, viewportClass } from './before-send';
 
 const meta = () => ({
   app: { name: 'web', version: 'abc1234' },
+  browser: {
+    brands: [{ brand: 'Chromium', version: '141' }],
+    mobile: false,
+    name: 'Chrome',
+    os: 'Android 15',
+    userAgent: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/141.0',
+    version: '141.0',
+  },
   page: { url: 'https://motorfix.ro/ro/garages?email=ana@example.com#top' },
   session: { attributes: { isSampled: 'true' }, id: 'Ab12Cd34' },
   user: { email: 'ana@example.com', id: 'user-1' },
@@ -121,6 +129,19 @@ describe('beforeSend', () => {
     expect(sent?.meta).not.toHaveProperty('session');
     expect(sent?.meta).not.toHaveProperty('user');
     expect(JSON.stringify(sent)).not.toMatch(/Ab12Cd34|user-1/);
+  });
+
+  // @traces 243-FR-015
+  it('sends no browser description, only its name, version and system', () => {
+    const sent = createBeforeSend('phone')(exception('boom'));
+
+    expect(sent?.meta.browser).toEqual({
+      mobile: false,
+      name: 'Chrome',
+      os: 'Android 15',
+      version: '141.0',
+    });
+    expect(JSON.stringify(sent)).not.toMatch(/Mozilla|Pixel 9|Chromium/);
   });
 
   it('keeps the view and the app version', () => {
