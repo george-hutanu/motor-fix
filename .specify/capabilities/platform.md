@@ -184,11 +184,11 @@ _From 421-monorepo-platform._
 
 ### 421-FR-026 — Local development MUST start PostgreSQL with PostGIS and Redis with one `docker compose up`.
 
-_From 421-monorepo-platform; modified by 1170-integration-on-demand._
+_From 421-monorepo-platform._
 
 ### 421-FR-027 — On every pull request CI MUST run install, typecheck, lint, unit tests, the contract check, the build of the affected projects, and a dependency audit of the production dependencies that fails on high and critical findings (the build tooling is kept current by the dependency-update pull requests instead). The API tests against real PostgreSQL and Redis (the integration suite) run on demand and before every release (1170-FR-002, 1170-FR-004).
 
-_From 421-monorepo-platform._
+_From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
 ### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
@@ -774,11 +774,11 @@ _From 678-measurable-sizing._
 
 ### 750-FR-001 — The end-to-end suite on CI MUST run its tests in parallel across the runner's cores; it runs on demand (`workflow_dispatch`, which runs every test in the suite), not on every PR, and its core flows (tagged `@core`) MUST run against staging before every release.
 
-_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand, 1170-integration-on-demand._
+_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
 
 ### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails; the end-to-end suite (750-FR-001) and the integration suite (1170-FR-002) run on demand.
 
-_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
+_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand, 1170-integration-on-demand._
 
 ### 750-FR-003 — A failing check inside a shared job MUST be identifiable by name from the job's failed log, and the other checks of that job MUST still run and report.
 
@@ -1384,11 +1384,11 @@ _From 976-integration-specs-under-load._
 
 ### 976-FR-005 — No assertion is weakened, no test is skipped or deleted, and every spec that ran before still runs; each spec file MUST keep the same number of tests, and each replaced wait or bound MUST prove the same property or a stronger one.
 
-_From 976-integration-specs-under-load; modified by 1170-integration-on-demand._
+_From 976-integration-specs-under-load._
 
 ### 976-FR-006 — CI behaviour MUST be unchanged: the same specs run with the same worker settings in the same jobs (the integration specs in the on-demand and release "Integration tests" job, 1170-FR-002); any worker-count change applies only to a by-hand run under `scripts/heavy.sh`, MUST stay above 1 worker, and is made only when the reproduction shows it is needed.
 
-_From 976-integration-specs-under-load._
+_From 976-integration-specs-under-load; modified by 1170-integration-on-demand._
 
 ### 976-FR-007 — One shared test helper in `libs/domain` MUST provide the wait-until-condition-or-deadline, with the condition's name and the deadline in its failure; every wait this change adds or replaces uses it, including the polling loops that gave up within two seconds. Loops that already wait 10 seconds or more are not load failures and stay.
 
