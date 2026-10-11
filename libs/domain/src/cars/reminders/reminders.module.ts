@@ -99,6 +99,13 @@ export class RemindersScheduler {
     );
   }
 
+  failedEvent(job: Job<CarEvent>, error: Error): void {
+    if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
+    this.logger.error(
+      `reminders lost ${job.data.kind} event ${job.data.id}: ${error.message}`,
+    );
+  }
+
   private queueNext(now: Date) {
     const next = nextRun(this.clock, now);
     return this.queue(next.day, next.at.getTime() - now.getTime());
@@ -182,10 +189,15 @@ export class RemindersModule
                 telemetry: queueTelemetry(),
               },
             );
-            // A car event that fails for good is the relay's to report.
+            // A job that fails for good is dropped (removeOnFail), so it is
+            // logged once here: a lost car event leaves its reminders as they were.
             worker.on('failed', (job, error) => {
               if (job?.name === 'daily')
                 inJob(job, () => scheduler.failed(job as Job<Daily>, error));
+              if (job?.name === 'event')
+                inJob(job, () =>
+                  scheduler.failedEvent(job as Job<CarEvent>, error),
+                );
             });
             observeWorker(worker);
             return worker;

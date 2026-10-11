@@ -597,10 +597,7 @@ describe('what an edit writes beside the car', () => {
     expect(events[0].payload).toEqual({
       carId: car.id,
       changed: expect.arrayContaining(['itpUntil', 'model', 'plate']),
-      itpUntil: '2027-11-13',
       ownerId: id,
-      rcaUntil: '2026-10-20',
-      rovinietaUntil: '2027-03-01',
     });
     expect((events[0].payload as { changed: string[] }).changed).toHaveLength(
       3,

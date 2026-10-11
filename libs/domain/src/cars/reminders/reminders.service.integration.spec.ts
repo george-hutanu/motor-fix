@@ -502,7 +502,7 @@ describe('the car events', () => {
     return {
       id: String(sequence),
       kind: 'car.updated',
-      payload: { carId, changed, ownerId: driver, ...after },
+      payload: { carId, changed, ownerId: driver },
       subjectId: carId,
     };
   };

@@ -174,6 +174,27 @@ describe('the reminders schedule at start-up', () => {
     expect(error).toHaveBeenCalledWith(expect.stringContaining('2026-11-10'));
     error.mockRestore();
   });
+
+  // @traces 092-FR-006
+  it('logs a car event that fails for good with its id and kind, not before', () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const s = scheduler('2026-11-10T07:00:00Z');
+    const job = (attemptsMade: number) =>
+      ({
+        attemptsMade,
+        data: { id: '41', kind: 'car.updated' },
+        name: 'event',
+        opts: { attempts: 6 },
+      }) as Job;
+
+    s.failedEvent(job(5), new Error('database down'));
+    expect(error).not.toHaveBeenCalled();
+    s.failedEvent(job(6), new Error('database down'));
+    expect(error).toHaveBeenCalledWith(
+      expect.stringMatching(/car\.updated.*41.*database down/),
+    );
+    error.mockRestore();
+  });
 });
 
 describe('the reminders worker with shortened days', () => {
@@ -259,10 +280,7 @@ describe('the reminders worker and the car events', () => {
         payload: {
           carId,
           changed: ['rcaUntil'],
-          itpUntil: null,
           ownerId: driver,
-          rcaUntil: '2030-01-20',
-          rovinietaUntil: null,
         },
         subjectId: carId,
       },

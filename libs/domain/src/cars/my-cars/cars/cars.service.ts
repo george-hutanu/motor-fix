@@ -304,10 +304,7 @@ export class CarsService {
         payload: {
           carId: id,
           changed,
-          itpUntil: saved.itpUntil,
           ownerId: actor.accountId,
-          rcaUntil: saved.rcaUntil,
-          rovinietaUntil: saved.rovinietaUntil,
         },
         subjectId: id,
       });

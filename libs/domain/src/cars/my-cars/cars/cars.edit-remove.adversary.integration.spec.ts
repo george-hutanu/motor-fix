@@ -258,10 +258,9 @@ describe('PATCH /cars/:id with fields it cannot take', () => {
     expect(cleared.status).toBe(200);
     expect(cleared.body.itpUntil).toBeNull();
     const payloads = (await events('car.updated')).map((e) => e.payload);
-    expect(payloads[1]).toMatchObject({
-      changed: ['itpUntil'],
-      itpUntil: null,
-    });
+    // The event names the cleared field; the worker reads the date from the car.
+    expect(payloads[1]).toMatchObject({ changed: ['itpUntil'] });
+    expect(payloads[1]).not.toHaveProperty('itpUntil');
   });
 
   it.each([[[1, 2]], ['text'], [null]])(

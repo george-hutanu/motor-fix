@@ -91,7 +91,7 @@ const updated = async (
   return {
     id: `adv-${sequence}`,
     kind: 'car.updated' as const,
-    payload: { carId, changed, ownerId: driver, ...after },
+    payload: { carId, changed, ownerId: driver },
     subjectId: carId,
   };
 };

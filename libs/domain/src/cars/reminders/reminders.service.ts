@@ -18,7 +18,7 @@ const CAR_DATES: [CarDate, DueKind][] = [
   ['rovinietaUntil', 'rovinieta'],
 ];
 
-interface CarUpdated extends Record<CarDate, string | null> {
+interface CarUpdated {
   carId: string;
   ownerId: string;
   changed: string[];
@@ -64,7 +64,9 @@ export class RemindersService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  // A new date resets what was sent for the old one, and a stage whose day
+  // A new date resets what was sent for the old one and takes a new id, since
+  // a sent stage is keyed by the reminder's id and date: a date moved away and
+  // back is reminded again. A stage whose day
   // passed before `today` (Europe/Bucharest) counts as sent: a date set late
   // never sends a stage that is already behind it. Today's stage still goes.
   async setCarDue(input: {
