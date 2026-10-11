@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { Location } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -108,6 +110,7 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ component: Blank, path: '**' }]),
+      provideLocationMocks(),
       GarageRequestsFeed,
       { provide: Overlays, useValue: { open } },
       { provide: Live, useValue: live },
@@ -120,7 +123,11 @@ async function render(
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const router = TestBed.inject(Router);
+  // As the app's bootstrap does: the router follows Back from here on.
+  router.initialNavigation();
   if (url) {
+    // A request opened in the app was opened from its origin, the entry before.
+    if (url.origin) await router.navigateByUrl(url.origin);
     await router.navigateByUrl(url.path, {
       state: url.origin ? { origin: url.origin } : {},
     });
@@ -510,6 +517,7 @@ describe('a request opened from the Cereri de ofertă view', () => {
       const feed = TestBed.inject(GarageRequestsFeed);
       const spy = jest.spyOn(feed, call).mockImplementation(() => undefined);
       open.mockReturnValueOnce(answered);
+      await router.navigateByUrl('/app/garage');
       await router.navigateByUrl('/app/garage/requests/req-2', {
         state: { origin: '/app/garage' },
       });
@@ -585,6 +593,30 @@ describe('the request’s address', () => {
     await settle();
 
     expect(router.url).toBe('/app/garage');
+  });
+
+  it('leaves no second entry of where it was opened from: Back then goes on past it', async () => {
+    let close: (value: string) => void = () => {};
+    const { router, settle } = await render({}, 'ro');
+    await router.navigateByUrl('/app/cars');
+    await router.navigateByUrl('/app/garage');
+    open.mockReturnValueOnce(
+      new Promise((r) => {
+        close = r;
+      }),
+    );
+    await router.navigateByUrl('/app/garage/requests/req-1', {
+      state: { origin: '/app/garage' },
+    });
+    await settle();
+    close('cancelled');
+    await settle();
+    expect(router.url).toBe('/app/garage');
+
+    TestBed.inject(Location).back();
+    await settle();
+
+    expect(router.url).toBe('/app/cars');
   });
 
   it('returns to the requests view when nothing says where it came from', async () => {

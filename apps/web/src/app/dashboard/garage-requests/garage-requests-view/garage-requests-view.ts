@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -53,6 +54,7 @@ export class GarageRequestsView {
     this.end,
   );
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly overlays = inject(Overlays);
   private shown: string | null = null;
 
@@ -89,8 +91,9 @@ export class GarageRequestsView {
       if (next) void this.follow(next);
       return;
     }
-    void this.router.navigateByUrl(typeof origin === 'string' ? origin : VIEW, {
-      replaceUrl: true,
-    });
+    // Opened in the app, the origin is the entry before: going back to it
+    // leaves no second one. Opened by its address, the view replaces it.
+    if (typeof origin === 'string') this.location.back();
+    else void this.router.navigateByUrl(VIEW, { replaceUrl: true });
   }
 }
