@@ -3,6 +3,7 @@
   hlmInput
   id="listing-name"
   name="name"
+  data-field="steps.1.name"
   autocomplete="organization"
   [attr.maxlength]="nameMax"
   [value]="value().name ?? ''"
@@ -20,6 +21,7 @@
   hlmInput
   id="listing-phone"
   name="phone"
+  data-field="steps.1.phone"
   type="tel"
   autocomplete="tel"
   [attr.maxlength]="phoneMax"
@@ -39,6 +41,7 @@
   hlmInput
   id="listing-known-for"
   name="knownFor"
+  data-field="steps.1.knownFor"
   rows="3"
   [attr.maxlength]="knownForMax"
   [value]="value().knownFor ?? ''"
@@ -52,22 +55,24 @@
   <p class="error" id="listing-known-for-error">{{ key | t }}</p>
 }
 
-<fieldset data-group="kind">
+<fieldset data-group="kind" data-field="steps.1.businessKind" tabindex="-1">
   <legend>{{ 'public.listing.details.kind' | t }}</legend>
   @for (kind of kinds; track kind.value) {
     <button type="button" [attr.aria-pressed]="value().businessKind === kind.value" (click)="choose(kind.value)">
       {{ kind.label | t }}
     </button>
   }
+  <p class="error" role="status" aria-live="polite">{{ errors().businessKind ? (errors().businessKind! | t) : '' }}</p>
 </fieldset>
 
 @if (value().businessKind === 'mobile') {
-  <fieldset data-group="legal">
+  <fieldset data-group="legal" data-field="steps.1.mobileLegalForm" tabindex="-1">
     <legend>{{ 'public.listing.details.legalForm' | t }}</legend>
     @for (form of legalForms; track form.value) {
       <button type="button" [attr.aria-pressed]="value().mobileLegalForm === form.value" (click)="chooseForm(form.value)">
         {{ form.label | t }}
       </button>
     }
+    <p class="error" role="status" aria-live="polite">{{ errors().mobileLegalForm ? (errors().mobileLegalForm! | t) : '' }}</p>
   </fieldset>
 }

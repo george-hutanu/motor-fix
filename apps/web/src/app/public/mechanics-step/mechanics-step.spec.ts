@@ -1,10 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import type { MechanicsSection } from '@motor-fix/contracts';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { I18n } from '@motor-fix/i18n';
 
 import { MechanicsStep } from './mechanics-step';
+import { forStep } from '../field-watch';
 
 // @traces 109-FR-011
+
+// The page's judgement of the section, as it hands it to the step.
+const judged = (value: MechanicsSection) =>
+  forStep(checkListing({ data: { steps: { '4': value } } }), 4);
 
 async function open(value: MechanicsSection = {}, language = 'ro') {
   const i18n = TestBed.inject(I18n);
@@ -12,11 +18,17 @@ async function open(value: MechanicsSection = {}, language = 'ro') {
   if (language === 'en') await i18n.use('en');
   const fixture = TestBed.createComponent(MechanicsStep);
   fixture.componentRef.setInput('value', value);
+  fixture.componentRef.setInput('problems', judged(value));
+  const shown: boolean[] = [];
+  fixture.componentInstance.value.subscribe((v) =>
+    fixture.componentRef.setInput('problems', judged(v)),
+  );
+  fixture.componentInstance.shown.subscribe((v) => shown.push(v));
   fixture.detectChanges();
   await fixture.whenStable();
   const step = fixture.nativeElement as HTMLElement;
   const last = () => fixture.componentInstance.value();
-  return { fixture, last, step };
+  return { fixture, last, shown, step };
 }
 
 type Opened = Awaited<ReturnType<typeof open>>;
@@ -42,6 +54,11 @@ const addButton = (step: HTMLElement) =>
 function typeIn({ fixture }: Opened, input: HTMLInputElement, value: string) {
   input.value = value;
   input.dispatchEvent(new Event('input'));
+  fixture.detectChanges();
+}
+
+function leaveName({ fixture }: Opened, row: HTMLElement) {
+  nameField(row).dispatchEvent(new Event('blur'));
   fixture.detectChanges();
 }
 
@@ -91,16 +108,99 @@ describe('step 4, the mechanics', () => {
     expect(opened.last()).toEqual({ mechanics: [{ name: 'Ion Marin' }] });
   });
 
+  // @traces 115-listing-checklist-FR-004 115-listing-checklist-FR-006
   it('asks for a name of two characters once the field is left', async () => {
-    const opened = await open({ mechanics: [{ name: 'I' }] });
+    const opened = await open();
+    press(opened, addButton(opened.step));
     const [row] = rows(opened.step);
+    typeIn(opened, nameField(row), 'I');
 
     expect(row.querySelector('.error')).toBeNull();
-    nameField(row).dispatchEvent(new Event('blur'));
-    opened.fixture.detectChanges();
+    leaveName(opened, row);
 
     expect(text(row.querySelector('.error'))).toBe('Scrie numele mecanicului');
     expect(nameField(row).getAttribute('aria-invalid')).toBe('true');
+    expect(nameField(row).getAttribute('aria-describedby')).toBe(
+      'listing-mechanic-error-0',
+    );
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('shows a restored wrong name at once, without leaving it', async () => {
+    const { fixture, step } = await open();
+    const restored = { mechanics: [{ name: 'I' }, { name: 'Ana Pop' }] };
+    fixture.componentRef.setInput('value', restored);
+    fixture.componentRef.setInput('problems', judged(restored));
+    fixture.detectChanges();
+
+    const [first, second] = rows(step);
+    expect(text(first.querySelector('.error'))).toBe(
+      'Scrie numele mecanicului',
+    );
+    expect(second.querySelector('.error')).toBeNull();
+  });
+
+  // @traces 115-listing-checklist-FR-004 115-listing-checklist-FR-008
+  it('shows every wrong name when sending is asked for', async () => {
+    const opened = await open();
+    press(opened, addButton(opened.step));
+    press(opened, addButton(opened.step));
+    expect(opened.step.querySelectorAll('.error')).toHaveLength(0);
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    opened.fixture.detectChanges();
+
+    expect(opened.step.querySelectorAll('.error')).toHaveLength(2);
+    expect(opened.shown.at(-1)).toBe(true);
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('follows the name once shown, and goes when it is fixed', async () => {
+    const opened = await open();
+    press(opened, addButton(opened.step));
+    const [row] = rows(opened.step);
+    leaveName(opened, row);
+    expect(text(row.querySelector('.error'))).toBe('Scrie numele mecanicului');
+
+    typeIn(opened, nameField(row), 'Ion Marin');
+
+    expect(row.querySelector('.error')).toBeNull();
+    expect(nameField(row).getAttribute('aria-invalid')).toBeNull();
+  });
+
+  // @traces 115-listing-checklist-FR-005
+  it('tells a warning without marking the name wrong', async () => {
+    const opened = await open({ mechanics: [{ name: 'Ion Marin' }] });
+    opened.fixture.componentRef.setInput('problems', {
+      errors: [],
+      warnings: [{ code: 'invalid', field: 'steps.4.mechanics[0].name' }],
+    });
+    opened.fixture.detectChanges();
+    const [row] = rows(opened.step);
+
+    expect(text(row.querySelector('.warning'))).toBe(
+      'Scrie numele mecanicului',
+    );
+    expect(nameField(row).getAttribute('aria-invalid')).toBeNull();
+    expect(opened.shown.at(-1)).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-007
+  it('says whether it shows an error, and marks each name by its row', async () => {
+    const opened = await open({
+      mechanics: [{ name: 'Ion Marin' }, { name: 'Ana Pop' }],
+    });
+
+    expect(opened.shown.at(-1)).toBe(false);
+    const second = rows(opened.step)[1];
+    typeIn(opened, nameField(second), '');
+    leaveName(opened, second);
+    expect(opened.shown.at(-1)).toBe(true);
+    expect(
+      [...opened.step.querySelectorAll('[data-field]')].map((e) =>
+        e.getAttribute('data-field'),
+      ),
+    ).toEqual(['steps.4.mechanics[0].name', 'steps.4.mechanics[1].name']);
   });
 
   it('removes a row', async () => {

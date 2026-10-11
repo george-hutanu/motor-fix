@@ -115,6 +115,23 @@ ol li {
   color: var(--mf-text-secondary);
   font-weight: 600;
 }
+/* A step with something missing, once sending was asked for or a field there shows an error; also on the phone bar. */
+.dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 var(--mf-space-2);
+  border-radius: 50%;
+  background: var(--mf-red);
+  vertical-align: middle;
+}
+.warning {
+  color: var(--mf-amber-ink);
+}
+.warning:empty {
+  display: none;
+}
 @media (min-width: 768px) {
   .page {
     grid-template-columns: minmax(12rem, 16rem) 1fr;

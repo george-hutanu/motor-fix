@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   input,
   model,
@@ -11,6 +12,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import type { ListingCheck } from '@motor-fix/contracts/listing-check';
 import type { PriceEntry } from '@motor-fix/contracts/listing-sections';
 import {
   FUELS,
@@ -44,9 +46,11 @@ import {
   toggleJob,
   untickedOf,
 } from '../brands-section';
+import { FieldWatch, NO_PROBLEMS } from '../field-watch';
 import { jobName } from '../prices-step/prices-rows';
 
 const POPULAR = 12;
+const BRANDS = 'steps.2.brands';
 // The search waits for the owner to stop typing.
 const DEBOUNCE_MS = 250;
 
@@ -56,7 +60,8 @@ type JobName = Pick<JobTypeDto, 'nameEn' | 'nameRo'>;
 
 // Step 2 of listing a garage: each brand taken, refused or left off, plus a
 // short note and a refusal phrase. It holds the draft's section and saves
-// nothing.
+// nothing; the page judges it: the chips ask for a taken brand when sending
+// is asked for, and a taken brand that gets no requests says so.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, HlmInput, HlmLabel, Lamp, TranslatePipe],
@@ -82,6 +87,21 @@ export class BrandsStep {
   readonly jobNames = input<ReadonlyMap<string, JobName>>(new Map());
   // The step the owner asks to open.
   readonly goTo = output<number>();
+  // The page's judgement of this step, and whether sending was asked for.
+  readonly problems = input<ListingCheck>(NO_PROBLEMS);
+  readonly showAll = input(false);
+  // Whether any field shows an error, for the step list's dot.
+  readonly shown = output<boolean>();
+
+  // The chips have no typing and no leaving: their error waits for sending.
+  private readonly watch = new FieldWatch();
+  protected readonly brandsError = computed(() => {
+    const message = this.watch.message(this.problems(), BRANDS, {
+      all: this.showAll(),
+      filled: false,
+    });
+    return message && !message.warning ? message.key : null;
+  });
 
   protected readonly fuelList = FUELS;
   protected readonly refOf = refOf;
@@ -113,6 +133,7 @@ export class BrandsStep {
   });
 
   constructor() {
+    effect(() => this.shown.emit(this.brandsError() !== null));
     let gone = false;
     inject(DestroyRef).onDestroy(() => {
       gone = true;
@@ -172,9 +193,21 @@ export class BrandsStep {
     return this.jobList().filter((job) => !off.includes(refOf(job))).length;
   }
 
-  // Nothing reaches a taken brand with every fuel or every job unticked.
-  protected getsNothing(id: string, fuels: Fuel[]) {
-    return !fuels.length || (this.jobList().length > 0 && !this.jobsTicked(id));
+  // A brand's place in the draft's list, which the page's judgement names.
+  protected brandPath(id: string): string | null {
+    const n = this.value().brands.findIndex((b) => b.brandId === id);
+    return n < 0 ? null : `${BRANDS}[${n}]`;
+  }
+
+  // The page's warning for a taken brand that gets no requests.
+  protected warningFor(id: string): string | null {
+    const path = this.brandPath(id);
+    if (!path) return null;
+    const message = this.watch.message(this.problems(), path, {
+      all: this.showAll(),
+      filled: true,
+    });
+    return message?.warning ? message.key : null;
   }
 
   protected tickJob(id: string, ref: string) {

@@ -3,8 +3,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
+  input,
   model,
+  output,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
@@ -26,6 +29,7 @@ import {
   type Weekday,
   type WeeklyHours,
 } from '@motor-fix/contracts/garage-hours';
+import type { ListingCheck } from '@motor-fix/contracts/listing-check';
 import {
   type PublicHolidayDto,
   PublicHolidaysService,
@@ -34,6 +38,7 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
 
 import { cut, letters } from '../brands-section';
+import { FieldWatch, NO_PROBLEMS } from '../field-watch';
 import {
   addBreak,
   addClosedDay,
@@ -59,12 +64,25 @@ type Calendar =
   | { state: 'loading' | 'down' }
   | { state: 'ready'; days: PublicHolidayDto[] };
 
-type PriceError = 'priceMissing' | 'priceRange';
+const HOURS = 'steps.5.hours';
+const PAYMENTS_FIELD = 'steps.5.payments';
+const PRICE = 'steps.5.courtesyCar.pricePerDayBani';
+
+// The draft refuses a typed price outside the range, so the page's check
+// sees none and calls it missing; the step tells the price is wrong instead.
+const priceOutOfRange = (check: ListingCheck): ListingCheck => ({
+  ...check,
+  errors: check.errors.map((problem) =>
+    problem.field === PRICE ? { ...problem, code: 'invalid' } : problem,
+  ),
+});
 
 // Step 5 of listing a garage: the weekly hours, the closed days, the
 // facilities with the courtesy car's terms, and the payment methods. It holds
 // the draft's section and saves nothing; nothing is kept until the owner
-// changes something.
+// changes something. The page judges it: the week, the payments and the
+// courtesy car's price say what is wrong once touched, or when sending is
+// asked for.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, HlmLabel, Lamp, LeiInput, TranslatePipe],
@@ -77,6 +95,11 @@ export class HoursStep {
   private readonly calendarApi = inject(PublicHolidaysService);
 
   readonly value = model<HoursSection>({});
+  // The page's judgement of this step, and whether sending was asked for.
+  readonly problems = input<ListingCheck>(NO_PROBLEMS);
+  readonly showAll = input(false);
+  // Whether any field shows an error, for the step list's dot.
+  readonly shown = output<boolean>();
 
   protected readonly times = TIMES;
   protected readonly days = WEEKDAYS;
@@ -120,13 +143,33 @@ export class HoursStep {
   protected readonly shownPrice = computed(
     () => this.outOfRange() ?? this.value().courtesyCar?.pricePerDayBani,
   );
-  // Why the paid car's price cannot stand, or null.
-  protected readonly priceError = computed((): PriceError | null => {
-    const car = this.value().courtesyCar;
-    if (!car?.paid) return null;
-    if (this.outOfRange() !== undefined) return 'priceRange';
-    if (car.pricePerDayBani === undefined) return 'priceMissing';
-    return isCourtesyPrice(car.pricePerDayBani) ? null : 'priceRange';
+
+  private readonly watch = new FieldWatch();
+  protected readonly messages = computed(() => {
+    const check = this.problems();
+    const all = this.showAll();
+    const typed = this.outOfRange() !== undefined;
+    return {
+      hours: this.watch.message(check, HOURS, { all, filled: false }),
+      payments: this.watch.message(check, PAYMENTS_FIELD, {
+        all,
+        filled: false,
+      }),
+      price: this.watch.message(typed ? priceOutOfRange(check) : check, PRICE, {
+        all,
+        filled: this.shownPrice() !== undefined,
+      }),
+    };
+  });
+  // The errors shown, a warning left out.
+  protected readonly failing = computed(() => {
+    const { hours, payments, price } = this.messages();
+    const error = (m: typeof hours) => (m && !m.warning ? m.key : null);
+    return {
+      hours: error(hours),
+      payments: error(payments),
+      price: error(price),
+    };
   });
 
   protected readonly nextHolidays = computed(() => {
@@ -138,6 +181,7 @@ export class HoursStep {
   });
 
   constructor() {
+    effect(() => this.shown.emit(Object.values(this.failing()).some(Boolean)));
     // The calendar comes with the client: a server render would drop it.
     if (isPlatformServer(inject(PLATFORM_ID))) return;
     const year = Number(this.today().slice(0, 4));
@@ -269,10 +313,6 @@ export class HoursStep {
     return this.key(`payment.${payment}`);
   }
 
-  protected priceErrorKey(error: PriceError) {
-    return this.key(`courtesy.${error}`);
-  }
-
   // The courtesy car starts free when ticked; its terms go when unticked.
   protected tick(facility: Facility) {
     const list = toggleFacility(this.ticks(), facility);
@@ -288,6 +328,7 @@ export class HoursStep {
   }
 
   protected pay(payment: Payment) {
+    this.watch.leave(PAYMENTS_FIELD);
     const list = togglePayment(this.taken(), payment);
     this.value.update(({ payments: _, ...rest }) =>
       list.length ? { ...rest, payments: list } : rest,
@@ -297,6 +338,14 @@ export class HoursStep {
   protected choosePaid(paid: boolean) {
     this.outOfRange.set(undefined);
     this.setCar(setCourtesy(this.value().courtesyCar, paid));
+  }
+
+  protected typePrice() {
+    this.watch.type(PRICE);
+  }
+
+  protected leavePrice() {
+    this.watch.leave(PRICE);
   }
 
   protected price(bani: number | undefined) {
@@ -338,7 +387,9 @@ export class HoursStep {
     this.errors.update(({ [row]: _, ...rest }) => rest);
   }
 
+  // A changed week has been touched: a week with no open day says so.
   private setHours(hours: WeeklyHours) {
+    this.watch.leave(HOURS);
     this.value.update((v) => ({ ...v, hours }));
   }
 }

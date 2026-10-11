@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { fold, type PricesSection } from '@motor-fix/contracts';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { CatalogueService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { PricesStep } from './prices-step';
 import type { MarkedBrand } from '../brands-section';
+import { forStep } from '../field-watch';
 
 // @traces 109-FR-004 109-FR-005 109-FR-006 109-FR-007 109-FR-008 109-FR-009
 
@@ -28,6 +30,10 @@ const TAKEN: MarkedBrand[] = [
 ];
 
 let search: jest.Mock;
+
+// The page's judgement of the section, as it hands it to the step.
+const judged = (value: PricesSection | undefined) =>
+  forStep(checkListing({ data: { steps: value ? { '3': value } : {} } }), 3);
 
 beforeEach(() => {
   search = jest.fn(
@@ -71,10 +77,16 @@ async function open(
   fixture.componentRef.setInput('value', value);
   fixture.componentRef.setInput('takenBrands', taken);
   fixture.componentRef.setInput('current', current);
+  fixture.componentRef.setInput('problems', judged(value));
+  fixture.componentInstance.value.subscribe((v) =>
+    fixture.componentRef.setInput('problems', judged(v)),
+  );
+  const shown: boolean[] = [];
+  fixture.componentInstance.shown.subscribe((v) => shown.push(v));
   await settle(fixture);
   const step = fixture.nativeElement as HTMLElement;
   const last = () => fixture.componentInstance.value();
-  return { fixture, last, step };
+  return { fixture, last, shown, step };
 }
 
 type Fixture = Awaited<ReturnType<typeof open>>['fixture'];
@@ -430,5 +442,175 @@ describe('step 3, the prices', () => {
     expect(names(step)).toEqual(['Diagnosis', 'Oil service', 'Front brakes']);
     await find(fixture, step, 'Headlight aim');
     expect(buttonNamed(step, 'Add “Headlight aim” as a new job')).toBeDefined();
+  });
+});
+
+describe('step 3, judged by the page', () => {
+  const restore = async (fixture: Fixture, value: PricesSection) => {
+    // The page restores the draft after its first render.
+    fixture.componentRef.setInput('value', value);
+    fixture.componentRef.setInput('problems', judged(value));
+    await settle(fixture);
+  };
+  const at = (step: HTMLElement, field: string) =>
+    step.querySelector(`[data-field="${field}"]`) as HTMLElement;
+
+  // @traces 115-listing-checklist-FR-006
+  it('shows a restored reversed range and a short proposed name at once, without leaving them', async () => {
+    const { fixture, shown, step } = await open({ jobs: [] });
+
+    await restore(fixture, {
+      jobs: [{ fromBani: 30_000, name: 'X', toBani: 20_000 }],
+      labour: { fromBani: 20_000, toBani: 10_000 },
+    });
+
+    const row = jobRows(step)[0];
+    expect(text(row.querySelector('.range + .error'))).toBe(
+      'Prețul minim trebuie să fie mai mic decât maximul',
+    );
+    expect(text(row.querySelector('.head + .error'))).toBe(
+      'Între 2 și 80 de caractere',
+    );
+    // A row drawn with the restore loses its first aria-invalid to
+    // hlmInput's host binding; the labour range is drawn before it.
+    expect(text(step.querySelector('.labour .error'))).toBe(
+      'Prețul minim trebuie să fie mai mic decât maximul',
+    );
+    expect(at(step, 'steps.3.labour.to').getAttribute('aria-invalid')).toBe(
+      'true',
+    );
+    expect(at(step, 'steps.3.labour.from').hasAttribute('aria-invalid')).toBe(
+      false,
+    );
+    expect(shown.at(-1)).toBe(true);
+  });
+
+  // @traces 115-listing-checklist-FR-002 115-listing-checklist-FR-008
+  it('shows every error at once when sending is asked for, the job list too', async () => {
+    const { fixture, shown, step } = await open({ jobs: [] });
+    expect(step.querySelector('.error')).toBeNull();
+    expect(shown).not.toContain(true);
+
+    fixture.componentRef.setInput('showAll', true);
+    await settle(fixture);
+
+    expect(text(step.querySelector('.labour .error'))).toBe(
+      'Completează prețul',
+    );
+    expect(at(step, 'steps.3.labour.from').getAttribute('aria-invalid')).toBe(
+      'true',
+    );
+    expect(text(step.querySelector('#listing-jobs-error'))).toBe(
+      'Adaugă cel puțin o lucrare cu preț',
+    );
+    expect(at(step, 'steps.3.jobs').getAttribute('aria-describedby')).toBe(
+      'listing-jobs-error',
+    );
+    expect(shown.at(-1)).toBe(true);
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('follows the value once left and lets the message go when it is fixed', async () => {
+    const { fixture, shown, step } = await open({
+      jobs: [{ fromBani: 10_000, jobTypeId: id(3), toBani: 20_000 }],
+      labour: { fromBani: 10_000, toBani: 20_000 },
+    });
+    const [from, to] = lei(jobRows(step)[0]);
+
+    await typeIn(fixture, to, '');
+    expect(jobRows(step)[0].querySelector('.error')).toBeNull();
+    await leave(fixture, from);
+    expect(text(jobRows(step)[0].querySelector('.error'))).toBe(
+      'Completează prețul',
+    );
+    expect(to.getAttribute('aria-invalid')).toBe('true');
+    expect(shown.at(-1)).toBe(true);
+
+    await typeIn(fixture, to, '50');
+    expect(text(jobRows(step)[0].querySelector('.error'))).toBe(
+      'Prețul minim trebuie să fie mai mic decât maximul',
+    );
+    await typeIn(fixture, to, '250');
+    expect(jobRows(step)[0].querySelector('.error')).toBeNull();
+    expect(to.hasAttribute('aria-invalid')).toBe(false);
+    expect(shown.at(-1)).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-005
+  it('warns of a restored wide range at once, never as invalid, and blocks nothing', async () => {
+    const { fixture, shown, step } = await open({ jobs: [] });
+
+    await restore(fixture, {
+      jobs: [{ fromBani: 10_000, jobTypeId: id(3), toBani: 50_000 }],
+      labour: { fromBani: 10_000, toBani: 20_000 },
+    });
+
+    const row = jobRows(step)[0];
+    expect(text(row.querySelector('.warning'))).toBe(
+      'Maximul e de peste 3 ori minimul. Verifică intervalul.',
+    );
+    expect(row.querySelector('.error')).toBeNull();
+    expect(step.querySelector('[aria-invalid]')).toBeNull();
+    expect(shown.at(-1)).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-007
+  it('marks every end of every range with its path, and the job list and names as groups', async () => {
+    const { step } = await open({
+      jobs: [{ jobTypeId: id(3) }, { brandId: DACIA, jobTypeId: id(3) }],
+    });
+
+    expect(
+      [...step.querySelectorAll('input[data-field]')].map((e) =>
+        e.getAttribute('data-field'),
+      ),
+    ).toEqual([
+      'steps.3.labour.from',
+      'steps.3.labour.to',
+      'steps.3.jobs[0].from',
+      'steps.3.jobs[0].to',
+      'steps.3.jobs[1].from',
+      'steps.3.jobs[1].to',
+    ]);
+    for (const field of [
+      'steps.3.jobs',
+      'steps.3.jobs[0].name',
+      'steps.3.jobs[1].name',
+    ])
+      expect(at(step, field).getAttribute('tabindex')).toBe('-1');
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('asks for the prices of a listed job left before the draft takes it', async () => {
+    const { fixture, last, step } = await open();
+
+    await leave(fixture, lei(jobRows(step)[0])[0]);
+
+    expect(last()).toBeUndefined();
+    expect(text(jobRows(step)[0].querySelector('.error'))).toBe(
+      'Completează prețul',
+    );
+    expect(jobRows(step)[1].querySelector('.error')).toBeNull();
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('forgets the rows left once a row goes, but keeps the labour range left', async () => {
+    const { fixture, step } = await open({
+      jobs: [{ jobTypeId: id(3) }, { jobTypeId: id(4) }],
+    });
+    await leave(fixture, labour(step)[0]);
+    await leave(fixture, lei(jobRows(step)[0])[0]);
+
+    (
+      jobRows(step)[0].querySelector(
+        'button[aria-label="Șterge Frâne față"]',
+      ) as HTMLButtonElement
+    ).click();
+    await settle(fixture);
+
+    expect(text(step.querySelector('.labour .error'))).toBe(
+      'Completează prețul',
+    );
+    expect(jobRows(step)[0].querySelector('.error')).toBeNull();
   });
 });

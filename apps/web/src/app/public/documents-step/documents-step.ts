@@ -2,24 +2,30 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   input,
   model,
+  output,
   signal,
 } from '@angular/core';
 import type { ListingDraftData } from '@motor-fix/contracts';
 import {
   CERTIFICATE_WINDOW_DAYS,
   DECLARED_NAME_MAX,
+  DECLARED_NAME_MIN,
   DOCUMENT_KINDS,
   type DocumentKind,
   type DraftDocuments,
   issuedWithinWindow,
 } from '@motor-fix/contracts/legal-documents';
+import type { ListingCheck } from '@motor-fix/contracts/listing-check';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput } from '@motor-fix/ui-cockpit';
 
 import { DocumentArea } from './document-area/document-area';
-import { nameError } from '../step6';
+import { FieldWatch, NO_PROBLEMS } from '../field-watch';
+
+const DECLARATION = 'declaration';
 
 type Declaration = Pick<ListingDraftData, 'declaredAt' | 'declaredByName'>;
 
@@ -33,7 +39,10 @@ function localDate(days = 0): string {
 
 // Step 6's documents, under the CUI and RAR fields: one area per kind, the
 // certificate's issue date once it has a page, then the declaration. It keeps
-// the draft's `documents` and declaration and leaves saving them to the page.
+// the draft's `documents` and declaration and leaves saving them to the page,
+// which judges them: a missing document is told under its area, and the
+// declaration once its name is left, when it opens wrong, or when sending is
+// asked for.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DocumentArea, HlmInput, TranslatePipe],
@@ -47,6 +56,11 @@ export class DocumentsStep {
   readonly kind = input<string>();
   readonly documents = model<DraftDocuments>({});
   readonly declaration = model<Declaration>({});
+  // The page's judgement of this step, and whether sending was asked for.
+  readonly problems = input<ListingCheck>(NO_PROBLEMS);
+  readonly showAll = input(false);
+  // Whether any field shows an error, for the step list's dot.
+  readonly shown = output<boolean>();
 
   protected readonly kinds = DOCUMENT_KINDS;
   protected readonly mobile = computed(() => this.kind() === 'mobile');
@@ -74,13 +88,43 @@ export class DocumentsStep {
   protected readonly nameMax = DECLARED_NAME_MAX;
   // What was typed, until the draft holds it: a name too short is not kept.
   private readonly typedName = signal<string | null>(null);
-  private readonly nameLeft = signal(false);
+  private readonly watch = new FieldWatch();
   protected readonly name = computed(
     () => this.typedName() ?? this.declaration().declaredByName ?? '',
   );
-  protected readonly nameError = computed(() =>
-    nameError(this.name(), this.ticked(), this.nameLeft()),
+  protected readonly declarationMessage = computed(() =>
+    this.watch.message(this.problems(), DECLARATION, {
+      all: this.showAll(),
+      filled: !!this.name().trim(),
+    }),
   );
+  protected readonly declarationError = computed(() => {
+    const message = this.declarationMessage();
+    return message && !message.warning ? message.key : null;
+  });
+  // A missing document only tells; it never stops the listing.
+  protected readonly documentMessages = computed(() => {
+    const check = this.problems();
+    const all = this.showAll();
+    return Object.fromEntries(
+      DOCUMENT_KINDS.map((kind) => [
+        kind,
+        this.watch.message(check, `documents.${kind}`, { all, filled: false }),
+      ]),
+    );
+  });
+
+  constructor() {
+    effect(() =>
+      this.shown.emit(
+        !!this.declarationError() ||
+          this.dateError() ||
+          Object.values(this.documentMessages()).some(
+            (message) => message && !message.warning,
+          ),
+      ),
+    );
+  }
 
   protected tick(on: boolean) {
     const { declaredAt: _, ...rest } = this.declaration();
@@ -91,14 +135,16 @@ export class DocumentsStep {
 
   protected typeName(value: string) {
     this.typedName.set(value);
+    this.watch.type(DECLARATION);
     const name = value.trim();
     const { declaredByName: _, ...rest } = this.declaration();
-    const whole = nameError(name, true, true) === null;
+    const whole =
+      name.length >= DECLARED_NAME_MIN && name.length <= DECLARED_NAME_MAX;
     this.declaration.set(whole ? { ...rest, declaredByName: name } : rest);
   }
 
   protected leaveName() {
-    this.nameLeft.set(true);
+    this.watch.leave(DECLARATION);
   }
 
   protected pagesOf(kind: DocumentKind): string[] {

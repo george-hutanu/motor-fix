@@ -1,5 +1,12 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { isListingDraftData } from '@motor-fix/contracts/listing-sections';
-import type { ListingDraftDto } from '@motor-fix/data-access';
+import {
+  type ListingDraftDto,
+  ListingDraftsService,
+} from '@motor-fix/data-access';
+import { I18n } from '@motor-fix/i18n';
 
 import {
   BROWSER_SAVE_MS,
@@ -15,6 +22,7 @@ import {
   startAgain,
   writeDraft,
 } from './draft';
+import { DraftKeeper } from './draft-keeper';
 
 const NOW = new Date('2026-10-07T12:00:00Z');
 
@@ -297,4 +305,143 @@ describe('a stored copy whose form data the server would refuse', () => {
       expect(restored).toBe(isListingDraftData(data));
     },
   );
+});
+
+describe('DraftKeeper before the check', () => {
+  const missing = [{ code: 'required', field: 'steps.1.phone' }];
+  const told = [{ code: 'document_missing', field: 'documents.x' }];
+  let api: Record<string, jest.Mock>;
+
+  function keeper(draft: Partial<BrowserDraft> = {}) {
+    api = {
+      listingDraftsControllerCheck: jest.fn().mockResolvedValue({
+        warnings: told,
+      }),
+      listingDraftsControllerCreate: jest.fn().mockResolvedValue({
+        email: 'ana@service.ro',
+        id: 'd1',
+        token: 't1',
+      }),
+      listingDraftsControllerSave: jest.fn().mockResolvedValue({ id: 'd1' }),
+      listingDraftsControllerSendLink: jest.fn().mockResolvedValue({}),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        DraftKeeper,
+        { provide: ListingDraftsService, useValue: api },
+        { provide: I18n, useValue: { language: () => 'ro' } },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+      ],
+    });
+    const kept = TestBed.inject(DraftKeeper);
+    kept.draft.set(entry({ email: 'ana@service.ro', ...draft }));
+    return kept;
+  }
+
+  const refusal = (status: number, error: object = {}) =>
+    new HttpErrorResponse({ error, status });
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  // @traces 115-listing-checklist-FR-009
+  it('creates the server copy when there is none, and sends no link', async () => {
+    const kept = keeper({ dirty: true });
+
+    expect(await kept.flush()).toBe(true);
+    expect(api['listingDraftsControllerCreate']).toHaveBeenCalledTimes(1);
+    expect(api['listingDraftsControllerSendLink']).not.toHaveBeenCalled();
+    expect(kept.draft().draftId).toBe('d1');
+  });
+
+  // @traces 115-listing-checklist-FR-009
+  it('saves a changed server copy, and leaves a clean one alone', async () => {
+    const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+
+    expect(await kept.flush()).toBe(true);
+    expect(api['listingDraftsControllerSave']).toHaveBeenCalledTimes(1);
+    expect(kept.draft().dirty).toBe(false);
+    expect(await kept.flush()).toBe(true);
+    expect(api['listingDraftsControllerSave']).toHaveBeenCalledTimes(1);
+    expect(api['listingDraftsControllerSendLink']).not.toHaveBeenCalled();
+  });
+
+  // @traces 115-listing-checklist-FR-011
+  it('answers false on a refused save, keeping what was typed', async () => {
+    const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+    api['listingDraftsControllerSave'].mockRejectedValue(refusal(500));
+
+    expect(await kept.flush()).toBe(false);
+    expect(kept.draft().data).toEqual(entry().data);
+  });
+
+  // @traces 115-listing-checklist-FR-009
+  it('waits for a save already on its way, then saves what came after', async () => {
+    const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+    let answer: (value: object) => void = () => undefined;
+    api['listingDraftsControllerSave'].mockReturnValueOnce(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    kept.leaveEmail();
+    kept.section('1', { name: 'Service Ionescu' });
+
+    const flushed = kept.flush();
+    answer({ id: 'd1' });
+
+    expect(await flushed).toBe(true);
+    expect(api['listingDraftsControllerSave']).toHaveBeenCalledTimes(2);
+    expect(kept.draft().dirty).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-010
+  it('checks only after the flush, and tells complete with its warnings', async () => {
+    const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+
+    expect(await kept.check()).toEqual({ kind: 'complete', warnings: told });
+    const [saved] = api['listingDraftsControllerSave'].mock.invocationCallOrder;
+    const [checked] =
+      api['listingDraftsControllerCheck'].mock.invocationCallOrder;
+    expect(saved).toBeLessThan(checked as number);
+  });
+
+  // @traces 115-listing-checklist-FR-010
+  it('tells the server list on a 422', async () => {
+    const kept = keeper({ draftId: 'd1', token: 't1' });
+    api['listingDraftsControllerCheck'].mockRejectedValue(
+      refusal(422, {
+        code: 'listing_incomplete',
+        errors: missing,
+        warnings: told,
+      }),
+    );
+
+    expect(await kept.check()).toEqual({
+      errors: missing,
+      kind: 'incomplete',
+      warnings: told,
+    });
+  });
+
+  // @traces 115-listing-checklist-FR-011
+  it('sends no check when the flush fails, and fails on any other answer', async () => {
+    const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+    api['listingDraftsControllerSave'].mockRejectedValueOnce(refusal(0));
+
+    expect(await kept.check()).toEqual({ kind: 'failed' });
+    expect(api['listingDraftsControllerCheck']).not.toHaveBeenCalled();
+
+    api['listingDraftsControllerCheck'].mockRejectedValue(refusal(500));
+    expect(await kept.check()).toEqual({ kind: 'failed' });
+    expect(kept.note()).toEqual({ key: 'notSaved' });
+  });
+
+  // @traces 115-listing-checklist-FR-011
+  it('moves the view when the draft is gone or already sent', async () => {
+    const kept = keeper({ draftId: 'd1', token: 't1' });
+    api['listingDraftsControllerCheck'].mockRejectedValueOnce(refusal(409));
+
+    expect(await kept.check()).toEqual({ kind: 'failed' });
+    expect(kept.view()).toBe('sent');
+  });
 });

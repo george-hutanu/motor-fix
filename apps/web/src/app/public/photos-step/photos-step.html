@@ -2,6 +2,9 @@
 <p class="hint">{{ 'public.listing.photos.hint' | t }}</p>
 <div
   class="drop"
+  data-field="files"
+  tabindex="-1"
+  [attr.aria-describedby]="message() ? 'photos-error' : null"
   [class.over]="over()"
   (dragenter)="over.set(ready())"
   (dragover)="$event.preventDefault()"
@@ -24,6 +27,9 @@
     {{ 'public.listing.photos.choose' | t }}
   </button>
 </div>
+@if (message(); as said) {
+  <p id="photos-error" [class]="said.warning ? 'warning' : 'error'" role="status">{{ said.key | t }}</p>
+}
 @if (refused()) {
   <p class="error" role="status">{{ 'public.listing.photos.refused' | t }}</p>
 }

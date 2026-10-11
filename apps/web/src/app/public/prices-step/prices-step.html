@@ -1,35 +1,46 @@
 <p class="hint">{{ 'public.listing.prices.hint' | t }}</p>
 <p class="hint">{{ 'public.listing.prices.guide' | t }}</p>
 
-<ng-template #range let-ends="ends" let-judged="judged" let-name="name" let-set="set" let-key="key">
+<ng-template #range let-ends="ends" let-path="path" let-name="name" let-set="set">
+  @let judged = rangeOf(path);
   <div class="range">
     <input
       hlmInput
       type="text"
       autocomplete="off"
+      [attr.data-field]="path + '.from'"
       [mfLei]="ends?.fromBani"
-      (mfLeiChange)="set({ fromBani: $event })"
-      (blur)="leave(key)"
+      (mfLeiChange)="type(path, 'from'); set({ fromBani: $event })"
+      (blur)="leave(path)"
       [attr.aria-label]="name + ', ' + ('public.listing.prices.from' | t)"
-      [attr.aria-invalid]="judged.field === 'from' ? true : null"
+      [attr.aria-invalid]="judged.from ? true : null"
     />
     <span aria-hidden="true">–</span>
     <input
       hlmInput
       type="text"
       autocomplete="off"
+      [attr.data-field]="path + '.to'"
       [mfLei]="ends?.toBani"
-      (mfLeiChange)="set({ toBani: $event })"
-      (blur)="leave(key)"
+      (mfLeiChange)="type(path, 'to'); set({ toBani: $event })"
+      (blur)="leave(path)"
       [attr.aria-label]="name + ', ' + ('public.listing.prices.to' | t)"
-      [attr.aria-invalid]="judged.field === 'to' ? true : null"
+      [attr.aria-invalid]="judged.to ? true : null"
     />
     <span class="unit">{{ 'public.listing.prices.lei' | t }}</span>
   </div>
-  @if (judged.error) {
-    <p class="error" role="alert">{{ judged.error | t }}</p>
-  } @else if (judged.wide) {
-    <p class="warning">{{ 'public.listing.prices.wideRange' | t }}</p>
+  @if (judged.shown; as message) {
+    @if (message.warning) {
+      <p class="warning">{{ message.key | t }}</p>
+    } @else {
+      <p class="error" role="alert">{{ message.key | t }}</p>
+    }
+  }
+</ng-template>
+
+<ng-template #named let-path="path">
+  @if (error(path + '.name'); as key) {
+    <p class="error" role="alert">{{ key | t }}</p>
   }
 </ng-template>
 
@@ -38,20 +49,25 @@
   <ng-container
     *ngTemplateOutlet="range; context: {
       ends: section().labour,
-      judged: labour(),
+      path: 'steps.3.labour',
       name: ('public.listing.prices.labour' | t),
-      set: setLabour.bind(this),
-      key: 'labour'
+      set: setLabour.bind(this)
     }"
   />
 </div>
 
 <p class="title">{{ 'public.listing.prices.jobs' | t }}</p>
-<ul class="jobs">
+<ul
+  class="jobs"
+  data-field="steps.3.jobs"
+  tabindex="-1"
+  [attr.aria-describedby]="jobsError() ? 'listing-jobs-error' : null"
+>
   @for (row of rows(); track row.index) {
     @let name = nameOf(row.entry);
+    @let path = jobPath(row.index);
     <li class="job">
-      <div class="head">
+      <div class="head" [attr.data-field]="path + '.name'" tabindex="-1">
         <span class="name">{{ name }}</span>
         @if (row.entry.name !== undefined) {
           <span class="pending">{{ 'public.listing.prices.pending' | t }}</span>
@@ -65,13 +81,13 @@
           ×
         </button>
       </div>
+      <ng-container *ngTemplateOutlet="named; context: { path: path }" />
       <ng-container
         *ngTemplateOutlet="range; context: {
           ends: row.entry,
-          judged: judged(row.entry, row.index),
+          path: path,
           name: name,
-          set: setEntry.bind(this, row.index),
-          key: '' + row.index
+          set: setEntry.bind(this, row.index)
         }"
       />
       @if (row.brands.length || offer(row.index).length) {
@@ -80,8 +96,9 @@
           <ul class="brands">
             @for (brand of row.brands; track brand.index) {
               @let label = brandName(brand.entry);
+              @let brandPath = jobPath(brand.index);
               <li class="brand">
-                <div class="head">
+                <div class="head" [attr.data-field]="brandPath + '.name'" tabindex="-1">
                   <span class="name">{{ label }}</span>
                   <button
                     type="button"
@@ -92,13 +109,13 @@
                     ×
                   </button>
                 </div>
+                <ng-container *ngTemplateOutlet="named; context: { path: brandPath }" />
                 <ng-container
                   *ngTemplateOutlet="range; context: {
                     ends: brand.entry,
-                    judged: judged(brand.entry, brand.index),
+                    path: brandPath,
                     name: name + ' · ' + label,
-                    set: setEntry.bind(this, brand.index),
-                    key: '' + brand.index
+                    set: setEntry.bind(this, brand.index)
                   }"
                 />
               </li>
@@ -114,6 +131,9 @@
     </li>
   }
 </ul>
+@if (jobsError(); as key) {
+  <p class="error" id="listing-jobs-error" role="alert">{{ key | t }}</p>
+}
 
 <button hlmBtn variant="secondary" type="button" [disabled]="full()" (click)="toSearch()">
   {{ 'public.listing.prices.addJob' | t }}

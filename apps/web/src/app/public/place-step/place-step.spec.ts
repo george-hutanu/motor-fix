@@ -5,6 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { BusinessKind, PlaceSection } from '@motor-fix/contracts';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
@@ -15,6 +16,16 @@ import {
   type Shown,
 } from './place-map';
 import { PlaceStep } from './place-step';
+import { forStep } from '../field-watch';
+
+// The page's judgement of the place, as it hands it to the step.
+const judged = (place: PlaceSection, businessKind?: BusinessKind) =>
+  forStep(
+    checkListing({
+      data: { steps: { '1': { businessKind }, '5': { place } } },
+    }),
+    5,
+  );
 
 type Suggestion = {
   label: string;
@@ -71,11 +82,17 @@ async function open(
   const fixture = TestBed.createComponent(PlaceStep);
   fixture.componentRef.setInput('value', value);
   fixture.componentRef.setInput('businessKind', businessKind);
+  fixture.componentRef.setInput('problems', judged(value, businessKind));
   const emitted: PlaceSection[] = [];
-  fixture.componentInstance.value.subscribe((v) => emitted.push(v));
+  const shownErrors: boolean[] = [];
+  fixture.componentInstance.value.subscribe((v) => {
+    emitted.push(v);
+    fixture.componentRef.setInput('problems', judged(v, businessKind));
+  });
+  fixture.componentInstance.shown.subscribe((v) => shownErrors.push(v));
   await settle(fixture);
   const step = fixture.nativeElement as HTMLElement;
-  return { emitted, fixture, step };
+  return { emitted, fixture, shownErrors, step };
 }
 
 type Opened = Awaited<ReturnType<typeof open>>;
@@ -380,6 +397,119 @@ describe('step 5, the place', () => {
     expect(text(opened.step.querySelector('.map-area'))).toContain(
       'Adresa trebuie să fie în România',
     );
+  });
+
+  // @traces 115-listing-checklist-FR-003 115-listing-checklist-FR-006
+  it('asks for the address once the field is left, and not before', async () => {
+    const opened = await open();
+    const field = address(opened.step);
+
+    expect(opened.step.querySelector('#place-address-error')).toBeNull();
+    field.dispatchEvent(new Event('blur'));
+    await settle(opened.fixture);
+
+    expect(text(opened.step.querySelector('#place-address-error'))).toBe(
+      'Alege adresa service‑ului',
+    );
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(described(opened.step, field)).toContain(
+      'Alege adresa service‑ului',
+    );
+    expect(opened.shownErrors.at(-1)).toBe(true);
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('follows the address once shown, and goes when it is filled', async () => {
+    const opened = await open();
+    address(opened.step).dispatchEvent(new Event('blur'));
+    await settle(opened.fixture);
+
+    await type(opened, 'Strada Exemplu 1', 0);
+
+    expect(opened.step.querySelector('#place-address-error')).toBeNull();
+    expect(address(opened.step).getAttribute('aria-invalid')).toBeNull();
+    expect(opened.shownErrors.at(-1)).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('shows a restored pin outside Romania at once', async () => {
+    const opened = await open();
+    const restored = { address: STEFAN.label, lat: 48.2, lng: 16.37 };
+    opened.fixture.componentRef.setInput('value', restored);
+    opened.fixture.componentRef.setInput('problems', judged(restored));
+    await settle(opened.fixture);
+
+    expect(text(opened.step.querySelector('#place-outside'))).toBe(
+      'Adresa trebuie să fie în România',
+    );
+    expect(
+      opened.step.querySelector('.map')?.getAttribute('aria-describedby'),
+    ).toBe('place-outside');
+  });
+
+  // @traces 115-listing-checklist-FR-003 115-listing-checklist-FR-008
+  it('asks a workshop for every place field when sending is asked for', async () => {
+    const opened = await open();
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    await settle(opened.fixture);
+
+    expect(text(opened.step.querySelector('#place-address-error'))).toBe(
+      'Alege adresa service‑ului',
+    );
+    expect(text(opened.step.querySelector('#place-outside'))).toBe(
+      'Alege adresa din listă sau fixeaz‑o pe hartă',
+    );
+    expect(opened.shownErrors.at(-1)).toBe(true);
+  });
+
+  // @traces 115-listing-checklist-FR-003 115-listing-checklist-FR-008
+  it('asks a mobile mechanic for the seat in the seat texts, the default radius standing in', async () => {
+    const opened = await open({}, 'mobile');
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    await settle(opened.fixture);
+
+    expect(text(opened.step.querySelector('#place-address-error'))).toBe(
+      'Alege adresa sediului înregistrat',
+    );
+    expect(text(opened.step.querySelector('#place-outside'))).toBe(
+      'Alege sediul din listă sau fixeaz‑l pe hartă',
+    );
+    const area = radius(opened.step) as HTMLInputElement;
+    expect(area.value).toBe('20');
+    expect(area.getAttribute('aria-invalid')).toBeNull();
+  });
+
+  // @traces 115-listing-checklist-FR-005
+  it('tells a warning without marking the field wrong', async () => {
+    const opened = await open({ address: STEFAN.label });
+    opened.fixture.componentRef.setInput('problems', {
+      errors: [],
+      warnings: [{ code: 'required', field: 'steps.5.place.address' }],
+    });
+    await settle(opened.fixture);
+
+    const note = opened.step.querySelector('#place-address-error');
+    expect(note?.classList.contains('warning')).toBe(true);
+    expect(address(opened.step).getAttribute('aria-invalid')).toBeNull();
+    expect(opened.shownErrors.at(-1)).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-007
+  it('marks each judged control by its path', async () => {
+    const opened = await open({}, 'mobile');
+
+    expect(
+      [...opened.step.querySelectorAll('[data-field]')].map((e) =>
+        e.getAttribute('data-field'),
+      ),
+    ).toEqual([
+      'steps.5.place.address',
+      'steps.5.place.lat',
+      'steps.5.place.radiusKm',
+    ]);
+    expect(opened.shownErrors.at(-1)).toBe(false);
   });
 
   it('says the search is down and keeps the field and the manual pin', async () => {

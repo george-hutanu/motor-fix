@@ -4,10 +4,17 @@ import { join } from 'node:path';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import type { HoursSection } from '@motor-fix/contracts/garage-hours';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { PublicHolidaysService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { HoursStep } from './hours-step';
+import { forStep } from '../field-watch';
+
+// The page's judgement of the section, as it hands it to the step.
+const judged = (value: HoursSection) =>
+  forStep(checkListing({ data: { steps: { '5': { ...value } } } }), 5);
 
 const CALENDAR: Record<
   number,
@@ -47,9 +54,15 @@ async function open(language: 'ro' | 'en' = 'ro') {
   await i18n.enter('public');
   if (language === 'en') await i18n.use('en');
   const fixture = TestBed.createComponent(HoursStep);
+  fixture.componentRef.setInput('problems', judged({}));
+  const shown: boolean[] = [];
+  fixture.componentInstance.value.subscribe((v) =>
+    fixture.componentRef.setInput('problems', judged(v)),
+  );
+  fixture.componentInstance.shown.subscribe((v) => shown.push(v));
   await settle(fixture);
   const step = fixture.nativeElement as HTMLElement;
-  return { fixture, i18n, step };
+  return { fixture, i18n, shown, step };
 }
 
 type Fixture = Awaited<ReturnType<typeof open>>['fixture'];
@@ -99,6 +112,12 @@ async function type(
   field.value = value;
   field.dispatchEvent(new Event('input'));
   field.dispatchEvent(new Event('change'));
+  await settle(fixture);
+}
+
+async function blur(fixture: Fixture, element: HTMLElement | null) {
+  if (!element) throw new Error('no element');
+  element.dispatchEvent(new Event('blur'));
   await settle(fixture);
 }
 
@@ -631,8 +650,15 @@ describe('step 5, the payment methods', () => {
     expect(fixture.componentInstance.value().payments).toEqual(['transfer']);
   });
 
-  it('says a payment method is needed while none is ticked', async () => {
+  // @traces 115-listing-checklist-FR-006
+  it('says a payment method is needed once the last one is unticked', async () => {
     const { fixture, step } = await open();
+    expect(statuses(step)).not.toContain(
+      'Alege cel puțin o modalitate de plată',
+    );
+
+    await click(fixture, payChip(step, 'Card'));
+    await click(fixture, payChip(step, 'Card'));
 
     expect(statuses(step)).toContain('Alege cel puțin o modalitate de plată');
     const error = step.querySelector(
@@ -725,21 +751,32 @@ describe('step 5, the courtesy car', () => {
     expect(fixture.componentInstance.value()).not.toHaveProperty('courtesyCar');
   });
 
-  it('shows a field error tied to the price while paid has no price', async () => {
+  // @traces 115-listing-checklist-FR-006
+  it('shows a field error tied to the price once a paid car has none and the field is left', async () => {
     const { fixture, step } = await open();
     await choosePaid(fixture, step);
+    expect(describedBy(step, price(step))).toBeNull();
+
+    await blur(fixture, price(step));
 
     const error = describedBy(step, price(step));
     expect(error?.getAttribute('role')).toBe('status');
-    expect(text(error)).not.toBe('');
+    expect(text(error)).toBe('Scrie prețul pe zi');
+    expect(price(step)?.getAttribute('aria-invalid')).toBe('true');
   });
 
+  // @traces 115-listing-checklist-FR-006
   it('shows a field error for a price over 2,000 lei and clears it for a price in range', async () => {
     const { fixture, step } = await open();
     await choosePaid(fixture, step);
 
     await type(fixture, price(step), '2001');
+    expect(describedBy(step, price(step))).toBeNull();
+    await blur(fixture, price(step));
     expect(describedBy(step, price(step))?.getAttribute('role')).toBe('status');
+    expect(text(describedBy(step, price(step)))).toBe(
+      'Prețul pe zi e între 1 și 2.000 lei',
+    );
 
     await type(fixture, price(step), '2000');
     expect(describedBy(step, price(step))).toBeNull();
@@ -755,6 +792,7 @@ describe('step 5, the courtesy car', () => {
       await choosePaid(fixture, step);
 
       await type(fixture, price(step), typed);
+      await blur(fixture, price(step));
 
       expect(fixture.componentInstance.value().courtesyCar).toEqual({
         paid: true,
@@ -792,6 +830,117 @@ describe('step 5, the courtesy car', () => {
     expect(radio(step, 'Paid')?.checked).toBe(true);
     expect(text(price(step)!.closest('label'))).toContain('Price per day');
     expect(price(step)?.value).toBe('120');
+  });
+});
+
+const CLOSED_WEEK = {
+  fri: [],
+  mon: [],
+  sat: [],
+  sun: [],
+  thu: [],
+  tue: [],
+  wed: [],
+};
+const field = (step: HTMLElement, path: string) =>
+  step.querySelector<HTMLElement>(`[data-field="${path}"]`);
+
+describe('step 5, the page judges the hours', () => {
+  // @traces 115-listing-checklist-FR-002
+  it('shows every error at once when sending is asked for', async () => {
+    const { fixture, shown, step } = await open();
+    const value: HoursSection = {
+      courtesyCar: { paid: true },
+      facilities: ['courtesy_car'],
+      hours: CLOSED_WEEK,
+    };
+    fixture.componentInstance.value.set(value);
+    await settle(fixture);
+    expect(shown.at(-1)).toBe(false);
+
+    fixture.componentRef.setInput('showAll', true);
+    await settle(fixture);
+
+    expect(
+      text(field(step, 'steps.5.hours')?.querySelector('#hours-error')),
+    ).toBe('Deschide cel puțin o zi pe săptămână');
+    expect(
+      text(field(step, 'steps.5.payments')?.querySelector('#payments-error')),
+    ).toBe('Alege cel puțin o modalitate de plată');
+    expect(text(describedBy(step, price(step)))).toBe('Scrie prețul pe zi');
+    expect(shown.at(-1)).toBe(true);
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('shows a restored wrong price at once, without leaving it', async () => {
+    const { fixture, step } = await open();
+
+    fixture.componentInstance.value.set({
+      courtesyCar: { paid: true, pricePerDayBani: 300_000 },
+      facilities: ['courtesy_car'],
+    });
+    await settle(fixture);
+
+    expect(text(describedBy(step, price(step)))).toBe(
+      'Prețul pe zi e între 1 și 2.000 lei',
+    );
+  });
+
+  // @traces 115-listing-checklist-FR-006
+  it('says the week needs an open day once every day is closed, and stops when one opens', async () => {
+    const { fixture, shown, step } = await open();
+    await openByDay(fixture, step);
+    for (const day of ['mon', 'tue', 'wed', 'thu', 'fri'])
+      await click(fixture, tick(step, `${day}-closed`));
+
+    const week = field(step, 'steps.5.hours');
+    expect(text(week?.querySelector('.error'))).toBe(
+      'Deschide cel puțin o zi pe săptămână',
+    );
+    expect(week?.getAttribute('aria-describedby')).toBe('hours-error');
+    expect(shown.at(-1)).toBe(true);
+
+    await click(fixture, tick(step, 'sun-closed'));
+    expect(week?.querySelector('.error')).toBeNull();
+    expect(shown.at(-1)).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-005
+  it('renders a warning without marking the field wrong', async () => {
+    const { fixture, step } = await open();
+    await choosePaid(fixture, step);
+
+    fixture.componentRef.setInput('problems', {
+      errors: [],
+      warnings: [
+        { code: 'invalid', field: 'steps.5.courtesyCar.pricePerDayBani' },
+      ],
+    });
+    await settle(fixture);
+
+    const note = describedBy(step, price(step));
+    expect(note?.classList).toContain('warning');
+    expect(note?.classList).not.toContain('error');
+    expect(price(step)?.getAttribute('aria-invalid')).toBeNull();
+  });
+
+  // @traces 115-listing-checklist-FR-007
+  it('marks the week, the payments and the price with their paths', async () => {
+    const { fixture, step } = await open();
+    await choosePaid(fixture, step);
+
+    expect(
+      [...step.querySelectorAll('[data-field]')].map((e) =>
+        e.getAttribute('data-field'),
+      ),
+    ).toEqual([
+      'steps.5.hours',
+      'steps.5.courtesyCar.pricePerDayBani',
+      'steps.5.payments',
+    ]);
+    for (const group of ['steps.5.hours', 'steps.5.payments'])
+      expect(field(step, group)?.getAttribute('tabindex')).toBe('-1');
+    expect(price(step)?.tagName).toBe('INPUT');
   });
 });
 

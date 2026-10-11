@@ -13,11 +13,17 @@
     }
   </ul>
 }
-<ul class="chips" [attr.aria-label]="'public.listing.brands.chips' | t">
+<ul
+  class="chips"
+  data-field="steps.2.brands"
+  tabindex="-1"
+  [attr.aria-label]="'public.listing.brands.chips' | t"
+  [attr.aria-describedby]="brandsError() ? 'listing-brands-error' : null"
+>
   @for (brand of chips(); track brand.id) {
     @let stance = stanceOf(brand.id);
     <li>
-      <button type="button" [attr.aria-pressed]="!!stance" (click)="tap(brand)">
+      <button type="button" [attr.data-field]="brandPath(brand.id)" [attr.aria-pressed]="!!stance" (click)="tap(brand)">
         {{ brand.name }}
         @if (stance) {
           <mf-lamp
@@ -71,14 +77,17 @@
         } @else {
           <p><button hlmBtn variant="ghost" type="button" (click)="goTo.emit(3)">{{ 'public.listing.brands.jobs.empty' | t }}</button></p>
         }
-        @if (getsNothing(brand.id, ticked)) {
-          <p class="quiet" role="status">{{ 'public.listing.brands.noRequests' | t: { brand: brand.name } }}</p>
+        @if (warningFor(brand.id); as key) {
+          <p class="quiet warning" role="status">{{ key | t: { brand: brand.name } }}</p>
         }
       }
     </li>
   }
 </ul>
 <p aria-live="polite">{{ counter() }}</p>
+@if (brandsError(); as key) {
+  <p class="error" id="listing-brands-error" role="alert">{{ key | t }}</p>
+}
 <label hlmLabel class="field">
   {{ 'public.listing.brands.note' | t }}
   <input hlmInput name="brandNote" autocomplete="off" [value]="value().brandNote ?? ''" (input)="write(note, input($event))" />

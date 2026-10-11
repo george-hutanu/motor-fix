@@ -17,6 +17,9 @@ p:empty {
 .error {
   color: var(--mf-red-ink);
 }
+.warning {
+  color: var(--mf-text-secondary);
+}
 input {
   width: 100%;
   min-height: var(--mf-tap);
@@ -92,7 +95,8 @@ button:focus-visible,
 /* A phone reads these at the body size; the small and label sizes start at a tablet. */
 @media (min-width: 768px) {
   .hint,
-  .error {
+  .error,
+  .warning {
     font-size: var(--mf-size-small);
   }
 }

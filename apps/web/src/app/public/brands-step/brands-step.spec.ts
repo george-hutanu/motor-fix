@@ -4,10 +4,12 @@ import { join } from 'node:path';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { BrandsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { BrandsStep } from './brands-step';
+import { forStep } from '../field-watch';
 
 // @traces 040-FR-001 040-FR-002 040-FR-003 040-FR-004 040-FR-005 040-FR-006 040-FR-007
 
@@ -71,8 +73,24 @@ async function open(language: 'ro' | 'en' = 'ro') {
 
 type Fixture = Awaited<ReturnType<typeof open>>['fixture'];
 
+// The page's judgement of the step, as it hands it over: the brands with
+// step 3's jobs.
+function judge(fixture: Fixture) {
+  const step = fixture.componentInstance;
+  fixture.componentRef.setInput(
+    'problems',
+    forStep(
+      checkListing({
+        data: { steps: { '2': step.value(), '3': { jobs: [...step.jobs()] } } },
+      }),
+      2,
+    ),
+  );
+}
+
 async function settle(fixture: Fixture) {
   for (let i = 0; i < 3; i++) {
+    judge(fixture);
     fixture.detectChanges();
     await fixture.whenStable();
   }
@@ -939,5 +957,86 @@ describe('the job row on a phone', () => {
     expect(global).toMatch(
       /input\[type="checkbox"\]\.mf-check \{[^}]*\sheight:\s*var\(--mf-tap\)/,
     );
+  });
+});
+
+describe('step 2, judged by the page', () => {
+  const error = (step: HTMLElement) =>
+    text(step.querySelector('#listing-brands-error'));
+  const group = (step: HTMLElement) =>
+    step.querySelector('[data-field="steps.2.brands"]') as HTMLElement;
+
+  // @traces 115-listing-checklist-FR-002 115-listing-checklist-FR-008
+  it('asks for a taken brand only when sending is asked for, and stops once one is taken', async () => {
+    const { fixture, step } = await open();
+    const shown: boolean[] = [];
+    fixture.componentInstance.shown.subscribe((v) => shown.push(v));
+    await settle(fixture);
+    expect(error(step)).toBe('');
+    // It told false while it opened, before this listened.
+    expect(shown).not.toContain(true);
+
+    fixture.componentRef.setInput('showAll', true);
+    await settle(fixture);
+    expect(error(step)).toBe('Alege cel puțin o marcă pe care lucrezi');
+    expect(group(step).getAttribute('aria-describedby')).toBe(
+      'listing-brands-error',
+    );
+    expect(shown.at(-1)).toBe(true);
+
+    await tap(fixture, step, 'Dacia', 2);
+    expect(error(step)).toBe('Alege cel puțin o marcă pe care lucrezi');
+    await tap(fixture, step, 'BMW');
+    expect(error(step)).toBe('');
+    expect(group(step).hasAttribute('aria-describedby')).toBe(false);
+    expect(shown.at(-1)).toBe(false);
+  });
+
+  // @traces 115-listing-checklist-FR-005 115-listing-checklist-FR-006
+  it('shows the no-requests warning of a restored brand at once, as a warning that blocks nothing', async () => {
+    const { fixture, step } = await open();
+    const shown: boolean[] = [];
+    fixture.componentInstance.shown.subscribe((v) => shown.push(v));
+
+    fixture.componentInstance.value.set({
+      brands: [
+        { brandId: CATALOGUE[0].id, name: 'BMW', stance: 'works_on' },
+        {
+          brandId: CATALOGUE[6].id,
+          fuels: [],
+          name: 'Dacia',
+          stance: 'works_on',
+        },
+      ],
+    });
+    await settle(fixture);
+
+    const line = quiet(step, 'Dacia') as HTMLElement;
+    expect(text(line)).toBe('Nu vei primi cereri pentru Dacia');
+    expect(line.classList).toContain('warning');
+    expect(quiet(step, 'BMW')).toBeNull();
+    expect(step.querySelector('[aria-invalid]')).toBeNull();
+    expect(shown).not.toContain(true);
+
+    await press(fixture, fuel(step, 'Dacia', 'Diesel'));
+    expect(quiet(step, 'Dacia')).toBeNull();
+  });
+
+  // @traces 115-listing-checklist-FR-007
+  it('marks the chips as the group and each marked brand by its place in the list', async () => {
+    const { fixture, step } = await open();
+
+    await tap(fixture, step, 'Dacia');
+    await tap(fixture, step, 'BMW', 2);
+
+    expect(group(step).tagName).toBe('UL');
+    expect(group(step).getAttribute('tabindex')).toBe('-1');
+    expect(chip(step, 'Dacia').getAttribute('data-field')).toBe(
+      'steps.2.brands[0]',
+    );
+    expect(chip(step, 'BMW').getAttribute('data-field')).toBe(
+      'steps.2.brands[1]',
+    );
+    expect(chip(step, 'Audi').hasAttribute('data-field')).toBe(false);
   });
 });

@@ -439,11 +439,10 @@ describe('step 5', () => {
       );
 
     // @traces 115-listing-checklist-FR-003
-    it('asks for the seat and the radius', () => {
+    it('asks for the seat, and lets the default radius stand in for none', () => {
       expect(errorsOf(mobile({}))).toEqual([
         { code: 'required', field: 'steps.5.place.address' },
         { code: 'required', field: 'steps.5.place.lat' },
-        { code: 'required', field: 'steps.5.place.radiusKm' },
       ]);
     });
 
@@ -548,6 +547,7 @@ describe('the completeness functions', () => {
       hoursComplete(five) &&
       hasConfirmedPhoto(data) &&
       (sections(data)['1']?.businessKind !== 'mobile' ||
+        place.radiusKm === undefined ||
         radiusAllowed(place.radiusKm))
     );
   };

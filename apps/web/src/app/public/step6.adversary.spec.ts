@@ -8,7 +8,7 @@ import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ListYourGarage } from './list-your-garage/list-your-garage';
-import { completedCount, cuiError, rarError, readStep6 } from './step6';
+import { completedCount, readStep6 } from './step6';
 
 describe('reading the verification step from hostile draft data', () => {
   it.each([
@@ -53,38 +53,6 @@ describe('reading the verification step from hostile draft data', () => {
     const copy = JSON.parse(JSON.stringify(data));
     readStep6(data);
     expect(data).toEqual(copy);
-  });
-});
-
-describe('the field errors at their edges', () => {
-  it.each([
-    ['one digit', '1'],
-    ['eleven digits', '12345678901'],
-    ['a letter among the digits', '1854729A'],
-    ['a prefix left in', 'RO18547290'],
-  ])('flags %s once left', (_, value) => {
-    expect(cuiError(value, true)).toBe('cuiInvalid');
-    expect(cuiError(value, false)).toBeNull();
-  });
-
-  it('keeps the error following the value once left', () => {
-    expect(cuiError('18547291', true)).toBe('cuiInvalid');
-    expect(cuiError('18547290', true)).toBeNull();
-    expect(cuiError('18547291', true)).toBe('cuiInvalid');
-  });
-
-  it('asks for three characters at two and not at three', () => {
-    expect(rarError('AB', true)).toBe('rarShort');
-    expect(rarError('ABC', true)).toBeNull();
-  });
-
-  it('stays quiet for a forty-character RAR number', () => {
-    expect(rarError('A'.repeat(40), true)).toBeNull();
-  });
-
-  it('stays quiet for an empty RAR number whether left or not', () => {
-    expect(rarError('', true)).toBeNull();
-    expect(rarError('', false)).toBeNull();
   });
 });
 
@@ -190,23 +158,25 @@ describe('step 6 of the page under hostile typing', () => {
     expect(cuiErr(page)).toBe('CUI invalid');
   });
 
-  it('treats a prefix alone as an empty field with no error', async () => {
+  // @traces 115-listing-checklist-FR-002
+  it('treats a prefix alone as an empty field, which is missing once left', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await type(harness, cui(page), 'RO');
     await leave(harness, cui(page));
-    expect(cuiErr(page)).toBe('');
+    expect(cuiErr(page)).toBe('Scrie CUI-ul firmei');
     expect(cui(page).value).toBe('');
     expect(counter(page)).toBe('0 din 5 completate');
   });
 
-  it('removes the error when the left field is cleared', async () => {
+  // @traces 115-listing-checklist-FR-002
+  it('asks for the CUI when the left field is cleared', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await type(harness, cui(page), '1');
     await leave(harness, cui(page));
     expect(cuiErr(page)).toBe('CUI invalid');
     await type(harness, cui(page), '');
     await leave(harness, cui(page));
-    expect(cuiErr(page)).toBe('');
+    expect(cuiErr(page)).toBe('Scrie CUI-ul firmei');
   });
 
   it('describes the RAR field by its hint until an error shows', async () => {

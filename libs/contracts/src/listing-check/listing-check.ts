@@ -40,7 +40,7 @@ import type { FieldProblem } from '../problem';
 const EMAIL_MAX = 254;
 const EMAIL_MIN = 3;
 
-export interface ListingCheckInput {
+interface ListingCheckInput {
   data: ListingDraftData;
   // The draft's address lives on its row; judged only when passed.
   email?: string;
@@ -176,8 +176,8 @@ function place(j: Judgement, section: PlaceSection, mobile: boolean) {
     j.error('steps.5.place.lat', 'required');
   else if (!inRomania(lat, lng)) j.error('steps.5.place.lat', 'invalid');
   if (!mobile) return;
-  if (radiusKm === undefined) j.error('steps.5.place.radiusKm', 'required');
-  else if (!radiusAllowed(radiusKm))
+  // An absent radius is the default the field shows (108's rule).
+  if (radiusKm !== undefined && !radiusAllowed(radiusKm))
     j.error('steps.5.place.radiusKm', 'invalid');
 }
 

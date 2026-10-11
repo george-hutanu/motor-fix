@@ -12,22 +12,21 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import type { ListingDraftData } from '@motor-fix/contracts';
-import {
-  type HoursSection,
-  hoursComplete,
-} from '@motor-fix/contracts/garage-hours';
+import type { FieldProblem, ListingDraftData } from '@motor-fix/contracts';
+import type { HoursSection } from '@motor-fix/contracts/garage-hours';
 import {
   declarationDone,
   documentDone,
 } from '@motor-fix/contracts/legal-documents';
 import {
-  detailsComplete,
+  checkListing,
+  type ListingCheck,
+  type ListingStep,
+} from '@motor-fix/contracts/listing-check';
+import {
   isDetailsSection,
   isMechanicsSection,
   isPricesSection,
-  mechanicsComplete,
-  pricesComplete,
 } from '@motor-fix/contracts/listing-sections';
 import {
   isValidCui,
@@ -38,7 +37,6 @@ import {
 import {
   isPlaceSection,
   type PlaceSection,
-  placeComplete,
 } from '@motor-fix/contracts/place-section';
 import type { JobTypeDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
@@ -50,21 +48,20 @@ import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
 import { DocumentsStep } from '../documents-step/documents-step';
 import { DraftKeeper } from '../draft/draft-keeper';
+import { FieldWatch, forStep, stepOfField } from '../field-watch';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step/hours-step';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
+import {
+  MissingSummary,
+  type SummaryState,
+} from '../missing-summary/missing-summary';
 import { PhotosStep } from '../photos-step/photos-step';
 import { PlaceStep } from '../place-step/place-step';
 import { dropUntaken } from '../prices-step/prices-rows';
 import { PricesStep } from '../prices-step/prices-step';
-import {
-  completedCount,
-  cuiError,
-  rarError,
-  readStep6,
-  type Step6Values,
-} from '../step6';
+import { completedCount, readStep6, type Step6Values } from '../step6';
 import { currentStep, jumpTarget, keepsTapped, STEPS } from '../steps';
 
 // Where the browser never says a scroll has ended: how long the page must be
@@ -73,6 +70,29 @@ const QUIET_MS = 150;
 // A jump whose scroll has not started by then never will (the page could not
 // move after all): it lets go, so the step list follows the owner again.
 const STALL_MS = 3000;
+
+// Each part of the page that shows field errors, and the step it sits in.
+const PART_STEP = {
+  brands: 2,
+  details: 1,
+  documents: 6,
+  email: 1,
+  hours: 5,
+  mechanics: 4,
+  photos: 5,
+  place: 5,
+  prices: 3,
+  step6: 6,
+} as const;
+type Part = keyof typeof PART_STEP;
+
+const same = (a: FieldProblem, b: FieldProblem) =>
+  a.field === b.field && a.code === b.code;
+// The page's own list, with what only the server knew added.
+const joined = (own: FieldProblem[], server: FieldProblem[] = []) => [
+  ...own,
+  ...server.filter((problem) => !own.some((o) => same(o, problem))),
+];
 
 // The page the owner fills in to list a garage: six steps on one long page,
 // with the list of steps beside them, or in a bar on a phone.
@@ -88,6 +108,7 @@ const STALL_MS = 3000;
     HlmInput,
     HoursStep,
     MechanicsStep,
+    MissingSummary,
     PhotosStep,
     PlaceStep,
     PricesStep,
@@ -107,6 +128,10 @@ export class ListYourGarage {
   private readonly nav = viewChild<ElementRef<HTMLElement>>('nav');
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly field = viewChild<ElementRef<HTMLElement>>('email');
+  private readonly summary = viewChild<unknown, ElementRef<HTMLElement>>(
+    MissingSummary,
+    { read: ElementRef },
+  );
   // A jump's own scroll is under way: however late it starts (up to the
   // stall), none of its movement decides the current step.
   private held = false;
@@ -168,18 +193,73 @@ export class ListYourGarage {
   protected readonly takenBrands = computed(() =>
     this.brands().brands.filter((b) => b.stance === 'works_on'),
   );
-  // The steps the list ticks, judged as the owner types.
-  protected readonly done = computed(() => {
-    const prices = this.prices();
-    return new Set([
-      ...(detailsComplete(this.details()) ? [1] : []),
-      ...(prices && pricesComplete(prices) ? [3] : []),
-      ...(mechanicsComplete(this.mechanics()) ? [4] : []),
-      ...(placeComplete(this.place()) && hoursComplete(this.hours())
-        ? [5]
-        : []),
-    ]);
+  // The whole listing judged as the owner types, by the rule the server uses.
+  private readonly ownCheck = computed(() => {
+    const { data, email } = this.keeper.draft();
+    return checkListing({ data, email });
   });
+  // The server's last judgement, until the next change to what it judged
+  // makes it stale (a step change or a save alone does not).
+  private readonly serverCheck = signal<{
+    of: string;
+    check: ListingCheck;
+  } | null>(null);
+  private readonly judged = computed(() => {
+    const { data, email } = this.keeper.draft();
+    return JSON.stringify([data, email ?? '']);
+  });
+  protected readonly problems = computed<ListingCheck>(() => {
+    const own = this.ownCheck();
+    const server = this.serverCheck();
+    if (!server || server.of !== this.judged()) return own;
+    return {
+      errors: joined(own.errors, server.check.errors),
+      warnings: joined(own.warnings, server.check.warnings),
+    };
+  });
+  protected readonly stepProblems = computed(() => {
+    const problems = this.problems();
+    return STEPS.map((step) => forStep(problems, step.n as ListingStep));
+  });
+  // The steps the list ticks: none of their fields is missing or wrong.
+  protected readonly done = computed(
+    () =>
+      new Set(
+        STEPS.filter(
+          (step) => this.stepProblems()[step.n - 1]?.errors.length === 0,
+        ).map((step) => step.n),
+      ),
+  );
+  // Sending was asked for: every field shows what is wrong with it.
+  protected readonly asked = signal(false);
+  private readonly shownErrors = signal<Partial<Record<Part, boolean>>>({});
+  // The steps the list marks red: asked for, or a field there shows an error.
+  protected readonly dots = computed(() => {
+    const shown = this.shownErrors();
+    const asked = this.asked();
+    return new Set(
+      STEPS.filter(
+        (step) =>
+          !this.done().has(step.n) &&
+          (asked ||
+            Object.entries(shown).some(
+              ([part, on]) => on && PART_STEP[part as Part] === step.n,
+            )),
+      ).map((step) => step.n),
+    );
+  });
+  protected readonly inFlight = signal(false);
+  private readonly outcome = signal<'complete' | 'failed' | null>(null);
+  protected readonly summaryState = computed<SummaryState>(() => {
+    const outcome = this.outcome();
+    if (outcome === 'failed') return 'failed';
+    const missing = this.problems().errors.length > 0;
+    if (this.asked()) return missing ? 'missing' : 'complete';
+    return outcome === 'complete' && !missing ? 'complete' : null;
+  });
+  protected readonly mobile = computed(
+    () => this.details().businessKind === 'mobile',
+  );
   // The catalogue names step 3 has looked up, for step 2's job rows.
   protected readonly knownJobs = signal<ReadonlyMap<string, JobTypeDto>>(
     new Map(),
@@ -248,14 +328,24 @@ export class ListYourGarage {
   // The fields show what was typed until they are left; the values below
   // are the stored ones.
   protected readonly shown = signal<Step6Values>({ cui: '', rarNumber: '' });
-  private readonly left = signal({ cui: false, rarNumber: false });
+  private readonly watch = new FieldWatch();
   private readonly stored = computed(() => readStep6(this.keeper.draft().data));
-  protected readonly cuiError = computed(() =>
-    cuiError(this.stored().cui, this.left().cui),
-  );
-  protected readonly rarError = computed(() =>
-    rarError(this.stored().rarNumber, this.left().rarNumber),
-  );
+  // The e-mail, CUI and RAR number fields the page holds itself.
+  protected readonly fieldErrors = computed(() => {
+    const check = this.problems();
+    const all = this.asked();
+    const { cui, rarNumber } = this.stored();
+    const message = (field: string, filled: boolean) =>
+      this.watch.message(check, field, { all, filled });
+    const saving = this.keeper.emailError();
+    return {
+      cui: message('steps.6.cui', cui !== ''),
+      email: saving
+        ? { key: `public.listing.${saving}`, warning: false }
+        : message('email', !!this.keeper.draft().email?.trim()),
+      rarNumber: message('steps.6.rarNumber', rarNumber !== ''),
+    };
+  });
   protected readonly verified = computed(() => {
     const { cui, rarNumber } = this.stored();
     const data = this.keeper.draft().data as ListingDraftData;
@@ -269,10 +359,12 @@ export class ListYourGarage {
   });
 
   protected fillCui(value: string) {
+    this.watch.type('steps.6.cui');
     this.fill6({ ...this.stored(), cui: stripCui(value) });
   }
 
   protected fillRar(value: string) {
+    this.watch.type('steps.6.rarNumber');
     this.fill6({ ...this.stored(), rarNumber: normaliseRarNumber(value) });
   }
 
@@ -288,7 +380,94 @@ export class ListYourGarage {
     const value = this.stored()[key];
     input.value = value;
     this.shown.update((shown) => ({ ...shown, [key]: value }));
-    this.left.update((left) => ({ ...left, [key]: true }));
+    this.watch.leave(`steps.6.${key}`);
+  }
+
+  protected typeEmail(value: string) {
+    this.watch.type('email');
+    this.keeper.type(value);
+  }
+
+  protected leaveEmail() {
+    this.watch.leave('email');
+    this.keeper.leaveEmail();
+  }
+
+  // A part of the page tells whether a field of its shows an error.
+  protected mark(part: Part, on: boolean) {
+    if (!!this.shownErrors()[part] !== on)
+      this.shownErrors.update((shown) => ({ ...shown, [part]: on }));
+  }
+
+  // The button: what is missing at once when the page knows it, else the
+  // server's judgement of the copy it holds once everything typed is on it.
+  // Focus stays on the button unless something is missing.
+  protected async send() {
+    if (this.inFlight()) return;
+    this.outcome.set(null);
+    if (this.ownCheck().errors.length > 0) {
+      this.asked.set(true);
+      this.toSummary();
+      return;
+    }
+    this.inFlight.set(true);
+    const result = await this.keeper.check();
+    this.inFlight.set(false);
+    if (result.kind === 'failed') {
+      this.outcome.set('failed');
+      return;
+    }
+    const errors = result.kind === 'incomplete' ? result.errors : [];
+    this.serverCheck.set({
+      check: { errors, warnings: result.warnings },
+      of: this.judged(),
+    });
+    this.asked.set(errors.length > 0);
+    if (errors.length === 0) this.outcome.set('complete');
+    else this.toSummary();
+  }
+
+  // The page jumps to the first step with an error, and focus goes to the
+  // summary without scrolling the page again.
+  private toSummary() {
+    const first = this.stepProblems().findIndex((p) => p.errors.length > 0);
+    if (first >= 0) this.show(first + 1);
+    afterNextRender(
+      () =>
+        this.summary()
+          ?.nativeElement.querySelector<HTMLElement>('[tabindex="-1"]')
+          ?.focus({ preventScroll: true }),
+      { injector: this.injector },
+    );
+  }
+
+  // A summary item: its step marked current, any closed part around the
+  // field opened, and the field focused in view.
+  protected goTo(field: string) {
+    const step = stepOfField(field);
+    if (!step) return;
+    const target = this.host.querySelector<HTMLElement>(
+      `[data-field="${field.replaceAll('"', '')}"]`,
+    );
+    if (!target) {
+      this.jump(step);
+      return;
+    }
+    for (
+      let details = target.closest('details');
+      details;
+      details = details.parentElement?.closest('details') ?? null
+    )
+      details.open = true;
+    this.open.set(false);
+    this.tapped = step;
+    this.current.set(step);
+    this.keeper.stepTo(step);
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({
+      behavior: this.reduced() ? 'auto' : 'smooth',
+      block: 'center',
+    });
   }
 
   protected readonly noteText = computed(() => {
@@ -334,12 +513,7 @@ export class ListYourGarage {
 
   // Back at the step the draft was left on, once the form is on the page.
   private restore(step: number | null) {
-    const stored = this.stored();
-    this.shown.set(stored);
-    this.left.set({
-      cui: stored.cui !== '',
-      rarNumber: stored.rarNumber !== '',
-    });
+    this.shown.set(this.stored());
     if (step && step > 1)
       afterNextRender(() => this.show(step), { injector: this.injector });
   }
