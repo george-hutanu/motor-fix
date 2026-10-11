@@ -263,9 +263,22 @@ describe('layout findings', () => {
     assert.equal(markPreExisting(now, [])[0].severity, 'high', 'a baseline that names no routes is not read as sweeping none');
   });
 
-  it('leaves findings of other kinds alone, even when the baseline had them', () => {
-    const consoleError = sweepFinding({ ...where, kind: 'console', text: 'NG0100' }, { web: true });
-    assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');
+  // @traces 1171-FR-008
+  it('marks an accessibility or console finding the baseline had under the same key as pre-existing, capped at medium', () => {
+    const consoleError = { kind: 'console', severity: 'high', title: 'Console error: 401 on /api/admin', route: '/admin' };
+    const axe = { kind: 'axe', severity: 'high', title: 'label-content-name-mismatch (1 element)', route: '/' };
+    const marked = markPreExisting([consoleError, axe], [consoleError, axe]);
+    assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['medium', true], ['medium', true]]);
+  });
+
+  // @traces 1171-FR-008
+  it('keeps an accessibility or console finding whose title or route differs from the baseline as the PR\'s own', () => {
+    const axe = { kind: 'axe', severity: 'high', title: 'label-content-name-mismatch (1 element)', route: '/' };
+    const more = { ...axe, title: 'label-content-name-mismatch (2 elements)' };
+    const elsewhere = { ...axe, route: '/cockpit' };
+    const flow = { kind: 'flow', severity: 'high', title: 'flow not run', route: '/' };
+    const marked = markPreExisting([more, elsewhere, flow], [axe, flow]);
+    assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['high', undefined], ['high', undefined], ['high', undefined]]);
   });
 
   describe('against what the baseline measured', () => {
