@@ -169,10 +169,19 @@ function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
   const when = (c) => (c.status && c.status !== "COMPLETED" ? Infinity : Date.parse(c.startedAt ?? c.createdAt ?? "") || 0);
   // Jobs in different workflows may share a name; a status context has one entry per context.
   const key = (c) => c.context ?? `${c.workflowName ?? ""}\u0000${c.name}`;
+  // A skip never outranks a run that did something (other than be cancelled), whatever the
+  // order: E2E runs on demand, and a later PR run on the same head skips it again, which
+  // must not hide the on-demand run's result.
+  const ran = (c) => c.conclusion !== "SKIPPED" && c.conclusion !== "CANCELLED";
+  const outranks = (c, cur) => {
+    if (c.conclusion === "SKIPPED" && ran(cur)) return false;
+    if (cur.conclusion === "SKIPPED" && ran(c)) return true;
+    return when(c) >= when(cur);
+  };
   const latest = new Map();
   for (const c of checks) {
     const k = key(c);
-    if (checkName(c) !== "agent-review" && c.workflowName !== QA_WORKFLOW && (!latest.has(k) || when(c) >= when(latest.get(k)))) latest.set(k, c);
+    if (checkName(c) !== "agent-review" && c.workflowName !== QA_WORKFLOW && (!latest.has(k) || outranks(c, latest.get(k)))) latest.set(k, c);
   }
   const ci = [...latest.values()];
   const result = (c) => c.conclusion ?? c.state;
