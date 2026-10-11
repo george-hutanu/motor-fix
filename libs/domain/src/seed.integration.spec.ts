@@ -374,6 +374,71 @@ describe('seed of the listed garages', () => {
     ).toEqual({ businessKind: 'mobile', serviceRadiusKm: 20 });
   });
 
+  // @traces 355-price-list-ranges-FR-015
+  it("gives Service Auto Militari the mock's price list, a BMW range and the BMW ticks", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const militari = await prisma.garage.findUniqueOrThrow({
+      select: {
+        brands: {
+          select: {
+            brand: { select: { key: true } },
+            jobs: { select: { jobTypeId: true } },
+          },
+        },
+        labourFromBani: true,
+        labourToBani: true,
+        prices: {
+          orderBy: [{ position: 'asc' }, { brandId: 'asc' }],
+          select: {
+            brand: { select: { key: true } },
+            durationMinutes: true,
+            fromBani: true,
+            jobType: { select: { id: true, key: true } },
+            toBani: true,
+          },
+        },
+      },
+      where: { slug: 'service-auto-militari' },
+    });
+    expect([militari.labourFromBani, militari.labourToBani]).toEqual([
+      18_000, 24_000,
+    ]);
+    expect(
+      militari.prices.map((p) => [
+        p.jobType.key,
+        p.brand?.key ?? null,
+        p.fromBani,
+        p.toBani,
+        p.durationMinutes,
+      ]),
+    ).toEqual([
+      ['diagnosis', null, 15_000, 22_000, 30],
+      ['oil-service', null, 25_000, 40_000, 60],
+      ['front-brakes', 'bmw', 110_000, 170_000, null],
+      ['front-brakes', null, 89_000, 140_000, 120],
+      ['timing-chain', null, 420_000, 680_000, 480],
+      ['ac-regas', null, 28_000, 36_000, 45],
+      ['suspension-alignment', null, 35_000, null, 90],
+    ]);
+    const keyOf = new Map(
+      militari.prices.map((p) => [p.jobType.id, p.jobType.key]),
+    );
+    const ticked = (brand: string) =>
+      (militari.brands.find((b) => b.brand.key === brand)?.jobs ?? [])
+        .map((job) => keyOf.get(job.jobTypeId))
+        .sort();
+    expect(ticked('bmw')).toEqual([
+      'ac-regas',
+      'diagnosis',
+      'front-brakes',
+      'oil-service',
+      'suspension-alignment',
+    ]);
+    expect(ticked('dacia')).toEqual(['oil-service']);
+  });
+
   // @traces 163-FR-005
   it('places six listed garages in București and two in Cluj-Napoca, for the figures by city', async () => {
     expect(seed('test').status).toBe(0);
