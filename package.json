@@ -69,7 +69,7 @@
     "@nx/devkit": "23.2.1",
     "@nx/esbuild": "23.2.1",
     "@nx/jest": "23.2.1",
-    "@nx/js": "23.2.1",
+    "@nx/js": "23.3.0",
     "@nx/playwright": "23.2.1",
     "@nx/webpack": "23.2.1",
     "@nx/workspace": "23.2.1",
