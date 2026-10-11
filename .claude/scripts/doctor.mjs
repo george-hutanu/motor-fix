@@ -13,7 +13,7 @@
 //   node scripts/doctor.mjs --bless-hooks   re-record hook fingerprints
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 import { LEVELS, activeFeature, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { resolveLevel } from "./level.mjs";
 import { fingerprint, loadRegistry, registryPath, scriptPath } from "./lib/hooks.mjs";
@@ -43,6 +43,22 @@ const frontmatter = (text) => {
 
 const dirs = (root) =>
   existsSync(root) ? readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) : [];
+
+// The mods under .claude/plugins are fingerprinted like the gates (FR-016):
+// every file but a plugin test and the types the engine writes when it loads one.
+const MODS = join(".claude", "plugins");
+export function modFingerprints(repo) {
+  const root = join(repo, MODS);
+  if (!existsSync(root)) return {};
+  return Object.fromEntries(
+    readdirSync(root, { recursive: true, withFileTypes: true })
+      .filter((d) => d.isFile())
+      .map((d) => relative(root, join(d.parentPath, d.name)))
+      .filter((rel) => !rel.endsWith(".test.ts") && !rel.includes(join(".claude-plugin", "types")))
+      .sort()
+      .map((rel) => [rel, fingerprint(join(root, rel))]),
+  );
+}
 
 export function checkHooks(repo) {
   const out = [];
@@ -86,6 +102,24 @@ export function checkHooks(repo) {
             .filter(Boolean)
             .join("; ")
         : `${wired.length} hook commands, all resolving to registry ids`,
+  });
+
+  const blessed = registry.mods ?? {};
+  const onDisk = modFingerprints(repo);
+  const changed = Object.keys(onDisk).filter((f) => f in blessed && blessed[f] !== onDisk[f]);
+  const unlisted = Object.keys(onDisk).filter((f) => !(f in blessed));
+  const gone = Object.keys(blessed).filter((f) => !(f in onDisk));
+  const drift = [
+    changed.length ? `changed: ${changed.join(", ")}` : "",
+    unlisted.length ? `unlisted: ${unlisted.join(", ")}` : "",
+    gone.length ? `missing: ${gone.join(", ")}` : "",
+  ].filter(Boolean);
+  out.push({
+    name: "mods/fingerprints",
+    status: drift.length ? FAIL : OK,
+    detail: drift.length
+      ? `${drift.join("; ")} — review the diff, then --bless-hooks`
+      : `${Object.keys(onDisk).length} mod files match their reviewed fingerprints`,
   });
 
   const known = new Set([...registry.hooks.map((h) => h.script), ...(registry.helpers ?? []).map((h) => h.script), "run-hook.mjs"]);
@@ -315,6 +349,12 @@ export function blessHooks(repo) {
       entry.fingerprint = fp;
     }
   }
+  const mods = modFingerprints(repo);
+  const before = registry.mods ?? {};
+  for (const f of new Set([...Object.keys(before), ...Object.keys(mods)])) {
+    if (before[f] !== mods[f]) changed.push(`${MODS}/${f}: ${before[f] ?? "(none)"} → ${mods[f] ?? "(removed)"}`);
+  }
+  if (Object.keys(mods).length || registry.mods) registry.mods = mods;
   writeFileSync(file, `${JSON.stringify(registry, null, 2)}\n`);
   return changed;
 }
