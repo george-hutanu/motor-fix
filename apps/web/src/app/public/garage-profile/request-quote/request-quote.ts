@@ -48,7 +48,7 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, HlmSwitch } from '@motor-fix/ui-cockpit';
 
-import { sentLine } from './sent-line';
+import { answersLine, sentLine } from './sent-line';
 import { type Place, PlaceStore } from '../../../home/place/place-store';
 
 export interface RequestQuoteData {
@@ -335,8 +335,15 @@ export class RequestQuote {
     return sentLine(this.i18n, request);
   }
 
+  protected answersLine(request: RequestDto) {
+    const [only, ...more] = request.recipients;
+    return only && more.length === 0 ? answersLine(this.i18n, only) : null;
+  }
+
   protected names(request: RequestDto) {
-    return request.recipients.map((r) => r.garage.name);
+    return request.recipients.map(
+      (r) => answersLine(this.i18n, r) ?? r.garage.name,
+    );
   }
 
   private async readNearby(carId: string, jobs: string[], place: Place | null) {
