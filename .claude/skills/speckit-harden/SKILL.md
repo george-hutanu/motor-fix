@@ -63,9 +63,10 @@ the whole of step 3 and mutation is rarely worth its minutes — run steps 1 and
 ### 1. Mechanical audits — and start the slow work now
 
 Run the audits, and **in the same message** launch the `mutation-runner`
-subagents from step 2b. Mutation never runs on this machine: each runner
-dispatches the Mutation workflow (`.github/workflows/mutation.yml`, sharded,
-one job per project or shard) for the pushed branch head, or reads the run
+subagents from step 2b. Mutation runs in CI, never on this machine: each
+runner dispatches the Mutation workflow (`.github/workflows/mutation.yml`,
+every 3 days on `main` and on demand, sharded, one job per project or shard)
+for the pushed branch head, or reads the run
 that already finished, so the run's minutes pass while you work.
 
 ```bash

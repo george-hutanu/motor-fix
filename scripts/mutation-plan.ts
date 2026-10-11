@@ -17,7 +17,7 @@ const REST = 'rest';
 type Timed = { measured?: unknown; timeout?: unknown };
 type ShardEntry = Timed & { folders: string[] };
 type ProjectEntry = Timed & { shards?: Record<string, ShardEntry> };
-export type ShardFile = {
+type ShardFile = {
   default: Timed;
   projects: Record<string, ProjectEntry>;
 };
@@ -49,7 +49,7 @@ export function excluded(root: string): string[] {
   ];
 }
 
-export type ProjectConfig = Record<string, unknown> & {
+type ProjectConfig = Record<string, unknown> & {
   thresholds: Record<string, unknown> & { break: number };
 };
 
@@ -73,7 +73,9 @@ export const projectFloor = (root: string): number =>
 export function readShardFile(repo: string): ShardFile {
   const file = join(repo, SHARD_FILE);
   if (!existsSync(file)) return { default: DEFAULT, projects: {} };
-  const own = JSON.parse(readFileSync(file, 'utf8')) as Partial<ShardFile>;
+  const text = readFileSync(file, 'utf8');
+  if (!text.trim()) return { default: DEFAULT, projects: {} };
+  const own = JSON.parse(text) as Partial<ShardFile>;
   return { default: own.default ?? DEFAULT, projects: own.projects ?? {} };
 }
 
@@ -225,6 +227,17 @@ function timeout(owner: string, own: Timed): number {
   return minutes;
 }
 
+// A shard's name becomes a job id, a report folder and a `project:shard`
+// filter item; a folder becomes a glob, so neither may hold what those read
+// as syntax, and a folder may not climb out of src.
+const SHARD_NAME = /^[a-z0-9][a-z0-9-]*$/;
+const SEGMENT = /^[A-Za-z0-9_@-][A-Za-z0-9_@.-]*$/;
+const plainFolder = (folder: string) =>
+  folder === '*' ||
+  base(folder)
+    .split('/')
+    .every((segment) => SEGMENT.test(segment) && segment !== '..');
+
 function validateShard(
   repo: string,
   root: string,
@@ -237,11 +250,16 @@ function validateShard(
     throw new Error(
       `${SHARD_FILE}: ${owner} lists a folder that is not a name`,
     );
-  for (const folder of entry.folders)
+  for (const folder of entry.folders) {
+    if (!plainFolder(folder))
+      throw new Error(
+        `${SHARD_FILE}: ${owner} names ${folder}; a folder is a plain path under src, x, x/* or *, with no trailing slash, .. or glob characters`,
+      );
     if (!existsSync(join(repo, root, 'src', base(folder))))
       throw new Error(
         `${SHARD_FILE}: ${owner} names ${folder}, which is not a folder under ${root}/src`,
       );
+  }
   timeout(owner, entry);
 }
 
@@ -261,6 +279,10 @@ function validateProject(
     if (shard === REST)
       throw new Error(
         `${SHARD_FILE}: ${name} names a shard rest, which is automatic`,
+      );
+    if (!SHARD_NAME.test(shard))
+      throw new Error(
+        `${SHARD_FILE}: ${name} names a shard ${shard}; a shard name is lower-case letters, digits and -`,
       );
     validateShard(repo, root, `${name}:${shard}`, entry);
   }
@@ -288,7 +310,9 @@ function isShard(file: ShardFile, item: string): boolean {
   const [project = '', shard = '', ...extra] = item.split(':');
   const shards = shardsOf(file, project);
   return (
-    extra.length === 0 && shards !== null && (shard === REST || shard in shards)
+    extra.length === 0 &&
+    shards !== null &&
+    (shard === REST || Object.hasOwn(shards, shard))
   );
 }
 
@@ -338,6 +362,12 @@ export function plan(
   const all = mutationProjects(repo);
   const roots = new Map(all.map((p) => [p.name, p.root] as const));
   validate(repo, file, roots);
+  const ids = all.flatMap(({ name, root }) => entriesOf(file, name, root));
+  const clash = ids.find((e, i) => ids.findIndex((o) => o.id === e.id) !== i);
+  if (clash)
+    throw new Error(
+      `two jobs would be named ${clash.id}: rename the shard in ${SHARD_FILE}`,
+    );
 
   const named = list(filters.projects);
   for (const name of named)

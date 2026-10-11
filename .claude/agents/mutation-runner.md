@@ -18,8 +18,9 @@ The invoking prompt names an Nx project with a `test:mutation` target: `api`,
 
 ## Steps
 
-Stryker runs only in `.github/workflows/mutation.yml`, never here: a run takes
-minutes to hours, one job per project or shard.
+Stryker runs only in `.github/workflows/mutation.yml` (every 3 days on `main`
+and on demand), never here: a run takes minutes to hours, one job per project
+or shard.
 
 1. Read `<project root>/stryker.config.json` for the `thresholds.break` floor.
 2. Find the newest Mutation run for the branch's head:

@@ -132,7 +132,7 @@
       "timeout": 45
     },
     "web": {
-      "measured": "unsharded 143 min (run 37360189195); rest shard not run yet",
+      "measured": "unsharded 143 min (run 37360189195); rest shard not run yet. Its stryker.config.json runs 2 test runners with a 5120 MB heap: the initial run ran out of memory at the default heap (run 38037093986)",
       "shards": {
         "dashboard-admin": {
           "folders": [

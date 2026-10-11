@@ -18,11 +18,8 @@ export type Counts = {
   survived: number;
   timeout: number;
 };
-export type Score = { project: string; shard: string } & (
-  | Counts
-  | { skipped: true }
-);
-export type Row = {
+type Score = { project: string; shard: string } & (Counts | { skipped: true });
+type Row = {
   complete: boolean;
   floor: number;
   minutes: number;
@@ -33,6 +30,19 @@ export type Row = {
 
 const ran = (score: Score): score is Score & Counts => !('skipped' in score);
 const key = (project: string, shard: string) => `${project}\0${shard}`;
+const COUNTS = ['killed', 'minutes', 'noCoverage', 'survived', 'timeout'];
+
+// A record the job wrote by hand-off from scripts/mutation.ts: anything else
+// would turn the combined score into NaN, or drop its project to partial.
+function wellFormed(record: Score): boolean {
+  const own = record as Record<string, unknown>;
+  if (typeof own['project'] !== 'string' || typeof own['shard'] !== 'string')
+    return false;
+  return (
+    own['skipped'] === true ||
+    COUNTS.every((name) => Number.isFinite(own[name]))
+  );
+}
 
 function combined(scores: Counts[]): number | null {
   const sum = (pick: (s: Counts) => number) =>
@@ -68,11 +78,24 @@ export function summarize(input: {
   records: Score[];
   result: string;
 }): { problems: string[]; rows: Row[] } {
-  const { floorOf, full, planned, records, result } = input;
-  const seen = new Set(records.map((r) => key(r.project, r.shard)));
-  const problems = planned
-    .filter((e) => !seen.has(key(e.project, e.shard)))
-    .map((e) => `${e.id}: no score; the job failed or was cut off`);
+  const { floorOf, full, planned, result } = input;
+  const problems = input.records
+    .filter((r) => !wellFormed(r))
+    .map(
+      (r) =>
+        `a score.json holds no project, shard or counts: ${JSON.stringify(r)}`,
+    );
+  // A job's artifact downloaded twice is one score, not two.
+  const unique = new Map<string, Score>();
+  for (const r of input.records.filter(wellFormed))
+    if (!unique.has(key(r.project, r.shard)))
+      unique.set(key(r.project, r.shard), r);
+  const records = [...unique.values()];
+  problems.push(
+    ...planned
+      .filter((e) => !unique.has(key(e.project, e.shard)))
+      .map((e) => `${e.id}: no score; the job failed or was cut off`),
+  );
   const projects = [...new Set(planned.map((e) => e.project))].sort();
   const rows = projects.map((project) =>
     row(
@@ -106,12 +129,17 @@ export function readScores(dir: string): Score[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name === 'score.json')
-    .map((entry) =>
-      JSON.parse(readFileSync(join(entry.parentPath, entry.name), 'utf8')),
-    );
+    .map((entry) => {
+      const file = join(entry.parentPath, entry.name);
+      try {
+        return JSON.parse(readFileSync(file, 'utf8'));
+      } catch (error) {
+        throw new Error(`${file}: ${(error as Error).message}`);
+      }
+    });
 }
 
-/** The plan job's matrix; empty when the plan job failed. */
+/** The plan job's matrix; refused when the plan job failed and left none. */
 export function plannedJobs(matrix: string | undefined): Entry[] {
   const planned = JSON.parse(matrix || '{}').include;
   if (!Array.isArray(planned)) throw new Error('MATRIX holds no include list');
