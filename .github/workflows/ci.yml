@@ -2,12 +2,18 @@ name: CI
 
 # Pull requests run the affected projects, and a documentation-only PR runs
 # only the change detector and CI OK; merges into main run every project
-# through release.yml. The PR title has its own workflow (pr-title.yml), so an
-# edited title is re-checked without re-running these jobs. Mutation testing
-# has its own workflow (mutation.yml) and never runs here.
+# through release.yml. A PR skips the Docker build, the compose stack and the
+# harness specs when it changes none of their inputs (scripts/ci-paths.ts).
+# The end-to-end suite runs only on demand: `gh workflow run ci.yml --ref
+# <branch>` runs every job, the E2E one included, on every project. A release
+# runs the core flows against staging instead (release.yml). The PR title has
+# its own workflow (pr-title.yml), so an edited title is re-checked without
+# re-running these jobs. Mutation testing has its own workflow (mutation.yml)
+# and never runs here.
 on:
   pull_request:
   workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,14 +28,18 @@ env:
   TZ: UTC
 
 jobs:
-  # Decides whether the PR changes documentation only (scripts/docs-only.ts).
-  # Off a PR the step does not run, the output is empty and every job runs.
+  # Decides whether the PR changes documentation only (scripts/docs-only.ts)
+  # and which path-filtered jobs and steps it needs (scripts/ci-paths.ts).
+  # Off a PR the steps do not run, the outputs are empty and every job runs.
   changes:
     name: Changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       docs-only: ${{ steps.classify.outputs.docs-only }}
+      docker: ${{ steps.paths.outputs.docker }}
+      compose: ${{ steps.paths.outputs.compose }}
+      harness: ${{ steps.paths.outputs.harness }}
     steps:
       - uses: actions/checkout@v7
         if: github.event_name == 'pull_request'
@@ -42,6 +52,9 @@ jobs:
       - id: classify
         if: github.event_name == 'pull_request'
         run: node scripts/docs-only.ts origin/${{ github.base_ref }}
+      - id: paths
+        if: github.event_name == 'pull_request'
+        run: node scripts/ci-paths.ts origin/${{ github.base_ref }}
       # Runs here, not in Checks, so a documentation-only PR is held to it too;
       # scripts/banned-words.json lists the retired names and what may hold them.
       - name: Banned words
@@ -94,18 +107,19 @@ jobs:
         run: node scripts/structure-check.ts ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }}
       # The PR tester's layout and sweep specs measure fixture pages in a real
       # browser and fail in CI without one. The headless shell is enough, and
-      # the runner image already carries Chrome's system libraries.
+      # the runner image already carries Chrome's system libraries. A PR that
+      # changes no harness input skips the browser and the specs.
       - id: harness-playwright
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.changes.outputs.harness != 'false' }}
         run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
       - id: harness-browser
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.changes.outputs.harness != 'false' }}
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-shell-${{ runner.os }}-${{ steps.harness-playwright.outputs.version }}
       - name: Browser for the harness
-        if: ${{ !cancelled() && steps.harness-browser.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && needs.changes.outputs.harness != 'false' && steps.harness-browser.outputs.cache-hit != 'true' }}
         timeout-minutes: 10
         # Bounded and retried like every Playwright install; no apt runs here, so nothing to repair.
         run: |
@@ -115,7 +129,7 @@ jobs:
           done
           exit 1
       - name: Harness
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.changes.outputs.harness != 'false' }}
         run: |
           npm run lint:harness
           npm run test:harness
@@ -123,9 +137,10 @@ jobs:
       # still pulls, the services come up healthy and the one-shot setup creates
       # the bucket. The setup stays out of --wait, which fails when it exits
       # before compose sees it running; run returns its exit code. On main,
-      # release.yml calls this workflow and the stack is not checked.
+      # release.yml calls this workflow and the stack is not checked; a PR
+      # checks it only when it changes the stack's inputs.
       - name: Compose stack
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.changes.outputs.compose == 'true' }}
         run: |
           docker compose up -d --wait postgres redis minio
           docker compose run --rm minio-setup
@@ -140,7 +155,7 @@ jobs:
           done
           curl -fsS -X POST -H 'content-type: application/json' -d '{"resourceLogs":[]}' localhost:4318/v1/logs
       - name: Stop the compose stack
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && needs.changes.outputs.compose == 'true' }}
         run: docker compose --profile observability down -v --remove-orphans
 
   tests:
@@ -199,10 +214,12 @@ jobs:
           JEST_SUITE: integration
         run: npx nx $NX_SCOPE -t test --passWithNoTests
 
+  # The full end-to-end suite, on demand only (workflow_dispatch): neither a
+  # PR nor a release runs it here. Its report is uploaded whatever the result.
   e2e:
     name: E2E tests
     needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services: *services
@@ -299,7 +316,7 @@ jobs:
           exit 1
       # Playwright starts the api, the worker and the web dev server itself (playwright.config.mts).
       - run: npx nx $NX_SCOPE -t e2e
-      - if: failure()
+      - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
@@ -310,11 +327,12 @@ jobs:
           # The report sits under dist/.playwright, a dot directory upload-artifact skips by default.
           include-hidden-files: true
 
-  # On main, release.yml's images job is the real build.
+  # On main, release.yml's images job is the real build. A PR builds only
+  # when it changes an image input (scripts/ci-paths.ts); a run by hand always.
   docker:
     name: Docker build (${{ matrix.app }})
     needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.docs-only != 'true'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.docker == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:

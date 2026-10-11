@@ -96,7 +96,7 @@ test.describe('the brand picker @seeded', () => {
     ).toHaveText('Dacia');
   });
 
-  test('opens the results for the chosen brand', async ({ page }) => {
+  test('opens the results for the chosen brand @core', async ({ page }) => {
     await ready(page, '/ro');
     await tile(page, 'Dacia').click();
 
