@@ -24,12 +24,17 @@ export class GarageSearchController {
   @ApiOkResponse({ type: GarageSearchPageDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: brandId missing or not a uuid, or near not a lat,lng in Romania; invalid_cursor: not a page of this search',
+      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, or near not a lat,lng in Romania; invalid_cursor: not a page of this search',
   })
-  @ApiNotFoundResponse({ description: 'not_found: no brand with that id' })
+  @ApiNotFoundResponse({
+    description: 'not_found: no brand with that slug or id',
+  })
   forBrand(@Query() query: GarageSearchQueryDto): Promise<GarageSearchPageDto> {
     return this.search.forBrand(
-      query.brandId,
+      // The query holds exactly one of the two.
+      query.brand === undefined
+        ? (query.brandId as string)
+        : { slug: query.brand },
       query.cursor,
       parseNear(query.near),
     );

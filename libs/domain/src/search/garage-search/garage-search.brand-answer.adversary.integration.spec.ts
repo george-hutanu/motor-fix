@@ -259,10 +259,15 @@ describe('GarageSearchService.forBrand brand answer, adversarial', () => {
 
     expect(Object.keys(wire).sort()).toEqual([
       'brandNote',
+      'businessKind',
       'doesNotTake',
+      'facilities',
       'id',
+      'labourFromLei',
       'name',
+      'rating',
       'refusalPhrase',
+      'reviewCount',
       'slug',
       'stance',
       'worksOn',

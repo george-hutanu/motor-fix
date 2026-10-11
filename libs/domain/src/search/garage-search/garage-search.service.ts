@@ -1,8 +1,10 @@
-import type {
-  GarageSearchPageDto,
-  ListedGarageDto,
-  SearchPoint,
+import {
+  FACILITIES,
+  type GarageSearchPageDto,
+  type ListedGarageDto,
+  type SearchPoint,
 } from '@motor-fix/contracts';
+import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
@@ -55,20 +57,78 @@ function decode(cursor: string, brandId: string): Cursor {
 const encode = (cursor: Cursor) =>
   Buffer.from(JSON.stringify(cursor)).toString('base64url');
 
+// The brand by its catalogue id, or by its slug as the address bar holds it.
+export type BrandKey = string | { slug: string };
+
+const CARD = {
+  brandNote: true,
+  brands: {
+    select: {
+      brand: {
+        select: { id: true, name: true, popularity: true, slug: true },
+      },
+      stance: true,
+    },
+  },
+  businessKind: true,
+  cityName: true,
+  facilities: { select: { facility: true }, where: { status: 'listed' } },
+  id: true,
+  labourFromBani: true,
+  name: true,
+  rating: true,
+  refusalPhrase: true,
+  reviewCount: true,
+  serviceRadiusKm: true,
+  slug: true,
+} satisfies Prisma.GarageSelect;
+
+type CardRow = Prisma.GarageGetPayload<{ select: typeof CARD }>;
+
+// What a card shows. A mobile mechanic's city would tell where its seat is,
+// so it gets its area instead.
+function cardOf(
+  brandId: string,
+  {
+    brandNote,
+    brands,
+    cityName,
+    facilities,
+    labourFromBani,
+    rating,
+    refusalPhrase,
+    serviceRadiusKm,
+    ...garage
+  }: CardRow,
+): ListedGarageDto {
+  const mobile = garage.businessKind === 'mobile';
+  const listed = new Set(facilities.map((row) => row.facility));
+  return {
+    ...garage,
+    stance:
+      brands.find((row) => row.brand.id === brandId)?.stance ?? 'unstated',
+    ...brandAnswer(brands, { brandNote, refusalPhrase }),
+    facilities: FACILITIES.filter((facility) => listed.has(facility)),
+    labourFromLei:
+      labourFromBani === null ? null : Math.round(labourFromBani / 100),
+    rating: rating === null ? null : rating.toNumber(),
+    ...(mobile
+      ? { serviceRadiusKm: serviceRadiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM }
+      : cityName !== null && { city: cityName }),
+  };
+}
+
 @Injectable()
 export class GarageSearchService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
   async forBrand(
-    brandId: string,
+    key: BrandKey,
     cursor?: string,
     point?: SearchPoint,
   ): Promise<GarageSearchPageDto> {
-    const brand = await this.prisma.brand.findUnique({
-      select: { id: true },
-      where: { id: brandId },
-    });
-    if (!brand) throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
+    const brand = await this.brandOf(key);
+    const brandId = brand.id;
     const after =
       cursor === undefined
         ? undefined
@@ -97,6 +157,7 @@ export class GarageSearchService {
     const last = items.at(-1);
     countFirstPage(cursor, items.length);
     return {
+      brand,
       counts: { doesNotTake, worksOn },
       items,
       nextCursor:
@@ -109,6 +170,15 @@ export class GarageSearchService {
           : null,
       total: worksOn + doesNotTake,
     };
+  }
+
+  private async brandOf(key: BrandKey) {
+    const brand = await this.prisma.brand.findUnique({
+      select: { id: true, name: true, slug: true },
+      where: typeof key === 'string' ? { id: key } : key,
+    });
+    if (!brand) throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
+    return brand;
   }
 
   private async area(point: SearchPoint | undefined) {
@@ -134,21 +204,7 @@ export class GarageSearchService {
   ): Promise<ListedGarageDto[]> {
     const garages = await this.prisma.garage.findMany({
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      select: {
-        brandNote: true,
-        brands: {
-          select: {
-            brand: {
-              select: { id: true, name: true, popularity: true, slug: true },
-            },
-            stance: true,
-          },
-        },
-        id: true,
-        name: true,
-        refusalPhrase: true,
-        slug: true,
-      },
+      select: CARD,
       take: PAGE + 1 - already,
       where: {
         ...publicGarages(),
@@ -161,12 +217,7 @@ export class GarageSearchService {
         }),
       },
     });
-    return garages.map(({ brandNote, brands, refusalPhrase, ...garage }) => ({
-      ...garage,
-      stance:
-        brands.find((row) => row.brand.id === brandId)?.stance ?? 'unstated',
-      ...brandAnswer(brands, { brandNote, refusalPhrase }),
-    }));
+    return garages.map((garage) => cardOf(brandId, garage));
   }
 }
 

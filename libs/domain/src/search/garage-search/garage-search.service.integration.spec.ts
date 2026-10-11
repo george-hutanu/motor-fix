@@ -5,6 +5,7 @@ import { HttpException } from '@nestjs/common';
 
 import { GarageSearchService } from './garage-search.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import type { Prisma } from '../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
@@ -159,10 +160,15 @@ describe('GarageSearchService.forBrand', () => {
     expect(page.items).toEqual([
       {
         brandNote: null,
+        businessKind: null,
         doesNotTake: [],
+        facilities: [],
         id,
+        labourFromLei: null,
         name: 'Alfa Service',
+        rating: null,
         refusalPhrase: null,
+        reviewCount: 0,
         slug,
         stance: 'works_on',
         worksOn: [{ id: dacia, name: 'Dacia', slug: 'dacia' }],
@@ -170,10 +176,15 @@ describe('GarageSearchService.forBrand', () => {
     ]);
     expect(Object.keys(page.items[0]).sort()).toEqual([
       'brandNote',
+      'businessKind',
       'doesNotTake',
+      'facilities',
       'id',
+      'labourFromLei',
       'name',
+      'rating',
       'refusalPhrase',
+      'reviewCount',
       'slug',
       'stance',
       'worksOn',
@@ -286,6 +297,7 @@ describe('GarageSearchService.forBrand', () => {
     await garage('Alfa', { stance: 'works_on', status: 'draft' });
 
     expect(await search.forBrand(dacia)).toEqual({
+      brand: { id: dacia, name: 'Dacia', slug: 'dacia' },
       counts: { doesNotTake: 0, worksOn: 0 },
       items: [],
       nextCursor: null,
@@ -424,5 +436,133 @@ describe('GarageSearchService.forBrand', () => {
         prisma.outboxEvent.count(),
       ]),
     ).toEqual(before);
+  });
+});
+
+async function card(
+  name: string,
+  fields: Prisma.GarageUpdateInput,
+  facilities: ('courtesy_car' | 'pickup_dropoff' | 'waiting_area')[] = [],
+) {
+  const id = await garage(name, { stance: 'works_on' });
+  await prisma.garage.update({ data: fields, where: { id } });
+  for (const facility of facilities) {
+    await prisma.garageFacility.create({ data: { facility, garageId: id } });
+  }
+  return id;
+}
+
+// @traces 267-brand-results-FR-003
+describe('what a card shows', () => {
+  it('carries the rating, reviews, rate in whole lei, kind, city and facilities in catalogue order', async () => {
+    await card(
+      'Alfa Service',
+      {
+        businessKind: 'company',
+        cityKey: 'militari',
+        cityName: 'Militari',
+        labourFromBani: 17_950,
+        rating: 4.8,
+        reviewCount: 90,
+      },
+      ['waiting_area', 'courtesy_car'],
+    );
+
+    const [item] = (await search.forBrand(dacia)).items;
+
+    expect(item).toMatchObject({
+      businessKind: 'company',
+      city: 'Militari',
+      facilities: ['courtesy_car', 'waiting_area'],
+      labourFromLei: 180,
+      rating: 4.8,
+      reviewCount: 90,
+    });
+    expect(item).not.toHaveProperty('serviceRadiusKm');
+  });
+
+  it('rounds the rate to the nearest leu', async () => {
+    await card('Alfa', { labourFromBani: 18_049 });
+    await card('Beta', { labourFromBani: 18_050 });
+
+    const items = (await search.forBrand(dacia)).items;
+
+    expect(items.map((item) => item.labourFromLei)).toEqual([180, 181]);
+  });
+
+  it("gives a mobile mechanic its area and never its seat's city", async () => {
+    await card('Mecanic Ion', {
+      businessKind: 'mobile',
+      cityKey: 'militari',
+      cityName: 'Militari',
+      serviceRadiusKm: 35,
+    });
+    await card('Mecanic Dan', { businessKind: 'mobile' });
+
+    const items = (await search.forBrand(dacia)).items;
+
+    expect(items.map((item) => item.serviceRadiusKm)).toEqual([20, 35]);
+    for (const item of items) {
+      expect(item).not.toHaveProperty('city');
+      expect(item.businessKind).toBe('mobile');
+    }
+  });
+
+  it('leaves the city out when it is not known', async () => {
+    await card('Alfa', { businessKind: 'pfa' });
+
+    const [item] = (await search.forBrand(dacia)).items;
+
+    expect(item).not.toHaveProperty('city');
+    expect(item).not.toHaveProperty('serviceRadiusKm');
+  });
+
+  it('carries nothing private', async () => {
+    await card('Alfa', {
+      address: 'Strada Lungă 1',
+      latitude: 44.43,
+      longitude: 26.1,
+      phone: '+40712345678',
+    });
+
+    const [item] = (await search.forBrand(dacia)).items;
+
+    expect(JSON.stringify(item)).not.toMatch(/Strada|\+4071|44\.43|26\.1/);
+  });
+});
+
+// @traces 267-brand-results-FR-004
+describe('naming the brand', () => {
+  it('finds the brand by its slug as by its id, and names it in the answer', async () => {
+    await garage('Alfa', { stance: 'works_on' });
+
+    const bySlug = await search.forBrand({ slug: 'dacia' });
+    const byId = await search.forBrand(dacia);
+
+    expect(bySlug.brand).toEqual({ id: dacia, name: 'Dacia', slug: 'dacia' });
+    expect(bySlug).toEqual(byId);
+  });
+
+  it('refuses a slug that names no brand with not found', async () => {
+    expect(await refusal(search.forBrand({ slug: 'trabant' }))).toMatchObject({
+      body: { code: 'not_found' },
+      status: 404,
+    });
+  });
+
+  it('pages on from a cursor when the brand is named by its slug', async () => {
+    for (let n = 0; n < 21; n += 1) {
+      await garage(`Garage ${String(n).padStart(2, '0')}`, {
+        stance: 'works_on',
+      });
+    }
+    const first = await search.forBrand({ slug: 'dacia' });
+
+    const next = await search.forBrand(
+      { slug: 'dacia' },
+      first.nextCursor ?? undefined,
+    );
+
+    expect(next.items.map((item) => item.name)).toEqual(['Garage 20']);
   });
 });
