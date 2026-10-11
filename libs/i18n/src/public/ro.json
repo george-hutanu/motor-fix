@@ -40,6 +40,13 @@
       "next": "Următoarea",
       "previous": "Înapoi"
     },
+    "prices": {
+      "empty": "Service‑ul nu și‑a publicat încă prețurile.",
+      "includes": "Prețurile includ piese și manoperă, cu TVA, și sunt orientative.",
+      "intro": "Pornește ce ai nevoie. Prețurile sunt intervale, pentru că lucrarea depinde de mașină.",
+      "labour": "Manopera este {range} / oră.",
+      "title": "Lista de prețuri"
+    },
     "rate": "Răspunde la {rate}% din cereri într‑o zi",
     "refuses": "Nu lucrează pe {brand}",
     "retry": "Încearcă din nou",

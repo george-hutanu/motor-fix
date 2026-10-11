@@ -85,6 +85,41 @@ export function formatLeiRange(
   return lei(ends[0] === ends[1] ? [ends[0]] : ends, language);
 }
 
+// A price range read in whole lei, as drivers and owners see a price list:
+// each end in bani is rounded to the nearest leu before it is written.
+export function formatWholeLeiRange(
+  from: unknown,
+  to: unknown,
+  language: Language,
+): string {
+  if (!isNumber(from) || !isNumber(to)) return MISSING;
+  return formatLeiRange(
+    Math.round(from / 100) * 100,
+    Math.round(to / 100) * 100,
+    language,
+  );
+}
+
+// A working day is eight hours, so a job of whole working days reads in days.
+const WORKDAY_MINUTES = 480;
+
+const DAY_WORDS: Record<Language, readonly [string, string]> = {
+  en: ['day', 'days'],
+  ro: ['zi', 'zile'],
+};
+
+export function formatDuration(minutes: unknown, language: Language): string {
+  if (!isNumber(minutes) || minutes <= 0) return '';
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes % WORKDAY_MINUTES === 0) {
+    const days = minutes / WORKDAY_MINUTES;
+    return `${days} ${DAY_WORDS[language][days === 1 ? 0 : 1]}`;
+  }
+  const rest = minutes % 60;
+  const hours = `${Math.floor(minutes / 60)} h`;
+  return rest > 0 ? `${hours} ${rest}` : hours;
+}
+
 export function formatRating(value: unknown, language: Language): string {
   return isNumber(value) ? digits(value, language, 1, 1) : MISSING;
 }
