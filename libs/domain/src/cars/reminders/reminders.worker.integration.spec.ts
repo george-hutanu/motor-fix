@@ -221,7 +221,7 @@ describe('the reminders worker with shortened days', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-006
+// @traces 092-FR-006
 describe('the reminders worker and the car events', () => {
   it('takes a relayed car event to the reminders, beside the daily run', async () => {
     const notifications = NotificationsModule.registerWorker({

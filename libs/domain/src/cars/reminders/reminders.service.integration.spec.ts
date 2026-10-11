@@ -363,7 +363,7 @@ describe('the tyre reminders', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-008
+// @traces 092-FR-008
 describe('a date set by an edit', () => {
   let driver: string;
   let carId: string;
@@ -465,7 +465,7 @@ describe('a date set by an edit', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-006
+// @traces 092-FR-006
 describe('the car events', () => {
   let driver: string;
   let carId: string;
@@ -584,7 +584,7 @@ describe('the car events', () => {
     });
   });
 
-  // @traces 092-edit-remove-car-FR-007
+  // @traces 092-FR-007
   it('removes every reminder of a removed car, twice over', async () => {
     await reminders.onCarEvent(
       updated(['itpUntil', 'rcaUntil'], {
@@ -603,7 +603,7 @@ describe('the car events', () => {
     expect(await prisma.reminder.count({ where: { carId } })).toBe(0);
   });
 
-  // @traces 092-edit-remove-car-FR-007
+  // @traces 092-FR-007
   it('changes nothing for an edit of a car removed since', async () => {
     await prisma.car.update({
       data: { removedAt: new Date() },
@@ -624,7 +624,7 @@ describe('the car events', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-007
+// @traces 092-FR-007
 describe('the daily run and a removed car', () => {
   let driver: string;
   let carId: string;

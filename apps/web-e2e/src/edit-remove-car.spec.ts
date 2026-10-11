@@ -1,7 +1,7 @@
-// @traces 092-edit-remove-car-FR-009
-// @traces 092-edit-remove-car-FR-010
-// @traces 092-edit-remove-car-FR-011
-// @traces 092-edit-remove-car-FR-014
+// @traces 092-FR-009
+// @traces 092-FR-010
+// @traces 092-FR-011
+// @traces 092-FR-014
 
 import { expect, type Page } from '@playwright/test';
 

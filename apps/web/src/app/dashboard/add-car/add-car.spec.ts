@@ -499,7 +499,7 @@ async function openEdit(
 const radio = (label: string) => field(label).checked;
 
 describe('the edit dialog', () => {
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('opens with the car filled in, under its own title and button', async () => {
     await openEdit();
 
@@ -520,7 +520,7 @@ describe('the edit dialog', () => {
     expect(button('Adaugă mașina')).toBeUndefined();
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('reads English', async () => {
     await openEdit('en');
 
@@ -531,7 +531,7 @@ describe('the edit dialog', () => {
     expect(button('Save')?.type).toBe('submit');
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('does not warn that the car’s own plate is already held', async () => {
     await openEdit();
 
@@ -541,14 +541,14 @@ describe('the edit dialog', () => {
     expect(text()).toContain('Ai deja o mașină cu acest număr.');
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('puts the focus on the date the card asked for', async () => {
     await openEdit('ro', stored, 'rcaUntil');
 
     expect(document.activeElement).toBe(field('RCA valabilă până la'));
   });
 
-  // @traces 092-edit-remove-car-FR-002
+  // @traces 092-FR-002
   it('sends only the changed fields, a cleared one as null, with the version it loaded', async () => {
     await openEdit();
     type(field('ITP valabil până la'), '2027-11-13');
@@ -571,7 +571,7 @@ describe('the edit dialog', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('sends the version alone when nothing changed', async () => {
     await openEdit();
 
@@ -584,7 +584,7 @@ describe('the edit dialog', () => {
     });
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('closes with the answered car', async () => {
     await openEdit();
     type(field('Model'), '330d');
@@ -599,7 +599,7 @@ describe('the edit dialog', () => {
     });
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('asks before saving fewer kilometres than saved, and saves after Salvează', async () => {
     await openEdit();
     type(field('Kilometri'), '140.000');
@@ -625,7 +625,7 @@ describe('the edit dialog', () => {
     });
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('returns to the form on Renunță and sends nothing', async () => {
     await openEdit();
     type(field('Kilometri'), '140000');
@@ -642,7 +642,7 @@ describe('the edit dialog', () => {
     expect(panel()).not.toBeNull();
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('asks the kilometres question in English', async () => {
     await openEdit('en');
     type(field('Kilometres'), '140000');
@@ -657,7 +657,7 @@ describe('the edit dialog', () => {
     expect(button('Cancel')).toBeDefined();
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('does not ask when the kilometres go up', async () => {
     await openEdit();
     type(field('Kilometri'), '150000');
@@ -672,7 +672,7 @@ describe('the edit dialog', () => {
     });
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('shows the button busy while saving', async () => {
     await openEdit();
     update.mockReturnValueOnce(new Promise(() => undefined));
@@ -685,7 +685,7 @@ describe('the edit dialog', () => {
     ).toBe('true');
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('keeps the values and shows the reason when the save fails', async () => {
     await openEdit();
     update.mockRejectedValueOnce(refusal(500, { code: 'internal' }));
@@ -700,7 +700,7 @@ describe('the edit dialog', () => {
     expect(button('Salvează')).toBeDefined();
   });
 
-  // @traces 092-edit-remove-car-FR-002
+  // @traces 092-FR-002
   it('reloads the car after a conflict, says so and saves with the new version', async () => {
     await openEdit();
     const current = {
@@ -735,7 +735,7 @@ describe('the edit dialog', () => {
     });
   });
 
-  // @traces 092-edit-remove-car-FR-002
+  // @traces 092-FR-002
   it('says the car is gone when a conflict finds it no longer listed', async () => {
     await openEdit();
     listCars.mockResolvedValueOnce({ items: [] });
@@ -749,7 +749,7 @@ describe('the edit dialog', () => {
     expect(text()).toContain('Nu mai găsim ce voiai să salvezi.');
   });
 
-  // @traces 092-edit-remove-car-FR-002
+  // @traces 092-FR-002
   it('says the car changed, in English', async () => {
     await openEdit('en');
     update.mockRejectedValueOnce(
@@ -766,7 +766,7 @@ describe('the edit dialog', () => {
 });
 
 describe('openAddCar for a car', () => {
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('opens the dialog for that car under the edit title', async () => {
     const open = jest.fn(async () => 'cancelled' as const);
     const overlays = { open } as unknown as Overlays;

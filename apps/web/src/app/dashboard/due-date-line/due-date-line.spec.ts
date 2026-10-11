@@ -533,7 +533,7 @@ async function renderOther(
 describe('the RCA and rovinietă lines', () => {
   beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it.each([
     [
       'driver.cars.rca',
@@ -578,7 +578,7 @@ describe('the RCA and rovinietă lines', () => {
     },
   );
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it.each([
     ['driver.cars.rca', '2026-12-08', 'RCA valid until December 2026'],
     ['driver.cars.rca', '2026-10-20', 'RCA expires in 12 days'],
@@ -604,7 +604,7 @@ describe('the RCA and rovinietă lines', () => {
 describe('the grey line that adds a date', () => {
   beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('is a button that asks for the date when the line is addable', async () => {
     const line = await renderOther(null, 'driver.cars.rca', 'ro', true);
 
@@ -617,7 +617,7 @@ describe('the grey line that adds a date', () => {
     expect(line.fixture.componentInstance.added).toBe(1);
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('names the button in English', async () => {
     const line = await renderOther(null, 'driver.cars.rovinieta', 'en', true);
 
@@ -629,7 +629,7 @@ describe('the grey line that adds a date', () => {
     ).toBe('Rovinietă: add the date');
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('stays plain text when the line is not addable', async () => {
     const line = await renderOther(null, 'driver.cars.rca');
 
@@ -637,14 +637,14 @@ describe('the grey line that adds a date', () => {
     expect(line.sentence()).toBe('RCA: adaugă data');
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('is no button once the line has a date', async () => {
     const line = await renderOther('2026-10-20', 'driver.cars.rca', 'ro', true);
 
     expect(line.element.querySelector('button')).toBeNull();
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('gives the button the 44 px target the stylesheet sets', () => {
     expect(styles).toMatch(/button\s*\{[^}]*min-height:\s*44px/);
   });

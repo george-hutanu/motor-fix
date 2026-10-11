@@ -151,7 +151,7 @@ const untouched = async (car: Car) => {
   expect(await updates()).toHaveLength(0);
 };
 
-// @traces 092-edit-remove-car-FR-001
+// @traces 092-FR-001
 describe('PATCH /cars/:id', () => {
   it('changes the fields sent, keeps the rest and answers the car with a new version', async () => {
     const { auth } = await driver();
@@ -212,7 +212,7 @@ describe('PATCH /cars/:id', () => {
     });
   });
 
-  // @traces 092-edit-remove-car-FR-014
+  // @traces 092-FR-014
   it.each(['engine', 'plate', 'itpUntil', 'rcaUntil', 'rovinietaUntil'])(
     'clears %s sent as null',
     async (field) => {
@@ -360,7 +360,7 @@ describe('PATCH /cars/:id', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-002
+// @traces 092-FR-002
 describe('an edit of a car changed in the meantime', () => {
   it('refuses a version that is not the car’s as stale_version', async () => {
     const { auth } = await driver();
@@ -408,7 +408,7 @@ describe('an edit of a car changed in the meantime', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-001
+// @traces 092-FR-001
 describe('an edit that changes nothing', () => {
   it('writes nothing and answers the car as stored', async () => {
     const { auth } = await driver();
@@ -444,7 +444,7 @@ describe('an edit that changes nothing', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-004
+// @traces 092-FR-004
 describe('whose car an edit reaches', () => {
   it.each([
     ['another driver’s car', 'other'],
@@ -539,7 +539,7 @@ describe('whose car an edit reaches', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-005
+// @traces 092-FR-005
 describe('what an edit writes beside the car', () => {
   it('writes one update entry per changed field, as the car answer shows it', async () => {
     const { auth, id } = await driver();

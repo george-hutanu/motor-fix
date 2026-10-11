@@ -13,7 +13,7 @@ const patch = (over: Record<string, unknown>) =>
   plainToInstance(UpdateCarDto, { version, ...over });
 const nextYear = new Date().getFullYear() + 1;
 
-// @traces 092-edit-remove-car-FR-001
+// @traces 092-FR-001
 describe('UpdateCarDto', () => {
   it('accepts a version alone', () => {
     expect(problems(patch({}))).toEqual([]);
@@ -63,7 +63,7 @@ describe('UpdateCarDto', () => {
     expect(problems(patch({ [field]: value }))).toEqual([field]);
   });
 
-  // @traces 092-edit-remove-car-FR-014
+  // @traces 092-FR-014
   it.each(['engine', 'plate', 'itpUntil', 'rcaUntil', 'rovinietaUntil'])(
     'accepts null for %s, which clears it',
     (field) => {
@@ -115,7 +115,7 @@ describe('UpdateCarDto', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-002
+// @traces 092-FR-002
 describe('CarDto', () => {
   it('carries updatedAt, the version an edit sends back', () => {
     const car: CarDto = plainToInstance(CarDto, {

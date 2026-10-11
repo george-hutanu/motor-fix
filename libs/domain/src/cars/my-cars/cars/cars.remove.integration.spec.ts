@@ -158,7 +158,7 @@ function quoteRequest(
   });
 }
 
-// @traces 092-edit-remove-car-FR-003
+// @traces 092-FR-003
 describe('DELETE /cars/:id', () => {
   it('answers 204 and marks the car removed, keeping its row', async () => {
     const { auth } = await driver();
@@ -243,7 +243,7 @@ describe('DELETE /cars/:id', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-003
+// @traces 092-FR-003
 describe('a car with an open request', () => {
   it.each(['sent', 'quoted', 'booked', 'in_work'] as const)(
     'is refused with 409 open_request while a request is %s, and stays',
@@ -265,7 +265,7 @@ describe('a car with an open request', () => {
   );
 });
 
-// @traces 092-edit-remove-car-FR-014
+// @traces 092-FR-014
 describe('whose car a removal reaches', () => {
   it.each([
     ['another driver’s car', 'other'],
@@ -336,8 +336,8 @@ describe('whose car a removal reaches', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-004
-// @traces 092-edit-remove-car-FR-005
+// @traces 092-FR-004
+// @traces 092-FR-005
 describe('what a removal writes beside the car', () => {
   it('writes one delete entry for the car', async () => {
     const { auth, id } = await driver();
@@ -384,8 +384,8 @@ describe('what a removal writes beside the car', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-007
-// @traces 092-edit-remove-car-FR-012
+// @traces 092-FR-007
+// @traces 092-FR-012
 describe('the reminders of a removed car', () => {
   it('are gone once car.removed is relayed, and the daily run sends nothing for it', async () => {
     const { auth, id } = await driver();

@@ -74,7 +74,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-// @traces 092-edit-remove-car-FR-011
+// @traces 092-FR-011
 describe('the removal confirmation', () => {
   it('names the car, says what happens and offers the two buttons', async () => {
     await open();
@@ -135,7 +135,7 @@ describe('the removal confirmation', () => {
   });
 });
 
-// @traces 092-edit-remove-car-FR-014
+// @traces 092-FR-014
 describe('a refused removal', () => {
   it('shows the open request inside the dialog, which stays open', async () => {
     await open('ro', async () => {

@@ -459,7 +459,7 @@ describe('a car card', () => {
   const press = (target: HTMLElement, key: string) =>
     target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }));
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('carries a menu button named after the car', async () => {
     const { element, settle } = await render();
     await settle();
@@ -470,7 +470,7 @@ describe('a car card', () => {
     expect(more?.getAttribute('aria-expanded')).toBe('false');
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('names the menu button in English', async () => {
     const { element, settle } = await render([car()], 'en');
     await settle();
@@ -480,7 +480,7 @@ describe('a car card', () => {
     );
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('offers Modifică and Șterge mașina, with the focus on the first', async () => {
     const { element, settle } = await render();
     await settle();
@@ -499,7 +499,7 @@ describe('a car card', () => {
     expect(document.activeElement).toBe(items()[0]);
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('offers Edit and Remove the car in English', async () => {
     const { element, settle } = await render([car()], 'en');
     await settle();
@@ -513,7 +513,7 @@ describe('a car card', () => {
     ]);
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('moves between the items with the arrows and closes with Escape', async () => {
     const { element, settle } = await render();
     await settle();
@@ -534,7 +534,7 @@ describe('a car card', () => {
     );
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('gives the menu button and its items a 44 px target', () => {
     const css = readFileSync(join(__dirname, 'cars-view.css'), 'utf8');
 
@@ -545,7 +545,7 @@ describe('a car card', () => {
     );
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('shows the year and kilometres, the plate, then the ITP, RCA and rovinietă lines', async () => {
     const { element, settle } = await render([
       car({
@@ -577,7 +577,7 @@ describe('a car card', () => {
     expect(card.querySelectorAll('mf-due-date-line a')).toHaveLength(0);
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('asks for the three dates on grey lines in English', async () => {
     const { element, settle } = await render([car()], 'en');
     await settle();
@@ -589,7 +589,7 @@ describe('a car card', () => {
     ]);
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('opens the edit dialog at the date a grey line asks for', async () => {
     const { element, settle } = await render([
       car({ id: 'car-1', plate: 'CJ12ABC' }),
@@ -626,7 +626,7 @@ describe('a car card', () => {
     }
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('opens the edit dialog from Modifică and puts the answered car in place without reading again', async () => {
     const { element, settle } = await render([
       car({ id: 'car-2', model: 'X1' }),
@@ -659,7 +659,7 @@ describe('a car card', () => {
     expect(list).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 092-edit-remove-car-FR-010
+  // @traces 092-FR-010
   it('leaves the card as it was when the edit is cancelled', async () => {
     const { element, settle } = await render();
     await settle();
@@ -673,7 +673,7 @@ describe('a car card', () => {
     expect(lines(cards(element)[0])[0]).toBe('BMW 320d');
   });
 
-  // @traces 092-edit-remove-car-FR-009
+  // @traces 092-FR-009
   it('shows the three lines of a car just added at once', async () => {
     const { element, settle } = await render([]);
     await settle();
@@ -692,7 +692,7 @@ describe('a car card', () => {
     ]);
   });
 
-  // @traces 092-edit-remove-car-FR-011
+  // @traces 092-FR-011
   it.each([
     [true, ['car-2']],
     ['cancelled', ['car-2', 'car-1']],
