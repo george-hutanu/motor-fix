@@ -70,8 +70,8 @@ time,
   cursor: pointer;
 }
 .open:focus-visible {
-  outline: 2px solid var(--mf-focus, currentColor);
-  outline-offset: -2px;
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: calc(-1 * var(--mf-focus-width));
 }
 @media (max-width: 900px) {
   :host {

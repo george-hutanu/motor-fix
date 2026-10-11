@@ -295,6 +295,19 @@ describe('the drawer’s actions', () => {
     );
   });
 
+  // Lap 7: at 320 px Trimite oferta filled the line and Refuză sat narrow
+  // under it; on a phone both span the sheet, as on the row.
+  it('stacks the two buttons full width on a phone', async () => {
+    await render();
+    const css = readFileSync(join(__dirname, 'request-drawer.css'), 'utf8');
+    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+
+    expect(phone).toMatch(
+      /\.actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/,
+    );
+    expect(phone).toMatch(/\.actions button\s*\{[^}]*width:\s*100%;/);
+  });
+
   it('stays open when the dialog is cancelled', async () => {
     const { element, settle } = await render();
 

@@ -54,6 +54,9 @@ export class GarageRequestsFeed {
   private readonly toasted = new Set<string>();
   // Requests answered from this tab, until their quoted row has been shown.
   private readonly mine = new Set<string>();
+  // The request whose drawer closed back to a page drawn anew: its row there
+  // takes the focus, since the overlay's opener is gone (FR-002).
+  private refocus: string | null = null;
 
   // The server's 404: this session may not see the garage's requests.
   readonly visible = computed(() => this.allowed() && !this.waiting.gone());
@@ -123,6 +126,17 @@ export class GarageRequestsFeed {
     this.waiting.reload();
     this.closedRows.reload();
     this.quotedRows.reload();
+  }
+
+  returnFocusTo(id: string) {
+    this.refocus = id;
+  }
+
+  // Whether the row of `id` should take the focus; asked once, then forgotten.
+  takeFocus(id: string): boolean {
+    if (this.refocus !== id) return false;
+    this.refocus = null;
+    return true;
   }
 
   // A quote sent from this tab: re-read now, and show its row even on a

@@ -80,9 +80,10 @@ async function render(
   } = {},
   language: 'ro' | 'en' = 'ro',
   url?: { path: string; origin?: string },
+  closedWith: string | undefined = 'cancelled',
 ) {
   observers = [];
-  open = jest.fn(async () => 'cancelled');
+  open = jest.fn(async () => closedWith);
   (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver =
     FakeObserver;
   live = fakeLive();
@@ -151,6 +152,8 @@ const waitingIds = (element: HTMLElement) =>
       'mf-garage-requests-panel li[data-live-id]:not([data-closed])',
     ),
   ].map((r) => r.dataset['liveId']);
+const opener = (element: HTMLElement) =>
+  element.querySelector('li[data-live-id="req-1"] button.open');
 const closedRows = (element: HTMLElement) => [
   ...element.querySelectorAll<HTMLElement>('li[data-closed]'),
 ];
@@ -617,6 +620,45 @@ describe('the request’s address', () => {
     await settle();
 
     expect(router.url).toBe('/app/cars');
+  });
+
+  // Lap 7: the page it was opened from is drawn anew, so the overlay has no
+  // opener to focus; the feed tells that page's row to take the focus back.
+  it('hands the focus back to the opening row when closing returns to another page', async () => {
+    const { element, router, settle } = await render({}, 'ro', {
+      origin: '/app/garage',
+      path: '/app/garage/requests/req-1',
+    });
+    await settle();
+
+    // The page drawn anew here is this one: its req-1 row took the focus.
+    expect(router.url).toBe('/app/garage');
+    expect(document.activeElement).toBe(opener(element));
+    expect(TestBed.inject(GarageRequestsFeed).takeFocus('req-1')).toBe(false);
+  });
+
+  it('leaves the focus to the overlay when the drawer was opened from the view', async () => {
+    const { element, settle } = await render({}, 'ro', {
+      origin: '/app/garage/requests',
+      path: '/app/garage/requests/req-1',
+    });
+    await settle();
+
+    expect(document.activeElement).not.toBe(opener(element));
+    expect(TestBed.inject(GarageRequestsFeed).takeFocus('req-1')).toBe(false);
+  });
+
+  it('hands no focus back when the request was answered from the drawer', async () => {
+    const { element, settle } = await render(
+      {},
+      'ro',
+      { origin: '/app/garage', path: '/app/garage/requests/req-1' },
+      'sent',
+    );
+    await settle();
+
+    expect(document.activeElement).not.toBe(opener(element));
+    expect(TestBed.inject(GarageRequestsFeed).takeFocus('req-1')).toBe(false);
   });
 
   it('returns to the requests view when nothing says where it came from', async () => {

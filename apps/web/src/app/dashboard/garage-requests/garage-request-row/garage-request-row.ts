@@ -1,9 +1,12 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  type ElementRef,
   inject,
   input,
+  viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { GARAGE_CLOSE_REASON_LABELS } from '@motor-fix/contracts/request-status';
@@ -38,6 +41,15 @@ export class GarageRequestRow {
   private readonly overlays = inject(Overlays);
   private readonly feed = inject(GarageRequestsFeed, { optional: true });
   private readonly router = inject(Router);
+  private readonly opener = viewChild<ElementRef<HTMLButtonElement>>('opener');
+
+  constructor() {
+    // The drawer this row opened closed back to its page, drawn anew.
+    afterNextRender(() => {
+      if (this.feed?.takeFocus(this.row().id))
+        this.opener()?.nativeElement.focus();
+    });
+  }
 
   protected readonly canSend = computed(() => {
     const row = this.row();

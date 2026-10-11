@@ -48,6 +48,8 @@ const me = (role: Role, canAnswerQuotes = false) =>
 let open: jest.Mock;
 let reload: jest.Mock;
 let sent: jest.Mock;
+// The request whose row the feed asks to take the focus back.
+let refocus: string | null = null;
 
 async function render(
   account: MeDto,
@@ -65,7 +67,18 @@ async function render(
       provideRouter([]),
       { provide: Session, useValue: { current: shown, shown } },
       { provide: Overlays, useValue: { open } },
-      { provide: GarageRequestsFeed, useValue: { reload, sent } },
+      {
+        provide: GarageRequestsFeed,
+        useValue: {
+          reload,
+          sent,
+          takeFocus: (id: string) => {
+            if (id !== refocus) return false;
+            refocus = null;
+            return true;
+          },
+        },
+      },
     ],
   });
   await TestBed.inject(I18n).enter('garage');
@@ -93,7 +106,10 @@ const sendButton = (element: HTMLElement, name = 'Trimite oferta') =>
     (b) => b.textContent?.trim() === name,
   );
 
-afterEach(() => TestBed.resetTestingModule());
+afterEach(() => {
+  refocus = null;
+  TestBed.resetTestingModule();
+});
 
 // @traces 344-FR-009
 describe('the request row’s Trimite oferta button', () => {
@@ -324,6 +340,24 @@ describe('opening a request from its row', () => {
     });
   });
 
+  // Lap 7: opened from Panou, the drawer closed back to a new Panou whose row
+  // the overlay could not focus; the row that opened it takes the focus back.
+  it('takes the focus back when the drawer it opened closes to its page again', async () => {
+    refocus = 'req-1';
+    const { element, settle } = await render(me('owner'));
+    await settle();
+
+    expect(document.activeElement).toBe(opener(element));
+  });
+
+  it('leaves the focus alone when no drawer of its request just closed', async () => {
+    refocus = 'req-2';
+    const { element, settle } = await render(me('owner'));
+    await settle();
+
+    expect(document.activeElement).not.toBe(opener(element));
+  });
+
   it('is absent on a closed row and for a mechanic who may not answer quotes', async () => {
     const closed = await render(me('owner'), {
       row: requestRow({
@@ -378,6 +412,12 @@ describe('the request row’s layout', () => {
     );
     expect(phone).toMatch(
       /\.actions button\s*\{[^}]*width:\s*100%;[^}]*padding-inline:\s*var\(--mf-space-3\);/,
+    );
+  });
+
+  it('draws the open button’s focus ring with the focus tokens', () => {
+    expect(css).toMatch(
+      /\.open:focus-visible\s*\{[^}]*outline:\s*var\(--mf-focus-width\) solid var\(--mf-focus\);/,
     );
   });
 

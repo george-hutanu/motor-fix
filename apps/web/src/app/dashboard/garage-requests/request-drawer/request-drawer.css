@@ -83,3 +83,13 @@ dd {
   min-height: var(--mf-tap);
   white-space: normal;
 }
+/* On a phone (the bottom sheet) both buttons span the sheet, as on the row. */
+@media (max-width: 767.98px) {
+  .actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .actions button {
+    width: 100%;
+  }
+}

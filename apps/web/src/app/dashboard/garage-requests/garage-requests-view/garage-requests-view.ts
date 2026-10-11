@@ -91,9 +91,19 @@ export class GarageRequestsView {
       if (next) void this.follow(next);
       return;
     }
-    // Opened in the app, the origin is the entry before: going back to it
-    // leaves no second one. Opened by its address, the view replaces it.
-    if (typeof origin === 'string') this.location.back();
-    else void this.router.navigateByUrl(VIEW, { replaceUrl: true });
+    this.leave(id, origin, result);
+  }
+
+  // Opened in the app, the origin is the entry before: going back to it
+  // leaves no second one. Opened by its address, the view replaces it.
+  private leave(id: string, origin: unknown, result: string) {
+    if (typeof origin !== 'string') {
+      void this.router.navigateByUrl(VIEW, { replaceUrl: true });
+      return;
+    }
+    // The overlay gave the focus back to the view's row; another page is
+    // drawn anew, so its row of this request takes it there.
+    if (result === 'cancelled' && origin !== VIEW) this.feed.returnFocusTo(id);
+    this.location.back();
   }
 }

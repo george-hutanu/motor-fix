@@ -27,7 +27,7 @@
   </p>
 }
 @if (canSend()) {
-  <button type="button" class="open" [attr.aria-label]="'garage.requests.open' | t: { name: name() }" (click)="open()"></button>
+  <button #opener type="button" class="open" [attr.aria-label]="'garage.requests.open' | t: { name: name() }" (click)="open()"></button>
   <div class="actions">
     <button hlmBtn type="button" (click)="send()">{{ 'garage.quotes.send.title' | t }}</button>
     <button hlmBtn variant="secondary" type="button" (click)="decline()">{{ 'garage.requests.decline.button' | t }}</button>
