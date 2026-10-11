@@ -1,4 +1,4 @@
-import type { BrowserContext } from '@playwright/test';
+import type { APIRequestContext, BrowserContext } from '@playwright/test';
 import { test as base } from '@playwright/test';
 
 import { cacheAssets } from './asset-cache/asset-cache.js';
@@ -11,6 +11,32 @@ export const MAILBOX = 'http://127.0.0.1:3025';
 
 // The browser telemetry collector's path (FARO_URL ends in /collect/<key>).
 export const COLLECTOR = /\/collect\/[\w-]+$/;
+
+// The tag the web server renders when PLAUSIBLE_DOMAIN is set, with a domain.
+const ANALYTICS_TAG = /<meta name="mf-analytics" content="[^"]+"/;
+
+/**
+ * Why a flow that needs analytics to load cannot run against this target, or
+ * undefined when it can. Only a deployed target is read: staging and
+ * production set no PLAUSIBLE_DOMAIN while analytics are off, so their pages
+ * carry no analytics tag. A run that starts its own servers (CI's E2E job sets
+ * the domain) never skips, so a missing domain there fails.
+ */
+export function analyticsSkipReason(
+  html: string,
+  target: string | undefined,
+): string | undefined {
+  if (!target || ANALYTICS_TAG.test(html)) return undefined;
+  return 'the server under test has no Plausible domain configured';
+}
+
+/** Skips the running test when the target serves no analytics domain. */
+export async function needsAnalytics(request: APIRequestContext) {
+  const reason = deployed
+    ? analyticsSkipReason(await (await request.get('/ro')).text(), deployed)
+    : undefined;
+  base.skip(reason !== undefined, reason);
+}
 
 /** The `context` fixture: the routes every test shares, removed when it ends. */
 export async function routedContext(

@@ -1,7 +1,7 @@
 import { type BrowserContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, settled, signIn } from './accounts.js';
-import { test } from './fixtures.js';
+import { needsAnalytics, test } from './fixtures.js';
 import { clearConsentCounts } from './global-setup.js';
 
 const KEY = 'mf_consent';
@@ -24,6 +24,11 @@ const TEXT = {
     settings: 'Setări cookie',
   },
 } as const;
+
+// The flows that need analytics to load call needsAnalytics first: against a
+// deployed target that sets no Plausible domain (staging and production while
+// analytics are off) they skip; a run that starts its own servers never does.
+// The flows that assert nothing loads run everywhere.
 
 // Answers plausible.io here, so nothing leaves, and counts every call: the
 // script itself and each page view the stand-in script sends.
@@ -102,7 +107,9 @@ test.describe('the consent bar on a first visit', () => {
 
     test(`counts the page once accepted and asks no more, ${language}`, async ({
       page,
+      request,
     }) => {
+      await needsAnalytics(request);
       const calls = await analyticsCalls(page);
       await ready(page, `/${language}`);
 
@@ -190,7 +197,9 @@ test.describe('cookie settings', () => {
   for (const language of ['ro', 'en'] as const) {
     test(`turn analytics off from the footer and on again, ${language}`, async ({
       page,
+      request,
     }) => {
+      await needsAnalytics(request);
       const calls = await analyticsCalls(page);
       await ready(page, `/${language}`);
       await bar(page, language)
@@ -270,7 +279,11 @@ test.describe('a garage profile and the dashboard @seeded', () => {
 
   // The visitor's choice is newer than any the account holds, so it applies
   // whatever another test left on the account.
-  test("turns analytics off from the driver's Setări", async ({ page }) => {
+  test("turns analytics off from the driver's Setări", async ({
+    page,
+    request,
+  }) => {
+    await needsAnalytics(request);
     const calls = await analyticsCalls(page);
     await ready(page, '/ro');
     await bar(page, 'ro')
@@ -320,7 +333,9 @@ test.describe('the account carries the choice @seeded', () => {
   test('a choice made before sign-in applies on a fresh browser after sign-in', async ({
     browser,
     page,
+    request,
   }) => {
+    await needsAnalytics(request);
     await analyticsCalls(page);
     await ready(page, '/ro');
     await bar(page, 'ro')

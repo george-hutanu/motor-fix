@@ -26,7 +26,8 @@ test('the context fixture removes every route handler once the test ends', async
 // FR-001..FR-002 (ST-1161): the flows that need analytics to load skip only
 // on a deployed target whose page names no analytics domain.
 test.describe('analyticsSkipReason', () => {
-  const served = '<head><meta name="mf-analytics" content="motorfix.ro"></head>';
+  const served =
+    '<head><meta name="mf-analytics" content="motorfix.ro"></head>';
   const bare = '<head><title>MotorFix</title></head>';
   const staging = 'https://staging.motorfix.example';
 
