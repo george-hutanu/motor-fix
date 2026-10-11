@@ -57,16 +57,19 @@ const brandSlug = (brand: unknown) =>
 // the labour rate when both ends are set, and each public job's range for the
 // brand in context, listed as the garage ticked them for it.
 function priceListOf(
-  brands: { brand: { id: string }; jobs: { jobTypeId: string }[] }[],
+  brands: {
+    brand: { id: string };
+    jobs: { jobTypeId: string }[];
+    stance: string;
+  }[],
   labourFromBani: number | null,
   labourToBani: number | null,
   prices: PriceRow[],
   rarActivities: string[],
   brandId: string | undefined,
 ): Pick<PublicGarageDto, 'jobTypes' | 'labour' | 'prices'> {
-  const ticks = brands
-    .find((row) => row.brand.id === brandId)
-    ?.jobs.map((job) => job.jobTypeId);
+  const held = brands.find((row) => row.brand.id === brandId);
+  const ticks = held?.jobs.map((job) => job.jobTypeId) ?? [];
   const jobs = priceListJobs(prices, rarActivities);
   return {
     jobTypes: jobs
@@ -82,9 +85,10 @@ function priceListOf(
       }),
     prices: publicPriceRows(
       prices,
-      rarActivities,
-      brandId === undefined ? undefined : { id: brandId, ticks: ticks ?? [] },
       jobs,
+      brandId === undefined
+        ? undefined
+        : { id: brandId, refused: held?.stance === 'does_not_take', ticks },
     ),
   };
 }

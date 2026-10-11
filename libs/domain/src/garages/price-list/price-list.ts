@@ -125,16 +125,16 @@ const brandRange = (
   );
 };
 
-// The jobs drivers see on a profile, in the list's order. With a brand in
-// context its complete range replaces the default and, once the garage ticked
-// any job for it, only the ticked jobs are listed; visibility, order and
-// duration always come from the default row. A caller that already holds
-// priceListJobs' answer passes it as jobs.
+// The jobs drivers see on a profile, in the list's order (`jobs` is
+// priceListJobs' answer for the same rows). With a brand in context its
+// complete range replaces the default, unless the garage does not take the
+// brand (`refused`), and once the garage ticked any job for it only the ticked
+// jobs are listed; visibility, order and duration always come from the
+// default row.
 export function publicPriceRows(
   rows: readonly PriceRow[],
-  rarActivities: readonly string[],
-  brand?: { id: string; ticks: readonly string[] },
-  jobs: readonly PriceListItemDto[] = priceListJobs(rows, rarActivities),
+  jobs: readonly PriceListItemDto[],
+  brand?: { id: string; refused?: boolean; ticks: readonly string[] },
 ): PublicPriceRowDto[] {
   const ticks = new Set(brand?.ticks);
   const listed = (jobTypeId: string) =>
@@ -144,7 +144,9 @@ export function publicPriceRows(
       item;
     if (!item.public || fromBani === undefined || toBani == null) return [];
     if (!listed(jobTypeId)) return [];
-    const own = brandRange(rows, jobTypeId, brand?.id);
+    const own = brand?.refused
+      ? undefined
+      : brandRange(rows, jobTypeId, brand?.id);
     return [
       {
         jobTypeId,

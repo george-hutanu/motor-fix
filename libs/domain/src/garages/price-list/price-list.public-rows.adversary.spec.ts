@@ -1,4 +1,11 @@
-import { type PriceRow, publicPriceRows } from './price-list';
+import { type PriceRow, priceListJobs, publicPriceRows } from './price-list';
+
+// The profile read's two steps, as public-garages.ts runs them.
+const publicRows = (
+  rows: readonly PriceRow[],
+  rarActivities: readonly string[],
+  brand?: Parameters<typeof publicPriceRows>[2],
+) => publicPriceRows(rows, priceListJobs(rows, rarActivities), brand);
 
 type Status = PriceRow['jobType']['status'];
 
@@ -40,8 +47,8 @@ const ranges = (rows: ReturnType<typeof publicPriceRows>) =>
 // @traces 355-price-list-ranges-FR-002
 describe('publicPriceRows with a brand range', () => {
   it('returns an empty list for no rows', () => {
-    expect(publicPriceRows([], [])).toEqual([]);
-    expect(publicPriceRows([], [], { id: BMW, ticks: ['x'] })).toEqual([]);
+    expect(publicRows([], [])).toEqual([]);
+    expect(publicRows([], [], { id: BMW, ticks: ['x'] })).toEqual([]);
   });
 
   it('uses a complete brand range even when the brand row is hidden', () => {
@@ -51,7 +58,7 @@ describe('publicPriceRows with a brand range', () => {
       row(j, { brandId: BMW, fromBani: 5000, toBani: 9000, visible: false }),
     ];
 
-    expect(ranges(publicPriceRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
+    expect(ranges(publicRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
       [j.id, 5000, 9000],
     ]);
   });
@@ -60,7 +67,7 @@ describe('publicPriceRows with a brand range', () => {
     const j = job();
     const rows = [row(j), row(j, { brandId: BMW, fromBani: 0, toBani: 0 })];
 
-    expect(ranges(publicPriceRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
+    expect(ranges(publicRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
       [j.id, 0, 0],
     ]);
   });
@@ -72,7 +79,7 @@ describe('publicPriceRows with a brand range', () => {
       row(j, { brandId: BMW, fromBani: 5000, toBani: null }),
     ];
 
-    expect(ranges(publicPriceRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
+    expect(ranges(publicRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
       [j.id, 1000, 2000],
     ]);
   });
@@ -84,7 +91,7 @@ describe('publicPriceRows with a brand range', () => {
       row(j, { brandId: 'brand-audi', fromBani: 1, toBani: 2 }),
     ];
 
-    expect(ranges(publicPriceRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
+    expect(ranges(publicRows(rows, [], { id: BMW, ticks: [] }))).toEqual([
       [j.id, 1000, 2000],
     ]);
   });
@@ -93,7 +100,7 @@ describe('publicPriceRows with a brand range', () => {
     const j = job();
     const rows = [row(j, { brandId: BMW, fromBani: 5000, toBani: 9000 })];
 
-    expect(publicPriceRows(rows, [], { id: BMW, ticks: [j.id] })).toEqual([]);
+    expect(publicRows(rows, [], { id: BMW, ticks: [j.id] })).toEqual([]);
   });
 
   it('never lists a job the rule hides, whatever the brand range or tick', () => {
@@ -113,7 +120,7 @@ describe('publicPriceRows with a brand range', () => {
     ];
 
     expect(
-      publicPriceRows(rows, ['B'], { id: BMW, ticks: all.map((j) => j.id) }),
+      publicRows(rows, ['B'], { id: BMW, ticks: all.map((j) => j.id) }),
     ).toEqual([]);
   });
 
@@ -124,13 +131,13 @@ describe('publicPriceRows with a brand range', () => {
       row(j, { brandId: BMW, durationMinutes: 999, fromBani: 5, toBani: 6 }),
     ];
 
-    const [only] = publicPriceRows(rows, [], { id: BMW, ticks: [] });
+    const [only] = publicRows(rows, [], { id: BMW, ticks: [] });
 
     expect(only.durationMinutes).toBe(120);
   });
 
   it('omits the duration key when the default row has none', () => {
-    const [only] = publicPriceRows([row(job())], []);
+    const [only] = publicRows([row(job())], []);
 
     expect(Object.keys(only).sort()).toEqual([
       'fromBani',
@@ -151,9 +158,7 @@ describe('publicPriceRows with brand ticks', () => {
     const rows = [row(a, { position: 0 }), row(b, { position: 1 })];
 
     expect(
-      publicPriceRows(rows, [], { id: BMW, ticks: [b.id] }).map(
-        (r) => r.jobTypeId,
-      ),
+      publicRows(rows, [], { id: BMW, ticks: [b.id] }).map((r) => r.jobTypeId),
     ).toEqual([b.id]);
   });
 
@@ -161,7 +166,7 @@ describe('publicPriceRows with brand ticks', () => {
     const a = job();
 
     expect(
-      publicPriceRows([row(a)], [], { id: BMW, ticks: ['someone-else'] }),
+      publicRows([row(a)], [], { id: BMW, ticks: ['someone-else'] }),
     ).toEqual([]);
   });
 
@@ -170,8 +175,8 @@ describe('publicPriceRows with brand ticks', () => {
     const b = job();
     const rows = [row(a, { position: 0 }), row(b, { position: 1 })];
 
-    expect(publicPriceRows(rows, [], { id: BMW, ticks: [] })).toHaveLength(2);
-    expect(publicPriceRows(rows, [])).toHaveLength(2);
+    expect(publicRows(rows, [], { id: BMW, ticks: [] })).toHaveLength(2);
+    expect(publicRows(rows, [])).toHaveLength(2);
   });
 
   it('keeps the order of the default rows however the brand rows are placed', () => {
@@ -184,7 +189,7 @@ describe('publicPriceRows with brand ticks', () => {
     ];
 
     expect(
-      publicPriceRows(rows, [], { id: BMW, ticks: [] }).map((r) => r.jobTypeId),
+      publicRows(rows, [], { id: BMW, ticks: [] }).map((r) => r.jobTypeId),
     ).toEqual([a.id, b.id]);
   });
 });
@@ -199,8 +204,8 @@ describe('publicPriceRows purity', () => {
     ]);
     const brand = Object.freeze({ id: BMW, ticks: Object.freeze([j.id]) });
 
-    const first = publicPriceRows(rows, [], brand);
-    const second = publicPriceRows(rows, [], brand);
+    const first = publicRows(rows, [], brand);
+    const second = publicRows(rows, [], brand);
 
     expect(second).toEqual(first);
     expect(first).toHaveLength(1);
@@ -211,7 +216,7 @@ describe('publicPriceRows purity', () => {
       row(job(), { position: 10_000 - i }),
     );
 
-    const out = publicPriceRows(rows, []);
+    const out = publicRows(rows, []);
 
     expect(out).toHaveLength(10_000);
     expect(out[0].jobTypeId).toBe(rows[9_999].jobType.id);

@@ -233,6 +233,22 @@ describe('the brand ticks on the price list', () => {
     expect(ids((await get(garage.slug, dacia.slug)).body)).toEqual([b.id]);
   });
 
+  it('keeps the default ranges for a brand the garage does not take', async () => {
+    const dacia = await brand('Dacia');
+    const { garage, price } = await setup();
+    const a = await jobType('A');
+    await price(a.id, 0);
+    await price(a.id, 0, {
+      brandId: dacia.id,
+      fromBani: 110_000,
+      toBani: 170_000,
+    });
+    await stance(garage.id, dacia.id, 'does_not_take');
+
+    const [row] = (await get(garage.slug, dacia.slug)).body.prices;
+    expect([row?.fromBani, row?.toBani]).toEqual([15_000, 22_000]);
+  });
+
   it('is not filtered by ticks the garage recorded for another brand', async () => {
     const bmw = await brand('BMW');
     const audi = await brand('Audi');

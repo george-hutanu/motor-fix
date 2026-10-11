@@ -1,5 +1,12 @@
 import { type PriceRow, priceListJobs, publicPriceRows } from './price-list';
 
+// The profile read's two steps, as public-garages.ts runs them.
+const publicRows = (
+  rows: readonly PriceRow[],
+  rarActivities: readonly string[],
+  brand?: Parameters<typeof publicPriceRows>[2],
+) => publicPriceRows(rows, priceListJobs(rows, rarActivities), brand);
+
 type Status = PriceRow['jobType']['status'];
 
 let next = 0;
@@ -222,14 +229,14 @@ describe('the price list items', () => {
 // @traces 355-price-list-ranges-FR-004
 describe('the public price rows of a profile read without a brand', () => {
   it('is empty without a price row', () => {
-    expect(publicPriceRows([], [])).toEqual([]);
+    expect(publicRows([], [])).toEqual([]);
   });
 
   it('gives each public job its names, duration and default range', () => {
     const j = job();
 
     expect(
-      publicPriceRows(
+      publicRows(
         [row(j, { durationMinutes: 120, fromBani: 89_000, toBani: 140_000 })],
         [],
       ),
@@ -246,7 +253,7 @@ describe('the public price rows of a profile read without a brand', () => {
   });
 
   it('leaves the duration out when the default row has none', () => {
-    const [item] = publicPriceRows([row(job())], []);
+    const [item] = publicRows([row(job())], []);
 
     expect(item).not.toHaveProperty('durationMinutes');
   });
@@ -256,7 +263,7 @@ describe('the public price rows of a profile read without a brand', () => {
     const first = job();
     const third = job();
 
-    const ids = publicPriceRows(
+    const ids = publicRows(
       [
         row(second, { position: 2 }),
         row(second, { brandId: 'bmw', position: 0 }),
@@ -282,7 +289,7 @@ describe('the public price rows of a profile read without a brand', () => {
       row(job(), { brandId: 'bmw' }),
     ];
 
-    expect(publicPriceRows(rows, ['B']).map((item) => item.jobTypeId)).toEqual([
+    expect(publicRows(rows, ['B']).map((item) => item.jobTypeId)).toEqual([
       shown.id,
     ]);
   });
@@ -291,8 +298,11 @@ describe('the public price rows of a profile read without a brand', () => {
 // @traces 355-price-list-ranges-FR-002
 // @traces 355-price-list-ranges-FR-003
 describe('the public price rows of a profile read with a brand', () => {
-  const ranges = (rows: PriceRow[], brand?: { id: string; ticks: string[] }) =>
-    publicPriceRows(rows, [], brand).map(({ fromBani, toBani }) => [
+  const ranges = (
+    rows: PriceRow[],
+    brand?: { id: string; refused?: boolean; ticks: string[] },
+  ) =>
+    publicRows(rows, [], brand).map(({ fromBani, toBani }) => [
       fromBani,
       toBani,
     ]);
@@ -349,9 +359,21 @@ describe('the public price rows of a profile read with a brand', () => {
     ]);
   });
 
+  it('keeps the default range for a brand the garage does not take', () => {
+    const j = job();
+    const rows = [
+      row(j),
+      row(j, { brandId: 'bmw', fromBani: 110_000, toBani: 170_000 }),
+    ];
+
+    expect(ranges(rows, { id: 'bmw', refused: true, ticks: [] })).toEqual([
+      [35_000, 48_000],
+    ]);
+  });
+
   it('keeps the default duration beside a brand range', () => {
     const j = job();
-    const [item] = publicPriceRows(
+    const [item] = publicRows(
       [
         row(j, { durationMinutes: 120 }),
         row(j, { brandId: 'bmw', durationMinutes: 30, toBani: 90_000 }),
@@ -369,7 +391,7 @@ describe('the public price rows of a profile read with a brand', () => {
     const rows = [row(brakes), row(chain, { position: 1 })];
 
     expect(
-      publicPriceRows(rows, [], { id: 'bmw', ticks: [brakes.id] }).map(
+      publicRows(rows, [], { id: 'bmw', ticks: [brakes.id] }).map(
         (item) => item.jobTypeId,
       ),
     ).toEqual([brakes.id]);
@@ -381,7 +403,7 @@ describe('the public price rows of a profile read with a brand', () => {
     const rows = [row(brakes), row(chain, { position: 1 })];
 
     expect(
-      publicPriceRows(rows, [], { id: 'audi', ticks: [] }).map(
+      publicRows(rows, [], { id: 'audi', ticks: [] }).map(
         (item) => item.jobTypeId,
       ),
     ).toEqual([brakes.id, chain.id]);
@@ -402,9 +424,7 @@ describe('the public price rows of a profile read with a brand', () => {
         row(j, { brandId: 'bmw', fromBani: 110_000, toBani: 170_000 }),
       ];
 
-      expect(
-        publicPriceRows(rows, ['B'], { id: 'bmw', ticks: [j.id] }),
-      ).toEqual([]);
+      expect(publicRows(rows, ['B'], { id: 'bmw', ticks: [j.id] })).toEqual([]);
     },
   );
 });
