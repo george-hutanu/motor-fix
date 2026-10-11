@@ -136,6 +136,32 @@ describe('merge gate — the decision', () => {
     assert.equal(decideMerge(pr(rollup)), null);
   });
 
+  // E2E runs only on demand (gh workflow run ci.yml): a later PR re-run on the
+  // same head skips it again, which must not hide the on-demand run's failure.
+  it('does not let a later skipped run hide a failed run of the same check', () => {
+    const rollup = [
+      { ...run('E2E tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('E2E tests', 'SKIPPED', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS', 'COMPLETED', '2026-10-05T07:12:00Z'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.match(decideMerge(pr(rollup)), /CI failed.*CI \/ E2E tests/);
+    assert.match(decideMerge(pr([rollup[1], rollup[0], rollup[2], rollup[3]])), /CI failed.*CI \/ E2E tests/);
+  });
+
+  it('lets a later run that passed replace a failed one, and a skip follow a cancelled one', () => {
+    const rollup = [
+      { ...run('E2E tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('E2E tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
+      { ...run('E2E tests', 'SKIPPED', 'COMPLETED', '2026-10-05T07:20:00Z'), workflowName: 'CI' },
+      { ...run('Docker build (web)', 'CANCELLED', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('Docker build (web)', 'SKIPPED', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
   it('reads an expected status context as pending, not failed', () => {
     const rollup = [...green, { __typename: 'StatusContext', context: 'deploy', state: 'EXPECTED' }, review('SUCCESS')];
     assert.match(decideMerge(pr(rollup)), /still running.*deploy/);

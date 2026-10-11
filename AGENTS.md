@@ -442,8 +442,8 @@ source for anything the constitution does not fix.
   `.claude/`, `.specify/` and `.github/`, or `docs/`) runs only the
   Changes and `CI OK` jobs. `scripts/ci-paths.ts` filters the rest by path:
   Docker build only on an image input (a Dockerfile, `package*.json`,
-  `.nvmrc`, `docker/`, `infra/keycloak/`, `apps/*/project.json`, build
-  config), Compose stack only on `docker-compose*.yml` or `infra/`, Harness
+  `.nvmrc`, `docker/`, `infra/keycloak/`, `libs/domain/prisma/`,
+  `apps/*/project.json`, build config), Compose stack only on `docker-compose*.yml` or `infra/`, Harness
   and its browser only on `.claude/`, `.specify/`, `.husky/`, `.github/`,
   `scripts/` or `package*.json`; a change to `ci.yml` runs all three. The
   sixth job, E2E tests (Playwright `web-e2e`, four workers, servers started

@@ -39,6 +39,8 @@ describe('classify', () => {
     'apps/web/project.json',
     'apps/api/tsconfig.app.json',
     'libs/domain/prisma.config.ts',
+    'libs/domain/prisma/schema/garage.prisma',
+    'libs/domain/prisma/migrations/20261011000000_x/migration.sql',
   ])('builds the images for %s', (path) => {
     expect(classify([path])).toEqual({ ...NONE, docker: true });
   });

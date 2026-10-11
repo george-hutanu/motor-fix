@@ -43,7 +43,8 @@ const DOCKER: Rule[] = [
     'libs/domain/prisma.config.ts',
     WORKFLOW,
   ),
-  under('docker/', 'infra/keycloak/'),
+  // The Dockerfile copies the Prisma schema and generates the client from it.
+  under('docker/', 'infra/keycloak/', 'libs/domain/prisma/'),
   matching(/^apps\/[^/]+\/(project\.json|tsconfig[^/]*\.json)$/),
 ];
 
