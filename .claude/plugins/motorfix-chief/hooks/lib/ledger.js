@@ -62,11 +62,14 @@ export function ledgerBlock(rows, ctx) {
   );
 }
 
+const CI_STATES = new Set(['pass', 'fail', 'pending']);
+
+// FR-022: a value outside the column's set is drawn as its default.
 export const boardRow = (r, ctx) => ({
   age: ageText(ctx.now - r.updatedAt),
-  ci: r.ci ?? 'none',
+  ci: CI_STATES.has(r.ci) ? r.ci : 'none',
   holder: holding(r, ctx) ? r.holder : 'none',
-  lap: `${r.lap}/${LAP_CAP}`,
+  lap: `${Math.min(LAP_CAP, r.lap ?? 0)}/${LAP_CAP}`,
   pr: r.pr,
   stage: r.stage ?? 'none',
 });

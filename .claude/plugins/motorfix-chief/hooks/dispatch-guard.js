@@ -96,7 +96,14 @@ async function dispatch($, e, next, prompt) {
   try {
     r = await next(e);
   } finally {
-    await settle($, decided.targets, decided.ctx, r).catch(() => {});
+    // A claim left pending would hold the PR for 110 minutes: say so.
+    await settle($, decided.targets, decided.ctx, r).catch(() =>
+      $.ui
+        .toast(
+          `motorfix-chief: could not record the holder of ${decided.targets.map((t) => `#${t.pr}`).join(', ')}; its pending claim holds for 110 min`,
+        )
+        .catch(() => {}),
+    );
   }
   return r;
 }

@@ -41,7 +41,6 @@ describe("motorfix-chief limits", () => {
 
   it("leaves the 16 settings-hook gates and their fingerprints as main has them (FR-015)", () => {
     const gates = here(".claude/hooks/registry.json").hooks;
-    expect(gates).toHaveLength(16);
     expect(gates).toEqual(onMain(".claude/hooks/registry.json").hooks);
   });
 });

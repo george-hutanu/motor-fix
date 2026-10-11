@@ -85,7 +85,8 @@ async function afterCiWait($, call, r) {
     waits.set(r.result.backgroundTaskId, call);
     return r;
   }
-  const passed = !r.isError && !(r.result?.stdout ?? '').trim();
+  const passed =
+    !r.isError && !r.result?.interrupted && !(r.result?.stdout ?? '').trim();
   return withContext(r, await finished($, call, passed));
 }
 

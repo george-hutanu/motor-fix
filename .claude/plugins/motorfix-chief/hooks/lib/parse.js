@@ -37,7 +37,9 @@ export function qaRunLine(stdout) {
 }
 
 export function replyBlock(text) {
-  const m = text.match(/^STATUS: (.*)\nPR: (.*)\nNEXT: (.*)\nFILES: (.*)/);
+  const m = text
+    .replace(/\r\n/g, '\n')
+    .match(/^STATUS: (.*)\nPR: (.*)\nNEXT: (.*)\nFILES: (.*)/);
   return m ? { files: m[4], next: m[3], pr: m[2], status: m[1] } : undefined;
 }
 

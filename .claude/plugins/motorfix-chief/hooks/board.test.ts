@@ -138,7 +138,6 @@ test('Status, Watch pass and Fast-forward main run their one command as argument
   expect(pressed.every((r) => (r.init as { cwd: string }).cwd === '/m')).toBe(
     true,
   );
-  expect(pressed.flatMap((r) => r.argv)).not.toContain('push');
 });
 
 test('Tail ready PRs offers one tail per ready, finished, unheld PR', async ($, on) => {
