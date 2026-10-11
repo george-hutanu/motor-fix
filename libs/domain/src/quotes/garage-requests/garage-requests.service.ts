@@ -7,13 +7,20 @@ import type {
   GarageRequestSummaryDto,
   GarageRequestsQueryDto,
 } from '@motor-fix/contracts';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpStatus,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
+import { refusal } from '../../auth/sign-up.service';
 import type {
   Account,
   Booking,
+  GarageStatus,
   JobType,
   Prisma,
   PrismaClient,
@@ -23,6 +30,7 @@ import type {
   RequestJob,
   RequestRecipient,
 } from '../../generated/prisma/client';
+import { ANSWERING } from '../answers';
 import { PAGE_SIZE } from '../quotes-config';
 import {
   assertCursor,
@@ -59,7 +67,39 @@ type Offered = Set<string>;
 const offeredKey = (brand: string, jobTypeId: string) =>
   `${brand}\u0000${jobTypeId}`;
 
-type Closed = { closedAt: string; closedReason: GarageCloseReason };
+type Closed = { closedAt: string | null; closedReason: GarageCloseReason };
+
+// The closed list's rule, as its raw query in closed() states it in SQL: keep
+// the two in step.
+const CLOSED_FOR_GARAGE = new Set(['expired', 'closed', 'declined']);
+const OPEN_REQUEST = new Set(['sent', 'quoted']);
+
+// Why the request no longer waits for the garage, by the closed list's rule;
+// a suspended garage cannot answer a request still waiting for it either. The
+// detail carries no close time: the list reads it from the activity log.
+function closedOf(
+  row: SummaryRow & {
+    recipients: { garage: { status: GarageStatus } }[];
+  },
+): Closed | undefined {
+  const [recipient] = row.recipients;
+  const garage = recipient.garage.status;
+  const waiting = recipient.status === 'waiting';
+  if (waiting && garage === 'suspended') {
+    return { closedAt: null, closedReason: 'garage_suspended' };
+  }
+  const closed =
+    CLOSED_FOR_GARAGE.has(recipient.status) ||
+    (waiting && !OPEN_REQUEST.has(row.status));
+  if (!closed) return undefined;
+  const closedReason = closeReasonOf(
+    recipient.status,
+    row,
+    garage,
+    row.quotes[0]?.status === 'accepted',
+  );
+  return { closedAt: null, closedReason };
+}
 
 function summaryOf(
   row: SummaryRow,
@@ -234,6 +274,7 @@ export class GarageRequestsService {
       ) c
       WHERE rr.garage_id = ${garageId}::uuid
         AND (
+          -- CLOSED_FOR_GARAGE and OPEN_REQUEST state the same rule for get().
           rr.status IN ('expired', 'closed', 'declined')
           OR (rr.status = 'waiting' AND qr.status NOT IN ('sent', 'quoted'))
         )
@@ -367,8 +408,11 @@ export class GarageRequestsService {
     );
   }
 
+  // A mechanic of an asked garage who may not answer quotes is told so; every
+  // other reader the request was not sent to learns nothing of it.
   async get(actor: Actor, id: string): Promise<GarageRequestDto> {
-    const garageId = this.garageOf(actor);
+    const garageId = actor.garageId;
+    if (!ANSWERING.has(actor.role) || !garageId) throw new NotFoundException();
     const row = await this.prisma.quoteRequest.findFirst({
       include: {
         ...summaryInclude(garageId),
@@ -379,15 +423,30 @@ export class GarageRequestsService {
           where: { garageId },
         },
         car: { select: { plate: true } },
+        recipients: {
+          include: { garage: { select: { status: true } } },
+          where: { garageId },
+        },
       },
       where: { id, recipients: { some: { garageId } } },
     });
     if (!row) throw new NotFoundException();
+    if (actor.role === 'mechanic' && !actor.permissions.canAnswerQuotes) {
+      throw refusal(
+        HttpStatus.FORBIDDEN,
+        'forbidden',
+        'Nu ai dreptul să citești cererile',
+      );
+    }
     const [offered, prices] = await Promise.all([
       this.offered(garageId, [row]),
       this.prices(garageId, row),
+      this.prisma.requestRecipient.updateMany({
+        data: { firstSeenAt: new Date() },
+        where: { firstSeenAt: null, garageId, requestId: id },
+      }),
     ]);
-    const summary = summaryOf(row, offered);
+    const summary = summaryOf(row, offered, closedOf(row));
     const [booking] = row.bookings;
     // The plate shows from confirmation on, as it does on the job, even once
     // the booking is cancelled; a mechanic sees it only on their own booking.
