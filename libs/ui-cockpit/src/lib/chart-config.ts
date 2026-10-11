@@ -39,6 +39,8 @@ interface ChartTheme {
   amber: string;
   bg: string;
   font: string;
+  /** The label token in pixels; undefined leaves Chart.js its default. */
+  labelSize?: number;
   line: string;
   text: string;
   textSecondary: string;
@@ -58,10 +60,12 @@ export const formatValue = (
 export function readTheme(el: Element): ChartTheme {
   const style = getComputedStyle(el);
   const token = (name: string) => style.getPropertyValue(`--mf-${name}`).trim();
+  const labelSize = Number.parseFloat(token('size-label'));
   return {
     amber: token('amber-ink'),
     bg: token('bg'),
     font: token('font-body'),
+    labelSize: Number.isFinite(labelSize) ? labelSize : undefined,
     line: token('line'),
     text: token('text'),
     textSecondary: token('text-secondary'),
@@ -115,7 +119,7 @@ export function chartConfig(
   const format = (value: unknown) => formatValue(unit, value, language);
   const ticks = {
     color: theme.textSecondary,
-    font: { family: theme.font, size: 12 },
+    font: { family: theme.font, size: theme.labelSize },
   };
   return {
     data: {
@@ -138,7 +142,7 @@ export function chartConfig(
         tooltip: {
           backgroundColor: theme.text,
           bodyColor: theme.bg,
-          bodyFont: { family: theme.font, size: 12, weight: 600 },
+          bodyFont: { family: theme.font, size: theme.labelSize, weight: 600 },
           callbacks: {
             label: (item: TooltipItem<ChartType>) =>
               `${item.label} · ${format(item.raw)}`,

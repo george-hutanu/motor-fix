@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -659,5 +662,22 @@ describe('retrying', () => {
 
     expect(current.sent).toHaveLength(2);
     expect(current.sent[1].key).not.toBe(current.sent[0].key);
+  });
+});
+
+describe('type scale (ST-975)', () => {
+  // @traces 975-type-scale-FR-001
+  // @traces 975-type-scale-FR-008
+  const source = readFileSync(join(__dirname, 'form-parts.ts'), 'utf8');
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = source.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets the done and error message at the subheading size', () => {
+    expect(source).toContain('font-size: var(--mf-size-subheading);');
   });
 });
