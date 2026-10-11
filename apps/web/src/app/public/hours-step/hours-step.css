@@ -38,7 +38,7 @@ input:not([type="checkbox"], [type="radio"]) {
   min-height: var(--mf-tap);
   box-sizing: border-box;
   font: inherit;
-  font-size: max(16px, 1rem);
+  font-size: var(--mf-size-field);
   color: var(--mf-text);
   background: var(--mf-bg);
   border: 1px solid var(--mf-line-strong);

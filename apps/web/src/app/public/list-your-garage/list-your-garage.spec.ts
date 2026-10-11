@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -1900,5 +1903,32 @@ describe('the details, prices and mechanics in the draft', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('type scale (ST-975)', () => {
+  // @traces 975-type-scale-FR-001
+  // @traces 975-type-scale-FR-004
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'list-your-garage.css'),
+    'utf8',
+  );
+  /** The body of the first top-level rule whose selector ends with `selector`. */
+  const rule = (selector: string) =>
+    new RegExp(
+      `(?:^|\\n)[^{}\\n]*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`,
+    ).exec(stylesheet)?.[1] ?? '';
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('names the label family without a size-less font shorthand', () => {
+    expect(rule('.label')).toContain('font-family: var(--mf-font-label);');
+    expect(stylesheet).not.toMatch(/font:\s*var\(--mf-font-/);
   });
 });

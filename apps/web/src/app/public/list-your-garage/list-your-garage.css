@@ -9,7 +9,7 @@ p {
   overflow-wrap: anywhere;
 }
 .label {
-  font: var(--mf-font-label);
+  font-family: var(--mf-font-label);
   letter-spacing: var(--mf-label-tracking);
   color: var(--mf-text-secondary);
 }
