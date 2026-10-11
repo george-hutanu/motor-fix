@@ -23,6 +23,7 @@ export {
   formatPct,
   formatRating,
   formatSlot,
+  formatWholeLeiRange,
   relativeTime,
   requestAge,
 } from './formats';

@@ -9,21 +9,11 @@ import {
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import {
   formatDuration,
-  formatLeiRange,
+  formatWholeLeiRange,
   I18n,
-  type Language,
   TranslatePipe,
 } from '@motor-fix/i18n';
 import { HlmSwitch } from '@motor-fix/ui-cockpit';
-
-// Ranges read in whole lei: an amount in bani is rounded to the nearest leu
-// before it is written.
-const leiRange = (fromBani: number, toBani: number, language: Language) =>
-  formatLeiRange(
-    Math.round(fromBani / 100) * 100,
-    Math.round(toBani / 100) * 100,
-    language,
-  );
 
 // The garage's price list on its profile. A switch marks a job the driver
 // needs; its state lives only in the open page, keyed by job, so a re-read
@@ -50,7 +40,11 @@ export class PricesSection {
     const labour = this.garage().labour;
     return labour
       ? this.i18n.t('public.garageProfile.prices.labour', {
-          range: leiRange(labour.fromBani, labour.toBani, this.i18n.language()),
+          range: formatWholeLeiRange(
+            labour.fromBani,
+            labour.toBani,
+            this.i18n.language(),
+          ),
         })
       : '';
   });
@@ -60,7 +54,7 @@ export class PricesSection {
       duration: formatDuration(row.durationMinutes, language),
       id: row.jobTypeId,
       name: language === 'en' ? row.nameEn : row.nameRo,
-      range: leiRange(row.fromBani, row.toBani, language),
+      range: formatWholeLeiRange(row.fromBani, row.toBani, language),
     }));
   });
   protected readonly on = linkedSignal<string[], Set<string>>({

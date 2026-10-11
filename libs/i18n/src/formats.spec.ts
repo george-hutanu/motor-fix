@@ -15,6 +15,7 @@ import {
   formatPct,
   formatRating,
   formatSlot,
+  formatWholeLeiRange,
   relativeTime,
   requestAge,
 } from './formats';
@@ -64,6 +65,23 @@ describe('formatLeiRange', () => {
   it.each(notNumbers)('shows a dash when an end is %p', (value) => {
     expect(formatLeiRange(value, 80000, 'ro')).toBe(MISSING);
     expect(formatLeiRange(80000, value, 'en')).toBe(MISSING);
+  });
+});
+
+// @traces 355-price-list-ranges-FR-008
+describe('formatWholeLeiRange', () => {
+  it('rounds each end to the nearest leu', () => {
+    expect(formatWholeLeiRange(18049, 23950, 'ro')).toBe('180–240 lei');
+    expect(formatWholeLeiRange(110050, 170000, 'en')).toBe('1,101–1,700 lei');
+  });
+
+  it('shows one amount when the rounded ends meet', () => {
+    expect(formatWholeLeiRange(18010, 17990, 'ro')).toBe('180 lei');
+  });
+
+  it.each(notNumbers)('shows a dash when an end is %p', (value) => {
+    expect(formatWholeLeiRange(value, 80000, 'ro')).toBe(MISSING);
+    expect(formatWholeLeiRange(80000, value, 'en')).toBe(MISSING);
   });
 });
 
