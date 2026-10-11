@@ -117,6 +117,34 @@ test.describe('list your garage, what is missing before sending', () => {
     });
   }
 
+  // @traces 115-FR-008 115-FR-012
+  test('in English, then switched to Romanian, the summary and the field messages stay shown', async ({
+    page,
+  }) => {
+    await ready(page, '/en/list-your-garage');
+    await page
+      .getByRole('button', { exact: true, name: 'Send for review' })
+      .click();
+
+    await expect(title(page)).toHaveText(/^Still missing: \d+ things$/);
+    await expect(item(page, /Write the company's CUI/)).toBeVisible();
+    await expect(cui(page)).toHaveAttribute('aria-invalid', 'true');
+    const before = await count(page);
+
+    // A click that does not scroll, as the language switch spec does.
+    await page
+      .getByRole('group', { name: 'Language' })
+      .getByRole('button', { name: 'RO' })
+      .dispatchEvent('click');
+
+    await expect(page).toHaveURL(/\/ro\/list-your-garage/);
+    await expect(title(page)).toHaveText(/^Mai lipsesc: \d+ (de )?lucruri$/);
+    expect(await count(page)).toBe(before);
+    await expect(item(page, /Scrie CUI.ul firmei/)).toBeVisible();
+    await expect(cui(page)).toHaveAttribute('aria-invalid', 'true');
+    await expect(send(page)).toBeVisible();
+  });
+
   // @traces 115-FR-011
   test('nothing typed is cleared by the press', async ({ page }) => {
     await ready(page, '/ro/list-your-garage');

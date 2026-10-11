@@ -146,12 +146,6 @@
                 (shown)="mark('documents', $event)"
               />
               <p class="note count" role="status" aria-live="polite">{{ 'public.listing.verifyCount' | t: { n: verified() } }}</p>
-              <mf-missing-summary
-                [errors]="problems().errors"
-                [state]="summaryState()"
-                [mobile]="mobile()"
-                (goTo)="goTo($event)"
-              />
               <p class="note">{{ 'public.listing.verifyNote' | t }}</p>
             }
             @if (step.n === 2) {
@@ -202,6 +196,12 @@
             [place]="place()"
           />
         </aside>
+        <mf-missing-summary
+          [errors]="problems().errors"
+          [state]="summaryState()"
+          [mobile]="mobile()"
+          (goTo)="goTo($event)"
+        />
         <div class="actions">
           <button hlmBtn type="button" class="send" [attr.aria-disabled]="inFlight() || null" [attr.aria-busy]="inFlight() || null" (click)="send()">
             {{ 'public.listing.check.send' | t }}

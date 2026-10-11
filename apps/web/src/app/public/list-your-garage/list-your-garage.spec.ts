@@ -2028,6 +2028,19 @@ describe('sending for verification', () => {
     expect(sendButton(page).type).toBe('button');
   });
 
+  // @traces 115-FR-008
+  it('puts the summary right above the buttons, after the preview card that ends the form below 1024 px', async () => {
+    const { page } = await open('/ro/list-your-garage');
+    const host = page.querySelector('mf-missing-summary') as HTMLElement;
+    const actions = page.querySelector('.actions') as HTMLElement;
+    const aside = page.querySelector('aside') as HTMLElement;
+
+    expect(host.nextElementSibling).toBe(actions);
+    expect(
+      aside.compareDocumentPosition(host) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   // @traces 115-FR-008 115-FR-007
   it('lists what is missing at once and asks the server nothing while the page already knows', async () => {
     const { harness, page } = await open('/ro/list-your-garage');

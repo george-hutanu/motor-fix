@@ -114,6 +114,28 @@ describe('the missing summary and the send button on a phone', () => {
   });
 });
 
+describe('the warnings of the listing steps', () => {
+  // @traces 115-FR-006
+  it.each([
+    'list-your-garage/list-your-garage.css',
+    'documents-step/documents-step.css',
+    'hours-step/hours-step.css',
+    'mechanics-step/mechanics-step.css',
+    'photos-step/photos-step.css',
+    'place-step/place-step.css',
+    'prices-step/prices-step.css',
+  ])(
+    '%s colours a warning as the brand step does, never as an error or amber',
+    (path) => {
+      const css = read(path);
+      const colours = [...css.matchAll(/\.warning \{([^}]*)\}/g)].flatMap(
+        ([, body]) => body.match(/(?<![-\w])color: [^;]+/g) ?? [],
+      );
+      expect(colours).toEqual(['color: var(--mf-text-secondary)']);
+    },
+  );
+});
+
 describe('the public tab bar', () => {
   const css = read('tab-bar/tab-bar.css');
 
