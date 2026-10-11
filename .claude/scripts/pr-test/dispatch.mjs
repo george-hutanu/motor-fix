@@ -53,7 +53,7 @@ const VALUED = ["--flows", "--spec", "--routes", "--lap", "--out", "--ref", "--r
 export function parseArgs(argv) {
   const flag = (n, d) => {
     const i = argv.indexOf(`--${n}`);
-    return i === -1 ? d : argv[i + 1];
+    return i === -1 ? d : (argv[i + 1] ?? "");
   };
   return {
     pr: argv.find((a, i) => /^\d+$/.test(a) && !VALUED.includes(argv[i - 1])),

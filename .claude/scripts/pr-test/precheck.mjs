@@ -24,7 +24,7 @@ export function scenarios(specText) {
   const out = [];
   let story = null;
   let inScenarios = false;
-  for (const line of String(specText ?? "").split("\n")) {
+  for (const line of String(specText ?? "").split(/\r?\n/)) {
     const heading = line.match(/^#{2,3}\s+(.*)$/);
     if (heading) {
       story = heading[1].match(/^User Story (\d+)\b/)?.[1] ?? null;
@@ -73,7 +73,8 @@ async function load(file) {
 }
 
 /** The pre-check of a flows file on disk, against the spec at `spec` when there is one. */
-export async function checkFlows({ flows, spec }) {
+export async function checkFlows({ flows, spec, specRequired = false }) {
+  if (spec && specRequired && !existsSync(spec)) return [`spec not found: ${spec}`];
   const specText = spec && existsSync(spec) ? readFileSync(spec, "utf8") : null;
   return precheck({ flowsText: readFileSync(flows, "utf8"), specText, loaded: await load(flows), name: flows });
 }
@@ -89,7 +90,7 @@ if (isEntryPoint(import.meta.url)) {
     console.error("usage: precheck.mjs --flows <file.mjs> [--spec <spec.md>]");
     process.exit(64);
   }
-  const problems = await checkFlows({ flows, spec: flag("spec") });
+  const problems = await checkFlows({ flows, spec: flag("spec"), specRequired: true });
   for (const p of problems) console.log(p);
   process.exit(problems.length ? 1 : 0);
 }
