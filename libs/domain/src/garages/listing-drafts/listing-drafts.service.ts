@@ -452,14 +452,18 @@ export class ListingDraftsService {
     return { warnings };
   }
 
+  // Step 6 keeps the CUI as typed, so the stored one is stripped as stripCui
+  // strips it: no spaces, no leading RO.
   private async cuiHeldElsewhere(id: string, cui: string): Promise<boolean> {
-    const held = await this.prisma.listingDraft.count({
-      where: {
-        data: { equals: cui, path: ['steps', '6', 'cui'] },
-        id: { not: id },
-      },
-    });
-    return held > 0;
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM listing_draft
+      WHERE id <> ${id}::uuid
+        AND regexp_replace(
+              regexp_replace(data #>> '{steps,6,cui}', '[[:space:]]+', '', 'g'),
+              '^ro', '', 'i'
+            ) = ${cui}
+      LIMIT 1`;
+    return rows.length > 0;
   }
 
   // The draft a key opens, which must be the one named and still open.

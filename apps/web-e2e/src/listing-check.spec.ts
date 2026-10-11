@@ -16,7 +16,12 @@ const cui = (page: Page) => page.locator('#listing-cui');
 
 const prices = (page: Page) => page.locator('mf-prices-step');
 const photos = (page: Page) => page.locator('mf-photos-step');
-const DIAGNOSIS = 'Diagnoză și citire coduri de eroare';
+// The three jobs a new listing starts with.
+const JOBS: [string, string, string][] = [
+  ['Diagnoză și citire coduri de eroare', '100', '250'],
+  ['Schimb de ulei și filtre', '150', '300'],
+  ['Plăcuțe și discuri de frână față', '300', '600'],
+];
 
 async function range(page: Page, name: string, from: string, to: string) {
   await prices(page)
@@ -156,7 +161,7 @@ test.describe('list your garage, what is missing before sending', () => {
       .first()
       .click();
     await range(page, 'Manoperă, pe oră', '120', '200');
-    await range(page, DIAGNOSIS, '100', '250');
+    for (const [job, from, to] of JOBS) await range(page, job, from, to);
     await item(page, /Adaugă cel puțin o fotografie/).click();
     await photos(page)
       .locator('input[type="file"]')

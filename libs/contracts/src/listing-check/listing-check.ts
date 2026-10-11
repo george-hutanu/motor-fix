@@ -4,10 +4,13 @@
 
 import { EMAIL_PATTERN } from '../email';
 import {
+  type CourtesyCar,
   type HoursSection,
   hasOpenDay,
   isCourtesyPrice,
   needsCourtesyPrice,
+  WEEKDAYS,
+  type WeeklyHours,
 } from '../garage-hours';
 import {
   DECLARED_NAME_MAX,
@@ -231,14 +234,27 @@ function place(j: Judgement, section: Partial<PlaceSection>, mobile: boolean) {
     j.error('steps.5.place.radiusKm', 'invalid');
 }
 
-function hours(j: Judgement, section: HoursSection) {
+// Absent hours are the default week; a day of the wrong shape is closed.
+const week = (value: unknown): WeeklyHours | undefined => {
+  if (value === undefined) return undefined;
+  const days = record<WeeklyHours>(value);
+  return Object.fromEntries(
+    WEEKDAYS.map((day) => [day, Array.isArray(days[day]) ? days[day] : []]),
+  ) as WeeklyHours;
+};
+
+function hours(j: Judgement, given: HoursSection) {
+  const section: HoursSection = {
+    ...given,
+    courtesyCar: record<CourtesyCar>(given.courtesyCar) as CourtesyCar,
+    facilities: Array.isArray(given.facilities) ? given.facilities : [],
+    hours: week(given.hours),
+  };
   if (!hasOpenDay(section.hours)) j.error('steps.5.hours', 'required');
   if (!(Array.isArray(section.payments) && section.payments.length))
     j.error('steps.5.payments', 'required');
   if (!needsCourtesyPrice(section)) return;
-  const price = record<{ pricePerDayBani: number }>(
-    section.courtesyCar,
-  ).pricePerDayBani;
+  const price = section.courtesyCar?.pricePerDayBani;
   const field = 'steps.5.courtesyCar.pricePerDayBani';
   if (price === undefined) j.error(field, 'required');
   else if (!isCourtesyPrice(price)) j.error(field, 'invalid');

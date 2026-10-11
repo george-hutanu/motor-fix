@@ -137,6 +137,38 @@ describe('hostile shapes', () => {
   });
 
   // @traces 115-FR-001
+  it.each([
+    ['an empty week', {}],
+    ['a week typed as text', 'x'],
+    ['a null day', { mon: null }],
+    ['a day typed as text', { mon: 'x' }],
+  ])('asks for an open day for %s instead of throwing', (_, hours) => {
+    expect(errorsOf(patched('5', { hours }))).toContainEqual({
+      code: 'required',
+      field: 'steps.5.hours',
+    });
+  });
+
+  // @traces 115-FR-001
+  it.each([
+    [
+      'facilities typed as text',
+      { courtesyCar: { paid: true }, facilities: 'courtesy_car' },
+    ],
+    ['facilities as a number', { facilities: 7 }],
+    [
+      'a courtesy car typed as text',
+      { courtesyCar: 'x', facilities: ['courtesy_car'] },
+    ],
+  ])('reads %s as no paid courtesy car', (_, patch) => {
+    expect(
+      errorsOf(patched('5', patch)).filter((e) =>
+        e.field.startsWith('steps.5.courtesyCar'),
+      ),
+    ).toEqual([]);
+  });
+
+  // @traces 115-FR-001
   it('does not change the data it judges and answers twice the same', () => {
     const data = deepFreeze(complete());
     const first = checkListing({ data, email: ' ana@service.ro ' });

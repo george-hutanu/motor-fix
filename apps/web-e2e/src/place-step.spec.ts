@@ -77,7 +77,7 @@ async function kept(
   return (await keptPlace(page)) as Record<string, unknown>;
 }
 
-// At 320 by 640 the consent bar, Save and the tab bar pinned at the bottom
+// At 320 by 640 the consent bar and the tab bar pinned at the bottom
 // leave the pin under them, where a drag by the mouse lands on a bar: answer
 // the bar first, as a visitor does on their first page.
 async function answerConsent(page: Page) {

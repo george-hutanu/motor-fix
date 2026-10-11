@@ -421,11 +421,10 @@ export class ListYourGarage {
     // typed while it answers makes the answer stale.
     const of = this.judged();
     this.inFlight.set(true);
+    // The keeper answers a failed call as `failed`; it never rejects.
     let result: Awaited<ReturnType<DraftKeeper['check']>>;
     try {
       result = await this.keeper.check();
-    } catch {
-      result = { kind: 'failed' };
     } finally {
       this.inFlight.set(false);
     }

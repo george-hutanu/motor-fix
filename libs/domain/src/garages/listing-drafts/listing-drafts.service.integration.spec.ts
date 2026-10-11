@@ -1247,6 +1247,19 @@ describe('checking a draft', () => {
     },
   );
 
+  // @traces 115-FR-005
+  it.each(['RO 18547290', 'ro18547290', '18 547 290'])(
+    'warns of a CUI another draft holds typed as %s',
+    async (typed) => {
+      await holding(complete(typed));
+      const draft = await holding(complete());
+
+      await expect(service.check(draft.id, draft.token)).resolves.toEqual({
+        warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
+      });
+    },
+  );
+
   it("does not hold a draft's own CUI against it, nor another CUI", async () => {
     await holding(complete('1234567'));
     const draft = await holding(complete());
