@@ -173,6 +173,8 @@ export type { JobStepsControllerTick$Params as JobStepsControllerTick$Params } f
 export { jobStepsControllerTick as jobStepsControllerTick } from './fn/garage-jobs/job-steps-controller-tick';
 export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
+export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
+export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
 export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';

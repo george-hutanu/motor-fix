@@ -8,10 +8,16 @@ import request from 'supertest';
 
 import { signAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
-import { OpenInMaintenance, Public } from './actor.guard';
+import {
+  CurrentActor,
+  OpenInMaintenance,
+  OptionalActor,
+  Public,
+} from './actor.guard';
 import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
 import { MAINTENANCE } from './maintenance';
+import type { Actor } from './policy';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';
@@ -56,6 +62,21 @@ class HalfOpenController {
   }
 }
 
+@Controller('optional')
+@Public()
+class OptionalController {
+  @Get('marked')
+  @OptionalActor()
+  marked(@CurrentActor() actor?: Actor) {
+    return { accountId: actor?.accountId ?? null };
+  }
+
+  @Get('unmarked')
+  unmarked(@CurrentActor() actor?: Actor) {
+    return { accountId: actor?.accountId ?? null };
+  }
+}
+
 @Controller('stays')
 @OpenInMaintenance()
 class StaysController {
@@ -90,6 +111,7 @@ beforeAll(async () => {
       HalfOpenController,
       StaysController,
       StaysPublicController,
+      OptionalController,
     ],
     imports: [AuthModule.register({ databaseUrl, redisUrl, tokenSecret })],
   })
@@ -170,6 +192,58 @@ describe('the app-wide actor check', () => {
 });
 
 const DAY = 24 * 60 * 60 * 1000;
+
+// @traces 143-FR-001
+describe('a public route that names the visitor when it can', () => {
+  async function accountOf(authorization: string) {
+    const token = authorization.slice('Bearer '.length);
+    const [, payload] = token.split('.');
+    return JSON.parse(Buffer.from(payload ?? '', 'base64url').toString())
+      .sub as string;
+  }
+
+  it('names the account behind a valid session', async () => {
+    const authorization = await driver();
+
+    const res = await get('/optional/marked', authorization);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ accountId: await accountOf(authorization) });
+  });
+
+  it('answers a visitor with no session as anonymous', async () => {
+    await get('/optional/marked').expect(200, { accountId: null });
+  });
+
+  it.each([
+    ['a malformed token', 'Bearer not-a-token'],
+    ['a token signed with another key', 'Bearer eyJhbGciOiJIUzI1NiJ9.e30.x'],
+  ])('treats %s as anonymous instead of refusing', async (_, authorization) => {
+    await get('/optional/marked', authorization).expect(200, {
+      accountId: null,
+    });
+  });
+
+  it('treats an expired session as anonymous', async () => {
+    const expired = await signedIn(['driver'], 'driver', {
+      now: Date.now() - DAY,
+    });
+
+    await get('/optional/marked', expired).expect(200, { accountId: null });
+  });
+
+  it('treats a suspended account as anonymous', async () => {
+    await get('/optional/marked', await driver('suspended')).expect(200, {
+      accountId: null,
+    });
+  });
+
+  it('never reads the session on a public route without the mark', async () => {
+    await get('/optional/unmarked', await driver()).expect(200, {
+      accountId: null,
+    });
+  });
+});
 
 function expectMaintenance(res: request.Response) {
   expect(res.status).toBe(503);

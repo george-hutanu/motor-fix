@@ -37,12 +37,17 @@ export interface AuthOptions {
 const REQUIRES = 'auth:requires';
 const PUBLIC = 'auth:public';
 const OPEN_IN_MAINTENANCE = 'auth:maintenance-open';
+const OPTIONAL_ACTOR = 'auth:optional-actor';
 
 // Every route needs a signed-in account unless it carries this mark.
 export const Public = () => SetMetadata(PUBLIC, true);
 
 // Answers as usual while the platform is in maintenance.
 export const OpenInMaintenance = () => SetMetadata(OPEN_IN_MAINTENANCE, true);
+
+// On an open route, names the caller when their token resolves; a missing or
+// bad token leaves them a visitor instead of refusing them.
+export const OptionalActor = () => SetMetadata(OPTIONAL_ACTOR, true);
 
 export const Requires = (capability: Capability) =>
   SetMetadata(REQUIRES, capability);
@@ -75,7 +80,14 @@ export class ActorGuard implements CanActivate {
       !marked(OPEN_IN_MAINTENANCE) && (await this.maintenance.on())
         ? await this.adminOnly(request)
         : undefined;
-    if (open) return true;
+    if (open) {
+      const authorization = request.header('authorization');
+      if (marked(OPTIONAL_ACTOR) && authorization) {
+        request.actor =
+          admin ?? (await this.actor(authorization).catch(() => undefined));
+      }
+      return true;
+    }
     const actor = admin ?? (await this.actor(request.header('authorization')));
     const capability = this.reflector.get<Capability | undefined>(
       REQUIRES,

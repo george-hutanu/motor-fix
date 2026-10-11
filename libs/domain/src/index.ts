@@ -68,6 +68,7 @@ export { verificationConfig } from './garages/verification/verification-config';
 export * from './health/health.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';
 export { InsightsModule } from './insights/insights.module';
+export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
 export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { emailConfig } from './notifications/email-config';

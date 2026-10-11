@@ -297,8 +297,13 @@ describe('observeDataStores', () => {
   });
 
   it('counts the slow statements whose calls grew since the previous reading', async () => {
+    // Fake timers: a loaded CI runner fired the 20 ms interval before the first assertion.
+    jest.useFakeTimers({
+      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    });
     let calls = 1;
     observe({
+      intervalMs: 60_000,
       outbox: outbox(),
       postgres: postgres(async () => [
         {
@@ -311,9 +316,9 @@ describe('observeDataStores', () => {
       ]),
       redis: redis(),
     });
-    await tick(5);
+    await jest.advanceTimersByTimeAsync(5);
     expect(await value('motorfix_pg_slow_statements')).toBe(0);
-    await tick(30);
+    await jest.advanceTimersByTimeAsync(60_000);
     expect(await value('motorfix_pg_slow_statements')).toBe(1);
   });
 

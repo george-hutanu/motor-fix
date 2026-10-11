@@ -204,7 +204,7 @@ describe('the night job schedule', () => {
     expect(counts).toMatchObject({
       active: 0,
       completed: 0,
-      delayed: 2,
+      delayed: 3,
       failed: 0,
       waiting: 0,
     });

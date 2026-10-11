@@ -27,6 +27,8 @@ import { GarageSettingsDto } from '../models/garage-settings-dto';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
 import { PriceListControllerRead$Params } from '../fn/garages/price-list-controller-read';
 import { PriceListDto } from '../models/price-list-dto';
+import { profileViewsControllerRecord } from '../fn/garages/profile-views-controller-record';
+import { ProfileViewsControllerRecord$Params } from '../fn/garages/profile-views-controller-record';
 import { PublicGarageDto } from '../models/public-garage-dto';
 import { publicGaragesControllerBySlug } from '../fn/garages/public-garages-controller-by-slug';
 import { PublicGaragesControllerBySlug$Params } from '../fn/garages/public-garages-controller-by-slug';
@@ -36,6 +38,31 @@ import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
 export class GaragesService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `profileViewsControllerRecord()` */
+  static readonly ProfileViewsControllerRecordPath = '/api/v1/garages/{id}/views';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `profileViewsControllerRecord()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  profileViewsControllerRecord$Response(params: ProfileViewsControllerRecord$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = profileViewsControllerRecord(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `profileViewsControllerRecord$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  profileViewsControllerRecord(params: ProfileViewsControllerRecord$Params, context?: HttpContext): Promise<void> {
+    const resp = this.profileViewsControllerRecord$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `garageBrandsControllerReplace()` */

@@ -49,6 +49,45 @@ test.describe('the public garage profile @seeded', () => {
     await expect(page.getByText(/Lucrează pe|Nu lucrează pe/)).toHaveCount(0);
   });
 
+  // @traces 143-FR-008
+  test('sends one profile view from the browser, answered without delaying the page', async ({
+    page,
+  }) => {
+    const views: { status: number; body: unknown }[] = [];
+    page.on('response', async (response) => {
+      if (!/\/api\/v1\/garages\/[^/]+\/views$/.test(response.url())) return;
+      views.push({
+        body: response.request().postDataJSON(),
+        status: response.status(),
+      });
+    });
+    const live = page.waitForRequest(/\/api\/v1\/live\/public\?/);
+
+    await page.goto('/ro/garages/service-auto-militari');
+    await expect(heading(page)).toHaveText(/Service Auto Militari/i);
+    await live;
+    await expect.poll(() => views.length).toBe(1);
+
+    expect(views).toEqual([
+      { body: { source: 'profile_direct' }, status: 204 },
+    ]);
+    await expect(heading(page)).toHaveText(/Service Auto Militari/i);
+  });
+
+  test('sends no profile view for a garage still in review', async ({
+    page,
+  }) => {
+    const views: string[] = [];
+    page.on('request', (request) => {
+      if (/\/views$/.test(request.url())) views.push(request.url());
+    });
+
+    await page.goto('/ro/garages/atelier-dinamo');
+    await expect(heading(page)).toHaveText('Pagina nu există');
+
+    expect(views).toEqual([]);
+  });
+
   test('answers 404 for a garage still in review', async ({ page }) => {
     const response = await page.goto('/ro/garages/atelier-dinamo');
 

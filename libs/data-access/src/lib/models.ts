@@ -127,6 +127,7 @@ export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { PlatformStatusDto } from './models/platform-status-dto';
 export type { PriceListDto } from './models/price-list-dto';
 export type { PriceListItemDto } from './models/price-list-item-dto';
+export type { ProfileViewDto } from './models/profile-view-dto';
 export type { ProvidersDto } from './models/providers-dto';
 export type { PublicBrandDto } from './models/public-brand-dto';
 export type { PublicGarageBrandDto } from './models/public-garage-brand-dto';

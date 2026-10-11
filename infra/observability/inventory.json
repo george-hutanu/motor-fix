@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 111,
+    "count": 112,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -129,9 +129,10 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
-        "worker-jobs-failed"
+        "worker-jobs-failed",
+        "profile-views-job-failed"
       ],
-      "reason": "two nightly jobs, platform-daily and response-stats, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night leaves the last figures in place and the next night recounts",
+      "reason": "three nightly jobs, platform-daily, response-stats and profile-views, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; profile-views has its own final-failure alert, since its counters expire two days after their day",
       "story": "ST-881"
     },
     {
@@ -701,11 +702,46 @@
     },
     {
       "kind": "endpoint",
+      "name": "profile-views",
+      "source": "libs/domain/src/insights/profile-views/profile-views.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/{id}/views",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "the public profile's beacon; every outcome is the motorfix_profile_views_total entry, which owns the lost-view alert; the api-error-rate rule covers its 5xx",
+      "story": "ST-143"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_profile_views_total",
+      "source": "libs/domain/src/insights/profile-views/profile-views.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "profile-views-lost"
+      ],
+      "reason": "counts each beacon by outcome (accepted, bot, staff, no_key, lost, throttled, not_found) with no garage, address or visitor label; a lost view logs one ProfileViews error line naming the Redis error only",
+      "story": "ST-143"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_profile_view_rows_total",
+      "source": "libs/domain/src/insights/profile-views/profile-views.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "profile-views-job-failed"
+      ],
+      "reason": "counts the daily rows the night writes and the days it logs as gaps, with one ProfileViews log line per day naming the day and the count; a failed night is the profile-views-job-failed alert",
+      "story": "ST-143"
+    },
+    {
+      "kind": "endpoint",
       "name": "consents",
       "source": "libs/domain/src/auth/consents/consents.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/consents and /api/v1/me/consents",
       "dashboard": "motorfix-api",
-      "alerts": ["api-error-rate", "api-latency"],
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "story": "ST-244"
     },
     {

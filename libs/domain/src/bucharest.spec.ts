@@ -1,6 +1,7 @@
 import {
   addLocalDays,
   atLocal,
+  isoWeek,
   localDay,
   monthStart,
   weekStart,
@@ -80,5 +81,25 @@ describe('addLocalDays', () => {
     const sent = new Date('2026-11-10T09:00:00.000Z');
 
     expect(addLocalDays(sent, 2)).toEqual(new Date('2026-11-12T09:00:00.000Z'));
+  });
+});
+
+// @traces 143-FR-013
+describe('isoWeek', () => {
+  it.each([
+    ['2026-09-28', '2026-W40'],
+    ['2026-10-04', '2026-W40'],
+    ['2026-10-05', '2026-W41'],
+    ['2026-10-12', '2026-W42'],
+    ['2025-12-29', '2026-W01'],
+    ['2026-01-01', '2026-W01'],
+    ['2026-12-31', '2026-W53'],
+    ['2027-01-03', '2026-W53'],
+    ['2027-01-04', '2027-W01'],
+    ['2024-12-30', '2025-W01'],
+    ['2021-01-03', '2020-W53'],
+    ['2020-12-31', '2020-W53'],
+  ])('labels %s as %s', (day, week) => {
+    expect(isoWeek(day)).toBe(week);
   });
 });

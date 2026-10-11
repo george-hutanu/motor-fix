@@ -40,6 +40,9 @@ type Read = {
 };
 let reads: Read[];
 const api = {
+  profileViewsControllerRecord: jest.fn(
+    (_: { id: string; body: { source?: string } }) => Promise.resolve(),
+  ),
   publicGaragesControllerBySlug: jest.fn(
     (query: { slug: string; brand?: string }) =>
       new Promise<PublicGarageDto>((resolve, reject) => {
@@ -87,6 +90,7 @@ beforeEach(async () => {
   reads = [];
   response = {};
   api.publicGaragesControllerBySlug.mockClear();
+  api.profileViewsControllerRecord.mockClear();
   live.register.mockClear();
   leave.mockClear();
   TestBed.configureTestingModule({

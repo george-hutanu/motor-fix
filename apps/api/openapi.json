@@ -3021,6 +3021,45 @@
         ]
       }
     },
+    "/api/v1/garages/{id}/views": {
+      "post": {
+        "operationId": "ProfileViewsController_record",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileViewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Received; counted or not"
+          },
+          "404": {
+            "description": "not_found: no approved garage"
+          },
+          "429": {
+            "description": "profile_views_rate_limited"
+          }
+        },
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
@@ -8951,6 +8990,23 @@
         "required": [
           "items"
         ]
+      },
+      "ProfileViewDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Where the visitor came from; anything else is profile_direct",
+            "enum": [
+              "search",
+              "map",
+              "home",
+              "shared_link",
+              "saved",
+              "profile_direct"
+            ]
+          }
+        }
       },
       "AdminCityDto": {
         "type": "object",

@@ -144,6 +144,14 @@ test.describe('the photos of a garage profile @seeded', () => {
         }),
       )
       .toBe(true);
+    // The tiles pop in one after another, scaled down at first: a scroll read
+    // while one is still smaller than its box is short by the difference, and
+    // the focus put back on close scrolls the rest.
+    await section(page).evaluate((photos) =>
+      Promise.all(
+        photos.getAnimations({ subtree: true }).map(({ finished }) => finished),
+      ),
+    );
     await tiles(page).nth(1).focus();
     await tiles(page).nth(1).scrollIntoViewIfNeeded();
     const scrolled = await page.evaluate(() => window.scrollY);
