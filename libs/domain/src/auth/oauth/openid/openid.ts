@@ -3,8 +3,8 @@ import {
   createPublicKey,
   createSign,
   createVerify,
-  type JsonWebKey,
   randomBytes,
+  type webcrypto,
 } from 'node:crypto';
 
 import type { OAuthProvider } from '@motor-fix/contracts';
@@ -108,7 +108,7 @@ function part(segment: string, what: string): Record<string, unknown> {
   throw new OpenIdError(`unreadable ID token ${what}`);
 }
 
-type Key = JsonWebKey & { kid?: string };
+type Key = webcrypto.JsonWebKey & { kid?: string };
 
 interface Check {
   audience: string;
