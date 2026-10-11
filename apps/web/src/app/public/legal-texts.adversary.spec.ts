@@ -112,7 +112,7 @@ describe('legal texts, structure and hygiene', () => {
       const ro = whole('ro', kind);
       // The operator's name and seat are written as registered, in Romanian.
       const names =
-        /rovinietă|HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ|București|Bucureștii/g;
+        /rovinietă|HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ|București/g;
       expect(en.replace(names, '')).not.toMatch(/[ăîșțâ]/i);
       expect(ro).toMatch(/[ăîșțâ]/i);
       expect(ro).not.toBe(en);

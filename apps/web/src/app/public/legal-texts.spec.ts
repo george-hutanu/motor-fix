@@ -7,7 +7,6 @@ const whole = (language: 'ro' | 'en', kind: LegalText) =>
     .flatMap((s) => [s.heading, ...s.paragraphs])
     .join('\n');
 
-// The contact route of the texts: writing from the account.
 const CONTACT = { en: /from your account/, ro: /din contul tău/ } as const;
 
 describe('the final legal texts', () => {
