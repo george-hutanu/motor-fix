@@ -95,7 +95,11 @@ export const routes: Routes = [
           ),
         path: 'sign-in/return',
       },
-      placeholder('garages', 'public.placeholder.garages'),
+      {
+        loadComponent: () =>
+          import('./public/results/results').then((m) => m.Results),
+        path: 'garages',
+      },
       {
         loadComponent: () =>
           import('./public/garage-profile/garage-profile').then(

@@ -461,7 +461,6 @@
   },
   "placeholder": {
     "account": "Cont",
-    "garages": "Service‑uri",
     "later": "Pagina vine în curând.",
     "mechanics": "Mecanic"
   },
@@ -559,6 +558,48 @@
     "sentOne": "Trimis către {garage}.",
     "submit": "Trimite",
     "title": "Cere ofertă"
+  },
+  "results": {
+    "area": "în {km} km de {place}",
+    "areaPicked": "în {km} km de locul ales",
+    "areaYou": "în {km} km de tine",
+    "card": {
+      "doesNotTake": "nu primește {brand}",
+      "mobile": "Mecanic mobil · vine la tine · rază {km} km",
+      "rate": "de la {rate} pe oră",
+      "view": "Vezi service‑ul",
+      "worksOn": "primește {brand}"
+    },
+    "changePlace": "Schimbă locul",
+    "failed": "Nu am putut încărca rezultatele",
+    "found": {
+      "few": "{count} service‑uri găsite",
+      "one": "{count} service găsit",
+      "other": "{count} de service‑uri găsite"
+    },
+    "list": "Service‑uri găsite",
+    "live": {
+      "removed": "{name} nu mai apare în listă",
+      "updated": "{name} s‑a actualizat"
+    },
+    "loading": "Se încarcă rezultatele",
+    "newSearch": "Căutare nouă",
+    "none": "Niciun service găsit",
+    "noneNear": "Niciun service în {km} km",
+    "others": {
+      "few": "{count} nu o primesc",
+      "one": "{count} nu o primește",
+      "other": "{count} nu o primesc"
+    },
+    "reload": "Reîncarcă",
+    "retry": "Reîncearcă",
+    "takers": {
+      "few": "{count} lucrează pe {brand}",
+      "one": "{count} lucrează pe {brand}",
+      "other": "{count} lucrează pe {brand}"
+    },
+    "title": "Service‑uri pentru {brand}",
+    "widen": "Caută în {km} km"
   },
   "signIn": {
     "brand": "MotorFix",

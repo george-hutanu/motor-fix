@@ -1,0 +1,136 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.card {
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+  box-sizing: border-box;
+  display: flex;
+  gap: var(--mf-space-3);
+  height: 100%;
+  padding: var(--mf-space-4);
+}
+
+.initials {
+  align-items: center;
+  background: var(--mf-panel-raised);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+  color: var(--mf-text);
+  display: flex;
+  flex: none;
+  font-weight: 700;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+
+.head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  justify-content: space-between;
+}
+
+.id {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+h3 {
+  font-size: var(--mf-size-body);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+p {
+  margin: 0;
+}
+
+.where,
+.list,
+.reviews {
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.score {
+  align-items: center;
+  display: flex;
+  gap: var(--mf-space-2);
+}
+
+.reviews {
+  font-variant-numeric: tabular-nums;
+}
+
+.key {
+  color: var(--mf-text);
+  font-weight: 700;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tags li {
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  color: var(--mf-text-secondary);
+  padding: 2px var(--mf-space-2);
+}
+
+.foot {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.view {
+  align-items: center;
+  color: var(--mf-amber-ink);
+  display: inline-flex;
+  min-height: var(--mf-tap);
+}
+
+.rate {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  margin-inline-start: auto;
+}
+
+/* Small text from a tablet up; body size on a phone. */
+@media (min-width: 768px) {
+  .where,
+  .list,
+  .reviews,
+  .tags li {
+    font-size: max(12px, var(--mf-size-small));
+  }
+}
+
+@media (max-width: 767.98px) {
+  mf-rating-dial {
+    --mf-size-small: var(--mf-size-body);
+  }
+}
