@@ -1,7 +1,12 @@
-import type { BrowserContext } from '@playwright/test';
+import type { APIRequestContext, BrowserContext } from '@playwright/test';
 import { expect } from '@playwright/test';
 
-import { analyticsSkipReason, routedContext, test } from './fixtures.js';
+import {
+  analyticsSkipReason,
+  needsAnalytics,
+  routedContext,
+  test,
+} from './fixtures.js';
 
 // FR-002 (ST-1007): handlers still answering when a test ends must not outlive it.
 test('the context fixture removes every route handler once the test ends', async () => {
@@ -48,5 +53,30 @@ test.describe('analyticsSkipReason', () => {
     expect(
       analyticsSkipReason('<meta name="mf-analytics" content="">', staging),
     ).toMatch(/no Plausible domain/);
+  });
+
+  const answering = (status: number, asked: string[] = []) =>
+    ({
+      get: async (path: string) => {
+        asked.push(path);
+        return {
+          ok: () => status < 400,
+          status: () => status,
+          text: async () => bare,
+        };
+      },
+    }) as unknown as APIRequestContext;
+
+  test('fails rather than skips when the deployed page does not answer', async () => {
+    await expect(needsAnalytics(answering(503), staging)).rejects.toThrow(
+      /503/,
+    );
+  });
+
+  test('reads nothing on a run that starts its own servers', async () => {
+    const asked: string[] = [];
+    // An empty BASE_URL, like an unset one, starts the run's own servers.
+    await needsAnalytics(answering(200, asked), '');
+    expect(asked).toEqual([]);
   });
 });

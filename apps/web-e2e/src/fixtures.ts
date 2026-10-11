@@ -30,11 +30,19 @@ export function analyticsSkipReason(
   return 'the server under test has no Plausible domain configured';
 }
 
-/** Skips the running test when the target serves no analytics domain. */
-export async function needsAnalytics(request: APIRequestContext) {
-  const reason = deployed
-    ? analyticsSkipReason(await (await request.get('/ro')).text(), deployed)
-    : undefined;
+/**
+ * Skips the running test when the deployed target serves no analytics domain.
+ * A page that does not answer fails the test: an error page carries no tag
+ * either, and must not pass for analytics being off.
+ */
+export async function needsAnalytics(
+  request: APIRequestContext,
+  target: string | undefined = deployed,
+) {
+  if (!target) return;
+  const page = await request.get('/ro');
+  if (!page.ok()) throw new Error(`GET /ro answered ${page.status()}`);
+  const reason = analyticsSkipReason(await page.text(), target);
   base.skip(reason !== undefined, reason);
 }
 

@@ -25,10 +25,7 @@ const TEXT = {
   },
 } as const;
 
-// The flows that need analytics to load call needsAnalytics first: against a
-// deployed target that sets no Plausible domain (staging and production while
-// analytics are off) they skip; a run that starts its own servers never does.
-// The flows that assert nothing loads run everywhere.
+// The flows that assert nothing loads run everywhere, needsAnalytics or not.
 
 // Answers plausible.io here, so nothing leaves, and counts every call: the
 // script itself and each page view the stand-in script sends.
