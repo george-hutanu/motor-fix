@@ -42,13 +42,13 @@ describe('legal texts, structure and hygiene', () => {
     },
   );
 
-  // @traces 243-FR-001
+  // @traces 243-FR-001 1203-FR-009
   it.each(kinds)(
-    'the %s has the same section count in both languages',
+    'the %s has the same sections and paragraph counts in both languages',
     (kind) => {
-      expect(LEGAL_TEXTS.ro[kind].sections).toHaveLength(
-        LEGAL_TEXTS.en[kind].sections.length,
-      );
+      const counts = (language: Language) =>
+        LEGAL_TEXTS[language][kind].sections.map((s) => s.paragraphs.length);
+      expect(counts('ro')).toEqual(counts('en'));
     },
   );
 

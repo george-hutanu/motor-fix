@@ -154,6 +154,21 @@ describe('the operator and how to reach it', () => {
     },
   );
 
+  // @traces 1203-FR-010
+  it.each(languages)(
+    'the %s operator details add no other address, phone number or officer',
+    (language) => {
+      const text = `${first(language)}\n${contact(language)}`;
+      expect(text.match(/[\w.]+@[\w.]+/g)).toEqual([
+        'hutanugeorge40@gmail.com',
+        'hutanugeorge40@gmail.com',
+      ]);
+      expect(text).not.toMatch(
+        /\+40|\b0\d{9}\b|DPO|data protection officer|responsabil/i,
+      );
+    },
+  );
+
   // @traces 1203-FR-008
   it('no text uses a cedilla where Romanian takes a comma below', () => {
     expect(JSON.stringify(LEGAL_TEXTS)).not.toMatch(/[ŞşŢţ]/);
