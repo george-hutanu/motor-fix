@@ -115,28 +115,31 @@ const brandRange = (
   rows: readonly PriceRow[],
   jobTypeId: string,
   brandId: string | undefined,
-) =>
-  rows.find(
+) => {
+  if (brandId === undefined) return undefined;
+  return rows.find(
     (row) =>
-      brandId !== undefined &&
       row.jobType.id === jobTypeId &&
       row.brandId === brandId &&
       row.toBani != null,
   );
+};
 
 // The jobs drivers see on a profile, in the list's order. With a brand in
 // context its complete range replaces the default and, once the garage ticked
 // any job for it, only the ticked jobs are listed; visibility, order and
-// duration always come from the default row.
+// duration always come from the default row. A caller that already holds
+// priceListJobs' answer passes it as jobs.
 export function publicPriceRows(
   rows: readonly PriceRow[],
   rarActivities: readonly string[],
   brand?: { id: string; ticks: readonly string[] },
+  jobs: readonly PriceListItemDto[] = priceListJobs(rows, rarActivities),
 ): PublicPriceRowDto[] {
   const ticks = new Set(brand?.ticks);
   const listed = (jobTypeId: string) =>
     ticks.size === 0 || ticks.has(jobTypeId);
-  return priceListJobs(rows, rarActivities).flatMap((item) => {
+  return jobs.flatMap((item) => {
     const { durationMinutes, fromBani, jobTypeId, nameEn, nameRo, toBani } =
       item;
     if (!item.public || fromBani === undefined || toBani == null) return [];

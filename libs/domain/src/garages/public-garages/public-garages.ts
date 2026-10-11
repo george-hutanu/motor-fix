@@ -57,22 +57,19 @@ const brandSlug = (brand: unknown) =>
 // the labour rate when both ends are set, and each public job's range for the
 // brand in context, listed as the garage ticked them for it.
 function priceListOf(
-  garage: {
-    brands: { brand: { id: string }; jobs: { jobTypeId: string }[] }[];
-    labourFromBani: number | null;
-    labourToBani: number | null;
-    prices: PriceRow[];
-    rarActivities: string[];
-  },
+  brands: { brand: { id: string }; jobs: { jobTypeId: string }[] }[],
+  labourFromBani: number | null,
+  labourToBani: number | null,
+  prices: PriceRow[],
+  rarActivities: string[],
   brandId: string | undefined,
 ): Pick<PublicGarageDto, 'jobTypes' | 'labour' | 'prices'> {
-  const { brands, labourFromBani, labourToBani, prices, rarActivities } =
-    garage;
   const ticks = brands
     .find((row) => row.brand.id === brandId)
     ?.jobs.map((job) => job.jobTypeId);
+  const jobs = priceListJobs(prices, rarActivities);
   return {
-    jobTypes: priceListJobs(prices, rarActivities)
+    jobTypes: jobs
       .filter((job) => job.public)
       .map(({ jobTypeId, nameEn, nameRo }) => ({
         id: jobTypeId,
@@ -87,6 +84,7 @@ function priceListOf(
       prices,
       rarActivities,
       brandId === undefined ? undefined : { id: brandId, ticks: ticks ?? [] },
+      jobs,
     ),
   };
 }
@@ -272,7 +270,11 @@ export class PublicGaragesService {
       slug: held,
       ...brandAnswerWithFuels(brands, texts),
       ...priceListOf(
-        { brands, labourFromBani, labourToBani, prices, rarActivities },
+        brands,
+        labourFromBani,
+        labourToBani,
+        prices,
+        rarActivities,
         inContext?.id,
       ),
       paymentMethods: {
