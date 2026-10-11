@@ -425,7 +425,8 @@ function fixture() {
   writeFileSync(join(repo, '.specify', '.gitignore'), 'feature.json\n');
   writeFileSync(join(repo, '.gitignore'), '.specify/**/.cache/\n.specify/run-state.json\n');
   git(repo, 'add', '.');
-  git(repo, 'commit', '-q', '-m', 'init');
+  const at = new Date(NOW).toISOString();
+  execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: repo, env: { ...process.env, GIT_COMMITTER_DATE: at, GIT_AUTHOR_DATE: at } });
   git(root, 'init', '-q', '--bare', 'origin.git');
   git(repo, 'remote', 'add', 'origin', join(root, 'origin.git'));
   git(repo, 'push', '-q', 'origin', 'main');
@@ -566,11 +567,12 @@ describe('--fix and claim', () => {
       quietCommit(merged, 120);
       const dirty = f.add('agent-dirty', '903-c');
       writeFileSync(join(dirty, 'wip.txt'), 'x\n');
+      utimesSync(join(dirty, 'wip.txt'), new Date(NOW - 120 * MIN), new Date(NOW - 120 * MIN));
       const gone = f.add('agent-gone', '904-d');
       rmSync(gone, { recursive: true, force: true });
       const heads = { '902-b': git(merged, 'rev-parse', 'HEAD'), '903-c': git(dirty, 'rev-parse', 'HEAD') };
       const report = collect(f.repo, env({
-        now: Date.now() + 120 * MIN,
+        now: NOW + 120 * MIN,
         gh: () => [
           pr({ number: 22, headRefName: '902-b', state: 'MERGED', headRefOid: heads['902-b'] }),
           pr({ number: 23, headRefName: '903-c', state: 'MERGED', headRefOid: heads['903-c'] }),
@@ -706,7 +708,7 @@ describe('--fix and claim', () => {
       const a = f.add('agent-a', '901-a');
       const b = f.add('agent-b', '902-b');
       const c = f.add('agent-c', '903-c');
-      const report = collect(f.repo, env({ now: Date.now() + 8 * 24 * 60 * MIN }));
+      const report = collect(f.repo, env({ now: NOW + 8 * 24 * 60 * MIN }));
       for (const p of [a, b, c]) assert.equal(report.rows.find((x) => x.path === p).fix, 'remove');
       const seen = [];
       const remove = (path, o) => {
