@@ -1,14 +1,16 @@
-// Gives the pre-commit hook a PostgreSQL and a Redis private to this worktree
-// when the projects it is about to test hold integration specs.
+// Gives a by-hand run of the integration suite a PostgreSQL and a Redis
+// private to this worktree, when the affected projects hold integration specs.
+// A commit runs the unit suite only; CI runs this suite on demand and before
+// every release.
 //
 //   node scripts/test-services.ts <base-ref>
 //
 // Starts (or reuses) the compose project named after the worktree, on ports
 // Docker assigns, waits for PostgreSQL, applies the branch's migrations, and
-// prints `export DATABASE_URL=… REDIS_URL=…` for the hook to eval. Prints
-// nothing when no affected project holds an integration spec. Everything else
-// goes to stderr; any failure exits non-zero, so the commit stops rather than
-// running without its integration specs.
+// prints `export DATABASE_URL=… REDIS_URL=…` to eval before
+// `JEST_SUITE=integration npx nx affected -t test`. Prints nothing when no
+// affected project holds an integration spec. Everything else goes to stderr;
+// any failure exits non-zero.
 //
 // The services stay up between commits, so only the first one pays the start.
 // A database holding a migration this branch does not have, or one applied
@@ -159,13 +161,13 @@ export function shellExports(env: Record<string, string>): string {
 
 export function noDockerMessage(project: string): string {
   return [
-    'pre-commit: the affected projects have integration specs, which need PostgreSQL and Redis, and Docker is not running.',
-    'Start Docker and commit again. The hook then runs, for this worktree (also the way to run those specs by hand):',
+    'test-services: the affected projects have integration specs, which need PostgreSQL and Redis, and Docker is not running.',
+    'Start Docker and run this again, or start them by hand for this worktree:',
     `  POSTGRES_PORT=0 REDIS_PORT=0 docker compose -p ${project} up -d --wait postgres redis`,
     `  export DATABASE_URL=postgresql://motorfix:motorfix@127.0.0.1:$(docker compose -p ${project} port postgres 5432 | sed 's/.*://')/motorfix`,
     `  export REDIS_URL=redis://127.0.0.1:$(docker compose -p ${project} port redis 6379 | sed 's/.*://')`,
     '  npx prisma migrate deploy --config libs/domain/prisma.config.ts',
-    'Do not commit with JEST_SUITE set: the hook refuses it.',
+    '  JEST_SUITE=integration npx nx affected -t test',
   ].join('\n');
 }
 
@@ -303,7 +305,7 @@ function main() {
   up();
   if (schemaDrift(appliedMigrations(compose), localMigrations())) {
     console.error(
-      `pre-commit: ${project} holds another branch's schema; recreating it`,
+      `test-services: ${project} holds another branch's schema; recreating it`,
     );
     run('docker', [...compose, 'down', '-v']);
     up();
@@ -331,7 +333,7 @@ function main() {
       `${(error as Error).message}; to start from an empty database: docker compose -p ${project} down -v`,
     );
   }
-  console.error(`pre-commit: integration specs run against ${project}`);
+  console.error(`test-services: integration specs run against ${project}`);
   console.log(shellExports(env));
 }
 
@@ -535,7 +537,7 @@ if (process.argv[1]?.endsWith('test-services.ts')) {
   try {
     main();
   } catch (error) {
-    console.error(`pre-commit: ${(error as Error).message}`);
+    console.error(`test-services: ${(error as Error).message}`);
     process.exit(1);
   }
 }

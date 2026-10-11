@@ -4,15 +4,21 @@ name: CI
 # only the change detector and CI OK; merges into main run every project
 # through release.yml. A PR skips the Docker build, the compose stack and the
 # harness specs when it changes none of their inputs (scripts/ci-paths.ts).
-# The end-to-end suite runs only on demand: `gh workflow run ci.yml --ref
-# <branch>` runs every job, the E2E one included, on every project. A release
-# runs the core flows against staging instead (release.yml). The PR title has
+# A PR runs the unit suite only. The integration and end-to-end suites run on
+# demand: `gh workflow run ci.yml --ref <branch>` runs every job, those two
+# included, on every project. A release asks for the integration suite
+# (input `integration`) and runs the core flows against staging instead of
+# the end-to-end suite (release.yml). The PR title has
 # its own workflow (pr-title.yml), so an edited title is re-checked without
 # re-running these jobs. Mutation testing has its own workflow (mutation.yml)
 # and never runs here.
 on:
   pull_request:
   workflow_call:
+    inputs:
+      integration:
+        type: boolean
+        default: false
   workflow_dispatch:
 
 permissions:
@@ -158,10 +164,33 @@ jobs:
         if: ${{ always() && github.event_name == 'pull_request' && needs.changes.outputs.compose == 'true' }}
         run: docker compose --profile observability down -v --remove-orphans
 
-  tests:
-    name: Unit and integration tests
+  # The unit suite needs no database, so a PR's test job has no services.
+  unit:
+    name: Unit tests
     needs: changes
     if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      # JEST_SUITE is an input of the test target (nx.json), so the two
+      # suites never answer each other from the Nx cache.
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        env:
+          JEST_SUITE: unit
+        run: npx nx $NX_SCOPE -t test --passWithNoTests
+
+  # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,
+  # like E2E: a PR never runs it. A workflow_call carries its caller's event
+  # name, so the release asks for it by input and runs it before staging.
+  integration:
+    name: Integration tests
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || inputs.integration
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services: &services
@@ -186,17 +215,9 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      # JEST_SUITE is an input of the test target (nx.json), so the two runs
-      # never answer each other from the Nx cache.
-      - name: Unit tests
-        if: ${{ !cancelled() }}
-        env:
-          JEST_SUITE: unit
-        run: npx nx $NX_SCOPE -t test --passWithNoTests
       # Service containers take no command, so the slow-statement view is
       # preloaded here: the data-store specs read it, never skip it.
       - name: Preload pg_stat_statements
-        if: ${{ !cancelled() }}
         run: |
           docker exec ${{ job.services.postgres.id }} psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'"
           docker restart ${{ job.services.postgres.id }}
@@ -206,10 +227,8 @@ jobs:
           done
           docker exec ${{ job.services.postgres.id }} pg_isready -U postgres
       - name: Migrate the test database
-        if: ${{ !cancelled() }}
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       - name: Integration tests
-        if: ${{ !cancelled() }}
         env:
           JEST_SUITE: integration
         run: npx nx $NX_SCOPE -t test --passWithNoTests
@@ -371,7 +390,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [changes, checks, tests, e2e, docker]
+    needs: [changes, checks, unit, integration, e2e, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

@@ -20,7 +20,7 @@ cheaper. Anything that writes or judges business logic keeps its model.
 | 5 | `pr-tester` pinned to `model: opus`; speckit-watch dispatches `merge` fixes on Sonnet; an empty watch pass ends after one line | – | High | Implementation and every verdict stay on Opus or Fable |
 | 6 | speckit-auto runs independent phases at once: story context beside clarify's challenger; ticket refresh, agent context and retro evidence beside review | Medium | – | Same inputs |
 | 7 | Autocompact at 20% of the window instead of 40% | – | Medium: sessions peaked at 170–220k and never compacted | Same: `pre:compact:flush` and speckit-auto's recovery keep the run state |
-| 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache. Affected integration specs run against the worktree's own PostgreSQL and Redis, started and migrated by the hook (~15 s cold, ~3 s warm); `JEST_SUITE` is refused | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
+| 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache. Affected integration specs run against the worktree's own PostgreSQL and Redis, started and migrated by the hook (~15 s cold, ~3 s warm); `JEST_SUITE` is refused (until #17, which made commits unit-only) | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
 | 9 | Local compose uses `imresamu/postgis:17-3.5` (multi-arch, same PostGIS) | High: no amd64 emulation, no `exec format error` | Fewer retry turns | Same database; CI keeps `postgis/postgis` |
 
 ## Done since: agent replies and reads
@@ -59,6 +59,7 @@ installs, CI OK at 675 s, of which E2E 629 s on one Playwright worker.
 | # | Change | Speed | Cost | Quality |
 |---|---|---|---|---|
 | 16 | `ci.yml` from 14 jobs to 7 runners (Checks, Unit and integration tests, E2E tests, Docker build web and api, Changes, CI OK) with 3 installs; E2E on 4 Playwright workers; `release.yml` runs one release check at a time and its `images` job writes the Docker layer cache PRs read | Run 37492214599: CI OK at 389 s (from 675 s), E2E 305 s (from 629 s), 3 installs | Half the runners per push, so fewer evening waits | Same checks, each still named in the log; a test that passes only on a retry now fails PR CI |
+| 17 | The integration suite (PostgreSQL+PostGIS and Redis) leaves every PR and every commit, as the end-to-end suite did: PR CI's "Unit tests" job has no services, an "Integration tests" job runs on demand and in the release before the images; the pre-commit hook sets `JEST_SUITE=unit` and starts no Docker stack | No service containers per PR, no compose stack per commit | Fewer runner minutes; no Docker memory on the 16 GB laptop | The suite still gates every release; `scripts/test-services.ts` keeps the by-hand run |
 
 ## Left for later
 
