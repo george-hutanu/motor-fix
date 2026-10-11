@@ -179,6 +179,7 @@ describe('the night that keeps the daily figures', () => {
     expect(await redis.pfcount(`insights:pv:${a.id}:${D1}`)).toBe(1);
   });
 
+  // @traces 243-FR-010
   it('holds no address, agent or visitor key in a row', async () => {
     const a = await world.garage('Atelier Dinamo');
     await seen(a.id, D1, { search: ['acc-visitor-1'] });
