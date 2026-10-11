@@ -48,8 +48,10 @@ export class HomeCards {
       : formatRating(garage.rating, this.i18n.language());
   }
 
-  protected name(garage: HomeGarageDto) {
-    return [garage.name, this.stance(garage), this.rating(garage)].join(', ');
+  // Read after the name, so the card's own text names it: name, stance,
+  // rating first (the lamp and the dial are hidden from screen readers).
+  protected heard(garage: HomeGarageDto) {
+    return `, ${this.stance(garage)}, ${this.rating(garage)} `;
   }
 
   // The city as written, the distance or a mobile mechanic's area.

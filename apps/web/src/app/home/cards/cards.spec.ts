@@ -64,6 +64,13 @@ const cards = (page: HTMLElement) => [
 ];
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
+// What a screen reader reads for a card: its text without the hidden parts.
+const announced = (card: Element) => {
+  const copy = card.cloneNode(true) as Element;
+  for (const hidden of copy.querySelectorAll('[aria-hidden="true"]'))
+    hidden.remove();
+  return said(copy);
+};
 const lists = (card: Element) =>
   [...card.querySelectorAll('.list')].map((list) => said(list));
 
@@ -315,8 +322,14 @@ describe('HomeCards', () => {
   it('names a card by the garage, its answer for the brand and its rating', async () => {
     const [card] = cards(await render([garageOf()]));
 
-    expect(card.getAttribute('aria-label')).toBe(
-      'Service Auto Militari, Lucrează pe BMW, 4,9',
+    // The card is named by its own text, so the name holds what it shows
+    // (axe label-content-name-mismatch), starting with name, stance, rating.
+    expect(card.getAttribute('aria-label')).toBeNull();
+    expect(announced(card)).toMatch(
+      /^Service Auto Militari, Lucrează pe BMW, 4,9 /,
+    );
+    expect(card.querySelector('mf-lamp')?.getAttribute('aria-hidden')).toBe(
+      'true',
     );
     expect(
       card.querySelector('mf-rating-dial')?.getAttribute('aria-hidden'),
