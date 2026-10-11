@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
@@ -469,5 +472,40 @@ describe('NotificationSettings', () => {
     expect(text(element)).toContain('Always sent');
     expect(text(element)).toContain('In the app only');
     expect(text(element)).toContain('Add a verified phone number');
+  });
+});
+
+describe('type scale', () => {
+  // @traces 975-type-scale-FR-001
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'notification-settings.css'),
+    'utf8',
+  );
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `h3` at the body size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*h3 \{[^}]*font-size: var\(--mf-size-body\);/,
+    );
+  });
+
+  // @traces 975-type-scale-FR-003
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+  const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
+  const tablet = at < 0 ? '' : stylesheet.slice(at);
+
+  it('sets no text under the body size on a phone', () => {
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+  });
+
+  it('sets the hints small from a tablet up', () => {
+    expect(tablet).toMatch(/\.hint \{\s*font-size: var\(--mf-size-small\);/);
   });
 });

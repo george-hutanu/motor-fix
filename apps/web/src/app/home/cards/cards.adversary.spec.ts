@@ -336,8 +336,12 @@ describe('HomeCards under hostile input', () => {
   it('names a card in English', async () => {
     const [card] = cards(await render([garageOf()], { language: 'en' }));
 
-    expect(card.getAttribute('aria-label')).toBe(
-      'Service Auto Militari, Works on BMW, 4.9',
+    expect(card.hasAttribute('aria-label')).toBe(false);
+    expect(card.querySelector('.sr-only')?.textContent?.trim()).toBe(
+      'Rating 4.9 out of 5',
+    );
+    expect(card.querySelector('mf-lamp')?.textContent?.trim()).toBe(
+      'Works on BMW',
     );
   });
 

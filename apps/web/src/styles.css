@@ -55,3 +55,14 @@ input[type="checkbox"].mf-check:checked::after {
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
+
+/* Text read by a screen reader and not shown, such as a count beside its
+   chip; one rule for every component that needs it. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -339,5 +342,33 @@ describe('the place dialog, by address', () => {
     await settle();
 
     expect(options().map(text)).toEqual([CLUJ.label]);
+  });
+});
+
+describe('type scale', () => {
+  // @traces 975-type-scale-FR-002
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(join(__dirname, 'place-dialog.css'), 'utf8');
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `input` at the field size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*input \{[^}]*font-size: var\(--mf-size-field\);/,
+    );
+  });
+
+  // @traces 975-type-scale-FR-003
+  it('keeps the message at the body size on a phone, small from a tablet up', () => {
+    const at = stylesheet.indexOf('@media (min-width: 768px)');
+    expect(stylesheet.slice(0, at)).not.toMatch(/\.message \{[^}]*font-size/);
+    expect(stylesheet.slice(at)).toMatch(
+      /\.message \{\s*font-size: var\(--mf-size-small\);/,
+    );
   });
 });
