@@ -31,7 +31,7 @@ h2 {
 .counter,
 .reconnecting,
 .stale {
-  font-size: 14px;
+  font-size: var(--mf-size-body);
   color: var(--mf-text-secondary);
 }
 p {

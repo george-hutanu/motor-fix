@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
@@ -150,5 +153,27 @@ describe('a row under Oferte trimise', () => {
     const row = await render(sample('2026-10-10T06:00:00Z'));
 
     expect(row.querySelector('button, a')).toBeNull();
+  });
+});
+
+describe('type scale on a phone (ST-975)', () => {
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'quote-sent-row.css'),
+    'utf8',
+  );
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+  const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
+  const tablet = at < 0 ? '' : stylesheet.slice(at);
+
+  it('sets no text under the body size on a phone', () => {
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+  });
+
+  it('sets the car, the slot and the status small from a tablet up', () => {
+    expect(tablet).toMatch(
+      /\.car,\s*\.slot,\s*\.status \{\s*font-size: var\(--mf-size-small\);/,
+    );
   });
 });

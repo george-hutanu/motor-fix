@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { GarageRequestSummaryDto, MeDto } from '@motor-fix/data-access';
@@ -280,5 +283,27 @@ describe('a declined row', () => {
 
     expect(element.querySelector('.reason')?.textContent?.trim()).toBe(label);
     expect(element.querySelector('.actions')).toBeNull();
+  });
+});
+
+describe('type scale on a phone (ST-975)', () => {
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'garage-request-row.css'),
+    'utf8',
+  );
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+  const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
+  const tablet = at < 0 ? '' : stylesheet.slice(at);
+
+  it('sets no text under the body size on a phone', () => {
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+  });
+
+  it('sets the car and the time small from a tablet up', () => {
+    expect(tablet).toMatch(
+      /\.car,\s*\.when \{\s*font-size: var\(--mf-size-small\);/,
+    );
   });
 });

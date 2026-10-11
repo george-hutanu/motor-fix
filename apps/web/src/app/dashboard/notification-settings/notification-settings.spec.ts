@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
@@ -469,5 +472,50 @@ describe('NotificationSettings', () => {
     expect(text(element)).toContain('Always sent');
     expect(text(element)).toContain('In the app only');
     expect(text(element)).toContain('Add a verified phone number');
+  });
+});
+
+describe('type scale (ST-975)', () => {
+  // @traces 975-type-scale-FR-001
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'notification-settings.css'),
+    'utf8',
+  );
+  /** The body of the first top-level rule whose selector ends with `selector`. */
+  const rule = (selector: string) =>
+    new RegExp(
+      `(?:^|\\n)[^{}\\n]*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`,
+    ).exec(stylesheet)?.[1] ?? '';
+
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `h3` at the body size', () => {
+    expect(rule('h3')).toContain('font-size: var(--mf-size-body);');
+  });
+});
+
+describe('type scale on a phone (ST-975)', () => {
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'notification-settings.css'),
+    'utf8',
+  );
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+  const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
+  const tablet = at < 0 ? '' : stylesheet.slice(at);
+
+  it('sets no text under the body size on a phone', () => {
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+  });
+
+  it('sets the hints small from a tablet up', () => {
+    expect(tablet).toMatch(/\.hint \{\s*font-size: var\(--mf-size-small\);/);
   });
 });
