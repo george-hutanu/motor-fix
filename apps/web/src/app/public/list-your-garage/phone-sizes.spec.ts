@@ -104,6 +104,14 @@ describe('the missing summary and the send button on a phone', () => {
   });
 
   // @traces 115-FR-013
+  it('gives the send button the whole row below a tablet, a lighter tracking and balanced lines at the body size', () => {
+    const page = read('list-your-garage/list-your-garage.css');
+    expect(page).toMatch(
+      /@media \(max-width: 767\.98px\) \{\s*\.actions \.send \{[^}]*flex: 1 1 100%;[^}]*letter-spacing: 0\.08em;[^}]*text-wrap: balance;/,
+    );
+  });
+
+  // @traces 115-FR-013
   it('pins the two actions only from a tablet, so on a phone they cover nothing', () => {
     const page = read('list-your-garage/list-your-garage.css');
     const [base] = page.match(/^\.actions \{[^}]*\}/m) ?? [''];

@@ -102,6 +102,9 @@ async function settle(fixture: Fixture) {
 
 const text = (element: Element | null | undefined) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+// The errors the step shows: its live regions stay in place, empty when silent.
+const shownErrors = (step: HTMLElement) =>
+  [...step.querySelectorAll('.error')].map(text).filter(Boolean);
 const jobRows = (step: HTMLElement) => [
   ...step.querySelectorAll<HTMLElement>('li.job'),
 ];
@@ -207,7 +210,7 @@ describe('step 3, the prices', () => {
     await settle(fixture);
 
     expect(names(step)).toEqual(['Diagnoză', 'Schimb de ulei', 'Frâne față']);
-    expect(step.querySelector('[role="status"]')).toBeNull();
+    expect(step.querySelector('.notice')).toBeNull();
   });
 
   it('lists the jobs of a kept labour range with no job list yet', async () => {
@@ -248,9 +251,7 @@ describe('step 3, the prices', () => {
 
     expect(jobRows(step)).toEqual([]);
     expect(last()).toBeUndefined();
-    expect(text(step.querySelector('[role="status"]'))).toBe(
-      'Căutarea nu merge acum',
-    );
+    expect(text(step.querySelector('.notice'))).toBe('Căutarea nu merge acum');
   });
 
   it('holds the typed lei as bani, a pasted "1.200 lei" as 1200 lei', async () => {
@@ -301,9 +302,7 @@ describe('step 3, the prices', () => {
     }
     await settle(fixture);
 
-    expect(text(step.querySelector('[role="status"]'))).toBe(
-      'Căutarea nu merge acum',
-    );
+    expect(text(step.querySelector('.notice'))).toBe('Căutarea nu merge acum');
   });
 
   it('offers no new job when a job bears the typed name, accents and case aside', async () => {
@@ -488,7 +487,7 @@ describe('step 3, judged by the page', () => {
   // @traces 115-FR-002 115-FR-008
   it('shows every error at once when sending is asked for, the job list too', async () => {
     const { fixture, shown, step } = await open({ jobs: [] });
-    expect(step.querySelector('.error')).toBeNull();
+    expect(shownErrors(step)).toEqual([]);
     expect(shown).not.toContain(true);
 
     fixture.componentRef.setInput('showAll', true);
@@ -506,6 +505,17 @@ describe('step 3, judged by the page', () => {
     expect(at(step, 'steps.3.jobs').getAttribute('aria-describedby')).toBe(
       'listing-jobs-error',
     );
+    // Polite, as every field error: never interrupting the summary.
+    expect(
+      step.querySelector('#listing-jobs-error')?.getAttribute('role'),
+    ).toBe('status');
+    expect(
+      step.querySelector('#listing-jobs-error')?.getAttribute('aria-live'),
+    ).toBe('polite');
+    expect(step.querySelector('.labour .error')?.getAttribute('role')).toBe(
+      'status',
+    );
+    expect(step.querySelector('[role="alert"]')).toBeNull();
     expect(shown.at(-1)).toBe(true);
   });
 

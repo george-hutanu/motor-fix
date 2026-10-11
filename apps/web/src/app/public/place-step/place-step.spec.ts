@@ -223,9 +223,9 @@ describe('step 5, the place', () => {
     await type(opened, 'Strada Exemplu');
 
     expect(options(opened.step)).toHaveLength(5);
-    expect(text(opened.step.querySelector('[aria-live="polite"]'))).toContain(
-      '5',
-    );
+    expect(
+      text(opened.step.querySelector('.hint[aria-live="polite"]')),
+    ).toContain('5');
   });
 
   it('drops a late answer to an older text', async () => {
@@ -404,7 +404,10 @@ describe('step 5, the place', () => {
     const opened = await open();
     const field = address(opened.step);
 
-    expect(opened.step.querySelector('#place-address-error')).toBeNull();
+    const region = opened.step.querySelector('#place-address-error');
+    expect(region?.getAttribute('role')).toBe('status');
+    expect(region?.getAttribute('aria-live')).toBe('polite');
+    expect(text(region)).toBe('');
     field.dispatchEvent(new Event('blur'));
     await settle(opened.fixture);
 
@@ -426,7 +429,7 @@ describe('step 5, the place', () => {
 
     await type(opened, 'Strada Exemplu 1', 0);
 
-    expect(opened.step.querySelector('#place-address-error')).toBeNull();
+    expect(text(opened.step.querySelector('#place-address-error'))).toBe('');
     expect(address(opened.step).getAttribute('aria-invalid')).toBeNull();
     expect(opened.shownErrors.at(-1)).toBe(false);
   });

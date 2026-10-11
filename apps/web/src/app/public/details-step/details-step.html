@@ -12,9 +12,7 @@
   (input)="type('name', $event)"
   (blur)="leave('name')"
 />
-@if (errors().name; as key) {
-  <p class="error" id="listing-name-error">{{ key | t }}</p>
-}
+<p class="error" id="listing-name-error" role="status" aria-live="polite">{{ errors().name ? (errors().name! | t) : '' }}</p>
 
 <label hlmLabel class="field" for="listing-phone">{{ 'public.listing.details.phone' | t }}</label>
 <input
@@ -32,9 +30,7 @@
   (blur)="leave('phone')"
 />
 <p class="hint" id="listing-phone-hint">{{ 'public.listing.details.phoneHint' | t }}</p>
-@if (errors().phone; as key) {
-  <p class="error" id="listing-phone-error">{{ key | t }}</p>
-}
+<p class="error" id="listing-phone-error" role="status" aria-live="polite">{{ errors().phone ? (errors().phone! | t) : '' }}</p>
 
 <label hlmLabel class="field" for="listing-known-for">{{ 'public.listing.details.knownFor' | t }}</label>
 <textarea
@@ -51,9 +47,7 @@
   (blur)="leave('knownFor')"
 ></textarea>
 <p class="hint" id="listing-known-for-hint">{{ 'public.listing.details.knownForHint' | t }}</p>
-@if (errors().knownFor; as key) {
-  <p class="error" id="listing-known-for-error">{{ key | t }}</p>
-}
+<p class="error" id="listing-known-for-error" role="status" aria-live="polite">{{ errors().knownFor ? (errors().knownFor! | t) : '' }}</p>
 
 <fieldset data-group="kind" data-field="steps.1.businessKind" tabindex="-1">
   <legend>{{ 'public.listing.details.kind' | t }}</legend>

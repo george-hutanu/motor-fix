@@ -2023,7 +2023,13 @@ describe('sending for verification', () => {
     const buttons = [...page.querySelectorAll('.actions button')];
 
     expect(buttons[0]).toBe(sendButton(page));
-    expect(text(sendButton(page))).toBe('Trimite spre verificare');
+    expect(text(sendButton(page).querySelector('.label'))).toBe(
+      'Trimite spre verificare',
+    );
+    // The board's arrow, unread: the button's name stays its label.
+    const arrow = sendButton(page).querySelector('.arrow');
+    expect(text(arrow)).toBe('→');
+    expect(arrow?.getAttribute('aria-hidden')).toBe('true');
     expect(sendButton(page).getAttribute('variant')).not.toBe('secondary');
     expect(sendButton(page).type).toBe('button');
   });

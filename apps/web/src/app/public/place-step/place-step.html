@@ -40,9 +40,7 @@
     }
   </div>
 </div>
-@if (messages().address; as message) {
-  <p [class]="message.warning ? 'warning' : 'error'" id="place-address-error">{{ message.key | t }}</p>
-}
+<p [class]="messages().address?.warning ? 'warning' : 'error'" id="place-address-error" role="status" aria-live="polite">{{ messages().address ? (messages().address!.key | t) : '' }}</p>
 <p class="hint" aria-live="polite">
   @if (suggestions().length > 0) {
     {{ 'public.listing.place.found' | t: { count: suggestions().length } }}

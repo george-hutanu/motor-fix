@@ -100,3 +100,7 @@ button:focus-visible,
     font-size: var(--mf-size-small);
   }
 }
+/* An always-present live region takes no room while it says nothing. */
+.error:empty {
+  display: none;
+}

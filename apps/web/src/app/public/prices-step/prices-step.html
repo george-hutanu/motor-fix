@@ -33,14 +33,14 @@
     @if (message.warning) {
       <p class="warning">{{ message.key | t }}</p>
     } @else {
-      <p class="error" role="alert">{{ message.key | t }}</p>
+      <p class="error" role="status">{{ message.key | t }}</p>
     }
   }
 </ng-template>
 
 <ng-template #named let-path="path">
   @if (error(path + '.name'); as key) {
-    <p class="error" role="alert">{{ key | t }}</p>
+    <p class="error" role="status">{{ key | t }}</p>
   }
 </ng-template>
 
@@ -131,9 +131,7 @@
     </li>
   }
 </ul>
-@if (jobsError(); as key) {
-  <p class="error" id="listing-jobs-error" role="alert">{{ key | t }}</p>
-}
+<p class="error" id="listing-jobs-error" role="status" aria-live="polite">{{ jobsError() ? (jobsError()! | t) : '' }}</p>
 
 <button hlmBtn variant="secondary" type="button" [disabled]="full()" (click)="toSearch()">
   {{ 'public.listing.prices.addJob' | t }}

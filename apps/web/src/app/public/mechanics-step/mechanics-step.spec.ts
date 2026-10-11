@@ -35,6 +35,9 @@ type Opened = Awaited<ReturnType<typeof open>>;
 
 const text = (element: Element | null | undefined) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+// The errors the step shows: its live regions stay in place, empty when silent.
+const shownErrors = (step: HTMLElement) =>
+  [...step.querySelectorAll('.error')].map(text).filter(Boolean);
 const toggle = (step: HTMLElement) =>
   step.querySelector<HTMLButtonElement>(
     'button[role="switch"]',
@@ -115,7 +118,10 @@ describe('step 4, the mechanics', () => {
     const [row] = rows(opened.step);
     typeIn(opened, nameField(row), 'I');
 
-    expect(row.querySelector('.error')).toBeNull();
+    const region = row.querySelector('#listing-mechanic-error-0');
+    expect(region?.getAttribute('role')).toBe('status');
+    expect(region?.getAttribute('aria-live')).toBe('polite');
+    expect(text(region)).toBe('');
     leaveName(opened, row);
 
     expect(text(row.querySelector('.error'))).toBe('Scrie numele mecanicului');
@@ -137,7 +143,7 @@ describe('step 4, the mechanics', () => {
     expect(text(first.querySelector('.error'))).toBe(
       'Scrie numele mecanicului',
     );
-    expect(second.querySelector('.error')).toBeNull();
+    expect(text(second.querySelector('.error'))).toBe('');
   });
 
   // @traces 115-FR-004 115-FR-008
@@ -145,12 +151,12 @@ describe('step 4, the mechanics', () => {
     const opened = await open();
     press(opened, addButton(opened.step));
     press(opened, addButton(opened.step));
-    expect(opened.step.querySelectorAll('.error')).toHaveLength(0);
+    expect(shownErrors(opened.step)).toEqual([]);
 
     opened.fixture.componentRef.setInput('showAll', true);
     opened.fixture.detectChanges();
 
-    expect(opened.step.querySelectorAll('.error')).toHaveLength(2);
+    expect(shownErrors(opened.step)).toHaveLength(2);
     expect(opened.shown.at(-1)).toBe(true);
   });
 
@@ -164,7 +170,7 @@ describe('step 4, the mechanics', () => {
 
     typeIn(opened, nameField(row), 'Ion Marin');
 
-    expect(row.querySelector('.error')).toBeNull();
+    expect(text(row.querySelector('.error'))).toBe('');
     expect(nameField(row).getAttribute('aria-invalid')).toBeNull();
   });
 

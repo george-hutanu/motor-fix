@@ -74,6 +74,14 @@ section > .note {
   background: var(--mf-bg);
   border-top: 1px solid var(--mf-line);
 }
+/* Below a tablet the send button takes the whole row with a lighter tracking. A phone keeps the body size, at which Michroma needs two lines for the label and arrow; they are balanced. */
+@media (max-width: 767.98px) {
+  .actions .send {
+    flex: 1 1 100%;
+    letter-spacing: 0.08em;
+    text-wrap: balance;
+  }
+}
 @media (min-width: 768px) {
   .actions {
     position: sticky;

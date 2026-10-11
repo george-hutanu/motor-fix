@@ -973,6 +973,9 @@ describe('step 2, judged by the page', () => {
     fixture.componentInstance.shown.subscribe((v) => shown.push(v));
     await settle(fixture);
     expect(error(step)).toBe('');
+    const region = step.querySelector('#listing-brands-error');
+    expect(region?.getAttribute('role')).toBe('status');
+    expect(region?.getAttribute('aria-live')).toBe('polite');
     // It told false while it opened, before this listened.
     expect(shown).not.toContain(true);
 

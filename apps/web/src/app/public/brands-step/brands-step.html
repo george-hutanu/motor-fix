@@ -85,9 +85,7 @@
   }
 </ul>
 <p aria-live="polite">{{ counter() }}</p>
-@if (brandsError(); as key) {
-  <p class="error" id="listing-brands-error" role="alert">{{ key | t }}</p>
-}
+<p class="error" id="listing-brands-error" role="status" aria-live="polite">{{ brandsError() ? (brandsError()! | t) : '' }}</p>
 <label hlmLabel class="field">
   {{ 'public.listing.brands.note' | t }}
   <input hlmInput name="brandNote" autocomplete="off" [value]="value().brandNote ?? ''" (input)="write(note, input($event))" />

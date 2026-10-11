@@ -171,6 +171,27 @@ describe('step 1, the garage details', () => {
   });
 
   // @traces 115-FR-006
+  it('keeps each field error in a polite live region that is there before it shows', async () => {
+    const opened = await open();
+    const ids = [
+      'listing-name-error',
+      'listing-phone-error',
+      'listing-known-for-error',
+    ];
+    for (const id of ids) {
+      const region = opened.step.querySelector(`#${id}`);
+      expect(region?.getAttribute('role')).toBe('status');
+      expect(region?.getAttribute('aria-live')).toBe('polite');
+      expect(text(region)).toBe('');
+    }
+
+    for (const name of ['name', 'phone', 'knownFor']) leave(opened, name);
+
+    for (const id of ids)
+      expect(text(opened.step.querySelector(`#${id}`))).not.toBe('');
+  });
+
+  // @traces 115-FR-006
   it('shows a restored wrong value at once, without leaving it', async () => {
     // The page restores the draft after its first render.
     const { fixture, step } = await open();

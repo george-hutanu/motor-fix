@@ -32,9 +32,7 @@
             (input)="type(i, 'name', $event)"
             (blur)="leave(i)"
           />
-          @if (message) {
-            <p [class]="message.warning ? 'warning' : 'error'" [id]="'listing-mechanic-error-' + i">{{ message.key | t }}</p>
-          }
+          <p [class]="message?.warning ? 'warning' : 'error'" [id]="'listing-mechanic-error-' + i" role="status" aria-live="polite">{{ message ? (message.key | t) : '' }}</p>
           <input
             hlmInput
             name="speciality"
