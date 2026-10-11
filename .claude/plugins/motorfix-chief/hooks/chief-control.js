@@ -1,7 +1,8 @@
 // Part 1, Chief Control: the ledger from Bash calls, the ledger in context after
 // a compaction, the 15-minute watch gate, and the tail offer (FR-002..FR-005,
-// FR-010, FR-023). Agent dispatches reach the ledger through the guard.
-import { blank, key, ledgerBlock, merge } from './lib/ledger.js';
+// FR-010, FR-023), and part 3's forward, which shares its prompt.submit hook.
+// Agent dispatches reach the ledger through the guard.
+import { blank, DEAD, key, ledgerBlock, merge } from './lib/ledger.js';
 import { bashCall, qaRunLine, taskNotification } from './lib/parse.js';
 import { fromRevParse, REV_PARSE } from './lib/role.js';
 import { stageCall } from './lib/stage.js';
@@ -100,8 +101,30 @@ export async function bashHook($, e, next) {
   return afterCiWait($, call, await next(e));
 }
 
+// Part 3 (FR-008, research R9): a helper's result that reached this session
+// while the runner that spawned it still runs goes to that runner instead.
+// Here, not in a file of its own: one prompt.submit hook per plugin (R1).
+async function forward($, id, text) {
+  const agents = await $.agent.list();
+  const helper = agents.find((a) => a.id === id);
+  const runner = agents.find((a) => a.id === helper?.parentId);
+  if (!runner || DEAD.has(runner.status)) return undefined;
+  const sent = await $.session.send({ text, to: { agentId: runner.id } });
+  if (!sent?.isDelivered) return undefined;
+  await $.store.set(`forward:${id}`, {
+    at: await $.clock.now(),
+    to: runner.id,
+  });
+  await $.ui.toast(
+    `motorfix-chief: forwarded ${id} to its runner ${runner.id}`,
+  );
+  return { drop: `motorfix-chief forwarded it to ${runner.id}` };
+}
+
 export async function submitHook($, e, next) {
   const note = taskNotification(e.text ?? '');
+  const sent = note?.id && !e.agentId && (await forward($, note.id, e.text));
+  if (sent) return sent;
   const wait = note && waits.get(note.id);
   if (!wait) return next(e);
   waits.delete(note.id);

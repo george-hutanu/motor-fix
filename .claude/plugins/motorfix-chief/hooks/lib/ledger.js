@@ -6,7 +6,7 @@ export const LAP_CAP = 10;
 // The guard's claim, written before its Agent call goes through (FR-020).
 export const PENDING = 'pending';
 export const MARKER = '<!-- motorfix-chief ledger -->';
-const DEAD = new Set(['completed', 'failed', 'killed']);
+export const DEAD = new Set(['completed', 'failed', 'killed']);
 
 export const key = (pr) => `pr:${pr}`;
 
