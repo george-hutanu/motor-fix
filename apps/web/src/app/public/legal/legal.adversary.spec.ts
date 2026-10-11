@@ -65,9 +65,9 @@ describe('the legal texts as data', () => {
   );
 
   it.each(languages)(
-    'the %s draft notice and version label are not empty',
+    'the %s version label is not empty and is the only label',
     (language) => {
-      expect(LEGAL_LABELS[language].draft.trim()).not.toBe('');
+      expect(Object.keys(LEGAL_LABELS[language])).toEqual(['version']);
       expect(LEGAL_LABELS[language].version.trim()).not.toBe('');
     },
   );
