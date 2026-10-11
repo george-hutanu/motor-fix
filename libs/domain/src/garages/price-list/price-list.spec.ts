@@ -1,4 +1,4 @@
-import { type PriceRow, priceListJobs } from './price-list';
+import { type PriceRow, priceListJobs, publicPriceRows } from './price-list';
 
 type Status = PriceRow['jobType']['status'];
 
@@ -216,4 +216,195 @@ describe('the price list items', () => {
 
     expect(ids).toEqual([first.id, second.id, brandOnly.id, tieA.id, tieB.id]);
   });
+});
+
+// @traces 355-price-list-ranges-FR-001
+// @traces 355-price-list-ranges-FR-004
+describe('the public price rows of a profile read without a brand', () => {
+  it('is empty without a price row', () => {
+    expect(publicPriceRows([], [])).toEqual([]);
+  });
+
+  it('gives each public job its names, duration and default range', () => {
+    const j = job();
+
+    expect(
+      publicPriceRows(
+        [row(j, { durationMinutes: 120, fromBani: 89_000, toBani: 140_000 })],
+        [],
+      ),
+    ).toEqual([
+      {
+        durationMinutes: 120,
+        fromBani: 89_000,
+        jobTypeId: j.id,
+        nameEn: j.nameEn,
+        nameRo: j.nameRo,
+        toBani: 140_000,
+      },
+    ]);
+  });
+
+  it('leaves the duration out when the default row has none', () => {
+    const [item] = publicPriceRows([row(job())], []);
+
+    expect(item).not.toHaveProperty('durationMinutes');
+  });
+
+  it('lists jobs in the order of their default rows, whatever the brand rows say', () => {
+    const second = job();
+    const first = job();
+    const third = job();
+
+    const ids = publicPriceRows(
+      [
+        row(second, { position: 2 }),
+        row(second, { brandId: 'bmw', position: 0 }),
+        row(third, { position: 3 }),
+        row(first, { position: 1 }),
+      ],
+      [],
+      { id: 'bmw', ticks: [] },
+    ).map((item) => item.jobTypeId);
+
+    expect(ids).toEqual([first.id, second.id, third.id]);
+  });
+
+  it('never carries a hidden job, the way the price list rule hides it', () => {
+    const shown = job();
+    const rows = [
+      row(shown),
+      row(job('approved', 'A')),
+      row(job(), { visible: false }),
+      row(job(), { toBani: null }),
+      row(job('pending')),
+      row(job('rejected')),
+      row(job(), { brandId: 'bmw' }),
+    ];
+
+    expect(publicPriceRows(rows, ['B']).map((item) => item.jobTypeId)).toEqual([
+      shown.id,
+    ]);
+  });
+});
+
+// @traces 355-price-list-ranges-FR-002
+// @traces 355-price-list-ranges-FR-003
+describe('the public price rows of a profile read with a brand', () => {
+  const ranges = (rows: PriceRow[], brand?: { id: string; ticks: string[] }) =>
+    publicPriceRows(rows, [], brand).map(({ fromBani, toBani }) => [
+      fromBani,
+      toBani,
+    ]);
+
+  it("shows the brand's range when it has both ends", () => {
+    const j = job();
+    const rows = [
+      row(j, { fromBani: 89_000, toBani: 140_000 }),
+      row(j, { brandId: 'bmw', fromBani: 110_000, toBani: 170_000 }),
+    ];
+
+    expect(ranges(rows, { id: 'bmw', ticks: [] })).toEqual([
+      [110_000, 170_000],
+    ]);
+  });
+
+  it('keeps the default range when the brand row has no top', () => {
+    const j = job();
+    const rows = [
+      row(j, { fromBani: 89_000, toBani: 140_000 }),
+      row(j, { brandId: 'bmw', fromBani: 110_000, toBani: null }),
+    ];
+
+    expect(ranges(rows, { id: 'bmw', ticks: [] })).toEqual([[89_000, 140_000]]);
+  });
+
+  it("ignores another brand's range, and every brand range without a brand", () => {
+    const j = job();
+    const rows = [
+      row(j, { fromBani: 89_000, toBani: 140_000 }),
+      row(j, { brandId: 'bmw', fromBani: 110_000, toBani: 170_000 }),
+    ];
+
+    expect(ranges(rows, { id: 'audi', ticks: [] })).toEqual([
+      [89_000, 140_000],
+    ]);
+    expect(ranges(rows)).toEqual([[89_000, 140_000]]);
+  });
+
+  it("uses a brand's range even when its own row is marked hidden", () => {
+    const j = job();
+    const rows = [
+      row(j),
+      row(j, {
+        brandId: 'bmw',
+        fromBani: 110_000,
+        toBani: 170_000,
+        visible: false,
+      }),
+    ];
+
+    expect(ranges(rows, { id: 'bmw', ticks: [] })).toEqual([
+      [110_000, 170_000],
+    ]);
+  });
+
+  it('keeps the default duration beside a brand range', () => {
+    const j = job();
+    const [item] = publicPriceRows(
+      [
+        row(j, { durationMinutes: 120 }),
+        row(j, { brandId: 'bmw', durationMinutes: 30, toBani: 90_000 }),
+      ],
+      [],
+      { id: 'bmw', ticks: [] },
+    );
+
+    expect(item?.durationMinutes).toBe(120);
+  });
+
+  it('lists only the ticked jobs when the brand has ticks', () => {
+    const brakes = job();
+    const chain = job();
+    const rows = [row(brakes), row(chain, { position: 1 })];
+
+    expect(
+      publicPriceRows(rows, [], { id: 'bmw', ticks: [brakes.id] }).map(
+        (item) => item.jobTypeId,
+      ),
+    ).toEqual([brakes.id]);
+  });
+
+  it('lists every public job when the brand has no tick', () => {
+    const brakes = job();
+    const chain = job();
+    const rows = [row(brakes), row(chain, { position: 1 })];
+
+    expect(
+      publicPriceRows(rows, [], { id: 'audi', ticks: [] }).map(
+        (item) => item.jobTypeId,
+      ),
+    ).toEqual([brakes.id, chain.id]);
+  });
+
+  it.each<[string, Partial<Omit<PriceRow, 'jobType'>>, Status, string | null]>([
+    ['hidden by the garage', { visible: false }, 'approved', null],
+    ['without a top price', { toBani: null }, 'approved', null],
+    ['waiting for approval', {}, 'pending', null],
+    ['rejected', {}, 'rejected', null],
+    ['not authorised', {}, 'approved', 'A'],
+  ])(
+    'never lists a job %s, ticked and with a complete brand range',
+    (_case, extra, status, activity) => {
+      const j = job(status, activity);
+      const rows = [
+        row(j, extra),
+        row(j, { brandId: 'bmw', fromBani: 110_000, toBani: 170_000 }),
+      ];
+
+      expect(
+        publicPriceRows(rows, ['B'], { id: 'bmw', ticks: [j.id] }),
+      ).toEqual([]);
+    },
+  );
 });

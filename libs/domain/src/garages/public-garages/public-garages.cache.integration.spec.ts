@@ -180,6 +180,23 @@ describe('the profile cache', () => {
     expect(withBrand.brand).toMatchObject({ slug, stance: 'does_not_take' });
   });
 
+  // @traces 355-price-list-ranges-FR-005
+  it('never reads a profile cached in the shape before the price list', async () => {
+    const garage = await approvedGarage();
+    await other.set(`garage-profile-slug:v4:${garage.slug}`, garage.id);
+    await other.hset(
+      `garage-profile:v4:${garage.id}`,
+      '-',
+      JSON.stringify({ id: garage.id, name: 'Formă veche', slug: garage.slug }),
+    );
+
+    const res = await read(garage.slug);
+
+    expect(res.body.name).toBe('Service Auto Militari');
+    expect(res.body.prices).toEqual([]);
+    expect(await other.hexists(`garage-profile:v5:${garage.id}`, '-')).toBe(1);
+  });
+
   it('reads PostgreSQL again once the profile is dropped', async () => {
     const garage = await approvedGarage();
     await read(garage.slug);

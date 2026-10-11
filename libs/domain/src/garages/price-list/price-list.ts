@@ -1,4 +1,8 @@
-import type { PriceListItemDto, PriceListReason } from '@motor-fix/contracts';
+import type {
+  PriceListItemDto,
+  PriceListReason,
+  PublicPriceRowDto,
+} from '@motor-fix/contracts';
 
 import type { JobTypeStatus } from '../../generated/prisma/client';
 
@@ -104,4 +108,49 @@ export function priceListJobs(
         ...(defaultRow?.toBani != null && { toBani: defaultRow.toBani }),
       };
     });
+}
+
+// A brand's own range for a job, only when it has both ends.
+const brandRange = (
+  rows: readonly PriceRow[],
+  jobTypeId: string,
+  brandId: string | undefined,
+) =>
+  rows.find(
+    (row) =>
+      brandId !== undefined &&
+      row.jobType.id === jobTypeId &&
+      row.brandId === brandId &&
+      row.toBani != null,
+  );
+
+// The jobs drivers see on a profile, in the list's order. With a brand in
+// context its complete range replaces the default and, once the garage ticked
+// any job for it, only the ticked jobs are listed; visibility, order and
+// duration always come from the default row.
+export function publicPriceRows(
+  rows: readonly PriceRow[],
+  rarActivities: readonly string[],
+  brand?: { id: string; ticks: readonly string[] },
+): PublicPriceRowDto[] {
+  const ticks = new Set(brand?.ticks);
+  const listed = (jobTypeId: string) =>
+    ticks.size === 0 || ticks.has(jobTypeId);
+  return priceListJobs(rows, rarActivities).flatMap((item) => {
+    const { durationMinutes, fromBani, jobTypeId, nameEn, nameRo, toBani } =
+      item;
+    if (!item.public || fromBani === undefined || toBani == null) return [];
+    if (!listed(jobTypeId)) return [];
+    const own = brandRange(rows, jobTypeId, brand?.id);
+    return [
+      {
+        jobTypeId,
+        nameEn,
+        nameRo,
+        ...(durationMinutes !== undefined && { durationMinutes }),
+        fromBani: own?.fromBani ?? fromBani,
+        toBani: own?.toBani ?? toBani,
+      },
+    ];
+  });
 }
