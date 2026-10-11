@@ -1,7 +1,7 @@
 :host {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--mf-space-6);
 }
 p {
   margin: 0;
@@ -10,5 +10,5 @@ p {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: var(--mf-space-3);
 }
