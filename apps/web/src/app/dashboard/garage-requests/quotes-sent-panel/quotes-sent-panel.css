@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-4);
-  padding: var(--mf-space-5) 22px;
+  padding: var(--mf-space-5) var(--mf-space-6);
   background: var(--mf-panel);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
@@ -43,4 +43,10 @@ h2 {
 .end {
   display: block;
   height: 1px;
+}
+/* A phone keeps 16 px sides, as the requests panel above it does. */
+@media (max-width: 767.98px) {
+  .panel {
+    padding-inline: var(--mf-space-4);
+  }
 }

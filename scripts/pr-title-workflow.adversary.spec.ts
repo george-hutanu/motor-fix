@@ -249,7 +249,14 @@ describe('CI workflow after the title check moved out', () => {
   it('keeps CI OK waiting for every remaining job and running always', () => {
     const okBlock = block(ci, 'ci-ok', 2);
     expect(okBlock).toMatch(/if: always\(\)/);
-    for (const job of ['changes', 'checks', 'tests', 'e2e', 'docker']) {
+    for (const job of [
+      'changes',
+      'checks',
+      'unit',
+      'integration',
+      'e2e',
+      'docker',
+    ]) {
       expect(okBlock).toMatch(new RegExp(`\\b${job}\\b`));
     }
   });

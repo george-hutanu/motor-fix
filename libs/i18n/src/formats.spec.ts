@@ -18,6 +18,7 @@ import {
   formatWholeLeiRange,
   relativeTime,
   requestAge,
+  requestExpiry,
 } from './formats';
 
 const MISSING = '—';
@@ -543,6 +544,56 @@ describe('requestAge', () => {
 
   it('answers the missing mark for what is not a time', () => {
     expect(requestAge('ieri', 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 347-FR-003 347-FR-013
+describe('requestExpiry', () => {
+  const now = new Date('2026-10-09T10:00:00Z');
+  const ahead = (ms: number) => new Date(now.getTime() + ms).toISOString();
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
+
+  it('counts whole days from a day on, rounding down', () => {
+    expect(requestExpiry(ahead(6 * DAY + 5 * HOUR), 'ro', now)).toBe(
+      'expiră în 6 zile',
+    );
+    expect(requestExpiry(ahead(6 * DAY + 5 * HOUR), 'en', now)).toBe(
+      'expires in 6 days',
+    );
+    expect(requestExpiry(ahead(DAY), 'ro', now)).toBe('expiră în 1 zi');
+    expect(requestExpiry(ahead(DAY), 'en', now)).toBe('expires in 1 day');
+  });
+
+  it('counts whole hours under a day, with "de" from 20 on in Romanian', () => {
+    expect(requestExpiry(ahead(90 * MIN), 'ro', now)).toBe('expiră în 1 oră');
+    expect(requestExpiry(ahead(90 * MIN), 'en', now)).toBe('expires in 1 hour');
+    expect(requestExpiry(ahead(3 * HOUR), 'ro', now)).toBe('expiră în 3 ore');
+    expect(requestExpiry(ahead(DAY - MIN), 'ro', now)).toBe(
+      'expiră în 23 de ore',
+    );
+    expect(requestExpiry(ahead(3 * HOUR), 'en', now)).toBe(
+      'expires in 3 hours',
+    );
+  });
+
+  it('says less than an hour under an hour', () => {
+    expect(requestExpiry(ahead(30 * MIN), 'ro', now)).toBe(
+      'expiră în mai puțin de o oră',
+    );
+    expect(requestExpiry(ahead(30 * MIN), 'en', now)).toBe(
+      'expires in less than an hour',
+    );
+  });
+
+  it('says expired once the moment has passed', () => {
+    expect(requestExpiry(ahead(0), 'ro', now)).toBe('a expirat');
+    expect(requestExpiry(ahead(-HOUR), 'en', now)).toBe('expired');
+  });
+
+  it('answers the missing mark for what is not a time', () => {
+    expect(requestExpiry('mâine', 'ro', now)).toBe(MISSING);
   });
 });
 

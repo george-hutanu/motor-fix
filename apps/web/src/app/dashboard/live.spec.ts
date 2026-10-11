@@ -425,6 +425,28 @@ describe('liveResource', () => {
     }
   });
 
+  it.each([400, 403])(
+    'does not read again after a read refused with %s',
+    async (status) => {
+      jest.useFakeTimers({ advanceTimers: true });
+      try {
+        let reads = 0;
+        const { ref } = await viewOf(async () => {
+          reads++;
+          throw new HttpErrorResponse({ status });
+        });
+
+        jest.advanceTimersByTime(120_000);
+        await flush();
+
+        expect(reads).toBe(1);
+        expect((ref.error() as HttpErrorResponse).status).toBe(status);
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
+
   it('marks the object gone when its re-read answers 404, and keeps what was shown', async () => {
     let gone = false;
     const { ref, send } = await viewOf(async () => {

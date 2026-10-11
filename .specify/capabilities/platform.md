@@ -73,6 +73,7 @@ features:
   - 251-monitoring-backups
   - 1167-constitution-e2e-on-demand
   - 1159-mutation-shards
+  - 1170-integration-on-demand
   - 1168-chief-mods
 ---
 
@@ -186,9 +187,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-027 — On every pull request CI MUST run install, typecheck, lint, unit and API tests against real PostgreSQL and Redis, the contract check, the build of the affected projects, and a dependency audit of the production dependencies that fails on high and critical findings (the build tooling is kept current by the dependency-update pull requests instead).
+### 421-FR-027 — On every pull request CI MUST run install, typecheck, lint, unit tests, the contract check, the build of the affected projects, and a dependency audit of the production dependencies that fails on high and critical findings (the build tooling is kept current by the dependency-update pull requests instead). The API tests against real PostgreSQL and Redis (the integration suite) run on demand and before every release (1170-FR-002, 1170-FR-004).
 
-_From 421-monorepo-platform._
+_From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
 ### 000-FR-001 — (replaces 516-FR-001) On every merge into `main` the pipeline MUST run every check on every project, build one image per app and the `keycloak` image tagged with the commit SHA, push them to GitHub's container registry, migrate and deploy staging — `api`, `worker`, `web`, `keycloak`, `mcp`, each waited for at its own health path (FR-004), a service whose Railway id is unset skipped with a notice (FR-007) — run the end-to-end suite's `@core` flows against staging (the whole suite runs there on demand only), and then promote to production with no manual approval. The staging wait is limited to 5 minutes per service; on expiry the run fails, the previous images are restored and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
@@ -776,9 +777,9 @@ _From 678-measurable-sizing._
 
 _From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
 
-### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, integration, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails; the end-to-end suite runs on demand (750-FR-001).
+### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails; the end-to-end suite (750-FR-001) and the integration suite (1170-FR-002) run on demand.
 
-_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand._
+_From 750-ci-speed; modified by 1167-constitution-e2e-on-demand, 1170-integration-on-demand._
 
 ### 750-FR-003 — A failing check inside a shared job MUST be identifiable by name from the job's failed log, and the other checks of that job MUST still run and report.
 
@@ -1386,9 +1387,9 @@ _From 976-integration-specs-under-load._
 
 _From 976-integration-specs-under-load._
 
-### 976-FR-006 — CI behaviour MUST be unchanged: the same specs run with the same worker settings in the same jobs; any worker-count change applies only to the pre-commit run under `scripts/heavy.sh`, MUST stay above 1 worker, and is made only when the reproduction shows it is needed.
+### 976-FR-006 — CI behaviour MUST be unchanged: the same specs run with the same worker settings in the same jobs (the integration specs in the on-demand and release "Integration tests" job, 1170-FR-002); any worker-count change applies only to a by-hand run under `scripts/heavy.sh`, MUST stay above 1 worker, and is made only when the reproduction shows it is needed.
 
-_From 976-integration-specs-under-load._
+_From 976-integration-specs-under-load; modified by 1170-integration-on-demand._
 
 ### 976-FR-007 — One shared test helper in `libs/domain` MUST provide the wait-until-condition-or-deadline, with the condition's name and the deadline in its failure; every wait this change adds or replaces uses it, including the polling loops that gave up within two seconds. Loops that already wait 10 seconds or more are not load failures and stay.
 
@@ -1733,6 +1734,30 @@ _From 1159-mutation-shards._
 ### 1159-FR-018 — The PR CI paragraph of `AGENTS.md`, the `speckit-harden` skill and the `mutation-runner` agent MUST say that mutation runs in the Mutation workflow (every 3 days and on demand, sharded, one job per project or shard) and never locally, and MUST NOT describe a local run (ST-711).
 
 _From 1159-mutation-shards._
+
+### 1170-FR-001 — A pull request's CI runs the unit suite only (`JEST_SUITE=unit`) in a job named "Unit tests" that has no PostgreSQL or Redis service containers; a failing unit test still fails `CI OK`.
+
+_From 1170-integration-on-demand._
+
+### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with PostgreSQL+PostGIS and Redis service containers, `pg_stat_statements` preloaded and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
+
+_From 1170-integration-on-demand._
+
+### 1170-FR-003 — `CI OK` needs the integration job and counts it skipped as passed, as it does the E2E job; the merge gate is unchanged (a skipped check is green; a later skip never hides an on-demand run's failure, as for E2E).
+
+_From 1170-integration-on-demand._
+
+### 1170-FR-004 — A release (merge to `main`) runs the integration suite before anything is built or deployed: `release.yml`'s `checks` job calls `ci.yml` with `integration: true`, so `images`, `staging` and `production` wait for it and a failure stops the release.
+
+_From 1170-integration-on-demand._
+
+### 1170-FR-005 — `.husky/pre-commit` starts no Docker stack and runs the affected `test` targets with `JEST_SUITE=unit`, set by the hook itself whatever the environment holds; the old refusal of a commit with `JEST_SUITE` set goes.
+
+_From 1170-integration-on-demand._
+
+### 1170-FR-006 — `scripts/test-services.ts` (`<base>`, `down`, `sweep`) stays, for running the integration suite by hand; its header and its no-Docker message describe the manual run, not the hook.
+
+_From 1170-integration-on-demand._
 
 ### 1168-FR-001 — The repository MUST hold one plugin at `.claude/plugins/motorfix-chief/` with a manifest, a hooks file naming one register module, and one module file per part (part 3 excepted: it shares Chief Control's one `prompt.submit` hook in `chief-control.js`, amended in the build), enabled through an in-repo marketplace entry in `.claude/settings.json`; `claude plugin validate .claude/plugins/motorfix-chief` MUST pass, and the plugin MUST carry no code or package from outside this repo.
 

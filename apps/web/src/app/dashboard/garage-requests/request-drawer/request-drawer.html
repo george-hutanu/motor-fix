@@ -1,0 +1,86 @@
+@if (refusal(); as said) {
+  <p class="refused">{{ said | t }}</p>
+} @else if (view.error()) {
+  <div class="failed">
+    <p>{{ 'garage.requests.detail.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.requests.retry' | t }}</button>
+  </div>
+} @else {
+  @if (closed(); as reason) {
+    <p class="banner" role="status">{{ reason | t }}</p>
+  }
+  @if (offline()) {
+    <p class="offline">{{ 'shell.live.offline' | t }}</p>
+  }
+  @if (request(); as r) {
+    @let c = car();
+    <dl>
+      <div>
+        <dt>{{ 'garage.requests.detail.customer' | t }}</dt>
+        <dd>{{ r.driver.shortName }}</dd>
+      </div>
+      @if (r.driver.phone) {
+        <div class="phone">
+          <dt>{{ 'garage.requests.detail.phone' | t }}</dt>
+          <dd>{{ r.driver.phone }}</dd>
+        </div>
+      }
+      @if (c) {
+        <div>
+          <dt>{{ 'garage.requests.detail.car' | t }}</dt>
+          <dd>{{ c.brand }} {{ c.model }} · {{ c.year }} · {{ c.fuel | t }}@if (c.engine) { · {{ c.engine }}}</dd>
+        </div>
+      }
+      @if (r.car.plate) {
+        <div class="plate">
+          <dt>{{ 'garage.requests.detail.plate' | t }}</dt>
+          <dd>{{ r.car.plate }}</dd>
+        </div>
+      }
+      <div>
+        <dt>{{ 'garage.requests.detail.jobs' | t }}</dt>
+        <dd>
+          <ul class="jobs">
+            @for (job of jobs().done; track job.id) {
+              <li>{{ job.name }}</li>
+            }
+          </ul>
+          @if (jobs().apart.length) {
+            <div class="not-offered">
+              <p>{{ 'garage.requests.detail.notOffered' | t: { brand: r.car.brand, count: jobs().apart.length } }}</p>
+              <ul class="jobs">
+                @for (job of jobs().apart; track job.id) {
+                  <li>{{ job.name }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>{{ 'garage.requests.detail.description' | t }}</dt>
+        @if (description(); as text) {
+          <dd class="description">{{ text }}</dd>
+        } @else {
+          <dd class="empty">{{ 'garage.requests.detail.noDescription' | t }}</dd>
+        }
+      </div>
+      <div>
+        <dt>{{ 'garage.requests.detail.mechanic' | t }}</dt>
+        <dd>{{ 'garage.requests.anyMechanic' | t }}</dd>
+      </div>
+    </dl>
+    <p class="times">
+      <time [attr.datetime]="r.createdAt">{{ 'garage.requests.detail.received' | t: { age: received() } }}</time>
+      · <time [attr.datetime]="r.expiresAt">{{ expiry() }}</time>
+    </p>
+  } @else {
+    <div class="skeleton" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </div>
+  }
+  <div class="actions">
+    <button hlmBtn type="button" [disabled]="disabled()" (click)="send()">{{ 'garage.quotes.send.title' | t }}</button>
+    <button hlmBtn variant="secondary" type="button" [disabled]="disabled()" (click)="decline()">{{ 'garage.requests.decline.button' | t }}</button>
+  </div>
+}

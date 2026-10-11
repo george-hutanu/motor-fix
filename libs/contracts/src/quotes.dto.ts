@@ -418,13 +418,17 @@ export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
   descriptionLine!: string | null;
 
   @ApiProperty({
-    description: 'Set on the rows of a closed read',
+    description:
+      'Set when the request no longer waits for the garage: on the rows of a closed read, and on the detail',
     enum: GARAGE_CLOSE_REASONS,
     nullable: true,
   })
   closedReason!: GarageCloseReason | null;
 
-  @ApiProperty({ ...NULLABLE_TIME, description: 'Set with closedReason' })
+  @ApiProperty({
+    ...NULLABLE_TIME,
+    description: 'Set with closedReason on list rows only; null on the detail',
+  })
   closedAt!: string | null;
 
   @ApiProperty({ type: DriverNameDto })

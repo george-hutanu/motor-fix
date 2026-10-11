@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
@@ -234,5 +237,30 @@ describe('the Oferte trimise panel kept current', () => {
 
     expect(ids(element)).toEqual(['req-q0', 'req-q1']);
     expect(element.querySelector('.mf-live-changed')).toBeNull();
+  });
+});
+
+// The PR tester measured this panel off the 4 px grid and the type scale.
+describe('the quotes-sent-panel stylesheet', () => {
+  const css = readFileSync(join(__dirname, 'quotes-sent-panel.css'), 'utf8');
+
+  it('pads and spaces on the 4 px grid', () => {
+    for (const [, value] of css.matchAll(/(?:gap|padding|margin):\s*([^;]+);/g))
+      for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
+        expect(Number.parseFloat(px) % 4).toBe(0);
+  });
+
+  // Lap 4: the requests panel above it pads 16 px on a phone; the two
+  // panels on one page keep the same sides.
+  it('pads its sides at 16 px on a phone, like the requests panel', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+    expect(phone).toMatch(
+      /\.panel\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,
+    );
+  });
+
+  it('sizes its text from the Cockpit type scale', () => {
+    for (const [, value] of css.matchAll(/font-size:\s*([^;]+);/g))
+      expect(value.trim()).toMatch(/^var\(--mf-size-[a-z]+\)$/);
   });
 });

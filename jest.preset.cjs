@@ -2,7 +2,8 @@ const nxPreset = require('@nx/jest/preset').default;
 
 // Specs that need PostgreSQL or Redis are named *.integration.spec.ts.
 // JEST_SUITE=unit leaves them out, JEST_SUITE=integration runs only them, and
-// no JEST_SUITE runs everything.
+// no JEST_SUITE runs everything. A chosen suite passes a project that has
+// none of its specs, as the other suite may hold them all.
 const INTEGRATION = '\\.integration\\.spec\\.ts$';
 const suites = {
   integration: { testMatch: ['**/?(*.)integration.spec.ts'] },
@@ -20,6 +21,6 @@ const maxWorkers = process.env.JEST_MAX_WORKERS;
 
 module.exports = {
   ...nxPreset,
-  ...(suite && suites[suite]),
+  ...(suite && { ...suites[suite], passWithNoTests: true }),
   ...(maxWorkers ? { maxWorkers } : {}),
 };

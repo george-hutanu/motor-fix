@@ -14,8 +14,9 @@
 // agent uses none of them on a real review.
 //
 // The affected unit tests and the end-to-end suite are off by default: CI's
-// "Unit and integration tests" job runs the unit tests on the merge result, and the merge
-// gate refuses until CI is green; the end-to-end suite runs by hand (ci.yml's
+// "Unit tests" job runs the unit tests on the merge result, and the merge
+// gate refuses until CI is green; the integration suite runs by hand and before every
+// release, and the end-to-end suite runs by hand (ci.yml's
 // workflow_dispatch) and its core flows on every release, against staging. Running
 // them here held a heavy slot for minutes and proved nothing new. --tests runs them anyway.
 //
@@ -426,7 +427,7 @@ async function main(argv) {
         const f2 = testFinding({ name: "End-to-end suite", command: `BASE_URL=${webURL} npx playwright test -c apps/web-e2e/playwright.config.mts --workers=1`, code: e2e.code, tail: e2e.tail });
         if (f2) findings.push(f2);
       }
-    } else notes.push("Unit tests left to CI (Unit and integration tests; the merge gate waits for them); the end-to-end suite runs on demand and its core flows on every release.");
+    } else notes.push("Unit tests left to CI (Unit tests; the merge gate waits for them); the integration suite runs on demand and before every release; the end-to-end suite runs on demand and its core flows on every release.");
 
     return finish(screenshots);
   } catch (error) {

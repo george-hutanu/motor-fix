@@ -13,12 +13,12 @@ export interface GarageRequestDto {
   car: GarageCarDto;
 
   /**
-   * Set with closedReason
+   * Set with closedReason on list rows only; null on the detail
    */
   closedAt: string | null;
 
   /**
-   * Set on the rows of a closed read
+   * Set when the request no longer waits for the garage: on the rows of a closed read, and on the detail
    */
   closedReason: ('declined' | 'expired' | 'garage_suspended' | 'cancelled' | 'account_closed' | 'accepted_elsewhere') | null;
   createdAt: string;
