@@ -25,7 +25,9 @@ const DROPPED = [
   'http.user_agent',
   'net.sock.peer.addr',
 ];
-// The same address and browser description, captured as request headers.
+// The same address and browser description, captured as request headers. No
+// instrumentation records headers today (setup/instrumentations.ts sets no
+// headersToSpanAttributes); this holds if one ever does.
 const CLIENT_HEADER =
   /^http\.request\.header\.(user[-_]agent|x[-_]forwarded[-_]for|forwarded|x[-_]real[-_]ip|cf[-_]connecting[-_]ip|true[-_]client[-_]ip)$/;
 

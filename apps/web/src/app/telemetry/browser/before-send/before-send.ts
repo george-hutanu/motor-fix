@@ -15,8 +15,8 @@ export function viewportClass(width: number): Viewport {
 const clean = (text: string) => scrub(text.replace(URL_TAIL, '$1'));
 
 // Runs on every item before it leaves the browser: personal values masked,
-// URLs cut to their path, no session, user or user-agent, the viewport class on each
-// measurement, and at most twenty errors per page load.
+// URLs cut to their path, no session, user or user-agent, the viewport class
+// on each measurement, and at most twenty errors per page load.
 export function createBeforeSend(viewport: Viewport) {
   let errors = 0;
   return (item: TransportItem): TransportItem | null => {

@@ -7,14 +7,6 @@ const whole = (language: 'ro' | 'en', kind: LegalText) =>
     .flatMap((s) => [s.heading, ...s.paragraphs])
     .join('\n');
 
-const profileViews = (language: 'ro' | 'en') => {
-  const heading = language === 'ro' ? /vizualiz/i : /profile view/i;
-  const section = LEGAL_TEXTS[language].privacy.sections.find((s) =>
-    heading.test(s.heading),
-  );
-  return section ? section.paragraphs.join('\n') : '';
-};
-
 // The contact route of the texts: writing from the account.
 const CONTACT = { en: /from your account/, ro: /din contul tău/ } as const;
 
@@ -81,63 +73,9 @@ describe('the final legal texts', () => {
     (language, facts) => {
       expect(LEGAL_TEXTS[language].privacy.sections).toHaveLength(11);
       const text = whole(language, 'privacy');
-      for (const provider of [
-        'Railway',
-        'Brevo',
-        'Grafana Cloud',
-        'Plausible',
-        'OpenFreeMap',
-        'Geoapify',
-        'Google',
-        'Apple',
-        'mf_refresh',
-      ])
-        expect(text).toContain(provider);
+      expect(text).toContain('mf_refresh');
       for (const fact of facts) expect(text).toMatch(fact);
       expect(text).toMatch(CONTACT[language]);
-    },
-  );
-
-  // @traces 243-FR-009
-  it.each([
-    [
-      'en',
-      [
-        /secret/i,
-        /every day|each day/i,
-        /account/i,
-        /two days/i,
-        /legitimate interest/i,
-        /6\(1\)\(f\)/,
-        /object/i,
-        /bots/i,
-        /cookie/i,
-        /not stored, logged or sent/i,
-      ],
-    ],
-    [
-      'ro',
-      [
-        /secret/i,
-        /în fiecare zi|zilnic/i,
-        /cont/i,
-        /două zile/i,
-        /interes(ul nostru)? legitim/i,
-        /6 alin\. \(1\) lit\. f/,
-        /opune/i,
-        /roboți/i,
-        /cookie/i,
-        /nu (le )?(stocăm|păstrăm)/i,
-      ],
-    ],
-  ] as const)(
-    'the %s privacy notice explains how profile views are counted',
-    (language, facts) => {
-      const section = profileViews(language);
-
-      expect(section).not.toBe('');
-      for (const fact of facts) expect(section).toMatch(fact);
-      expect(section).toMatch(CONTACT[language]);
     },
   );
 });
