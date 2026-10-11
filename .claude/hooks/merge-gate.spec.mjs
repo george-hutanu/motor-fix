@@ -56,8 +56,9 @@ describe('merge gate — the decision', () => {
     assert.equal(decideMerge(pr([...green, review('SUCCESS')])), null);
   });
 
+  // A PR skips E2E tests (on demand only) and the path-filtered Docker builds.
   it('counts skipped and neutral checks as green', () => {
-    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
+    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Docker build (web)', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
   });
 
   // The PR tester now runs beside CI rather than after it, so agent-review

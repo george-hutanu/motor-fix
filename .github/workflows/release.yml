@@ -259,8 +259,12 @@ jobs:
             sudo sh -c 'pkill -9 -x apt-get; pkill -9 -x dpkg; dpkg --configure -a' || true
           done
           exit 1
-      - name: End to end on staging
-        run: npx nx run web-e2e:e2e --skip-nx-cache
+      # The core flows only (tests tagged @core), the constitution's "before
+      # every release": the full suite against staging sent most of the web
+      # service's egress. It stays available by hand, from a laptop:
+      # BASE_URL=<staging address> E2E_PASSWORD=<seed password> npx nx run web-e2e:e2e
+      - name: Core flows on staging
+        run: npx nx run web-e2e:e2e --skip-nx-cache --grep @core
         env:
           BASE_URL: ${{ vars.PUBLIC_WEB_URL }}
           RELEASE_SHA: ${{ github.sha }}
