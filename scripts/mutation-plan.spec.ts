@@ -331,7 +331,6 @@ describe('the repository shard file', () => {
     expect(new Set(entries.map((e) => e.id)).size).toBe(entries.length);
   });
 
-  // 100 % of a sharded project's mutated files in exactly one shard.
   it('puts each mutated file of every sharded project in exactly one shard', () => {
     const { projects } = readShardFile(real);
     const roots = new Map(
@@ -349,7 +348,7 @@ describe('the repository shard file', () => {
     }
   });
 
-  // A shard with no spec of its own would stop Stryker before any mutant ran.
+  // A shard with no spec of its own would score every mutant uncovered.
   it('gives every shard of the repository at least one spec of its own', () => {
     const { projects } = readShardFile(real);
     const roots = new Map(

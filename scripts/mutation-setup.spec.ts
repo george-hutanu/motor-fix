@@ -141,6 +141,15 @@ describe('mutation setup', () => {
   // Its specs read git (structure-check, observability-inventory), which sees
   // nothing in Stryker's copied sandbox; .gitignore keeps .stryker-tmp and
   // reports out of git.
+  // The web initial run ran out of memory at the default heap (run
+  // 38037093986); two runners keep it inside the runner's 16 GB.
+  it('gives the web project a larger heap and two test runners', () => {
+    expect(JSON.parse(read('apps/web/stryker.config.json'))).toMatchObject({
+      concurrency: 2,
+      testRunnerNodeArgs: ['--max-old-space-size=5120'],
+    });
+  });
+
   it('runs the scripts project in the checked-out repository', () => {
     expect(JSON.parse(read('scripts/stryker.config.json'))).toMatchObject({
       inPlace: true,
