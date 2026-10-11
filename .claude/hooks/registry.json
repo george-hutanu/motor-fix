@@ -215,14 +215,15 @@
     "motorfix-chief/.claude-plugin/plugin.json": "0dda7c3ca12d",
     "motorfix-chief/.gitignore": "6df82eb6cc4b",
     "motorfix-chief/hooks/board.js": "27c7fb50d42a",
-    "motorfix-chief/hooks/chief-control.js": "af1619e1af9d",
+    "motorfix-chief/hooks/chief-control.js": "b6d51692173b",
     "motorfix-chief/hooks/dispatch-guard.js": "49b179e64590",
     "motorfix-chief/hooks/hooks.json": "f36f3680952a",
     "motorfix-chief/hooks/lib/ledger.js": "5bc287609bf0",
     "motorfix-chief/hooks/lib/parse.js": "91251764c4f1",
     "motorfix-chief/hooks/lib/role.js": "e3e911f56b08",
-    "motorfix-chief/hooks/lib/stubs.ts": "f646006da5bd",
-    "motorfix-chief/hooks/lib/surface.js": "26ea29a4372b",
-    "motorfix-chief/hooks/register.js": "e346d0079d6d"
+    "motorfix-chief/hooks/lib/stubs.ts": "d3a9c1254fe4",
+    "motorfix-chief/hooks/lib/surface.js": "3f806c780113",
+    "motorfix-chief/hooks/owner-card.js": "02caa137259c",
+    "motorfix-chief/hooks/register.js": "a734540e18a4"
   }
 }

@@ -13,7 +13,13 @@ const CLOSED = new Set(['merged', 'closed']);
 
 // This session's role (the board reads it too) and its background ci-waits
 // (task id → PR and run).
-export const role = { chief: false, main: null, remote: null, ticking: false };
+export const role = {
+  chief: false,
+  main: null,
+  remote: null,
+  surface: null,
+  ticking: false,
+};
 const waits = new Map();
 
 async function readRows($) {
@@ -139,6 +145,7 @@ async function tick($) {
 
 async function onStart($, e) {
   role.remote = (await $.env.get('CLAUDE_CODE_REMOTE')) ?? null;
+  role.surface = e.surface ?? null;
   const r = await $.process.run(REV_PARSE, { cwd: e.cwd, timeoutMs: 10_000 });
   Object.assign(role, fromRevParse(r.exitCode === 0 ? r.stdout : ''));
   if (!role.chief) return;

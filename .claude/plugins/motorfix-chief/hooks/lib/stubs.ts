@@ -24,6 +24,8 @@ export function stubs(on, options: Options = {}) {
   const sent: { to: unknown; text: string }[] = [];
   const submitted: string[] = [];
   const opened: string[] = [];
+  const closed: string[] = [];
+  const copied: string[] = [];
   const agents = options.agents ?? [];
   // The clock starts at 0 and moves only when the test advances it.
   const clock = mock.clock(on);
@@ -52,11 +54,27 @@ export function stubs(on, options: Options = {}) {
     opened.push(e.id);
     return value({ isPlaced: true });
   });
+  on('ui.close', (_$, e) => value(void closed.push(e.id)));
+  on('ui.copy', (_$, e) => {
+    copied.push(e.text);
+    return value({ isCopied: true });
+  });
   // The engine's own drawing, beneath the plugin: an empty box.
   on('ui.render', ($, e) => h($.ui.resolve(e).Box, {}));
   on('process.run', async (_$, e) => {
     runs.push({ argv: e.argv, init: e.init });
     return value(options.run ? await options.run(e.argv) : ok());
   });
-  return { agents, clock, opened, runs, sent, store, submitted, toasts };
+  return {
+    agents,
+    clock,
+    closed,
+    copied,
+    opened,
+    runs,
+    sent,
+    store,
+    submitted,
+    toasts,
+  };
 }

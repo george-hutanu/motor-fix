@@ -12,7 +12,8 @@ import {
   submitHook,
 } from './chief-control.js';
 import { agentHook } from './dispatch-guard.js';
-import { PANE } from './lib/surface.js';
+import { CARD, PANE } from './lib/surface.js';
+import { cardHook, cardPaneHook } from './owner-card.js';
 
 // A gating hook that fails lets the call through: the mod never blocks on its own error.
 const failOpen = (_$, e, next) => next(e);
@@ -26,4 +27,6 @@ export function register(on) {
   on('prompt.context', contextHook);
   on('ui.render', { component: 'AbovePrompt' }, bandHook);
   on('ui.render', { component: 'Pane', requestId: PANE.id }, paneHook);
+  on('tool.call', { tool: 'AskUserQuestion' }, cardHook).catch(failOpen);
+  on('ui.render', { component: 'Pane', requestId: CARD.id }, cardPaneHook);
 }
