@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-10
+updated: 2026-10-11
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -10,6 +10,7 @@ features:
   - 345-decline-request
   - 1025-answers-same-day
   - 357-public-price-jobs
+  - 347-read-request
 ---
 
 # Capability: Quotes
@@ -174,9 +175,9 @@ _From 343-live-quote-requests._
 
 _From 345-decline-request._
 
-### 343-FR-005 — The reads of FR-002 MUST be open to the owner and the receptionist of the garage and to a mechanic of it with `can_answer_quotes`; every other caller, a mechanic without the permission and another garage's staff MUST get 404 (the existing policy, 220-FR-012); the routes need a session and join no public route. Rows carry the driver as first name and surname initial, the car snapshot (brand, model, year), the jobs in the reader's language, the request's creation time and expiry, and no phone, e-mail, plate or description beyond what 220-FR-013 already gives.
+### 347-FR-008 — The detail read MUST answer 403 `forbidden` to a mechanic of a recipient garage who lacks `can_answer_quotes` (today 404, 343-FR-005; the decline and the send already answer 403 to that mechanic, 344-FR-002), and 404 `not_found` to every other caller without a recipient row for their garage, another recipient garage's staff included, and to a caller with no garage; the list read is unchanged. The web MUST show "Nu ai dreptul să citești cererile" / "You are not allowed to read requests" on 403 and "Cererea nu mai este disponibilă" / "The request is no longer available" on 404 and 400, with no request data.
 
-_From 343-live-quote-requests._
+_From 347-read-request._
 
 ### 343-FR-006 — Panou MUST gain a section "Cereri de ofertă" / "Quote requests" above its empty state, replacing that empty state once the section exists: its heading, the counter "N fără răspuns" / "N unanswered", the four newest waiting rows and, when there are more than four, a link "Vezi toate" / "See all" to the Cereri de ofertă view. The section is present for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 097-FR-005), absent for a mechanic without it, and absent while the garage is `draft` (097-FR-008's line stays).
 
@@ -362,6 +363,58 @@ _From 1025-answers-same-day._
 
 _From 1025-answers-same-day._
 
+### 347-FR-001 — Every waiting row (closed rows do not open) in the Cereri de ofertă panel on Panou and in the Cereri de ofertă view MUST open the request on click (and on Enter or Space when focused, the row being a button-like element with an accessible name "Deschide cererea <customer> · <car>"), for the owner, the receptionist and a mechanic with `can_answer_quotes`; the row's existing Trimite oferta and Refuză buttons stop the click from opening it.
+
+_From 347-read-request._
+
+### 347-FR-002 — The request MUST open in the shared overlay's `drawer` shape (right-hand drawer from 768 px, bottom sheet under it, 158-FR-011), titled "Cerere de ofertă" / "Quote request", with the two actions Trimite oferta and Refuză fixed at the bottom while the body scrolls; closing follows the overlay's three ways (close button, Escape, the dimmed page); focus moves into the drawer when it opens and returns to the row (or the opener) when it closes, as the shared overlay does for every drawer.
+
+_From 347-read-request._
+
+### 347-FR-003 — The drawer MUST show, from the existing detail read: the driver's `shortName`; the car as "<brand> <model> · <year> · <fuel in the reader's language> · <engine>" (the engine part left out when the snapshot has none); every job in the reader's language, the offered ones in the main list and the not-offered ones apart under "Nu faceți această lucrare pe <brand>" / "You do not do this job on <brand>" (plural "aceste lucrări" / "these jobs" when more than one); the description as plain text with its line breaks, links not made clickable; "orice mecanic" / "any mechanic" (see Assumptions); "primită <relative age>" / "received <relative age>" with the row's existing age wording; "expiră <relative>" / "expires <relative>" from `expiresAt`, rounded down: "în N zile" / "in N days" from 24 h (exactly 24 h is "în 1 zi" / "in 1 day"), "în N ore" / "in N hours" from one hour, "în mai puțin de o oră" / "in less than an hour" under it, "a expirat" / "expired" once past, computed in Europe/Bucharest by one formatter that mirrors the row's age helper.
+
+_From 347-read-request._
+
+### 347-FR-004 — When the description is null or whitespace, the drawer MUST say "Clientul nu a adăugat o descriere." / "The customer added no description." in the description's place.
+
+_From 347-read-request._
+
+### 347-FR-005 — The drawer MUST show no e-mail ever, the phone only when the detail read carries it (this garage's quote accepted, never to a mechanic) and the plate only when the read carries it (a confirmed booking), with no new field added to the read for them.
+
+_From 347-read-request._
+
+### 347-FR-006 — Trimite oferta MUST open the existing send-quote dialog and Refuză the existing decline dialog, for this request, on top of the drawer; when either dialog returns a success the drawer MUST close and the feed MUST move the row out of the waiting list as it does today. The buttons MUST follow the row's current permission rule (the session's `garageAccess`).
+
+_From 347-read-request._
+
+### 347-FR-007 — The drawer MUST have the address `/app/garage/requests/:requestId` under the garage's requests view: opening the address loads the view with the drawer open on that request, opening a row navigates to it carrying its origin (Panou or the view) in router state, and closing the drawer navigates to that origin, else `/app/garage/requests`; the URL is the source of truth, so browser Back closes the drawer. The view's existing `**` sub-path ownership carries it; no new route guard.
+
+_From 347-read-request._
+
+### 347-FR-009 — `REQUEST_RECIPIENT` MUST gain a nullable `first_seen_at` (timestamptz), set to now by any successful detail read for the reader's garage when it is still null (the send-quote dialog's read included), and never changed afterwards (the update is conditional on null, so two concurrent reads keep the earlier time); a refused read writes nothing; no audit entry and no event is written for it.
+
+_From 347-read-request._
+
+### 347-FR-010 — While the drawer is open, the web MUST re-read the request within 5 seconds when the garage's live channel delivers `quote.sent`, `request.declined`, `request.cancelled`, `request.expired` or `quote.accepted` for that request id, through the existing garage feed's subscription, and MUST show a closed banner when the read's `closedReason` or `recipient.status` says the garage can no longer answer: one text per reason ("Cererea s-a închis: clientul a anulat-o" / "The request closed: the customer cancelled it"; "… a expirat" / "… it expired"; "… un coleg a trimis o ofertă" / "… a colleague sent a quote"; "… un coleg a refuzat-o" / "… a colleague declined it"; "… clientul a ales alt service" / "… the customer chose another garage"; "… service-ul este suspendat" / "… the garage is suspended"; "… contul clientului a fost închis" / "… the customer's account was closed"), both buttons disabled. The banner keys on `recipient.status` / `closedReason` only: `quoted` shows the colleague text whoever sent it (no actor lookup); this garage's own accepted quote shows no banner but disables both buttons; an unknown reason shows "Cererea s-a închis." / "The request closed.". A request already closed when opened by its address shows the same banner. The banner is a live region (`role="status"`), so a screen reader announces it when it appears. A re-read keeps the fields already shown in place (no return to the skeleton). A banner that appears while the send-quote or decline dialog is open sits under that dialog; the dialog's own 409 handling stands and the drawer shows the banner once the dialog closes.
+
+_From 347-read-request._
+
+### 347-FR-011 — The detail read MUST tell the web why the garage can no longer answer when it opens a closed request: `closedReason` filled on the detail from the same rule the list uses for its closed rows (today the detail leaves it null) and `recipient.status`, so FR-010 needs no second source.
+
+_From 347-read-request._
+
+### 347-FR-012 — The drawer MUST show, while the read is in flight, the drawer frame with its title and skeleton lines in place of the fields and both buttons disabled; on a failed read, "Nu am putut încărca cererea. Încearcă din nou." / "We could not load the request. Try again." with a retry button; when offline, what was loaded, the dashboard's existing offline line and both buttons disabled until the connection returns.
+
+_From 347-read-request._
+
+### 347-FR-013 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the drawer MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, every button at least 44 px tall and the banner's text at a contrast of at least 4.5:1; the web component is a folder (`<name>.ts`, `<name>.html`, `<name>.css`) under `apps/web/src/app/dashboard/garage-requests/`.
+
+_From 347-read-request._
+
+### 347-FR-014 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL: the detail carries the snapshot, the jobs with `offered`, the description and `expiresAt`, and never e-mail, a phone before acceptance or a plate before confirmation; `first_seen_at` set by the first read and unchanged by a second, also under two concurrent reads; nothing written by a refused read; 403 for a mechanic without the permission; 404 for another garage's owner and for a request not sent to the garage; `closedReason` on the detail of a cancelled, expired, declined, quoted-by-colleague, accepted-elsewhere and suspended request. In Jest, web: the row opens the drawer and its buttons do not; the car line with and without an engine; the not-offered heading in singular and plural; the no-description text; the received and expiry wording in both languages; the phone and plate shown only when the read carries them; the address opens the drawer and closing returns; each banner text per reason and the disabled buttons; the loading, error, retry and offline states. End to end (Playwright): the seeded owner opens a waiting request from the list, reads the customer, car, jobs and description, sends a quote from the drawer, and sees the row leave the list.
+
+_From 347-read-request._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -385,3 +438,5 @@ _From 1025-answers-same-day._
 - `343-FR-009` — superseded by `345-FR-016` (2026-10-10)
 
 - `221-FR-004` — superseded by `357-FR-006` (2026-10-10)
+
+- `343-FR-005` — superseded by `347-FR-008` (2026-10-11)
