@@ -215,6 +215,7 @@ describe('plan', () => {
     ],
     ['a shard named rest', { rest: ['auth'] }, 'rest'],
     ['a shard with no folders', { empty: [] }, 'empty'],
+    ['a folder that is not a string', { odd: [7] }, 'odd'],
   ])('refuses %s', (_case, folders, named) => {
     shardFile({
       domain: {
@@ -330,7 +331,7 @@ describe('the repository shard file', () => {
     expect(new Set(entries.map((e) => e.id)).size).toBe(entries.length);
   });
 
-  // SC-004: 100 % of a sharded project's mutated files in exactly one shard.
+  // 100 % of a sharded project's mutated files in exactly one shard.
   it('puts each mutated file of every sharded project in exactly one shard', () => {
     const { projects } = readShardFile(real);
     const roots = new Map(

@@ -17,11 +17,19 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { readShardFile, shardScope, shardsOf } from './mutation-plan.ts';
+import {
+  excluded,
+  readShardFile,
+  type Scope,
+  shardScope,
+  shardsOf,
+} from './mutation-plan.ts';
+import type { Counts } from './mutation-summary.ts';
 
 const DETECTED = ['Killed', 'Timeout'];
 const UNDETECTED = ['Survived', 'NoCoverage'];
@@ -42,8 +50,6 @@ const DRY_RUN_TIMEOUT_MINUTES = 30;
 export const reportsDir = (project: string, shard?: string) =>
   `reports/mutation/${project}${shard ? `/${shard}` : ''}`;
 
-type Scope = ReturnType<typeof shardScope>;
-
 function scopeOf(project: string, root: string, shard: string): Scope {
   const shards = shardsOf(readShardFile(process.cwd()), project);
   if (!shards)
@@ -51,13 +57,12 @@ function scopeOf(project: string, root: string, shard: string): Scope {
   return shardScope(root, shards, shard);
 }
 
-export function strykerOptions(
-  project: string,
-  root: string,
-  incremental: boolean,
-  only?: string,
-  shard?: string,
-): Record<string, unknown> {
+type ProjectConfig = Record<string, unknown> & {
+  thresholds: Record<string, unknown> & { break: number };
+};
+
+/** <root>/stryker.config.json, refused when it holds no numeric floor. */
+function projectConfig(root: string): ProjectConfig {
   const file = join(root, 'stryker.config.json');
   let own: { thresholds?: { break?: unknown } } | null = null;
   try {
@@ -67,6 +72,28 @@ export function strykerOptions(
     throw new Error(
       `${file} is missing, is not JSON, or sets no thresholds.break`,
     );
+  return own as ProjectConfig;
+}
+
+export const projectFloor = (root: string): number =>
+  projectConfig(root).thresholds.break;
+
+// The cache restores the last run's reports with its incremental file: a job
+// cut off before it writes its own must leave none of them to be read as this
+// run's.
+export function clearReports(reports: string): void {
+  for (const name of ['score.json', 'mutation.json', 'index.html'])
+    rmSync(join(reports, name), { force: true });
+}
+
+export function strykerOptions(
+  project: string,
+  root: string,
+  incremental: boolean,
+  only?: string,
+  shard?: string,
+): Record<string, unknown> {
+  const own = projectConfig(root);
   const lib = join(root, 'tsconfig.lib.json');
   const reports = reportsDir(project, shard);
   const scope = shard ? scopeOf(project, root, shard) : undefined;
@@ -98,13 +125,7 @@ export function strykerOptions(
     // mutation.json carries each survivor's file, line and mutator, which the
     // mutation-runner agent reads from the job's artifact.
     jsonReporter: { fileName: `${reports}/mutation.json` },
-    mutate: [
-      `${root}/src/**/*.ts`,
-      `!${root}/src/**/*.spec.ts`,
-      `!${root}/src/**/*.test.ts`,
-      `!${root}/src/**/generated/**`,
-      `!${root}/src/**/test-setup.ts`,
-    ],
+    mutate: [`${root}/src/**/*.ts`, ...excluded(root)],
     reporters: ['clear-text', 'progress', 'html', 'json'],
     testRunner: 'jest',
     tsconfigFile: existsSync(lib) ? lib : join(root, 'tsconfig.app.json'),
@@ -175,16 +196,11 @@ export function mutationScore(statuses: string[]): number | null {
   return counted ? (detected / counted) * 100 : null;
 }
 
-export type ScoreRecord = {
+type ScoreRecord = Counts & {
   floor: number;
-  killed: number;
-  minutes: number;
-  noCoverage: number;
   project: string;
   score: number | null;
   shard: string;
-  survived: number;
-  timeout: number;
 };
 
 /** What one job leaves for the summary job: its counts, not just a score. */
@@ -220,13 +236,6 @@ export function summaryRows(
   return summary ? row : HEADER + row;
 }
 
-function floorOf(root: string): number {
-  const own = JSON.parse(
-    readFileSync(join(root, 'stryker.config.json'), 'utf8'),
-  );
-  return own.thresholds.break;
-}
-
 function writeScore(reports: string, record: object): void {
   mkdirSync(reports, { recursive: true });
   writeFileSync(join(reports, 'score.json'), `${JSON.stringify(record)}\n`);
@@ -242,12 +251,14 @@ async function main() {
   const label = shard ? `${project} ${shard}` : project;
   console.log(`mutation: ${label}`);
   const reports = reportsDir(project, shard);
+  clearReports(reports);
   if (!hasSpecs(root)) {
     console.log(`${label}: no tests yet, mutation run skipped`);
     writeScore(reports, { project, shard: shard ?? '', skipped: true });
     return;
   }
   const options = strykerOptions(project, root, incremental, only, shard);
+  const floor = projectFloor(root);
   // A specifier the compiler cannot follow: the spec build resolves with node10,
   // which cannot see this ESM-only package.
   const { Stryker }: StrykerCore = await import(STRYKER);
@@ -257,7 +268,7 @@ async function main() {
     project,
     shard ?? '',
     results.map((r) => r.status),
-    floorOf(root),
+    floor,
     Date.now() - started,
   );
   writeScore(reports, record);

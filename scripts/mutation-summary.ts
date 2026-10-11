@@ -11,7 +11,7 @@ import { join } from 'node:path';
 
 import { type Entry, plan } from './mutation-plan.ts';
 
-type Counts = {
+export type Counts = {
   killed: number;
   minutes: number;
   noCoverage: number;
@@ -111,11 +111,17 @@ export function readScores(dir: string): Score[] {
     );
 }
 
+/** The plan job's matrix; empty when the plan job failed. */
+export function plannedJobs(matrix: string | undefined): Entry[] {
+  const planned = JSON.parse(matrix || '{}').include;
+  if (!Array.isArray(planned)) throw new Error('MATRIX holds no include list');
+  return planned;
+}
+
 function main() {
   const repo = process.cwd();
   const full = plan(repo, {});
-  const planned: Entry[] = JSON.parse(process.env['MATRIX'] ?? '{}').include;
-  if (!Array.isArray(planned)) throw new Error('MATRIX holds no include list');
+  const planned = plannedJobs(process.env['MATRIX']);
   const roots = new Map(full.map((e) => [e.project, e.root] as const));
   const floorOf = (project: string) =>
     JSON.parse(

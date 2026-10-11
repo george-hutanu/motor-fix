@@ -11,8 +11,8 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const SHARD_FILE = 'scripts/mutation-shards.json';
-export const REST = 'rest';
+const SHARD_FILE = 'scripts/mutation-shards.json';
+const REST = 'rest';
 
 type Timed = { measured?: unknown; timeout?: unknown };
 type ShardEntry = Timed & { folders: string[] };
@@ -212,6 +212,10 @@ function validateShard(
 ): void {
   if (!Array.isArray(entry.folders) || entry.folders.length === 0)
     throw new Error(`${SHARD_FILE}: ${owner} lists no folders`);
+  if (!entry.folders.every((folder) => typeof folder === 'string'))
+    throw new Error(
+      `${SHARD_FILE}: ${owner} lists a folder that is not a name`,
+    );
   for (const folder of entry.folders)
     if (!existsSync(join(repo, root, 'src', base(folder))))
       throw new Error(

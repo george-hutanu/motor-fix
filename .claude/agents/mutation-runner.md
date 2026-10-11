@@ -39,7 +39,10 @@ minutes to hours, one job per project or shard.
    (add `--raw-field shards=<project:shard,…>` when shards were named). One
    still running: return the same `partial` line with its id; never wait for it.
 3. Completed: download the project's reports into the scratchpad,
-   `gh run download <id> --pattern 'mutation-<project>*' --dir <scratch>`, and
+   `gh run download <id> --name mutation-<project> --dir <scratch>`; a
+   project split in `scripts/mutation-shards.json` has one artifact per
+   shard, `--name mutation-<project>-<shard>` for each, `rest` included (a
+   glob such as `mutation-mcp*` would also take `mutation-mcp-tools`). Then
    read each `score.json` (counts) and `mutation.json` (survivors: files →
    mutants with `status` `Survived` or `NoCoverage`, `location.start.line`,
    `mutatorName`, `replacement`). Sum a sharded project's shards.

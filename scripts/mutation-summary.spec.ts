@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import type { Entry } from './mutation-plan.ts';
-import { readScores, summarize, table } from './mutation-summary.ts';
+import {
+  plannedJobs,
+  readScores,
+  summarize,
+  table,
+} from './mutation-summary.ts';
 
 const entry = (project: string, shard = ''): Entry => ({
   id: shard ? `${project}-${shard}` : project,
@@ -230,4 +235,20 @@ describe('readScores', () => {
   it('reads nothing from a folder that is not there', () => {
     expect(readScores(join(dir, 'missing'))).toEqual([]);
   });
+});
+
+describe('plannedJobs', () => {
+  it('reads the include list of the plan job matrix', () => {
+    expect(plannedJobs('{"include":[{"id":"media"}]}')).toEqual([
+      { id: 'media' },
+    ]);
+  });
+
+  // A failed plan job leaves MATRIX empty.
+  it.each([undefined, '', '{}'])(
+    'names the missing list when MATRIX is %j',
+    (matrix) => {
+      expect(() => plannedJobs(matrix)).toThrow('MATRIX holds no include list');
+    },
+  );
 });

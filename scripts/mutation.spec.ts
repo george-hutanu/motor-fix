@@ -1,12 +1,20 @@
 // @traces 1159-FR-004 1159-FR-009 1159-FR-012 1159-FR-016 1159-FR-019
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  clearReports,
   flags,
   hasSpecs,
   mutationScore,
+  projectFloor,
   reportsDir,
   scoreRecord,
   strykerOptions,
@@ -315,6 +323,49 @@ describe('reportsDir', () => {
   it('names the folder by project, and by shard when there is one', () => {
     expect(reportsDir('domain')).toBe('reports/mutation/domain');
     expect(reportsDir('domain', 'auth')).toBe('reports/mutation/domain/auth');
+  });
+});
+
+describe('projectFloor', () => {
+  it('reads the floor from the project stryker.config.json', () => {
+    write('libs/x/stryker.config.json', floor(70));
+
+    expect(projectFloor('libs/x')).toBe(70);
+  });
+
+  it('refuses a config with no floor and names the file', () => {
+    write('libs/x/stryker.config.json', JSON.stringify({ mutate: [] }));
+
+    expect(() => projectFloor('libs/x')).toThrow('libs/x/stryker.config.json');
+  });
+});
+
+describe('clearReports', () => {
+  // The cache restores the last run's reports: a job cut off before it
+  // writes its own must leave no score for the summary to take as this run's.
+  it('removes the last run score and reports, keeping the incremental file', () => {
+    for (const name of [
+      'score.json',
+      'mutation.json',
+      'index.html',
+      'incremental.json',
+    ])
+      write(`reports/mutation/x/${name}`, '{}');
+
+    clearReports('reports/mutation/x');
+
+    expect(existsSync(join(repo, 'reports/mutation/x/score.json'))).toBe(false);
+    expect(existsSync(join(repo, 'reports/mutation/x/mutation.json'))).toBe(
+      false,
+    );
+    expect(existsSync(join(repo, 'reports/mutation/x/index.html'))).toBe(false);
+    expect(existsSync(join(repo, 'reports/mutation/x/incremental.json'))).toBe(
+      true,
+    );
+  });
+
+  it('does nothing when there are no reports yet', () => {
+    expect(() => clearReports('reports/mutation/none')).not.toThrow();
   });
 });
 

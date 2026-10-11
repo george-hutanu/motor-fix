@@ -118,9 +118,8 @@ fixed here while a spec gap goes to "Needs you". Its report is not shown to the
 user; relay the failing rows.
 
 **2b. Mutation score.** Collect the `mutation-runner` results launched in
-step 1 (one per touched Nx project with a `stryker.config.json` — `api`, `mcp`,
-`web`, `worker`, `contracts`, `domain`, `i18n`, `media`, `ui-cockpit`, `scripts`; `npx nx show projects
---affected --with-target test:mutation` lists the touched ones). Each is a survivor table of at most
+step 1 (one per touched Nx project with a `stryker.config.json`; `npx nx show
+projects --affected --with-target test:mutation` lists the touched ones). Each is a survivor table of at most
 twenty-five lines read from the workflow's reports, or a `partial` line naming
 the Mutation run still going: re-invoke the runner once that run has finished
 (waited for in the background, never in a sleep loop). Relay the score line
