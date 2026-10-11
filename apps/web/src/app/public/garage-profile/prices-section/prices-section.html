@@ -6,7 +6,7 @@
   <p class="includes">{{ 'public.garageProfile.prices.includes' | t }}</p>
   @for (row of rows(); track row.id) {
     <label class="row" [class.on]="on().has(row.id)">
-      <hlm-switch [checked]="on().has(row.id)" [aria-label]="row.name" (checkedChange)="toggle(row.id, $event)" />
+      <hlm-switch [inputId]="'mf-price-job-' + row.id" [checked]="on().has(row.id)" [aria-label]="row.name" (checkedChange)="toggle(row.id, $event)" />
       <span class="job">
         <span class="name">{{ row.name }}</span>
         @if (row.duration) {

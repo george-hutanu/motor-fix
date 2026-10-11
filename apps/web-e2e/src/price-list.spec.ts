@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
+import { hydrated } from './accounts.js';
 import { test } from './fixtures.js';
 
 const MILITARI = '/garages/service-auto-militari';
@@ -130,7 +131,7 @@ test.describe('the price list on a garage profile @seeded', () => {
   });
 
   test('turns a switch on and off from the keyboard', async ({ page }) => {
-    await page.goto(`/ro${MILITARI}`);
+    await hydrated(page, `/ro${MILITARI}`);
     const first = page.getByRole('switch', {
       name: 'Diagnoză și citire coduri de eroare',
     });

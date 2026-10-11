@@ -281,6 +281,17 @@ describe('the switch on each row', () => {
     ]);
   });
 
+  it('names each switch by its own job alone, never through a shared label', () => {
+    const ids = switches().map((s) => s.id);
+
+    expect(ids.every(Boolean)).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const s of switches()) {
+      const by = s.getAttribute('aria-labelledby');
+      if (by) expect(document.getElementById(by)).not.toBeNull();
+    }
+  });
+
   it('is named by the English name in English', async () => {
     await english();
 
