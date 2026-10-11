@@ -13,6 +13,8 @@ import {
   clearReports,
   flags,
   hasSpecs,
+  IN_PLACE_ENV,
+  markInPlace,
   mutationScore,
   reportsDir,
   scoreRecord,
@@ -332,6 +334,25 @@ describe('strykerOptions shared limits', () => {
 
     mkdirSync(join(repo, 'libs/x/jest.config.cts'));
     expect(() => strykerOptions('x', 'libs/x', false)).toThrow('EISDIR');
+  });
+});
+
+// Scripts mutate in place: its specs that read the repository's own sources
+// or time a scan would see instrumented code (run 38132926917), so the run
+// tells them so.
+describe('markInPlace', () => {
+  it('marks an in-place run in the environment its test runners inherit', () => {
+    const env: Record<string, string | undefined> = {};
+    markInPlace({ inPlace: true }, env);
+    expect(env[IN_PLACE_ENV]).toBe('1');
+    expect(IN_PLACE_ENV).toBe('MUTATION_IN_PLACE');
+  });
+
+  it('leaves a sandboxed run unmarked', () => {
+    const env: Record<string, string | undefined> = {};
+    markInPlace({}, env);
+    markInPlace({ inPlace: false }, env);
+    expect(env).toEqual({});
   });
 });
 

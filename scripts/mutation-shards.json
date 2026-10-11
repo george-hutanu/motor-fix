@@ -6,7 +6,7 @@
   },
   "projects": {
     "api": {
-      "measured": "41 min incremental, concurrency 1 (run 38037093986)",
+      "measured": "48 min mutating, 49 min job, scored 88.89 under its floor (run 38132926917)",
       "timeout": 90
     },
     "contracts": {
@@ -14,7 +14,7 @@
       "timeout": 45
     },
     "domain": {
-      "measured": "unsharded over 360 min (run 37360166653); rest shard failed its initial test run without pg_stat_statements (run 38127622063)",
+      "measured": "unsharded over 360 min (run 37360166653); rest shard 30 min mutating, 31 min job, after pg_stat_statements was preloaded (run 38135952989)",
       "shards": {
         "auth-core": {
           "folders": ["auth/*", "auth/oauth"],
@@ -104,7 +104,7 @@
       "timeout": 30
     },
     "mcp": {
-      "measured": "20 min at concurrency 2 (run 38037093986); concurrency 1 since",
+      "measured": "36 min mutating at concurrency 1, 37 min job, scored 75.00 under its floor (run 38132926917)",
       "timeout": 90
     },
     "mcp-tools": {
@@ -112,7 +112,7 @@
       "timeout": 45
     },
     "media": {
-      "measured": "under 1 min incremental (run 38037093986)",
+      "measured": "31 s mutating, 2 min job (run 38127622063)",
       "timeout": 30
     },
     "observability": {
@@ -124,7 +124,7 @@
       "timeout": 30
     },
     "scripts": {
-      "measured": "initial test run failed in the sandbox (run 38037093986); in place not run yet",
+      "measured": "in place, its initial test run failed on specs reading the instrumented repository after 4 min (run 38132926917); those specs skip under MUTATION_IN_PLACE since",
       "timeout": 90
     },
     "ui-cockpit": {
@@ -145,13 +145,13 @@
             "app/dashboard/admin-growth",
             "app/dashboard/platform-rules"
           ],
-          "measured": "not run yet",
+          "measured": "28 min job (run 38132926917)",
           "timeout": 120
         },
         "dashboard-core": {
           "folders": ["app/dashboard/*", "app/dashboard/frame"],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38132926917)",
+          "timeout": 360
         },
         "dashboard-garage": {
           "folders": [
@@ -173,8 +173,8 @@
             "app/dashboard/push-panel",
             "app/dashboard/email-banner"
           ],
-          "measured": "not run yet",
-          "timeout": 120
+          "measured": "over 120 min: cancelled at its limit (run 38132926917)",
+          "timeout": 360
         },
         "public-core": {
           "folders": [
@@ -184,7 +184,7 @@
             "app/public/list-your-garage",
             "app/public/brand-verdict"
           ],
-          "measured": "not run yet",
+          "measured": "76 min job (run 38132926917)",
           "timeout": 120
         },
         "public-steps": {
@@ -199,7 +199,7 @@
             "app/public/details-step",
             "app/public/mechanics-step"
           ],
-          "measured": "not run yet",
+          "measured": "60 min job (run 38132926917)",
           "timeout": 120
         }
       },

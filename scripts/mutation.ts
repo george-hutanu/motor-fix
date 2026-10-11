@@ -67,6 +67,19 @@ export function clearReports(reports: string): void {
     rmSync(join(reports, name), { force: true });
 }
 
+// An in-place run instruments the checked-out sources themselves, so specs
+// that read the repository's own files, or time a scan, would judge
+// instrumented code: they skip under this variable, which Stryker's test
+// runners inherit.
+export const IN_PLACE_ENV = 'MUTATION_IN_PLACE';
+
+export function markInPlace(
+  options: Record<string, unknown>,
+  env: Record<string, string | undefined> = process.env,
+): void {
+  if (options['inPlace'] === true) env[IN_PLACE_ENV] = '1';
+}
+
 export function strykerOptions(
   project: string,
   root: string,
@@ -242,6 +255,7 @@ async function main() {
     return;
   }
   const options = strykerOptions(project, root, incremental, only, shard);
+  markInPlace(options);
   const floor = projectFloor(root);
   // A specifier the compiler cannot follow: the spec build resolves with node10,
   // which cannot see this ESM-only package.
