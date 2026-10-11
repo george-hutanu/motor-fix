@@ -60,10 +60,8 @@ async function render(
 }
 
 const cards = (page: HTMLElement) => [
-  ...page.querySelectorAll<HTMLElement>('.card:not(.skeleton)'),
+  ...page.querySelectorAll<HTMLAnchorElement>('a.card'),
 ];
-const link = (card: Element) =>
-  card.querySelector<HTMLAnchorElement>('a.name') as HTMLAnchorElement;
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
 const lists = (card: Element) =>
@@ -287,7 +285,7 @@ describe('HomeCards', () => {
     expect(said(page.querySelector('section h2'))).toBe('Who takes your BMW');
     expect(said(page.querySelector('a.all'))).toBe('See all on the map');
     const [first, second] = cards(page);
-    expect(link(first).getAttribute('href')).toBe(
+    expect(first.getAttribute('href')).toBe(
       '/en/garages/service-auto-militari?brand=bmw',
     );
     expect(said(first.querySelector('mf-lamp'))).toBe('Works on BMW');
@@ -307,7 +305,7 @@ describe('HomeCards', () => {
       garageOf({ id: 'b', slug: 'atelier-berceni' }),
     ]);
 
-    expect(cards(page).map((card) => link(card).getAttribute('href'))).toEqual([
+    expect(cards(page).map((card) => card.getAttribute('href'))).toEqual([
       '/ro/garages/service-auto-militari?brand=bmw',
       '/ro/garages/atelier-berceni?brand=bmw',
     ]);
@@ -317,25 +315,12 @@ describe('HomeCards', () => {
   it('names a card by the garage, its answer for the brand and its rating', async () => {
     const [card] = cards(await render([garageOf()]));
 
-    expect(link(card).getAttribute('aria-label')).toBe(
+    expect(card.getAttribute('aria-label')).toBe(
       'Service Auto Militari, Lucrează pe BMW, 4,9',
     );
     expect(
       card.querySelector('mf-rating-dial')?.getAttribute('aria-hidden'),
     ).toBe('true');
-  });
-
-  // @traces 227-FR-014
-  it('keeps the link text inside the link name, the whole card still opening the profile', async () => {
-    const [card] = cards(await render([garageOf()]));
-    const anchors = card.querySelectorAll('a');
-
-    expect(anchors).toHaveLength(1);
-    expect(said(link(card))).toBe('Service Auto Militari');
-    expect(link(card).getAttribute('aria-label')).toMatch(
-      /^Service Auto Militari, /,
-    );
-    expect(card.localName).not.toBe('a');
   });
 
   // @traces 227-FR-006

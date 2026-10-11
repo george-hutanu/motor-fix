@@ -623,8 +623,7 @@ for (const width of [320, 834]) {
 // @traces 227-FR-003
 // @traces 227-FR-004
 // @traces 227-FR-005
-const cards = (page: Page) =>
-  page.locator('mf-home-cards .card:not(.skeleton)');
+const cards = (page: Page) => page.locator('mf-home-cards a.card');
 const cardsLink = (page: Page) =>
   page
     .locator('mf-home-cards')

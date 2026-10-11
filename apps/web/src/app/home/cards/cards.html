@@ -19,17 +19,16 @@
       <ul>
         @for (garage of garages(); track garage.id) {
           <li>
-            <article class="card">
+            <a
+              class="card"
+              [routerLink]="['/', i18n.language(), 'garages', garage.slug]"
+              [queryParams]="{ brand: brand().slug }"
+              [attr.aria-label]="name(garage)"
+            >
               <span class="top">
                 <mf-rating-dial size="small" aria-hidden="true" [value]="garage.rating" />
                 <span class="id">
-                  <a
-                    class="name"
-                    [routerLink]="['/', i18n.language(), 'garages', garage.slug]"
-                    [queryParams]="{ brand: brand().slug }"
-                    [attr.aria-label]="name(garage)"
-                    >{{ garage.name }}</a
-                  >
+                  <span class="name">{{ garage.name }}</span>
                   @if (where(garage); as where) {
                     @if (where.city && where.rest) {
                       <span class="where"><span translate="no">{{ where.city }}</span>{{ where.rest }}</span>
@@ -50,7 +49,7 @@
                 }
                 <span class="reviews">{{ reviews(garage) }}</span>
               </span>
-            </article>
+            </a>
           </li>
         }
       </ul>
