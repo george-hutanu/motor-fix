@@ -399,7 +399,7 @@ describe('step 5, the place', () => {
     );
   });
 
-  // @traces 115-listing-checklist-FR-003 115-listing-checklist-FR-006
+  // @traces 115-FR-003 115-FR-006
   it('asks for the address once the field is left, and not before', async () => {
     const opened = await open();
     const field = address(opened.step);
@@ -418,7 +418,7 @@ describe('step 5, the place', () => {
     expect(opened.shownErrors.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('follows the address once shown, and goes when it is filled', async () => {
     const opened = await open();
     address(opened.step).dispatchEvent(new Event('blur'));
@@ -431,7 +431,7 @@ describe('step 5, the place', () => {
     expect(opened.shownErrors.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a restored pin outside Romania at once', async () => {
     const opened = await open();
     const restored = { address: STEFAN.label, lat: 48.2, lng: 16.37 };
@@ -447,7 +447,7 @@ describe('step 5, the place', () => {
     ).toBe('place-outside');
   });
 
-  // @traces 115-listing-checklist-FR-003 115-listing-checklist-FR-008
+  // @traces 115-FR-003 115-FR-008
   it('asks a workshop for every place field when sending is asked for', async () => {
     const opened = await open();
 
@@ -463,7 +463,7 @@ describe('step 5, the place', () => {
     expect(opened.shownErrors.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-003 115-listing-checklist-FR-008
+  // @traces 115-FR-003 115-FR-008
   it('asks a mobile mechanic for the seat in the seat texts, the default radius standing in', async () => {
     const opened = await open({}, 'mobile');
 
@@ -481,7 +481,7 @@ describe('step 5, the place', () => {
     expect(area.getAttribute('aria-invalid')).toBeNull();
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('tells a warning without marking the field wrong', async () => {
     const opened = await open({ address: STEFAN.label });
     opened.fixture.componentRef.setInput('problems', {
@@ -496,7 +496,7 @@ describe('step 5, the place', () => {
     expect(opened.shownErrors.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('marks each judged control by its path', async () => {
     const opened = await open({}, 'mobile');
 

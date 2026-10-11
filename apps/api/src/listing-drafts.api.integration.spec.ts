@@ -118,7 +118,7 @@ describe('the listing draft routes', () => {
     });
   });
 
-  // @traces 115-listing-checklist-FR-010
+  // @traces 115-FR-010
   it('checks the stored draft with the key, refusing what it lacks', async () => {
     const { body: created } = await create().expect(201);
     const server = app.getHttpServer();

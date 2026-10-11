@@ -343,7 +343,7 @@ describe('DraftKeeper before the check', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  // @traces 115-listing-checklist-FR-009
+  // @traces 115-FR-009
   it('creates the server copy when there is none, and sends no link', async () => {
     const kept = keeper({ dirty: true });
 
@@ -353,7 +353,7 @@ describe('DraftKeeper before the check', () => {
     expect(kept.draft().draftId).toBe('d1');
   });
 
-  // @traces 115-listing-checklist-FR-009
+  // @traces 115-FR-009
   it('saves a changed server copy, and leaves a clean one alone', async () => {
     const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
 
@@ -365,7 +365,7 @@ describe('DraftKeeper before the check', () => {
     expect(api['listingDraftsControllerSendLink']).not.toHaveBeenCalled();
   });
 
-  // @traces 115-listing-checklist-FR-011
+  // @traces 115-FR-011
   it('answers false on a refused save, keeping what was typed', async () => {
     const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
     api['listingDraftsControllerSave'].mockRejectedValue(refusal(500));
@@ -374,7 +374,7 @@ describe('DraftKeeper before the check', () => {
     expect(kept.draft().data).toEqual(entry().data);
   });
 
-  // @traces 115-listing-checklist-FR-009
+  // @traces 115-FR-009
   it('waits for a save already on its way, then saves what came after', async () => {
     const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
     let answer: (value: object) => void = () => undefined;
@@ -394,7 +394,7 @@ describe('DraftKeeper before the check', () => {
     expect(kept.draft().dirty).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-010
+  // @traces 115-FR-010
   it('checks only after the flush, and tells complete with its warnings', async () => {
     const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
 
@@ -405,7 +405,7 @@ describe('DraftKeeper before the check', () => {
     expect(saved).toBeLessThan(checked as number);
   });
 
-  // @traces 115-listing-checklist-FR-010
+  // @traces 115-FR-010
   it('tells the server list on a 422', async () => {
     const kept = keeper({ draftId: 'd1', token: 't1' });
     api['listingDraftsControllerCheck'].mockRejectedValue(
@@ -423,7 +423,7 @@ describe('DraftKeeper before the check', () => {
     });
   });
 
-  // @traces 115-listing-checklist-FR-011
+  // @traces 115-FR-011
   it('sends no check when the flush fails, and fails on any other answer', async () => {
     const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
     api['listingDraftsControllerSave'].mockRejectedValueOnce(refusal(0));
@@ -436,7 +436,7 @@ describe('DraftKeeper before the check', () => {
     expect(kept.note()).toEqual({ key: 'notSaved' });
   });
 
-  // @traces 115-listing-checklist-FR-011
+  // @traces 115-FR-011
   it('moves the view when the draft is gone or already sent', async () => {
     const kept = keeper({ draftId: 'd1', token: 't1' });
     api['listingDraftsControllerCheck'].mockRejectedValueOnce(refusal(409));

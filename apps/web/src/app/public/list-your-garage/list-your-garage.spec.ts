@@ -2012,7 +2012,7 @@ describe('sending for verification', () => {
     return opened;
   }
 
-  // @traces 115-listing-checklist-FR-008
+  // @traces 115-FR-008
   it('puts the button first in the actions bar, as the primary action', async () => {
     const { page } = await open('/ro/list-your-garage');
     const buttons = [...page.querySelectorAll('.actions button')];
@@ -2023,7 +2023,7 @@ describe('sending for verification', () => {
     expect(sendButton(page).type).toBe('button');
   });
 
-  // @traces 115-listing-checklist-FR-008 115-listing-checklist-FR-007
+  // @traces 115-FR-008 115-FR-007
   it('lists what is missing at once and asks the server nothing while the page already knows', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     expect(dotted(page)).toEqual([]);
@@ -2045,7 +2045,7 @@ describe('sending for verification', () => {
     expect(page.querySelector('nav > button .dot')).not.toBeNull();
   });
 
-  // @traces 115-listing-checklist-FR-006 115-listing-checklist-FR-008
+  // @traces 115-FR-006 115-FR-008
   it('shows every field message once asked, and keeps what was typed', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     const name = page.querySelector<HTMLInputElement>(
@@ -2064,7 +2064,7 @@ describe('sending for verification', () => {
     expect(cuiInput(page).getAttribute('aria-invalid')).toBe('true');
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('ticks all six steps of a complete listing and marks none', async () => {
     const { page } = await completeCopy();
 
@@ -2072,7 +2072,7 @@ describe('sending for verification', () => {
     expect(dotted(page)).toEqual([]);
   });
 
-  // @traces 115-listing-checklist-FR-009
+  // @traces 115-FR-009
   it('asks the server once nothing is missing here, and says the listing is complete', async () => {
     const { harness, page } = await completeCopy();
 
@@ -2093,7 +2093,7 @@ describe('sending for verification', () => {
     expect(dotted(page)).toEqual([]);
   });
 
-  // @traces 115-listing-checklist-FR-005 115-listing-checklist-FR-009
+  // @traces 115-FR-005 115-FR-009
   it('shows a warning the server alone knows under its field, and still calls the listing complete', async () => {
     const { harness, page } = await completeCopy();
 
@@ -2112,7 +2112,7 @@ describe('sending for verification', () => {
     expect(ticked(page)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
-  // @traces 115-listing-checklist-FR-009 115-listing-checklist-FR-011
+  // @traces 115-FR-009 115-FR-011
   it('shows what the server finds missing, until the listing changes', async () => {
     const { harness, page } = await completeCopy();
 
@@ -2147,7 +2147,7 @@ describe('sending for verification', () => {
     expect(text(summary(page))).toBe('Totul e complet');
   });
 
-  // @traces 115-listing-checklist-FR-009 115-listing-checklist-FR-011
+  // @traces 115-FR-009 115-FR-011
   it('says the check failed when the server cannot answer', async () => {
     const { harness, page } = await completeCopy();
 
@@ -2158,7 +2158,7 @@ describe('sending for verification', () => {
     expect(sendButton(page).disabled).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-008
+  // @traces 115-FR-008
   it('takes an item to its field: the step made current and the field focused', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await press(harness, page);
@@ -2177,7 +2177,7 @@ describe('sending for verification', () => {
     );
   });
 
-  // @traces 115-listing-checklist-FR-008
+  // @traces 115-FR-008
   it('opens a closed part around the field it goes to', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await press(harness, page);

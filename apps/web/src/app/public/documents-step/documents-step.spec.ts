@@ -696,7 +696,7 @@ describe('the certificate issue date', () => {
 });
 
 describe('the missing documents', () => {
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('tells under each area a document still missing, without stopping the step', async () => {
     const opened = await open({
       documents: { rar_authorisation: { pages: [keyOf(1)] } },
@@ -830,7 +830,7 @@ describe('the declaration', () => {
     expect(nameErrorText(opened.step)).toBe('');
   });
 
-  // @traces 115-listing-checklist-FR-002 115-listing-checklist-FR-008
+  // @traces 115-FR-002 115-FR-008
   it('asks for the tick and the name when sending is asked for', async () => {
     const opened = await open();
     expect(nameErrorText(opened.step)).toBe('');
@@ -845,7 +845,7 @@ describe('the declaration', () => {
     expect(opened.shown.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a restored name without its tick at once', async () => {
     const opened = await open();
     const restored = { declaredByName: 'Ion Popescu' };
@@ -861,7 +861,7 @@ describe('the declaration', () => {
     expect(opened.shown.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('marks the name as the declaration and each document by its kind', async () => {
     const { step } = await open();
 

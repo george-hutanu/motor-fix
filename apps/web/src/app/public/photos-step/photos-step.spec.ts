@@ -549,7 +549,7 @@ const photosError = (step: HTMLElement) =>
   step.querySelector('[data-field="files"]')?.getAttribute('aria-describedby');
 
 describe('the page judges the photos', () => {
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('says a photo is needed only when sending is asked for', async () => {
     const opened = await open();
     const shown = judged(opened);
@@ -567,7 +567,7 @@ describe('the page judges the photos', () => {
     expect(shown.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('says so once the last photo is removed, and stops when one is added', async () => {
     const opened = await open({ files: [keyOf(0)] });
     await restored(opened, 1);
@@ -590,7 +590,7 @@ describe('the page judges the photos', () => {
     expect(shown.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('renders a warning as a note, not an error', async () => {
     const opened = await open();
     const shown = judged(opened);
@@ -606,7 +606,7 @@ describe('the page judges the photos', () => {
     expect(shown).not.toContain(true);
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('marks the photo area, which takes the focus, with its path', async () => {
     const { step } = await open();
 

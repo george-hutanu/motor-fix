@@ -204,7 +204,7 @@ describe('ProblemFilter', () => {
     expect(res.body).toMatchObject({ code: 'validation_failed', errors });
   });
 
-  // @traces 115-listing-checklist-FR-010
+  // @traces 115-FR-010
   it('keeps the field warnings a refusal carries beside its errors', () => {
     const errors = [{ code: 'required', field: 'steps.1.phone' }];
     const warnings = [

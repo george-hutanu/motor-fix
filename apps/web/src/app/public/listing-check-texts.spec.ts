@@ -73,7 +73,7 @@ const PROBLEMS: FieldProblem[] = [
 ].map(([field, code]) => ({ code, field }) as FieldProblem);
 
 describe('textKey', () => {
-  // @traces 115-listing-checklist-FR-012
+  // @traces 115-FR-012
   it.each(['ro', 'en'] as const)(
     'gives every field problem a text in %s',
     (language) => {
@@ -88,7 +88,7 @@ describe('textKey', () => {
     },
   );
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('keeps the texts the steps already show', () => {
     const key = (field: string, code: string) => textKey({ code, field });
 
@@ -108,7 +108,7 @@ describe('textKey', () => {
     );
   });
 
-  // @traces 115-listing-checklist-FR-012
+  // @traces 115-FR-012
   it('reads a row by its pattern, whatever its index', () => {
     expect(textKey({ code: 'below_from', field: 'steps.3.jobs[12].to' })).toBe(
       'public.listing.prices.errors.below_from',
@@ -121,7 +121,7 @@ describe('textKey', () => {
     ).toBe('public.listing.mechanics.nameNeeded');
   });
 
-  // @traces 115-listing-checklist-FR-012
+  // @traces 115-FR-012
   it('falls back to the code for a field it does not know', () => {
     expect(textKey({ code: 'required', field: 'steps.9.new' })).toBe(
       'public.listing.check.required',
@@ -131,7 +131,7 @@ describe('textKey', () => {
     );
   });
 
-  // @traces 115-listing-checklist-FR-003
+  // @traces 115-FR-003
   it('names the registered seat for a mobile mechanic', () => {
     const address = { code: 'required', field: 'steps.5.place.address' };
 

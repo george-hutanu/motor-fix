@@ -158,7 +158,7 @@ describe('step 6 of the page under hostile typing', () => {
     expect(cuiErr(page)).toBe('CUI invalid');
   });
 
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('treats a prefix alone as an empty field, which is missing once left', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await type(harness, cui(page), 'RO');
@@ -168,7 +168,7 @@ describe('step 6 of the page under hostile typing', () => {
     expect(counter(page)).toBe('0 din 5 completate');
   });
 
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('asks for the CUI when the left field is cleared', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await type(harness, cui(page), '1');

@@ -966,7 +966,7 @@ describe('step 2, judged by the page', () => {
   const group = (step: HTMLElement) =>
     step.querySelector('[data-field="steps.2.brands"]') as HTMLElement;
 
-  // @traces 115-listing-checklist-FR-002 115-listing-checklist-FR-008
+  // @traces 115-FR-002 115-FR-008
   it('asks for a taken brand only when sending is asked for, and stops once one is taken', async () => {
     const { fixture, step } = await open();
     const shown: boolean[] = [];
@@ -992,7 +992,7 @@ describe('step 2, judged by the page', () => {
     expect(shown.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-005 115-listing-checklist-FR-006
+  // @traces 115-FR-005 115-FR-006
   it('shows the no-requests warning of a restored brand at once, as a warning that blocks nothing', async () => {
     const { fixture, step } = await open();
     const shown: boolean[] = [];
@@ -1022,7 +1022,7 @@ describe('step 2, judged by the page', () => {
     expect(quiet(step, 'Dacia')).toBeNull();
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('marks the chips as the group and each marked brand by its place in the list', async () => {
     const { fixture, step } = await open();
 

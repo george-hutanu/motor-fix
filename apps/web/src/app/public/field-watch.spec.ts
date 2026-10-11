@@ -7,7 +7,7 @@ const check = {
 const quiet = { all: false, filled: false };
 
 describe('FieldWatch', () => {
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows an error once its field is left, and not before', () => {
     const watch = new FieldWatch();
 
@@ -19,7 +19,7 @@ describe('FieldWatch', () => {
     });
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a restored wrong value at once, but not while it is typed', () => {
     const watch = new FieldWatch();
     const filled = { all: false, filled: true };
@@ -32,7 +32,7 @@ describe('FieldWatch', () => {
     expect(watch.shows('steps.1.name', filled)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-008
+  // @traces 115-FR-008
   it('shows every error when sending is asked for', () => {
     const watch = new FieldWatch();
     watch.type('steps.1.name');
@@ -40,7 +40,7 @@ describe('FieldWatch', () => {
     expect(watch.shows('steps.1.name', { all: true, filled: true })).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('tells a warning whatever the field state, and goes with the problem', () => {
     const watch = new FieldWatch();
 
@@ -56,7 +56,7 @@ describe('FieldWatch', () => {
 });
 
 describe('forStep', () => {
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('keeps one step problems and drops a path no step holds', () => {
     const all = {
       errors: [

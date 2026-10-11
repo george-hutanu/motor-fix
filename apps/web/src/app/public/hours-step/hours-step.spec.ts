@@ -650,7 +650,7 @@ describe('step 5, the payment methods', () => {
     expect(fixture.componentInstance.value().payments).toEqual(['transfer']);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('says a payment method is needed once the last one is unticked', async () => {
     const { fixture, step } = await open();
     expect(statuses(step)).not.toContain(
@@ -751,7 +751,7 @@ describe('step 5, the courtesy car', () => {
     expect(fixture.componentInstance.value()).not.toHaveProperty('courtesyCar');
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a field error tied to the price once a paid car has none and the field is left', async () => {
     const { fixture, step } = await open();
     await choosePaid(fixture, step);
@@ -765,7 +765,7 @@ describe('step 5, the courtesy car', () => {
     expect(price(step)?.getAttribute('aria-invalid')).toBe('true');
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a field error for a price over 2,000 lei and clears it for a price in range', async () => {
     const { fixture, step } = await open();
     await choosePaid(fixture, step);
@@ -846,7 +846,7 @@ const field = (step: HTMLElement, path: string) =>
   step.querySelector<HTMLElement>(`[data-field="${path}"]`);
 
 describe('step 5, the page judges the hours', () => {
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('shows every error at once when sending is asked for', async () => {
     const { fixture, shown, step } = await open();
     const value: HoursSection = {
@@ -871,7 +871,7 @@ describe('step 5, the page judges the hours', () => {
     expect(shown.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a restored wrong price at once, without leaving it', async () => {
     const { fixture, step } = await open();
 
@@ -886,7 +886,7 @@ describe('step 5, the page judges the hours', () => {
     );
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('says the week needs an open day once every day is closed, and stops when one opens', async () => {
     const { fixture, shown, step } = await open();
     await openByDay(fixture, step);
@@ -905,7 +905,7 @@ describe('step 5, the page judges the hours', () => {
     expect(shown.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('renders a warning without marking the field wrong', async () => {
     const { fixture, step } = await open();
     await choosePaid(fixture, step);
@@ -924,7 +924,7 @@ describe('step 5, the page judges the hours', () => {
     expect(price(step)?.getAttribute('aria-invalid')).toBeNull();
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('marks the week, the payments and the price with their paths', async () => {
     const { fixture, step } = await open();
     await choosePaid(fixture, step);

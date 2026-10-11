@@ -170,7 +170,7 @@ describe('step 1, the garage details', () => {
     );
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a restored wrong value at once, without leaving it', async () => {
     // The page restores the draft after its first render.
     const { fixture, step } = await open();
@@ -186,7 +186,7 @@ describe('step 1, the garage details', () => {
     expect(errorOf(step, 'knownFor')).toBe('');
   });
 
-  // @traces 115-listing-checklist-FR-008
+  // @traces 115-FR-008
   it('shows every error at once when sending is asked for, the kind too', async () => {
     const opened = await open();
 
@@ -205,7 +205,7 @@ describe('step 1, the garage details', () => {
     expect(opened.shown.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-003
+  // @traces 115-FR-003
   it('asks a mobile mechanic for the legal form once asked', async () => {
     const opened = await open({ businessKind: 'mobile' });
 
@@ -229,7 +229,7 @@ describe('step 1, the garage details', () => {
     ).toBe('');
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('says whether it shows an error, and marks each judged control', async () => {
     const opened = await open();
 

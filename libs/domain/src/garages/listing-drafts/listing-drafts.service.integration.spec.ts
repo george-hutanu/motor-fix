@@ -1208,7 +1208,7 @@ describe('checking a draft', () => {
       where: { id },
     });
 
-  // @traces 115-listing-checklist-FR-010
+  // @traces 115-FR-010
   it('answers a complete draft with no warning', async () => {
     const draft = await holding(complete());
 
@@ -1217,7 +1217,7 @@ describe('checking a draft', () => {
     });
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('lets a draft with only warnings through, the missing uploads named', async () => {
     const { documents: _, ...data } = complete();
     const draft = await holding(data);
@@ -1230,7 +1230,7 @@ describe('checking a draft', () => {
     });
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it.each(['open', 'submitted'] as const)(
     'warns of a CUI another draft holds, %s',
     async (status) => {
@@ -1256,7 +1256,7 @@ describe('checking a draft', () => {
     });
   });
 
-  // @traces 115-listing-checklist-FR-010
+  // @traces 115-FR-010
   it('refuses an incomplete draft with the list the browser makes', async () => {
     const data = complete();
     data.steps = {
@@ -1295,7 +1295,7 @@ describe('checking a draft', () => {
     });
   });
 
-  // @traces 115-listing-checklist-FR-010
+  // @traces 115-FR-010
   it('refuses a sent draft with draft_submitted', async () => {
     const draft = await holding(complete());
     await prisma.listingDraft.update({
@@ -1323,7 +1323,7 @@ describe('checking a draft', () => {
     expect(refused.body).toMatchObject({ code: 'not_found' });
   });
 
-  // @traces 115-listing-checklist-FR-011
+  // @traces 115-FR-011
   it('writes nothing, whatever it answers', async () => {
     const whole = await holding(complete());
     const { documents: _, ...partial } = complete();

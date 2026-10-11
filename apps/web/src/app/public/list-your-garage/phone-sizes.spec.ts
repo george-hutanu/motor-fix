@@ -79,14 +79,14 @@ describe('the list-your-garage page on a phone', () => {
 describe('the missing summary and the send button on a phone', () => {
   const summary = read('missing-summary/missing-summary.css');
 
-  // @traces 115-listing-checklist-FR-013
+  // @traces 115-FR-013
   it('gives every summary item a 44 px target across the whole width', () => {
     expect(summary).toMatch(
       /\bbutton \{[^}]*width: 100%;[^}]*min-height: var\(--mf-tap\);/,
     );
   });
 
-  // @traces 115-listing-checklist-FR-013
+  // @traces 115-FR-013
   it('wraps long texts instead of pushing the page sideways at 320 px', () => {
     expect(summary).toMatch(/:host \{[^}]*min-width: 0;/);
     expect(summary).toMatch(/\bbutton \{[^}]*overflow-wrap: anywhere;/);
@@ -94,7 +94,7 @@ describe('the missing summary and the send button on a phone', () => {
     expect(summary).not.toMatch(/white-space: nowrap|min-width: \d+px/);
   });
 
-  // @traces 115-listing-checklist-FR-013
+  // @traces 115-FR-013
   it('gives the send button a 44 px target and lets the actions wrap', () => {
     const page = read('list-your-garage/list-your-garage.css');
     expect(page).toMatch(

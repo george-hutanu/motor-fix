@@ -374,7 +374,7 @@ describe('a complete step 5', () => {
     expect(hoursComplete({ payments: ['transfer'] })).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('needs at least one open day', () => {
     const closed: WeeklyHours = {
       fri: [],

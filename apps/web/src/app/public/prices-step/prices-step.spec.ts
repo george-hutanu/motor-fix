@@ -455,7 +455,7 @@ describe('step 3, judged by the page', () => {
   const at = (step: HTMLElement, field: string) =>
     step.querySelector(`[data-field="${field}"]`) as HTMLElement;
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a restored reversed range and a short proposed name at once, without leaving them', async () => {
     const { fixture, shown, step } = await open({ jobs: [] });
 
@@ -485,7 +485,7 @@ describe('step 3, judged by the page', () => {
     expect(shown.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-002 115-listing-checklist-FR-008
+  // @traces 115-FR-002 115-FR-008
   it('shows every error at once when sending is asked for, the job list too', async () => {
     const { fixture, shown, step } = await open({ jobs: [] });
     expect(step.querySelector('.error')).toBeNull();
@@ -509,7 +509,7 @@ describe('step 3, judged by the page', () => {
     expect(shown.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('follows the value once left and lets the message go when it is fixed', async () => {
     const { fixture, shown, step } = await open({
       jobs: [{ fromBani: 10_000, jobTypeId: id(3), toBani: 20_000 }],
@@ -536,7 +536,7 @@ describe('step 3, judged by the page', () => {
     expect(shown.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('warns of a restored wide range at once, never as invalid, and blocks nothing', async () => {
     const { fixture, shown, step } = await open({ jobs: [] });
 
@@ -554,7 +554,7 @@ describe('step 3, judged by the page', () => {
     expect(shown.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('marks every end of every range with its path, and the job list and names as groups', async () => {
     const { step } = await open({
       jobs: [{ jobTypeId: id(3) }, { brandId: DACIA, jobTypeId: id(3) }],
@@ -580,7 +580,7 @@ describe('step 3, judged by the page', () => {
       expect(at(step, field).getAttribute('tabindex')).toBe('-1');
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('asks for the prices of a listed job left before the draft takes it', async () => {
     const { fixture, last, step } = await open();
 
@@ -593,7 +593,7 @@ describe('step 3, judged by the page', () => {
     expect(jobRows(step)[1].querySelector('.error')).toBeNull();
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('forgets the rows left once a row goes, but keeps the labour range left', async () => {
     const { fixture, step } = await open({
       jobs: [{ jobTypeId: id(3) }, { jobTypeId: id(4) }],

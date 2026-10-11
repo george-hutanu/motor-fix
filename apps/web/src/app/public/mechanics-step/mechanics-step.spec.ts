@@ -108,7 +108,7 @@ describe('step 4, the mechanics', () => {
     expect(opened.last()).toEqual({ mechanics: [{ name: 'Ion Marin' }] });
   });
 
-  // @traces 115-listing-checklist-FR-004 115-listing-checklist-FR-006
+  // @traces 115-FR-004 115-FR-006
   it('asks for a name of two characters once the field is left', async () => {
     const opened = await open();
     press(opened, addButton(opened.step));
@@ -125,7 +125,7 @@ describe('step 4, the mechanics', () => {
     );
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('shows a restored wrong name at once, without leaving it', async () => {
     const { fixture, step } = await open();
     const restored = { mechanics: [{ name: 'I' }, { name: 'Ana Pop' }] };
@@ -140,7 +140,7 @@ describe('step 4, the mechanics', () => {
     expect(second.querySelector('.error')).toBeNull();
   });
 
-  // @traces 115-listing-checklist-FR-004 115-listing-checklist-FR-008
+  // @traces 115-FR-004 115-FR-008
   it('shows every wrong name when sending is asked for', async () => {
     const opened = await open();
     press(opened, addButton(opened.step));
@@ -154,7 +154,7 @@ describe('step 4, the mechanics', () => {
     expect(opened.shown.at(-1)).toBe(true);
   });
 
-  // @traces 115-listing-checklist-FR-006
+  // @traces 115-FR-006
   it('follows the name once shown, and goes when it is fixed', async () => {
     const opened = await open();
     press(opened, addButton(opened.step));
@@ -168,7 +168,7 @@ describe('step 4, the mechanics', () => {
     expect(nameField(row).getAttribute('aria-invalid')).toBeNull();
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('tells a warning without marking the name wrong', async () => {
     const opened = await open({ mechanics: [{ name: 'Ion Marin' }] });
     opened.fixture.componentRef.setInput('problems', {
@@ -185,7 +185,7 @@ describe('step 4, the mechanics', () => {
     expect(opened.shown.at(-1)).toBe(false);
   });
 
-  // @traces 115-listing-checklist-FR-007
+  // @traces 115-FR-007
   it('says whether it shows an error, and marks each name by its row', async () => {
     const opened = await open({
       mechanics: [{ name: 'Ion Marin' }, { name: 'Ana Pop' }],

@@ -65,8 +65,9 @@ const errorsOf = (data: ListingDraftData, email?: string) =>
 
 const warningsOf = (data: ListingDraftData) => checkListing({ data }).warnings;
 
+// @traces 115-FR-015
 describe('a complete listing', () => {
-  // @traces 115-listing-checklist-FR-001
+  // @traces 115-FR-001
   it('has no error and no warning', () => {
     expect(checkListing({ data: complete(), email: 'ana@service.ro' })).toEqual(
       { errors: [], warnings: [] },
@@ -75,7 +76,7 @@ describe('a complete listing', () => {
 });
 
 describe('an empty listing', () => {
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('lists every required value once, in step order', () => {
     expect(errorsOf({}, '')).toEqual([
       { code: 'required', field: 'email' },
@@ -97,7 +98,7 @@ describe('an empty listing', () => {
     ]);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('warns of the two missing documents', () => {
     expect(warningsOf({})).toEqual([
       { code: 'document_missing', field: 'documents.onrc_certificate' },
@@ -110,7 +111,7 @@ describe('step 1', () => {
   const details = (patch: Record<string, unknown>) =>
     withStep('1', { ...step('1'), ...patch });
 
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it.each([
     [{ name: '   ' }, 'required', 'steps.1.name'],
     [{ name: ' A ' }, 'invalid', 'steps.1.name'],
@@ -152,7 +153,7 @@ describe('step 1', () => {
     expect(errorsOf(complete())).toEqual([]);
   });
 
-  // @traces 115-listing-checklist-FR-003
+  // @traces 115-FR-003
   it('asks a mobile mechanic for the legal form', () => {
     expect(errorsOf(details({ businessKind: 'mobile' }))).toContainEqual({
       code: 'required',
@@ -168,7 +169,7 @@ describe('step 1', () => {
 });
 
 describe('step 2', () => {
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it.each<[string, BrandsSection]>([
     ['no brand', { brands: [] }],
     [
@@ -181,7 +182,7 @@ describe('step 2', () => {
     ]);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('warns once for a taken brand with every fuel unticked', () => {
     const data = withStep('2', {
       brands: [
@@ -241,7 +242,7 @@ describe('step 3', () => {
   const prices = (patch: Record<string, unknown>) =>
     withStep('3', { ...step('3'), ...patch });
 
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('asks for both ends of the labour range', () => {
     expect(errorsOf(prices({ labour: {} }))).toEqual([
       { code: 'required', field: 'steps.3.labour.from' },
@@ -313,7 +314,7 @@ describe('step 3', () => {
     ]);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('warns of a wide range without refusing it', () => {
     expect(
       checkListing({
@@ -333,7 +334,7 @@ describe('step 3', () => {
 });
 
 describe('step 4', () => {
-  // @traces 115-listing-checklist-FR-004
+  // @traces 115-FR-004
   it('is complete when empty', () => {
     expect(errorsOf(withStep('4', {}))).toEqual([]);
     expect(errorsOf(withStep('4', { mechanics: [] }))).toEqual([]);
@@ -361,7 +362,7 @@ describe('step 5', () => {
   const five = (patch: Record<string, unknown>) =>
     withStep('5', { ...step('5'), ...patch });
 
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('asks for a confirmed photo', () => {
     expect(errorsOf({ ...complete(), files: [] })).toEqual([
       { code: 'required', field: 'files' },
@@ -438,7 +439,7 @@ describe('step 5', () => {
         }),
       );
 
-    // @traces 115-listing-checklist-FR-003
+    // @traces 115-FR-003
     it('asks for the seat, and lets the default radius stand in for none', () => {
       expect(errorsOf(mobile({}))).toEqual([
         { code: 'required', field: 'steps.5.place.address' },
@@ -461,7 +462,7 @@ describe('step 6', () => {
   const six = (patch: Record<string, unknown>) =>
     withStep('6', { ...step('6'), ...patch });
 
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it.each([
     [{ cui: undefined }, 'required', 'steps.6.cui'],
     [{ cui: '18547291' }, 'invalid', 'steps.6.cui'],
@@ -487,7 +488,7 @@ describe('step 6', () => {
     ]);
   });
 
-  // @traces 115-listing-checklist-FR-005
+  // @traces 115-FR-005
   it('warns of a missing upload and still sends', () => {
     const data = {
       ...complete(),
@@ -503,7 +504,7 @@ describe('step 6', () => {
 });
 
 describe('one error per field', () => {
-  // @traces 115-listing-checklist-FR-002
+  // @traces 115-FR-002
   it('never names a field twice', () => {
     const data = withStep('3', {
       jobs: [{ fromBani: 1.5, jobTypeId: JOB, toBani: 0.5 }],
@@ -515,7 +516,7 @@ describe('one error per field', () => {
 });
 
 describe('stepOf', () => {
-  // @traces 115-listing-checklist-FR-008
+  // @traces 115-FR-008
   it.each([
     ['email', 1],
     ['steps.1.name', 1],
@@ -607,7 +608,7 @@ describe('the completeness functions', () => {
     ['no declaration', { ...complete(), declaredByName: '' }],
   ];
 
-  // @traces 115-listing-checklist-FR-001
+  // @traces 115-FR-001
   it.each(drafts)('agree with the rule set on a %s draft', (_, data) => {
     const errors = errorsOf(data);
     for (const n of [1, 2, 3, 4, 5, 6]) {
