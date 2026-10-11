@@ -23,6 +23,7 @@ export function stubs(on, options: Options = {}) {
   const runs: { argv: readonly string[]; init: unknown }[] = [];
   const sent: { to: unknown; text: string }[] = [];
   const submitted: string[] = [];
+  const opened: string[] = [];
   const agents = options.agents ?? [];
   // The clock starts at 0 and moves only when the test advances it.
   const clock = mock.clock(on);
@@ -47,9 +48,15 @@ export function stubs(on, options: Options = {}) {
   on('session.start', (_$, e) => ({ cwd: e.cwd }));
   on('session.end', () => ({ sessionId: options.session ?? 'sess-a' }));
   on('prompt.context', (_$, e) => ({ blocks: e.blocks }));
+  on('ui.open', (_$, e) => {
+    opened.push(e.id);
+    return value({ isPlaced: true });
+  });
+  // The engine's own drawing, beneath the plugin: an empty box.
+  on('ui.render', ($, e) => h($.ui.resolve(e).Box, {}));
   on('process.run', async (_$, e) => {
     runs.push({ argv: e.argv, init: e.init });
     return value(options.run ? await options.run(e.argv) : ok());
   });
-  return { agents, clock, runs, sent, store, submitted, toasts };
+  return { agents, clock, opened, runs, sent, store, submitted, toasts };
 }

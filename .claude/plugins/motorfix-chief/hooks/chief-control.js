@@ -4,14 +4,16 @@
 import { blank, key, ledgerBlock, merge } from './lib/ledger.js';
 import { bashCall, qaRunLine, taskNotification } from './lib/parse.js';
 import { fromRevParse, REV_PARSE } from './lib/role.js';
+import { canDraw, PANE } from './lib/surface.js';
 
 const TICK_MS = 15 * 60_000;
 const GATE_TIMEOUT_MS = 10 * 60_000;
 const WATCH = '.claude/scripts/watch.mjs';
 const CLOSED = new Set(['merged', 'closed']);
 
-// This session's role and its background ci-waits (task id → PR and run).
-const self = { chief: false, main: null, remote: null, ticking: false };
+// This session's role (the board reads it too) and its background ci-waits
+// (task id → PR and run).
+export const role = { chief: false, main: null, remote: null, ticking: false };
 const waits = new Map();
 
 async function readRows($) {
@@ -91,7 +93,7 @@ export async function submitHook($, e, next) {
 // R11: refresh the ledger from watch.mjs, then gate only with two or more active worktrees.
 async function refresh($) {
   const r = await $.process.run(['node', WATCH, '--json'], {
-    cwd: self.main,
+    cwd: role.main,
     timeoutMs: 120_000,
   });
   if (r.exitCode !== 0) return 0;
@@ -113,7 +115,7 @@ export const wakeText = (stdout) =>
 
 async function gate($) {
   const r = await $.process.run(['node', WATCH, '--gate'], {
-    cwd: self.main,
+    cwd: role.main,
     timeoutMs: GATE_TIMEOUT_MS,
   });
   if (r.exitCode === 2) await $.prompt.submit({ text: wakeText(r.stdout) });
@@ -122,8 +124,8 @@ async function gate($) {
 }
 
 async function tick($) {
-  if (self.ticking) return;
-  self.ticking = true;
+  if (role.ticking) return;
+  role.ticking = true;
   try {
     if ((await refresh($)) >= 2) await gate($);
   } catch (err) {
@@ -131,31 +133,33 @@ async function tick($) {
       `motorfix-chief: watch gate failed (${err?.message ?? err})`,
     );
   } finally {
-    self.ticking = false;
+    role.ticking = false;
   }
 }
 
 async function onStart($, e) {
-  self.remote = (await $.env.get('CLAUDE_CODE_REMOTE')) ?? null;
+  role.remote = (await $.env.get('CLAUDE_CODE_REMOTE')) ?? null;
   const r = await $.process.run(REV_PARSE, { cwd: e.cwd, timeoutMs: 10_000 });
-  Object.assign(self, r.exitCode === 0 ? fromRevParse(r.stdout) : {});
-  if (!self.chief) return;
+  Object.assign(role, fromRevParse(r.exitCode === 0 ? r.stdout : ''));
+  if (!role.chief) return;
   await $.store.set('chief', {
     sessionId: await $.session.id(),
     startedAt: await $.clock.now(),
   });
-  if (self.remote !== 'true') $.clock.every(TICK_MS, () => tick($));
+  if (role.remote !== 'true') $.clock.every(TICK_MS, () => tick($));
+  // Part 4: the board's pane; one session.start hook per plugin (R1).
+  if (canDraw(e.surface, role.remote)) await $.ui.open(PANE).catch(() => {});
 }
 
 async function onEnd($) {
-  if (!self.chief) return;
+  if (!role.chief) return;
   const mine = await $.store.get('chief');
   if (mine?.sessionId === (await $.session.id())) await $.store.delete('chief');
 }
 
 export async function contextHook($, e, next) {
   const r = await next(e);
-  if (!self.chief) return r;
+  if (!role.chief) return r;
   const text = ledgerBlock(await readRows($), {
     agents: await $.agent.list(),
     now: await $.clock.now(),
