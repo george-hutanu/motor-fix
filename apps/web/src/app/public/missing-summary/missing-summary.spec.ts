@@ -48,6 +48,17 @@ describe('MissingSummary', () => {
     expect(text(summary.querySelector('h2'))).toBe(title);
   });
 
+  // @traces 115-FR-008
+  it('counts only the things it lists', async () => {
+    const { summary } = await open(
+      [problem('steps.1.phone'), problem('steps.9.new')],
+      'missing',
+    );
+
+    expect(text(summary.querySelector('h2'))).toBe('Mai lipsește: 1 lucru');
+    expect(summary.querySelectorAll('button')).toHaveLength(1);
+  });
+
   // @traces 115-FR-012
   it('counts in English', async () => {
     const { summary } = await open(many(2), 'missing', 'en');

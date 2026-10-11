@@ -12,7 +12,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import type { ListingCheck } from '@motor-fix/contracts/listing-check';
+import { type ListingCheck, refOf } from '@motor-fix/contracts/listing-check';
 import type { PriceEntry } from '@motor-fix/contracts/listing-sections';
 import {
   FUELS,
@@ -39,7 +39,6 @@ import {
   letters,
   mark,
   next,
-  refOf,
   type Stance,
   tickAll,
   toggleFuel,

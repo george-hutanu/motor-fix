@@ -394,6 +394,25 @@ describe('DraftKeeper before the check', () => {
     expect(kept.draft().dirty).toBe(false);
   });
 
+  // @traces 115-FR-011
+  it('gives up, keeping the draft, when every save leaves something new to save', async () => {
+    const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+    let n = 0;
+    api['listingDraftsControllerSave'].mockImplementation(async () => {
+      n += 1;
+      if (n <= 20) {
+        kept.section('1', { name: `Service ${n}` });
+        // A change typed within the same millisecond still counts as one.
+        kept.draft.update((draft) => ({ ...draft, savedAt: `change ${n}` }));
+      }
+      return { id: 'd1' };
+    });
+
+    expect(await kept.flush()).toBe(false);
+    expect(n).toBeLessThan(20);
+    expect(api['listingDraftsControllerCheck']).not.toHaveBeenCalled();
+  });
+
   // @traces 115-FR-010
   it('checks only after the flush, and tells complete with its warnings', async () => {
     const kept = keeper({ dirty: true, draftId: 'd1', token: 't1' });

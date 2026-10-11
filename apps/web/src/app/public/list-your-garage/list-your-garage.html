@@ -29,7 +29,9 @@
       >
         <button #bar type="button" class="bar" [attr.aria-expanded]="open()" (click)="open.set(!open())">
           {{ barText() }}
-          @if (dots().size > 0) {
+          @if (done().has(current())) {
+            <span class="done" role="img" [attr.aria-label]="'public.listing.done' | t">✓</span>
+          } @else if (dots().has(current())) {
             <span class="dot" role="img" [attr.aria-label]="'public.listing.check.incomplete' | t"></span>
           }
         </button>

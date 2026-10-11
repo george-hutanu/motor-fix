@@ -16,19 +16,9 @@ export interface FieldMessage {
 
 export const NO_PROBLEMS: ListingCheck = { errors: [], warnings: [] };
 
-// The step a problem belongs to, or null for a path no step holds (a reply
-// from a server that knows a field this page does not).
-export function stepOfField(field: string): ListingStep | null {
-  try {
-    return stepOf(field);
-  } catch {
-    return null;
-  }
-}
-
 // The problems one step shows.
 export function forStep(check: ListingCheck, step: ListingStep): ListingCheck {
-  const mine = (problem: FieldProblem) => stepOfField(problem.field) === step;
+  const mine = (problem: FieldProblem) => stepOf(problem.field) === step;
   return {
     errors: check.errors.filter(mine),
     warnings: check.warnings.filter(mine),
@@ -44,7 +34,7 @@ interface Showing {
   mobile?: boolean;
 }
 
-// Which of a step's fields show their error, as 205-FR-010 has it: once
+// Which of a step's fields show their error: once
 // left, at once when the value was there before the owner typed in it, and
 // all of them when sending is asked for. After it shows, the text follows
 // the value. A warning tells whatever the field's state.

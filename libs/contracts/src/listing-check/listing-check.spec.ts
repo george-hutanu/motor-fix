@@ -533,8 +533,8 @@ describe('stepOf', () => {
     expect(stepOf(field)).toBe(n);
   });
 
-  it.each(['steps.7.x', 'survey', ''])('refuses %j', (field) => {
-    expect(() => stepOf(field)).toThrow(RangeError);
+  it.each(['steps.7.x', 'survey', ''])('puts %j in no step', (field) => {
+    expect(stepOf(field)).toBeNull();
   });
 });
 

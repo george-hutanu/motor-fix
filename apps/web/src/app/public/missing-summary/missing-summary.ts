@@ -6,9 +6,9 @@ import {
   output,
 } from '@angular/core';
 import type { FieldProblem } from '@motor-fix/contracts';
+import { stepOf } from '@motor-fix/contracts/listing-check';
 import { TranslatePipe } from '@motor-fix/i18n';
 
-import { stepOfField } from '../field-watch';
 import { textKey } from '../listing-check-texts';
 import { STEPS } from '../steps';
 
@@ -37,11 +37,15 @@ export class MissingSummary {
     const items = this.errors().map((problem) => ({
       field: problem.field,
       key: textKey(problem, mobile),
-      step: stepOfField(problem.field),
+      step: stepOf(problem.field),
     }));
     return STEPS.map((step) => ({
       items: items.filter((item) => item.step === step.n),
       step,
     })).filter((group) => group.items.length > 0);
   });
+  // The title counts what the list shows, never a field no step holds.
+  protected readonly count = computed(() =>
+    this.groups().reduce((sum, group) => sum + group.items.length, 0),
+  );
 }

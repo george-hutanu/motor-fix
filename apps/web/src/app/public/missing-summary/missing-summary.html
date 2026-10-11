@@ -1,7 +1,7 @@
 <div class="summary" aria-live="polite" tabindex="-1" [attr.data-state]="state()">
   @switch (state()) {
     @case ('missing') {
-      <h2>{{ 'public.listing.check.missing' | t: { count: errors().length } }}</h2>
+      <h2>{{ 'public.listing.check.missing' | t: { count: count() } }}</h2>
       @for (group of groups(); track group.step.n) {
         <div class="group" [attr.data-step]="group.step.n">
           <h3>{{ group.step.n }} {{ group.step.label | t }}</h3>

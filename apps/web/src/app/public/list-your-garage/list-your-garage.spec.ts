@@ -504,7 +504,7 @@ describe('switching the language', () => {
     expect(page.querySelector('h1')).toBe(heading);
     expect(text(heading)).toBe('Put your garage on the map');
     expect(current(page)).toEqual(['4 Mechanics · optional']);
-    expect(text(bar(page))).toBe('4 / 6 · Mechanics');
+    expect(text(bar(page))).toBe('4 / 6 · Mechanics ✓');
     expect([...page.querySelectorAll('section')].map((s) => s.id)).toEqual(
       [1, 2, 3, 4, 5, 6].map((n) => `step-${n}`),
     );
@@ -1606,7 +1606,11 @@ describe('the details, prices and mechanics in the draft', () => {
   });
 
   it('restores step 1 from a kept copy and ticks it while it is complete', async () => {
-    seed({ data: { steps: { '1': COMPLETE_DETAILS } } });
+    // Step 1 holds the e-mail too.
+    seed({
+      data: { steps: { '1': COMPLETE_DETAILS } },
+      email: 'ion@service.test',
+    });
 
     const { harness, page } = await open('/ro/list-your-garage');
 
@@ -1753,6 +1757,7 @@ describe('the details, prices and mechanics in the draft', () => {
           '5': { payments: ['cash'], place: STEFAN },
         },
       },
+      email: 'ion@service.test',
     });
 
     const { page } = await open('/ro/list-your-garage');
@@ -2070,6 +2075,23 @@ describe('sending for verification', () => {
 
     expect(ticked(page)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(dotted(page)).toEqual([]);
+    // The phone bar carries the current step's mark, as the list does.
+    expect(page.querySelector('nav > button .done')).not.toBeNull();
+    expect(page.querySelector('nav > button .dot')).toBeNull();
+  });
+
+  // @traces 115-FR-007 115-FR-013
+  it("marks the phone bar with the current step's mark only", async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    await press(harness, page);
+    expect(page.querySelector('nav > button .dot')).not.toBeNull();
+
+    // Step 4 is optional and done: its tick, not the other steps' dots.
+    page.querySelectorAll<HTMLButtonElement>('nav ol button')[3]?.click();
+    harness.detectChanges();
+    expect(current(page)[0]).toMatch(/^4 /);
+    expect(page.querySelector('nav > button .dot')).toBeNull();
+    expect(page.querySelector('nav > button .done')).not.toBeNull();
   });
 
   // @traces 115-FR-009
@@ -2143,8 +2165,57 @@ describe('sending for verification', () => {
     await pause();
     fillIn(harness, name, 'Service Popescu și fiii');
 
+    // The last missing thing gone, the list goes; only the server says
+    // the listing is complete.
     expect(dotted(page)).toEqual([]);
-    expect(text(summary(page))).toBe('Totul e complet');
+    expect(text(summary(page))).toBe('');
+  });
+
+  // @traces 115-FR-009 115-FR-011
+  it('drops a server list for a copy that changed while it was judged', async () => {
+    const { harness, page } = await completeCopy();
+
+    sendButton(page).click();
+    harness.detectChanges();
+    const check = await request();
+    const name = page.querySelector<HTMLInputElement>(
+      'mf-details-step [name="name"]',
+    ) as HTMLInputElement;
+    fillIn(harness, name, 'Service Popescu și fiii');
+    await answered(
+      harness,
+      check,
+      {
+        code: 'listing_incomplete',
+        errors: [{ code: 'required', field: 'files' }],
+        warnings: [],
+      },
+      422,
+    );
+
+    expect(dotted(page)).toEqual([]);
+    expect(text(summary(page))).toBe('');
+  });
+
+  // @traces 115-FR-001 115-FR-008
+  it('lists an e-mail never typed as missing, without asking the server', async () => {
+    seed({ data: COMPLETE });
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    await press(harness, page);
+
+    expect(
+      TestBed.inject(HttpTestingController).match((r) =>
+        r.url.endsWith('/check'),
+      ),
+    ).toEqual([]);
+    expect(text(summary(page).querySelector('h2'))).toBe(
+      'Mai lipsește: 1 lucru',
+    );
+    expect(
+      summary(page).querySelector('[data-step="1"] button'),
+    ).not.toBeNull();
+    expect(dotted(page)).toEqual([1]);
   });
 
   // @traces 115-FR-009 115-FR-011
@@ -2188,8 +2259,8 @@ describe('sending for verification', () => {
     name.replaceWith(closed);
     closed.append(name);
 
-    const item = [...summary(page).querySelectorAll('button')].find((button) =>
-      button.closest('[data-step="1"]'),
+    const item = [...summary(page).querySelectorAll('button')].find(
+      (button) => text(button) === 'Între 2 și 80 de caractere',
     ) as HTMLButtonElement;
     item.click();
     harness.detectChanges();

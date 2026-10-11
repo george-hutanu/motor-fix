@@ -1,4 +1,4 @@
-import { FieldWatch, forStep, stepOfField } from './field-watch';
+import { FieldWatch, forStep } from './field-watch';
 
 const check = {
   errors: [{ code: 'required', field: 'steps.1.name' }],
@@ -72,6 +72,5 @@ describe('forStep', () => {
       warnings: [],
     });
     expect(forStep(all, 6).warnings).toHaveLength(1);
-    expect(stepOfField('steps.9.new')).toBeNull();
   });
 });

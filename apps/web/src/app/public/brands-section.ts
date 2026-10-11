@@ -10,7 +10,6 @@ import {
 } from '@motor-fix/contracts/marked-brands';
 
 export type { Fuel, MarkedBrand, Stance };
-export { refOf };
 
 // The step's own value always holds the list, even when nothing is marked.
 export type BrandsSection = DraftBrands & { brands: MarkedBrand[] };

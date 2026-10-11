@@ -65,6 +65,8 @@ function browserStorage(): Storage | null {
 // The listing draft behind the page: the browser copy a second after each
 // change, the server copy once an e-mail is given, one save in flight and
 // the latest change queued behind it.
+const FLUSH_ROUNDS = 5;
+
 @Injectable()
 export class DraftKeeper {
   private readonly api = inject(ListingDraftsService);
@@ -210,11 +212,18 @@ export class DraftKeeper {
     this.failedCall = false;
     if (!(await this.created(email))) return false;
     if (email !== this.serverEmail) this.nextEmail = email;
-    while (!this.failedCall && this.unsaved()) {
+    return (await this.savedAll()) && this.view() === 'form';
+  }
+
+  // Saves until nothing is left unsaved. Typing that never stops would keep
+  // it saving: past a few rounds it gives up, and the draft stays as it is.
+  private async savedAll(): Promise<boolean> {
+    for (let round = 0; !this.failedCall && this.unsaved(); round += 1) {
+      if (round >= FLUSH_ROUNDS) return false;
       if (this.sending) await this.settled();
       else await this.save();
     }
-    return !this.failedCall && this.view() === 'form';
+    return !this.failedCall;
   }
 
   // The server copy exists, made now or by the call already on its way.

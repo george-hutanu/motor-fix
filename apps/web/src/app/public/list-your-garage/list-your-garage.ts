@@ -22,6 +22,8 @@ import {
   checkListing,
   type ListingCheck,
   type ListingStep,
+  refOf,
+  stepOf,
 } from '@motor-fix/contracts/listing-check';
 import {
   isDetailsSection,
@@ -43,12 +45,12 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
-import { brandsOf, dropUnlisted, jobsOf, refOf } from '../brands-section';
+import { brandsOf, dropUnlisted, jobsOf } from '../brands-section';
 import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
 import { DocumentsStep } from '../documents-step/documents-step';
 import { DraftKeeper } from '../draft/draft-keeper';
-import { FieldWatch, forStep, stepOfField } from '../field-watch';
+import { FieldWatch, forStep } from '../field-watch';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step/hours-step';
@@ -195,8 +197,10 @@ export class ListYourGarage {
   );
   // The whole listing judged as the owner types, by the rule the server uses.
   private readonly ownCheck = computed(() => {
+    // An address never typed is judged as empty: it is missing, like any
+    // other field.
     const { data, email } = this.keeper.draft();
-    return checkListing({ data, email });
+    return checkListing({ data, email: email ?? '' });
   });
   // The server's last judgement, until the next change to what it judged
   // makes it stale (a step change or a save alone does not).
@@ -250,12 +254,15 @@ export class ListYourGarage {
   });
   protected readonly inFlight = signal(false);
   private readonly outcome = signal<'complete' | 'failed' | null>(null);
+  // Complete is only the server's word on the copy as it stands; once the
+  // last missing thing is typed the list goes, and the button asks again.
   protected readonly summaryState = computed<SummaryState>(() => {
     const outcome = this.outcome();
     if (outcome === 'failed') return 'failed';
-    const missing = this.problems().errors.length > 0;
-    if (this.asked()) return missing ? 'missing' : 'complete';
-    return outcome === 'complete' && !missing ? 'complete' : null;
+    if (this.problems().errors.length > 0)
+      return this.asked() ? 'missing' : null;
+    const fresh = this.serverCheck()?.of === this.judged();
+    return outcome === 'complete' && fresh ? 'complete' : null;
   });
   protected readonly mobile = computed(
     () => this.details().businessKind === 'mobile',
@@ -410,18 +417,24 @@ export class ListYourGarage {
       this.toSummary();
       return;
     }
+    // What the server judges is the copy as it stood at the press; a change
+    // typed while it answers makes the answer stale.
+    const of = this.judged();
     this.inFlight.set(true);
-    const result = await this.keeper.check();
-    this.inFlight.set(false);
+    let result: Awaited<ReturnType<DraftKeeper['check']>>;
+    try {
+      result = await this.keeper.check();
+    } catch {
+      result = { kind: 'failed' };
+    } finally {
+      this.inFlight.set(false);
+    }
     if (result.kind === 'failed') {
       this.outcome.set('failed');
       return;
     }
     const errors = result.kind === 'incomplete' ? result.errors : [];
-    this.serverCheck.set({
-      check: { errors, warnings: result.warnings },
-      of: this.judged(),
-    });
+    this.serverCheck.set({ check: { errors, warnings: result.warnings }, of });
     this.asked.set(errors.length > 0);
     if (errors.length === 0) this.outcome.set('complete');
     else this.toSummary();
@@ -444,11 +457,11 @@ export class ListYourGarage {
   // A summary item: its step marked current, any closed part around the
   // field opened, and the field focused in view.
   protected goTo(field: string) {
-    const step = stepOfField(field);
+    const step = stepOf(field);
     if (!step) return;
-    const target = this.host.querySelector<HTMLElement>(
-      `[data-field="${field.replaceAll('"', '')}"]`,
-    );
+    const target = [
+      ...this.host.querySelectorAll<HTMLElement>('[data-field]'),
+    ].find((element) => element.dataset['field'] === field);
     if (!target) {
       this.jump(step);
       return;
