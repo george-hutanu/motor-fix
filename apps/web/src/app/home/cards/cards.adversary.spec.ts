@@ -62,12 +62,6 @@ const cards = (page: HTMLElement) => [
 ];
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
-const announced = (card: Element) => {
-  const copy = card.cloneNode(true) as Element;
-  for (const hidden of copy.querySelectorAll('[aria-hidden="true"]'))
-    hidden.remove();
-  return said(copy);
-};
 const lists = (card: Element) =>
   [...card.querySelectorAll('.list')].map((list) => said(list));
 
@@ -342,9 +336,12 @@ describe('HomeCards under hostile input', () => {
   it('names a card in English', async () => {
     const [card] = cards(await render([garageOf()], { language: 'en' }));
 
-    expect(card.getAttribute('aria-label')).toBeNull();
-    expect(announced(card)).toMatch(
-      /^Service Auto Militari, Works on BMW, 4\.9 /,
+    expect(card.hasAttribute('aria-label')).toBe(false);
+    expect(card.querySelector('.sr-only')?.textContent?.trim()).toBe(
+      'Rating 4.9 out of 5',
+    );
+    expect(card.querySelector('mf-lamp')?.textContent?.trim()).toBe(
+      'Works on BMW',
     );
   });
 

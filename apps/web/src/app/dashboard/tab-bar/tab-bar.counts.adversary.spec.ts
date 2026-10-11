@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { DashboardTabBar } from './tab-bar';
+import { spoken } from '../../spoken.testing';
 import { type Counts, DASHBOARDS } from '../views';
 
 @Component({ template: '' })
@@ -58,7 +59,8 @@ describe('the admin tab bar counters', () => {
     const garages = tab(harness.routeNativeElement as HTMLElement, 'garages');
 
     expect(garages.querySelector('.chip')).toBeNull();
-    expect(garages.getAttribute('aria-label')).toBeNull();
+    expect(garages?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(garages)).not.toMatch(/așteptare|waiting/);
   });
 
   it.each([
@@ -79,9 +81,8 @@ describe('the admin tab bar counters', () => {
     const harness = await open();
     const garages = tab(harness.routeNativeElement as HTMLElement, 'garages');
 
-    expect(garages.getAttribute('aria-label')).toBe(
-      'Service‑uri, 1234 în așteptare',
-    );
+    expect(garages?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(garages)).toBe('Service‑uri 1234 în așteptare');
   });
 
   it('puts the chip on the Service‑uri tab only', async () => {
@@ -122,7 +123,8 @@ describe('the admin tab bar counters', () => {
     const garages = tab(harness.routeNativeElement as HTMLElement, 'garages');
 
     expect(garages.querySelector('.chip')).toBeNull();
-    expect(garages.getAttribute('aria-label')).toBeNull();
+    expect(garages?.hasAttribute('aria-label')).toBe(false);
+    expect(spoken(garages)).not.toMatch(/așteptare|waiting/);
   });
 
   it('shows no chip for a negative or non-numeric count', async () => {

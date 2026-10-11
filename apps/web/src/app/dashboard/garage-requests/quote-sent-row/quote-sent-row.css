@@ -28,11 +28,6 @@ p {
   font-weight: 600;
 }
 .car,
-.slot,
-.status {
-  font-size: var(--mf-size-small);
-}
-.car,
 .slot {
   color: var(--mf-text-secondary);
 }
@@ -52,5 +47,14 @@ p {
 @media (max-width: 900px) {
   :host {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
+  .car,
+  .slot,
+  .status {
+    font-size: var(--mf-size-small);
   }
 }

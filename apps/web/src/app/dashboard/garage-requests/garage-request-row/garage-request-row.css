@@ -24,10 +24,6 @@ p {
   font-weight: 700;
 }
 .car,
-.when {
-  font-size: var(--mf-size-small);
-}
-.car,
 .mechanic,
 time,
 .mark {
@@ -94,8 +90,8 @@ time,
     grid-area: 1 / 1 / 4 / 2;
   }
 }
-/* A phone reads nothing under body size. Trimite oferta and Refuză stack
-   full width, so the label keeps one line at 320 px. */
+/* On a phone Trimite oferta and Refuză stack full width, so the label keeps
+   one line at 320 px. */
 @media (max-width: 767.98px) {
   :host {
     padding-inline: 0;
@@ -108,8 +104,12 @@ time,
     width: 100%;
     padding-inline: var(--mf-space-3);
   }
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
   .car,
   .when {
-    font-size: var(--mf-size-body);
+    font-size: var(--mf-size-small);
   }
 }

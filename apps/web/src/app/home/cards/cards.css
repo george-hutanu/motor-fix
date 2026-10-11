@@ -54,7 +54,6 @@ li {
   height: 100%;
   min-height: 44px;
   padding: var(--mf-space-4);
-  position: relative;
   text-decoration: none;
 }
 
@@ -79,15 +78,6 @@ li {
 .name {
   font-weight: 700;
   overflow-wrap: anywhere;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 .where,

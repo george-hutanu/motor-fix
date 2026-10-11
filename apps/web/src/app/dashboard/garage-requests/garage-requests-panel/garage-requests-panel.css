@@ -31,7 +31,7 @@ h2 {
 .counter,
 .reconnecting,
 .stale {
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   color: var(--mf-text-secondary);
 }
 p {
@@ -76,14 +76,6 @@ p {
 .see-all:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus);
   outline-offset: var(--mf-focus-offset);
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 /* A phone keeps 16 px sides, so a row's buttons have room for their labels. */
 @media (max-width: 767.98px) {

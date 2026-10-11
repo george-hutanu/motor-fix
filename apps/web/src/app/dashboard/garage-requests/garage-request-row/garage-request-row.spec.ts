@@ -368,13 +368,6 @@ describe('the request row’s layout', () => {
     expect(rule('.actions')).toMatch(/grid-area:\s*1\s*\/\s*4/);
   });
 
-  it('sets the car, mechanic and age at body size on a phone', () => {
-    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
-    expect(phone).toMatch(
-      /\.car,\s*\.when\s*\{\s*font-size:\s*var\(--mf-size-body\);/,
-    );
-  });
-
   // Lap 4: at 320 px Trimite oferta wrapped one word per line and Refuză
   // dropped to a line of its own beside nothing.
   it('stacks Trimite oferta and Refuză full width on a phone, the row unpadded at the sides', () => {
@@ -393,5 +386,27 @@ describe('the request row’s layout', () => {
       for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
         expect(Number.parseFloat(px) % 4).toBe(0);
     expect(rule('.open')).toMatch(/padding:\s*0/);
+  });
+});
+
+describe('type scale on a phone', () => {
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
+    join(__dirname, 'garage-request-row.css'),
+    'utf8',
+  );
+  const at = stylesheet.indexOf('@media (min-width: 768px)');
+  const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
+  const tablet = at < 0 ? '' : stylesheet.slice(at);
+
+  it('sets no text under the body size on a phone', () => {
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+  });
+
+  it('sets the car and the time small from a tablet up', () => {
+    expect(tablet).toMatch(
+      /\.car,\s*\.when \{\s*font-size: var\(--mf-size-small\);/,
+    );
   });
 });

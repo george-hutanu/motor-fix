@@ -7,6 +7,7 @@ import type { BrandDto, HomeGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { HomeCards, type ResultsRoute } from './cards';
+import { spoken } from '../../spoken.testing';
 
 const BMW: BrandDto = { id: 'b', name: 'BMW', popularity: 1, slug: 'bmw' };
 
@@ -64,13 +65,6 @@ const cards = (page: HTMLElement) => [
 ];
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
-// What a screen reader reads for a card: its text without the hidden parts.
-const announced = (card: Element) => {
-  const copy = card.cloneNode(true) as Element;
-  for (const hidden of copy.querySelectorAll('[aria-hidden="true"]'))
-    hidden.remove();
-  return said(copy);
-};
 const lists = (card: Element) =>
   [...card.querySelectorAll('.list')].map((list) => said(list));
 
@@ -322,18 +316,22 @@ describe('HomeCards', () => {
   it('names a card by the garage, its answer for the brand and its rating', async () => {
     const [card] = cards(await render([garageOf()]));
 
-    // The card is named by its own text, so the name holds what it shows
-    // (axe label-content-name-mismatch), starting with name, stance, rating.
-    expect(card.getAttribute('aria-label')).toBeNull();
-    expect(announced(card)).toMatch(
-      /^Service Auto Militari, Lucrează pe BMW, 4,9 /,
-    );
-    expect(card.querySelector('mf-lamp')?.getAttribute('aria-hidden')).toBe(
-      'true',
-    );
+    // Named by its own text, so the name holds what the card shows (axe
+    // label-content-name-mismatch); the rating is read out beside the name.
+    expect(card.hasAttribute('aria-label')).toBe(false);
+    const name = spoken(card);
+    expect(name).toMatch(/^Service Auto Militari\s*Rating 4,9 din 5/);
+    expect(name).toContain('Lucrează pe BMW');
     expect(
       card.querySelector('mf-rating-dial')?.getAttribute('aria-hidden'),
     ).toBe('true');
+  });
+
+  // @traces 227-FR-014
+  it('reads no rating for a garage nobody has reviewed', async () => {
+    const [card] = cards(await render([garageOf({ rating: null })]));
+
+    expect(card.querySelector('.sr-only')).toBeNull();
   });
 
   // @traces 227-FR-006

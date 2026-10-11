@@ -373,14 +373,19 @@ describe('the requests panel with a limit', () => {
 });
 
 // The PR tester measured this panel off the 4 px grid and the type scale.
-describe('the garage-requests-panel stylesheet', () => {
-  const css = readFileSync(
+describe('type scale', () => {
+  // @traces 975-type-scale-FR-001
+  // @traces 975-type-scale-FR-003
+  // @traces 975-type-scale-FR-008
+  const stylesheet = readFileSync(
     join(__dirname, 'garage-requests-panel.css'),
     'utf8',
   );
 
   it('pads and spaces on the 4 px grid', () => {
-    for (const [, value] of css.matchAll(/(?:gap|padding|margin):\s*([^;]+);/g))
+    for (const [, value] of stylesheet.matchAll(
+      /(?:gap|padding|margin):\s*([^;]+);/g,
+    ))
       for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
         expect(Number.parseFloat(px) % 4).toBe(0);
   });
@@ -388,14 +393,24 @@ describe('the garage-requests-panel stylesheet', () => {
   // Lap 4: at 320 px the 24 px sides left a row's Trimite oferta too
   // narrow for its label on one line.
   it('pads its sides at 16 px on a phone', () => {
-    const phone = css.slice(css.indexOf('@media (max-width: 767.98px)'));
+    const phone = stylesheet.slice(
+      stylesheet.indexOf('@media (max-width: 767.98px)'),
+    );
     expect(phone).toMatch(
       /\.panel\s*\{[^}]*padding-inline:\s*var\(--mf-space-4\);/,
     );
   });
 
-  it('sizes its text from the Cockpit type scale', () => {
-    for (const [, value] of css.matchAll(/font-size:\s*([^;]+);/g))
-      expect(value.trim()).toMatch(/^var\(--mf-size-[a-z]+\)$/);
+  it('takes every text size from a Cockpit size token', () => {
+    const sizes = stylesheet.match(/font-size:[^;]*;/g) ?? [];
+    expect(
+      sizes.filter((d) => !/^font-size: var\(--mf-size-[a-z]+\);$/.test(d)),
+    ).toEqual([]);
+  });
+
+  it('sets `.stale` at the body size', () => {
+    expect(stylesheet).toMatch(
+      /\n[^{}\n]*\.stale \{[^}]*font-size: var\(--mf-size-body\);/,
+    );
   });
 });

@@ -27,7 +27,10 @@
               <span class="top">
                 <mf-rating-dial size="small" aria-hidden="true" [value]="garage.rating" />
                 <span class="id">
-                  <span class="name">{{ garage.name }}</span><span class="sr-only">{{ heard(garage) }}</span>
+                  <span class="name">{{ garage.name }}</span>
+                  @if (rated(garage); as rated) {
+                    <span class="sr-only">{{ rated }}</span>
+                  }
                   @if (where(garage); as where) {
                     @if (where.city && where.rest) {
                       <span class="where"><span translate="no">{{ where.city }}</span>{{ where.rest }}</span>
@@ -39,7 +42,7 @@
                   }
                 </span>
               </span>
-              <mf-lamp aria-hidden="true" [state]="garage.stance === 'works_on' ? 'green' : 'red'" [label]="stance(garage)" />
+              <mf-lamp [state]="garage.stance === 'works_on' ? 'green' : 'red'" [label]="stance(garage)" />
               <span class="list"><span class="key">{{ 'public.home.cards.worksOn' | t }}</span> {{ names(garage.worksOn) }}</span>
               <span class="list"><span class="key">{{ 'public.home.cards.doesNotTake' | t }}</span> {{ names(garage.doesNotTake) }}</span>
               <span class="facts">
