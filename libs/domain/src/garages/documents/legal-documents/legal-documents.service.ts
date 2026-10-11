@@ -134,7 +134,7 @@ export class LegalDocumentsService {
     if (!isUUID(fileId) || !isUUID(documentId)) throw new NotFoundException();
     const page = PAGE.test(n) ? Number(n) : 0;
     // One transaction: the read that resolves the document and its open
-    // entry (FR-014); a page gone from storage rolls both back.
+    // entry; a page gone from storage rolls both back.
     const { contentType, key, kind } = await this.prisma.$transaction(
       async (tx) => {
         const document = await this.readable(

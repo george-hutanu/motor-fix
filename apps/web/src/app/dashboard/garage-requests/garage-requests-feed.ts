@@ -55,7 +55,7 @@ export class GarageRequestsFeed {
   // Requests answered from this tab, until their quoted row has been shown.
   private readonly mine = new Set<string>();
   // The request whose drawer closed back to a page drawn anew: its row there
-  // takes the focus, since the overlay's opener is gone (FR-002).
+  // takes the focus, since the overlay's opener is gone.
   private refocus: string | null = null;
 
   // The server's 404: this session may not see the garage's requests.
