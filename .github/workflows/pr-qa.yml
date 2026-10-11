@@ -220,7 +220,7 @@ jobs:
 
       # Screenshots stay here, never in git: the agent copies only report.md
       # and report.json into specs/<feature>/pr-review/.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: pr-qa-${{ inputs.pr || github.event.pull_request.number }}

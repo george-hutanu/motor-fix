@@ -706,8 +706,8 @@
       "source": "libs/domain/src/insights/profile-views/profile-views.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/{id}/views",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "the public profile's beacon; every outcome is the motorfix_profile_views_total entry, which owns the lost-view alert; the api-error-rate rule covers its 5xx",
+      "alerts": ["api-error-rate", "api-latency"],
+      "reason": "the public profile's beacon; every outcome is the motorfix_profile_views_total entry, which owns the lost-view alert",
       "story": "ST-143"
     },
     {
