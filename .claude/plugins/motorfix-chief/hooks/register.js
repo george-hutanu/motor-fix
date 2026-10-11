@@ -15,6 +15,7 @@ import { agentHook } from './dispatch-guard.js';
 import { CARD, PANE } from './lib/surface.js';
 import { cardHook, cardPaneHook } from './owner-card.js';
 import { resultHook } from './quiet-transcripts.js';
+import { measureHook } from './usage-guard.js';
 
 // A gating hook that fails lets the call through: the mod never blocks on its own error.
 const failOpen = (_$, e, next) => next(e);
@@ -31,4 +32,5 @@ export function register(on) {
   on('tool.call', { tool: 'AskUserQuestion' }, cardHook).catch(failOpen);
   on('ui.render', { component: 'Pane', requestId: CARD.id }, cardPaneHook);
   on('ui.render', { component: 'ToolResult' }, resultHook);
+  on('session.measure', measureHook);
 }

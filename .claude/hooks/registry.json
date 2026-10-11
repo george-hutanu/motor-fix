@@ -225,6 +225,7 @@
     "motorfix-chief/hooks/lib/surface.js": "3f806c780113",
     "motorfix-chief/hooks/owner-card.js": "bbad969d8594",
     "motorfix-chief/hooks/quiet-transcripts.js": "9b248fbd9dfd",
-    "motorfix-chief/hooks/register.js": "624cb299700b"
+    "motorfix-chief/hooks/register.js": "2606a573fddc",
+    "motorfix-chief/hooks/usage-guard.js": "1e381e868732"
   }
 }
