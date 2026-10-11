@@ -6,7 +6,7 @@ import { ok, stubs } from './lib/stubs.ts';
 
 const MIN = 60_000;
 const CHIEF = '/m/.git\n/m/.git\n';
-const WORKER = '/m/.git/worktrees/363-slug\n/m/.git\n';
+const WORKER = '/m/.git/worktrees/41-slug\n/m/.git\n';
 const row = (pr: number, patch = {}) => ({
   ci: null,
   head: null,
@@ -49,7 +49,7 @@ test('Chief records its session at start and removes it at end', async ($, on) =
 
 test('a worker session writes no chief key and runs no gate', async ($, on) => {
   const s = stubs(on, { run: () => ok(WORKER) });
-  await start($, '/m/.worktrees/363-slug');
+  await start($, '/m/.worktrees/41-slug');
   await s.clock.advance(60 * MIN);
   expect(s.store.has('chief')).toBe(false);
   expect(s.runs.filter((r) => isGate(r.argv))).toHaveLength(0);
@@ -57,76 +57,76 @@ test('a worker session writes no chief key and runs no gate', async ($, on) => {
 
 test('dispatch.mjs fills the row from its QA-run line', async ($, on) => {
   const s = stubs(on, {
-    store: { 'pr:363': row(363, { holder: 'agent-7f3' }) },
+    store: { 'pr:41': row(41, { holder: 'agent-7f3' }) },
   });
   on(
     'tool.call',
     { tool: 'Bash' },
-    bash('', '- QA run: 38135939640 · head 8e6a1b2c3d4e · lap 2 · https://x\n'),
+    bash('', '- QA run: 9000000001 · head 8e6a1b2c3d4e · lap 2 · https://x\n'),
   );
   await $.tool.call({
-    command: 'node .claude/scripts/pr-test/dispatch.mjs 363 --no-wait',
+    command: 'node .claude/scripts/pr-test/dispatch.mjs 41 --no-wait',
     tool: 'Bash',
   });
-  expect(s.store.get('pr:363')).toMatchObject({
+  expect(s.store.get('pr:41')).toMatchObject({
     head: '8e6a1b2',
     holder: 'agent-7f3',
     lap: 2,
-    qaRun: 38135939640,
+    qaRun: 9000000001,
   });
 });
 
 test('a foreground ci-wait with --run whose QA run succeeded sets ci pass and offers the tail once per head', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { head: 'abc1234' }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { head: 'abc1234' }) } });
   on('tool.call', { tool: 'Bash' }, bash('', 'QA run: success\n'));
   const call = () =>
     $.tool.call({
-      command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99',
+      command: 'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 99',
       tool: 'Bash',
     });
   const first = await call();
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'pass', qaRun: 99 });
-  expect(first.context?.join('\n')).toContain('tail #363 after QA run 99');
-  expect(s.store.get('offer:363:abc1234')).toMatchObject({ runId: 99 });
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'pass', qaRun: 99 });
+  expect(first.context?.join('\n')).toContain('tail #41 after QA run 99');
+  expect(s.store.get('offer:41:abc1234')).toMatchObject({ runId: 99 });
   const second = await call();
   expect(second.context ?? []).toHaveLength(0);
 });
 
 test('a ci-wait without --run, or one that prints a failing check, offers nothing', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { head: 'abc1234' }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { head: 'abc1234' }) } });
   let out = '';
   on('tool.call', { tool: 'Bash' }, () => bash('', out)());
   const plain = await $.tool.call({
-    command: 'node .claude/scripts/pr-test/ci-wait.mjs 363',
+    command: 'node .claude/scripts/pr-test/ci-wait.mjs 41',
     tool: 'Bash',
   });
   expect(plain.context ?? []).toHaveLength(0);
   out = 'Unit and integration tests: fail\n';
   const failed = await $.tool.call({
-    command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99',
+    command: 'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 99',
     tool: 'Bash',
   });
   expect(failed.context ?? []).toHaveLength(0);
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'fail' });
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'fail' });
   out = 'QA run: failure\n';
   const qaFailed = await $.tool.call({
-    command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 100',
+    command: 'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 100',
     tool: 'Bash',
   });
   expect(qaFailed.context ?? []).toHaveLength(0);
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'fail' });
-  expect(s.store.get('offer:363:abc1234')).toBeUndefined();
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'fail' });
+  expect(s.store.get('offer:41:abc1234')).toBeUndefined();
 });
 
 // A background wait's output never reaches the plugin, so on its notification
 // the plugin asks ci-wait.mjs again (everything has finished, so it answers at once).
-const CI_WAIT = 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99';
+const CI_WAIT = 'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 99';
 const note = (code: number) =>
   `<task-notification>\n<task-id>bt14</task-id>\n<status>completed</status>\n<summary>Background command "x" completed (exit code ${code})</summary>\n</task-notification>`;
 async function waitInBackground($, on, recheck: string) {
   const s = stubs(on, {
     run: (argv) => (argv.join(' ') === CI_WAIT ? ok(recheck) : ok()),
-    store: { 'pr:363': row(363, { head: 'abc1234' }) },
+    store: { 'pr:41': row(41, { head: 'abc1234' }) },
   });
   on('tool.call', { tool: 'Bash' }, bash('', '', { backgroundTaskId: 'bt14' }));
   await $.tool.call({
@@ -134,15 +134,15 @@ async function waitInBackground($, on, recheck: string) {
     run_in_background: true,
     tool: 'Bash',
   });
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'pending' });
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'pending' });
   return s;
 }
 
 test('a background ci-wait --run that exits 0 and reads green again offers the tail', async ($, on) => {
   const s = await waitInBackground($, on, 'QA run: success\n');
   const r = await $.prompt.submit({ text: note(0) });
-  expect(r.context?.join('\n')).toContain('tail #363 after QA run 99');
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'pass' });
+  expect(r.context?.join('\n')).toContain('tail #41 after QA run 99');
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'pass' });
   expect(s.runs.map((x) => x.argv.join(' '))).toContain(CI_WAIT);
 });
 
@@ -154,8 +154,8 @@ for (const out of [
     const s = await waitInBackground($, on, out);
     const r = await $.prompt.submit({ text: note(0) });
     expect(r.context ?? []).toHaveLength(0);
-    expect(s.store.get('pr:363')).toMatchObject({ ci: 'fail' });
-    expect(s.store.get('offer:363:abc1234')).toBeUndefined();
+    expect(s.store.get('pr:41')).toMatchObject({ ci: 'fail' });
+    expect(s.store.get('offer:41:abc1234')).toBeUndefined();
   });
 }
 
@@ -165,7 +165,7 @@ test('a background recheck that cannot read CI leaves ci pending, offers nothing
       argv.join(' ') === CI_WAIT
         ? { exitCode: 2, stderr: 'gh failed', stdout: 'CI: unreadable\n' }
         : ok(),
-    store: { 'pr:363': row(363, { head: 'abc1234' }) },
+    store: { 'pr:41': row(41, { head: 'abc1234' }) },
   });
   on('tool.call', { tool: 'Bash' }, bash('', '', { backgroundTaskId: 'bt14' }));
   await $.tool.call({
@@ -175,9 +175,9 @@ test('a background recheck that cannot read CI leaves ci pending, offers nothing
   });
   const r = await $.prompt.submit({ text: note(0) });
   expect(r.context ?? []).toHaveLength(0);
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'pending' });
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'pending' });
   expect(s.toasts).toEqual([
-    'motorfix-chief: could not re-read CI for #363; run ci-wait.mjs 363 --run 99 again',
+    'motorfix-chief: could not re-read CI for #41; run ci-wait.mjs 41 --run 99 again',
   ]);
 });
 
@@ -186,7 +186,7 @@ test('the ledger block after compaction lists every row in PR order', async ($, 
     run: () => ok(CHIEF),
     store: {
       'pr:12': row(12, { stage: 'planning' }),
-      'pr:363': row(363, { qaRun: 5, stage: 'QA' }),
+      'pr:41': row(41, { qaRun: 5, stage: 'QA' }),
     },
   });
   await start($);
@@ -195,7 +195,7 @@ test('the ledger block after compaction lists every row in PR order', async ($, 
   expect(block?.text.split('\n')).toEqual([
     '<!-- motorfix-chief ledger -->',
     '#12 planning lap 0/10 run – ci – head – holder – worktree – age 0m',
-    '#363 QA lap 0/10 run 5 ci – head – holder – worktree – age 0m',
+    '#41 QA lap 0/10 run 5 ci – head – holder – worktree – age 0m',
   ]);
 });
 
@@ -204,12 +204,12 @@ test('the ledger read clears a holder whose agent this session dispatched has en
     agents: [{ id: 'agent-7f3', status: 'completed' }],
     run: () => ok(CHIEF),
     store: {
-      'pr:363': row(363, {
+      'pr:41': row(41, {
         holder: 'agent-7f3',
         holderSession: 'sess-a',
         stage: 'QA',
       }),
-      'pr:368': row(368, {
+      'pr:43': row(43, {
         holder: 'agent-9',
         holderSession: 'sess-b',
         stage: 'QA',
@@ -218,13 +218,13 @@ test('the ledger read clears a holder whose agent this session dispatched has en
   });
   await start($);
   const r = await $.prompt.context({ blocks: [] });
-  expect(s.store.get('pr:363')).toMatchObject({
+  expect(s.store.get('pr:41')).toMatchObject({
     holder: null,
     holderSession: null,
   });
-  expect(s.store.get('pr:368')).toMatchObject({ holder: 'agent-9' });
+  expect(s.store.get('pr:43')).toMatchObject({ holder: 'agent-9' });
   expect(r.blocks.find((b) => b.name === 'motorfixLedger')?.text).toContain(
-    '#363 QA lap 0/10 run – ci – head – holder – ',
+    '#41 QA lap 0/10 run – ci – head – holder – ',
   );
 });
 
@@ -243,12 +243,12 @@ test('the gate runs every 15 minutes in Chief with two active worktrees and wake
       if (isJson(argv))
         return ok(
           watchJson([
-            { number: 363, state: 'ready' },
-            { number: 370, state: 'draft' },
+            { number: 41, state: 'ready' },
+            { number: 42, state: 'draft' },
           ]),
         );
       if (isGate(argv))
-        return { exitCode: 2, stderr: '', stdout: 'tail #363\n' };
+        return { exitCode: 2, stderr: '', stdout: 'tail #41\n' };
       return ok(CHIEF);
     },
   });
@@ -258,7 +258,7 @@ test('the gate runs every 15 minutes in Chief with two active worktrees and wake
   expect(gates).toHaveLength(4);
   expect(gates[0].init).toMatchObject({ cwd: '/m', timeoutMs: 600_000 });
   expect(s.submitted[0]).toBe(
-    'motorfix-chief watch gate: run /speckit-watch for these items.\ntail #363',
+    'motorfix-chief watch gate: run /speckit-watch for these items.\ntail #41',
   );
 });
 
@@ -269,8 +269,8 @@ test('a gate still running is never started twice', async ($, on) => {
       if (isJson(argv))
         return ok(
           watchJson([
-            { number: 363, state: 'ready' },
-            { number: 370, state: 'ready' },
+            { number: 41, state: 'ready' },
+            { number: 42, state: 'ready' },
           ]),
         );
       if (isGate(argv))
@@ -289,8 +289,8 @@ test('a gate still running is never started twice', async ($, on) => {
 
 test('one active worktree runs no gate; exit 1 shows one toast; a merged PR leaves the ledger with its tail offers', async ($, on) => {
   let prs = [
-    { number: 363, state: 'merged' },
-    { number: 370, state: 'draft' },
+    { number: 41, state: 'merged' },
+    { number: 42, state: 'draft' },
   ];
   const s = stubs(on, {
     run: (argv) => {
@@ -299,25 +299,25 @@ test('one active worktree runs no gate; exit 1 shows one toast; a merged PR leav
       return ok(CHIEF);
     },
     store: {
-      'offer:363:abc1234': { answer: null, offeredAt: 0, runId: 5 },
-      'offer:363:def5678': { answer: null, offeredAt: 0, runId: 6 },
-      'offer:370:abc1234': { answer: null, offeredAt: 0, runId: 8 },
-      'offer:3630:abc1234': { answer: null, offeredAt: 0, runId: 7 },
-      'pr:363': row(363),
-      'pr:370': row(370),
+      'offer:41:abc1234': { answer: null, offeredAt: 0, runId: 5 },
+      'offer:41:def5678': { answer: null, offeredAt: 0, runId: 6 },
+      'offer:42:abc1234': { answer: null, offeredAt: 0, runId: 8 },
+      'offer:410:abc1234': { answer: null, offeredAt: 0, runId: 7 },
+      'pr:41': row(41),
+      'pr:42': row(42),
     },
   });
   await start($);
   await s.clock.advance(15 * MIN);
   expect(s.runs.filter((r) => isGate(r.argv))).toHaveLength(0);
-  expect(s.store.has('pr:363')).toBe(false);
-  expect(s.store.has('pr:370')).toBe(true);
+  expect(s.store.has('pr:41')).toBe(false);
+  expect(s.store.has('pr:42')).toBe(true);
   expect(
     [...s.store.keys()].filter((k) => k.startsWith('offer:')).sort(),
-  ).toEqual(['offer:3630:abc1234', 'offer:370:abc1234']);
+  ).toEqual(['offer:410:abc1234', 'offer:42:abc1234']);
   prs = [
-    { number: 370, state: 'draft' },
-    { number: 371, state: 'ready' },
+    { number: 42, state: 'draft' },
+    { number: 44, state: 'ready' },
   ];
   await s.clock.advance(15 * MIN);
   expect(s.toasts.filter((t) => t.includes('watch gate'))).toHaveLength(1);

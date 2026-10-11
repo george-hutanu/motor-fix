@@ -4,8 +4,8 @@ import { ok, stubs } from './lib/stubs.ts';
 
 // @traces 1168-FR-010
 
-const TREE = '/m/.worktrees/1168-chief-mods';
-const WORKER = '/m/.git/worktrees/1168-chief-mods\n/m/.git\n';
+const TREE = '/m/.worktrees/42-slug';
+const WORKER = '/m/.git/worktrees/42-slug\n/m/.git\n';
 const CHIEF = '/m/.git\n/m/.git\n';
 const WATCH = JSON.stringify({
   rows: [
@@ -14,13 +14,13 @@ const WATCH = JSON.stringify({
       head: 'abc1234def5678abc1234def5678abc1234def56',
       main: false,
       path: TREE,
-      pr: { number: 370, state: 'open' },
+      pr: { number: 42, state: 'open' },
     },
   ],
 });
 const RECORDED = {
   chief: { sessionId: 'sess-chief', startedAt: 0 },
-  'pr:370': { pr: 370, stage: 'in development', updatedAt: 0 },
+  'pr:42': { pr: 42, stage: 'in development', updatedAt: 0 },
 };
 
 // rev-parse answers as a worker (or Chief); watch.mjs finds the PR and the
@@ -61,9 +61,9 @@ test('a stage change in a worker turn sends one line to Chief at turn end', asyn
   await endTurn($);
   expect(s.sent).toEqual([
     // The engine hands the hook beneath the address as the bare session id.
-    { text: '#370 in development → QA abc1234', to: 'sess-chief' },
+    { text: '#42 in development → QA abc1234', to: 'sess-chief' },
   ]);
-  expect((s.store.get('pr:370') as { stage: string }).stage).toBe('QA');
+  expect((s.store.get('pr:42') as { stage: string }).stage).toBe('QA');
   expect(s.runs.some((r) => r.argv.includes('HEAD'))).toBe(false);
   await endTurn($);
   expect(s.sent).toHaveLength(1);
@@ -72,29 +72,29 @@ test('a stage change in a worker turn sends one line to Chief at turn end', asyn
 test('the PR named on the command wins, and a merge reports merged', async ($, on) => {
   const s = stubs(on, {
     run: runner(WORKER),
-    store: { ...RECORDED, 'pr:368': { pr: 368, stage: 'QA', updatedAt: 0 } },
+    store: { ...RECORDED, 'pr:43': { pr: 43, stage: 'QA', updatedAt: 0 } },
   });
   engine(on);
   await start($);
-  await sh($, 'node .claude/scripts/lifecycle.mjs merge --pr 368');
+  await sh($, 'node .claude/scripts/lifecycle.mjs merge --pr 43');
   await endTurn($);
-  expect(s.sent.map((m) => m.text)).toEqual(['#368 QA → merged abc1234']);
+  expect(s.sent.map((m) => m.text)).toEqual(['#43 QA → merged abc1234']);
 });
 
 test("a later turn that names no PR reports the worktree's own, not the earlier turn's", async ($, on) => {
   const s = stubs(on, {
     run: runner(WORKER),
-    store: { ...RECORDED, 'pr:368': { pr: 368, stage: 'QA', updatedAt: 0 } },
+    store: { ...RECORDED, 'pr:43': { pr: 43, stage: 'QA', updatedAt: 0 } },
   });
   engine(on);
   await start($);
-  await sh($, 'node .claude/scripts/lifecycle.mjs merge --pr 368');
+  await sh($, 'node .claude/scripts/lifecycle.mjs merge --pr 43');
   await endTurn($);
   await sh($, 'node .claude/scripts/tracker-sync.mjs qa');
   await endTurn($);
   expect(s.sent.map((m) => m.text)).toEqual([
-    '#368 QA → merged abc1234',
-    '#370 in development → QA abc1234',
+    '#43 QA → merged abc1234',
+    '#42 in development → QA abc1234',
   ]);
 });
 
@@ -120,7 +120,7 @@ test('Chief sends no report', async ($, on) => {
 });
 
 for (const [name, options] of [
-  ['no chief key', { store: { 'pr:370': RECORDED['pr:370'] } }],
+  ['no chief key', { store: { 'pr:42': RECORDED['pr:42'] } }],
   ['an undelivered send', { delivered: false, store: { ...RECORDED } }],
 ] as const) {
   test(`${name} logs one dim line and does not retry in that turn`, async ($, on) => {
@@ -130,7 +130,7 @@ for (const [name, options] of [
     await sh($, 'node .claude/scripts/tracker-sync.mjs blocked "waits"');
     await endTurn($);
     expect(s.logs).toEqual([
-      'motorfix-chief: Chief not reachable; #370 in development → blocked abc1234 not sent',
+      'motorfix-chief: Chief not reachable; #42 in development → blocked abc1234 not sent',
     ]);
     expect(s.sent.length).toBeLessThanOrEqual(1);
   });

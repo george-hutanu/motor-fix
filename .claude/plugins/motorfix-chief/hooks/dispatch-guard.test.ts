@@ -26,44 +26,44 @@ const held = (patch = {}) => ({
   holder: 'agent-7f3',
   holderSession: 'sess-a',
   lap: 0,
-  pr: 363,
+  pr: 41,
   qaRun: null,
   stage: 'QA',
   updatedAt: 0,
-  worktree: '/m/.worktrees/363-slug',
+  worktree: '/m/.worktrees/41-slug',
   ...patch,
 });
 
 test('a task-runner for a PR whose holder is live here is denied, naming the holder', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  expect(refusal(await $.tool.call(agent('tail #363 after QA run 1')))).toBe(
-    'motorfix-chief: PR #363 is held by agent agent-7f3 (live, dispatched by this session) in .worktrees/363-slug — one agent per PR; wait for it or stop it first.',
+  expect(refusal(await $.tool.call(agent('tail #41 after QA run 1')))).toBe(
+    'motorfix-chief: PR #41 is held by agent agent-7f3 (live, dispatched by this session) in .worktrees/41-slug — one agent per PR; wait for it or stop it first.',
   );
 });
 
 test('a worktree named in the prompt finds its row', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   expect(
-    refusal(await $.tool.call(agent('Resume in /m/.worktrees/363-slug'))),
-  ).toMatch(/PR #363 is held by agent agent-7f3/);
+    refusal(await $.tool.call(agent('Resume in /m/.worktrees/41-slug'))),
+  ).toMatch(/PR #41 is held by agent agent-7f3/);
 });
 
 test('a holder from another session holds for 110 minutes and says so', async ($, on) => {
   const s = stubs(on, {
-    store: { 'pr:363': held({ holderSession: 'sess-9a2', updatedAt: 0 }) },
+    store: { 'pr:41': held({ holderSession: 'sess-9a2', updatedAt: 0 }) },
   });
   await s.clock.advance(41 * MIN);
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  expect(refusal(await $.tool.call(agent('tail #363')))).toBe(
-    'motorfix-chief: PR #363 is held by agent agent-7f3 (dispatched by session sess-9a2, 41 min ago) — one agent per PR; it frees itself at 110 min.',
+  expect(refusal(await $.tool.call(agent('tail #41')))).toBe(
+    'motorfix-chief: PR #41 is held by agent agent-7f3 (dispatched by session sess-9a2, 41 min ago) — one agent per PR; it frees itself at 110 min.',
   );
 });
 
@@ -74,28 +74,28 @@ test('a prompt naming several held PRs is denied with one line per PR', async ($
       { id: 'agent-9', status: 'running' },
     ],
     store: {
-      'pr:363': held(),
-      'pr:368': held({ holder: 'agent-9', pr: 368, worktree: null }),
+      'pr:41': held(),
+      'pr:43': held({ holder: 'agent-9', pr: 43, worktree: null }),
     },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  expect(refusal(await $.tool.call(agent('tail #363 then PR #368')))).toMatch(
-    /PR #363 is held[^\n]*\n[^\n]*PR #368 is held/,
+  expect(refusal(await $.tool.call(agent('tail #41 then PR #43')))).toMatch(
+    /PR #41 is held[^\n]*\n[^\n]*PR #43 is held/,
   );
 });
 
 test('a free PR passes, and the launched agent becomes its holder', async ($, on) => {
   const s = stubs(on, {
     agents: [{ id: 'agent-old', status: 'completed' }],
-    store: { 'pr:363': held({ holder: 'agent-old' }) },
+    store: { 'pr:41': held({ holder: 'agent-old' }) },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  const r = await $.tool.call(agent('tail #363 in /m/.worktrees/363-slug'));
+  const r = await $.tool.call(agent('tail #41 in /m/.worktrees/41-slug'));
   expect(r.result).toMatchObject({ agentId: 'agent-new' });
-  expect(s.store.get('pr:363')).toMatchObject({
+  expect(s.store.get('pr:41')).toMatchObject({
     holder: 'agent-new',
     holderSession: 'sess-a',
-    pr: 363,
+    pr: 41,
   });
 });
 
@@ -103,11 +103,11 @@ test('a PR with no row gets one, with the worktree the prompt names', async ($, 
   const s = stubs(on);
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   await $.tool.call(
-    agent('Run /speckit-auto for PR #370 in /m/.worktrees/1168-chief-mods'),
+    agent('Run /speckit-auto for PR #42 in /m/.worktrees/42-slug'),
   );
-  expect(s.store.get('pr:370')).toMatchObject({
+  expect(s.store.get('pr:42')).toMatchObject({
     holder: 'agent-new',
-    worktree: '/m/.worktrees/1168-chief-mods',
+    worktree: '/m/.worktrees/42-slug',
   });
 });
 
@@ -116,11 +116,11 @@ test('a prompt naming several worktrees gives its new rows none of them', async 
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   await $.tool.call(
     agent(
-      'Tail PR #370 in /m/.worktrees/1168-chief-mods and PR #371 in /m/.worktrees/1170-other',
+      'Tail PR #42 in /m/.worktrees/42-slug and PR #44 in /m/.worktrees/44-other',
     ),
   );
-  expect(s.store.get('pr:370')).toMatchObject({ worktree: null });
-  expect(s.store.get('pr:371')).toMatchObject({ worktree: null });
+  expect(s.store.get('pr:42')).toMatchObject({ worktree: null });
+  expect(s.store.get('pr:44')).toMatchObject({ worktree: null });
 });
 
 test('two dispatches for the same PR at once resolve to one holder', async ($, on) => {
@@ -128,18 +128,18 @@ test('two dispatches for the same PR at once resolve to one holder', async ($, o
   let n = 0;
   on('tool.call', { tool: 'Agent' }, () => launched(`agent-${++n}`)());
   const results = await Promise.all([
-    $.tool.call(agent('tail #363')),
-    $.tool.call(agent('tail #363')),
+    $.tool.call(agent('tail #41')),
+    $.tool.call(agent('tail #41')),
   ]);
   expect(results.filter((r) => refusal(r))).toHaveLength(1);
-  expect(s.store.get('pr:363')).toMatchObject({ holder: 'agent-1' });
+  expect(s.store.get('pr:41')).toMatchObject({ holder: 'agent-1' });
 });
 
 test('a call the engine refuses releases the claim', async ($, on) => {
   const s = stubs(on);
   on('tool.call', { tool: 'Agent' }, () => ({ deny: 'no' }));
-  expect(refusal(await $.tool.call(agent('tail #363')))).toBe('no');
-  expect(s.store.get('pr:363')).toMatchObject({ holder: null });
+  expect(refusal(await $.tool.call(agent('tail #41')))).toBe('no');
+  expect(s.store.get('pr:41')).toMatchObject({ holder: null });
 });
 
 test('general-purpose for a story run, tail or watch fix is denied', async ($, on) => {
@@ -147,8 +147,8 @@ test('general-purpose for a story run, tail or watch fix is denied', async ($, o
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   for (const prompt of [
     'Run /speckit-auto "ST-1"',
-    'tail #363 after QA run 1',
-    '/speckit-watch fix rerun-qa for #363',
+    'tail #41 after QA run 1',
+    '/speckit-watch fix rerun-qa for #41',
   ]) {
     expect(refusal(await $.tool.call(agent(prompt, 'general-purpose')))).toBe(
       'motorfix-chief: this dispatch is a story run, tail or watch fix — task-runner is required (AGENTS.md step 4), never general-purpose.',
@@ -159,11 +159,11 @@ test('general-purpose for a story run, tail or watch fix is denied', async ($, o
 test('other agent types and plain general-purpose work pass untouched', async ($, on) => {
   const s = stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  await $.tool.call(agent('review PR #363', 'code-reviewer'));
+  await $.tool.call(agent('review PR #41', 'code-reviewer'));
   await $.tool.call(agent('Find every caller of foo', 'general-purpose'));
   await $.tool.call(agent('Write a note with no PR'));
-  expect(s.store.get('pr:363')).toMatchObject({ holder: 'agent-7f3' });
+  expect(s.store.get('pr:41')).toMatchObject({ holder: 'agent-7f3' });
 });

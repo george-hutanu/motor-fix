@@ -6,7 +6,7 @@ import { ASK } from './owner-card.js';
 // @traces 1168-FR-012 1168-FR-017 1168-FR-021
 
 const CHIEF = '/m/.git\n/m/.git\n';
-const WORKER = '/m/.git/worktrees/363-slug\n/m/.git\n';
+const WORKER = '/m/.git/worktrees/41-slug\n/m/.git\n';
 const PLUGIN = 'motorfix-chief';
 const CHAIN =
   'cd ~/projects/motor-fix && GH_TOKEN=$(gh auth token -u george-hutanu) gh secret set X';

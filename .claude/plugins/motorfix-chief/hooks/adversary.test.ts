@@ -6,8 +6,8 @@ import { ASK } from './owner-card.js';
 const MIN = 60_000;
 const CHIEF = '/m/.git\n/m/.git\n';
 const PLUGIN = 'motorfix-chief';
-const TREE = '/m/.worktrees/1168-chief-mods';
-const WORKER_TREE = '/m/.git/worktrees/1168-chief-mods\n/m/.git\n';
+const TREE = '/m/.worktrees/42-slug';
+const WORKER_TREE = '/m/.git/worktrees/42-slug\n/m/.git\n';
 
 const row = (pr: number, patch = {}) => ({
   ci: null,
@@ -23,11 +23,11 @@ const row = (pr: number, patch = {}) => ({
   ...patch,
 });
 const held = (patch = {}) =>
-  row(363, {
+  row(41, {
     holder: 'agent-7f3',
     holderSession: 'sess-a',
     stage: 'QA',
-    worktree: '/m/.worktrees/363-slug',
+    worktree: '/m/.worktrees/41-slug',
     ...patch,
   });
 const launched = (agentId: string) => () => ({
@@ -69,12 +69,12 @@ const texts = async (ui) =>
 test('a prompt naming one held and one free PR is denied for the held one only', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  const text = refusal(await $.tool.call(agent('tail #368 and tail #363')));
-  expect(text).toMatch(/PR #363 is held by agent agent-7f3/);
-  expect(text).not.toMatch(/PR #368/);
+  const text = refusal(await $.tool.call(agent('tail #43 and tail #41')));
+  expect(text).toMatch(/PR #41 is held by agent agent-7f3/);
+  expect(text).not.toMatch(/PR #43/);
 });
 
 test('two dispatches for different PRs at once both pass', async ($, on) => {
@@ -82,12 +82,12 @@ test('two dispatches for different PRs at once both pass', async ($, on) => {
   let n = 0;
   on('tool.call', { tool: 'Agent' }, () => launched(`agent-${++n}`)());
   const results = await Promise.all([
-    $.tool.call(agent('tail #363')),
-    $.tool.call(agent('tail #368')),
+    $.tool.call(agent('tail #41')),
+    $.tool.call(agent('tail #43')),
   ]);
   expect(results.filter((r) => refusal(r))).toHaveLength(0);
-  expect(s.store.get('pr:363')).toMatchObject({ pr: 363 });
-  expect(s.store.get('pr:368')).toMatchObject({ pr: 368 });
+  expect(s.store.get('pr:41')).toMatchObject({ pr: 41 });
+  expect(s.store.get('pr:43')).toMatchObject({ pr: 43 });
 });
 
 test('three dispatches for one PR at once leave exactly one holder', async ($, on) => {
@@ -100,37 +100,37 @@ test('three dispatches for one PR at once leave exactly one holder', async ($, o
     return launched(id)();
   });
   const results = await Promise.all([
-    $.tool.call(agent('tail #363')),
-    $.tool.call(agent('tail #363')),
-    $.tool.call(agent('PR 363 resume')),
+    $.tool.call(agent('tail #41')),
+    $.tool.call(agent('tail #41')),
+    $.tool.call(agent('PR 41 resume')),
   ]);
   expect(results.filter((r) => refusal(r))).toHaveLength(2);
 });
 
 test('a holder from another session is denied at 109 minutes and free at 111', async ($, on) => {
   const s = stubs(on, {
-    store: { 'pr:363': held({ holderSession: 'sess-9a2', updatedAt: 0 }) },
+    store: { 'pr:41': held({ holderSession: 'sess-9a2', updatedAt: 0 }) },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   await s.clock.advance(109 * MIN);
-  expect(refusal(await $.tool.call(agent('tail #363')))).toMatch(
+  expect(refusal(await $.tool.call(agent('tail #41')))).toMatch(
     /dispatched by session sess-9a2, 109 min ago/,
   );
   await s.clock.advance(2 * MIN);
-  const r = await $.tool.call(agent('tail #363'));
+  const r = await $.tool.call(agent('tail #41'));
   expect(refusal(r)).toBeUndefined();
-  expect(s.store.get('pr:363')).toMatchObject({ holder: 'agent-new' });
+  expect(s.store.get('pr:41')).toMatchObject({ holder: 'agent-new' });
 });
 
 test('a claim another session wrote but has not settled says the dispatch is under way', async ($, on) => {
   stubs(on, {
     store: {
-      'pr:363': held({ holder: 'pending', holderSession: 'sess-other' }),
+      'pr:41': held({ holder: 'pending', holderSession: 'sess-other' }),
     },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  expect(refusal(await $.tool.call(agent('tail #363')))).toBe(
-    'motorfix-chief: PR #363 is being dispatched by session sess-other — one agent per PR; wait for that dispatch.',
+  expect(refusal(await $.tool.call(agent('tail #41')))).toBe(
+    'motorfix-chief: PR #41 is being dispatched by session sess-other — one agent per PR; wait for that dispatch.',
   );
 });
 
@@ -138,10 +138,10 @@ for (const status of ['pending', 'running', 'waiting', 'idle']) {
   test(`a holder whose status is ${status} is live and blocks`, async ($, on) => {
     stubs(on, {
       agents: [{ id: 'agent-7f3', status }],
-      store: { 'pr:363': held() },
+      store: { 'pr:41': held() },
     });
     on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-    expect(refusal(await $.tool.call(agent('tail #363')))).toMatch(
+    expect(refusal(await $.tool.call(agent('tail #41')))).toMatch(
       /held by agent agent-7f3/,
     );
   });
@@ -151,11 +151,11 @@ for (const status of ['completed', 'failed', 'killed']) {
   test(`a holder whose status is ${status} is free and its row is cleared when read`, async ($, on) => {
     const s = stubs(on, {
       agents: [{ id: 'agent-7f3', status }],
-      store: { 'pr:363': held() },
+      store: { 'pr:41': held() },
     });
     on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-    expect(refusal(await $.tool.call(agent('tail #363')))).toBeUndefined();
-    expect(s.store.get('pr:363')).toMatchObject({ holder: 'agent-new' });
+    expect(refusal(await $.tool.call(agent('tail #41')))).toBeUndefined();
+    expect(s.store.get('pr:41')).toMatchObject({ holder: 'agent-new' });
   });
 }
 
@@ -166,8 +166,8 @@ test('a denied dispatch still clears the dead holder of the other PR it read', a
       { id: 'agent-old', status: 'killed' },
     ],
     store: {
-      'pr:363': held(),
-      'pr:368': row(368, {
+      'pr:41': held(),
+      'pr:43': row(43, {
         holder: 'agent-old',
         holderSession: 'sess-a',
         stage: 'QA',
@@ -175,38 +175,38 @@ test('a denied dispatch still clears the dead holder of the other PR it read', a
     },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  expect(refusal(await $.tool.call(agent('tail #368 and tail #363')))).toMatch(
-    /#363/,
+  expect(refusal(await $.tool.call(agent('tail #43 and tail #41')))).toMatch(
+    /#41/,
   );
-  expect(s.store.get('pr:368')).toMatchObject({ holder: null });
-  expect(s.store.get('pr:363')).toMatchObject({ holder: 'agent-7f3' });
+  expect(s.store.get('pr:43')).toMatchObject({ holder: null });
+  expect(s.store.get('pr:41')).toMatchObject({ holder: 'agent-7f3' });
 });
 
 test('a holder missing from the agent list is free', async ($, on) => {
-  stubs(on, { agents: [], store: { 'pr:363': held() } });
+  stubs(on, { agents: [], store: { 'pr:41': held() } });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  expect(refusal(await $.tool.call(agent('tail #363')))).toBeUndefined();
+  expect(refusal(await $.tool.call(agent('tail #41')))).toBeUndefined();
 });
 
 test('a denied dispatch leaves the held row untouched', async ($, on) => {
   const s = stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held({ lap: 4, qaRun: 55 }) },
+    store: { 'pr:41': held({ lap: 4, qaRun: 55 }) },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  const before = JSON.stringify(s.store.get('pr:363'));
-  await $.tool.call(agent('tail #363'));
-  expect(JSON.stringify(s.store.get('pr:363'))).toBe(before);
+  const before = JSON.stringify(s.store.get('pr:41'));
+  await $.tool.call(agent('tail #41'));
+  expect(JSON.stringify(s.store.get('pr:41'))).toBe(before);
 });
 
 test('general-purpose for work with a held PR but no task-runner marker passes', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   const r = await $.tool.call(
-    agent('summarize PR #363 for me', 'general-purpose'),
+    agent('summarize PR #41 for me', 'general-purpose'),
   );
   expect(r.result).toMatchObject({ agentId: 'agent-new' });
 });
@@ -237,7 +237,7 @@ test('a /speckit-watch mention without a fix name does not force task-runner', a
 test('every non-task agent type passes even when its prompt names a held PR and /speckit-auto', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   for (const type of [
@@ -246,7 +246,7 @@ test('every non-task agent type passes even when its prompt names a held PR and 
     'claude',
     'test-adversary',
   ]) {
-    const r = await $.tool.call(agent('/speckit-auto tail #363', type));
+    const r = await $.tool.call(agent('/speckit-auto tail #41', type));
     expect(refusal(r)).toBeUndefined();
   }
 });
@@ -258,8 +258,8 @@ test('an empty prompt, a missing prompt and a missing agent type pass without th
     agent(''),
     agent(undefined),
     agent(null),
-    agent('tail #363', undefined),
-    agent('tail #363', null),
+    agent('tail #41', undefined),
+    agent('tail #41', null),
   ]) {
     const r = await $.tool.call(call);
     expect(refusal(r)).toBeUndefined();
@@ -268,31 +268,31 @@ test('an empty prompt, a missing prompt and a missing agent type pass without th
 
 test('a half-written ledger row is treated as free, not as a crash', async ($, on) => {
   const s = stubs(on, {
-    store: { 'pr:363': 'garbage', 'pr:368': null, 'pr:370': { pr: 370 } },
+    store: { 'pr:41': 'garbage', 'pr:42': { pr: 42 }, 'pr:43': null },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  for (const n of [363, 368, 370]) {
+  for (const n of [41, 43, 42]) {
     const r = await $.tool.call(agent(`tail #${n}`));
     expect(r.result).toMatchObject({ agentId: 'agent-new' });
   }
-  expect(s.store.get('pr:363')).toMatchObject({ holder: 'agent-new' });
+  expect(s.store.get('pr:41')).toMatchObject({ holder: 'agent-new' });
 });
 
 test('a prompt of a megabyte with ten thousand PR tokens still resolves', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  const prompt = `${'x'.repeat(1_000_000)} ${'#1 '.repeat(10_000)} tail #363`;
+  const prompt = `${'x'.repeat(1_000_000)} ${'#1 '.repeat(10_000)} tail #41`;
   const text = refusal(await $.tool.call(agent(prompt)));
-  expect(text).toMatch(/PR #363 is held by agent agent-7f3/);
+  expect(text).toMatch(/PR #41 is held by agent agent-7f3/);
 });
 
 test('a prompt with a hash that is not a PR number names no PR', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
   for (const prompt of ['use color #fff', 'see ticket #', 'item #abc']) {
@@ -300,16 +300,14 @@ test('a prompt with a hash that is not a PR number names no PR', async ($, on) =
   }
 });
 
-test('lower-case "pr 363" and "PR #363" both find the row', async ($, on) => {
+test('lower-case "pr 41" and "PR #41" both find the row', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   on('tool.call', { tool: 'Agent' }, launched('agent-new'));
-  for (const prompt of ['resume pr 363', 'resume PR #363', 'resume Pr 363']) {
-    expect(refusal(await $.tool.call(agent(prompt)))).toMatch(
-      /PR #363 is held/,
-    );
+  for (const prompt of ['resume pr 41', 'resume PR #41', 'resume Pr 41']) {
+    expect(refusal(await $.tool.call(agent(prompt)))).toMatch(/PR #41 is held/);
   }
 });
 
@@ -318,29 +316,29 @@ test('a launch that errors releases the claim so the retry is not denied', async
   on('tool.call', { tool: 'Agent' }, () => {
     throw new Error('spawn failed');
   });
-  await $.tool.call(agent('tail #363')).catch(() => undefined);
-  expect(s.store.get('pr:363')).not.toMatchObject({ holder: 'pending' });
+  await $.tool.call(agent('tail #41')).catch(() => undefined);
+  expect(s.store.get('pr:41')).not.toMatchObject({ holder: 'pending' });
 });
 
 // the ledger and the watch gate
 
 test('a dispatch.mjs lap above the cap is held at 10', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363) } });
+  const s = stubs(on, { store: { 'pr:41': row(41) } });
   on(
     'tool.call',
     { tool: 'Bash' },
     bashOut('- QA run: 7 · head 8e6a1b2c3d4e · lap 11 · https://x\n'),
   );
   await $.tool.call({
-    command: 'node .claude/scripts/pr-test/dispatch.mjs 363 --no-wait',
+    command: 'node .claude/scripts/pr-test/dispatch.mjs 41 --no-wait',
     tool: 'Bash',
   });
-  expect(s.store.get('pr:363')).toMatchObject({ lap: 10 });
+  expect(s.store.get('pr:41')).toMatchObject({ lap: 10 });
 });
 
 test('a new head does not reset the lap', async ($, on) => {
   const s = stubs(on, {
-    store: { 'pr:363': row(363, { head: 'aaaaaaa', lap: 3 }) },
+    store: { 'pr:41': row(41, { head: 'aaaaaaa', lap: 3 }) },
   });
   on(
     'tool.call',
@@ -348,22 +346,22 @@ test('a new head does not reset the lap', async ($, on) => {
     bashOut('- QA run: 8 · head bbbbbbbbbbbb · lap 4 · https://x\n'),
   );
   await $.tool.call({
-    command: 'node .claude/scripts/pr-test/dispatch.mjs 363 --no-wait',
+    command: 'node .claude/scripts/pr-test/dispatch.mjs 41 --no-wait',
     tool: 'Bash',
   });
-  expect(s.store.get('pr:363')).toMatchObject({ head: 'bbbbbbb', lap: 4 });
+  expect(s.store.get('pr:41')).toMatchObject({ head: 'bbbbbbb', lap: 4 });
 });
 
 test('dispatch.mjs output with no QA-run line leaves the row as it was', async ($, on) => {
   const s = stubs(on, {
-    store: { 'pr:363': row(363, { head: 'abc1234', lap: 2, qaRun: 5 }) },
+    store: { 'pr:41': row(41, { head: 'abc1234', lap: 2, qaRun: 5 }) },
   });
   on('tool.call', { tool: 'Bash' }, bashOut('gh: rate limited\n'));
   await $.tool.call({
-    command: 'node .claude/scripts/pr-test/dispatch.mjs 363 --no-wait',
+    command: 'node .claude/scripts/pr-test/dispatch.mjs 41 --no-wait',
     tool: 'Bash',
   });
-  expect(s.store.get('pr:363')).toMatchObject({
+  expect(s.store.get('pr:41')).toMatchObject({
     head: 'abc1234',
     lap: 2,
     qaRun: 5,
@@ -371,7 +369,7 @@ test('dispatch.mjs output with no QA-run line leaves the row as it was', async (
 });
 
 test('a Bash call that is neither dispatch nor ci-wait touches no row', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { lap: 2 }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { lap: 2 }) } });
   on(
     'tool.call',
     { tool: 'Bash' },
@@ -379,41 +377,41 @@ test('a Bash call that is neither dispatch nor ci-wait touches no row', async ($
   );
   for (const command of [
     'ls',
-    'echo dispatch.mjs 363',
+    'echo dispatch.mjs 41',
     'cat ci-wait.mjs',
-    'node .claude/scripts/status.mjs 363',
+    'node .claude/scripts/status.mjs 41',
   ]) {
     await $.tool.call({ command, tool: 'Bash' });
   }
-  expect(s.store.get('pr:363')).toEqual(row(363, { lap: 2 }));
-  expect([...s.store.keys()]).toEqual(['pr:363']);
+  expect(s.store.get('pr:41')).toEqual(row(41, { lap: 2 }));
+  expect([...s.store.keys()]).toEqual(['pr:41']);
 });
 
 test('a ci-wait --run that was interrupted offers nothing', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { head: 'abc1234' }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { head: 'abc1234' }) } });
   on('tool.call', { tool: 'Bash' }, bashOut('', { interrupted: true }));
   const r = await $.tool.call({
-    command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99',
+    command: 'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 99',
     tool: 'Bash',
   });
   expect(r.context ?? []).toHaveLength(0);
-  expect(s.store.has('offer:363:abc1234')).toBe(false);
+  expect(s.store.has('offer:41:abc1234')).toBe(false);
 });
 
 test('a new head gets its own tail offer', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { head: 'abc1234' }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { head: 'abc1234' }) } });
   on('tool.call', { tool: 'Bash' }, bashOut(''));
   const call = () =>
     $.tool.call({
-      command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99',
+      command: 'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 99',
       tool: 'Bash',
     });
   await call();
-  const row1 = s.store.get('pr:363') as Record<string, unknown>;
-  s.store.set('pr:363', { ...row1, head: 'def5678' });
+  const row1 = s.store.get('pr:41') as Record<string, unknown>;
+  s.store.set('pr:41', { ...row1, head: 'def5678' });
   const r = await call();
-  expect(r.context?.join('\n')).toContain('tail #363 after QA run 99');
-  expect(s.store.has('offer:363:def5678')).toBe(true);
+  expect(r.context?.join('\n')).toContain('tail #41 after QA run 99');
+  expect(s.store.has('offer:41:def5678')).toBe(true);
 });
 
 test('a ci-wait for a PR with no row does not throw', async ($, on) => {
@@ -427,29 +425,29 @@ test('a ci-wait for a PR with no row does not throw', async ($, on) => {
 });
 
 test('a background notification with no task-id passes through unchanged and changes no row', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { ci: 'pending' }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { ci: 'pending' }) } });
   const text =
     '<task-notification>\n<status>completed</status>\n<summary>Background command "x" completed (exit code 0)</summary>\n</task-notification>';
   const r = await $.prompt.submit({ text });
   expect(r.text).toBe(text);
   expect(r.context ?? []).toHaveLength(0);
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'pending' });
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'pending' });
 });
 
 test('a notification for a task the mod never saw changes nothing', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { ci: 'pending' }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { ci: 'pending' }) } });
   const text =
     '<task-notification>\n<task-id>nope</task-id>\n<status>completed</status>\n<summary>Background command "x" completed (exit code 0)</summary>\n</task-notification>';
   const r = await $.prompt.submit({ text });
   expect(r.context ?? []).toHaveLength(0);
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'pending' });
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'pending' });
 });
 
 test('a failed background ci-wait marks the row fail and offers no tail', async ($, on) => {
-  const s = stubs(on, { store: { 'pr:363': row(363, { head: 'abc1234' }) } });
+  const s = stubs(on, { store: { 'pr:41': row(41, { head: 'abc1234' }) } });
   on('tool.call', { tool: 'Bash' }, bashOut('', { backgroundTaskId: 'bt1' }));
   await $.tool.call({
-    command: 'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 99',
+    command: 'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 99',
     run_in_background: true,
     tool: 'Bash',
   });
@@ -457,7 +455,7 @@ test('a failed background ci-wait marks the row fail and offers no tail', async 
     text: '<task-notification>\n<task-id>bt1</task-id>\n<status>failed</status>\n<summary>Background command "x" failed (exit code 1)</summary>\n</task-notification>',
   });
   expect(r.context ?? []).toHaveLength(0);
-  expect(s.store.get('pr:363')).toMatchObject({ ci: 'fail' });
+  expect(s.store.get('pr:41')).toMatchObject({ ci: 'fail' });
 });
 
 test('an empty prompt and a megabyte prompt are submitted unchanged', async ($, on) => {
@@ -470,7 +468,7 @@ test('an empty prompt and a megabyte prompt are submitted unchanged', async ($, 
 test('the ledger block lists rows in numeric PR order, not text order', async ($, on) => {
   stubs(on, {
     run: () => ok(CHIEF),
-    store: { 'pr:9': row(9), 'pr:100': row(100), 'pr:363': row(363) },
+    store: { 'pr:9': row(9), 'pr:41': row(41), 'pr:100': row(100) },
   });
   await start($);
   const r = await $.prompt.context({ blocks: [] });
@@ -478,14 +476,14 @@ test('the ledger block lists rows in numeric PR order, not text order', async ($
     .find((b) => b.name === 'motorfixLedger')
     ?.text.split('\n')
     .map((l) => l.split(' ')[0]);
-  expect(lines).toEqual(['<!--', '#9', '#100', '#363']);
+  expect(lines).toEqual(['<!--', '#9', '#41', '#100']);
 });
 
 test('the ledger block marks a live holder', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'running' }],
     run: () => ok(CHIEF),
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   await start($);
   const r = await $.prompt.context({ blocks: [] });
@@ -497,12 +495,12 @@ test('the ledger block marks a live holder', async ($, on) => {
 test('an unreadable row does not hide the other rows from the ledger block', async ($, on) => {
   stubs(on, {
     run: () => ok(CHIEF),
-    store: { 'pr:12': 'junk', 'pr:363': row(363, { stage: 'QA' }) },
+    store: { 'pr:12': 'junk', 'pr:41': row(41, { stage: 'QA' }) },
   });
   await start($);
   const r = await $.prompt.context({ blocks: [] });
   expect(r.blocks.find((b) => b.name === 'motorfixLedger')?.text).toContain(
-    '#363 QA lap 0/10',
+    '#41 QA lap 0/10',
   );
 });
 
@@ -649,7 +647,7 @@ test('a cloud session runs no gate and draws no band', async ($, on) => {
             ]),
           )
         : ok(CHIEF),
-    store: { 'pr:363': row(363, { stage: 'QA' }) },
+    store: { 'pr:41': row(41, { stage: 'QA' }) },
   });
   await start($, '/m', 'desktop');
   await s.clock.advance(60 * MIN);
@@ -745,7 +743,7 @@ test('a holder that is no longer live is drawn as none', async ($, on) => {
   stubs(on, {
     agents: [{ id: 'agent-7f3', status: 'killed' }],
     run: () => ok(CHIEF),
-    store: { 'pr:363': held() },
+    store: { 'pr:41': held() },
   });
   await start($);
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...BAND });
@@ -755,12 +753,12 @@ test('a holder that is no longer live is drawn as none', async ($, on) => {
 test('a corrupt row does not stop the band drawing the others', async ($, on) => {
   stubs(on, {
     run: () => ok(CHIEF),
-    store: { 'pr:12': 42, 'pr:363': row(363, { stage: 'QA' }) },
+    store: { 'pr:12': 42, 'pr:41': row(41, { stage: 'QA' }) },
   });
   await start($);
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...BAND });
   expect(await texts(ui)).toContain(
-    '#363 QA lap 0/10 ci none holder none age 0m',
+    '#41 QA lap 0/10 ci none holder none age 0m',
   );
 });
 
@@ -905,13 +903,13 @@ const WATCH = JSON.stringify({
       head: 'abc1234def5678',
       main: false,
       path: TREE,
-      pr: { number: 370, state: 'open' },
+      pr: { number: 42, state: 'open' },
     },
   ],
 });
 const RECORDED = {
   chief: { sessionId: 'sess-chief', startedAt: 0 },
-  'pr:370': { pr: 370, stage: 'in development', updatedAt: 0 },
+  'pr:42': { pr: 42, stage: 'in development', updatedAt: 0 },
 };
 
 test('a worker whose tree has no PR in watch.mjs sends nothing and does not throw', async ($, on) => {
@@ -961,7 +959,7 @@ test('a stage set to the value it already has sends nothing', async ($, on) => {
     run: runner(WORKER_TREE, WATCH),
     store: {
       ...RECORDED,
-      'pr:370': { pr: 370, stage: 'QA', updatedAt: 0 },
+      'pr:42': { pr: 42, stage: 'QA', updatedAt: 0 },
     },
   });
   engine(on);
@@ -976,14 +974,14 @@ test('finish reports Done', async ($, on) => {
     run: runner(WORKER_TREE, WATCH),
     store: {
       ...RECORDED,
-      'pr:370': { pr: 370, stage: 'merged', updatedAt: 0 },
+      'pr:42': { pr: 42, stage: 'merged', updatedAt: 0 },
     },
   });
   engine(on);
   await start($, TREE);
   await sh($, 'node .claude/scripts/tracker-sync.mjs finish');
   await endTurn($);
-  expect(s.sent.map((m) => m.text)).toEqual(['#370 merged → Done abc1234']);
+  expect(s.sent.map((m) => m.text)).toEqual(['#42 merged → Done abc1234']);
 });
 
 test('a failed undelivered send is not retried on the next empty turn', async ($, on) => {
@@ -1360,7 +1358,7 @@ test('a ci-wait result with a hundred failing checks draws one pill per check', 
   const out = Array.from({ length: 100 }, (_, i) => `check ${i}: fail`).join(
     '\n',
   );
-  const id = await ran($, 'node .claude/scripts/pr-test/ci-wait.mjs 363', out);
+  const id = await ran($, 'node .claude/scripts/pr-test/ci-wait.mjs 41', out);
   const ui = await $.ui.mount({
     plugin: PLUGIN,
     surface: 'terminal',
@@ -1369,7 +1367,7 @@ test('a ci-wait result with a hundred failing checks draws one pill per check', 
   expect(await texts(ui)).toHaveLength(100);
 });
 
-test('two dispatches for one PR written as "#363" and "PR 363" resolve to one holder', async ($, on) => {
+test('two dispatches for one PR written as "#41" and "PR 41" resolve to one holder', async ($, on) => {
   const s = stubs(on);
   let n = 0;
   // The engine lists a launched agent as running, as $.agent.list() does live.
@@ -1379,8 +1377,8 @@ test('two dispatches for one PR written as "#363" and "PR 363" resolve to one ho
     return launched(id)();
   });
   const results = await Promise.all([
-    $.tool.call(agent('tail #363')),
-    $.tool.call(agent('PR 363 resume')),
+    $.tool.call(agent('tail #41')),
+    $.tool.call(agent('PR 41 resume')),
   ]);
   expect(results.filter((r) => refusal(r))).toHaveLength(1);
 });

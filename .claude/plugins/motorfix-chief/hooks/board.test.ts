@@ -6,7 +6,7 @@ import { ok, stubs } from './lib/stubs.ts';
 
 const MIN = 60_000;
 const CHIEF = '/m/.git\n/m/.git\n';
-const WORKER = '/m/.git/worktrees/363-slug\n/m/.git\n';
+const WORKER = '/m/.git/worktrees/41-slug\n/m/.git\n';
 const PLUGIN = 'motorfix-chief';
 const BAND = {
   component: 'AbovePrompt' as const,
@@ -45,9 +45,9 @@ const row = (pr: number, patch = {}) => ({
   ...patch,
 });
 const LEDGER = {
-  'offer:368:nohead': { answer: null, offeredAt: 0, runId: 77 },
+  'offer:43:nohead': { answer: null, offeredAt: 0, runId: 77 },
   'pr:12': row(12, { stage: 'planning' }),
-  'pr:363': row(363, {
+  'pr:41': row(41, {
     ci: 'pass',
     holder: 'agent-7f3',
     holderSession: 'sess-a',
@@ -55,8 +55,8 @@ const LEDGER = {
     qaRun: 99,
     stage: 'QA',
   }),
-  'pr:368': row(368, { ci: 'pass', qaRun: 77, stage: 'QA' }),
-  'pr:370': row(370, { ci: 'pending', qaRun: 80, stage: 'QA' }),
+  'pr:42': row(42, { ci: 'pending', qaRun: 80, stage: 'QA' }),
+  'pr:43': row(43, { ci: 'pass', qaRun: 77, stage: 'QA' }),
 };
 const texts = async (ui) =>
   (await ui.findAll({ type: 'Text' })).map((t) => t.text);
@@ -75,9 +75,9 @@ test('the band shows one row per PR with fixed column values, and four buttons',
     const ui = await $.ui.mount({ plugin: PLUGIN, surface, ...BAND });
     expect(await texts(ui)).toEqual([
       '#12 planning lap 0/10 ci none holder none age 2h',
-      '#363 QA lap 2/10 ci pass holder agent-7f3 age 2h',
-      '#368 QA lap 0/10 ci pass holder none age 2h',
-      '#370 QA lap 0/10 ci pending holder none age 2h',
+      '#41 QA lap 2/10 ci pass holder agent-7f3 age 2h',
+      '#42 QA lap 0/10 ci pending holder none age 2h',
+      '#43 QA lap 0/10 ci pass holder none age 2h',
     ]);
     expect((await ui.findAll({ type: 'Button' })).map((b) => b.key)).toEqual([
       'status',
@@ -94,7 +94,7 @@ test('the pane lists the same rows and opens at Chief start', async ($, on) => {
   await start($, 'desktop');
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', ...PANE });
   expect(await texts(ui)).toContain(
-    '#368 QA lap 0/10 ci pass holder none age 0m',
+    '#43 QA lap 0/10 ci pass holder none age 0m',
   );
   expect(s.opened).toEqual(['motorfix-board']);
   expect(await ui.findAll({ type: 'Button' })).toHaveLength(4);
@@ -119,7 +119,7 @@ test('nothing is drawn off desktop and terminal, in a cloud session, or in a wor
   expect(await texts(ui)).toEqual(['engine']);
   env = {};
   gitOut = WORKER;
-  await start($, 'terminal', '/m/.worktrees/363-slug');
+  await start($, 'terminal', '/m/.worktrees/41-slug');
   ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...BAND });
   expect(await texts(ui)).toEqual(['engine']);
 });
@@ -153,7 +153,7 @@ test('Tail ready PRs offers one tail per ready, finished, unheld PR', async ($, 
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', ...BAND });
   await ui.press({ key: 'tail' });
   expect(s.submitted).toEqual([
-    'motorfix-chief: tail these ready PRs, one task-runner each.\ntail #368 after QA run 77',
+    'motorfix-chief: tail these ready PRs, one task-runner each.\ntail #43 after QA run 77',
   ]);
 });
 

@@ -14,17 +14,17 @@ import {
 
 const MIN = 60_000;
 const row = (patch = {}) => ({
-  ...blank(363),
+  ...blank(41),
   holder: 'agent-7f3',
   holderSession: 'sess-a',
   ...patch,
 });
 
 test('merge stamps the time and caps the lap at 10', () => {
-  expect(merge(blank(363), { head: 'abc1234', lap: 12 }, 5)).toMatchObject({
+  expect(merge(blank(41), { head: 'abc1234', lap: 12 }, 5)).toMatchObject({
     head: 'abc1234',
     lap: 10,
-    pr: 363,
+    pr: 41,
     updatedAt: 5,
   });
   expect(merge(row({ lap: 3 }), { head: 'def5678' }, 9).lap).toBe(3);
@@ -62,7 +62,7 @@ test('a row from another session, or a pending claim, holds for 110 minutes', ()
       session: 'sess-a',
     }),
   ).toBe(true);
-  expect(holding(blank(363), { agents: [], now: 5, session: 'sess-a' })).toBe(
+  expect(holding(blank(41), { agents: [], now: 5, session: 'sess-a' })).toBe(
     false,
   );
 });
@@ -83,24 +83,24 @@ test('the ledger block has one line per row, in PR order, or one line when empty
     row({
       holder: null,
       holderSession: null,
-      pr: 370,
+      pr: 42,
       stage: 'planning',
-      worktree: '/m/.worktrees/1168-chief-mods',
+      worktree: '/m/.worktrees/42-slug',
     }),
     row({
       ci: 'pass',
       head: 'abc1234',
       lap: 3,
-      qaRun: 38135939640,
+      qaRun: 9000000001,
       stage: 'QA',
-      worktree: '/m/.worktrees/363-slug',
+      worktree: '/m/.worktrees/41-slug',
     }),
   ];
   expect(ledgerBlock(rows, ctx)).toBe(
     [
       '<!-- motorfix-chief ledger -->',
-      '#363 QA lap 3/10 run 38135939640 ci pass head abc1234 holder agent-7f3 (live) worktree .worktrees/363-slug age 12m',
-      '#370 planning lap 0/10 run – ci – head – holder – worktree .worktrees/1168-chief-mods age 12m',
+      '#41 QA lap 3/10 run 9000000001 ci pass head abc1234 holder agent-7f3 (live) worktree .worktrees/41-slug age 12m',
+      '#42 planning lap 0/10 run – ci – head – holder – worktree .worktrees/42-slug age 12m',
     ].join('\n'),
   );
   expect(ledgerBlock([], ctx)).toBe(
@@ -115,7 +115,7 @@ test('a board row shows stage, lap, CI, holder and age in their fixed values', (
     ci: 'fail',
     holder: 'none',
     lap: '4/10',
-    pr: 363,
+    pr: 41,
     stage: 'QA',
   });
   expect(boardRow(blank(9), { ...ctx, now: 0 })).toEqual({
@@ -147,5 +147,5 @@ test('a holder of this session whose agent finished, failed, was killed or is go
   expect(
     deadHolder(row({ holderSession: 'sess-b' }), { ...ctx, agents: [] }),
   ).toBe(false);
-  expect(deadHolder(blank(363), { ...ctx, agents: [] })).toBe(false);
+  expect(deadHolder(blank(41), { ...ctx, agents: [] })).toBe(false);
 });

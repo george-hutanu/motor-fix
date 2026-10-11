@@ -46,7 +46,7 @@ test('a ci-wait result draws one pill per check, and one green pill when empty',
   const out = 'Unit and integration tests: fail\nQA run: success\n';
   const failing = await ran(
     $,
-    'node .claude/scripts/pr-test/ci-wait.mjs 363 --run 77',
+    'node .claude/scripts/pr-test/ci-wait.mjs 41 --run 77',
     out,
   );
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -61,11 +61,7 @@ test('a ci-wait result draws one pill per check, and one green pill when empty',
     ]);
     await ui.unmount();
   }
-  const green = await ran(
-    $,
-    'node .claude/scripts/pr-test/ci-wait.mjs 363',
-    '',
-  );
+  const green = await ran($, 'node .claude/scripts/pr-test/ci-wait.mjs 41', '');
   const ui = await $.ui.mount({
     plugin: PLUGIN,
     surface: 'terminal',
@@ -80,7 +76,7 @@ test('the PR QA: cancel notice draws nothing', async ($, on) => {
   await start($);
   const id = await ran(
     $,
-    'node .claude/scripts/pr-test/ci-wait.mjs 363',
+    'node .claude/scripts/pr-test/ci-wait.mjs 41',
     'PR QA: cancel\n',
   );
   const ui = await $.ui.mount({
@@ -95,7 +91,7 @@ test('an Agent reply that opens with the envelope folds to STATUS, PR and NEXT',
   stubs(on, { run: () => ok(CHIEF) });
   await start($);
   const text =
-    'STATUS: success — merged\nPR: #363 merged abc1234\nNEXT: none\nFILES: a.md\nlong body\nmore';
+    'STATUS: success — merged\nPR: #41 merged abc1234\nNEXT: none\nFILES: a.md\nlong body\nmore';
   const output = { agentId: 'a1', content: [{ text, type: 'text' }] };
   const ui = await $.ui.mount({
     plugin: PLUGIN,
@@ -104,7 +100,7 @@ test('an Agent reply that opens with the envelope folds to STATUS, PR and NEXT',
   });
   expect(await texts(ui)).toEqual([
     'STATUS: success — merged',
-    'PR: #363 merged abc1234',
+    'PR: #41 merged abc1234',
     'NEXT: none',
   ]);
 });
@@ -115,7 +111,7 @@ test('other results, a background ci-wait, and other surfaces keep the default r
   await start($);
   const plain = await ran($, 'ls', 'a\nb\n');
   const agent = { agentId: 'a1', content: [{ text: 'hello', type: 'text' }] };
-  const bg = await ran($, 'node .claude/scripts/pr-test/ci-wait.mjs 363', '');
+  const bg = await ran($, 'node .claude/scripts/pr-test/ci-wait.mjs 41', '');
   const cases = [
     ['terminal', result('Bash', plain, bash('a\nb\n'))],
     ['terminal', result('Agent', 'toolu_x', agent)],
