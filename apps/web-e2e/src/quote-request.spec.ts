@@ -126,3 +126,43 @@ test.describe('a quote request from a garage profile @seeded', () => {
     });
   }
 });
+
+// The API's half (the rate, the threshold, the flag on each recipient) is in
+// the quote-requests and requests integration specs. Here the real send goes
+// out and its reply is handed to the dialog with the flag set, so the line's
+// place and fit are checked on a phone without touching any garage's figures.
+// @traces 1025-FR-001 1025-FR-006
+test.describe('the confirmation for a garage that usually answers the same day @seeded', () => {
+  test('says so under the sent line on a 320 px phone, with no sideways scroll', async ({
+    page,
+  }) => {
+    await signedInDriver(page);
+    await page.setViewportSize({ height: 800, width: 320 });
+    await page.route('**/api/v1/quote-requests', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        recipients: { answersSameDay: boolean }[];
+      };
+      for (const recipient of body.recipients) recipient.answersSameDay = true;
+      await route.fulfill({ json: body, response });
+    });
+    await hydrated(page, PROFILE);
+    await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    const quote = dialog(page, 'Cere ofertă');
+    await expect(car(quote)).toContainText('Dacia Logan');
+    await quote.getByRole('switch', { name: OIL }).click();
+
+    await quote.getByRole('button', { name: 'Trimite' }).click();
+
+    const status = quote.getByRole('status');
+    await expect(
+      status.getByText('Trimis către Service Auto Militari.'),
+    ).toBeVisible();
+    await expect(
+      status.getByText(
+        'Service Auto Militari răspunde de obicei în aceeași zi.',
+      ),
+    ).toBeVisible();
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
+});

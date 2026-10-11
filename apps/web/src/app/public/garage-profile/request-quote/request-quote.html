@@ -1,6 +1,9 @@
 @if (save.state() === 'done' && save.result(); as request) {
   <div class="done" role="status">
     <p class="sent"><span class="dot" aria-hidden="true"></span>{{ sentLine(request) }}</p>
+    @if (answersLine(request); as line) {
+      <p class="lead">{{ line }}</p>
+    }
     @if (request.recipients.length > 1) {
       <ul class="names">
         @for (name of names(request); track $index) {

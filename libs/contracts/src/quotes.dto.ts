@@ -163,6 +163,12 @@ export class RecipientDto {
   @ApiProperty({ type: GarageRefDto })
   garage!: GarageRefDto;
 
+  @ApiProperty({
+    description:
+      'The garage usually answers the same day: its public rate is at or above the API’s threshold',
+  })
+  answersSameDay!: boolean;
+
   @ApiProperty({ enum: RECIPIENT_STATUSES })
   status!: RecipientStatus;
 
