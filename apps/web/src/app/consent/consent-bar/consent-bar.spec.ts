@@ -136,14 +136,15 @@ describe('the consent bar', () => {
     });
   });
 
-  it("lifts the listing's pinned Save above the bar and the tab bar", () => {
+  // @traces 115-FR-013
+  it("lifts the listing's actions, pinned from a tablet up, above the bar", () => {
     const css = readFileSync(
       join(__dirname, '../../public/list-your-garage/list-your-garage.css'),
       'utf8',
     );
 
     expect(css).toMatch(
-      /\.actions \{[^}]*bottom: calc\(var\(--tab-bar, 0px\) \+ var\(--consent-bar, 0px\)\);/,
+      /@media \(min-width: 768px\) \{\s*\.actions \{[^}]*bottom: var\(--consent-bar, 0px\);/,
     );
   });
 

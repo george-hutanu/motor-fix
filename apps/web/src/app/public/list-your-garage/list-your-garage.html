@@ -203,7 +203,7 @@
           />
         </aside>
         <div class="actions">
-          <button hlmBtn type="button" class="send" [disabled]="inFlight()" [attr.aria-busy]="inFlight() || null" (click)="send()">
+          <button hlmBtn type="button" class="send" [attr.aria-disabled]="inFlight() || null" [attr.aria-busy]="inFlight() || null" (click)="send()">
             {{ 'public.listing.check.send' | t }}
           </button>
           <button hlmBtn variant="secondary" type="button" (click)="save()">{{ 'public.listing.save' | t }}</button>

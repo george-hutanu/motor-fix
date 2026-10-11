@@ -128,12 +128,13 @@ describe('the public tab bar', () => {
     expect(css).toMatch(/\ba \{[^}]*font-size: var\(--mf-size-body\);/);
   });
 
-  it('is the height the page actions sit above', () => {
+  it('is the height the step list leaves free, while the pinned actions only clear the consent bar', () => {
     expect(read('frame/frame.css')).toMatch(
       /--tab-bar: calc\(1px \+ 8px \+ 52px \+ max\(16px, var\(--mf-safe-bottom\)\)\);/,
     );
+    // The tab bar is gone from 768 px, where the actions are pinned.
     expect(read('list-your-garage/list-your-garage.css')).toMatch(
-      /bottom: calc\(var\(--tab-bar, 0px\) \+ var\(--consent-bar, 0px\)\);/,
+      /@media \(min-width: 768px\) \{\s*\.actions \{[^}]*bottom: var\(--consent-bar, 0px\);/,
     );
   });
 });

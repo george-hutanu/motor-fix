@@ -2104,12 +2104,20 @@ describe('sending for verification', () => {
     const check = await request();
     expect(check.request.method).toBe('POST');
     expect(check.request.url).toMatch(/listing-drafts\/d1\/check$/);
-    expect(sendButton(page).disabled).toBe(true);
+    // A disabled button would drop the focus FR-009 keeps on it.
+    expect(sendButton(page).disabled).toBe(false);
+    expect(sendButton(page).getAttribute('aria-disabled')).toBe('true');
     expect(sendButton(page).getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(sendButton(page));
+    // A press while it answers asks nothing more.
+    sendButton(page).click();
+    harness.detectChanges();
+    await pause();
+    expect(TestBed.inject(HttpTestingController).match(() => true)).toEqual([]);
 
     await answered(harness, check, { warnings: [] });
 
-    expect(sendButton(page).disabled).toBe(false);
+    expect(sendButton(page).getAttribute('aria-disabled')).toBeNull();
     expect(text(summary(page))).toBe('Totul e complet');
     expect(document.activeElement).toBe(sendButton(page));
     expect(dotted(page)).toEqual([]);
@@ -2226,7 +2234,7 @@ describe('sending for verification', () => {
     await answered(harness, await request(), null, 500);
 
     expect(text(summary(page))).toBe('Nu am putut verifica. Încearcă din nou.');
-    expect(sendButton(page).disabled).toBe(false);
+    expect(sendButton(page).getAttribute('aria-disabled')).toBeNull();
   });
 
   // @traces 115-FR-008

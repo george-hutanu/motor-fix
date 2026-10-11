@@ -65,8 +65,7 @@ ol {
 section > .note {
   margin-top: var(--mf-space-3);
 }
-/* Pinned to the bottom of the screen while the sections pass: reaching Save never scrolls the owner off the step a draft is saved at. It sits on the public tab bar (below 768 px, the frame's --tab-bar) and on the consent bar while that asks (--consent-bar, its own height). */
-/* On a phone the two buttons wrap to two rows, and pinned they would cover a third of a 640 px screen: they end the form there, and stay in view from a tablet up. */
+/* On a phone the two buttons wrap to two rows, and pinned they would cover a third of a 640 px screen: there they end the form. From a tablet up they stay pinned to the bottom while the sections pass, above the consent bar while that asks (--consent-bar, its own height). */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -78,7 +77,7 @@ section > .note {
 @media (min-width: 768px) {
   .actions {
     position: sticky;
-    bottom: calc(var(--tab-bar, 0px) + var(--consent-bar, 0px));
+    bottom: var(--consent-bar, 0px);
     z-index: 1;
   }
 }
