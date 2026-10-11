@@ -1,4 +1,4 @@
-// @traces 1159-FR-006 1159-FR-007 1159-FR-010 1159-FR-011 1159-FR-014 1159-FR-019
+// @traces 1159-FR-006 1159-FR-007 1159-FR-018 1159-FR-010 1159-FR-011 1159-FR-014 1159-FR-019
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -108,4 +108,32 @@ describe('the summary job', () => {
     expect(summary).toMatch(/RESULT: \$\{\{ needs\.mutate\.result \}\}/);
     expect(summary).toMatch(/run: node scripts\/mutation-summary\.ts /);
   });
+});
+
+describe('the docs that describe a mutation run', () => {
+  const doc = (path: string) =>
+    readFileSync(join(__dirname, '..', path), 'utf8');
+
+  it('says AGENTS.md runs mutation every 3 days, sharded, never on a laptop', () => {
+    const agents = doc('AGENTS.md');
+
+    expect(agents).toMatch(/mutation\.yml` runs it every 3 days/);
+    expect(agents).toMatch(/scripts\/mutation-shards\.json/);
+    expect(agents).not.toMatch(/nightly/);
+  });
+
+  it.each([
+    '.claude/skills/speckit-harden/SKILL.md',
+    '.claude/agents/mutation-runner.md',
+    '.specify/contexts/harden.md',
+  ])(
+    '%s sends mutation to the workflow and runs no Stryker locally',
+    (path) => {
+      const text = doc(path);
+
+      expect(text).toMatch(/mutation\.yml|Mutation workflow/);
+      expect(text).not.toMatch(/nx run <project>:test:mutation/);
+      expect(text).not.toMatch(/npx nx run[^`]*test:mutation/);
+    },
+  );
 });
