@@ -1,3 +1,4 @@
+// @traces 1159-FR-011 1159-FR-013 1159-FR-017
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
@@ -40,6 +41,12 @@ const sourceFiles = mutated
   .flatMap((root) => sources(`${root}/src`));
 
 describe('mutation setup', () => {
+  const cwd = process.cwd();
+
+  afterEach(() => {
+    process.chdir(cwd);
+  });
+
   it('finds the projects it checks', () => {
     expect(mutated).toEqual(
       expect.arrayContaining(['apps/web', 'libs/overlays', 'scripts']),
@@ -109,33 +116,45 @@ describe('mutation setup', () => {
     expect(unsilenced).toEqual([]);
   });
 
-  it.each(['apps/api', 'libs/domain'])(
-    '%s runs one test runner at a time',
-    (root) => {
-      expect(JSON.parse(read(`${root}/stryker.config.json`))).toMatchObject({
-        concurrency: 1,
-      });
-    },
+  // Each test runner would take its own database turn; one at a time keeps
+  // the turns from queueing past Stryker's timeout.
+  const withDatabase = mutated.filter(
+    (root) =>
+      root !== 'scripts' &&
+      sources(`${root}/src`).some((file) =>
+        file.endsWith('.integration.spec.ts'),
+      ),
   );
-});
 
-describe('mutation workflow', () => {
-  const workflow = read('.github/workflows/mutation.yml');
-
-  it('takes a full run on demand, without earlier results', () => {
-    expect(workflow).toMatch(/^ {6}full:\n(?: {8}.+\n)*? {8}type: boolean$/m);
-    expect(workflow).toMatch(
-      /^ {6}- name: Restore the mutation results of earlier runs\n {8}if: \$\{\{ !inputs\.full \}\}$/m,
-    );
-    expect(workflow).toMatch(/-- --incremental=\$INCREMENTAL$/m);
-    expect(workflow).toMatch(
-      /INCREMENTAL: \$\{\{ inputs\.full && 'false' \|\| 'true' \}\}$/m,
+  it('finds the projects whose specs use the database', () => {
+    expect(withDatabase).toEqual(
+      expect.arrayContaining(['apps/api', 'libs/domain']),
     );
   });
 
-  it('sets its time limit from a measured run, within the job ceiling', () => {
-    const limit = workflow.match(/^ {4}# (.+)\n {4}timeout-minutes: (\d+)$/m);
-    expect(limit?.[1]).toMatch(/measured/);
-    expect(Number(limit?.[2])).toBeLessThanOrEqual(360);
+  it.each(withDatabase)('%s runs one test runner at a time', (root) => {
+    expect(JSON.parse(read(`${root}/stryker.config.json`))).toMatchObject({
+      concurrency: 1,
+    });
+  });
+
+  // Its specs read git (structure-check, observability-inventory), which sees
+  // nothing in Stryker's copied sandbox; .gitignore keeps .stryker-tmp and
+  // reports out of git.
+  // The web initial run ran out of memory at the default heap (run
+  // 38037093986); two runners keep it inside the runner's 16 GB.
+  it('gives the web project a larger heap and two test runners', () => {
+    expect(JSON.parse(read('apps/web/stryker.config.json'))).toMatchObject({
+      concurrency: 2,
+      testRunnerNodeArgs: ['--max-old-space-size=5120'],
+    });
+  });
+
+  it('runs the scripts project in the checked-out repository', () => {
+    expect(JSON.parse(read('scripts/stryker.config.json'))).toMatchObject({
+      inPlace: true,
+    });
+    expect(read('.gitignore')).toMatch(/^\.stryker-tmp\/$/m);
+    expect(read('.gitignore')).toMatch(/^reports\/$/m);
   });
 });

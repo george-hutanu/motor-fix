@@ -1,4 +1,5 @@
 {
+  "inPlace": true,
   "mutate": ["scripts/*.ts", "!scripts/*.spec.ts"],
   "thresholds": {
     "break": 46,

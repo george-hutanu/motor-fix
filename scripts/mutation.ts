@@ -1,14 +1,37 @@
 // Runs Stryker for one Nx project: the target behind `nx run <p>:test:mutation`.
 //
-//   node scripts/mutation.ts <project> <projectRoot> [--incremental] [--mutate <glob>]
+//   node scripts/mutation.ts <project> <projectRoot> [--incremental] [--mutate <glob>] [--shard <name>]
 //
 // The options every project shares live here; <projectRoot>/stryker.config.json
 // holds the project's floor (thresholds.break, a ratchet guarded by
 // config-protection.mjs) and any option where the project differs. Stryker
-// sets the exit code when the score is under the floor.
+// sets the exit code when the score is under the floor. `--shard` runs one
+// shard of a project split in scripts/mutation-shards.json: only its files
+// and its specs, with the break off, since the Mutation workflow's summary
+// job holds the shards' combined score to the floor. Every run writes
+// score.json beside its report for that job.
 
-import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, resolve } from 'node:path';
+
+import {
+  excluded,
+  projectConfig,
+  projectFloor,
+  readShardFile,
+  type Scope,
+  shardScope,
+  shardsOf,
+} from './mutation-plan.ts';
+import type { Counts } from './mutation-summary.ts';
 
 const DETECTED = ['Killed', 'Timeout'];
 const UNDETECTED = ['Survived', 'NoCoverage'];
@@ -22,25 +45,55 @@ type StrykerCore = {
   ) => { runMutationTest(): Promise<{ status: string }[]> };
 };
 
+// Long enough for domain's 329 specs, which outran Stryker's 5-minute
+// default before any mutant ran (run 38037093986).
+const DRY_RUN_TIMEOUT_MINUTES = 30;
+
+export const reportsDir = (project: string, shard?: string) =>
+  `reports/mutation/${project}${shard ? `/${shard}` : ''}`;
+
+function scopeOf(project: string, root: string, shard: string): Scope {
+  const shards = shardsOf(readShardFile(process.cwd()), project);
+  if (!shards)
+    throw new Error(`${project} has no shards in scripts/mutation-shards.json`);
+  return shardScope(root, shards, shard);
+}
+
+// The cache restores the last run's reports with its incremental file: a job
+// cut off before it writes its own must leave none of them to be read as this
+// run's.
+export function clearReports(reports: string): void {
+  for (const name of ['score.json', 'mutation.json', 'index.html'])
+    rmSync(join(reports, name), { force: true });
+}
+
+// An in-place run instruments the checked-out sources themselves, so specs
+// that read the repository's own files, or time a scan, would judge
+// instrumented code: they skip under this variable, which Stryker's test
+// runners inherit.
+export const IN_PLACE_ENV = 'MUTATION_IN_PLACE';
+
+export function markInPlace(
+  options: Record<string, unknown>,
+  env: Record<string, string | undefined> = process.env,
+): void {
+  if (options['inPlace'] === true) env[IN_PLACE_ENV] = '1';
+}
+
 export function strykerOptions(
   project: string,
   root: string,
   incremental: boolean,
   only?: string,
+  shard?: string,
 ): Record<string, unknown> {
-  const file = join(root, 'stryker.config.json');
-  let own: { thresholds?: { break?: unknown } } | null = null;
-  try {
-    own = JSON.parse(readFileSync(file, 'utf8'));
-  } catch {}
-  if (typeof own?.thresholds?.break !== 'number')
-    throw new Error(
-      `${file} is missing, is not JSON, or sets no thresholds.break`,
-    );
+  const own = projectConfig(root);
   const lib = join(root, 'tsconfig.lib.json');
-  const reports = `reports/mutation/${project}`;
+  const reports = reportsDir(project, shard);
+  const scope = shard ? scopeOf(project, root, shard) : undefined;
   return {
     checkers: ['typescript'],
+    dryRunTimeoutMinutes: DRY_RUN_TIMEOUT_MINUTES,
     htmlReporter: { fileName: `${reports}/index.html` },
     // Stryker copies the repository into its sandbox and ignores .gitignore.
     ignorePatterns: [
@@ -62,17 +115,21 @@ export function strykerOptions(
     ignoreStatic: true,
     incremental,
     incrementalFile: `${reports}/incremental.json`,
-    jest: jestOptions(root),
-    mutate: [
-      `${root}/src/**/*.ts`,
-      `!${root}/src/**/*.spec.ts`,
-      `!${root}/src/**/*.test.ts`,
-      `!${root}/src/**/generated/**`,
-      `!${root}/src/**/test-setup.ts`,
-    ],
+    jest: jestOptions(root, scope),
+    // mutation.json carries each survivor's file, line and mutator, which the
+    // mutation-runner agent reads from the job's artifact.
+    jsonReporter: { fileName: `${reports}/mutation.json` },
+    mutate: [`${root}/src/**/*.ts`, ...excluded(root)],
+    reporters: ['clear-text', 'progress', 'html', 'json'],
     testRunner: 'jest',
     tsconfigFile: existsSync(lib) ? lib : join(root, 'tsconfig.app.json'),
     ...own,
+    ...(scope && {
+      // A shard whose folders hold no spec still runs, its mutants uncovered.
+      allowEmpty: true,
+      mutate: scope.mutate,
+      thresholds: { ...own.thresholds, break: null },
+    }),
     ...(only && { mutate: [only] }),
   };
 }
@@ -80,16 +137,25 @@ export function strykerOptions(
 // Stryker reads the Jest config without normalising it, so a project's own
 // `<rootDir>/…` environment would reach it as a module it cannot find: hand it
 // the resolved file instead.
-function jestOptions(root: string): Record<string, unknown> {
+// A shard's spec paths go in the same way, over the file's own.
+function jestOptions(root: string, scope?: Scope): Record<string, unknown> {
   const configFile = join(root, 'jest.config.cts');
   let text = '';
   try {
     text = readFileSync(configFile, 'utf8');
-  } catch {}
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   const own = text.match(/^\s*testEnvironment: '<rootDir>\/([^']+)',$/m)?.[1];
-  return own
-    ? { config: { testEnvironment: resolve(root, own) }, configFile }
-    : { configFile };
+  const config = {
+    ...(own && { testEnvironment: resolve(root, own) }),
+    ...(scope && {
+      passWithNoTests: true,
+      testMatch: scope.testMatch,
+      testPathIgnorePatterns: scope.testPathIgnorePatterns,
+    }),
+  };
+  return Object.keys(config).length ? { config, configFile } : { configFile };
 }
 
 // Nx forwards `--incremental` as `--incremental=true` and `--mutate x` as
@@ -97,6 +163,7 @@ function jestOptions(root: string): Record<string, unknown> {
 export function flags(args: string[]): {
   incremental: boolean;
   only: string | undefined;
+  shard: string | undefined;
 } {
   const value = (name: string) => {
     const at = args.indexOf(name);
@@ -107,6 +174,7 @@ export function flags(args: string[]): {
   return {
     incremental: incremental !== undefined && incremental !== 'false',
     only: value('--mutate'),
+    shard: value('--shard') || undefined,
   };
 }
 
@@ -125,6 +193,35 @@ export function mutationScore(statuses: string[]): number | null {
   return counted ? (detected / counted) * 100 : null;
 }
 
+type ScoreRecord = Counts & {
+  floor: number;
+  project: string;
+  score: number | null;
+  shard: string;
+};
+
+/** What one job leaves for the summary job: its counts, not just a score. */
+export function scoreRecord(
+  project: string,
+  shard: string,
+  statuses: string[],
+  floor: number,
+  ms: number,
+): ScoreRecord {
+  const count = (status: string) => statuses.filter((s) => s === status).length;
+  return {
+    floor,
+    killed: count('Killed'),
+    minutes: Math.round(ms / 6_000) / 10,
+    noCoverage: count('NoCoverage'),
+    project,
+    score: mutationScore(statuses),
+    shard,
+    survived: count('Survived'),
+    timeout: count('Timeout'),
+  };
+}
+
 export function summaryRows(
   summary: string,
   project: string,
@@ -136,39 +233,55 @@ export function summaryRows(
   return summary ? row : HEADER + row;
 }
 
+function writeScore(reports: string, record: object): void {
+  mkdirSync(reports, { recursive: true });
+  writeFileSync(join(reports, 'score.json'), `${JSON.stringify(record)}\n`);
+}
+
 async function main() {
   const [project, root] = process.argv.slice(2);
   if (!project || !root)
     throw new Error(
-      'usage: mutation.ts <project> <projectRoot> [--incremental] [--mutate <glob>]',
+      'usage: mutation.ts <project> <projectRoot> [--incremental] [--mutate <glob>] [--shard <name>]',
     );
-  console.log(`mutation: ${project}`);
+  const { incremental, only, shard } = flags(process.argv.slice(4));
+  const label = shard ? `${project} ${shard}` : project;
+  console.log(`mutation: ${label}`);
+  const reports = reportsDir(project, shard);
+  clearReports(reports);
   if (!hasSpecs(root)) {
-    console.log(`${project}: no tests yet, mutation run skipped`);
+    console.log(`${label}: no tests yet, mutation run skipped`);
+    writeScore(reports, { project, shard: shard ?? '', skipped: true });
     return;
   }
-  const { incremental, only } = flags(process.argv.slice(4));
-  const options = strykerOptions(project, root, incremental, only);
+  const options = strykerOptions(project, root, incremental, only, shard);
+  markInPlace(options);
+  const floor = projectFloor(root);
   // A specifier the compiler cannot follow: the spec build resolves with node10,
   // which cannot see this ESM-only package.
   const { Stryker }: StrykerCore = await import(STRYKER);
   const started = Date.now();
   const results = await new Stryker(options).runMutationTest();
+  const record = scoreRecord(
+    project,
+    shard ?? '',
+    results.map((r) => r.status),
+    floor,
+    Date.now() - started,
+  );
+  writeScore(reports, record);
   const summary = process.env['GITHUB_STEP_SUMMARY'];
-  if (summary) {
-    const score = mutationScore(results.map((r) => r.status));
-    const { thresholds } = options as { thresholds: { break: number } };
+  if (summary)
     appendFileSync(
       summary,
       summaryRows(
         existsSync(summary) ? readFileSync(summary, 'utf8') : '',
-        project,
-        score,
-        thresholds.break,
+        label,
+        record.score,
+        record.floor,
         Date.now() - started,
       ),
     );
-  }
 }
 
 if (process.argv[1]?.endsWith('mutation.ts')) {

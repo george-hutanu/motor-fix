@@ -1,0 +1,213 @@
+{
+  "$comment": "One Mutation workflow job per project, or per shard of a project listed with shards (scripts/mutation-plan.ts). A shard is a list of folders under the project's src: 'x' takes x and everything under it, 'x/*' only the files directly in x, '*' only the files directly in src. An automatic 'rest' shard takes every file no named shard holds; it is never listed. A project's own timeout is its job's, or its rest shard's. Each timeout (minutes) sits beside the measured run it comes from: measured time plus at least 30%, at most 360.",
+  "default": {
+    "measured": "no run yet: the figure for a project not listed here",
+    "timeout": 60
+  },
+  "projects": {
+    "api": {
+      "measured": "48 min mutating, 49 min job, scored 88.89 under its floor (run 38132926917)",
+      "timeout": 90
+    },
+    "contracts": {
+      "measured": "40 min mutating, 42 min job, scored 91.77 under its floor (run 38132926917)",
+      "timeout": 60
+    },
+    "domain": {
+      "measured": "unsharded over 360 min (run 37360166653); rest shard 30 min mutating, 31 min job, after pg_stat_statements was preloaded (run 38135952989)",
+      "shards": {
+        "auth-core": {
+          "folders": ["auth/*", "auth/oauth"],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "auth-flows": {
+          "folders": [
+            "auth/password",
+            "auth/email-confirmation",
+            "auth/phone-sign-in",
+            "auth/assistant",
+            "auth/phone-change",
+            "auth/consents",
+            "auth/email-change"
+          ],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "garages-core": {
+          "folders": [
+            "garages/*",
+            "garages/verification",
+            "garages/listing-drafts",
+            "garages/garage-brands",
+            "garages/staff-invite"
+          ],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "garages-listing": {
+          "folders": [
+            "garages/documents",
+            "garages/photos",
+            "garages/public-garages",
+            "garages/prices",
+            "garages/garage-settings",
+            "garages/price-list",
+            "garages/details",
+            "garages/place",
+            "garages/mechanics"
+          ],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "insights-events-admin": {
+          "folders": ["insights", "events", "admin"],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "notifications-channels": {
+          "folders": [
+            "notifications/templates",
+            "notifications/preferences",
+            "notifications/news",
+            "notifications/bell",
+            "notifications/push",
+            "notifications/outage",
+            "notifications/brevo",
+            "notifications/verification-result",
+            "notifications/request-received",
+            "notifications/quote-received"
+          ],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "notifications-core": {
+          "folders": ["notifications/*"],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "places-catalogue": {
+          "folders": ["storage", "cars", "catalogue", "search", "places"],
+          "measured": "120 min job, finished at its limit (run 38127622063)",
+          "timeout": 160
+        },
+        "quotes-workshop": {
+          "folders": ["quotes", "workshop"],
+          "measured": "over 120 min: cancelled at its limit (run 38127622063); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        }
+      },
+      "timeout": 120
+    },
+    "i18n": {
+      "measured": "7 min job (run 38132926917)",
+      "timeout": 30
+    },
+    "mcp": {
+      "measured": "36 min mutating at concurrency 1, 37 min job, scored 75.00 under its floor (run 38132926917)",
+      "timeout": 90
+    },
+    "mcp-tools": {
+      "measured": "30 min job (run 38132926917)",
+      "timeout": 45
+    },
+    "media": {
+      "measured": "31 s mutating, 2 min job (run 38127622063)",
+      "timeout": 30
+    },
+    "observability": {
+      "measured": "19 min job, scored 66.83 under its floor (run 38132926917)",
+      "timeout": 45
+    },
+    "overlays": {
+      "measured": "13 min mutating, 14 min job (run 38132926917)",
+      "timeout": 30
+    },
+    "scripts": {
+      "measured": "in place, 24 min mutating, 25 min job, scored 65.48 (run 38142763848)",
+      "timeout": 90
+    },
+    "ui-cockpit": {
+      "measured": "25 min job (run 38132926917)",
+      "timeout": 45
+    },
+    "web": {
+      "measured": "unsharded 143 min (run 37360189195); rest shard over 120 min: cancelled at its limit (run 38132926917); 360 is provisional until a run finishes within it. Its stryker.config.json runs 2 test runners with a 5120 MB heap: the initial run ran out of memory at the default heap (run 38037093986)",
+      "shards": {
+        "dashboard-admin": {
+          "folders": [
+            "app/dashboard/admin-users",
+            "app/dashboard/admin-users-filters",
+            "app/dashboard/admin-users-filters-sheet",
+            "app/dashboard/admin-filters",
+            "app/dashboard/admin-filters-sheet",
+            "app/dashboard/admin-panel",
+            "app/dashboard/admin-growth",
+            "app/dashboard/platform-rules"
+          ],
+          "measured": "28 min job (run 38132926917)",
+          "timeout": 120
+        },
+        "dashboard-core": {
+          "folders": ["app/dashboard/*", "app/dashboard/frame"],
+          "measured": "over 120 min: cancelled at its limit (run 38132926917); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "dashboard-garage": {
+          "folders": [
+            "app/dashboard/garage-requests",
+            "app/dashboard/job-steps",
+            "app/dashboard/my-details",
+            "app/dashboard/add-car",
+            "app/dashboard/live-in-place",
+            "app/dashboard/invite-staff",
+            "app/dashboard/jobs-view",
+            "app/dashboard/requests-view",
+            "app/dashboard/cars-view",
+            "app/dashboard/due-date-line",
+            "app/dashboard/driver-home",
+            "app/dashboard/driver-notifications",
+            "app/dashboard/notification-settings",
+            "app/dashboard/bell",
+            "app/dashboard/bell-list",
+            "app/dashboard/push-panel",
+            "app/dashboard/email-banner"
+          ],
+          "measured": "over 120 min: cancelled at its limit (run 38132926917); 360 is provisional until a run finishes within it",
+          "timeout": 360
+        },
+        "public-core": {
+          "folders": [
+            "app/public/*",
+            "app/public/garage-profile",
+            "app/public/garage-preview",
+            "app/public/list-your-garage",
+            "app/public/brand-verdict"
+          ],
+          "measured": "76 min job (run 38132926917)",
+          "timeout": 120
+        },
+        "public-steps": {
+          "folders": [
+            "app/public/place-step",
+            "app/public/draft",
+            "app/public/prices-step",
+            "app/public/documents-step",
+            "app/public/hours-step",
+            "app/public/photos-step",
+            "app/public/brands-step",
+            "app/public/details-step",
+            "app/public/mechanics-step"
+          ],
+          "measured": "60 min job (run 38132926917)",
+          "timeout": 120
+        }
+      },
+      "timeout": 360
+    },
+    "worker": {
+      "measured": "2 min job (run 38132926917)",
+      "timeout": 30
+    }
+  }
+}
