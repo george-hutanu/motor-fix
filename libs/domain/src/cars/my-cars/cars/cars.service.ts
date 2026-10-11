@@ -16,6 +16,8 @@ import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 
 const LIMIT = 20;
+// A request in one of these is still under way, so its car stays.
+const OPEN_REQUEST = ['sent', 'quoted', 'booked', 'in_work'] as const;
 const DATES = ['itpUntil', 'rcaUntil', 'rovinietaUntil'] as const;
 
 const withBrand = { brand: { select: { name: true } } } as const;
@@ -80,12 +82,11 @@ function assertNotTooFar(
 
 type Changes = Partial<Record<Editable, string | number | null>>;
 
-// The caller's own car, locked, at the version the edit was read from.
-async function lockedCar(
+// The caller's own car, not removed, locked until the transaction ends.
+async function ownCar(
   tx: Prisma.TransactionClient,
   id: string,
   ownerId: string,
-  version: string,
 ): Promise<CarRow> {
   await tx.$queryRaw`SELECT id FROM car WHERE id = ${id}::uuid FOR UPDATE`;
   const car = await tx.car.findFirst({
@@ -93,6 +94,17 @@ async function lockedCar(
     where: { id, ownerId, removedAt: null },
   });
   if (!car) throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such car');
+  return car;
+}
+
+// The caller's own car, locked, at the version the edit was read from.
+async function lockedCar(
+  tx: Prisma.TransactionClient,
+  id: string,
+  ownerId: string,
+  version: string,
+): Promise<CarRow> {
+  const car = await ownCar(tx, id, ownerId);
   if (car.updatedAt.getTime() !== new Date(version).getTime()) {
     throw refusal(
       HttpStatus.CONFLICT,
@@ -298,6 +310,39 @@ export class CarsService {
         subjectId: id,
       });
       return saved;
+    });
+  }
+
+  // A soft removal: the row stays, with its requests and repairs, and
+  // leaves every list. Refused while a request for the car is under way.
+  async remove(actor: Actor, id: string): Promise<void> {
+    requireCapability(actor, 'driver.cars');
+    const ownerId = actor.accountId;
+    await this.prisma.$transaction(async (tx) => {
+      await ownCar(tx, id, ownerId);
+      const open = await tx.quoteRequest.count({
+        where: { carId: id, status: { in: [...OPEN_REQUEST] } },
+      });
+      if (open > 0) {
+        throw refusal(
+          HttpStatus.CONFLICT,
+          'open_request',
+          'The car has a request under way',
+        );
+      }
+      await tx.car.update({ data: { removedAt: new Date() }, where: { id } });
+      await this.audit.record(tx, {
+        ...editEntry(actor, id),
+        action: 'delete',
+        text: 'car removed',
+      });
+      // No plate and no model: the outbox is read beyond the owner.
+      await this.events.record(tx, {
+        audience: { ownerAccountId: ownerId, type: 'car' },
+        kind: 'car.removed',
+        payload: { carId: id, ownerId },
+        subjectId: id,
+      });
     });
   }
 

@@ -7,8 +7,10 @@ import {
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
+  HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
@@ -22,6 +24,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiHeader,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -109,5 +112,27 @@ export class CarsController {
     @Body() body: UpdateCarDto,
   ): Promise<CarDto> {
     return this.cars.update(actor, id, body);
+  }
+
+  @Delete(':id')
+  @Requires('driver.cars')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: "Remove the caller's car; its history stays stored",
+  })
+  @ApiNoContentResponse({ description: 'The car is removed' })
+  @ApiBadRequestResponse({ description: 'validation_failed: a bad id' })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiNotFoundResponse({
+    description: 'not_found: no such car of the caller, or not a driver',
+  })
+  @ApiConflictResponse({
+    description: 'open_request: a request for the car is under way',
+  })
+  remove(
+    @CurrentActor() actor: Actor,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    return this.cars.remove(actor, id);
   }
 }

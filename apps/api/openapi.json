@@ -1915,6 +1915,45 @@
         "tags": [
           "cars"
         ]
+      },
+      "delete": {
+        "operationId": "CarsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The car is removed"
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: no such car of the caller, or not a driver"
+          },
+          "409": {
+            "description": "open_request: a request for the car is under way"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove the caller's car; its history stays stored",
+        "tags": [
+          "cars"
+        ]
       }
     },
     "/api/v1/brands": {

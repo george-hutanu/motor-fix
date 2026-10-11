@@ -129,6 +129,8 @@ export type { CarsControllerList$Params as CarsControllerList$Params } from './f
 export { carsControllerList as carsControllerList } from './fn/cars/cars-controller-list';
 export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from './fn/cars/cars-controller-create';
 export { carsControllerCreate as carsControllerCreate } from './fn/cars/cars-controller-create';
+export type { CarsControllerRemove$Params as CarsControllerRemove$Params } from './fn/cars/cars-controller-remove';
+export { carsControllerRemove as carsControllerRemove } from './fn/cars/cars-controller-remove';
 export type { CarsControllerUpdate$Params as CarsControllerUpdate$Params } from './fn/cars/cars-controller-update';
 export { carsControllerUpdate as carsControllerUpdate } from './fn/cars/cars-controller-update';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
