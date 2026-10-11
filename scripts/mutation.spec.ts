@@ -256,6 +256,12 @@ describe('strykerOptions for a shard', () => {
     expect(options.htmlReporter).toEqual({
       fileName: 'reports/mutation/x/auth/index.html',
     });
+    expect(options.jsonReporter).toEqual({
+      fileName: 'reports/mutation/x/auth/mutation.json',
+    });
+    expect(options.reporters).toEqual(
+      expect.arrayContaining(['html', 'json', 'clear-text']),
+    );
   });
 
   // A shard's partial score is never held to the floor: the summary job

@@ -95,6 +95,9 @@ export function strykerOptions(
     incremental,
     incrementalFile: `${reports}/incremental.json`,
     jest: jestOptions(root, scope),
+    // mutation.json carries each survivor's file, line and mutator, which the
+    // mutation-runner agent reads from the job's artifact.
+    jsonReporter: { fileName: `${reports}/mutation.json` },
     mutate: [
       `${root}/src/**/*.ts`,
       `!${root}/src/**/*.spec.ts`,
@@ -102,6 +105,7 @@ export function strykerOptions(
       `!${root}/src/**/generated/**`,
       `!${root}/src/**/test-setup.ts`,
     ],
+    reporters: ['clear-text', 'progress', 'html', 'json'],
     testRunner: 'jest',
     tsconfigFile: existsSync(lib) ? lib : join(root, 'tsconfig.app.json'),
     ...own,

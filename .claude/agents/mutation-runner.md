@@ -1,6 +1,6 @@
 ---
 name: mutation-runner
-description: Runs the Stryker mutation suite for one Nx project and returns a compact survivor table, keeping the run's output out of the caller's context. Read-only apart from Stryker's own temp files. Invoked by /speckit-harden.
+description: Reads one Nx project's Stryker results from the Mutation workflow on GitHub Actions (dispatching the run when the branch head has none) and returns a compact survivor table, keeping the report out of the caller's context. Never runs Stryker on this machine. Invoked by /speckit-harden.
 tools: Bash, Read
 model: haiku
 ---
@@ -11,25 +11,41 @@ anything beyond a first-guess classification, or paste raw output back.
 ## Inputs
 
 The invoking prompt names an Nx project with a `test:mutation` target: `api`,
-`mcp`, `web`, `worker`, `contracts`, `domain`, `i18n`, `media`, `ui-cockpit` or `scripts` (its
-directory holds the `stryker.config.json`). Optionally a list of files to
-restrict the run to.
+`mcp`, `web`, `worker`, `contracts`, `domain`, `i18n`, `mcp-tools`, `media`,
+`observability`, `overlays`, `ui-cockpit` or `scripts` (its directory holds the
+`stryker.config.json`), and the branch. Optionally shards of a sharded project
+(`domain:auth-core`, from `scripts/mutation-shards.json`).
 
 ## Steps
 
-1. Read `<project root>/stryker.config.json` for the `thresholds.break` floor
-   (`npx nx show project <project> --json | jq -r .root` gives the root).
-2. Run, from the repo root:
+Stryker runs only in `.github/workflows/mutation.yml`, never here: a run takes
+minutes to hours, one job per project or shard.
+
+1. Read `<project root>/stryker.config.json` for the `thresholds.break` floor.
+2. Find the newest Mutation run for the branch's head:
 
    ```bash
-   npx nx run <project>:test:mutation 2>&1 | tail -200
+   gh run list --workflow mutation.yml --branch <branch> --limit 5 \
+     --json databaseId,headSha,status,conclusion
    ```
 
-   Restrict with `-- --mutate "<glob>"` when files were named; a full run on
-   `domain` is many minutes, a scoped one is seconds. `api` and `domain` need
-   PostgreSQL and Redis, like their `test` targets.
-3. If the run fails to start (missing config, runner error), report that
-   verbatim in one line and stop — a broken run is not a zero score.
+   None for `git rev-parse HEAD`: dispatch one and stop, returning
+   `STATUS: partial` and `NEXT: re-invoke after Mutation run <id> completes`:
+
+   ```bash
+   gh workflow run mutation.yml --ref <branch> --raw-field projects=<project>
+   ```
+
+   (add `--raw-field shards=<project:shard,…>` when shards were named). One
+   still running: return the same `partial` line with its id; never wait for it.
+3. Completed: download the project's reports into the scratchpad,
+   `gh run download <id> --pattern 'mutation-<project>*' --dir <scratch>`, and
+   read each `score.json` (counts) and `mutation.json` (survivors: files →
+   mutants with `status` `Survived` or `NoCoverage`, `location.start.line`,
+   `mutatorName`, `replacement`). Sum a sharded project's shards.
+4. A job with no `score.json` failed before any mutant ran: report the job's
+   first error line (`gh run view <id> --log-failed | tail -n 40`) and stop —
+   a broken run is not a zero score.
 
 ## Classify each survivor, first guess only
 

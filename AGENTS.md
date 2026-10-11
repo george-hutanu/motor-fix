@@ -411,9 +411,10 @@ source for anything the constitution does not fix.
   ESM-only, so the Nest projects' `test` targets run Jest with
   `--experimental-vm-modules`.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
-  project; the harness specs keep `npm run test:harness`; `test:mutation`
-  and `test:mutation:affected` run Stryker one project at a time, against the
-  floor in each project's `stryker.config.json`, which only rises. A spec that
+  project; the harness specs keep `npm run test:harness`. Stryker runs only
+  in the Mutation workflow, never on a laptop (`test:mutation` and
+  `test:mutation:affected` stay for it), against the floor in each project's
+  `stryker.config.json`, which only rises. A spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`;
   `npm run test:unit` leaves those out and `npm run test:integration` runs
   only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
@@ -445,8 +446,12 @@ source for anything the constitution does not fix.
   PR is edited, so a corrected title re-checks without re-running CI. PRs
   run `nx affected`; `release.yml` calls the
   same workflow, which then runs every project. Mutation testing never runs
-  in PR CI: `.github/workflows/mutation.yml` runs it nightly on `main` and on
-  `workflow_dispatch`.
+  in PR CI: `.github/workflows/mutation.yml` runs it every 3 days on `main`
+  and on `workflow_dispatch` (`projects`, `shards`, `full`), one job per
+  project or per shard of one split in `scripts/mutation-shards.json`, five
+  at a time, each with its own PostgreSQL, Redis, cache and report and its
+  own time limit; a summary job holds each project's combined score to its
+  floor.
 - Release: `.github/workflows/release.yml` builds one image per app (root
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
   end-to-end suite there, and promotes the same digests to production with
