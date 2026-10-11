@@ -1,12 +1,13 @@
 ---
 capability: garage-profile
-updated: 2026-10-10
+updated: 2026-10-11
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
   - 312-report-garage
   - 384-response-rate
   - 143-profile-views
+  - 355-price-list-ranges
 ---
 
 # Capability: Garage profile
@@ -174,6 +175,70 @@ _From 384-response-rate._
 ### 143-FR-008 — The web profile page MUST send one beacon per page load with the source taken from the in-app route the visitor came from (the results list, the results map, Home, the saved list), `shared_link` when the address carries `?src=share` (which the shared link of #363 now adds), else `profile_direct`; the results map has no screen yet and is mapped to `map` when it ships; the page MUST NOT wait for the answer, retry, or show any state for it.
 
 _From 143-profile-views._
+
+### 355-FR-001 — The public profile read (`GET /api/v1/garages/{slug}`, with its optional `brand`) MUST carry the garage's price list in the same answer, with no new endpoint: the labour range (both ends in bani, only when both are set) and the list's rows, one per job that is public by the ST-357 rule (357-FR-001 to 357-FR-003) and not left out for the brand in context (FR-003), each with the job's Romanian and English names, its duration in minutes when the default row has one, and the range chosen by FR-002 (both ends in bani). The existing `jobTypes` list, which the quote request reads, is unchanged.
+
+_From 355-price-list-ranges._
+
+### 355-FR-002 — The range a row carries MUST be the job's price row for the brand in context when the profile is read with a catalogue brand and such a row exists with both ends set; otherwise the job's default row (no brand). A brand row with one end missing, a brand row for another brand, a brand the garage marked `does_not_take` (its brand rows are kept and never used; its ticks still apply) or a read without a brand never changes the default range. A brand row's own `visible` flag is ignored: visibility is the default row's (357-FR-001).
+
+_From 355-price-list-ranges._
+
+### 355-FR-003 — When the profile is read with a catalogue brand for which the garage recorded at least one job tick (a `GarageBrandJob` row for that garage and brand, the tick of specs issue #207), the rows of jobs not ticked for that brand MUST be left out; when the garage recorded no tick for that brand, or the read has no catalogue brand, every public job is listed. A tick never lists a job the ST-357 rule hides.
+
+_From 355-price-list-ranges._
+
+### 355-FR-004 — Rows MUST be in the order of the default row's `position` (the order the garage entered them), as the ST-357 rule orders them; a brand row never moves a job.
+
+_From 355-price-list-ranges._
+
+### 355-FR-005 — The rows and the labour range MUST be served from the profile's cache like the rest of the answer (307-FR-006), per brand in context, and the answer's shape version in the cache key MUST be bumped since its shape changed.
+
+_From 355-price-list-ranges._
+
+### 355-FR-006 — The profile page MUST fill its prices slot with a "Lista de prețuri" / "Price list" section: when the list has at least one row, an intro of two sentences ("Pornește ce ai nevoie. Prețurile sunt intervale, pentru că lucrarea depinde de mașină." / "Switch on what you need. Prices are ranges, because the job depends on the car."), a third sentence "Manopera este {range} / oră." / "Labour is {range} / hour." only when the answer carries a labour range, then the line "Prețurile includ piese și manoperă, cu TVA, și sunt orientative." / "Prices include parts and labour, VAT included, and are a guide.", then the rows.
+
+_From 355-price-list-ranges._
+
+### 355-FR-007 — Each row MUST show the job's name in the page's language (`nameRo` / `nameEn`), its duration when it has one (FR-009), its range (FR-008) and a switch (FR-011).
+
+_From 355-price-list-ranges._
+
+### 355-FR-008 — Every range, labour included, MUST show in whole lei through the shared money range format (019-FR-002): both ends with the language's thousands separator ("1.100–1.700 lei" in Romanian, "1,100–1,700 lei" in English), an en dash, one amount when the ends are equal, and " lei" after. Values stored in bani are rounded to whole lei (never truncated) and shown with no decimals.
+
+_From 355-price-list-ranges._
+
+### 355-FR-009 — A duration MUST read, in both languages: under 60 minutes as "{n} min"; from 60 minutes, a whole number of days (multiples of 480 minutes) as "{d} zi" / "{d} zile" in Romanian ("1 zi", "2 zile") and "{d} day" / "{d} days" in English; otherwise hours as "{h} h" with the remaining minutes after a space when there are any ("1 h", "1 h 5", "1 h 30", "10 h"; the minutes are not zero-padded). A duration of 0 or less, or none, shows nothing.
+
+_From 355-price-list-ranges._
+
+### 355-FR-010 — When the list has no row (no public job, or none for the brand in context), the section MUST show its heading and "Service-ul nu și-a publicat încă prețurile." / "The garage has not published its prices yet." and nothing else.
+
+_From 355-price-list-ranges._
+
+### 355-FR-011 — Each row's switch MUST be off when the list loads, be labelled by the job's name for assistive technology, keep its state only in the open page (nothing is written and nothing is added up: specs issue #75 sums the states), and be dropped with its row when a re-read no longer lists the job; a row still listed after a re-read keeps its state; a row is identified by its job (`jobTypeId`), not by the price row behind it.
+
+_From 355-price-list-ranges._
+
+### 355-FR-012 — On `price_list.updated` (and every other message the profile already reacts to) the section MUST re-read with the profile, with the same brand, and show the new list in place, keeping the scroll position (307-FR-018). The swap is silent for assistive technology (no live region): the list is not an alert, and the page's other sections re-read the same way.
+
+_From 355-price-list-ranges._
+
+### 355-FR-013 — While the profile is being read the section MUST show its skeleton like the other sections (307-FR-015); a 404 or 410 shows the profile's own views, with no section.
+
+_From 355-price-list-ranges._
+
+### 355-FR-014 — The section MUST render at 320 px and 390 px (stacked rows), tablet and desktop, light and dark, Romanian and English, with no sideways scroll, and its texts MUST live in the public texts for both languages (307-FR-016); a job's name is the catalogue's text and is not translated by the page.
+
+_From 355-price-list-ranges._
+
+### 355-FR-015 — The development data MUST hold, for one approved seeded garage, a labour range and the six jobs of the mock with their default ranges and durations, one of them with no top price, a BMW range for front brakes and a BMW tick list that leaves out "Kit lanț de distribuție", so the acceptance scenarios run end to end against the development catalogue (as 230-FR-015 did for brands).
+
+_From 355-price-list-ranges._
+
+### 355-FR-016 — Accessibility of the section MUST be stated and measurable: the section is a named region holding an `h2` heading (the profile's heading level for sections); each switch is reachable and operable with the keyboard (Tab, Space), shows a visible focus ring, exposes the switch role and its on/off state, and is named by its job's name; the whole row is its click target, at least 44 px high; every text and the range in both states (on, off) meets 4.5:1 contrast against the card in light and dark (the PR QA sweep's axe and contrast checks); the on state is also carried by the switch itself, never by the range's colour alone.
+
+_From 355-price-list-ranges._
 
 ## Retired
 

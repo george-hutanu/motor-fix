@@ -5,10 +5,12 @@ import {
   computed,
   effect,
   inject,
+  makeStateKey,
   PendingTasks,
   PLATFORM_ID,
   RESPONSE_INIT,
   signal,
+  TransferState,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -27,6 +29,7 @@ import { map } from 'rxjs';
 
 import { Gone } from './gone/gone';
 import { PhotosSection } from './photos-section/photos-section';
+import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { sourceOf } from './view-source';
@@ -45,6 +48,11 @@ const KINDS = EVENT_KINDS.filter(
 
 const GONE = [404, 410];
 
+// The answer the server render showed, carried to the browser so hydration
+// finds the same page instead of a skeleton.
+export const profileKey = (slug: string, brand: string | undefined) =>
+  makeStateKey<PublicGarageDto>(`garage-profile:${slug}:${brand ?? ''}`);
+
 @Component({
   imports: [
     DayPipe,
@@ -53,6 +61,7 @@ const GONE = [404, 410];
     Lamp,
     LiveChange,
     PhotosSection,
+    PricesSection,
     RatingDial,
     ReportGarageLink,
     RequestQuoteButton,
@@ -70,6 +79,7 @@ export class GarageProfile {
   private readonly garages = inject(GaragesService);
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
+  private readonly state = inject(TransferState);
   protected readonly i18n = inject(I18n);
 
   private readonly slug = toSignal(
@@ -92,6 +102,8 @@ export class GarageProfile {
       brand: this.profile?.value()?.brand?.id,
       garage: this.profile?.value()?.id,
     }),
+    undefined,
+    this.carried(),
   );
   protected readonly garage = this.profile.value;
   // What the dial says, announced politely when a re-read changes it.
@@ -145,6 +157,15 @@ export class GarageProfile {
     });
   }
 
+  // The server's answer for this address, used once: a later visit reads afresh.
+  private carried(): PublicGarageDto | undefined {
+    if (!this.browser) return undefined;
+    const key = profileKey(untracked(this.slug), untracked(this.brand));
+    const garage = this.state.get(key, null) ?? undefined;
+    this.state.remove(key);
+    return garage;
+  }
+
   // One view per garage opened, sent once it is known to be there and never
   // waited on: a refused or lost view leaves the page as it is.
   private view(id: string): void {
@@ -176,6 +197,7 @@ export class GarageProfile {
         (garage) => {
           if (moved()) return this.read();
           this.status.set(undefined);
+          if (!this.browser) this.state.set(profileKey(slug, brand), garage);
           return garage;
         },
         (failure: unknown) => {

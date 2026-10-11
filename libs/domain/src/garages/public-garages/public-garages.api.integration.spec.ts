@@ -104,6 +104,7 @@ describe('reading a garage by its public slug', () => {
       name: 'Atelier Dinamo',
       paymentMethods: { card: false, cash: false, transfer: false },
       photos: [],
+      prices: [],
       rating: null,
       refusalPhrase: null,
       responseRate: { state: 'new' },
@@ -142,6 +143,7 @@ describe('reading a garage by its public slug', () => {
       'name',
       'paymentMethods',
       'photos',
+      'prices',
       'rating',
       'refusalPhrase',
       'responseRate',
@@ -771,11 +773,13 @@ const PUBLIC_FIELDS = new Set([
   'doesNotTake',
   'id',
   'jobTypes',
+  'labour',
   'latitude',
   'longitude',
   'name',
   'paymentMethods',
   'photos',
+  'prices',
   'rating',
   'refusalPhrase',
   'responseRate',
@@ -903,6 +907,287 @@ describe('the jobs a profile offers', () => {
     const approved = await garage('approved');
 
     expect((await read(approved.slug)).body.jobTypes).toEqual([]);
+  });
+});
+
+// @traces 355-price-list-ranges-FR-001
+// @traces 355-price-list-ranges-FR-002
+// @traces 355-price-list-ranges-FR-003
+// @traces 355-price-list-ranges-FR-004
+// @traces 355-price-list-ranges-FR-005
+describe('the price list a profile carries', () => {
+  async function priced(labour: { from?: number; to?: number } = {}) {
+    const approved = await prisma.garage.create({
+      data: {
+        labourFromBani: labour.from ?? null,
+        labourToBani: labour.to ?? null,
+        name: 'Service Auto Militari',
+        slug: `militari-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+    const owner = await account('owner', ['garage']);
+    const jobType = (nameRo: string, nameEn: string) =>
+      prisma.jobType.create({
+        data: {
+          key: `job-${randomUUID()}`,
+          nameEn,
+          nameRo,
+          status: 'approved',
+        },
+      });
+    const price = (
+      jobTypeId: string,
+      position: number,
+      extra: Record<string, unknown> = {},
+    ) =>
+      prisma.garagePrice.create({
+        data: {
+          fromBani: 15_000,
+          garageId: approved.id,
+          jobTypeId,
+          position,
+          toBani: 22_000,
+          updatedBy: owner,
+          ...extra,
+        },
+      });
+    return { approved, jobType, price };
+  }
+
+  const tick = async (
+    garageId: string,
+    brandId: string,
+    stance: 'works_on' | 'does_not_take',
+    jobTypeIds: string[],
+  ) => {
+    const fuels = stance === 'works_on';
+    await prisma.garageBrand.create({
+      data: {
+        brandId,
+        diesel: fuels,
+        electric: fuels,
+        garageId,
+        hybrid: fuels,
+        petrol: fuels,
+        stance,
+      },
+    });
+    for (const jobTypeId of jobTypeIds) {
+      await prisma.garageBrandJob.create({
+        data: { brandId, garageId, jobTypeId },
+      });
+    }
+  };
+
+  it("carries the labour range and each public job with its duration and range, in the garage's order", async () => {
+    const { approved, jobType, price } = await priced({
+      from: 18_000,
+      to: 24_000,
+    });
+    const brakes = await jobType(
+      'Plăcuțe și discuri de frână față',
+      'Front brake pads and discs',
+    );
+    const diagnosis = await jobType('Diagnoză', 'Diagnosis');
+    const suspension = await jobType(
+      'Verificare suspensie',
+      'Suspension check',
+    );
+    await price(brakes.id, 2, {
+      durationMinutes: 120,
+      fromBani: 89_000,
+      toBani: 140_000,
+    });
+    await price(diagnosis.id, 0);
+    await price(suspension.id, 5, { durationMinutes: 90, toBani: null });
+
+    const res = await read(approved.slug);
+
+    expect(res.status).toBe(200);
+    expect(res.body.labour).toEqual({ fromBani: 18_000, toBani: 24_000 });
+    expect(res.body.prices).toEqual([
+      {
+        fromBani: 15_000,
+        jobTypeId: diagnosis.id,
+        nameEn: 'Diagnosis',
+        nameRo: 'Diagnoză',
+        toBani: 22_000,
+      },
+      {
+        durationMinutes: 120,
+        fromBani: 89_000,
+        jobTypeId: brakes.id,
+        nameEn: 'Front brake pads and discs',
+        nameRo: 'Plăcuțe și discuri de frână față',
+        toBani: 140_000,
+      },
+    ]);
+    expect(res.body.jobTypes).toEqual([
+      { id: diagnosis.id, nameEn: 'Diagnosis', nameRo: 'Diagnoză' },
+      {
+        id: brakes.id,
+        nameEn: 'Front brake pads and discs',
+        nameRo: 'Plăcuțe și discuri de frână față',
+      },
+    ]);
+  });
+
+  it.each([
+    ['only the bottom', { from: 18_000 }],
+    ['only the top', { to: 24_000 }],
+    ['neither end', {}],
+  ])('carries no labour range when the garage set %s', async (_, labour) => {
+    const { approved } = await priced(labour);
+
+    const res = await read(approved.slug);
+
+    expect(res.body).not.toHaveProperty('labour');
+  });
+
+  it('carries an empty list when no job is public', async () => {
+    const { approved, jobType, price } = await priced({
+      from: 18_000,
+      to: 24_000,
+    });
+    const hidden = await jobType('Diagnoză', 'Diagnosis');
+    await price(hidden.id, 0, { visible: false });
+
+    expect((await read(approved.slug)).body.prices).toEqual([]);
+  });
+
+  it("shows the brand's complete range and only the jobs ticked for it", async () => {
+    const bmw = await catalogueBrand('BMW');
+    const { approved, jobType, price } = await priced();
+    const brakes = await jobType('Frâne față', 'Front brakes');
+    const chain = await jobType('Kit lanț de distribuție', 'Timing chain kit');
+    const oil = await jobType('Schimb ulei', 'Oil change');
+    await price(brakes.id, 0, { fromBani: 89_000, toBani: 140_000 });
+    await price(brakes.id, 0, {
+      brandId: bmw.id,
+      fromBani: 110_000,
+      toBani: 170_000,
+    });
+    await price(chain.id, 1);
+    await price(oil.id, 2, { fromBani: 25_000, toBani: 40_000 });
+    await price(oil.id, 2, { brandId: bmw.id, fromBani: 30_000, toBani: null });
+    await tick(approved.id, bmw.id, 'works_on', [brakes.id, oil.id]);
+
+    const res = await readWith(approved.slug, { brand: bmw.slug });
+
+    expect(
+      res.body.prices.map((row: Record<string, unknown>) => [
+        row['jobTypeId'],
+        row['fromBani'],
+        row['toBani'],
+      ]),
+    ).toEqual([
+      [brakes.id, 110_000, 170_000],
+      [oil.id, 25_000, 40_000],
+    ]);
+  });
+
+  it.each<[string, (audi: string) => Record<string, string>]>([
+    ['without a brand', () => ({})],
+    ['for an unknown brand', () => ({ brand: 'nu-exista' })],
+    ['for a brand with no tick and no range', (audi) => ({ brand: audi })],
+  ])('lists every public job with its default range %s', async (_, query) => {
+    const bmw = await catalogueBrand('BMW');
+    const audi = await catalogueBrand('Audi');
+    const { approved, jobType, price } = await priced();
+    const brakes = await jobType('Frâne față', 'Front brakes');
+    const chain = await jobType('Kit lanț de distribuție', 'Timing chain kit');
+    await price(brakes.id, 0, { fromBani: 89_000, toBani: 140_000 });
+    await price(brakes.id, 0, {
+      brandId: bmw.id,
+      fromBani: 110_000,
+      toBani: 170_000,
+    });
+    await price(chain.id, 1);
+    await tick(approved.id, bmw.id, 'works_on', [brakes.id]);
+
+    const res = await readWith(approved.slug, query(audi.slug));
+
+    expect(
+      res.body.prices.map((row: Record<string, unknown>) => [
+        row['jobTypeId'],
+        row['fromBani'],
+        row['toBani'],
+      ]),
+    ).toEqual([
+      [brakes.id, 89_000, 140_000],
+      [chain.id, 15_000, 22_000],
+    ]);
+  });
+
+  it('lists the ticked jobs of a brand the garage does not take', async () => {
+    const dacia = await catalogueBrand('Dacia');
+    const { approved, jobType, price } = await priced();
+    const brakes = await jobType('Frâne față', 'Front brakes');
+    const oil = await jobType('Schimb ulei', 'Oil change');
+    await price(brakes.id, 0);
+    await price(oil.id, 1);
+    await tick(approved.id, dacia.id, 'does_not_take', [oil.id]);
+
+    const res = await readWith(approved.slug, { brand: dacia.slug });
+
+    expect(res.body.brand).toMatchObject({ stance: 'does_not_take' });
+    expect(
+      res.body.prices.map((row: Record<string, unknown>) => row['jobTypeId']),
+    ).toEqual([oil.id]);
+  });
+
+  it('never lists a hidden job for a brand that ticked it with a complete range', async () => {
+    const bmw = await catalogueBrand('BMW');
+    const { approved, jobType, price } = await priced();
+    const hidden = await jobType('Frâne față', 'Front brakes');
+    await price(hidden.id, 0, { visible: false });
+    await price(hidden.id, 0, {
+      brandId: bmw.id,
+      fromBani: 110_000,
+      toBani: 170_000,
+    });
+    await tick(approved.id, bmw.id, 'works_on', [hidden.id]);
+
+    expect(
+      (await readWith(approved.slug, { brand: bmw.slug })).body.prices,
+    ).toEqual([]);
+  });
+
+  it("caches each brand's list in its own field and drops them together", async () => {
+    const bmw = await catalogueBrand('BMW');
+    const { approved, jobType, price } = await priced();
+    const brakes = await jobType('Frâne față', 'Front brakes');
+    const row = await price(brakes.id, 0, {
+      fromBani: 89_000,
+      toBani: 140_000,
+    });
+    await price(brakes.id, 0, {
+      brandId: bmw.id,
+      fromBani: 110_000,
+      toBani: 170_000,
+    });
+    await read(approved.slug);
+    await readWith(approved.slug, { brand: bmw.slug });
+    const redis = app.get(AUTH_REDIS);
+
+    expect(
+      (await redis.hkeys(`garage-profile:v5:${approved.id}`)).sort(),
+    ).toEqual(['-', bmw.slug].sort());
+
+    await prisma.garagePrice.update({
+      data: { toBani: 150_000 },
+      where: { id: row.id },
+    });
+    expect((await read(approved.slug)).body.prices[0].toBani).toBe(140_000);
+
+    await dropProfiles(redis, [`public:garage:${approved.id}`]);
+
+    expect((await read(approved.slug)).body.prices[0].toBani).toBe(150_000);
+    expect(
+      (await readWith(approved.slug, { brand: bmw.slug })).body.prices[0]
+        .toBani,
+    ).toBe(170_000);
   });
 });
 

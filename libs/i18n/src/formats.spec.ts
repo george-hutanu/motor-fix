@@ -6,6 +6,7 @@ import {
   daysUntil,
   formatClock,
   formatDay,
+  formatDuration,
   formatKm,
   formatLei,
   formatLeiRange,
@@ -14,6 +15,7 @@ import {
   formatPct,
   formatRating,
   formatSlot,
+  formatWholeLeiRange,
   relativeTime,
   requestAge,
 } from './formats';
@@ -64,6 +66,52 @@ describe('formatLeiRange', () => {
     expect(formatLeiRange(value, 80000, 'ro')).toBe(MISSING);
     expect(formatLeiRange(80000, value, 'en')).toBe(MISSING);
   });
+});
+
+// @traces 355-price-list-ranges-FR-008
+describe('formatWholeLeiRange', () => {
+  it('rounds each end to the nearest leu', () => {
+    expect(formatWholeLeiRange(18049, 23950, 'ro')).toBe('180–240 lei');
+    expect(formatWholeLeiRange(110050, 170000, 'en')).toBe('1,101–1,700 lei');
+  });
+
+  it('shows one amount when the rounded ends meet', () => {
+    expect(formatWholeLeiRange(18010, 17990, 'ro')).toBe('180 lei');
+  });
+
+  it.each(notNumbers)('shows a dash when an end is %p', (value) => {
+    expect(formatWholeLeiRange(value, 80000, 'ro')).toBe(MISSING);
+    expect(formatWholeLeiRange(80000, value, 'en')).toBe(MISSING);
+  });
+});
+
+// @traces 355-price-list-ranges-FR-009
+describe('formatDuration', () => {
+  it.each([
+    [30, '30 min', '30 min'],
+    [1, '1 min', '1 min'],
+    [59, '59 min', '59 min'],
+    [60, '1 h', '1 h'],
+    [65, '1 h 5', '1 h 5'],
+    [90, '1 h 30', '1 h 30'],
+    [600, '10 h', '10 h'],
+    [479, '7 h 59', '7 h 59'],
+    [481, '8 h 1', '8 h 1'],
+    [480, '1 zi', '1 day'],
+    [960, '2 zile', '2 days'],
+    [1440, '3 zile', '3 days'],
+  ])('reads %p minutes as %p and %p', (minutes, ro, en) => {
+    expect(formatDuration(minutes, 'ro')).toBe(ro);
+    expect(formatDuration(minutes, 'en')).toBe(en);
+  });
+
+  it.each([0, -30, null, undefined, Number.NaN, Infinity, '60'])(
+    'shows nothing for %p',
+    (minutes) => {
+      expect(formatDuration(minutes, 'ro')).toBe('');
+      expect(formatDuration(minutes, 'en')).toBe('');
+    },
+  );
 });
 
 describe('formatRating', () => {
