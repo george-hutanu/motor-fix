@@ -101,6 +101,7 @@ const refusedForConsent = (res: request.Response) => {
 };
 
 describe('consent at sign-up', () => {
+  // @traces 243-FR-012
   it('stores the terms and the privacy notice accepted, with versions, language and method', async () => {
     const before = new Date();
     const res = await signUp();
@@ -197,6 +198,16 @@ describe('consent at sign-up', () => {
       await nothingWritten();
     },
   );
+
+  // @traces 243-FR-012
+  it('refuses a sign-up that accepted the replaced texts of 2026-10-05', async () => {
+    const res = await signUp({
+      consent: { privacyVersion: '2026-10-05', termsVersion: '2026-10-05' },
+    });
+
+    refusedForConsent(res);
+    await nothingWritten();
+  });
 
   it('refuses a version that is not a string by validation and writes nothing', async () => {
     const res = await signUp({

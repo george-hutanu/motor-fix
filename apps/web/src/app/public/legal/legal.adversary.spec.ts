@@ -45,6 +45,7 @@ describe('the legal texts as data', () => {
     },
   );
 
+  // @traces 243-FR-001
   it.each(kinds)(
     'the %s holds as many sections and paragraphs in Romanian as in English',
     (kind) => {
@@ -65,9 +66,9 @@ describe('the legal texts as data', () => {
   );
 
   it.each(languages)(
-    'the %s draft notice and version label are not empty',
+    'the %s version label is not empty and is the only label',
     (language) => {
-      expect(LEGAL_LABELS[language].draft.trim()).not.toBe('');
+      expect(Object.keys(LEGAL_LABELS[language])).toEqual(['version']);
       expect(LEGAL_LABELS[language].version.trim()).not.toBe('');
     },
   );

@@ -527,6 +527,21 @@ describe('what a view does not do', () => {
       outbox: await prisma.outboxEvent.count(),
     }).toEqual(before);
   });
+
+  // @traces 243-FR-010
+  it('sets no cookie for a visitor or for a signed-in driver', async () => {
+    at('2030-06-14T08:00:00Z');
+    const g = await garage();
+    const driver = await world.account('Andrei');
+
+    const anonymous = await view(g.id);
+    const signedIn = await view(g.id, { auth: bearer(driver, 'driver') });
+
+    expect(anonymous.status).toBe(204);
+    expect(signedIn.status).toBe(204);
+    expect(anonymous.headers['set-cookie']).toBeUndefined();
+    expect(signedIn.headers['set-cookie']).toBeUndefined();
+  });
 });
 
 // @traces 143-FR-009

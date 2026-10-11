@@ -19,8 +19,3 @@ h2 {
 .meta {
   color: var(--mf-text-secondary);
 }
-.draft {
-  padding: var(--mf-space-3);
-  border-radius: var(--mf-radius-control);
-  background: var(--mf-amber-tint);
-}
