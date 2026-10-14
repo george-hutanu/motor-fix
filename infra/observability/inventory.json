@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 113,
+    "count": 115,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -719,7 +719,10 @@
       "source": "libs/domain/src/insights/profile-views/profile-views.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/{id}/views",
       "dashboard": "motorfix-api",
-      "alerts": ["api-error-rate", "api-latency"],
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "reason": "the public profile's beacon; every outcome is the motorfix_profile_views_total entry, which owns the lost-view alert",
       "story": "ST-143"
     },

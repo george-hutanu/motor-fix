@@ -27,7 +27,8 @@
       "plateCheck": "Check the registration plate.",
       "plateHeld": "You already have a car with this plate.",
       "problem": {
-        "car_limit": "You can have at most 20 cars."
+        "car_limit": "You can have at most 20 cars.",
+        "stale_version": "The car was changed in the meantime. Check the details and save again."
       },
       "rca": "RCA valid until",
       "retry": "Try again",
@@ -36,6 +37,12 @@
       "title": "Add a car",
       "year": "Year",
       "yearRange": "The year must be between 1950 and {max}."
+    },
+    "edit": {
+      "cancel": "Cancel",
+      "kmLower": "The reading is lower than the saved one ({km} km). Are you sure?",
+      "submit": "Save",
+      "title": "Edit the car"
     },
     "findGarage": "Find a garage",
     "findGarageFor": "Find a garage for {car}",
@@ -49,7 +56,40 @@
       "today": "ITP expires today",
       "valid": "ITP valid until {month}"
     },
-    "retry": "Try again"
+    "menu": {
+      "edit": "Edit",
+      "name": "Actions for {car}",
+      "remove": "Remove the car"
+    },
+    "rca": {
+      "days": {
+        "one": "RCA expires tomorrow",
+        "other": "RCA expires in {count} days"
+      },
+      "expired": "RCA expired on {day}",
+      "missing": "RCA: add the date",
+      "today": "RCA expires today",
+      "valid": "RCA valid until {month}"
+    },
+    "remove": {
+      "cancel": "Cancel",
+      "confirm": "Remove the car",
+      "problem": {
+        "open_request": "The car has an open request. Finish or cancel the request first."
+      },
+      "text": "Remove the {car}? You will get no more reminders for it."
+    },
+    "retry": "Try again",
+    "rovinieta": {
+      "days": {
+        "one": "Rovinietă expires tomorrow",
+        "other": "Rovinietă expires in {count} days"
+      },
+      "expired": "Rovinietă expired on {day}",
+      "missing": "Rovinietă: add the date",
+      "today": "Rovinietă expires today",
+      "valid": "Rovinietă valid until {month}"
+    }
   },
   "details": {
     "cancel": "Cancel",

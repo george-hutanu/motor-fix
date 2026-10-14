@@ -48,3 +48,17 @@ describe('the repository inventory', () => {
     expect(check?.metric).toMatch(/\/api\/v1\/listing-drafts\/:id\/check/);
   });
 });
+
+// @traces 092-FR-013
+describe('the car edit and removal routes', () => {
+  it('are OpenAPI operations the inventory counts', () => {
+    const car = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/cars/{id}'];
+
+    expect(Object.keys(car)).toEqual(
+      expect.arrayContaining(['patch', 'delete']),
+    );
+    expect(checkInventory(root)).toEqual([]);
+  });
+});

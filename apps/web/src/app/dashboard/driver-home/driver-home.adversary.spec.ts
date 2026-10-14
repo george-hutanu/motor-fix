@@ -27,6 +27,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   plate: null,
   rcaUntil: null,
   rovinietaUntil: null,
+  updatedAt: '2026-10-07T09:00:00.000Z',
   year: 2017,
   ...over,
 });

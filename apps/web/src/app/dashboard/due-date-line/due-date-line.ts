@@ -3,6 +3,7 @@ import {
   Component,
   inject,
   input,
+  output,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -55,6 +56,9 @@ export class DueDateLine {
   readonly expiry = input.required<string | null>();
   readonly keyPrefix = input.required<string>();
   readonly link = input<DueDateLink | null>(null);
+  // With no date, the grey line becomes a button that asks for one.
+  readonly addable = input(false);
+  readonly add = output<void>();
 
   protected status(): DueDateStatus {
     return dueDateStatus(this.expiry(), new Date());

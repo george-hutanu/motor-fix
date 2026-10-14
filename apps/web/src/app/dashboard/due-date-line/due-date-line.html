@@ -1,5 +1,9 @@
 @let now = status();
-<mf-lamp [state]="now.state" [label]="sentence(now)" />
+@if (addable() && now.days === null) {
+  <button type="button" (click)="add.emit()"><mf-lamp [state]="now.state" [label]="sentence(now)" /></button>
+} @else {
+  <mf-lamp [state]="now.state" [label]="sentence(now)" />
+}
 @if (now.passed && link(); as to) {
   <a
     [routerLink]="to.path"

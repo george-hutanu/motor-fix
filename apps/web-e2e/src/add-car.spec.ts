@@ -105,8 +105,9 @@ const monthYear = (day: string) =>
     year: 'numeric',
   }).format(new Date(`${day}T00:00:00Z`));
 
+// The ITP line comes first; a missing RCA or rovinietă date follows as a grey line.
 const itpLamp = (page: Page, name: string) =>
-  card(page, name).locator('mf-due-date-line mf-lamp');
+  card(page, name).locator('mf-due-date-line mf-lamp').first();
 
 test.describe('a driver can add a car @seeded', () => {
   test('a new driver can add a car, finds it after signing in again, and adds another in English', async ({

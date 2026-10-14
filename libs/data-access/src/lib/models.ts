@@ -175,6 +175,7 @@ export type { SwitchRoleDto } from './models/switch-role-dto';
 export type { TestMessageDto } from './models/test-message-dto';
 export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UnreadCountDto } from './models/unread-count-dto';
+export type { UpdateCarDto } from './models/update-car-dto';
 export type { UpdateGarageDto } from './models/update-garage-dto';
 export type { UpdateMeDto } from './models/update-me-dto';
 export type { UpdateNotificationGroupDto } from './models/update-notification-group-dto';
