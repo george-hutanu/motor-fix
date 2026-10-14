@@ -1,5 +1,10 @@
 import { DOCUMENT } from '@angular/common';
-import { inject, provideEnvironmentInitializer } from '@angular/core';
+import {
+  DestroyRef,
+  inject,
+  provideEnvironmentInitializer,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
 
 // The service worker reports a broken state when the files it cached no
@@ -8,7 +13,10 @@ export function provideServiceWorkerRecovery() {
   return provideEnvironmentInitializer(() => {
     const updates = inject(SwUpdate);
     const document = inject(DOCUMENT);
+    const destroyRef = inject(DestroyRef);
     if (updates.isEnabled)
-      updates.unrecoverable.subscribe(() => document.location.reload());
+      updates.unrecoverable
+        .pipe(takeUntilDestroyed(destroyRef))
+        .subscribe(() => document.location.reload());
   });
 }

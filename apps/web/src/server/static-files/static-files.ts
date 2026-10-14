@@ -4,6 +4,16 @@ import express, { type Express } from 'express';
 // the release to upload, and they never leave the server.
 const SOURCE_MAP = /\.map$/i;
 
+// The file server decodes the path, so `%2Emap` names a map too; a malformed
+// escape is left for the file server to refuse.
+function decoded(path: string) {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 // The build fingerprints a file as `<name>-<8 characters>.<ext>` (outputHashing
 // "all"): capitals and digits for the entry files and media, base64url for
 // the lazy chunks (`chunk-C0-vUTPR.js`, `chunk--0e6RH5t.js`). A suffix with no
@@ -25,7 +35,7 @@ export function mountStaticFiles(app: Express, folder: string) {
       ),
   });
   app.use((req, res, next) => {
-    if (SOURCE_MAP.test(req.path)) res.status(404).end();
+    if (SOURCE_MAP.test(decoded(req.path))) res.status(404).end();
     else serve(req, res, next);
   });
 }
