@@ -175,9 +175,10 @@ export function readinessOutcome({ name, status, body, storage, url }) {
  * immutable or positive max-age, a blocking finding otherwise.
  */
 export function workerCacheOutcome({ status, cacheControl, url }) {
-  const cc = String(cacheControl ?? "").toLowerCase();
-  const kept = /\bimmutable\b/.test(cc) || Number(/max-age=(\d+)/.exec(cc)?.[1] ?? 0) > 0;
-  if (status === 200 && /\bno-cache\b/.test(cc) && !kept) return {};
+  const directives = String(cacheControl ?? "").toLowerCase().split(",").map((d) => d.trim().split("="));
+  const has = (name) => directives.some(([n]) => n.trim() === name);
+  const kept = has("immutable") || directives.some(([n, v]) => n.trim() === "max-age" && Number(v) > 0);
+  if (status === 200 && has("no-cache") && !kept) return {};
   return { finding: stepFinding("ngsw-worker.js is cached past a deploy", `GET ${url} answered ${status} with Cache-Control: ${cacheControl || "(none)"}; it must be no-cache.`, "high") };
 }
 
