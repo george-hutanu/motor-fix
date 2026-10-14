@@ -119,7 +119,6 @@ const since = async (before: Awaited<ReturnType<typeof cacheCounts>>) => {
   };
 };
 
-// @traces 267-FR-009
 // @traces 267-FR-009 267-FR-010 267-FR-011
 describe('the search cache', () => {
   it('keeps a page for 60 seconds under the generation, brand, place, radius and cursor', async () => {

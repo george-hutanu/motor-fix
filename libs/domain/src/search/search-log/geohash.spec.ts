@@ -1,7 +1,6 @@
 import { geohash5 } from './geohash';
 
 // @traces 267-FR-007
-// @traces 267-FR-007
 describe('geohash5', () => {
   it.each([
     [{ lat: 42.6, lng: -5.6 }, 'ezs42'],

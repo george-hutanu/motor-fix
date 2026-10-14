@@ -20,7 +20,6 @@ async function counts(name: string) {
   );
 }
 
-// @traces 267-FR-023
 // @traces 267-FR-011 267-FR-023
 describe('counting the search cache and the search log', () => {
   it('adds one per cache read, by outcome', async () => {

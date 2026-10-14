@@ -115,7 +115,7 @@ export class Results {
 
   // Only a new search is logged: the opening one, another brand or place in
   // the bar, and a place chosen here; never a retry, a widening or a reload.
-  private logNext = true;
+  private logNext = false;
   private logged: string | undefined;
 
   // Never on the server: it renders the skeletons, the browser searches.
