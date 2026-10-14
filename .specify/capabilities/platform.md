@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-11
+updated: 2026-10-14
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -76,6 +76,7 @@ features:
   - 1170-integration-on-demand
   - 1168-chief-mods
   - 1171-qa-latency
+  - 1201-static-cache-headers
 ---
 
 # Capability: Platform
@@ -1887,6 +1888,34 @@ _From 1171-qa-latency._
 ### 1171-FR-009 — `.claude/scripts/pr-test/latency.mjs <n>…` prints, per PR, the time from ready to the PR tester's first review, the number of laps (the tester's reviews), and the median of each over the PRs given.
 
 _From 1171-qa-latency._
+
+### 1201-FR-001 — The web server MUST answer a static file whose name carries the build's content hash — a base name ending in a dash and exactly eight characters from letters, digits, `_` and `-`, at least one of them a capital letter or a digit, before the extension (the forms the production build writes: `main-VFV36B5U.js` for entry files and media, `chunk-C0-vUTPR.js` for lazy chunks) — with `Cache-Control: public, max-age=31536000, immutable`.
+
+_From 1201-static-cache-headers._
+
+### 1201-FR-002 — The web server MUST answer every other static file it serves — today including `ngsw-worker.js`, `ngsw.json`, `manifest.webmanifest`, `index.csr.html`, `favicon.ico` and the files under `/icons/`, none of which carries a hash — with a `Cache-Control` value of exactly `no-cache`, MUST NOT mark it `immutable` or give it a positive `max-age`, and MUST send an `ETag` so a client can revalidate it.
+
+_From 1201-static-cache-headers._
+
+### 1201-FR-003 — A conditional request for an unchanged static file carrying its current `ETag` MUST be answered `304 Not Modified`.
+
+_From 1201-static-cache-headers._
+
+### 1201-FR-004 — The rest of the static file behaviour MUST stay as it is: no directory index, no redirect, source maps answered `404` with an empty body, and a missing file passed on to the next handler.
+
+_From 1201-static-cache-headers._
+
+### 1201-FR-005 — The web app MUST reload the page once for each unrecoverable state the service worker reports, when the service worker updates source says it is enabled; when it says it is disabled (on the server and in development), the app MUST NOT subscribe to those reports.
+
+_From 1201-static-cache-headers._
+
+### 1201-FR-006 — The PR QA run MUST request `/ngsw-worker.js` from the booted PR head and report a check that passes only when the answer is `200` and its `Cache-Control` contains `no-cache` and carries neither `immutable` nor a positive `max-age`; any other answer (no header, a non-200) MUST be a blocking finding.
+
+_From 1201-static-cache-headers._
+
+### 1201-FR-007 — FR-001 to FR-005 MUST each have failing-first automated tests beside the code they exercise (Constitution II).
+
+_From 1201-static-cache-headers._
 
 ## Retired
 
