@@ -577,6 +577,50 @@ describe('Results', () => {
       expect(document.activeElement).toBe(focused);
     });
 
+    it('keeps the cards as they are when a live re-read fails', async () => {
+      quietly();
+      await loaded();
+      const [first, second] = cards();
+
+      send('review.posted', 'review-9');
+      await coalesce();
+      await reads[1]?.fail();
+
+      expect(names()).toEqual(['Atelier Unu', 'Service Doi']);
+      expect(cards()[0]).toBe(first);
+      expect(cards()[1]).toBe(second);
+      expect(page().querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('drops a live re-read answered after the search changed', async () => {
+      quietly();
+      await loaded();
+
+      send('review.posted', 'review-9');
+      await coalesce();
+      expect(reads[1]?.params).toEqual({ brand: 'bmw', ids: 'one,two' });
+      await open('/ro/garages?brand=audi');
+      await reads[2]?.answer(
+        pageOf({
+          counts: { doesNotTake: 0, worksOn: 1 },
+          items: [garageOf('three', 'Garaj Trei')],
+          total: 1,
+        }),
+      );
+      await reads[1]?.answer(
+        pageOf({
+          items: [
+            { ...garageOf('one', 'Atelier Unu'), reviewCount: 11 },
+            garageOf('two', 'Service Doi'),
+          ],
+        }),
+      );
+
+      expect(names()).toEqual(['Garaj Trei']);
+      expect(tally()).toContain('1 service găsit');
+      expect(chip()).toBeUndefined();
+    });
+
     // @traces 267-brand-results-FR-019
     it('re-reads only the loaded garages an update or a restoration names, in one read for a burst', async () => {
       await loaded();

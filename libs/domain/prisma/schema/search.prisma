@@ -3,7 +3,8 @@
 // One row per new search, for the admin Demand view: the brand, the
 // 5-character geohash of the rounded place (null without one) and the time.
 // Holds no account and no exact point. Written after the answer, never
-// through the outbox; no index until the Demand query needs one.
+// through the outbox.
+// TODO: index brand_id and at, and set a retention, once the Demand view reads this table.
 model SearchLog {
   id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   brandId  String   @map("brand_id") @db.Uuid
