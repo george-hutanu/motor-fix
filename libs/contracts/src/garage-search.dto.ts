@@ -100,7 +100,7 @@ export class GarageSearchQueryDto extends NearQueryDto {
     description: `Up to ${SEARCH_IDS_MAX} garage ids, comma-separated: answers those of them that are public, in the search's order, with no cursor`,
     example: '9f1c2a7b-0000-4000-8000-000000000001',
   })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @IsGarageIdList('ids')
   ids?: string;

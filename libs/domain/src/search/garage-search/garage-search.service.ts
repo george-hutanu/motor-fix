@@ -3,6 +3,7 @@ import {
   type GarageSearchPageDto,
   type ListedGarageDto,
   nearOf,
+  SEARCH_IDS_MAX,
   type SearchPoint,
 } from '@motor-fix/contracts';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
@@ -19,7 +20,7 @@ import { countSearch } from '../../metrics/product-counters';
 import { garagesInArea, groupsOf, placed } from '../area/search-area';
 import { SearchLogService } from '../search-log/search-log.service';
 
-const PAGE = 20;
+const PAGE = SEARCH_IDS_MAX;
 const GROUPS = ['works_on', 'other'] as const;
 
 // Unsigned on purpose: it only says where the next page starts, and a

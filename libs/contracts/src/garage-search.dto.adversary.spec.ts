@@ -47,6 +47,10 @@ describe('GarageSearchQueryDto under hostile input', () => {
     expect(search({ brand: null })).not.toEqual([]);
   });
 
+  it('refuses ids given as null', () => {
+    expect(search({ brand: 'bmw', ids: null })).toContain('ids');
+  });
+
   it('refuses a brand key repeated into a list', () => {
     expect(search({ brand: ['bmw', 'audi'] })).not.toEqual([]);
   });
