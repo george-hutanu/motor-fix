@@ -169,6 +169,19 @@ export function readinessOutcome({ name, status, body, storage, url }) {
   return { finding: stepFinding(`${name} readiness failed: ${failed.join(", ") || status}`, `GET ${url} answered ${status}: ${String(body).slice(0, 300)}`) };
 }
 
+/**
+ * The service worker script must be revalidated on every use, or a deploy
+ * never reaches a returning visitor: nothing on 200 with no-cache and no
+ * immutable or positive max-age, a blocking finding otherwise.
+ */
+export function workerCacheOutcome({ status, cacheControl, url }) {
+  const directives = String(cacheControl ?? "").toLowerCase().split(",").map((d) => d.trim().split("="));
+  const has = (name) => directives.some(([n]) => n.trim() === name);
+  const kept = has("immutable") || directives.some(([n, v]) => n.trim() === "max-age" && Number(v) > 0);
+  if (status === 200 && has("no-cache") && !kept) return {};
+  return { finding: stepFinding("ngsw-worker.js is cached past a deploy", `GET ${url} answered ${status} with Cache-Control: ${cacheControl || "(none)"}; it must be no-cache.`, "high") };
+}
+
 /** A layout finding is its route, rule and element: the value measured may move between laps. */
 // Each part escapes its own "|", so no route or selector can pass for another rule's key.
 const keyPart = (v) => String(v ?? "").replaceAll("\\", "\\\\").replaceAll("|", "\\|");
