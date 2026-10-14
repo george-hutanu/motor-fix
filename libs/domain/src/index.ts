@@ -34,7 +34,10 @@ export { PhoneSignInModule } from './auth/phone-sign-in/phone-sign-in.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { createPrisma, PRISMA } from './auth/prisma';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
-export { RemindersModule } from './cars/reminders/reminders.module';
+export {
+  CAR_REMINDERS_CONSUMER,
+  RemindersModule,
+} from './cars/reminders/reminders.module';
 export { reminderDayMs } from './cars/reminders/reminders-config';
 export { BrandLoader } from './catalogue/brand-loader';
 export { BRANDS } from './catalogue/brands';

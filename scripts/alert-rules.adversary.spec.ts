@@ -101,6 +101,7 @@ describe('alert rule queries', () => {
   it('only match label values that the dashboards use for the same selector', () => {
     const wanted = [
       'outcome=\\"failed\\"',
+      'outcome=\\"fallback\\"',
       'store=\\"postgres\\"',
       'store=\\"redis\\"',
     ];

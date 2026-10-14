@@ -34,4 +34,31 @@ describe('the repository inventory', () => {
   repoIt('counts every OpenAPI operation and misses nothing', () => {
     expect(checkInventory(root)).toEqual([]);
   });
+
+  // @traces 115-FR-014
+  it('lists the listing draft check with its request metric', () => {
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: { name?: string; metric?: string }[] = Object.values(
+      inventory,
+    ).flatMap((each) => (Array.isArray(each) ? each : []));
+    const check = entries.find((each) => each.name === 'listing-draft-check');
+
+    expect(check?.metric).toMatch(/\/api\/v1\/listing-drafts\/:id\/check/);
+  });
+});
+
+// @traces 092-FR-013
+describe('the car edit and removal routes', () => {
+  it('are OpenAPI operations the inventory counts', () => {
+    const car = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/cars/{id}'];
+
+    expect(Object.keys(car)).toEqual(
+      expect.arrayContaining(['patch', 'delete']),
+    );
+    expect(checkInventory(root)).toEqual([]);
+  });
 });

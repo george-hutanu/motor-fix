@@ -50,3 +50,44 @@ p {
     align-self: flex-start;
   }
 }
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.more {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: calc(-1 * var(--mf-space-3)) calc(-1 * var(--mf-space-3)) 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mf-radius-control);
+  background: none;
+  color: var(--mf-text-secondary);
+  cursor: pointer;
+}
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: var(--mf-space-1) 0;
+}
+.menu [role="menuitem"] {
+  min-height: 44px;
+  padding: 0 var(--mf-space-4);
+  border: 0;
+  background: none;
+  color: var(--mf-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.menu [role="menuitem"]:hover {
+  background: var(--mf-line);
+}

@@ -1,0 +1,42 @@
+<article class="card">
+  <span class="initials" aria-hidden="true">{{ initials() }}</span>
+  <div class="body">
+    <div class="head">
+      <div class="id">
+        <h3>{{ garage().name }}</h3>
+        @if (where().city || where().rest) {
+          <p class="where">
+            @if (where().city) {
+              <span translate="no">{{ where().city }}</span>
+            }{{ where().rest }}
+          </p>
+        }
+      </div>
+      <div class="score">
+        <mf-rating-dial size="small" aria-hidden="true" [value]="garage().rating" />
+        @if (rated(); as rated) {
+          <span class="sr-only">{{ rated }}</span>
+        }
+        <span class="reviews">{{ reviews() }}</span>
+      </div>
+    </div>
+    <mf-lamp [state]="takes() ? 'green' : 'red'" [label]="stance()" />
+    <p class="list"><span class="key">{{ 'public.home.cards.worksOn' | t }}</span> {{ names(garage().worksOn) }}</p>
+    <p class="list"><span class="key">{{ 'public.home.cards.doesNotTake' | t }}</span> {{ names(garage().doesNotTake) }}</p>
+    @if (garage().facilities.length > 0) {
+      <ul class="tags">
+        @for (facility of garage().facilities; track facility) {
+          <li>{{ facilityName(facility) }}</li>
+        }
+      </ul>
+    }
+    <div class="foot">
+      <a class="view" [routerLink]="['/', i18n.language(), 'garages', garage().slug]" [queryParams]="{ brand: brand().slug }">{{
+        'public.results.card.view' | t
+      }}</a>
+      @if (rate(); as rate) {
+        <span class="rate">{{ rate }}</span>
+      }
+    </div>
+  </div>
+</article>

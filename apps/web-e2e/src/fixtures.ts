@@ -46,6 +46,8 @@ export async function needsAnalytics(
   base.skip(reason !== undefined, reason);
 }
 
+let draftAddresses = 0;
+
 /** The `context` fixture: the routes every test shares, removed when it ends. */
 export async function routedContext(
   { context }: { context: BrowserContext },
@@ -57,6 +59,21 @@ export async function routedContext(
   // Analytics, loaded once a test accepts them: answered here too.
   await context.route('https://plausible.io/**', (route) =>
     route.fulfill({ status: 204 }),
+  );
+  // Drafts created are limited per address per hour (rate-counts.ts), and
+  // every listing spec creates some from this one machine: each test creates
+  // them from an address of its own, on TEST-NET-1. A deployed target trusts
+  // no such header, so this only matters to a run that starts its servers.
+  const address = `192.0.2.${(Date.now() + ++draftAddresses) % 250}`;
+  await context.route('**/api/v1/listing-drafts', (route) =>
+    route.request().method() === 'POST'
+      ? route.continue({
+          headers: {
+            ...route.request().headers(),
+            'x-forwarded-for': address,
+          },
+        })
+      : route.fallback(),
   );
   await use(context);
   // Handlers still answering when the test ends must not outlive it.

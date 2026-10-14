@@ -94,3 +94,11 @@ li:hover {
 .actions button {
   white-space: normal;
 }
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+}
+.question p {
+  font-weight: 600;
+}

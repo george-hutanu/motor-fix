@@ -149,6 +149,7 @@ const NOT_CHANGES = new Set([
   // Reminders follow a car's or a booking's dates: the stories that change
   // those audit the change, and sending a reminder is not one.
   'RemindersService.cancelBooking',
+  'RemindersService.onCarEvent',
   'RemindersService.removeCar',
   'RemindersService.send',
   'RemindersService.setBooking',
@@ -165,6 +166,9 @@ const NOT_CHANGES = new Set([
   'ListingDocumentsService.remove',
   // Runs inside the sending transaction, which audits the new garage.
   'GaragePhotosService.saveRows',
+  // A visitor's search, counted for the Demand view: no account and no
+  // change to anyone's data, so no audit entry by the search's rule.
+  'SearchLogService.record',
 ]);
 
 const uncovered = (source: string) =>

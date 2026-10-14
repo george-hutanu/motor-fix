@@ -200,6 +200,7 @@ async function brand(active = true) {
   ).id;
 }
 
+// @traces 267-FR-018
 describe('the public live stream', () => {
   it('opens for a visitor without a session and greets it with hello', async () => {
     const live = await stream(app);
@@ -260,6 +261,43 @@ describe('the public live stream', () => {
     await quiet(live, ['system']);
 
     expect(live.events()).toEqual(['platform_rule.changed']);
+  });
+
+  // @traces 267-FR-018
+  it('joins every public garage of a results page, comma-separated, and none of the others', async () => {
+    const first = await garage();
+    const second = await garage();
+    const draft = await garage('draft');
+    const suspended = await garage('suspended');
+    const unknown = randomUUID();
+    const live = await stream(app, {
+      garages: [first, draft, second, suspended, unknown].join(','),
+    });
+    await live.next('hello');
+
+    for (const id of [draft, suspended, unknown, first, second]) {
+      await record('garage.updated', id, [`public:garage:${id}`]);
+    }
+    await quiet(live, ['system']);
+
+    expect(live.res.statusCode).toBe(200);
+    expect(
+      live.messages
+        .filter((m) => m.event === 'garage.updated')
+        .map((m) => m.data['id']),
+    ).toEqual([first, second]);
+  });
+
+  // @traces 267-FR-018
+  it('opens for a page of 20 garage ids and carries an event about the last of them', async () => {
+    const last = await garage();
+    const ids = [...Array.from({ length: 19 }, () => randomUUID()), last];
+    const live = await stream(app, { garages: ids.join(',') });
+    await live.next('hello');
+
+    await record('garage.suspended', last, [`public:garage:${last}`]);
+
+    expect((await live.next('garage.suspended')).data['id']).toBe(last);
   });
 
   it('never carries a private kind, even when the publisher named a public key', async () => {
@@ -441,11 +479,27 @@ describe('the public live stream', () => {
   });
 
   describe('what it refuses', () => {
+    const SAME = randomUUID();
+    // @traces 267-FR-018
     it.each([
       ['two garages', { garages: [randomUUID(), randomUUID()] }],
       ['two mechanics', { mechanics: [randomUUID(), randomUUID()] }],
       ['two brands', { brand: [randomUUID(), randomUUID()] }],
       ['a garage that is not a uuid', { garages: 'atelier-dinamo' }],
+      [
+        '21 garages',
+        { garages: Array.from({ length: 21 }, () => randomUUID()).join(',') },
+      ],
+      ['the same garage twice', { garages: `${SAME},${SAME}` }],
+      [
+        'the same garage in two cases',
+        { garages: `${SAME},${SAME.toUpperCase()}` },
+      ],
+      [
+        'a list with a garage that is not a uuid',
+        { garages: `${randomUUID()},atelier-dinamo` },
+      ],
+      ['an empty entry in the list', { garages: `${randomUUID()},` }],
       ['an unknown parameter', { token: 'abc' }],
     ])('answers 400 to %s before any stream data', async (_, query) => {
       const search = new URLSearchParams();

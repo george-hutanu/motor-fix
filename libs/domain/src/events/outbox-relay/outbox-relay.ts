@@ -6,6 +6,7 @@ import {
   type ProfileDropper,
 } from '../../garages/public-garages/public-garages.cache';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { dropSearches } from '../../search/garage-search/garage-search.cache';
 import { type LivePublisher, publishLive } from '../live/live.hub';
 
 const BATCH = 100;
@@ -151,9 +152,10 @@ export class OutboxRelay {
 
   private async hand(row: Row) {
     const id = String(row.id);
-    // The cached profile goes first, so a page re-reading on the event never
-    // gets the answer from before it.
+    // The cached profile and searches go first, so a page re-reading on the
+    // event never gets the answer from before it.
     await dropProfiles(this.redis, row.audience);
+    await dropSearches(this.redis, row.audience);
     await publishLive(
       this.redis,
       {

@@ -1,9 +1,10 @@
 ---
 capability: cars
-updated: 2026-10-08
+updated: 2026-10-11
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
+  - 092-edit-remove-car
 ---
 
 # Capability: Cars
@@ -68,14 +69,72 @@ _From 090-itp-status-lamp._
 
 _From 090-itp-status-lamp._
 
-### 090-FR-006 — Mașinile mele's car card MUST show the brand and model, "<year> · <km> km", the plate grouped as today when the car has one, and then the ITP due-date line in place of ST-89's plain ITP line. A car added from the dialog shows its line at once. Modifies 089-FR-008 (the ITP line becomes the due-date line).
+### 092-FR-009 — Mașinile mele's car card MUST show the brand and model, "<year> · <km> km", the plate grouped as today when the car has one, then the ITP due-date line (090-FR-001..005), then the RCA and rovinietă lines below; a car added or edited from its dialog shows its lines at once (supersedes 090-FR-006). The card MUST carry a "⋯" menu (accessible name "Acțiuni pentru <brand model>" / "Actions for <brand model>", operable by keyboard, a 44 px touch target) with "Modifică" / "Edit" and "Șterge mașina" / "Remove the car". The card MUST show, after the ITP line, an RCA due-date line and a rovinietă due-date line (the shared line of 090-FR-001 with their own texts, the lamp states of 090-FR-003): "RCA valabilă până în <month> <year>" / "RCA valid until <Month> <year>", "RCA-ul expiră în <n> <zile>" / "RCA expires in <n> days" (mâine/azi as the ITP), "RCA-ul a expirat pe <day>" / "RCA expired on <day>", and the same for "Rovinieta" ("Rovinieta e valabilă până în …", "Rovinieta expiră în …", "Rovinieta a expirat pe …" / "Rovinietă valid until …", "Rovinietă expires in …", "Rovinietă expired on …"); no garage link on these two. With no date the grey line reads "RCA: adaugă data" / "RCA: add the date" and "Rovinietă: adaugă data" / "Rovinietă: add the date"; the ITP's grey sentence stays 090-FR-004's. Each of the three grey lines is a button that opens the edit dialog with the focus on that date's field.
 
-_From 090-itp-status-lamp._
+_From 092-edit-remove-car._
 
 ### 090-FR-007 — Tests MUST cover: the state and sentence for 61, 60, 8, 7, 1, 0 and −1 days and for no date, with a fixed clock in Europe/Bucharest, including just before and after midnight and the change to and from summer time; the Romanian plural and both languages' month names; the link only on a passed date, with its address (Jest); end to end (Playwright): a new driver adds a car with an ITP 36 days ahead and sees the amber line, then adds a car with an ITP 400 days ahead and sees the green line (dates relative to today in Europe/Bucharest, never literal).
 
 _From 090-itp-status-lamp._
 
+### 092-FR-001 — The system MUST let the owner of a car change any of its fields through `PATCH /api/v1/cars/:id` in the `cars` module (a merge patch: an omitted field is unchanged, an explicit `null` clears the plate, the engine or a date): brand, model, year, fuel, engine, odometer, plate, ITP, RCA and rovinietă dates, each with the add story's validation (089-FR-003; a refused body answers 400 `validation_failed` with the fields, 472-FR-001); it MUST require the capability `driver.cars`, answer 200 with the car as the owner sees it, and answer 404 for a car another account owns, a car already removed, or an unknown id (079-FR-013), and 400 `validation_failed` for an id that is not a UUID. The plate MAY be added, changed or cleared and stays the owner's alone (089-FR-011). A MotorFix admin does not edit cars.
+
+_From 092-edit-remove-car._
+
+### 092-FR-002 — The car MUST carry an update time (`updated_at`, set on creation and on every change), returned to the owner in every car answer as its version; an edit MUST send the version it loaded as a required `version` body field, and a mismatch MUST answer 409 `stale_version` and change nothing. The dialog then reloads the car, shows scenario 6's message and keeps the dialog open with the current values.
+
+_From 092-edit-remove-car._
+
+### 092-FR-003 — The system MUST let the owner remove a car through `DELETE /api/v1/cars/:id` (capability `driver.cars`; 404 as FR-001): a soft removal that sets `removed_at` and answers 204; the car is never hard-deleted (089-FR-005). It MUST be refused with 409 `open_request` when the car has a quote request in `sent`, `quoted`, `booked` or `in_work`; the check and the removal run in one transaction. A removed car MUST be absent from `GET /api/v1/cars` (089-FR-002, unchanged) and from the 20-car count (089-FR-004, unchanged), so every screen that reads the list (Mașinile mele, the home page's cars panel, the request-quote car picker) no longer shows it. There is no undo.
+
+_From 092-edit-remove-car._
+
+### 092-FR-004 — In the same transaction as the change, the system MUST write audit entries through the audit writer (390-FR-001): for an edit, one entry per changed field with old and new value (action `update`, subject `car`, actor the account in its role in use; values as the car answer carries them: the brand id, dates as `YYYY-MM-DD`, numbers and text as such; the plate's entry names the field with both values `null`); for a removal, one entry "car removed" (action `delete`, subject `car`). An edit that changes no field writes no entry.
+
+_From 092-edit-remove-car._
+
+### 092-FR-005 — In the same transaction, the system MUST hand to the event port `car.updated` (car id, owner id and the names of the changed fields; the worker reads the dates from the car, FR-006) and `car.removed` (car id, owner id); neither carries the plate or the model (089-FR-007). Nobody is notified and nothing updates live.
+
+_From 092-edit-remove-car._
+
+### 092-FR-006 — The worker MUST, on `car.updated` with a changed ITP, RCA or rovinietă date, set that car's reminder of that kind to the date the car holds when the event is handled (creating the row when there is none) with its 30-day and 7-day sent flags reset when the date moved, and cancel that kind's reminder when the car's date is cleared; the dates are read from the car, not the event, so an older event retried after a later edit cannot move a reminder back or recreate one cleared since; on `car.removed`, it MUST cancel every reminder of the car (ITP, RCA, rovinietă, tyres, service). A change of any other field leaves the reminders untouched. The worker's handling MUST be idempotent (an event may be delivered more than once), and a `car.updated` that arrives for a car already removed MUST change nothing, so a late event never recreates a reminder. The reminders service's `setCarDue` and `removeCar` are the hooks.
+
+_From 092-edit-remove-car._
+
+### 092-FR-007 — A removed car MUST get no reminder from the daily run: its rows are gone (FR-006), and the run MUST also skip any reminder whose car has `removed_at` set, so a removal that commits between a run's read and its send sends nothing.
+
+_From 092-edit-remove-car._
+
+### 092-FR-008 — A reminder stage MUST be sent once per date setting: a change of the date resets the flags, and that reset is the one way a stage goes out again. When a date is set or changed, every stage whose day (the due day minus 30, the due day minus 7) is before today in Europe/Bucharest MUST be marked as sent, so it is never sent late; a stage whose day is today is still sent by today's run.
+
+_From 092-edit-remove-car._
+
+### 092-FR-009 — Mașinile mele's car card MUST show the brand and model, "<year> · <km> km", the plate grouped as today when the car has one, then the ITP due-date line (090-FR-001..005), then the RCA and rovinietă lines below; a car added or edited from its dialog shows its lines at once (supersedes 090-FR-006). The card MUST carry a "⋯" menu (accessible name "Acțiuni pentru <brand model>" / "Actions for <brand model>", operable by keyboard, a 44 px touch target) with "Modifică" / "Edit" and "Șterge mașina" / "Remove the car". The card MUST show, after the ITP line, an RCA due-date line and a rovinietă due-date line (the shared line of 090-FR-001 with their own texts, the lamp states of 090-FR-003): "RCA valabilă până în <month> <year>" / "RCA valid until <Month> <year>", "RCA-ul expiră în <n> <zile>" / "RCA expires in <n> days" (mâine/azi as the ITP), "RCA-ul a expirat pe <day>" / "RCA expired on <day>", and the same for "Rovinieta" ("Rovinieta e valabilă până în …", "Rovinieta expiră în …", "Rovinieta a expirat pe …" / "Rovinietă valid until …", "Rovinietă expires in …", "Rovinietă expired on …"); no garage link on these two. With no date the grey line reads "RCA: adaugă data" / "RCA: add the date" and "Rovinietă: adaugă data" / "Rovinietă: add the date"; the ITP's grey sentence stays 090-FR-004's. Each of the three grey lines is a button that opens the edit dialog with the focus on that date's field.
+
+_From 092-edit-remove-car._
+
+### 092-FR-010 — The edit dialog MUST be a `dialog` task of the overlays service using the shared form-saving helper (158-FR-010, 159-FR-001..004), titled "Modifică mașina" / "Edit the car", with the add dialog's fields, sections, limits, messages and brand search (089-FR-009), pre-filled with the car's values, and one main button "Salvează" / "Save". A kilometre reading below the saved one MUST ask scenario 4's question (the saved reading in the person's number format) with "Salvează" / "Save" and "Renunță" / "Cancel" before the request is sent. The button shows progress while saving; a server error keeps the values and shows the reason (159-FR-002). On success the task closes with the car and the view updates its card without re-reading the list.
+
+_From 092-edit-remove-car._
+
+### 092-FR-011 — The removal MUST be confirmed in a dialog with scenario 1's text (User Story 2) naming the car as "<brand> <model>", with "Șterge mașina" / "Remove the car" as the main button and "Renunță" / "Cancel"; a refusal (FR-003's `open_request`, or any other error) MUST show its reason inside that dialog, which stays open; on success the dialog closes and the card leaves the list at once.
+
+_From 092-edit-remove-car._
+
+### 092-FR-012 — A removed car's repairs and figures MUST stay stored and be hidden with the car: Istoric reparații and the spend figures (when they exist) read only cars not removed. Selling a car and passing its history on is out of scope (#287).
+
+_From 092-edit-remove-car._
+
+### 092-FR-013 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the existing cars module's metrics, logs and traces; no new service, queue, outside call or dashboard panel is needed, and the PR's Observability section says so.
+
+_From 092-edit-remove-car._
+
+### 092-FR-014 — Tests MUST cover: every field editable within the add-dialog limits and each limit refused; the plate added, changed and cleared and absent from events, audit values and other accounts' answers; a date change resets the flags and a sent stage never repeats for the same date; a cleared date cancels its reminder; removal refused with an open request in each of the four states and allowed in `done` and `closed`; removed cars absent from `GET /api/v1/cars`, from the 20-car count and from the reminder run; 404 for another driver's car and for a removed car; 409 on a stale version; the audit entries and events written in the same transaction (a failing audit write rolls the change back) (Jest, on real PostgreSQL where the repository is used); the card menu, the three due-date lines and their grey lines, the edit dialog pre-filled, the lower-kilometres question and the removal confirmation with its refusal, in both languages (Jest); end to end (Playwright): a driver edits a car's ITP date and sees the line change; removes a car and sees it gone from Mașinile mele and the home page's cars panel.
+
+_From 092-edit-remove-car._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
+
+- `090-FR-006` — superseded by `092-FR-009` (2026-10-11)

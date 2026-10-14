@@ -3,12 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
 
+import type { GarageSearchCache } from './garage-search.cache';
 import { GarageSearchService } from './garage-search.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import type { Prisma } from '../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import { SearchLogService } from '../search-log/search-log.service';
 
 type Stance = 'works_on' | 'does_not_take';
 type Status = 'approved' | 'draft' | 'suspended';
@@ -18,7 +21,16 @@ const reader = countedMetrics();
 const searches = (outcome: string) =>
   counterTotal(reader, 'motorfix_searches_total', { outcome });
 const { prisma } = fixtures();
-const search = new GarageSearchService(prisma);
+// PostgreSQL's answer every time: the cases change rows between reads, and
+// garage-search.cache.integration.spec.ts covers the cache.
+const uncached = {
+  page: (_key, read) => read(),
+} satisfies Pick<GarageSearchCache, 'page'> as unknown as GarageSearchCache;
+const search = new GarageSearchService(
+  prisma,
+  uncached,
+  new SearchLogService(prisma),
+);
 serialDatabase(databaseUrl);
 
 let dacia: string;
@@ -99,6 +111,7 @@ const tamper = (cursor: string, change: Record<string, unknown>) =>
   ).toString('base64url');
 
 // @traces 879-FR-009
+// @traces 267-FR-001 267-FR-002 267-FR-003 267-FR-024
 describe('counting searches', () => {
   it('counts a first page with garages as results, an empty one as none, and no later page or refused search', async () => {
     const [results, none] = [await searches('results'), await searches('none')];
@@ -159,10 +172,15 @@ describe('GarageSearchService.forBrand', () => {
     expect(page.items).toEqual([
       {
         brandNote: null,
+        businessKind: null,
         doesNotTake: [],
+        facilities: [],
         id,
+        labourFromLei: null,
         name: 'Alfa Service',
+        rating: null,
         refusalPhrase: null,
+        reviewCount: 0,
         slug,
         stance: 'works_on',
         worksOn: [{ id: dacia, name: 'Dacia', slug: 'dacia' }],
@@ -170,10 +188,15 @@ describe('GarageSearchService.forBrand', () => {
     ]);
     expect(Object.keys(page.items[0]).sort()).toEqual([
       'brandNote',
+      'businessKind',
       'doesNotTake',
+      'facilities',
       'id',
+      'labourFromLei',
       'name',
+      'rating',
       'refusalPhrase',
+      'reviewCount',
       'slug',
       'stance',
       'worksOn',
@@ -286,6 +309,7 @@ describe('GarageSearchService.forBrand', () => {
     await garage('Alfa', { stance: 'works_on', status: 'draft' });
 
     expect(await search.forBrand(dacia)).toEqual({
+      brand: { id: dacia, name: 'Dacia', slug: 'dacia' },
       counts: { doesNotTake: 0, worksOn: 0 },
       items: [],
       nextCursor: null,
@@ -424,5 +448,330 @@ describe('GarageSearchService.forBrand', () => {
         prisma.outboxEvent.count(),
       ]),
     ).toEqual(before);
+  });
+});
+
+async function card(
+  name: string,
+  fields: Prisma.GarageUpdateInput,
+  facilities: ('courtesy_car' | 'pickup_dropoff' | 'waiting_area')[] = [],
+) {
+  const id = await garage(name, { stance: 'works_on' });
+  await prisma.garage.update({ data: fields, where: { id } });
+  for (const facility of facilities) {
+    await prisma.garageFacility.create({ data: { facility, garageId: id } });
+  }
+  return id;
+}
+
+// @traces 267-FR-003
+describe('what a card shows', () => {
+  it('carries the rating, reviews, rate in whole lei, kind, city and facilities in catalogue order', async () => {
+    await card(
+      'Alfa Service',
+      {
+        businessKind: 'company',
+        cityKey: 'militari',
+        cityName: 'Militari',
+        labourFromBani: 17_950,
+        rating: 4.8,
+        reviewCount: 90,
+      },
+      ['waiting_area', 'courtesy_car'],
+    );
+
+    const [item] = (await search.forBrand(dacia)).items;
+
+    expect(item).toMatchObject({
+      businessKind: 'company',
+      city: 'Militari',
+      facilities: ['courtesy_car', 'waiting_area'],
+      labourFromLei: 180,
+      rating: 4.8,
+      reviewCount: 90,
+    });
+    expect(item).not.toHaveProperty('serviceRadiusKm');
+  });
+
+  it('rounds the rate to the nearest leu', async () => {
+    await card('Alfa', { labourFromBani: 18_049 });
+    await card('Beta', { labourFromBani: 18_050 });
+
+    const items = (await search.forBrand(dacia)).items;
+
+    expect(items.map((item) => item.labourFromLei)).toEqual([180, 181]);
+  });
+
+  it("gives a mobile mechanic its area and never its seat's city", async () => {
+    await card('Mecanic Ion', {
+      businessKind: 'mobile',
+      cityKey: 'militari',
+      cityName: 'Militari',
+      serviceRadiusKm: 35,
+    });
+    await card('Mecanic Dan', { businessKind: 'mobile' });
+
+    const items = (await search.forBrand(dacia)).items;
+
+    expect(items.map((item) => item.serviceRadiusKm)).toEqual([20, 35]);
+    for (const item of items) {
+      expect(item).not.toHaveProperty('city');
+      expect(item.businessKind).toBe('mobile');
+    }
+  });
+
+  it('leaves the city out when it is not known', async () => {
+    await card('Alfa', { businessKind: 'pfa' });
+
+    const [item] = (await search.forBrand(dacia)).items;
+
+    expect(item).not.toHaveProperty('city');
+    expect(item).not.toHaveProperty('serviceRadiusKm');
+  });
+
+  it('carries nothing private', async () => {
+    await card('Alfa', {
+      address: 'Strada Lungă 1',
+      latitude: 44.43,
+      longitude: 26.1,
+      phone: '+40712345678',
+    });
+
+    const [item] = (await search.forBrand(dacia)).items;
+
+    expect(JSON.stringify(item)).not.toMatch(/Strada|\+4071|44\.43|26\.1/);
+  });
+});
+
+// @traces 267-FR-004
+describe('naming the brand', () => {
+  it('finds the brand by its slug as by its id, and names it in the answer', async () => {
+    await garage('Alfa', { stance: 'works_on' });
+
+    const bySlug = await search.forBrand({ slug: 'dacia' });
+    const byId = await search.forBrand(dacia);
+
+    expect(bySlug.brand).toEqual({ id: dacia, name: 'Dacia', slug: 'dacia' });
+    expect(bySlug).toEqual(byId);
+  });
+
+  it('refuses a slug that names no brand with not found', async () => {
+    expect(await refusal(search.forBrand({ slug: 'trabant' }))).toMatchObject({
+      body: { code: 'not_found' },
+      status: 404,
+    });
+  });
+
+  it('pages on from a cursor when the brand is named by its slug', async () => {
+    for (let n = 0; n < 21; n += 1) {
+      await garage(`Garage ${String(n).padStart(2, '0')}`, {
+        stance: 'works_on',
+      });
+    }
+    const first = await search.forBrand({ slug: 'dacia' });
+
+    const next = await search.forBrand(
+      { slug: 'dacia' },
+      first.nextCursor ?? undefined,
+    );
+
+    expect(next.items.map((item) => item.name)).toEqual(['Garage 20']);
+  });
+});
+
+// A garage with its rating and reviews; an unrated one has no reviews.
+async function rated(
+  name: string,
+  rating: number | null,
+  stance?: Stance,
+  reviewCount = rating === null ? 0 : 1,
+) {
+  const id = await garage(name, { stance });
+  await prisma.garage.update({
+    data: { rating, reviewCount },
+    where: { id },
+  });
+  return id;
+}
+
+type Row = { id: string; name: string; rating: number | null; reviews: number };
+
+// The order of a group: rating high to low with the unrated last, then more
+// reviews, then the name, then the id.
+const byOrder = (a: Row, b: Row) =>
+  (b.rating ?? -1) - (a.rating ?? -1) ||
+  b.reviews - a.reviews ||
+  (a.name < b.name ? -1 : a.name > b.name ? 1 : 0) ||
+  (a.id < b.id ? -1 : 1);
+
+// @traces 267-FR-001
+describe('the order of a group', () => {
+  it('ranks by rating, then reviews, then name, with the unrated last in each group', async () => {
+    await rated('Alfa', 4.8, 'works_on', 10);
+    await rated('Beta', 4.8, 'works_on', 30);
+    await rated('Gama', 4.9, 'works_on', 2);
+    await rated('Aaron', null, 'works_on');
+    await rated('Abel', 4.8, 'works_on', 30);
+    await rated('Zeta', null, 'does_not_take');
+    await rated('Yota', 3, undefined, 1);
+    await rated('Beta Noua', null);
+
+    const page = await search.forBrand(dacia);
+
+    expect(page.items.map((item) => item.name)).toEqual([
+      'Gama',
+      'Abel',
+      'Beta',
+      'Alfa',
+      'Aaron',
+      'Yota',
+      'Beta Noua',
+      'Zeta',
+    ]);
+  });
+});
+
+const RATINGS = [5, 4.5, null, 4.5];
+
+// The n-th of a list full of ties: four ratings, two review counts, five
+// names, the first 25 taking the brand.
+async function mixed(n: number) {
+  const rating = RATINGS[n % 4] ?? null;
+  const reviews = rating === null ? 0 : 1 + Number(n % 3 === 0);
+  const name = `Service ${n % 5}`;
+  const taker = n < 25;
+  const stance: Stance | undefined = taker ? 'works_on' : undefined;
+  const id = await rated(name, rating, stance, reviews);
+  return { id, name, rating, reviews, taker };
+}
+
+// @traces 267-FR-002
+describe('paging the order', () => {
+  it('pages 45 garages with equal ratings, equal reviews and unrated ones, none repeated or skipped', async () => {
+    const rows: (Row & { taker: boolean })[] = [];
+    for (let n = 0; n < 45; n += 1) rows.push(await mixed(n));
+
+    const pages = await everyPage(dacia);
+    const ids = pages.flatMap((page) => page.items.map((item) => item.id));
+
+    expect(pages.map((page) => page.items.length)).toEqual([20, 20, 5]);
+    expect(ids).toEqual(
+      [
+        ...rows.filter((row) => row.taker).sort(byOrder),
+        ...rows.filter((row) => !row.taker).sort(byOrder),
+      ].map((row) => row.id),
+    );
+  });
+
+  it('goes on from a boundary suspended since, by its rating read back', async () => {
+    for (let n = 0; n < 21; n += 1) {
+      const rating = Math.round((5 - n / 10) * 10) / 10;
+      await rated(
+        `Garage ${String(20 - n).padStart(2, '0')}`,
+        rating,
+        'works_on',
+      );
+    }
+    const first = await search.forBrand(dacia);
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: first.items.at(-1)?.id },
+    });
+
+    const next = await search.forBrand(dacia, first.nextCursor ?? undefined);
+
+    expect(first.items.at(-1)?.name).toBe('Garage 01');
+    expect(next.items.map((item) => item.name)).toEqual(['Garage 00']);
+  });
+});
+
+// Cluj-Napoca; a hundredth of a degree of latitude is about 1.1 km.
+const CLUJ = { lat: 46.771, lng: 23.624 };
+
+async function at(name: string, dLat: number, radiusKm?: number) {
+  const id = await garage(name, { stance: 'works_on' });
+  await prisma.garage.update({
+    data: {
+      latitude: CLUJ.lat + dLat,
+      longitude: CLUJ.lng,
+      ...(radiusKm !== undefined && {
+        businessKind: 'mobile',
+        seatAddress: 'Strada Sediului 1, Cluj-Napoca',
+        serviceRadiusKm: radiusKm,
+      }),
+    },
+    where: { id },
+  });
+  return id;
+}
+
+// @traces 267-FR-005
+describe('the radius', () => {
+  beforeEach(async () => {
+    await at('Aproape', 0.1);
+    await at('La 33 km', 0.3);
+    await at('La 55 km', 0.5);
+    await at('Mobil 20', 0.3, 20);
+    await at('Mobil 35', 0.3, 35);
+  });
+
+  const names = (page: Page) => page.items.map((item) => item.name);
+
+  it('reads 25 km by default and 50 km when asked, for fixed garages only', async () => {
+    expect(names(await search.forBrand(dacia, undefined, CLUJ))).toEqual([
+      'Aproape',
+      'Mobil 35',
+    ]);
+    expect(names(await search.forBrand(dacia, undefined, CLUJ, 50))).toEqual([
+      'Aproape',
+      'La 33 km',
+      'Mobil 35',
+    ]);
+  });
+
+  it('ignores the radius without a place', async () => {
+    const page = await search.forBrand(dacia, undefined, undefined, 50);
+
+    expect(page.total).toBe(5);
+  });
+});
+
+// @traces 267-FR-006
+describe('refreshing the cards shown', () => {
+  it('answers only the public garages among the ids, in the order of the search, with its counts', async () => {
+    const low = await rated('Alfa', 3, 'works_on');
+    const high = await rated('Beta', 5, 'works_on');
+    const other = await rated('Gama', 4.5, 'does_not_take');
+    await rated('Delta', 4, 'works_on');
+    const hidden = await garage('Epsilon', {
+      stance: 'works_on',
+      status: 'suspended',
+    });
+    const before = await searches('results');
+
+    const page = await search.byIds(dacia, [
+      other,
+      hidden,
+      low,
+      randomUUID(),
+      high,
+    ]);
+
+    expect(page.items.map((item) => item.id)).toEqual([high, low, other]);
+    expect(page).toMatchObject({
+      brand: { id: dacia, name: 'Dacia', slug: 'dacia' },
+      counts: { doesNotTake: 1, worksOn: 3 },
+      nextCursor: null,
+      total: 4,
+    });
+    expect(await searches('results')).toBe(before);
+  });
+
+  it('carries the distance when the search has a place', async () => {
+    const near = await at('Aproape', 0.1);
+
+    const [item] = (await search.byIds(dacia, [near], CLUJ)).items;
+
+    expect(item).toMatchObject({ comesToYou: false, distanceKm: 11.1 });
   });
 });

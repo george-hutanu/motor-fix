@@ -17,6 +17,7 @@ import {
   TIMES,
   todayInBucharest,
   WEEKDAYS,
+  type WeeklyHours,
 } from './garage-hours';
 
 const week = (overrides: Record<string, unknown> = {}) => ({
@@ -371,6 +372,27 @@ describe('a complete step 5', () => {
     expect(hoursComplete({})).toBe(false);
     expect(hoursComplete({ payments: [] })).toBe(false);
     expect(hoursComplete({ payments: ['transfer'] })).toBe(true);
+  });
+
+  // @traces 115-FR-002
+  it('needs at least one open day', () => {
+    const closed: WeeklyHours = {
+      fri: [],
+      mon: [],
+      sat: [],
+      sun: [],
+      thu: [],
+      tue: [],
+      wed: [],
+    };
+    expect(hoursComplete({ hours: closed, payments: ['cash'] })).toBe(false);
+    expect(
+      hoursComplete({
+        hours: { ...closed, sat: [['09:00', '13:00']] },
+        payments: ['cash'],
+      }),
+    ).toBe(true);
+    expect(hoursComplete({ payments: ['cash'] })).toBe(true);
   });
 
   it('needs no price for a free courtesy car', () => {

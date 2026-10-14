@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-10
+updated: 2026-10-14
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -8,6 +8,7 @@ features:
   - 229-location-or-address
   - 226-best-rated-brand-dial
   - 227-garage-cards-home
+  - 267-brand-results
 ---
 
 # Capability: Garage search
@@ -36,17 +37,17 @@ _From 042-brand-verdict._
 
 _From 043-brand-first-garage-list._
 
-### 043-FR-006 — The list MUST come 20 garages a page as `{ items, nextCursor, total, counts }`, with an opaque cursor for the next page that carries the brand, the group and the last garage's id, the search reading that garage's name back by id as the keyset, even when it has left the public list since (a name has no length limit, so the cursor stays under 200 characters), so the next page continues the same group where the previous one stopped and no garage is repeated or skipped between two consecutive pages of an unchanged list; `total` is the sum of the two counts; `nextCursor` is null on the last page, that is when no garage follows the page.
+### 267-FR-002 — The cursor of 043-FR-006 MUST continue that order: it carries the brand, the group and the last garage's id, and the search reads that garage's rating, review count and name back by id as the keyset, so no garage is repeated or skipped between two consecutive pages of an unchanged list, even when that garage has left the public list since. A rating change between two pages may move the boundary; paging through a changing list is ST-273's.
 
-_From 043-brand-first-garage-list._
+_From 267-brand-results._
 
-### 043-FR-007 — Inside each group the garages MUST come by name under the database's default collation, then by id, so two garages of the same name have one order and a page boundary between them repeats or skips neither.
+### 267-FR-001 — The garage search for a brand (`GET /api/v1/search/garages`) MUST order each group by rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z under the database's default collation, then id; the rating is the stored one-decimal value (`Decimal(2,1)`), so the order key and the card's number are the same; the group rule of 043-FR-001 (takers first, on every page) is unchanged.
 
-_From 043-brand-first-garage-list._
+_From 267-brand-results._
 
-### 042-FR-013 — A listed garage MUST carry only the fields FR-012 names: no rating, review count or other garage field is added to the item by this story. The search stays open to visitors, reads only approved garages, keeps its order, counts and paging, and writes nothing.
+### 267-FR-003 — Each listed garage MUST carry, besides the fields of 042-FR-012 and 229-FR-012, what its card shows: `rating` (one decimal, null until reviewed), `reviewCount`, `labourFromLei` (whole lei, null until set), `businessKind`, `city` (the address's city; never for a mobile mechanic; absent when unknown), `serviceRadiusKm` (a mobile mechanic only), and `facilities` (the kinds of its facility rows in status `listed`, in a fixed catalogue order). Nothing private travels: no phone, address, seat or account.
 
-_From 042-brand-verdict._
+_From 267-brand-results._
 
 ### 043-FR-009 — The brand MUST be named by its uuid; a uuid no brand row holds MUST answer "not found", while a retired (inactive) brand still answers; a missing brand, a value that is not a uuid, an unknown query field, or a cursor that is longer than 200 characters, does not decode, names another brand or names no group, MUST be refused as a bad request, in the API's one error shape with a stable code (`validation_failed`, `invalid_cursor`, `not_found`).
 
@@ -56,9 +57,9 @@ _From 043-brand-first-garage-list._
 
 _From 043-brand-first-garage-list._
 
-### 043-FR-011 — The search MUST write nothing: no audit entry, no event, no search log (MF-10 owns the search log).
+### 267-FR-007 — A new search (the page opening for a brand and place, or the brand or the place changing) MUST write exactly one SEARCH_LOG row: `brand_id`, `area_cell` (a geohash of 5 characters of the place, about 5 km; null without a place) and `at`. No account id, no exact point, no cursor page, no `ids=` read, no reload, no retry, no 50 km widening and no live re-read writes one. The page marks a new search with `log=1`; the API writes nothing without it, and writes the row for every `log=1` request whether the answer came from the cache or from PostgreSQL.
 
-_From 043-brand-first-garage-list._
+_From 267-brand-results._
 
 ### 229-FR-009 — `GET /api/v1/home?brand={slug}&near={lat},{lng}` MUST answer without a session, from the `search` module and the one public garage scope, with: the brand (id, name, slug), `total` (Y) and `takers` (X); when `near` is given, both count only the approved garages in the area of that point (FR-010 and FR-011), and without it they cover all of Romania; `near` MUST be two finite numbers (latitude −90..90, longitude −180..180) inside Romania (the bounding box shared in `libs/contracts`), else 400 `validation_failed`; a missing, blank, over-long or control-character `brand` answers 400 `validation_failed`; a slug with no active brand answers 404 `not_found`; the answer carries `Cache-Control: public, max-age=60`.
 
@@ -80,9 +81,9 @@ _From 229-location-or-address._
 
 _From 229-location-or-address._
 
-### 229-FR-012 — `GET /api/v1/search/garages?brandId=&near={lat},{lng}` MUST accept the same optional `near`, limit both groups and both counts to the area, and carry on each listed garage its distance: `distanceKm` as a number with one decimal for a fixed garage, and for a mobile mechanic `distanceKm: null` with `comesToYou: true` (false for a fixed garage); without `near` the items carry neither field, and the order, paging and cursor of 043-FR-006/007 are unchanged. The Results screen that shows these is ST-271's.
+### 267-FR-005 — The search MUST accept `radius` of 25 (the default) or 50 km, applied to fixed garages only (a mobile mechanic's rule of 229-FR-011 is unchanged); any other value answers `validation_failed`.
 
-_From 229-location-or-address._
+_From 267-brand-results._
 
 ### 229-FR-013 — The area query, the distance and the mobile-mechanic rule MUST live in one shared place in the `search` module that the Home read and the garage search both call (Constitution V); the distance MUST be the straight-line distance over the earth, in metres, computed in the database.
 
@@ -108,6 +109,66 @@ _From 227-garage-cards-home._
 
 _From 226-best-rated-brand-dial._
 
+### 267-FR-004 — The search MUST accept the brand by its catalogue slug (`brand={slug}`) as well as by id, exactly one of the two, and the answer MUST carry the brand (id, name, slug) so the page can name it; a slug naming no brand answers `not_found`, both given or neither answers `validation_failed`.
+
+_From 267-brand-results._
+
+### 267-FR-006 — The search MUST accept `ids={uuid,…}` (at most 20) with a brand, answering the listed-garage items for those ids that are public, in the same shape and no other field, uncached and never logged, so the page can refresh the cards it shows; an id that names nothing public is left out silently.
+
+_From 267-brand-results._
+
+### 267-FR-008 — The row MUST be written after the answer is sent; a failure to write it MUST be logged and MUST never fail or slow the search. 043-FR-011 ("the search writes nothing") is modified to allow this one write and nothing else: no audit entry and no event.
+
+_From 267-brand-results._
+
+### 267-FR-009 — A page answer MUST be kept in Redis for 60 seconds, keyed by brand, place (as the shared 3-decimal `near` text), radius and cursor (never `log` or `ids`), and the same request within that time MUST be answered from it; the answer is never cached by a CDN (`Cache-Control: no-store`), so every search reaches the API and the log stays complete. `ids=` reads are never cached.
+
+_From 267-brand-results._
+
+### 267-FR-010 — Every cached answer MUST be dropped when a public garage change passes through the API (an approval, suspension, restoration, `garage.updated`, a brand-stance change or a review kind), so a count or card read after it is fresh; 60 seconds is the longest an entry lives either way.
+
+_From 267-brand-results._
+
+### 267-FR-011 — With Redis unavailable the search MUST answer from PostgreSQL directly, with no error and no difference in the answer; the miss is counted.
+
+_From 267-brand-results._
+
+### 267-FR-012 — The web app MUST serve Results at `/:lang/garages` in place of today's placeholder, open to anyone with no session, reading `brand` (the slug) from the address bar, the place from `near` in the bar or else from the browser's kept place (which is then written into the bar), and `radius=50` when widened; the bar is rewritten without a history entry, so a shared link opens the same search.
+
+_From 267-brand-results._
+
+### 267-FR-013 — The page MUST show the title naming the brand in the copy voice of MF-2 ("Service-uri pentru BMW" in the mock's voice), and under it the summary "{total} de service-uri găsite · {takers} lucrează pe {brand} · {others} nu o primesc" with the Romanian plural rules, the area ("în 25 km de {place}" / "în 50 km de {place}", or nothing without a place) and "Schimbă locul".
+
+_From 267-brand-results._
+
+### 267-FR-014 — Each card MUST show: a drawing with the garage's initials (the first letters of its first two words), the name, the area line ("{city} · {distance}", a mobile mechanic's "Mecanic mobil · vine la tine · rază {n} km" instead, never its address), the lamp of `libs/ui-cockpit` green for `works_on` and red otherwise with its words ("primește {brand}" / "nu primește {brand}"), the works-on list and the refusal list ("Lucrează pe" / "Nu primește", the existing brand-answer texts), the listed facilities, "de la {n} lei/oră", "{n} recenzii", the rating dial of `libs/ui-cockpit` with the rating (an unrated garage shows "fără recenzii" and an empty dial) and the link "Vezi service-ul" to `/:lang/garages/{slug}?brand={slug}`. Distances follow 229-FR-015.
+
+_From 267-brand-results._
+
+### 267-FR-015 — The header MUST be the public frame's: the logo, "Căutare nouă" to Home, sign in, "Înscrie-ți service-ul" and the RO / EN switch; the page needs no sign-in and asks for none.
+
+_From 267-brand-results._
+
+### 267-FR-016 — While the search runs the page MUST show six skeleton cards; on an API error or no answer it MUST show "Nu am putut încărca rezultatele" with "Reîncearcă", which runs the same request again (not logged); the page MUST never scroll sideways at 320 px.
+
+_From 267-brand-results._
+
+### 267-FR-017 — Without a place, zero garages read "Niciun service găsit" with "Schimbă locul" only, and `radius` is ignored (no `validation_failed`). With a place and zero garages the page MUST show "Niciun service în 25 km" with "Caută în 50 km" (offered once per place: after it the empty state at 50 km offers "Schimbă locul" only) and "Schimbă locul", which opens the existing place dialog; a place chosen there runs a new, logged search at 25 km.
+
+_From 267-brand-results._
+
+### 267-FR-022 — Warming the result for the most common next filter is recorded as not applicable until the filters exist (#210): this story has no next request to warm (no filters, no sort UI, no second page without ST-273), and the 60-second cache of FR-009 is the warm store #210 will fill once a brand and place are chosen. The story's finish comment records this; #210 carries the warm rule, its hit-rate panel and its alert.
+
+_From 267-brand-results._
+
+### 267-FR-023 — The PR MUST list in its Observability section and in `infra/observability/inventory.json`: a counter of search-log rows written and failed, a counter of cache hits, misses and fallbacks (Redis unavailable), and the search latency histogram with a panel on the MotorFix dashboard and an alert when the fallback rate or the log-failure rate stays above 5% for 10 minutes; `motorfix_searches_total` stays as it is.
+
+_From 267-brand-results._
+
+### 267-FR-024 — Jest on real PostgreSQL and Redis MUST cover: the groups with `works_on`, `does_not_take` and an unmarked brand and draft and suspended garages excluded; the order with equal ratings and equal reviews and unrated garages last in their group, across a page boundary; the 25 km boundary, the 50 km radius and mobile mechanics in and out of their area; the slug and the id naming the brand; `ids=` with a non-public id; one SEARCH_LOG row per new search, none without `log=1`, no account id or exact point, and the search answering when the write fails; the cache key, the drop on a public garage event and the fallback with Redis down; the stream taking 20 garage ids and refusing 21. Web unit tests MUST cover the page's reading of the bar and the kept place, the title and summary texts in both languages, a card's fields for a fixed garage and a mobile mechanic, the empty, loading and error states, the 50 km offer once, and the live rules of FR-019 and FR-020. Playwright: from Home with Dacia selected, open Results and check the order and counts against the seed; in a second context suspend a garage and see its card fade out.
+
+_From 267-brand-results._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -116,3 +177,9 @@ _From 226-best-rated-brand-dial._
 - `225-FR-009` — superseded by `229-FR-009` (2026-10-08)
 
 - `226-FR-009` — superseded by `227-FR-009` (2026-10-10)
+
+- `043-FR-007` — superseded by `267-FR-001` (2026-10-14)
+- `043-FR-006` — superseded by `267-FR-002` (2026-10-14)
+- `042-FR-013` — superseded by `267-FR-003` (2026-10-14)
+- `043-FR-011` — superseded by `267-FR-007` (2026-10-14)
+- `229-FR-012` — superseded by `267-FR-005` (2026-10-14)

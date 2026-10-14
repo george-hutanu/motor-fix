@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import {
   IsIn,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   IsUUID,
@@ -12,6 +13,7 @@ import {
   MaxLength,
   Min,
   ValidateBy,
+  ValidateIf,
 } from 'class-validator';
 
 import { FUELS, MAX_KM, normalisePlate, STORED_PLATE } from './plate';
@@ -127,6 +129,115 @@ export class CreateCarDto {
   rovinietaUntil?: string;
 }
 
+// Sent: checked as the add dialog checks it. A field left out keeps its value.
+const sent = () => ValidateIf((_, value) => value !== undefined);
+// Sent and not null: null clears an optional field.
+const given = () =>
+  ValidateIf((_, value) => value !== undefined && value !== null);
+
+// An edit carries only the fields it changes, and the version it read.
+export class UpdateCarDto {
+  @ApiProperty({
+    description: 'The updatedAt of the car as read; an older one is refused',
+    format: 'date-time',
+  })
+  @IsISO8601()
+  version!: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @sent()
+  @IsUUID()
+  brandId?: string;
+
+  @ApiPropertyOptional({ description: 'Trimmed', maxLength: 40, minLength: 1 })
+  @sent()
+  @Transform(trimmed)
+  @IsString()
+  @Length(1, 40)
+  @Matches(/^\P{Cc}*$/u, { message: 'model must not hold control characters' })
+  model?: string;
+
+  @ApiPropertyOptional({
+    description: 'From 1950 to next year',
+    minimum: 1950,
+    type: 'integer',
+  })
+  @sent()
+  @IsInt()
+  @Min(1950)
+  @notAfterNextYear()
+  year?: number;
+
+  @ApiPropertyOptional({ maximum: MAX_KM, minimum: 0, type: 'integer' })
+  @sent()
+  @IsInt()
+  @Min(0)
+  @Max(MAX_KM)
+  odometerKm?: number;
+
+  @ApiPropertyOptional({ enum: FUELS })
+  @sent()
+  @IsIn(FUELS)
+  fuel?: Fuel;
+
+  @ApiPropertyOptional({
+    description: 'Trimmed; null or blank clears it',
+    maxLength: 30,
+    nullable: true,
+    type: String,
+  })
+  @given()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(30)
+  @Matches(/^\P{Cc}*$/u, { message: 'engine must not hold control characters' })
+  engine?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Stored in upper case without spaces or hyphens; null clears it',
+    example: 'B123ABC',
+    nullable: true,
+    type: String,
+  })
+  @given()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalisePlate(value) : value,
+  )
+  @Matches(STORED_PLATE)
+  plate?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'At most five years ahead; null clears it',
+    format: 'date',
+    nullable: true,
+    type: String,
+  })
+  @given()
+  @calendarDay()
+  itpUntil?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'At most five years ahead; null clears it',
+    format: 'date',
+    nullable: true,
+    type: String,
+  })
+  @given()
+  @calendarDay()
+  rcaUntil?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'At most five years ahead; null clears it',
+    format: 'date',
+    nullable: true,
+    type: String,
+  })
+  @given()
+  @calendarDay()
+  rovinietaUntil?: string | null;
+}
+
 // The car as its owner sees it; nobody else is ever answered with it.
 export class CarDto {
   @ApiProperty({ format: 'uuid' })
@@ -167,6 +278,12 @@ export class CarDto {
 
   @ApiProperty({ format: 'date-time' })
   createdAt!: string;
+
+  @ApiProperty({
+    description: 'The version an edit sends back',
+    format: 'date-time',
+  })
+  updatedAt!: string;
 }
 
 export class CarListDto {

@@ -288,7 +288,8 @@ test.describe('on a phone', () => {
     await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
   });
 
-  test('keeps "Salvează ciorna" pinned above the tab bar, so saving never scrolls', async ({
+  // @traces 115-FR-013
+  test('ends the form with "Salvează ciorna" on a phone, above the tab bar and covered by nothing', async ({
     page,
   }) => {
     await open(page, '/ro/list-your-garage');
@@ -300,11 +301,15 @@ test.describe('on a phone', () => {
         `pinned-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`,
       );
     await page.getByLabel('E‑mail').blur();
-    await bar(page).click();
-    await entry(page, 'Fotografii și adresă').click();
-    const y = await still(page);
 
     const save = page.getByRole('button', { name: 'Salvează ciorna' });
+    // Two buttons pinned would cover a third of a phone: they end the form.
+    expect(
+      await save.evaluate(
+        (b) => getComputedStyle(b.closest('.actions')!).position,
+      ),
+    ).not.toBe('sticky');
+    await save.scrollIntoViewIfNeeded();
     const tabs = page.locator('mf-public-tab-bar');
     await expect(tabs).toBeVisible();
     const saveBox = (await save.boundingBox())!;
@@ -323,8 +328,6 @@ test.describe('on a phone', () => {
 
     await save.click();
     await expect(page.getByText('Ciorna e salvată')).toBeVisible();
-    expect(await page.evaluate(() => scrollY)).toBe(y);
-    await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
   });
 
   test('opens and closes the list over the page, which stays where it was', async ({

@@ -249,6 +249,7 @@ function fromBody(answer: unknown, status: number): Problem {
   const code = codeOf(body);
   if (!code) return { code: codeForStatus(status), status };
   const errors = fieldProblems(body['errors']);
+  const warnings = fieldProblems(body['warnings']);
   const detail = typeof body['detail'] === 'string' ? body['detail'] : null;
   const attemptsLeft = wholeFrom(body['attemptsLeft'], 0);
   const retryAfterSeconds = wholeFrom(body['retryAfterSeconds'], 1);
@@ -259,6 +260,7 @@ function fromBody(answer: unknown, status: number): Problem {
     ...(retryAfterSeconds !== null && { retryAfterSeconds }),
     ...(detail && { detail }),
     ...(errors && { errors }),
+    ...(warnings && { warnings }),
   };
 }
 

@@ -11,9 +11,11 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import type { DraftDocuments, ListingDraftData } from '@motor-fix/contracts';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { I18n } from '@motor-fix/i18n';
 
 import { DocumentsStep } from './documents-step';
+import { forStep } from '../field-watch';
 
 const DRAFT = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
 const TOKEN = 'k'.repeat(43);
@@ -33,6 +35,20 @@ const daysAgo = (days: number) => {
 };
 
 type Declaration = Pick<ListingDraftData, 'declaredAt' | 'declaredByName'>;
+
+// The page's judgement of the documents and the declaration, as it hands it
+// to the step (the CUI and RAR fields are the page's own).
+const judged = (documents: DraftDocuments, declaration: Declaration) => {
+  const check = forStep(
+    checkListing({ data: { ...declaration, documents } }),
+    6,
+  );
+  const mine = (p: { field: string }) => !p.field.startsWith('steps.6.');
+  return {
+    errors: check.errors.filter(mine),
+    warnings: check.warnings.filter(mine),
+  };
+};
 
 interface Options {
   draftId?: string;
@@ -61,6 +77,19 @@ async function open({
   fixture.componentRef.setInput('kind', kind);
   fixture.componentRef.setInput('documents', documents);
   fixture.componentRef.setInput('declaration', declaration);
+  fixture.componentRef.setInput('problems', judged(documents, declaration));
+  const rejudge = () =>
+    fixture.componentRef.setInput(
+      'problems',
+      judged(
+        fixture.componentInstance.documents(),
+        fixture.componentInstance.declaration(),
+      ),
+    );
+  fixture.componentInstance.documents.subscribe(rejudge);
+  fixture.componentInstance.declaration.subscribe(rejudge);
+  const shown: boolean[] = [];
+  fixture.componentInstance.shown.subscribe((v) => shown.push(v));
   const http = TestBed.inject(HttpTestingController);
   const step = fixture.nativeElement as HTMLElement;
   const settle = async () => {
@@ -70,7 +99,7 @@ async function open({
     }
   };
   await settle();
-  return { fixture, http, i18n, settle, step };
+  return { fixture, http, i18n, settle, shown, step };
 }
 
 type Opened = Awaited<ReturnType<typeof open>>;
@@ -666,6 +695,30 @@ describe('the certificate issue date', () => {
   });
 });
 
+describe('the missing documents', () => {
+  // @traces 115-FR-005
+  it('tells under each area a document still missing, without stopping the step', async () => {
+    const opened = await open({
+      documents: { rar_authorisation: { pages: [keyOf(1)] } },
+    });
+
+    const missing = certificate(opened.step).querySelector(
+      '#listing-onrc_certificate-missing',
+    );
+    expect(text(missing)).toBe(
+      'Lipsește documentul. Îl poți adăuga și după trimitere.',
+    );
+    expect(missing?.classList).toContain('warning');
+    expect(
+      authorisation(opened.step).querySelector(
+        '#listing-rar_authorisation-missing',
+      ),
+    ).toBeNull();
+    expect(opened.step.querySelector('[aria-invalid="true"]')).toBeNull();
+    expect(opened.shown.at(-1)).toBe(false);
+  });
+});
+
 describe('the declaration', () => {
   const box = (step: HTMLElement) =>
     step.querySelector<HTMLInputElement>(
@@ -775,6 +828,53 @@ describe('the declaration', () => {
 
     await typeName(opened, 'Ion');
     expect(nameErrorText(opened.step)).toBe('');
+  });
+
+  // @traces 115-FR-002 115-FR-008
+  it('asks for the tick and the name when sending is asked for', async () => {
+    const opened = await open();
+    expect(nameErrorText(opened.step)).toBe('');
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    await opened.settle();
+
+    expect(nameErrorText(opened.step)).toBe(
+      'Bifează declarația și scrie‑ți numele',
+    );
+    expect(nameField(opened.step).getAttribute('aria-invalid')).toBe('true');
+    expect(opened.shown.at(-1)).toBe(true);
+  });
+
+  // @traces 115-FR-006
+  it('shows a restored name without its tick at once', async () => {
+    const opened = await open();
+    const restored = { declaredByName: 'Ion Popescu' };
+    opened.fixture.componentRef.setInput('declaration', restored);
+    opened.fixture.componentRef.setInput('problems', judged({}, restored));
+    await opened.settle();
+
+    expect(nameErrorText(opened.step)).toBe(
+      'Bifează declarația și scrie‑ți numele',
+    );
+    await tick(opened);
+    expect(nameErrorText(opened.step)).toBe('');
+    expect(opened.shown.at(-1)).toBe(false);
+  });
+
+  // @traces 115-FR-007
+  it('marks the name as the declaration and each document by its kind', async () => {
+    const { step } = await open();
+
+    expect(
+      [...step.querySelectorAll('[data-field]')].map((e) => [
+        e.getAttribute('data-field'),
+        e.getAttribute('tabindex'),
+      ]),
+    ).toEqual([
+      ['documents.onrc_certificate', '-1'],
+      ['documents.rar_authorisation', '-1'],
+      ['declaration', null],
+    ]);
   });
 
   // @traces 206-FR-009

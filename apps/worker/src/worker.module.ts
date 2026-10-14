@@ -1,5 +1,6 @@
 import { type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
+  CAR_REMINDERS_CONSUMER,
   DataStoreMetricsModule,
   DECLINE_WINDOW_CONSUMER,
   DeclineWindowModule,
@@ -62,6 +63,7 @@ export function workerModule(
       StorageModule.register(env),
       OutboxRelayModule.register({
         consumers: [
+          CAR_REMINDERS_CONSUMER,
           DECLINE_WINDOW_CONSUMER,
           NEWS_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,

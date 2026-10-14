@@ -26,6 +26,7 @@ features:
   - 139-edit-my-details
   - 244-analytics-news-consent
   - 243-terms-privacy
+  - 1203-legal-operator
 ---
 
 # Capability: Accounts
@@ -790,17 +791,53 @@ _From 243-terms-privacy._
 
 _From 243-terms-privacy._
 
-### 243-FR-011 — The texts MUST name "MotorFix" as the operator and the contact route that exists today (writing from the account, as the drafts say; a visitor without an account writes to the address the owner gives once the company is set up, until then the same route from a new account); the company's legal name, registration and address are added as a new version once the owner names them.
+### 1203-FR-001 — The privacy notice's first section, "Who runs MotorFix and how to reach us" (EN) / "Cine se ocupă de MotorFix și cum ne contactezi" (RO), MUST name HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ as the controller of the personal data in the service, with CUI 55178146, trade register number (Nr. ordine în Registrul Comerțului) F2026034954005, EUID ROONRC.F2026034954005, and the professional seat București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5, in both languages. The legal name and the seat are written verbatim in Romanian in both languages (a legal name and a postal address are not translated); the English text may add a short gloss saying the operator is a sole trader registered in Romania.
 
-_From 243-terms-privacy._
+_From 1203-legal-operator._
 
-### 243-FR-012 — The versions of both texts MUST change to `2026-10-11` in the one place the pages, the sign-up tick and the acceptance check read them, so that the pages show the new version, a new account's acceptance records it, and a sign-up naming the old version is refused (132-FR-001).
+### 1203-FR-005 — Both texts MUST be published as a new version: the terms version and the privacy version MUST both become 2026-10-12, and each text MUST carry that version in both languages.
 
-_From 243-terms-privacy._
+_From 1203-legal-operator._
 
 ### 243-FR-014 — The news consent (#834) and the analytics consent (#150) texts MUST be referred to from the privacy notice as separate, withdrawable consents, and the notice MUST say where each is changed (the account's notification settings or the link in each news e-mail for news, where the product changes it today; the cookie settings for analytics).
 
 _From 243-terms-privacy._
+
+### 1203-FR-001 — The privacy notice's first section, "Who runs MotorFix and how to reach us" (EN) / "Cine se ocupă de MotorFix și cum ne contactezi" (RO), MUST name HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ as the controller of the personal data in the service, with CUI 55178146, trade register number (Nr. ordine în Registrul Comerțului) F2026034954005, EUID ROONRC.F2026034954005, and the professional seat București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5, in both languages. The legal name and the seat are written verbatim in Romanian in both languages (a legal name and a postal address are not translated); the English text may add a short gloss saying the operator is a sole trader registered in Romania.
+
+_From 1203-legal-operator._
+
+### 1203-FR-002 — The same section MUST give hutanugeorge40@gmail.com as the e-mail for anything about the reader's data, including data-protection requests and exercising the rights this notice describes (the phrase covers "anything in this notice"), stating that no account is needed, and MUST keep writing from the account as a second way; the sentence telling a reader without an account to create one in order to write MUST be removed, in both languages.
+
+_From 1203-legal-operator._
+
+### 1203-FR-003 — The sentence that the legal name, registration number and address "will be added to this notice, as a new version, once the company is set up", and its Romanian twin, MUST be removed.
+
+_From 1203-legal-operator._
+
+### 1203-FR-004 — The terms' section "Governing law and contact" (EN) / "Legea aplicabilă și contact" (RO) MUST keep that the terms are governed by Romanian law and MUST name the same operator with the same four facts (name, CUI, trade register number with EUID, professional seat) and the same e-mail as the way to write about anything in the terms, beside writing from the account, in both languages.
+
+_From 1203-legal-operator._
+
+### 1203-FR-006 — An acceptance (consent) that names a version other than 2026-10-12 for either text MUST not count as current: a sign-up carrying it MUST be refused with the existing "accept the current terms" error, and one carrying 2026-10-12 for both MUST be accepted and recorded with those versions. No new re-acceptance flow is added; the existing version rule (both versions compared by equality) applies.
+
+_From 1203-legal-operator._
+
+### 1203-FR-007 — The documented API example of the consent versions MUST be regenerated so it shows the new version: `apps/api/openapi.json` and, if its output changes, the generated `libs/data-access` client (`npx nx run data-access:generate`); the diff of each is the example only.
+
+_From 1203-legal-operator._
+
+### 1203-FR-008 — Every Romanian word in the changed paragraphs, the operator's name and its seat included, MUST use ș and ț with comma below (U+0219, U+021B, and their capitals U+0218, U+021A); no cedilla form (U+015F, U+0163, U+015E, U+0162) may appear in the legal texts.
+
+_From 1203-legal-operator._
+
+### 1203-FR-009 — Both languages MUST keep the same sections and the same number of paragraphs in the same order, as the existing structure test requires; the operator details are placed in the same paragraph positions in both languages.
+
+_From 1203-legal-operator._
+
+### 1203-FR-010 — No legal fact beyond the ones in FR-001, FR-002 and FR-004 is added: no DPO appointment, no other address, telephone number or supervisory-authority wording, no change to any other section.
+
+_From 1203-legal-operator._
 
 ## Retired
 
@@ -827,3 +864,6 @@ _From 243-terms-privacy._
 - `097-FR-005` — superseded by `139-FR-003` (2026-10-10)
 
 - `132-FR-008` — superseded by `243-FR-013` (2026-10-11)
+
+- `243-FR-011` — superseded by `1203-FR-001` (2026-10-11)
+- `243-FR-012` — superseded by `1203-FR-005` (2026-10-11)

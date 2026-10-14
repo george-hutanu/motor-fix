@@ -878,6 +878,84 @@
       }
     },
     {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Search cache per hour, by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 49
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_search_cache_total{service_name=\"api\", outcome=\"hit\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "hit"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_search_cache_total{service_name=\"api\", outcome=\"miss\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "miss"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_search_cache_total{service_name=\"api\", outcome=\"fallback\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "fallback"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Search log per hour, by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 49
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_search_log_total{service_name=\"api\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
       "id": 25,
       "type": "row",
       "title": "Logs and traces",
@@ -886,7 +964,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 57
       },
       "panels": []
     },
@@ -902,7 +980,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 58
       },
       "targets": [
         {
@@ -944,7 +1022,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 50
+        "y": 58
       },
       "targets": [
         {

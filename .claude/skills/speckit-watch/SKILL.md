@@ -60,11 +60,14 @@ which uses the same scan, so a pass started by it always has something to do.
    jobs; a PR with an Actions run in flight is held, so it is never re-dispatched), then one line per row whose verdict is not `ok` — worktree, branch,
    phase, PR, fix, `reason`. Rows that are `ok` are summed, not listed.
    A `waiting` row is a handed-off ready PR whose recorded QA run (the
-   note's `QA run:` line) tests its head while CI or that run is still
+   note's `QA run:` line) tests its head while that run is still
    unfinished: it has no fix and nobody is dispatched for it, since an agent
-   started now would only wait. Once both have finished it turns `stale` with
-   the `tail` fix, without the quiet threshold. A run GitHub cannot report
-   waits only until the quiet threshold, then gets the `tail` as well.
+   started now would only wait. Once the run has finished it turns `stale`
+   with the `tail` fix whatever CI's state, without the quiet threshold. A
+   run GitHub cannot report waits only until the quiet threshold, then gets
+   the `tail` as well. A ready PR with `agent-review` success is `waiting`
+   while a check is pending, and `stale` with the `merge` fix at once when
+   every check is green and the worktree is clean at the PR's head.
    A `conflict` row is a ready PR nobody holds that conflicts with `main`
    (often after another merge): GitHub runs no CI on it, so it gets the
    `merge-main` fix at once, before any other rule and without the quiet
@@ -105,10 +108,10 @@ which uses the same scan, so a pass started by it always has something to do.
    | --- | --- |
    | `resume` | Read `specs/<feature>/auto-run.md`, `tasks.md` and `node .claude/scripts/run-state.mjs show`, then continue `/speckit-auto` from the phase run-state names (its section "After a context compaction" applies), through the hand-off. With an `agent-review` failure on the PR head, that is the QA fix loop: fix the blocking findings tests first, push, `run-state.mjs repair`, run `/speckit-pr-test <pr>` again. Without a feature, read the branch's commits and PR and finish the lifecycle the same way. |
    | `tail` | The story's agent handed this ready PR off. Run `node .claude/scripts/lifecycle.mjs handoff --restore --pr <n>` (a missing note comes back from the PR's newest `<!-- speckit-handoff -->` comment), read `specs/<feature>/handoff.md`, then `.claude/skills/speckit-auto/SKILL.md`, and run "The tail" in `tail.md` beside it: the tester on the finished QA run (`RUN`), its fixes (tests first), each followed by a new run dispatched with `--no-wait` and an end, never a wait, the merge, `speckit-tracker-sync finish` with its finish comment on the PR, the archive check, then delete `handoff.md`. |
-   | `merge-main` | The ready PR conflicts with `main`, so no CI runs on it. Merge `origin/main` into the branch (never a rebase, never a forced push; a merge already in progress in the worktree is finished, not restarted), resolving the conflicts, run the affected tests, commit and push; then `.claude/scripts/pr-test/dispatch.mjs <pr> --no-wait` and end with `NEXT: tail #<pr> after QA run <id>`. A merge it cannot finish, or tests that stay red, is `git merge --abort` and `speckit-tracker-sync blocked <reason>`; no repair lap is counted. |
+   | `merge-main` | The ready PR conflicts with `main`, so no CI runs on it. Merge `origin/main` into the branch with `node .claude/scripts/merge-main.mjs` (never a rebase, never a forced push; a merge already in progress in the worktree is finished, not restarted), which resolves the capability specs, the hook registry and the generated client itself; resolve what its `left` names by hand, run `doctor.mjs --bless-hooks` for an id under `bless` after reading its diff, run the affected tests, commit and push; then `.claude/scripts/pr-test/dispatch.mjs <pr> --no-wait` and end with `NEXT: tail #<pr> after QA run <id>`. A merge it cannot finish, or tests that stay red, is `git merge --abort` and `speckit-tracker-sync blocked <reason>`; no repair lap is counted. |
    | `rerun-qa` | Run `/speckit-pr-test <pr>` on the current head, then follow lifecycle steps 6–7. |
    | `fix-ci` | List what did not pass and read the failing job's log tail, both with the summary-only reads in AGENTS.md "Agent replies" (never the whole log); fix it on the branch tests first, push, wait for the checks again; each lap is `run-state.mjs repair`. Then continue the lifecycle. |
-   | `merge` | Lifecycle step 7: merge `origin/main` in if behind (a new head needs a new `/speckit-pr-test`), then `gh pr merge <pr> --merge` and `speckit-tracker-sync finish`. |
+   | `merge` | `agent-review` succeeded and every check is green: run tail.md steps 5–6 at once, the merge (`gh pr merge <pr> --merge`), `speckit-tracker-sync finish` and the finish. Behind `main` with a conflict or shared files, merge it in with `node .claude/scripts/merge-main.mjs` instead and hand the new head back to QA (`dispatch.mjs <pr> --no-wait`, `NEXT: tail #<pr> after QA run <id>`). |
 
    End the prompt with: "If the work cannot go on without the owner, set it
    Blocked (`run-state.mjs set --status blocked --blocking <condition>`, then

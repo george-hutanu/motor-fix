@@ -14,5 +14,10 @@ export interface CarDto {
   plate: string | null;
   rcaUntil: string | null;
   rovinietaUntil: string | null;
+
+  /**
+   * The version an edit sends back
+   */
+  updatedAt: string;
   year: number;
 }

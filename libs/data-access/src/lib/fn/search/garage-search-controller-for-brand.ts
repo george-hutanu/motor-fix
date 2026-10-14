@@ -17,9 +17,29 @@ export interface GarageSearchControllerForBrand$Params {
   near?: string;
 
 /**
- * The brand, by its catalogue id
+ * The brand, by its catalogue slug; exactly one of brand and brandId
  */
-  brandId: string;
+  brand?: string;
+
+/**
+ * The brand, by its catalogue id; exactly one of brand and brandId
+ */
+  brandId?: string;
+
+/**
+ * Km around near that a fixed garage may be; a mobile mechanic counts by its own area. Ignored without near
+ */
+  radius?: 25 | 50;
+
+/**
+ * Up to 20 garage ids, comma-separated: answers those of them that are public, in the search's order, with no cursor
+ */
+  ids?: string;
+
+/**
+ * Marks a new search, which the search log counts once; a re-read, retry or wider search leaves it out
+ */
+  log?: '1';
 
 /**
  * The nextCursor of the previous page; opaque
@@ -27,11 +47,15 @@ export interface GarageSearchControllerForBrand$Params {
   cursor?: string;
 }
 
-export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string, params: GarageSearchControllerForBrand$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageSearchPageDto>> {
+export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string, params?: GarageSearchControllerForBrand$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageSearchPageDto>> {
   const rb = new RequestBuilder(rootUrl, garageSearchControllerForBrand.PATH, 'get');
   if (params) {
     rb.query('near', params.near, {});
+    rb.query('brand', params.brand, {});
     rb.query('brandId', params.brandId, {});
+    rb.query('radius', params.radius, {});
+    rb.query('ids', params.ids, {});
+    rb.query('log', params.log, {});
     rb.query('cursor', params.cursor, {});
   }
 

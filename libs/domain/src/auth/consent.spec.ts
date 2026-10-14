@@ -7,6 +7,7 @@ import { HttpStatus } from '@nestjs/common';
 
 import { consentRequired, isCurrentConsent } from './consent';
 
+// @traces 1203-FR-006
 describe('isCurrentConsent', () => {
   it('accepts the current terms and privacy versions', () => {
     expect(isCurrentConsent(CURRENT_CONSENT)).toBe(true);
@@ -27,6 +28,10 @@ describe('isCurrentConsent', () => {
     ['an old terms version', { ...CURRENT_CONSENT, termsVersion: 'x' }],
     ['an old privacy version', { ...CURRENT_CONSENT, privacyVersion: 'x' }],
     ['the versions swapped', { privacyVersion: 'a', termsVersion: 'b' }],
+    [
+      'the texts replaced on 2026-10-12',
+      { privacyVersion: '2026-10-11', termsVersion: '2026-10-11' },
+    ],
   ])('refuses %s', (_, consent) => {
     expect(isCurrentConsent(consent)).toBe(false);
   });

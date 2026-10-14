@@ -1,5 +1,7 @@
 <h3>{{ 'public.listing.hours.heading' | t }}</h3>
 @let rows = simple();
+@let week = messages().hours;
+<div class="week" data-field="steps.5.hours" tabindex="-1" [attr.aria-describedby]="week ? 'hours-error' : null">
 <div class="row" data-row="weekdays">
   <span class="name">{{ 'public.listing.hours.weekdays' | t }}</span>
   @if (rows.weekdays === 'differs') {
@@ -78,6 +80,8 @@
     </div>
   }
 </details>
+<p id="hours-error" [class]="week?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ week ? (week.key | t) : '' }}</p>
+</div>
 
 <h3>{{ 'public.listing.hours.closedDays' | t }}</h3>
 <div class="holidays">
@@ -150,17 +154,19 @@
                 <input
                   hlmInput
                   name="courtesyPrice"
+                  data-field="steps.5.courtesyCar.pricePerDayBani"
                   autocomplete="off"
                   [mfLei]="shownPrice()"
                   (mfLeiChange)="price($event)"
-                  [aria-describedby]="priceError() ? 'courtesy-price-error' : null"
+                  (input)="typePrice()"
+                  (blur)="leavePrice()"
+                  [attr.aria-invalid]="failing().price ? true : null"
+                  [aria-describedby]="messages().price ? 'courtesy-price-error' : null"
                 />
                 {{ 'public.listing.prices.lei' | t }}
               </span>
             </label>
-            @if (priceError(); as error) {
-              <p id="courtesy-price-error" class="error" role="status">{{ priceErrorKey(error) | t }}</p>
-            }
+            <p id="courtesy-price-error" [class]="messages().price?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ messages().price ? (messages().price!.key | t) : '' }}</p>
           }
         </div>
       }
@@ -169,6 +175,8 @@
 </ul>
 <p class="facilities-hint hint">{{ 'public.listing.hours.facilitiesHint' | t }}</p>
 <h3>{{ 'public.listing.hours.payment.heading' | t }}</h3>
+@let paymentMessage = messages().payments;
+<div class="payment-group" data-field="steps.5.payments" tabindex="-1">
 <ul class="payments">
   @for (payment of payments; track payment) {
     @let ticked = taken().includes(payment);
@@ -176,7 +184,7 @@
       <button
         type="button"
         [attr.aria-pressed]="ticked"
-        [attr.aria-describedby]="taken().length ? null : 'payments-error'"
+        [attr.aria-describedby]="paymentMessage ? 'payments-error' : null"
         (click)="pay(payment)"
       >
         {{ paymentKey(payment) | t }}
@@ -187,6 +195,5 @@
     </li>
   }
 </ul>
-@if (!taken().length) {
-  <p id="payments-error" class="error" role="status">{{ 'public.listing.hours.payment.needed' | t }}</p>
-}
+<p id="payments-error" [class]="paymentMessage?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ paymentMessage ? (paymentMessage.key | t) : '' }}</p>
+</div>

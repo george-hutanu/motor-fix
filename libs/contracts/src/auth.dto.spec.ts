@@ -1,7 +1,12 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { PhoneCodeDto, PhoneSignInDto, SignUpDto } from './auth.dto';
+import {
+  ConsentDto,
+  PhoneCodeDto,
+  PhoneSignInDto,
+  SignUpDto,
+} from './auth.dto';
 import { PRIVACY_VERSION, TERMS_VERSION } from './consent';
 
 describe('SignUpDto', () => {
@@ -156,5 +161,18 @@ describe('PhoneSignInDto', () => {
     expect(check(PhoneSignInDto, { ...body, accountId: 'x' }).failed).toEqual([
       'accountId',
     ]);
+  });
+});
+
+describe('ConsentDto', () => {
+  // The API document's example is generated from this metadata.
+  const example = (key: keyof ConsentDto) =>
+    Reflect.getMetadata('swagger/apiModelProperties', ConsentDto.prototype, key)
+      ?.example;
+
+  // @traces 1203-FR-007
+  it('documents the current versions as its example', () => {
+    expect(example('termsVersion')).toBe(TERMS_VERSION);
+    expect(example('privacyVersion')).toBe(PRIVACY_VERSION);
   });
 });
