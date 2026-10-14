@@ -204,6 +204,7 @@
       },
       "photosNeeded": "Add at least one photo",
       "positionNeeded": "Pick the address from the list or pin it on the map",
+      "radiusNeeded": "Choose how far you travel",
       "rarNeeded": "Write the RAR authorisation number",
       "required": "Fill this in",
       "seatAddressNeeded": "Choose the registered seat's address",

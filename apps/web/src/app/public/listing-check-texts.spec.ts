@@ -140,4 +140,11 @@ describe('textKey', () => {
     );
     expect(textKey(address)).toBe('public.listing.check.addressNeeded');
   });
+
+  // @traces 115-FR-003
+  it('asks a mobile mechanic to choose the travel radius', () => {
+    const radius = { code: 'invalid', field: 'steps.5.place.radiusKm' };
+
+    expect(textKey(radius, true)).toBe('public.listing.check.radiusNeeded');
+  });
 });

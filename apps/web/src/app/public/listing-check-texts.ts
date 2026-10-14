@@ -33,7 +33,7 @@ const TEXTS: Readonly<Record<string, string>> = {
   'steps.5.place.address:required': `${L}.check.addressNeeded`,
   'steps.5.place.lat:invalid': `${L}.place.outside`,
   'steps.5.place.lat:required': `${L}.check.positionNeeded`,
-  'steps.5.place.radiusKm:invalid': `${L}.place.radiusHint`,
+  'steps.5.place.radiusKm:invalid': `${L}.check.radiusNeeded`,
   'steps.6.cui:cui_in_use': `${L}.check.cuiInUse`,
   'steps.6.cui:invalid': `${L}.cuiInvalid`,
   'steps.6.cui:required': `${L}.check.cuiNeeded`,
