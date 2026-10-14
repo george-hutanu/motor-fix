@@ -537,6 +537,11 @@ describe('step 3, judged by the page', () => {
       'Completează prețul',
     );
     expect(to.getAttribute('aria-invalid')).toBe('true');
+    const message = jobRows(step)[0].querySelector('.error') as HTMLElement;
+    expect(message.id).not.toBe('');
+    expect(to.getAttribute('aria-describedby')).toBe(message.id);
+    expect(from.getAttribute('aria-describedby')).toBe(message.id);
+    expect(step.querySelectorAll(`[id="${message.id}"]`)).toHaveLength(1);
     expect(shown.at(-1)).toBe(true);
 
     await typeIn(fixture, to, '50');
@@ -546,6 +551,7 @@ describe('step 3, judged by the page', () => {
     await typeIn(fixture, to, '250');
     expect(text(jobRows(step)[0].querySelector('.error'))).toBe('');
     expect(to.hasAttribute('aria-invalid')).toBe(false);
+    expect(to.hasAttribute('aria-describedby')).toBe(false);
     expect(shown.at(-1)).toBe(false);
   });
 

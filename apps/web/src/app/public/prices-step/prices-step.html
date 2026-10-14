@@ -3,6 +3,7 @@
 
 <ng-template #range let-ends="ends" let-path="path" let-name="name" let-set="set">
   @let judged = rangeOf(path);
+  @let messageId = messageIdOf(path);
   <div class="range">
     <input
       hlmInput
@@ -14,6 +15,7 @@
       (blur)="leave(path)"
       [attr.aria-label]="name + ', ' + ('public.listing.prices.from' | t)"
       [attr.aria-invalid]="judged.from ? true : null"
+      [attr.aria-describedby]="judged.shown ? messageId : null"
     />
     <span aria-hidden="true">–</span>
     <input
@@ -26,10 +28,11 @@
       (blur)="leave(path)"
       [attr.aria-label]="name + ', ' + ('public.listing.prices.to' | t)"
       [attr.aria-invalid]="judged.to ? true : null"
+      [attr.aria-describedby]="judged.shown ? messageId : null"
     />
     <span class="unit">{{ 'public.listing.prices.lei' | t }}</span>
   </div>
-  <p [class]="judged.shown?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ judged.shown ? (judged.shown.key | t) : '' }}</p>
+  <p [id]="messageId" [class]="judged.shown?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ judged.shown ? (judged.shown.key | t) : '' }}</p>
 </ng-template>
 
 <ng-template #named let-path="path">
