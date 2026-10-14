@@ -11,7 +11,7 @@ import { RequestBuilder } from '../../request-builder';
 export interface PublicLiveControllerLive$Params {
 
 /**
- * The garage a profile shows
+ * The garage a profile shows, or up to 20 garages a page of results shows, comma-separated
  */
   garages?: string;
 

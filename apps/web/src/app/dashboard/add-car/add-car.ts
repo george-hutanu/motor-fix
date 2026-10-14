@@ -1,10 +1,14 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
+  ElementRef,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
@@ -28,8 +32,9 @@ import {
   type CarDto,
   CarsService,
   type CreateCarDto,
+  type UpdateCarDto,
 } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
 import {
   FieldError,
   injectOverlayTask,
@@ -47,6 +52,16 @@ const DATES = [
   { control: 'rcaUntil', label: 'driver.cars.add.rca' },
   { control: 'rovinietaUntil', label: 'driver.cars.add.rovinieta' },
 ] as const;
+
+export type DateField = (typeof DATES)[number]['control'];
+
+export interface CarTaskData {
+  plates: string[];
+  car?: CarDto;
+  focus?: DateField;
+  // Called once when the car turns out removed meanwhile, so the list drops it.
+  gone?: () => void;
+}
 
 const nextYear = () => new Date().getFullYear() + 1;
 
@@ -91,7 +106,8 @@ const chosen = (c: AbstractControl): ValidationErrors | null =>
 
 // "Adaugă o mașină": the car's brand from the catalogue, its model, year,
 // kilometres and fuel, then the optional plate, engine and document dates.
-// Closes with the saved car.
+// Given a car, the same form edits it: "Modifică mașina". Closes with the
+// saved car.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -111,7 +127,11 @@ export class AddCar {
   private readonly catalogue = inject(BrandsService);
   private readonly cars = inject(CarsService);
   private readonly i18n = inject(I18n);
-  protected readonly task = injectOverlayTask<{ plates: string[] }, CarDto>();
+  protected readonly task = injectOverlayTask<CarTaskData, CarDto>();
+  // The car as last read, in edit mode; its updatedAt is the version sent.
+  protected readonly car = signal(this.task.data.car);
+  protected readonly askingKm = signal(false);
+  protected readonly gone = signal(false);
 
   protected readonly fuels = FUELS;
   protected readonly dates = DATES;
@@ -156,11 +176,18 @@ export class AddCar {
     done: (car: CarDto) => this.task.close(car),
     form: this.form,
     messages: 'driver.cars.add',
-    send: (_, key) =>
-      this.cars.carsControllerCreate({
-        body: this.body(),
-        'Idempotency-Key': key,
-      }),
+    send: (_, key) => {
+      const car = this.car();
+      return car
+        ? this.cars.carsControllerUpdate({
+            body: this.patch(car),
+            id: car.id,
+          })
+        : this.cars.carsControllerCreate({
+            body: this.body(),
+            'Idempotency-Key': key,
+          });
+    },
   });
 
   protected readonly brandText = signal('');
@@ -180,7 +207,7 @@ export class AddCar {
   protected readonly plateNote = computed(() => {
     const stored = normalisePlate(this.plateValue());
     if (stored === '') return null;
-    if (this.task.data.plates.includes(stored))
+    if (stored !== this.car()?.plate && this.task.data.plates.includes(stored))
       return 'driver.cars.add.plateHeld';
     return isRomanianPlate(stored) ? null : 'driver.cars.add.plateCheck';
   });
@@ -188,6 +215,85 @@ export class AddCar {
   constructor() {
     void this.i18n.enter('driver');
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+    const car = this.car();
+    if (car) this.fill(car);
+    const focus = this.task.data.focus;
+    if (focus) {
+      const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+      // The read phase runs after the panel has placed its own first focus.
+      afterNextRender({
+        read: () =>
+          host.querySelector<HTMLElement>(`#mf-car-${focus}`)?.focus(),
+      });
+    }
+    effect(() => {
+      const code = this.save.problem()?.code;
+      if (code === 'stale_version') untracked(() => void this.reload());
+      else if (code === 'not_found' && this.car())
+        untracked(() => this.markGone());
+    });
+  }
+
+  protected submitLabel() {
+    return this.car() ? 'driver.cars.edit.submit' : 'driver.cars.add.submit';
+  }
+
+  // A reading below the saved one is asked about before anything is sent.
+  protected submit() {
+    const car = this.car();
+    const typed = Number(kilometres(this.form.controls.odometerKm.value));
+    if (car && this.form.valid && typed < car.odometerKm)
+      this.askingKm.set(true);
+    else this.save.submit();
+  }
+
+  protected confirmKm() {
+    this.askingKm.set(false);
+    this.save.submit();
+  }
+
+  protected kmQuestion() {
+    const km = formatNum(this.car()?.odometerKm, this.i18n.language());
+    return this.i18n.t('driver.cars.edit.kmLower', { km });
+  }
+
+  private fill(car: CarDto) {
+    this.brandText.set(car.brandName);
+    this.form.reset({
+      brandId: car.brandId,
+      engine: car.engine ?? '',
+      fuel: car.fuel,
+      itpUntil: car.itpUntil ?? '',
+      model: car.model,
+      odometerKm: formatNum(car.odometerKm, this.i18n.language()),
+      plate: car.plate ?? '',
+      rcaUntil: car.rcaUntil ?? '',
+      rovinietaUntil: car.rovinietaUntil ?? '',
+      year: String(car.year),
+    });
+  }
+
+  // Someone saved the car meanwhile: show what it holds now, with its version.
+  private async reload() {
+    const id = this.car()?.id;
+    try {
+      const { items } = await this.cars.carsControllerList();
+      const current = items.find((c) => c.id === id);
+      if (!current) {
+        this.markGone();
+        return;
+      }
+      this.car.set(current);
+      this.fill(current);
+    } catch {
+      // The stale message stays; the next save answers 409 again.
+    }
+  }
+
+  private markGone() {
+    if (this.gone()) return;
+    this.gone.set(true);
+    this.task.data.gone?.();
   }
 
   protected fuelKey(fuel: (typeof FUELS)[number]) {
@@ -253,6 +359,27 @@ export class AddCar {
     this.active.set(-1);
     this.brandsDown.set(false);
     this.noMatch.set(false);
+  }
+
+  // The fields that differ from the car, a cleared one as null.
+  private patch(car: CarDto): UpdateCarDto {
+    const value = this.form.getRawValue();
+    const next: Omit<UpdateCarDto, 'version'> = {
+      brandId: value.brandId,
+      engine: value.engine.trim() || null,
+      fuel: value.fuel as CarDto['fuel'],
+      itpUntil: value.itpUntil || null,
+      model: value.model.trim(),
+      odometerKm: Number(kilometres(value.odometerKm)),
+      plate: normalisePlate(value.plate) || null,
+      rcaUntil: value.rcaUntil || null,
+      rovinietaUntil: value.rovinietaUntil || null,
+      year: Number(value.year),
+    };
+    const changed = Object.entries(next).filter(
+      ([field, given]) => car[field as keyof CarDto] !== given,
+    );
+    return { ...Object.fromEntries(changed), version: car.updatedAt };
   }
 
   private body(): CreateCarDto {

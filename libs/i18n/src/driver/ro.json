@@ -27,7 +27,8 @@
       "plateCheck": "Verifică numărul de înmatriculare.",
       "plateHeld": "Ai deja o mașină cu acest număr.",
       "problem": {
-        "car_limit": "Poți avea cel mult 20 de mașini."
+        "car_limit": "Poți avea cel mult 20 de mașini.",
+        "stale_version": "Mașina a fost modificată între timp. Verifică datele și salvează din nou."
       },
       "rca": "RCA valabilă până la",
       "retry": "Reîncearcă",
@@ -36,6 +37,12 @@
       "title": "Adaugă o mașină",
       "year": "An",
       "yearRange": "Anul trebuie să fie între 1950 și {max}."
+    },
+    "edit": {
+      "cancel": "Renunță",
+      "kmLower": "Kilometrajul e mai mic decât cel salvat ({km} km). Sigur?",
+      "submit": "Salvează",
+      "title": "Modifică mașina"
     },
     "findGarage": "Caută un service",
     "findGarageFor": "Caută un service pentru {car}",
@@ -50,7 +57,42 @@
       "today": "ITP‑ul expiră azi",
       "valid": "ITP valabil până în {month}"
     },
-    "retry": "Reîncearcă"
+    "menu": {
+      "edit": "Modifică",
+      "name": "Acțiuni pentru {car}",
+      "remove": "Șterge mașina"
+    },
+    "rca": {
+      "days": {
+        "few": "RCA‑ul expiră în {count} zile",
+        "one": "RCA‑ul expiră mâine",
+        "other": "RCA‑ul expiră în {count} de zile"
+      },
+      "expired": "RCA‑ul a expirat pe {day}",
+      "missing": "RCA: adaugă data",
+      "today": "RCA‑ul expiră azi",
+      "valid": "RCA valabilă până în {month}"
+    },
+    "remove": {
+      "cancel": "Renunță",
+      "confirm": "Șterge mașina",
+      "problem": {
+        "open_request": "Mașina are o cerere deschisă. Încheie sau anulează cererea mai întâi."
+      },
+      "text": "Ștergi {car}? Nu mai primești amintiri pentru ea."
+    },
+    "retry": "Reîncearcă",
+    "rovinieta": {
+      "days": {
+        "few": "Rovinieta expiră în {count} zile",
+        "one": "Rovinieta expiră mâine",
+        "other": "Rovinieta expiră în {count} de zile"
+      },
+      "expired": "Rovinieta a expirat pe {day}",
+      "missing": "Rovinietă: adaugă data",
+      "today": "Rovinieta expiră azi",
+      "valid": "Rovinieta e valabilă până în {month}"
+    }
   },
   "details": {
     "cancel": "Renunță",

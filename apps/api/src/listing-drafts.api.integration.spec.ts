@@ -118,6 +118,38 @@ describe('the listing draft routes', () => {
     });
   });
 
+  // @traces 115-FR-010
+  it('checks the stored draft with the key, refusing what it lacks', async () => {
+    const { body: created } = await create().expect(201);
+    const server = app.getHttpServer();
+
+    const res = await request(server)
+      .post(`/api/v1/listing-drafts/${created.id}/check`)
+      .set('X-Listing-Token', created.token)
+      .expect(422);
+
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body).toMatchObject({
+      code: 'listing_incomplete',
+      status: 422,
+      warnings: [
+        { code: 'document_missing', field: 'documents.onrc_certificate' },
+        { code: 'document_missing', field: 'documents.rar_authorisation' },
+      ],
+    });
+    expect(res.body.errors).toContainEqual({
+      code: 'required',
+      field: 'steps.1.phone',
+    });
+    expect(res.body.errors).not.toContainEqual(
+      expect.objectContaining({ field: 'steps.1.name' }),
+    );
+
+    await request(server)
+      .post(`/api/v1/listing-drafts/${created.id}/check`)
+      .expect(404);
+  });
+
   it('refuses a bad address with the field error the form shows', async () => {
     const res = await create(body({ email: 'not-an-email' })).expect(400);
 
@@ -188,6 +220,7 @@ describe('the listing draft routes', () => {
       'GET /api/v1/listing-drafts/{id}/photos',
       'PATCH /api/v1/listing-drafts/{id}',
       'POST /api/v1/listing-drafts',
+      'POST /api/v1/listing-drafts/{id}/check',
       'POST /api/v1/listing-drafts/{id}/continue-link',
       'POST /api/v1/listing-drafts/{id}/documents/{kind}',
       'POST /api/v1/listing-drafts/{id}/documents/{kind}/upload-url',

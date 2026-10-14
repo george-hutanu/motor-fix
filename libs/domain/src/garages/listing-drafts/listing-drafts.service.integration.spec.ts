@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { checkListing, type ListingDraftData } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
 
@@ -1144,5 +1145,215 @@ describe('the declaration of a draft', () => {
       declaredByName: undefined,
     });
     expect(await signed()).toBe(before);
+  });
+});
+
+describe('checking a draft', () => {
+  const PAGE = 'listing-documents/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/p1';
+  const complete = (cui = '18547290'): ListingDraftData => ({
+    declaredAt: '2026-10-11T10:00:00.000Z',
+    declaredByName: 'Ion Popescu',
+    documents: {
+      onrc_certificate: { pages: [PAGE] },
+      rar_authorisation: { pages: [PAGE] },
+    },
+    files: ['garage-photos/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/p1'],
+    steps: {
+      '1': {
+        businessKind: 'company',
+        knownFor: 'Frâne și distribuție',
+        name: 'Service Popescu',
+        phone: '+40722123456',
+      },
+      '2': {
+        brands: [
+          {
+            brandId: '6d3b3a0e-2f8e-4b1f-8c2a-1d4e5f6a7b8c',
+            name: 'Dacia',
+            stance: 'works_on',
+          },
+        ],
+      },
+      '3': {
+        jobs: [
+          {
+            fromBani: 15_000,
+            jobTypeId: '0b9f3c1e-6a43-4c55-9d1c-6f3f1b7d2a10',
+            toBani: 30_000,
+          },
+        ],
+        labour: { fromBani: 12_000, toBani: 20_000 },
+      },
+      '5': {
+        payments: ['cash'],
+        place: { address: 'Str. Lungă 1, Brașov', lat: 45.65, lng: 25.6 },
+      },
+      '6': { cui, rarNumber: 'BV-123' },
+    },
+  });
+
+  // A draft whose stored copy holds `data`, as a browser's saves left it.
+  const holding = async (data: ListingDraftData) => {
+    const draft = await service.create(body());
+    await prisma.listingDraft.update({
+      data: { data: data as object },
+      where: { id: draft.id },
+    });
+    return draft;
+  };
+
+  const rowOf = (id: string) =>
+    prisma.listingDraft.findUniqueOrThrow({
+      select: { data: true, email: true, status: true, updatedAt: true },
+      where: { id },
+    });
+
+  // @traces 115-FR-010
+  it('answers a complete draft with no warning', async () => {
+    const draft = await holding(complete());
+
+    await expect(service.check(draft.id, draft.token)).resolves.toEqual({
+      warnings: [],
+    });
+  });
+
+  // @traces 115-FR-005
+  it('lets a draft with only warnings through, the missing uploads named', async () => {
+    const { documents: _, ...data } = complete();
+    const draft = await holding(data);
+
+    await expect(service.check(draft.id, draft.token)).resolves.toEqual({
+      warnings: [
+        { code: 'document_missing', field: 'documents.onrc_certificate' },
+        { code: 'document_missing', field: 'documents.rar_authorisation' },
+      ],
+    });
+  });
+
+  // @traces 115-FR-005
+  it.each(['open', 'submitted'] as const)(
+    'warns of a CUI another draft holds, %s',
+    async (status) => {
+      const other = await holding(complete());
+      await prisma.listingDraft.update({
+        data: { status },
+        where: { id: other.id },
+      });
+      const draft = await holding(complete());
+
+      await expect(service.check(draft.id, draft.token)).resolves.toEqual({
+        warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
+      });
+    },
+  );
+
+  // @traces 115-FR-005
+  it.each(['RO 18547290', 'ro18547290', '18 547 290'])(
+    'warns of a CUI another draft holds typed as %s',
+    async (typed) => {
+      await holding(complete(typed));
+      const draft = await holding(complete());
+
+      await expect(service.check(draft.id, draft.token)).resolves.toEqual({
+        warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
+      });
+    },
+  );
+
+  it("does not hold a draft's own CUI against it, nor another CUI", async () => {
+    await holding(complete('1234567'));
+    const draft = await holding(complete());
+
+    await expect(service.check(draft.id, draft.token)).resolves.toEqual({
+      warnings: [],
+    });
+  });
+
+  // @traces 115-FR-010
+  it('refuses an incomplete draft with the list the browser makes', async () => {
+    const data = complete();
+    data.steps = {
+      ...data.steps,
+      '1': { name: 'S' },
+      '6': { cui: '18547291' },
+    };
+    const draft = await holding(data);
+
+    const refused = await refusalOf(service.check(draft.id, draft.token));
+
+    expect(refused.status).toBe(422);
+    expect(refused.body).toEqual({
+      code: 'listing_incomplete',
+      errors: checkListing({ data, email: 'owner@example.test' }).errors,
+      message: 'The listing is not complete',
+      warnings: [],
+    });
+    expect((refused.body as { errors: unknown[] }).errors).toContainEqual({
+      code: 'invalid',
+      field: 'steps.6.cui',
+    });
+  });
+
+  it('judges the address the draft row holds', async () => {
+    const draft = await holding(complete());
+    await prisma.listingDraft.update({
+      data: { email: 'not-an-address' },
+      where: { id: draft.id },
+    });
+
+    const refused = await refusalOf(service.check(draft.id, draft.token));
+
+    expect(refused.body).toMatchObject({
+      errors: [{ code: 'invalid', field: 'email' }],
+    });
+  });
+
+  // @traces 115-FR-010
+  it('refuses a sent draft with draft_submitted', async () => {
+    const draft = await holding(complete());
+    await prisma.listingDraft.update({
+      data: { status: 'submitted' },
+      where: { id: draft.id },
+    });
+
+    const refused = await refusalOf(service.check(draft.id, draft.token));
+
+    expect(refused.status).toBe(409);
+    expect(refused.body).toMatchObject({ code: 'draft_submitted' });
+  });
+
+  it.each([
+    ['no key', undefined],
+    ["another draft's key", 'other'],
+  ])('answers not_found to %s', async (_, key) => {
+    const draft = await holding(complete());
+    const other = await service.create(body());
+    const token = key === 'other' ? other.token : undefined;
+
+    const refused = await refusalOf(service.check(draft.id, token));
+
+    expect(refused.status).toBe(404);
+    expect(refused.body).toMatchObject({ code: 'not_found' });
+  });
+
+  // @traces 115-FR-011
+  it('writes nothing, whatever it answers', async () => {
+    const whole = await holding(complete());
+    const { documents: _, ...partial } = complete();
+    partial.steps = { ...partial.steps, '1': {} };
+    const lacking = await holding(partial);
+    const drafts = await prisma.listingDraft.count();
+    const tokens = await prisma.listingDraftToken.count();
+    const before = [await rowOf(whole.id), await rowOf(lacking.id)];
+    sent.length = 0;
+
+    await service.check(whole.id, whole.token);
+    await refusalOf(service.check(lacking.id, lacking.token));
+    await refusalOf(service.check(whole.id, lacking.token));
+
+    expect([await rowOf(whole.id), await rowOf(lacking.id)]).toEqual(before);
+    expect(await prisma.listingDraft.count()).toBe(drafts);
+    expect(await prisma.listingDraftToken.count()).toBe(tokens);
+    expect(sent).toEqual([]);
   });
 });

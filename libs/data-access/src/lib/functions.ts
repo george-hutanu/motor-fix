@@ -129,6 +129,10 @@ export type { CarsControllerList$Params as CarsControllerList$Params } from './f
 export { carsControllerList as carsControllerList } from './fn/cars/cars-controller-list';
 export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from './fn/cars/cars-controller-create';
 export { carsControllerCreate as carsControllerCreate } from './fn/cars/cars-controller-create';
+export type { CarsControllerRemove$Params as CarsControllerRemove$Params } from './fn/cars/cars-controller-remove';
+export { carsControllerRemove as carsControllerRemove } from './fn/cars/cars-controller-remove';
+export type { CarsControllerUpdate$Params as CarsControllerUpdate$Params } from './fn/cars/cars-controller-update';
+export { carsControllerUpdate as carsControllerUpdate } from './fn/cars/cars-controller-update';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
 export type { PopularBrandsControllerTiles$Params as PopularBrandsControllerTiles$Params } from './fn/brands/popular-brands-controller-tiles';
@@ -205,6 +209,8 @@ export type { ListingDraftsControllerSave$Params as ListingDraftsControllerSave$
 export { listingDraftsControllerSave as listingDraftsControllerSave } from './fn/listing-drafts/listing-drafts-controller-save';
 export type { ListingDraftsControllerSendLink$Params as ListingDraftsControllerSendLink$Params } from './fn/listing-drafts/listing-drafts-controller-send-link';
 export { listingDraftsControllerSendLink as listingDraftsControllerSendLink } from './fn/listing-drafts/listing-drafts-controller-send-link';
+export type { ListingDraftsControllerCheck$Params as ListingDraftsControllerCheck$Params } from './fn/listing-drafts/listing-drafts-controller-check';
+export { listingDraftsControllerCheck as listingDraftsControllerCheck } from './fn/listing-drafts/listing-drafts-controller-check';
 export type { ListingPhotosControllerUploadAddress$Params as ListingPhotosControllerUploadAddress$Params } from './fn/listing-drafts/listing-photos-controller-upload-address';
 export { listingPhotosControllerUploadAddress as listingPhotosControllerUploadAddress } from './fn/listing-drafts/listing-photos-controller-upload-address';
 export type { ListingPhotosControllerList$Params as ListingPhotosControllerList$Params } from './fn/listing-drafts/listing-photos-controller-list';

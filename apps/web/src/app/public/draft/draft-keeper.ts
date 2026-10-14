@@ -1,6 +1,10 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import type { DraftDocuments, ListingDraftData } from '@motor-fix/contracts';
+import type {
+  DraftDocuments,
+  FieldProblem,
+  ListingDraftData,
+} from '@motor-fix/contracts';
 import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import { ListingDraftsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -23,6 +27,11 @@ import {
 type DraftView = 'form' | 'loading' | 'invalid' | 'sent';
 type EmailError = 'emailInvalid' | 'emailNeeded';
 type StepKey = keyof NonNullable<ListingDraftData['steps']>;
+// What the server said of the whole listing, after the flush.
+type CheckOutcome =
+  | { kind: 'complete'; warnings: FieldProblem[] }
+  | { kind: 'incomplete'; errors: FieldProblem[]; warnings: FieldProblem[] }
+  | { kind: 'failed' };
 interface DraftNote {
   key: string;
   params?: Record<string, number>;
@@ -56,6 +65,8 @@ function browserStorage(): Storage | null {
 // The listing draft behind the page: the browser copy a second after each
 // change, the server copy once an e-mail is given, one save in flight and
 // the latest change queued behind it.
+const FLUSH_ROUNDS = 5;
+
 @Injectable()
 export class DraftKeeper {
   private readonly api = inject(ListingDraftsService);
@@ -80,6 +91,8 @@ export class DraftKeeper {
   private manual = false;
   private sending = false;
   private again = false;
+  private failedCall = false;
+  private waiters: (() => void)[] = [];
   private browserTimer: ReturnType<typeof setTimeout> | undefined;
   private serverTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -188,6 +201,68 @@ export class DraftKeeper {
     return false;
   }
 
+  // Everything typed onto the server copy before it is judged: creates it
+  // when there is none, saves it otherwise, and sends no link. Answers
+  // whether the server now holds what the page shows.
+  async flush(): Promise<boolean> {
+    clearTimeout(this.browserTimer);
+    this.write();
+    const email = this.checked(true);
+    if (email === null) return false;
+    this.failedCall = false;
+    if (!(await this.created(email))) return false;
+    if (email !== this.serverEmail) this.nextEmail = email;
+    return (await this.savedAll()) && this.view() === 'form';
+  }
+
+  // Saves until nothing is left unsaved. Typing that never stops would keep
+  // it saving: past a few rounds it gives up, and the draft stays as it is.
+  private async savedAll(): Promise<boolean> {
+    for (let round = 0; !this.failedCall && this.unsaved(); round += 1) {
+      if (round >= FLUSH_ROUNDS) return false;
+      if (this.sending) await this.settled();
+      else await this.save();
+    }
+    return !this.failedCall;
+  }
+
+  // The server copy exists, made now or by the call already on its way.
+  private async created(email: string): Promise<boolean> {
+    if (!this.draft().draftId) {
+      if (this.sending) await this.settled();
+      else await this.create(email);
+    }
+    const { draftId, token } = this.draft();
+    return !!draftId && !!token;
+  }
+
+  private unsaved() {
+    return this.sending || this.draft().dirty || !!this.nextEmail;
+  }
+
+  // The server's judgement of the whole listing, after the flush.
+  async check(): Promise<CheckOutcome> {
+    if (!(await this.flush())) return { kind: 'failed' };
+    const { draftId, token } = this.draft();
+    try {
+      const { warnings } = await this.api.listingDraftsControllerCheck({
+        id: draftId as string,
+        [TOKEN]: token as string,
+      });
+      return { kind: 'complete', warnings: warnings ?? [] };
+    } catch (error) {
+      const problem = toProblem(error);
+      if (problem.status === 422 && problem.errors)
+        return {
+          errors: problem.errors,
+          kind: 'incomplete',
+          warnings: problem.warnings ?? [],
+        };
+      this.refused(error);
+      return { kind: 'failed' };
+    }
+  }
+
   // An empty form, no longer tied to the server copy the link lost.
   startAgain(): number {
     this.adopt(startAgain(this.draft()));
@@ -264,6 +339,7 @@ export class DraftKeeper {
     } finally {
       this.sending = false;
       this.next();
+      this.wake();
     }
   }
 
@@ -300,7 +376,17 @@ export class DraftKeeper {
     } finally {
       this.sending = false;
       this.next();
+      this.wake();
     }
+  }
+
+  // Resolves when the call on its way has finished.
+  private settled() {
+    return new Promise<void>((resolve) => this.waiters.push(resolve));
+  }
+
+  private wake() {
+    for (const waiter of this.waiters.splice(0)) waiter();
   }
 
   private async sendLink() {
@@ -343,6 +429,7 @@ export class DraftKeeper {
   }
 
   private fail(error: unknown) {
+    this.failedCall = true;
     this.draft.update(failed);
     this.write();
     this.refused(error);

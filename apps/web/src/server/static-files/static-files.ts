@@ -4,16 +4,40 @@ import express, { type Express } from 'express';
 // the release to upload, and they never leave the server.
 const SOURCE_MAP = /\.map$/i;
 
-// The browser build's files, cached for a year (their names carry a hash).
-// A source map is answered 404 here, before the page renderer can claim it.
+// The file server decodes the path, so `%2Emap` names a map too; a malformed
+// escape is left for the file server to refuse.
+function decoded(path: string) {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
+// The build fingerprints a file as `<name>-<8 characters>.<ext>` (outputHashing
+// "all"): capitals and digits for the entry files and media, base64url for
+// the lazy chunks (`chunk-C0-vUTPR.js`, `chunk--0e6RH5t.js`). A suffix with no
+// capital or digit (`icon-maskable.png`) is a plain name, not a hash.
+// A plain file must not end in a dash and 8 such characters holding a digit
+// or capital (`og-1200x630.png` would be taken for a hash and kept a year).
+const HASHED = /-(?=[\w-]{0,7}[A-Z0-9])[\w-]{8}\.[^./]+$/;
+
+// A hashed file is kept for a year. Every other file (the service worker, its
+// manifest, the icons) is revalidated on each use, so a deploy reaches a
+// returning visitor; the ETag turns an unchanged one into a 304. A source map
+// is answered 404 here, before the page renderer can claim it.
 export function mountStaticFiles(app: Express, folder: string) {
   const serve = express.static(folder, {
     index: false,
-    maxAge: '1y',
     redirect: false,
+    setHeaders: (res, path) =>
+      res.setHeader(
+        'Cache-Control',
+        HASHED.test(path) ? 'public, max-age=31536000, immutable' : 'no-cache',
+      ),
   });
   app.use((req, res, next) => {
-    if (SOURCE_MAP.test(req.path)) res.status(404).end();
+    if (SOURCE_MAP.test(decoded(req.path))) res.status(404).end();
     else serve(req, res, next);
   });
 }

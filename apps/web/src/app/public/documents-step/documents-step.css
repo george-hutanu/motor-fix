@@ -18,10 +18,20 @@ h3 {
   max-width: 100%;
   box-sizing: border-box;
 }
-.error {
+.error,
+.warning {
   margin: 0;
-  color: var(--mf-red);
   overflow-wrap: anywhere;
+}
+.error {
+  color: var(--mf-red);
+}
+.warning {
+  color: var(--mf-text-secondary);
+}
+mf-document-area:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
 }
 .choice {
   display: flex;

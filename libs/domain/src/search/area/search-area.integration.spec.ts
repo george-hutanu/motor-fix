@@ -50,6 +50,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+// @traces 267-FR-005
 describe('the area around a place', () => {
   it('holds a fixed garage 24.9 km away and not one 25.1 km away', async () => {
     const near = await garage({ at: 24_900, kind: 'company' });
@@ -140,5 +141,28 @@ describe('the area around a place', () => {
       mobile: true,
     });
     expect(area.size).toBe(2);
+  });
+});
+
+// @traces 267-FR-005
+describe('the area at a wider radius', () => {
+  it('holds a fixed garage 49.9 km away at 50 km and not one 50.1 km away', async () => {
+    const near = await garage({ at: 49_900, kind: 'company' });
+    const far = await garage({ at: 50_100, kind: 'company' });
+
+    const area = await garagesInArea(prisma, POINT, 50);
+
+    expect(area.has(near)).toBe(true);
+    expect(area.has(far)).toBe(false);
+  });
+
+  it('leaves a mobile mechanic to its own area at 50 km', async () => {
+    const outside = await garage({ at: 30_000, kind: 'mobile', radiusKm: 20 });
+    const inside = await garage({ at: 30_000, kind: 'mobile', radiusKm: 35 });
+
+    const area = await garagesInArea(prisma, POINT, 50);
+
+    expect(area.has(outside)).toBe(false);
+    expect(area.has(inside)).toBe(true);
   });
 });

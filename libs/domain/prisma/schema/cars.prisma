@@ -29,6 +29,8 @@ model Car {
   idempotencyKey String         @map("idempotency_key")
   removedAt      DateTime?      @map("removed_at") @db.Timestamptz(3)
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  // The version an edit sends back: a save on an older one is refused.
+  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   owner          Account        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   brand          Brand          @relation(fields: [brandId], references: [id], onDelete: Restrict)
   reminders      Reminder[]

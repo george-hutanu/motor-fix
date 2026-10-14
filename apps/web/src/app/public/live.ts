@@ -10,15 +10,17 @@ import {
   untracked,
 } from '@angular/core';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { SEARCH_IDS_MAX } from '@motor-fix/contracts/search-place';
 import { filter, type Observable, Subject } from 'rxjs';
 
 import { backoffDelay, readEvents, SILENT_FOR } from '../live/stream';
 import { type LiveView, liveView } from '../live/view';
 
 // What an open public view shows: a garage's page, a mechanic's, or the
-// results for a brand.
+// results for a brand with the garages of the page loaded.
 interface PublicView {
   garage?: string | undefined;
+  garages?: readonly string[] | undefined;
   mechanic?: string | undefined;
   brand?: string | undefined;
 }
@@ -27,11 +29,19 @@ type PublicLiveState = 'closed' | 'reconnecting' | 'open';
 
 const ASLEEP_FOR = 60_000;
 
-const PARAMS = [
-  ['garages', 'garage'],
-  ['mechanics', 'mechanic'],
-  ['brand', 'brand'],
-] as const;
+// What a view names under each parameter, empty when it names nothing there.
+const PARAMS: readonly (readonly [string, (view: PublicView) => string])[] = [
+  [
+    'garages',
+    (view) =>
+      [...new Set([view.garage, ...(view.garages ?? [])])]
+        .filter((id): id is string => Boolean(id))
+        .slice(0, SEARCH_IDS_MAX)
+        .join(','),
+  ],
+  ['mechanics', (view) => view.mechanic ?? ''],
+  ['brand', (view) => view.brand ?? ''],
+];
 
 // A visitor's one live stream, open while a public view is. It sends no token
 // and needs no session; it names what the open views show, the newest view
@@ -109,8 +119,8 @@ export class PublicLive implements OnDestroy {
 
   private apply() {
     const params = new URLSearchParams();
-    for (const [param, field] of PARAMS) {
-      const value = this.views.findLast((v) => v[field])?.[field];
+    for (const [param, named] of PARAMS) {
+      const value = this.views.map(named).findLast(Boolean);
       if (value) params.set(param, value);
     }
     const query = params.toString();
@@ -200,7 +210,23 @@ export class PublicLive implements OnDestroy {
 }
 
 const sameView = (a: PublicView, b: PublicView) =>
-  PARAMS.every(([, field]) => a[field] === b[field]);
+  PARAMS.every(([, named]) => named(a) === named(b));
+
+// Holds the stream open for what `view` answers, following it, until the
+// injection context it is called in is destroyed.
+export function followPublicView(view: () => PublicView): void {
+  const live = inject(PublicLive);
+  let shown = untracked(view);
+  let leave = live.register(shown);
+  effect(() => {
+    const next = view();
+    if (sameView(next, shown)) return;
+    shown = next;
+    leave();
+    leave = live.register(next);
+  });
+  inject(DestroyRef).onDestroy(() => leave());
+}
 
 // A public view's data, read through the API at once, again on each open of
 // the stream, and again when an event of these kinds arrives about the object
@@ -215,16 +241,7 @@ export function publicLiveResource<T>(
   initial?: T,
 ): LiveView<T> {
   const live = inject(PublicLive);
-  let shown = untracked(view);
-  let leave = live.register(shown);
-  effect(() => {
-    const next = view();
-    if (sameView(next, shown)) return;
-    shown = next;
-    leave();
-    leave = live.register(next);
-  });
-  inject(DestroyRef).onDestroy(() => leave());
+  followPublicView(view);
   return liveView(load, {
     changes: live.on(kinds).pipe(filter((m) => !id || m.id === id())),
     goneOn: [404, 410],

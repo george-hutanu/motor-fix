@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -7,6 +10,7 @@ import { Overlays } from '@motor-fix/overlays';
 
 import { CarsView } from './cars-view';
 import { AddCar } from '../add-car/add-car';
+import { RemoveCar } from '../remove-car/remove-car';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
   brandId: 'bmw',
@@ -21,6 +25,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   plate: null,
   rcaUntil: null,
   rovinietaUntil: null,
+  updatedAt: '2026-10-07T09:00:00.000Z',
   year: 2019,
   ...over,
 });
@@ -409,4 +414,344 @@ describe('Mașinile mele opened at a car', () => {
     expect(focused()).toBeNull();
     expect(scrolled).not.toHaveBeenCalled();
   });
+});
+
+describe('a car card', () => {
+  beforeEach(() =>
+    jest.useFakeTimers({
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'clearImmediate',
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'hrtime',
+        'performance',
+      ],
+      now: new Date('2026-10-08T09:00:00Z'),
+    }),
+  );
+  afterEach(() => {
+    jest.useRealTimers();
+    document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+      n.innerHTML = '';
+    });
+  });
+
+  const trigger = (card: HTMLElement) =>
+    card.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
+  const items = () => [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="menu"] [role="menuitem"]',
+    ),
+  ];
+  const sentences = (card: HTMLElement) =>
+    [...card.querySelectorAll<HTMLElement>('mf-due-date-line mf-lamp')].map(
+      (l) => (l.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+  const press = (target: HTMLElement, key: string) =>
+    target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }));
+
+  // @traces 092-FR-009
+  it('carries a menu button named after the car', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    const more = trigger(cards(element)[0]);
+    expect(more?.type).toBe('button');
+    expect(more?.getAttribute('aria-label')).toBe('Acțiuni pentru BMW 320d');
+    expect(more?.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  // @traces 092-FR-009
+  it('names the menu button in English', async () => {
+    const { element, settle } = await render([car()], 'en');
+    await settle();
+
+    expect(trigger(cards(element)[0])?.getAttribute('aria-label')).toBe(
+      'Actions for BMW 320d',
+    );
+  });
+
+  // @traces 092-FR-009
+  it('offers Modifică and Șterge mașina, with the focus on the first', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    trigger(cards(element)[0])?.click();
+    await settle();
+
+    expect(trigger(cards(element)[0])?.getAttribute('aria-expanded')).toBe(
+      'true',
+    );
+    expect(items().map((i) => i.textContent?.trim())).toEqual([
+      'Modifică',
+      'Șterge mașina',
+    ]);
+    expect(items().every((i) => i.type === 'button')).toBe(true);
+    expect(document.activeElement).toBe(items()[0]);
+  });
+
+  // @traces 092-FR-009
+  it('offers Edit and Remove the car in English', async () => {
+    const { element, settle } = await render([car()], 'en');
+    await settle();
+
+    trigger(cards(element)[0])?.click();
+    await settle();
+
+    expect(items().map((i) => i.textContent?.trim())).toEqual([
+      'Edit',
+      'Remove the car',
+    ]);
+  });
+
+  // @traces 092-FR-009
+  it('moves between the items with the arrows and closes with Escape', async () => {
+    const { element, settle } = await render();
+    await settle();
+    trigger(cards(element)[0])?.click();
+    await settle();
+
+    press(items()[0], 'ArrowDown');
+    expect(document.activeElement).toBe(items()[1]);
+    press(items()[1], 'ArrowDown');
+    expect(document.activeElement).toBe(items()[0]);
+    press(items()[0], 'ArrowUp');
+    expect(document.activeElement).toBe(items()[1]);
+    press(items()[1], 'Escape');
+    await settle();
+
+    expect(trigger(cards(element)[0])?.getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+  });
+
+  // @traces 092-FR-009
+  it('gives the menu button and its items a 44 px target', () => {
+    const css = readFileSync(join(__dirname, 'cars-view.css'), 'utf8');
+
+    expect(css).toMatch(/\.more\s*\{[^}]*min-width:\s*44px/);
+    expect(css).toMatch(/\.more\s*\{[^}]*min-height:\s*44px/);
+    expect(css).toMatch(
+      /\[role=["']menuitem["']\]\s*\{[^}]*min-height:\s*44px/,
+    );
+  });
+
+  // @traces 092-FR-009
+  it('shows the year and kilometres, the plate, then the ITP, RCA and rovinietă lines', async () => {
+    const { element, settle } = await render([
+      car({
+        itpUntil: '2026-11-13',
+        plate: 'B123ABC',
+        rcaUntil: '2026-10-20',
+        rovinietaUntil: '2027-12-08',
+      }),
+    ]);
+    await settle();
+
+    const card = cards(element)[0];
+    expect(lines(card).slice(0, 3)).toEqual([
+      'BMW 320d',
+      '2019 · 148.200 km',
+      'B 123 ABC',
+    ]);
+    expect(sentences(card)).toEqual([
+      'ITP‑ul expiră în 36 de zile',
+      'RCA‑ul expiră în 12 zile',
+      'Rovinieta e valabilă până în decembrie 2027',
+    ]);
+    const plate = card.querySelectorAll('p')[2];
+    const itpLine = card.querySelector('mf-due-date-line');
+    expect(
+      plate.compareDocumentPosition(itpLine as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(card.querySelectorAll('mf-due-date-line a')).toHaveLength(0);
+  });
+
+  // @traces 092-FR-009
+  it('asks for the three dates on grey lines in English', async () => {
+    const { element, settle } = await render([car()], 'en');
+    await settle();
+
+    expect(sentences(cards(element)[0])).toEqual([
+      'ITP: add the date from the registration',
+      'RCA: add the date',
+      'Rovinietă: add the date',
+    ]);
+  });
+
+  // @traces 092-FR-009
+  it('opens the edit dialog at the date a grey line asks for', async () => {
+    const { element, settle } = await render([
+      car({ id: 'car-1', plate: 'CJ12ABC' }),
+    ]);
+    await settle();
+
+    const grey = [
+      ...cards(element)[0].querySelectorAll('mf-due-date-line button'),
+    ];
+    expect(
+      grey.map((b) => (b.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    ).toEqual([
+      'ITP: adaugă data din talon',
+      'RCA: adaugă data',
+      'Rovinietă: adaugă data',
+    ]);
+    for (const [i, focus] of [
+      'itpUntil',
+      'rcaUntil',
+      'rovinietaUntil',
+    ].entries()) {
+      (grey[i] as HTMLButtonElement).click();
+      await settle();
+      await settle();
+      expect(open).toHaveBeenLastCalledWith(AddCar, {
+        data: {
+          car: car({ id: 'car-1', plate: 'CJ12ABC' }),
+          focus,
+          gone: expect.any(Function),
+          plates: ['CJ12ABC'],
+        },
+        shape: 'dialog',
+        title: 'driver.cars.edit.title',
+      });
+    }
+  });
+
+  // @traces 092-FR-010
+  it('opens the edit dialog from Modifică and puts the answered car in place without reading again', async () => {
+    const { element, settle } = await render([
+      car({ id: 'car-2', model: 'X1' }),
+      car({ id: 'car-1' }),
+    ]);
+    await settle();
+    open.mockResolvedValueOnce(
+      car({ id: 'car-1', itpUntil: '2027-11-13', model: '330d' }),
+    );
+
+    trigger(cards(element)[1])?.click();
+    await settle();
+    items()[0].click();
+    await settle();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(AddCar, {
+      data: {
+        car: car({ id: 'car-1' }),
+        gone: expect.any(Function),
+        plates: [],
+      },
+      shape: 'dialog',
+      title: 'driver.cars.edit.title',
+    });
+    expect(cards(element).map((c) => c.getAttribute('data-car'))).toEqual([
+      'car-2',
+      'car-1',
+    ]);
+    expect(lines(cards(element)[1])[0]).toBe('BMW 330d');
+    expect(sentences(cards(element)[1])[0]).toBe(
+      'ITP valabil până în noiembrie 2027',
+    );
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 092-FR-010
+  it('drops the card when the edit dialog finds the car removed meanwhile', async () => {
+    const { element, settle } = await render([
+      car({ id: 'car-2', model: 'X1' }),
+      car({ id: 'car-1' }),
+    ]);
+    await settle();
+    open.mockImplementationOnce(async (_, { data }) => {
+      data.gone();
+      return 'cancelled';
+    });
+
+    trigger(cards(element)[1])?.click();
+    await settle();
+    items()[0].click();
+    await settle();
+    await settle();
+
+    expect(cards(element).map((c) => c.getAttribute('data-car'))).toEqual([
+      'car-2',
+    ]);
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 092-FR-010
+  it('leaves the card as it was when the edit is cancelled', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    trigger(cards(element)[0])?.click();
+    await settle();
+    items()[0].click();
+    await settle();
+    await settle();
+
+    expect(lines(cards(element)[0])[0]).toBe('BMW 320d');
+  });
+
+  // @traces 092-FR-009
+  it('shows the three lines of a car just added at once', async () => {
+    const { element, settle } = await render([]);
+    await settle();
+    open.mockResolvedValueOnce(
+      car({ rcaUntil: '2026-10-20', rovinietaUntil: null }),
+    );
+
+    button(element, 'Adaugă o mașină')?.click();
+    await settle();
+    await settle();
+
+    expect(sentences(cards(element)[0])).toEqual([
+      'ITP: adaugă data din talon',
+      'RCA‑ul expiră în 12 zile',
+      'Rovinietă: adaugă data',
+    ]);
+  });
+
+  // @traces 092-FR-011
+  it.each([
+    [true, ['car-2']],
+    ['cancelled', ['car-2', 'car-1']],
+  ] as const)(
+    'asks before removing from Șterge mașina; on %s the cards are %j without reading again',
+    async (answer, left) => {
+      const { element, settle } = await render([
+        car({ id: 'car-2', model: 'X1' }),
+        car({ id: 'car-1' }),
+      ]);
+      await settle();
+      open.mockResolvedValueOnce(answer);
+
+      trigger(cards(element)[1])?.click();
+      await settle();
+      items()[1].click();
+      await settle();
+      await settle();
+
+      expect(open).toHaveBeenCalledWith(
+        RemoveCar,
+        expect.objectContaining({
+          data: { car: car({ id: 'car-1' }) },
+          shape: 'dialog',
+        }),
+      );
+      expect(cards(element).map((c) => c.getAttribute('data-car'))).toEqual(
+        left,
+      );
+      expect(list).toHaveBeenCalledTimes(1);
+    },
+  );
 });

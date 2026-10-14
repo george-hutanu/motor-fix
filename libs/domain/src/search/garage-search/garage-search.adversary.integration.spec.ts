@@ -203,10 +203,15 @@ describe('GET /search/garages under attack', () => {
 
     expect(Object.keys(res.body.items[0]).sort()).toEqual([
       'brandNote',
+      'businessKind',
       'doesNotTake',
+      'facilities',
       'id',
+      'labourFromLei',
       'name',
+      'rating',
       'refusalPhrase',
+      'reviewCount',
       'slug',
       'stance',
       'worksOn',
@@ -216,6 +221,7 @@ describe('GET /search/garages under attack', () => {
       refusalPhrase: 'sorry',
     });
     expect(Object.keys(res.body).sort()).toEqual([
+      'brand',
       'counts',
       'items',
       'nextCursor',

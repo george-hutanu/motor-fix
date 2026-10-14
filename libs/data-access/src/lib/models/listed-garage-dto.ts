@@ -4,6 +4,12 @@
 import { BrandRefDto } from '../models/brand-ref-dto';
 export interface ListedGarageDto {
   brandNote: string | null;
+  businessKind: ('company' | 'pfa' | 'ii' | 'mobile') | null;
+
+  /**
+   * The address's city; never for a mobile mechanic
+   */
+  city?: string;
 
   /**
    * True for a mobile mechanic whose area holds the place. Only with near
@@ -15,9 +21,30 @@ export interface ListedGarageDto {
    */
   distanceKm?: number | null;
   doesNotTake: Array<BrandRefDto>;
+
+  /**
+   * The facilities it lists, in catalogue order
+   */
+  facilities: Array<'courtesy_car' | 'pickup_dropoff' | 'waiting_area'>;
   id: string;
+
+  /**
+   * The hourly labour rate it starts from, in whole lei
+   */
+  labourFromLei: number | null;
   name: string;
+
+  /**
+   * Out of 5, one decimal; null until reviewed
+   */
+  rating: number | null;
   refusalPhrase: string | null;
+  reviewCount: number;
+
+  /**
+   * A mobile mechanic's area, in km; only for one
+   */
+  serviceRadiusKm?: number;
   slug: string;
 
   /**

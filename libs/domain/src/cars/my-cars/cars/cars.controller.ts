@@ -1,10 +1,20 @@
-import { CarDto, CarListDto, CreateCarDto } from '@motor-fix/contracts';
+import {
+  CarDto,
+  CarListDto,
+  CreateCarDto,
+  UpdateCarDto,
+} from '@motor-fix/contracts';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
+  HttpCode,
   HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +24,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiHeader,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -76,5 +87,53 @@ export class CarsController {
   @ApiNotFoundResponse({ description: 'not_found: not a driver' })
   list(@CurrentActor() actor: Actor): Promise<CarListDto> {
     return this.cars.list(actor);
+  }
+
+  @Patch(':id')
+  @Requires('driver.cars')
+  @UseGuards(JsonOnly)
+  @ApiOperation({
+    summary: "Change some of the caller's car's fields; null clears one",
+  })
+  @ApiOkResponse({ type: CarDto })
+  @ApiBadRequestResponse({
+    description:
+      'validation_failed: a bad field or id, unknown_brand, too_far_ahead or a missing version',
+  })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiNotFoundResponse({
+    description: 'not_found: no such car of the caller, or not a driver',
+  })
+  @ApiConflictResponse({
+    description: 'stale_version: the car changed since that version',
+  })
+  update(
+    @CurrentActor() actor: Actor,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: UpdateCarDto,
+  ): Promise<CarDto> {
+    return this.cars.update(actor, id, body);
+  }
+
+  @Delete(':id')
+  @Requires('driver.cars')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: "Remove the caller's car; its history stays stored",
+  })
+  @ApiNoContentResponse({ description: 'The car is removed' })
+  @ApiBadRequestResponse({ description: 'validation_failed: a bad id' })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiNotFoundResponse({
+    description: 'not_found: no such car of the caller, or not a driver',
+  })
+  @ApiConflictResponse({
+    description: 'open_request: a request for the car is under way',
+  })
+  remove(
+    @CurrentActor() actor: Actor,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    return this.cars.remove(actor, id);
   }
 }

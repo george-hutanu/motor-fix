@@ -160,6 +160,7 @@ describe('POST /cars', () => {
       plate: 'B123ABC',
       rcaUntil: null,
       rovinietaUntil: null,
+      updatedAt: res.body.createdAt,
       year: 2019,
     });
     const row = await prisma.car.findUniqueOrThrow({

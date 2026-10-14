@@ -16,6 +16,7 @@ import {
   touchesWeb,
   trustBaseline,
   verdict,
+  workerCacheOutcome,
 } from './findings.mjs';
 
 const where = { route: '/', viewport: 'mobile', scheme: 'dark', lang: 'en', screenshot: 'shots/home-mobile-dark-en.png' };
@@ -263,9 +264,22 @@ describe('layout findings', () => {
     assert.equal(markPreExisting(now, [])[0].severity, 'high', 'a baseline that names no routes is not read as sweeping none');
   });
 
-  it('leaves findings of other kinds alone, even when the baseline had them', () => {
-    const consoleError = sweepFinding({ ...where, kind: 'console', text: 'NG0100' }, { web: true });
-    assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');
+  // @traces 1171-FR-008
+  it('marks an accessibility or console finding the baseline had under the same key as pre-existing, capped at medium', () => {
+    const consoleError = { kind: 'console', severity: 'high', title: 'Console error: 401 on /api/admin', route: '/admin' };
+    const axe = { kind: 'axe', severity: 'high', title: 'label-content-name-mismatch (1 element)', route: '/' };
+    const marked = markPreExisting([consoleError, axe], [consoleError, axe]);
+    assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['medium', true], ['medium', true]]);
+  });
+
+  // @traces 1171-FR-008
+  it('keeps an accessibility or console finding whose title or route differs from the baseline as the PR\'s own', () => {
+    const axe = { kind: 'axe', severity: 'high', title: 'label-content-name-mismatch (1 element)', route: '/' };
+    const more = { ...axe, title: 'label-content-name-mismatch (2 elements)' };
+    const elsewhere = { ...axe, route: '/cockpit' };
+    const flow = { kind: 'flow', severity: 'high', title: 'flow not run', route: '/' };
+    const marked = markPreExisting([more, elsewhere, flow], [axe, flow]);
+    assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['high', undefined], ['high', undefined], ['high', undefined]]);
   });
 
   describe('against what the baseline measured', () => {
@@ -351,5 +365,33 @@ describe('layout findings', () => {
     const marked = markPreExisting(now, [], { measured: false });
     assert.equal(marked[0].severity, 'medium');
     assert.equal(marked[0].preExisting, true);
+  });
+});
+
+// @traces 1201-FR-006
+describe('the service worker cache check', () => {
+  const url = 'http://127.0.0.1:4000/ngsw-worker.js';
+  const check = (status, cacheControl) => workerCacheOutcome({ status, cacheControl, url });
+
+  it('passes when the worker is served no-cache', () => {
+    assert.deepEqual(check(200, 'no-cache'), {});
+    assert.deepEqual(check(200, 'no-cache, max-age=0'), {});
+  });
+
+  it.each([
+    [200, 'public, max-age=31536000, immutable'],
+    [200, 'no-cache, immutable'],
+    [200, 'public, max-age=60'],
+    [200, 'no-cache, max-age=600'],
+    [200, null],
+    [200, ''],
+    [404, 'no-cache'],
+    [0, null],
+  ])('blocks on status %s with Cache-Control %s', (status, cacheControl) => {
+    const { finding } = check(status, cacheControl);
+    assert.equal(finding.severity, 'high');
+    assert.match(finding.title, /ngsw-worker\.js/);
+    assert.match(finding.steps[0], new RegExp(String(status)));
+    assert.ok(finding.steps[0].includes(url));
   });
 });

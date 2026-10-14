@@ -2,26 +2,26 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  input,
   model,
-  signal,
+  output,
 } from '@angular/core';
+import type { ListingCheck } from '@motor-fix/contracts/listing-check';
 import {
   type BusinessKind,
   type DetailsSection,
-  isRomanianPhone,
   KNOWN_FOR_MAX,
   type MobileLegalForm,
   NAME_MAX,
-  NAME_MIN,
   PHONE_MAX,
 } from '@motor-fix/contracts/listing-sections';
-import { normalisePhone } from '@motor-fix/contracts/phone';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 
-type Text = 'name' | 'phone' | 'knownFor';
+import { FieldWatch, NO_PROBLEMS } from '../field-watch';
 
-const KEY = 'public.listing.details';
+type Text = 'name' | 'phone' | 'knownFor';
 
 const KINDS: readonly { value: BusinessKind; label: string }[] = [
   { label: 'public.listing.details.kinds.company', value: 'company' },
@@ -34,25 +34,10 @@ const LEGAL_FORMS: readonly { value: MobileLegalForm; label: string }[] = [
   { label: 'public.listing.details.legalForms.company', value: 'company' },
 ];
 
-function nameError(name = '') {
-  const length = name.trim().length;
-  return length < NAME_MIN || length > NAME_MAX ? `${KEY}.nameLength` : null;
-}
-
-function phoneError(phone = '') {
-  if (!phone.trim()) return `${KEY}.phoneNeeded`;
-  const normalised = normalisePhone(phone);
-  return normalised && isRomanianPhone(normalised)
-    ? null
-    : `${KEY}.phoneRomanian`;
-}
-
-const knownForError = (knownFor = '') =>
-  knownFor.trim() ? null : `${KEY}.knownForNeeded`;
-
 // Step 1 of listing a garage: the name, the phone, what the garage is best
 // at and the kind of business. It holds the draft's section and saves
-// nothing; a field says what is wrong only once it has been left.
+// nothing; the page judges it, and a field says what is wrong once it has
+// been left, when it opens wrong, or when sending is asked for.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, HlmLabel, TranslatePipe],
@@ -62,6 +47,11 @@ const knownForError = (knownFor = '') =>
 })
 export class DetailsStep {
   readonly value = model<DetailsSection>({});
+  // The page's judgement of this step, and whether sending was asked for.
+  readonly problems = input<ListingCheck>(NO_PROBLEMS);
+  readonly showAll = input(false);
+  // Whether any field shows an error, for the step list's dot.
+  readonly shown = output<boolean>();
 
   protected readonly kinds = KINDS;
   protected readonly legalForms = LEGAL_FORMS;
@@ -69,29 +59,38 @@ export class DetailsStep {
   protected readonly knownForMax = KNOWN_FOR_MAX;
   protected readonly phoneMax = PHONE_MAX;
 
-  private readonly left = signal<ReadonlySet<Text>>(new Set());
+  private readonly watch = new FieldWatch();
 
   protected readonly errors = computed(() => {
-    const { knownFor, name, phone } = this.value();
-    const left = this.left();
-    const shown = (field: Text, error: string | null) =>
-      left.has(field) ? error : null;
+    const value = this.value();
+    const check = this.problems();
+    const all = this.showAll();
+    const message = (field: string, filled: boolean) =>
+      this.watch.message(check, field, { all, filled })?.key ?? null;
+    const text = (field: Text) =>
+      message(`steps.1.${field}`, !!value[field]?.trim());
     return {
-      knownFor: shown('knownFor', knownForError(knownFor)),
-      name: shown('name', nameError(name)),
-      phone: shown('phone', phoneError(phone)),
+      businessKind: message('steps.1.businessKind', false),
+      knownFor: text('knownFor'),
+      mobileLegalForm: message('steps.1.mobileLegalForm', false),
+      name: text('name'),
+      phone: text('phone'),
     };
   });
 
+  constructor() {
+    effect(() => this.shown.emit(Object.values(this.errors()).some(Boolean)));
+  }
+
   protected type(field: Text, event: Event) {
     const typed = (event.target as HTMLInputElement).value;
+    this.watch.type(`steps.1.${field}`);
     const { [field]: _, ...rest } = this.value();
     this.value.set(typed ? { ...rest, [field]: typed } : rest);
   }
 
   protected leave(field: Text) {
-    if (!this.left().has(field))
-      this.left.update((left) => new Set([...left, field]));
+    this.watch.leave(`steps.1.${field}`);
   }
 
   // Another kind than mobile has no legal form to keep.

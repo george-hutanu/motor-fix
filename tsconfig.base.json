@@ -34,6 +34,9 @@
       "@motor-fix/contracts/legal-documents": [
         "./libs/contracts/src/legal-documents/legal-documents.ts"
       ],
+      "@motor-fix/contracts/listing-check": [
+        "./libs/contracts/src/listing-check/listing-check.ts"
+      ],
       "@motor-fix/contracts/listing-photos": [
         "./libs/contracts/src/listing-photos/listing-photos.ts"
       ],

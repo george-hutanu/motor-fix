@@ -106,7 +106,10 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
     await mechanics(page).getByRole('switch').click();
     await kept(page, 'Ion Marin');
     await kept(page, '"onProfile":true');
-    expect(await ticked(page)).toEqual([1, 3, 4]);
+    // Step 1 waits for the e-mail, which this flow never types; step 2 ticks
+    // once a brand is chosen.
+    // @traces 115-FR-002 115-FR-007
+    expect(await ticked(page)).toEqual([2, 3, 4]);
 
     await page.reload();
     await settled(page);
@@ -142,6 +145,6 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
       'aria-checked',
       'true',
     );
-    await expect.poll(() => ticked(page)).toEqual([1, 3, 4]);
+    await expect.poll(() => ticked(page)).toEqual([2, 3, 4]);
   });
 });

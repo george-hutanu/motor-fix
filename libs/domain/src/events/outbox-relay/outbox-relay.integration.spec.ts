@@ -13,6 +13,7 @@ import { AccountsService } from '../../auth/accounts.service';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { timersArmedBy, until } from '../../waits.testing';
+import { audienceOf, type LiveSubject } from '../audience';
 import { outbox } from '../event.port';
 import { LIVE_CHANNEL } from '../live/live.hub';
 
@@ -101,6 +102,7 @@ beforeEach(async () => {
   jest.restoreAllMocks();
 });
 
+// @traces 267-FR-010
 describe('recording an event in the change’s transaction', () => {
   it('commits the change and its event together', async () => {
     const driver = randomUUID();
@@ -458,9 +460,11 @@ describe('dropping the cached public profile', () => {
       `INCR garage-profile-gen:v5:${a}`,
       `EXPIRE garage-profile-gen:v5:${a} 600`,
       `DEL garage-profile:v5:${a}`,
+      'INCR garage-search-gen:v1',
       `INCR garage-profile-gen:v5:${b}`,
       `EXPIRE garage-profile-gen:v5:${b} 600`,
       `DEL garage-profile:v5:${b}`,
+      'INCR garage-search-gen:v1',
     ]);
     expect((await drops()) - before).toBe(2);
   });
@@ -490,5 +494,64 @@ describe('dropping the cached public profile', () => {
     // The drop comes before the publish: no page hears of a change while
     // its old profile is still cached.
     expect(redis.published.filter((m) => m.includes(garageId))).toEqual([]);
+  });
+});
+
+describe('dropping the cached searches', () => {
+  const garageId = randomUUID();
+  const brandId = randomUUID();
+
+  // @traces 267-FR-010
+  it.each<[string, LiveSubject]>([
+    [
+      'verification.decided',
+      { garageId, published: true, type: 'verification' },
+    ],
+    ['garage.suspended', { garageId, results: true, type: 'public_garage' }],
+    ['garage.restored', { garageId, results: true, type: 'public_garage' }],
+    ['garage.updated', { garageId, results: false, type: 'public_garage' }],
+    [
+      'garage.updated (brand stance)',
+      { brandIds: [brandId], garageId, type: 'garage_brands' },
+    ],
+    [
+      'review.posted',
+      {
+        authorAccountId: randomUUID(),
+        garageId,
+        mechanicId: null,
+        type: 'review',
+      },
+    ],
+  ])('advances the search generation once for %s', async (name, subject) => {
+    await prisma.outboxEvent.create({
+      data: {
+        audience: audienceOf(subject),
+        kind: name.split(' ')[0] as string,
+        subjectId: garageId,
+      },
+    });
+    const redis = new FakeRedis();
+
+    await new OutboxRelay(prisma, redis).relay();
+
+    expect(
+      redis.dropped.filter((command) => command.includes('garage-search')),
+    ).toEqual(['INCR garage-search-gen:v1']);
+  });
+
+  it('leaves the searches for an event no public channel reads', async () => {
+    await prisma.outboxEvent.create({
+      data: {
+        audience: audienceOf({ garageId, type: 'verification' }),
+        kind: 'verification.decided',
+        subjectId: garageId,
+      },
+    });
+    const redis = new FakeRedis();
+
+    await new OutboxRelay(prisma, redis).relay();
+
+    expect(redis.dropped).toEqual([]);
   });
 });

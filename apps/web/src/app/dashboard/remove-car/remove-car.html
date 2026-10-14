@@ -1,0 +1,6 @@
+<p>{{ 'driver.cars.remove.text' | t: { car: name } }}</p>
+<mf-task-error [save]="save" />
+<div class="actions">
+  <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'driver.cars.remove.cancel' | t }}</button>
+  <button hlmBtn type="button" [mfTaskSubmit]="save" (click)="save.submit()">{{ 'driver.cars.remove.confirm' | t }}</button>
+</div>

@@ -1,3 +1,4 @@
+import type { EventKind } from '@motor-fix/contracts';
 import {
   observeQueue,
   observeWorker,
@@ -15,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { type Job, type JobsOptions, Queue, Worker } from 'bullmq';
 
-import { RemindersService } from './reminders.service';
+import { type CarEvent, RemindersService } from './reminders.service';
 import { inJob } from '../../logging';
 import {
   bucharestDaily,
@@ -49,6 +50,19 @@ interface Daily {
   day: string;
 }
 
+// A car's edit or removal, relayed onto the reminders queue: its reminders
+// follow the new dates or go. Tried 5 more times, 1 to 16 minutes later.
+export const CAR_REMINDERS_CONSUMER = {
+  jobs: {
+    attempts: 6,
+    backoff: { delay: 60_000, type: 'exponential' },
+    removeOnComplete: true,
+    removeOnFail: true,
+  } as JobsOptions,
+  kinds: ['car.updated', 'car.removed'] as readonly EventKind[],
+  queue: REMINDERS_QUEUE,
+};
+
 // One job a day, under the id of its day, so a restart or a second worker
 // cannot queue a day twice; a day run twice still sends nothing twice.
 // The next day is queued before the run, so a failing run cannot stop it.
@@ -78,11 +92,15 @@ export class RemindersScheduler {
     for (const task of this.tasks) await task.run(this.now());
   }
 
-  failed(job: Job<Daily>, error: Error): void {
+  failed(job: Job<Daily | CarEvent>, error: Error): void {
     if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
-    this.logger.error(
-      `reminders run of ${job.data.day} failed: ${error.message}`,
-    );
+    if (job.name === 'event') {
+      const { id, kind } = job.data as CarEvent;
+      this.logger.error(`reminders lost ${kind} event ${id}: ${error.message}`);
+    } else {
+      const { day } = job.data as Daily;
+      this.logger.error(`reminders run of ${day} failed: ${error.message}`);
+    }
   }
 
   private queueNext(now: Date) {
@@ -146,12 +164,20 @@ export class RemindersModule
           },
         },
         {
-          inject: [RemindersScheduler],
+          inject: [RemindersScheduler, RemindersService],
           provide: REMINDERS_WORKER,
-          useFactory: (scheduler: RemindersScheduler) => {
-            const worker = new Worker<Daily>(
+          useFactory: (
+            scheduler: RemindersScheduler,
+            reminders: RemindersService,
+          ) => {
+            const worker = new Worker<Daily | CarEvent>(
               REMINDERS_QUEUE,
-              (job) => inJob(job, () => scheduler.handle(job)),
+              (job) =>
+                inJob(job, () =>
+                  job.name === 'event'
+                    ? reminders.onCarEvent(job.data as CarEvent)
+                    : scheduler.handle(job as Job<Daily>),
+                ),
               {
                 connection: {
                   maxRetriesPerRequest: null,
@@ -160,6 +186,8 @@ export class RemindersModule
                 telemetry: queueTelemetry(),
               },
             );
+            // A job that fails for good is dropped (removeOnFail), so it is
+            // logged once here: a lost car event leaves its reminders as they were.
             worker.on('failed', (job, error) => {
               if (job) inJob(job, () => scheduler.failed(job, error));
             });

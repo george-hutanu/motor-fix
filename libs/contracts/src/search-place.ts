@@ -2,6 +2,13 @@
 // it leaves, and the API reads it back the same way.
 
 export const SEARCH_RADIUS_DEFAULT_KM = 25;
+// The areas a search may cover, in km; the wider one is offered once when the
+// default finds nothing.
+export const SEARCH_RADII = [SEARCH_RADIUS_DEFAULT_KM, 50] as const;
+export type SearchRadius = (typeof SEARCH_RADII)[number];
+
+// The garages one page of results shows, and a live re-read or stream names.
+export const SEARCH_IDS_MAX = 20;
 // About 100 m: one spot gives one request, so a cached answer is shared.
 const PLACE_DECIMALS = 3;
 

@@ -122,6 +122,28 @@ const EXPECTED: Record<
     type: 'gt',
     value: 1.5,
   },
+  'api-search-cache-fallback-rate': {
+    expr: [
+      'motorfix_search_cache_total{service_name="api", outcome="fallback"}[10m]',
+      'motorfix_search_cache_total{service_name="api"}[10m]',
+      '>= 20',
+    ],
+    for: '10m',
+    from: 600,
+    type: 'gt',
+    value: 0.05,
+  },
+  'api-search-log-failure-rate': {
+    expr: [
+      'motorfix_search_log_total{service_name="api", outcome="failed"}[10m]',
+      'motorfix_search_log_total{service_name="api"}[10m]',
+      '>= 20',
+    ],
+    for: '10m',
+    from: 600,
+    type: 'gt',
+    value: 0.05,
+  },
   'postgres-connections': {
     expr: [
       'sum by (deployment_environment) (motorfix_pg_connections)',
@@ -399,6 +421,7 @@ function ruleProblems(
   ];
 }
 
+// @traces 267-FR-023
 describe('alert rules', () => {
   const files = alertFiles();
   const own = (service: Service) => files[`${service}.json`];
@@ -424,7 +447,8 @@ describe('alert rules', () => {
   // @traces 1024-FR-005
   // @traces 1024-FR-006
   // @traces 1024-FR-007
-  it('holds exactly the sixteen rules, each with its threshold, window and wait', () => {
+  // @traces 267-FR-023
+  it('holds exactly the eighteen rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );

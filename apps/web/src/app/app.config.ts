@@ -23,6 +23,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
+import { provideServiceWorkerRecovery } from './service-worker-recovery';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -39,5 +40,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(PlatformStatus).read()),
     // Only the production build emits ngsw-worker.js.
     provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
+    provideServiceWorkerRecovery(),
   ],
 };

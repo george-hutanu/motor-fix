@@ -56,6 +56,7 @@ afterAll(async () => {
 const search = (query: Record<string, string>) =>
   request(app.getHttpServer()).get('/search/garages').query(query);
 
+// @traces 267-FR-004 267-FR-005 267-FR-006 267-FR-024
 describe('GET /search/garages', () => {
   it('answers a visitor without a session with a page of garages', async () => {
     const garage = await prisma.garage.create({
@@ -69,14 +70,20 @@ describe('GET /search/garages', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
+      brand: { id: dacia, name: 'Dacia', slug: 'dacia' },
       counts: { doesNotTake: 0, worksOn: 1 },
       items: [
         {
           brandNote: null,
+          businessKind: null,
           doesNotTake: [],
+          facilities: [],
           id: garage.id,
+          labourFromLei: null,
           name: 'Alfa Service',
+          rating: null,
           refusalPhrase: null,
+          reviewCount: 0,
           slug: 'alfa-service',
           stance: 'works_on',
           worksOn: [{ id: dacia, name: 'Dacia', slug: 'dacia' }],
@@ -90,6 +97,8 @@ describe('GET /search/garages', () => {
   it.each([
     ['no brand', {}],
     ['a brand that is not a uuid', { brandId: 'dacia' }],
+    ['a slug and an id together', { brand: 'dacia', brandId: randomUUID() }],
+    ['a slug with capitals', { brand: 'Dacia' }],
     ['an unknown parameter', { brandId: randomUUID(), sort: 'rating' }],
     [
       'a cursor over 200 characters',
@@ -125,6 +134,29 @@ describe('GET /search/garages', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  // @traces 267-FR-004
+  it('finds the brand by its slug and names it in the answer', async () => {
+    const res = await search({ brand: 'dacia' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.brand).toEqual({ id: dacia, name: 'Dacia', slug: 'dacia' });
+  });
+
+  it('answers 404 not_found to a slug that names no brand', async () => {
+    const res = await search({ brand: 'trabant' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('not_found');
+  });
+
+  it('answers 400 to a repeated brand key', async () => {
+    const res = await request(app.getHttpServer()).get(
+      '/search/garages?brand=dacia&brand=bmw',
+    );
+
+    expect(res.status).toBe(400);
   });
 
   it('answers 404 not_found to a brand that does not exist', async () => {
@@ -208,19 +240,25 @@ describe('GET /search/garages near a place', () => {
     ]);
   });
 
-  it('never tells where a mobile mechanic is', async () => {
+  // @traces 267-FR-003
+  it('never tells where a mobile mechanic is, only how far it travels', async () => {
     await placed('Gama', 0.1, 'works_on', 20);
 
     const res = await search({ brandId: dacia, near: NEAR });
 
     const [item] = res.body.items;
-    expect(item).toMatchObject({ comesToYou: true, distanceKm: null });
+    expect(item).toMatchObject({
+      businessKind: 'mobile',
+      comesToYou: true,
+      distanceKm: null,
+      serviceRadiusKm: 20,
+    });
     for (const key of [
       'address',
+      'city',
       'latitude',
       'longitude',
       'seatAddress',
-      'serviceRadiusKm',
     ]) {
       expect(item).not.toHaveProperty(key);
     }
@@ -277,5 +315,70 @@ describe('GET /search/garages near a place', () => {
     const res = await search({ brandId: dacia, near: '47.498,19.040' });
 
     expect(res.status).toBe(400);
+  });
+});
+
+// @traces 267-FR-005
+describe('GET /search/garages with a radius', () => {
+  it('widens to 50 km for fixed garages and refuses any other radius', async () => {
+    await placed('Alfa', 0.01, 'works_on');
+    await placed('Beta', 0.3, 'works_on');
+
+    const wide = await search({ brandId: dacia, near: NEAR, radius: '50' });
+    const odd = await search({ brandId: dacia, near: NEAR, radius: '30' });
+    const plain = await search({ brandId: dacia, near: NEAR, radius: '25' });
+
+    expect(wide.body.items.map((i: { name: string }) => i.name)).toEqual([
+      'Alfa',
+      'Beta',
+    ]);
+    expect(plain.body.total).toBe(1);
+    expect(odd.status).toBe(400);
+  });
+
+  it('is never kept by a cache on the way', async () => {
+    const res = await search({ brandId: dacia });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+});
+
+// @traces 267-FR-006
+describe('GET /search/garages with ids', () => {
+  it('answers a visitor the public garages among the ids, in the order of the search, with its counts', async () => {
+    const alfa = await placed('Alfa', 0.01, 'works_on');
+    const beta = await placed('Beta', 0.01, 'does_not_take');
+    await placed('Gama', 0.01, 'works_on');
+    const hidden = await prisma.garage.create({
+      data: { name: 'Delta', slug: 'delta', status: 'suspended' },
+    });
+
+    const res = await search({
+      brand: 'dacia',
+      ids: [beta, hidden.id, randomUUID(), alfa].join(','),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.items.map((i: { id: string }) => i.id)).toEqual([
+      alfa,
+      beta,
+    ]);
+    expect(res.body).toMatchObject({
+      counts: { doesNotTake: 1, worksOn: 2 },
+      nextCursor: null,
+      total: 3,
+    });
+  });
+
+  it('refuses 21 ids and an id that is not a uuid', async () => {
+    const many = Array.from({ length: 21 }, () => randomUUID()).join(',');
+
+    const tooMany = await search({ brandId: dacia, ids: many });
+    const bad = await search({ brandId: dacia, ids: 'alfa' });
+
+    expect(tooMany.status).toBe(400);
+    expect(bad.status).toBe(400);
   });
 });
