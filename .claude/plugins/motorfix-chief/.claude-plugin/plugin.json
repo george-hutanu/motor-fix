@@ -1,0 +1,6 @@
+{
+  "author": { "name": "george-hutanu" },
+  "description": "Chief's PR ledger, dispatch guard, build board and quieter transcripts for motor-fix",
+  "name": "motorfix-chief",
+  "version": "0.1.0"
+}

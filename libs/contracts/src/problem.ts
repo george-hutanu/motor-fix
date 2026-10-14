@@ -6,6 +6,8 @@ export interface Problem {
   detail?: string;
   // Errors that belong to one field; `field` is the form control's name.
   errors?: FieldProblem[];
+  // Field notes that do not block, sent beside the errors of a refusal.
+  warnings?: FieldProblem[];
   // A wrong sign-in code (`code_invalid`): the tries the code has left.
   attemptsLeft?: number;
   // A refusal that lifts with time: the seconds until it does, also sent as

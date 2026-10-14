@@ -10,6 +10,7 @@ import {
   checkHooks,
   checkSkillsAndAgents,
 } from './doctor.mjs';
+// @traces 1168-FR-016
 
 // Doctor is the check that catches a gate which stopped firing. These build a
 // throwaway repo skeleton and break one thing at a time — the real repo is
@@ -101,6 +102,56 @@ describe('doctor — hooks', () => {
     assert.match(changed[0], /pre:bash:guard/);
     assert.equal(status(checkHooks(repo), 'hooks/fingerprints'), 'ok');
     assert.match(readFileSync(join(repo, '.claude/hooks/registry.json'), 'utf8'), /"fingerprint"/);
+  });
+});
+
+describe('doctor — mods', () => {
+  const MOD = '.claude/plugins/motorfix-chief';
+  const registry = () => JSON.parse(readFileSync(join(repo, '.claude/hooks/registry.json'), 'utf8'));
+  beforeEach(() => {
+    write('.claude/plugins/.claude-plugin/marketplace.json', { name: 'motorfix' });
+    write(`${MOD}/.claude-plugin/plugin.json`, { name: 'motorfix-chief' });
+    write(`${MOD}/hooks/register.js`, 'export function register() {}\n');
+    write(`${MOD}/hooks/guard.test.ts`, '// test\n');
+    blessHooks(repo);
+  });
+
+  it('records every mod file and the marketplace manifest, never a test or the generated types', () => {
+    assert.deepEqual(Object.keys(registry().mods).sort(), [
+      '.claude-plugin/marketplace.json',
+      'motorfix-chief/.claude-plugin/plugin.json',
+      'motorfix-chief/hooks/register.js',
+    ]);
+    write(`${MOD}/.claude-plugin/types/claude-code/index.d.ts`, '// generated\n');
+    write(`${MOD}/hooks/guard.test.ts`, '// test, edited\n');
+    assert.equal(status(checkHooks(repo), 'mods/fingerprints'), 'ok');
+  });
+
+  it('fails on an unblessed edit to a mod file or the marketplace manifest, and --bless-hooks records it', () => {
+    write(`${MOD}/hooks/register.js`, 'export function register(on) { on("tool.check") }\n');
+    write('.claude/plugins/.claude-plugin/marketplace.json', { name: 'other' });
+    const results = checkHooks(repo);
+    assert.equal(status(results, 'mods/fingerprints'), 'fail');
+    assert.match(detail(results, 'mods/fingerprints'), /motorfix-chief\/hooks\/register\.js/);
+    assert.match(detail(results, 'mods/fingerprints'), /marketplace\.json/);
+    const changed = blessHooks(repo);
+    assert.equal(changed.length, 2);
+    assert.equal(status(checkHooks(repo), 'mods/fingerprints'), 'ok');
+  });
+
+  it('fails on a mod file nobody blessed and on a blessed file that is gone', () => {
+    write(`${MOD}/hooks/extra.js`, '// new\n');
+    assert.match(detail(checkHooks(repo), 'mods/fingerprints'), /unlisted: motorfix-chief\/hooks\/extra\.js/);
+    rmSync(join(repo, `${MOD}/hooks/extra.js`));
+    rmSync(join(repo, `${MOD}/hooks/register.js`));
+    assert.match(detail(checkHooks(repo), 'mods/fingerprints'), /missing: motorfix-chief\/hooks\/register\.js/);
+  });
+
+  it('leaves every gate entry and its fingerprint unchanged when it blesses the mods', () => {
+    const before = registry().hooks;
+    write(`${MOD}/hooks/register.js`, '// changed\n');
+    blessHooks(repo);
+    assert.deepEqual(registry().hooks, before);
   });
 });
 

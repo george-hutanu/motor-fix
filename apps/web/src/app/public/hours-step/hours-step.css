@@ -113,9 +113,22 @@ button {
   overflow-wrap: anywhere;
   cursor: pointer;
 }
-.error {
+.error,
+.warning {
   flex-basis: 100%;
+}
+.error {
   color: var(--mf-red-ink);
+}
+.warning {
+  color: var(--mf-text-secondary);
+}
+/* The week and the payments are judged as a whole, each with its message. */
+.week,
+.payment-group {
+  display: grid;
+  gap: var(--mf-space-3);
+  min-width: 0;
 }
 details {
   display: grid;
@@ -205,4 +218,10 @@ ul {
   mf-lamp {
     font-size: var(--mf-size-small);
   }
+}
+
+/* The message regions stay in the page, empty, so a reader announces what lands in them. */
+.error:empty,
+.warning:empty {
+  display: none;
 }

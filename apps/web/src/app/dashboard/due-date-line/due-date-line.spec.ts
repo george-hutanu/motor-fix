@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { ChangeDetectorRef, Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -25,6 +28,8 @@ class Host {
   readonly expiry = signal<string | null>(null);
   readonly link = signal<Link>(null);
 }
+
+const styles = readFileSync(join(__dirname, 'due-date-line.css'), 'utf8');
 
 const GARAGES: NonNullable<Link> = {
   label: 'driver.cars.findGarage',
@@ -480,5 +485,167 @@ describe('the due-date line at the edges', () => {
         .querySelector('mf-lamp')
         ?.getAttribute('data-state');
     expect([state(a), state(b)]).toEqual(['red', 'green']);
+  });
+});
+
+@Component({
+  imports: [DueDateLine],
+  template: `<mf-due-date-line
+    [expiry]="expiry()"
+    [keyPrefix]="prefix()"
+    [addable]="addable()"
+    (add)="added = added + 1"
+  />`,
+})
+class Other {
+  readonly expiry = signal<string | null>(null);
+  readonly prefix = signal('driver.cars.rca');
+  readonly addable = signal(false);
+  added = 0;
+}
+
+async function renderOther(
+  expiry: string | null,
+  prefix: string,
+  language: 'ro' | 'en' = 'ro',
+  addable = false,
+) {
+  TestBed.configureTestingModule({ providers: [provideRouter([])] });
+  const i18n = TestBed.inject(I18n);
+  await i18n.enter('driver');
+  if (language === 'en') await i18n.use('en');
+  const fixture = TestBed.createComponent(Other);
+  fixture.componentInstance.expiry.set(expiry);
+  fixture.componentInstance.prefix.set(prefix);
+  fixture.componentInstance.addable.set(addable);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  const element = fixture.nativeElement as HTMLElement;
+  const lamp = () => element.querySelector('mf-lamp') as HTMLElement;
+  return {
+    element,
+    fixture,
+    sentence: () => (lamp().textContent ?? '').replace(/\s+/g, ' ').trim(),
+    state: () => lamp().getAttribute('data-state'),
+  };
+}
+
+describe('the RCA and rovinietă lines', () => {
+  beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
+
+  // @traces 092-FR-009
+  it.each([
+    [
+      'driver.cars.rca',
+      '2026-12-08',
+      'green',
+      'RCA valabilă până în decembrie 2026',
+    ],
+    ['driver.cars.rca', '2026-10-20', 'amber', 'RCA‑ul expiră în 12 zile'],
+    ['driver.cars.rca', '2026-10-09', 'red', 'RCA‑ul expiră mâine'],
+    ['driver.cars.rca', '2026-10-08', 'red', 'RCA‑ul expiră azi'],
+    ['driver.cars.rca', '2026-10-07', 'red', 'RCA‑ul a expirat pe 7 oct. 2026'],
+    ['driver.cars.rca', null, 'grey', 'RCA: adaugă data'],
+    [
+      'driver.cars.rovinieta',
+      '2026-12-08',
+      'green',
+      'Rovinieta e valabilă până în decembrie 2026',
+    ],
+    [
+      'driver.cars.rovinieta',
+      '2026-11-13',
+      'amber',
+      'Rovinieta expiră în 36 de zile',
+    ],
+    ['driver.cars.rovinieta', '2026-10-09', 'red', 'Rovinieta expiră mâine'],
+    ['driver.cars.rovinieta', '2026-10-08', 'red', 'Rovinieta expiră azi'],
+    [
+      'driver.cars.rovinieta',
+      '2026-10-07',
+      'red',
+      'Rovinieta a expirat pe 7 oct. 2026',
+    ],
+    ['driver.cars.rovinieta', null, 'grey', 'Rovinietă: adaugă data'],
+  ])(
+    '%s shows %p as a %s lamp reading "%s"',
+    async (prefix, expiry, state, text) => {
+      const line = await renderOther(expiry, prefix);
+
+      expect(line.state()).toBe(state);
+      expect(line.sentence()).toBe(text);
+      expect(line.element.querySelector('a')).toBeNull();
+    },
+  );
+
+  // @traces 092-FR-009
+  it.each([
+    ['driver.cars.rca', '2026-12-08', 'RCA valid until December 2026'],
+    ['driver.cars.rca', '2026-10-20', 'RCA expires in 12 days'],
+    ['driver.cars.rca', '2026-10-09', 'RCA expires tomorrow'],
+    ['driver.cars.rca', '2026-10-08', 'RCA expires today'],
+    ['driver.cars.rca', '2026-10-07', 'RCA expired on 7 Oct 2026'],
+    ['driver.cars.rca', null, 'RCA: add the date'],
+    [
+      'driver.cars.rovinieta',
+      '2026-12-08',
+      'Rovinietă valid until December 2026',
+    ],
+    ['driver.cars.rovinieta', '2026-10-20', 'Rovinietă expires in 12 days'],
+    ['driver.cars.rovinieta', '2026-10-09', 'Rovinietă expires tomorrow'],
+    ['driver.cars.rovinieta', '2026-10-08', 'Rovinietă expires today'],
+    ['driver.cars.rovinieta', '2026-10-07', 'Rovinietă expired on 7 Oct 2026'],
+    ['driver.cars.rovinieta', null, 'Rovinietă: add the date'],
+  ])('%s reads %p in English as "%s"', async (prefix, expiry, text) => {
+    expect((await renderOther(expiry, prefix, 'en')).sentence()).toBe(text);
+  });
+});
+
+describe('the grey line that adds a date', () => {
+  beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
+
+  // @traces 092-FR-009
+  it('is a button that asks for the date when the line is addable', async () => {
+    const line = await renderOther(null, 'driver.cars.rca', 'ro', true);
+
+    const button = line.element.querySelector('button');
+    expect(button?.type).toBe('button');
+    expect(button?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'RCA: adaugă data',
+    );
+    button?.click();
+    expect(line.fixture.componentInstance.added).toBe(1);
+  });
+
+  // @traces 092-FR-009
+  it('names the button in English', async () => {
+    const line = await renderOther(null, 'driver.cars.rovinieta', 'en', true);
+
+    expect(
+      line.element
+        .querySelector('button')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('Rovinietă: add the date');
+  });
+
+  // @traces 092-FR-009
+  it('stays plain text when the line is not addable', async () => {
+    const line = await renderOther(null, 'driver.cars.rca');
+
+    expect(line.element.querySelector('button')).toBeNull();
+    expect(line.sentence()).toBe('RCA: adaugă data');
+  });
+
+  // @traces 092-FR-009
+  it('is no button once the line has a date', async () => {
+    const line = await renderOther('2026-10-20', 'driver.cars.rca', 'ro', true);
+
+    expect(line.element.querySelector('button')).toBeNull();
+  });
+
+  // @traces 092-FR-009
+  it('gives the button the 44 px target the stylesheet sets', () => {
+    expect(styles).toMatch(/button\s*\{[^}]*min-height:\s*44px/);
   });
 });

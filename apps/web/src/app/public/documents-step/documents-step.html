@@ -1,7 +1,10 @@
 <h3>{{ 'public.listing.documents.heading' | t }}</h3>
 @for (each of kinds; track each) {
   @let pages = pagesOf(each);
+  @let missing = documentMessages()[each];
   <mf-document-area
+    [attr.data-field]="'documents.' + each"
+    tabindex="-1"
     [kind]="each"
     [mobile]="mobile()"
     [draftId]="draftId()"
@@ -9,6 +12,9 @@
     [pages]="pages"
     (pagesChange)="setPages(each, $event)"
   >
+    @if (missing) {
+      <p [class]="missing.warning ? 'warning' : 'error'" [id]="'listing-' + each + '-missing'">{{ missing.key | t }}</p>
+    }
     @if (each === 'onrc_certificate' && pages.length) {
       <div class="field">
         <label for="listing-issued-on">{{ 'public.listing.documents.issuedOn' | t }}</label>
@@ -42,12 +48,14 @@
     id="listing-declared-name"
     type="text"
     autocomplete="name"
+    data-field="declaration"
     [maxLength]="nameMax"
     [value]="name()"
-    [attr.aria-describedby]="nameError() ? 'listing-declared-name-error' : null"
-    [attr.aria-invalid]="nameError() ? 'true' : null"
+    [attr.aria-describedby]="declarationMessage() ? 'listing-declared-name-error' : null"
+    [attr.aria-invalid]="declarationError() ? 'true' : null"
     (input)="typeName(declarer.value)"
     (blur)="leaveName()"
   />
-  <p id="listing-declared-name-error" class="error" role="status" aria-live="polite">{{ nameError() ? ('public.listing.declaration.nameShort' | t) : '' }}</p>
+  @let declared = declarationMessage();
+  <p id="listing-declared-name-error" [class]="declared?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ declared ? (declared.key | t) : '' }}</p>
 </div>

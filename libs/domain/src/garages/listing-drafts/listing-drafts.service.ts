@@ -1,5 +1,6 @@
 import {
   type ContinueLinkSentDto,
+  checkListing,
   DECLARED_NAME_MAX,
   DECLARED_NAME_MIN,
   DOCUMENT_KINDS,
@@ -7,10 +8,12 @@ import {
   EMAIL_PATTERN,
   isListingDraftData,
   issuedWithinWindow,
+  type ListingCheckDto,
   type ListingDraftCreatedDto,
   type ListingDraftData,
   type ListingDraftDto,
   type ListingDraftSavedDto,
+  stripCui,
 } from '@motor-fix/contracts';
 import {
   HttpException,
@@ -424,6 +427,43 @@ export class ListingDraftsService {
       this.logger.error(`listing draft link failed for ${draft.id}: ${reason}`);
       return {};
     }
+  }
+
+  // The same judgement the form makes, on the stored copy, plus the CUI
+  // another draft already holds. Reads only: a check never saves.
+  async check(id: string, token: string | undefined): Promise<ListingCheckDto> {
+    const draft = await this.open(id, token);
+    const data = isListingDraftData(draft.data) ? draft.data : {};
+    const { errors, warnings } = checkListing({ data, email: draft.email });
+    const cui = stripCui(data.steps?.['6']?.cui ?? '');
+    if (cui && (await this.cuiHeldElsewhere(id, cui)))
+      warnings.push({ code: 'cui_in_use', field: 'steps.6.cui' });
+    if (errors.length) {
+      throw new HttpException(
+        {
+          code: 'listing_incomplete',
+          errors,
+          message: 'The listing is not complete',
+          warnings,
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+    return { warnings };
+  }
+
+  // Step 6 keeps the CUI as typed, so the stored one is stripped as stripCui
+  // strips it: no spaces, no leading RO.
+  private async cuiHeldElsewhere(id: string, cui: string): Promise<boolean> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM listing_draft
+      WHERE id <> ${id}::uuid
+        AND regexp_replace(
+              regexp_replace(data #>> '{steps,6,cui}', '[[:space:]]+', '', 'g'),
+              '^ro', '', 'i'
+            ) = ${cui}
+      LIMIT 1`;
+    return rows.length > 0;
   }
 
   // The draft a key opens, which must be the one named and still open.

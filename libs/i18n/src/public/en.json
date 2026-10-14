@@ -181,6 +181,36 @@
         "other": "{count} taken"
       }
     },
+    "check": {
+      "addressNeeded": "Choose the garage's address",
+      "brandsNeeded": "Choose at least one brand you work on",
+      "complete": "Everything is complete",
+      "cuiInUse": "This CUI is already on another listing. We check it when you send.",
+      "cuiNeeded": "Write the company's CUI",
+      "declarationNeeded": "Tick the declaration and write your name",
+      "documentMissing": "The document is missing. You can add it after sending too.",
+      "failed": "We could not check. Try again.",
+      "hoursNeeded": "Open at least one day a week",
+      "incomplete": "incomplete",
+      "invalid": "Check this value",
+      "jobNameLength": "Between 2 and 80 characters",
+      "jobsNeeded": "Add at least one job with a price",
+      "kindNeeded": "Choose the kind of business",
+      "knownForLong": "At most 160 characters",
+      "legalFormNeeded": "Choose PFA or company",
+      "missing": {
+        "one": "Still missing: {count} thing",
+        "other": "Still missing: {count} things"
+      },
+      "photosNeeded": "Add at least one photo",
+      "positionNeeded": "Pick the address from the list or pin it on the map",
+      "radiusNeeded": "Choose how far you travel",
+      "rarNeeded": "Write the RAR authorisation number",
+      "required": "Fill this in",
+      "seatAddressNeeded": "Choose the registered seat's address",
+      "seatPositionNeeded": "Pick the seat on the map",
+      "send": "Send for review"
+    },
     "cui": "Company tax ID",
     "cuiInvalid": "Invalid tax ID",
     "declaration": {

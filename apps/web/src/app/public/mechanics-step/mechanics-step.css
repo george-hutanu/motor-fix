@@ -50,9 +50,15 @@ input {
   min-height: var(--mf-tap);
   box-sizing: border-box;
 }
+.error,
+.warning {
+  font-size: var(--mf-size-small);
+}
 .error {
   color: var(--mf-red-ink);
-  font-size: var(--mf-size-small);
+}
+.warning {
+  color: var(--mf-text-secondary);
 }
 .remove {
   min-width: var(--mf-tap);
@@ -71,7 +77,12 @@ input {
 
 /* running text on a phone is at the 16 px body size. */
 @media (max-width: 767.98px) {
-  .error {
+  .error,
+  .warning {
     font-size: var(--mf-size-body);
   }
+}
+/* An always-present live region takes no room while it says nothing. */
+.error:empty {
+  display: none;
 }

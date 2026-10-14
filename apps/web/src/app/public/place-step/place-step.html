@@ -10,6 +10,7 @@
     hlmInput
     id="place-address"
     name="address"
+    data-field="steps.5.place.address"
     autocomplete="street-address"
     role="combobox"
     aria-autocomplete="list"
@@ -17,12 +18,14 @@
     aria-expanded="false"
     [attr.aria-expanded]="suggestions().length > 0"
     [attr.aria-activedescendant]="active() >= 0 ? 'place-option-' + active() : null"
-    [attr.aria-describedby]="searchDown() ? 'place-search-down' : null"
+    [attr.aria-invalid]="errors().address ? true : null"
+    [attr.aria-describedby]="addressDescribedBy()"
     [attr.maxlength]="addressMax"
     [placeholder]="'public.listing.place.placeholder' | t"
     [value]="value().address ?? ''"
     (input)="type($event)"
     (keydown)="keys($event)"
+    (blur)="leave('address')"
   />
   <div class="suggestions" id="place-options" role="listbox" [attr.aria-label]="'public.listing.place.suggestions' | t">
     @for (suggestion of suggestions(); track $index) {
@@ -37,6 +40,7 @@
     }
   </div>
 </div>
+<p [class]="messages().address?.warning ? 'warning' : 'error'" id="place-address-error" role="status" aria-live="polite">{{ messages().address ? (messages().address!.key | t) : '' }}</p>
 <p class="hint" aria-live="polite">
   @if (suggestions().length > 0) {
     {{ 'public.listing.place.found' | t: { count: suggestions().length } }}
@@ -58,18 +62,17 @@
   <div
     #map
     class="map"
+    data-field="steps.5.place.lat"
     [tabIndex]="0"
     role="application"
     [attr.aria-label]="'public.listing.place.map' | t"
-    [attr.aria-describedby]="outside() ? 'place-outside' : 'place-map-hint'"
+    [attr.aria-describedby]="messages().position ? 'place-outside' : 'place-map-hint'"
     (keydown)="nudge($event)"
   ></div>
   @if (mapDown()) {
     <p class="error" role="alert">{{ 'public.listing.place.mapDown' | t }}</p>
   }
-  @if (outside()) {
-    <p class="error" id="place-outside" role="alert">{{ 'public.listing.place.outside' | t }}</p>
-  }
+  <p [class]="messages().position?.warning ? 'warning' : 'error'" id="place-outside" role="status" aria-live="polite">{{ messages().position ? (messages().position!.key | t) : '' }}</p>
   <p class="hint" id="place-map-hint">
     @if (hasPin()) {
       {{ 'public.listing.place.dragHint' | t }}
@@ -86,19 +89,26 @@
       hlmInput
       id="place-radius"
       name="radiusKm"
+      data-field="steps.5.place.radiusKm"
       type="number"
       inputmode="numeric"
       step="1"
       [attr.min]="radiusMin"
       [attr.max]="radiusMax"
       [value]="radiusShown()"
-      [attr.aria-invalid]="radiusInvalid() ? true : null"
+      [attr.aria-invalid]="errors().radius ? true : null"
       aria-describedby="place-radius-hint"
       (input)="typeRadius($event)"
+      (blur)="leave('radius')"
     />
     <span aria-hidden="true">{{ 'public.listing.place.km' | t }}</span>
   </div>
-  <p [class]="radiusInvalid() ? 'error' : 'hint'" id="place-radius-hint">
-    {{ 'public.listing.place.radiusHint' | t }}
+  @let radius = messages().radius;
+  <p [class]="radius ? (radius.warning ? 'warning' : 'error') : 'hint'" id="place-radius-hint">
+    @if (radius) {
+      {{ radius.key | t }}
+    } @else {
+      {{ 'public.listing.place.radiusHint' | t }}
+    }
   </p>
 }

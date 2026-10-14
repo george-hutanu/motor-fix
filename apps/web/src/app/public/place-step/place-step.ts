@@ -9,13 +9,14 @@ import {
   inject,
   input,
   model,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
+import type { ListingCheck } from '@motor-fix/contracts/listing-check';
 import type { BusinessKind } from '@motor-fix/contracts/listing-sections';
 import {
   ADDRESS_MAX,
-  inRomania,
   PLACE_SEARCH_MIN,
   PLACE_SUGGESTIONS_MAX,
   type PlaceSection,
@@ -27,6 +28,11 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 
 import { type LatLng, PLACE_MAP, type PlaceMap } from './place-map';
+import { type FieldMessage, FieldWatch, NO_PROBLEMS } from '../field-watch';
+
+const ADDRESS = 'steps.5.place.address';
+const POSITION = 'steps.5.place.lat';
+const RADIUS = 'steps.5.place.radiusKm';
 
 const SEARCH_AFTER_MS = 300;
 // One arrow key moves the pin about 20 m.
@@ -44,7 +50,9 @@ const positionOf = ({ lat, lng }: PlaceSection): LatLng | undefined =>
 // The place of step 5: the address, found by search or typed, and the pin
 // on the map, dropped by a suggestion, moved by a drag, a tap once armed or
 // the arrow keys. A mobile mechanic gives its registered seat instead and
-// the radius it travels. It holds the draft's section and saves nothing.
+// the radius it travels. It holds the draft's section and saves nothing;
+// the page judges it, and a field says what is wrong once it has been left,
+// when it opens wrong, or when sending is asked for.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, HlmLabel, TranslatePipe],
@@ -55,6 +63,11 @@ const positionOf = ({ lat, lng }: PlaceSection): LatLng | undefined =>
 export class PlaceStep {
   readonly value = model<PlaceSection>({});
   readonly businessKind = input<BusinessKind | undefined>();
+  // The page's judgement of this step, and whether sending was asked for.
+  readonly problems = input<ListingCheck>(NO_PROBLEMS);
+  readonly showAll = input(false);
+  // Whether any field shows an error, for the step list's dot.
+  readonly shown = output<boolean>();
 
   private readonly i18n = inject(I18n);
   private readonly places = inject(PlacesService);
@@ -65,6 +78,7 @@ export class PlaceStep {
   // Only the answer to the latest text is shown.
   private asked = 0;
   private lastAsked = '';
+  private readonly watch = new FieldWatch();
 
   protected readonly addressMax = ADDRESS_MAX;
   protected readonly radiusMin = RADIUS_KM.min;
@@ -75,10 +89,6 @@ export class PlaceStep {
   protected readonly nothingFound = signal(false);
   protected readonly searchDown = signal(false);
   protected readonly armed = signal(false);
-  protected readonly outside = computed(() => {
-    const at = positionOf(this.value());
-    return !!at && !inRomania(at.lat, at.lng);
-  });
   protected readonly mapDown = signal(false);
   // What is typed in the radius field while it is not a radius to keep.
   private readonly radiusTyped = signal<string | null>(null);
@@ -86,12 +96,50 @@ export class PlaceStep {
     () =>
       this.radiusTyped() ?? String(this.value().radiusKm ?? RADIUS_KM.default),
   );
-  protected readonly radiusInvalid = computed(
-    () => this.radiusTyped() !== null,
-  );
   protected readonly hasPin = computed(
     () => positionOf(this.value()) !== undefined,
   );
+
+  // What each field shows; a mobile mechanic's place reads as the seat.
+  protected readonly messages = computed(() => {
+    const value = this.value();
+    const check = this.problems();
+    const all = this.showAll();
+    const mobile = this.mobile();
+    const message = (field: string, filled: boolean) =>
+      this.watch.message(check, field, { all, filled, mobile });
+    // A radius typed out of range is never kept, so the page cannot judge it.
+    const typed: FieldMessage | null =
+      this.radiusTyped() === null
+        ? null
+        : { key: 'public.listing.place.radiusHint', warning: false };
+    return {
+      address: message(ADDRESS, !!value.address?.trim()),
+      position: message(POSITION, this.hasPin()),
+      radius: mobile
+        ? (typed ?? message(RADIUS, value.radiusKm !== undefined))
+        : null,
+    };
+  });
+  protected readonly addressDescribedBy = computed(
+    () =>
+      [
+        this.messages().address && 'place-address-error',
+        this.searchDown() && 'place-search-down',
+      ]
+        .filter(Boolean)
+        .join(' ') || null,
+  );
+  protected readonly errors = computed(() => {
+    const { address, position, radius } = this.messages();
+    const error = (message: FieldMessage | null) =>
+      message && !message.warning ? message.key : null;
+    return {
+      address: error(address),
+      position: error(position),
+      radius: error(radius),
+    };
+  });
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -117,6 +165,7 @@ export class PlaceStep {
         () => this.mapDown.set(true),
       );
     });
+    effect(() => this.shown.emit(Object.values(this.errors()).some(Boolean)));
     // One call, so a pin and a radius set together move the view once.
     effect(() =>
       this.map()?.show({
@@ -130,6 +179,7 @@ export class PlaceStep {
 
   protected type(event: Event) {
     const typed = (event.target as HTMLInputElement).value;
+    this.watch.type(ADDRESS);
     // A typed address is no longer the suggestion the town came with.
     const { address: _, locality: __, ...rest } = this.value();
     this.value.set(typed ? { ...rest, address: typed } : rest);
@@ -194,6 +244,10 @@ export class PlaceStep {
     }
   }
 
+  protected leave(field: 'address' | 'radius') {
+    this.watch.leave(field === 'address' ? ADDRESS : RADIUS);
+  }
+
   protected arm() {
     this.armed.set(true);
   }
@@ -208,6 +262,7 @@ export class PlaceStep {
 
   protected typeRadius(event: Event) {
     const typed = (event.target as HTMLInputElement).value.trim();
+    this.watch.type(RADIUS);
     const km = /^\d+$/.test(typed) ? Number(typed) : Number.NaN;
     if (!radiusAllowed(km)) {
       this.radiusTyped.set(typed);
