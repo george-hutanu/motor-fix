@@ -30,6 +30,7 @@ export function sendProblem(
     | 'currentStatus'
     | 'to'
     | 'rule'
+    | 'warnings'
   > & {
     inviteId?: string;
     garageId?: string;
@@ -95,10 +96,12 @@ export class ProblemFilter implements ExceptionFilter {
       // The members beyond the problem shape a refusal carries: the open
       // invite a refused send names, the tries a wrong code has left, and
       // the wait before a limit lifts, what a refused move was about, and
-      // the garage a refused quote request names. Nothing else an exception
+      // the garage a refused quote request names, and the notes a refused
+      // listing check keeps beside its errors. Nothing else an exception
       // holds leaves.
       {
         ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
+        ...warnings(own.warnings),
         ...attemptsLeft(own.attemptsLeft),
         ...retryAfter(own.retryAfterSeconds),
         ...stringMembers(own),
@@ -117,6 +120,12 @@ function attemptsLeft(value: unknown): Pick<Problem, 'attemptsLeft'> {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
     ? { attemptsLeft: value }
     : {};
+}
+
+// The field notes that do not stop a move, when the refusal names any.
+function warnings(value: unknown): Pick<Problem, 'warnings'> {
+  const list = fieldProblems(value);
+  return list ? { warnings: list } : {};
 }
 
 // The seconds until a limit lifts, when the refusal says so.

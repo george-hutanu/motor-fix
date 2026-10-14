@@ -67,6 +67,13 @@ ul button:focus-visible {
 .quiet {
   color: var(--mf-text-secondary);
 }
+.error {
+  color: var(--mf-red-ink);
+}
+.chips:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}
 .jobs {
   display: grid;
   gap: var(--mf-space-2);
@@ -101,4 +108,8 @@ ul button:focus-visible {
   mf-lamp {
     font-size: var(--mf-size-small);
   }
+}
+/* An always-present live region takes no room while it says nothing. */
+.error:empty {
+  display: none;
 }

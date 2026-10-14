@@ -1,10 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { type DetailsSection, PHONE_MAX } from '@motor-fix/contracts';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { I18n } from '@motor-fix/i18n';
 
 import { DetailsStep } from './details-step';
+import { forStep } from '../field-watch';
 
 // @traces 109-FR-001 109-FR-002 109-FR-003
+
+// The page's judgement of the section, as it hands it to the step.
+const judged = (value: DetailsSection) =>
+  forStep(checkListing({ data: { steps: { '1': value } } }), 1);
 
 async function open(value: DetailsSection = {}, language: 'ro' | 'en' = 'ro') {
   const i18n = TestBed.inject(I18n);
@@ -12,13 +18,19 @@ async function open(value: DetailsSection = {}, language: 'ro' | 'en' = 'ro') {
   if (language === 'en') await i18n.use('en');
   const fixture = TestBed.createComponent(DetailsStep);
   fixture.componentRef.setInput('value', value);
+  fixture.componentRef.setInput('problems', judged(value));
   const emitted: DetailsSection[] = [];
-  fixture.componentInstance.value.subscribe((v) => emitted.push(v));
+  const shown: boolean[] = [];
+  fixture.componentInstance.value.subscribe((v) => {
+    emitted.push(v);
+    fixture.componentRef.setInput('problems', judged(v));
+  });
+  fixture.componentInstance.shown.subscribe((v) => shown.push(v));
   fixture.detectChanges();
   await fixture.whenStable();
   const step = fixture.nativeElement as HTMLElement;
   const last = () => emitted.at(-1) ?? fixture.componentInstance.value();
-  return { emitted, fixture, last, step };
+  return { emitted, fixture, last, shown, step };
 }
 
 type Opened = Awaited<ReturnType<typeof open>>;
@@ -156,6 +168,158 @@ describe('step 1, the garage details', () => {
     expect(errorOf(opened.step, 'knownFor')).toBe(
       'Spune pe scurt la ce sunteți cei mai buni',
     );
+  });
+
+  // @traces 115-FR-006
+  it('keeps each field error in a polite live region that is there before it shows', async () => {
+    const opened = await open();
+    const ids = [
+      'listing-name-error',
+      'listing-phone-error',
+      'listing-known-for-error',
+    ];
+    for (const id of ids) {
+      const region = opened.step.querySelector(`#${id}`);
+      expect(region?.getAttribute('role')).toBe('status');
+      expect(region?.getAttribute('aria-live')).toBe('polite');
+      expect(text(region)).toBe('');
+    }
+
+    for (const name of ['name', 'phone', 'knownFor']) leave(opened, name);
+
+    for (const id of ids)
+      expect(text(opened.step.querySelector(`#${id}`))).not.toBe('');
+  });
+
+  // @traces 115-FR-006
+  it('shows a restored wrong value at once, without leaving it', async () => {
+    // The page restores the draft after its first render.
+    const { fixture, step } = await open();
+    const restored = { name: 'S', phone: '+44 20 7946 0958' };
+    fixture.componentRef.setInput('value', restored);
+    fixture.componentRef.setInput('problems', judged(restored));
+    fixture.detectChanges();
+
+    expect(errorOf(step, 'name')).toBe('Între 2 și 80 de caractere');
+    expect(errorOf(step, 'phone')).toBe(
+      'Momentan acceptăm doar numere din România',
+    );
+    expect(errorOf(step, 'knownFor')).toBe('');
+  });
+
+  // @traces 115-FR-008
+  it('shows every error at once when sending is asked for, the kind too', async () => {
+    const opened = await open();
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    opened.fixture.detectChanges();
+
+    expect(errorOf(opened.step, 'name')).toBe('Între 2 și 80 de caractere');
+    expect(errorOf(opened.step, 'knownFor')).toBe(
+      'Spune pe scurt la ce sunteți cei mai buni',
+    );
+    expect(
+      text(
+        opened.step.querySelector('[data-field="steps.1.businessKind"] .error'),
+      ),
+    ).toBe('Alege tipul de afacere');
+    expect(opened.shown.at(-1)).toBe(true);
+  });
+
+  // @traces 115-FR-006
+  it('describes the kind and legal-form groups and their buttons by their errors', async () => {
+    const opened = await open({ businessKind: 'mobile' });
+    const kind = opened.step.querySelector(
+      '[data-field="steps.1.businessKind"]',
+    ) as HTMLElement;
+    const legal = opened.step.querySelector(
+      '[data-field="steps.1.mobileLegalForm"]',
+    ) as HTMLElement;
+    expect(legal.getAttribute('aria-describedby')).toBeNull();
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    opened.fixture.detectChanges();
+
+    expect(legal.getAttribute('aria-describedby')).toBe('listing-legal-error');
+    expect(text(opened.step.querySelector('#listing-legal-error'))).toBe(
+      'Alege PFA sau firmă',
+    );
+    for (const button of legal.querySelectorAll('button'))
+      expect(button.getAttribute('aria-describedby')).toBe(
+        'listing-legal-error',
+      );
+    expect(kind.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  // @traces 115-FR-006
+  it('describes the kind group by its error once sending is asked for', async () => {
+    const opened = await open();
+    const kind = opened.step.querySelector(
+      '[data-field="steps.1.businessKind"]',
+    ) as HTMLElement;
+    expect(kind.getAttribute('aria-describedby')).toBeNull();
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    opened.fixture.detectChanges();
+
+    expect(kind.getAttribute('aria-describedby')).toBe('listing-kind-error');
+    expect(text(opened.step.querySelector('#listing-kind-error'))).toBe(
+      'Alege tipul de afacere',
+    );
+    for (const button of kind.querySelectorAll('button'))
+      expect(button.getAttribute('aria-describedby')).toBe(
+        'listing-kind-error',
+      );
+  });
+
+  // @traces 115-FR-003
+  it('asks a mobile mechanic for the legal form once asked', async () => {
+    const opened = await open({ businessKind: 'mobile' });
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    opened.fixture.detectChanges();
+
+    expect(
+      text(
+        opened.step.querySelector(
+          '[data-field="steps.1.mobileLegalForm"] .error',
+        ),
+      ),
+    ).toBe('Alege PFA sau firmă');
+    tap(opened, 'legal', 'PFA');
+    expect(
+      text(
+        opened.step.querySelector(
+          '[data-field="steps.1.mobileLegalForm"] .error',
+        ),
+      ),
+    ).toBe('');
+  });
+
+  // @traces 115-FR-007
+  it('says whether it shows an error, and marks each judged control', async () => {
+    const opened = await open();
+
+    expect(opened.shown.at(-1)).toBe(false);
+    leave(opened, 'name');
+    expect(opened.shown.at(-1)).toBe(true);
+    type(opened, 'name', 'Service Popescu');
+    expect(opened.shown.at(-1)).toBe(false);
+    expect(
+      [...opened.step.querySelectorAll('[data-field]')].map((e) =>
+        e.getAttribute('data-field'),
+      ),
+    ).toEqual([
+      'steps.1.name',
+      'steps.1.phone',
+      'steps.1.knownFor',
+      'steps.1.businessKind',
+    ]);
+    expect(
+      opened.step
+        .querySelector('[data-field="steps.1.businessKind"]')
+        ?.getAttribute('tabindex'),
+    ).toBe('-1');
   });
 
   it('opens with the values the draft holds', async () => {

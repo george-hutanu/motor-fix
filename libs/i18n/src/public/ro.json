@@ -188,6 +188,37 @@
         "other": "{count} de primite"
       }
     },
+    "check": {
+      "addressNeeded": "Alege adresa service‑ului",
+      "brandsNeeded": "Alege cel puțin o marcă pe care lucrezi",
+      "complete": "Totul e complet",
+      "cuiInUse": "Acest CUI apare deja într‑o altă cerere. Îl verificăm când trimiți.",
+      "cuiNeeded": "Scrie CUI‑ul firmei",
+      "declarationNeeded": "Bifează declarația și scrie‑ți numele",
+      "documentMissing": "Lipsește documentul. Îl poți adăuga și după trimitere.",
+      "failed": "Nu am putut verifica. Încearcă din nou.",
+      "hoursNeeded": "Deschide cel puțin o zi pe săptămână",
+      "incomplete": "lipsesc date",
+      "invalid": "Verifică valoarea",
+      "jobNameLength": "Între 2 și 80 de caractere",
+      "jobsNeeded": "Adaugă cel puțin o lucrare cu preț",
+      "kindNeeded": "Alege tipul de afacere",
+      "knownForLong": "Cel mult 160 de caractere",
+      "legalFormNeeded": "Alege PFA sau firmă",
+      "missing": {
+        "few": "Mai lipsesc: {count} lucruri",
+        "one": "Mai lipsește: {count} lucru",
+        "other": "Mai lipsesc: {count} de lucruri"
+      },
+      "photosNeeded": "Adaugă cel puțin o fotografie",
+      "positionNeeded": "Alege adresa din listă sau fixeaz‑o pe hartă",
+      "radiusNeeded": "Alege raza de deplasare",
+      "rarNeeded": "Scrie numărul autorizației RAR",
+      "required": "Completează câmpul",
+      "seatAddressNeeded": "Alege adresa sediului înregistrat",
+      "seatPositionNeeded": "Alege sediul pe hartă",
+      "send": "Trimite spre verificare"
+    },
     "cui": "CUI‑ul firmei",
     "cuiInvalid": "CUI invalid",
     "declaration": {

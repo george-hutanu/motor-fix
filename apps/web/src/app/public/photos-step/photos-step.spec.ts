@@ -7,9 +7,11 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { checkListing } from '@motor-fix/contracts/listing-check';
 import { I18n } from '@motor-fix/i18n';
 
 import { PhotosStep } from './photos-step';
+import { forStep } from '../field-watch';
 
 const DRAFT = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
 const TOKEN = 'k'.repeat(43);
@@ -70,7 +72,7 @@ const button = (tile: HTMLElement | undefined, name: RegExp) =>
     (b) => name.test(text(b)) || name.test(b.getAttribute('aria-label') ?? ''),
   ) as HTMLButtonElement;
 const announced = (step: HTMLElement) =>
-  text(step.querySelector('[aria-live="polite"]'));
+  text(step.querySelector('.announce[aria-live="polite"]'));
 
 const photo = (name: string, type = 'image/jpeg', size = 2048) => {
   const file = new File([new Uint8Array(8)], name, { type });
@@ -527,5 +529,92 @@ describe('ordering and removing the photos', () => {
     expect(tiles(opened.step)).toEqual([]);
     expect(opened.fixture.componentInstance.files()).toEqual([]);
     opened.http.expectNone((r) => r.method === 'POST' && r.url === BASE);
+  });
+});
+
+// The page's judgement of the photos, fed back each time the keys change.
+function judged(opened: Opened) {
+  const judge = (files: string[]) =>
+    opened.fixture.componentRef.setInput(
+      'problems',
+      forStep(checkListing({ data: { files } }), 5),
+    );
+  judge(opened.fixture.componentInstance.files());
+  opened.fixture.componentInstance.files.subscribe(judge);
+  const shown: boolean[] = [];
+  opened.fixture.componentInstance.shown.subscribe((v) => shown.push(v));
+  return shown;
+}
+const photosError = (step: HTMLElement) =>
+  step.querySelector('[data-field="files"]')?.getAttribute('aria-describedby');
+
+describe('the page judges the photos', () => {
+  // @traces 115-FR-002
+  it('says a photo is needed only when sending is asked for', async () => {
+    const opened = await open();
+    const shown = judged(opened);
+    await opened.settle();
+    const region = opened.step.querySelector('#photos-error');
+    expect(region?.getAttribute('role')).toBe('status');
+    expect(region?.getAttribute('aria-live')).toBe('polite');
+    expect(text(region)).toBe('');
+    expect(shown).not.toContain(true);
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    await opened.settle();
+
+    expect(text(opened.step.querySelector('#photos-error'))).toBe(
+      'Adaugă cel puțin o fotografie',
+    );
+    expect(photosError(opened.step)).toBe('photos-error');
+    expect(shown.at(-1)).toBe(true);
+  });
+
+  // @traces 115-FR-006
+  it('says so once the last photo is removed, and stops when one is added', async () => {
+    const opened = await open({ files: [keyOf(0)] });
+    await restored(opened, 1);
+    const shown = judged(opened);
+
+    button(tiles(opened.step)[0], /Șterge/).click();
+    await opened.settle();
+    opened.http.expectOne((r) => r.method === 'DELETE');
+
+    expect(text(opened.step.querySelector('#photos-error'))).toBe(
+      'Adaugă cel puțin o fotografie',
+    );
+    expect(shown.at(-1)).toBe(true);
+
+    await choose(opened, [photo('atelier.jpg')]);
+    const [asked] = askedForAddress(opened.http);
+    await upload(opened, asked as TestRequest, 1);
+
+    expect(text(opened.step.querySelector('#photos-error'))).toBe('');
+    expect(shown.at(-1)).toBe(false);
+  });
+
+  // @traces 115-FR-005
+  it('renders a warning as a note, not an error', async () => {
+    const opened = await open();
+    const shown = judged(opened);
+    opened.fixture.componentRef.setInput('problems', {
+      errors: [],
+      warnings: [{ code: 'required', field: 'files' }],
+    });
+    await opened.settle();
+
+    const note = opened.step.querySelector('#photos-error');
+    expect(note?.classList).toContain('warning');
+    expect(note?.classList).not.toContain('error');
+    expect(shown).not.toContain(true);
+  });
+
+  // @traces 115-FR-007
+  it('marks the photo area, which takes the focus, with its path', async () => {
+    const { step } = await open();
+
+    const area = step.querySelector<HTMLElement>('[data-field="files"]');
+    expect(area?.classList).toContain('drop');
+    expect(area?.getAttribute('tabindex')).toBe('-1');
   });
 });

@@ -213,15 +213,23 @@ export function isHoursSection(
   );
 }
 
-// Ready to tick: at least one payment, and a price when a listed courtesy car
-// is paid.
+// No hours kept means the default week, which is open.
+export const hasOpenDay = (hours: WeeklyHours | undefined): boolean =>
+  hours === undefined || WEEKDAYS.some((day) => hours[day].length > 0);
+
+// A listed courtesy car that is paid needs its price.
+export const needsCourtesyPrice = (section: HoursSection): boolean =>
+  (section.facilities ?? []).includes('courtesy_car') &&
+  section.courtesyCar?.paid === true;
+
+// Ready to tick: an open day, at least one payment, and a price when a listed
+// courtesy car is paid.
 export function hoursComplete(section: HoursSection): boolean {
-  const car = section.courtesyCar;
-  const needsPrice =
-    (section.facilities ?? []).includes('courtesy_car') && car?.paid === true;
   return (
+    hasOpenDay(section.hours) &&
     (section.payments ?? []).length > 0 &&
-    (!needsPrice || isCourtesyPrice(car?.pricePerDayBani))
+    (!needsCourtesyPrice(section) ||
+      isCourtesyPrice(section.courtesyCar?.pricePerDayBani))
   );
 }
 

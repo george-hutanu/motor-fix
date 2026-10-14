@@ -57,6 +57,7 @@ const PUBLIC = [
   'POST /api/v1/garages/00000000-0000-4000-8000-000000000000/views',
   'POST /api/v1/invites/check',
   'POST /api/v1/listing-drafts',
+  'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/check',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/continue-link',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000/upload-url',

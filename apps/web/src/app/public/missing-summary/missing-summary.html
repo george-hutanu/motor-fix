@@ -1,0 +1,25 @@
+<div class="summary" aria-live="polite" tabindex="-1" [attr.data-state]="state()">
+  @switch (state()) {
+    @case ('missing') {
+      <h2>{{ 'public.listing.check.missing' | t: { count: count() } }}</h2>
+      @for (group of groups(); track group.step.n) {
+        <div class="group" [attr.data-step]="group.step.n">
+          <h3>{{ group.step.n }} {{ group.step.label | t }}</h3>
+          <ul>
+            @for (item of group.items; track item.field + item.key) {
+              <li>
+                <button type="button" (click)="goTo.emit(item.field)">{{ item.key | t }}</button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+    @case ('complete') {
+      <p class="complete">{{ 'public.listing.check.complete' | t }}</p>
+    }
+    @case ('failed') {
+      <p class="failed">{{ 'public.listing.check.failed' | t }}</p>
+    }
+  }
+</div>

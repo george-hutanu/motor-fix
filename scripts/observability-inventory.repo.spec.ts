@@ -34,4 +34,17 @@ describe('the repository inventory', () => {
   repoIt('counts every OpenAPI operation and misses nothing', () => {
     expect(checkInventory(root)).toEqual([]);
   });
+
+  // @traces 115-FR-014
+  it('lists the listing draft check with its request metric', () => {
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: { name?: string; metric?: string }[] = Object.values(
+      inventory,
+    ).flatMap((each) => (Array.isArray(each) ? each : []));
+    const check = entries.find((each) => each.name === 'listing-draft-check');
+
+    expect(check?.metric).toMatch(/\/api\/v1\/listing-drafts\/:id\/check/);
+  });
 });

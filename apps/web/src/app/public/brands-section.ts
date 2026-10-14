@@ -1,3 +1,4 @@
+import { refOf } from '@motor-fix/contracts/listing-check';
 import type { PriceEntry } from '@motor-fix/contracts/listing-sections';
 import {
   type BrandsSection as DraftBrands,
@@ -62,9 +63,6 @@ export function toggleFuel(
 
 // A job of the price list, once whatever brand ranges it has, in its order.
 export type Job = Pick<PriceEntry, 'jobTypeId' | 'name'>;
-
-// A catalogue job by its id, a proposed one by its name: the draft's ref.
-export const refOf = (job: Job): string => job.jobTypeId ?? job.name ?? '';
 
 export function jobsOf(entries: readonly PriceEntry[]): Job[] {
   const seen = new Set<string>();
