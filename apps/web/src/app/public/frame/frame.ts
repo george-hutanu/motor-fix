@@ -42,7 +42,7 @@ export class PublicFrame {
     inject(ActivatedRoute).snapshot.data['tabBar'] !== false;
 
   private readonly router = inject(Router);
-  // Results names the link home "Căutare nouă" (267-FR-015).
+  // Results names the link home "Căutare nouă".
   protected readonly onResults = signal(this.isResults());
 
   constructor() {

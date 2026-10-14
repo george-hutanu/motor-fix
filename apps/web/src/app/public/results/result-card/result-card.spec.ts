@@ -156,7 +156,7 @@ describe('ResultCard', () => {
   it('shows the labour rate in tabular numerals, the review count and the rating dial', async () => {
     const card = await render(garageOf());
 
-    expect(said(card.querySelector('.rate'))).toBe('de la 180 lei pe oră');
+    expect(said(card.querySelector('.rate'))).toBe('de la 180 lei/oră');
     expect(said(card.querySelector('.reviews'))).toBe('212 recenzii');
     expect(said(card.querySelector('mf-rating-dial .mf-dial-value'))).toBe(
       '4,9',
@@ -197,7 +197,7 @@ describe('ResultCard', () => {
     );
 
     expect(said(card.querySelector('mf-lamp'))).toBe("doesn't take BMW");
-    expect(said(card.querySelector('.rate'))).toBe('from 180 lei per hour');
+    expect(said(card.querySelector('.rate'))).toBe('from 180 lei/hour');
     expect(said(card.querySelector('.reviews'))).toBe('1 review');
     expect([...card.querySelectorAll('.list')].map(said)).toEqual([
       'Works on BMW, Dacia',

@@ -597,7 +597,7 @@
     "card": {
       "doesNotTake": "nu primește {brand}",
       "mobile": "Mecanic mobil · vine la tine · rază {km} km",
-      "rate": "de la {rate} pe oră",
+      "rate": "de la {rate}/oră",
       "view": "Vezi service‑ul",
       "worksOn": "primește {brand}"
     },

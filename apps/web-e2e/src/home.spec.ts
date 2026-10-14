@@ -676,7 +676,7 @@ test.describe('the garage cards near Bucharest @seeded', () => {
       '/ro/garages?brand=dacia',
     );
     await cardsLink(page).click();
-    // Results writes the kept place into the bar (267-FR-012).
+    // Results writes the kept place into the bar.
     await expect(page).toHaveURL(
       /\/ro\/garages\?brand=dacia&near=44\.\d{3},26\.\d{3}$/,
     );

@@ -587,7 +587,7 @@
     "card": {
       "doesNotTake": "doesn't take {brand}",
       "mobile": "Mobile mechanic · comes to you · {km} km radius",
-      "rate": "from {rate} per hour",
+      "rate": "from {rate}/hour",
       "view": "View garage",
       "worksOn": "takes {brand}"
     },
