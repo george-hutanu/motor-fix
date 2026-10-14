@@ -63,6 +63,15 @@ with your own list from step 1: each flow from the spec or the diff the file
 does not drive is a `high` finding titled "flow not run", naming the flow, so
 the PR cannot merge on that run. With no file, every flow is not run.
 
+Whoever writes the file names each acceptance scenario of the spec in it as
+`US<k> scenario <m>`, in the flow that drives it or in a
+`// not a flow: US<k> scenario <m> — <reason>` line, and waits for `'load'`
+or a visible element, never `networkidle` (live updates keep a connection
+open, so it never settles). `node .claude/scripts/pr-test/precheck.mjs
+--flows <file> --spec specs/<feature>/spec.md` checks both, and that the
+module loads, with no browser; `dispatch.mjs --flows` runs it and dispatches
+nothing while it fails.
+
 Otherwise write `.specify/.cache/qa-flows-<PR>.mjs`: a default export `async ({ baseURL,
 apiURL, outDir, repoRoot, signIn, health, ready }) => findings[]` that drives Playwright
 (`createRequire(join(repoRoot, 'package.json'))('@playwright/test').chromium`,
@@ -237,7 +246,9 @@ the screen evidence; nobody has to watch the screens live.
 
 The run's `Layout (<rule>)` findings are measured, with the element, the
 value and the floor: confirm them on the screenshot, never re-measure by eye,
-and never argue one down. One marked pre-existing is main's and stays medium.
+and never argue one down. One marked pre-existing is main's and stays medium,
+and so does an axe or console finding whose key (kind, title and route) the
+base run of `main` has too.
 
 ### Design rubric
 

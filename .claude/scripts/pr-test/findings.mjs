@@ -185,6 +185,8 @@ export const findingKey = (f) => f.key ?? (f.kind === "layout" ? layoutKey(f) : 
 /** Where one sweep ran: the key of a report's layoutCoverage. */
 export const coverageKey = ({ route, viewport, scheme, lang }) => `${route ?? ""}|${viewport ?? ""}|${scheme ?? ""}|${lang ?? ""}`;
 
+const BY_KEY = ["axe", "console"];
+
 /**
  * Layout findings the baseline run of `main` already reported are pre-existing: kept, capped at medium.
  * A baseline from a tester that measured no layout (`measured: false`) cannot tell main's from the PR's,
@@ -193,10 +195,13 @@ export const coverageKey = ({ route, viewport, scheme, lang }) => `${route ?? ""
  * every layout finding is main's until a baseline sweeps it.
  * With `coverage` (the baseline's layoutCoverage), a finding stays the PR's only where the baseline measured
  * its rule in full on its route in at least one size, scheme and language it was seen in, and did not report
- * it there; a baseline of other web code (`stale`) vouches for nothing.
+ * it there; a baseline of other web code (`stale`) vouches for nothing. An accessibility or console finding
+ * is main's when the baseline reported one with the same key (kind, title, route).
  */
 export function markPreExisting(findings, baseline, { measured = true, routes, coverage, stale = false } = {}) {
   const before = new Set(baseline.filter((f) => f.kind === "layout").map(layoutKey));
+  // An accessibility or console finding main's run reported under the same key is main's.
+  const mains = new Set(baseline.filter((f) => BY_KEY.includes(f.kind)).map(findingKey));
   const unswept = (route) => Array.isArray(routes) && !routes.includes(route);
   const uncovered = (f) => {
     if (coverage === undefined) return false;
@@ -207,11 +212,8 @@ export function markPreExisting(findings, baseline, { measured = true, routes, c
       return Array.isArray(rules) && rules.includes(f.rule);
     });
   };
-  return findings.map((f) =>
-    f.kind === "layout" && (!measured || stale || unswept(f.route) || uncovered(f) || before.has(layoutKey(f)))
-      ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true }
-      : f,
-  );
+  const mainsToo = (f) => (f.kind === "layout" ? !measured || stale || unswept(f.route) || uncovered(f) || before.has(layoutKey(f)) : BY_KEY.includes(f.kind) && mains.has(findingKey(f)));
+  return findings.map((f) => (mainsToo(f) ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true } : f));
 }
 
 /**

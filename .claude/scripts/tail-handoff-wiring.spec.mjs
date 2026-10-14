@@ -109,10 +109,28 @@ describe('no agent holds its context across the CI and QA wait', () => {
     assert.match(wait, /watch\.mjs claim <worktree> tail/);
   });
 
-  it('hands a pending check back to the session wait instead of reading it as done', () => {
+  // @traces 1171-FR-001 1171-FR-002
+  it('waits for the QA run only before the tail, and for CI only before the merge', () => {
+    const wait = section(auto, '## The wait');
+    assert.match(wait, /QA run only/);
+    assert.match(wait, /NEXT: merge #<n> after CI/);
+    assert.match(wait, /ci-wait\.mjs <n>(?! --run)/);
+    assert.match(wait, /watch\.mjs claim <worktree> merge/);
+  });
+
+  // @traces 1171-FR-002
+  it('reviews the run while a check is pending, and hands the merge to the session after a passing lap', () => {
     const read = steps(section(auto, '## The tail')).find((s) => s.includes('Read CI'));
     assert.match(read, /pending/);
-    assert.match(read, /NEXT: tail #<n> after QA run <id>/);
+    assert.match(read, /does not hold the review/);
+    assert.match(section(auto, '## The tail'), /NEXT: merge #<n> after CI/);
+  });
+
+  // @traces 1171-FR-006
+  it('merges origin/main with the merge helper, never a bare git merge', () => {
+    const tail = section(auto, '## The tail');
+    assert.match(tail, /merge-main\.mjs/);
+    assert.doesNotMatch(tail, /git merge --no-edit origin\/main/);
   });
 
   it('runs the tester on the finished run, and ends a fix lap with a new run instead of waiting', () => {

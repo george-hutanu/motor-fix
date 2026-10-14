@@ -64,7 +64,7 @@ without a status, so the test runs again.
    `LOCAL` for `--local` and `RUN` for `--run <id>`. Within the lifecycle the
    run is always given: the agent that marks the PR ready, or pushes a fix,
    dispatches it with `dispatch.mjs <n> --no-wait` and ends, and the tail
-   brings `RUN` once CI and the run have finished (speckit-auto "The wait"),
+   brings `RUN` once the run has finished, whatever CI's state (speckit-auto "The wait"),
    so no agent sleeps on a run. With `RUN` the tester downloads that run
    (`dispatch.mjs <n> --run <id>`) and checks that the flows sent with it
    cover the spec's. Without it, by hand, it dispatches `.github/workflows/pr-qa.yml`

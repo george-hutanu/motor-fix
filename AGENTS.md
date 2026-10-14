@@ -78,12 +78,12 @@ to `tracker-sync.md` at its next event.
      ignores it) and returns `NEXT: tail #<n> after QA run <id>`, its last
      action. No agent is alive while CI and the run work: a context that
      sleeps past the 5-minute prompt cache is written again in full. The
-     session holds one background wait until both have finished, then
-     dispatches a fresh **tail agent**, given only the PR number, the
-     worktree and that path, which runs steps 5–7 and the finish. The
+     session holds one background wait for the QA run only, then
+     dispatches a fresh **tail agent** whatever CI's state, given only the
+     PR number, the worktree and that path, which runs steps 5–7 and the finish. The
      orchestrating session does this on that NEXT (a story run in the owner's
      own session does its own); `/speckit-watch` shows such a PR `waiting`,
-     with no fix, until both have finished, and then dispatches one (its
+     with no fix, until the run has finished, and then dispatches one (its
      `tail` fix) when nobody holds it. It implements
      QA fixes, so it keeps the default model (Opus). It deletes the note
      when the task is Done. The story's agent, the tail agent and every
@@ -91,15 +91,18 @@ to `tracker-sync.md` at its next event.
      `general-purpose`: it denies the heavy tools those runs never use, and
      its prompt names no re-read of this file or CLAUDE.local.md, which are
      already in its context.
-  5. Get CI green: merge `origin/main` into the branch if it is behind and
+  5. Get CI green: merge `origin/main` into the branch if it is behind
+     (`node .claude/scripts/merge-main.mjs`, which resolves the capability
+     specs, the hook registry and the generated client itself) and
      push; the checks are waited for in the background (`run_in_background`),
-     by the session before the tail starts, never in a foreground `sleep`
+     by the session before the merge, never in a foreground `sleep`
      loop and never by an agent that would sleep through it. A failing check
      is fixed on the branch like a failing QA lap (step 6).
   6. QA, started as soon as the PR is ready, beside step 5 rather than after
      it: its run is dispatched at ready, and the PR tester
      (`/speckit-pr-test <n>`, the `pr-tester` subagent) reviews it once it
-     has finished (`--run <id>`);
+     has finished (`--run <id>`), while CI may still be running; a pending
+     check holds only the merge;
      the task and the PR's stage label stay QA. It leaves the unit suites to
      CI, which runs them on the merge result, the integration suite to its
      on-demand run and the release, and the end-to-end suite to its
@@ -118,8 +121,10 @@ to `tracker-sync.md` at its next event.
      tested commit by documentation only (`scripts/docs-only.ts`, e.g. the
      `deferred.md` task URLs) carries that verdict instead of a new lap
      (`.claude/scripts/pr-test/carry.mjs`); the merge gate verifies the carry.
-  7. Merge on `agent-review` success with every other check green
-     (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
+  7. Merge on `agent-review` success with every other check green, at once
+     (`gh pr merge <n> --merge`; a check still pending ends the tail with
+     `NEXT: merge #<n> after CI`, and the session waits for CI and dispatches
+     the `merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-tracker-sync finish`, which closes its issue).
      The orchestrating session then fast-forwards the main checkout
      (`git -C <main> merge --ff-only origin/main`); when the watch reports it
@@ -221,8 +226,8 @@ the block verbatim; `.claude/agents/agent-replies.spec.mjs` keeps them equal.
 Read only what decides the next step; every check still runs:
 
 - CI: the background wait prints only what did not pass —
-  `node .claude/scripts/pr-test/ci-wait.mjs <n>` (`--run <id>` to wait for a
-  QA run too), which also waits while a fresh head has no checks yet
+  `node .claude/scripts/pr-test/ci-wait.mjs <n>` (`--run <id>` waits for the
+  QA run only), which also waits while a fresh head has no checks yet
   (empty output means green). A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
 - Jest, Playwright, Nx: run into a log file, then read the exit code, the
   summary and the failures — `<command> > <log> 2>&1; echo "exit $?"; tail -n 40 <log>`,

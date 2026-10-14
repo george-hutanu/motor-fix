@@ -29,12 +29,12 @@ const SHA = 'a'.repeat(40);
 
 describe('dispatch: arguments', () => {
   it('reads the PR, the flows, the routes, the lap, the output and the ref', () => {
-    const o = parseArgs(['62', '--flows', 'f.mjs', '--routes', '/,/cockpit,/app', '--lap', '2', '--out', '/tmp/x', '--ref', 'chore-x']);
-    assert.deepEqual(o, { pr: '62', flows: 'f.mjs', routes: '/,/cockpit,/app', lap: '2', out: '/tmp/x', ref: 'chore-x', noWait: false, run: undefined });
+    const o = parseArgs(['62', '--flows', 'f.mjs', '--spec', 's.md', '--routes', '/,/cockpit,/app', '--lap', '2', '--out', '/tmp/x', '--ref', 'chore-x']);
+    assert.deepEqual(o, { pr: '62', flows: 'f.mjs', spec: 's.md', routes: '/,/cockpit,/app', lap: '2', out: '/tmp/x', ref: 'chore-x', noWait: false, run: undefined });
   });
 
   it('dispatches on main, lap 1, the default routes, without flows', () => {
-    assert.deepEqual(parseArgs(['7']), { pr: '7', flows: undefined, routes: '/,/cockpit', lap: '1', out: undefined, ref: 'main', noWait: false, run: undefined });
+    assert.deepEqual(parseArgs(['7']), { pr: '7', flows: undefined, spec: undefined, routes: '/,/cockpit', lap: '1', out: undefined, ref: 'main', noWait: false, run: undefined });
   });
 
   it('reads the start-only form and the read-a-finished-run form', () => {
@@ -351,5 +351,31 @@ describe('dispatch in a cloud session: the pull_request run, found over REST', (
     assert.equal(r.code, 0, r.stderr);
     assert.deepEqual(called(r.calls, 'pr '), []);
     assert.equal(called(r.calls, 'run download 77').length, 1);
+  });
+});
+
+// @traces 1171-FR-007
+describe('dispatch --flows: the flows are pre-checked before anything is dispatched', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dispatch-flows-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const spec = join(dir, 'spec.md');
+  writeFileSync(spec, '### User Story 1 - x\n\n**Acceptance Scenarios**:\n\n1. **Given** a, **Then** b.\n');
+
+  it('refuses with exit 64 and the problems, dispatching nothing, when the flows fail the pre-check', () => {
+    const flows = join(dir, 'bad.mjs');
+    writeFileSync(flows, "export default async ({ page }) => { await page.goto('/', { waitUntil: 'networkidle' }); return []; };\n");
+    const r = fakeGh()('--no-wait', '--flows', flows, '--spec', spec);
+    assert.equal(r.code, 64);
+    assert.match(r.stderr, /networkidle/);
+    assert.match(r.stderr, /US1 scenario 1/);
+    assert.deepEqual(called(r.calls, 'workflow run'), []);
+  });
+
+  it('dispatches flows that pass the pre-check', () => {
+    const flows = join(dir, 'good.mjs');
+    writeFileSync(flows, "// US1 scenario 1\nexport default async () => [];\n");
+    const r = fakeGh()('--no-wait', '--flows', flows, '--spec', spec);
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(called(r.calls, 'workflow run').length, 1);
   });
 });
