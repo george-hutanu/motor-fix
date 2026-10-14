@@ -447,7 +447,7 @@ describe('alert rules', () => {
   // @traces 1024-FR-005
   // @traces 1024-FR-006
   // @traces 1024-FR-007
-  // @traces 267-brand-results-FR-023
+  // @traces 267-FR-023
   it('holds exactly the eighteen rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],

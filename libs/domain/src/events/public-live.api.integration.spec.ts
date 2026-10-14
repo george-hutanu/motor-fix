@@ -263,7 +263,7 @@ describe('the public live stream', () => {
     expect(live.events()).toEqual(['platform_rule.changed']);
   });
 
-  // @traces 267-brand-results-FR-018
+  // @traces 267-FR-018
   it('joins every public garage of a results page, comma-separated, and none of the others', async () => {
     const first = await garage();
     const second = await garage();
@@ -288,7 +288,7 @@ describe('the public live stream', () => {
     ).toEqual([first, second]);
   });
 
-  // @traces 267-brand-results-FR-018
+  // @traces 267-FR-018
   it('opens for a page of 20 garage ids and carries an event about the last of them', async () => {
     const last = await garage();
     const ids = [...Array.from({ length: 19 }, () => randomUUID()), last];
@@ -480,7 +480,7 @@ describe('the public live stream', () => {
 
   describe('what it refuses', () => {
     const SAME = randomUUID();
-    // @traces 267-brand-results-FR-018
+    // @traces 267-FR-018
     it.each([
       ['two garages', { garages: [randomUUID(), randomUUID()] }],
       ['two mechanics', { mechanics: [randomUUID(), randomUUID()] }],

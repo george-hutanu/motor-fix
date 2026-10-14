@@ -300,7 +300,7 @@ const refused = (query: Record<string, unknown>) =>
     whitelist: true,
   }).length > 0;
 
-// @traces 267-brand-results-FR-018
+// @traces 267-FR-018
 describe('the public stream query naming garages', () => {
   it('takes one garage and a page of twenty, comma-separated', () => {
     expect(refused({ garages: uuid(1) })).toBe(false);

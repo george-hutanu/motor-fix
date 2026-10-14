@@ -48,7 +48,7 @@ const ID = (n: number) =>
 const ids = (count: number) =>
   Array.from({ length: count }, (_, n) => ID(n + 1)).join(',');
 
-// @traces 267-brand-results-FR-004
+// @traces 267-FR-004
 describe('GarageSearchQueryDto naming the brand', () => {
   it('takes a brand by its slug alone', () => {
     expect(errors({ brand: 'bmw' })).toEqual([]);
@@ -72,7 +72,7 @@ describe('GarageSearchQueryDto naming the brand', () => {
   });
 });
 
-// @traces 267-brand-results-FR-005
+// @traces 267-FR-005
 describe('GarageSearchQueryDto radius', () => {
   it.each(['25', '50'])('takes a radius of %s km', (radius) => {
     expect(errors({ brand: 'bmw', radius })).toEqual([]);
@@ -92,7 +92,7 @@ describe('GarageSearchQueryDto radius', () => {
   });
 });
 
-// @traces 267-brand-results-FR-006
+// @traces 267-FR-006
 describe('GarageSearchQueryDto ids', () => {
   it('takes one id and twenty ids', () => {
     expect(errors({ brand: 'bmw', ids: ID(1) })).toEqual([]);
@@ -117,7 +117,7 @@ describe('GarageSearchQueryDto ids', () => {
   });
 });
 
-// @traces 267-brand-results-FR-007
+// @traces 267-FR-007
 describe('GarageSearchQueryDto log', () => {
   it('takes log=1', () => {
     expect(errors({ brand: 'bmw', log: '1' })).toEqual([]);

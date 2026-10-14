@@ -136,7 +136,7 @@ describe('GET /search/garages', () => {
     expect(res.body.code).toBe('invalid_cursor');
   });
 
-  // @traces 267-brand-results-FR-004
+  // @traces 267-FR-004
   it('finds the brand by its slug and names it in the answer', async () => {
     const res = await search({ brand: 'dacia' });
 
@@ -240,7 +240,7 @@ describe('GET /search/garages near a place', () => {
     ]);
   });
 
-  // @traces 267-brand-results-FR-003
+  // @traces 267-FR-003
   it('never tells where a mobile mechanic is, only how far it travels', async () => {
     await placed('Gama', 0.1, 'works_on', 20);
 
@@ -318,7 +318,7 @@ describe('GET /search/garages near a place', () => {
   });
 });
 
-// @traces 267-brand-results-FR-005
+// @traces 267-FR-005
 describe('GET /search/garages with a radius', () => {
   it('widens to 50 km for fixed garages and refuses any other radius', async () => {
     await placed('Alfa', 0.01, 'works_on');
@@ -344,7 +344,7 @@ describe('GET /search/garages with a radius', () => {
   });
 });
 
-// @traces 267-brand-results-FR-006
+// @traces 267-FR-006
 describe('GET /search/garages with ids', () => {
   it('answers a visitor the public garages among the ids, in the order of the search, with its counts', async () => {
     const alfa = await placed('Alfa', 0.01, 'works_on');

@@ -112,7 +112,7 @@ test.describe('the Results page @seeded', () => {
     await expect.poll(logged).toBe(1);
   });
 
-  test('logs neither the widening nor the retry of a search near a place', async ({
+  test('does not log the widening of a search near a place', async ({
     page,
   }) => {
     const before = await logged();
@@ -135,6 +135,30 @@ test.describe('the Results page @seeded', () => {
     expect(await logged()).toBe(before + 1);
   });
 
+  test('does not log the retry after a failed search', async ({ page }) => {
+    const before = await logged();
+    const asked: string[] = [];
+    let first = true;
+    await page.route(/\/api\/v1\/search\/garages\?/, (route) => {
+      asked.push(route.request().url());
+      if (!first) return route.continue();
+      first = false;
+      return route.fulfill({ body: '{}', status: 500 });
+    });
+    await page.goto(`/ro/garages?brand=${brand.slug}`);
+
+    await expect(
+      page.getByRole('heading', { name: 'Nu am putut încărca rezultatele' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Reîncearcă' }).click();
+    await expect(cards(page).nth(0)).toHaveText(garages[0].name);
+
+    expect(asked).toHaveLength(2);
+    expect(new URL(asked[1] ?? '').searchParams.has('log')).toBe(false);
+    await page.waitForTimeout(1_000);
+    expect(await logged()).toBe(before);
+  });
+
   test('fades out a garage suspended while the page is open and drops it from the counts', async ({
     page,
   }) => {
@@ -152,6 +176,8 @@ test.describe('the Results page @seeded', () => {
       if (frame === page.mainFrame()) navigations++;
     });
 
+    // No route suspends a garage yet: the row and its event are written as
+    // the admin's suspension will write them, with the same audience.
     const id = ids.get(garages[0].name);
     await db.query('BEGIN');
     await db.query(`UPDATE garage SET status = 'suspended' WHERE id = $1`, [
@@ -160,7 +186,7 @@ test.describe('the Results page @seeded', () => {
     await db.query(
       `INSERT INTO outbox_event (kind, subject_id, audience)
        VALUES ('garage.suspended', $1, $2)`,
-      [id, [`garage:${id}`, `public:garage:${id}`]],
+      [id, [`garage:${id}`, `public:garage:${id}`, 'public:search']],
     );
     await db.query('COMMIT');
 

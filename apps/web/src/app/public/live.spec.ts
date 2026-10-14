@@ -506,7 +506,7 @@ describe('publicLiveResource', () => {
   });
 });
 
-// @traces 267-brand-results-FR-018
+// @traces 267-FR-018
 describe('a results view naming its garages', () => {
   const ids = (count: number) =>
     Array.from({ length: count }, (_, n) => `g-${n + 1}`);

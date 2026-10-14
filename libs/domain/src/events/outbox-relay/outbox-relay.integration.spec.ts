@@ -501,7 +501,7 @@ describe('dropping the cached searches', () => {
   const garageId = randomUUID();
   const brandId = randomUUID();
 
-  // @traces 267-brand-results-FR-010
+  // @traces 267-FR-010
   it.each<[string, LiveSubject]>([
     [
       'verification.decided',

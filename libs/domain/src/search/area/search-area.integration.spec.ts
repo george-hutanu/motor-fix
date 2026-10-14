@@ -144,7 +144,7 @@ describe('the area around a place', () => {
   });
 });
 
-// @traces 267-brand-results-FR-005
+// @traces 267-FR-005
 describe('the area at a wider radius', () => {
   it('holds a fixed garage 49.9 km away at 50 km and not one 50.1 km away', async () => {
     const near = await garage({ at: 49_900, kind: 'company' });

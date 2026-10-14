@@ -56,7 +56,7 @@ const said = (el: Element | null | undefined) =>
 
 // @traces 267-FR-014
 describe('ResultCard', () => {
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('draws the initials of the first two words of the name, hidden from screen readers', async () => {
     const card = await render(garageOf());
 
@@ -66,28 +66,28 @@ describe('ResultCard', () => {
     expect(said(card.querySelector('h3'))).toBe('Service Auto Militari');
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('draws one initial for a one-word name', async () => {
     const card = await render(garageOf({ name: 'dinamo' }));
 
     expect(said(card.querySelector('.initials'))).toBe('D');
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('says the city and the distance on the area line', async () => {
     const card = await render(garageOf());
 
     expect(said(card.querySelector('.where'))).toBe('București · 2,4 km');
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('says only the distance when the city is unknown', async () => {
     const card = await render(garageOf({ city: undefined }));
 
     expect(said(card.querySelector('.where'))).toBe('2,4 km');
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('says a mobile mechanic comes to you, with its radius, never a city', async () => {
     const card = await render(
       garageOf({
@@ -104,7 +104,7 @@ describe('ResultCard', () => {
     expect(card.textContent).not.toContain('Chiajna');
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('lights the lamp green for a garage that takes the brand', async () => {
     const card = await render(garageOf());
 
@@ -113,7 +113,7 @@ describe('ResultCard', () => {
     expect(said(lamp)).toBe('primește BMW');
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it.each(['does_not_take', 'unstated'] as const)(
     'lights the lamp red for a garage whose stance is %s',
     async (stance) => {
@@ -125,7 +125,7 @@ describe('ResultCard', () => {
     },
   );
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('lists the brands it works on and those it does not take', async () => {
     const card = await render(garageOf());
 
@@ -133,7 +133,7 @@ describe('ResultCard', () => {
     expect(lists).toEqual(['Lucrează pe BMW, Dacia', 'Nu primește Tesla']);
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('shows the listed facilities as tags, in the order they came', async () => {
     const card = await render(
       garageOf({ facilities: ['courtesy_car', 'pickup_dropoff'] }),
@@ -145,14 +145,14 @@ describe('ResultCard', () => {
     ]);
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('shows no tag list when nothing is listed', async () => {
     const card = await render(garageOf({ facilities: [] }));
 
     expect(card.querySelector('.tags')).toBeNull();
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('shows the labour rate in tabular numerals, the review count and the rating dial', async () => {
     const card = await render(garageOf());
 
@@ -165,7 +165,7 @@ describe('ResultCard', () => {
     expect(css).toMatch(/\.rate[^{]*\{[^}]*font-variant-numeric: tabular-nums/);
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('shows no rate before one is set, "Fără recenzii" and an empty dial before a review', async () => {
     const card = await render(
       garageOf({ labourFromLei: null, rating: null, reviewCount: 0 }),
@@ -176,7 +176,7 @@ describe('ResultCard', () => {
     expect(said(card.querySelector('mf-rating-dial .mf-dial-value'))).toBe('—');
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('links to the garage with the brand, and carries no save button', async () => {
     const card = await render(garageOf());
 
@@ -189,7 +189,7 @@ describe('ResultCard', () => {
     expect(card.textContent).not.toMatch(/Salvează|Save/);
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('speaks English', async () => {
     const card = await render(
       garageOf({ reviewCount: 1, stance: 'does_not_take' }),
@@ -210,7 +210,7 @@ describe('ResultCard', () => {
     );
   });
 
-  // @traces 267-brand-results-FR-014
+  // @traces 267-FR-014
   it('says a mobile mechanic comes to you in English too', async () => {
     const card = await render(
       garageOf({

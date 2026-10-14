@@ -42,7 +42,7 @@ const columns = () =>
 const insert = (brand: string, areaCell: string | null) =>
   prisma.$executeRaw`INSERT INTO search_log (brand_id, area_cell) VALUES (${brand}::uuid, ${areaCell})`;
 
-// @traces 267-brand-results-FR-007
+// @traces 267-FR-007
 // @traces 267-FR-007
 describe('the search log table', () => {
   it('holds a brand, an area cell and a time, and nothing about the searcher', async () => {

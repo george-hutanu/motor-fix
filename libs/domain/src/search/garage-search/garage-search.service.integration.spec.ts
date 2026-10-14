@@ -464,7 +464,7 @@ async function card(
   return id;
 }
 
-// @traces 267-brand-results-FR-003
+// @traces 267-FR-003
 describe('what a card shows', () => {
   it('carries the rating, reviews, rate in whole lei, kind, city and facilities in catalogue order', async () => {
     await card(
@@ -543,7 +543,7 @@ describe('what a card shows', () => {
   });
 });
 
-// @traces 267-brand-results-FR-004
+// @traces 267-FR-004
 describe('naming the brand', () => {
   it('finds the brand by its slug as by its id, and names it in the answer', async () => {
     await garage('Alfa', { stance: 'works_on' });
@@ -604,7 +604,7 @@ const byOrder = (a: Row, b: Row) =>
   (a.name < b.name ? -1 : a.name > b.name ? 1 : 0) ||
   (a.id < b.id ? -1 : 1);
 
-// @traces 267-brand-results-FR-001
+// @traces 267-FR-001
 describe('the order of a group', () => {
   it('ranks by rating, then reviews, then name, with the unrated last in each group', async () => {
     await rated('Alfa', 4.8, 'works_on', 10);
@@ -645,7 +645,7 @@ async function mixed(n: number) {
   return { id, name, rating, reviews, taker };
 }
 
-// @traces 267-brand-results-FR-002
+// @traces 267-FR-002
 describe('paging the order', () => {
   it('pages 45 garages with equal ratings, equal reviews and unrated ones, none repeated or skipped', async () => {
     const rows: (Row & { taker: boolean })[] = [];
@@ -705,7 +705,7 @@ async function at(name: string, dLat: number, radiusKm?: number) {
   return id;
 }
 
-// @traces 267-brand-results-FR-005
+// @traces 267-FR-005
 describe('the radius', () => {
   beforeEach(async () => {
     await at('Aproape', 0.1);
@@ -736,7 +736,7 @@ describe('the radius', () => {
   });
 });
 
-// @traces 267-brand-results-FR-006
+// @traces 267-FR-006
 describe('refreshing the cards shown', () => {
   it('answers only the public garages among the ids, in the order of the search, with its counts', async () => {
     const low = await rated('Alfa', 3, 'works_on');
