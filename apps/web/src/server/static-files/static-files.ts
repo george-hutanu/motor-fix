@@ -18,6 +18,8 @@ function decoded(path: string) {
 // "all"): capitals and digits for the entry files and media, base64url for
 // the lazy chunks (`chunk-C0-vUTPR.js`, `chunk--0e6RH5t.js`). A suffix with no
 // capital or digit (`icon-maskable.png`) is a plain name, not a hash.
+// A plain file must not end in a dash and 8 such characters holding a digit
+// or capital (`og-1200x630.png` would be taken for a hash and kept a year).
 const HASHED = /-(?=[\w-]{0,7}[A-Z0-9])[\w-]{8}\.[^./]+$/;
 
 // A hashed file is kept for a year. Every other file (the service worker, its

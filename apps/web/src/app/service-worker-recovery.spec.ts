@@ -45,4 +45,17 @@ describe('service worker recovery', () => {
     unrecoverable.next(broken);
     expect(reload).not.toHaveBeenCalled();
   });
+
+  it('stops listening once the injector is destroyed', () => {
+    const { unrecoverable, reload } = start(true);
+    TestBed.resetTestingModule();
+    unrecoverable.next(broken);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('does not reload when the reports end without one', () => {
+    const { unrecoverable, reload } = start(true);
+    unrecoverable.complete();
+    expect(reload).not.toHaveBeenCalled();
+  });
 });

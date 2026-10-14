@@ -355,11 +355,11 @@ async function main(argv) {
     }
     {
       const url = `${webURL}/ngsw-worker.js`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(15000) }).catch(() => ({ status: 0, headers: new Headers() }));
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) }).catch((e) => ({ status: 0, error: e.message, headers: new Headers() }));
       const cacheControl = res.headers.get("cache-control");
       await res.body?.cancel();
       log(`worker cache: ${res.status} ${cacheControl}`);
-      const outcome = workerCacheOutcome({ status: res.status, cacheControl, url });
+      const outcome = workerCacheOutcome({ status: res.status, cacheControl, url: res.error ? `${url} (${res.error})` : url });
       if (outcome.finding) findings.push(outcome.finding);
     }
 

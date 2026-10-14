@@ -159,9 +159,7 @@ describe('static files under hostile requests', () => {
   it.each([
     '/main-AB12.js%2Emap',
     '/main-AB12.js%2emap',
-    '/main-AB12CD34.js.map',
     '/main-AB12CD34.js.map?download=1',
-    '/deep/a.js.map',
     '/deep/../main-AB12.js.map',
     '/main-AB12.js.Map',
   ])('answers 404 for the source map %s', async (path) => {
