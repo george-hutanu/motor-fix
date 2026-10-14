@@ -75,9 +75,7 @@
                   (blur)="leaveEmail()"
                 />
                 <p id="listing-email-hint" class="hint">{{ 'public.listing.emailHint' | t }}</p>
-                @if (fieldErrors().email; as error) {
-                  <p id="listing-email-error" class="error">{{ error.key | t }}</p>
-                }
+                <p id="listing-email-error" class="error" role="status" aria-live="polite">{{ fieldErrors().email ? (fieldErrors().email!.key | t) : '' }}</p>
               </div>
               <mf-details-step
                 [value]="details()"

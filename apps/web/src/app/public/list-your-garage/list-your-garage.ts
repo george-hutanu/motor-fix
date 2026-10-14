@@ -50,7 +50,7 @@ import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
 import { DocumentsStep } from '../documents-step/documents-step';
 import { DraftKeeper } from '../draft/draft-keeper';
-import { FieldWatch, forStep } from '../field-watch';
+import { type FieldMessage, FieldWatch, forStep } from '../field-watch';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step/hours-step';
@@ -303,6 +303,14 @@ export class ListYourGarage {
       );
       if (brands !== section.brands)
         this.keeper.section('2', { ...section, brands });
+    });
+    // The e-mail, CUI and RAR fields this page holds mark their steps too.
+    effect(() => {
+      const { cui, email, rarNumber } = this.fieldErrors();
+      const shows = (message: FieldMessage | null) =>
+        !!message && !message.warning;
+      this.mark('email', shows(email));
+      this.mark('step6', shows(cui) || shows(rarNumber));
     });
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {

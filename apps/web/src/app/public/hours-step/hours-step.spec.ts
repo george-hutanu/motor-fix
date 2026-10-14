@@ -896,6 +896,25 @@ describe('step 5, the page judges the hours', () => {
   });
 
   // @traces 115-FR-006
+  it('points the payment buttons at their message only while one shows', async () => {
+    const { fixture, step } = await open();
+    fixture.componentInstance.value.set({ hours: CLOSED_WEEK });
+    await settle(fixture);
+    const buttons = () => [
+      ...(field(step, 'steps.5.payments')?.querySelectorAll('button') ?? []),
+    ];
+    expect(buttons().length).toBeGreaterThan(0);
+    for (const button of buttons())
+      expect(button.getAttribute('aria-describedby')).toBeNull();
+
+    fixture.componentRef.setInput('showAll', true);
+    await settle(fixture);
+
+    for (const button of buttons())
+      expect(button.getAttribute('aria-describedby')).toBe('payments-error');
+  });
+
+  // @traces 115-FR-006
   it('shows a restored wrong price at once, without leaving it', async () => {
     const { fixture, step } = await open();
 

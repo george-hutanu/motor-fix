@@ -296,7 +296,7 @@ export class PricesStep {
     return message && !message.warning ? message.key : null;
   }
 
-  /** The id of a range's message, which both its inputs point at (FR-006). */
+  /** The id of a range's message, which both its inputs point at. */
   protected messageIdOf(path: string) {
     return `listing-${path.replace(/[^a-z0-9]+/gi, '-')}-message`;
   }

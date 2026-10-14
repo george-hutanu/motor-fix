@@ -175,7 +175,7 @@
 </ul>
 <p class="facilities-hint hint">{{ 'public.listing.hours.facilitiesHint' | t }}</p>
 <h3>{{ 'public.listing.hours.payment.heading' | t }}</h3>
-@let payment = messages().payments;
+@let paymentMessage = messages().payments;
 <div class="payment-group" data-field="steps.5.payments" tabindex="-1">
 <ul class="payments">
   @for (payment of payments; track payment) {
@@ -184,7 +184,7 @@
       <button
         type="button"
         [attr.aria-pressed]="ticked"
-        [attr.aria-describedby]="payment ? 'payments-error' : null"
+        [attr.aria-describedby]="paymentMessage ? 'payments-error' : null"
         (click)="pay(payment)"
       >
         {{ paymentKey(payment) | t }}
@@ -195,5 +195,5 @@
     </li>
   }
 </ul>
-<p id="payments-error" [class]="payment?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ payment ? (payment.key | t) : '' }}</p>
+<p id="payments-error" [class]="paymentMessage?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ paymentMessage ? (paymentMessage.key | t) : '' }}</p>
 </div>

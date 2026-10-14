@@ -633,6 +633,26 @@ describe('the e-mail field and the save button', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
+  // @traces 115-FR-006 115-FR-007
+  it('reads the e-mail error out politely and marks step 1 red once it shows', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    const dotted = () =>
+      [...page.querySelectorAll('nav ol li')].flatMap((li, i) =>
+        li.querySelector('.dot') ? [i + 1] : [],
+      );
+    const error = page.querySelector('#listing-email-error') as HTMLElement;
+    expect(error.getAttribute('role')).toBe('status');
+    expect(error.getAttribute('aria-live')).toBe('polite');
+    expect(dotted()).toEqual([]);
+
+    type(harness, page, 'ion@service');
+    leave(harness, page);
+    await settle(harness);
+
+    expect(page.querySelector('#listing-email-error')).toBe(error);
+    expect(dotted()).toEqual([1]);
+  });
+
   it('places one secondary save button after the sections, and one status note', async () => {
     const { page } = await open('/en/list-your-garage');
 
@@ -1241,12 +1261,19 @@ describe('the verification step', () => {
     expect(
       page.querySelector('#listing-cui-error')?.closest('[aria-live="polite"]'),
     ).not.toBeNull();
+    // The error shown marks its step red in the list.
+    expect(
+      [...page.querySelectorAll('nav ol li')].flatMap((li, i) =>
+        li.querySelector('.dot') ? [i + 1] : [],
+      ),
+    ).toEqual([6]);
     expect(counter(page)).toBe('0 din 5 completate');
 
     fillIn(harness, input, 'RO18547290');
     expect(errorOf(page, input)).toBe('');
     expect(input.getAttribute('aria-invalid')).toBeNull();
     expect(counter(page)).toBe('1 din 5 completate');
+    expect(page.querySelector('nav ol li .dot')).toBeNull();
     leaveField(harness, input);
     expect(input.value).toBe('18547290');
   });
@@ -2125,7 +2152,7 @@ describe('sending for verification', () => {
     const check = await request();
     expect(check.request.method).toBe('POST');
     expect(check.request.url).toMatch(/listing-drafts\/d1\/check$/);
-    // A disabled button would drop the focus FR-009 keeps on it.
+    // A disabled button would drop the focus the press keeps on it.
     expect(sendButton(page).disabled).toBe(false);
     expect(sendButton(page).getAttribute('aria-disabled')).toBe('true');
     expect(sendButton(page).getAttribute('aria-busy')).toBe('true');

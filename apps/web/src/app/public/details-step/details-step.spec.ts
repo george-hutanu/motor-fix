@@ -226,6 +226,52 @@ describe('step 1, the garage details', () => {
     expect(opened.shown.at(-1)).toBe(true);
   });
 
+  // @traces 115-FR-006
+  it('describes the kind and legal-form groups and their buttons by their errors', async () => {
+    const opened = await open({ businessKind: 'mobile' });
+    const kind = opened.step.querySelector(
+      '[data-field="steps.1.businessKind"]',
+    ) as HTMLElement;
+    const legal = opened.step.querySelector(
+      '[data-field="steps.1.mobileLegalForm"]',
+    ) as HTMLElement;
+    expect(legal.getAttribute('aria-describedby')).toBeNull();
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    opened.fixture.detectChanges();
+
+    expect(legal.getAttribute('aria-describedby')).toBe('listing-legal-error');
+    expect(text(opened.step.querySelector('#listing-legal-error'))).toBe(
+      'Alege PFA sau firmă',
+    );
+    for (const button of legal.querySelectorAll('button'))
+      expect(button.getAttribute('aria-describedby')).toBe(
+        'listing-legal-error',
+      );
+    expect(kind.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  // @traces 115-FR-006
+  it('describes the kind group by its error once sending is asked for', async () => {
+    const opened = await open();
+    const kind = opened.step.querySelector(
+      '[data-field="steps.1.businessKind"]',
+    ) as HTMLElement;
+    expect(kind.getAttribute('aria-describedby')).toBeNull();
+
+    opened.fixture.componentRef.setInput('showAll', true);
+    opened.fixture.detectChanges();
+
+    expect(kind.getAttribute('aria-describedby')).toBe('listing-kind-error');
+    expect(text(opened.step.querySelector('#listing-kind-error'))).toBe(
+      'Alege tipul de afacere',
+    );
+    for (const button of kind.querySelectorAll('button'))
+      expect(button.getAttribute('aria-describedby')).toBe(
+        'listing-kind-error',
+      );
+  });
+
   // @traces 115-FR-003
   it('asks a mobile mechanic for the legal form once asked', async () => {
     const opened = await open({ businessKind: 'mobile' });
