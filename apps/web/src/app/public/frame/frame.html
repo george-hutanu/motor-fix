@@ -4,7 +4,11 @@
     <span>{{ 'shell.brand' | t }}</span>
   </a>
   <nav class="links" [attr.aria-label]="'public.siteBar.nav' | t">
-    <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.find' | t }}</a>
+    @if (onResults()) {
+      <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.newSearch' | t }}</a>
+    } @else {
+      <a [routerLink]="['/', i18n.language()]">{{ 'public.siteBar.find' | t }}</a>
+    }
     <button type="button" (click)="signIn.start()">{{ 'public.siteBar.signIn' | t }}</button>
     <a class="list" [routerLink]="['/', i18n.language(), 'list-your-garage']">{{ 'public.siteBar.list' | t }}</a>
   </nav>

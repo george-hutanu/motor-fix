@@ -434,9 +434,8 @@ describe('Results', () => {
         'Niciun service în 25 km',
       );
       expect(actions()).toEqual(['Caută în 50 km', 'Schimbă locul']);
-      expect(said(page().querySelector('.summary .tally'))).toBe(
-        '0 service‑uri găsite · 0 lucrează pe BMW · 0 nu o primesc',
-      );
+      // The empty state says it: no all-zero counts above it.
+      expect(page().querySelector('.summary .tally')).toBeNull();
     });
 
     // @traces 267-FR-017
