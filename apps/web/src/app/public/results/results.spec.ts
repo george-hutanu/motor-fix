@@ -152,19 +152,42 @@ const searches = () =>
 const keep = (place: Place) =>
   localStorage.setItem('mf-place', JSON.stringify(place));
 
-// @traces 267-FR-012 267-FR-013 267-FR-015 267-FR-016 267-FR-017 267-FR-018 267-FR-019 267-FR-020 267-FR-021 267-FR-022
+// @traces 267-FR-012 267-FR-013 267-FR-015 267-FR-016 267-FR-017 267-FR-018 267-FR-019 267-FR-020 267-FR-021
 describe('Results', () => {
   describe('in the browser', () => {
     beforeEach(() => configure());
 
-    // @traces 267-brand-results-FR-012
+    // @traces 267-FR-012
     it('reads the brand from the address bar and runs one logged search, with no place', async () => {
       await open('/ro/garages?brand=bmw');
 
       expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
     });
 
-    // @traces 267-brand-results-FR-012
+    // @traces 267-FR-022
+    it('reads no other search once the list has come', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer();
+
+      expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
+    });
+
+    // @traces 267-FR-007
+    it('logs the search again when the bar names another brand or place', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer();
+      await open('/ro/garages?brand=audi');
+      await reads[1]?.answer();
+      await open('/ro/garages?brand=audi&near=44.437,26.117');
+
+      expect(searches()).toEqual([
+        { brand: 'bmw', log: '1' },
+        { brand: 'audi', log: '1' },
+        { brand: 'audi', log: '1', near: '44.437,26.117' },
+      ]);
+    });
+
+    // @traces 267-FR-012
     it('asks by id when the bar names the brand by its id', async () => {
       await open('/ro/garages?brand=6f1c0a52-3b7e-4c1d-9a2f-0e8b7d6c5a41');
 
@@ -173,7 +196,7 @@ describe('Results', () => {
       ]);
     });
 
-    // @traces 267-brand-results-FR-012
+    // @traces 267-FR-012
     it('searches near the kept place and writes it into the bar without a history entry', async () => {
       keep(PLACE);
       const router = TestBed.inject(Router);
@@ -191,7 +214,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-012
+    // @traces 267-FR-012
     it('takes the place in the bar over the kept one, and the wider radius with it', async () => {
       keep(PLACE);
 
@@ -202,14 +225,14 @@ describe('Results', () => {
       ]);
     });
 
-    // @traces 267-brand-results-FR-012
+    // @traces 267-FR-012
     it('leaves the radius out without a place', async () => {
       await open('/ro/garages?brand=bmw&radius=50');
 
       expect(searches()).toEqual([{ brand: 'bmw', log: '1' }]);
     });
 
-    // @traces 267-brand-results-FR-016
+    // @traces 267-FR-016
     it('shows six skeleton cards while the search runs', async () => {
       await open('/ro/garages?brand=bmw');
 
@@ -217,7 +240,7 @@ describe('Results', () => {
       expect(page().querySelector('mf-result-card')).toBeNull();
     });
 
-    // @traces 267-brand-results-FR-013
+    // @traces 267-FR-013
     it('titles the page with the brand and sums up the two groups', async () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.answer();
@@ -228,7 +251,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-013
+    // @traces 267-FR-013
     it('follows the Romanian plural rules in the summary', async () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.answer(
@@ -240,7 +263,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-013
+    // @traces 267-FR-013
     it('names the area of the kept place, at 25 km by default', async () => {
       keep(PLACE);
       await open('/ro/garages?brand=bmw');
@@ -251,7 +274,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-013
+    // @traces 267-FR-013
     it('says no area without a place', async () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.answer();
@@ -260,7 +283,7 @@ describe('Results', () => {
       expect(page().querySelector('.summary .area')).toBeNull();
     });
 
-    // @traces 267-brand-results-FR-013
+    // @traces 267-FR-013
     it('runs a new logged search at 25 km near the place chosen through "Schimbă locul"', async () => {
       await open('/ro/garages?brand=bmw&near=46.77,23.59&radius=50');
       await reads[0]?.answer();
@@ -288,7 +311,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-014
+    // @traces 267-FR-014
     it('shows one card per garage, in the order the search gave', async () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.answer();
@@ -301,7 +324,7 @@ describe('Results', () => {
       expect(page().querySelector('.card.skeleton')).toBeNull();
     });
 
-    // @traces 267-brand-results-FR-013
+    // @traces 267-FR-013
     it('speaks English', async () => {
       await open('/en/garages?brand=bmw', { language: 'en' });
       await reads[0]?.answer(
@@ -338,7 +361,7 @@ describe('Results', () => {
       await settle();
     };
 
-    // @traces 267-brand-results-FR-016
+    // @traces 267-FR-016
     it('says the results could not be loaded when the search fails, with "Reîncearcă"', async () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.fail();
@@ -351,7 +374,7 @@ describe('Results', () => {
       expect(headings()).toHaveLength(1);
     });
 
-    // @traces 267-brand-results-FR-016
+    // @traces 267-FR-016
     it('shows the same failure when the API cannot be reached', async () => {
       await open('/ro/garages?brand=bmw');
       await reads[0]?.fail(0);
@@ -362,7 +385,7 @@ describe('Results', () => {
       expect(actions()).toEqual(['Reîncearcă']);
     });
 
-    // @traces 267-brand-results-FR-016
+    // @traces 267-FR-016
     it('runs the same search again on "Reîncearcă", without logging it, and shows skeletons meanwhile', async () => {
       keep(PLACE);
       await open('/ro/garages?brand=bmw');
@@ -380,7 +403,7 @@ describe('Results', () => {
       expect(state()).toBeNull();
     });
 
-    // @traces 267-brand-results-FR-016
+    // @traces 267-FR-016
     it('offers "Căutare nouă" to Home instead of a retry when the brand is unknown', async () => {
       await open('/ro/garages?brand=nu-exista');
       await reads[0]?.fail(404);
@@ -393,7 +416,7 @@ describe('Results', () => {
       expect(headings()).toHaveLength(1);
     });
 
-    // @traces 267-brand-results-FR-016
+    // @traces 267-FR-016
     it('offers "Căutare nouă" and searches nothing when the bar names no brand', async () => {
       await open('/ro/garages');
 
@@ -401,7 +424,7 @@ describe('Results', () => {
       expect(actions()).toEqual(['Căutare nouă']);
     });
 
-    // @traces 267-brand-results-FR-017
+    // @traces 267-FR-017
     it('reads "Niciun service în 25 km" with "Caută în 50 km" and "Schimbă locul" when nothing is near the place', async () => {
       keep(PLACE);
       await open('/ro/garages?brand=bmw');
@@ -416,7 +439,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-017
+    // @traces 267-FR-017
     it('widens to 50 km on "Caută în 50 km" without logging, and offers only "Schimbă locul" after it', async () => {
       keep(PLACE);
       await open('/ro/garages?brand=bmw');
@@ -444,7 +467,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-017
+    // @traces 267-FR-017
     it('opens the place dialog from the empty state, and the place chosen runs a new logged search at 25 km', async () => {
       await open('/ro/garages?brand=bmw&near=46.77,23.59&radius=50');
       await reads[0]?.answer(empty());
@@ -465,7 +488,7 @@ describe('Results', () => {
       });
     });
 
-    // @traces 267-brand-results-FR-017
+    // @traces 267-FR-017
     it('reads "Niciun service găsit" with "Schimbă locul" only without a place, ignoring the radius', async () => {
       await open('/ro/garages?brand=bmw&radius=50');
       await reads[0]?.answer(empty());
@@ -477,8 +500,8 @@ describe('Results', () => {
       expect(actions()).toEqual(['Schimbă locul']);
     });
 
-    // @traces 267-brand-results-FR-016
-    // @traces 267-brand-results-FR-017
+    // @traces 267-FR-016
+    // @traces 267-FR-017
     it('speaks English in the empty and failed states', async () => {
       keep(PLACE);
       await open('/en/garages?brand=bmw', { language: 'en' });
@@ -530,7 +553,7 @@ describe('Results', () => {
       await reads[0]?.answer();
     }
 
-    // @traces 267-brand-results-FR-018
+    // @traces 267-FR-018
     it('opens the stream with every loaded garage and the brand', async () => {
       await loaded();
 
@@ -540,8 +563,8 @@ describe('Results', () => {
       });
     });
 
-    // @traces 267-brand-results-FR-019
-    // @traces 267-brand-results-FR-021
+    // @traces 267-FR-019
+    // @traces 267-FR-021
     it('re-reads the loaded cards through ids= on a review kind and changes them in place, highlighted and announced', async () => {
       const announce = quietly();
       await loaded();
@@ -621,7 +644,7 @@ describe('Results', () => {
       expect(chip()).toBeUndefined();
     });
 
-    // @traces 267-brand-results-FR-019
+    // @traces 267-FR-019
     it('re-reads only the loaded garages an update or a restoration names, in one read for a burst', async () => {
       await loaded();
 
@@ -634,7 +657,7 @@ describe('Results', () => {
       expect(reads[1]?.params).not.toHaveProperty('log');
     });
 
-    // @traces 267-brand-results-FR-019
+    // @traces 267-FR-019
     it('keeps the order of the list when a re-read gives the cards in another order', async () => {
       await loaded();
 
@@ -653,7 +676,7 @@ describe('Results', () => {
       expect(names()).toEqual(['Atelier Unu', 'Service Doi']);
     });
 
-    // @traces 267-brand-results-FR-019
+    // @traces 267-FR-019
     it('runs one read at a time: an event during a read makes one more read after it', async () => {
       await loaded();
 
@@ -670,7 +693,7 @@ describe('Results', () => {
       expect(reads[2]?.params).toEqual({ brand: 'bmw', ids: 'two' });
     });
 
-    // @traces 267-brand-results-FR-021
+    // @traces 267-FR-021
     it('highlights nothing under reduced motion, and still announces', async () => {
       reduced.set(true);
       const announce = quietly();
@@ -692,7 +715,7 @@ describe('Results', () => {
       );
     });
 
-    // @traces 267-brand-results-FR-019
+    // @traces 267-FR-019
     it('fades a suspended card out over 300 ms, then removes it and lowers the counts by one', async () => {
       const announce = quietly();
       await loaded();
@@ -720,7 +743,7 @@ describe('Results', () => {
       expect(reads).toHaveLength(1);
     });
 
-    // @traces 267-brand-results-FR-019
+    // @traces 267-FR-019
     it('removes a suspended card at once under reduced motion', async () => {
       reduced.set(true);
       await loaded();
@@ -731,7 +754,7 @@ describe('Results', () => {
       expect(names()).toEqual(['Atelier Unu']);
     });
 
-    // @traces 267-brand-results-FR-020
+    // @traces 267-FR-020
     it.each([
       ['an approval', 'verification.decided', 'verification-1'],
       ['a change to a garage not loaded', 'garage.updated', 'other'],
@@ -764,7 +787,7 @@ describe('Results', () => {
       },
     );
 
-    // @traces 267-brand-results-FR-020
+    // @traces 267-FR-020
     it('changes the counts in place when the total holds with another split', async () => {
       await loaded();
 
@@ -780,7 +803,7 @@ describe('Results', () => {
       expect(chip()).toBeUndefined();
     });
 
-    // @traces 267-brand-results-FR-020
+    // @traces 267-FR-020
     it('offers "Reîncarcă" when the total rose, and changes the list only when it is tapped', async () => {
       await loaded();
       const router = TestBed.inject(Router);
@@ -823,9 +846,9 @@ describe('Results', () => {
       expect(router.url).toBe('/ro/garages?brand=bmw');
     });
 
-    // @traces 267-brand-results-FR-018
-    // @traces 267-brand-results-FR-019
-    // @traces 267-brand-results-FR-020
+    // @traces 267-FR-018
+    // @traces 267-FR-019
+    // @traces 267-FR-020
     it('re-reads the cards and the counts on each re-open of the stream', async () => {
       await loaded();
 
@@ -843,7 +866,7 @@ describe('Results', () => {
       expect(reads).toHaveLength(3);
     });
 
-    // @traces 267-brand-results-FR-021
+    // @traces 267-FR-021
     it('never reloads, changes the route or moves focus on a live update', async () => {
       await open('/ro/garages?brand=bmw&near=46.77,23.59');
       await reads[0]?.answer();
@@ -881,7 +904,7 @@ describe('Results', () => {
   describe('on the server', () => {
     beforeEach(() => configure('server'));
 
-    // @traces 267-brand-results-FR-016
+    // @traces 267-FR-016
     it('renders six skeleton cards and never searches', async () => {
       await open('/ro/garages?brand=bmw');
 
@@ -890,8 +913,8 @@ describe('Results', () => {
     });
   });
 
-  // @traces 267-brand-results-FR-012
-  // @traces 267-brand-results-FR-015
+  // @traces 267-FR-012
+  // @traces 267-FR-015
   it('is served at /:lang/garages inside the public frame, in place of the placeholder', async () => {
     const lang = routes.find((route) => route.path === ':lang') as Route;
     const garages = lang.children?.find((route) => route.path === 'garages');

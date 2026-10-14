@@ -113,15 +113,18 @@ export class Results {
     };
   });
 
-  // Only a new search is logged: the opening one and a place chosen here,
-  // never a retry or a widening.
+  // Only a new search is logged: the opening one, another brand or place in
+  // the bar, and a place chosen here; never a retry, a widening or a reload.
   private logNext = true;
+  private logged: string | undefined;
 
   // Never on the server: it renders the skeletons, the browser searches.
   protected readonly results = resource({
     loader: ({ params }) => {
-      const log = this.logNext;
+      const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
+      const log = this.logNext || searched !== this.logged;
       this.logNext = false;
+      this.logged = searched;
       return this.search.garageSearchControllerForBrand(
         log ? { ...params, log: '1' } : params,
       );
