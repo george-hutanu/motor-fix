@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ActivatedRoute,
@@ -41,18 +41,27 @@ export class PublicFrame {
   protected readonly tabBar =
     inject(ActivatedRoute).snapshot.data['tabBar'] !== false;
 
+  private readonly router = inject(Router);
+  // Results names the link home "Căutare nouă".
+  protected readonly onResults = signal(this.isResults());
+
   constructor() {
     // A signed-out visit to a dashboard lands here asking for sign-in.
-    const router = inject(Router);
+    const router = this.router;
     router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
       .subscribe(() => {
+        this.onResults.set(this.isResults());
         if (router.currentNavigation()?.extras.state?.['signIn']) {
           void this.signIn.start();
         }
       });
+  }
+
+  private isResults() {
+    return /^\/[a-z]{2}\/garages(\?|$)/.test(this.router.url);
   }
 }

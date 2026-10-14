@@ -25,6 +25,7 @@ async function open(address: string, language: 'ro' | 'en' = 'ro') {
         {
           children: [
             { component: Page, path: '' },
+            { component: Page, path: 'garages' },
             { component: Page, path: 'garages/:garage' },
             { component: Page, path: 'list-your-garage' },
           ],
@@ -72,6 +73,19 @@ describe('the public site bar', () => {
     expect(link('Înscrie‑ți service‑ul')?.getAttribute('href')).toBe(
       '/ro/list-your-garage',
     );
+  });
+
+  // @traces 267-FR-015
+  it('names the link home "Căutare nouă" on Results, and "New search" in English', async () => {
+    await open('/ro/garages?brand=dacia');
+
+    expect(link('Căutare nouă')?.getAttribute('href')).toBe('/ro');
+    expect(link('Găsește un mecanic')).toBeUndefined();
+
+    TestBed.resetTestingModule();
+    await open('/en/garages?brand=dacia', 'en');
+
+    expect(link('New search')?.getAttribute('href')).toBe('/en');
   });
 
   it('opens the sign-in dialog from "Autentificare" and from the account button', async () => {

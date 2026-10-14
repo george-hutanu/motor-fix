@@ -456,10 +456,8 @@ describe('the Cont destination', () => {
 
 describe('placeholder screens', () => {
   it.each([
-    '/ro/garages',
     '/ro/mechanics/ion',
     '/ro/account',
-    '/en/garages',
     '/en/mechanics/ion',
     '/en/account',
   ])(
@@ -474,21 +472,21 @@ describe('placeholder screens', () => {
   );
 
   it('writes the heading and line in the language of the address', async () => {
-    await open('/ro/garages');
+    await open('/ro/mechanics/ion');
     const ro = heading();
     const roLine = line();
-    await open('/en/garages');
+    await open('/en/mechanics/ion');
 
     expect(heading()).not.toBe(ro);
     expect(line()).not.toBe(roLine);
   });
 
-  it('names a different section on the account screen than on the garage screen', async () => {
-    await open('/en/garages');
-    const garages = heading();
+  it('names a different section on the account screen than on the mechanic screen', async () => {
+    await open('/en/mechanics/ion');
+    const mechanic = heading();
     await open('/en/account');
 
-    expect(heading()).not.toBe(garages);
+    expect(heading()).not.toBe(mechanic);
   });
 
   it('gives a placeholder the canonical and alternate links of its address', async () => {

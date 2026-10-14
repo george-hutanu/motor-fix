@@ -483,7 +483,6 @@
   },
   "placeholder": {
     "account": "Account",
-    "garages": "Garages",
     "later": "This page is coming soon.",
     "mechanics": "Mechanic"
   },
@@ -580,6 +579,45 @@
     "sentOne": "Sent to {garage}.",
     "submit": "Send",
     "title": "Request a quote"
+  },
+  "results": {
+    "area": "within {km} km of {place}",
+    "areaPicked": "within {km} km of the chosen place",
+    "areaYou": "within {km} km of you",
+    "card": {
+      "doesNotTake": "doesn't take {brand}",
+      "mobile": "Mobile mechanic · comes to you · {km} km radius",
+      "rate": "from {rate}/hour",
+      "view": "View garage",
+      "worksOn": "takes {brand}"
+    },
+    "changePlace": "Change place",
+    "failed": "We couldn't load the results",
+    "found": {
+      "one": "{count} garage found",
+      "other": "{count} garages found"
+    },
+    "list": "Garages found",
+    "live": {
+      "removed": "{name} is no longer listed",
+      "updated": "{name} was updated"
+    },
+    "loading": "Loading the results",
+    "newSearch": "New search",
+    "none": "No garage found",
+    "noneNear": "No garage within {km} km",
+    "others": {
+      "one": "{count} doesn't take it",
+      "other": "{count} don't take it"
+    },
+    "reload": "Reload",
+    "retry": "Try again",
+    "takers": {
+      "one": "{count} works on {brand}",
+      "other": "{count} work on {brand}"
+    },
+    "title": "Garages for {brand}",
+    "widen": "Search within {km} km"
   },
   "signIn": {
     "brand": "MotorFix",
@@ -682,6 +720,7 @@
     "home": "MotorFix, home page",
     "list": "List your garage",
     "nav": "Site menu",
+    "newSearch": "New search",
     "signIn": "Sign in"
   },
   "tabs": {

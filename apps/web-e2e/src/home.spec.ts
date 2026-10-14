@@ -671,8 +671,15 @@ test.describe('the garage cards near Bucharest @seeded', () => {
       '/ro/garages/service-auto-militari?brand=dacia',
     );
     await page.goBack();
+    await expect(cardsLink(page)).toHaveAttribute(
+      'href',
+      '/ro/garages?brand=dacia',
+    );
     await cardsLink(page).click();
-    await expect(page).toHaveURL('/ro/garages?brand=dacia');
+    // Results writes the kept place into the bar.
+    await expect(page).toHaveURL(
+      /\/ro\/garages\?brand=dacia&near=44\.\d{3},26\.\d{3}$/,
+    );
   });
 
   test('keeps the heading and the link when nobody near takes the brand', async ({

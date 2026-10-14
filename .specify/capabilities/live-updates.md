@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-08
+updated: 2026-10-14
 features:
   - 253-live-connection
   - 254-live-audience
@@ -14,6 +14,7 @@ features:
   - 258-platform-rules-switches
   - 261-maintenance-mode
   - 260-rule-off-confirm
+  - 267-brand-results
 ---
 
 # Capability: Live updates
@@ -302,9 +303,9 @@ _From 586-live-e2e-typed-text._
 
 _From 419-live-garage-updates._
 
-### 419-FR-002 — The stream MUST take `garages` (at most 1 uuid), `mechanics` (at most 1 uuid) and `brand` (1 uuid), all optional; more ids than allowed, a value that is not a uuid or an unknown query field MUST be refused with 400 and code `validation_failed` in the API's one error shape, before any stream data.
+### 267-FR-018 — The page MUST open the public live stream with `garages` naming every loaded garage and `brand` naming the brand; the stream (419-FR-002) MUST accept up to 20 garage ids (one page) instead of one, joining `public:garage:{id}` for each that is public; a reopen when the loaded set changes follows 419-FR-008.
 
-_From 419-live-garage-updates._
+_From 267-brand-results._
 
 ### 419-FR-003 — A public stream MUST join `system`, plus `public:garage:{garageId}` when the id names an approved garage, `public:mechanic:{mechanicId}` when the id names a mechanic of an approved garage (no hidden state exists yet; the mechanic-page story adds that check), and `public:search:{brandId}` together with the all-brands results channel `public:search` when the id names a brand of the catalogue (retired brands included); an id that names nothing, or a garage that is not approved, MUST be ignored silently: the stream opens, joins nothing for it and answers exactly as for an unknown id.
 
@@ -330,9 +331,9 @@ _From 419-live-garage-updates._
 
 _From 419-live-garage-updates._
 
-### 419-FR-010 — A results view MUST re-read when `garage.updated`, `verification.decided`, `garage.suspended` or `garage.restored` arrives for any garage (a garage that newly takes the brand arrives as `garage.updated` for a garage not yet loaded). A profile view re-reads on any of FR-004's garage kinds about its garage; a mechanic view on `mechanic.updated` and the review kinds about its mechanic.
+### 267-FR-019 — On a review kind, `garage.updated` or `garage.restored` about a loaded garage, the page MUST re-read those cards through `ids=` and change them in place (rating, dial, review count, lamp, lists, facilities, rate) without re-ordering the list and without a reload; `garage.suspended` about a loaded garage MUST fade its card out over 300 ms (at once with reduced motion), remove it and lower the counts by one. The 300 ms coalescing, one-read-at-a-time and structural-sharing rules of 419-FR-009 hold. 419-FR-010 is modified: a results view no longer re-reads its whole list on a garage event.
 
-_From 419-live-garage-updates._
+_From 267-brand-results._
 
 ### 419-FR-011 — The stream, the connection and the helper MUST write nothing: no row, no audit entry, no event, no search log; the only reads are the public garage, mechanic and search APIs on re-read and, at open, the garage's, mechanic's and brand's existence.
 
@@ -354,6 +355,14 @@ _From 261-maintenance-mode._
 
 _From 260-rule-off-confirm._
 
+### 267-FR-020 — On `verification.decided`, `garage.updated`, `garage.restored` or `garage.suspended` about a garage not loaded, or a brand-stance change for the brand, the page MUST re-read the counts (the first page's counts, uncached after FR-010); when the total rose a "Reîncarcă" chip MUST appear and the list MUST change only when it is tapped (re-reading the first page, not logged); when the total fell, or stayed the same with a different split, the counts change in place.
+
+_From 267-brand-results._
+
+### 267-FR-021 — A changed value is highlighted for 1 second (none with reduced motion) and announced politely, and no live update reloads the page, changes the route or moves focus (256-FR-005, FR-009, FR-010).
+
+_From 267-brand-results._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -367,3 +376,6 @@ _From 260-rule-off-confirm._
 - `254-FR-003` — superseded by `574-FR-001` (2026-10-07)
 
 - `254-FR-001` — superseded by `419-FR-006` (2026-10-07)
+
+- `419-FR-002` — superseded by `267-FR-018` (2026-10-14)
+- `419-FR-010` — superseded by `267-FR-019` (2026-10-14)

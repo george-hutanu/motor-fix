@@ -7,7 +7,7 @@ import {
 
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
-export interface InArea {
+interface InArea {
   distanceM: number;
   mobile: boolean;
 }
@@ -15,10 +15,11 @@ export interface InArea {
 // Haversine on a sphere of the Earth's mean radius: within a metre of the
 // ellipsoid at these distances, and it needs no PostGIS extension. A fixed
 // garage is in when within the search radius; a mobile mechanic when the
-// place is inside the area it serves around its seat.
+// place is inside the area it serves around its seat, whatever the radius.
 export async function garagesInArea(
   prisma: PrismaClient,
   { lat, lng }: SearchPoint,
+  radiusKm: number = SEARCH_RADIUS_DEFAULT_KM,
 ): Promise<Map<string, InArea>> {
   const rows = await prisma.$queryRaw<
     { id: string; distance_m: number; mobile: boolean }[]
@@ -39,7 +40,7 @@ export async function garagesInArea(
     WHERE distance_m <= CASE
       WHEN mobile
         THEN COALESCE(service_radius_km, ${MOBILE_SERVICE_RADIUS_DEFAULT_KM}) * 1000
-      ELSE ${SEARCH_RADIUS_DEFAULT_KM * 1000}
+      ELSE ${radiusKm * 1000}
     END
   `;
   return new Map(

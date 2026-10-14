@@ -195,6 +195,7 @@ describe('a place on the garage search under attack', () => {
     const res = await search('near=46.771,23.624');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
+      brand: { id: dacia, name: 'Dacia', slug: 'dacia' },
       counts: { doesNotTake: 0, worksOn: 0 },
       items: [],
       nextCursor: null,

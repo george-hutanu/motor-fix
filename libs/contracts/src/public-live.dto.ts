@@ -1,15 +1,19 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
+import { IsOptional, IsUUID, ValidateIf } from 'class-validator';
 
-// What a public page shows: one garage, one mechanic and one brand at most. A
-// repeated key arrives as a list, which IsUUID refuses.
+import { IsGarageIdList } from './garage-search.dto';
+import { SEARCH_IDS_MAX } from './search-place';
+
+// What a public page shows: the garages of a profile or of one page of
+// results, one mechanic and one brand at most. A repeated key arrives as a
+// list, which the validators refuse.
 export class PublicLiveQueryDto {
   @ApiPropertyOptional({
-    description: 'The garage a profile shows',
-    format: 'uuid',
+    description: `The garage a profile shows, or up to ${SEARCH_IDS_MAX} garages a page of results shows, comma-separated`,
+    example: '9f1c2a7b-0000-4000-8000-000000000001',
   })
-  @IsOptional()
-  @IsUUID()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsGarageIdList('garages')
   garages?: string;
 
   @ApiPropertyOptional({

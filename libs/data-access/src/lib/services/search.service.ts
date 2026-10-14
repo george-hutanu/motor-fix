@@ -28,7 +28,7 @@ export class SearchService extends BaseService {
    *
    * This method doesn't expect any request body.
    */
-  garageSearchControllerForBrand$Response(params: GarageSearchControllerForBrand$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageSearchPageDto>> {
+  garageSearchControllerForBrand$Response(params?: GarageSearchControllerForBrand$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageSearchPageDto>> {
     const obs = garageSearchControllerForBrand(this.http, this.rootUrl, params, context);
     return firstValueFrom(obs);
   }
@@ -39,7 +39,7 @@ export class SearchService extends BaseService {
    *
    * This method doesn't expect any request body.
    */
-  garageSearchControllerForBrand(params: GarageSearchControllerForBrand$Params, context?: HttpContext): Promise<GarageSearchPageDto> {
+  garageSearchControllerForBrand(params?: GarageSearchControllerForBrand$Params, context?: HttpContext): Promise<GarageSearchPageDto> {
     const resp = this.garageSearchControllerForBrand$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageSearchPageDto>): GarageSearchPageDto => r.body);
   }
