@@ -28,6 +28,44 @@ test('the context fixture removes every route handler once the test ends', async
   expect(calls.slice(-2)).toEqual(['use', 'unrouteAll:ignoreErrors']);
 });
 
+// @traces 115-FR-010
+test("the context fixture sends each test's new drafts from an address of its own", async () => {
+  type Handler = (route: unknown) => Promise<void>;
+  const handlers = new Map<string, Handler>();
+  const context = {
+    route: async (url: unknown, handler: Handler) => {
+      if (typeof url === 'string') handlers.set(url, handler);
+    },
+    unrouteAll: async () => undefined,
+  } as unknown as BrowserContext;
+  await routedContext({ context }, async () => undefined);
+  const drafts = handlers.get('**/api/v1/listing-drafts');
+
+  const sent: Record<string, unknown>[] = [];
+  const route = (method: string) => ({
+    continue: async (options: Record<string, unknown>) => {
+      sent.push(options);
+    },
+    fallback: async () => {
+      sent.push({ fallback: method });
+    },
+    request: () => ({
+      headers: () => ({ accept: 'json' }),
+      method: () => method,
+    }),
+  });
+  await drafts?.(route('POST'));
+  await drafts?.(route('GET'));
+
+  expect(sent[0]).toEqual({
+    headers: {
+      accept: 'json',
+      'x-forwarded-for': expect.stringMatching(/^192\.0\.2\.\d{1,3}$/),
+    },
+  });
+  expect(sent[1]).toEqual({ fallback: 'GET' });
+});
+
 // FR-001..FR-002 (ST-1161): the flows that need analytics to load skip only
 // on a deployed target whose page names no analytics domain.
 test.describe('analyticsSkipReason', () => {

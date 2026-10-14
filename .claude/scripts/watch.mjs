@@ -196,26 +196,26 @@ export function fixOf(row, { now, thresholds }) {
   if (pr?.state === "ready" && pr.mergeable === "CONFLICTING") return { verdict: "conflict", fix: "merge-main", reason: "conflicts with main: no CI runs until origin/main is merged in" };
   const quiet = (now - row.activity.at) / MIN;
   const limit = thresholds[row.phase];
-  // A handed-off PR whose QA run tests its head needs nobody until CI and that
-  // run have both finished: an agent started sooner would only wait, and pay
-  // for its whole context again when the cache goes cold. A PR with no checks,
-  // or a run GitHub cannot report (deleted, gh down), waits only until the quiet
-  // threshold, then gets a tail like any other. A head already passed merges.
-  const unknown = pr?.checks === "none" || row.qaRunState == null;
-  if (pr?.state === "ready" && pr.agentReview !== "success" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(unknown && quiet > limit)) {
-    const ciDone = pr.checks === "pass" || pr.checks === "fail";
+  // A head the tester passed needs only CI: it merges the moment every check
+  // is green, with no quiet threshold, and waits, with no fix, while
+  // one is still pending.
+  const atPrHead = row.clean && row.head && row.head === pr?.head;
+  if (pr?.state === "ready" && pr.agentReview === "success") {
+    if (pr.checks === "pass" && atPrHead) return { verdict: "stale", fix: "merge", reason: "agent-review success and every check green" };
+    if (pr.checks === "pending") return { verdict: "waiting", fix: null, reason: "agent-review success, waiting for CI before the merge" };
+  }
+  // A handed-off PR whose QA run tests its head needs nobody until that run
+  // has finished, whatever CI is doing: the tail reviews it and leaves a
+  // pending check to the merge. A run GitHub cannot report (deleted, gh down)
+  // waits only until the quiet threshold, then gets a tail like any other.
+  if (pr?.state === "ready" && pr.agentReview !== "success" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(row.qaRunState == null && quiet > limit)) {
     const status = row.qaRunState?.status;
-    if (ciDone && status === "completed") return { verdict: "stale", fix: "tail", reason: `CI ${pr.checks} and QA run ${row.qaRun.id} completed` };
-    const waits = [];
-    if (!ciDone) waits.push(pr.checks === "none" ? "CI (no checks yet)" : "CI");
-    if (status !== "completed") waits.push(`QA run ${row.qaRun.id} (${status ?? "state unreadable"})`);
-    return { verdict: "waiting", fix: null, reason: `waiting for ${waits.join(" and ")}` };
+    if (status === "completed") return { verdict: "stale", fix: "tail", reason: `QA run ${row.qaRun.id} completed (CI ${pr.checks})` };
+    return { verdict: "waiting", fix: null, reason: `waiting for QA run ${row.qaRun.id} (${status ?? "state unreadable"})` };
   }
   if (quiet <= limit) return { verdict: "ok", fix: null, reason: `quiet ${Math.round(quiet)} of ${limit} min` };
   const reason = `no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
   const open = pr && (pr.state === "ready" || pr.state === "draft");
-  const atPrHead = row.clean && row.head && row.head === pr?.head;
-  if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success" && atPrHead) return { verdict: "stale", fix: "merge", reason };
   // A story agent that handed its ready PR off (specs/<feature>/handoff.md)
   // has ended: a fresh tail agent takes CI, QA laps and the merge from there.
   if (pr?.state === "ready" && row.handoff) return { verdict: "stale", fix: "tail", reason };

@@ -17,16 +17,20 @@ import {
   inject,
   input,
   model,
+  output,
   signal,
   untracked,
 } from '@angular/core';
 import { FILE_RULES } from '@motor-fix/contracts/files';
+import type { ListingCheck } from '@motor-fix/contracts/listing-check';
 import { PHOTOS_MAX } from '@motor-fix/contracts/listing-photos';
 import { ListingDraftsService } from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { FileUploader } from '@motor-fix/media';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 import { defer, type Subscription } from 'rxjs';
+
+import { FieldWatch, NO_PROBLEMS } from '../field-watch';
 
 const RULE = FILE_RULES.garage_photo;
 const TYPES: readonly string[] = RULE.types;
@@ -50,7 +54,9 @@ interface Tile {
 
 // Step 5 of listing a garage, above the hours: the photos, sent straight to
 // storage and confirmed on the draft, the first the cover. It keeps the
-// draft's keys in their order and leaves saving them to the page.
+// draft's keys in their order and leaves saving them to the page, which
+// judges them: a listing without a photo says so once one is removed, or
+// when sending is asked for.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(window:online)': 'resume()' },
@@ -64,6 +70,11 @@ export class PhotosStep {
   readonly token = input<string>();
   readonly kind = input<string>();
   readonly files = model<string[]>([]);
+  // The page's judgement of this step, and whether sending was asked for.
+  readonly problems = input<ListingCheck>(NO_PROBLEMS);
+  readonly showAll = input(false);
+  // Whether the photos show an error, for the step list's dot.
+  readonly shown = output<boolean>();
 
   private readonly api = inject(ListingDraftsService);
   private readonly uploader = inject(FileUploader);
@@ -85,11 +96,24 @@ export class PhotosStep {
     this.tiles().some((tile) => tile.status === 'failed'),
   );
 
+  private readonly watch = new FieldWatch();
+  protected readonly message = computed(() =>
+    this.watch.message(this.problems(), 'files', {
+      all: this.showAll(),
+      filled: false,
+    }),
+  );
+  protected readonly failing = computed(() => {
+    const message = this.message();
+    return !!message && !message.warning;
+  });
+
   private nextId = 0;
   private readonly sending = new Map<number, Subscription>();
   private poll: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
+    effect(() => this.shown.emit(this.failing()));
     effect(() => {
       const keys = this.files();
       if (this.ready()) untracked(() => this.restore(keys));
@@ -154,6 +178,7 @@ export class PhotosStep {
   protected remove(id: number) {
     const tile = this.tiles().find((t) => t.id === id);
     if (!tile) return;
+    this.watch.leave('files');
     this.sending.get(id)?.unsubscribe();
     this.sending.delete(id);
     this.release(tile);

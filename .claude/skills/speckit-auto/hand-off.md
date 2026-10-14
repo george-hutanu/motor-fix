@@ -16,7 +16,15 @@ and QA lap is where most of a story's cost went.
 
 1. Fill in every section of the PR body from the template: what changed, the
    exact test commands and results, UI evidence or `N/A` and why, risk and
-   rollback, every box ticked; Agent review stays `Pending.`.
+   rollback, every box ticked; Agent review stays `Pending.`. Write the flows
+   the way `.claude/agents/pr-tester.md` §2 says, to
+   `.specify/.cache/qa-flows-<n>.mjs` (git ignores it), and pre-check them
+   before ready:
+   `node .claude/scripts/pr-test/precheck.mjs --flows .specify/.cache/qa-flows-<n>.mjs --spec specs/<feature>/spec.md`
+   names a module that does not load, a `networkidle` wait and every
+   acceptance scenario no flow names (`US<k> scenario <m>`, or a
+   `// not a flow: US<k> scenario <m> — <reason>` line); fix each until it
+   exits 0. These were most of the failed first laps measured.
 2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>" [--story ST-<n>]`
    commits and pushes the feature records (phase 17's status line and Spec
    Delta merge, `tracker-sync.md`), files unfiled deferred bullets, runs
@@ -30,13 +38,13 @@ and QA lap is where most of a story's cost went.
    Its first check is `level.mjs check --ready`: a level 2 or 3 feature
    missing an owed artifact stops with the phases that write it. Run them,
    commit, and run `ready` again.
-3. Start the QA run, beside CI, and do not wait for it. Write the flows the
-   way `.claude/agents/pr-tester.md` §2 says, to
-   `.specify/.cache/qa-flows-<n>.mjs` (git ignores it), then
-   `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`:
+3. Start the QA run, beside CI, and do not wait for it. The flows are step
+   1's: `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`:
    it dispatches the PR QA workflow for the head, prints one line,
    `- QA run: <id> · head <sha> · lap <n> · <url>`, and exits. On exit 2 (no
-   run appeared) the note records no run and the tail dispatches one.
+   run appeared) the note records no run and the tail dispatches one; on
+   exit 64 the flows failed the pre-check and nothing was dispatched: fix
+   what it named and run it again.
 4. Add that line, as printed, to `specs/<feature>/handoff.md` (step 2 wrote
    the rest; git ignores it; the tail deletes it), then post the note again
    with `node .claude/scripts/lifecycle.mjs handoff --pr <n>` (a cloud

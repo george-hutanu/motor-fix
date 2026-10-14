@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-10
+updated: 2026-10-11
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -24,6 +24,7 @@ features:
   - 163-figures-period-city
   - 412-brand-job-ticks
   - 226-best-rated-brand-dial
+  - 115-listing-checklist
 ---
 
 # Capability: Garage listing
@@ -68,9 +69,9 @@ _From 108-step-list-in-view._
 
 _From 108-step-list-in-view._
 
-### 108-FR-010 — The list MUST show no completion tick in this story: what makes a step complete, and its tick, belong to the validation story.
+### 115-FR-007 — The step list (108-FR-004) and its phone bar MUST show, on each step, a tick when the rule set has no error on it (steps 2 and 6 gain theirs; 108-FR-010 and the three-step tick of 109-FR-012 are superseded), and a red dot when the step has an error and either sending has been asked for on this page since the error appeared or the step holds a shown field error. Each mark MUST be named for assistive technology ("complet" / "complete", "lipsesc date" / "incomplete") and never be colour alone. Step 4 shows a tick whenever it has no error, an empty step 4 included.
 
-_From 108-step-list-in-view._
+_From 115-listing-checklist._
 
 ### 108-FR-011 — The page MUST obey the phone layout rules: no sideways scroll at 320 px, 44 px targets for the bar and the entries, no text under 12 px, light and dark theme following the device. In both themes the current step differs from the others by more than colour (weight or a marker) and its highlight and the keyboard focus ring reach a 3:1 contrast against their background, text 4.5:1 (Cockpit tokens).
 
@@ -372,9 +373,9 @@ _From 109-garage-details-prices._
 
 _From 109-garage-details-prices._
 
-### 109-FR-012 — Each of the three sections MUST expose whether it is complete by the rules above, through one pure function per section where the form and the sending story's checks both read it (texts judged after trimming, as the writes trim them), and the step list MUST show a tick on steps 1, 3 and 4 when their section is complete, updated as the owner types.
+### 115-FR-007 — The step list (108-FR-004) and its phone bar MUST show, on each step, a tick when the rule set has no error on it (steps 2 and 6 gain theirs; 108-FR-010 and the three-step tick of 109-FR-012 are superseded), and a red dot when the step has an error and either sending has been asked for on this page since the error appeared or the step holds a shown field error. Each mark MUST be named for assistive technology ("complet" / "complete", "lipsesc date" / "incomplete") and never be colour alone. Step 4 shows a tick whenever it has no error, an empty step 4 included.
 
-_From 109-garage-details-prices._
+_From 115-listing-checklist._
 
 ### 109-FR-013 — The `garages` module MUST provide one write that creates the garage from a step-1 section inside a transaction the caller owns, taking the transaction, the actor (the owner account created in it) and the section: it MUST trim the texts, check the lengths of FR-001 (code `length` on the field), normalise the phone and refuse one that is not `+40` and nine digits (code `romanian` on `phone`), require the kind of business and, for `mobile`, the legal form (code `required`), and create the garage with `status = draft`, `name`, a unique `slug` derived from the name (lower case, accents dropped, non-letters as hyphens, a numeric suffix when taken), `phone`, `known_for`, `business_kind`, `mobile_legal_form` (null unless mobile); a refusal is the 422 field-error refusal the other writes raise and writes nothing. It MUST record one `create` audit entry (subject type `garage`, the stored values as the new value, actor the owner) and emit no event. The garage row gains `phone`, `known_for`, `business_kind` (`company`, `pfa`, `ii`, `mobile`) and `mobile_legal_form` (`pfa`, `company`), all empty for garages that exist today.
 
@@ -690,9 +691,9 @@ _From 397-listing-ticks._
 
 _From 397-listing-ticks._
 
-### 397-FR-004 — Step 5 MUST count as complete only when at least one payment method is ticked and, when the courtesy car is ticked and paid, a price of 1–2,000 lei is given (free needs no price); the step shows the missing piece as a field error in the person's language, and the listing cannot be sent while it is missing (the submit story reads the same completeness function).
+### 115-FR-002 — The rule set MUST require, with one error per missing or wrong value: step 1 the garage name (2–80 characters after trimming), a Romanian phone (109-FR-002), the e-mail (114-FR-001), "La ce sunteți cei mai buni" (1–160 characters) and the kind of business, plus PFA or company for a mobile mechanic; step 2 at least one brand marked taken; step 3 the labour range with both ends good by the shared range check (354-FR-006), at least one job without a brand (`steps.3.jobs`) and a top on every job (`steps.3.jobs[n].to`), as `pricesComplete` judges, every job row passing the range check and a typed name within 2–80 characters; step 5 a position inside Romania with an address (111-FR-007), at least one confirmed photo (110-FR-017), at least one day with an open interval, at least one payment method and a courtesy price of 1–2,000 lei when the courtesy car is ticked and paid (397-FR-004); step 6 a valid CUI, a RAR number of at least 3 characters, and the declaration (the tick and a declared name of 2–80 characters, 206-FR-009). A missing value carries the code `required`; the codes of a wrong value are the owning rule's own (`invalid` for a CUI, a RAR number, a name or a phone, and the range check's `integer`, `min`, `max`, `below_from`), and the warning codes are `wide_range`, `no_requests`, `document_missing` and `cui_in_use`; no other code is raised. A value that fails a step story's own rule (a phone that is not Romanian, a range refused by the range check) MUST reuse that rule's code, never a second judgement.
 
-_From 397-listing-ticks._
+_From 115-listing-checklist._
 
 ### 397-FR-005 — Under every brand chip marked taken (`works_on`) step 2 MUST show four toggle ticks "Benzină" / "Petrol", "Diesel" / "Diesel", "Hibrid" / "Hybrid", "Electric" / "Electric" (`petrol`, `diesel`, `hybrid`, `electric`), all ticked when the brand becomes taken; each is a button with `aria-pressed` whose accessible name carries the brand and the fuel. A refused or unmarked brand shows none.
 
@@ -806,6 +807,62 @@ _From 412-brand-job-ticks._
 
 _From 412-brand-job-ticks._
 
+### 115-FR-001 — One rule set MUST decide whether a draft can be sent: a pure function in the contracts library that takes the draft's data (`ListingDraftData`) and returns the errors and the warnings, each a field problem (`FieldProblem`: `code`, `field`) whose `field` is the draft path of the value, `email` for the draft's address (which lives on the draft's row, not in `data`; the browser passes the keeper's, the server the row's, and it is judged only when passed) and the paths of the draft's data, among them (`steps.1.name`, `steps.1.phone`, `steps.1.knownFor`, `steps.2.brands`, `steps.3.labour.to`, `steps.3.jobs`, `steps.3.jobs[2].to`, `steps.4.mechanics[1].name`, `steps.5.place.address`, `steps.5.hours`, `steps.5.payments`, `steps.5.courtesyCar.pricePerDayBani`, `files`, `steps.6.cui`, `steps.6.rarNumber`, `documents.onrc_certificate`, `documents.rar_authorisation`, `declaration`). The form and the server read this one function; neither holds a rule of its own. The existing per-section completeness functions stay and MUST agree with it: a step is complete exactly when the rule set has no error on that step (a test holds them together).
+
+_From 115-listing-checklist._
+
+### 115-FR-002 — The rule set MUST require, with one error per missing or wrong value: step 1 the garage name (2–80 characters after trimming), a Romanian phone (109-FR-002), the e-mail (114-FR-001), "La ce sunteți cei mai buni" (1–160 characters) and the kind of business, plus PFA or company for a mobile mechanic; step 2 at least one brand marked taken; step 3 the labour range with both ends good by the shared range check (354-FR-006), at least one job without a brand (`steps.3.jobs`) and a top on every job (`steps.3.jobs[n].to`), as `pricesComplete` judges, every job row passing the range check and a typed name within 2–80 characters; step 5 a position inside Romania with an address (111-FR-007), at least one confirmed photo (110-FR-017), at least one day with an open interval, at least one payment method and a courtesy price of 1–2,000 lei when the courtesy car is ticked and paid (397-FR-004); step 6 a valid CUI, a RAR number of at least 3 characters, and the declaration (the tick and a declared name of 2–80 characters, 206-FR-009). A missing value carries the code `required`; the codes of a wrong value are the owning rule's own (`invalid` for a CUI, a RAR number, a name or a phone, and the range check's `integer`, `min`, `max`, `below_from`), and the warning codes are `wide_range`, `no_requests`, `document_missing` and `cui_in_use`; no other code is raised. A value that fails a step story's own rule (a phone that is not Romanian, a range refused by the range check) MUST reuse that rule's code, never a second judgement.
+
+_From 115-listing-checklist._
+
+### 115-FR-003 — For a mobile mechanic (step 1's kind `mobile`) step 5 MUST require the registered seat's position and address and a radius of 1–100 km in place of the workshop address and pin, with the same field paths and their own messages ("Alege sediul pe hartă", "Alege raza de deplasare"); for every other kind the radius MUST NOT be required or judged.
+
+_From 115-listing-checklist._
+
+### 115-FR-004 — Step 4 MUST stay optional: an empty step 4 is complete, and the rule set raises an error only on a mechanic card whose name is outside 2–60 characters (`steps.4.mechanics[n].name`), as `mechanicsComplete` already judges.
+
+_From 115-listing-checklist._
+
+### 115-FR-005 — The rule set MUST return as warnings, never as errors, so that sending goes on: a labour or job range whose top is more than three times its bottom (the range check's `wide_range`, [Q27]); a taken brand with every job unticked (412-FR-005) or every fuel unticked (397-FR-007), one warning per brand, `no_requests`, on `steps.2.brands[n]`; a missing certificate or authorisation upload in step 6, `document_missing`, one per kind ([X20f]); and, judged by the server only, a CUI held by another draft (open or submitted; the garage side is ST-116's), `cui_in_use` on `steps.6.cui` ([X20a]). The summary MUST NOT count warnings and the step list MUST NOT dot a step for one.
+
+_From 115-listing-checklist._
+
+### 115-FR-006 — Each field's error MUST show under its field, in the form's language, once the owner has left the field, on a restored value that fails, and all at once when sending is asked for; after it shows, it follows the value on every change and goes when the value is good. The field MUST carry `aria-invalid` and be described by its error or, when there is none, by its hint, and the error text MUST sit in a polite live region (as 205-FR-010 has it). A warning shows in the same place in the warning style the brand step already uses (397-FR-007), never with `aria-invalid`. The steps' own messages that exist today (CUI, RAR, place, courtesy price) MUST be the same texts and places; this story adds no second message for them.
+
+_From 115-listing-checklist._
+
+### 115-FR-008 — The page MUST show, at the end of the form where "Salvează ciorna" stands (the end of step 6, as the board places it), a primary button "Trimite spre verificare" / "Send for review" first and "Salvează ciorna" as the secondary beside it. Pressing it MUST run the rule set on the browser's data and, with errors, send nothing, show every field error at once, show above the button a summary titled "Mai lipsesc: {n} lucruri" / "Still missing: {n} things" (singular "Mai lipsește: 1 lucru" / "Still missing: 1 thing"; the Romanian plural takes "de" from 20 up, "Mai lipsesc: 20 de lucruri") whose items are grouped by step in step order, each item a link reading the field's message, move focus to the summary and jump the page to the first step with an error with the same jump and hold the step list uses (861-FR-001). Activating an item MUST open whatever hides the field (a disclosure, a brand row), jump to it and focus it. The summary MUST shrink as the owner fixes items and go when none is left.
+
+_From 115-listing-checklist._
+
+### 115-FR-009 — With no error in the browser, the button MUST save the server copy at once, creating it first when none exists (as "Salvează ciorna" does, 114-FR-005; a failed or refused create shows the failed-call text below and calls no check), ask the server to check the draft (FR-010) and show its reply: 422 is shown exactly as the browser's own errors (FR-006–FR-008), 200 shows "Totul e complet" / "Everything is complete" in the summary's place (the same live region announces it; focus stays on the button) with the reply's warnings under their fields, and a failed call shows "Nu am putut verifica. Încearcă din nou." / "We could not check. Try again." with the draft kept. The button MUST be disabled while a check is in flight. What happens after a 200 (the survey, the account, the file) is ST-116's and this story MUST NOT change the draft's status or the page beyond that notice.
+
+_From 115-listing-checklist._
+
+### 115-FR-010 — The API MUST serve `POST /api/v1/listing-drafts/{id}/check` to whoever holds the draft, under the same holder rule and 409 `draft_submitted` as a save (114-FR-007); it has no rate limit of its own (a save has none either; the create counter of 114-FR-021 is for creation). It MUST run the rule set of FR-001 on the stored server copy (not on a request body), add the server-only CUI warning (FR-005) and answer 200 with `{ warnings }` or 422 `listing_incomplete` with `errors` (the same field paths and codes the browser produces) and `warnings`. It MUST write nothing: no draft field, no garage table, no audit entry, no event, no e-mail (114-FR-018). The sending story's write MUST be able to call the same rule function and refuse the same way; this story adds no other route.
+
+_From 115-listing-checklist._
+
+### 115-FR-011 — Nothing typed MUST be lost by a check: no error, summary or 422 clears, trims or rewrites a field; the browser copy and the server copy stay what they were; a refused send leaves the owner on the page with every value in place.
+
+_From 115-listing-checklist._
+
+### 115-FR-012 — Every message, mark name, summary text and button of this story MUST exist in Romanian and English in the public interface texts, one text per field problem (keyed by field path and code, with a per-code fallback), and switching the language MUST change all of them while every shown message stays shown (108-FR-009).
+
+_From 115-listing-checklist._
+
+### 115-FR-013 — The summary, the button and every message MUST obey the phone layout rules (108-FR-011): no sideways scroll at 320 px, 44 px targets for the summary's items and the button, readable in light and dark.
+
+_From 115-listing-checklist._
+
+### 115-FR-014 — The new endpoint MUST be listed in `infra/observability/inventory.json` with its request metrics and log line, as every endpoint is (`scripts/observability-inventory.ts`); it needs no queue, dashboard panel or alert of its own: it is a read that reuses the drafts' request panel and alert, and the PR says so in its Observability section.
+
+_From 115-listing-checklist._
+
+### 115-FR-015 — Tests MUST cover, in Jest: each required rule of FR-002 once, with the mobile variant of FR-003 and the optional step 4; each warning of FR-005 as a warning with no error beside it, a draft with no step-6 uploads and a CUI used by another draft, open or submitted, included; the agreement of each completeness function with the rule set (FR-001); the summary's count, grouping, singular, jump and focus; the dot and tick rules of FR-007; a restored wrong value shown without leaving; and, on real PostgreSQL and Redis, the endpoint's 200 with warnings, 422 with the same field list the browser produces for the same data, 409 on a submitted draft, the holder rule and that it writes nothing. In Playwright: press "Trimite spre verificare" on an empty form and read the summary; fill the missing items from the summary's links and reach "Totul e complet".
+
+_From 115-listing-checklist._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -829,3 +886,7 @@ _From 412-brand-job-ticks._
 - `205-FR-005` — superseded by `206-FR-010` (2026-10-09)
 
 - `307-FR-002` — superseded by `226-FR-011` (2026-10-10)
+
+- `108-FR-010` — superseded by `115-FR-007` (2026-10-11)
+- `109-FR-012` — superseded by `115-FR-007` (2026-10-11)
+- `397-FR-004` — superseded by `115-FR-002` (2026-10-11)

@@ -65,17 +65,29 @@ ol {
 section > .note {
   margin-top: var(--mf-space-3);
 }
-/* Pinned to the bottom of the screen while the sections pass: reaching Save never scrolls the owner off the step a draft is saved at. It sits on the public tab bar (below 768 px, the frame's --tab-bar) and on the consent bar while that asks (--consent-bar, its own height). */
+/* On a phone the two buttons wrap to two rows, and pinned they would cover a third of a 640 px screen: there they end the form. From a tablet up they stay pinned to the bottom while the sections pass, above the consent bar while that asks (--consent-bar, its own height). */
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mf-space-2);
-  position: sticky;
-  bottom: calc(var(--tab-bar, 0px) + var(--consent-bar, 0px));
-  z-index: 1;
   padding-block: var(--mf-space-2);
   background: var(--mf-bg);
   border-top: 1px solid var(--mf-line);
+}
+/* Below a tablet the send button takes the whole row with a lighter tracking. A phone keeps the body size, at which Michroma needs two lines for the label and arrow; they are balanced. */
+@media (max-width: 767.98px) {
+  .actions .send {
+    flex: 1 1 100%;
+    letter-spacing: 0.08em;
+    text-wrap: balance;
+  }
+}
+@media (min-width: 768px) {
+  .actions {
+    position: sticky;
+    bottom: var(--consent-bar, 0px);
+    z-index: 1;
+  }
 }
 .ended {
   display: grid;
@@ -114,6 +126,23 @@ ol li {
   padding: 0 var(--mf-space-2);
   color: var(--mf-text-secondary);
   font-weight: 600;
+}
+/* A step with something missing, once sending was asked for or a field there shows an error; also on the phone bar. */
+.dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 var(--mf-space-2);
+  border-radius: 50%;
+  background: var(--mf-red);
+  vertical-align: middle;
+}
+.warning {
+  color: var(--mf-text-secondary);
+}
+.warning:empty {
+  display: none;
 }
 @media (min-width: 768px) {
   .page {
@@ -184,7 +213,7 @@ ol li {
 .ended button {
   min-height: var(--mf-tap);
 }
-/* From 1024 px the preview card leaves the form for a third column of its own, and stays in view while the form scrolls. Placed after the six steps in the page, so on narrower screens its panel sits right above Save. The aside stays inside the form's markup for that order, so here it is laid over the third track the grid keeps empty for it, spanning the page's height for the sticky card to travel in. */
+/* From 1024 px the preview card leaves the form for a third column of its own, and stays in view while the form scrolls. Placed after the six steps in the page, so on narrower screens its panel sits between them and the missing summary, which stays right above the buttons. The aside stays inside the form's markup for that order, so here it is laid over the third track the grid keeps empty for it, spanning the page's height for the sticky card to travel in. */
 @media (min-width: 1024px) {
   .page {
     position: relative;

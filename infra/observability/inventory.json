@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 114,
+    "count": 115,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -662,6 +662,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "listing-draft-check",
+      "source": "libs/domain/src/garages/listing-drafts/listing-drafts.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/listing-drafts/:id/check and status (200 sendable, 422 listing_incomplete, 404, 409)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "read-only and writes nothing; a 422 is the owner's form still lacking values, not a failure, so it is read by status on the dashboard and not alerted on; the api traces carry the route span",
+      "story": "ST-115"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-verification-documents",
       "source": "libs/domain/src/garages/documents/legal-documents/legal-documents.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/documents/:documentId/pages/:n/download-url",
@@ -706,7 +719,10 @@
       "source": "libs/domain/src/insights/profile-views/profile-views.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/{id}/views",
       "dashboard": "motorfix-api",
-      "alerts": ["api-error-rate", "api-latency"],
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
       "reason": "the public profile's beacon; every outcome is the motorfix_profile_views_total entry, which owns the lost-view alert",
       "story": "ST-143"
     },

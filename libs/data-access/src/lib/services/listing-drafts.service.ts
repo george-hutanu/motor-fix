@@ -12,6 +12,7 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { ContinueLinkSentDto } from '../models/continue-link-sent-dto';
 import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
 import { DraftDocumentDto } from '../models/draft-document-dto';
+import { ListingCheckDto } from '../models/listing-check-dto';
 import { listingDocumentsControllerConfirm } from '../fn/listing-drafts/listing-documents-controller-confirm';
 import { ListingDocumentsControllerConfirm$Params } from '../fn/listing-drafts/listing-documents-controller-confirm';
 import { listingDocumentsControllerRemove } from '../fn/listing-drafts/listing-documents-controller-remove';
@@ -21,6 +22,8 @@ import { ListingDocumentsControllerUploadAddress$Params } from '../fn/listing-dr
 import { ListingDraftCreatedDto } from '../models/listing-draft-created-dto';
 import { ListingDraftDto } from '../models/listing-draft-dto';
 import { ListingDraftSavedDto } from '../models/listing-draft-saved-dto';
+import { listingDraftsControllerCheck } from '../fn/listing-drafts/listing-drafts-controller-check';
+import { ListingDraftsControllerCheck$Params } from '../fn/listing-drafts/listing-drafts-controller-check';
 import { listingDraftsControllerCreate } from '../fn/listing-drafts/listing-drafts-controller-create';
 import { ListingDraftsControllerCreate$Params } from '../fn/listing-drafts/listing-drafts-controller-create';
 import { listingDraftsControllerCurrent } from '../fn/listing-drafts/listing-drafts-controller-current';
@@ -145,6 +148,31 @@ export class ListingDraftsService extends BaseService {
   listingDraftsControllerSendLink(params: ListingDraftsControllerSendLink$Params, context?: HttpContext): Promise<ContinueLinkSentDto> {
     const resp = this.listingDraftsControllerSendLink$Response(params, context);
     return resp.then((r: StrictHttpResponse<ContinueLinkSentDto>): ContinueLinkSentDto => r.body);
+  }
+
+  /** Path part for operation `listingDraftsControllerCheck()` */
+  static readonly ListingDraftsControllerCheckPath = '/api/v1/listing-drafts/{id}/check';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingDraftsControllerCheck()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingDraftsControllerCheck$Response(params: ListingDraftsControllerCheck$Params, context?: HttpContext): Promise<StrictHttpResponse<ListingCheckDto>> {
+    const obs = listingDraftsControllerCheck(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingDraftsControllerCheck$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingDraftsControllerCheck(params: ListingDraftsControllerCheck$Params, context?: HttpContext): Promise<ListingCheckDto> {
+    const resp = this.listingDraftsControllerCheck$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ListingCheckDto>): ListingCheckDto => r.body);
   }
 
   /** Path part for operation `listingPhotosControllerUploadAddress()` */

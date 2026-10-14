@@ -1,6 +1,7 @@
 import {
   ContinueLinkSentDto,
   CreateListingDraftDto,
+  ListingCheckDto,
   ListingDraftCreatedDto,
   ListingDraftDto,
   ListingDraftSavedDto,
@@ -36,6 +37,7 @@ import {
   ApiPayloadTooLargeResponse,
   ApiTags,
   ApiTooManyRequestsResponse,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 
@@ -136,5 +138,23 @@ export class ListingDraftsController {
     @Headers(TOKEN) token?: string,
   ): Promise<ContinueLinkSentDto> {
     return this.drafts.sendLink(id, token);
+  }
+
+  // Whether the stored draft can be sent, judged without saving it.
+  @Public()
+  @Post(':id/check')
+  @HttpCode(HttpStatus.OK)
+  @tokenHeader
+  @ApiOkResponse({ type: ListingCheckDto })
+  @ApiUnprocessableEntityResponse({
+    description: 'listing_incomplete, with errors and warnings',
+  })
+  @ApiNotFoundResponse({ description: 'not_found' })
+  @ApiConflictResponse({ description: 'draft_submitted' })
+  check(
+    @Param('id') id: string,
+    @Headers(TOKEN) token?: string,
+  ): Promise<ListingCheckDto> {
+    return this.drafts.check(id, token);
   }
 }

@@ -13,13 +13,15 @@
     @for (card of cards(); track $index) {
       @let i = $index;
       @let n = i + 1;
-      @let wrong = nameError(card, i);
+      @let message = nameErrors()[i];
+      @let wrong = message && !message.warning;
       <li class="mechanic">
         <span class="initials" aria-hidden="true">{{ initials(card.name) }}</span>
         <div class="fields">
           <input
             hlmInput
             name="name"
+            [attr.data-field]="nameField(i)"
             autocomplete="off"
             [attr.maxlength]="nameMax"
             [value]="card.name"
@@ -30,9 +32,7 @@
             (input)="type(i, 'name', $event)"
             (blur)="leave(i)"
           />
-          @if (wrong) {
-            <p class="error" [id]="'listing-mechanic-error-' + i">{{ 'public.listing.mechanics.nameNeeded' | t }}</p>
-          }
+          <p [class]="message?.warning ? 'warning' : 'error'" [id]="'listing-mechanic-error-' + i" role="status" aria-live="polite">{{ message ? (message.key | t) : '' }}</p>
           <input
             hlmInput
             name="speciality"

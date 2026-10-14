@@ -504,7 +504,7 @@ describe('switching the language', () => {
     expect(page.querySelector('h1')).toBe(heading);
     expect(text(heading)).toBe('Put your garage on the map');
     expect(current(page)).toEqual(['4 Mechanics · optional']);
-    expect(text(bar(page))).toBe('4 / 6 · Mechanics');
+    expect(text(bar(page))).toBe('4 / 6 · Mechanics ✓');
     expect([...page.querySelectorAll('section')].map((s) => s.id)).toEqual(
       [1, 2, 3, 4, 5, 6].map((n) => `step-${n}`),
     );
@@ -517,7 +517,9 @@ const field = (page: HTMLElement) =>
 const note = (page: HTMLElement) =>
   text(page.querySelector('.sections > p.note'));
 const saveButton = (page: HTMLElement) =>
-  page.querySelector<HTMLButtonElement>('.actions button') as HTMLButtonElement;
+  page.querySelector<HTMLButtonElement>(
+    '.actions button[variant="secondary"]',
+  ) as HTMLButtonElement;
 const stored = (): BrowserDraft | null =>
   JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
 const seed = (draft: Partial<BrowserDraft>) =>
@@ -629,6 +631,26 @@ describe('the e-mail field and the save button', () => {
       'Scrie o adresă de e-mail validă.',
     );
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  // @traces 115-FR-006 115-FR-007
+  it('reads the e-mail error out politely and marks step 1 red once it shows', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    const dotted = () =>
+      [...page.querySelectorAll('nav ol li')].flatMap((li, i) =>
+        li.querySelector('.dot') ? [i + 1] : [],
+      );
+    const error = page.querySelector('#listing-email-error') as HTMLElement;
+    expect(error.getAttribute('role')).toBe('status');
+    expect(error.getAttribute('aria-live')).toBe('polite');
+    expect(dotted()).toEqual([]);
+
+    type(harness, page, 'ion@service');
+    leave(harness, page);
+    await settle(harness);
+
+    expect(page.querySelector('#listing-email-error')).toBe(error);
+    expect(dotted()).toEqual([1]);
   });
 
   it('places one secondary save button after the sections, and one status note', async () => {
@@ -1239,12 +1261,19 @@ describe('the verification step', () => {
     expect(
       page.querySelector('#listing-cui-error')?.closest('[aria-live="polite"]'),
     ).not.toBeNull();
+    // The error shown marks its step red in the list.
+    expect(
+      [...page.querySelectorAll('nav ol li')].flatMap((li, i) =>
+        li.querySelector('.dot') ? [i + 1] : [],
+      ),
+    ).toEqual([6]);
     expect(counter(page)).toBe('0 din 5 completate');
 
     fillIn(harness, input, 'RO18547290');
     expect(errorOf(page, input)).toBe('');
     expect(input.getAttribute('aria-invalid')).toBeNull();
     expect(counter(page)).toBe('1 din 5 completate');
+    expect(page.querySelector('nav ol li .dot')).toBeNull();
     leaveField(harness, input);
     expect(input.value).toBe('18547290');
   });
@@ -1604,7 +1633,11 @@ describe('the details, prices and mechanics in the draft', () => {
   });
 
   it('restores step 1 from a kept copy and ticks it while it is complete', async () => {
-    seed({ data: { steps: { '1': COMPLETE_DETAILS } } });
+    // Step 1 holds the e-mail too.
+    seed({
+      data: { steps: { '1': COMPLETE_DETAILS } },
+      email: 'ion@service.test',
+    });
 
     const { harness, page } = await open('/ro/list-your-garage');
 
@@ -1615,6 +1648,8 @@ describe('the details, prices and mechanics in the draft', () => {
     expect(ticked(page)).toEqual([4]);
   });
 
+  // Step 5 is complete only with a photo, as the check has it.
+  const PHOTO = 'listing-photos/0f1e2d3c-0000-4000-8000-000000000001/cover';
   const STEFAN = {
     address: 'Strada Ștefan cel Mare 12, Sector 2, București',
     lat: 44.4512,
@@ -1622,7 +1657,12 @@ describe('the details, prices and mechanics in the draft', () => {
   };
 
   it('ticks step 5 once the kept place has an address and a position in Romania', async () => {
-    seed({ data: { steps: { '5': { payments: ['cash'], place: STEFAN } } } });
+    seed({
+      data: {
+        files: [PHOTO],
+        steps: { '5': { payments: ['cash'], place: STEFAN } },
+      },
+    });
 
     const { page } = await open('/ro/list-your-garage');
 
@@ -1673,7 +1713,7 @@ describe('the details, prices and mechanics in the draft', () => {
   });
 
   it('ticks step 5 once a payment method is ticked on the page', async () => {
-    seed({ data: { steps: { '5': { place: STEFAN } } } });
+    seed({ data: { files: [PHOTO], steps: { '5': { place: STEFAN } } } });
     const { harness, page } = await open('/ro/list-your-garage');
 
     const cash = [
@@ -1734,6 +1774,7 @@ describe('the details, prices and mechanics in the draft', () => {
   it("ticks step 5 for a mobile mechanic's seat with no radius, as 20 stands in", async () => {
     seed({
       data: {
+        files: [PHOTO],
         steps: {
           '1': {
             ...COMPLETE_DETAILS,
@@ -1743,6 +1784,7 @@ describe('the details, prices and mechanics in the draft', () => {
           '5': { payments: ['cash'], place: STEFAN },
         },
       },
+      email: 'ion@service.test',
     });
 
     const { page } = await open('/ro/list-your-garage');
@@ -1927,5 +1969,359 @@ describe('type scale', () => {
       /\n[^{}\n]*\.label \{[^}]*font-family: var\(--mf-font-label\);/,
     );
     expect(stylesheet).not.toMatch(/font:\s*var\(--mf-font-/);
+  });
+});
+
+describe('sending for verification', () => {
+  const PHOTO = 'listing-photos/0f1e2d3c-0000-4000-8000-000000000001/cover';
+  const PAGE = 'listing-documents/0f1e2d3c-0000-4000-8000-000000000002/p1';
+  // A listing the shared check finds nothing missing in.
+  const COMPLETE = {
+    declaredAt: '2026-10-11T10:00:00.000Z',
+    declaredByName: 'Ion Popescu',
+    documents: {
+      onrc_certificate: { pages: [PAGE] },
+      rar_authorisation: { pages: [PAGE] },
+    },
+    files: [PHOTO],
+    steps: {
+      '1': {
+        businessKind: 'company',
+        knownFor: 'Frâne și distribuție',
+        name: 'Service Popescu',
+        phone: '0722 123 456',
+      },
+      '2': {
+        brands: [{ brandId: DACIA.id, name: 'Dacia', stance: 'works_on' }],
+      },
+      '3': {
+        jobs: [{ fromBani: 15_000, jobTypeId: jobId(1), toBani: 30_000 }],
+        labour: { fromBani: 12_000, toBani: 20_000 },
+      },
+      '4': {},
+      '5': {
+        payments: ['cash'],
+        place: { address: 'Str. Lungă 1, Brașov', lat: 45.65, lng: 25.6 },
+      },
+      '6': { cui: '18547290', rarNumber: 'BV-123' },
+    },
+  };
+  const sendButton = (page: HTMLElement) =>
+    page.querySelector<HTMLButtonElement>(
+      '.actions button.send',
+    ) as HTMLButtonElement;
+  const summary = (page: HTMLElement) =>
+    page.querySelector('mf-missing-summary .summary') as HTMLElement;
+  const dotted = (page: HTMLElement) =>
+    [...page.querySelectorAll('nav ol li')].flatMap((li, i) =>
+      li.querySelector('.dot') ? [i + 1] : [],
+    );
+
+  async function press(harness: RouterTestingHarness, page: HTMLElement) {
+    sendButton(page).click();
+    for (let i = 0; i < 5; i++) await pause();
+    await settle(harness);
+  }
+
+  async function completeCopy() {
+    seed({ draftId: 'd1', email: 'ion@service.test', token: 't1' });
+    const opened = await open('/ro/list-your-garage');
+    await answered(opened.harness, await request(), {
+      data: COMPLETE,
+      email: 'ion@service.test',
+      id: 'd1',
+      language: 'ro',
+      status: 'open',
+      step: 1,
+      updatedAt: '2026-10-11T11:00:00.000Z',
+    });
+    // The photo kept in the copy, read back once for its thumbnail.
+    const photos = await request();
+    expect(photos.request.url).toMatch(/\/photos$/);
+    await answered(opened.harness, photos, {
+      photos: [{ key: PHOTO, thumbnailUrl: 'https://cdn.test/p.jpg' }],
+    });
+    return opened;
+  }
+
+  // @traces 115-FR-008
+  it('puts the button first in the actions bar, as the primary action', async () => {
+    const { page } = await open('/ro/list-your-garage');
+    const buttons = [...page.querySelectorAll('.actions button')];
+
+    expect(buttons[0]).toBe(sendButton(page));
+    expect(text(sendButton(page).querySelector('.send-label'))).toBe(
+      'Trimite spre verificare',
+    );
+    // Not the page's grey `.label`: on the primary fill it fails contrast.
+    expect(sendButton(page).querySelector('.label')).toBeNull();
+    // The board's arrow, unread: the button's name stays its label.
+    const arrow = sendButton(page).querySelector('.arrow');
+    expect(text(arrow)).toBe('→');
+    expect(arrow?.getAttribute('aria-hidden')).toBe('true');
+    expect(sendButton(page).getAttribute('variant')).not.toBe('secondary');
+    expect(sendButton(page).type).toBe('button');
+  });
+
+  // @traces 115-FR-008
+  it('puts the summary right above the buttons, after the preview card that ends the form below 1024 px', async () => {
+    const { page } = await open('/ro/list-your-garage');
+    const host = page.querySelector('mf-missing-summary') as HTMLElement;
+    const actions = page.querySelector('.actions') as HTMLElement;
+    const aside = page.querySelector('aside') as HTMLElement;
+
+    expect(host.nextElementSibling).toBe(actions);
+    expect(
+      aside.compareDocumentPosition(host) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  // @traces 115-FR-008 115-FR-007
+  it('lists what is missing at once and asks the server nothing while the page already knows', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    expect(dotted(page)).toEqual([]);
+    expect(text(summary(page))).toBe('');
+
+    await press(harness, page);
+
+    expect(TestBed.inject(HttpTestingController).match(() => true)).toEqual([]);
+    expect(text(summary(page).querySelector('h2'))).toMatch(
+      /^Mai lipsesc: \d+ (de )?lucruri$/,
+    );
+    expect(summary(page).getAttribute('aria-live')).toBe('polite');
+    expect(document.activeElement).toBe(summary(page));
+    // The page goes to the first step with an error.
+    expect(current(page)[0]).toMatch(/^1 Service-ul/);
+    expect(scrolls).toContainEqual(expect.objectContaining({ block: 'start' }));
+    // Step 4 is optional and done; every other step is marked.
+    expect(dotted(page)).toEqual([1, 2, 3, 5, 6]);
+    expect(page.querySelector('nav > button .dot')).not.toBeNull();
+  });
+
+  // @traces 115-FR-006 115-FR-008
+  it('shows every field message once asked, and keeps what was typed', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    const name = page.querySelector<HTMLInputElement>(
+      'mf-details-step [name="name"]',
+    ) as HTMLInputElement;
+    fillIn(harness, name, 'S');
+    expect(
+      page.querySelector('input[data-field="steps.6.cui"]'),
+    ).not.toBeNull();
+    expect(errorOf(page, cuiInput(page))).toBe('');
+
+    await press(harness, page);
+
+    expect(name.value).toBe('S');
+    expect(errorOf(page, cuiInput(page))).toBe('Scrie CUI-ul firmei');
+    expect(cuiInput(page).getAttribute('aria-invalid')).toBe('true');
+  });
+
+  // @traces 115-FR-007
+  it('ticks all six steps of a complete listing and marks none', async () => {
+    const { page } = await completeCopy();
+
+    expect(ticked(page)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(dotted(page)).toEqual([]);
+    // The phone bar carries the current step's mark, as the list does.
+    expect(page.querySelector('nav > button .done')).not.toBeNull();
+    expect(page.querySelector('nav > button .dot')).toBeNull();
+  });
+
+  // @traces 115-FR-007 115-FR-013
+  it("marks the phone bar with the current step's mark only", async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    await press(harness, page);
+    expect(page.querySelector('nav > button .dot')).not.toBeNull();
+
+    // Step 4 is optional and done: its tick, not the other steps' dots.
+    page.querySelectorAll<HTMLButtonElement>('nav ol button')[3]?.click();
+    harness.detectChanges();
+    expect(current(page)[0]).toMatch(/^4 /);
+    expect(page.querySelector('nav > button .dot')).toBeNull();
+    expect(page.querySelector('nav > button .done')).not.toBeNull();
+  });
+
+  // @traces 115-FR-009
+  it('asks the server once nothing is missing here, and says the listing is complete', async () => {
+    const { harness, page } = await completeCopy();
+
+    sendButton(page).focus();
+    sendButton(page).click();
+    harness.detectChanges();
+    const check = await request();
+    expect(check.request.method).toBe('POST');
+    expect(check.request.url).toMatch(/listing-drafts\/d1\/check$/);
+    // A disabled button would drop the focus the press keeps on it.
+    expect(sendButton(page).disabled).toBe(false);
+    expect(sendButton(page).getAttribute('aria-disabled')).toBe('true');
+    expect(sendButton(page).getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(sendButton(page));
+    // A press while it answers asks nothing more.
+    sendButton(page).click();
+    harness.detectChanges();
+    await pause();
+    expect(TestBed.inject(HttpTestingController).match(() => true)).toEqual([]);
+
+    await answered(harness, check, { warnings: [] });
+
+    expect(sendButton(page).getAttribute('aria-disabled')).toBeNull();
+    expect(text(summary(page))).toBe('Totul e complet');
+    expect(document.activeElement).toBe(sendButton(page));
+    expect(dotted(page)).toEqual([]);
+  });
+
+  // @traces 115-FR-005 115-FR-009
+  it('shows a warning the server alone knows under its field, and still calls the listing complete', async () => {
+    const { harness, page } = await completeCopy();
+
+    await press(harness, page);
+    await answered(harness, await request(), {
+      warnings: [{ code: 'cui_in_use', field: 'steps.6.cui' }],
+    });
+
+    expect(text(summary(page))).toBe('Totul e complet');
+    const note = page.querySelector('#listing-cui-error') as HTMLElement;
+    expect(text(note)).toBe(
+      'Acest CUI apare deja într-o altă cerere. Îl verificăm când trimiți.',
+    );
+    expect(note.classList).toContain('warning');
+    expect(cuiInput(page).getAttribute('aria-invalid')).toBeNull();
+    expect(ticked(page)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  // @traces 115-FR-009 115-FR-011
+  it('shows what the server finds missing, until the listing changes', async () => {
+    const { harness, page } = await completeCopy();
+
+    await press(harness, page);
+    await answered(
+      harness,
+      await request(),
+      {
+        code: 'listing_incomplete',
+        errors: [{ code: 'required', field: 'files' }],
+        warnings: [],
+      },
+      422,
+    );
+
+    expect(text(summary(page).querySelector('h2'))).toBe(
+      'Mai lipsește: 1 lucru',
+    );
+    expect(text(summary(page).querySelector('button'))).toBe(
+      'Adaugă cel puțin o fotografie',
+    );
+    expect(dotted(page)).toEqual([5]);
+    expect(document.activeElement).toBe(summary(page));
+
+    const name = page.querySelector<HTMLInputElement>(
+      'mf-details-step [name="name"]',
+    ) as HTMLInputElement;
+    await pause();
+    fillIn(harness, name, 'Service Popescu și fiii');
+
+    // The last missing thing gone, the list goes; only the server says
+    // the listing is complete.
+    expect(dotted(page)).toEqual([]);
+    expect(text(summary(page))).toBe('');
+  });
+
+  // @traces 115-FR-009 115-FR-011
+  it('drops a server list for a copy that changed while it was judged', async () => {
+    const { harness, page } = await completeCopy();
+
+    sendButton(page).click();
+    harness.detectChanges();
+    const check = await request();
+    const name = page.querySelector<HTMLInputElement>(
+      'mf-details-step [name="name"]',
+    ) as HTMLInputElement;
+    fillIn(harness, name, 'Service Popescu și fiii');
+    await answered(
+      harness,
+      check,
+      {
+        code: 'listing_incomplete',
+        errors: [{ code: 'required', field: 'files' }],
+        warnings: [],
+      },
+      422,
+    );
+
+    expect(dotted(page)).toEqual([]);
+    expect(text(summary(page))).toBe('');
+  });
+
+  // @traces 115-FR-001 115-FR-008
+  it('lists an e-mail never typed as missing, without asking the server', async () => {
+    seed({ data: COMPLETE });
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    await press(harness, page);
+
+    expect(
+      TestBed.inject(HttpTestingController).match((r) =>
+        r.url.endsWith('/check'),
+      ),
+    ).toEqual([]);
+    expect(text(summary(page).querySelector('h2'))).toBe(
+      'Mai lipsește: 1 lucru',
+    );
+    expect(
+      summary(page).querySelector('[data-step="1"] button'),
+    ).not.toBeNull();
+    expect(dotted(page)).toEqual([1]);
+  });
+
+  // @traces 115-FR-009 115-FR-011
+  it('says the check failed when the server cannot answer', async () => {
+    const { harness, page } = await completeCopy();
+
+    await press(harness, page);
+    await answered(harness, await request(), null, 500);
+
+    expect(text(summary(page))).toBe('Nu am putut verifica. Încearcă din nou.');
+    expect(sendButton(page).getAttribute('aria-disabled')).toBeNull();
+  });
+
+  // @traces 115-FR-008
+  it('takes an item to its field: the step made current and the field focused', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    await press(harness, page);
+    scrolls.length = 0;
+
+    const item = [...summary(page).querySelectorAll('button')].find(
+      (button) => text(button) === 'Scrie CUI-ul firmei',
+    ) as HTMLButtonElement;
+    item.click();
+    harness.detectChanges();
+
+    expect(document.activeElement).toBe(cuiInput(page));
+    expect(current(page)).toEqual(['6 Verificare · obligatoriu']);
+    expect(scrolls).toContainEqual(
+      expect.objectContaining({ block: 'center' }),
+    );
+  });
+
+  // @traces 115-FR-008
+  it('opens a closed part around the field it goes to', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    await press(harness, page);
+    const name = page.querySelector(
+      'mf-details-step [data-field="steps.1.name"]',
+    ) as HTMLElement;
+    const closed = document.createElement('details');
+    name.replaceWith(closed);
+    closed.append(name);
+
+    const item = [...summary(page).querySelectorAll('button')].find(
+      (button) => text(button) === 'Între 2 și 80 de caractere',
+    ) as HTMLButtonElement;
+    item.click();
+    harness.detectChanges();
+
+    expect(closed.open).toBe(true);
+    expect(document.activeElement).toBe(name);
   });
 });

@@ -1,3 +1,5 @@
+import { refOf } from '@motor-fix/contracts/listing-check';
+
 import {
   brandsOf,
   dropUnlisted,
@@ -5,7 +7,6 @@ import {
   jobsOf,
   type MarkedBrand,
   mark,
-  refOf,
   tickAll,
   toggleFuel,
   toggleJob,
