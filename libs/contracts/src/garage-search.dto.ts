@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsIn,
   IsOptional,
@@ -17,10 +17,11 @@ import { BrandRefDto, GarageBrandAnswerDto } from './garage-brands.dto';
 import { FACILITIES, type Facility } from './garage-hours';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 import { NearQueryDto } from './near.dto';
-import { SEARCH_RADII, type SearchRadius } from './search-place';
-
-// The cards one page shows, so the most an `ids` re-read names.
-export const SEARCH_IDS_MAX = 20;
+import {
+  SEARCH_IDS_MAX,
+  SEARCH_RADII,
+  type SearchRadius,
+} from './search-place';
 
 // Up to one page of different garage ids, comma-separated; a repeated key
 // arrives as a list and is refused.
@@ -86,8 +87,12 @@ export class GarageSearchQueryDto extends NearQueryDto {
     enum: SEARCH_RADII,
     type: 'integer',
   })
-  @IsOptional()
-  @Type(() => Number)
+  // Only the digits "25" or "50": Number() would also read "2.5e1" or "0x19"
+  // as 25, and IsOptional would let a null through.
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) =>
+    value === '25' || value === '50' ? Number(value) : value,
+  )
   @IsIn(SEARCH_RADII)
   radius?: SearchRadius;
 

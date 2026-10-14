@@ -10,6 +10,7 @@ import {
   untracked,
 } from '@angular/core';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { SEARCH_IDS_MAX } from '@motor-fix/contracts/search-place';
 import { filter, type Observable, Subject } from 'rxjs';
 
 import { backoffDelay, readEvents, SILENT_FOR } from '../live/stream';
@@ -28,9 +29,6 @@ type PublicLiveState = 'closed' | 'reconnecting' | 'open';
 
 const ASLEEP_FOR = 60_000;
 
-// The stream takes one page of garages at most.
-const GARAGES_MAX = 20;
-
 // What a view names under each parameter, empty when it names nothing there.
 const PARAMS: readonly (readonly [string, (view: PublicView) => string])[] = [
   [
@@ -38,7 +36,7 @@ const PARAMS: readonly (readonly [string, (view: PublicView) => string])[] = [
     (view) =>
       [...new Set([view.garage, ...(view.garages ?? [])])]
         .filter((id): id is string => Boolean(id))
-        .slice(0, GARAGES_MAX)
+        .slice(0, SEARCH_IDS_MAX)
         .join(','),
   ],
   ['mechanics', (view) => view.mechanic ?? ''],

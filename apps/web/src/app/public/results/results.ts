@@ -16,6 +16,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
 import {
   nearOf,
+  SEARCH_RADII,
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
 import {
@@ -35,7 +36,7 @@ import { followPublicView, PublicLive } from '../live';
 
 // A link from a saved car names the brand by its id; every other one by slug.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const WIDE = 50;
+const WIDE = SEARCH_RADII[1];
 // A suspended card's fade, and the burst of events that makes one read.
 const FADE_MS = 300;
 const BURST_MS = 300;
