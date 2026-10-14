@@ -278,8 +278,12 @@ export class Results {
     const page = untracked(this.answer);
     if (!page) return;
     const loaded = page.items.some((garage) => garage.id === id);
-    if (kind === 'garage.suspended' && loaded) return this.leave(id);
-    if (CARD_KINDS.has(kind) && loaded) this.wanted.add(id);
+    // A suspended card fades out; the counts come from a re-read, which never
+    // holds it, so one already re-read after the suspension is not lowered twice.
+    if (kind === 'garage.suspended' && loaded) {
+      this.leave(id);
+      this.countsWanted = true;
+    } else if (CARD_KINDS.has(kind) && loaded) this.wanted.add(id);
     // A review names itself, not its garage; only loaded garages send them.
     else if (REVIEWS.has(kind))
       for (const garage of page.items) this.wanted.add(garage.id);
@@ -383,16 +387,7 @@ export class Results {
     const now = untracked(this.answer);
     const garage = now?.items.find((g) => g.id === id);
     if (!now || !garage) return;
-    const takes = garage.stance === 'works_on';
-    this.answer.set({
-      ...now,
-      counts: {
-        doesNotTake: now.counts.doesNotTake - (takes ? 0 : 1),
-        worksOn: now.counts.worksOn - (takes ? 1 : 0),
-      },
-      items: now.items.filter((g) => g.id !== id),
-      total: now.total - 1,
-    });
+    this.answer.set({ ...now, items: now.items.filter((g) => g.id !== id) });
   }
 
   private write(queryParams: Record<string, string | null>) {

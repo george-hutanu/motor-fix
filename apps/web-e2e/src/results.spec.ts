@@ -153,8 +153,12 @@ test.describe('the Results page @seeded', () => {
     await page.getByRole('button', { name: 'Reîncearcă' }).click();
     await expect(cards(page).nth(0)).toHaveText(garages[0].name);
 
-    expect(asked).toHaveLength(2);
-    expect(new URL(asked[1] ?? '').searchParams.has('log')).toBe(false);
+    // Other specs' garage events re-read the counts or cards here too: the
+    // first search asks to be logged, and nothing after it does.
+    const logs = asked.map((url) => new URL(url).searchParams.has('log'));
+    expect(logs.length).toBeGreaterThanOrEqual(2);
+    expect(logs[0]).toBe(true);
+    expect(logs.slice(1)).not.toContain(true);
     await page.waitForTimeout(1_000);
     expect(await logged()).toBe(before);
   });

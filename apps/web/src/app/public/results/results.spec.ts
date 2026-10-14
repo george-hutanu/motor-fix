@@ -716,7 +716,7 @@ describe('Results', () => {
     });
 
     // @traces 267-FR-019
-    it('fades a suspended card out over 300 ms, then removes it and lowers the counts by one', async () => {
+    it('fades a suspended card out over 300 ms, then removes it and lowers the counts by one from one re-read', async () => {
       const announce = quietly();
       await loaded();
 
@@ -733,6 +733,12 @@ describe('Results', () => {
       await settle();
 
       expect(names()).toEqual(['Service Doi']);
+      expect(reads).toHaveLength(2);
+      expect(reads[1]?.params).toEqual({ brand: 'bmw' });
+      await reads[1]?.answer(
+        pageOf({ counts: { doesNotTake: 17, worksOn: 30 }, total: 47 }),
+      );
+      expect(names()).toEqual(['Service Doi']);
       expect(tally()).toBe(
         '47 de service‑uri găsite · 30 lucrează pe BMW · 17 nu o primesc',
       );
@@ -740,7 +746,30 @@ describe('Results', () => {
         'Atelier Unu nu mai apare în listă',
         'polite',
       );
-      expect(reads).toHaveLength(1);
+    });
+
+    // @traces 267-FR-019
+    it('does not lower the counts twice when a re-read already left the suspended garage out', async () => {
+      quietly();
+      await loaded();
+
+      // Another garage's event re-reads the counts after the suspension was
+      // written but before its own event reached the page.
+      send('verification.decided', 'verification-1');
+      await coalesce();
+      await reads[1]?.answer(
+        pageOf({ counts: { doesNotTake: 17, worksOn: 30 }, total: 47 }),
+      );
+      send('garage.suspended', 'one');
+      await coalesce();
+      await reads[2]?.answer(
+        pageOf({ counts: { doesNotTake: 17, worksOn: 30 }, total: 47 }),
+      );
+
+      expect(names()).toEqual(['Service Doi']);
+      expect(tally()).toBe(
+        '47 de service‑uri găsite · 30 lucrează pe BMW · 17 nu o primesc',
+      );
     });
 
     // @traces 267-FR-019
