@@ -152,6 +152,7 @@ const searches = () =>
 const keep = (place: Place) =>
   localStorage.setItem('mf-place', JSON.stringify(place));
 
+// @traces 267-FR-012 267-FR-013 267-FR-015 267-FR-016 267-FR-017 267-FR-018 267-FR-019 267-FR-020 267-FR-021 267-FR-022
 describe('Results', () => {
   describe('in the browser', () => {
     beforeEach(() => configure());

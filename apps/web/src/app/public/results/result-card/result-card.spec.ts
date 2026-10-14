@@ -54,6 +54,7 @@ async function render(
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
 
+// @traces 267-FR-014
 describe('ResultCard', () => {
   // @traces 267-brand-results-FR-014
   it('draws the initials of the first two words of the name, hidden from screen readers', async () => {

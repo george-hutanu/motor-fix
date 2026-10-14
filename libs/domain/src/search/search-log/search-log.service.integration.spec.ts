@@ -106,6 +106,7 @@ async function logCounts() {
 }
 
 // @traces 267-brand-results-FR-007
+// @traces 267-FR-007 267-FR-008
 describe('the search log, through the search', () => {
   it('writes one row for a new search: the brand and the cell of the rounded place', async () => {
     const res = await search({

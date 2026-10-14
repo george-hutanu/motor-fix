@@ -102,6 +102,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+// @traces 267-FR-018
 describe('PublicLive', () => {
   it('opens no stream while no public view is open', async () => {
     setUp();

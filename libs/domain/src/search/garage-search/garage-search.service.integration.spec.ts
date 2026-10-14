@@ -111,6 +111,7 @@ const tamper = (cursor: string, change: Record<string, unknown>) =>
   ).toString('base64url');
 
 // @traces 879-FR-009
+// @traces 267-FR-001 267-FR-002 267-FR-003 267-FR-024
 describe('counting searches', () => {
   it('counts a first page with garages as results, an empty one as none, and no later page or refused search', async () => {
     const [results, none] = [await searches('results'), await searches('none')];

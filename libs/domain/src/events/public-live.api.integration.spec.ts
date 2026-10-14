@@ -200,6 +200,7 @@ async function brand(active = true) {
   ).id;
 }
 
+// @traces 267-FR-018
 describe('the public live stream', () => {
   it('opens for a visitor without a session and greets it with hello', async () => {
     const live = await stream(app);

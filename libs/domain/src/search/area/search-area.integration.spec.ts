@@ -50,6 +50,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+// @traces 267-FR-005
 describe('the area around a place', () => {
   it('holds a fixed garage 24.9 km away and not one 25.1 km away', async () => {
     const near = await garage({ at: 24_900, kind: 'company' });

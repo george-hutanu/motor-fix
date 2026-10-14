@@ -421,6 +421,7 @@ function ruleProblems(
   ];
 }
 
+// @traces 267-FR-023
 describe('alert rules', () => {
   const files = alertFiles();
   const own = (service: Service) => files[`${service}.json`];

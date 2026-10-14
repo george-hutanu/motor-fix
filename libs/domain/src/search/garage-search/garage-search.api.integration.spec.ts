@@ -56,6 +56,7 @@ afterAll(async () => {
 const search = (query: Record<string, string>) =>
   request(app.getHttpServer()).get('/search/garages').query(query);
 
+// @traces 267-FR-004 267-FR-005 267-FR-006 267-FR-024
 describe('GET /search/garages', () => {
   it('answers a visitor without a session with a page of garages', async () => {
     const garage = await prisma.garage.create({

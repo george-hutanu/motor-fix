@@ -102,6 +102,7 @@ beforeEach(async () => {
   jest.restoreAllMocks();
 });
 
+// @traces 267-FR-010
 describe('recording an event in the change’s transaction', () => {
   it('commits the change and its event together', async () => {
     const driver = randomUUID();

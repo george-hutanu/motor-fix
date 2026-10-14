@@ -12,6 +12,7 @@ function errors(query: Record<string, unknown>) {
   }).flatMap((error) => Object.values(error.constraints ?? {}));
 }
 
+// @traces 267-FR-004 267-FR-005 267-FR-006
 describe('GarageSearchQueryDto', () => {
   it('takes a brand id alone', () => {
     expect(errors({ brandId: BRAND })).toEqual([]);
