@@ -13,10 +13,10 @@ import { AUTH_REDIS } from '../../auth/attempts';
 // is never read again and expires by itself. No CDN keeps an answer (the
 // route is no-store), so every search still reaches the API and its log.
 // The `v1` in the keys is the answer's shape: a change to the DTO bumps it.
-export const SEARCH_SECONDS = 60;
-export const SEARCH_GENERATION = 'garage-search-gen:v1';
+const SEARCH_SECONDS = 60;
+const SEARCH_GENERATION = 'garage-search-gen:v1';
 
-export interface SearchKey {
+interface SearchKey {
   brandId: string;
   // The place as its shared 3-decimal text.
   near?: string;
@@ -24,7 +24,7 @@ export interface SearchKey {
   cursor?: string;
 }
 
-export const searchKey = (
+const searchKey = (
   generation: string,
   { brandId, cursor, near, radiusKm }: SearchKey,
 ) =>

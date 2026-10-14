@@ -17,7 +17,7 @@ import { type LiveView, liveView } from '../live/view';
 
 // What an open public view shows: a garage's page, a mechanic's, or the
 // results for a brand with the garages of the page loaded.
-export interface PublicView {
+interface PublicView {
   garage?: string | undefined;
   garages?: readonly string[] | undefined;
   mechanic?: string | undefined;

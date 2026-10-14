@@ -91,7 +91,7 @@ const encode = (cursor: Cursor) =>
   Buffer.from(JSON.stringify(cursor)).toString('base64url');
 
 // The brand by its catalogue id, or by its slug as the address bar holds it.
-export type BrandKey = string | { slug: string };
+type BrandKey = string | { slug: string };
 
 const CARD = {
   brandNote: true,

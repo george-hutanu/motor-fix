@@ -7,7 +7,7 @@ import {
 
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
-export interface InArea {
+interface InArea {
   distanceM: number;
   mobile: boolean;
 }
