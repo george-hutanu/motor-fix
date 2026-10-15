@@ -48,6 +48,11 @@ import { PUSH_CONFIG, type PushConfig } from './push/push-config';
 import { PushSubscriptionsController } from './push/push-subscriptions/push-subscriptions.controller';
 import { PushSubscriptionsService } from './push/push-subscriptions/push-subscriptions.service';
 import {
+  QUOTE_ACCEPTED_QUEUE,
+  type QuoteAcceptedEvent,
+  QuoteAcceptedFanOut,
+} from './quote-accepted/quote-accepted.fan-out';
+import {
   QUOTE_RECEIVED_QUEUE,
   QuoteReceivedFanOut,
   type QuoteSentEvent,
@@ -83,6 +88,7 @@ const WORKER = Symbol('NOTIFICATIONS_WORKER');
 const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
+const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
@@ -120,6 +126,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
+    @Optional()
+    @Inject(QUOTE_ACCEPTED_WORKER)
+    private readonly quoteAcceptedWorker?: Worker | null,
     @Optional()
     @Inject(VERIFICATION_RESULT_WORKER)
     private readonly verificationResultWorker?: Worker | null,
@@ -321,6 +330,32 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        QuoteAcceptedFanOut,
+        {
+          inject: [QuoteAcceptedFanOut],
+          provide: QUOTE_ACCEPTED_WORKER,
+          useFactory: (fanOut: QuoteAcceptedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('QuoteAccepted').error(
+                'PUBLIC_WEB_URL missing; accepted quote messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<QuoteAcceptedEvent>(
+              QUOTE_ACCEPTED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            return worker;
+          },
+        },
         VerificationResultFanOut,
         {
           inject: [VerificationResultFanOut],
@@ -355,6 +390,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.newsWorker?.close();
     await this.requestReceivedWorker?.close();
     await this.quoteReceivedWorker?.close();
+    await this.quoteAcceptedWorker?.close();
     await this.verificationResultWorker?.close();
     await this.worker?.close();
     await this.jobs.close();

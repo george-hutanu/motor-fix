@@ -207,6 +207,18 @@
     },
     {
       "kind": "queue",
+      "name": "quote-accepted",
+      "source": "libs/domain/src/notifications/quote-accepted/quote-accepted.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
+      "reason": "one QuoteAccepted log line per job naming the quote id and how many staff were told, or why none; BullMQ's queue metrics cover depth and failures; the acceptances themselves are counted by motorfix_quote_accepts_total",
+      "story": "ST-222"
+    },
+    {
+      "kind": "queue",
       "name": "quote-received",
       "source": "libs/domain/src/notifications/quote-received/quote-received.fan-out.ts",
       "dashboard": "motorfix-queues",

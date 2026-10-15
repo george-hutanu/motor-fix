@@ -80,6 +80,7 @@ export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push/push-config';
+export { QUOTE_ACCEPTED_CONSUMER } from './notifications/quote-accepted/quote-accepted.fan-out';
 export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-received.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
