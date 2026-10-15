@@ -87,7 +87,8 @@ failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
 with a screenshot under `outDir`. A guarded screen (`/app/...`) opens only
 signed in: `await signIn(context, 'driver')` on a fresh browser context, before
 its first page, gives it a new session of that role's seeded account, as the
-sweep does for `path@role`. The dashboard toast is one such flow: sign in as
+sweep does for `path@role`, with the account set to Romanian
+(`signIn(context, 'driver', 'en')` for English). The dashboard toast is one such flow: sign in as
 the driver, open `/app/driver`, click "Retrimite" on the e-mail banner and
 check the toast. Open every context with `serviceWorkers: 'block'`, as
 `apps/web-e2e` does: the production build registers ngsw, whose requests no
