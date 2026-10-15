@@ -44,8 +44,9 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { callEndpoints, changedEndpoints, SEEDED, seedPassword, signIn } from "./endpoints.mjs";
+import { callEndpoints, changedEndpoints, seededSession } from "./endpoints.mjs";
 import { diffShots, parseJson, readReport, visualOutcome } from "./baseline.mjs";
+import * as helpers from "./flow-helpers.mjs";
 import { appsFor, cutOffFinding, markPreExisting, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, trustBaseline, verdict, workerCacheOutcome } from "./findings.mjs";
 import {
   APP_SCRIPTS,
@@ -89,7 +90,8 @@ export function parseArgs(argv) {
   };
 }
 
-// What a PR's QA flows are called with: signIn(context, role) opens a guarded screen as a seeded account.
+// What a PR's QA flows are called with, here and by `precheck.mjs --check`: signIn(context, role) opens a
+// guarded screen as a seeded account; the shared helpers (flow-helpers.mjs) do the waits flows got wrong.
 export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }) => ({
   baseURL: webURL,
   apiURL,
@@ -98,7 +100,25 @@ export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }
   worktree,
   signIn: flowSignIn({ session, baseURL: webURL }),
   ...apiHealth(apiURL),
+  ...helpers,
 });
+
+/**
+ * Runs `fn` (the flows) with every unhandled rejection it leaves turned into a high finding, so a flow that
+ * forgot an await is reported instead of ending the run. The handler lives only as long as `fn`, plus the turn
+ * that lets a rejection left at its very end surface.
+ */
+export async function collectRejections(findings, fn) {
+  const onRejection = (reason) =>
+    findings.push(stepFinding("A flow left an unhandled rejection", String(reason?.stack ?? reason).split("\n").slice(0, 3).join(" / "), "high"));
+  process.on("unhandledRejection", onRejection);
+  try {
+    return await fn();
+  } finally {
+    await new Promise((resolve) => setImmediate(resolve));
+    process.off("unhandledRejection", onRejection);
+  }
+}
 
 /**
  * What each app is launched with beside the shared env: its port, and the web app's address wherever a
@@ -380,10 +400,7 @@ async function main(argv) {
 
     phase = "sweep";
     log(`sweep: ${opt.routes.join(", ")} × ${Object.keys(VIEWPORTS).length} viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
-    const session = async (role) => {
-      if (!SEEDED[role]) throw new Error(`no seeded account for the role ${role}`);
-      return (await signIn(apiURL, role, seedPassword())).refresh;
-    };
+    const session = seededSession(apiURL);
     const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot: root, session });
     // Evidence relative to the report: shots/ stays in --out, beside it; only the report is copied into specs/.
     // A layout finding the baseline run already reported is main's, not this PR's: kept, at medium at most.
@@ -418,7 +435,7 @@ async function main(argv) {
       phase = "flows";
       const flow = await import(pathToFileURL(resolve(opt.flows)).href);
       try {
-        const extra = (await flow.default(flowArgs({ webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, session }))) ?? [];
+        const extra = (await collectRejections(findings, () => flow.default(flowArgs({ webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, session })))) ?? [];
         findings.push(...extra);
         log(`flows: ${extra.length} finding(s)`);
       } catch (error) {

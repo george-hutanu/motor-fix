@@ -6,6 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { SEEDED } from './endpoints.mjs';
+import * as helpers from './flow-helpers.mjs';
 import { appLaunchEnv, filesBetween, flowArgs, parseArgs, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
@@ -178,6 +180,65 @@ describe('run: what each app is launched with', () => {
     assert.equal(env.worker.PUBLIC_WEB_URL, env.web.PUBLIC_WEB_URL);
     assert.deepEqual([env.api.PORT, env.web.PORT, env.worker.PORT], ['3100', '4100', '3200']);
     assert.equal(env.web.API_INTERNAL_URL, 'http://127.0.0.1:3100');
+  });
+});
+
+// @traces 1230-FR-006
+describe('run: the shared flow helpers', () => {
+  it('hands the flows waitForText, openSheet, stepButton and the seeded accounts, next to the rest', () => {
+    const args = flowArgs({ webURL: 'http://127.0.0.1:4100', apiURL: 'http://127.0.0.1:3100', outDir: '/o', repoRoot: '/r', worktree: '/w', session: async () => 'r' });
+    for (const name of ['waitForText', 'openSheet', 'stepButton']) assert.equal(args[name], helpers[name], name);
+    assert.equal(args.accounts, SEEDED);
+    for (const name of ['baseURL', 'apiURL', 'signIn', 'health', 'ready']) assert.ok(args[name], name);
+  });
+});
+
+// @traces 1230-FR-008
+describe('run: an unhandled rejection a flow leaves', () => {
+  // In a child process: the test runner treats any unhandled rejection in its own process as a failure.
+  const probe = (body) => {
+    const dir = mkdtempSync(join(tmpdir(), 'run-rejections-'));
+    const file = join(dir, 'probe.mjs');
+    writeFileSync(
+      file,
+      `import { collectRejections } from ${JSON.stringify(new URL('./run.mjs', import.meta.url).href)};
+const before = process.listenerCount('unhandledRejection');
+const findings = [];
+let threw = null;
+${body}
+console.log(JSON.stringify({ findings, before, after: process.listenerCount('unhandledRejection'), threw }));
+`,
+    );
+    const r = spawnSync(process.execPath, [file], { encoding: 'utf8', timeout: 15_000 });
+    rmSync(dir, { recursive: true, force: true });
+    assert.equal(r.status, 0, r.stderr);
+    return JSON.parse(r.stdout.trim().split('\n').at(-1));
+  };
+
+  it('becomes one high finding each, naming the error, and the run goes on', () => {
+    const out = probe(`const result = await collectRejections(findings, async () => {
+  Promise.reject(new Error('the bell never rang'));
+  Promise.reject(new Error('the sheet never opened'));
+  return 'done';
+});
+if (result !== 'done') throw new Error('the flows result was lost');`);
+    assert.equal(out.findings.length, 2);
+    assert.deepEqual(out.findings.map((f) => f.severity), ['high', 'high']);
+    assert.match(JSON.stringify(out.findings), /the bell never rang/);
+    assert.match(JSON.stringify(out.findings), /the sheet never opened/);
+    assert.equal(out.after, out.before);
+  });
+
+  it('removes its handler when the flows throw too', () => {
+    const out = probe(`try {
+  await collectRejections(findings, async () => {
+    Promise.reject(new Error('left behind'));
+    throw new Error('the flow threw');
+  });
+} catch (error) { threw = error.message; }`);
+    assert.equal(out.threw, 'the flow threw');
+    assert.equal(out.findings.length, 1);
+    assert.equal(out.after, out.before);
   });
 });
 

@@ -102,6 +102,17 @@ export async function signIn(apiURL, role, password) {
 }
 
 /**
+ * `session(role)` for the run, the sweep and `precheck.mjs --check`: signs the seeded account of that role in
+ * afresh (refresh tokens rotate) and returns its refresh token.
+ */
+export const seededSession =
+  (apiURL, password = seedPassword()) =>
+  async (role) => {
+    if (!SEEDED[role]) throw new Error(`no seeded account for the role ${role}`);
+    return (await signIn(apiURL, role, password)).refresh;
+  };
+
+/**
  * Call each changed operation once. Returns the findings (each 5xx, see
  * endpointFinding), the calls made with their answers, and the operations
  * skipped with the reason.
