@@ -66,8 +66,9 @@ permissions:
   statuses: write
 
 # One run per PR: a newer head, or a lap dispatched after the run the push
-# started, cancels the older one. A cancelled run writes no final status; the
-# newer run sets pending on its own head.
+# started, cancels the older one. A cancelled run writes no success or
+# failure: it replaces its own pending status with error, and leaves alone
+# one a newer run has set since.
 concurrency:
   group: pr-qa-${{ inputs.pr || github.event.pull_request.number }}
   cancel-in-progress: true
@@ -248,3 +249,16 @@ jobs:
           gh api -X POST "repos/$REPO/statuses/$SHA" -f state="$STATE" -f context=agent-review \
             -f description="$desc" -f target_url="$RUN_URL" > /dev/null
 
+      # A cancelled run's pending status would hold the lap until the wait's limit. It is replaced only while
+      # it is still this run's: on the same head a newer run's status is the newest entry, and is left as it is.
+      - name: agent-review error on the head under test when the lap is cancelled
+        if: cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          owner=$(gh api "repos/$REPO/commits/$SHA/status" --jq '.statuses[] | select(.context == "agent-review") | .target_url')
+          [ "$owner" = "$RUN_URL" ] || { echo "agent-review on $SHA is ${owner:-unset}, not this run's; left as it is"; exit 0; }
+          gh api -X POST "repos/$REPO/statuses/$SHA" -f state=error -f context=agent-review \
+            -f description="PR QA lap $LAP cancelled" -f target_url="$RUN_URL" > /dev/null

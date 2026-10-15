@@ -347,6 +347,16 @@ describe('pr checks', () => {
     assert.equal(once.api().filter((c) => c.includes('actions/runs')).length, 0);
   });
 
+  // @traces 1230-FR-010
+  it("carries each check's link under --json, a status's target URL included, as gh does", () => {
+    const f = fake(routes([run('Biome', 'completed', 'success')], [{ context: 'agent-review', state: 'pending', target_url: 'https://github.com/o/r/actions/runs/77' }]));
+    const r = gh(['pr', 'checks', '160', '--json', 'name,bucket,link'], f);
+    assert.deepEqual(JSON.parse(r.stdout), [
+      { name: 'Biome', bucket: 'pass', link: 'https://x/Biome' },
+      { name: 'agent-review', bucket: 'pending', link: 'https://github.com/o/r/actions/runs/77' },
+    ]);
+  });
+
   it('prints name, bucket and link per line without --json', () => {
     const f = fake(routes([run('Biome', 'completed', 'success')]));
     assert.equal(gh(['pr', 'checks', '160'], f).stdout, 'Biome\tpass\thttps://x/Biome\n');

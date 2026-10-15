@@ -92,18 +92,31 @@ describe('PR QA workflow: the agent-review status', () => {
   });
 
   const verdictStep = statusSteps.find((st) => /STATE: /.test(st)) ?? '';
+  const cancelStep = statusSteps.find((st) => /if: cancelled\(\)/.test(st)) ?? '';
 
   it('ends with success only when the run passed with no blocking findings, failure otherwise', () => {
     assert.match(verdictStep, /-f state="\$STATE" -f context=agent-review/);
     assert.match(verdictStep, /STATE: \$\{\{ job\.status == 'success' && steps\.run\.outputs\.code == '0' && 'success' \|\| 'failure' \}\}/);
   });
 
-  it('writes no final status for a cancelled run or one whose inputs were refused', () => {
+  it('writes no success or failure for a cancelled run or one whose inputs were refused', () => {
     assert.match(verdictStep, /if: \$\{\{ !cancelled\(\) && steps\.inputs\.outcome == 'success' \}\}/);
   });
 
+  // @traces 1230-FR-009
+  it('replaces the pending status a cancelled run left with error, only while that status is still its own', () => {
+    assert.ok(cancelStep, 'a status step that runs on cancel');
+    assert.ok(stepList.indexOf(cancelStep) > stepList.findIndex((st) => /name: The verdict/.test(st)));
+    assert.match(cancelStep, /gh api "repos\/\$REPO\/commits\/\$SHA\/status"/);
+    assert.match(cancelStep, /select\(\.context == "agent-review"\)/);
+    assert.match(cancelStep, /\.target_url/);
+    assert.match(cancelStep, /= "\$RUN_URL" \] \|\| \{.*exit 0; \}\n/);
+    assert.match(cancelStep, /-f state=error -f context=agent-review/);
+    assert.match(cancelStep, /-f description="PR QA lap \$LAP cancelled"/);
+  });
+
   it("uses the run's own token, on the commit under test, linking the run", () => {
-    assert.equal(statusSteps.length, 2);
+    assert.equal(statusSteps.length, 3);
     for (const st of statusSteps) {
       assert.match(st, /GH_TOKEN: \$\{\{ github\.token \}\}/);
       assert.match(st, /target_url="\$RUN_URL"/);
@@ -112,9 +125,9 @@ describe('PR QA workflow: the agent-review status', () => {
 });
 
 describe('PR QA workflow: no secrets', () => {
-  it('references no secret, and its own token only in the two status steps and the baseline download', () => {
+  it('references no secret, and its own token only in the three status steps and the baseline download', () => {
     assert.doesNotMatch(code, /secrets\.|GITHUB_TOKEN|ANTHROPIC|TYPESAFE/i);
-    assert.equal(code.match(/github\.token/g)?.length, 3);
+    assert.equal(code.match(/github\.token/g)?.length, 4);
   });
 
   it('keeps no git credentials in either checkout', () => {
