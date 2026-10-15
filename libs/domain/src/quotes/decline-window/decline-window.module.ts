@@ -56,7 +56,7 @@ export class DeclineWindowModule
           provide: DECLINE_WINDOW_JOBS,
           useFactory: () => {
             const queue = new Queue(DECLINE_WINDOW_QUEUE, {
-              connection: { url: options.redisUrl },
+              connection: { maxRetriesPerRequest: null, url: options.redisUrl },
               telemetry: queueTelemetry(),
             });
             observeQueue(queue);

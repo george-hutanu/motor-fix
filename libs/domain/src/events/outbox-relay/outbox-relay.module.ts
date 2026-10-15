@@ -7,11 +7,12 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { type JobsOptions, Queue } from 'bullmq';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
 
 import { type EventConsumer, OutboxRelay } from './outbox-relay';
 import { createPrisma } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { borrowStore, returnStore } from '../../store/store';
 
 const RELAY_PRISMA = Symbol('RELAY_PRISMA');
 const RELAY_REDIS = Symbol('RELAY_REDIS');
@@ -52,17 +53,8 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
         },
         {
           provide: RELAY_REDIS,
-          useFactory: () => {
-            const redis = new Redis(options.redisUrl, {
-              commandTimeout: 2000,
-              connectTimeout: 2000,
-              enableOfflineQueue: false,
-              maxRetriesPerRequest: 1,
-            });
-            // The relay logs a failed batch; the client's own errors add nothing.
-            redis.on('error', () => undefined);
-            return redis;
-          },
+          // The relay logs a failed batch.
+          useFactory: () => borrowStore(options.redisUrl),
         },
         {
           provide: RELAY_QUEUES,
@@ -78,7 +70,7 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
                     connection: {
                       commandTimeout: 2000,
                       enableOfflineQueue: false,
-                      maxRetriesPerRequest: 1,
+                      maxRetriesPerRequest: null,
                       url: options.redisUrl,
                     },
                     defaultJobOptions: jobs,
@@ -106,7 +98,7 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
   async onApplicationShutdown() {
     await this.relay.stop();
     for (const { queue } of this.queues) await queue.close();
-    this.redis.disconnect();
+    await returnStore(this.redis);
     await this.prisma.$disconnect();
   }
 }

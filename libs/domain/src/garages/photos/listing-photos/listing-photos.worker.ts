@@ -47,7 +47,7 @@ export class ListingPhotosWorkerModule implements OnApplicationShutdown {
           useFactory: () => {
             if (!telemetryStarted()) return undefined;
             const queue = new Queue(LISTING_PHOTOS_QUEUE, {
-              connection: { url: options.redisUrl },
+              connection: { maxRetriesPerRequest: null, url: options.redisUrl },
             });
             observeQueue(queue);
             return queue;

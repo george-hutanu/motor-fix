@@ -5,7 +5,7 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
 
 import { AccountLoader } from './account-loader';
 import { AccountsService } from './accounts.service';
@@ -35,19 +35,7 @@ import { AuditHistoryController } from '../audit/audit-history/audit-history.con
 import { AuditHistoryService } from '../audit/audit-history/audit-history.service';
 import { EVENT_PORT, outbox } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
-
-function connect(url: string) {
-  // A Redis that does not answer within 2 s counts as down (the sign-in rule).
-  const redis = new Redis(url, {
-    commandTimeout: 2000,
-    connectTimeout: 2000,
-    lazyConnect: true,
-    maxRetriesPerRequest: 1,
-  });
-  // A down Redis only skips the attempt limits; Attempts logs it.
-  redis.on('error', () => undefined);
-  return redis;
-}
+import { borrowStore, returnStore } from '../store/store';
 
 @Module({})
 export class AuthModule implements OnApplicationShutdown {
@@ -99,7 +87,10 @@ export class AuthModule implements OnApplicationShutdown {
           provide: PRISMA,
           useFactory: () => createPrisma(options.databaseUrl),
         },
-        { provide: AUTH_REDIS, useFactory: () => connect(options.redisUrl) },
+        {
+          provide: AUTH_REDIS,
+          useFactory: () => borrowStore(options.redisUrl),
+        },
         { provide: SESSION_EVENTS, useExisting: AUTH_REDIS },
         {
           inject: [AUTH_REDIS],
@@ -124,7 +115,7 @@ export class AuthModule implements OnApplicationShutdown {
   }
 
   async onApplicationShutdown() {
-    this.redis.disconnect();
+    await returnStore(this.redis);
     await this.prisma.$disconnect();
   }
 }

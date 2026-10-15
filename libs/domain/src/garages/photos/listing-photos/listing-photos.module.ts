@@ -30,7 +30,7 @@ export class ListingPhotosModule {
           provide: LISTING_PHOTOS_JOBS,
           useFactory: () => {
             const queue = new Queue(LISTING_PHOTOS_QUEUE, {
-              connection: { url: options.redisUrl },
+              connection: { maxRetriesPerRequest: null, url: options.redisUrl },
               telemetry: queueTelemetry(),
             });
             observeQueue(queue);
