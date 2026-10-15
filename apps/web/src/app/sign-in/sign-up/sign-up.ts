@@ -22,6 +22,7 @@ import {
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 import { characters } from '../../characters';
+import { Consent as Analytics } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import { Consent, consentControl } from '../consent/consent';
 import { ProviderButtons } from '../providers/providers';
@@ -50,6 +51,7 @@ import { ADDRESS, type AuthData, type AuthSwitch } from '../sign-in';
 export class SignUp {
   private readonly session = inject(Session);
   private readonly i18n = inject(I18n);
+  private readonly analytics = inject(Analytics);
   private readonly task = injectOverlayTask<
     AuthData,
     'signed-in' | AuthSwitch
@@ -76,7 +78,13 @@ export class SignUp {
   });
 
   protected readonly save = taskSave({
-    done: () => this.task.close('signed-in'),
+    done: () => {
+      this.analytics.track('sign_up_completed', {
+        method: 'email',
+        role: 'driver',
+      });
+      this.task.close('signed-in');
+    },
     form: this.form,
     messages: 'public.signUp',
     send: async ({ email = '', name = '', password = '' }) => {

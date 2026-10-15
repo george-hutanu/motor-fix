@@ -30,6 +30,8 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, toast } from '@motor-fix/ui-cockpit';
 
+import { Consent } from '../../../consent/consent';
+
 export interface DeclineRequestData {
   requestId: string;
   // The row's driver and car, named under the title.
@@ -66,6 +68,7 @@ const ENDING = new Set([403, 404, 409]);
 export class DeclineRequestDialog {
   private readonly requests = inject(GarageRequestsService);
   private readonly i18n = inject(I18n);
+  private readonly consent = inject(Consent);
   protected readonly task = injectOverlayTask<
     DeclineRequestData,
     OverlayResult<DeclineRequestResult>
@@ -91,6 +94,7 @@ export class DeclineRequestDialog {
 
   protected readonly save = taskSave({
     done: () => {
+      this.consent.track('request_answered', { action: 'decline' });
       toast(this.i18n.t(`${MESSAGES}.declined`));
       this.task.close('declined');
     },

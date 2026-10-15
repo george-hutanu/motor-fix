@@ -18,6 +18,7 @@ import {
   type RequestQuoteData,
   type RequestQuoteResult,
 } from './request-quote';
+import { Consent } from '../../../consent/consent';
 import { PlaceStore } from '../../../home/place/place-store';
 
 @Component({ template: '' })
@@ -121,6 +122,7 @@ let list: jest.Mock;
 let send: jest.Mock;
 let nearby: jest.Mock;
 let onSent: jest.Mock;
+let track: jest.Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -146,9 +148,11 @@ async function open(
   send = jest.fn(async () => options.reply ?? sent([GARAGE.name]));
   nearby = jest.fn(async () => ({ items: options.candidates ?? [] }));
   onSent = jest.fn();
+  track = jest.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      { provide: Consent, useValue: { track } },
       { provide: CarsService, useValue: { carsControllerList: list } },
       {
         provide: QuoteRequestsService,
@@ -802,5 +806,75 @@ describe('the confirmation’s answering line', () => {
     await sendWith(sent([name], [name]));
 
     expect(lines()[1]).toBe(`${name} răspunde de obicei în aceeași zi.`);
+  });
+});
+
+// @traces 250-FR-005
+describe('the quote request sent event', () => {
+  const told = () =>
+    track.mock.calls.filter(([name]) => name === 'quote_request_sent');
+
+  it('tells the request once it is created, from what was sent', async () => {
+    await open();
+    jobSwitch('Schimb ulei').click();
+    jobSwitch('Plăcuțe frână').click();
+    await settle();
+    expect(told()).toEqual([]);
+
+    await press();
+
+    expect(told()).toEqual([
+      ['quote_request_sent', { brand: 'dacia', garages: '1', jobs: 2 }],
+    ]);
+  });
+
+  it.each([
+    [1, '2–3'],
+    [2, '2–3'],
+    [3, '4–5'],
+    [4, '4–5'],
+  ])(
+    'buckets the profile’s garage and %i ticked as %s',
+    async (extra, garages) => {
+      const names = ['Atelier A', 'Atelier B', 'Atelier C', 'Atelier D'];
+      await open({
+        candidates: names.map((name, i) => candidate(`g-${i}`, name)),
+      });
+      for (const name of names.slice(0, extra)) {
+        tick(name).click();
+        await settle();
+      }
+      jobSwitch('Schimb ulei').click();
+      await settle();
+
+      await press();
+
+      expect(told()).toEqual([
+        ['quote_request_sent', { brand: 'dacia', garages, jobs: 1 }],
+      ]);
+    },
+  );
+
+  it('names no brand when the profile was not opened for one', async () => {
+    await open({ garage: { ...GARAGE, brand: undefined } });
+    jobSwitch('Schimb ulei').click();
+    await settle();
+
+    await press();
+
+    expect(told()).toEqual([['quote_request_sent', { garages: '1', jobs: 1 }]]);
+  });
+
+  it('tells nothing for a failed send and once for its retry', async () => {
+    await open();
+    send.mockRejectedValueOnce(refusal(500, { code: 'error' }));
+    type('Scârțâie la frânare');
+
+    await press();
+    expect(told()).toEqual([]);
+    await press();
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(told()).toHaveLength(1);
   });
 });

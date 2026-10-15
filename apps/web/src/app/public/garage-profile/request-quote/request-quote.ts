@@ -49,6 +49,7 @@ import {
 import { HlmButton, HlmInput, HlmSwitch } from '@motor-fix/ui-cockpit';
 
 import { answersLine, sentLine } from './sent-line';
+import { Consent } from '../../../consent/consent';
 import { type Place, PlaceStore } from '../../../home/place/place-store';
 
 export interface RequestQuoteData {
@@ -128,6 +129,7 @@ export class RequestQuote {
     RequestQuoteResult
   >();
   private readonly router = inject(Router);
+  private readonly consent = inject(Consent);
   protected readonly garage = this.task.data.garage;
 
   protected readonly max = REQUEST_DESCRIPTION_MAX;
@@ -164,7 +166,10 @@ export class RequestQuote {
   });
 
   protected readonly save = taskSave({
-    done: (request: RequestDto) => this.task.data.sent?.(request),
+    done: (request: RequestDto) => {
+      this.trackSent(this.body());
+      this.task.data.sent?.(request);
+    },
     form: this.form,
     messages: 'public.requestQuote',
     send: (_, key) =>
@@ -401,6 +406,16 @@ export class RequestQuote {
       this.form.controls.garageIds.setValue(
         ticked.filter((id) => id !== garageId),
       );
+  }
+
+  private trackSent({ garageIds, jobTypeIds }: CreateQuoteRequestDto) {
+    const brand = this.garage.brand?.slug;
+    this.consent.track('quote_request_sent', {
+      garages:
+        garageIds.length > 3 ? '4–5' : garageIds.length > 1 ? '2–3' : '1',
+      jobs: jobTypeIds.length,
+      ...(brand && { brand }),
+    });
   }
 
   private body(): CreateQuoteRequestDto {

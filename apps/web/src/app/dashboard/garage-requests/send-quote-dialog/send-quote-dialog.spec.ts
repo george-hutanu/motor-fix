@@ -21,6 +21,7 @@ import {
   SendQuoteDialog,
   type SendQuoteResult,
 } from './send-quote-dialog';
+import { Consent } from '../../../consent/consent';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -89,6 +90,7 @@ const QUOTE = { id: 'quote-1' } as GarageQuoteDto;
 
 let read: jest.Mock;
 let send: jest.Mock;
+let track: jest.Mock;
 let result: Promise<SendQuoteResult | 'cancelled'>;
 
 async function settle() {
@@ -108,8 +110,10 @@ async function open(
   read = jest.fn(async () => request);
   if (readFails) read.mockRejectedValueOnce(new Error('network'));
   send = jest.fn(async () => QUOTE);
+  track = jest.fn();
   TestBed.configureTestingModule({
     providers: [
+      { provide: Consent, useValue: { track } },
       {
         provide: GarageRequestsService,
         useValue: { garageRequestsControllerGet: read },
@@ -765,5 +769,30 @@ describe('type scale on a phone', () => {
     expect(stylesheet.slice(at)).toMatch(
       /\.mechanic,\s*\.left-out,\s*\.hint,\s*\.counter,\s*\.error,\s*\.warning \{\s*font-size: var\(--mf-size-small\);/,
     );
+  });
+});
+
+// @traces 250-FR-005
+describe('the request answered event for a quote', () => {
+  it('tells a quote sent once the server took it', async () => {
+    await open();
+    await fillValid();
+    expect(track).not.toHaveBeenCalled();
+
+    await press();
+
+    await expect(result).resolves.toBe('sent');
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith('request_answered', { action: 'quote' });
+  });
+
+  it('tells nothing for a quote the server refused', async () => {
+    await open();
+    await fillValid();
+    send.mockRejectedValueOnce(refusal(500, { code: 'internal_error' }));
+
+    await press();
+
+    expect(track).not.toHaveBeenCalled();
   });
 });
