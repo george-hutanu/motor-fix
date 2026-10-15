@@ -42,7 +42,7 @@ let api: {
   consentsControllerRecord: jest.Mock;
   consentsControllerRecordMine: jest.Mock;
 };
-let analytics: { load: jest.Mock; pageview: jest.Mock };
+let analytics: { event: jest.Mock; load: jest.Mock; pageview: jest.Mock };
 let events: Subject<unknown>;
 let current: ReturnType<typeof signal<MeDto | null>>;
 
@@ -86,7 +86,7 @@ async function start({
     consentsControllerRecordMine: jest.fn(async () => ({ id: 'r2' })),
     ...calls,
   };
-  analytics = { load: jest.fn(), pageview: jest.fn() };
+  analytics = { event: jest.fn(), load: jest.fn(), pageview: jest.fn() };
   events = new Subject();
   current = signal<MeDto | null>(null);
   TestBed.configureTestingModule({
@@ -655,5 +655,125 @@ describe('an old choice', () => {
     keep(choice({ at: ago(364) }));
 
     expect((await start()).showBar()).toBe(false);
+  });
+});
+
+// @traces 250-FR-001
+describe('a custom event', () => {
+  const pick = { brand: 'dacia', source: 'home_picker' } as const;
+
+  it('goes under a valid "granted", named by the page template', async () => {
+    keep(choice());
+    const consent = await start();
+
+    consent.track('brand_picked', pick);
+
+    expect(analytics.event).toHaveBeenCalledTimes(1);
+    expect(analytics.event).toHaveBeenCalledWith(
+      'brand_picked',
+      '/:lang',
+      pick,
+    );
+  });
+
+  it('keeps only the properties the contract allows', async () => {
+    keep(choice());
+    const consent = await start();
+
+    consent.track('garage_opened', {
+      garage: '6d3b3a0e-2f8e-4b1f-8c2a-1d4e5f6a7b8c',
+      source: 'results',
+    });
+
+    expect(analytics.event).toHaveBeenCalledWith('garage_opened', '/:lang', {
+      source: 'results',
+    });
+  });
+
+  it('sends nothing for a name outside the contract', async () => {
+    keep(choice());
+    const consent = await start();
+
+    consent.track('page_left' as 'listing_started');
+
+    expect(analytics.event).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing with no choice, a refusal, a withdrawal or an expired choice', async () => {
+    for (const stored of [
+      null,
+      choice({ decision: 'refused' }),
+      choice({ decision: 'withdrawn' }),
+      choice({ at: ago(ANALYTICS_CONSENT_MAX_AGE_DAYS + 1) }),
+    ]) {
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      if (stored) keep(stored);
+      const consent = await start();
+
+      consent.track('listing_started');
+
+      expect(analytics.event).not.toHaveBeenCalled();
+    }
+  });
+
+  it('sends nothing on the server', async () => {
+    keep(choice());
+    const consent = await start({ platform: 'server' });
+
+    consent.track('brand_picked', pick);
+
+    expect(analytics.event).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing on a page that names no analytics domain', async () => {
+    keep(choice());
+    const consent = await start({ domain: null });
+
+    consent.track('brand_picked', pick);
+
+    expect(analytics.event).not.toHaveBeenCalled();
+  });
+
+  it('stops at once when analytics is turned off', async () => {
+    keep(choice());
+    const consent = await start();
+
+    consent.track('brand_picked', pick);
+    await consent.save(false);
+    consent.track('brand_picked', pick);
+
+    expect(analytics.event).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops at once when another tab withdraws', async () => {
+    keep(choice());
+    const consent = await start();
+    const withdrawn = choice({ decision: 'withdrawn' });
+
+    keep(withdrawn);
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: CONSENT_KEY,
+        newValue: JSON.stringify(withdrawn),
+      }),
+    );
+    consent.track('brand_picked', pick);
+
+    expect(analytics.event).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 250-FR-010
+describe('a custom event Plausible cannot take', () => {
+  it('never throws into the flow that sent it', async () => {
+    keep(choice());
+    const consent = await start();
+    analytics.event.mockImplementation(() => {
+      throw new Error('blocked');
+    });
+
+    expect(() => consent.track('listing_submitted')).not.toThrow();
+    expect(analytics.event).toHaveBeenCalledTimes(1);
   });
 });

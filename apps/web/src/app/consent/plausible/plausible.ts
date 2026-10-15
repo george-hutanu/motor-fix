@@ -26,3 +26,11 @@ export function loadPlausible(domain: string): void {
 export function pageview(template: string): void {
   host().plausible?.('pageview', { u: `${location.origin}${template}` });
 }
+
+export function event(
+  name: string,
+  template: string,
+  props: Record<string, string | number>,
+): void {
+  host().plausible?.(name, { props, u: `${location.origin}${template}` });
+}
