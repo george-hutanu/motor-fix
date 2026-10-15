@@ -118,7 +118,6 @@ function summaryOf(
   row: SummaryRow,
   offered: Offered,
   closed?: Closed,
-  phone: { phone?: string } = {},
 ): GarageRequestSummaryDto {
   const [recipient] = row.recipients;
   const [quote] = row.quotes;
@@ -132,7 +131,7 @@ function summaryOf(
     closedReason: closed?.closedReason ?? null,
     createdAt: row.createdAt.toISOString(),
     descriptionLine: firstLine(row.description),
-    driver: { shortName: shortName(row.driver.name), ...phone },
+    driver: { shortName: shortName(row.driver.name) },
     expiresAt: row.expiresAt.toISOString(),
     id: row.id,
     jobs: jobsOf(row.jobs).map((job) => ({
@@ -381,9 +380,13 @@ export class GarageRequestsService {
     const byId = new Map(found.map((row) => [row.id, row]));
     const rows = hits.flatMap((hit) => byId.get(hit.requestId) ?? []);
     const offered = await this.offered(garageId, rows);
-    return page(rows, total, (row) =>
-      summaryOf(row, offered, undefined, listPhoneOf(row, actor)),
-    );
+    return page(rows, total, (row) => {
+      const summary = summaryOf(row, offered);
+      return {
+        ...summary,
+        driver: { ...summary.driver, ...listPhoneOf(row, actor) },
+      };
+    });
   }
 
   // The garage's price-list row for each asked job: the row for the car's
