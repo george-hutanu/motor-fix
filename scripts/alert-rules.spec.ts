@@ -194,7 +194,7 @@ const EXPECTED: Record<
     for: '5m',
     from: 300,
     type: 'gt',
-    value: 0.8,
+    value: 0.7,
   },
   'redis-unreachable': {
     expr: ['motorfix_datastore_up{store="redis"}'],
@@ -484,6 +484,15 @@ describe('alert rules', () => {
         ]);
       }
     }
+  });
+
+  // @traces 1175-FR-006
+  it('warns at 70 % of the store memory, the floor being 70 % of 320 MiB', () => {
+    const rule = rulesOf(own('redis') as AlertFile).find(
+      (r) => r.uid === 'redis-memory',
+    );
+    expect(rule?.annotations['summary']).toContain('more than 70%');
+    expect(rule?.annotations['summary']).toContain('224 MiB');
   });
 
   // @traces 1024-FR-005
