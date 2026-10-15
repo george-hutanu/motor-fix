@@ -13,11 +13,13 @@
 // language (the public frame mounts under `:lang`). routeProblem refuses, before
 // any run, what the PR QA workflow's own check refuses, any other `:`, and a
 // route under /app/ with no role (it would sweep the sign-in screen).
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { SEEDED } from "./endpoints.mjs";
 import { coverageKey, layoutKey, mergeFindings, sweepFinding } from "./findings.mjs";
 import { measureLayout } from "./layout.mjs";
 
@@ -32,7 +34,14 @@ const LOCALES = { ro: "ro-RO", en: "en-GB" };
 // Where the language switch keeps the chosen language (libs/i18n/src/switch.ts).
 const LANG_KEY = "mf.lang";
 
-const slug = (route) => route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
+// A path of letters, digits, '-' and '/' slugs as itself; anything else (a query, `/:lang`, an escape) or a
+// long one also gets a short hash of the whole, so two routes that differ only there never share a file.
+const SLUG_MAX = 80;
+const slug = (route) => {
+  const plain = route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
+  if (/^[a-z0-9/-]*$/i.test(route) && plain.length <= SLUG_MAX) return plain;
+  return `${plain.slice(0, SLUG_MAX)}-${createHash("sha256").update(route).digest("hex").slice(0, 8)}`;
+};
 
 /**
  * The characters the PR QA workflow lets through its routes input, the same
@@ -56,6 +65,7 @@ export function routeProblem(route) {
   const rest = route.replace(LANG, "");
   if (!SHAPE.test(rest)) return `${route}: a ':' belongs only in a leading /:lang segment or a trailing :<status>`;
   const { path, role } = parseRoute(route);
+  if (role && !Object.hasOwn(SEEDED, role)) return `${route}: no seeded account has the role ${role} (${Object.keys(SEEDED).join(", ")})`;
   if (path.startsWith("/app/") && !role) return `${route}: a route under /app/ needs @role, or the sweep opens the sign-in screen`;
   return null;
 }
@@ -119,13 +129,14 @@ export async function contextCookies(run, { session, baseURL }) {
   return [sessionCookie({ refresh: await session(run.role, run.lang), baseURL })];
 }
 
-// The QA flows' `signIn(context, role)`: the cookie a `path@role` route gets,
-// for a browser context the flow opened itself.
+// The QA flows' `signIn(context, role[, lang])`: the cookie a `path@role` route gets, for a browser context
+// the flow opened itself. The account's language is set every time (Romanian unless asked), since the
+// sweep before the flows leaves it at whichever language it swept last.
 export const flowSignIn =
   ({ session, baseURL }) =>
-  async (context, role) => {
+  async (context, role, lang = "ro") => {
     if (!role) throw new Error("signIn(context, role) needs a role, one of the seeded accounts'");
-    await context.addCookies(await contextCookies({ role }, { session, baseURL }));
+    await context.addCookies(await contextCookies({ role, lang }, { session, baseURL }));
   };
 
 /** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */

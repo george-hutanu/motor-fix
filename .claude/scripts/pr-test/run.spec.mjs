@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { SEEDED } from './endpoints.mjs';
 import * as helpers from './flow-helpers.mjs';
-import { appLaunchEnv, filesBetween, flowArgs, parseArgs, testsCommand } from './run.mjs';
+import { appLaunchEnv, filesBetween, flowArgs, parseArgs, strayRejection, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -263,4 +263,20 @@ describe('how to write a route and a flow, where the tester and its callers read
     it(`${name} names the shared flow helpers`, () => {
       for (const helper of ['waitForText', 'openSheet', 'stepButton', 'accounts']) assert.match(docs[name], new RegExp(`\\b${helper}\\b`), helper);
     });
+});
+
+// @traces 1230-FR-008
+describe('run: an unhandled rejection outside the flows step', () => {
+  it('is a high finding instead of a crash, and left to the flows step while it runs', () => {
+    const findings = [];
+    let flows = true;
+    const handler = strayRejection(findings, () => flows);
+    handler(new Error('settled during the flows'));
+    assert.deepEqual(findings, []);
+    flows = false;
+    handler(new Error('a wait the flows left behind'));
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].severity, 'high');
+    assert.match(JSON.stringify(findings[0]), /a wait the flows left behind/);
+  });
 });

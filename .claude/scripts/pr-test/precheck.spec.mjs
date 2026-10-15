@@ -2,7 +2,7 @@
 import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFile, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -123,6 +123,7 @@ describe('precheck --check: the flows against the app and API already serving', 
     req.on('end', () => {
       seen.push(`${req.method} ${req.url}`);
       if (req.url === '/' || req.url === '/health/live') return res.writeHead(200).end('ok');
+      if (req.method === 'PATCH' && req.url === '/api/v1/me') return res.writeHead(200, { 'content-type': 'application/json' }).end(raw);
       if (req.url === '/api/v1/auth/sign-in') {
         const ok = JSON.parse(raw).password === 'parola-de-test';
         return res.writeHead(ok ? 200 : 401, { 'content-type': 'application/json', 'set-cookie': 'mf_refresh=r-live; Path=/api/v1/auth' }).end(JSON.stringify(ok ? { accessToken: 't' } : {}));
@@ -135,6 +136,7 @@ describe('precheck --check: the flows against the app and API already serving', 
     server.close();
     rmSync(dir, { recursive: true, force: true });
   });
+  const ran = join(dir, 'ran');
   const flows = (name, body) => {
     const file = join(dir, `${name}.mjs`);
     writeFileSync(file, body);
@@ -143,7 +145,7 @@ describe('precheck --check: the flows against the app and API already serving', 
   // Async, so this process's server can answer the child.
   const check = (file, ...args) =>
     new Promise((resolve) => {
-      execFile(process.execPath, [SCRIPT, '--flows', file, '--check', ...args], { encoding: 'utf8', timeout: 20_000, env: { ...process.env, SEED_PASSWORD: '' } }, (error, stdout, stderr) =>
+      execFile(process.execPath, [SCRIPT, '--flows', file, '--check', ...args], { encoding: 'utf8', timeout: 20_000, env: { ...process.env, SEED_PASSWORD: '', RAN_FILE: ran } }, (error, stdout, stderr) =>
         resolve({ code: error ? error.code : 0, stdout, stderr }),
       );
     });
@@ -194,6 +196,7 @@ describe('precheck --check: the flows against the app and API already serving', 
     assert.equal(r.code, 1);
     assert.equal(r.stdout.trim().split('\n').length, 1, r.stdout);
     assert.match(r.stdout, /API .*http:\/\/127\.0\.0\.1:9\/health\/live/);
+    assert.equal(existsSync(ran), false);
   });
 
   it('defaults to the dev server and the local API', () => {

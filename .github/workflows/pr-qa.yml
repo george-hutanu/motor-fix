@@ -261,4 +261,4 @@ jobs:
           owner=$(gh api "repos/$REPO/commits/$SHA/status" --jq '.statuses[] | select(.context == "agent-review") | .target_url')
           [ "$owner" = "$RUN_URL" ] || { echo "agent-review on $SHA is ${owner:-unset}, not this run's; left as it is"; exit 0; }
           gh api -X POST "repos/$REPO/statuses/$SHA" -f state=error -f context=agent-review \
-            -f description="PR QA lap $LAP cancelled" -f target_url="$RUN_URL" > /dev/null
+            -f description="PR QA lap cancelled" -f target_url="$RUN_URL" > /dev/null

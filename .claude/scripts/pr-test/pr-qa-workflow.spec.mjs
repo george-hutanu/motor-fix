@@ -112,7 +112,7 @@ describe('PR QA workflow: the agent-review status', () => {
     assert.match(cancelStep, /\.target_url/);
     assert.match(cancelStep, /= "\$RUN_URL" \] \|\| \{.*exit 0; \}\n/);
     assert.match(cancelStep, /-f state=error -f context=agent-review/);
-    assert.match(cancelStep, /-f description="PR QA lap \$LAP cancelled"/);
+    assert.match(cancelStep, /-f description="PR QA lap cancelled"/);
   });
 
   it("uses the run's own token, on the commit under test, linking the run", () => {

@@ -231,6 +231,12 @@ describe('route syntax: a query string, a /:lang segment, and the routes refused
     for (const bad of ['/x/:lang', '/x:lang', '/:language/x', '/:id', '/a:b@c', '/s?t=12:30', '/:lang/:lang']) assert.match(routeProblem(bad) ?? '', /:/, bad);
   });
 
+  it('refuses a role no seeded account has, naming the ones there are', () => {
+    assert.match(routeProblem('/app/x@owner'), /^\/app\/x@owner: no seeded account has the role owner \(admin, driver/);
+    assert.match(routeProblem('/app/x@constructor') ?? '', /no seeded account/);
+    assert.equal(routeProblem('/app/x@receptionist'), null);
+  });
+
   it('refuses a route under /app/ that names no role, and nothing else for it', () => {
     assert.match(routeProblem('/app/driver'), /^\/app\/driver: .*\/app\/.*@role/);
     assert.match(routeProblem('/app/driver:401'), /@role/);
@@ -257,6 +263,18 @@ describe('signing in from a QA flow', () => {
     assert.deepEqual(asked, ['driver', 'mechanic']);
     assert.deepEqual(one.added, [sessionCookie({ refresh: 'r-1', baseURL })]);
     assert.deepEqual(two.added, [sessionCookie({ refresh: 'r-2', baseURL })]);
+  });
+
+  // @traces 1230-FR-011
+  it('opens the account in Romanian unless the flow asks for another language, whatever the sweep left it in', async () => {
+    const asked = [];
+    const signIn = flowSignIn({ session: async (role, lang) => (asked.push([role, lang]), 'r'), baseURL });
+    await signIn(fakeContext(), 'driver');
+    await signIn(fakeContext(), 'driver', 'en');
+    assert.deepEqual(asked, [
+      ['driver', 'ro'],
+      ['driver', 'en'],
+    ]);
   });
 
   it('refuses a call with no role, and a run with no session', async () => {

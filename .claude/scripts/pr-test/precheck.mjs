@@ -22,9 +22,9 @@
 // http://localhost:3000), with the arguments the run gives them and a real
 // signIn as the seeded accounts. It prints one line per finding, thrown error
 // and unhandled rejection, exit 1 on any; an address that does not answer is
-// one line and exit 1, and the flows are not run. It starts no server and
-// dispatches nothing.
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+// one line and exit 1, and the flows are not run; flows still running after
+// ten minutes are one line too. It starts no server and dispatches nothing.
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -34,6 +34,8 @@ import { collectRejections, flowArgs } from "./run.mjs";
 import { HEALTH } from "./services.mjs";
 
 export const CHECK_DEFAULTS = { baseURL: "http://localhost:4200", apiURL: "http://localhost:3000" };
+// A flow awaiting what never settles would hold the check for ever; a lap's own bound is the job's 60 minutes.
+const CHECK_MS = 10 * 60_000;
 
 /** `US<k> scenario <m>` for every numbered acceptance scenario of every user story. */
 export function scenarios(specText) {
@@ -78,10 +80,20 @@ export function precheck({ flowsText, specText, loaded, name = "flows" }) {
   return problems;
 }
 
+// A flows file is imported once per version on disk: its top level runs once for the static and the live
+// check, and again only after the file changed.
+const modules = new Map();
+const importFlows = (file) => {
+  const { mtimeMs, size } = statSync(file);
+  const key = `${pathToFileURL(resolve(file)).href}?precheck=${mtimeMs}-${size}`;
+  if (!modules.has(key)) modules.set(key, import(key));
+  return modules.get(key);
+};
+
 /** Import the flows module and say whether it loaded with a function as its default export. */
 async function load(file) {
   try {
-    const mod = await import(`${pathToFileURL(resolve(file)).href}?precheck=${Date.now()}`);
+    const mod = await importFlows(file);
     return { ok: true, isFunction: typeof mod.default === "function" };
   } catch (error) {
     return { ok: false, error: String(error?.message ?? error).split("\n")[0] };
@@ -117,13 +129,21 @@ export async function checkLive({ flows, baseURL = CHECK_DEFAULTS.baseURL, apiUR
     if (why) lines.push(`${name} not serving at ${url}: ${why}`);
   }
   if (lines.length) return lines;
-  const flow = await import(`${pathToFileURL(resolve(flows)).href}?check=${Date.now()}`);
+  const flow = await importFlows(flows);
   const outDir = mkdtempSync(join(tmpdir(), "mf-flows-check-"));
   const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
   const findings = [];
   try {
     const args = flowArgs({ webURL: baseURL, apiURL, outDir, repoRoot, worktree: repoRoot, session: seededSession(apiURL) });
-    findings.push(...((await collectRejections(findings, () => flow.default(args))) ?? []));
+    let timer;
+    const bound = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`the flows did not finish within ${CHECK_MS / 1000} s`)), CHECK_MS);
+    });
+    try {
+      findings.push(...((await collectRejections(findings, () => Promise.race([flow.default(args), bound]))) ?? []));
+    } finally {
+      clearTimeout(timer);
+    }
   } catch (error) {
     lines.push(`flows threw: ${String(error?.stack ?? error).split("\n").slice(0, 3).join(" / ")}`);
   } finally {

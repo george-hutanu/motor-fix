@@ -103,14 +103,24 @@ export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }
   ...helpers,
 });
 
+const rejectionFinding = (title, reason) => stepFinding(title, String(reason?.stack ?? reason).split("\n").slice(0, 3).join(" / "), "high");
+
+/**
+ * The run's own handler, for the whole run: a rejection outside the flows step (one a flow left to settle
+ * later, say) is a high finding instead of a crash that would skip the report and the teardown. Inside the
+ * flows step collectRejections reports it.
+ */
+export const strayRejection = (findings, inFlows) => (reason) => {
+  if (!inFlows()) findings.push(rejectionFinding("An unhandled rejection outside the flows step", reason));
+};
+
 /**
  * Runs `fn` (the flows) with every unhandled rejection it leaves turned into a high finding, so a flow that
  * forgot an await is reported instead of ending the run. The handler lives only as long as `fn`, plus the turn
  * that lets a rejection left at its very end surface.
  */
 export async function collectRejections(findings, fn) {
-  const onRejection = (reason) =>
-    findings.push(stepFinding("A flow left an unhandled rejection", String(reason?.stack ?? reason).split("\n").slice(0, 3).join(" / "), "high"));
+  const onRejection = (reason) => findings.push(rejectionFinding("A flow left an unhandled rejection", reason));
   process.on("unhandledRejection", onRejection);
   try {
     return await fn();
@@ -216,6 +226,10 @@ async function main(argv) {
       }
     }
   };
+  process.on(
+    "unhandledRejection",
+    strayRejection(findings, () => phase === "flows"),
+  );
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
     process.on(signal, () => {
       log(`${signal} during ${phase}: writing the report, then tearing down`);

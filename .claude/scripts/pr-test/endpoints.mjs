@@ -123,7 +123,7 @@ export async function setLanguage(apiURL, token, lang, who = "") {
 export const seededSession =
   (apiURL, password = seedPassword()) =>
   async (role, lang) => {
-    if (!SEEDED[role]) throw new Error(`no seeded account for the role ${role}`);
+    if (!Object.hasOwn(SEEDED, role)) throw new Error(`no seeded account for the role ${role}`);
     const { token, refresh } = await signIn(apiURL, role, password);
     if (lang) await setLanguage(apiURL, token, lang, role);
     return refresh;
