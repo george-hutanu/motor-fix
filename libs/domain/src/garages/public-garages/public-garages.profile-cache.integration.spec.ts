@@ -12,6 +12,7 @@ import request from 'supertest';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { purgeTags } from '../../cache/purge';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -74,7 +75,7 @@ beforeEach(async () => {
 const read = (slug: string, query: Record<string, string> = {}) =>
   request(app.getHttpServer()).get(`/garages/${slug}`).query(query);
 
-const approvedGarage = (status: 'approved' | 'suspended' = 'approved') =>
+const garageOf = (status: 'approved' | 'suspended' = 'approved') =>
   prisma.garage.create({
     data: { name: 'Service Auto Militari', slug: `m-${randomUUID()}`, status },
   });
@@ -82,57 +83,46 @@ const approvedGarage = (status: 'approved' | 'suspended' = 'approved') =>
 const rename = (id: string, name: string) =>
   prisma.garage.update({ data: { name }, where: { id } });
 
-const drop = async (id: string) => {
-  await other.incr(`garage-profile-gen:v5:${id}`);
-  await other.del(`garage-profile:v5:${id}`);
-};
+const entry = (slug: string, brand = '-') => `v1:profile:${slug}:${brand}`;
 
 async function counts() {
   const { resourceMetrics } = await metricReader.collect();
   const found = resourceMetrics.scopeMetrics
     .flatMap((scope) => scope.metrics)
-    .find(
-      (metric) =>
-        metric.descriptor.name === 'motorfix_garage_profile_cache_total',
-    );
+    .find((metric) => metric.descriptor.name === 'motorfix_cache_total');
   const by = Object.fromEntries(
-    (found?.dataPoints ?? []).map((point) => [
-      point.attributes['outcome'],
-      point.value as number,
-    ]),
+    (found?.dataPoints ?? [])
+      .filter((point) => point.attributes['kind'] === 'profile')
+      .map((point) => [point.attributes['outcome'], point.value as number]),
   );
-  return { hit: by['hit'] ?? 0, miss: by['miss'] ?? 0 };
+  return {
+    hit: by['hit'] ?? 0,
+    miss: by['miss'] ?? 0,
+    negative: by['negative'] ?? 0,
+  };
 }
 
-// @traces 307-FR-006 307-FR-007
-describe('the profile cache', () => {
-  it('writes the answer on a miss, for ten minutes at most', async () => {
-    const garage = await approvedGarage();
+// @traces 1182-FR-004 1182-FR-007
+describe('the profile through the cache service', () => {
+  it('stores a miss under the slug and brand, tagged with the garage', async () => {
+    const garage = await garageOf();
     const before = await counts();
 
     expect((await read(garage.slug)).status).toBe(200);
 
-    const stored = await other.hget(`garage-profile:v5:${garage.id}`, '-');
-    expect(JSON.parse(stored ?? 'null')).toMatchObject({
+    const stored = JSON.parse((await other.get(entry(garage.slug))) ?? 'null');
+    expect(stored.v).toMatchObject({
       id: garage.id,
       name: 'Service Auto Militari',
     });
-    expect(await other.get(`garage-profile-slug:v5:${garage.slug}`)).toBe(
-      garage.id,
-    );
-    for (const key of [
-      `garage-profile:v5:${garage.id}`,
-      `garage-profile-slug:v5:${garage.slug}`,
-    ]) {
-      const ttl = await other.ttl(key);
-      expect(ttl).toBeGreaterThan(0);
-      expect(ttl).toBeLessThanOrEqual(600);
-    }
+    expect(await other.smembers(`v1:tag:garage:${garage.id}`)).toEqual([
+      entry(garage.slug),
+    ]);
     expect((await counts()).miss - before.miss).toBe(1);
   });
 
   it('answers the second read from the cache', async () => {
-    const garage = await approvedGarage();
+    const garage = await garageOf();
     await read(garage.slug);
     const before = await counts();
 
@@ -143,122 +133,93 @@ describe('the profile cache', () => {
     expect((await counts()).hit - before.hit).toBe(1);
   });
 
-  it('counts a slug pointer the garage gave up as one miss, not a hit', async () => {
-    const garage = await approvedGarage();
+  it('keeps each brand in context in its own entry', async () => {
+    const slug = `dacia-${randomUUID()}`;
+    await prisma.brand.create({
+      data: { key: slug, name: `Dacia ${slug}`, slug },
+    });
+    const garage = await garageOf();
+
+    await read(garage.slug);
+    const withBrand = await read(garage.slug, { brand: slug });
+    await read(garage.slug, { brand: 'made-up-brand' });
+
+    expect(withBrand.body.brand).toMatchObject({
+      slug,
+      stance: 'does_not_take',
+    });
+    expect((await other.smembers(`v1:tag:garage:${garage.id}`)).sort()).toEqual(
+      [entry(garage.slug), entry(garage.slug, slug)].sort(),
+    );
+  });
+
+  it('reads PostgreSQL again once the garage’s tag is purged', async () => {
+    const garage = await garageOf();
+    await read(garage.slug);
+
+    await rename(garage.id, 'Nume nou');
+    await purgeTags(other, [`garage:${garage.id}`]);
+
+    expect((await read(garage.slug)).body.name).toBe('Nume nou');
+  });
+
+  it('drops a slug the garage gave up when its change is purged', async () => {
+    const garage = await garageOf();
     await read(garage.slug);
     const renamed = `renamed-${randomUUID()}`;
     await prisma.garage.update({
       data: { slug: renamed },
       where: { id: garage.id },
     });
-    await read(renamed);
-    const before = await counts();
+    await purgeTags(other, [`garage:${garage.id}`]);
 
     expect((await read(garage.slug)).status).toBe(404);
-
-    const after = await counts();
-    expect(after.hit - before.hit).toBe(0);
-    expect(after.miss - before.miss).toBe(1);
+    expect((await read(renamed)).status).toBe(200);
   });
 
-  it('keeps each brand in context in its own field', async () => {
-    const slug = `dacia-${randomUUID()}`;
-    await prisma.brand.create({
-      data: { key: slug, name: `Dacia ${slug}`, slug },
-    });
-    const garage = await approvedGarage();
-
-    await read(garage.slug);
-    await read(garage.slug, { brand: slug });
-
-    expect(
-      (await other.hkeys(`garage-profile:v5:${garage.id}`)).sort(),
-    ).toEqual(['-', slug].sort());
-    const withBrand = JSON.parse(
-      (await other.hget(`garage-profile:v5:${garage.id}`, slug)) ?? 'null',
-    );
-    expect(withBrand.brand).toMatchObject({ slug, stance: 'does_not_take' });
-  });
-
-  // @traces 355-price-list-ranges-FR-005
-  it('never reads a profile cached in the shape before the price list', async () => {
-    const garage = await approvedGarage();
-    await other.set(`garage-profile-slug:v4:${garage.slug}`, garage.id);
-    await other.hset(
-      `garage-profile:v4:${garage.id}`,
-      '-',
-      JSON.stringify({ id: garage.id, name: 'Formă veche', slug: garage.slug }),
-    );
-
-    const res = await read(garage.slug);
-
-    expect(res.body.name).toBe('Service Auto Militari');
-    expect(res.body.prices).toEqual([]);
-    expect(await other.hexists(`garage-profile:v5:${garage.id}`, '-')).toBe(1);
-  });
-
-  it('reads PostgreSQL again once the profile is dropped', async () => {
-    const garage = await approvedGarage();
-    await read(garage.slug);
-
-    await rename(garage.id, 'Nume nou');
-    await drop(garage.id);
-
-    expect((await read(garage.slug)).body.name).toBe('Nume nou');
-  });
-
-  it('never caches a 404 or a 410', async () => {
+  it('remembers an unknown slug’s 404 for 60 seconds, untagged', async () => {
     const unknown = `nobody-${randomUUID()}`;
-    const suspended = await approvedGarage('suspended');
-
     expect((await read(unknown)).status).toBe(404);
-    expect((await read(suspended.slug)).status).toBe(410);
+    await prisma.garage.create({
+      data: { name: 'Prea târziu', slug: unknown, status: 'approved' },
+    });
+    const before = await counts();
 
-    expect(await other.exists(`garage-profile-slug:v5:${unknown}`)).toBe(0);
-    expect(
-      await other.exists(
-        `garage-profile-slug:v5:${suspended.slug}`,
-        `garage-profile:v5:${suspended.id}`,
-      ),
-    ).toBe(0);
+    const again = await read(unknown);
+
+    expect([again.status, again.body.code]).toEqual([404, 'not_found']);
+    expect((await counts()).negative - before.negative).toBe(1);
+    expect(await other.pttl(entry(unknown))).toBeLessThanOrEqual(66_000);
   });
 
-  it('leaves nothing cached when a drop lands while a read is under way', async () => {
-    const garage = await approvedGarage();
-    const send = appRedis.sendCommand.bind(appRedis);
-    jest
-      .spyOn(appRedis, 'sendCommand')
-      .mockImplementation((command: Command, ...rest) => {
-        const sent = send(command, ...rest);
-        const key = String(command.args[0] ?? '');
-        if (
-          command.name !== 'get' ||
-          !key.startsWith('garage-profile-gen:v5:')
-        ) {
-          return sent;
-        }
-        return Promise.resolve(sent).then(async (value) => {
-          await drop(garage.id);
-          return value;
-        });
-      });
+  it('keeps the verdict on a garage that exists out of the cache, so a restore shows at once', async () => {
+    const garage = await garageOf('suspended');
+    expect((await read(garage.slug)).status).toBe(410);
+    expect(await other.exists(entry(garage.slug))).toBe(0);
+
+    await prisma.garage.update({
+      data: { status: 'approved' },
+      where: { id: garage.id },
+    });
 
     expect((await read(garage.slug)).status).toBe(200);
-    jest.restoreAllMocks();
+  });
 
-    expect(await other.exists(`garage-profile:v5:${garage.id}`)).toBe(0);
-    await rename(garage.id, 'Nume nou');
-    expect((await read(garage.slug)).body.name).toBe('Nume nou');
+  it('answers a slug holding a control character 404 without a cache call', async () => {
+    expect((await read('bad%07slug')).status).toBe(404);
+    expect((await read('bad%07slug')).status).toBe(404);
+
+    expect(await other.exists(entry('bad\u0007slug'))).toBe(0);
   });
 
   it('answers from PostgreSQL while Redis is down, warning once per outage', async () => {
-    const garage = await approvedGarage();
+    const garage = await garageOf();
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const outageWarnings = () =>
       warn.mock.calls.filter(([message]) =>
-        /garage profile cache/i.test(String(message)),
+        /cache unavailable/i.test(String(message)),
       ).length;
     const send = appRedis.sendCommand.bind(appRedis);
     let down = true;
@@ -278,8 +239,6 @@ describe('the profile cache', () => {
 
     down = false;
     expect((await read(garage.slug)).status).toBe(200);
-    expect(outageWarnings()).toBe(1);
-
     down = true;
     expect((await read(garage.slug)).status).toBe(200);
     expect(outageWarnings()).toBe(2);

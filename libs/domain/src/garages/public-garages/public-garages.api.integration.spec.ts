@@ -4,10 +4,10 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { dropProfiles } from './public-garages.cache';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { purgeAudience } from '../../cache/purge';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -892,7 +892,7 @@ describe('the jobs a profile offers', () => {
       data: { toBani: 48_000 },
       where: { id: row.id },
     });
-    await dropProfiles(app.get(AUTH_REDIS), [`public:garage:${approved.id}`]);
+    await purgeAudience(app.get(AUTH_REDIS), [`public:garage:${approved.id}`]);
 
     expect((await read(approved.slug)).body.jobTypes).toEqual([
       {
@@ -1172,8 +1172,13 @@ describe('the price list a profile carries', () => {
     const redis = app.get(AUTH_REDIS);
 
     expect(
-      (await redis.hkeys(`garage-profile:v5:${approved.id}`)).sort(),
-    ).toEqual(['-', bmw.slug].sort());
+      (await redis.smembers(`v1:tag:garage:${approved.id}`)).sort(),
+    ).toEqual(
+      [
+        `v1:profile:${approved.slug}:-`,
+        `v1:profile:${approved.slug}:${bmw.slug}`,
+      ].sort(),
+    );
 
     await prisma.garagePrice.update({
       data: { toBani: 150_000 },
@@ -1181,7 +1186,7 @@ describe('the price list a profile carries', () => {
     });
     expect((await read(approved.slug)).body.prices[0].toBani).toBe(140_000);
 
-    await dropProfiles(redis, [`public:garage:${approved.id}`]);
+    await purgeAudience(redis, [`public:garage:${approved.id}`]);
 
     expect((await read(approved.slug)).body.prices[0].toBani).toBe(150_000);
     expect(

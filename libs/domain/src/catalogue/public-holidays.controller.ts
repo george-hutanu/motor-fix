@@ -4,6 +4,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { Public } from '../auth/actor.guard';
 import { PRISMA } from '../auth/prisma';
+import { PublicCache } from '../cache/http-cache/http-cache.interceptor';
 import type { PrismaClient } from '../generated/prisma/client';
 
 @ApiTags('public-holidays')
@@ -13,6 +14,7 @@ export class PublicHolidaysController {
 
   @Get()
   @Public()
+  @PublicCache()
   @ApiOkResponse({ type: [PublicHolidayDto] })
   async list(
     @Query() { year }: PublicHolidaysQueryDto,

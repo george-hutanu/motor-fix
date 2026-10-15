@@ -245,7 +245,7 @@ describe('the public garages scope', () => {
     const reads = publicGarageReads(domainSources());
 
     expect(reads.map((r) => r.name)).toContain(
-      'garages/public-garages/public-garages.ts#bySlug',
+      'garages/public-garages/public-garages.ts#read',
     );
     expect(
       reads
