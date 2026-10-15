@@ -6,6 +6,7 @@ import { Queue, QueueEvents } from 'bullmq';
 import { INSIGHTS_QUEUE, InsightsModule } from './insights.module';
 import { writeSnapshot } from './platform-figures';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { addDays, localDay } from '../bucharest';
 import {
   databaseUrl,
   fixtures,
@@ -44,7 +45,7 @@ beforeEach(async () => {
 });
 
 describe('the daily snapshot', () => {
-  it('writes one row for the Bucharest day of the run, holding the three figures', async () => {
+  it('writes a row for the Bucharest day of the run, holding the three figures', async () => {
     await prisma.garage.create({
       data: {
         approvedAt: new Date('2026-11-02T08:00:00Z'),
@@ -56,13 +57,22 @@ describe('the daily snapshot', () => {
 
     await writeSnapshot(prisma, new Date('2026-11-09T23:00:00Z'));
 
-    expect(await prisma.platformDaily.findMany()).toEqual([
+    expect(
+      await prisma.platformDaily.findMany({
+        where: { day: new Date('2026-11-10') },
+      }),
+    ).toEqual([
       {
         activeDrivers: 0,
+        bookingsConfirmed: null,
         city: 'all',
         day: new Date('2026-11-10'),
         garagesApprovedThisMonth: 1,
         garagesListed: 1,
+        jobsDone: null,
+        requestsAccepted: null,
+        requestsQuoted: null,
+        reviewsPosted: null,
         writtenAt: new Date('2026-11-09T23:00:00Z'),
       },
     ]);
@@ -81,7 +91,9 @@ describe('the daily snapshot', () => {
 
     await writeSnapshot(prisma, new Date('2026-11-09T23:30:00Z'));
 
-    const rows = await prisma.platformDaily.findMany();
+    const rows = await prisma.platformDaily.findMany({
+      where: { day: new Date('2026-11-10') },
+    });
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       garagesListed: 1,
@@ -171,7 +183,10 @@ describe('the night job', () => {
     expect(await prisma.platformDaily.count()).toBe(0);
   });
 
-  it('writes the day when the job runs', async () => {
+  it("writes the day and the day before's funnel when the job runs, logging the funnel", async () => {
+    const info = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
     const app = await boot();
     const events = new QueueEvents(INSIGHTS_QUEUE, {
       connection: { url: redisUrl },
@@ -183,7 +198,19 @@ describe('the night job', () => {
     await events.close();
     await app.close();
 
-    expect(await prisma.platformDaily.count()).toBe(1);
+    const today = localDay(new Date());
+    const rows = await prisma.platformDaily.findMany({
+      orderBy: { day: 'asc' },
+      select: { city: true, day: true, requestsQuoted: true },
+    });
+    expect(rows).toEqual([
+      { city: 'all', day: new Date(addDays(today, -1)), requestsQuoted: 0 },
+      { city: 'all', day: new Date(today), requestsQuoted: null },
+    ]);
+    expect(info).toHaveBeenCalledWith(
+      `platform-daily funnel ${addDays(today, -1)} requestsQuoted 0, requestsAccepted 0, bookingsConfirmed 0, jobsDone 0, reviewsPosted 0`,
+    );
+    info.mockRestore();
   });
 
   // @traces 163-FR-005 163-FR-006
@@ -211,6 +238,7 @@ describe('the night job', () => {
     const rows = await prisma.platformDaily.findMany({
       orderBy: { city: 'asc' },
       select: { city: true, garagesListed: true },
+      where: { day: new Date(localDay(new Date())) },
     });
     expect(rows).toEqual([
       { city: 'all', garagesListed: 1 },

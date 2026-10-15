@@ -109,11 +109,36 @@ export async function snapshotActiveDrivers(db: PrismaClient, day: string) {
 export const monthStartSnapshot = (db: PrismaClient, now: Date) =>
   snapshotActiveDrivers(db, monthStart(localDay(now)));
 
+// Each count dates a row by its own moment on the Bucharest day; a request
+// quoted or accepted by several garages counts once, on its earliest quote.
+export async function countFunnel(db: PrismaClient, day: string) {
+  const since = atLocal(day, 0);
+  const until = atLocal(addDays(day, 1), 0);
+  const [[requests], bookingsConfirmed, jobsDone] = await Promise.all([
+    db.$queryRaw<{ requestsQuoted: number; requestsAccepted: number }[]>`
+      SELECT
+        count(*) FILTER (WHERE first_sent >= ${since} AND first_sent < ${until})::int AS "requestsQuoted",
+        count(*) FILTER (WHERE accepted)::int AS "requestsAccepted"
+      FROM (
+        SELECT min(sent_at) AS first_sent,
+          bool_or(accepted_at >= ${since} AND accepted_at < ${until}) AS accepted
+        FROM quote
+        GROUP BY request_id
+      ) q`,
+    db.booking.count({ where: { confirmedAt: { gte: since, lt: until } } }),
+    db.job.count({ where: { finishedAt: { gte: since, lt: until } } }),
+  ]);
+  return { ...requests, bookingsConfirmed, jobsDone, reviewsPosted: 0 };
+}
+
 export async function writeSnapshot(db: PrismaClient, now: Date) {
-  const day = new Date(localDay(now));
+  const today = localDay(now);
+  const day = new Date(today);
+  let live = { garagesApprovedThisMonth: 0, garagesListed: 0 };
   for (const { key: city } of await cities(db)) {
     const { activeDrivers, garagesApprovedThisMonth, garagesListed } =
       await countPlatformFigures(db, now, { city });
+    if (city === CITY_ALL) live = { garagesApprovedThisMonth, garagesListed };
     const figures = {
       activeDrivers: city === CITY_ALL ? activeDrivers : null,
       garagesApprovedThisMonth,
@@ -126,6 +151,15 @@ export async function writeSnapshot(db: PrismaClient, now: Date) {
       where: { day_city: { city, day } },
     });
   }
+  const yesterday = addDays(today, -1);
+  const funnel = await countFunnel(db, yesterday);
+  const counts = { ...funnel, writtenAt: now };
+  await db.platformDaily.upsert({
+    create: { city: CITY_ALL, day: new Date(yesterday), ...live, ...counts },
+    update: counts,
+    where: { day_city: { city: CITY_ALL, day: new Date(yesterday) } },
+  });
+  return { day: yesterday, ...funnel };
 }
 
 type Figures = { activeDrivers: number | null; garagesListed: number };

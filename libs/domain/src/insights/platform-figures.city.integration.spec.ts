@@ -147,6 +147,7 @@ describe('the nightly snapshot by city', () => {
         garagesApprovedThisMonth: true,
         garagesListed: true,
       },
+      where: { day: new Date('2026-11-10') },
     });
     expect(rows).toEqual([
       {
