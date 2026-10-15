@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { SEEDED } from './endpoints.mjs';
 import * as helpers from './flow-helpers.mjs';
-import { appLaunchEnv, filesBetween, flowArgs, parseArgs, strayRejection, testsCommand } from './run.mjs';
+import { appLaunchEnv, collectRejections, filesBetween, flowArgs, parseArgs, strayRejection, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -259,6 +259,17 @@ describe('how to write a route and a flow, where the tester and its callers read
       assert.match(doc, /precheck\.mjs[^\n]*--check/);
     });
 
+  it('gives a query example the app serves: public screens live under /:lang, and /results is no route', () => {
+    for (const doc of [docs.agent, read('./sweep.mjs')]) {
+      assert.doesNotMatch(doc, /\/results\?brand=/);
+      assert.match(doc, /\/:lang\/garages\?brand=dacia/);
+    }
+  });
+
+  it("sweep's contextCookies comment does not say a flow's context asks for no language", () => {
+    assert.doesNotMatch(read('./sweep.mjs'), /flowSignIn\) asks for no language/);
+  });
+
   for (const name of ['skill', 'agent'])
     it(`${name} names the shared flow helpers`, () => {
       for (const helper of ['waitForText', 'openSheet', 'stepButton', 'accounts']) assert.match(docs[name], new RegExp(`\\b${helper}\\b`), helper);
@@ -278,5 +289,15 @@ describe('run: an unhandled rejection outside the flows step', () => {
     assert.equal(findings.length, 1);
     assert.equal(findings[0].severity, 'high');
     assert.match(JSON.stringify(findings[0]), /a wait the flows left behind/);
+  });
+
+  it('is left to collectRejections only while its handler is on, not for the rest of the flows step', async () => {
+    const findings = [];
+    const handler = strayRejection(findings);
+    await collectRejections(findings, async () => handler(new Error('while collecting')));
+    assert.deepEqual(findings, []);
+    handler(new Error('after collectRejections returned'));
+    assert.equal(findings.length, 1);
+    assert.match(JSON.stringify(findings[0]), /after collectRejections returned/);
   });
 });

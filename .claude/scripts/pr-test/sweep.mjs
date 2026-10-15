@@ -8,7 +8,7 @@
 // A route is `path[?query][@role][:status]`: `/de:404` must answer 404, and
 // that 404 is no finding; `/app/driver@driver` is opened with a real session
 // of the seeded driver, signed in afresh for each browser context and set to
-// the language under test; `/results?brand=dacia` opens with its query. A
+// the language under test; `/:lang/garages?brand=dacia` opens with its query. A
 // leading `/:lang` segment, and only there, becomes `/ro` or `/en` per
 // language (the public frame mounts under `:lang`). routeProblem refuses, before
 // any run, what the PR QA workflow's own check refuses, any other `:`, and a
@@ -121,7 +121,7 @@ export const dropExpected = (observations) =>
 
 /**
  * The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared)
- * in the run's language, else none. A flow's own context (flowSignIn) asks for no language.
+ * in the run's language, else none. flowSignIn passes the language a flow asks for (`ro` when it names none).
  */
 export async function contextCookies(run, { session, baseURL }) {
   if (!run.role) return [];

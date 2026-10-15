@@ -51,7 +51,7 @@ endpoints the change touches. A route is written `path[?query][@role][:status]`:
 opened with a real session of the seeded driver (signed in through the API for
 each browser context, its account set to the language under test; roles `admin`, `driver`, `garage`, `mechanic`,
 `receptionist`), and `/de:404` expects that status, so the 404 raises no
-finding while any other answer does. `/results?brand=dacia` opens with its
+finding while any other answer does. `/:lang/garages?brand=dacia` opens with its
 query. A public screen under the language frame starts with `/:lang`
 (`/:lang/list-your-garage`), swept as `/ro/...` and `/en/...`; a `:` anywhere
 else is refused. A route under `/app/` needs `@role`, or it would sweep the

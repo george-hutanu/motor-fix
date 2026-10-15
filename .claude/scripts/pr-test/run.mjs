@@ -108,11 +108,17 @@ const rejectionFinding = (title, reason) => stepFinding(title, String(reason?.st
 /**
  * The run's own handler, for the whole run: a rejection outside the flows step (one a flow left to settle
  * later, say) is a high finding instead of a crash that would skip the report and the teardown. Inside the
- * flows step collectRejections reports it.
+ * flows step collectRejections reports it, but only while its handler is on: one that surfaces after it has
+ * returned is this handler's.
  */
-export const strayRejection = (findings, inFlows) => (reason) => {
-  if (!inFlows()) findings.push(rejectionFinding("An unhandled rejection outside the flows step", reason));
-};
+export const strayRejection =
+  (findings, inFlows = () => collecting > 0) =>
+  (reason) => {
+    if (!inFlows()) findings.push(rejectionFinding("An unhandled rejection outside the flows step", reason));
+  };
+
+/** How many collectRejections handlers are on right now. */
+let collecting = 0;
 
 /**
  * Runs `fn` (the flows) with every unhandled rejection it leaves turned into a high finding, so a flow that
@@ -122,11 +128,13 @@ export const strayRejection = (findings, inFlows) => (reason) => {
 export async function collectRejections(findings, fn) {
   const onRejection = (reason) => findings.push(rejectionFinding("A flow left an unhandled rejection", reason));
   process.on("unhandledRejection", onRejection);
+  collecting++;
   try {
     return await fn();
   } finally {
     await new Promise((resolve) => setImmediate(resolve));
     process.off("unhandledRejection", onRejection);
+    collecting--;
   }
 }
 
@@ -226,10 +234,7 @@ async function main(argv) {
       }
     }
   };
-  process.on(
-    "unhandledRejection",
-    strayRejection(findings, () => phase === "flows"),
-  );
+  process.on("unhandledRejection", strayRejection(findings));
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
     process.on(signal, () => {
       log(`${signal} during ${phase}: writing the report, then tearing down`);
