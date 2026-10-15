@@ -2016,10 +2016,6 @@ _From 1230-qa-harness-laps._
 
 _From 1230-qa-harness-laps._
 
-### 1175-FR-001 — Every store the repository starts MUST be Valkey 9 from the `valkey/valkey:9` image: `docker-compose.yml` service `redis`, the `redis` service of the integration job and the mutation workflow, the PR QA boot (through the PR's compose file), `scripts/backup/restore-drill.sh`; the service names `redis`, the environment names `REDIS_URL` and `REDIS_PORT`, the `redis://` scheme and the port 6379 stay as they are, and `scripts/cloud-setup.sh` and `scripts/test-services.ts` go on starting or pulling the service by that name.
-
-_From 1175-valkey._
-
 ### 1175-FR-002 — Every health check and every binary the repository runs against the store MUST be Valkey's: the workflows' health command `valkey-cli ping`; the no-Docker path of `.claude/scripts/pr-test/services.mjs` starting `valkey-server` and stopping it with `valkey-cli`, with its pid-file process name updated to match.
 
 _From 1175-valkey._
@@ -2032,7 +2028,7 @@ _From 1175-valkey._
 
 _From 1175-valkey._
 
-### 1175-FR-005 — Every cache key MUST carry a time to live: the entries, tags, locks and purge marks of the cache service, the garage-search cache, the active-brands cache, the OAuth flow keys, the rate-limit and attempt counters and the profile-view counters keep theirs, and a key these paths write without one is a defect. A check MUST enforce it: one self-contained integration spec that, on a logical database of its own, drives each of those write paths itself, then scans that database and fails naming every key whose time to live is unset, except keys an allowlist in the check names with a reason (the garage-search generation counter, a version number that must not expire). BullMQ's own `bull:*` keys are out of scope: the check drives only the cache paths named here, and BullMQ bounds its keys by job retention, not by TTL. A lint rule is not practical (a TTL is an argument, not a syntax) and is not added.
+### 1175-FR-005 — Every cache key MUST carry a time to live: the entries, tags, locks and purge marks of the cache service, the garage-search cache, the active-brands cache, the OAuth flow keys, the rate-limit and attempt counters and the profile-view counters keep theirs, and a key these paths write without one is a defect. A check MUST enforce it: one self-contained integration spec that, under a key prefix of its own, drives each of those write paths itself, then scans that prefix and fails naming every key whose time to live is unset, except keys an allowlist in the check names with a reason (the garage-search generation counter, a version number that must not expire). BullMQ's own `bull:*` keys are out of scope: the check drives only the cache paths named here, and BullMQ bounds its keys by job retention, not by TTL. A lint rule is not practical (a TTL is an argument, not a syntax) and is not added.
 
 _From 1175-valkey._
 

@@ -53,7 +53,6 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
         },
         {
           provide: RELAY_REDIS,
-          // The relay logs a failed batch.
           useFactory: () => borrowStore(options.redisUrl),
         },
         {

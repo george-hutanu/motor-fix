@@ -563,10 +563,6 @@ _From 1024-alert-rules._
 
 _From 1182-cache-service._
 
-### 1175-FR-006 — The `redis-memory` alert MUST fire when used memory is above 70 % of the maximum (the 320 MiB floor when the server reports none) for 5 minutes, its summary saying 70 %; the `motorfix-redis` dashboard's memory panel MUST draw the 70 % line against the used-memory series, at 70 % of the 320 MiB floor (224 MiB) because a panel threshold is an absolute number; when the server reports a maximum, the alert's ratio is the authority and the line is a reference only; `infra/observability/inventory.json` MUST keep `redis-memory` on the `redis` entry and `node scripts/observability-inventory.ts` MUST pass. `redis-unreachable` and `redis-connections` stay as they are.
-
-_From 1175-valkey._
-
 ## Retired
 
 - `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
