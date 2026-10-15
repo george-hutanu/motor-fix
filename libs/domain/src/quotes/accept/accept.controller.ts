@@ -8,6 +8,7 @@ import {
   Controller,
   Headers,
   HttpStatus,
+  Logger,
   Param,
   ParseUUIDPipe,
   Post,
@@ -41,6 +42,8 @@ const KEY = 'Idempotency-Key';
 @ApiBearerAuth()
 @Controller('quotes')
 export class AcceptController {
+  private readonly logger = new Logger('QuoteAccept');
+
   constructor(private readonly service: AcceptService) {}
 
   @Post(':id/accept')
@@ -75,6 +78,7 @@ export class AcceptController {
   ): Promise<BookingDto> {
     if (!key || key.length > QUOTE_IDEMPOTENCY_KEY_MAX) {
       recordQuoteAccept('refused');
+      this.logger.warn(`quote ${id} booking -: refused`);
       throw refusal(
         HttpStatus.BAD_REQUEST,
         'validation_failed',
