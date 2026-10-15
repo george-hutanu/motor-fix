@@ -13,6 +13,7 @@ import { RequestsController } from './requests/requests.controller';
 import { RequestsService } from './requests/requests.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
+import { CacheModule } from '../cache/cache.module';
 
 // Requests, quotes and bookings. The client, the outbox and the Redis
 // connection come from the global AuthModule.
@@ -24,7 +25,8 @@ import { AuditService } from '../audit/audit.service';
     QuotesController,
     AcceptController,
   ],
-  exports: [DeclineService],
+  exports: [DeclineService, GarageRequestsService, RequestsService],
+  imports: [CacheModule],
   providers: [
     RequestsService,
     GarageRequestsService,

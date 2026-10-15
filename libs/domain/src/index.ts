@@ -33,6 +33,7 @@ export { PasswordResetModule } from './auth/password/password-reset/password-res
 export { PhoneSignInModule } from './auth/phone-sign-in/phone-sign-in.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { createPrisma, PRISMA } from './auth/prisma';
+export { WarmModule } from './cache/warm/warm.module';
 export { warmCache } from './cache/warm-up/warm-up';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export {

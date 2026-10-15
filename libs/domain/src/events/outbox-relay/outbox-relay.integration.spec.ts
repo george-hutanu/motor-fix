@@ -434,6 +434,7 @@ describe('purging the cached public reads', () => {
     });
 
   // @traces 1182-FR-005 1182-FR-007 1182-FR-008
+  // @traces 1169-FR-006
   it('purges the garage and the search tags of every event a public garage channel reads, whatever its kind', async () => {
     const [a, b] = [randomUUID(), randomUUID()];
     await garageEvent(a, 'garage.suspended');
@@ -443,22 +444,28 @@ describe('purging the cached public reads', () => {
     await new OutboxRelay(prisma, redis).relay();
 
     expect(redis.dropped).toEqual([
+      `PURGE v1:tag:warm:garage:${a}`,
       `PURGE v1:tag:garage:${a}`,
       'PURGE v1:tag:search',
       'INCR garage-search-gen:v1',
+      `PURGE v1:tag:warm:garage:${b}`,
       `PURGE v1:tag:garage:${b}`,
       'PURGE v1:tag:search',
       'INCR garage-search-gen:v1',
     ]);
   });
 
-  it('purges nothing for an event no public channel reads', async () => {
+  // @traces 1169-FR-006
+  it('purges only the sign-in warm of its audience for an event no public channel reads', async () => {
     await recorded(1);
     const redis = new FakeRedis();
 
     await new OutboxRelay(prisma, redis).relay();
 
-    expect(redis.dropped).toEqual([]);
+    expect(redis.dropped).toEqual([
+      expect.stringMatching(/^PURGE v1:tag:warm:account:/),
+      expect.stringMatching(/^PURGE v1:tag:warm:garage:/),
+    ]);
   });
 
   it('keeps the event waiting when the purge fails', async () => {
@@ -535,6 +542,6 @@ describe('dropping the cached searches', () => {
 
     await new OutboxRelay(prisma, redis).relay();
 
-    expect(redis.dropped).toEqual([]);
+    expect(redis.dropped).toEqual([`PURGE v1:tag:warm:garage:${garageId}`]);
   });
 });
