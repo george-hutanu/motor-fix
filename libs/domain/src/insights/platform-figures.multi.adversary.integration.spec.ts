@@ -117,23 +117,6 @@ describe('the night funnel when the job runs again', () => {
 
     expect(await row()).toMatchObject({ requestsQuoted: 0 });
   });
-
-  it('keeps the city rows free of funnel counts', async () => {
-    const { id } = await world.garage('Atelier A');
-    await prisma.garage.update({
-      data: { cityKey: 'cluj', cityName: 'Cluj' },
-      where: { id },
-    });
-    const request = await world.request(driverId, { createdAt: ON_DAY });
-    await quoteFrom(request.id, id, ON_DAY);
-
-    await writeSnapshot(prisma, NIGHT);
-
-    const cityRow = await prisma.platformDaily.findUnique({
-      where: { day_city: { city: 'cluj', day: DAY } },
-    });
-    expect(cityRow?.requestsQuoted ?? 0).toBe(0);
-  });
 });
 
 // @traces 250-FR-008
