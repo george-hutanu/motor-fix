@@ -64,14 +64,17 @@ describe('the server origin map with odd addresses', () => {
     expect(providers[0]?.useValue).toEqual({ [key]: 'https://web.test' });
   });
 
-  it.each([['']])('provides no map for a public address of %j', async (web) => {
-    const providers = await serverConfig({
-      API_INTERNAL_URL: api,
-      PUBLIC_WEB_URL: web,
-    });
+  it.each([[''], [undefined]])(
+    'provides no map for a public address of %j',
+    async (web) => {
+      const providers = await serverConfig({
+        API_INTERNAL_URL: api,
+        PUBLIC_WEB_URL: web,
+      });
 
-    expect(providers).toEqual([]);
-  });
+      expect(providers).toEqual([]);
+    },
+  );
 
   it.each([['not a url'], ['web.test'], ['//web.test'], ['http://'], ['   ']])(
     'refuses to load for the invalid public address %j',
@@ -79,6 +82,18 @@ describe('the server origin map with odd addresses', () => {
       await expect(
         serverConfig({ API_INTERNAL_URL: api, PUBLIC_WEB_URL: web }),
       ).rejects.toThrow('PUBLIC_WEB_URL must be an absolute URL');
+    },
+  );
+
+  it.each([['not a url'], [''], ['/api']])(
+    'refuses to load for the invalid private API address %j',
+    async (api) => {
+      await expect(
+        serverConfig({
+          API_INTERNAL_URL: api,
+          PUBLIC_WEB_URL: 'https://web.test',
+        }),
+      ).rejects.toThrow('API_INTERNAL_URL must be an absolute URL');
     },
   );
 });

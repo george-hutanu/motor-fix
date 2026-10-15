@@ -397,6 +397,24 @@ describe('the price list on the profile', () => {
     expect(prices()?.textContent).toContain('990–1.500 lei');
     expect(prices()?.textContent).not.toContain('890–1.400 lei');
   });
+
+  it('keeps the same section and its switch through the read that follows', async () => {
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
+    const section = prices();
+    section?.querySelector<HTMLElement>('[role="switch"]')?.click();
+    await settle();
+
+    resync.next();
+    await settle();
+    await reads[1]?.answer({ ...FIXED, prices: [BRAKES] });
+
+    expect(reads).toHaveLength(2);
+    expect(prices()).toBe(section);
+    expect(
+      prices()?.querySelector('[role="switch"]')?.getAttribute('aria-checked'),
+    ).toBe('true');
+  });
 });
 
 // The server render's answer reaches the browser through the transfer cache,

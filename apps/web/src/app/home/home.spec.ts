@@ -1067,7 +1067,8 @@ describe('Home place from the Setări city', () => {
       q: 'Cluj-Napoca',
     });
     expect(lineText()).toBe('Lângă Cluj-Napoca · Schimbă');
-    expect(nearsRead().at(-1)).toBe('46.771,23.624');
+    // The city is placed before the first Home read answers, so it is the only one.
+    expect(nearsRead()).toEqual(['46.771,23.624']);
     expect(stored()).toBeNull();
     expect(session.load).not.toHaveBeenCalled();
   });

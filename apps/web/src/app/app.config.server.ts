@@ -19,6 +19,14 @@ import { apiInternalUrl } from '../api-url';
 
 const publicUrl = publicWebUrl();
 
+// The API's private origin, the key the browser's origin replaces.
+const apiOrigin = () => {
+  const url = apiInternalUrl();
+  if (!URL.canParse(url))
+    throw new Error('API_INTERNAL_URL must be an absolute URL');
+  return new URL(url).origin;
+};
+
 const serverConfig: ApplicationConfig = {
   providers: [
     provideServerRendering(withRoutes(serverRoutes)),
@@ -38,7 +46,7 @@ const serverConfig: ApplicationConfig = {
           // browser will ask, not the API's private one.
           {
             provide: HTTP_TRANSFER_CACHE_ORIGIN_MAP,
-            useValue: { [new URL(apiInternalUrl()).origin]: publicUrl.origin },
+            useValue: { [apiOrigin()]: publicUrl.origin },
           },
         ]
       : []),

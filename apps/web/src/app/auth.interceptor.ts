@@ -41,7 +41,7 @@ const ownPath = (url: string, origin: string) => {
 };
 
 // Signed out is a normal answer to "who am I", never a reason to ask.
-const isWhoAmI = (req: HttpRequest<unknown>, path: string | null) =>
+const isWhoAmI = (req: HttpRequest<unknown>, path: string) =>
   req.method === 'GET' && path === '/api/v1/me';
 
 const withToken = (req: HttpRequest<unknown>, token: string) =>
