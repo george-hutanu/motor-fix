@@ -310,7 +310,7 @@ describe('PublicLive', () => {
 describe('publicLiveResource', () => {
   const PROFILE = ['garage.updated', 'review.posted'] as const;
 
-  it('reads at once, and not again when the stream first opens: the view has just read its data (255-FR-004)', async () => {
+  it('reads at once, and not again when the stream first opens: the view has just read its data', async () => {
     setUp();
     const load = jest.fn(async () => ({ name: 'Atelier' }));
     const ref = runInInjectionContext(view(), () =>
