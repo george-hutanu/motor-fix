@@ -6,12 +6,12 @@ import { PASSWORD, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
-// The seeded driver with a Dacia Logan and a phone, and the owners of
-// Service Auto Militari and of the test workshop.
+// The seeded driver with a Dacia Logan and a phone, and the owner of
+// Service Auto Militari, the one approved seeded garage with staff (the test
+// workshop is a draft, which no request reaches).
 const DRIVER = 'cerere@example.test';
 const DRIVER_PHONE = '+40700000102';
 const MILITARI = 'militari@example.test';
-const WORKSHOP = 'service@example.test';
 
 async function accessToken(request: APIRequestContext, email: string) {
   const res = await request.post('/api/v1/auth/sign-in', {
@@ -28,15 +28,12 @@ const garageOf = async (request: APIRequestContext, token: string) => {
   return ((await me.json()) as { garageId: string }).garageId;
 };
 
-// The driver's own request for an oil service, sent to both garages and
-// quoted by each, so no other flow's request is the one accepted.
+// Two of the driver's own requests for an oil service, each quoted by
+// Militari, so the driver holds two quotes and no other flow's request is the
+// one accepted.
 async function twoQuotes(request: APIRequestContext) {
   const militari = await accessToken(request, MILITARI);
-  const workshop = await accessToken(request, WORKSHOP);
-  const garageIds = [
-    await garageOf(request, militari),
-    await garageOf(request, workshop),
-  ];
+  const garageId = await garageOf(request, militari);
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
   const driver = await accessToken(request, DRIVER);
@@ -45,21 +42,22 @@ async function twoQuotes(request: APIRequestContext) {
     items: { id: string; model: string }[];
   };
   const car = items.find((item) => item.model === 'Logan') ?? items[0];
-  const sent = await request.post('/api/v1/quote-requests', {
-    data: {
-      carId: car.id,
-      description: `Schimb de ulei înainte de drum ${randomUUID().slice(0, 8)}`,
-      garageIds,
-      jobTypeIds: [oil.id],
-      sources: ['profile_direct', 'profile_direct'],
-    },
-    headers: { ...bearer(driver), 'Idempotency-Key': randomUUID() },
-  });
-  expect(sent.status()).toBe(201);
-  const requestId = ((await sent.json()) as { id: string }).id;
   const slot = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  const requestIds: string[] = [];
   const quoteIds: string[] = [];
-  for (const owner of [militari, workshop]) {
+  for (let i = 0; i < 2; i += 1) {
+    const sent = await request.post('/api/v1/quote-requests', {
+      data: {
+        carId: car.id,
+        description: `Schimb de ulei înainte de drum ${randomUUID().slice(0, 8)}`,
+        garageIds: [garageId],
+        jobTypeIds: [oil.id],
+        sources: ['profile_direct'],
+      },
+      headers: { ...bearer(driver), 'Idempotency-Key': randomUUID() },
+    });
+    expect(sent.status()).toBe(201);
+    const requestId = ((await sent.json()) as { id: string }).id;
     const quote = await request.post('/api/v1/quotes', {
       data: {
         durationMinutes: 60,
@@ -68,12 +66,13 @@ async function twoQuotes(request: APIRequestContext) {
         slot,
         toLei: 400,
       },
-      headers: { ...bearer(owner), 'Idempotency-Key': randomUUID() },
+      headers: { ...bearer(militari), 'Idempotency-Key': randomUUID() },
     });
     expect(quote.status()).toBe(201);
+    requestIds.push(requestId);
     quoteIds.push(((await quote.json()) as { id: string }).id);
   }
-  return { driver, quoteIds, requestId };
+  return { driver, quoteIds, requestIds };
 }
 
 async function signedIn(page: Page, email: string, landing: string) {
@@ -97,7 +96,8 @@ test.describe('accepting a quote @seeded', () => {
     request,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
-    const { driver, quoteIds, requestId } = await twoQuotes(request);
+    const { driver, quoteIds, requestIds } = await twoQuotes(request);
+    const [requestId, otherId] = requestIds;
     await signedIn(page, DRIVER, '/app/driver');
     await page.goto('/app/driver/requests');
     const row = page.locator(`li[data-request="${requestId}"]`);
@@ -121,6 +121,10 @@ test.describe('accepting a quote @seeded', () => {
     await expect(row.locator('.waiting')).toHaveText(
       /^Așteaptă confirmarea service‑ului · încă 2[34] h$/,
     );
+    // The driver's other quote is untouched by this acceptance.
+    const other = page.locator(`li[data-request="${otherId}"]`);
+    await expect(other).toContainText('Ofertă');
+    await expect(other.locator('.waiting')).toHaveCount(0);
 
     const context = await browser.newContext();
     try {
