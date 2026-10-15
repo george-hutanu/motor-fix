@@ -61,6 +61,7 @@ describe('the mutate job', () => {
     expect(mutate).toMatch(/^ {4}name: mutate \$\{\{ matrix\.id \}\}$/m);
   });
 
+  // @traces 1175-FR-001
   it('gives each job its own PostgreSQL and Redis and migrates before mutating', () => {
     expect(mutate).toMatch(/^ {6}postgres:\n {8}image: postgis\/postgis/m);
     expect(mutate).toMatch(/^ {6}redis:\n {8}image: valkey\/valkey:9$/m);

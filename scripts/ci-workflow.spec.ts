@@ -282,6 +282,7 @@ describe('ci workflow', () => {
     );
   });
 
+  // @traces 1175-FR-001 1175-FR-002 1175-FR-004
   it('runs the compose store on Valkey, refusing writes rather than evicting', () => {
     const compose = readFileSync(join(root, 'docker-compose.yml'), 'utf8');
     const service = compose.match(/^ {2}redis:\n((?: {4}.*\n|\n)+)/m)?.[1];

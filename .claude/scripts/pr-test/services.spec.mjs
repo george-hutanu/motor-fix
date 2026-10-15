@@ -99,6 +99,7 @@ describe('service plans', () => {
     assert.deepEqual(plan.setup, ['compose', '-p', 'mf-prtest-21-x1', '-f', '/wt/docker-compose.yml', 'run', '--rm', 'minio-setup']);
   });
 
+  // @traces 1175-FR-002 1175-FR-004
   it('without Docker, starts a private PostgreSQL and Redis on the given ports inside the run directory', () => {
     const plan = localPlan({ dir: '/tmp/run', ports });
     const flat = plan.start.map((c) => c.join(' ')).join('\n');

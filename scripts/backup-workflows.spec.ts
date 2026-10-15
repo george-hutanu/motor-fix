@@ -156,6 +156,7 @@ describe('the restore drill workflow', () => {
     expect(text).toContain('docker rm -f "$DB" "$REDIS" "$MINIO"');
   });
 
+  // @traces 1175-FR-001 1175-FR-004
   it('starts its throw-away store from the Valkey image, refusing writes rather than evicting', () => {
     const text = read('scripts', 'backup', 'restore-drill.sh');
     expect(text).toMatch(

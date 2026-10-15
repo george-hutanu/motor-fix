@@ -150,6 +150,7 @@ describe('CI workflow still performs every check', () => {
     },
   );
 
+  // @traces 1175-FR-001 1175-FR-002
   it('declares postgres and redis once with health checks and published ports', () => {
     const tests = jobBlock(ci, 'integration');
     const services = tests.slice(

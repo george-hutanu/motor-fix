@@ -93,4 +93,16 @@ describe('the connections the product code opens', () => {
 
     expect(opening).toEqual(['events/events.module.ts', 'store/store.ts']);
   });
+
+  // @traces 1175-FR-008
+  it('give every BullMQ connection unlimited retries per request', () => {
+    const connections = files(src)
+      .map((path) => readFileSync(path, 'utf8'))
+      .filter((text) => text.includes("from 'bullmq'"))
+      .flatMap((text) => text.match(/connection: \{[^}]*\}/g) ?? []);
+
+    expect(connections.length).toBeGreaterThan(0);
+    for (const connection of connections)
+      expect(connection).toMatch(/maxRetriesPerRequest: null/);
+  });
 });

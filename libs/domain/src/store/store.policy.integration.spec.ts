@@ -18,4 +18,9 @@ describe('the store', () => {
 
     expect(reply).toEqual(['maxmemory-policy', 'noeviction']);
   });
+
+  // @traces 1175-FR-001 1175-FR-010
+  it('is Valkey 9', async () => {
+    expect(await redis.info('server')).toMatch(/^valkey_version:9\./m);
+  });
 });
