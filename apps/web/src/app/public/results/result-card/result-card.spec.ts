@@ -1,12 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { ResultCard } from './result-card';
+import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
 
 const BMW: BrandRefDto = { id: 'b-bmw', name: 'BMW', slug: 'bmw' };
 const DACIA: BrandRefDto = { id: 'b-dacia', name: 'Dacia', slug: 'dacia' };
@@ -34,7 +37,13 @@ const garageOf = (over: Partial<ListedGarageDto> = {}): ListedGarageDto => ({
 let fixture: ComponentFixture<ResultCard>;
 
 beforeEach(async () => {
-  TestBed.configureTestingModule({ providers: [provideRouter([])] });
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter([]),
+      provideHttpClient(),
+      provideHttpClientTesting(),
+    ],
+  });
   await TestBed.inject(I18n).enter('public');
 });
 
@@ -224,5 +233,120 @@ describe('ResultCard', () => {
     expect(said(card.querySelector('.where'))).toBe(
       'Mobile mechanic · comes to you · 15 km radius',
     );
+  });
+});
+
+// @traces 1169-FR-007
+describe('a result card about to be opened', () => {
+  let observers: {
+    callback: IntersectionObserverCallback;
+    observed: Element[];
+    disconnected: boolean;
+  }[];
+  let want: jest.SpyInstance;
+  let cancel: jest.SpyInstance;
+
+  beforeEach(() => {
+    observers = [];
+    (globalThis as Record<string, unknown>)['IntersectionObserver'] = class {
+      private readonly seen;
+      constructor(callback: IntersectionObserverCallback) {
+        this.seen = {
+          callback,
+          disconnected: false,
+          observed: [] as Element[],
+        };
+        observers.push(this.seen);
+      }
+      observe(target: Element) {
+        this.seen.observed.push(target);
+      }
+      disconnect() {
+        this.seen.disconnected = true;
+      }
+    };
+    const prefetch = TestBed.inject(ProfilePrefetch);
+    want = jest.spyOn(prefetch, 'want').mockImplementation(() => undefined);
+    cancel = jest.spyOn(prefetch, 'cancel').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    delete (globalThis as Record<string, unknown>)['IntersectionObserver'];
+  });
+
+  const pointer = (type: string, pointerType = 'mouse') => {
+    const event = new Event(type);
+    Object.defineProperty(event, 'pointerType', { value: pointerType });
+    return event;
+  };
+  const intersect = (card: Element, isIntersecting = true) =>
+    observers[0]?.callback(
+      [{ isIntersecting, target: card } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+
+  it('pre-fetches its garage, with the brand, after the pointer rests on it for 100 ms', async () => {
+    const card = await render(garageOf());
+    jest.useFakeTimers();
+
+    card.dispatchEvent(pointer('pointerenter'));
+    jest.advanceTimersByTime(99);
+    expect(want).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(1);
+
+    expect(want).toHaveBeenCalledTimes(1);
+    expect(want).toHaveBeenCalledWith('service-auto-militari', 'bmw');
+  });
+
+  it('cancels when the pointer leaves first, and never pre-fetches', async () => {
+    const card = await render(garageOf());
+    jest.useFakeTimers();
+
+    card.dispatchEvent(pointer('pointerenter'));
+    jest.advanceTimersByTime(50);
+    card.dispatchEvent(pointer('pointerleave'));
+    jest.advanceTimersByTime(500);
+
+    expect(cancel).toHaveBeenCalledWith('service-auto-militari', 'bmw');
+    expect(want).not.toHaveBeenCalled();
+  });
+
+  it('pre-fetches as soon as a touch starts on it, and a lifted finger cancels nothing', async () => {
+    const card = await render(garageOf());
+
+    card.dispatchEvent(new Event('touchstart'));
+    card.dispatchEvent(pointer('pointerleave', 'touch'));
+
+    expect(want).toHaveBeenCalledWith('service-auto-militari', 'bmw');
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('is not pre-fetched for being on screen at first paint', async () => {
+    const card = await render(garageOf());
+
+    expect(observers[0]?.observed).toEqual([card]);
+    intersect(card);
+
+    expect(want).not.toHaveBeenCalled();
+  });
+
+  it('is pre-fetched when it scrolls into view after the first scroll', async () => {
+    const card = await render(garageOf());
+    window.dispatchEvent(new Event('scroll'));
+
+    intersect(card, false);
+    expect(want).not.toHaveBeenCalled();
+    intersect(card);
+
+    expect(want).toHaveBeenCalledWith('service-auto-militari', 'bmw');
+  });
+
+  it('stops watching when it goes away', async () => {
+    await render(garageOf());
+
+    fixture.destroy();
+
+    expect(observers[0]?.disconnected).toBe(true);
   });
 });

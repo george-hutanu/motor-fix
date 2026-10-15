@@ -1,4 +1,12 @@
-import { Component, computed, inject, input } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  input,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
 import {
@@ -10,7 +18,11 @@ import {
 } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
+import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
+
 // Whole keys, so the workspace check finds each one.
+const REST_MS = 100;
+
 const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
   courtesy_car: 'public.listing.hours.facility.courtesy_car',
   pickup_dropoff: 'public.listing.hours.facility.pickup_dropoff',
@@ -30,6 +42,47 @@ export class ResultCard {
 
   readonly brand = input.required<BrandRefDto>();
   readonly garage = input.required<ListedGarageDto>();
+
+  constructor() {
+    const prefetch = inject(ProfilePrefetch);
+    const host: HTMLElement = inject(ElementRef).nativeElement;
+    const destroyRef = inject(DestroyRef);
+    const want = () => prefetch.want(this.garage().slug, this.brand().slug);
+    // A pointer resting on the card, a touch on it, or the card scrolled into
+    // view all say it is about to be opened. A touch also ends in a
+    // pointerleave, which must not cancel what it started.
+    afterNextRender(() => {
+      let rest: ReturnType<typeof setTimeout> | undefined;
+      const enter = (event: Event) => {
+        if ((event as PointerEvent).pointerType === 'touch') return;
+        clearTimeout(rest);
+        rest = setTimeout(want, REST_MS);
+      };
+      const leave = (event: Event) => {
+        if ((event as PointerEvent).pointerType === 'touch') return;
+        clearTimeout(rest);
+        prefetch.cancel(this.garage().slug, this.brand().slug);
+      };
+      host.addEventListener('pointerenter', enter);
+      host.addEventListener('pointerleave', leave);
+      host.addEventListener('touchstart', want, { passive: true });
+      const seen =
+        typeof IntersectionObserver === 'function'
+          ? new IntersectionObserver((entries) => {
+              if (prefetch.scrolled && entries.some((e) => e.isIntersecting))
+                want();
+            })
+          : undefined;
+      seen?.observe(host);
+      destroyRef.onDestroy(() => {
+        clearTimeout(rest);
+        seen?.disconnect();
+        host.removeEventListener('pointerenter', enter);
+        host.removeEventListener('pointerleave', leave);
+        host.removeEventListener('touchstart', want);
+      });
+    });
+  }
 
   protected readonly initials = computed(() =>
     this.garage()

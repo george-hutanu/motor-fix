@@ -15,6 +15,7 @@ import { filter, Subject } from 'rxjs';
 import { GarageProfile, profileKey } from './garage-profile';
 import { Consent } from '../../consent/consent';
 import { PublicLive } from '../live';
+import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
 
 const MOBILE: PublicGarageDto = {
   brandNote: null,
@@ -88,6 +89,13 @@ const api = {
   ),
 };
 
+const prefetch = {
+  take: jest.fn(
+    (_slug: string, _brand: string | undefined): PublicGarageDto | undefined =>
+      undefined,
+  ),
+};
+
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
 const consent = { track: jest.fn() };
@@ -113,6 +121,7 @@ beforeEach(async () => {
   api.profileViewsControllerRecord.mockClear();
   consent.track.mockClear();
   live.register.mockClear();
+  prefetch.take.mockReset();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -123,6 +132,7 @@ beforeEach(async () => {
       { provide: GaragesService, useValue: api },
       { provide: PublicLive, useValue: live },
       { provide: Consent, useValue: consent },
+      { provide: ProfilePrefetch, useValue: prefetch },
       { provide: PLATFORM_ID, useValue: 'browser' },
       { provide: RESPONSE_INIT, useValue: response },
     ],
@@ -424,7 +434,7 @@ describe('the price list carried over from the server render', () => {
         { provide: GaragesService, useValue: api },
         { provide: PublicLive, useValue: live },
         { provide: Consent, useValue: consent },
-        { provide: Consent, useValue: consent },
+        { provide: ProfilePrefetch, useValue: prefetch },
         { provide: PLATFORM_ID, useValue: 'server' },
         { provide: RESPONSE_INIT, useValue: {} },
       ],
@@ -488,6 +498,74 @@ describe('the price list carried over from the server render', () => {
         profileKey('service-auto-militari', undefined),
       ),
     ).toBe(false);
+  });
+});
+
+// @traces 1169-FR-008
+describe('a profile pre-fetched from the results', () => {
+  const send = (kind: string) =>
+    messages.next({ at: '2026-10-08T12:00:00.000Z', id: 'x', kind });
+
+  it('draws the pre-fetched answer with no read before it', async () => {
+    prefetch.take.mockReturnValue(FIXED);
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+
+    expect(prefetch.take).toHaveBeenCalledWith('service-auto-militari', 'bmw');
+    expect(page().querySelector('[aria-busy="true"]')).toBeNull();
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
+    expect(reads).toHaveLength(0);
+  });
+
+  it('joins the stream and reads again on its messages, as today', async () => {
+    jest.useFakeTimers();
+    prefetch.take.mockReturnValue(FIXED);
+    await open('/ro/garages/service-auto-militari');
+
+    expect(live.register).toHaveBeenLastCalledWith({
+      brand: undefined,
+      garage: 'g-2',
+    });
+    send('garage.updated');
+    jest.advanceTimersByTime(300);
+    await settle();
+
+    expect(reads).toHaveLength(1);
+    await reads[0]?.answer({ ...FIXED, name: 'Service Auto Militari Nou' });
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari Nou',
+    );
+  });
+
+  it('prefers the answer carried from the server render', async () => {
+    prefetch.take.mockReturnValue({ ...FIXED, name: 'Pre-fetched' });
+    TestBed.inject(TransferState).set(
+      profileKey('service-auto-militari', undefined),
+      FIXED,
+    );
+
+    await open('/ro/garages/service-auto-militari');
+
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
+  });
+
+  it('reads once as today when nothing was pre-fetched', async () => {
+    await open('/ro/garages/service-auto-militari');
+
+    expect(reads).toHaveLength(1);
+    expect(page().querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('says a garage it cannot find as today', async () => {
+    await open('/ro/garages/nowhere');
+    await reads[0]?.fail(404);
+
+    expect(page().querySelector('mf-gone')).not.toBeNull();
+    expect(response.status).toBe(404);
   });
 });
 
