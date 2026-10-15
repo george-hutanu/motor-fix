@@ -1,7 +1,7 @@
 import type { ResponseRateDto } from '@motor-fix/contracts';
 
 import { outbox } from '../../events/event.port';
-import type { PrismaClient } from '../../generated/prisma/client';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 
 const RESPONSE_RATE_PERIOD_DAYS = 30;
 const RESPONSE_RATE_WINDOW_HOURS = 24;
@@ -19,28 +19,39 @@ interface ResponseFigures {
   rate: number | null;
 }
 
-// A closed recipient (the driver cancelled, or a suspension closed it) was
-// never the garage's to answer, and one still waiting under a day may yet be
-// answered in time: neither counts. Every request ever sent counts toward
-// the lifetime figure.
-async function countResponseStats(db: PrismaClient, now: Date) {
+// The answer-rate rule over a `request_recipient r`, for a garage's figures
+// and the platform's alike. A closed recipient (the driver cancelled, or a
+// suspension closed it) was never the garage's to answer, and one still
+// waiting under a day may yet be answered in time: neither counts.
+export function answerRule(now: Date) {
   const since = new Date(now.getTime() - RESPONSE_RATE_PERIOD_DAYS * 24 * HOUR);
   const settled = new Date(now.getTime() - RESPONSE_RATE_WINDOW_HOURS * HOUR);
   const window = `${RESPONSE_RATE_WINDOW_HOURS} hours`;
+  return {
+    answered: Prisma.sql`r.status IN ('quoted', 'declined')
+      AND r.answered_at <= r.created_at + ${window}::interval`,
+    counted: Prisma.sql`r.status <> 'closed' AND r.created_at > ${since}
+      AND NOT (r.status = 'waiting' AND r.created_at > ${settled})`,
+  };
+}
+
+export const answerRateOf = (answered: number, counted: number) =>
+  counted === 0 ? null : Math.floor((answered * 100) / counted);
+
+// Every request ever sent counts toward the lifetime figure.
+async function countResponseStats(db: PrismaClient, now: Date) {
+  const rule = answerRule(now);
   const rows = await db.$queryRaw<
     (Omit<ResponseFigures, 'rate'> & { garageId: string })[]
   >`
     SELECT g.id AS "garageId",
       count(r.id) FILTER (WHERE counted)::int AS "requests30d",
-      count(r.id) FILTER (
-        WHERE counted AND r.status IN ('quoted', 'declined')
-          AND r.answered_at <= r.created_at + ${window}::interval
-      )::int AS "answeredWithinDay30d",
+      count(r.id) FILTER (WHERE counted AND ${rule.answered})::int
+        AS "answeredWithinDay30d",
       count(r.id)::int AS "lifetimeRequests"
     FROM garage g
     LEFT JOIN LATERAL (
-      SELECT r.*, r.status <> 'closed' AND r.created_at > ${since}
-        AND NOT (r.status = 'waiting' AND r.created_at > ${settled}) AS counted
+      SELECT r.*, ${rule.counted} AS counted
       FROM request_recipient r
       WHERE r.garage_id = g.id
     ) r ON true
@@ -49,10 +60,7 @@ async function countResponseStats(db: PrismaClient, now: Date) {
     ORDER BY g.id`;
   return rows.map((row) => ({
     ...row,
-    rate:
-      row.requests30d === 0
-        ? null
-        : Math.floor((row.answeredWithinDay30d * 100) / row.requests30d),
+    rate: answerRateOf(row.answeredWithinDay30d, row.requests30d),
   }));
 }
 

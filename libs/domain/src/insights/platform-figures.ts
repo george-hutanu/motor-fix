@@ -1,12 +1,11 @@
 import { CITY_ALL, type Period } from '@motor-fix/contracts';
 
 import { monthsBack, periodRange } from './periods';
+import { answerRateOf, answerRule } from './response-stats/response-stats';
 import { addDays, atLocal, localDay, monthStart } from '../bucharest';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
 const ACTIVE_WINDOW = 30 * 86_400_000;
-const ANSWER_PERIOD_DAYS = 30;
-const ANSWER_WINDOW_HOURS = 24;
 
 // A garage with no known city counts for the whole country only.
 const inCity = (city: string): Prisma.GarageWhereInput =>
@@ -67,26 +66,19 @@ export async function countPlatformFigures(
   };
 }
 
-// The rule of each garage's response figures, over every garage's
-// recipients: a closed one never counts, nor one still waiting under a day.
+// Each garage's answer-rate rule, over every garage's recipients.
 async function platformAnswerRate(db: PrismaClient, now: Date, city: string) {
-  const since = new Date(now.getTime() - ANSWER_PERIOD_DAYS * 86_400_000);
-  const settled = new Date(now.getTime() - ANSWER_WINDOW_HOURS * 3_600_000);
-  const window = `${ANSWER_WINDOW_HOURS} hours`;
+  const rule = answerRule(now);
   const [{ counted, answered }] = await db.$queryRaw<
     { counted: number; answered: number }[]
   >`
     SELECT count(*)::int AS counted,
-      count(*) FILTER (
-        WHERE r.status IN ('quoted', 'declined')
-          AND r.answered_at <= r.created_at + ${window}::interval
-      )::int AS answered
+      count(*) FILTER (WHERE ${rule.answered})::int AS answered
     FROM request_recipient r
     JOIN garage g ON g.id = r.garage_id
-    WHERE r.status <> 'closed' AND r.created_at > ${since}
-      AND NOT (r.status = 'waiting' AND r.created_at > ${settled})
+    WHERE ${rule.counted}
       AND (${city} = ${CITY_ALL} OR g.city_key = ${city})`;
-  return counted === 0 ? null : Math.floor((answered * 100) / counted);
+  return answerRateOf(answered, counted);
 }
 
 // `approvedAt` moves when a reopened file is approved again, so a garage
