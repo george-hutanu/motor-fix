@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-11
+updated: 2026-10-15
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -25,6 +25,7 @@ features:
   - 412-brand-job-ticks
   - 226-best-rated-brand-dial
   - 115-listing-checklist
+  - 1204-hours-row-live-regions
 ---
 
 # Capability: Garage listing
@@ -862,6 +863,38 @@ _From 115-listing-checklist._
 ### 115-FR-015 — Tests MUST cover, in Jest: each required rule of FR-002 once, with the mobile variant of FR-003 and the optional step 4; each warning of FR-005 as a warning with no error beside it, a draft with no step-6 uploads and a CUI used by another draft, open or submitted, included; the agreement of each completeness function with the rule set (FR-001); the summary's count, grouping, singular, jump and focus; the dot and tick rules of FR-007; a restored wrong value shown without leaving; and, on real PostgreSQL and Redis, the endpoint's 200 with warnings, 422 with the same field list the browser produces for the same data, 409 on a submitted draft, the holder rule and that it writes nothing. In Playwright: press "Trimite spre verificare" on an empty form and read the summary; fill the missing items from the summary's links and reach "Totul e complet".
 
 _From 115-listing-checklist._
+
+### 1204-FR-001 — The weekdays row MUST carry one status region that is in the page whenever the row is, empty when the row has no error, marked `role="status"` with `aria-live="polite"` (never interrupting), with the row's error text as its content while the row's error stands; while the row is on screen, the text MUST be set into its existing region and MUST be emptied from it when the error goes (the one exception is a row created already in error: a day row shown when the day-by-day view opens while its error stands).
+
+_From 1204-hours-row-live-regions._
+
+### 1204-FR-002 — The Saturday row, while the day-by-day view is closed, MUST carry a region of its own with the same behaviour as 1204-FR-001.
+
+_From 1204-hours-row-live-regions._
+
+### 1204-FR-003 — Each day row in the day-by-day view MUST carry a region of its own with the same behaviour as 1204-FR-001, including for the break-outside error; only the row with the error has text in its region.
+
+_From 1204-hours-row-live-regions._
+
+### 1204-FR-004 — The closed-day error MUST be a region with the same behaviour as 1204-FR-001, in the page whenever the closed-day fields are.
+
+_From 1204-hours-row-live-regions._
+
+### 1204-FR-005 — Each region MUST keep its existing id (the row's or the closed-day error's), and a row's fields MUST describe themselves by that id only while the row shows an error, as today; the week-level description of the hours block is unchanged.
+
+_From 1204-hours-row-live-regions._
+
+### 1204-FR-006 — An empty region MUST take no visible space and show nothing while staying in the accessibility tree (never `display: none`, which would make a region that gains text appear to assistive technology already holding it); this holds for every message region of the step, the week, payments and price ones included, so the step's appearance with no error is unchanged at 320 px, 390 px, tablet and desktop, in light and dark, in Romanian and English.
+
+_From 1204-hours-row-live-regions._
+
+### 1204-FR-007 — The error texts, their keys and their translations are unchanged; no new text is added in either language.
+
+_From 1204-hours-row-live-regions._
+
+### 1204-FR-008 — The colocated component tests MUST cover, before the change is made, each of the four region kinds (weekdays, Saturday, a day row, closed day): present and empty before an error, holding the text during one, empty after it; and the tests that count or list the step's status regions MUST keep passing with their meaning intact: the helper that lists the regions' texts leaves the empty ones out, so its existing assertions stay unchanged.
+
+_From 1204-hours-row-live-regions._
 
 ## Retired
 
