@@ -53,8 +53,11 @@ export class PublicLive implements OnDestroy {
   private readonly messages = new Subject<LiveMessage>();
   readonly events = this.messages.asObservable();
   private readonly resyncs = new Subject<void>();
-  // Every view re-reads its data on each open: the stream may have missed events.
+  // Every view re-reads its data when a stream opens after the tab already
+  // had one: it may have missed events. The first open follows the views' own
+  // first reads, so it re-reads nothing (255-FR-004).
   readonly resync: Observable<void> = this.resyncs.asObservable();
+  private opened = false;
   private readonly status = signal<PublicLiveState>('closed');
   readonly state = this.status.asReadonly();
 
@@ -153,7 +156,8 @@ export class PublicLive implements OnDestroy {
       await this.stream(url, wanted, () => {
         failures = 0;
         this.status.set('open');
-        this.resyncs.next();
+        if (this.opened) this.resyncs.next();
+        this.opened = true;
       }).catch(() => undefined);
       if (wanted.aborted) return;
       this.status.set('reconnecting');
