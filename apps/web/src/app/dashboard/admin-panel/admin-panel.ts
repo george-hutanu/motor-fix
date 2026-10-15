@@ -23,11 +23,11 @@ interface Tile {
 const inPeriod = (f: Figures) => f.period !== 'default';
 const sinceStart = (now: number, start: number | undefined) =>
   start === undefined ? null : now - start;
-const NO_LINE = () => null;
 const TILES: readonly {
   key: string;
   line?: (f: Figures) => number | null;
   percent?: true;
+  soon?: true;
   // The line in place of a figure the answer leaves out.
   none?: string;
 }[] = [
@@ -38,9 +38,9 @@ const TILES: readonly {
         ? (f.garagesApprovedInPeriod ?? null)
         : f.garagesApprovedThisMonth,
   },
-  { key: 'requestsSent', line: NO_LINE },
-  { key: 'answerRate', line: NO_LINE, none: 'answerRateNone', percent: true },
-  { key: 'bookings', line: NO_LINE },
+  { key: 'requestsSent' },
+  { key: 'answerRate', none: 'answerRateNone', percent: true },
+  { key: 'bookings' },
   {
     key: 'activeDrivers',
     line: (f) => {
@@ -50,7 +50,7 @@ const TILES: readonly {
       return sinceStart(f.activeDrivers, f.activeDriversPeriodStart);
     },
   },
-  { key: 'reportedReviews' },
+  { key: 'reportedReviews', soon: true },
 ];
 
 const MISSING = '—';
@@ -90,21 +90,10 @@ export class AdminPanel {
   protected readonly tiles = computed(() => {
     const figures = this.overview.figures();
     const loading = this.busy();
-    return TILES.map(({ key, line, none, percent }): Tile => {
-      const label = this.t(key);
-      if (!line) return this.missing(label, 'soon', this.t('soon'));
-      if (figures) {
-        const figure = figures[key as Figure] as number | undefined;
-        if (figure === undefined && none)
-          return this.missing(label, 'none', this.t(none));
-        return this.value(
-          label,
-          figure,
-          line(figures),
-          figures.period,
-          percent,
-        );
-      }
+    return TILES.map((tile): Tile => {
+      const label = this.t(tile.key);
+      if (tile.soon) return this.missing(label, 'soon', this.t('soon'));
+      if (figures) return this.shown(label, tile, figures);
       if (loading) return { label, name: label, state: 'loading' };
       return this.missing(label, 'failed', this.t('unavailable'));
     });
@@ -114,11 +103,23 @@ export class AdminPanel {
     return this.i18n.t(`admin.panel.${key}`, params);
   }
 
-  private missing(
+  // A released figure, or its line when the answer leaves the figure out.
+  private shown(
     label: string,
-    state: 'soon' | 'failed' | 'none',
-    line: string,
+    { key, line, none, percent }: (typeof TILES)[number],
+    figures: Figures,
   ): Tile {
+    const figure = figures[key as Figure] as number | undefined;
+    if (figure === undefined && none) {
+      const text = this.t(none);
+      const name = `${label}, ${MISSING}, ${text}`;
+      return { label, line: text, name, number: MISSING, state: 'value' };
+    }
+    const change = line ? line(figures) : null;
+    return this.value(label, figure, change, figures.period, percent);
+  }
+
+  private missing(label: string, state: 'soon' | 'failed', line: string): Tile {
     const name =
       state === 'soon' ? `${label}, ${line}` : `${label}, ${MISSING}, ${line}`;
     return {
@@ -126,7 +127,7 @@ export class AdminPanel {
       line,
       name,
       number: MISSING,
-      state: state === 'none' ? 'value' : state,
+      state,
     };
   }
 
