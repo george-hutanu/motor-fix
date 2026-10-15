@@ -123,6 +123,22 @@ without a status, so the test runs again.
    (`gh pr comment <n> --body …`), leave `agent-review` at failure, and stop.
    The PR is never merged at the cap.
 
+## Routes and flows
+
+- A route is `path[?query][@role][:status]`. `/:lang` is allowed as the first
+  segment only (`/:lang/list-your-garage` is swept as `/ro/...` and
+  `/en/...`); a route under `/app/` needs `@role` (the seeded account of that
+  role, its language set to the one under test). `dispatch.mjs` and `run.mjs`
+  refuse any other route before a run is spent (exit 64, one line each).
+- A flows file gets, beside `baseURL`, `apiURL`, `signIn`, `health` and
+  `ready`, the shared helpers `waitForText`, `openSheet`, `stepButton` and
+  `accounts` (`.claude/scripts/pr-test/flow-helpers.mjs`); an unhandled
+  rejection it leaves is a `high` finding.
+- Prove the flows before dispatching them:
+  `node .claude/scripts/pr-test/precheck.mjs --flows <file> --check` against
+  the app and API already serving (`--base-url`, default
+  http://localhost:4200; `--api-url`, default http://localhost:3000).
+
 ## Evidence
 
 Copy `report.md` and `report.json` from the tester's `--out` directory into

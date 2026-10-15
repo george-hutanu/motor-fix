@@ -112,8 +112,11 @@ to `tracker-sync.md` at its next event.
      API and uploads the report and screenshots; then, locally, the tester reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit (`--local` boots on the
-     laptop instead, behind the heavy lock, when Actions is unavailable). Fix
-     every blocking finding
+     laptop instead, behind the heavy lock, when Actions is unavailable).
+     Its routes are `path[?query][@role][:status]` (`/:lang` first only,
+     `@role` required under `/app/`), and its flows are proven first with
+     `precheck.mjs --flows <f> --check` against a running app (the skill's
+     "Routes and flows"). Fix every blocking finding
      (tests first), push, dispatch the new head's run with `--no-wait` and
      end, as at ready; each lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (10), and at the cap the task goes to

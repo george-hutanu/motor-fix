@@ -242,3 +242,25 @@ if (result !== 'done') throw new Error('the flows result was lost');`);
   });
 });
 
+// @traces 1230-FR-012
+describe('how to write a route and a flow, where the tester and its callers read it', () => {
+  const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
+  const docs = {
+    skill: read('../../skills/speckit-pr-test/SKILL.md'),
+    agent: read('../../agents/pr-tester.md'),
+    agents: read('../../../AGENTS.md'),
+  };
+
+  for (const [name, doc] of Object.entries(docs))
+    it(`${name} states the route grammar and the pre-flight check`, () => {
+      assert.match(doc, /path\[\?query\]\[@role\]\[:status\]/);
+      assert.match(doc, /\/:lang/);
+      assert.match(doc, /\/app\/[^\n]*@role|@role[^\n]*\/app\//);
+      assert.match(doc, /precheck\.mjs[^\n]*--check/);
+    });
+
+  for (const name of ['skill', 'agent'])
+    it(`${name} names the shared flow helpers`, () => {
+      for (const helper of ['waitForText', 'openSheet', 'stepButton', 'accounts']) assert.match(docs[name], new RegExp(`\\b${helper}\\b`), helper);
+    });
+});

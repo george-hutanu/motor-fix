@@ -47,11 +47,16 @@ node .claude/scripts/specs-repo.mjs ensure >/dev/null; for f in spec design task
 
 From the spec's acceptance scenarios, `design.md` and the changed files, list
 the flows a user or a client would go through, and which routes and
-endpoints the change touches. A route is written `path[@role][:status]`: `/app/driver@driver` is
+endpoints the change touches. A route is written `path[?query][@role][:status]`: `/app/driver@driver` is
 opened with a real session of the seeded driver (signed in through the API for
-each browser context; roles `admin`, `driver`, `garage`, `mechanic`,
+each browser context, its account set to the language under test; roles `admin`, `driver`, `garage`, `mechanic`,
 `receptionist`), and `/de:404` expects that status, so the 404 raises no
-finding while any other answer does. A changed route you still cannot reach is
+finding while any other answer does. `/results?brand=dacia` opens with its
+query. A public screen under the language frame starts with `/:lang`
+(`/:lang/list-your-garage`), swept as `/ro/...` and `/en/...`; a `:` anywhere
+else is refused. A route under `/app/` needs `@role`, or it would sweep the
+sign-in screen. `dispatch.mjs` and `run.mjs` refuse a route they cannot sweep
+before anything runs (exit 64, one line per route). A changed route you still cannot reach is
 a `medium` finding titled "not swept", naming the route.
 
 ## 2. Write the flows (before the run)
@@ -73,7 +78,7 @@ module loads, with no browser; `dispatch.mjs --flows` runs it and dispatches
 nothing while it fails.
 
 Otherwise write `.specify/.cache/qa-flows-<PR>.mjs`: a default export `async ({ baseURL,
-apiURL, outDir, repoRoot, signIn, health, ready }) => findings[]` that drives Playwright
+apiURL, outDir, repoRoot, signIn, health, ready, waitForText, openSheet, stepButton, accounts }) => findings[]` that drives Playwright
 (`createRequire(join(repoRoot, 'package.json'))('@playwright/test').chromium`,
 one browser, closed in `finally`) through each flow from step 1: click, type,
 switch the language, reload, open a second tab where the spec asks for it, and
@@ -101,6 +106,16 @@ only health routes are `/health/live` and `/health/ready` (nothing answers at
 the bare health path), and the run checks both before your flows start. If a
 flow needs them anyway (a change to health or readiness), call `health()` and
 `ready()`, which fetch those two routes on `apiURL` and return the Response.
+Use the shared helpers for the waits the first laps got wrong:
+`waitForText(page, text[, ms])` (visible within 10 s, else it rejects naming
+the text), `openSheet(page, trigger)` (clicks, then waits for the open sheet's
+content, never the overlay's own box), `stepButton(page, label)` (the step's
+button visible at this viewport, the hidden phone or desktop copy skipped) and
+`accounts` (the seeded role-to-e-mail map). Await every promise: one left
+unhandled is a `high` finding. Before dispatching, run the flows once against
+a running app: `node .claude/scripts/pr-test/precheck.mjs --flows <file> --check
+[--base-url http://localhost:4200] [--api-url http://localhost:3000]` (the
+same arguments, a real `signIn`; one line per finding, throw or rejection).
 The file imports
 nothing but Node built-ins and what `repoRoot` resolves: on GitHub Actions it
 runs from a temporary directory beside the PR's checkout.
