@@ -354,6 +354,64 @@
               }
             }
           ]
+        },
+        {
+          "uid": "api-prefetch-hit-rate",
+          "title": "API pre-fetch hit rate low",
+          "condition": "B",
+          "for": "60m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "api"
+          },
+          "annotations": {
+            "summary": "Fewer than 30% of the warmed {{ $labels.kind }} entries were taken by the next read, for 60 minutes, over at least 50 warms ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-api"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "(sum by (deployment_environment, kind) (increase(motorfix_cache_total{service_name=\"api\", kind=~\"driver-home|garage-home\", outcome=\"hit\"}[1h])) / sum by (deployment_environment, kind) (increase(motorfix_cache_total{service_name=\"api\", kind=~\"driver-home|garage-home\", outcome=\"warm\"}[1h]))) and on (deployment_environment, kind) (sum by (deployment_environment, kind) (increase(motorfix_cache_total{service_name=\"api\", kind=~\"driver-home|garage-home\", outcome=\"warm\"}[1h])) >= 50)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        0.3
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }

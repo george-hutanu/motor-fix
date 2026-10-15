@@ -15,7 +15,8 @@
         "api-latency",
         "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
-        "api-search-log-failure-rate"
+        "api-search-log-failure-rate",
+        "api-prefetch-hit-rate"
       ],
       "story": "ST-881"
     },
@@ -76,7 +77,8 @@
         "api-latency",
         "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
-        "api-search-log-failure-rate"
+        "api-search-log-failure-rate",
+        "api-prefetch-hit-rate"
       ],
       "story": "ST-881"
     },
@@ -378,7 +380,7 @@
         "web-error-rate",
         "web-latency"
       ],
-      "reason": "the browser's collector",
+      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel",
       "story": "ST-877"
     },
     {
@@ -420,10 +422,22 @@
       "source": "libs/domain/src/cache/cache.metrics.ts",
       "dashboard": "motorfix-api",
       "alerts": [
-        "api-cache-fallback-rate"
+        "api-cache-fallback-rate",
+        "api-prefetch-hit-rate"
       ],
-      "reason": "counts each cached public read (profile, home, popular-brands) by outcome: hit, miss, stale (served past its soft expiry), coalesced (a concurrent read served by another read's call), negative (a remembered not-found or empty answer), fallback (Redis failed and PostgreSQL answered), warm (filled by the post-deploy warm-up), and purge (an entry removed by a tag purge, from the worker); one warn log line when Redis first fails and one when it is back; a fallback rate above 5% for 10 minutes is the api-cache-fallback-rate alert",
+      "reason": "counts each cached read (profile, home, popular-brands, and the pre-fetched driver-home and garage-home lists) by outcome: hit, miss, stale (served past its soft expiry), coalesced (a concurrent read served by another read's call), negative (a remembered not-found or empty answer), fallback (Redis failed and PostgreSQL answered), warm (filled by the post-deploy warm-up or, for driver-home and garage-home, by a sign-in), and purge (an entry removed by a tag purge, from the worker); one warn log line when Redis first fails and one when it is back; a fallback rate above 5% for 10 minutes is the api-cache-fallback-rate alert, and a driver-home or garage-home hit rate (hits / warms) under 30% for 60 minutes over at least 50 warms is the api-prefetch-hit-rate alert",
       "story": "ST-1182"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_cache_warm_read_seconds",
+      "source": "libs/domain/src/cache/cache.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-prefetch-hit-rate"
+      ],
+      "reason": "times each read a sign-in warm fills, by kind (driver-home, garage-home): the wait a hit on that entry saves, shown as its p75 on the pre-fetch panel",
+      "story": "ST-1169"
     },
     {
       "kind": "product-counter",
