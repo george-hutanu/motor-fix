@@ -282,6 +282,18 @@ describe('ci workflow', () => {
     );
   });
 
+  it('runs the compose store on Valkey, refusing writes rather than evicting', () => {
+    const compose = readFileSync(join(root, 'docker-compose.yml'), 'utf8');
+    const service = compose.match(/^ {2}redis:\n((?: {4}.*\n|\n)+)/m)?.[1];
+
+    expect(service).toMatch(/image: valkey\/valkey:9\n/);
+    expect(service).toContain(
+      "command: ['valkey-server', '--maxmemory-policy', 'noeviction']",
+    );
+    expect(service).toContain('valkey-cli');
+    expect(compose).not.toMatch(/image: redis|redis-server|redis-cli/);
+  });
+
   it('keeps otel-lgtm behind its profile at an exact version', () => {
     const compose = readFileSync(join(root, 'docker-compose.yml'), 'utf8');
     const service = compose.match(/^ {2}otel-lgtm:\n((?: {4}.*\n|\n)+)/m)?.[1];

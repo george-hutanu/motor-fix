@@ -120,7 +120,7 @@ step build
 
 # Files are not in a backup: an empty bucket of the compose images lets the
 # ready check's storage probe pass.
-docker run -d --name "$REDIS" -p 127.0.0.1::6379 redis:7 >/dev/null
+docker run -d --name "$REDIS" -p 127.0.0.1::6379 valkey/valkey:9 valkey-server --maxmemory-policy noeviction >/dev/null
 docker run -d --name "$MINIO" -p 127.0.0.1::9000 \
   -e MINIO_ROOT_USER=drill -e MINIO_ROOT_PASSWORD=drill-secret \
   pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data >/dev/null

@@ -1,5 +1,5 @@
 // Private services for one PR tester run: free ports, the compose project (or,
-// on a machine without Docker, a private PostgreSQL cluster, Redis and, when
+// on a machine without Docker, a private PostgreSQL cluster, Valkey and, when
 // its binary is installed, MinIO), the environment the apps get, the health
 // wait, and the cleanup of what a killed run left. Nothing here touches the
 // shared default ports other sessions use.
@@ -70,7 +70,7 @@ export function composePlan({ project, file, ports }) {
 }
 
 /**
- * Without Docker: a throwaway PostgreSQL cluster and Redis inside the run's
+ * Without Docker: a throwaway PostgreSQL cluster and Valkey inside the run's
  * directory, on the run's ports, and MinIO beside them when `minio` (its
  * binary is on the PATH). MinIO does not daemonize: the caller spawns
  * `minio.cmd` detached, writes its pid to `minio.pidFile`, waits for
@@ -85,11 +85,11 @@ export function localPlan({ dir, ports, minio = false }) {
       ["initdb", "-D", pg, "-U", "motorfix", "--auth=trust", "--no-sync", "-E", "UTF8", "--no-locale"],
       ["pg_ctl", "-D", pg, "-l", join(dir, "pg.log"), "-o", `-p ${ports.postgres} -k ${dir} -c listen_addresses=127.0.0.1`, "-w", "start"],
       ["createdb", "-h", "127.0.0.1", "-p", String(ports.postgres), "-U", "motorfix", "motorfix"],
-      ["redis-server", "--port", String(ports.redis), "--bind", "127.0.0.1", "--save", "", "--appendonly", "no", "--daemonize", "yes", "--pidfile", join(dir, "redis.pid"), "--dir", dir],
+      ["valkey-server", "--port", String(ports.redis), "--bind", "127.0.0.1", "--save", "", "--appendonly", "no", "--maxmemory-policy", "noeviction", "--daemonize", "yes", "--pidfile", join(dir, "redis.pid"), "--dir", dir],
     ],
     stop: [
       ["pg_ctl", "-D", pg, "-m", "immediate", "-w", "stop"],
-      ["redis-cli", "-p", String(ports.redis), "shutdown", "nosave"],
+      ["valkey-cli", "-p", String(ports.redis), "shutdown", "nosave"],
     ],
     ...(minio && {
       minio: {
@@ -135,7 +135,7 @@ const worktreeOwner = (name) => pidIn(/^mf-prtest-\d+-[0-9a-f]{7}-(\d+)$/, name)
 export const APP_SCRIPTS = { api: "dist/apps/api/main.js", web: "dist/apps/web/server/server.mjs", worker: "dist/apps/worker/main.js" };
 
 /** What a run's pid files name: a program (its command's first word) or a script it runs. */
-const PID_FILES = [["redis.pid", "redis-server"], ["minio.pid", "minio"], ...Object.entries(APP_SCRIPTS).map(([app, script]) => [`${app}.pid`, script])];
+const PID_FILES = [["redis.pid", "valkey-server"], ["minio.pid", "minio"], ...Object.entries(APP_SCRIPTS).map(([app, script]) => [`${app}.pid`, script])];
 
 /** The pid on a file's first line, when it is one a process can have and is not init. */
 function pidFrom(file) {
