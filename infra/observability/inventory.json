@@ -10,10 +10,10 @@
       "source": "apps/api",
       "dashboard": "motorfix-api",
       "alerts": [
-        "api-cache-fallback-rate",
         "api-down",
         "api-error-rate",
         "api-latency",
+        "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate"
       ],
@@ -71,10 +71,10 @@
       "source": "scripts/railway-deploy.ts",
       "dashboard": "motorfix-overview",
       "alerts": [
-        "api-cache-fallback-rate",
         "api-down",
         "api-error-rate",
         "api-latency",
+        "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate"
       ],
