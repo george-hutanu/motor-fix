@@ -12,6 +12,7 @@ features:
   - 357-public-price-jobs
   - 347-read-request
   - 222-booking-from-quote
+  - 1169-prefetch-intent
 ---
 
 # Capability: Quotes
@@ -471,6 +472,14 @@ _From 222-booking-from-quote._
 ### 222-FR-016 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL: scenario 1 in one transaction with the other quotes `waiting` and `confirm_by` by both arms; the audit entries and the outbox event in the same transaction, the via-assistant mark for a grant; `history_shared` true, false and absent; the replay (200, same body, nothing written) and the same-key race; exactly one `quote.accepted` outbox row per accept; 409 `booking_pending` for a second quote of a booked request; `invalid_transition` for `expired`, `withdrawn`, `lost`, `declined_by_driver`, `accepted`, a `waiting` quote past `expires_at`, a suspended garage and a request not `quoted`; `slot_passed`; an unconfirmed e-mail accepts; two concurrent acceptances (two quotes, and the same quote twice) ending with exactly one booking; 404 for another driver and a garage account, 401 for a visitor; 400 for a bad body and a missing key; the garage list carrying the accepted row with `confirmBy` and the phone for the owner and the receptionist, no phone for the mechanic and none on waiting rows; the plate absent before confirmation; the driver list carrying the booking's status and `confirmBy`; no history field in any garage read; the consumer building one QUOTE_ACCEPTED per owner and receptionist, none for a mechanic, and none when the booking has moved on. In Jest, web: the driver row's waiting line in hours, minutes and moments, in both languages, and absent for other statuses; the garage row's accepted wording, time left and phone link present or absent; the re-read on `quote.accepted` in the driver's view and home. In Playwright, one end-to-end test: a driver with two quotes accepts one through the API from the browser session, sees Programată with the waiting line in Cererile mele, and the garage owner sees the accepted row with the phone in Oferte trimise.
 
 _From 222-booking-from-quote._
+
+### 1169-FR-004 — For a session opened as a garage the warm MUST read the garage's `waiting`, `quoted` and `closed` request lists (`GET /api/v1/garage/requests?status=…`, first page) as the garage home reads them, each stored under kind `garage-home`, the garage id and the `status`, tagged `warm:garage:{garageId}` and `warm:account:{accountId}`. An account with no garage warms nothing.
+
+_From 1169-prefetch-intent._
+
+### 1169-FR-005 — The four list reads FR-003 and FR-004 name MUST, when the request is authenticated and carries no cursor and (garage) exactly the warmed `status` value, first take a warm entry for the actor's own account (driver) or own garage (garage) and answer it; otherwise they answer from the database as today. The answer body, status and `Cache-Control: private, no-cache` are the same either way. Any matching read takes the entry, not only the home's (the add-car and quote dialogs also read `GET /api/v1/cars`); no header or route hint marks the home. A warm entry is never answered to another account, to another role or to an unauthenticated request; no new route is added and the public-routes list is unchanged.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 

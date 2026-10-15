@@ -1,10 +1,11 @@
 ---
 capability: tracker
-updated: 2026-10-10
+updated: 2026-10-15
 features:
   - 1036-github-tracker-lifecycle
   - 1037-remove-notion
   - 1135-drop-legacy-pr-body
+  - 1169-prefetch-intent
 ---
 
 # Capability: Tracker
@@ -88,6 +89,10 @@ _From 1135-drop-legacy-pr-body._
 ### 1135-FR-002 — A ready PR's `## Story` section MUST pass only with a `https://github.com/george-hutanu/motor-fix-specs/issues/<n>` link or `N/A` followed by a reason; an old-tracker link (any host of the retired tracker) MUST fail with the existing "no link to the story" message, and so MUST a specs-repo link that does not start a word (one buried in another URL). The header comment MUST describe this rule and no longer mention the pre-rename acceptance or #337.
 
 _From 1135-drop-legacy-pr-body._
+
+### 1169-FR-013 — The run MUST post one comment each on ST-267 (#49), ST-426 (#210), ST-222 (#35) and ST-349 (#73) in `george-hutanu/motor-fix-specs` stating the acceptance criterion from the issue's part 3, 4 or 5 and linking #1169, never twice (a comment already there is left), and log the four in `specs/1169-prefetch-intent/tracker-sync.md`.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 

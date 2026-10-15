@@ -9,6 +9,7 @@ features:
   - 143-profile-views
   - 355-price-list-ranges
   - 1182-cache-service
+  - 1169-prefetch-intent
 ---
 
 # Capability: Garage profile
@@ -236,6 +237,10 @@ _From 355-price-list-ranges._
 ### 355-FR-016 — Accessibility of the section MUST be stated and measurable: the section is a named region holding an `h2` heading (the profile's heading level for sections); each switch is reachable and operable with the keyboard (Tab, Space), shows a visible focus ring, exposes the switch role and its on/off state, and is named by its job's name; the whole row is its click target, at least 44 px high; every text and the range in both states (on, off) meets 4.5:1 contrast against the card in light and dark (the PR QA sweep's axe and contrast checks); the on state is also carried by the switch itself, never by the range's colour alone.
 
 _From 355-price-list-ranges._
+
+### 1169-FR-008 — The pre-fetched answer MUST be kept in one root-level store keyed by slug and brand with its fetch time; the profile page, when opened with a matching entry younger than 120 s, MUST draw from it with no first read, then join the garage's live stream and re-read on its messages as today; an older or missing entry leaves the page's reads as today. A profile that answered not found or gone is remembered in the store for 120 s and not fetched again on another signal.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 
