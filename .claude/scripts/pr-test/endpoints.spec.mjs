@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 
-import { SEEDED, callEndpoints, changedEndpoints, exampleValue, firstId, roleFor, seedPassword } from './endpoints.mjs';
+import { SEEDED, callEndpoints, changedEndpoints, exampleValue, firstId, roleFor, seedPassword, seededSession, setLanguage } from './endpoints.mjs';
 
 const secured = { security: [{ bearer: [] }] };
 const listen = (server) => new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
@@ -225,6 +225,101 @@ describe('calling the changed operations', () => {
       const news = out.skipped.find((s) => s.startsWith('POST /api/v1/admin/news'));
       assert.match(news, /could not sign in as admin.*401/);
       assert.equal(api.seen.filter((s) => s.url === '/api/v1/auth/sign-in').length, 2, 'one sign-in attempt per role');
+    } finally {
+      await close(api.server);
+    }
+  });
+});
+
+// A seeded API that signs the seeded accounts in and answers PATCH /api/v1/me with `me`.
+async function accountApi({ me = 200 } = {}) {
+  const seen = [];
+  const server = createServer((req, res) => {
+    let raw = '';
+    req.on('data', (c) => (raw += c));
+    req.on('end', () => {
+      const body = raw ? JSON.parse(raw) : undefined;
+      seen.push({ method: req.method, url: req.url, auth: req.headers.authorization, body });
+      const send = (status, json, headers = {}) => res.writeHead(status, { 'content-type': 'application/json', ...headers }).end(JSON.stringify(json));
+      if (req.url === '/api/v1/auth/sign-in') {
+        const role = Object.entries(SEEDED).find(([, email]) => email === body.email)?.[0];
+        if (!role || body.password !== 'parola-de-test') return send(401, { code: 'invalid_credentials' });
+        return send(200, { accessToken: `token-${role}` }, { 'set-cookie': `mf_refresh=refresh-${role}-${seen.length}; Path=/api/v1/auth; HttpOnly` });
+      }
+      if (req.method === 'PATCH' && req.url === '/api/v1/me') return send(me, me < 300 ? { language: body.language } : { code: 'boom' });
+      send(404, { code: 'not_found' });
+    });
+  });
+  const port = await listen(server);
+  return { server, seen, apiURL: `http://127.0.0.1:${port}` };
+}
+
+// @traces 1230-FR-007
+describe('a seeded session for the run, the sweep and the flows check', () => {
+  it('signs the seeded account of a role in with the seed password and returns its refresh token', async () => {
+    const api = await accountApi();
+    try {
+      const refresh = await seededSession(api.apiURL)('mechanic');
+      assert.match(refresh, /^refresh-mechanic-/);
+      assert.deepEqual(api.seen.map((c) => [c.method, c.url, c.body?.email]), [['POST', '/api/v1/auth/sign-in', SEEDED.mechanic]]);
+    } finally {
+      await close(api.server);
+    }
+  });
+
+  it('signs in afresh on every call, since refresh tokens rotate', async () => {
+    const api = await accountApi();
+    try {
+      const session = seededSession(api.apiURL);
+      assert.notEqual(await session('driver'), await session('driver'));
+    } finally {
+      await close(api.server);
+    }
+  });
+
+  it('refuses a role no seeded account has', async () => {
+    await assert.rejects(seededSession('http://127.0.0.1:9')('owner'), /no seeded account for the role owner/);
+  });
+});
+
+// @traces 1230-FR-011
+describe('the account language of a signed-in sweep', () => {
+  it('is set through PATCH /api/v1/me with the bearer token', async () => {
+    const api = await accountApi();
+    try {
+      await setLanguage(api.apiURL, 'token-driver', 'en', 'driver');
+      assert.deepEqual(api.seen, [{ method: 'PATCH', url: '/api/v1/me', auth: 'Bearer token-driver', body: { language: 'en' } }]);
+    } finally {
+      await close(api.server);
+    }
+  });
+
+  it('rejects naming the call and the status when the API refuses it, and when it cannot be reached', async () => {
+    const api = await accountApi({ me: 500 });
+    try {
+      await assert.rejects(setLanguage(api.apiURL, 't', 'en', 'driver'), /PATCH \/api\/v1\/me \{"language":"en"\} as driver.*HTTP 500/);
+    } finally {
+      await close(api.server);
+    }
+    await assert.rejects(setLanguage('http://127.0.0.1:9', 't', 'ro', 'driver'), /PATCH \/api\/v1\/me \{"language":"ro"\}/);
+  });
+
+  it('is set before the session is handed over when a language is asked for, and not otherwise', async () => {
+    const api = await accountApi();
+    try {
+      await seededSession(api.apiURL)('driver', 'en');
+      assert.deepEqual(api.seen.map((c) => `${c.method} ${c.url}`), ['POST /api/v1/auth/sign-in', 'PATCH /api/v1/me']);
+      assert.equal(api.seen[1].auth, 'Bearer token-driver');
+      assert.deepEqual(api.seen[1].body, { language: 'en' });
+    } finally {
+      await close(api.server);
+    }
+  });
+
+  it('names the role in the refusal, so the finding says whose context failed', async () => {
+    const api = await accountApi({ me: 403 });
+    try {
+      await assert.rejects(seededSession(api.apiURL)('driver', 'en'), /PATCH \/api\/v1\/me \{"language":"en"\} as driver answered HTTP 403/);
     } finally {
       await close(api.server);
     }

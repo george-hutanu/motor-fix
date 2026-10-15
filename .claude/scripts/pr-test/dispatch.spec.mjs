@@ -379,3 +379,29 @@ describe('dispatch --flows: the flows are pre-checked before anything is dispatc
     assert.equal(called(r.calls, 'workflow run').length, 1);
   });
 });
+
+// @traces 1230-FR-003 1230-FR-005
+describe('dispatch --routes: a route the run cannot sweep is refused before anything is asked of GitHub', () => {
+  it('exits 64 with one line per refused route, and makes no gh call at all', () => {
+    const r = fakeGh()('--no-wait', '--routes', '/,/a b,/app/driver,/x/:lang');
+    assert.equal(r.code, 64);
+    const lines = r.stderr.trim().split('\n');
+    assert.ok(lines.some((l) => l.includes('/a b: ')), r.stderr);
+    assert.ok(lines.some((l) => l.includes('/app/driver: ') && l.includes('@role')), r.stderr);
+    assert.ok(lines.some((l) => l.includes('/x/:lang: ')), r.stderr);
+    assert.ok(!lines.some((l) => /(^|\s)\/: /.test(l)), r.stderr);
+    assert.deepEqual(r.calls, []);
+  });
+
+  it('refuses the same way in a cloud session, before the PR is read over REST', () => {
+    const r = fakeGh({ CLAUDE_CODE_REMOTE: 'true' })('--no-wait', '--routes', '/app/driver');
+    assert.equal(r.code, 64);
+    assert.deepEqual(r.calls, []);
+  });
+
+  it('dispatches query, /:lang and signed-in routes as written', () => {
+    const r = fakeGh()('--no-wait', '--routes', '/results?brand=dacia,/:lang/list-your-garage,/app/driver@driver');
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(called(r.calls, 'workflow run').length, 1);
+  });
+});

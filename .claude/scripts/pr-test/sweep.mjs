@@ -5,14 +5,21 @@
 // checks (layout.mjs), and a screenshot of each combination. Playwright and axe-core come from this checkout, not the PR's,
 // so a PR from before either existed can still be swept.
 //
-// A route is `path[@role][:status]`: `/de:404` must answer 404, and that 404
-// is no finding; `/app/driver@driver` is opened with a real session of the
-// seeded driver, signed in afresh for each browser context.
+// A route is `path[?query][@role][:status]`: `/de:404` must answer 404, and
+// that 404 is no finding; `/app/driver@driver` is opened with a real session
+// of the seeded driver, signed in afresh for each browser context and set to
+// the language under test; `/:lang/garages?brand=dacia` opens with its query. A
+// leading `/:lang` segment, and only there, becomes `/ro` or `/en` per
+// language (the public frame mounts under `:lang`). routeProblem refuses, before
+// any run, what the PR QA workflow's own check refuses, any other `:`, and a
+// route under /app/ with no role (it would sweep the sign-in screen).
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { SEEDED } from "./endpoints.mjs";
 import { coverageKey, layoutKey, mergeFindings, sweepFinding } from "./findings.mjs";
 import { measureLayout } from "./layout.mjs";
 
@@ -27,19 +34,60 @@ const LOCALES = { ro: "ro-RO", en: "en-GB" };
 // Where the language switch keeps the chosen language (libs/i18n/src/switch.ts).
 const LANG_KEY = "mf.lang";
 
-const slug = (route) => route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
+// A path of letters, digits, '-' and '/' slugs as itself; anything else (a query, `/:lang`, an escape) or a
+// long one also gets a short hash of the whole, so two routes that differ only there never share a file.
+const SLUG_MAX = 80;
+const slug = (route) => {
+  const plain = route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
+  if (/^[a-z0-9/-]*$/i.test(route) && plain.length <= SLUG_MAX) return plain;
+  return `${plain.slice(0, SLUG_MAX)}-${createHash("sha256").update(route).digest("hex").slice(0, 8)}`;
+};
+
+/**
+ * The characters the PR QA workflow lets through its routes input, the same
+ * text as its bash `[[ =~ ]]` (`&` escaped there, where a bare one is a syntax
+ * error); pr-qa-workflow.spec.mjs holds the two equal.
+ */
+export const ROUTE_PATTERN = new RegExp("^/[A-Za-z0-9/_.,@:?=\\&%-]*$");
+const LANG = /^\/:lang(?=$|[/?@:])/;
+const SHAPE = /^([^@:]*)(?:@([a-z]+))?(?::(\d{3}))?$/;
 
 export function parseRoute(spec) {
-  const [, path, role, status] = /^([^@:]*)(?:@([a-z]+))?(?::(\d{3}))?$/.exec(spec) ?? [null, spec];
-  return { path: path || "/", role: role ?? null, expect: status ? Number(status) : null };
+  const lang = LANG.test(spec);
+  const rest = lang ? spec.replace(LANG, "") : spec;
+  const [, path, role, status] = SHAPE.exec(rest) ?? [null, rest];
+  return { path: (lang ? "/:lang" : "") + path || "/", role: role ?? null, expect: status ? Number(status) : null, lang };
+}
+
+/** Why the run cannot sweep a route, in one line naming it, or null when it can. */
+export function routeProblem(route) {
+  if (!ROUTE_PATTERN.test(route) || route.includes(",")) return `${route}: not a route the PR QA workflow accepts (path[?query][@role][:status], letters, digits and /_.@:?=&%- only)`;
+  const rest = route.replace(LANG, "");
+  if (!SHAPE.test(rest)) return `${route}: a ':' belongs only in a leading /:lang segment or a trailing :<status>`;
+  const { path, role } = parseRoute(route);
+  if (role && !Object.hasOwn(SEEDED, role)) return `${route}: no seeded account has the role ${role} (${Object.keys(SEEDED).join(", ")})`;
+  if (path.startsWith("/app/") && !role) return `${route}: a route under /app/ needs @role, or the sweep opens the sign-in screen`;
+  return null;
 }
 
 export function matrix({ routes, schemes = ["light", "dark"], langs = ["ro", "en"] }) {
   return routes.flatMap((route) => {
-    const { path, role, expect } = parseRoute(route);
+    const { path, role, expect, lang: perLang } = parseRoute(route);
     const name = `${slug(path)}${role ? `-as-${role}` : ""}${expect ? `-${expect}` : ""}`;
     return Object.keys(VIEWPORTS).flatMap((viewport) =>
-      schemes.flatMap((scheme) => langs.map((lang) => ({ route, path, role, expect, viewport, scheme, lang, shot: `${name}-${viewport}-${scheme}-${lang}.png` }))),
+      schemes.flatMap((scheme) =>
+        langs.map((lang) => ({
+          route,
+          path,
+          href: perLang ? path.replace(LANG, `/${lang}`) : path,
+          role,
+          expect,
+          viewport,
+          scheme,
+          lang,
+          shot: `${name}-${viewport}-${scheme}-${lang}.png`,
+        })),
+      ),
     );
   });
 }
@@ -53,7 +101,8 @@ export function loadProblem(status, expect) {
 
 const pathOf = (url) => {
   try {
-    return new URL(url).pathname;
+    const u = new URL(url);
+    return u.pathname + u.search;
   } catch {
     return null;
   }
@@ -64,23 +113,43 @@ export const dropExpected = (observations) =>
   observations.filter(
     (o) =>
       !o.expect ||
-      !((o.kind === "http" && o.status === o.expect && pathOf(o.url) === o.path) || (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))),
+      !(
+        (o.kind === "http" && o.status === o.expect && pathOf(o.url) === (o.href ?? o.path)) ||
+        (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))
+      ),
   );
 
-/** The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared), else none. */
+/**
+ * The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared)
+ * in the run's language, else none. flowSignIn passes the language a flow asks for (`ro` when it names none).
+ */
 export async function contextCookies(run, { session, baseURL }) {
   if (!run.role) return [];
   if (!session) throw new Error(`no session for @${run.role}: the sweep was given no way to sign in`);
-  return [sessionCookie({ refresh: await session(run.role), baseURL })];
+  return [sessionCookie({ refresh: await session(run.role, run.lang), baseURL })];
 }
 
-// The QA flows' `signIn(context, role)`: the cookie a `path@role` route gets,
-// for a browser context the flow opened itself.
+/** Every page of the context starts in `lang`, as if the language switch had chosen it. */
+const keepLanguage = (context, lang) =>
+  context.addInitScript(
+    ([key, value]) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    },
+    [LANG_KEY, lang],
+  );
+
+// The QA flows' `signIn(context, role[, lang])`: the cookie a `path@role` route gets, for a browser context
+// the flow opened itself, and its pages in that language. The account's language is set every time (Romanian
+// unless asked), since the sweep before the flows leaves it at whichever language it swept last, and the
+// stored choice too, since a restored session does not re-read the account's.
 export const flowSignIn =
   ({ session, baseURL }) =>
-  async (context, role) => {
+  async (context, role, lang = "ro") => {
     if (!role) throw new Error("signIn(context, role) needs a role, one of the seeded accounts'");
-    await context.addCookies(await contextCookies({ role }, { session, baseURL }));
+    await context.addCookies(await contextCookies({ role, lang }, { session, baseURL }));
+    await keepLanguage(context, lang);
   };
 
 /** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
@@ -119,8 +188,8 @@ export function toFindings(observations, { web, origins }) {
 
 /**
  * Drive the running web app through the matrix; returns observations and
- * screenshot paths. `session(role)` signs a seeded account of that role in
- * and returns its refresh token, for routes marked `@role`.
+ * screenshot paths. `session(role, lang)` signs a seeded account of that role in,
+ * sets its language, and returns its refresh token, for routes marked `@role`.
  */
 // A signed-in screen holds its live stream open, so the network never idles:
 // the page must load, then gets a bounded wait for its first calls to settle.
@@ -151,14 +220,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         colorScheme: run.scheme,
         locale: LOCALES[run.lang],
       });
-      await context.addInitScript(
-        ([key, value]) => {
-          try {
-            localStorage.setItem(key, value);
-          } catch {}
-        },
-        [LANG_KEY, run.lang],
-      );
+      await keepLanguage(context, run.lang);
       // Maps read the app's own empty style: no tile is fetched from outside.
       await context.addInitScript(() => {
         globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
@@ -175,7 +237,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
       page.on("response", (r) => r.status() >= 400 && seen({ kind: "http", url: r.url(), status: r.status() }));
       try {
         await context.addCookies(await contextCookies(run, { session, baseURL }));
-        const res = await openPage(page, new URL(run.path, baseURL).href);
+        const res = await openPage(page, new URL(run.href, baseURL).href);
         const problem = loadProblem(res?.status(), run.expect);
         if (problem) seen({ kind: "load", text: problem });
         await page.waitForTimeout(300);

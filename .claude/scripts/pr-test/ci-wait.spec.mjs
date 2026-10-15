@@ -135,6 +135,45 @@ describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
     assert.equal(qa.calls.filter((c) => c === 'pr view 21 --json mergeable').length, 2);
   });
 
+  // @traces 1230-FR-010
+  describe('an agent-review status a finished run left pending', () => {
+    const stale = (run) => [{ name: 'Checks', bucket: 'pending' }, { name: 'agent-review', bucket: 'pending', link: `https://github.com/o/r/actions/runs/${run}` }];
+
+    it('ends the wait at the first poll, naming the status and its run, whatever else is pending', async () => {
+      for (const conclusion of ['cancelled', 'success', 'failure']) {
+        const w = world({ checks: [stale(88)], run: [{ status: 'completed', conclusion }] });
+        const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
+        assert.deepEqual(out, { code: 1, lines: [`CI: agent-review pending but its run 88 is ${conclusion}; dispatch a new lap`] });
+        // One read, and one more to confirm the status is still pending once the run is seen finished.
+        assert.equal(w.calls.filter((c) => c.startsWith('pr checks')).length, 2);
+        assert.ok(w.calls.includes('run view 88 --json status,conclusion'), w.calls.join('\n'));
+      }
+    });
+
+    it('keeps waiting when the run set its verdict between the checks read and the run read', async () => {
+      const verdict = [...green, { name: 'agent-review', bucket: 'pass', link: 'https://github.com/o/r/actions/runs/88' }];
+      const w = world({ checks: [stale(88), verdict], run: [{ status: 'completed', conclusion: 'success' }] });
+      assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+    });
+
+    it('keeps waiting while the run it names is still going', async () => {
+      const w = world({ checks: [stale(88), green], run: [{ status: 'in_progress', conclusion: '' }] });
+      assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+    });
+
+    it('asks for each check\'s link', async () => {
+      const w = world({ checks: [green] });
+      await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
+      assert.ok(w.calls.includes('pr checks 21 --json name,bucket,link'), w.calls.join('\n'));
+    });
+
+    it('keeps waiting on a pending status that links no Actions run', async () => {
+      const w = world({ checks: [[{ name: 'agent-review', bucket: 'pending', link: '' }], green] });
+      assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+      assert.equal(w.calls.filter((c) => c.startsWith('run view')).length, 0);
+    });
+  });
+
   it('stops on a state it cannot read, as on any gh failure', async () => {
     const w = world({ checks: [green], mergeable: ['error'] });
     const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
