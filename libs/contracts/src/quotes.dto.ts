@@ -6,6 +6,7 @@ import {
 } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsDivisibleBy,
   IsIn,
   IsInt,
@@ -17,6 +18,7 @@ import {
   Matches,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 import { FUELS } from './plate';
@@ -527,4 +529,13 @@ export class SendQuoteDto {
   @IsString()
   @Length(1, QUOTE_NOTE_MAX)
   note?: string | null;
+}
+
+// The driver's acceptance of a quote: whether the garage may read the car's
+// history once it confirms.
+export class AcceptQuoteDto {
+  @ApiPropertyOptional({ default: false })
+  @ValidateIf((dto: AcceptQuoteDto) => dto.historyShared !== undefined)
+  @IsBoolean()
+  historyShared?: boolean;
 }

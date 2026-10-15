@@ -236,6 +236,8 @@ model Booking {
   lift                  Int?
   moveCount             Int                  @default(0) @map("move_count")
   historyShared         Boolean              @default(false) @map("history_shared")
+  // The driver's Idempotency-Key on the accept; null on rows other paths write.
+  idempotencyKey        String?              @map("idempotency_key")
   cancelledAt           DateTime?            @map("cancelled_at") @db.Timestamptz(3)
   cancelledBySide       CancelledBySide?     @map("cancelled_by_side")
   cancelledBy           String?              @map("cancelled_by") @db.Uuid
@@ -257,6 +259,7 @@ model Booking {
   mechanic              Mechanic?            @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
   job                   Job?
 
+  @@unique([driverId, idempotencyKey])
   @@index([garageId, createdAt(sort: Desc)])
   @@index([requestId])
   @@map("booking")

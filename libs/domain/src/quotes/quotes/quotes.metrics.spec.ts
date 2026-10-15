@@ -7,6 +7,7 @@ import {
 
 import {
   recordDeclineWindow,
+  recordQuoteAccept,
   recordQuoteSend,
   recordRequestDecline,
 } from './quotes.metrics';
@@ -106,6 +107,30 @@ describe('counting declines and their windows', () => {
         { outcome: 'skipped_undone', sweep: 'false', value: 1 },
         { outcome: 'skipped_closed', sweep: 'true', value: 1 },
         { outcome: 'already_told', sweep: 'false', value: 1 },
+      ]),
+    );
+  });
+});
+
+// @traces 222-FR-014
+describe('counting quote acceptances', () => {
+  it('adds one per accept by outcome, with no identifiers', async () => {
+    recordQuoteAccept('accepted');
+    recordQuoteAccept('accepted');
+    recordQuoteAccept('replayed');
+    recordQuoteAccept('booking_pending');
+    recordQuoteAccept('slot_passed');
+    recordQuoteAccept('invalid_transition');
+    recordQuoteAccept('refused');
+
+    expect(await points('motorfix_quote_accepts_total')).toEqual(
+      expect.arrayContaining([
+        { outcome: 'accepted', value: 2 },
+        { outcome: 'replayed', value: 1 },
+        { outcome: 'booking_pending', value: 1 },
+        { outcome: 'slot_passed', value: 1 },
+        { outcome: 'invalid_transition', value: 1 },
+        { outcome: 'refused', value: 1 },
       ]),
     );
   });
