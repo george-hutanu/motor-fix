@@ -161,6 +161,8 @@ export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControlle
 export { quoteRequestsControllerCandidates as quoteRequestsControllerCandidates } from './fn/quote-requests/quote-requests-controller-candidates';
 export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from './fn/quotes/quotes-controller-send';
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
+export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';
+export { acceptControllerAccept as acceptControllerAccept } from './fn/quotes/accept-controller-accept';
 export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params } from './fn/garage-jobs/garage-jobs-controller-list';
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';

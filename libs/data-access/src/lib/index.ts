@@ -8,6 +8,7 @@ export type { StrictHttpResponse } from './strict-http-response';
 export { Api } from './api';
 
 export type { AcceptedTextDto } from './models/accepted-text-dto';
+export type { AcceptQuoteDto } from './models/accept-quote-dto';
 export type { AdminAccountCountDto } from './models/admin-account-count-dto';
 export type { AdminAccountDto } from './models/admin-account-dto';
 export type { AdminAccountsPageDto } from './models/admin-accounts-page-dto';
@@ -157,6 +158,7 @@ export type { RecordVerificationCheckDto } from './models/record-verification-ch
 export type { RefreshDto } from './models/refresh-dto';
 export type { ReorderJobStepsDto } from './models/reorder-job-steps-dto';
 export type { ReplaceGarageBrandsDto } from './models/replace-garage-brands-dto';
+export type { RequestBookingDto } from './models/request-booking-dto';
 export type { RequestDto } from './models/request-dto';
 export type { RequestJobDto } from './models/request-job-dto';
 export type { RequestListDto } from './models/request-list-dto';
@@ -376,6 +378,8 @@ export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControlle
 export { quoteRequestsControllerCandidates as quoteRequestsControllerCandidates } from './fn/quote-requests/quote-requests-controller-candidates';
 export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from './fn/quotes/quotes-controller-send';
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
+export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';
+export { acceptControllerAccept as acceptControllerAccept } from './fn/quotes/accept-controller-accept';
 export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params } from './fn/garage-jobs/garage-jobs-controller-list';
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';

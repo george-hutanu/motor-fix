@@ -15,6 +15,7 @@ import { Live } from '../live';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const row = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
+  booking: null,
   car: {
     brand: 'Dacia',
     engine: null,
@@ -95,6 +96,107 @@ const rows = (element: HTMLElement) => [
 ];
 
 afterEach(() => TestBed.resetTestingModule());
+
+// @traces 222-FR-007
+// @traces 222-FR-009
+describe('Cererile mele once a quote is accepted', () => {
+  const HOUR = 3_600_000;
+  const booked = (confirmIn: number, status = 'awaiting_confirmation') =>
+    row({
+      booking: {
+        confirmBy: new Date(Date.now() + confirmIn).toISOString(),
+        status: status as 'awaiting_confirmation',
+      },
+      quotesCount: 2,
+      status: 'booked',
+    });
+  const waiting = (element: HTMLElement) =>
+    element.querySelector('[data-request] .waiting');
+
+  it('shows Programată with the hours left for the garage to confirm', async () => {
+    const { element } = await render([[booked(5 * HOUR + 30 * 60_000)]]);
+
+    expect(text(rows(element)[0])).toContain('Programată');
+    const line = waiting(element);
+    expect(line && text(line)).toBe(
+      'Așteaptă confirmarea service‑ului · încă 5 h',
+    );
+  });
+
+  it('writes it in English for an English reader', async () => {
+    const { element } = await render([[booked(5 * HOUR + 30 * 60_000)]], 'en');
+
+    expect(text(rows(element)[0])).toContain('Booked');
+    const line = waiting(element);
+    expect(line && text(line)).toBe('Waiting for the garage · 5 h left');
+  });
+
+  it('counts minutes under an hour and moments under a minute', async () => {
+    const minutes = await render([[booked(42 * 60_000 + 10_000)]]);
+    const minutesLine = waiting(minutes.element);
+    expect(minutesLine && text(minutesLine)).toBe(
+      'Așteaptă confirmarea service‑ului · încă 42 min',
+    );
+    TestBed.resetTestingModule();
+
+    const moments = await render([[booked(20_000)]], 'en');
+    const momentsLine = waiting(moments.element);
+    expect(momentsLine && text(momentsLine)).toBe(
+      'Waiting for the garage · moments left',
+    );
+  });
+
+  it.each(['confirmed', 'lapsed', 'cancelled'])(
+    'shows no waiting line once the booking is %s',
+    async (status) => {
+      const { element } = await render([[booked(5 * HOUR, status)]]);
+
+      expect(waiting(element)).toBeNull();
+    },
+  );
+
+  it('shows no waiting line on a request with no booking', async () => {
+    const { element } = await render([[row({ status: 'quoted' })]]);
+
+    expect(waiting(element)).toBeNull();
+  });
+
+  it('counts the time down as the minutes pass', async () => {
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    });
+    try {
+      const { element, settle } = await render([[booked(61 * 60_000)]]);
+      expect(text(waiting(element) as Element)).toContain('încă 1 h');
+
+      jest.advanceTimersByTime(2 * 60_000);
+      await settle();
+
+      expect(text(waiting(element) as Element)).toContain('încă 59 min');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('reads the list again when the driver accepts a quote, from this tab or another', async () => {
+    const { element, settle } = await render([
+      [row({ quotesCount: 2, status: 'quoted' })],
+      [booked(24 * HOUR)],
+    ]);
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'quote-1',
+      kind: 'quote.accepted',
+    });
+    await wait(400);
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(waiting(element)).not.toBeNull();
+  });
+});
 
 // @traces 221-FR-014, 221-SC-002
 describe('Cererile mele', () => {

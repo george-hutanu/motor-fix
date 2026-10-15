@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 115,
+    "count": 116,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -204,6 +204,18 @@
       ],
       "reason": "counted by motorfix_verification_result_total (built, skipped) on motorfix-queues; one VerificationResult log line per event with the file id, the decision and the owners told; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the alert fires on a job's final failure",
       "story": "ST-209"
+    },
+    {
+      "kind": "queue",
+      "name": "quote-accepted",
+      "source": "libs/domain/src/notifications/quote-accepted/quote-accepted.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
+      "reason": "one QuoteAccepted log line per job naming the quote id and how many staff were told, or why none; BullMQ's queue metrics cover depth and failures; the acceptances themselves are counted by motorfix_quote_accepts_total",
+      "story": "ST-222"
     },
     {
       "kind": "queue",
@@ -438,6 +450,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_quote_accepts_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts the acceptances drivers try by outcome (accepted, replayed, booking_pending, slot_passed, invalid_transition, refused; refused covers the service's 404 and the controller's Idempotency-Key 400, the validation pipe's 400s show in the route metric) with no identifiers, with one QuoteAccept log line per try naming the quote id, the booking id and the outcome; a drop in acceptances is a product signal, not an outage; the api-error-rate rule covers the service that reports it",
+      "story": "ST-222"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_request_declines_total",
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
@@ -496,6 +517,19 @@
       ],
       "reason": "one log line per send naming the quote id, the request id and the outcome; the send counter and response-time histogram are the motorfix_quotes_sent_total entry",
       "story": "ST-344"
+    },
+    {
+      "kind": "endpoint",
+      "name": "quote-accept",
+      "source": "libs/domain/src/quotes/accept/accept.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quotes/:id/accept",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one log line per acceptance naming the quote id, the booking id and the outcome; the count by outcome is the motorfix_quote_accepts_total entry",
+      "story": "ST-222"
     },
     {
       "kind": "product-counter",

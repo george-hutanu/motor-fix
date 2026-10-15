@@ -10,6 +10,9 @@
             <span aria-hidden="true">·</span>
             <time>{{ row.when }}</time>
           </p>
+          @if (row.waiting; as left) {
+            <p class="waiting">{{ 'driver.requests.waitingGarage' | t: { left } }}</p>
+          }
         </li>
       }
     </ul>

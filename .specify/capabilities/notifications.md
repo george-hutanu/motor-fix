@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-10
+updated: 2026-10-15
 features:
   - 194-email-sending
   - 195-message-templates
@@ -31,6 +31,7 @@ features:
   - 209-status-change-emails
   - 251-monitoring-backups
   - 032-notifications-bell
+  - 222-booking-from-quote
 ---
 
 # Capability: Notifications
@@ -686,6 +687,10 @@ _From 032-notifications-bell._
 ### 032-FR-008 — On a 320 px and a 390 px phone the bell with its badge MUST be visible at the right of the top bar of every driver view, with no sideways scroll, and the list MUST open as the shared bottom sheet with a close button; on desktop the list MUST keep opening in the shared drawer.
 
 _From 032-notifications-bell._
+
+### 222-FR-010 — `quote.accepted` MUST have one registered consumer in the notifications worker which, per event, builds one QUOTE_ACCEPTED through the existing notification service for each owner and receptionist of the quote's garage (the catalogue's staff list), never a mechanic, with params `{ driverShortName, car, slot }` (the slot written in Romania's time zone, as the platform writes its other times), skips when the booking is no longer `awaiting_confirmation` by the time it runs, and builds none twice for the same booking and recipient when the event is delivered again; the templates (bell, push, e-mail) MUST exist in Romanian and English: bell "Andrei M. a acceptat oferta ta · <car> · <slot>" / "Andrei M. accepted your quote · <car> · <slot>", push title "Ofertă acceptată" / "Quote accepted" with the same body, e-mail subject "Ofertă acceptată: <car>" / "Quote accepted: <car>" with the body naming the driver, the car, the slot and that the booking waits for the garage's confirmation; opening the notification lands on Oferte trimise.
+
+_From 222-booking-from-quote._
 
 ## Retired
 

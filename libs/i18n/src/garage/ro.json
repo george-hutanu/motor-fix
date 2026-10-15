@@ -112,9 +112,11 @@
       "wide": "Intervalul este foarte larg; șoferul așteaptă un interval strâns."
     },
     "sentList": {
+      "accepted": "Acceptată · așteaptă confirmarea ta",
       "empty": "Nicio ofertă trimisă încă.",
       "heading": "Oferte trimise",
       "loading": "Se încarcă ofertele trimise",
+      "phone": "Sună clientul: {phone}",
       "waiting": "Așteaptă răspunsul clientului"
     }
   },

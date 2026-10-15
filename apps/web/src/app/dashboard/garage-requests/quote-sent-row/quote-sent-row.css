@@ -44,6 +44,22 @@ p {
   border-radius: 50%;
   background: var(--mf-amber);
 }
+:host(.accepted) .status {
+  color: inherit;
+}
+:host(.accepted) .lamp {
+  background: var(--mf-green);
+}
+/* Under the status, in its column. */
+.phone {
+  grid-column: -2;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: 44px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 900px) {
   :host {
     grid-template-columns: minmax(0, 1fr);

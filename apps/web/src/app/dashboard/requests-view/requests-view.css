@@ -52,3 +52,6 @@ p {
   font-weight: 600;
   color: var(--mf-text);
 }
+.waiting {
+  color: var(--mf-text-secondary);
+}

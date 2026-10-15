@@ -164,3 +164,83 @@ describe('the per-side cancellation reasons in the database', () => {
     },
   );
 });
+
+// @traces 222-FR-003
+describe('the booking idempotency key', () => {
+  let quoteIds: string[];
+  let driverId: string;
+
+  beforeAll(async () => {
+    const request = await prisma.quoteRequest.findUniqueOrThrow({
+      where: { id: requestId },
+    });
+    driverId = request.driverId;
+    const garages = await Promise.all(
+      ['Service Militari', 'Auto Pipera', 'Garaj Titan'].map((name) =>
+        world.garage(name),
+      ),
+    );
+    quoteIds = [];
+    for (const garage of garages) {
+      quoteIds.push((await world.quote(requestId, garage.id)).id);
+    }
+  });
+
+  afterEach(() =>
+    prisma.booking.deleteMany({ where: { quoteId: { in: quoteIds } } }),
+  );
+
+  const bookingWith = async (quoteId: string, key: string | null) => {
+    const quote = await prisma.quote.findUniqueOrThrow({
+      where: { id: quoteId },
+    });
+    return prisma.booking.create({
+      data: {
+        confirmBy: quote.slot,
+        driverId,
+        durationMinutes: quote.durationMinutes,
+        garageId: quote.garageId,
+        idempotencyKey: key,
+        quoteId,
+        requestId,
+        startsAt: quote.slot,
+      },
+    });
+  };
+
+  it('is optional, so bookings other paths write need none', async () => {
+    const booking = await bookingWith(quoteIds[0], null);
+
+    expect(booking.idempotencyKey).toBeNull();
+  });
+
+  it('lets two bookings without a key stand side by side', async () => {
+    await bookingWith(quoteIds[0], null);
+
+    await expect(bookingWith(quoteIds[1], null)).resolves.toBeDefined();
+  });
+
+  it('refuses a second booking with the same key for the same driver', async () => {
+    const key = randomUUID();
+    await bookingWith(quoteIds[0], key);
+
+    await expect(bookingWith(quoteIds[1], key)).rejects.toMatchObject({
+      code: 'P2002',
+    });
+  });
+
+  it.each([
+    ['empty', ''],
+    ['201 characters', 'k'.repeat(201)],
+  ])('refuses a key that is %s', async (_, key) => {
+    await expect(bookingWith(quoteIds[2], key)).rejects.toThrow(
+      /booking_idempotency_key_length/,
+    );
+  });
+
+  it('takes a key of 200 characters', async () => {
+    const booking = await bookingWith(quoteIds[2], 'k'.repeat(200));
+
+    expect(booking.idempotencyKey).toHaveLength(200);
+  });
+});

@@ -19,6 +19,7 @@ import {
   relativeTime,
   requestAge,
   requestExpiry,
+  timeLeft,
 } from './formats';
 
 const MISSING = '—';
@@ -633,5 +634,41 @@ describe('formatSlot', () => {
 
   it.each(notNumbers)('shows a dash for %p', (value) => {
     expect(formatSlot(value, 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 222-FR-007
+// @traces 222-FR-008
+describe('timeLeft', () => {
+  const now = new Date('2026-10-15T10:00:00Z');
+  const ahead = (ms: number) => new Date(now.getTime() + ms).toISOString();
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+
+  it('counts whole hours from an hour on, rounding down', () => {
+    expect(timeLeft(ahead(23 * HOUR + 59 * MIN), 'ro', now)).toBe('încă 23 h');
+    expect(timeLeft(ahead(23 * HOUR + 59 * MIN), 'en', now)).toBe('23 h left');
+    expect(timeLeft(ahead(HOUR), 'ro', now)).toBe('încă 1 h');
+    expect(timeLeft(ahead(HOUR), 'en', now)).toBe('1 h left');
+  });
+
+  it('counts whole minutes under an hour', () => {
+    expect(timeLeft(ahead(59 * MIN + 59_000), 'ro', now)).toBe('încă 59 min');
+    expect(timeLeft(ahead(59 * MIN + 59_000), 'en', now)).toBe('59 min left');
+    expect(timeLeft(ahead(MIN), 'ro', now)).toBe('încă 1 min');
+    expect(timeLeft(ahead(MIN), 'en', now)).toBe('1 min left');
+  });
+
+  it.each([
+    ['under a minute', 59_000],
+    ['now', 0],
+    ['past', -HOUR],
+  ])('says moments left when the deadline is %s', (_, ms) => {
+    expect(timeLeft(ahead(ms), 'ro', now)).toBe('încă câteva secunde');
+    expect(timeLeft(ahead(ms), 'en', now)).toBe('moments left');
+  });
+
+  it.each(notNumbers)('shows a dash for %p', (value) => {
+    expect(timeLeft(value, 'ro', now)).toBe(MISSING);
   });
 });

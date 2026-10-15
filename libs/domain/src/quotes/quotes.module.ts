@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { AcceptController } from './accept/accept.controller';
+import { AcceptService } from './accept/accept.service';
 import { DeclineService } from './decline/decline.service';
 import { GarageRequestsController } from './garage-requests/garage-requests.controller';
 import { GarageRequestsService } from './garage-requests/garage-requests.service';
@@ -20,6 +22,7 @@ import { AuditService } from '../audit/audit.service';
     GarageRequestsController,
     QuoteRequestsController,
     QuotesController,
+    AcceptController,
   ],
   exports: [DeclineService],
   providers: [
@@ -28,6 +31,7 @@ import { AuditService } from '../audit/audit.service';
     QuoteRequestsService,
     QuotesService,
     DeclineService,
+    AcceptService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

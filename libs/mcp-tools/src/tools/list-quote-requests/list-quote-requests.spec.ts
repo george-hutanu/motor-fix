@@ -12,6 +12,7 @@ type Inbox = Awaited<
 >;
 
 const item: Inbox['items'][number] = {
+  booking: null,
   car: {
     brand: 'Dacia',
     engine: '1.5 dCi',
@@ -145,8 +146,10 @@ describe('list_quote_requests', () => {
 
   it('answers the dashboard’s item with the jobs named in the account’s language and the description as user text', async () => {
     const result = await call({}, inboxOf([item]), 'en');
-    // The raw description line and the close fields stay out of the answer.
+    // The raw description line, the close fields and the booking stay out of
+    // the answer.
     const {
+      booking,
       closedAt,
       closedReason,
       description,

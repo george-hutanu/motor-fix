@@ -7,6 +7,10 @@ import { QuoteDto } from '../models/quote-dto';
 import { RecipientDto } from '../models/recipient-dto';
 import { RequestJobDto } from '../models/request-job-dto';
 export interface RequestDto {
+
+  /**
+   * The request’s newest booking
+   */
   booking: (BookingDto & {
 }) | null;
   car: CarSnapshotDto;

@@ -69,3 +69,20 @@ export function recordDeclineWindow(
     })
     .add(1, { outcome, sweep: String(sweep) });
 }
+
+export type QuoteAcceptOutcome =
+  | 'accepted'
+  | 'replayed'
+  | 'booking_pending'
+  | 'slot_passed'
+  | 'invalid_transition'
+  | 'refused';
+
+// One count per acceptance a driver tries, by outcome; never who or which.
+export function recordQuoteAccept(outcome: QuoteAcceptOutcome) {
+  meter()
+    .createCounter('motorfix_quote_accepts_total', {
+      description: 'Quotes drivers accepted, by outcome',
+    })
+    .add(1, { outcome });
+}

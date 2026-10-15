@@ -8,6 +8,10 @@ import { GarageQuoteDto } from '../models/garage-quote-dto';
 import { GarageRecipientDto } from '../models/garage-recipient-dto';
 import { GarageRequestDetailJobDto } from '../models/garage-request-detail-job-dto';
 export interface GarageRequestDto {
+
+  /**
+   * The booking the garage’s quote became
+   */
   booking: (GarageBookingDto & {
 }) | null;
   car: GarageCarDto;

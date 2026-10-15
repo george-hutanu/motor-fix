@@ -182,16 +182,18 @@ const QUOTE_STAMPS: Partial<Record<QuoteStatus, string>> = {
 
 // Accepting a second quote on the same request is refused by the database
 // (one accepted quote per request), as a 409 rather than a 500.
+// `at` stamps the move with a time the caller already wrote elsewhere.
 export function moveQuote(
   tx: Tx,
   ports: TransitionPorts,
-  move: Base<QuoteStatus>,
+  move: Base<QuoteStatus> & { at?: Date },
 ) {
+  const { at, ...rest } = move;
   const stamp = QUOTE_STAMPS[move.to];
   return applyTransition(tx, QUOTE, ports, {
-    ...move,
+    ...rest,
     scope: inGarage,
-    set: () => (stamp ? { [stamp]: new Date() } : {}),
+    set: () => (stamp ? { [stamp]: at ?? new Date() } : {}),
   });
 }
 

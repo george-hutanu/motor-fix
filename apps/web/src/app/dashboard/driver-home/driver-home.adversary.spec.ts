@@ -33,6 +33,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
 });
 
 const request = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
+  booking: null,
   car: {
     brand: 'Dacia',
     engine: null,

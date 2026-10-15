@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-11
+updated: 2026-10-15
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -11,6 +11,7 @@ features:
   - 1025-answers-same-day
   - 357-public-price-jobs
   - 347-read-request
+  - 222-booking-from-quote
 ---
 
 # Capability: Quotes
@@ -59,9 +60,9 @@ _From 221-quote-request._
 
 _From 220-requests-quotes-bookings._
 
-### 344-FR-008 — `GET /api/v1/garage/requests` MUST accept a third `status` value, `quoted`: the garage's recipients `quoted` whose quote is `waiting`, newest quote first (`sent_at` descending, equal times by id), with the existing shape, paging and `total` (343-FR-002); each row MUST carry its quote summary (`quote`: the shipped quote summary, id, `fromBani`, `toBani`, `durationMinutes`, `slot`, `sentAt`, `expiresAt`, status); a `waiting` row carries null `quote`, and a `closed` row keeps the quote it had, as shipped (343). A value outside the three answers 400 `validation_failed` naming `status`.
+### 222-FR-005 — The garage's requests list read (`GET /api/v1/garage/requests?status=quoted`, 344-FR-008) MUST also return the garage's recipients whose quote is `accepted` and whose booking is `awaiting_confirmation`, in the same order, shape, paging and total; each such row MUST carry the booking's `status` and `confirmBy` and, for the owner and a receptionist only, the driver's `phone` (absent when the account has none; never for a mechanic; never on any other row). The driver's phone MUST never appear in a list response before acceptance, and the plate never before confirmation (347-FR-005 unchanged).
 
-_From 344-send-quote._
+_From 222-booking-from-quote._
 
 ### 344-FR-007 — `GET /api/v1/garage/requests/:id` MUST gain, per job, the garage's pre-fill (`price`: `fromBani`, `toBani` (nullable), `durationMinutes` (nullable), in bani like the price list's own reads, or null when the garage has no row for the job): the GARAGE_PRICE row for the job and the car's brand where one exists, else the job's default row (no brand), else null; a row not `visible` counts the same as a visible one. The shape is unchanged otherwise; the read's policy (343-FR-005) is unchanged.
 
@@ -415,6 +416,62 @@ _From 347-read-request._
 
 _From 347-read-request._
 
+### 222-FR-001 — The API MUST offer `POST /api/v1/quotes/:id/accept` to the driver who owns the quote's request, taking a body `{ historyShared?: boolean }` (default false; any other type is 400 `validation_failed` naming `historyShared`) and the `Idempotency-Key` header with the send's rules (1 to the existing maximum of characters, else 400 naming it); it MUST answer 201 with the booking as the driver reads it (the existing booking DTO) and 404 `not_found` to every other caller, a garage account or another driver included, writing nothing; a visitor with no session is asked to sign in (401 `sign_in_required`, the platform's guard on every route not public), writing nothing.
+
+_From 222-booking-from-quote._
+
+### 222-FR-002 — The accept MUST lock the request row (`SELECT … FOR UPDATE`) before judging anything, then, in that one transaction: check, in this order, the quote is `waiting`, the request holds no booking `awaiting_confirmation` or `confirmed`, the request is `quoted`, the quote is not past `expires_at`, its slot is not past and its garage is not `suspended`; create the BOOKING first, so its id exists for the event; move the quote to `accepted` and the request to `booked` through the transition service (their audit entries included, 220-FR-008, 220-FR-011), the BOOKING created with `quote`, `request`, `garage`, `driver`, `starts_at` = the quote's slot, `duration_minutes` = the quote's, status `awaiting_confirmation`, `confirm_by` = the earlier of `accepted_at` + BOOKING_CONFIRM_LAPSE_HOURS and `starts_at`, `history_shared` as given; record one audit entry for the booking's creation (subject `booking`, field `stage`, old value null, new value `awaiting_confirmation`) and one for the history choice (field `history_shared`) through the audit port, which marks an assistant grant's call `via assistant` as it does today; and write exactly one outbox event `quote.accepted`, the quote's move's own event, with `{ quoteId, requestId, bookingId, historyShared }` to the audiences `account:{driverId}` and `garage:{garageId}`; the request's move is filed with no event of its own (as the send's is), never a second `quote.accepted`. The other quotes of the request MUST stay `waiting`; nothing is written when any check fails.
+
+_From 222-booking-from-quote._
+
+### 222-FR-003 — The accept MUST be idempotent per driver: BOOKING gains `idempotency_key` (text, nullable for rows other stories create, unique with `driver_id`), and a second call with the same key and driver MUST answer 200 with that booking as it reads now (no stored response body) without writing anything, whatever its body or quote id; two calls with the same key at the same moment are serialised by the request lock, so the second answers that replay; a refused call stores nothing, so its key stays free. A different key on an already accepted quote is refused as FR-004 says.
+
+_From 222-booking-from-quote._
+
+### 222-FR-004 — A refused accept MUST answer the platform's problem details (220-FR-015): 409 `invalid_transition` carrying the entity and current state for a quote `expired`, `withdrawn`, `lost`, `declined_by_driver` or `accepted`, for a `waiting` quote past `expires_at` (state `expired`, the row left to the sweep), for a `suspended` garage's quote (state `withdrawn`, the row left as it is) and for a request not `quoted`; 409 `booking_pending` with the message "Ai deja o programare în așteptare" / "You already have a booking waiting" when the request holds a booking `awaiting_confirmation` or `confirmed` (checked after the quote's own state and before the request's, so a second quote of a booked request names the booking, while the same quote accepted twice names `accepted`); 409 `slot_passed` with "Ora propusă a trecut" / "The proposed time has passed" when the slot is not after now. Two concurrent acceptances on one request MUST end with exactly one booking: the loser reads the winner's rows after the lock and answers 409 as above; the database's one-accepted-quote index is the last guard (220-FR-009) and answers 409, never 500.
+
+_From 222-booking-from-quote._
+
+### 222-FR-006 — The driver's requests list read (`GET /api/v1/requests`, 220-FR-012 lineage) MUST carry, per request, its newest booking's `status` and `confirmBy` when one exists (null otherwise), so the row can show the waiting line without a detail read; the detail is unchanged.
+
+_From 222-booking-from-quote._
+
+### 222-FR-007 — The driver's Cererile mele row of a `booked` request whose booking is `awaiting_confirmation` MUST show, under the existing status label Programată / Booked, the line "Așteaptă confirmarea service‑ului · încă N h" / "Waiting for the garage · N h left", N the whole hours left until `confirmBy` (rounded down), "încă N min" / "N min left" under one hour, "încă câteva secunde" / "moments left" under one minute or past; the line re-renders at least every minute while shown and shows for no other booking status.
+
+_From 222-booking-from-quote._
+
+### 222-FR-008 — The garage's Oferte trimise row of an accepted quote (FR-005) MUST read "Acceptată · așteaptă confirmarea ta" / "Accepted · waiting for your confirmation" in place of "În așteptare", followed by the time left in FR-007's wording ("încă N h" / "N h left"), and, when the row carries it, the driver's phone as a `tel:` link; the row keeps the request's name, car, jobs, range and slot, and its lamp takes a distinct accepted colour. The request drawer opened from the row MUST show the phone as it does today.
+
+_From 222-booking-from-quote._
+
+### 222-FR-009 — The driver's Cererile mele view and the driver home MUST re-read within 5 seconds when the driver's live channel delivers `quote.accepted` (added to the kinds each already listens to); the garage feed already re-reads on it (347-FR-010) and MUST move the row from "waiting" rendering to the accepted rendering without a reload.
+
+_From 222-booking-from-quote._
+
+### 222-FR-011 — Nothing the garage reads (its list, its detail, its drawer, its notifications) MUST carry the car's history or the repairs the driver logged elsewhere, whether or not `history_shared` is true: the garage's booking carries the flag only (the existing `historyShared` on its booking DTO) and no history field is added; the read-only view is #288 and access opens at confirmation (#82).
+
+_From 222-booking-from-quote._
+
+### 222-FR-012 — The booking MUST keep the quoted range through the quote it points to (`from_bani`, `to_bani`, unchanged by the accept); no price is written on the booking.
+
+_From 222-booking-from-quote._
+
+### 222-FR-013 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the two rows MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px and the phone link at least 44 px tall; no new web component is needed (the existing row components gain the lines), and any new one is a folder (`<name>.ts`, `<name>.html`, `<name>.css`).
+
+_From 222-booking-from-quote._
+
+### 222-FR-014 — Observability (AGENTS.md): the new endpoint and the `quote-accepted` consumer queue MUST be listed in `infra/observability/inventory.json`; the accept (a product action) MUST emit one counter of acceptances with the outcome (`accepted`, `replayed`, `booking_pending`, `slot_passed`, `invalid_transition`, `refused`, the last standing for the 404 and for the missing or bad `Idempotency-Key` 400 the controller raises; a body rejected by the global validation pipe never reaches the action and is counted by the HTTP metrics by status) in the quotes metrics module, one log line per outcome naming the quote id, and the existing queue metrics cover the consumer; the PR's Observability section lists them.
+
+_From 222-booking-from-quote._
+
+### 222-FR-015 — The OpenAPI document and the generated client MUST carry the new operation, the body DTO, the new 409 codes and the list DTOs' new fields (`npx nx run data-access:generate`, never edited by hand).
+
+_From 222-booking-from-quote._
+
+### 222-FR-016 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL: scenario 1 in one transaction with the other quotes `waiting` and `confirm_by` by both arms; the audit entries and the outbox event in the same transaction, the via-assistant mark for a grant; `history_shared` true, false and absent; the replay (200, same body, nothing written) and the same-key race; exactly one `quote.accepted` outbox row per accept; 409 `booking_pending` for a second quote of a booked request; `invalid_transition` for `expired`, `withdrawn`, `lost`, `declined_by_driver`, `accepted`, a `waiting` quote past `expires_at`, a suspended garage and a request not `quoted`; `slot_passed`; an unconfirmed e-mail accepts; two concurrent acceptances (two quotes, and the same quote twice) ending with exactly one booking; 404 for another driver and a garage account, 401 for a visitor; 400 for a bad body and a missing key; the garage list carrying the accepted row with `confirmBy` and the phone for the owner and the receptionist, no phone for the mechanic and none on waiting rows; the plate absent before confirmation; the driver list carrying the booking's status and `confirmBy`; no history field in any garage read; the consumer building one QUOTE_ACCEPTED per owner and receptionist, none for a mechanic, and none when the booking has moved on. In Jest, web: the driver row's waiting line in hours, minutes and moments, in both languages, and absent for other statuses; the garage row's accepted wording, time left and phone link present or absent; the re-read on `quote.accepted` in the driver's view and home. In Playwright, one end-to-end test: a driver with two quotes accepts one through the API from the browser session, sees Programată with the waiting line in Cererile mele, and the garage owner sees the accepted row with the phone in Oferte trimise.
+
+_From 222-booking-from-quote._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -440,3 +497,5 @@ _From 347-read-request._
 - `221-FR-004` — superseded by `357-FR-006` (2026-10-10)
 
 - `343-FR-005` — superseded by `347-FR-008` (2026-10-11)
+
+- `344-FR-008` — superseded by `222-FR-005` (2026-10-15)

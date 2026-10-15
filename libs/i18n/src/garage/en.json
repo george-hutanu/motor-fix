@@ -112,9 +112,11 @@
       "wide": "This range is very wide; the driver expects a narrow one."
     },
     "sentList": {
+      "accepted": "Accepted · waiting for your confirmation",
       "empty": "No quotes sent yet.",
       "heading": "Quotes sent",
       "loading": "Loading the quotes sent",
+      "phone": "Call the customer: {phone}",
       "waiting": "Waiting for the customer"
     }
   },

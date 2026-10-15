@@ -395,6 +395,42 @@ export function requestExpiry(
   return words.soon;
 }
 
+const LEFT: Record<
+  Language,
+  {
+    hours(count: number): string;
+    minutes(count: number): string;
+    moments: string;
+  }
+> = {
+  en: {
+    hours: (n) => `${n} h left`,
+    minutes: (n) => `${n} min left`,
+    moments: 'moments left',
+  },
+  ro: {
+    hours: (n) => `încă ${n} h`,
+    minutes: (n) => `încă ${n} min`,
+    moments: 'încă câteva secunde',
+  },
+};
+
+// How long until a deadline, rounded down: whole hours from an hour on, whole
+// minutes under it, then moments, also once it has passed.
+export function timeLeft(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const left = date.getTime() - now.getTime();
+  const words = LEFT[language];
+  if (left >= 60 * MINUTE) return words.hours(Math.floor(left / (60 * MINUTE)));
+  if (left >= MINUTE) return words.minutes(Math.floor(left / MINUTE));
+  return words.moments;
+}
+
 const TODAY: Record<Language, string> = { en: 'today', ro: 'azi' };
 const TOMORROW: Record<Language, string> = { en: 'tomorrow', ro: 'mâine' };
 

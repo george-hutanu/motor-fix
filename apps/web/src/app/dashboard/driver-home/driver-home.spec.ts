@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   type CarDto,
   CarsService,
@@ -10,9 +11,11 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import { filter, Subject } from 'rxjs';
 
 import { DriverHome } from './driver-home';
 import { AddCar } from '../add-car/add-car';
+import { Live } from '../live';
 import { Session } from '../session';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
@@ -34,6 +37,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
 });
 
 const request = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
+  booking: null,
   car: {
     brand: 'Dacia',
     engine: null,
@@ -73,6 +77,7 @@ interface Setup {
 let carsList: jest.Mock;
 let requestsList: jest.Mock;
 let open: jest.Mock;
+let events: Subject<LiveMessage>;
 
 const answer = <T>(value: Answer<T>) =>
   value instanceof Error
@@ -94,6 +99,7 @@ async function render({
   carsList = jest.fn(() => answer(cars));
   requestsList = jest.fn(() => answer(requests));
   open = jest.fn(async () => 'cancelled');
+  events = new Subject();
   const current = signal({ capabilities, role: 'driver' } as unknown as MeDto);
   TestBed.configureTestingModule({
     providers: [
@@ -105,6 +111,17 @@ async function render({
       },
       { provide: Overlays, useValue: { open } },
       { provide: Session, useValue: { current, shown: current } },
+      {
+        provide: Live,
+        useValue: {
+          events,
+          on: (kinds: readonly EventKind[]) =>
+            events.pipe(
+              filter((m) => (kinds as readonly string[]).includes(m.kind)),
+            ),
+          resync: new Subject<void>(),
+        },
+      },
     ],
   });
   await TestBed.inject(I18n).enter('driver');
@@ -510,5 +527,39 @@ describe('the panels’ states', () => {
       expect(filled.querySelector('mf-empty-state')).toBeNull();
       expect(text(filled)).toBe(text(filled.querySelector('h2')));
     }
+  });
+});
+
+// @traces 222-FR-009
+describe('Panou once a quote is accepted', () => {
+  it('reads the requests again when the driver’s quote.accepted arrives', async () => {
+    const { settle } = await render({
+      requests: [request({ quotesCount: 2 })],
+    });
+    expect(requestsList).toHaveBeenCalledTimes(1);
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'quote-1',
+      kind: 'quote.accepted',
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    await settle();
+
+    expect(requestsList).toHaveBeenCalledTimes(2);
+    expect(carsList).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads nothing again for other kinds', async () => {
+    await render({ requests: [request()] });
+
+    events.next({
+      at: new Date().toISOString(),
+      id: 'x',
+      kind: 'message.sent',
+    });
+    await new Promise((r) => setTimeout(r, 400));
+
+    expect(requestsList).toHaveBeenCalledTimes(1);
   });
 });

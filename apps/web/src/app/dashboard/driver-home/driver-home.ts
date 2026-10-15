@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
   type CarDto,
@@ -18,6 +19,7 @@ import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 
 import { openAddCar } from '../add-car/open-add-car';
 import { EmptyState } from '../empty-state/empty-state';
+import { Live } from '../live';
 import { Session } from '../session';
 import { allowedViews } from '../views';
 
@@ -73,6 +75,11 @@ export class DriverHome {
   constructor() {
     void this.i18n.enter('driver');
     this.load();
+    // An accepted quote books the request: its panels read it again.
+    inject(Live)
+      .on(['quote.accepted'])
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.loadRequests());
   }
 
   protected async addCar() {
@@ -91,6 +98,10 @@ export class DriverHome {
       ({ items }) => this.cars.set(items),
       () => this.cars.set('failed'),
     );
+    this.loadRequests();
+  }
+
+  private loadRequests() {
     this.requestsApi.requestsControllerList().then(
       ({ items }) => this.requests.set(items),
       () => this.requests.set('failed'),
