@@ -66,11 +66,14 @@ export class ResultCard {
       host.addEventListener('pointerenter', enter);
       host.addEventListener('pointerleave', leave);
       host.addEventListener('touchstart', want, { passive: true });
+      // The first delivery is where the card stood when drawn: on screen
+      // then is not intent, only coming into view later is.
+      let drawn = false;
       const seen =
         typeof IntersectionObserver === 'function'
           ? new IntersectionObserver((entries) => {
-              if (prefetch.scrolled && entries.some((e) => e.isIntersecting))
-                want();
+              if (drawn && entries.some((e) => e.isIntersecting)) want();
+              drawn = true;
             })
           : undefined;
       seen?.observe(host);

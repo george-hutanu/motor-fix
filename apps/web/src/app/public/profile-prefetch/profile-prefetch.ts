@@ -19,8 +19,9 @@ type Entry = { at: number; garage?: PublicGarageDto };
 type Wanted = { key: string; slug: string; brand: string | undefined };
 type Outcome = 'fetched' | 'cancelled' | 'hit' | 'expired' | 'skipped';
 
+// A pair, so no slug and brand can spell another garage's key.
 const keyOf = (slug: string, brand: string | undefined) =>
-  `${slug}|${brand ?? ''}`;
+  JSON.stringify([slug, brand ?? '']);
 
 // Public profiles read ahead of a likely open from the results, kept for
 // 120 s for the profile page to draw from. A read only: it records no view.
@@ -36,24 +37,6 @@ export class ProfilePrefetch {
   private waiting: Wanted[] = [];
   private preloaded = false;
   private skipped = false;
-  private moved = false;
-
-  constructor() {
-    if (this.browser)
-      this.document.defaultView?.addEventListener(
-        'scroll',
-        () => {
-          this.moved = true;
-        },
-        { once: true, passive: true },
-      );
-  }
-
-  // Cards on screen at first paint are not wanted for being seen: only once
-  // the visitor has scrolled is a card coming into view a sign of intent.
-  get scrolled(): boolean {
-    return this.moved;
-  }
 
   want(slug: string, brand: string | undefined): void {
     if (!this.browser) return;
@@ -136,8 +119,10 @@ export class ProfilePrefetch {
           )
             this.entries.set(key, { at: Date.now() });
         },
-        next: (response) => {
-          this.entries.set(key, { at: Date.now(), garage: response.body });
+        next: ({ body }) => {
+          // An empty answer is no garage to draw: the page reads its own.
+          if (!body) return;
+          this.entries.set(key, { at: Date.now(), garage: body });
           this.report('fetched', Date.now() - started);
         },
       });

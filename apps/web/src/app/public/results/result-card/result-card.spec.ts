@@ -331,6 +331,15 @@ describe('a result card about to be opened', () => {
     expect(want).not.toHaveBeenCalled();
   });
 
+  it('is not pre-fetched for being on screen when drawn after an earlier scroll', async () => {
+    window.dispatchEvent(new Event('scroll'));
+    const card = await render(garageOf());
+
+    intersect(card);
+
+    expect(want).not.toHaveBeenCalled();
+  });
+
   it('is pre-fetched when it scrolls into view after the first scroll', async () => {
     const card = await render(garageOf());
     window.dispatchEvent(new Event('scroll'));

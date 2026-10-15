@@ -1,4 +1,4 @@
-export type Measure = (
+type Measure = (
   type: string,
   values: Record<string, number>,
   context: Record<string, string>,

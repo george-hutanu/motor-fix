@@ -203,15 +203,6 @@ describe('pre-fetching a garage profile', () => {
     http.verify();
     expect(beacon).not.toHaveBeenCalled();
   });
-
-  it('learns of the first scroll', () => {
-    setUp();
-    expect(prefetch.scrolled).toBe(false);
-
-    window.dispatchEvent(new Event('scroll'));
-
-    expect(prefetch.scrolled).toBe(true);
-  });
 });
 
 // @traces 1169-FR-008
