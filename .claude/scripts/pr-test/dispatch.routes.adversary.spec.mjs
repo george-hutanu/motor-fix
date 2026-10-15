@@ -30,7 +30,7 @@ afterAll(() => {
 });
 
 function dispatch(...args) {
-  const dir = mkdtempSync(join(tmpdir(), 'dispatch-1230-'));
+  const dir = mkdtempSync(join(tmpdir(), 'dispatch-routes-'));
   dirs.push(dir);
   const bin = join(dir, 'bin');
   mkdirSync(bin);

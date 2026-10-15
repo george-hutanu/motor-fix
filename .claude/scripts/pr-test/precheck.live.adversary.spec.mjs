@@ -50,7 +50,7 @@ const closed = async () => {
 };
 
 function flows(body) {
-  const dir = mkdtempSync(join(tmpdir(), 'precheck-1230-'));
+  const dir = mkdtempSync(join(tmpdir(), 'precheck-live-adv-'));
   dirs.push(dir);
   const file = join(dir, 'flows.mjs');
   writeFileSync(file, body);

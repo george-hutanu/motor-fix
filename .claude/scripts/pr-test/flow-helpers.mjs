@@ -1,6 +1,6 @@
 // The helpers a QA flows file is handed, by the run (run.mjs flowArgs) and by
-// `precheck.mjs --check` alike, for the waits the first laps kept getting
-// wrong. They take Playwright's own page and locators and import nothing from
+// `precheck.mjs --check` alike: the waits a flow most often gets wrong, done
+// once. They take Playwright's own page and locators and import nothing from
 // it: Playwright comes from the checkout under test (sweep.mjs).
 import { SEEDED } from "./endpoints.mjs";
 

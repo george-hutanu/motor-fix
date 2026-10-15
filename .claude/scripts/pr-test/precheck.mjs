@@ -24,7 +24,8 @@
 // and unhandled rejection, exit 1 on any; an address that does not answer is
 // one line and exit 1, and the flows are not run; flows still running after
 // ten minutes are one line too. It starts no server and dispatches nothing.
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -80,12 +81,11 @@ export function precheck({ flowsText, specText, loaded, name = "flows" }) {
   return problems;
 }
 
-// A flows file is imported once per version on disk: its top level runs once for the static and the live
-// check, and again only after the file changed.
+// A flows file is imported once per content: its top level runs once for the static and the live check,
+// and again only after the file changed.
 const modules = new Map();
 const importFlows = (file) => {
-  const { mtimeMs, size } = statSync(file);
-  const key = `${pathToFileURL(resolve(file)).href}?precheck=${mtimeMs}-${size}`;
+  const key = `${pathToFileURL(resolve(file)).href}?precheck=${createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 16)}`;
   if (!modules.has(key)) modules.set(key, import(key));
   return modules.get(key);
 };

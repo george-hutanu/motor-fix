@@ -446,8 +446,8 @@ async function main(argv) {
     log(visual.notes.join(" "));
 
     if (opt.flows) {
-      phase = "flows";
       const flow = await import(pathToFileURL(resolve(opt.flows)).href);
+      phase = "flows";
       try {
         const extra = (await collectRejections(findings, () => flow.default(flowArgs({ webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, session })))) ?? [];
         findings.push(...extra);
