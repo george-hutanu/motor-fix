@@ -14,10 +14,29 @@
 // runs the same check and dispatches nothing while it fails.
 // The flows file is the dispatching agent's own: loading it runs its top level
 // here, in this process and its environment, not in the workflow's sandbox.
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+//
+//   node .claude/scripts/pr-test/precheck.mjs --flows <file.mjs> --check [--base-url <url>] [--api-url <url>]
+//
+// --check also runs the flows, once, against the app and API already serving
+// there (by default the dev server, http://localhost:4200, and the API,
+// http://localhost:3000), with the arguments the run gives them and a real
+// signIn as the seeded accounts. It prints one line per finding, thrown error
+// and unhandled rejection, exit 1 on any; an address that does not answer is
+// one line and exit 1, and the flows are not run; flows still running after
+// ten minutes are one line too. It starts no server and dispatches nothing.
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { isEntryPoint } from "../lib/entry.mjs";
+import { seededSession } from "./endpoints.mjs";
+import { collectRejections, flowArgs } from "./run.mjs";
+import { HEALTH } from "./services.mjs";
+
+export const CHECK_DEFAULTS = { baseURL: "http://localhost:4200", apiURL: "http://localhost:3000" };
+// A flow awaiting what never settles would hold the check for ever; a lap's own bound is the job's 60 minutes.
+const CHECK_MS = 10 * 60_000;
 
 /** `US<k> scenario <m>` for every numbered acceptance scenario of every user story. */
 export function scenarios(specText) {
@@ -62,10 +81,19 @@ export function precheck({ flowsText, specText, loaded, name = "flows" }) {
   return problems;
 }
 
+// A flows file is imported once per content: its top level runs once for the static and the live check,
+// and again only after the file changed.
+const modules = new Map();
+const importFlows = (file) => {
+  const key = `${pathToFileURL(resolve(file)).href}?precheck=${createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 16)}`;
+  if (!modules.has(key)) modules.set(key, import(key));
+  return modules.get(key);
+};
+
 /** Import the flows module and say whether it loaded with a function as its default export. */
 async function load(file) {
   try {
-    const mod = await import(`${pathToFileURL(resolve(file)).href}?precheck=${Date.now()}`);
+    const mod = await importFlows(file);
     return { ok: true, isFunction: typeof mod.default === "function" };
   } catch (error) {
     return { ok: false, error: String(error?.message ?? error).split("\n")[0] };
@@ -79,6 +107,52 @@ export async function checkFlows({ flows, spec, specRequired = false }) {
   return precheck({ flowsText: readFileSync(flows, "utf8"), specText, loaded: await load(flows), name: flows });
 }
 
+/** Why an address does not serve, or null when it answers below 500. */
+async function unreachable(url) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    await res.body?.cancel();
+    return res.status < 500 ? null : `HTTP ${res.status}`;
+  } catch (error) {
+    return String(error.cause?.code ?? error.message);
+  }
+}
+
+/** Runs the flows once against the app and API at these addresses; one line per problem, empty when clean. */
+export async function checkLive({ flows, baseURL = CHECK_DEFAULTS.baseURL, apiURL = CHECK_DEFAULTS.apiURL }) {
+  const lines = [];
+  for (const [name, url] of [
+    ["app", `${baseURL}/`],
+    ["API", apiURL + HEALTH.live],
+  ]) {
+    const why = await unreachable(url);
+    if (why) lines.push(`${name} not serving at ${url}: ${why}`);
+  }
+  if (lines.length) return lines;
+  const flow = await importFlows(flows);
+  const outDir = mkdtempSync(join(tmpdir(), "mf-flows-check-"));
+  const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
+  const findings = [];
+  try {
+    const args = flowArgs({ webURL: baseURL, apiURL, outDir, repoRoot, worktree: repoRoot, session: seededSession(apiURL) });
+    let timer;
+    const bound = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`the flows did not finish within ${CHECK_MS / 1000} s`)), CHECK_MS);
+    });
+    try {
+      findings.push(...((await collectRejections(findings, () => Promise.race([flow.default(args), bound]))) ?? []));
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (error) {
+    lines.push(`flows threw: ${String(error?.stack ?? error).split("\n").slice(0, 3).join(" / ")}`);
+  } finally {
+    rmSync(outDir, { recursive: true, force: true });
+  }
+  for (const f of findings) lines.push(`finding ${f.severity}: ${f.title}${f.steps?.length ? ` — ${f.steps.join(" / ")}` : ""}`);
+  return lines;
+}
+
 if (isEntryPoint(import.meta.url)) {
   const argv = process.argv.slice(2);
   const flag = (n) => {
@@ -87,10 +161,12 @@ if (isEntryPoint(import.meta.url)) {
   };
   const flows = flag("flows");
   if (!flows || !existsSync(flows)) {
-    console.error("usage: precheck.mjs --flows <file.mjs> [--spec <spec.md>]");
+    console.error("usage: precheck.mjs --flows <file.mjs> [--spec <spec.md>] [--check [--base-url <url>] [--api-url <url>]]");
     process.exit(64);
   }
   const problems = await checkFlows({ flows, spec: flag("spec"), specRequired: true });
+  if (argv.includes("--check") && !problems.some((p) => p.startsWith(`${flows} does not load`) || p.includes("default export")))
+    problems.push(...(await checkLive({ flows, baseURL: flag("base-url"), apiURL: flag("api-url") })));
   for (const p of problems) console.log(p);
   process.exit(problems.length ? 1 : 0);
 }

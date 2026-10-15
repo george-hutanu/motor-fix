@@ -509,7 +509,7 @@ describe('a missing report, hostile reasons', () => {
 
 describe('the route syntax, odd routes', () => {
   it('reads a plain root', () => {
-    assert.deepEqual(parseRoute('/'), { path: '/', role: null, expect: null });
+    assert.deepEqual(parseRoute('/'), { path: '/', role: null, expect: null, lang: false });
   });
 
   it('never gives a status that is not a whole number', () => {
@@ -546,7 +546,7 @@ describe('the route syntax, odd routes', () => {
   });
 
   it('reads a unicode path with a status', () => {
-    assert.deepEqual(parseRoute('/ștefan:404'), { path: '/ștefan', role: null, expect: 404 });
+    assert.deepEqual(parseRoute('/ștefan:404'), { path: '/ștefan', role: null, expect: 404, lang: false });
   });
 });
 

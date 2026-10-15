@@ -14,6 +14,7 @@
 // permissions and no secret, so the flows code it imports can reach nothing.
 //
 //   node .claude/scripts/pr-test/dispatch.mjs <pr> [--flows <file.mjs> [--spec <spec.md>]] [--routes /,/cockpit]
+//        (each route path[?query][@role][:status]; one the run would refuse is refused here, exit 64)
 //        [--lap <n>] [--out <dir>] [--ref main] [--no-wait | --run <id>]
 //
 // No agent waits on a run (its prompt cache would go cold): --no-wait dispatches,
@@ -41,6 +42,7 @@ import { gzipSync } from "node:zlib";
 import { activeFeature } from "../lib/feature.mjs";
 import { checkFlows } from "./precheck.mjs";
 import { qaRunLine } from "./qa-run.mjs";
+import { routeProblem } from "./sweep.mjs";
 
 export const WORKFLOW = "pr-qa.yml";
 export const ARTIFACT_PREFIX = "pr-qa-";
@@ -208,6 +210,13 @@ async function main(argv) {
   }
   if (opt.run !== undefined && opt.noWait) {
     console.error("dispatch: --no-wait dispatches a run and --run reads one; pass one of them");
+    return 64;
+  }
+  // The workflow's own check, and the sweep's, before a run is spent on a route either would refuse.
+  const refused = opt.routes.split(",").map(routeProblem).filter(Boolean);
+  if (refused.length) {
+    for (const line of refused) console.error(`dispatch: ${line}`);
+    console.error("dispatch: nothing was dispatched");
     return 64;
   }
   const cloud = process.env.CLAUDE_CODE_REMOTE === "true";

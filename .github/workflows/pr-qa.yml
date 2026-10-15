@@ -66,8 +66,9 @@ permissions:
   statuses: write
 
 # One run per PR: a newer head, or a lap dispatched after the run the push
-# started, cancels the older one. A cancelled run writes no final status; the
-# newer run sets pending on its own head.
+# started, cancels the older one. A cancelled run writes no success or
+# failure: it replaces its own pending status with error, and leaves alone
+# one a newer run has set since.
 concurrency:
   group: pr-qa-${{ inputs.pr || github.event.pull_request.number }}
   cancel-in-progress: true
@@ -95,7 +96,9 @@ jobs:
           [[ "$PR" =~ ^[1-9][0-9]*$ ]] || { echo "::error::pr must be a PR number"; exit 1; }
           [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sha must be the full 40-character head commit"; exit 1; }
           [[ "$LAP" =~ ^[1-9][0-9]*$ ]] || { echo "::error::lap must be a positive number"; exit 1; }
-          [[ "$ROUTES" =~ ^/[A-Za-z0-9/_.,@:-]*$ ]] || { echo "::error::routes must be comma-separated paths, each path[@role][:status]"; exit 1; }
+          # The same rule as ROUTE_PATTERN in .claude/scripts/pr-test/sweep.mjs; dispatch.mjs applies it before dispatching.
+          # It lets & and ? through, so $ROUTES is only ever expanded inside double quotes.
+          [[ "$ROUTES" =~ ^/[A-Za-z0-9/_.,@:?=\&%-]*$ ]] || { echo "::error::routes must be comma-separated paths, each path[?query][@role][:status]"; exit 1; }
 
       - name: agent-review pending on the head under test
         env:
@@ -245,3 +248,17 @@ jobs:
           if [ "$STATE" = success ]; then desc="PR QA lap $LAP passed"; else desc="PR QA lap $LAP: blocking findings or a failed step"; fi
           gh api -X POST "repos/$REPO/statuses/$SHA" -f state="$STATE" -f context=agent-review \
             -f description="$desc" -f target_url="$RUN_URL" > /dev/null
+
+      # A cancelled run's pending status would hold the lap until the wait's limit. It is replaced only while
+      # it is still this run's: on the same head a newer run's status is the newest entry, and is left as it is.
+      - name: agent-review error on the head under test when the lap is cancelled
+        if: cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          owner=$(gh api "repos/$REPO/commits/$SHA/status" --jq '.statuses[] | select(.context == "agent-review") | .target_url')
+          [ "$owner" = "$RUN_URL" ] || { echo "agent-review on $SHA is ${owner:-unset}, not this run's; left as it is"; exit 0; }
+          gh api -X POST "repos/$REPO/statuses/$SHA" -f state=error -f context=agent-review \
+            -f description="PR QA lap cancelled" -f target_url="$RUN_URL" > /dev/null
