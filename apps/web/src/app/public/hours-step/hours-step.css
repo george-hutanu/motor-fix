@@ -220,8 +220,15 @@ ul {
   }
 }
 
-/* The message regions stay in the page, empty, so a reader announces what lands in them. */
+/* The message regions stay in the page, empty, so a reader announces what lands in them.
+   Hidden without display: none, which would drop them from the accessibility tree and make
+   a message arrive in a region the reader never knew. Out of flow, so no row or grid gap. */
 .error:empty,
 .warning:empty {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

@@ -17,9 +17,8 @@
       </select>
     </span>
   }
-  @if (errors()['weekdays']; as error) {
-    <p class="error" id="hours-weekdays-error" role="status">{{ key(error) | t }}</p>
-  }
+  @let weekdaysError = errors()['weekdays'];
+  <p class="error" id="hours-weekdays-error" role="status" aria-live="polite">{{ weekdaysError ? (key(weekdaysError) | t) : '' }}</p>
 </div>
 <div class="row" data-row="sat">
   <span class="name">{{ 'public.listing.hours.saturday' | t }}</span>
@@ -40,8 +39,9 @@
       </select>
     </span>
   }
-  @if (!open() && errors()['sat']; as error) {
-    <p class="error" id="hours-sat-error" role="status">{{ key(error) | t }}</p>
+  @if (!open()) {
+    @let saturdayError = errors()['sat'];
+    <p class="error" id="hours-sat-error" role="status" aria-live="polite">{{ saturdayError ? (key(saturdayError) | t) : '' }}</p>
   }
 </div>
 <details [open]="open()" (toggle)="toggled($event)">
@@ -72,9 +72,8 @@
           } @else if (intervals.length === 2) {
             <button type="button" (click)="join(day)">{{ 'public.listing.hours.removeBreak' | t }}</button>
           }
-          @if (errors()[day]; as error) {
-            <p class="error" [id]="'hours-' + day + '-error'" role="status">{{ key(error) | t }}</p>
-          }
+          @let dayError = errors()[day];
+          <p class="error" [id]="'hours-' + day + '-error'" role="status" aria-live="polite">{{ dayError ? (key(dayError) | t) : '' }}</p>
         </div>
       }
     </div>
@@ -109,9 +108,8 @@
 </label>
 <div class="row">
   <button type="button" class="add-closed" (click)="addClosed()">{{ 'public.listing.hours.add' | t }}</button>
-  @if (closedError(); as error) {
-    <p id="hours-closed-error" class="closed-error error" role="status">{{ key(error) | t }}</p>
-  }
+  @let closedDayError = closedError();
+  <p id="hours-closed-error" class="closed-error error" role="status" aria-live="polite">{{ closedDayError ? (key(closedDayError) | t) : '' }}</p>
 </div>
 @if (value().closedDays?.length) {
   <ul class="closed-days">

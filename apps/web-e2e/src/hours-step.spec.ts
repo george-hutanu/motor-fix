@@ -135,9 +135,9 @@ test.describe('step 5 of list your garage, the hours and facilities', () => {
     await page.reload();
     await settled(page);
     await expect(select(page, 'weekdays-close')).toHaveValue('17:00');
-    await expect(
-      step(page).locator('[data-row="weekdays"] .error'),
-    ).toHaveCount(0);
+    await expect(step(page).locator('[data-row="weekdays"] .error')).toHaveText(
+      '',
+    );
   });
 
   for (const [width, height] of [

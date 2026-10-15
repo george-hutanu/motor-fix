@@ -84,6 +84,15 @@ const tick = (step: HTMLElement, name: string) =>
   );
 const row = (step: HTMLElement, name: string) =>
   step.querySelector<HTMLElement>(`[data-row="${name}"]`);
+// A reader announces text that lands in a region it already knows, so the
+// region is there, polite and empty, before any message.
+const quietRegion = (step: HTMLElement, id: string) => {
+  const region = step.querySelector(`[id="${id}"]`);
+  expect(region?.getAttribute('role')).toBe('status');
+  expect(region?.getAttribute('aria-live')).toBe('polite');
+  expect(text(region)).toBe('');
+  return region;
+};
 const button = (scope: HTMLElement, label: string) => {
   const found = [...scope.querySelectorAll<HTMLButtonElement>('button')].find(
     (b) => text(b) === label || b.getAttribute('aria-label') === label,
@@ -381,6 +390,68 @@ describe('step 5, the opening hours', () => {
       'Closing must be after opening',
     );
   });
+
+  // @traces 1204-hours-row-live-regions-FR-001
+  // @traces 1204-hours-row-live-regions-FR-005
+  it('says why the weekdays kept their hours in the region that was there before, and empties it when they hold', async () => {
+    const { fixture, step } = await open();
+    const region = quietRegion(step, 'hours-weekdays-error');
+
+    await choose(fixture, select(step, 'weekdays-close'), '07:00');
+
+    expect(step.querySelector('#hours-weekdays-error')).toBe(region);
+    expect(statuses(step)).toEqual([
+      'Ora de închidere trebuie să fie după deschidere',
+    ]);
+
+    await choose(fixture, select(step, 'weekdays-close'), '18:00');
+
+    expect(step.querySelector('#hours-weekdays-error')).toBe(region);
+    expect(text(region)).toBe('');
+    expect(
+      select(step, 'weekdays-close')?.getAttribute('aria-describedby'),
+    ).toBeNull();
+  });
+
+  // @traces 1204-hours-row-live-regions-FR-002
+  it('says why Saturday kept its hours in the region that was there before, and empties it when they hold', async () => {
+    const { fixture, step } = await open();
+    await click(fixture, tick(step, 'sat-closed'));
+    const region = quietRegion(step, 'hours-sat-error');
+
+    await choose(fixture, select(step, 'sat-close'), '07:00');
+
+    expect(step.querySelector('#hours-sat-error')).toBe(region);
+    expect(statuses(step)).toEqual([
+      'Ora de închidere trebuie să fie după deschidere',
+    ]);
+
+    await choose(fixture, select(step, 'sat-close'), '12:00');
+
+    expect(step.querySelector('#hours-sat-error')).toBe(region);
+    expect(text(region)).toBe('');
+  });
+
+  // @traces 1204-hours-row-live-regions-FR-003
+  it("says why a day refused its break in that day's own region, and empties it when the break fits", async () => {
+    const { fixture, step } = await open();
+    await openByDay(fixture, step);
+    const monday = step.querySelector<HTMLElement>('[data-day="mon"]');
+    if (!monday) throw new Error('no Monday');
+    await click(fixture, button(monday, 'Adaugă pauză'));
+    const region = quietRegion(step, 'hours-mon-error');
+    quietRegion(step, 'hours-tue-error');
+
+    await choose(fixture, select(step, 'mon-1-open'), '11:00');
+
+    expect(step.querySelector('#hours-mon-error')).toBe(region);
+    expect(statuses(step)).toEqual(['Pauza trebuie să fie în programul zilei']);
+
+    await choose(fixture, select(step, 'mon-1-open'), '13:00');
+
+    expect(step.querySelector('#hours-mon-error')).toBe(region);
+    expect(text(region)).toBe('');
+  });
 });
 
 describe('step 5, the closed days', () => {
@@ -435,6 +506,22 @@ describe('step 5, the closed days', () => {
       ).toBe(error?.id);
     expect(fixture.componentInstance.value().closedDays).toBeUndefined();
     expect(closedDays(step)).toEqual([]);
+  });
+
+  // @traces 1204-hours-row-live-regions-FR-004
+  it('says why a day was refused in the region that was there before, and empties it once a day is added', async () => {
+    const { fixture, step } = await open();
+    const region = quietRegion(step, 'hours-closed-error');
+
+    await add(fixture, step, '2026-10-06');
+
+    expect(step.querySelector('#hours-closed-error')).toBe(region);
+    expect(statuses(step)).toEqual(['Data a trecut']);
+
+    await add(fixture, step, '2026-12-27');
+
+    expect(step.querySelector('#hours-closed-error')).toBe(region);
+    expect(text(region)).toBe('');
   });
 
   it('adds the same day once', async () => {
@@ -595,7 +682,9 @@ const radio = (step: HTMLElement, label: string) =>
 const price = (step: HTMLElement) =>
   step.querySelector<HTMLInputElement>('input[name="courtesyPrice"]');
 const statuses = (step: HTMLElement) =>
-  [...step.querySelectorAll('[role="status"]')].map(text);
+  [...step.querySelectorAll('[role="status"]')]
+    .map(text)
+    .filter((t) => t !== '');
 const describedBy = (step: HTMLElement, field: HTMLElement | null) => {
   const id = field?.getAttribute('aria-describedby');
   return id ? step.querySelector(`[id="${id}"]`) : null;
@@ -937,7 +1026,7 @@ describe('step 5, the page judges the hours', () => {
       await click(fixture, tick(step, `${day}-closed`));
 
     const week = field(step, 'steps.5.hours');
-    expect(text(week?.querySelector('.error'))).toBe(
+    expect(text(week?.querySelector('#hours-error'))).toBe(
       'Deschide cel puțin o zi pe săptămână',
     );
     expect(week?.getAttribute('aria-describedby')).toBe('hours-error');
@@ -1003,5 +1092,20 @@ describe('type scale', () => {
     expect(stylesheet).toMatch(
       /\n[^{}\n]*input:not\(\[type="checkbox"\], \[type="radio"\]\) \{[^}]*font-size: var\(--mf-size-field\);/,
     );
+  });
+});
+
+describe('empty messages', () => {
+  // @traces 1204-hours-row-live-regions-FR-006
+  it('take no space but stay known to a reader, never removed from it', () => {
+    const stylesheet = readFileSync(join(__dirname, 'hours-step.css'), 'utf8');
+    const rule = stylesheet.match(
+      /\.error:empty,\s*\.warning:empty\s*\{([^}]*)\}/,
+    )?.[1];
+
+    expect(rule).toBeDefined();
+    expect(rule).not.toMatch(/display:\s*none/);
+    expect(rule).toMatch(/position:\s*absolute/);
+    expect(rule).toMatch(/clip-path:\s*inset\(50%\)/);
   });
 });
