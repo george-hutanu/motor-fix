@@ -250,7 +250,20 @@ describe('signing in from a QA flow', () => {
   const baseURL = 'http://127.0.0.1:4100';
   const fakeContext = () => {
     const added = [];
-    return { added, addCookies: async (cookies) => added.push(...cookies) };
+    const scripts = [];
+    return { added, scripts, addCookies: async (cookies) => added.push(...cookies), addInitScript: async (fn, arg) => scripts.push([fn, arg]) };
+  };
+  // What the context's init scripts leave in a fresh page's localStorage.
+  const storedBy = (context) => {
+    const store = new Map();
+    const saved = globalThis.localStorage;
+    globalThis.localStorage = { setItem: (k, v) => store.set(k, v) };
+    try {
+      for (const [fn, arg] of context.scripts) fn(arg);
+    } finally {
+      globalThis.localStorage = saved;
+    }
+    return Object.fromEntries(store);
   };
 
   it('adds the same refresh cookie the sweep sets for path@role, signed in afresh on each call', async () => {
@@ -275,6 +288,17 @@ describe('signing in from a QA flow', () => {
       ['driver', 'ro'],
       ['driver', 'en'],
     ]);
+  });
+
+  // @traces 1230-FR-011
+  it("opens the flow's pages in the asked language too, as the sweep's own contexts do (the app reads the account's only at sign-in)", async () => {
+    const signIn = flowSignIn({ session: async () => 'r', baseURL });
+    const en = fakeContext();
+    const ro = fakeContext();
+    await signIn(en, 'driver', 'en');
+    await signIn(ro, 'driver');
+    assert.deepEqual(storedBy(en), { 'mf.lang': 'en' });
+    assert.deepEqual(storedBy(ro), { 'mf.lang': 'ro' });
   });
 
   it('refuses a call with no role, and a run with no session', async () => {

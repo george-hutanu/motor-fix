@@ -158,7 +158,7 @@ export default async (a) => {
     const s = await stack();
     const file = flows(`export default async (a) => {
   const cookies = [];
-  await a.signIn({ addCookies: async (c) => cookies.push(...c) }, 'driver');
+  await a.signIn({ addInitScript: async () => {}, addCookies: async (c) => cookies.push(...c) }, 'driver');
   return cookies.length === 1 && cookies[0].value === 'rt-9' ? [] : [{ severity: 'high', title: 'cookie ' + JSON.stringify(cookies) }];
 };`);
     const r = await cli(file, s, [], { SEED_PASSWORD: 'pw-from-env' });

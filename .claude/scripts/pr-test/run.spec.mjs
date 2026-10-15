@@ -57,7 +57,7 @@ describe('run: what the QA flows are given', () => {
     assert.equal(typeof args.health, 'function');
     assert.equal(typeof args.ready, 'function');
     const added = [];
-    await args.signIn({ addCookies: async (c) => added.push(...c) }, 'driver');
+    await args.signIn({ addInitScript: async () => {}, addCookies: async (c) => added.push(...c) }, 'driver');
     assert.deepEqual(asked, ['driver']);
     assert.equal(added[0].value, 'r-1');
     assert.equal(added[0].domain, '127.0.0.1');

@@ -129,14 +129,27 @@ export async function contextCookies(run, { session, baseURL }) {
   return [sessionCookie({ refresh: await session(run.role, run.lang), baseURL })];
 }
 
+/** Every page of the context starts in `lang`, as if the language switch had chosen it. */
+const keepLanguage = (context, lang) =>
+  context.addInitScript(
+    ([key, value]) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    },
+    [LANG_KEY, lang],
+  );
+
 // The QA flows' `signIn(context, role[, lang])`: the cookie a `path@role` route gets, for a browser context
-// the flow opened itself. The account's language is set every time (Romanian unless asked), since the
-// sweep before the flows leaves it at whichever language it swept last.
+// the flow opened itself, and its pages in that language. The account's language is set every time (Romanian
+// unless asked), since the sweep before the flows leaves it at whichever language it swept last, and the
+// stored choice too, since a restored session does not re-read the account's.
 export const flowSignIn =
   ({ session, baseURL }) =>
   async (context, role, lang = "ro") => {
     if (!role) throw new Error("signIn(context, role) needs a role, one of the seeded accounts'");
     await context.addCookies(await contextCookies({ role, lang }, { session, baseURL }));
+    await keepLanguage(context, lang);
   };
 
 /** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
@@ -207,14 +220,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         colorScheme: run.scheme,
         locale: LOCALES[run.lang],
       });
-      await context.addInitScript(
-        ([key, value]) => {
-          try {
-            localStorage.setItem(key, value);
-          } catch {}
-        },
-        [LANG_KEY, run.lang],
-      );
+      await keepLanguage(context, run.lang);
       // Maps read the app's own empty style: no tile is fetched from outside.
       await context.addInitScript(() => {
         globalThis.__MF_MAP_STYLE = "/map/empty-style.json";

@@ -159,7 +159,7 @@ describe('precheck --check: the flows against the app and API already serving', 
   const missing = want.filter((k) => args[k] === undefined);
   if (missing.length) throw new Error('missing ' + missing.join(','));
   const added = [];
-  await args.signIn({ addCookies: async (c) => added.push(...c) }, 'driver');
+  await args.signIn({ addInitScript: async () => {}, addCookies: async (c) => added.push(...c) }, 'driver');
   if (added[0]?.value !== 'r-live') throw new Error('signIn set no session cookie');
   if (args.accounts.driver !== 'sofer@example.test') throw new Error('accounts');
   return [];

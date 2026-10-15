@@ -56,20 +56,20 @@ describe('flow arguments', () => {
     const asked = [];
     const a = args(async (...x) => (asked.push(x), 'tok'));
     const added = [];
-    await a.signIn({ addCookies: async (c) => added.push(...c) }, 'driver');
+    await a.signIn({ addInitScript: async () => {}, addCookies: async (c) => added.push(...c) }, 'driver');
     assert.equal(added.length, 1);
     assert.equal(added[0].name, 'mf_refresh');
     assert.equal(added[0].value, 'tok');
     assert.equal(asked[0][0], 'driver');
-    await assert.rejects(a.signIn({ addCookies: async () => {} }), /role/);
-    await assert.rejects(a.signIn({ addCookies: async () => {} }, ''), /role/);
+    await assert.rejects(a.signIn({ addInitScript: async () => {}, addCookies: async () => {} }), /role/);
+    await assert.rejects(a.signIn({ addInitScript: async () => {}, addCookies: async () => {} }, ''), /role/);
   });
 
   it('passes a session failure to the flow instead of hiding it', async () => {
     const a = args(async () => {
       throw new Error('could not sign in as driver');
     });
-    await assert.rejects(a.signIn({ addCookies: async () => assert.fail('no cookie for a failed sign-in') }, 'driver'), /could not sign in/);
+    await assert.rejects(a.signIn({ addInitScript: async () => {}, addCookies: async () => assert.fail('no cookie for a failed sign-in') }, 'driver'), /could not sign in/);
   });
 });
 
