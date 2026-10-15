@@ -4,10 +4,15 @@ import { ready, signIn } from './accounts.js';
 import { needsAnalytics, test } from './fixtures.js';
 
 // The seeded driver with a Dacia Logan, and Service Auto Militari, which works
-// on Dacia and has an oil change on its price list.
+// on Dacia and has an oil change on its price list; Atelier Berceni, near it,
+// takes the same oil change for Dacia.
 const DRIVER = 'cerere@example.test';
 const GARAGE = 'Service Auto Militari';
 const SLUG = 'service-auto-militari';
+const NEARBY = 'Atelier Berceni';
+// Militari itself, as a place picked on Home: the request then lists the
+// garages near it.
+const MILITARI = { label: 'Militari', lat: 44.435, lng: 26.015 };
 const OIL = 'Schimb de ulei și filtre';
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -61,15 +66,31 @@ async function signedIn(page: Page) {
   await expect(page).toHaveURL('/app/driver');
 }
 
+// The place the browser keeps, set before any page reads it.
+const nearMilitari = (page: Page) =>
+  page.addInitScript((place) => {
+    localStorage.setItem(
+      'mf-place',
+      JSON.stringify({ ...place, origin: 'address' }),
+    );
+  }, MILITARI);
+
 // Home → a brand → Results → the garage's profile, as a driver walks it.
-async function toProfile(page: Page) {
+async function toProfile(page: Page, near?: typeof MILITARI) {
   await ready(page, '/ro');
   await page
     .getByRole('radiogroup', { name: 'Marca mașinii' })
     .getByRole('radio', { exact: true, name: 'Dacia' })
     .click();
   await page.getByRole('link', { name: 'Caută service‑uri' }).click();
-  await expect(page).toHaveURL('/ro/garages?brand=dacia');
+  if (near) {
+    await expect(page).toHaveURL(/^[^?]*\/ro\/garages\?/);
+    const query = new URL(page.url()).searchParams;
+    expect(query.get('brand')).toBe('dacia');
+    expect(query.get('near')).toBe(`${near.lat},${near.lng}`);
+  } else {
+    await expect(page).toHaveURL('/ro/garages?brand=dacia');
+  }
   await page
     .locator('article.card', {
       has: page.getByRole('heading', { exact: true, name: GARAGE }),
@@ -82,14 +103,17 @@ async function toProfile(page: Page) {
   ).toBeVisible();
 }
 
-// The request for an oil change to this garage alone; its id once created.
-async function sendRequest(page: Page) {
+// The request for an oil change to this garage and the nearby ones ticked.
+async function sendRequest(page: Page, others: string[] = []) {
   await page.getByRole('button', { name: 'Cere ofertă' }).click();
   const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
   await expect(
     quote.getByRole('combobox', { exact: true, name: 'Mașina' }),
   ).toContainText('Dacia Logan');
   await quote.getByRole('switch', { name: OIL }).click();
+  for (const name of others) {
+    await quote.getByRole('checkbox', { name }).check();
+  }
   const sent = page.waitForResponse(
     (r) =>
       r.url().endsWith('/api/v1/quote-requests') &&
@@ -98,7 +122,13 @@ async function sendRequest(page: Page) {
   await quote.getByRole('button', { name: 'Trimite' }).click();
   const response = await sent;
   expect(response.status()).toBe(201);
-  await expect(quote.getByText(`Trimis către ${GARAGE}.`)).toBeVisible();
+  await expect(
+    quote.getByText(
+      others.length === 0
+        ? `Trimis către ${GARAGE}.`
+        : `Trimis către ${others.length + 1} service‑uri.`,
+    ),
+  ).toBeVisible();
 }
 
 const named = (events: Sent[]) => events.map(({ n, p }) => ({ n, p }));
@@ -109,18 +139,19 @@ const named = (events: Sent[]) => events.map(({ n, p }) => ({ n, p }));
 // @traces 250-FR-005
 // @traces 250-FR-010
 test.describe('the launch events @seeded', () => {
-  test('follow a driver from a brand to a sent request once analytics are accepted, naming no garage', async ({
+  test('follow a driver from a brand to a request sent to two garages once analytics are accepted, naming no garage', async ({
     page,
     request,
   }) => {
     await needsAnalytics(request);
     const { events } = await plausible(page);
+    await nearMilitari(page);
     await ready(page, '/ro');
     await accept(page);
     await signedIn(page);
 
-    await toProfile(page);
-    await sendRequest(page);
+    await toProfile(page, MILITARI);
+    await sendRequest(page, [NEARBY]);
 
     await expect
       .poll(() => named(events))
@@ -130,7 +161,7 @@ test.describe('the launch events @seeded', () => {
         { n: 'quote_request_started', p: { source: 'profile' } },
         {
           n: 'quote_request_sent',
-          p: { brand: 'dacia', garages: '1', jobs: 1 },
+          p: { brand: 'dacia', garages: '2–3', jobs: 1 },
         },
       ]);
     for (const { u, p } of events) {
