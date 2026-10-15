@@ -5,9 +5,9 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { dropProfiles } from './public-garages.cache';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { purgeAudience } from '../../cache/purge';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -240,7 +240,7 @@ describe('the photos of a public garage profile', () => {
       where: { id: a.id },
     });
     const cached = (await read(garage.slug)).body.photos as Photo[];
-    await dropProfiles(other, [`public:garage:${garage.id}`]);
+    await purgeAudience(other, [`public:garage:${garage.id}`]);
     const fresh = (await read(garage.slug)).body.photos as Photo[];
 
     expect(cached).toEqual(first);

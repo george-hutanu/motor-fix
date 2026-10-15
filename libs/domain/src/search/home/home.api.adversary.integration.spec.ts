@@ -2,8 +2,11 @@ import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
+import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { PUBLIC_POLICY } from '../../cache/http-cache/http-cache.interceptor';
+import { purgeTags } from '../../cache/purge';
 import {
   databaseUrl,
   fixtures,
@@ -36,6 +39,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await purgeTags(app.get(AUTH_REDIS), ['search']);
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
 });
 
@@ -132,7 +136,7 @@ describe('GET /home against hostile queries', () => {
   it('does not set a public cache header on a refusal', async () => {
     const res = await home('brand=');
 
-    expect(res.headers['cache-control']).not.toBe('public, max-age=60');
+    expect(String(res.headers['cache-control'] ?? '')).not.toContain('public');
   });
 });
 
@@ -219,7 +223,7 @@ describe('GET /home counts', () => {
     );
 
     expect(res.status).toBe(200);
-    expect(res.headers['cache-control']).toBe('public, max-age=60');
+    expect(res.headers['cache-control']).toBe(PUBLIC_POLICY);
   });
 
   it('answers a thousand approved garages with the right totals', async () => {

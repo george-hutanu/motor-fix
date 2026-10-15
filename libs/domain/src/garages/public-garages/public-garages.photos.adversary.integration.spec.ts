@@ -5,9 +5,9 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { dropProfiles } from './public-garages.cache';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { purgeAudience } from '../../cache/purge';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -136,7 +136,7 @@ describe('the photos of a public garage profile under hostile conditions', () =>
     await photo(garage.id, 0);
 
     const first = (await photosOf(garage.slug)).map(({ id }) => id);
-    await dropProfiles(other, [`public:garage:${garage.id}`]);
+    await purgeAudience(other, [`public:garage:${garage.id}`]);
     const second = (await photosOf(garage.slug)).map(({ id }) => id);
 
     expect(second).toEqual(first);

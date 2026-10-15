@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-10
+updated: 2026-10-15
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -21,6 +21,7 @@ features:
   - 209-status-change-emails
   - 251-monitoring-backups
   - 1024-alert-rules
+  - 1182-cache-service
 ---
 
 # Capability: Observability
@@ -556,6 +557,10 @@ _From 1024-alert-rules._
 ### 1024-FR-013 — The PR body's Observability section MUST list the rules per service with their thresholds, and its Notes MUST list the owner's two steps: the `MotorFix owner` contact point with the owner's e-mail exists in Grafana, and one test firing (Grafana's "Test" on the contact point, or a rule fired by hand) was received, each marked as not verifiable by the agent.
 
 _From 1024-alert-rules._
+
+### 1182-FR-014 — The cache MUST be observable: one counter with one count per read kind (`profile`, `home`, `popular-brands`) and outcome — `hit`, `miss`, `stale` (served past the soft expiry), `coalesced` (a concurrent read served by another's call), `negative` (a remembered not-found or empty), `fallback` (Redis unavailable, the database answered), `purge` and `warm` — replacing `motorfix_garage_profile_cache_total`; the inventory lists it with its panel and alert or the reason none is needed; the API dashboard gains a panel with hit rate, stale serves and stampedes avoided (the `coalesced` count).
+
+_From 1182-cache-service._
 
 ## Retired
 

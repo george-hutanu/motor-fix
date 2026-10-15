@@ -4,6 +4,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { JobTypesService } from './job-types.service';
 import { Public } from '../../auth/actor.guard';
+import { PublicCache } from '../../cache/http-cache/http-cache.interceptor';
 
 @ApiTags('catalogue')
 @Controller('job-types')
@@ -12,6 +13,7 @@ export class JobTypesController {
 
   @Get()
   @Public()
+  @PublicCache()
   @ApiOkResponse({ type: JobTypeListDto })
   search(@Query() query: JobTypesQueryDto): Promise<JobTypeListDto> {
     return this.jobTypes.search(query);

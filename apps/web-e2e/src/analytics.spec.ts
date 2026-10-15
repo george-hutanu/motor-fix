@@ -233,8 +233,10 @@ test.describe('the launch events @seeded', () => {
     await toProfile(page);
 
     await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    // A visitor gets the request dialog, then the sign-in dialog over it once
+    // the API answers 401; either may be open, so check the topmost.
     await expect(
-      page.getByRole('dialog', { name: /Cere ofertă|Autentificare/ }),
+      page.getByRole('dialog', { name: /Cere ofertă|Autentificare/ }).last(),
     ).toBeVisible();
   });
 });

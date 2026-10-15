@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-14
+updated: 2026-10-15
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -77,6 +77,7 @@ features:
   - 1168-chief-mods
   - 1171-qa-latency
   - 1201-static-cache-headers
+  - 1182-cache-service
 ---
 
 # Capability: Platform
@@ -1916,6 +1917,58 @@ _From 1201-static-cache-headers._
 ### 1201-FR-007 — FR-001 to FR-005 MUST each have failing-first automated tests beside the code they exercise (Constitution II).
 
 _From 1201-static-cache-headers._
+
+### 1182-FR-001 — The API MUST have one cache service that any read goes through with a key, a read function, a soft lifetime and a set of tags, and that answers from Redis when it holds a fresh entry, otherwise from the read function, storing the answer; key names carry a version (`v1`) so a change of shape bumps it and no older shape is read back. Every soft lifetime it stores is multiplied by a factor drawn evenly from 0.9 to 1.1 (jitter), so entries written together do not expire together; the hard expiry follows the jittered soft one.
+
+_From 1182-cache-service._
+
+### 1182-FR-002 — An entry MUST carry a soft expiry inside the value and a hard expiry 10 minutes after it. Before the soft expiry it is fresh. Between the two it is stale: a read answers from it at once and starts one refresh behind it, and no second refresh starts while that one runs. After the hard expiry the entry is gone.
+
+_From 1182-cache-service._
+
+### 1182-FR-003 — Concurrent reads of one missing or stale key MUST cause one read function call: within an instance, every caller waits on the one call in flight; across instances, a per-key lock held for at most 3 seconds lets one instance read while the others wait for the stored value (serving stale when they hold one; otherwise polling the key every 50 ms while the lock exists), and a waiter that sees no value once the lock is gone tries the lock once more and reads if it wins, else reads the database itself. A lock that outlives its holder MUST NOT block reads for longer than those 3 seconds.
+
+_From 1182-cache-service._
+
+### 1182-FR-004 — A not-found verdict for a slug no garage holds and an empty result list MUST be remembered for 60 seconds (jittered; soft and hard expiry alike, so a verdict is never served stale), so a repeated read in that window answers the same verdict without a database read; the unknown slug's entry carries no tag. A verdict about a garage that exists (a draft's 404, a suspended garage's 410) is not cached, so its approval or restore shows on the next read.
+
+_From 1182-cache-service._
+
+### 1182-FR-005 — Every stored entry MUST be added to each of its tags, and a purge of a tag MUST remove every entry it names and the tag itself; a purge wins over a read or refresh that began before it (that read's store is refused, so no older answer is left behind). A purge Redis refuses throws to its caller.
+
+_From 1182-cache-service._
+
+### 1182-FR-006 — Each purge MUST hand its tag to one purge hook with no behaviour today, the seam the CDN story (ST-430) fills; the purge succeeds whether or not the hook does anything. No CDN call is made in this story.
+
+_From 1182-cache-service._
+
+### 1182-FR-009 — Every visitor read route whose answer depends only on its path and query — today the profile, the brand Home answer, the popular tiles, the brand search, the job types and the public holidays — MUST answer `200` with exactly `Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400`. A visitor route that depends on a header or token (the listing photo and document reads), and a route whose own story names a stricter policy (`no-store` on the search, the places lookup and the platform status; `no-cache` on the event streams) keep theirs. Problem answers (4xx, 5xx) carry no public cache header. The six routes are an allowlist, marked on the route and applied in one place; no other `@Public()` route gains the public policy. A visitor answer served through the cache service also carries `Cache-Tag` naming its entry's tags (comma-separated), the tag the CDN purge (ST-430) names.
+
+_From 1182-cache-service._
+
+### 1182-FR-010 — Every read route answered with a session MUST answer `200` with exactly `Cache-Control: private, no-cache`; a route whose own story names `no-store` keeps it.
+
+_From 1182-cache-service._
+
+### 1182-FR-011 — Every `200` read answer MUST carry a weak validator that changes when the answer changes, and a repeat of the request with `If-None-Match` naming the current validator MUST answer `304` with no body and the same `Cache-Control`; a problem answer is never `304`.
+
+_From 1182-cache-service._
+
+### 1182-FR-012 — No API answer MUST carry a `Vary` member other than `Accept-Encoding` (a redirect keeps Express's own `Vary: Accept`: it is no read answer and carries no public policy); the language is in the path, never negotiated. The server-sent event routes MUST stay uncompressed end to end (the API adds no compression; the web edge keeps relaying them unbuffered) and keep `Cache-Control: no-cache`.
+
+_From 1182-cache-service._
+
+### 1182-FR-013 — Once per release, the first instance to come up MUST warm, through the cache service, the profile (no brand in context) of the 200 most-read approved garages and the brand pages (the Home answer of each popular brand without a place, and the popular tiles), guarded by a once-per-release key set with `NX` and a one-day expiry so that another instance or a restart of the same release warms nothing; it runs after the API listens without delaying readiness, and is skipped when the release id is `dev` (no release); a warm-up that fails logs one warning and never stops the instance from serving.
+
+_From 1182-cache-service._
+
+### 1182-FR-015 — Redis MUST never hold the only copy (Constitution VI): while it fails, every read answers from PostgreSQL as it would without a cache, no lock is taken, the first failing call warns once and the first success after an outage logs the recovery; the HTTP headers of FR-009 to FR-012 do not depend on Redis.
+
+_From 1182-cache-service._
+
+### 1182-FR-016 — FR-001 to FR-015 MUST each have failing-first automated tests beside the code they exercise (Constitution II), on real PostgreSQL and Redis where the read reaches them; the single-flight test counts the database reads under 50 concurrent requests for one key on one instance and across two instances sharing Redis, and sees one.
+
+_From 1182-cache-service._
 
 ## Retired
 

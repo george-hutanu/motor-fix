@@ -12,6 +12,8 @@ import {
 export const requestContext = new AsyncLocalStorage<{
   requestId?: string;
   jobId?: string;
+  // The tags of the cached answers this request served.
+  cacheTags?: string[];
 }>();
 
 // Runs a job's work and its failure log with the job id on every line.

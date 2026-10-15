@@ -6,10 +6,17 @@ const mockApp = {
   listen: jest.fn(async () => undefined),
 };
 const mockCreate = jest.fn(async (..._args: unknown[]) => mockApp);
-const mockReadEnv = jest.fn((..._args: unknown[]) => ({ APP_ENV: 'test' }));
+const mockReadEnv = jest.fn(
+  (..._args: unknown[]): { APP_ENV: string; RELEASE_SHA?: string } => ({
+    APP_ENV: 'test',
+  }),
+);
 const mockRegister = jest.fn((..._args: unknown[]) => 'registered module');
 const mockConfigure = jest.fn();
 const mockWrite = jest.fn();
+const mockWarm = jest.fn(
+  (..._args: unknown[]) => new Promise<void>(() => undefined),
+);
 
 jest.mock('node:fs', () => ({
   ...jest.requireActual('node:fs'),
@@ -22,6 +29,7 @@ jest.mock('@motor-fix/contracts', () => ({
 jest.mock('@motor-fix/domain', () => ({
   BRANDS: ['the brand file'],
   BrandLoader: class BrandLoader {},
+  warmCache: (...args: unknown[]) => mockWarm(...args),
 }));
 jest.mock('@nestjs/core', () => ({
   NestFactory: { create: (...args: unknown[]) => mockCreate(...args) },
@@ -86,6 +94,18 @@ describe('api entry point', () => {
 
     expect(mockApp.enableShutdownHooks).toHaveBeenCalled();
     expect(mockApp.listen).toHaveBeenCalledWith(3000);
+  });
+
+  // @traces 1182-FR-013
+  it('warms the cache for its release once it serves, without waiting for it', async () => {
+    mockReadEnv.mockReturnValueOnce({ APP_ENV: 'test', RELEASE_SHA: 'abc123' });
+
+    await run([]);
+
+    expect(mockWarm).toHaveBeenCalledWith(mockApp, 'abc123');
+    expect(mockApp.listen.mock.invocationCallOrder[0]).toBeLessThan(
+      mockWarm.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it('serves on the port it is given', async () => {
