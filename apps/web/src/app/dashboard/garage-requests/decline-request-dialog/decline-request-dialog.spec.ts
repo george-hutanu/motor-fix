@@ -11,6 +11,7 @@ import {
   DeclineRequestDialog,
   type DeclineRequestResult,
 } from './decline-request-dialog';
+import { Consent } from '../../../consent/consent';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -37,6 +38,7 @@ const DECLINED = {
 };
 
 let decline: jest.Mock;
+let track: jest.Mock;
 let result: Promise<DeclineRequestResult | 'cancelled'>;
 
 async function settle() {
@@ -48,8 +50,10 @@ async function settle() {
 
 async function open({ language = 'ro' }: { language?: 'ro' | 'en' } = {}) {
   decline = jest.fn(async () => DECLINED);
+  track = jest.fn();
   TestBed.configureTestingModule({
     providers: [
+      { provide: Consent, useValue: { track } },
       {
         provide: GarageRequestsService,
         useValue: { garageRequestsControllerDecline: decline },
@@ -296,5 +300,31 @@ describe('the decline dialog: declining', () => {
 
     expect(button('Refuză')?.disabled).toBe(false);
     expect(radio('Suntem ocupați complet').checked).toBe(true);
+  });
+});
+
+// @traces 250-FR-005
+describe('the request answered event for a decline', () => {
+  it('tells a decline once the server took it', async () => {
+    await open();
+    await pick('Trebuie să vedem mașina mai întâi');
+
+    await press();
+
+    await expect(result).resolves.toBe('declined');
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith('request_answered', {
+      action: 'decline',
+    });
+  });
+
+  it('tells nothing for a decline the server refused', async () => {
+    await open();
+    await pick('Trebuie să vedem mașina mai întâi');
+    decline.mockRejectedValueOnce(refusal(500, { code: 'internal_error' }));
+
+    await press();
+
+    expect(track).not.toHaveBeenCalled();
   });
 });

@@ -21,6 +21,7 @@ import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { HEALTH, Home, TILES } from './home';
 import { PlaceDialog } from './place/place-dialog/place-dialog';
 import type { Place } from './place/place-store';
+import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
 
 const NAMES = [
@@ -113,6 +114,7 @@ const overlays = {
   ),
 };
 const reduced = signal(false);
+const consent = { track: jest.fn() };
 
 let fixture: ComponentFixture<Home>;
 
@@ -123,6 +125,7 @@ async function settle() {
 
 beforeEach(async () => {
   reads = [];
+  consent.track.mockClear();
   reduced.set(false);
   localStorage.clear();
   session.load.mockReset().mockResolvedValue(null);
@@ -148,6 +151,7 @@ async function configure(platform = 'browser') {
       { provide: Overlays, useValue: overlays },
       { provide: REDUCED_MOTION, useValue: reduced },
       { provide: PLATFORM_ID, useValue: platform },
+      { provide: Consent, useValue: consent },
     ],
   });
   await TestBed.inject(I18n).enter('public');
@@ -1431,5 +1435,51 @@ describe('Home garage cards', () => {
     await render([]);
 
     expect(cardsArea()).toBeNull();
+  });
+});
+
+// @traces 250-FR-005
+describe('Home brand events', () => {
+  const find = async (found: BrandDto) => {
+    fixture.debugElement
+      .query(By.directive(BrandSearch))
+      .componentInstance.chosen.emit(found);
+    await settle();
+  };
+
+  it('tells a tile picked as a brand picked on the home picker', async () => {
+    await render();
+    expect(consent.track).not.toHaveBeenCalled();
+
+    await choose('Dacia');
+
+    expect(consent.track).toHaveBeenCalledTimes(1);
+    expect(consent.track).toHaveBeenCalledWith('brand_picked', {
+      brand: 'dacia',
+      source: 'home_picker',
+    });
+  });
+
+  it('tells a brand found by the search the same way', async () => {
+    await render();
+
+    await find(ALFA);
+
+    expect(consent.track).toHaveBeenCalledTimes(1);
+    expect(consent.track).toHaveBeenCalledWith('brand_picked', {
+      brand: 'alfa-romeo',
+      source: 'home_picker',
+    });
+  });
+
+  it('tells nothing for the brands the picker moves through by itself', async () => {
+    jest.useFakeTimers();
+    await render();
+
+    jest.advanceTimersByTime(5000 * 3);
+    await settle();
+
+    expect(checked()).not.toBe('BMW');
+    expect(consent.track).not.toHaveBeenCalled();
   });
 });

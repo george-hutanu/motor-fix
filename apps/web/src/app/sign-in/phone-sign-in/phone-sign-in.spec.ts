@@ -5,6 +5,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { PhoneSignIn } from './phone-sign-in';
+import { Consent } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import { Providers } from '../providers/providers';
 import type { AuthData, AuthSwitch } from '../sign-in';
@@ -16,6 +17,7 @@ class Host {
 
 let phoneCode: jest.Mock;
 let signInWithPhone: jest.Mock;
+let track: jest.Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 
 async function settle() {
@@ -28,8 +30,10 @@ async function settle() {
 async function open(language: 'ro' | 'en' = 'ro', data?: AuthData) {
   phoneCode = jest.fn(async () => undefined);
   signInWithPhone = jest.fn(async () => ({ landing: '/app/garage' }));
+  track = jest.fn();
   TestBed.configureTestingModule({
     providers: [
+      { provide: Consent, useValue: { track } },
       { provide: Session, useValue: { phoneCode, signInWithPhone } },
       {
         provide: Providers,
@@ -608,5 +612,38 @@ describe('what the dialog says to each answer', () => {
     expect(panel().querySelector('mf-task-error')?.textContent ?? '').toContain(
       text,
     );
+  });
+});
+
+// @traces 250-FR-005
+describe('the sign-up completed event by phone', () => {
+  it('tells a phone sign-up of a driver once the profile step created the account', async () => {
+    await open();
+    await toProfile();
+    expect(track).not.toHaveBeenCalled();
+
+    type(field('Nume'), 'Ion Popescu');
+    panel().querySelector<HTMLInputElement>('mf-consent input')?.click();
+    button('Creează contul').click();
+    await settle();
+
+    await expect(result).resolves.toBe('signed-in');
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith('sign_up_completed', {
+      method: 'phone',
+      role: 'driver',
+    });
+  });
+
+  it('tells nothing for a number that already has an account', async () => {
+    await open();
+    await sendCode();
+
+    type(field('Cod'), '012345');
+    button('Intră în cont').click();
+    await settle();
+
+    await expect(result).resolves.toBe('signed-in');
+    expect(track).not.toHaveBeenCalled();
   });
 });

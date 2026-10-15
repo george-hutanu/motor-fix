@@ -113,7 +113,15 @@ export class InsightsModule
               },
               [SNAPSHOT]: async () => {
                 await placeGarages(prisma, places);
-                return writeSnapshot(prisma, new Date());
+                const { day, ...funnel } = await writeSnapshot(
+                  prisma,
+                  new Date(),
+                );
+                logger.log(
+                  `${SNAPSHOT} funnel ${day} ${Object.entries(funnel)
+                    .map(([name, count]) => `${name} ${count}`)
+                    .join(', ')}`,
+                );
               },
             };
             const worker = new Worker(

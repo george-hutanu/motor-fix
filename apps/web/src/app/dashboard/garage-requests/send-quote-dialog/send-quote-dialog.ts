@@ -41,6 +41,8 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
+import { Consent } from '../../../consent/consent';
+
 export interface SendQuoteData {
   requestId: string;
 }
@@ -179,6 +181,7 @@ export class SendQuoteDialog {
   private readonly requests = inject(GarageRequestsService);
   private readonly quotes = inject(QuotesService);
   private readonly i18n = inject(I18n);
+  private readonly consent = inject(Consent);
   protected readonly task = injectOverlayTask<
     SendQuoteData,
     OverlayResult<SendQuoteResult>
@@ -222,6 +225,7 @@ export class SendQuoteDialog {
 
   protected readonly save = taskSave({
     done: () => {
+      this.consent.track('request_answered', { action: 'quote' });
       toast(this.i18n.t(`${MESSAGES}.sent`));
       this.task.close('sent');
     },

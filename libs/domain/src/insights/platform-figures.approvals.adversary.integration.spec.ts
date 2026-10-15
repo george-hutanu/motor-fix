@@ -156,7 +156,9 @@ describe('a garage approved again does not join the month a second time', () => 
 
     await writeSnapshot(prisma, now);
 
-    const [row] = await prisma.platformDaily.findMany();
+    const [row] = await prisma.platformDaily.findMany({
+      where: { day: new Date('2025-11-10') },
+    });
     expect([row.garagesListed, row.garagesApprovedThisMonth]).toEqual([2, 1]);
   });
 });
@@ -165,7 +167,9 @@ describe('snapshot day keys at the clock changes and month ends', () => {
   const keyed = async (at: string) => {
     await prisma.$executeRawUnsafe('TRUNCATE platform_daily');
     await writeSnapshot(prisma, new Date(at));
-    const rows = await prisma.platformDaily.findMany();
+    const rows = await prisma.platformDaily.findMany({
+      orderBy: { day: 'asc' },
+    });
     return rows.map((r) => r.day.toISOString().slice(0, 10));
   };
 

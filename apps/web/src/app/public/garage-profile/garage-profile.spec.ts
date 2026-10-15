@@ -5,7 +5,7 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, RESPONSE_INIT, TransferState } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
@@ -13,6 +13,7 @@ import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { GarageProfile, profileKey } from './garage-profile';
+import { Consent } from '../../consent/consent';
 import { PublicLive } from '../live';
 
 const MOBILE: PublicGarageDto = {
@@ -89,6 +90,7 @@ const api = {
 
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
+const consent = { track: jest.fn() };
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
@@ -109,6 +111,7 @@ beforeEach(async () => {
   response = {};
   api.publicGaragesControllerBySlug.mockClear();
   api.profileViewsControllerRecord.mockClear();
+  consent.track.mockClear();
   live.register.mockClear();
   TestBed.configureTestingModule({
     providers: [
@@ -119,6 +122,7 @@ beforeEach(async () => {
       ]),
       { provide: GaragesService, useValue: api },
       { provide: PublicLive, useValue: live },
+      { provide: Consent, useValue: consent },
       { provide: PLATFORM_ID, useValue: 'browser' },
       { provide: RESPONSE_INIT, useValue: response },
     ],
@@ -419,6 +423,8 @@ describe('the price list carried over from the server render', () => {
         ]),
         { provide: GaragesService, useValue: api },
         { provide: PublicLive, useValue: live },
+        { provide: Consent, useValue: consent },
+        { provide: Consent, useValue: consent },
         { provide: PLATFORM_ID, useValue: 'server' },
         { provide: RESPONSE_INIT, useValue: {} },
       ],
@@ -964,6 +970,8 @@ describe('the profile view', () => {
         ]),
         { provide: GaragesService, useValue: api },
         { provide: PublicLive, useValue: live },
+        { provide: Consent, useValue: consent },
+        { provide: Consent, useValue: consent },
         { provide: PLATFORM_ID, useValue: 'server' },
         { provide: RESPONSE_INIT, useValue: {} },
       ],
@@ -1035,5 +1043,58 @@ describe('the profile page and the same-day line', () => {
     expect(page().querySelector('.rate')?.textContent?.trim()).toBe(
       'Answers 95% of requests within a day',
     );
+  });
+});
+
+// @traces 250-FR-005
+describe('the garage opened event', () => {
+  const opened = () => consent.track.mock.calls;
+
+  it('tells one open, with no source for a direct open and no garage named', async () => {
+    await open('/ro/garages/service-auto-militari');
+    expect(opened()).toEqual([]);
+
+    await reads[0]?.answer(FIXED);
+
+    expect(opened()).toEqual([['garage_opened', {}]]);
+  });
+
+  it.each([
+    ['/ro/garages', 'results'],
+    ['/ro', 'home'],
+    ['/app/driver/saved', 'saved_list'],
+  ])('names a garage opened after %s as %s', async (before, source) => {
+    TestBed.inject(Router).resetConfig([
+      ...TestBed.inject(Router).config,
+      { children: [], path: 'app/driver/saved' },
+    ]);
+    await open(before);
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+
+    expect(opened()).toEqual([['garage_opened', { source }]]);
+  });
+
+  it('names a shared link', async () => {
+    await open('/ro/garages/service-auto-militari?src=share');
+    await reads[0]?.answer(FIXED);
+
+    expect(opened()).toEqual([['garage_opened', { source: 'shared_link' }]]);
+  });
+
+  it('tells no second open when the same garage is read again', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await open('/ro/garages/service-auto-militari?brand=dacia');
+    await reads[1]?.answer(FIXED);
+
+    expect(opened()).toHaveLength(1);
+  });
+
+  it('tells nothing for a garage that is not there', async () => {
+    await open('/ro/garages/nu-exista');
+    await reads[0]?.fail(404);
+
+    expect(opened()).toEqual([]);
   });
 });

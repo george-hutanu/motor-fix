@@ -17,18 +17,26 @@ const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
 const LISTED = 'Service\u2011uri listate';
-const SOON_RO = [
-  'Cereri de ofertă azi',
-  'Rată de răspuns',
-  'Programări',
-  'Recenzii raportate',
+// The seeded counts move with the seed; only their shape is fixed here.
+const COUNTED_RO = [
+  /^Cereri de ofertă, \d{1,3}(\.\d{3})*$/,
+  /^Rată de răspuns, (\d{1,3}\s?%|—, Fără cereri în ultimele 30 de zile)$/,
+  /^Programări, \d{1,3}(\.\d{3})*$/,
+];
+const COUNTED_EN = [
+  /^Quote requests, \d{1,3}(,\d{3})*$/,
+  /^Answer rate, (\d{1,3}%|—, No requests in the last 30 days)$/,
+  /^Bookings, \d{1,3}(,\d{3})*$/,
 ];
 const FIGURES = {
   activeDrivers: 12480,
   activeDriversMonthStart: 12168,
+  answerRate: 66,
+  bookings: 17,
   garagesApprovedThisMonth: 9,
   garagesListed: 214,
   garagesWaiting: 2,
+  requestsSent: 1250,
 };
 
 const panel = (page: Page) => page.locator('mf-admin-panel');
@@ -160,14 +168,15 @@ test.describe('the admin dashboard @seeded', () => {
           name: /^Șoferi activi, \d{1,3}(\.\d{3})*(, [+\u2212]\d{1,3}(\.\d{3})* luna asta)?$/,
         }),
       ).toBeVisible();
-      for (const label of SOON_RO) {
-        await expect(
-          panel(page).getByRole('group', {
-            exact: true,
-            name: `${label}, în curând`,
-          }),
-        ).toBeVisible();
+      for (const name of COUNTED_RO) {
+        await expect(panel(page).getByRole('group', { name })).toBeVisible();
       }
+      await expect(
+        panel(page).getByRole('group', {
+          exact: true,
+          name: 'Recenzii raportate, în curând',
+        }),
+      ).toBeVisible();
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });
   }
@@ -200,19 +209,15 @@ test.describe('the admin dashboard @seeded', () => {
         name: /^Active drivers, \d{1,3}(,\d{3})*(, [+\u2212]\d{1,3}(,\d{3})* this month)?$/,
       }),
     ).toBeVisible();
-    for (const label of [
-      'Quote requests today',
-      'Answer rate',
-      'Bookings',
-      'Reported reviews',
-    ]) {
-      await expect(
-        panel(page).getByRole('group', {
-          exact: true,
-          name: `${label}, coming soon`,
-        }),
-      ).toBeVisible();
+    for (const name of COUNTED_EN) {
+      await expect(panel(page).getByRole('group', { name })).toBeVisible();
     }
+    await expect(
+      panel(page).getByRole('group', {
+        exact: true,
+        name: 'Reported reviews, coming soon',
+      }),
+    ).toBeVisible();
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
 
@@ -383,9 +388,9 @@ test.describe('the platform figures', () => {
 
       for (const name of [
         'Garages listed, 214, +9 this month',
-        'Quote requests today, coming soon',
-        'Answer rate, coming soon',
-        'Bookings, coming soon',
+        'Quote requests, 1,250',
+        'Answer rate, 66%',
+        'Bookings, 17',
         'Active drivers, 12,480, +312 this month',
         'Reported reviews, coming soon',
       ]) {

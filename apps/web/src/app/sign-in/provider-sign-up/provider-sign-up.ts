@@ -18,6 +18,7 @@ import {
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 import { characters } from '../../characters';
+import { Consent as Analytics } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import { Consent, consentControl } from '../consent/consent';
 import { PROVIDER_NAME } from '../providers/providers';
@@ -45,6 +46,7 @@ import type { AuthSwitch } from '../sign-in';
 export class ProviderSignUp implements OnInit {
   private readonly session = inject(Session);
   private readonly i18n = inject(I18n);
+  private readonly analytics = inject(Analytics);
   private readonly task = injectOverlayTask<
     undefined,
     'signed-in' | AuthSwitch | 'cancelled'
@@ -64,7 +66,14 @@ export class ProviderSignUp implements OnInit {
   });
 
   protected readonly save = taskSave({
-    done: () => this.task.close('signed-in'),
+    done: () => {
+      const method = this.pending()?.provider;
+      this.analytics.track('sign_up_completed', {
+        ...(method && { method }),
+        role: 'driver',
+      });
+      this.task.close('signed-in');
+    },
     form: this.form,
     messages: 'public.providerSignUp',
     send: async ({ name = '' }) => {

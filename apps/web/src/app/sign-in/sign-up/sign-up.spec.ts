@@ -5,6 +5,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { SignUp } from './sign-up';
+import { Consent } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import type { AuthSwitch } from '../sign-in';
 
@@ -24,6 +25,7 @@ const problem = (
   });
 
 let signUp: jest.Mock;
+let track: jest.Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 let online = true;
 
@@ -40,8 +42,12 @@ async function open(
   name?: string,
 ) {
   signUp = jest.fn(async () => ({ landing: '/app/driver' }));
+  track = jest.fn();
   TestBed.configureTestingModule({
-    providers: [{ provide: Session, useValue: { signUp } }],
+    providers: [
+      { provide: Session, useValue: { signUp } },
+      { provide: Consent, useValue: { track } },
+    ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
@@ -537,5 +543,30 @@ describe('the consent to the terms and the privacy notice', () => {
 
     expect(describedBy(consentBox())).toBe('Bifează pentru a continua.');
     expect(document.activeElement).toBe(consentBox());
+  });
+});
+
+// @traces 250-FR-005
+describe('the sign-up completed event', () => {
+  it('tells an e-mail sign-up of a driver once the account exists', async () => {
+    await open();
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
+
+    await expect(result).resolves.toBe('signed-in');
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith('sign_up_completed', {
+      method: 'email',
+      role: 'driver',
+    });
+  });
+
+  it('tells nothing when the account was refused', async () => {
+    await open();
+    signUp.mockRejectedValueOnce(problem(409, 'email_taken'));
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
+
+    expect(track).not.toHaveBeenCalled();
   });
 });

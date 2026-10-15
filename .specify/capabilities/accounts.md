@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-11
+updated: 2026-10-15
 features:
   - 079-account-model
   - 082-sign-in
@@ -27,6 +27,7 @@ features:
   - 244-analytics-news-consent
   - 243-terms-privacy
   - 1203-legal-operator
+  - 250-launch-analytics-events
 ---
 
 # Capability: Accounts
@@ -838,6 +839,38 @@ _From 1203-legal-operator._
 ### 1203-FR-010 — No legal fact beyond the ones in FR-001, FR-002 and FR-004 is added: no DPO appointment, no other address, telephone number or supervisory-authority wording, no change to any other section.
 
 _From 1203-legal-operator._
+
+### 250-FR-001 — The web app MUST send every analytics event through one analytics service that drops the call without a valid "granted" consent, stops at once when consent is withdrawn during the visit, and never runs on the server.
+
+_From 250-launch-analytics-events._
+
+### 250-FR-002 — An event sent to Plausible MUST carry only the properties of its allowed set (FR-004); any other property, and any property whose value is outside its allowed values, is dropped before the call. A `brand` slug is lowercase letters, digits and single hyphens only. No event or page view may carry a name, e-mail, phone, number plate, account id, request id, garage id or free text.
+
+_From 250-launch-analytics-events._
+
+### 250-FR-003 — Page addresses sent to Plausible MUST have ids removed: a page is named by its route template (as today's page views already do), and custom events reuse the same name, never the address.
+
+_From 250-launch-analytics-events._
+
+### 250-FR-004 — The event contract MUST be exactly the Build brief's list: `sign_up_completed` (`method` ∈ email, google, apple, phone; `role` ∈ driver, garage), `brand_picked` (`brand` slug; `source` ∈ home_picker, home_strip, results_chips), `garage_opened` (`source` ∈ results, map_pin, home, shared_link, saved_list), `filter_applied` (`filter` ∈ open_now, open_saturday, max_price, min_rating, card; no value), `garage_saved` (`source` ∈ profile, result_card), `quote_request_started` (`source` ∈ profile, results), `quote_request_sent` (`garages` ∈ "1", "2–3", "4–5"; `jobs` integer ≥ 1; `brand` slug, dropped when the request did not come through a brand profile), `message_sent` (`side` ∈ driver, garage), `request_answered` (`action` ∈ quote, decline), `quote_accepted` (`sort` ∈ fastest, price, slot, rating; `position` integer ≥ 1), `review_posted` (`rating` 1–5; `has_text` ∈ yes, no), `listing_started`, `listing_step_completed` (`step` 1–6), `survey_completed`, `listing_submitted`.
+
+_From 250-launch-analytics-events._
+
+### 250-FR-005 — Each event whose surface exists today MUST fire from it: `brand_picked` (Home picker and brand search, `source: home_picker`), `garage_opened` (profile, source from the existing profile-view classification: search → `results`, home → `home`, shared link → `shared_link`, saved → `saved_list`; a direct open sends no `source`), `quote_request_started` (opening "Cere ofertă" from the profile), `quote_request_sent` (the request created), `sign_up_completed` (e-mail, Google, Apple, phone; role from the flow, always `driver` today), `request_answered` (the garage quotes or declines), `listing_started` (a new listing draft), `listing_step_completed` (each of the 6 steps), `listing_submitted` (fires when the form's completeness check ends complete, the only send that exists; it moves to the verification submit when #14 lands and the list says so).
+
+_From 250-launch-analytics-events._
+
+### 250-FR-006 — An event whose surface is not built (`filter_applied`, `garage_saved`, `message_sent`, `review_posted`, `survey_completed`, `quote_accepted` (no web accept surface until #61; `position` only until a sort exists), `sign_up_completed` with `role: garage`, `brand_picked` from a strip or chips, `garage_opened` from a map pin, a quote sort) is part of the contract and fires when its surface lands; it is not wired in this feature and the list (FR-009) says so.
+
+_From 250-launch-analytics-events._
+
+### 250-FR-009 — The repository MUST hold a list mapping each launch feature's "How to measure it" figure to an event of FR-004, a database count (the S9 figures and the nightly funnel), or "not measured at launch"; for every event, its surface and whether it is built; and the owner-side Plausible setup: one goal per event and the two funnels (driver: Home → `brand_picked` → `garage_opened` → `quote_request_started` → `quote_request_sent` → `quote_accepted` → `review_posted`; garage: `listing_started` → `listing_step_completed` step 6 → `survey_completed` → `listing_submitted`), done in Plausible's dashboard.
+
+_From 250-launch-analytics-events._
+
+### 250-FR-010 — When Plausible cannot be reached or is blocked, no screen, flow or database figure MUST be affected; the events are lost silently.
+
+_From 250-launch-analytics-events._
 
 ## Retired
 

@@ -48,8 +48,11 @@ beforeEach(() => {
   jest.clearAllMocks();
   figures.mockResolvedValue({
     activeDrivers: 12480,
+    answerRate: 66,
+    bookings: 17,
     garagesApprovedThisMonth: 9,
     garagesListed: 214,
+    requestsSent: 48,
   });
   monthStart.mockResolvedValue(undefined);
   periodStart.mockResolvedValue(undefined);
@@ -74,10 +77,13 @@ describe('the admin overview route', () => {
 
     expect(answer).toEqual({
       activeDrivers: 12480,
+      answerRate: 66,
+      bookings: 17,
       cities: CITIES,
       garagesApprovedThisMonth: 9,
       garagesListed: 214,
       garagesWaiting: 2,
+      requestsSent: 48,
     });
     expect(Object.keys(answer)).not.toContain('activeDriversMonthStart');
   });
@@ -89,10 +95,13 @@ describe('the admin overview route', () => {
     await expect(overview.overview({})).resolves.toEqual({
       activeDrivers: 12480,
       activeDriversMonthStart: 12168,
+      answerRate: 66,
+      bookings: 17,
       cities: CITIES,
       garagesApprovedThisMonth: 9,
       garagesListed: 214,
       garagesWaiting: 2,
+      requestsSent: 48,
     });
   });
 

@@ -9,6 +9,7 @@ import {
   Injector,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
@@ -44,6 +45,7 @@ import type { JobTypeDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
+import { Consent } from '../../consent/consent';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { brandsOf, dropUnlisted, jobsOf } from '../brands-section';
 import { BrandsStep } from '../brands-step/brands-step';
@@ -142,6 +144,9 @@ export class ListYourGarage {
   private tapped: number | null = null;
 
   protected readonly keeper = inject(DraftKeeper);
+  private readonly consent = inject(Consent);
+  // The steps ticked since the copy was restored, those it came with included.
+  private ticked: Set<number> | null = null;
   protected readonly signIn = inject(SignInDialog);
   protected readonly steps = STEPS;
   // The draft's steps['5'], kept and restored with the rest of the form.
@@ -304,6 +309,15 @@ export class ListYourGarage {
       if (brands !== section.brands)
         this.keeper.section('2', { ...section, brands });
     });
+    effect(() => {
+      const done = this.done();
+      if (!this.ticked) return;
+      for (const step of done) {
+        if (this.ticked.has(step)) continue;
+        this.ticked.add(step);
+        untracked(() => this.consent.track('listing_step_completed', { step }));
+      }
+    });
     // The e-mail, CUI and RAR fields this page holds mark their steps too.
     effect(() => {
       const { cui, email, rarNumber } = this.fieldErrors();
@@ -443,8 +457,10 @@ export class ListYourGarage {
     const errors = result.kind === 'incomplete' ? result.errors : [];
     this.serverCheck.set({ check: { errors, warnings: result.warnings }, of });
     this.asked.set(errors.length > 0);
-    if (errors.length === 0) this.outcome.set('complete');
-    else this.toSummary();
+    if (errors.length === 0) {
+      this.outcome.set('complete');
+      this.consent.track('listing_submitted');
+    } else this.toSummary();
   }
 
   // The page jumps to the first step with an error, and focus goes to the
@@ -533,6 +549,7 @@ export class ListYourGarage {
 
   // Back at the step the draft was left on, once the form is on the page.
   private restore(step: number | null) {
+    this.ticked = new Set(this.done());
     this.shown.set(this.stored());
     if (step && step > 1)
       afterNextRender(() => this.show(step), { injector: this.injector });

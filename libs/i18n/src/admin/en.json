@@ -5,13 +5,14 @@
   "panel": {
     "activeDrivers": "Active drivers",
     "answerRate": "Answer rate",
+    "answerRateNone": "No requests in the last 30 days",
     "bookings": "Bookings",
     "garagesListed": "Garages listed",
     "inPeriod": "{sign}{n} {period}",
     "observability": "Observability",
     "observabilityNewTab": "{name}, opens in a new tab",
     "reportedReviews": "Reported reviews",
-    "requestsToday": "Quote requests today",
+    "requestsSent": "Quote requests",
     "soon": "coming soon",
     "thisMonth": "{sign}{n} this month",
     "unavailable": "The figures could not be read"

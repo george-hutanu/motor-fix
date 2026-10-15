@@ -5,6 +5,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { SignUp } from './sign-up';
+import { Consent } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import type { AuthSwitch } from '../sign-in';
 
@@ -36,7 +37,10 @@ async function settle() {
 async function open(language: 'ro' | 'en' = 'ro', email?: string) {
   signUp = jest.fn(async () => ({ landing: '/app/driver' }));
   TestBed.configureTestingModule({
-    providers: [{ provide: Session, useValue: { signUp } }],
+    providers: [
+      { provide: Session, useValue: { signUp } },
+      { provide: Consent, useValue: { track: jest.fn() } },
+    ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);

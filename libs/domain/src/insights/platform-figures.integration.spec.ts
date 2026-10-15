@@ -50,8 +50,10 @@ describe('the platform figures', () => {
   it('counts zero of everything on an empty database', async () => {
     await expect(countPlatformFigures(prisma, now)).resolves.toEqual({
       activeDrivers: 0,
+      bookings: 0,
       garagesApprovedThisMonth: 0,
       garagesListed: 0,
+      requestsSent: 0,
     });
   });
 

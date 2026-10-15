@@ -20,21 +20,34 @@ interface Answer {
   garagesApprovedThisMonth: number;
   activeDrivers: number;
   activeDriversMonthStart?: number;
+  requestsSent: number;
+  answerRate?: number;
+  bookings: number;
   observabilityUrl?: string;
 }
 
 const FIGURES: Answer = {
   activeDrivers: 12480,
   activeDriversMonthStart: 12168,
+  answerRate: 66,
+  bookings: 17,
   garagesApprovedThisMonth: 9,
   garagesListed: 214,
   garagesWaiting: 2,
+  requestsSent: 1250,
 };
 
 const LISTED = 'Service‑uri listate';
+const COMPUTED = [
+  LISTED,
+  'Cereri de ofertă',
+  'Rată de răspuns',
+  'Programări',
+  'Șoferi activi',
+];
 const RO_LABELS = [
   LISTED,
-  'Cereri de ofertă azi',
+  'Cereri de ofertă',
   'Rată de răspuns',
   'Programări',
   'Șoferi activi',
@@ -255,7 +268,7 @@ describe('AdminPanel', () => {
       tiles(element).map((t) => t.querySelector('.label')?.textContent?.trim()),
     ).toEqual([
       'Garages listed',
-      'Quote requests today',
+      'Quote requests',
       'Answer rate',
       'Bookings',
       'Active drivers',
@@ -265,48 +278,89 @@ describe('AdminPanel', () => {
     expect(text(drivers, 'number')).toBe('12,480');
     expect(text(drivers, 'line')).toBe('+312 this month');
     expect(text(tile(element, 'Garages listed'), 'line')).toBe('+9 this month');
-    expect(text(tile(element, 'Bookings'), 'line')).toBe('coming soon');
+    expect(text(tile(element, 'Quote requests'), 'number')).toBe('1,250');
+    expect(text(tile(element, 'Bookings'), 'number')).toBe('17');
   });
 
-  it.each([
-    'Cereri de ofertă azi',
-    'Rată de răspuns',
-    'Programări',
-    'Recenzii raportate',
-  ])('shows %s as coming soon, with a dash and no number', async (label) => {
+  // @traces 250-FR-008
+  it('shows the requests sent, the answer rate as a percent and the bookings, with no change line', async () => {
     answer = async () => FIGURES;
     const element = await open();
 
+    const requests = tile(element, 'Cereri de ofertă');
+    expect(text(requests, 'number')).toBe('1.250');
+    expect(requests.querySelector('.line')).toBeNull();
+    expect(requests.getAttribute('aria-label')).toBe('Cereri de ofertă, 1.250');
+    const rate = tile(element, 'Rată de răspuns');
+    expect(text(rate, 'number')).toBe('66%');
+    expect(rate.getAttribute('aria-label')).toBe('Rată de răspuns, 66%');
+    expect(text(tile(element, 'Programări'), 'number')).toBe('17');
+  });
+
+  // @traces 250-FR-008
+  it('shows a dash and why on the answer rate when no request of the last 30 days counted', async () => {
+    const { answerRate: _, ...none } = FIGURES;
+    answer = async () => none;
+    const element = await open();
+
+    const rate = tile(element, 'Rată de răspuns');
+    expect(text(rate, 'number')).toBe('—');
+    expect(text(rate, 'line')).toBe('Fără cereri în ultimele 30 de zile');
+    expect(rate.getAttribute('aria-label')).toBe(
+      'Rată de răspuns, —, Fără cereri în ultimele 30 de zile',
+    );
+
+    await TestBed.inject(I18n).use('en');
+    await settle();
+    expect(text(tile(element, 'Answer rate'), 'line')).toBe(
+      'No requests in the last 30 days',
+    );
+  });
+
+  // @traces 250-FR-008
+  it('shows zero requests and zero bookings as 0, not as missing', async () => {
+    answer = async () => ({ ...FIGURES, bookings: 0, requestsSent: 0 });
+    const element = await open();
+
+    expect(text(tile(element, 'Cereri de ofertă'), 'number')).toBe('0');
+    expect(text(tile(element, 'Programări'), 'number')).toBe('0');
+  });
+
+  it('shows the reported reviews as coming soon, with a dash and no number', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    const label = 'Recenzii raportate';
     const soon = tile(element, label);
     expect(text(soon, 'number')).toBe('—');
     expect(text(soon, 'line')).toBe('în curând');
     expect(soon.getAttribute('aria-label')).toBe(`${label}, în curând`);
   });
 
-  it('shows skeletons on the two computed tiles while the first read is on its way, and the coming-soon tiles as they are', async () => {
+  it('shows skeletons on the computed tiles while the first read is on its way, and the coming-soon tile as it is', async () => {
     answer = () => new Promise(() => undefined);
     const element = await open();
 
-    for (const label of [LISTED, 'Șoferi activi']) {
+    for (const label of COMPUTED) {
       const busy = tile(element, label);
       expect(busy.getAttribute('aria-busy')).toBe('true');
       expect(busy.getAttribute('aria-label')).toBe(label);
       expect(busy.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
       expect(text(busy, 'number')).not.toMatch(/\d/);
     }
-    expect(text(tile(element, 'Programări'), 'line')).toBe('în curând');
-    expect(tile(element, 'Programări').getAttribute('aria-busy')).not.toBe(
-      'true',
-    );
+    expect(text(tile(element, 'Recenzii raportate'), 'line')).toBe('în curând');
+    expect(
+      tile(element, 'Recenzii raportate').getAttribute('aria-busy'),
+    ).not.toBe('true');
   });
 
-  it('shows a dash and the reason on both computed tiles when the read fails, never 0', async () => {
+  it('shows a dash and the reason on every computed tile when the read fails, never 0', async () => {
     answer = async () => {
       throw new HttpErrorResponse({ status: 503 });
     };
     const element = await open();
 
-    for (const label of [LISTED, 'Șoferi activi']) {
+    for (const label of COMPUTED) {
       const failed = tile(element, label);
       expect(text(failed, 'number')).toBe('—');
       expect(failed.textContent).toContain('Cifrele nu au putut fi citite');
@@ -367,9 +421,9 @@ describe('AdminPanel', () => {
     const buttons = Array.from(
       element.querySelectorAll<HTMLButtonElement>('[role="group"] button'),
     );
-    expect(buttons).toHaveLength(2);
+    expect(buttons).toHaveLength(COMPUTED.length);
     const ids = buttons.map((b) => b.getAttribute('aria-describedby'));
-    expect(new Set(ids).size).toBe(2);
+    expect(new Set(ids).size).toBe(COMPUTED.length);
     for (const [i, id] of ids.entries()) {
       const described = element.querySelector(`#${id}`);
       expect(described?.getAttribute('role')).toBe('tooltip');

@@ -33,6 +33,7 @@ import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
 import { sourceOf } from './view-source';
+import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
 import { publicLiveResource } from '../live';
@@ -47,6 +48,14 @@ const KINDS = EVENT_KINDS.filter(
 );
 
 const GONE = [404, 410];
+
+// The analytics name of where a profile was opened from; a direct open has none.
+const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
+  home: 'home',
+  saved: 'saved_list',
+  search: 'results',
+  shared_link: 'shared_link',
+};
 
 // The answer the server render showed, carried to the browser so hydration
 // finds the same page instead of a skeleton.
@@ -77,6 +86,7 @@ export class GarageProfile {
   private readonly router = inject(Router);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly garages = inject(GaragesService);
+  private readonly consent = inject(Consent);
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
   private readonly state = inject(TransferState);
@@ -179,6 +189,8 @@ export class GarageProfile {
     this.garages
       .profileViewsControllerRecord({ body: { source }, id })
       .catch(() => undefined);
+    const opened = OPENED_FROM[source];
+    this.consent.track('garage_opened', opened ? { source: opened } : {});
   }
 
   // The server render waits for the first answer, so its status and its

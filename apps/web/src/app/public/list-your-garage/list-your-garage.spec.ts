@@ -21,6 +21,7 @@ import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ListYourGarage } from './list-your-garage';
+import { Consent } from '../../consent/consent';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { type BrowserDraft, STORAGE_KEY } from '../draft/draft';
 import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
@@ -30,6 +31,7 @@ import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 let tops = [1000, 2000, 3000, 4000, 5000, 6000];
 const scrolls: ScrollIntoViewOptions[] = [];
 const signIn = { start: jest.fn() };
+const consent = { track: jest.fn() };
 // The catalogue behind step 2's chips, read through its own client.
 const DACIA = {
   id: '7c1e4f2a-3b5d-4e6f-8a9b-0c1d2e3f4a5b',
@@ -72,6 +74,7 @@ const placeMap = jest.fn(async (_host: HTMLElement, events: PlaceMapEvents) => {
 beforeEach(() => {
   localStorage.clear();
   signIn.start.mockReset();
+  consent.track.mockReset();
   tops = [1000, 2000, 3000, 4000, 5000, 6000];
   scrolls.length = 0;
   jest
@@ -103,6 +106,7 @@ async function open(path: string, reduced = false) {
       provideHttpClientTesting(),
       { provide: REDUCED_MOTION, useValue: signal(reduced) },
       { provide: SignInDialog, useValue: signIn },
+      { provide: Consent, useValue: consent },
       { provide: BrandsService, useValue: catalogue },
       { provide: PublicHolidaysService, useValue: holidays },
       { provide: CatalogueService, useValue: jobs },
@@ -143,6 +147,10 @@ const ticked = (page: HTMLElement) =>
   );
 const bar = (page: HTMLElement) =>
   page.querySelector<HTMLButtonElement>('nav > button[aria-expanded]');
+const stepsTold = () =>
+  consent.track.mock.calls.filter(
+    ([name]) => name === 'listing_step_completed',
+  );
 // What the browser fires once a scroll, the page's own jump included, has stopped.
 const ended = () => window.dispatchEvent(new Event('scrollend'));
 
@@ -1648,6 +1656,34 @@ describe('the details, prices and mechanics in the draft', () => {
     expect(ticked(page)).toEqual([4]);
   });
 
+  // @traces 250-FR-005
+  it('tells a step completed once, when it becomes complete on the page', async () => {
+    const { knownFor: _, ...partial } = COMPLETE_DETAILS;
+    seed({ data: { steps: { '1': partial } }, email: 'ion@service.test' });
+    const { harness, page } = await open('/ro/list-your-garage');
+    expect(stepsTold()).toEqual([]);
+
+    fillIn(harness, detailsField(page, 'knownFor'), 'Frâne');
+    expect(ticked(page)).toEqual([1, 4]);
+    fillIn(harness, detailsField(page, 'knownFor'), '');
+    fillIn(harness, detailsField(page, 'knownFor'), 'Frâne');
+
+    expect(stepsTold()).toEqual([['listing_step_completed', { step: 1 }]]);
+  });
+
+  // @traces 250-FR-005
+  it('tells nothing for the steps a restored copy already completes', async () => {
+    seed({
+      data: { steps: { '1': COMPLETE_DETAILS } },
+      email: 'ion@service.test',
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(ticked(page)).toEqual([1, 4]);
+    expect(stepsTold()).toEqual([]);
+  });
+
   // Step 5 is complete only with a photo, as the check has it.
   const PHOTO = 'listing-photos/0f1e2d3c-0000-4000-8000-000000000001/cover';
   const STEFAN = {
@@ -2272,6 +2308,41 @@ describe('sending for verification', () => {
       summary(page).querySelector('[data-step="1"] button'),
     ).not.toBeNull();
     expect(dotted(page)).toEqual([1]);
+  });
+
+  // @traces 250-FR-005
+  it('tells the listing submitted when the server finds it complete', async () => {
+    const { harness, page } = await completeCopy();
+    expect(stepsTold()).toEqual([]);
+
+    await press(harness, page);
+    expect(consent.track).not.toHaveBeenCalledWith('listing_submitted');
+    await answered(harness, await request(), { warnings: [] });
+
+    expect(
+      consent.track.mock.calls.filter(([name]) => name === 'listing_submitted'),
+    ).toEqual([['listing_submitted']]);
+  });
+
+  // @traces 250-FR-005
+  it('tells no listing submitted when the check fails or finds something missing', async () => {
+    const { harness, page } = await completeCopy();
+
+    await press(harness, page);
+    await answered(harness, await request(), null, 500);
+    await press(harness, page);
+    await answered(
+      harness,
+      await request(),
+      {
+        code: 'listing_incomplete',
+        errors: [{ code: 'required', field: 'files' }],
+        warnings: [],
+      },
+      422,
+    );
+
+    expect(consent.track).not.toHaveBeenCalledWith('listing_submitted');
   });
 
   // @traces 115-FR-009 115-FR-011

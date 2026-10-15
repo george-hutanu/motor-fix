@@ -87,11 +87,14 @@ export class AdminOverview {
       activeDrivers: value.activeDrivers,
       activeDriversMonthStart: value.activeDriversMonthStart,
       activeDriversPeriodStart: value.activeDriversPeriodStart,
+      answerRate: value.answerRate,
+      bookings: value.bookings,
       garagesApprovedInPeriod: value.garagesApprovedInPeriod,
       garagesApprovedThisMonth: value.garagesApprovedThisMonth,
       garagesListed: value.garagesListed,
       observabilityUrl: value.observabilityUrl,
       period: this.period(),
+      requestsSent: value.requestsSent,
     };
   });
 

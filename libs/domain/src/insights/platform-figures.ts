@@ -1,6 +1,7 @@
 import { CITY_ALL, type Period } from '@motor-fix/contracts';
 
 import { monthsBack, periodRange } from './periods';
+import { answerRateOf, answerRule } from './response-stats/response-stats';
 import { addDays, atLocal, localDay, monthStart } from '../bucharest';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
@@ -21,11 +22,15 @@ export async function countPlatformFigures(
   const where = inCity(city);
   const since = atLocal(monthStart(localDay(now)), 0);
   const range = periodRange(period, now);
+  const from = range?.since ?? since;
   const [
     garagesListed,
     garagesApprovedThisMonth,
     garagesApprovedInPeriod,
     activeDrivers,
+    requestsSent,
+    bookings,
+    answerRate,
   ] = await Promise.all([
     db.garage.count({ where: { status: 'approved', ...where } }),
     firstApprovedSince(db, since, where),
@@ -41,13 +46,39 @@ export async function countPlatformFigures(
           },
         })
       : 0,
+    db.quoteRequest.count({
+      where: {
+        createdAt: { gte: from },
+        ...(city !== CITY_ALL && { recipients: { some: { garage: where } } }),
+      },
+    }),
+    db.booking.count({ where: { confirmedAt: { gte: from }, garage: where } }),
+    platformAnswerRate(db, now, city),
   ]);
   return {
     activeDrivers,
     garagesApprovedThisMonth,
     garagesListed,
     ...(garagesApprovedInPeriod !== null && { garagesApprovedInPeriod }),
+    ...(answerRate !== null && { answerRate }),
+    bookings,
+    requestsSent,
   };
+}
+
+// Each garage's answer-rate rule, over every garage's recipients.
+async function platformAnswerRate(db: PrismaClient, now: Date, city: string) {
+  const rule = answerRule(now);
+  const [{ counted, answered }] = await db.$queryRaw<
+    { counted: number; answered: number }[]
+  >`
+    SELECT count(*)::int AS counted,
+      count(*) FILTER (WHERE ${rule.answered})::int AS answered
+    FROM request_recipient r
+    JOIN garage g ON g.id = r.garage_id
+    WHERE ${rule.counted}
+      AND (${city} = ${CITY_ALL} OR g.city_key = ${city})`;
+  return answerRateOf(answered, counted);
 }
 
 // `approvedAt` moves when a reopened file is approved again, so a garage
@@ -109,8 +140,38 @@ export async function snapshotActiveDrivers(db: PrismaClient, day: string) {
 export const monthStartSnapshot = (db: PrismaClient, now: Date) =>
   snapshotActiveDrivers(db, monthStart(localDay(now)));
 
+// Each count dates a row by its own moment on the Bucharest day. A request
+// counts once: as quoted on the day of its first quote, and as accepted on a
+// day any of its quotes was accepted.
+async function countFunnel(db: PrismaClient, day: string) {
+  const since = atLocal(day, 0);
+  const until = atLocal(addDays(day, 1), 0);
+  const [[requests], bookingsConfirmed, jobsDone] = await Promise.all([
+    db.$queryRaw<{ requestsQuoted: number; requestsAccepted: number }[]>`
+      SELECT
+        count(*) FILTER (WHERE first_sent >= ${since} AND first_sent < ${until})::int AS "requestsQuoted",
+        count(*) FILTER (WHERE accepted)::int AS "requestsAccepted"
+      FROM (
+        SELECT min(sent_at) AS first_sent,
+          bool_or(accepted_at >= ${since} AND accepted_at < ${until}) AS accepted
+        FROM quote
+        GROUP BY request_id
+      ) q`,
+    db.booking.count({ where: { confirmedAt: { gte: since, lt: until } } }),
+    db.job.count({ where: { finishedAt: { gte: since, lt: until } } }),
+  ]);
+  return {
+    ...requests,
+    bookingsConfirmed,
+    jobsDone,
+    // TODO: count reviews once the review model exists
+    reviewsPosted: 0,
+  };
+}
+
 export async function writeSnapshot(db: PrismaClient, now: Date) {
-  const day = new Date(localDay(now));
+  const today = localDay(now);
+  const day = new Date(today);
   for (const { key: city } of await cities(db)) {
     const { activeDrivers, garagesApprovedThisMonth, garagesListed } =
       await countPlatformFigures(db, now, { city });
@@ -126,6 +187,15 @@ export async function writeSnapshot(db: PrismaClient, now: Date) {
       where: { day_city: { city, day } },
     });
   }
+  const yesterday = addDays(today, -1);
+  const funnel = await countFunnel(db, yesterday);
+  // Only a row the night before wrote takes the counts: a missed day stays
+  // missed rather than taking today's garage figures as its own.
+  await db.platformDaily.updateMany({
+    data: { ...funnel, writtenAt: now },
+    where: { city: CITY_ALL, day: new Date(yesterday) },
+  });
+  return { day: yesterday, ...funnel };
 }
 
 type Figures = { activeDrivers: number | null; garagesListed: number };

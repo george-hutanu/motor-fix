@@ -14,6 +14,7 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
+import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
 import type {
   RequestQuoteData,
@@ -37,6 +38,7 @@ export class RequestQuoteButton {
   private readonly session = inject(Session);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly consent = inject(Consent);
   protected readonly i18n = inject(I18n);
 
   protected readonly sent = signal<RequestDto | null>(null);
@@ -72,6 +74,7 @@ export class RequestQuoteButton {
   }
 
   protected async open() {
+    this.consent.track('quote_request_started', { source: 'profile' });
     const source =
       this.route.snapshot.queryParamMap.get('src') === 'share'
         ? 'shared_link'

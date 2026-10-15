@@ -23,7 +23,12 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
-import { loadPlausible, pageview } from './plausible/plausible';
+import {
+  type AnalyticsEvent,
+  type EventProps,
+  sanitise,
+} from './analytics-events';
+import { event, loadPlausible, pageview } from './plausible/plausible';
 import { Session } from '../dashboard/session';
 import { routeTemplate } from '../telemetry/route-template/route-template';
 
@@ -40,11 +45,14 @@ export interface StoredChoice extends RecordConsentDto {
   pending: boolean;
 }
 
-// Where page views go; tests stand in for it.
+// Where page views and events go; tests stand in for it.
 export const ANALYTICS = new InjectionToken<{
+  event: (name: string, template: string, props: EventProps) => void;
   load: (domain: string) => void;
   pageview: (template: string) => void;
-}>('ANALYTICS', { factory: () => ({ load: loadPlausible, pageview }) });
+}>('ANALYTICS', {
+  factory: () => ({ event, load: loadPlausible, pageview }),
+});
 
 // A choice holds under the current text and for less than 365 days.
 export function isValid(
@@ -213,6 +221,23 @@ export class Consent {
     if (!this.granted() || !this.domain) return;
     this.analytics.load(this.domain);
     if (countNow) this.count();
+  }
+
+  // The one way an event leaves the app: under a valid "granted", in the
+  // browser, with only the properties its contract allows.
+  track(name: AnalyticsEvent, props: EventProps = {}): void {
+    if (!this.browser || !this.granted() || !this.domain) return;
+    const clean = sanitise(name, props);
+    if (!clean) return;
+    try {
+      this.analytics.event(
+        name,
+        routeTemplate(this.router.routerState.snapshot.root),
+        clean,
+      );
+    } catch {
+      // A blocked or broken Plausible loses the event, never the flow.
+    }
   }
 
   private count() {

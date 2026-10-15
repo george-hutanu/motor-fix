@@ -23,6 +23,7 @@ import {
   startAgain,
   writeDraft,
 } from './draft';
+import { Consent } from '../../consent/consent';
 
 type DraftView = 'form' | 'loading' | 'invalid' | 'sent';
 type EmailError = 'emailInvalid' | 'emailNeeded';
@@ -71,6 +72,7 @@ const FLUSH_ROUNDS = 5;
 export class DraftKeeper {
   private readonly api = inject(ListingDraftsService);
   private readonly i18n = inject(I18n);
+  private readonly consent = inject(Consent);
   private readonly router = inject(Router);
 
   readonly draft = signal<BrowserDraft>({
@@ -334,6 +336,7 @@ export class DraftKeeper {
       });
       this.serverEmail = saved.email;
       this.confirm(sent, saved);
+      this.consent.track('listing_started');
     } catch (error) {
       this.fail(error);
     } finally {
