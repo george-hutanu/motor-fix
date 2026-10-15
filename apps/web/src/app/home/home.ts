@@ -7,12 +7,10 @@ import {
   effect,
   inject,
   linkedSignal,
-  makeStateKey,
   PendingTasks,
   PLATFORM_ID,
   resource,
   signal,
-  TransferState,
   untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -41,9 +39,7 @@ import { HomePreview } from './preview/preview';
 import { garageWhere } from './where/where';
 import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
-
-export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
-export const TILES = makeStateKey<BrandDto[] | null>('tiles');
+import { publicRead } from '../public-read';
 
 const CYCLE_MS = 5000;
 
@@ -69,7 +65,6 @@ const report = (error: unknown) =>
   templateUrl: './home.html',
 })
 export class Home {
-  private readonly state = inject(TransferState);
   private readonly server = isPlatformServer(inject(PLATFORM_ID));
   private readonly document = inject(DOCUMENT);
   private readonly reduced = inject(REDUCED_MOTION);
@@ -84,8 +79,8 @@ export class Home {
   private chosen = 0;
   private cityAsked: string | null = null;
   protected readonly i18n = inject(I18n);
-  protected readonly health = signal(this.state.get(HEALTH, null));
-  protected readonly tiles = signal(this.state.get(TILES, null) ?? []);
+  protected readonly health = signal<HealthReadyDto | null>(null);
+  protected readonly tiles = signal<BrandDto[]>([]);
   private readonly searched = signal<BrandDto | undefined>(undefined);
   protected readonly shown = computed(() => {
     const searched = this.searched();
@@ -207,31 +202,20 @@ export class Home {
       onCleanup(() => clearInterval(timer));
     });
 
+    // The same two reads on both sides: in the browser, right after a server
+    // render, the transfer cache answers them with what the server read.
     const brands = inject(BrandsService);
-    if (!this.server) {
-      // Opened from another screen in the app: no server render handed the
-      // tiles over, so the browser reads them itself.
-      if (!this.state.hasKey(TILES)) {
-        void brands
-          .popularBrandsControllerTiles({ limit: 8 })
-          .catch(() => [])
-          .then((tiles) => this.tiles.set(tiles));
-      }
-      return;
-    }
     const health = inject(HealthService);
     const pending = inject(PendingTasks);
     void pending.run(async () => {
-      const ready = await health.healthControllerReady().catch(report);
-      this.health.set(ready);
-      this.state.set(HEALTH, ready);
+      this.health.set(await health.healthControllerReady().catch(report));
     });
     void pending.run(async () => {
-      const tiles = await brands
-        .popularBrandsControllerTiles({ limit: 8 })
-        .catch(() => []);
-      this.tiles.set(tiles);
-      this.state.set(TILES, tiles);
+      this.tiles.set(
+        await brands
+          .popularBrandsControllerTiles({ limit: 8 }, publicRead())
+          .catch(() => []),
+      );
     });
   }
 

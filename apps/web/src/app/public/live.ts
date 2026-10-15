@@ -238,14 +238,12 @@ export function publicLiveResource<T>(
   kinds: readonly EventKind[],
   view: () => PublicView,
   id?: () => string,
-  initial?: T,
 ): LiveView<T> {
   const live = inject(PublicLive);
   followPublicView(view);
   return liveView(load, {
     changes: live.on(kinds).pipe(filter((m) => !id || m.id === id())),
     goneOn: [404, 410],
-    initial,
     resync: live.resync,
   });
 }

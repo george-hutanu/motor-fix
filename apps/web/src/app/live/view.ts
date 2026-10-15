@@ -29,7 +29,7 @@ export interface LiveView<T> {
   reload(): void;
 }
 
-interface LiveViewOptions<T> {
+interface LiveViewOptions {
   // The events that change what the view shows; a burst of 300 ms is one re-read.
   changes: Observable<unknown>;
   // Every view re-reads its data: the stream may have missed events.
@@ -38,9 +38,6 @@ interface LiveViewOptions<T> {
   goneOn: readonly number[];
   // When set, a failed read is tried again after this long.
   retryAfter?: number;
-  // Data already read elsewhere (the server render), shown until the first
-  // read answers, so the first render is not a skeleton.
-  initial?: T | undefined;
 }
 
 // A view's data, read through the API at once and again on every change and
@@ -48,9 +45,9 @@ interface LiveViewOptions<T> {
 // context; a read still running when the view goes away is dropped.
 export function liveView<T>(
   load: () => Promise<T>,
-  { changes, goneOn, initial, resync, retryAfter }: LiveViewOptions<T>,
+  { changes, goneOn, resync, retryAfter }: LiveViewOptions,
 ): LiveView<T> {
-  const value = signal<T | undefined>(initial);
+  const value = signal<T | undefined>(undefined);
   const error = signal<unknown>(undefined);
   const gone = signal(false);
   const isLoading = signal(false);

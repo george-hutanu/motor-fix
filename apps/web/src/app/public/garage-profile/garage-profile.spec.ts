@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { HttpErrorResponse } from '@angular/common/http';
-import { PLATFORM_ID, RESPONSE_INIT, TransferState } from '@angular/core';
+import { type HttpContext, HttpErrorResponse } from '@angular/common/http';
+import { PLATFORM_ID, RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -12,8 +12,9 @@ import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
-import { GarageProfile, profileKey } from './garage-profile';
+import { GarageProfile } from './garage-profile';
 import { Consent } from '../../consent/consent';
+import { PUBLIC_READ } from '../../public-read';
 import { PublicLive } from '../live';
 
 const MOBILE: PublicGarageDto = {
@@ -71,7 +72,7 @@ const api = {
     (_: { id: string; body: { source?: string } }) => Promise.resolve(),
   ),
   publicGaragesControllerBySlug: jest.fn(
-    (query: { slug: string; brand?: string }) =>
+    (query: { slug: string; brand?: string }, _context?: HttpContext) =>
       new Promise<PublicGarageDto>((resolve, reject) => {
         reads.push({
           answer: async (garage) => {
@@ -398,11 +399,12 @@ describe('the price list on the profile', () => {
   });
 });
 
-// The server's answer rides to the browser, so hydration finds the same
-// section it rendered and a switch tapped early is not lost.
+// The server render's answer reaches the browser through the transfer cache,
+// which serves it at once: hydration finds the same section it rendered.
 // @traces 355-price-list-ranges-FR-011
-// @traces 355-price-list-ranges-FR-013
-describe('the price list carried over from the server render', () => {
+// @traces 1200-transfer-cache-origin-FR-005
+// @traces 1200-transfer-cache-origin-FR-006
+describe('the profile read the server render hands over', () => {
   const BRAKES = {
     durationMinutes: 120,
     fromBani: 89_000,
@@ -414,41 +416,9 @@ describe('the price list carried over from the server render', () => {
   const prices = () =>
     page().querySelector<HTMLElement>('section[data-slot="prices"]');
 
-  it('hands the answer it rendered on the server to the browser', async () => {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter([
-          { component: GarageProfile, path: ':lang/garages/:garage' },
-        ]),
-        { provide: GaragesService, useValue: api },
-        { provide: PublicLive, useValue: live },
-        { provide: Consent, useValue: consent },
-        { provide: Consent, useValue: consent },
-        { provide: PLATFORM_ID, useValue: 'server' },
-        { provide: RESPONSE_INIT, useValue: {} },
-      ],
-    });
-    await TestBed.inject(I18n).enter('public');
-    harness = await RouterTestingHarness.create();
-
-    await open('/ro/garages/service-auto-militari?brand=bmw');
-    const garage = { ...FIXED, prices: [BRAKES] };
-    await reads[0]?.answer(garage);
-
-    expect(
-      TestBed.inject(TransferState).get(
-        profileKey('service-auto-militari', 'bmw'),
-        null,
-      ),
-    ).toEqual(garage);
-  });
-
-  it('shows the carried answer on its first render, with no skeleton', async () => {
-    const garage = { ...FIXED, prices: [BRAKES] };
-    TestBed.inject(TransferState).set(
-      profileKey('service-auto-militari', 'bmw'),
-      garage,
+  it('shows an answer served at once on its first render, with no skeleton', async () => {
+    api.publicGaragesControllerBySlug.mockImplementationOnce(() =>
+      Promise.resolve({ ...FIXED, prices: [BRAKES] }),
     );
 
     await open('/ro/garages/service-auto-militari?brand=bmw');
@@ -457,37 +427,16 @@ describe('the price list carried over from the server render', () => {
     expect(prices()?.textContent).toContain('890–1.400 lei');
   });
 
-  it('keeps the same section and its switch through the read that follows', async () => {
-    const garage = { ...FIXED, prices: [BRAKES] };
-    TestBed.inject(TransferState).set(
-      profileKey('service-auto-militari', 'bmw'),
-      garage,
-    );
+  // A signed-in visitor's token would keep the browser from the cached
+  // answer, so the profile goes out as a public read.
+  // @traces 1200-transfer-cache-origin-FR-004
+  it('reads the profile once, as a public read', async () => {
     await open('/ro/garages/service-auto-militari?brand=bmw');
-    const section = prices();
-    section?.querySelector<HTMLElement>('[role="switch"]')?.click();
-    await settle();
 
-    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
-
-    expect(prices()).toBe(section);
-    expect(
-      prices()?.querySelector('[role="switch"]')?.getAttribute('aria-checked'),
-    ).toBe('true');
-  });
-
-  it('uses a carried answer once, so a later visit reads afresh', async () => {
-    TestBed.inject(TransferState).set(
-      profileKey('service-auto-militari', undefined),
-      { ...FIXED, prices: [BRAKES] },
-    );
-    await open('/ro/garages/service-auto-militari');
-
-    expect(
-      TestBed.inject(TransferState).hasKey(
-        profileKey('service-auto-militari', undefined),
-      ),
-    ).toBe(false);
+    expect(api.publicGaragesControllerBySlug).toHaveBeenCalledTimes(1);
+    const [query, context] = api.publicGaragesControllerBySlug.mock.calls[0];
+    expect(query).toEqual({ brand: 'bmw', slug: 'service-auto-militari' });
+    expect(context?.get(PUBLIC_READ)).toBe(true);
   });
 });
 
