@@ -9,6 +9,7 @@ import {
 import { TracingInstrumentation } from '@grafana/faro-web-tracing';
 
 import { createBeforeSend, viewportClass } from './before-send/before-send';
+import { sendMeasurementsTo } from './measure/measure';
 import { routeTemplate } from '../route-template/route-template';
 
 // Browser errors, Web Vitals and same-origin traces to the collector, named
@@ -45,6 +46,9 @@ export function startFaro({
       url,
     });
     faro.api.setSession({ attributes: { isSampled: 'true' } });
+    sendMeasurementsTo((type, values, context) =>
+      faro.api.pushMeasurement({ type, values }, { context }),
+    );
     const view = () =>
       faro.api.setView({
         name: routeTemplate(router.routerState.snapshot.root),

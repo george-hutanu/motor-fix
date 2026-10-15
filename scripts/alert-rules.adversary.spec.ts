@@ -102,6 +102,8 @@ describe('alert rule queries', () => {
     const wanted = [
       'outcome=\\"failed\\"',
       'outcome=\\"fallback\\"',
+      'outcome=\\"hit\\"',
+      'outcome=\\"warm\\"',
       'store=\\"postgres\\"',
       'store=\\"redis\\"',
     ];

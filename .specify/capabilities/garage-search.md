@@ -10,6 +10,7 @@ features:
   - 227-garage-cards-home
   - 267-brand-results
   - 1182-cache-service
+  - 1169-prefetch-intent
 ---
 
 # Capability: Garage search
@@ -173,6 +174,10 @@ _From 267-brand-results._
 ### 1182-FR-008 — The brand pages MUST go through the cache service: the Home answer for a brand (`GET /api/v1/home`, keyed by brand and the shared 3-decimal place text or none) and the popular tiles (`GET /api/v1/brands/popular`, keyed by limit), each with a soft lifetime of 60 seconds, tagged so that the relay purges them on the same public garage and search events that drop the search page today (267-FR-010's rule). Their answers and validation are unchanged (229-FR-009, 225-FR-010, 227-FR-009).
 
 _From 1182-cache-service._
+
+### 1169-FR-007 — The results page's card MUST pre-fetch the public profile of its garage, with the brand in context, on the first of: the pointer resting on the card for 100 ms, a touch starting on it, or the card scrolling into view after the visitor's first scroll (cards visible at first paint are not pre-fetched on visibility alone: first paint is not intent). At most 3 pre-fetches are in flight at once (later signals wait for a slot); a card already stored or in flight starts no second fetch; the pointer leaving a card before its answer cancels the fetch and stores nothing. On the same signal the profile route's lazy code is requested once per page life.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 

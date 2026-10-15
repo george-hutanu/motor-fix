@@ -133,6 +133,17 @@ const EXPECTED: Record<
     type: 'gt',
     value: 1.5,
   },
+  'api-prefetch-hit-rate': {
+    expr: [
+      'motorfix_cache_total{service_name="api", kind=~"driver-home|garage-home", outcome="hit"}[1h]',
+      'motorfix_cache_total{service_name="api", kind=~"driver-home|garage-home", outcome="warm"}[1h]',
+      '>= 50',
+    ],
+    for: '60m',
+    from: 3600,
+    type: 'lt',
+    value: 0.3,
+  },
   'api-search-cache-fallback-rate': {
     expr: [
       'motorfix_search_cache_total{service_name="api", outcome="fallback"}[10m]',
@@ -460,7 +471,8 @@ describe('alert rules', () => {
   // @traces 1024-FR-007
   // @traces 267-FR-023
   // @traces 1182-FR-014
-  it('holds exactly the nineteen rules, each with its threshold, window and wait', () => {
+  // @traces 1169-FR-012
+  it('holds exactly the twenty rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );

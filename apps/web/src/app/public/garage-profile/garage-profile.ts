@@ -37,6 +37,7 @@ import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
 import { publicLiveResource } from '../live';
+import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
 
 // What can change on a garage's page: the garage, its reviews, its
 // verification, prices, mechanics, facilities and response figures.
@@ -90,6 +91,7 @@ export class GarageProfile {
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
   private readonly state = inject(TransferState);
+  private readonly prefetch = inject(ProfilePrefetch);
   protected readonly i18n = inject(I18n);
 
   private readonly slug = toSignal(
@@ -104,6 +106,9 @@ export class GarageProfile {
   // The gone status last read, so a gone view knows 404 from 410; any other
   // failure leaves it as it was.
   private readonly status = signal<number | undefined>(undefined);
+  // A pre-fetched answer stands in for the first read; the stream's messages
+  // read again as on any other open.
+  private prefetched: PublicGarageDto | undefined;
 
   protected readonly profile: LiveView<PublicGarageDto> = publicLiveResource(
     () => this.read(),
@@ -167,13 +172,18 @@ export class GarageProfile {
     });
   }
 
-  // The server's answer for this address, used once: a later visit reads afresh.
+  // The server's answer for this address, used once: a later visit reads
+  // afresh. Without one, a profile pre-fetched from the results.
   private carried(): PublicGarageDto | undefined {
     if (!this.browser) return undefined;
-    const key = profileKey(untracked(this.slug), untracked(this.brand));
+    const slug = untracked(this.slug);
+    const brand = untracked(this.brand);
+    const key = profileKey(slug, brand);
     const garage = this.state.get(key, null) ?? undefined;
     this.state.remove(key);
-    return garage;
+    if (garage) return garage;
+    this.prefetched = this.prefetch.take(slug, brand);
+    return this.prefetched;
   }
 
   // One view per garage opened, sent once it is known to be there and never
@@ -198,6 +208,9 @@ export class GarageProfile {
   // A read the address moved away from while it ran is read again for the
   // address shown now, so a late answer never fills another garage's page.
   private read(): Promise<PublicGarageDto> {
+    const prefetched = this.prefetched;
+    this.prefetched = undefined;
+    if (prefetched) return Promise.resolve(prefetched);
     const slug = untracked(this.slug);
     const brand = untracked(this.brand);
     const moved = () =>

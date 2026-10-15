@@ -5,9 +5,14 @@ import { faro, initializeFaro } from '@grafana/faro-web-sdk';
 import { TracingInstrumentation } from '@grafana/faro-web-tracing';
 
 import { startFaro } from './faro';
+import { measure, sendMeasurementsTo } from './measure/measure';
 
 jest.mock('@grafana/faro-web-sdk', () => {
-  const api = { setSession: jest.fn(), setView: jest.fn() };
+  const api = {
+    pushMeasurement: jest.fn(),
+    setSession: jest.fn(),
+    setView: jest.fn(),
+  };
   return {
     ErrorsInstrumentation: jest.fn(),
     faro: { api },
@@ -104,6 +109,25 @@ describe('startFaro', () => {
       [{ name: '/:lang/garages/:garage' }],
       [{ name: 'unmatched' }],
     ]);
+  });
+
+  // @traces 1169-FR-011
+  it('sends the measurements the app takes to the collector once started', () => {
+    sendMeasurementsTo(undefined);
+    measure('prefetch', { duration: 1 }, { outcome: 'hit', path: 'profile' });
+    expect(faro.api.pushMeasurement).not.toHaveBeenCalled();
+
+    start();
+    measure(
+      'prefetch',
+      { duration: 40 },
+      { outcome: 'fetched', path: 'profile' },
+    );
+
+    expect(faro.api.pushMeasurement).toHaveBeenCalledWith(
+      { type: 'prefetch', values: { duration: 40 } },
+      { context: { outcome: 'fetched', path: 'profile' } },
+    );
   });
 
   it('swallows a failure to start', () => {

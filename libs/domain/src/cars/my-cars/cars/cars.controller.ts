@@ -37,6 +37,7 @@ import { CurrentActor, Requires } from '../../../auth/actor.guard';
 import { JsonOnly } from '../../../auth/auth.controller';
 import type { Actor } from '../../../auth/policy';
 import { refusal } from '../../../auth/sign-up.service';
+import { CacheService, cacheKey } from '../../../cache/cache.service';
 
 const KEY = 'Idempotency-Key';
 
@@ -44,7 +45,10 @@ const KEY = 'Idempotency-Key';
 @ApiBearerAuth()
 @Controller('cars')
 export class CarsController {
-  constructor(private readonly cars: CarsService) {}
+  constructor(
+    private readonly cars: CarsService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Post()
   @UseGuards(JsonOnly)
@@ -85,8 +89,14 @@ export class CarsController {
   @ApiOkResponse({ type: CarListDto })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({ description: 'not_found: not a driver' })
-  list(@CurrentActor() actor: Actor): Promise<CarListDto> {
-    return this.cars.list(actor);
+  async list(@CurrentActor() actor: Actor): Promise<CarListDto> {
+    const warmed =
+      actor.role === 'driver'
+        ? await this.cache.take<CarListDto>(
+            cacheKey('driver-home', actor.accountId, 'cars'),
+          )
+        : undefined;
+    return warmed ?? this.cars.list(actor);
   }
 
   @Patch(':id')
