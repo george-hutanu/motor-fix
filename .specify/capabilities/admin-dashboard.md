@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-10
+updated: 2026-10-15
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -12,6 +12,7 @@ features:
   - 163-figures-period-city
   - 384-response-rate
   - 002-find-account-search
+  - 250-launch-analytics-events
 ---
 
 # Capability: Admin dashboard
@@ -64,9 +65,9 @@ _From 160-admin-dashboard-menu._
 
 _From 161-headline-numbers._
 
-### 161-FR-002 — Quote requests today, answer rate, bookings and reported reviews MUST NOT be computed or carried in the answer until the entities they count exist (MF-15, MF-45); their tiles read "—" with the line "în curând" / "coming soon". When those entities arrive, the figures join the same answer with the brief's rules: requests created since 00:00 today Europe/Bucharest counted once per request, the share of recipients' passed 24-hour windows answered (quoted or declined) within 24 hours over the last 30 days, bookings confirmed this month with those confirmed today, and reports waiting for a decision with the oldest waiting time in days.
+### 250-FR-008 — The admin overview MUST show the four S9 figures as database counts: garages live (approved now, suspended left out, as today), requests sent (quote requests created in the chosen period, a request to several garages once), answer rate (share of garage recipients of the last 30 days that quoted or declined within 24 hours, over all hours; none when no recipient; rounded down to a whole percent) and bookings (bookings confirmed in the chosen period), each scoped by the overview's period (default: the current Bucharest month, as garages approved this month) and city as the existing figures are; the answer rate's 30-day window is fixed and does not follow the period. The reported-reviews tile keeps "—" and "în curând" until MF-45.
 
-_From 161-headline-numbers._
+_From 250-launch-analytics-events._
 
 ### 161-FR-004 — "Panou" of the admin dashboard MUST show, above its other content, six tiles in this order: "Service‑uri listate", "Cereri de ofertă azi", "Rată de răspuns", "Programări", "Șoferi activi", "Recenzii raportate" (English "Garages listed", "Quote requests today", "Answer rate", "Bookings", "Active drivers", "Reported reviews"), each with its number and one line under it.
 
@@ -516,6 +517,10 @@ _From 002-find-account-search._
 
 _From 002-find-account-search._
 
+### 250-FR-007 — The night job MUST write, on the whole-country row of the previous Europe/Bucharest day, the funnel counts of that day: requests whose first quote was sent that day, requests whose quote was accepted that day, bookings confirmed that day (whatever happened to them after), jobs that reached done that day, reviews posted that day (0 until reviews exist); a request counted once however many garages it went to; the counts written onto that day's existing row with its other fields untouched (a day whose row the night job missed gets no funnel counts: the job never back-fills a missed day, 161-FR-010), and a rerun replacing the day's counts.
+
+_From 250-launch-analytics-events._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -536,3 +541,5 @@ _From 002-find-account-search._
 
 - `001-FR-001` — superseded by `002-FR-001` (2026-10-10)
 - `001-FR-011` — superseded by `002-FR-011` (2026-10-10)
+
+- `161-FR-002` — superseded by `250-FR-008` (2026-10-15)
