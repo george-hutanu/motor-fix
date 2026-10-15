@@ -116,7 +116,7 @@ export const dropExpected = (observations) =>
 export async function contextCookies(run, { session, baseURL }) {
   if (!run.role) return [];
   if (!session) throw new Error(`no session for @${run.role}: the sweep was given no way to sign in`);
-  return [sessionCookie({ refresh: await session(run.role), baseURL })];
+  return [sessionCookie({ refresh: await session(run.role, run.lang), baseURL })];
 }
 
 // The QA flows' `signIn(context, role)`: the cookie a `path@role` route gets,

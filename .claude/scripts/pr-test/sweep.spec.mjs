@@ -148,6 +148,17 @@ describe('route syntax: path[@role][:status]', () => {
     await assert.rejects(contextCookies({ role: 'admin' }, { baseURL }), /no session for @admin/);
   });
 
+  // @traces 1230-FR-011
+  it('signs a role route in for the language under test, so the account opens in that language', async () => {
+    const asked = [];
+    const session = async (role, lang) => (asked.push([role, lang]), 'r');
+    const baseURL = 'http://127.0.0.1:4100';
+    for (const run of matrix({ routes: ['/app/driver@driver'], schemes: ['light'] }).filter((r) => r.viewport === 'desktop')) await contextCookies(run, { session, baseURL });
+    assert.deepEqual(asked, [
+      ['driver', 'ro'],
+      ['driver', 'en'],
+    ]);
+  });
 });
 
 // @traces 1230-FR-002 1230-FR-003 1230-FR-004 1230-FR-005
@@ -336,6 +347,19 @@ describe('the sweep measures the layout', async () => {
     assert.deepEqual(Object.keys(coverage).sort(), Object.keys(VIEWPORTS).map((v) => `/owner-pass.html|${v}|light|en`).sort());
     assert.ok(coverage['/owner-pass.html|desktop|light|en'].includes('focus-ring'));
     assert.ok(coverage['/owner-pass.html|mobile|light|en'].includes('min-text'));
+  }, 60000);
+
+  // @traces 1230-FR-011
+  it.skipIf(!ready)('reports a signed-in context whose language could not be set as one blocking finding naming the call, and sweeps nothing there', async () => {
+    const session = async (role, lang) => {
+      throw new Error(`PATCH /api/v1/me {"language":"${lang}"} as ${role} answered HTTP 500`);
+    };
+    const { observations, screenshots } = await runSweep({ baseURL, routes: ['/owner-pass.html@driver'], outDir, schemes: ['light'], langs: ['en'], repoRoot: root, session });
+    const findings = toFindings(observations, { web: true, origins: [baseURL] });
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].severity, 'blocker');
+    assert.match(findings[0].title, /PATCH \/api\/v1\/me \{"language":"en"\} as driver answered HTTP 500/);
+    assert.deepEqual(screenshots, []);
   }, 60000);
 
   it.skipIf(!ready)('finds no layout defect on the same page without them', async () => {

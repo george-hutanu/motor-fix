@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 
-import { SEEDED, callEndpoints, changedEndpoints, exampleValue, firstId, roleFor, seedPassword, seededSession } from './endpoints.mjs';
+import { SEEDED, callEndpoints, changedEndpoints, exampleValue, firstId, roleFor, seedPassword, seededSession, setLanguage } from './endpoints.mjs';
 
 const secured = { security: [{ bearer: [] }] };
 const listen = (server) => new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
@@ -282,3 +282,46 @@ describe('a seeded session for the run, the sweep and the flows check', () => {
   });
 });
 
+// @traces 1230-FR-011
+describe('the account language of a signed-in sweep', () => {
+  it('is set through PATCH /api/v1/me with the bearer token', async () => {
+    const api = await accountApi();
+    try {
+      await setLanguage(api.apiURL, 'token-driver', 'en');
+      assert.deepEqual(api.seen, [{ method: 'PATCH', url: '/api/v1/me', auth: 'Bearer token-driver', body: { language: 'en' } }]);
+    } finally {
+      await close(api.server);
+    }
+  });
+
+  it('rejects naming the call and the status when the API refuses it, and when it cannot be reached', async () => {
+    const api = await accountApi({ me: 500 });
+    try {
+      await assert.rejects(setLanguage(api.apiURL, 't', 'en'), /PATCH \/api\/v1\/me \{"language":"en"\}.*HTTP 500/);
+    } finally {
+      await close(api.server);
+    }
+    await assert.rejects(setLanguage('http://127.0.0.1:9', 't', 'ro'), /PATCH \/api\/v1\/me \{"language":"ro"\}/);
+  });
+
+  it('is set before the session is handed over when a language is asked for, and not otherwise', async () => {
+    const api = await accountApi();
+    try {
+      await seededSession(api.apiURL)('driver', 'en');
+      assert.deepEqual(api.seen.map((c) => `${c.method} ${c.url}`), ['POST /api/v1/auth/sign-in', 'PATCH /api/v1/me']);
+      assert.equal(api.seen[1].auth, 'Bearer token-driver');
+      assert.deepEqual(api.seen[1].body, { language: 'en' });
+    } finally {
+      await close(api.server);
+    }
+  });
+
+  it('names the role in the refusal, so the finding says whose context failed', async () => {
+    const api = await accountApi({ me: 403 });
+    try {
+      await assert.rejects(seededSession(api.apiURL)('driver', 'en'), /PATCH \/api\/v1\/me \{"language":"en"\} as driver answered HTTP 403/);
+    } finally {
+      await close(api.server);
+    }
+  });
+});

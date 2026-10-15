@@ -101,15 +101,32 @@ export async function signIn(apiURL, role, password) {
   return { token, refresh };
 }
 
+/** Stores the signed-in account's language, which the web app follows at sign-in over the device's. */
+export async function setLanguage(apiURL, token, lang, who = "") {
+  const call = `PATCH /api/v1/me ${JSON.stringify({ language: lang })}${who ? ` as ${who}` : ""}`;
+  const res = await fetch(`${apiURL}/api/v1/me`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ language: lang }),
+    signal: AbortSignal.timeout(15000),
+  }).catch((error) => {
+    throw new Error(`${call} failed: ${error.cause?.code ?? error.message}`);
+  });
+  await res.body?.cancel();
+  if (!res.ok) throw new Error(`${call} answered HTTP ${res.status}`);
+}
+
 /**
- * `session(role)` for the run, the sweep and `precheck.mjs --check`: signs the seeded account of that role in
- * afresh (refresh tokens rotate) and returns its refresh token.
+ * `session(role, lang)` for the run, the sweep and `precheck.mjs --check`: signs the seeded account of that
+ * role in afresh (refresh tokens rotate), sets its language when one is asked for, and returns its refresh token.
  */
 export const seededSession =
   (apiURL, password = seedPassword()) =>
-  async (role) => {
+  async (role, lang) => {
     if (!SEEDED[role]) throw new Error(`no seeded account for the role ${role}`);
-    return (await signIn(apiURL, role, password)).refresh;
+    const { token, refresh } = await signIn(apiURL, role, password);
+    if (lang) await setLanguage(apiURL, token, lang, role);
+    return refresh;
   };
 
 /**
