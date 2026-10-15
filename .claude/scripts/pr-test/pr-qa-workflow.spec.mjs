@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ARTIFACT_PREFIX, WORKFLOW } from './dispatch.mjs';
 import { EXTERNAL_PORTS, appEnv } from './services.mjs';
+import { ROUTE_PATTERN } from './sweep.mjs';
 
 // The PR tester's heavy half runs on GitHub Actions (.github/workflows/pr-qa.yml).
 // The repo carries no YAML parser of its own, so the shape is read from the text:
@@ -90,14 +91,15 @@ describe('PR QA workflow: the agent-review status', () => {
     assert.match(stepList[at], /-f context=agent-review/);
   });
 
+  const verdictStep = statusSteps.find((st) => /STATE: /.test(st)) ?? '';
+
   it('ends with success only when the run passed with no blocking findings, failure otherwise', () => {
-    const last = stepList.at(-1);
-    assert.match(last, /-f state="\$STATE" -f context=agent-review/);
-    assert.match(last, /STATE: \$\{\{ job\.status == 'success' && steps\.run\.outputs\.code == '0' && 'success' \|\| 'failure' \}\}/);
+    assert.match(verdictStep, /-f state="\$STATE" -f context=agent-review/);
+    assert.match(verdictStep, /STATE: \$\{\{ job\.status == 'success' && steps\.run\.outputs\.code == '0' && 'success' \|\| 'failure' \}\}/);
   });
 
   it('writes no final status for a cancelled run or one whose inputs were refused', () => {
-    assert.match(stepList.at(-1), /if: \$\{\{ !cancelled\(\) && steps\.inputs\.outcome == 'success' \}\}/);
+    assert.match(verdictStep, /if: \$\{\{ !cancelled\(\) && steps\.inputs\.outcome == 'success' \}\}/);
   });
 
   it("uses the run's own token, on the commit under test, linking the run", () => {
@@ -250,7 +252,25 @@ describe('PR QA workflow: the routes input', () => {
     for (const ok of ['/,/cockpit', '/de:404', '/app/driver@driver', '/app/admin@driver:403,/']) assert.ok(pattern.test(ok), ok);
   });
 
+  // @traces 1230-FR-002
+  it('accepts a query string and an escaped character', () => {
+    for (const ok of ['/results?brand=dacia&sort=near', '/a%20b', '/:lang/list-your-garage,/results?brand=dacia']) assert.ok(pattern.test(ok), ok);
+  });
+
   it('refuses anything that is not a path', () => {
-    for (const bad of ['cockpit', '/a b', "/a'", '/a;rm', '/$(x)', '/a"b']) assert.ok(!pattern.test(bad), bad);
+    for (const bad of ['cockpit', '/a b', "/a'", '/a;rm', '/$(x)', '/a"b', '/a|b', '/a`b`']) assert.ok(!pattern.test(bad), bad);
+  });
+
+  // @traces 1230-FR-003
+  it('is the same rule the dispatcher refuses routes by, so the two never drift', () => {
+    assert.equal(pattern.source, ROUTE_PATTERN.source);
+  });
+
+  // @traces 1230-FR-002
+  it('expands the routes only inside double quotes, now that & and ? pass the check', () => {
+    const uses = code.match(/.?\$\{?ROUTES\b\}?.?/g) ?? [];
+    assert.ok(uses.length >= 2, uses.join(' | '));
+    for (const use of uses) assert.match(use, /^"\$\{?ROUTES\}?"$/, use);
+    assert.match(steps, /--routes "\$ROUTES"/);
   });
 });

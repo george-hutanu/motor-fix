@@ -1,7 +1,9 @@
-import { describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { filesBetween, flowArgs, parseArgs, testsCommand } from './run.mjs';
@@ -139,3 +141,31 @@ describe('filesBetween', () => {
     assert.equal(filesBetween(tree, 'f'.repeat(40), 'HEAD'), null);
   });
 });
+
+// @traces 1230-FR-005
+describe('run: a route the sweep cannot open is refused before anything starts', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'run-routes-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const bin = join(dir, 'bin');
+  mkdirSync(bin);
+  // Every outside command the run would start first, logged: none may be called.
+  for (const cmd of ['gh', 'git', 'sh', 'docker'])
+    writeFileSync(join(bin, cmd), `#!/bin/sh\necho "${cmd} $*" >> "${join(dir, 'calls.log')}"\nexit 1\n`, { mode: 0o755 });
+  const run = (env, ...args) =>
+    spawnSync(process.execPath, [fileURLToPath(new URL('./run.mjs', import.meta.url)), '62', ...args], {
+      encoding: 'utf8',
+      timeout: 15_000,
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, ...env },
+    });
+  const calls = () => (existsSync(join(dir, 'calls.log')) ? readFileSync(join(dir, 'calls.log'), 'utf8').trim() : '');
+
+  it('exits 64 naming /app/driver, with no heavy slot, no gh and no browser', () => {
+    for (const env of [{ HEAVY_HELD: '' }, { HEAVY_HELD: '1' }]) {
+      const r = run(env, '--routes', '/,/app/driver');
+      assert.equal(r.status, 64, r.stderr);
+      assert.match(r.stderr, /\/app\/driver: .*@role/);
+      assert.equal(calls(), '');
+    }
+  });
+});
+

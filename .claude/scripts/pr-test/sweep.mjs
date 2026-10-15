@@ -5,9 +5,14 @@
 // checks (layout.mjs), and a screenshot of each combination. Playwright and axe-core come from this checkout, not the PR's,
 // so a PR from before either existed can still be swept.
 //
-// A route is `path[@role][:status]`: `/de:404` must answer 404, and that 404
-// is no finding; `/app/driver@driver` is opened with a real session of the
-// seeded driver, signed in afresh for each browser context.
+// A route is `path[?query][@role][:status]`: `/de:404` must answer 404, and
+// that 404 is no finding; `/app/driver@driver` is opened with a real session
+// of the seeded driver, signed in afresh for each browser context and set to
+// the language under test; `/results?brand=dacia` opens with its query. A
+// leading `/:lang` segment, and only there, becomes `/ro` or `/en` per
+// language (the public frame mounts under `:lang`). routeProblem refuses, before
+// any run, what the PR QA workflow's own check refuses, any other `:`, and a
+// route under /app/ with no role (it would sweep the sign-in screen).
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
@@ -29,17 +34,50 @@ const LANG_KEY = "mf.lang";
 
 const slug = (route) => route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
 
+/**
+ * The characters the PR QA workflow lets through its routes input, the same
+ * text as its bash `[[ =~ ]]` (`&` escaped there, where a bare one is a syntax
+ * error); pr-qa-workflow.spec.mjs holds the two equal.
+ */
+export const ROUTE_PATTERN = new RegExp("^/[A-Za-z0-9/_.,@:?=\\&%-]*$");
+const LANG = /^\/:lang(?=$|[/?@:])/;
+const SHAPE = /^([^@:]*)(?:@([a-z]+))?(?::(\d{3}))?$/;
+
 export function parseRoute(spec) {
-  const [, path, role, status] = /^([^@:]*)(?:@([a-z]+))?(?::(\d{3}))?$/.exec(spec) ?? [null, spec];
-  return { path: path || "/", role: role ?? null, expect: status ? Number(status) : null };
+  const lang = LANG.test(spec);
+  const rest = lang ? spec.replace(LANG, "") : spec;
+  const [, path, role, status] = SHAPE.exec(rest) ?? [null, rest];
+  return { path: (lang ? "/:lang" : "") + path || "/", role: role ?? null, expect: status ? Number(status) : null, lang };
+}
+
+/** Why the run cannot sweep a route, in one line naming it, or null when it can. */
+export function routeProblem(route) {
+  if (!ROUTE_PATTERN.test(route) || route.includes(",")) return `${route}: not a route the PR QA workflow accepts (path[?query][@role][:status], letters, digits and /_.@:?=&%- only)`;
+  const rest = route.replace(LANG, "");
+  if (!SHAPE.test(rest)) return `${route}: a ':' belongs only in a leading /:lang segment or a trailing :<status>`;
+  const { path, role } = parseRoute(route);
+  if (path.startsWith("/app/") && !role) return `${route}: a route under /app/ needs @role, or the sweep opens the sign-in screen`;
+  return null;
 }
 
 export function matrix({ routes, schemes = ["light", "dark"], langs = ["ro", "en"] }) {
   return routes.flatMap((route) => {
-    const { path, role, expect } = parseRoute(route);
+    const { path, role, expect, lang: perLang } = parseRoute(route);
     const name = `${slug(path)}${role ? `-as-${role}` : ""}${expect ? `-${expect}` : ""}`;
     return Object.keys(VIEWPORTS).flatMap((viewport) =>
-      schemes.flatMap((scheme) => langs.map((lang) => ({ route, path, role, expect, viewport, scheme, lang, shot: `${name}-${viewport}-${scheme}-${lang}.png` }))),
+      schemes.flatMap((scheme) =>
+        langs.map((lang) => ({
+          route,
+          path,
+          href: perLang ? path.replace(LANG, `/${lang}`) : path,
+          role,
+          expect,
+          viewport,
+          scheme,
+          lang,
+          shot: `${name}-${viewport}-${scheme}-${lang}.png`,
+        })),
+      ),
     );
   });
 }
@@ -53,7 +91,8 @@ export function loadProblem(status, expect) {
 
 const pathOf = (url) => {
   try {
-    return new URL(url).pathname;
+    const u = new URL(url);
+    return u.pathname + u.search;
   } catch {
     return null;
   }
@@ -64,10 +103,16 @@ export const dropExpected = (observations) =>
   observations.filter(
     (o) =>
       !o.expect ||
-      !((o.kind === "http" && o.status === o.expect && pathOf(o.url) === o.path) || (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))),
+      !(
+        (o.kind === "http" && o.status === o.expect && pathOf(o.url) === (o.href ?? o.path)) ||
+        (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))
+      ),
   );
 
-/** The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared), else none. */
+/**
+ * The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared)
+ * in the run's language, else none. A flow's own context (flowSignIn) asks for no language.
+ */
 export async function contextCookies(run, { session, baseURL }) {
   if (!run.role) return [];
   if (!session) throw new Error(`no session for @${run.role}: the sweep was given no way to sign in`);
@@ -119,8 +164,8 @@ export function toFindings(observations, { web, origins }) {
 
 /**
  * Drive the running web app through the matrix; returns observations and
- * screenshot paths. `session(role)` signs a seeded account of that role in
- * and returns its refresh token, for routes marked `@role`.
+ * screenshot paths. `session(role, lang)` signs a seeded account of that role in,
+ * sets its language, and returns its refresh token, for routes marked `@role`.
  */
 // A signed-in screen holds its live stream open, so the network never idles:
 // the page must load, then gets a bounded wait for its first calls to settle.
@@ -175,7 +220,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
       page.on("response", (r) => r.status() >= 400 && seen({ kind: "http", url: r.url(), status: r.status() }));
       try {
         await context.addCookies(await contextCookies(run, { session, baseURL }));
-        const res = await openPage(page, new URL(run.path, baseURL).href);
+        const res = await openPage(page, new URL(run.href, baseURL).href);
         const problem = loadProblem(res?.status(), run.expect);
         if (problem) seen({ kind: "load", text: problem });
         await page.waitForTimeout(300);
