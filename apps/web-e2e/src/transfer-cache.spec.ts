@@ -53,6 +53,14 @@ const outside = (seen: Read[]) =>
   seen
     .map(({ method, path }) => `${method} ${path}`)
     .filter((read) => !BROWSER_ONLY.some((allowed) => allowed.test(read)));
+// The browser-only reads a page makes once: a second one is a repeated read.
+const ONCE = ['GET /api/v1/platform-status', 'GET /api/v1/home'];
+const repeated = (seen: Read[]) =>
+  ONCE.filter(
+    (once) =>
+      seen.filter(({ method, path }) => `${method} ${path}` === once).length >
+      1,
+  );
 
 async function openHome(page: Page) {
   await hydrated(page, '/ro');
@@ -81,6 +89,7 @@ test.describe('a server-rendered page read once @seeded', () => {
     );
     expect(seen.map((read) => read.path)).not.toContain('/health/ready');
     expect(outside(seen)).toEqual([]);
+    expect(repeated(seen)).toEqual([]);
   });
 
   test('the profile: the browser does not read the garage again', async ({
@@ -96,6 +105,7 @@ test.describe('a server-rendered page read once @seeded', () => {
       '/api/v1/garages/service-auto-militari',
     );
     expect(outside(seen)).toEqual([]);
+    expect(repeated(seen)).toEqual([]);
   });
 
   test('signed in, the same pages repeat no read and send their public reads without a token', async ({
