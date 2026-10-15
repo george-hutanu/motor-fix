@@ -53,6 +53,7 @@ describe('GET /requests', () => {
       status: 'closed',
     });
     expect(open).toEqual({
+      booking: null,
       car,
       closedAt: null,
       closedReason: null,
@@ -147,6 +148,74 @@ describe('GET /requests', () => {
 });
 
 // @traces 220-FR-012
+// @traces 222-FR-006
+describe('GET /requests once a quote is accepted', () => {
+  it('carries the newest booking’s status and deadline on its request', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const { garage } = await team('Atelier Dinamo');
+    const { booking, request } = await world.chain(andrei, garage.id, {
+      booking: 'awaiting_confirmation',
+    });
+    const open = await world.request(andrei);
+
+    const res = await get('/requests', bearer(andrei, 'driver'));
+
+    const byId = new Map(
+      res.body.items.map((i: { id: string }) => [i.id, i] as const),
+    );
+    expect(byId.get(request.id)).toMatchObject({
+      booking: {
+        confirmBy: booking.confirmBy.toISOString(),
+        status: 'awaiting_confirmation',
+      },
+      status: 'booked',
+    });
+    expect(byId.get(open.id)).toMatchObject({ booking: null });
+  });
+
+  it('reads the newest booking when the request holds more than one', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await team('Atelier Dinamo');
+    const militari = await team('Service Militari');
+    const request = await world.request(andrei, { status: 'booked' });
+    const first = await world.quote(request.id, dinamo.garage.id, 'lost');
+    await world.booking(first.id, 'lapsed');
+    await prisma.booking.updateMany({
+      data: { createdAt: minutesAgo(60) },
+      where: { quoteId: first.id },
+    });
+    const second = await world.quote(
+      request.id,
+      militari.garage.id,
+      'accepted',
+    );
+    const newest = await world.booking(second.id, 'confirmed');
+
+    const res = await get('/requests', bearer(andrei, 'driver'));
+
+    expect(res.body.items[0].booking).toEqual({
+      confirmBy: newest.confirmBy.toISOString(),
+      status: 'confirmed',
+    });
+  });
+
+  it('leaves the detail’s booking as it was', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const { garage } = await team('Atelier Dinamo');
+    const { booking, request } = await world.chain(andrei, garage.id, {
+      booking: 'awaiting_confirmation',
+    });
+
+    const res = await get(`/requests/${request.id}`, bearer(andrei, 'driver'));
+
+    expect(res.body.booking).toMatchObject({
+      id: booking.id,
+      status: 'awaiting_confirmation',
+    });
+    expect(res.body.booking.garage).toBeDefined();
+  });
+});
+
 // @traces 220-FR-015
 describe('GET /requests/:id', () => {
   it('gives the driver the request with its recipients, quotes and booking', async () => {

@@ -13,6 +13,7 @@ import { RequestsView } from './requests-view';
 import { Live } from '../live';
 
 const row = (id: string): RequestSummaryDto => ({
+  booking: null,
   car: {
     brand: 'Dacia',
     engine: null,

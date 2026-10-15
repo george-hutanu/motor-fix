@@ -325,6 +325,13 @@ export class RequestSummaryDto {
     type: String,
   })
   description!: string | null;
+
+  @ApiProperty({
+    description: 'The request’s newest booking',
+    nullable: true,
+    type: RequestBookingDto,
+  })
+  booking!: RequestBookingDto | null;
 }
 
 export class RequestDto extends RequestSummaryDto {
@@ -335,7 +342,7 @@ export class RequestDto extends RequestSummaryDto {
   quotes!: QuoteDto[];
 
   @ApiProperty({ nullable: true, type: BookingDto })
-  booking!: BookingDto | null;
+  declare booking: BookingDto | null;
 }
 
 export class RequestListDto {

@@ -15,6 +15,7 @@ import { Live } from '../live';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const row = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
+  booking: null,
   car: {
     brand: 'Dacia',
     engine: null,

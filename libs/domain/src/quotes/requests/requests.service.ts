@@ -8,6 +8,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type {
+  Booking,
   Garage,
   GarageResponseStats,
   JobType,
@@ -36,15 +37,23 @@ import {
 
 const SUMMARY = {
   _count: { select: { quotes: true } },
+  bookings: { orderBy: NEWEST_FIRST, take: 1 },
   jobs: { include: { jobType: true }, orderBy: { position: 'asc' as const } },
 };
 
 type SummaryRow = QuoteRequest & {
   _count: { quotes: number };
+  bookings: Booking[];
   jobs: (RequestJob & { jobType: JobType })[];
 };
 
-const summaryOf = (row: SummaryRow): RequestSummaryDto => ({
+const summaryOf = ({
+  bookings: [booking],
+  ...row
+}: SummaryRow): RequestSummaryDto => ({
+  booking: booking
+    ? { confirmBy: booking.confirmBy.toISOString(), status: booking.status }
+    : null,
   car: snapshotOf(row),
   closedAt: iso(row.closedAt),
   closedReason: row.closedReason,
