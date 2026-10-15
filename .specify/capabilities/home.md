@@ -97,7 +97,7 @@ _From 229-location-or-address._
 
 _From 229-location-or-address._
 
-### 229-FR-008 — The point MUST be rounded to three decimals (about 100 m) before it leaves the browser, and the API rounds it again before querying, so one visitor's requests from one spot share one answer and the cached Home answer (`Cache-Control: public, max-age=60`, 225-FR-009) is not spent on metre-level variants.
+### 229-FR-008 — The point MUST be rounded to three decimals (about 100 m) before it leaves the browser, and the API rounds it again before querying, so one visitor's requests from one spot share one answer and the cached Home answer (the public cache policy of 1182-FR-009 and the server cache of 1182-FR-008; was `public, max-age=60`, 225-FR-009) is not spent on metre-level variants.
 
 _From 229-location-or-address._
 
