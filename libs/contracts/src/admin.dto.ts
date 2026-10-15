@@ -107,6 +107,31 @@ export class AdminOverviewDto {
 
   @ApiProperty({
     description:
+      'Quote requests created in the chosen period (the current Europe/Bucharest month by default); a request to several garages once; in a city, those with a recipient garage there',
+    minimum: 0,
+    type: 'integer',
+  })
+  requestsSent!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Share of garage recipients of the last 30 days that quoted or declined within 24 hours, all hours, rounded down; absent when no recipient counted',
+    maximum: 100,
+    minimum: 0,
+    type: 'integer',
+  })
+  answerRate?: number;
+
+  @ApiProperty({
+    description:
+      'Bookings confirmed in the chosen period (the current Europe/Bucharest month by default); in a city, those at a garage there',
+    minimum: 0,
+    type: 'integer',
+  })
+  bookings!: number;
+
+  @ApiProperty({
+    description:
       'The whole country first, then every city with a listed garage, most garages first',
     type: [AdminCityDto],
   })

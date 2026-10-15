@@ -20,6 +20,16 @@ export interface AdminOverviewDto {
   activeDriversPeriodStart?: number;
 
   /**
+   * Share of garage recipients of the last 30 days that quoted or declined within 24 hours, all hours, rounded down; absent when no recipient counted
+   */
+  answerRate?: number;
+
+  /**
+   * Bookings confirmed in the chosen period (the current Europe/Bucharest month by default); in a city, those at a garage there
+   */
+  bookings: number;
+
+  /**
    * The whole country first, then every city with a listed garage, most garages first
    */
   cities: Array<AdminCityDto>;
@@ -53,4 +63,9 @@ export interface AdminOverviewDto {
    * The MotorFix overview dashboard in Grafana for this API's environment, absent when Grafana is not configured
    */
   observabilityUrl?: string;
+
+  /**
+   * Quote requests created in the chosen period (the current Europe/Bucharest month by default); a request to several garages once; in a city, those with a recipient garage there
+   */
+  requestsSent: number;
 }

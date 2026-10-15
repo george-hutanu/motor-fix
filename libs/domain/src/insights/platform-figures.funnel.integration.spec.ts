@@ -66,7 +66,7 @@ const funnel = {
   reviewsPosted: true,
 } as const;
 
-// @traces 250-launch-analytics-events-FR-007
+// @traces 250-FR-007
 describe("the night's funnel counts", () => {
   it("writes the day's requests quoted and accepted, bookings confirmed and jobs done on its whole-country row", async () => {
     const a = await world.garage('Atelier Dinamo');

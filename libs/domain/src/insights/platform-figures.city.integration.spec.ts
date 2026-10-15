@@ -82,8 +82,10 @@ describe('the figures of a city', () => {
       countPlatformFigures(prisma, now, { city: 'bucuresti' }),
     ).resolves.toEqual({
       activeDrivers: 0,
+      bookings: 0,
       garagesApprovedThisMonth: 1,
       garagesListed: 2,
+      requestsSent: 0,
     });
     await expect(
       countPlatformFigures(prisma, now, { city: 'cluj-napoca', period: '30d' }),

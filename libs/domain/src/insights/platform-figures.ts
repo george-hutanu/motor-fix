@@ -5,6 +5,8 @@ import { addDays, atLocal, localDay, monthStart } from '../bucharest';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
 const ACTIVE_WINDOW = 30 * 86_400_000;
+const ANSWER_PERIOD_DAYS = 30;
+const ANSWER_WINDOW_HOURS = 24;
 
 // A garage with no known city counts for the whole country only.
 const inCity = (city: string): Prisma.GarageWhereInput =>
@@ -21,11 +23,15 @@ export async function countPlatformFigures(
   const where = inCity(city);
   const since = atLocal(monthStart(localDay(now)), 0);
   const range = periodRange(period, now);
+  const from = range?.since ?? since;
   const [
     garagesListed,
     garagesApprovedThisMonth,
     garagesApprovedInPeriod,
     activeDrivers,
+    requestsSent,
+    bookings,
+    answerRate,
   ] = await Promise.all([
     db.garage.count({ where: { status: 'approved', ...where } }),
     firstApprovedSince(db, since, where),
@@ -41,13 +47,46 @@ export async function countPlatformFigures(
           },
         })
       : 0,
+    db.quoteRequest.count({
+      where: {
+        createdAt: { gte: from },
+        ...(city !== CITY_ALL && { recipients: { some: { garage: where } } }),
+      },
+    }),
+    db.booking.count({ where: { confirmedAt: { gte: from }, garage: where } }),
+    platformAnswerRate(db, now, city),
   ]);
   return {
     activeDrivers,
     garagesApprovedThisMonth,
     garagesListed,
     ...(garagesApprovedInPeriod !== null && { garagesApprovedInPeriod }),
+    ...(answerRate !== null && { answerRate }),
+    bookings,
+    requestsSent,
   };
+}
+
+// The rule of each garage's response figures, over every garage's
+// recipients: a closed one never counts, nor one still waiting under a day.
+async function platformAnswerRate(db: PrismaClient, now: Date, city: string) {
+  const since = new Date(now.getTime() - ANSWER_PERIOD_DAYS * 86_400_000);
+  const settled = new Date(now.getTime() - ANSWER_WINDOW_HOURS * 3_600_000);
+  const window = `${ANSWER_WINDOW_HOURS} hours`;
+  const [{ counted, answered }] = await db.$queryRaw<
+    { counted: number; answered: number }[]
+  >`
+    SELECT count(*)::int AS counted,
+      count(*) FILTER (
+        WHERE r.status IN ('quoted', 'declined')
+          AND r.answered_at <= r.created_at + ${window}::interval
+      )::int AS answered
+    FROM request_recipient r
+    JOIN garage g ON g.id = r.garage_id
+    WHERE r.status <> 'closed' AND r.created_at > ${since}
+      AND NOT (r.status = 'waiting' AND r.created_at > ${settled})
+      AND (${city} = ${CITY_ALL} OR g.city_key = ${city})`;
+  return counted === 0 ? null : Math.floor((answered * 100) / counted);
 }
 
 // `approvedAt` moves when a reopened file is approved again, so a garage

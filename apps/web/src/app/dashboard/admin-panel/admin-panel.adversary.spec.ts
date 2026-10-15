@@ -120,26 +120,13 @@ describe('AdminPanel with awkward figures', () => {
     );
   });
 
-  it('keeps the four unreleased tiles at a dash even when the answer carries stray figures for them', async () => {
-    answer = async () =>
-      ({
-        ...FIGURES,
-        answerRate: 92,
-        bookings: 31,
-        quoteRequestsToday: 7,
-        reportedReviews: 3,
-      }) as Answer;
+  it('keeps the unreleased tile at a dash even when the answer carries a stray figure for it', async () => {
+    answer = async () => ({ ...FIGURES, reportedReviews: 3 }) as Answer;
     const element = await open();
 
-    for (const label of [
-      'Cereri de ofertă azi',
-      'Rată de răspuns',
-      'Programări',
-      'Recenzii raportate',
-    ]) {
-      expect(text(tile(element, label), 'number')).toBe('—');
-      expect(text(tile(element, label), 'line')).toBe('în curând');
-    }
+    const label = 'Recenzii raportate';
+    expect(text(tile(element, label), 'number')).toBe('—');
+    expect(text(tile(element, label), 'line')).toBe('în curând');
   });
 });
 

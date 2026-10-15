@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import type { Period } from '@motor-fix/contracts/figure-choices';
-import { formatNum, I18n } from '@motor-fix/i18n';
+import { formatNum, formatPct, I18n } from '@motor-fix/i18n';
 
 import { AdminGrowth } from '../admin-growth/admin-growth';
 import { AdminOverview } from '../admin-overview';
@@ -23,29 +23,35 @@ interface Tile {
 const inPeriod = (f: Figures) => f.period !== 'default';
 const sinceStart = (now: number, start: number | undefined) =>
   start === undefined ? null : now - start;
-const TILES: readonly { key: string; line?: (f: Figures) => number | null }[] =
-  [
-    {
-      key: 'garagesListed',
-      line: (f) =>
-        inPeriod(f)
-          ? (f.garagesApprovedInPeriod ?? null)
-          : f.garagesApprovedThisMonth,
+const NO_LINE = () => null;
+const TILES: readonly {
+  key: string;
+  line?: (f: Figures) => number | null;
+  percent?: true;
+  // The line in place of a figure the answer leaves out.
+  none?: string;
+}[] = [
+  {
+    key: 'garagesListed',
+    line: (f) =>
+      inPeriod(f)
+        ? (f.garagesApprovedInPeriod ?? null)
+        : f.garagesApprovedThisMonth,
+  },
+  { key: 'requestsSent', line: NO_LINE },
+  { key: 'answerRate', line: NO_LINE, none: 'answerRateNone', percent: true },
+  { key: 'bookings', line: NO_LINE },
+  {
+    key: 'activeDrivers',
+    line: (f) => {
+      if (!inPeriod(f))
+        return sinceStart(f.activeDrivers, f.activeDriversMonthStart);
+      if (f.period === 'today') return null;
+      return sinceStart(f.activeDrivers, f.activeDriversPeriodStart);
     },
-    { key: 'requestsToday' },
-    { key: 'answerRate' },
-    { key: 'bookings' },
-    {
-      key: 'activeDrivers',
-      line: (f) => {
-        if (!inPeriod(f))
-          return sinceStart(f.activeDrivers, f.activeDriversMonthStart);
-        if (f.period === 'today') return null;
-        return sinceStart(f.activeDrivers, f.activeDriversPeriodStart);
-      },
-    },
-    { key: 'reportedReviews' },
-  ];
+  },
+  { key: 'reportedReviews' },
+];
 
 const MISSING = '—';
 
@@ -84,16 +90,21 @@ export class AdminPanel {
   protected readonly tiles = computed(() => {
     const figures = this.overview.figures();
     const loading = this.busy();
-    return TILES.map(({ key, line }): Tile => {
+    return TILES.map(({ key, line, none, percent }): Tile => {
       const label = this.t(key);
       if (!line) return this.missing(label, 'soon', this.t('soon'));
-      if (figures)
+      if (figures) {
+        const figure = figures[key as Figure] as number | undefined;
+        if (figure === undefined && none)
+          return this.missing(label, 'none', this.t(none));
         return this.value(
           label,
-          figures[key as Figure] as number | undefined,
+          figure,
           line(figures),
           figures.period,
+          percent,
         );
+      }
       if (loading) return { label, name: label, state: 'loading' };
       return this.missing(label, 'failed', this.t('unavailable'));
     });
@@ -103,10 +114,20 @@ export class AdminPanel {
     return this.i18n.t(`admin.panel.${key}`, params);
   }
 
-  private missing(label: string, state: 'soon' | 'failed', line: string): Tile {
+  private missing(
+    label: string,
+    state: 'soon' | 'failed' | 'none',
+    line: string,
+  ): Tile {
     const name =
       state === 'soon' ? `${label}, ${line}` : `${label}, ${MISSING}, ${line}`;
-    return { label, line, name, number: MISSING, state };
+    return {
+      label,
+      line,
+      name,
+      number: MISSING,
+      state: state === 'none' ? 'value' : state,
+    };
   }
 
   private value(
@@ -114,9 +135,10 @@ export class AdminPanel {
     figure: number | undefined,
     change: number | null,
     period: Period,
+    percent?: true,
   ): Tile {
     const language = this.i18n.language();
-    const number = formatNum(figure, language);
+    const number = (percent ? formatPct : formatNum)(figure, language);
     const line = change === null ? undefined : this.line(change, period);
     return {
       label,
