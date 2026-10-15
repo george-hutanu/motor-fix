@@ -18,7 +18,7 @@ describe('the store in the documentation', () => {
   });
 
   // @traces 1175-FR-012
-  it.skipIf(!existsSync(docs))('carries the dated ST-1175 note on every page that names the store', () => {
+  it.skipIf(!existsSync(docs))('carries the dated Valkey note on every page that names the store', () => {
     for (const page of [
       'reference/stack.md',
       'explanation/architecture/system-overview.md',
