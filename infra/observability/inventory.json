@@ -436,7 +436,7 @@
       "alerts": [
         "api-prefetch-hit-rate"
       ],
-      "reason": "times each read a sign-in warm fills, by kind (driver-home, garage-home): the wait a hit on that entry saves, shown as its p75 on the pre-fetch panel",
+      "reason": "times each read a warm fills, by kind: a sign-in warm (driver-home, garage-home), the wait a hit on that entry saves, shown as its p75 on the pre-fetch panel, and the post-deploy warm-up (profile, home, popular-brands), which no panel shows",
       "story": "ST-1169"
     },
     {
