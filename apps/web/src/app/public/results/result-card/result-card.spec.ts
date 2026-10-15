@@ -72,7 +72,7 @@ describe('ResultCard', () => {
     const initials = card.querySelector('.initials');
     expect(said(initials)).toBe('SA');
     expect(initials?.getAttribute('aria-hidden')).toBe('true');
-    expect(said(card.querySelector('h3'))).toBe('Service Auto Militari');
+    expect(said(card.querySelector('h2'))).toBe('Service Auto Militari');
   });
 
   // @traces 267-FR-014
