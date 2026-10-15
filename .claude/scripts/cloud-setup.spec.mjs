@@ -9,7 +9,8 @@ import { cleanup, IMAGES, setup, stub } from './cloud-setup.fixture.mjs';
 afterEach(cleanup);
 
 // @traces 749-FR-005
-describe('cloud-setup.sh', () => {
+// Each case runs the real script through bash: under a full parallel harness run that outlasts the 5 s default.
+describe('cloud-setup.sh', { timeout: 30_000 }, () => {
   it('on a fresh VM installs Node 26 with n, keeps it first on PATH, runs npm ci, starts Docker and pulls postgres and redis', () => {
     const { run, calls, home, bin } = setup();
     const out = run();

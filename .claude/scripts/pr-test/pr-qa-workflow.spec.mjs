@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ARTIFACT_PREFIX, WORKFLOW } from './dispatch.mjs';
 import { EXTERNAL_PORTS, appEnv } from './services.mjs';
+import { ROUTE_PATTERN } from './sweep.mjs';
 
 // The PR tester's heavy half runs on GitHub Actions (.github/workflows/pr-qa.yml).
 // The repo carries no YAML parser of its own, so the shape is read from the text:
@@ -90,18 +91,32 @@ describe('PR QA workflow: the agent-review status', () => {
     assert.match(stepList[at], /-f context=agent-review/);
   });
 
+  const verdictStep = statusSteps.find((st) => /STATE: /.test(st)) ?? '';
+  const cancelStep = statusSteps.find((st) => /if: cancelled\(\)/.test(st)) ?? '';
+
   it('ends with success only when the run passed with no blocking findings, failure otherwise', () => {
-    const last = stepList.at(-1);
-    assert.match(last, /-f state="\$STATE" -f context=agent-review/);
-    assert.match(last, /STATE: \$\{\{ job\.status == 'success' && steps\.run\.outputs\.code == '0' && 'success' \|\| 'failure' \}\}/);
+    assert.match(verdictStep, /-f state="\$STATE" -f context=agent-review/);
+    assert.match(verdictStep, /STATE: \$\{\{ job\.status == 'success' && steps\.run\.outputs\.code == '0' && 'success' \|\| 'failure' \}\}/);
   });
 
-  it('writes no final status for a cancelled run or one whose inputs were refused', () => {
-    assert.match(stepList.at(-1), /if: \$\{\{ !cancelled\(\) && steps\.inputs\.outcome == 'success' \}\}/);
+  it('writes no success or failure for a cancelled run or one whose inputs were refused', () => {
+    assert.match(verdictStep, /if: \$\{\{ !cancelled\(\) && steps\.inputs\.outcome == 'success' \}\}/);
+  });
+
+  // @traces 1230-FR-009
+  it('replaces the pending status a cancelled run left with error, only while that status is still its own', () => {
+    assert.ok(cancelStep, 'a status step that runs on cancel');
+    assert.ok(stepList.indexOf(cancelStep) > stepList.findIndex((st) => /name: The verdict/.test(st)));
+    assert.match(cancelStep, /gh api "repos\/\$REPO\/commits\/\$SHA\/status"/);
+    assert.match(cancelStep, /select\(\.context == "agent-review"\)/);
+    assert.match(cancelStep, /\.target_url/);
+    assert.match(cancelStep, /= "\$RUN_URL" \] \|\| \{.*exit 0; \}\n/);
+    assert.match(cancelStep, /-f state=error -f context=agent-review/);
+    assert.match(cancelStep, /-f description="PR QA lap cancelled"/);
   });
 
   it("uses the run's own token, on the commit under test, linking the run", () => {
-    assert.equal(statusSteps.length, 2);
+    assert.equal(statusSteps.length, 3);
     for (const st of statusSteps) {
       assert.match(st, /GH_TOKEN: \$\{\{ github\.token \}\}/);
       assert.match(st, /target_url="\$RUN_URL"/);
@@ -110,9 +125,9 @@ describe('PR QA workflow: the agent-review status', () => {
 });
 
 describe('PR QA workflow: no secrets', () => {
-  it('references no secret, and its own token only in the two status steps and the baseline download', () => {
+  it('references no secret, and its own token only in the three status steps and the baseline download', () => {
     assert.doesNotMatch(code, /secrets\.|GITHUB_TOKEN|ANTHROPIC|TYPESAFE/i);
-    assert.equal(code.match(/github\.token/g)?.length, 3);
+    assert.equal(code.match(/github\.token/g)?.length, 4);
   });
 
   it('keeps no git credentials in either checkout', () => {
@@ -250,7 +265,25 @@ describe('PR QA workflow: the routes input', () => {
     for (const ok of ['/,/cockpit', '/de:404', '/app/driver@driver', '/app/admin@driver:403,/']) assert.ok(pattern.test(ok), ok);
   });
 
+  // @traces 1230-FR-002
+  it('accepts a query string and an escaped character', () => {
+    for (const ok of ['/results?brand=dacia&sort=near', '/a%20b', '/:lang/list-your-garage,/results?brand=dacia']) assert.ok(pattern.test(ok), ok);
+  });
+
   it('refuses anything that is not a path', () => {
-    for (const bad of ['cockpit', '/a b', "/a'", '/a;rm', '/$(x)', '/a"b']) assert.ok(!pattern.test(bad), bad);
+    for (const bad of ['cockpit', '/a b', "/a'", '/a;rm', '/$(x)', '/a"b', '/a|b', '/a`b`']) assert.ok(!pattern.test(bad), bad);
+  });
+
+  // @traces 1230-FR-003
+  it('is the same rule the dispatcher refuses routes by, so the two never drift', () => {
+    assert.equal(pattern.source, ROUTE_PATTERN.source);
+  });
+
+  // @traces 1230-FR-002
+  it('expands the routes only inside double quotes, now that & and ? pass the check', () => {
+    const uses = code.match(/.?\$\{?ROUTES\b\}?.?/g) ?? [];
+    assert.ok(uses.length >= 2, uses.join(' | '));
+    for (const use of uses) assert.match(use, /^"\$\{?ROUTES\}?"$/, use);
+    assert.match(steps, /--routes "\$ROUTES"/);
   });
 });

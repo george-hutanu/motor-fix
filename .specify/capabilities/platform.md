@@ -78,6 +78,7 @@ features:
   - 1171-qa-latency
   - 1201-static-cache-headers
   - 1182-cache-service
+  - 1230-qa-harness-laps
 ---
 
 # Capability: Platform
@@ -368,9 +369,9 @@ _From 450-pr-tester-env-gaps._
 
 _From 450-pr-tester-env-gaps._
 
-### 450-FR-012 — The PR QA workflow's routes check MUST accept `@` and `:` in routes and still refuse anything else outside paths.
+### 1230-FR-002 — A route MAY carry a query string: the PR QA workflow's routes check MUST accept `?`, `=`, `&` and `%` after the path, the sweep MUST open the route with its query, and the screenshot name MUST slug the full route so two routes differing only by query do not share a file. (Item 2; modifies 450-FR-012.)
 
-_From 450-pr-tester-env-gaps._
+_From 1230-qa-harness-laps._
 
 ### 450-FR-013 — `--tests` MUST run the affected unit tests with `--skip-nx-cache`, so they never come from the Nx cache.
 
@@ -1970,6 +1971,50 @@ _From 1182-cache-service._
 
 _From 1182-cache-service._
 
+### 1230-FR-001 — The QA run MUST launch the worker with `PUBLIC_WEB_URL` set to the booted web app's address, the same value the API and the web app are launched with, so every notification consumer is on during the flows. (Item 1.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-003 — `dispatch.mjs` MUST refuse, before dispatching anything, every route the workflow's own check would refuse, with the same rule, one line per route naming it and why, exit non-zero. (Item 2.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-004 — A route MAY start with a `/:lang` segment, and only there: the sweep MUST substitute the language under test into it (`ro` for Romanian, `en` for English) before parsing the rest, report the route as written, and still read a trailing `:<status>` (`/:lang/x:404`); the route parser and the shared route rule MUST accept it, and refuse a `:` anywhere else in the path. (Item 3.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-005 — `dispatch.mjs` and `run.mjs` MUST refuse, before any run is dispatched or any browser started, a route whose path is under `/app/` and carries no `@role`, with one line naming the route; `/app` itself and paths merely starting with `/app` (`/apple-pay`) are not under `/app/`. (Item 4.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-006 — The arguments a flows file receives, from the run and from `--check` alike, MUST include a shared helper set next to the existing ones: `waitForText(page, text)` (resolves when the text is visible within a bounded wait, 10 s unless the caller gives another, rejects naming the text and the wait), `openSheet(page, trigger)` (clicks the trigger and resolves when the sheet's content is visible, never judging the overlay container's box), `stepButton(page, label)` (the step's control that is visible at the current viewport, phone step list hidden or not), and `accounts` (the seeded role-to-e-mail map the API calls use). The set is one module, exported once, used by both callers. (Item 5.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-007 — `precheck.mjs` MUST offer `--check --base-url <url> --api-url <url>`: it loads the flows file, calls it with the same arguments the run gives (FR-006), including a real `signIn` that signs the seeded accounts in with the seed password, against the app and API already serving there (defaults `http://localhost:4200`, the dev server, and `http://localhost:3000`), runs it under FR-008's rejection handler, prints one line per finding, thrown error or unhandled rejection, exits 1 on any and 0 on none; it dispatches nothing and starts no server; an unreachable app or API is one line and exit 1, and so are flows still running after ten minutes (review amendment: a hung flow must not hold the laptop). (Item 5.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-008 — The run's flows step MUST turn an unhandled promise rejection the flows file leaves during the step into one `high` finding per rejection, naming the error, and continue to the remaining steps; the handler is installed for the flows step only and removed when it ends; a run-wide handler turns any other unhandled rejection into one `high` finding, so the run always reaches its report and teardown (review amendment). (Item 5; folds #1147.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-009 — The PR QA workflow MUST, when its run is cancelled after it set `agent-review` pending, replace that status on its head with `error`, description `PR QA lap cancelled`, the same target URL, only when the head's current `agent-review` entry in its combined status has this run as its target URL; a status a newer run set is left as it is. (Item 6.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-010 — The CI wait MUST end, within one poll interval and with one line naming the stale status, exit non-zero, when an `agent-review` check is pending and the run its `link` names is cancelled or has completed, whatever other checks are still pending, instead of waiting out the 120-minute limit; `gh.mjs` MUST supply `link` for `pr checks` over REST as `gh` does. (Item 6.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-011 — The sweep MUST open an `@role` route in the language under test whatever language the seeded account stored, by setting the account's `language` through the API before each signed-in context, so the English sweep of a signed-in screen is in English and the Romanian one in Romanian, without changing the seed. (Folds #1146 and #619.)
+
+_From 1230-qa-harness-laps._
+
+### 1230-FR-012 — The PR tester's skill, `AGENTS.md` and the PR tester's agent definition (which states the route grammar today) MUST state, in a few lines, how to write a route (`path[@role][:status]`, a `:lang` segment, a query string, `@role` required under `/app/`) and a flow (the helpers of FR-006, `--check` before dispatch). (Done when, third line.)
+
+_From 1230-qa-harness-laps._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2049,3 +2094,5 @@ _From 1182-cache-service._
 
 - `431-FR-007` — superseded by `1159-FR-014` (2026-10-11)
 - `431-FR-008` — superseded by `1159-FR-019` (2026-10-11)
+
+- `450-FR-012` — superseded by `1230-FR-002` (2026-10-15)

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, runSweep, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -82,10 +82,10 @@ describe('observations to findings', () => {
 
 describe('route syntax: path[@role][:status]', () => {
   it('reads a plain path, a role, an expected status, or both', () => {
-    assert.deepEqual(parseRoute('/cockpit'), { path: '/cockpit', role: null, expect: null });
-    assert.deepEqual(parseRoute('/de:404'), { path: '/de', role: null, expect: 404 });
-    assert.deepEqual(parseRoute('/app/driver@driver'), { path: '/app/driver', role: 'driver', expect: null });
-    assert.deepEqual(parseRoute('/app/admin@driver:403'), { path: '/app/admin', role: 'driver', expect: 403 });
+    assert.deepEqual(parseRoute('/cockpit'), { path: '/cockpit', role: null, expect: null, lang: false });
+    assert.deepEqual(parseRoute('/de:404'), { path: '/de', role: null, expect: 404, lang: false });
+    assert.deepEqual(parseRoute('/app/driver@driver'), { path: '/app/driver', role: 'driver', expect: null, lang: false });
+    assert.deepEqual(parseRoute('/app/admin@driver:403'), { path: '/app/admin', role: 'driver', expect: 403, lang: false });
   });
 
   it('keeps the role and status in the matrix and in the screenshot name', () => {
@@ -147,13 +147,123 @@ describe('route syntax: path[@role][:status]', () => {
     assert.equal(asked.length, 2);
     await assert.rejects(contextCookies({ role: 'admin' }, { baseURL }), /no session for @admin/);
   });
+
+  // @traces 1230-FR-011
+  it('signs a role route in for the language under test, so the account opens in that language', async () => {
+    const asked = [];
+    const session = async (role, lang) => (asked.push([role, lang]), 'r');
+    const baseURL = 'http://127.0.0.1:4100';
+    for (const run of matrix({ routes: ['/app/driver@driver'], schemes: ['light'] }).filter((r) => r.viewport === 'desktop')) await contextCookies(run, { session, baseURL });
+    assert.deepEqual(asked, [
+      ['driver', 'ro'],
+      ['driver', 'en'],
+    ]);
+  });
+});
+
+// @traces 1230-FR-002 1230-FR-003 1230-FR-004 1230-FR-005
+describe('route syntax: a query string, a /:lang segment, and the routes refused before a run', () => {
+  const desktop = (route) => matrix({ routes: [route], schemes: ['light'] }).filter((r) => r.viewport === 'desktop');
+
+  it('keeps the query in the path the sweep opens', () => {
+    assert.deepEqual(parseRoute('/results?brand=dacia&sort=near'), { path: '/results?brand=dacia&sort=near', role: null, expect: null, lang: false });
+    assert.deepEqual(parseRoute('/results?brand=dacia@driver:403'), { path: '/results?brand=dacia', role: 'driver', expect: 403, lang: false });
+    assert.equal(desktop('/results?brand=dacia')[0].href, '/results?brand=dacia');
+  });
+
+  it('gives two routes that differ only by their query two screenshots', () => {
+    const [dacia] = desktop('/results?brand=dacia');
+    const [bmw] = desktop('/results?brand=bmw');
+    const [plain] = desktop('/results');
+    assert.equal(new Set([dacia.shot, bmw.shot, plain.shot]).size, 3);
+  });
+
+  it('still drops the error an expected status causes on a route with a query or a language', () => {
+    const at = { route: '/results?brand=x:404', path: '/results?brand=x', href: '/results?brand=x', expect: 404, viewport: 'desktop', scheme: 'light', lang: 'ro' };
+    const lang = { route: '/:lang/nowhere:404', path: '/:lang/nowhere', href: '/en/nowhere', expect: 404, viewport: 'desktop', scheme: 'light', lang: 'en' };
+    const kept = dropExpected([
+      { ...at, kind: 'http', url: 'http://127.0.0.1:4100/results?brand=x', status: 404 },
+      { ...at, kind: 'http', url: 'http://127.0.0.1:4100/results', status: 404 },
+      { ...lang, kind: 'http', url: 'http://127.0.0.1:4100/en/nowhere', status: 404 },
+    ]);
+    assert.deepEqual(
+      kept.map((o) => o.url),
+      ['http://127.0.0.1:4100/results'],
+    );
+  });
+
+  it('opens a /:lang route at /ro and /en, and reports it as written', () => {
+    const runs = desktop('/:lang/list-your-garage');
+    assert.deepEqual(
+      runs.map((r) => [r.lang, r.href, r.route]),
+      [
+        ['ro', '/ro/list-your-garage', '/:lang/list-your-garage'],
+        ['en', '/en/list-your-garage', '/:lang/list-your-garage'],
+      ],
+    );
+    assert.equal(parseRoute('/:lang/list-your-garage').lang, true);
+  });
+
+  it('reads /:lang on its own, with a trailing slash, and with a status after it', () => {
+    assert.deepEqual(desktop('/:lang').map((r) => r.href), ['/ro', '/en']);
+    assert.deepEqual(desktop('/:lang/').map((r) => r.href), ['/ro/', '/en/']);
+    const [missing] = desktop('/:lang/x:404');
+    assert.equal(missing.expect, 404);
+    assert.equal(missing.href, '/ro/x');
+    assert.deepEqual(desktop('/:lang?brand=dacia').map((r) => r.href), ['/ro?brand=dacia', '/en?brand=dacia']);
+  });
+
+  it('accepts every route the workflow and the sweep can both read', () => {
+    for (const ok of ['/', '/cockpit', '/de:404', '/app', '/apple-pay', '/app/driver@driver', '/app/driver@driver:401', '/results?brand=dacia&sort=near', '/a%20b', '/:lang', '/:lang/list-your-garage', '/:lang/x:404'])
+      assert.equal(routeProblem(ok), null, ok);
+  });
+
+  it('refuses a character the workflow refuses, naming the route', () => {
+    for (const bad of ['cockpit', '/a b', '/a;rm', '/$(x)', '/a"b', '/a#b']) {
+      const problem = routeProblem(bad);
+      assert.equal(typeof problem, 'string', bad);
+      assert.ok(problem.startsWith(`${bad}: `), problem);
+      assert.ok(!problem.includes('\n'), problem);
+    }
+  });
+
+  it('refuses a colon anywhere but a leading /:lang or a trailing status', () => {
+    for (const bad of ['/x/:lang', '/x:lang', '/:language/x', '/:id', '/a:b@c', '/s?t=12:30', '/:lang/:lang']) assert.match(routeProblem(bad) ?? '', /:/, bad);
+  });
+
+  it('refuses a role no seeded account has, naming the ones there are', () => {
+    assert.match(routeProblem('/app/x@owner'), /^\/app\/x@owner: no seeded account has the role owner \(admin, driver/);
+    assert.match(routeProblem('/app/x@constructor') ?? '', /no seeded account/);
+    assert.equal(routeProblem('/app/x@receptionist'), null);
+  });
+
+  it('refuses a route under /app/ that names no role, and nothing else for it', () => {
+    assert.match(routeProblem('/app/driver'), /^\/app\/driver: .*\/app\/.*@role/);
+    assert.match(routeProblem('/app/driver:401'), /@role/);
+    assert.match(routeProblem('/app/'), /@role/);
+    assert.equal(routeProblem('/app'), null);
+    assert.equal(routeProblem('/apple-pay'), null);
+  });
 });
 
 describe('signing in from a QA flow', () => {
   const baseURL = 'http://127.0.0.1:4100';
   const fakeContext = () => {
     const added = [];
-    return { added, addCookies: async (cookies) => added.push(...cookies) };
+    const scripts = [];
+    return { added, scripts, addCookies: async (cookies) => added.push(...cookies), addInitScript: async (fn, arg) => scripts.push([fn, arg]) };
+  };
+  // What the context's init scripts leave in a fresh page's localStorage.
+  const storedBy = (context) => {
+    const store = new Map();
+    const saved = globalThis.localStorage;
+    globalThis.localStorage = { setItem: (k, v) => store.set(k, v) };
+    try {
+      for (const [fn, arg] of context.scripts) fn(arg);
+    } finally {
+      globalThis.localStorage = saved;
+    }
+    return Object.fromEntries(store);
   };
 
   it('adds the same refresh cookie the sweep sets for path@role, signed in afresh on each call', async () => {
@@ -166,6 +276,29 @@ describe('signing in from a QA flow', () => {
     assert.deepEqual(asked, ['driver', 'mechanic']);
     assert.deepEqual(one.added, [sessionCookie({ refresh: 'r-1', baseURL })]);
     assert.deepEqual(two.added, [sessionCookie({ refresh: 'r-2', baseURL })]);
+  });
+
+  // @traces 1230-FR-011
+  it('opens the account in Romanian unless the flow asks for another language, whatever the sweep left it in', async () => {
+    const asked = [];
+    const signIn = flowSignIn({ session: async (role, lang) => (asked.push([role, lang]), 'r'), baseURL });
+    await signIn(fakeContext(), 'driver');
+    await signIn(fakeContext(), 'driver', 'en');
+    assert.deepEqual(asked, [
+      ['driver', 'ro'],
+      ['driver', 'en'],
+    ]);
+  });
+
+  // @traces 1230-FR-011
+  it("opens the flow's pages in the asked language too, as the sweep's own contexts do (the app reads the account's only at sign-in)", async () => {
+    const signIn = flowSignIn({ session: async () => 'r', baseURL });
+    const en = fakeContext();
+    const ro = fakeContext();
+    await signIn(en, 'driver', 'en');
+    await signIn(ro, 'driver');
+    assert.deepEqual(storedBy(en), { 'mf.lang': 'en' });
+    assert.deepEqual(storedBy(ro), { 'mf.lang': 'ro' });
   });
 
   it('refuses a call with no role, and a run with no session', async () => {
@@ -256,6 +389,19 @@ describe('the sweep measures the layout', async () => {
     assert.deepEqual(Object.keys(coverage).sort(), Object.keys(VIEWPORTS).map((v) => `/owner-pass.html|${v}|light|en`).sort());
     assert.ok(coverage['/owner-pass.html|desktop|light|en'].includes('focus-ring'));
     assert.ok(coverage['/owner-pass.html|mobile|light|en'].includes('min-text'));
+  }, 60000);
+
+  // @traces 1230-FR-011
+  it.skipIf(!ready)('reports a signed-in context whose language could not be set as one blocking finding naming the call, and sweeps nothing there', async () => {
+    const session = async (role, lang) => {
+      throw new Error(`PATCH /api/v1/me {"language":"${lang}"} as ${role} answered HTTP 500`);
+    };
+    const { observations, screenshots } = await runSweep({ baseURL, routes: ['/owner-pass.html@driver'], outDir, schemes: ['light'], langs: ['en'], repoRoot: root, session });
+    const findings = toFindings(observations, { web: true, origins: [baseURL] });
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].severity, 'blocker');
+    assert.match(findings[0].title, /PATCH \/api\/v1\/me \{"language":"en"\} as driver answered HTTP 500/);
+    assert.deepEqual(screenshots, []);
   }, 60000);
 
   it.skipIf(!ready)('finds no layout defect on the same page without them', async () => {

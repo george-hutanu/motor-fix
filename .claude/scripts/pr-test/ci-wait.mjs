@@ -11,8 +11,9 @@
 // is pending (a PR that has none after SPECKIT_CI_NO_CHECKS_MIN minutes, by
 // default 10, is the tail's Hard Stop) and prints one "<check>: <bucket>" line
 // per check that did not pass, so empty output means green. Neither waits past
-// SPECKIT_CI_WAIT_MIN minutes, by default 120: a run with no free runner, or a
-// status a cancelled run left pending, ends the wait with exit 1 too. Exit 0
+// SPECKIT_CI_WAIT_MIN minutes, by default 120: a run with no free runner ends
+// the wait with exit 1 too. A pending agent-review whose run (its link) has
+// finished ends it at once, exit 1, naming the run: no one will replace it. Exit 0
 // finished, 1 a limit reached, 2 gh failed, 3 the PR conflicts with main.
 //
 // GitHub runs no CI on a PR that conflicts with main, so the PR's mergeable
@@ -60,9 +61,11 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
     if (stop) return stop;
     // The cloud's gh.mjs keeps gh's plain exit codes under --json (8 pending,
     // 1 failing), so its answer is read whatever the code; real gh exits 0.
-    const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket"]);
+    const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link"]);
     checks = NO_CHECKS.test(out.stderr) ? [] : parsed(out.stdout);
     if (!Array.isArray(checks)) return { code: 2, lines: [`CI: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+    const stale = await staleReview(gh, pr, checks);
+    if (stale) return { code: 1, lines: [stale] };
     const pending = checks.filter((c) => c.bucket === "pending").map((c) => c.name);
     if (checks.length > 0 && pending.length === 0) break;
     if (checks.length === 0 && now() - start >= noChecksMs) return { code: 1, lines: [`CI: no checks on #${pr} after ${minutes(noChecksMs)} min`] };
@@ -71,6 +74,29 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
   }
   return { code: 0, lines: checks.filter((c) => c.bucket !== "pass" && c.bucket !== "skipping").map((c) => `${c.name}: ${c.bucket}`) };
 }
+
+/**
+ * The line that ends the wait when agent-review is pending but the Actions run its link names has finished
+ * (a cancelled lap, or one whose last step never ran): nothing will ever replace that status. Null otherwise,
+ * a status that links no run included.
+ */
+async function staleReview(gh, pr, checks) {
+  const run = pendingReviewRun(checks);
+  if (!run) return null;
+  const out = await gh(["run", "view", run, "--json", "status,conclusion"]);
+  const state = out.code === 0 ? parsed(out.stdout) : undefined;
+  if (state?.status !== "completed") return null;
+  // The run may have set its verdict between the checks read and this one: read the checks again before
+  // calling the status stale, so a lap that just finished is not mistaken for one that never will.
+  const again = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link"]);
+  const now = parsed(again.stdout);
+  if (Array.isArray(now) && pendingReviewRun(now) !== run) return null;
+  return `CI: agent-review pending but its run ${run} is ${state.conclusion || "completed"}; dispatch a new lap`;
+}
+
+/** The Actions run id a pending agent-review status links, or undefined. */
+const pendingReviewRun = (checks) =>
+  /\/actions\/runs\/(\d+)/.exec(checks.find((c) => c.name === "agent-review" && c.bucket === "pending")?.link ?? "")?.[1];
 
 /** The QA run's wait: until it has completed, whatever CI is doing. */
 async function waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs }) {

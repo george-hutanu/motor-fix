@@ -8,13 +8,14 @@ const METHODS = ["get", "post", "put", "patch", "delete"];
 const ROLES = ["admin", "garage", "mechanic", "receptionist", "driver"];
 
 /** The accounts libs/domain/src/seed.ts adds outside production, one per role. */
-export const SEEDED = {
+// Frozen: flows files are handed it as `accounts`, and a write there would redirect every later sign-in.
+export const SEEDED = Object.freeze({
   admin: "admin@example.test",
   driver: "sofer@example.test",
   garage: "service@example.test",
   mechanic: "mecanic@example.test",
   receptionist: "receptie@example.test",
-};
+});
 
 /** The seed's own test password, or the one it was given. */
 export const seedPassword = (env = process.env) => env.SEED_PASSWORD || "parola-de-test";
@@ -100,6 +101,34 @@ export async function signIn(apiURL, role, password) {
   if (typeof token !== "string" || !token) throw new Error(`could not sign in as ${role} (${SEEDED[role]}): HTTP ${res.status} with no access token`);
   return { token, refresh };
 }
+
+/** Stores the signed-in account's language, which the web app follows at sign-in over the device's. */
+export async function setLanguage(apiURL, token, lang, who) {
+  const call = `PATCH /api/v1/me ${JSON.stringify({ language: lang })} as ${who}`;
+  const res = await fetch(`${apiURL}/api/v1/me`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ language: lang }),
+    signal: AbortSignal.timeout(15000),
+  }).catch((error) => {
+    throw new Error(`${call} failed: ${error.cause?.code ?? error.message}`);
+  });
+  await res.body?.cancel();
+  if (!res.ok) throw new Error(`${call} answered HTTP ${res.status}`);
+}
+
+/**
+ * `session(role, lang)` for the run, the sweep and `precheck.mjs --check`: signs the seeded account of that
+ * role in afresh (refresh tokens rotate), sets its language when one is asked for, and returns its refresh token.
+ */
+export const seededSession =
+  (apiURL, password = seedPassword()) =>
+  async (role, lang) => {
+    if (!Object.hasOwn(SEEDED, role)) throw new Error(`no seeded account for the role ${role}`);
+    const { token, refresh } = await signIn(apiURL, role, password);
+    if (lang) await setLanguage(apiURL, token, lang, role);
+    return refresh;
+  };
 
 /**
  * Call each changed operation once. Returns the findings (each 5xx, see
