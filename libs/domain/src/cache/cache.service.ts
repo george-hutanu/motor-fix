@@ -9,6 +9,7 @@ import {
   type CacheKind,
   type CacheOutcome,
   recordCache,
+  recordWarmRead,
 } from './cache.metrics';
 import { AUTH_REDIS } from '../auth/attempts';
 import { requestContext } from '../logging';
@@ -63,6 +64,8 @@ export interface CacheRead<T> {
   // The soft lifetime, in seconds.
   soft: number;
   read: () => Promise<Filled<T>>;
+  // Gone at its soft expiry: never served stale, never refreshed.
+  stale?: false;
 }
 
 interface Entry<T> {
@@ -116,13 +119,6 @@ function parse<T>(text: string | null | undefined) {
   }
 }
 
-// Names the served answer's tags on the request, for its Cache-Tag header.
-function tagRequest(tags: string[] | undefined) {
-  const store = requestContext.getStore();
-  if (!store || !tags) return;
-  store.cacheTags = [...new Set([...(store.cacheTags ?? []), ...tags])];
-}
-
 // Reads through Redis. PostgreSQL stays the truth: while Redis fails, every
 // read comes from its read function, uncached, and the first failure of an
 // outage is the one logged, with the recovery.
@@ -138,6 +134,11 @@ export class CacheService {
 
   constructor(@Inject(AUTH_REDIS) private readonly redis: Redis) {}
 
+  // False from a failed Redis command until one succeeds again.
+  get available() {
+    return !this.redisDown;
+  }
+
   // Runs the warm-up's reads: each entry they fill counts as warm.
   warm<T>(run: () => Promise<T>): Promise<T> {
     return this.warming.run(true, run);
@@ -148,7 +149,7 @@ export class CacheService {
     if (text === undefined) {
       this.count(spec.key, 'fallback');
       const filled = await spec.read();
-      tagRequest(filled.tags);
+      this.tagRequest(filled.tags);
       return filled.value;
     }
     const entry = parse<T>(text);
@@ -157,14 +158,40 @@ export class CacheService {
     const joined = flight && ((await flight) as Entry<T> | undefined);
     if (joined) this.count(spec.key, 'coalesced');
     const served = joined ?? ((await this.fly(spec, false)) as Entry<T>);
-    tagRequest(served.t);
+    this.tagRequest(served.t);
     return served.v;
+  }
+
+  // Takes an entry once, after the read of the key still in flight here: an
+  // entry past its soft expiry counts as a miss and is answered to no one.
+  async take<T>(key: string): Promise<T | undefined> {
+    await this.flights.get(key)?.catch(() => undefined);
+    const text = await this.attempt(() => this.redis.getdel(key));
+    if (text === undefined) {
+      this.count(key, 'fallback');
+      return undefined;
+    }
+    const entry = parse<T>(text);
+    if (entry && Date.now() < entry.s) {
+      this.count(key, 'hit');
+      return entry.v;
+    }
+    this.count(key, 'miss');
+    return undefined;
+  }
+
+  // Names the served answer's tags on the request, for its Cache-Tag header;
+  // a warm's reads are not the answer of the request they run in.
+  private tagRequest(tags: string[] | undefined) {
+    const store = requestContext.getStore();
+    if (!store || !tags || this.warming.getStore()) return;
+    store.cacheTags = [...new Set([...(store.cacheTags ?? []), ...tags])];
   }
 
   // A stored entry: fresh, remembered as not found, or stale, when one read
   // refreshes it behind the answer.
   private served<T>(spec: CacheRead<T>, entry: Entry<T>) {
-    tagRequest(entry.t);
+    this.tagRequest(entry.t);
     if (entry.n) {
       this.count(spec.key, 'negative');
     } else if (Date.now() < entry.s) {
@@ -196,7 +223,7 @@ export class CacheService {
   ): Promise<Entry<T> | undefined> {
     const lock = lockKey(spec.key);
     const token = randomUUID();
-    const start = await this.take(lock, token);
+    const start = await this.lock(lock, token);
     if (start === undefined) return this.unstored(spec, background, 'fallback');
     if (start > 0) return this.lead(spec, lock, token, start, background);
     if (background) return undefined;
@@ -207,7 +234,7 @@ export class CacheService {
     }
     // The holder is gone without storing: one more try at the lock, then the
     // read goes to the database itself.
-    const again = await this.take(lock, token);
+    const again = await this.lock(lock, token);
     if (again) return this.lead(spec, lock, token, again, false);
     return this.unstored(
       spec,
@@ -218,7 +245,7 @@ export class CacheService {
 
   // Takes the key's lock: Redis's time when taken, 0 when held, undefined
   // when Redis failed.
-  private take(lock: string, token: string) {
+  private lock(lock: string, token: string) {
     return this.attempt(
       () => this.redis.eval(LOCK, 1, lock, token, LOCK_MS) as Promise<number>,
     );
@@ -242,7 +269,11 @@ export class CacheService {
     background: boolean,
   ) {
     try {
+      const began = performance.now();
       const filled = await spec.read();
+      if (this.warming.getStore()) {
+        recordWarmRead(kindOf(spec.key), (performance.now() - began) / 1000);
+      }
       const { entry, hardMs } = this.entry(spec, filled);
       const tags = filled.tags ?? [];
       await this.attempt(() =>
@@ -271,7 +302,7 @@ export class CacheService {
       ...(filled.tags?.length ? { t: filled.tags } : {}),
       ...(filled.negative && { n: 1 as const }),
     };
-    return { entry, hardMs };
+    return { entry, hardMs: spec.stale === false ? softMs : hardMs };
   }
 
   // Polls until the holder has stored the entry, or its lock is gone.

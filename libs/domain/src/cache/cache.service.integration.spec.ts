@@ -381,3 +381,149 @@ describe('the cache service', () => {
     ).toHaveLength(1);
   });
 });
+
+const warmKey = () => cacheKey('driver-home', randomUUID(), 'cars');
+
+const failing = (redis: Redis) =>
+  jest.spyOn(redis, 'sendCommand').mockImplementation((command: Command) => {
+    command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
+    return command.promise;
+  });
+
+async function warmReads() {
+  const { resourceMetrics } = await metricReader.collect();
+  const found = resourceMetrics.scopeMetrics
+    .flatMap((scope) => scope.metrics)
+    .find(
+      (metric) => metric.descriptor.name === 'motorfix_cache_warm_read_seconds',
+    );
+  return Object.fromEntries(
+    (found?.dataPoints ?? []).map((point) => [
+      String(point.attributes['kind']),
+      (point.value as { count: number }).count,
+    ]),
+  );
+}
+
+// @traces 1169-FR-001 1169-FR-010 1169-FR-011
+describe('the cache service’s warm entries', () => {
+  const warmed = (cache: CacheService, k: string, ms = 0, value: unknown = 1) =>
+    cache.warm(() =>
+      cache.read({
+        key: k,
+        read: async () => {
+          await sleep(ms);
+          return { tags: ['warm:account:a'], value };
+        },
+        soft: 90,
+        stale: false,
+      }),
+    );
+
+  it('leaves Redis at its jittered soft expiry, with no stale window', async () => {
+    const cache = new CacheService(client());
+    const k = warmKey();
+
+    await warmed(cache, k);
+
+    const ttl = await other.pttl(k);
+    expect(ttl).toBeGreaterThan(80_000);
+    expect(ttl).toBeLessThanOrEqual(99_000);
+  });
+
+  it('answers a warm entry to one take, then none', async () => {
+    const cache = new CacheService(client());
+    const k = warmKey();
+
+    const outcomes = await counting(async () => {
+      await warmed(cache, k, 0, { items: ['car'] });
+      await expect(cache.take(k)).resolves.toEqual({ items: ['car'] });
+      await expect(cache.take(k)).resolves.toBeUndefined();
+    });
+
+    expect(outcomes).toEqual({
+      'driver-home hit': 1,
+      'driver-home miss': 1,
+      'driver-home warm': 1,
+    });
+    expect(await other.exists(k)).toBe(0);
+  });
+
+  it('gives the entry to only one of two takes at once, across instances', async () => {
+    const [a, b] = [new CacheService(client()), new CacheService(client())];
+    const k = warmKey();
+    await warmed(a, k);
+
+    const answers = await Promise.all([a.take(k), b.take(k)]);
+
+    expect(answers.filter((answer) => answer !== undefined)).toEqual([1]);
+  });
+
+  it('waits for a warm of the key still in flight and counts a hit', async () => {
+    const cache = new CacheService(client());
+    const k = warmKey();
+
+    const outcomes = await counting(async () => {
+      const warming = warmed(cache, k, 200, 'warmed');
+      await sleep(50);
+      await expect(cache.take(k)).resolves.toBe('warmed');
+      await warming;
+    });
+
+    expect(outcomes).toEqual({ 'driver-home hit': 1, 'driver-home warm': 1 });
+    expect(await other.exists(k)).toBe(0);
+  });
+
+  it('counts a take past the soft expiry as a miss and answers nothing', async () => {
+    const cache = new CacheService(client());
+    const k = warmKey();
+    await warmed(cache, k);
+    const later = Date.now() + 100_000;
+    jest.spyOn(Date, 'now').mockImplementation(() => later);
+
+    const outcomes = await counting(async () => {
+      await expect(cache.take(k)).resolves.toBeUndefined();
+    });
+
+    expect(outcomes).toEqual({ 'driver-home miss': 1 });
+  });
+
+  it('answers nothing and counts a fallback while Redis is down, and says it is unavailable', async () => {
+    const redis = client();
+    const cache = new CacheService(redis);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    expect(cache.available).toBe(true);
+    failing(redis);
+
+    const outcomes = await counting(async () => {
+      await expect(cache.take(warmKey())).resolves.toBeUndefined();
+    });
+
+    expect(outcomes).toEqual({ 'driver-home fallback': 1 });
+    expect(cache.available).toBe(false);
+  });
+
+  it('names no warm tag on the request the warm runs in, nor on a take', async () => {
+    const cache = new CacheService(client());
+    const k = warmKey();
+    const store: { cacheTags?: string[] } = {};
+
+    await requestContext.run(store, async () => {
+      await warmed(cache, k);
+      await cache.take(k);
+    });
+
+    expect(store.cacheTags).toBeUndefined();
+  });
+
+  it('records the time of each read it warms, by kind', async () => {
+    const cache = new CacheService(client());
+    const before = await warmReads();
+
+    await warmed(cache, warmKey(), 20);
+    await cache.read({ key: warmKey(), read: source(1, 0).read, soft: 90 });
+
+    const after = await warmReads();
+    expect((after['driver-home'] ?? 0) - (before['driver-home'] ?? 0)).toBe(1);
+  });
+});

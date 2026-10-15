@@ -2,7 +2,7 @@ import { inMemory } from '@motor-fix/observability/testing';
 import { metrics } from '@opentelemetry/api';
 import { MeterProvider } from '@opentelemetry/sdk-metrics';
 
-import { recordCache } from './cache.metrics';
+import { recordCache, recordWarmRead } from './cache.metrics';
 
 const { metricReader } = inMemory();
 metrics.setGlobalMeterProvider(new MeterProvider({ readers: [metricReader] }));
@@ -37,5 +37,32 @@ describe('counting the cache', () => {
       'profile coalesced': 1,
       'profile hit': 2,
     });
+  });
+});
+
+// @traces 1169-FR-011
+describe('counting the sign-in warm', () => {
+  it('counts the home kinds and records each warm read’s time by kind only', async () => {
+    recordCache('garage-home', 'warm');
+    recordCache('driver-home', 'hit');
+    recordWarmRead('driver-home', 0.02);
+
+    const counted = await counts();
+    expect(counted['garage-home warm']).toBe(1);
+    expect(counted['driver-home hit']).toBe(1);
+    const { resourceMetrics } = await metricReader.collect();
+    const histogram = resourceMetrics.scopeMetrics
+      .flatMap((scope) => scope.metrics)
+      .find(
+        (metric) =>
+          metric.descriptor.name === 'motorfix_cache_warm_read_seconds',
+      );
+    expect(histogram?.descriptor.unit).toBe('s');
+    expect(histogram?.dataPoints).toHaveLength(1);
+    const [point] = histogram?.dataPoints ?? [];
+    expect(point?.attributes).toEqual({ kind: 'driver-home' });
+    const value = point?.value as { sum: number; count: number } | undefined;
+    expect(value?.count).toBe(1);
+    expect(value?.sum).toBeCloseTo(0.02);
   });
 });
