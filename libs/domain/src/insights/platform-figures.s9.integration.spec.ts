@@ -137,6 +137,26 @@ describe('the launch figures of the overview', () => {
     });
   });
 
+  it('counts an expired recipient as not answered within a day', async () => {
+    const { id } = await garage();
+    await arrived(id, hoursAgo(72), 'quoted', 2);
+    await arrived(id, hoursAgo(72), 'expired');
+
+    await expect(countPlatformFigures(prisma, NOW)).resolves.toMatchObject({
+      answerRate: 50,
+    });
+  });
+
+  it('counts a quoted recipient with no answer time as not answered within a day', async () => {
+    const { id } = await garage();
+    await arrived(id, hoursAgo(72), 'declined', 1);
+    await arrived(id, hoursAgo(72), 'quoted');
+
+    await expect(countPlatformFigures(prisma, NOW)).resolves.toMatchObject({
+      answerRate: 50,
+    });
+  });
+
   it('keeps the answer rate on the last 30 days whatever the period', async () => {
     const { id } = await garage();
     await arrived(id, hoursAgo(20 * 24), 'quoted', 2);
