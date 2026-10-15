@@ -1,8 +1,14 @@
-import type { HomeDto, HomeGarageDto, SearchPoint } from '@motor-fix/contracts';
+import {
+  type HomeDto,
+  type HomeGarageDto,
+  nearOf,
+  type SearchPoint,
+} from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
+import { type CacheRead, cacheKey } from '../../cache/cache.service';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type {
   GarageBrandStance,
@@ -22,6 +28,21 @@ const BEST_FIRST: Prisma.GarageOrderByWithRelationInput[] = [
 
 const TAKERS_SHOWN = 2;
 const PREVIEW_MAX = 3;
+
+// The Home answer of a brand and place as the cache keeps it: a minute, and
+// purged with the searches.
+export const homeRead = (
+  home: HomeService,
+  slug: string,
+  point?: SearchPoint,
+): CacheRead<HomeDto> => ({
+  key: cacheKey('home', slug, point ? nearOf(point) : '-'),
+  read: async () => ({
+    tags: ['search'],
+    value: await home.forBrand(slug, point),
+  }),
+  soft: 60,
+});
 
 @Injectable()
 export class HomeService {

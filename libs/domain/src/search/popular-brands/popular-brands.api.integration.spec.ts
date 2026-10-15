@@ -2,8 +2,11 @@ import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
+import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { PUBLIC_POLICY } from '../../cache/http-cache/http-cache.interceptor';
+import { purgeTags } from '../../cache/purge';
 import {
   databaseUrl,
   fixtures,
@@ -36,6 +39,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await purgeTags(app.get(AUTH_REDIS), ['search']);
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
 });
 
@@ -98,14 +102,14 @@ describe('GET /brands/popular', () => {
   it('lets the answer be cached for a minute', async () => {
     const res = await popular();
 
-    expect(res.headers['cache-control']).toBe('public, max-age=60');
+    expect(res.headers['cache-control']).toBe(PUBLIC_POLICY);
   });
 
   it('never lets a refusal be cached publicly', async () => {
     const res = await popular({ limit: '0' });
 
     expect(res.status).toBe(400);
-    expect(res.headers['cache-control']).not.toBe('public, max-age=60');
+    expect(String(res.headers['cache-control'] ?? '')).not.toContain('public');
   });
 
   it('leaves out retired brands and puts unranked ones last, by name', async () => {

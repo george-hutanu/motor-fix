@@ -5,11 +5,6 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import {
-  dropProfiles,
-  generationKey,
-  profileKey,
-} from './public-garages.cache';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { OutboxRelay } from '../../events/outbox-relay/outbox-relay';
@@ -162,7 +157,9 @@ describe('a profile read with a damaged brand parameter', () => {
       await get(`/garages/${garage.slug}?brand=nobody-${i}`);
     }
 
-    expect(await other.hlen(profileKey(garage.id))).toBeLessThanOrEqual(2);
+    expect(await other.zcard(`v1:tag:garage:${garage.id}`)).toBeLessThanOrEqual(
+      2,
+    );
   });
 });
 
@@ -363,73 +360,5 @@ describe('the verification date', () => {
     const res = await get(`/garages/${garage.slug}`);
 
     expect(res.body.description).toBe(line);
-  });
-});
-
-// @traces 307-FR-006
-describe('dropping the profile when an event reaches a public garage channel', () => {
-  const seed = async (id: string, fields: string[]) => {
-    for (const field of fields) {
-      await other.hset(profileKey(id), field, '{"id":"x"}');
-    }
-  };
-
-  it('removes every brand field of the garages named, and only those', async () => {
-    const [a, b, c] = [randomUUID(), randomUUID(), randomUUID()];
-    await seed(a, ['-', 'dacia', 'bmw']);
-    await seed(b, ['-', 'dacia']);
-    await seed(c, ['-']);
-
-    await dropProfiles(other, [`public:garage:${a}`, `public:garage:${b}`]);
-
-    expect(await other.exists(profileKey(a))).toBe(0);
-    expect(await other.exists(profileKey(b))).toBe(0);
-    expect(await other.hlen(profileKey(c))).toBe(1);
-    expect(await other.get(generationKey(a))).toBe('1');
-    expect(await other.ttl(generationKey(a))).toBeGreaterThan(0);
-    expect(await other.exists(generationKey(c))).toBe(0);
-  });
-
-  it('leaves a profile alone for audiences that only look like the public one', async () => {
-    const id = randomUUID();
-    await seed(id, ['-']);
-
-    await dropProfiles(other, [
-      `garage:${id}`,
-      `account:${id}`,
-      ` public:garage:${id}`,
-      `public:garage:`,
-      'public:garage',
-      '',
-    ]);
-
-    expect(await other.hlen(profileKey(id))).toBe(1);
-  });
-
-  it('advances the generation once for each time the garage is named', async () => {
-    const id = randomUUID();
-
-    await dropProfiles(other, [`public:garage:${id}`]);
-    await dropProfiles(other, [`public:garage:${id}`]);
-
-    expect(await other.get(generationKey(id))).toBe('2');
-  });
-
-  it('drops nothing and does not fail for an empty audience', async () => {
-    await expect(dropProfiles(other, [])).resolves.toBeUndefined();
-  });
-
-  // A drop Redis refuses fails the relay's batch, which leaves the event
-  // unrelayed and retries it, so no profile outlives its change.
-  it('fails the drop when Redis refuses it, so the relay retries the event', async () => {
-    const broken = {
-      del: () => Promise.reject(new Error('Connection is closed.')),
-      expire: () => Promise.reject(new Error('Connection is closed.')),
-      incr: () => Promise.reject(new Error('Connection is closed.')),
-    };
-
-    await expect(
-      dropProfiles(broken, [`public:garage:${randomUUID()}`]),
-    ).rejects.toThrow('Connection is closed.');
   });
 });

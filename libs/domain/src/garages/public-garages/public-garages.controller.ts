@@ -9,6 +9,7 @@ import {
 
 import { PublicGaragesService } from './public-garages';
 import { Public } from '../../auth/actor.guard';
+import { PublicCache } from '../../cache/http-cache/http-cache.interceptor';
 
 @ApiTags('garages')
 @Controller('garages')
@@ -16,6 +17,7 @@ export class PublicGaragesController {
   constructor(private readonly garages: PublicGaragesService) {}
 
   @Public()
+  @PublicCache()
   @Get(':slug')
   @ApiOkResponse({ type: PublicGarageDto })
   @ApiNotFoundResponse({ description: 'not_found: never approved, or unknown' })

@@ -6,19 +6,10 @@ import {
   type PublicGaragePhotoDto,
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
-import type { Redis } from 'ioredis';
 
-import {
-  generationKey,
-  NO_BRAND,
-  PROFILE_SECONDS,
-  profileKey,
-  slugKey,
-} from './public-garages.cache';
-import { recordProfileCache } from './public-garages.metrics';
-import { AUTH_REDIS } from '../../auth/attempts';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
+import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
 import { StorageService } from '../../storage/storage.service';
@@ -40,6 +31,10 @@ const present = <T extends Record<string, unknown>>(fields: T) =>
   ) as { [K in keyof T]?: NonNullable<T[K]> };
 
 const notFound = () => refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
+
+// A profile entry lives ten minutes before it is refreshed.
+const PROFILE_SECONDS = 600;
+const NO_BRAND = '-';
 
 const CONTROL = /\p{Cc}/u;
 const BRAND_MAX = 60;
@@ -93,24 +88,14 @@ function priceListOf(
   };
 }
 
-// Writes the answer only while the garage's generation is still the one the
-// read saw before it went to PostgreSQL: a drop in between wins.
-const WRITE = `
-if (redis.call('GET', KEYS[3]) or '0') ~= ARGV[1] then return 0 end
-redis.call('HSET', KEYS[1], ARGV[2], ARGV[3])
-redis.call('EXPIRE', KEYS[1], ARGV[4], 'NX')
-redis.call('SET', KEYS[2], ARGV[5], 'EX', ARGV[4])
-return 1`;
-
 @Injectable()
 export class PublicGaragesService {
   private readonly logger = new Logger('PublicGarages');
-  private redisDown = false;
   private storageDown = false;
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
-    @Inject(AUTH_REDIS) private readonly redis: Redis,
+    private readonly cache: CacheService,
     private readonly storage: StorageService,
   ) {}
 
@@ -119,59 +104,42 @@ export class PublicGaragesService {
     // PostgreSQL refuses a NUL byte in text; no slug holds a control character.
     if (CONTROL.test(slug)) throw notFound();
     const wanted = brandSlug(brand);
-    const cachedId = await this.cache(() => this.redis.get(slugKey(slug)));
-    const cached = cachedId && (await this.cached(cachedId, wanted));
-    // A slug the garage gave up still points at it until the pointer expires.
-    if (cached && cached.slug === slug) {
-      recordProfileCache('hit');
-      return cached;
-    }
-    recordProfileCache('miss');
-    const id =
-      cachedId ??
-      (
-        await this.prisma.garage.findFirst({
-          select: { id: true },
-          where: { slug, ...publicGarages() },
-        })
-      )?.id;
-    if (!id) return this.hidden(slug);
-    const generation = await this.cache(() =>
-      this.redis.get(generationKey(id)),
-    );
-    const answer = await this.read(slug, wanted);
-    if (!answer) return this.hidden(slug);
-    if (generation !== undefined && answer.id === id) {
-      await this.store(slug, answer, generation ?? '0');
-    }
+    const answer = await this.cache.read<PublicGarageDto | null>({
+      key: cacheKey('profile', slug, wanted ?? NO_BRAND),
+      read: () => this.fill(slug, wanted),
+      soft: PROFILE_SECONDS,
+    });
+    if (!answer) throw notFound();
     return answer;
   }
 
-  private async cached(id: string, wanted: string | undefined) {
-    const text = await this.cache(() =>
-      this.redis.hget(profileKey(id), wanted ?? NO_BRAND),
-    );
-    if (!text) return undefined;
-    return JSON.parse(text) as PublicGarageDto;
-  }
-
-  // Stored under the brand the answer carries: an unknown brand reads as none
-  // and fills the none field, so made-up brands never grow the hash.
-  private store(slug: string, answer: PublicGarageDto, generation: string) {
-    return this.cache(() =>
-      this.redis.eval(
-        WRITE,
-        3,
-        profileKey(answer.id),
-        slugKey(slug),
-        generationKey(answer.id),
-        generation,
-        answer.brand ? answer.brand.slug : NO_BRAND,
-        JSON.stringify(answer),
-        PROFILE_SECONDS,
-        answer.id,
-      ),
-    );
+  // An unknown brand reads as none and fills the no-brand entry, so made-up
+  // brands never grow the cache. A slug nobody holds is remembered as not
+  // found; a garage not listed is refused uncached, so its approval or its
+  // restore shows on the next read.
+  private async fill(
+    slug: string,
+    wanted: string | undefined,
+  ): Promise<Filled<PublicGarageDto | null>> {
+    const answer = await this.read(slug, wanted);
+    if (answer) {
+      return {
+        tags: [`garage:${answer.id}`],
+        value: answer,
+        ...(wanted && !answer.brand
+          ? { key: cacheKey('profile', slug, NO_BRAND) }
+          : {}),
+      };
+    }
+    const hidden = await this.prisma.garage.findUnique({
+      select: { status: true },
+      where: { slug },
+    });
+    if (hidden?.status === 'suspended') {
+      throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
+    }
+    if (hidden) throw notFound();
+    return { negative: true, value: null };
   }
 
   private async read(
@@ -374,32 +342,5 @@ export class PublicGaragesService {
       ...found,
       stance: row?.stance === 'works_on' ? 'works_on' : 'does_not_take',
     };
-  }
-
-  private async hidden(slug: string): Promise<never> {
-    const hidden = await this.prisma.garage.findUnique({
-      select: { status: true },
-      where: { slug },
-    });
-    if (hidden?.status === 'suspended') {
-      throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
-    }
-    throw notFound();
-  }
-
-  // Redis only spares PostgreSQL a read: while it fails the answer comes from
-  // PostgreSQL, and the first failure of an outage is the one logged.
-  private async cache<T>(command: () => Promise<T>): Promise<T | undefined> {
-    try {
-      const result = await command();
-      this.redisDown = false;
-      return result;
-    } catch (error) {
-      if (!this.redisDown) {
-        this.logger.warn(`garage profile cache unavailable: ${String(error)}`);
-        this.redisDown = true;
-      }
-      return undefined;
-    }
   }
 }

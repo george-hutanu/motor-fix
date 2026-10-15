@@ -30,7 +30,7 @@ const searchKey = (
 ) =>
   `garage-search:v1:${generation}:${brandId}:${near ?? '-'}:${radiusKm ?? SEARCH_RADIUS_DEFAULT_KM}:${cursor ?? '-'}`;
 
-const SEARCH_AUDIENCE = /^public:(garage:|search$|search:)/;
+export const SEARCH_AUDIENCE = /^public:(garage:|search$|search:)/;
 
 // Drops every cached search when an event reaches a garage's public page or
 // a search. A drop Redis refuses throws, so the relay retries the event.

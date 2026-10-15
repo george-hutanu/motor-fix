@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-11
+updated: 2026-10-15
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -8,6 +8,7 @@ features:
   - 384-response-rate
   - 143-profile-views
   - 355-price-list-ranges
+  - 1182-cache-service
 ---
 
 # Capability: Garage profile
@@ -32,13 +33,9 @@ _From 307-public-garage-profile._
 
 _From 307-public-garage-profile._
 
-### 307-FR-006 — The answer, without the distance, MUST be served from a cache in Redis held as one Redis hash per garage with a field per brand in context (and one for none), dropped as a whole by the worker's outbox relay whenever it relays an event to that garage's `public:garage:{id}` channel, whatever the kind, and expiring on its own after 10 minutes as a safety net; a 404 or 410 is never cached; with Redis unavailable the read answers from PostgreSQL, warning once per outage (the first failing call logs; the next only after a call has succeeded), and a drop Redis refuses fails the relay's batch, which leaves the event unrelayed and retries it with one log per streak (T005), so no cached profile outlives its change; the generation expires with the profile, after 10 minutes. The cache keys carry the answer's shape version (`v1`). *(Amended in harden, 2026-10-08: the drop throws rather than being skipped, so the relay's retry keeps the cache honest; see auto-run.md.)* A read that began before a drop MUST NOT leave its older answer in the cache: the drop also advances a per-garage generation, and a read writes its answer only when the generation it saw before reading PostgreSQL is unchanged. PostgreSQL stays the only truth (Principle VI).
+### 1182-FR-007 — The public garage profile read MUST go through the cache service in place of its own Redis hash, slug pointer and generation: one entry per garage and brand in context (and one for none), found from the slug, tagged with the garage, a soft lifetime of 10 minutes, keeping every rule of 307-FR-001 and 307-FR-006 that the reader sees (the one public scope, the 404/410 verdicts of garages that exist read fresh every time, the brand-in-context variants, the drop on every event relayed to `public:garage:{id}`, PostgreSQL the only truth). The old keys, generation and per-module fail-open wrapper are removed, not kept beside the new service.
 
-_From 307-public-garage-profile._
-
-### 307-FR-007 — The read's cache MUST be observable: hits, misses and drops counted in the API's metrics, listed in `infra/observability/inventory.json` with the panel and alert they feed, or the reason none is needed.
-
-_From 307-public-garage-profile._
+_From 1182-cache-service._
 
 ### 307-FR-008 — The web app MUST serve the profile at `/{lang}/garages/{slug}` (replacing the placeholder, one address per language, 021), server-rendered like the other public pages, inside the public frame, and keep `?brand=` on the address so a shared link carries the brand in context.
 
@@ -245,3 +242,6 @@ _From 355-price-list-ranges._
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
 
 - `307-FR-014` — superseded by `310-FR-004` (2026-10-09)
+
+- `307-FR-007` — removed by 1182-cache-service (2026-10-15)
+- `307-FR-006` — superseded by `1182-FR-007` (2026-10-15)

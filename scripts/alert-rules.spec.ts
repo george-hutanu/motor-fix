@@ -90,6 +90,17 @@ const EXPECTED: Record<
     expr: string[];
   }
 > = {
+  'api-cache-fallback-rate': {
+    expr: [
+      'motorfix_cache_total{service_name="api", outcome="fallback"}[10m]',
+      'motorfix_cache_total{service_name="api", outcome=~"hit|miss|stale|coalesced|negative|fallback"}[10m]',
+      '>= 20',
+    ],
+    for: '10m',
+    from: 600,
+    type: 'gt',
+    value: 0.05,
+  },
   'api-down': {
     expr: [
       'target_info{service_name="api"}[24h]',
@@ -448,7 +459,8 @@ describe('alert rules', () => {
   // @traces 1024-FR-006
   // @traces 1024-FR-007
   // @traces 267-FR-023
-  it('holds exactly the eighteen rules, each with its threshold, window and wait', () => {
+  // @traces 1182-FR-014
+  it('holds exactly the nineteen rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );

@@ -3,8 +3,11 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { SearchModule } from './search.module';
+import { AUTH_REDIS } from '../auth/attempts';
 import { AuthModule } from '../auth/auth.module';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { PUBLIC_POLICY } from '../cache/http-cache/http-cache.interceptor';
+import { purgeTags } from '../cache/purge';
 import {
   databaseUrl,
   fixtures,
@@ -37,6 +40,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await purgeTags(app.get(AUTH_REDIS), ['search']);
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
   dacia = (
     await prisma.brand.create({
@@ -259,6 +263,6 @@ describe('a place on the Home count under attack', () => {
 
   it('keeps the public cache header on a counted area', async () => {
     const res = await home('near=46.771,23.624');
-    expect(res.headers['cache-control']).toBe('public, max-age=60');
+    expect(res.headers['cache-control']).toBe(PUBLIC_POLICY);
   });
 });
