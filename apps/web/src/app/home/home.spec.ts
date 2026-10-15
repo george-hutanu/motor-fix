@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { PLATFORM_ID, signal } from '@angular/core';
+import { PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
@@ -18,7 +18,7 @@ import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
-import { Home } from './home';
+import { HEALTH, Home } from './home';
 import { PlaceDialog } from './place/place-dialog/place-dialog';
 import type { Place } from './place/place-store';
 import { Consent } from '../consent/consent';
@@ -207,8 +207,8 @@ const slugsRead = () =>
   homeApi.homeControllerForBrand.mock.calls.map(([q]) => q.brand);
 
 describe('Home', () => {
-  it('shows the name, the version and both checks', async () => {
-    healthApi.healthControllerReady.mockResolvedValue({
+  it('shows the name, the version and both checks the server read', async () => {
+    TestBed.inject(TransferState).set(HEALTH, {
       checks: { postgres: 'ok', redis: 'ok', storage: 'ok' },
       status: 'ok',
       version: 'abc123',
@@ -221,7 +221,7 @@ describe('Home', () => {
   });
 
   it('names the part that failed', async () => {
-    healthApi.healthControllerReady.mockResolvedValue({
+    TestBed.inject(TransferState).set(HEALTH, {
       checks: { postgres: 'ok', redis: 'error', storage: 'ok' },
       status: 'error',
       version: 'abc123',
@@ -231,36 +231,30 @@ describe('Home', () => {
     expect(text()).toContain('PostgreSQL: ok · Redis: error');
   });
 
-  it('says the status is unknown when the API did not answer', async () => {
+  it('says the status is unknown when the server render handed no answer over', async () => {
     await render();
 
     expect(text()).toContain('versiune necunoscută');
     expect(text()).toContain('PostgreSQL: necunoscut · Redis: necunoscut');
   });
 
+  // The browser cannot reach the API's ready check: on the page's own origin
+  // the web server answers its own, with the status alone. Every Home of the
+  // visit, one the browser opened after a redirect included, shows the
+  // server's answer.
   // @traces 1200-FR-006
-  it('reads the checks in the browser too, where the server render hands its answer over', async () => {
-    healthApi.healthControllerReady.mockResolvedValue({
+  it('never asks the ready check in the browser, and keeps the server answer for a later Home', async () => {
+    TestBed.inject(TransferState).set(HEALTH, {
       checks: { postgres: 'ok', redis: 'ok', storage: 'ok' },
       status: 'ok',
       version: 'abc123',
     });
     await render();
-
-    expect(healthApi.healthControllerReady).toHaveBeenCalledTimes(1);
-    expect(text()).toContain('PostgreSQL: ok · Redis: ok');
-  });
-
-  // The web server answers its own ready check with the status alone, so a
-  // browser read the server render did not hand over has no checks to show.
-  // @traces 1200-FR-006
-  it('says the checks are unknown when the ready answer carries none', async () => {
-    healthApi.healthControllerReady.mockRejectedValue(
-      new HttpErrorResponse({ error: { status: 'unavailable' }, status: 503 }),
-    );
+    fixture.destroy();
     await render();
 
-    expect(text()).toContain('PostgreSQL: necunoscut · Redis: necunoscut');
+    expect(healthApi.healthControllerReady).not.toHaveBeenCalled();
+    expect(text()).toContain('PostgreSQL: ok · Redis: ok');
   });
 
   // The switch itself is the site bar's, in the public frame.
@@ -533,6 +527,24 @@ describe('Home brand picker on the server', () => {
     TestBed.resetTestingModule();
     await configure('server');
     healthApi.healthControllerReady.mockResolvedValue(null);
+  });
+
+  // @traces 1200-FR-006
+  it('reads the ready check and hands it to the browser, a 503 report included', async () => {
+    const report = {
+      checks: { postgres: 'ok', redis: 'error', storage: 'ok' },
+      status: 'error',
+      version: 'abc123',
+    };
+    healthApi.healthControllerReady.mockRejectedValue(
+      new HttpErrorResponse({ error: report, status: 503 }),
+    );
+    tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
+    fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(TestBed.inject(TransferState).get(HEALTH, null)).toEqual(report);
   });
 
   it('reads eight tiles and hands them to the browser', async () => {

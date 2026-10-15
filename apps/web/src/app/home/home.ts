@@ -7,10 +7,12 @@ import {
   effect,
   inject,
   linkedSignal,
+  makeStateKey,
   PendingTasks,
   PLATFORM_ID,
   resource,
   signal,
+  TransferState,
   untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -41,6 +43,11 @@ import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
 import { publicRead } from '../public-read';
 
+// The server's ready answer, kept for every Home of the visit: the browser
+// cannot ask the API's ready check, since the web server answers its own on
+// the page's origin with the status alone.
+export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
+
 const CYCLE_MS = 5000;
 
 // A 503 from the ready check still carries the report, so it is shown, not
@@ -65,6 +72,7 @@ const report = (error: unknown) =>
   templateUrl: './home.html',
 })
 export class Home {
+  private readonly state = inject(TransferState);
   private readonly server = isPlatformServer(inject(PLATFORM_ID));
   private readonly document = inject(DOCUMENT);
   private readonly reduced = inject(REDUCED_MOTION);
@@ -79,7 +87,7 @@ export class Home {
   private chosen = 0;
   private cityAsked: string | null = null;
   protected readonly i18n = inject(I18n);
-  protected readonly health = signal<HealthReadyDto | null>(null);
+  protected readonly health = signal(this.state.get(HEALTH, null));
   protected readonly tiles = signal<BrandDto[]>([]);
   private readonly searched = signal<BrandDto | undefined>(undefined);
   protected readonly shown = computed(() => {
@@ -202,14 +210,18 @@ export class Home {
       onCleanup(() => clearInterval(timer));
     });
 
-    // The same two reads on both sides: in the browser, right after a server
-    // render, the transfer cache answers them with what the server read.
+    // The tiles are read on both sides: in the browser, right after a server
+    // render, the transfer cache answers with what the server read.
     const brands = inject(BrandsService);
-    const health = inject(HealthService);
     const pending = inject(PendingTasks);
-    void pending.run(async () => {
-      this.health.set(await health.healthControllerReady().catch(report));
-    });
+    if (this.server) {
+      const health = inject(HealthService);
+      void pending.run(async () => {
+        const ready = await health.healthControllerReady().catch(report);
+        this.health.set(ready);
+        this.state.set(HEALTH, ready);
+      });
+    }
     void pending.run(async () => {
       this.tiles.set(
         await brands
