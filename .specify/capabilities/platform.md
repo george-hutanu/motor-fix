@@ -79,6 +79,7 @@ features:
   - 1201-static-cache-headers
   - 1182-cache-service
   - 1230-qa-harness-laps
+  - 1175-valkey
 ---
 
 # Capability: Platform
@@ -187,9 +188,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-026 — Local development MUST start PostgreSQL with PostGIS and Redis with one `docker compose up`.
+### 1175-FR-001 — Every store the repository starts MUST be Valkey 9 from the `valkey/valkey:9` image: `docker-compose.yml` service `redis`, the `redis` service of the integration job and the mutation workflow, the PR QA boot (through the PR's compose file), `scripts/backup/restore-drill.sh`; the service names `redis`, the environment names `REDIS_URL` and `REDIS_PORT`, the `redis://` scheme and the port 6379 stay as they are, and `scripts/cloud-setup.sh` and `scripts/test-services.ts` go on starting or pulling the service by that name.
 
-_From 421-monorepo-platform._
+_From 1175-valkey._
 
 ### 421-FR-027 — On every pull request CI MUST run install, typecheck, lint, unit tests, the contract check, the build of the affected projects, and a dependency audit of the production dependencies that fails on high and critical findings (the build tooling is kept current by the dependency-update pull requests instead). The API tests against real PostgreSQL and Redis (the integration suite) run on demand and before every release (1170-FR-002, 1170-FR-004).
 
@@ -2015,6 +2016,54 @@ _From 1230-qa-harness-laps._
 
 _From 1230-qa-harness-laps._
 
+### 1175-FR-001 — Every store the repository starts MUST be Valkey 9 from the `valkey/valkey:9` image: `docker-compose.yml` service `redis`, the `redis` service of the integration job and the mutation workflow, the PR QA boot (through the PR's compose file), `scripts/backup/restore-drill.sh`; the service names `redis`, the environment names `REDIS_URL` and `REDIS_PORT`, the `redis://` scheme and the port 6379 stay as they are, and `scripts/cloud-setup.sh` and `scripts/test-services.ts` go on starting or pulling the service by that name.
+
+_From 1175-valkey._
+
+### 1175-FR-002 — Every health check and every binary the repository runs against the store MUST be Valkey's: the workflows' health command `valkey-cli ping`; the no-Docker path of `.claude/scripts/pr-test/services.mjs` starting `valkey-server` and stopping it with `valkey-cli`, with its pid-file process name updated to match.
+
+_From 1175-valkey._
+
+### 1175-FR-003 — Wherever the repository can pass the server its configuration (the compose service's command, the local fallback's command line, the drill's `docker run`), the server MUST run with `maxmemory-policy noeviction`; one integration spec MUST assert the policy of the store it runs against is `noeviction` (a refused `CONFIG GET` fails it naming the store), so the CI service containers, which take no command line, are checked by their default; the local fallback's command line is asserted by a unit test.
+
+_From 1175-valkey._
+
+### 1175-FR-004 — No file in this repository (outside `node_modules`; the specs repo's archived feature folders are not part of it) MUST name a Redis image or binary (`redis:7`, `redis:<n>`, `redis-server`, `redis-cli`) afterwards, documentation included; the harness specs that assert the old strings (`scripts/ci-workflow.adversary.spec.ts`, `scripts/mutation-workflow*.spec.ts`, `.claude/scripts/pr-test/services.spec.mjs`, `adversary.spec.mjs`, `.claude/scripts/cloud-setup*.spec.mjs`) MUST assert the Valkey ones.
+
+_From 1175-valkey._
+
+### 1175-FR-005 — Every cache key MUST carry a time to live: the entries, tags, locks and purge marks of the cache service, the garage-search cache, the active-brands cache, the OAuth flow keys, the rate-limit and attempt counters and the profile-view counters keep theirs, and a key these paths write without one is a defect. A check MUST enforce it: one self-contained integration spec that, on a logical database of its own, drives each of those write paths itself, then scans that database and fails naming every key whose time to live is unset, except keys an allowlist in the check names with a reason (the garage-search generation counter, a version number that must not expire). BullMQ's own `bull:*` keys are out of scope: the check drives only the cache paths named here, and BullMQ bounds its keys by job retention, not by TTL. A lint rule is not practical (a TTL is an argument, not a syntax) and is not added.
+
+_From 1175-valkey._
+
+### 1175-FR-007 — Each process MUST open one command client to the store, created with `enableAutoPipelining: true`, with `connectTimeout: 2000`, `commandTimeout: 2000` and `maxRetriesPerRequest: 1` (the offline queue left on), shared by every command path of that process and closed once, after the paths using it have stopped, at shutdown (api: auth attempts, OAuth flows, the cache service, the search cache, the brand cache, profile views, the live publisher, the health check; worker: the relay's publisher, the insight counters, the data-store reader, the health check); the api MUST open exactly one further connection, the live subscriber; the end-to-end suite's global set-up and the tests keep their own clients. The time limits and failure semantics the existing requirements give those paths (422-FR-009's 2 seconds, 878-FR-007's failed reading that affects no job, 253-FR-011's open stream, ST-1182's fallback to PostgreSQL) MUST be met per call on the shared client, not by a second connection, and their existing tests MUST stay green.
+
+_From 1175-valkey._
+
+### 1175-FR-008 — Every BullMQ connection option, Queue and Worker alike, MUST carry `maxRetriesPerRequest: null`; BullMQ keeps its own connections (a Worker duplicates whatever it is given).
+
+_From 1175-valkey._
+
+### 1175-FR-010 — The integration suite and the live-update tests MUST be green on Valkey 9 before the PR is ready: an on-demand CI run on this branch (`gh workflow run ci.yml --ref 1175-valkey`) with every job green, named in the PR body's test evidence.
+
+_From 1175-valkey._
+
+### 1175-FR-011 — The constitution MUST be amended (`/speckit-constitution`, MINOR bump to 3.3.0) so Principle III names Valkey (the Redis-compatible, BSD-licensed store; the code speaks the Redis protocol and the names `redis` and `REDIS_URL` stay) in place of Redis, and Principles II, IV and VI say Valkey where they say Redis; the Sync Impact Report names ST-1175. Existing capability requirements that say "Redis" are not rewritten: one requirement of this feature states that "Redis" in them means the Valkey server reached through the Redis protocol (Principle I).
+
+_From 1175-valkey._
+
+### 1175-FR-012 — The documentation that names Redis as the given store MUST say Valkey 9 with a dated note naming ST-1175: the specs repo's `docs/reference/stack.md` (the cache, background-work, live-channel, hosting and tests rows), `docs/explanation/architecture/system-overview.md`, decisions A01, A16 and A25 and their index rows, and AGENTS.md's Product and stack paragraph. Decision A07 (the outbox carried by Redis) keeps its text; the store it names is the same role.
+
+_From 1175-valkey._
+
+### 1175-FR-013 — The Railway change, which the repository cannot make, MUST be recorded as the owner's step in `specs/1175-valkey/handoff.md`, the PR's finish comment and a how-to section in the specs repo (`docs/how-to/release.md`): replace the Redis template service with Valkey 9 (`valkey/valkey:9`), set `maxmemory-policy noeviction`, point api's and worker's `REDIS_URL` at it on staging and then production, and watch the `motorfix-redis` dashboard for the swap. The swap empties the store (Principle VI: PostgreSQL is the truth, the outbox relay re-reads from it), so the owner does it in a quiet window with no waiting or delayed BullMQ jobs, or accepts their loss knowingly.
+
+_From 1175-valkey._
+
+### 1175-FR-014 — In the living capabilities, "Redis" names the store role (cache, queues, fan-out, counters) reached through the Redis protocol at `REDIS_URL`; from this feature on, that store is Valkey 9, and a requirement naming Redis is read as naming it.
+
+_From 1175-valkey._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2096,3 +2145,5 @@ _From 1230-qa-harness-laps._
 - `431-FR-008` — superseded by `1159-FR-019` (2026-10-11)
 
 - `450-FR-012` — superseded by `1230-FR-002` (2026-10-15)
+
+- `421-FR-026` — superseded by `1175-FR-001` (2026-10-15)

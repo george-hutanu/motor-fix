@@ -22,6 +22,7 @@ features:
   - 251-monitoring-backups
   - 1024-alert-rules
   - 1182-cache-service
+  - 1175-valkey
 ---
 
 # Capability: Observability
@@ -530,9 +531,9 @@ _From 1024-alert-rules._
 
 _From 1024-alert-rules._
 
-### 1024-FR-007 — `redis.json` MUST hold `redis-unreachable` (`motorfix_datastore_up{store="redis"}` read 0 for 5 minutes), `redis-memory` (`motorfix_redis_memory_used_bytes` over `motorfix_redis_memory_max_bytes` above 80 % where the maximum is above 0, else used memory above 256 MiB, for 5 minutes) and `redis-connections` (`motorfix_redis_clients_connected` above 100 for 5 minutes).
+### 1175-FR-006 — The `redis-memory` alert MUST fire when used memory is above 70 % of the maximum (the 320 MiB floor when the server reports none) for 5 minutes, its summary saying 70 %; the `motorfix-redis` dashboard's memory panel MUST draw the 70 % line against the used-memory series, at 70 % of the 320 MiB floor (224 MiB) because a panel threshold is an absolute number; when the server reports a maximum, the alert's ratio is the authority and the line is a reference only; `infra/observability/inventory.json` MUST keep `redis-memory` on the `redis` entry and `node scripts/observability-inventory.ts` MUST pass. `redis-unreachable` and `redis-connections` stay as they are.
 
-_From 1024-alert-rules._
+_From 1175-valkey._
 
 ### 1024-FR-008 — `infra/observability/inventory.json` MUST list, in place of `"none"`: for the `app` and `railway-service` entries `api`, `worker`, `web`, that service's rule uids; for every `queue` entry with `"alerts": "none"`, `worker-queue-backlog` and `worker-jobs-failed` (the `verification-result` and `quote-timers` entries keep theirs); for `postgresql` and `redis`, their three uids; for every `outside-service` and `endpoint` entry with `"alerts": "none"` whose reason names ST-880, the error-rate and latency uids of the service that calls it (worker: `worker-jobs-failed` and `worker-saturation`) (`dashboard` tells which: `motorfix-api` → api, `motorfix-worker` → worker, `motorfix-web-vitals` and `motorfix-web` → web); every `product-counter` keeps `"none"` with the reason that a count has no failure to alert on and names the rule of the service that reports it. No `reason` MUST name ST-880 afterwards, `web-e2e` and `openfreemap` stay as they are, and `node scripts/observability-inventory.ts` MUST pass.
 
@@ -562,6 +563,10 @@ _From 1024-alert-rules._
 
 _From 1182-cache-service._
 
+### 1175-FR-006 — The `redis-memory` alert MUST fire when used memory is above 70 % of the maximum (the 320 MiB floor when the server reports none) for 5 minutes, its summary saying 70 %; the `motorfix-redis` dashboard's memory panel MUST draw the 70 % line against the used-memory series, at 70 % of the 320 MiB floor (224 MiB) because a panel threshold is an absolute number; when the server reports a maximum, the alert's ratio is the authority and the line is a reference only; `infra/observability/inventory.json` MUST keep `redis-memory` on the `redis` entry and `node scripts/observability-inventory.ts` MUST pass. `redis-unreachable` and `redis-connections` stay as they are.
+
+_From 1175-valkey._
+
 ## Retired
 
 - `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
@@ -572,3 +577,5 @@ _From 1182-cache-service._
 - `879-FR-010` — superseded by `244-FR-018` (2026-10-10)
 
 - `879-FR-010` — superseded by `251-FR-018` (2026-10-10)
+
+- `1024-FR-007` — superseded by `1175-FR-006` (2026-10-15)
