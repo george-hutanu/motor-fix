@@ -11,22 +11,32 @@ import {
 import { RequestsService } from './requests.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
+import { CacheService, cacheKey } from '../../cache/cache.service';
 
 @ApiTags('requests')
 @ApiBearerAuth()
 @Controller('requests')
 export class RequestsController {
-  constructor(private readonly requests: RequestsService) {}
+  constructor(
+    private readonly requests: RequestsService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ type: RequestListDto })
   @ApiBadRequestResponse({ description: 'validation_failed; invalid_cursor' })
   @ApiNotFoundResponse({ description: 'not_found: not a driver' })
-  list(
+  async list(
     @CurrentActor() actor: Actor,
     @Query() query: ListQueryDto,
   ): Promise<RequestListDto> {
-    return this.requests.list(actor, query.cursor);
+    const warmed =
+      actor.role === 'driver' && query.cursor === undefined
+        ? await this.cache.take<RequestListDto>(
+            cacheKey('driver-home', actor.accountId, 'requests'),
+          )
+        : undefined;
+    return warmed ?? this.requests.list(actor, query.cursor);
   }
 
   @Get(':id')

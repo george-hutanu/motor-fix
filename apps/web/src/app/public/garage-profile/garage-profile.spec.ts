@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { HttpErrorResponse } from '@angular/common/http';
-import { PLATFORM_ID, RESPONSE_INIT, TransferState } from '@angular/core';
+import { type HttpContext, HttpErrorResponse } from '@angular/common/http';
+import { PLATFORM_ID, RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -12,9 +12,11 @@ import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
-import { GarageProfile, profileKey } from './garage-profile';
+import { GarageProfile } from './garage-profile';
 import { Consent } from '../../consent/consent';
+import { PUBLIC_READ } from '../../public-read';
 import { PublicLive } from '../live';
+import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
 
 const MOBILE: PublicGarageDto = {
   brandNote: null,
@@ -71,7 +73,7 @@ const api = {
     (_: { id: string; body: { source?: string } }) => Promise.resolve(),
   ),
   publicGaragesControllerBySlug: jest.fn(
-    (query: { slug: string; brand?: string }) =>
+    (query: { slug: string; brand?: string }, _context?: HttpContext) =>
       new Promise<PublicGarageDto>((resolve, reject) => {
         reads.push({
           answer: async (garage) => {
@@ -85,6 +87,13 @@ const api = {
           query,
         });
       }),
+  ),
+};
+
+const prefetch = {
+  take: jest.fn(
+    (_slug: string, _brand: string | undefined): PublicGarageDto | undefined =>
+      undefined,
   ),
 };
 
@@ -113,6 +122,7 @@ beforeEach(async () => {
   api.profileViewsControllerRecord.mockClear();
   consent.track.mockClear();
   live.register.mockClear();
+  prefetch.take.mockReset();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -123,6 +133,7 @@ beforeEach(async () => {
       { provide: GaragesService, useValue: api },
       { provide: PublicLive, useValue: live },
       { provide: Consent, useValue: consent },
+      { provide: ProfilePrefetch, useValue: prefetch },
       { provide: PLATFORM_ID, useValue: 'browser' },
       { provide: RESPONSE_INIT, useValue: response },
     ],
@@ -396,13 +407,32 @@ describe('the price list on the profile', () => {
     expect(prices()?.textContent).toContain('990–1.500 lei');
     expect(prices()?.textContent).not.toContain('890–1.400 lei');
   });
+
+  it('keeps the same section and its switch through the read that follows', async () => {
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
+    const section = prices();
+    section?.querySelector<HTMLElement>('[role="switch"]')?.click();
+    await settle();
+
+    resync.next();
+    await settle();
+    await reads[1]?.answer({ ...FIXED, prices: [BRAKES] });
+
+    expect(reads).toHaveLength(2);
+    expect(prices()).toBe(section);
+    expect(
+      prices()?.querySelector('[role="switch"]')?.getAttribute('aria-checked'),
+    ).toBe('true');
+  });
 });
 
-// The server's answer rides to the browser, so hydration finds the same
-// section it rendered and a switch tapped early is not lost.
+// The server render's answer reaches the browser through the transfer cache,
+// which serves it at once: hydration finds the same section it rendered.
 // @traces 355-price-list-ranges-FR-011
-// @traces 355-price-list-ranges-FR-013
-describe('the price list carried over from the server render', () => {
+// @traces 1200-FR-005
+// @traces 1200-FR-006
+describe('the profile read the server render hands over', () => {
   const BRAKES = {
     durationMinutes: 120,
     fromBani: 89_000,
@@ -414,41 +444,9 @@ describe('the price list carried over from the server render', () => {
   const prices = () =>
     page().querySelector<HTMLElement>('section[data-slot="prices"]');
 
-  it('hands the answer it rendered on the server to the browser', async () => {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter([
-          { component: GarageProfile, path: ':lang/garages/:garage' },
-        ]),
-        { provide: GaragesService, useValue: api },
-        { provide: PublicLive, useValue: live },
-        { provide: Consent, useValue: consent },
-        { provide: Consent, useValue: consent },
-        { provide: PLATFORM_ID, useValue: 'server' },
-        { provide: RESPONSE_INIT, useValue: {} },
-      ],
-    });
-    await TestBed.inject(I18n).enter('public');
-    harness = await RouterTestingHarness.create();
-
-    await open('/ro/garages/service-auto-militari?brand=bmw');
-    const garage = { ...FIXED, prices: [BRAKES] };
-    await reads[0]?.answer(garage);
-
-    expect(
-      TestBed.inject(TransferState).get(
-        profileKey('service-auto-militari', 'bmw'),
-        null,
-      ),
-    ).toEqual(garage);
-  });
-
-  it('shows the carried answer on its first render, with no skeleton', async () => {
-    const garage = { ...FIXED, prices: [BRAKES] };
-    TestBed.inject(TransferState).set(
-      profileKey('service-auto-militari', 'bmw'),
-      garage,
+  it('shows an answer served at once on its first render, with no skeleton', async () => {
+    api.publicGaragesControllerBySlug.mockImplementationOnce(() =>
+      Promise.resolve({ ...FIXED, prices: [BRAKES] }),
     );
 
     await open('/ro/garages/service-auto-militari?brand=bmw');
@@ -457,37 +455,70 @@ describe('the price list carried over from the server render', () => {
     expect(prices()?.textContent).toContain('890–1.400 lei');
   });
 
-  it('keeps the same section and its switch through the read that follows', async () => {
-    const garage = { ...FIXED, prices: [BRAKES] };
-    TestBed.inject(TransferState).set(
-      profileKey('service-auto-militari', 'bmw'),
-      garage,
-    );
+  // A signed-in visitor's token would keep the browser from the cached
+  // answer, so the profile goes out as a public read.
+  // @traces 1200-FR-004
+  it('reads the profile once, as a public read', async () => {
     await open('/ro/garages/service-auto-militari?brand=bmw');
-    const section = prices();
-    section?.querySelector<HTMLElement>('[role="switch"]')?.click();
-    await settle();
 
-    await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
+    expect(api.publicGaragesControllerBySlug).toHaveBeenCalledTimes(1);
+    const [query, context] = api.publicGaragesControllerBySlug.mock.calls[0];
+    expect(query).toEqual({ brand: 'bmw', slug: 'service-auto-militari' });
+    expect(context?.get(PUBLIC_READ)).toBe(true);
+  });
+});
 
-    expect(prices()).toBe(section);
-    expect(
-      prices()?.querySelector('[role="switch"]')?.getAttribute('aria-checked'),
-    ).toBe('true');
+// @traces 1169-FR-008
+describe('a profile pre-fetched from the results', () => {
+  const send = (kind: string) =>
+    messages.next({ at: '2026-10-08T12:00:00.000Z', id: 'x', kind });
+
+  it('draws the pre-fetched answer with no read before it', async () => {
+    prefetch.take.mockReturnValue(FIXED);
+
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+
+    expect(prefetch.take).toHaveBeenCalledWith('service-auto-militari', 'bmw');
+    expect(page().querySelector('[aria-busy="true"]')).toBeNull();
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari',
+    );
+    expect(reads).toHaveLength(0);
   });
 
-  it('uses a carried answer once, so a later visit reads afresh', async () => {
-    TestBed.inject(TransferState).set(
-      profileKey('service-auto-militari', undefined),
-      { ...FIXED, prices: [BRAKES] },
-    );
+  it('joins the stream and reads again on its messages, as today', async () => {
+    jest.useFakeTimers();
+    prefetch.take.mockReturnValue(FIXED);
     await open('/ro/garages/service-auto-militari');
 
-    expect(
-      TestBed.inject(TransferState).hasKey(
-        profileKey('service-auto-militari', undefined),
-      ),
-    ).toBe(false);
+    expect(live.register).toHaveBeenLastCalledWith({
+      brand: undefined,
+      garage: 'g-2',
+    });
+    send('garage.updated');
+    jest.advanceTimersByTime(300);
+    await settle();
+
+    expect(reads).toHaveLength(1);
+    await reads[0]?.answer({ ...FIXED, name: 'Service Auto Militari Nou' });
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe(
+      'Service Auto Militari Nou',
+    );
+  });
+
+  it('reads once as today when nothing was pre-fetched', async () => {
+    await open('/ro/garages/service-auto-militari');
+
+    expect(reads).toHaveLength(1);
+    expect(page().querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('says a garage it cannot find as today', async () => {
+    await open('/ro/garages/nowhere');
+    await reads[0]?.fail(404);
+
+    expect(page().querySelector('mf-gone')).not.toBeNull();
+    expect(response.status).toBe(404);
   });
 });
 

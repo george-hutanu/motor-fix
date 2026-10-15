@@ -32,6 +32,7 @@ import {
   SearchModule,
   StorageModule,
   verificationConfig,
+  WarmModule,
   WorkshopModule,
 } from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
@@ -90,6 +91,7 @@ export class AppModule {
         CatalogueModule,
         SearchModule,
         QuotesModule,
+        WarmModule,
         WorkshopModule,
         PlacesModule.register(placesConfig(env.APP_ENV, process.env)),
         ProfileViewsModule,

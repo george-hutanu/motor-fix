@@ -310,7 +310,7 @@ describe('PublicLive', () => {
 describe('publicLiveResource', () => {
   const PROFILE = ['garage.updated', 'review.posted'] as const;
 
-  it('reads at once, and again when the stream opens', async () => {
+  it('reads at once, and not again when the stream first opens: the view has just read its data', async () => {
     setUp();
     const load = jest.fn(async () => ({ name: 'Atelier' }));
     const ref = runInInjectionContext(view(), () =>
@@ -324,7 +324,8 @@ describe('publicLiveResource', () => {
     await settle();
 
     expect(ref.value()).toEqual({ name: 'Atelier' });
-    expect(load).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(load).toHaveBeenCalledTimes(1);
   });
 
   it('re-reads on its kinds about its object, once for a burst, and not for another object', async () => {

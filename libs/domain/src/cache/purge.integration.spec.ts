@@ -119,9 +119,11 @@ describe('purging for an event audience', () => {
   it('purges a garage’s tag for its public channel, and the search tag once', async () => {
     const [a, b] = [randomUUID(), randomUUID()];
 
-    expect(
-      await tagged([`garage:${a}`, `public:garage:${a}`, `public:garage:${b}`]),
-    ).toEqual([`garage:${a}`, `garage:${b}`, 'search']);
+    expect(await tagged([`public:garage:${a}`, `public:garage:${b}`])).toEqual([
+      `garage:${a}`,
+      `garage:${b}`,
+      'search',
+    ]);
     expect(await tagged(['public:search'])).toEqual(['search']);
     expect(await tagged(['public:search:brand-1'])).toEqual(['search']);
   });
@@ -131,12 +133,86 @@ describe('purging for an event audience', () => {
 
     expect(
       await tagged([
-        `garage:${id}`,
-        `account:${id}`,
+        `mechanic:${id}`,
         ` public:garage:${id}`,
+        ` account:${id}`,
         'public:garage',
         '',
       ]),
     ).toEqual([]);
+  });
+});
+
+// @traces 1169-FR-006
+describe('purging the sign-in warm for an event audience', () => {
+  const warmed = async (key: string, tags: string[]) =>
+    cache.warm(() =>
+      cache.read({
+        key,
+        read: async () => ({ tags, value: { items: [] } }),
+        soft: 90,
+        stale: false,
+      }),
+    );
+
+  it('purges the warm entries of every account and garage the event reaches', async () => {
+    const [account, garage, owner] = [randomUUID(), randomUUID(), randomUUID()];
+    const cars = cacheKey('driver-home', account, 'cars');
+    const requests = cacheKey('driver-home', account, 'requests');
+    const waiting = cacheKey('garage-home', garage, 'waiting');
+    const untouched = cacheKey('driver-home', randomUUID(), 'cars');
+    await warmed(cars, [`warm:account:${account}`]);
+    await warmed(requests, [`warm:account:${account}`]);
+    await warmed(waiting, [`warm:garage:${garage}`, `warm:account:${owner}`]);
+    await warmed(untouched, [`warm:account:${randomUUID()}`]);
+    const before = await purges();
+    const seen: string[] = [];
+
+    const purged = await purgeAudience(
+      redis,
+      [`account:${account}`, `garage:${garage}`],
+      (tag) => seen.push(tag),
+    );
+
+    expect(seen).toEqual([`warm:account:${account}`, `warm:garage:${garage}`]);
+    expect(purged.sort()).toEqual([cars, requests, waiting].sort());
+    expect(await redis.exists(cars, requests, waiting)).toBe(0);
+    expect(await redis.exists(untouched)).toBe(1);
+    const after = await purges();
+    expect((after['driver-home'] ?? 0) - (before['driver-home'] ?? 0)).toBe(2);
+    expect((after['garage-home'] ?? 0) - (before['garage-home'] ?? 0)).toBe(1);
+  });
+
+  it('purges them beside the public tags, whatever else the audience holds', async () => {
+    const id = randomUUID();
+    const seen: string[] = [];
+
+    await purgeAudience(
+      redis,
+      [
+        `garage:${id}`,
+        `public:garage:${id}`,
+        `mechanic:${id}`,
+        `account:${id}`,
+      ],
+      (tag) => seen.push(tag),
+    );
+
+    expect(seen).toEqual([
+      `warm:garage:${id}`,
+      `warm:account:${id}`,
+      `garage:${id}`,
+      'search',
+    ]);
+  });
+
+  it('throws when Redis refuses the purge, so the relay retries the event', async () => {
+    const broken = {
+      eval: () => Promise.reject(new Error('Connection is closed.')),
+    };
+
+    await expect(
+      purgeAudience(broken, [`account:${randomUUID()}`]),
+    ).rejects.toThrow('Connection is closed.');
   });
 });

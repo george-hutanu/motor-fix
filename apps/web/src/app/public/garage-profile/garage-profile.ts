@@ -5,12 +5,10 @@ import {
   computed,
   effect,
   inject,
-  makeStateKey,
   PendingTasks,
   PLATFORM_ID,
   RESPONSE_INIT,
   signal,
-  TransferState,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -36,7 +34,9 @@ import { sourceOf } from './view-source';
 import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
+import { publicRead } from '../../public-read';
 import { publicLiveResource } from '../live';
+import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
 
 // What can change on a garage's page: the garage, its reviews, its
 // verification, prices, mechanics, facilities and response figures.
@@ -56,11 +56,6 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
   search: 'results',
   shared_link: 'shared_link',
 };
-
-// The answer the server render showed, carried to the browser so hydration
-// finds the same page instead of a skeleton.
-export const profileKey = (slug: string, brand: string | undefined) =>
-  makeStateKey<PublicGarageDto>(`garage-profile:${slug}:${brand ?? ''}`);
 
 @Component({
   imports: [
@@ -89,7 +84,7 @@ export class GarageProfile {
   private readonly consent = inject(Consent);
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
-  private readonly state = inject(TransferState);
+  private readonly prefetch = inject(ProfilePrefetch);
   protected readonly i18n = inject(I18n);
 
   private readonly slug = toSignal(
@@ -104,6 +99,9 @@ export class GarageProfile {
   // The gone status last read, so a gone view knows 404 from 410; any other
   // failure leaves it as it was.
   private readonly status = signal<number | undefined>(undefined);
+  // A pre-fetched answer stands in for the first read; the stream's messages
+  // read again as on any other open.
+  private prefetched: PublicGarageDto | undefined;
 
   protected readonly profile: LiveView<PublicGarageDto> = publicLiveResource(
     () => this.read(),
@@ -113,7 +111,7 @@ export class GarageProfile {
       garage: this.profile?.value()?.id,
     }),
     undefined,
-    this.carried(),
+    this.takePrefetched(),
   );
   protected readonly garage = this.profile.value;
   // What the dial says, announced politely when a re-read changes it.
@@ -167,13 +165,15 @@ export class GarageProfile {
     });
   }
 
-  // The server's answer for this address, used once: a later visit reads afresh.
-  private carried(): PublicGarageDto | undefined {
+  // A profile pre-fetched from the results, shown at once; after a server
+  // render the transfer cache answers the first read instead.
+  private takePrefetched(): PublicGarageDto | undefined {
     if (!this.browser) return undefined;
-    const key = profileKey(untracked(this.slug), untracked(this.brand));
-    const garage = this.state.get(key, null) ?? undefined;
-    this.state.remove(key);
-    return garage;
+    this.prefetched = this.prefetch.take(
+      untracked(this.slug),
+      untracked(this.brand),
+    );
+    return this.prefetched;
   }
 
   // One view per garage opened, sent once it is known to be there and never
@@ -198,18 +198,23 @@ export class GarageProfile {
   // A read the address moved away from while it ran is read again for the
   // address shown now, so a late answer never fills another garage's page.
   private read(): Promise<PublicGarageDto> {
+    const prefetched = this.prefetched;
+    this.prefetched = undefined;
+    if (prefetched) return Promise.resolve(prefetched);
     const slug = untracked(this.slug);
     const brand = untracked(this.brand);
     const moved = () =>
       slug !== untracked(this.slug) || brand !== untracked(this.brand);
     const done = this.pending.add();
     return this.garages
-      .publicGaragesControllerBySlug({ slug, ...(brand ? { brand } : {}) })
+      .publicGaragesControllerBySlug(
+        { slug, ...(brand ? { brand } : {}) },
+        publicRead(),
+      )
       .then(
         (garage) => {
           if (moved()) return this.read();
           this.status.set(undefined);
-          if (!this.browser) this.state.set(profileKey(slug, brand), garage);
           return garage;
         },
         (failure: unknown) => {

@@ -23,6 +23,7 @@ features:
   - 1024-alert-rules
   - 1182-cache-service
   - 1175-valkey
+  - 1169-prefetch-intent
 ---
 
 # Capability: Observability
@@ -562,6 +563,14 @@ _From 1024-alert-rules._
 ### 1182-FR-014 — The cache MUST be observable: one counter with one count per read kind (`profile`, `home`, `popular-brands`) and outcome — `hit`, `miss`, `stale` (served past the soft expiry), `coalesced` (a concurrent read served by another's call), `negative` (a remembered not-found or empty), `fallback` (Redis unavailable, the database answered), `purge` and `warm` — replacing `motorfix_garage_profile_cache_total`; the inventory lists it with its panel and alert or the reason none is needed; the API dashboard gains a panel with hit rate, stale serves and stampedes avoided (the `coalesced` count).
 
 _From 1182-cache-service._
+
+### 1169-FR-011 — The cache counter `motorfix_cache_total{kind, outcome}` MUST gain the kinds `driver-home` and `garage-home` with the outcomes `warm` (an entry stored), `hit` (an entry taken) and `miss` (a matching read found no entry), and one histogram, `motorfix_cache_warm_read_seconds{kind}`, MUST record each warm read's duration (the latency a hit saves). Metric labels and the collector's measurement carry only the kind or path and the outcome, never an account id, garage id or slug, and the skipped-warm warning names no account data. The browser MUST report each profile pre-fetch to the collector with the path `profile`, its outcome (`fetched`, `cancelled`, `hit`, `expired`, `skipped`) and, for a fetch, its duration.
+
+_From 1169-prefetch-intent._
+
+### 1169-FR-012 — The API dashboard (`infra/observability/grafana/dashboards/motorfix-api.json`) MUST gain one panel "Pre-fetch: warms, hits, misses, hit rate and latency saved" over the server paths, and the web-vitals dashboard one panel for the `profile` path from the collector's data. `infra/observability/alerts/api.json` MUST gain `api-prefetch-hit-rate`, firing per kind when a server path's hit rate (hits / warms) stays under 30% for 60 minutes with at least 50 warms, and `web.json` `web-prefetch-hit-rate` for the browser path by the same rule, its hit rate being `hit / fetched` (recorded as deferred, the panel standing, if the collector's data cannot be alerted on: see Assumptions); `infra/observability/inventory.json` MUST list the histogram, the two alerts and the collector's new measurement, and `scripts/observability-inventory.ts` and `scripts/alert-rules.spec.ts` MUST pass.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 

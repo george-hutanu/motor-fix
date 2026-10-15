@@ -1,3 +1,4 @@
+import { HTTP_TRANSFER_CACHE_ORIGIN_MAP } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -18,6 +19,14 @@ import { apiInternalUrl } from '../api-url';
 
 const publicUrl = publicWebUrl();
 
+// The API's private origin, the key the browser's origin replaces.
+const apiOrigin = () => {
+  const url = apiInternalUrl();
+  if (!URL.canParse(url))
+    throw new Error('API_INTERNAL_URL must be an absolute URL');
+  return new URL(url).origin;
+};
+
 const serverConfig: ApplicationConfig = {
   providers: [
     provideServerRendering(withRoutes(serverRoutes)),
@@ -31,7 +40,15 @@ const serverConfig: ApplicationConfig = {
       });
     }),
     ...(publicUrl
-      ? [{ provide: SITE_ORIGIN, useValue: publicUrl.origin }]
+      ? [
+          { provide: SITE_ORIGIN, useValue: publicUrl.origin },
+          // Each read handed to the browser is keyed by the address the
+          // browser will ask, not the API's private one.
+          {
+            provide: HTTP_TRANSFER_CACHE_ORIGIN_MAP,
+            useValue: { [apiOrigin()]: publicUrl.origin },
+          },
+        ]
       : []),
   ],
 };

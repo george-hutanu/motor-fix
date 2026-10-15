@@ -41,9 +41,12 @@ import { HomePreview } from './preview/preview';
 import { garageWhere } from './where/where';
 import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
+import { publicRead } from '../public-read';
 
+// The server's ready answer, kept for every Home of the visit: the browser
+// cannot ask the API's ready check, since the web server answers its own on
+// the page's origin with the status alone.
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
-export const TILES = makeStateKey<BrandDto[] | null>('tiles');
 
 const CYCLE_MS = 5000;
 
@@ -85,7 +88,7 @@ export class Home {
   private cityAsked: string | null = null;
   protected readonly i18n = inject(I18n);
   protected readonly health = signal(this.state.get(HEALTH, null));
-  protected readonly tiles = signal(this.state.get(TILES, null) ?? []);
+  protected readonly tiles = signal<BrandDto[]>([]);
   private readonly searched = signal<BrandDto | undefined>(undefined);
   protected readonly shown = computed(() => {
     const searched = this.searched();
@@ -207,31 +210,24 @@ export class Home {
       onCleanup(() => clearInterval(timer));
     });
 
+    // The tiles are read on both sides: in the browser, right after a server
+    // render, the transfer cache answers with what the server read.
     const brands = inject(BrandsService);
-    if (!this.server) {
-      // Opened from another screen in the app: no server render handed the
-      // tiles over, so the browser reads them itself.
-      if (!this.state.hasKey(TILES)) {
-        void brands
-          .popularBrandsControllerTiles({ limit: 8 })
-          .catch(() => [])
-          .then((tiles) => this.tiles.set(tiles));
-      }
-      return;
-    }
-    const health = inject(HealthService);
     const pending = inject(PendingTasks);
+    if (this.server) {
+      const health = inject(HealthService);
+      void pending.run(async () => {
+        const ready = await health.healthControllerReady().catch(report);
+        this.health.set(ready);
+        this.state.set(HEALTH, ready);
+      });
+    }
     void pending.run(async () => {
-      const ready = await health.healthControllerReady().catch(report);
-      this.health.set(ready);
-      this.state.set(HEALTH, ready);
-    });
-    void pending.run(async () => {
-      const tiles = await brands
-        .popularBrandsControllerTiles({ limit: 8 })
-        .catch(() => []);
-      this.tiles.set(tiles);
-      this.state.set(TILES, tiles);
+      this.tiles.set(
+        await brands
+          .popularBrandsControllerTiles({ limit: 8 }, publicRead())
+          .catch(() => []),
+      );
     });
   }
 

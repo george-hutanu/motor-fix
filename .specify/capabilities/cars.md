@@ -1,10 +1,11 @@
 ---
 capability: cars
-updated: 2026-10-11
+updated: 2026-10-15
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
   - 092-edit-remove-car
+  - 1169-prefetch-intent
 ---
 
 # Capability: Cars
@@ -132,6 +133,10 @@ _From 092-edit-remove-car._
 ### 092-FR-014 — Tests MUST cover: every field editable within the add-dialog limits and each limit refused; the plate added, changed and cleared and absent from events, audit values and other accounts' answers; a date change resets the flags and a sent stage never repeats for the same date; a cleared date cancels its reminder; removal refused with an open request in each of the four states and allowed in `done` and `closed`; removed cars absent from `GET /api/v1/cars`, from the 20-car count and from the reminder run; 404 for another driver's car and for a removed car; 409 on a stale version; the audit entries and events written in the same transaction (a failing audit write rolls the change back) (Jest, on real PostgreSQL where the repository is used); the card menu, the three due-date lines and their grey lines, the edit dialog pre-filled, the lower-kilometres question and the removal confirmation with its refusal, in both languages (Jest); end to end (Playwright): a driver edits a car's ITP date and sees the line change; removes a car and sees it gone from Mașinile mele and the home page's cars panel.
 
 _From 092-edit-remove-car._
+
+### 1169-FR-003 — For a session opened as a driver the warm MUST read, as the home reads them, the account's car list (`GET /api/v1/cars`, first page, no query) and request list (`GET /api/v1/requests`, first page, no query), each stored under kind `driver-home`, the account id and the list's name, tagged `warm:account:{accountId}`.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 

@@ -974,6 +974,71 @@
       }
     },
     {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Pre-fetch: warms, hits, misses, hit rate and latency saved",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 49
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, outcome) (increase(motorfix_cache_total{service_name=\"api\", deployment_environment=\"$env\", kind=~\"driver-home|garage-home\", outcome=~\"warm|hit|miss\"}[1h]))",
+          "legendFormat": "{{outcome}} {{kind}} per hour"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind) (increase(motorfix_cache_total{service_name=\"api\", deployment_environment=\"$env\", kind=~\"driver-home|garage-home\", outcome=\"hit\"}[1h])) / sum by (kind) (increase(motorfix_cache_total{service_name=\"api\", deployment_environment=\"$env\", kind=~\"driver-home|garage-home\", outcome=\"warm\"}[1h]))",
+          "legendFormat": "hit rate {{kind}}"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "histogram_quantile(0.75, sum by (kind, le) (rate(motorfix_cache_warm_read_seconds_bucket{service_name=\"api\", deployment_environment=\"$env\", kind=~\"driver-home|garage-home\"}[$__rate_interval])))",
+          "legendFormat": "latency saved p75 {{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": 25,
       "type": "row",
       "title": "Logs and traces",

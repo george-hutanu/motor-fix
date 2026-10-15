@@ -1,4 +1,12 @@
-import { Component, computed, inject, input } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  input,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
 import {
@@ -9,6 +17,10 @@ import {
   TranslatePipe,
 } from '@motor-fix/i18n';
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
+
+import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
+
+const REST_MS = 100;
 
 // Whole keys, so the workspace check finds each one.
 const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
@@ -30,6 +42,50 @@ export class ResultCard {
 
   readonly brand = input.required<BrandRefDto>();
   readonly garage = input.required<ListedGarageDto>();
+
+  constructor() {
+    const prefetch = inject(ProfilePrefetch);
+    const host: HTMLElement = inject(ElementRef).nativeElement;
+    const destroyRef = inject(DestroyRef);
+    const want = () => prefetch.want(this.garage().slug, this.brand().slug);
+    // A pointer resting on the card, a touch on it, or the card scrolled into
+    // view all say it is about to be opened. A touch also ends in a
+    // pointerleave, which must not cancel what it started.
+    afterNextRender(() => {
+      let rest: ReturnType<typeof setTimeout> | undefined;
+      const enter = (event: Event) => {
+        if ((event as PointerEvent).pointerType === 'touch') return;
+        clearTimeout(rest);
+        rest = setTimeout(want, REST_MS);
+      };
+      const leave = (event: Event) => {
+        if ((event as PointerEvent).pointerType === 'touch') return;
+        clearTimeout(rest);
+        prefetch.cancel(this.garage().slug, this.brand().slug);
+      };
+      host.addEventListener('pointerenter', enter);
+      host.addEventListener('pointerleave', leave);
+      host.addEventListener('touchstart', want, { passive: true });
+      // The first delivery is where the card stood when drawn: on screen
+      // then is not intent, only coming into view later is.
+      let drawn = false;
+      const seen =
+        typeof IntersectionObserver === 'function'
+          ? new IntersectionObserver((entries) => {
+              if (drawn && entries.some((e) => e.isIntersecting)) want();
+              drawn = true;
+            })
+          : undefined;
+      seen?.observe(host);
+      destroyRef.onDestroy(() => {
+        clearTimeout(rest);
+        seen?.disconnect();
+        host.removeEventListener('pointerenter', enter);
+        host.removeEventListener('pointerleave', leave);
+        host.removeEventListener('touchstart', want);
+      });
+    });
+  }
 
   protected readonly initials = computed(() =>
     this.garage()
