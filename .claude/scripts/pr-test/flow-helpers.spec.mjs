@@ -3,7 +3,9 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { SEEDED } from './endpoints.mjs';
-import { accounts, openSheet, stepButton, waitForText } from './flow-helpers.mjs';
+import { JSDOM } from 'jsdom';
+
+import { accounts, openSheet, SHEET_CONTENT, stepButton, waitForText } from './flow-helpers.mjs';
 
 // Fakes that record what was asked of the page, in the order it was asked.
 function fakePage({ visible = true } = {}) {
@@ -51,9 +53,20 @@ describe('openSheet', () => {
     await openSheet(page, locator('button#filters'));
     assert.deepEqual(calls[0], ['click', 'button#filters']);
     assert.equal(calls[1][0], 'waitFor');
-    assert.match(calls[1][1], /^\[data-slot="sheet-content"\]\[data-state="open"\] > \*/);
+    assert.equal(calls[1][1], `${SHEET_CONTENT}.first()`);
     assert.equal(calls[1][2].state, 'visible');
     assert.equal(calls.length, 2);
+  });
+
+  // The app opens its drawers and bottom sheets through @motor-fix/overlays, whose panel carries the kit's
+  // class but none of the kit sheet's data attributes; a kit sheet that is closing must not count.
+  it("finds the content of the app's own overlay panel and of an open kit sheet, never a closed one", () => {
+    const { document } = new JSDOM(`
+      <mf-overlay-panel class="spartan-sheet-content mf-overlay-drawer" data-side="right"><header id="panel">Notificări</header></mf-overlay-panel>
+      <hlm-sheet-content class="spartan-sheet-content" data-slot="sheet-content" data-state="open"><div id="kit">x</div></hlm-sheet-content>
+      <hlm-sheet-content class="spartan-sheet-content" data-slot="sheet-content" data-state="closed"><div id="closing">x</div></hlm-sheet-content>
+    `).window;
+    assert.deepEqual([...document.querySelectorAll(SHEET_CONTENT)].map((e) => e.id), ['panel', 'kit']);
   });
 
   it('takes the trigger as a selector too', async () => {

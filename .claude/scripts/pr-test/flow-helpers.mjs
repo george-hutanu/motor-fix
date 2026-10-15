@@ -16,6 +16,12 @@ export async function waitForText(page, text, ms = WAIT_MS) {
 }
 
 /**
+ * The content of an open sheet: the app's own overlay panel (@motor-fix/overlays, which carries the kit's class
+ * and none of its data attributes) or a kit sheet that is not closing.
+ */
+export const SHEET_CONTENT = '.spartan-sheet-content:not([data-state="closed"]) > *';
+
+/**
  * Clicks `trigger` (a locator or a selector) and resolves once the open sheet shows content. The sheet's own
  * box is a fixed overlay that can measure empty while it animates in, so only its content is waited for.
  */
@@ -23,7 +29,7 @@ export async function openSheet(page, trigger, ms = WAIT_MS) {
   const button = typeof trigger === "string" ? page.locator(trigger) : trigger;
   await button.click();
   try {
-    await page.locator('[data-slot="sheet-content"][data-state="open"] > *').first().waitFor({ state: "visible", timeout: ms });
+    await page.locator(SHEET_CONTENT).first().waitFor({ state: "visible", timeout: ms });
   } catch {
     throw new Error(`the sheet opened by ${typeof trigger === "string" ? trigger : "the trigger"} showed no content within ${ms} ms`);
   }
