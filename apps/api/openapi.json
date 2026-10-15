@@ -2720,6 +2720,83 @@
         ]
       }
     },
+    "/api/v1/quotes/{id}/accept": {
+      "post": {
+        "operationId": "AcceptController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per acceptance the driver means; a repeat answers the first booking",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The key accepted before: the booking as it reads now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Accepted now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, historyShared or key"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the driver’s quote"
+          },
+          "409": {
+            "description": "invalid_transition: the quote is not waiting, has expired or its garage is suspended, or the request is not quoted; booking_pending: the request already has a booking; slot_passed: the proposed time has passed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Accept a quote: a booking waits for the garage",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -8880,6 +8957,15 @@
           "durationMinutes",
           "slot"
         ]
+      },
+      "AcceptQuoteDto": {
+        "type": "object",
+        "properties": {
+          "historyShared": {
+            "type": "boolean",
+            "default": false
+          }
+        }
       },
       "JobSummaryDto": {
         "type": "object",

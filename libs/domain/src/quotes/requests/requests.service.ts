@@ -1,5 +1,4 @@
 import type {
-  BookingDto,
   RequestDto,
   RequestListDto,
   RequestSummaryDto,
@@ -9,7 +8,6 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type {
-  Booking,
   Garage,
   GarageResponseStats,
   JobType,
@@ -25,6 +23,7 @@ import {
 import { DECLINE_UNDO_MINUTES } from '../quotes-config';
 import {
   assertCursor,
+  bookingOf,
   garageRef,
   iso,
   jobsOf,
@@ -56,23 +55,6 @@ const summaryOf = (row: SummaryRow): RequestSummaryDto => ({
   jobs: jobsOf(row.jobs),
   quotesCount: row._count.quotes,
   status: row.status,
-});
-
-const bookingOf = (booking: Booking & { garage: Garage }): BookingDto => ({
-  cancelledAt: iso(booking.cancelledAt),
-  cancelledBySide: booking.cancelledBySide,
-  cancelReason: booking.cancelReason,
-  completedAt: iso(booking.completedAt),
-  confirmBy: booking.confirmBy.toISOString(),
-  confirmedAt: iso(booking.confirmedAt),
-  createdAt: booking.createdAt.toISOString(),
-  durationMinutes: booking.durationMinutes,
-  garage: garageRef(booking.garage),
-  id: booking.id,
-  noShowAt: iso(booking.noShowAt),
-  quoteId: booking.quoteId,
-  startsAt: booking.startsAt.toISOString(),
-  status: booking.status,
 });
 
 // The driver's own requests. A garage is only its name and page; a decline

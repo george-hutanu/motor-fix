@@ -1,4 +1,5 @@
 import type {
+  BookingDto,
   CarSnapshotDto,
   GarageCloseReason,
   GarageRefDto,
@@ -97,6 +98,26 @@ export const garageRef = (garage: Garage): GarageRefDto => ({
   id: garage.id,
   name: garage.name,
   slug: garage.slug,
+});
+
+// A booking as its driver reads it.
+export const bookingOf = (
+  booking: Booking & { garage: Garage },
+): BookingDto => ({
+  cancelledAt: iso(booking.cancelledAt),
+  cancelledBySide: booking.cancelledBySide,
+  cancelReason: booking.cancelReason,
+  completedAt: iso(booking.completedAt),
+  confirmBy: booking.confirmBy.toISOString(),
+  confirmedAt: iso(booking.confirmedAt),
+  createdAt: booking.createdAt.toISOString(),
+  durationMinutes: booking.durationMinutes,
+  garage: garageRef(booking.garage),
+  id: booking.id,
+  noShowAt: iso(booking.noShowAt),
+  quoteId: booking.quoteId,
+  startsAt: booking.startsAt.toISOString(),
+  status: booking.status,
 });
 
 export const quoteOf = (

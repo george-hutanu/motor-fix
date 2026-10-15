@@ -9,6 +9,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { acceptControllerAccept } from '../fn/quotes/accept-controller-accept';
+import { AcceptControllerAccept$Params } from '../fn/quotes/accept-controller-accept';
+import { BookingDto } from '../models/booking-dto';
 import { GarageQuoteDto } from '../models/garage-quote-dto';
 import { quotesControllerSend } from '../fn/quotes/quotes-controller-send';
 import { QuotesControllerSend$Params } from '../fn/quotes/quotes-controller-send';
@@ -50,6 +53,39 @@ export class QuotesService extends BaseService {
   quotesControllerSend(params: QuotesControllerSend$Params, context?: HttpContext): Promise<GarageQuoteDto> {
     const resp = this.quotesControllerSend$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageQuoteDto>): GarageQuoteDto => r.body);
+  }
+
+  /** Path part for operation `acceptControllerAccept()` */
+  static readonly AcceptControllerAcceptPath = '/api/v1/quotes/{id}/accept';
+
+  /**
+   * Accept a quote: a booking waits for the garage.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `acceptControllerAccept()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  acceptControllerAccept$Response(params: AcceptControllerAccept$Params, context?: HttpContext): Promise<StrictHttpResponse<BookingDto>> {
+    const obs = acceptControllerAccept(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Accept a quote: a booking waits for the garage.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `acceptControllerAccept$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  acceptControllerAccept(params: AcceptControllerAccept$Params, context?: HttpContext): Promise<BookingDto> {
+    const resp = this.acceptControllerAccept$Response(params, context);
+    return resp.then((r: StrictHttpResponse<BookingDto>): BookingDto => r.body);
   }
 
 }
