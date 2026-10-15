@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// ST-1175 moved the store to Valkey 9. The repository's own documents say so
+// The store moved to Valkey 9. The repository's own documents say so
 // on every run; the specs repo's pages only where its clone is checked out
 // (a laptop, not CI, which never reads specs).
 

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
+import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
 import { borrowStore, returnStore } from './store';
@@ -60,6 +61,26 @@ describe('the store connection', () => {
 
     expect(redis.disconnect).toHaveBeenCalledTimes(1);
     expect(redis.quit).not.toHaveBeenCalled();
+  });
+
+  // @traces 1175-FR-007
+  it('logs a down store once until it is back, and never lets the error escape', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const redis = borrowStore('redis://flaky:6379');
+    const handler = (event: string) =>
+      (redis.on as jest.Mock).mock.calls.find(([name]) => name === event)?.[1];
+
+    handler('error')(new Error('ECONNREFUSED'));
+    handler('error')(new Error('ECONNREFUSED'));
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    handler('ready')();
+    handler('error')(new Error('ETIMEDOUT'));
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenLastCalledWith('cannot reach the store: ETIMEDOUT');
+
+    warn.mockRestore();
+    await returnStore(redis);
   });
 
   // @traces 1175-FR-007
