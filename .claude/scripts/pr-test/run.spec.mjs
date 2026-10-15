@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { filesBetween, flowArgs, parseArgs, testsCommand } from './run.mjs';
+import { appLaunchEnv, filesBetween, flowArgs, parseArgs, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -166,6 +166,18 @@ describe('run: a route the sweep cannot open is refused before anything starts',
       assert.match(r.stderr, /\/app\/driver: .*@role/);
       assert.equal(calls(), '');
     }
+  });
+});
+
+// @traces 1230-FR-001
+describe('run: what each app is launched with', () => {
+  it('gives the worker the web address the api and the web app get, so every notification consumer is on', () => {
+    const env = appLaunchEnv({ apiPort: 3100, webPort: 4100, workerPort: 3200, apiURL: 'http://127.0.0.1:3100', webURL: 'http://127.0.0.1:4100' });
+    assert.equal(env.worker.PUBLIC_WEB_URL, 'http://127.0.0.1:4100');
+    assert.equal(env.worker.PUBLIC_WEB_URL, env.api.PUBLIC_WEB_URL);
+    assert.equal(env.worker.PUBLIC_WEB_URL, env.web.PUBLIC_WEB_URL);
+    assert.deepEqual([env.api.PORT, env.web.PORT, env.worker.PORT], ['3100', '4100', '3200']);
+    assert.equal(env.web.API_INTERNAL_URL, 'http://127.0.0.1:3100');
   });
 });
 

@@ -100,6 +100,16 @@ export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }
   ...apiHealth(apiURL),
 });
 
+/**
+ * What each app is launched with beside the shared env: its port, and the web app's address wherever a
+ * notification or an e-mail links to it (the worker's consumers stay off without it).
+ */
+export const appLaunchEnv = ({ apiPort, webPort, workerPort, apiURL, webURL }) => ({
+  api: { PORT: String(apiPort), PUBLIC_WEB_URL: webURL },
+  web: { PORT: String(webPort), API_INTERNAL_URL: apiURL, PUBLIC_WEB_URL: webURL },
+  worker: { PORT: String(workerPort), PUBLIC_WEB_URL: webURL },
+});
+
 /** The affected unit tests between the base and the head, never answered from the Nx cache. */
 export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
 
@@ -331,10 +341,10 @@ async function main(argv) {
       });
       booted.push(name);
     };
-    // The API writes links to the web app into its e-mails.
-    launch("api", { PORT: String(apiPort), PUBLIC_WEB_URL: webURL });
-    launch("web", { PORT: String(webPort), API_INTERNAL_URL: apiURL, PUBLIC_WEB_URL: webURL });
-    if (apps.worker) launch("worker", { PORT: String(workerPort) });
+    const extras = appLaunchEnv({ apiPort, webPort, workerPort, apiURL, webURL });
+    launch("api", extras.api);
+    launch("web", extras.web);
+    if (apps.worker) launch("worker", extras.worker);
 
     phase = "health";
     const live = [
