@@ -596,6 +596,191 @@ describe('step 5, the closed days', () => {
   });
 });
 
+describe('step 5, the row messages under hostile use', () => {
+  const ORDER = 'Ora de închidere trebuie să fie după deschidere';
+  const BREAK = 'Pauza trebuie să fie în programul zilei';
+  const regions = (step: HTMLElement, id: string) =>
+    step.querySelectorAll(`[id="${id}"]`);
+  const rowTexts = (step: HTMLElement) =>
+    [...step.querySelectorAll('[role="status"][id$="-error"]')]
+      .filter((r) => r.id !== 'hours-error' && text(r) !== '')
+      .map((r) => `${r.id}=${text(r)}`)
+      .sort();
+  const closeByDay = async (fixture: Fixture, step: HTMLElement) => {
+    const details = step.querySelector('details');
+    if (!details) throw new Error('no disclosure');
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+    await settle(fixture);
+  };
+  const addBreak = (fixture: Fixture, step: HTMLElement, day: string) =>
+    click(
+      fixture,
+      button(
+        step.querySelector(`[data-day="${day}"]`) as HTMLElement,
+        'Adaugă pauză',
+      ),
+    );
+  const uniqueIds = (step: HTMLElement) => {
+    const ids = [...step.querySelectorAll('[id]')].map((e) => e.id);
+    return ids.length === new Set(ids).size;
+  };
+
+  it('replaces a day row text in the same region when its reason changes with no valid state between', async () => {
+    const { fixture, step } = await open();
+    await openByDay(fixture, step);
+    await addBreak(fixture, step, 'mon');
+    const region = step.querySelector('#hours-mon-error');
+    await choose(fixture, select(step, 'mon-1-open'), '11:00');
+    expect(text(region)).toBe(BREAK);
+
+    await choose(fixture, select(step, 'mon-0-close'), '07:00');
+
+    expect(step.querySelector('#hours-mon-error')).toBe(region);
+    expect(text(region)).toBe(ORDER);
+    expect(regions(step, 'hours-mon-error')).toHaveLength(1);
+  });
+
+  it('keeps one Saturday region with the error once, as the day view opens and closes', async () => {
+    const { fixture, step } = await open();
+    await click(fixture, tick(step, 'sat-closed'));
+    await choose(fixture, select(step, 'sat-close'), '07:00');
+    expect(rowTexts(step)).toEqual([`hours-sat-error=${ORDER}`]);
+
+    await openByDay(fixture, step);
+    expect(regions(step, 'hours-sat-error')).toHaveLength(1);
+    expect(rowTexts(step)).toEqual([`hours-sat-error=${ORDER}`]);
+
+    await closeByDay(fixture, step);
+    expect(regions(step, 'hours-sat-error')).toHaveLength(1);
+    expect(rowTexts(step)).toEqual([`hours-sat-error=${ORDER}`]);
+
+    await choose(fixture, select(step, 'sat-close'), '12:00');
+    expect(rowTexts(step)).toEqual([]);
+    expect(regions(step, 'hours-sat-error')).toHaveLength(1);
+  });
+
+  it('gives Saturday exactly one empty polite region in the day view', async () => {
+    const { fixture, step } = await open();
+    await openByDay(fixture, step);
+
+    expect(regions(step, 'hours-sat-error')).toHaveLength(1);
+    quietRegion(step, 'hours-sat-error');
+  });
+
+  // A refused range keeps the week as it was, so the weekdays still agree and
+  // the view may close; a kept break would make them differ and hold it open.
+  it('shows a day error again, tied to its fields, when the view closes and reopens', async () => {
+    const { fixture, step } = await open();
+    await openByDay(fixture, step);
+    await choose(fixture, select(step, 'mon-0-close'), '07:00');
+    expect(rowTexts(step)).toEqual([`hours-mon-error=${ORDER}`]);
+
+    await closeByDay(fixture, step);
+    expect(regions(step, 'hours-mon-error')).toHaveLength(0);
+    expect(rowTexts(step)).toEqual([]);
+
+    await openByDay(fixture, step);
+    expect(rowTexts(step)).toEqual([`hours-mon-error=${ORDER}`]);
+    expect(select(step, 'mon-0-close')?.getAttribute('aria-describedby')).toBe(
+      'hours-mon-error',
+    );
+  });
+
+  it('shows two rows in error at once, each in its own region, and clears them one by one', async () => {
+    const { fixture, step } = await open();
+    await openByDay(fixture, step);
+    await addBreak(fixture, step, 'mon');
+    await addBreak(fixture, step, 'tue');
+    await choose(fixture, select(step, 'mon-1-open'), '11:00');
+    await choose(fixture, select(step, 'tue-0-close'), '07:00');
+
+    expect(rowTexts(step)).toEqual([
+      `hours-mon-error=${BREAK}`,
+      `hours-tue-error=${ORDER}`,
+    ]);
+
+    await choose(fixture, select(step, 'mon-1-open'), '13:00');
+    expect(rowTexts(step)).toEqual([`hours-tue-error=${ORDER}`]);
+    expect(regions(step, 'hours-mon-error')).toHaveLength(1);
+
+    await choose(fixture, select(step, 'tue-0-close'), '12:00');
+    expect(rowTexts(step)).toEqual([]);
+  });
+
+  it('shows the weekdays error and a closed-day error together, each in its own region', async () => {
+    const { fixture, step } = await open();
+    await choose(fixture, select(step, 'weekdays-close'), '07:00');
+    await type(
+      fixture,
+      step.querySelector('input[type="date"][name="closedDay"]'),
+      '2026-10-06',
+    );
+    await click(fixture, step.querySelector('button.add-closed'));
+
+    expect(rowTexts(step)).toEqual([
+      'hours-closed-error=Data a trecut',
+      `hours-weekdays-error=${ORDER}`,
+    ]);
+  });
+
+  it('has no duplicate ids with the day view open, in error and at rest', async () => {
+    const { fixture, step } = await open();
+    expect(uniqueIds(step)).toBe(true);
+
+    await openByDay(fixture, step);
+    expect(uniqueIds(step)).toBe(true);
+    await addBreak(fixture, step, 'mon');
+    await choose(fixture, select(step, 'mon-1-open'), '11:00');
+    expect(uniqueIds(step)).toBe(true);
+
+    await closeByDay(fixture, step);
+    await openByDay(fixture, step);
+    expect(uniqueIds(step)).toBe(true);
+    for (const day of ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
+      expect(regions(step, `hours-${day}-error`)).toHaveLength(1);
+  });
+
+  it('keeps the region and swaps its text to English while an error shows', async () => {
+    const { fixture, i18n, step } = await open();
+    await choose(fixture, select(step, 'weekdays-close'), '07:00');
+    const region = step.querySelector('#hours-weekdays-error');
+    expect(text(region)).toBe(ORDER);
+
+    await i18n.use('en');
+    await settle(fixture);
+
+    expect(step.querySelector('#hours-weekdays-error')).toBe(region);
+    expect(text(region)).toBe('Closing must be after opening');
+    expect(
+      select(step, 'weekdays-close')?.getAttribute('aria-describedby'),
+    ).toBe('hours-weekdays-error');
+  });
+
+  it('translates a day break error in place when the language changes', async () => {
+    const { fixture, i18n, step } = await open();
+    await openByDay(fixture, step);
+    await addBreak(fixture, step, 'mon');
+    await choose(fixture, select(step, 'mon-1-open'), '11:00');
+    const region = step.querySelector('#hours-mon-error');
+
+    await i18n.use('en');
+    await settle(fixture);
+
+    expect(step.querySelector('#hours-mon-error')).toBe(region);
+    expect(text(region)).toBe("The break must be within the day's hours");
+  });
+
+  it('keeps one error when the same invalid value is chosen twice', async () => {
+    const { fixture, step } = await open();
+    await choose(fixture, select(step, 'weekdays-close'), '07:00');
+    await choose(fixture, select(step, 'weekdays-close'), '07:00');
+
+    expect(rowTexts(step)).toEqual([`hours-weekdays-error=${ORDER}`]);
+    expect(regions(step, 'hours-weekdays-error')).toHaveLength(1);
+  });
+});
+
 describe('step 5, the facilities', () => {
   it('shows three chips, none ticked, with the hint under them', async () => {
     const { step } = await open();
