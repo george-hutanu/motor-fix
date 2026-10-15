@@ -184,6 +184,16 @@ describe('the night job', () => {
   });
 
   it("writes the day and the day before's funnel when the job runs, logging the funnel", async () => {
+    const today = localDay(new Date());
+    await prisma.platformDaily.create({
+      data: {
+        city: 'all',
+        day: new Date(addDays(today, -1)),
+        garagesApprovedThisMonth: 0,
+        garagesListed: 0,
+        writtenAt: new Date(),
+      },
+    });
     const info = jest
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
@@ -198,7 +208,6 @@ describe('the night job', () => {
     await events.close();
     await app.close();
 
-    const today = localDay(new Date());
     const rows = await prisma.platformDaily.findMany({
       orderBy: { day: 'asc' },
       select: { city: true, day: true, requestsQuoted: true },

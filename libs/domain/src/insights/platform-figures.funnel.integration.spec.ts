@@ -1,4 +1,4 @@
-import { writeSnapshot } from './platform-figures';
+import { readGrowth, writeSnapshot } from './platform-figures';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { databaseUrl, quotesWorld } from '../quotes/quotes.testing';
 
@@ -22,6 +22,19 @@ beforeEach(async () => {
 });
 
 afterAll(() => prisma.$disconnect());
+
+// The row the night of the 8th wrote for the 9th, which the counts land on.
+const writtenTheNightBefore = () =>
+  prisma.platformDaily.create({
+    data: {
+      activeDrivers: 40,
+      city: 'all',
+      day: DAY,
+      garagesApprovedThisMonth: 3,
+      garagesListed: 7,
+      writtenAt: new Date('2026-11-08T23:00:00Z'),
+    },
+  });
 
 const row = (city = 'all', day = DAY) =>
   prisma.platformDaily.findUnique({ where: { day_city: { city, day } } });
@@ -69,6 +82,7 @@ const funnel = {
 // @traces 250-FR-007
 describe("the night's funnel counts", () => {
   it("writes the day's requests quoted and accepted, bookings confirmed and jobs done on its whole-country row", async () => {
+    await writtenTheNightBefore();
     const a = await world.garage('Atelier Dinamo');
     for (let i = 0; i < 2; i++) await world.request(driverId);
     const first = await quoted(a.id, ON_DAY);
@@ -97,6 +111,7 @@ describe("the night's funnel counts", () => {
   });
 
   it('counts a request quoted by three garages once', async () => {
+    await writtenTheNightBefore();
     const garages = await Promise.all(
       ['Atelier Dinamo', 'Service Titan', 'Auto Pipera'].map(world.garage),
     );
@@ -111,6 +126,7 @@ describe("the night's funnel counts", () => {
   });
 
   it('leaves out what happened at 23:30 of the day before, and a request first quoted then', async () => {
+    await writtenTheNightBefore();
     const [a, b] = await Promise.all(
       ['Atelier Dinamo', 'Service Titan'].map(world.garage),
     );
@@ -131,6 +147,7 @@ describe("the night's funnel counts", () => {
   });
 
   it('replaces the counts on a rerun instead of adding to them', async () => {
+    await writtenTheNightBefore();
     const a = await world.garage('Atelier Dinamo');
     const first = await quoted(a.id, ON_DAY);
 
@@ -146,31 +163,42 @@ describe("the night's funnel counts", () => {
     });
   });
 
-  it('creates a missing row from the live garage figures, without the active drivers', async () => {
+  it('writes no row for a day whose own night was missed', async () => {
     await world.garage('Atelier Dinamo');
     await world.garage('Service Titan');
 
     await writeSnapshot(prisma, NIGHT);
 
-    expect(await row()).toMatchObject({
-      activeDrivers: null,
-      garagesApprovedThisMonth: 0,
-      garagesListed: 2,
-      writtenAt: NIGHT,
+    expect(await row()).toBeNull();
+  });
+
+  it("keeps a month's last day closing it when the next month's first night was missed", async () => {
+    await prisma.platformDaily.create({
+      data: {
+        activeDrivers: 30,
+        city: 'all',
+        day: new Date('2026-10-31'),
+        garagesApprovedThisMonth: 1,
+        garagesListed: 5,
+        writtenAt: new Date('2026-10-30T22:00:00Z'),
+      },
+    });
+    await world.garage('Atelier Dinamo');
+
+    // 01:00 on 2 November, the night of the 1st having been missed.
+    await writeSnapshot(prisma, new Date('2026-11-01T23:00:00Z'));
+
+    expect(await row('all', new Date('2026-11-01'))).toBeNull();
+    const { months } = await readGrowth(prisma, NIGHT);
+    expect(months.find((m) => m.month === '2026-10')).toStrictEqual({
+      activeDrivers: 30,
+      garagesListed: 5,
+      month: '2026-10',
     });
   });
 
   it('keeps the other figures of a row the night before wrote', async () => {
-    await prisma.platformDaily.create({
-      data: {
-        activeDrivers: 40,
-        city: 'all',
-        day: DAY,
-        garagesApprovedThisMonth: 3,
-        garagesListed: 7,
-        writtenAt: new Date('2026-11-08T23:00:00Z'),
-      },
-    });
+    await writtenTheNightBefore();
 
     await writeSnapshot(prisma, NIGHT);
 
@@ -184,6 +212,7 @@ describe("the night's funnel counts", () => {
   });
 
   it('holds no funnel counts on a city row', async () => {
+    await writtenTheNightBefore();
     const a = await world.garage('Atelier Dinamo');
     await prisma.garage.update({
       data: { cityKey: 'cluj-napoca', cityName: 'Cluj-Napoca' },

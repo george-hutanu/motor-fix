@@ -150,7 +150,7 @@ export const monthStartSnapshot = (db: PrismaClient, now: Date) =>
 
 // Each count dates a row by its own moment on the Bucharest day; a request
 // quoted or accepted by several garages counts once, on its earliest quote.
-export async function countFunnel(db: PrismaClient, day: string) {
+async function countFunnel(db: PrismaClient, day: string) {
   const since = atLocal(day, 0);
   const until = atLocal(addDays(day, 1), 0);
   const [[requests], bookingsConfirmed, jobsDone] = await Promise.all([
@@ -173,11 +173,9 @@ export async function countFunnel(db: PrismaClient, day: string) {
 export async function writeSnapshot(db: PrismaClient, now: Date) {
   const today = localDay(now);
   const day = new Date(today);
-  let live = { garagesApprovedThisMonth: 0, garagesListed: 0 };
   for (const { key: city } of await cities(db)) {
     const { activeDrivers, garagesApprovedThisMonth, garagesListed } =
       await countPlatformFigures(db, now, { city });
-    if (city === CITY_ALL) live = { garagesApprovedThisMonth, garagesListed };
     const figures = {
       activeDrivers: city === CITY_ALL ? activeDrivers : null,
       garagesApprovedThisMonth,
@@ -192,11 +190,11 @@ export async function writeSnapshot(db: PrismaClient, now: Date) {
   }
   const yesterday = addDays(today, -1);
   const funnel = await countFunnel(db, yesterday);
-  const counts = { ...funnel, writtenAt: now };
-  await db.platformDaily.upsert({
-    create: { city: CITY_ALL, day: new Date(yesterday), ...live, ...counts },
-    update: counts,
-    where: { day_city: { city: CITY_ALL, day: new Date(yesterday) } },
+  // Only a row the night before wrote takes the counts: a missed day stays
+  // missed rather than taking today's garage figures as its own.
+  await db.platformDaily.updateMany({
+    data: { ...funnel, writtenAt: now },
+    where: { city: CITY_ALL, day: new Date(yesterday) },
   });
   return { day: yesterday, ...funnel };
 }

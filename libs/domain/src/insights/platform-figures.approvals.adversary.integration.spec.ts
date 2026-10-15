@@ -4,7 +4,6 @@ import {
   writeSnapshot,
 } from './platform-figures';
 import { serialDatabase } from '../auth/serial-db.testing';
-import { addDays } from '../bucharest';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
 const { prisma, reset } = fixtures();
@@ -173,7 +172,6 @@ describe('snapshot day keys at the clock changes and month ends', () => {
     });
     return rows.map((r) => r.day.toISOString().slice(0, 10));
   };
-  const withFunnel = (day: string) => [addDays(day, -1), day];
 
   it.each([
     ['2026-03-28T21:59:59Z', '2026-03-28'],
@@ -190,16 +188,12 @@ describe('snapshot day keys at the clock changes and month ends', () => {
     ['2028-02-28T22:00:00Z', '2028-02-29'],
     ['2028-02-29T22:00:00Z', '2028-03-01'],
   ])('keys a run at %s to %s', async (at, day) => {
-    expect(await keyed(at)).toEqual(withFunnel(day));
+    expect(await keyed(at)).toEqual([day]);
   });
 
   it('writes the 01:00 runs on the clock-change days to those days', async () => {
-    expect(await keyed('2026-03-28T23:00:00Z')).toEqual(
-      withFunnel('2026-03-29'),
-    );
-    expect(await keyed('2026-10-24T22:00:00Z')).toEqual(
-      withFunnel('2026-10-25'),
-    );
+    expect(await keyed('2026-03-28T23:00:00Z')).toEqual(['2026-03-29']);
+    expect(await keyed('2026-10-24T22:00:00Z')).toEqual(['2026-10-25']);
   });
 
   it('writes two runs on either side of a month end to two different rows', async () => {
@@ -210,7 +204,6 @@ describe('snapshot day keys at the clock changes and month ends', () => {
       orderBy: { day: 'asc' },
     });
     expect(rows.map((r) => r.day.toISOString().slice(0, 10))).toEqual([
-      '2026-10-30',
       '2026-10-31',
       '2026-11-01',
     ]);
