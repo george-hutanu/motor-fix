@@ -116,8 +116,10 @@ describe('the figures of a period', () => {
       countPlatformFigures(prisma, now, { period: 'default' }),
     ).resolves.toStrictEqual({
       activeDrivers: 0,
+      bookings: 0,
       garagesApprovedThisMonth: 1,
       garagesListed: 1,
+      requestsSent: 0,
     });
   });
 });

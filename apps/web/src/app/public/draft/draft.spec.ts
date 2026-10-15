@@ -23,6 +23,7 @@ import {
   writeDraft,
 } from './draft';
 import { DraftKeeper } from './draft-keeper';
+import { Consent } from '../../consent/consent';
 
 const NOW = new Date('2026-10-07T12:00:00Z');
 
@@ -311,8 +312,10 @@ describe('DraftKeeper before the check', () => {
   const missing = [{ code: 'required', field: 'steps.1.phone' }];
   const told = [{ code: 'document_missing', field: 'documents.x' }];
   let api: Record<string, jest.Mock>;
+  let track: jest.Mock;
 
   function keeper(draft: Partial<BrowserDraft> = {}) {
+    track = jest.fn();
     api = {
       listingDraftsControllerCheck: jest.fn().mockResolvedValue({
         warnings: told,
@@ -328,6 +331,7 @@ describe('DraftKeeper before the check', () => {
     TestBed.configureTestingModule({
       providers: [
         DraftKeeper,
+        { provide: Consent, useValue: { track } },
         { provide: ListingDraftsService, useValue: api },
         { provide: I18n, useValue: { language: () => 'ro' } },
         { provide: Router, useValue: { navigate: jest.fn() } },
@@ -351,6 +355,32 @@ describe('DraftKeeper before the check', () => {
     expect(api['listingDraftsControllerCreate']).toHaveBeenCalledTimes(1);
     expect(api['listingDraftsControllerSendLink']).not.toHaveBeenCalled();
     expect(kept.draft().draftId).toBe('d1');
+  });
+
+  // @traces 250-FR-005
+  it('tells a listing started once its first server copy exists', async () => {
+    const kept = keeper({ dirty: true });
+
+    expect(await kept.flush()).toBe(true);
+    kept.section('1', { name: 'Service Ionescu' });
+    expect(await kept.flush()).toBe(true);
+
+    expect(api['listingDraftsControllerSave']).toHaveBeenCalledTimes(1);
+    expect(track.mock.calls).toEqual([['listing_started']]);
+  });
+
+  // @traces 250-FR-005
+  it('tells nothing for a draft whose server copy already exists, or was refused', async () => {
+    const saved = keeper({ dirty: true, draftId: 'd1', token: 't1' });
+    expect(await saved.flush()).toBe(true);
+    expect(track).not.toHaveBeenCalled();
+    TestBed.resetTestingModule();
+
+    const refused = keeper({ dirty: true });
+    api['listingDraftsControllerCreate'].mockRejectedValue(refusal(500));
+    expect(await refused.flush()).toBe(false);
+
+    expect(track).not.toHaveBeenCalled();
   });
 
   // @traces 115-FR-009

@@ -39,6 +39,7 @@ import { HomeCards, type ResultsRoute } from './cards/cards';
 import { type Place, PlaceStore } from './place/place-store';
 import { HomePreview } from './preview/preview';
 import { garageWhere } from './where/where';
+import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
@@ -91,6 +92,7 @@ export class Home {
     return searched ? [searched, ...this.tiles().slice(0, 7)] : this.tiles();
   });
   private readonly choice = inject(BrandChoice);
+  private readonly consent = inject(Consent);
   private readonly kept = this.choice.kept();
   // Back from another screen, the tile the person chose comes back.
   protected readonly selected = linkedSignal<BrandDto | undefined>(() => {
@@ -267,6 +269,7 @@ export class Home {
   protected choose(slug: string) {
     this.selected.set(this.shown().find((brand) => brand.slug === slug));
     this.choice.keep(slug === this.searched()?.slug ? null : slug);
+    this.consent.track('brand_picked', { brand: slug, source: 'home_picker' });
   }
 
   protected pick(brand: BrandDto) {
@@ -277,6 +280,10 @@ export class Home {
     if (!tile) this.searched.set(brand);
     this.selected.set(tile ?? brand);
     this.choice.keep(tile && tile !== this.searched() ? tile.slug : null);
+    this.consent.track('brand_picked', {
+      brand: brand.slug,
+      source: 'home_picker',
+    });
   }
 
   private advance() {

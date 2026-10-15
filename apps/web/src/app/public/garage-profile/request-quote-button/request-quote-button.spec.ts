@@ -11,6 +11,7 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
 import { RequestQuoteButton } from './request-quote-button';
+import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
 import type {
   RequestQuoteData,
@@ -45,6 +46,7 @@ const request = (names: string[]) =>
   }) as unknown as RequestDto;
 
 let open: jest.Mock;
+let track: jest.Mock;
 let load: jest.Mock;
 let renew: jest.Mock;
 
@@ -70,6 +72,7 @@ async function render(
   const role = options.role === undefined ? null : options.role;
   const current = signal<{ role: string } | null>(role ? { role } : null);
   const roleHint = signal(options.hint ?? null);
+  track = jest.fn();
   load = jest.fn(async () => null);
   // The cookie's session is gone: the session forgets the role it last saw.
   renew = jest.fn(async () => {
@@ -80,6 +83,7 @@ async function render(
     providers: [
       provideRouter([]),
       { provide: Overlays, useValue: { open } },
+      { provide: Consent, useValue: { track } },
       {
         provide: Session,
         useValue: {
@@ -270,5 +274,30 @@ describe('RequestQuoteButton', () => {
     await press(host);
 
     expect(host.querySelector('[role="status"]')).toBeNull();
+  });
+});
+
+// @traces 250-FR-005
+describe('the quote request started event', () => {
+  it('tells a request started from the profile once per press', async () => {
+    const host = await render();
+    expect(track).not.toHaveBeenCalled();
+
+    await press(host);
+
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith('quote_request_started', {
+      source: 'profile',
+    });
+  });
+
+  it('names the profile as the source on a shared link too', async () => {
+    const host = await render({ query: { src: 'share' } });
+
+    await press(host);
+
+    expect(track).toHaveBeenCalledWith('quote_request_started', {
+      source: 'profile',
+    });
   });
 });

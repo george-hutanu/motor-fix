@@ -145,19 +145,17 @@ describe('the admin overview', () => {
     expect(res.status).toBe(200);
     const required = [
       'activeDrivers',
+      'bookings',
       'garagesApprovedThisMonth',
       'garagesListed',
       'garagesWaiting',
+      'requestsSent',
     ];
+    const optional = ['activeDriversMonthStart', 'answerRate', 'cities'];
     const fields = Object.keys(res.body);
     expect(fields).toEqual(expect.arrayContaining(required));
     expect(
-      fields.filter(
-        (f) =>
-          !required.includes(f) &&
-          f !== 'activeDriversMonthStart' &&
-          f !== 'cities',
-      ),
+      fields.filter((f) => !required.includes(f) && !optional.includes(f)),
     ).toEqual([]);
     const { cities, ...counts } = res.body;
     for (const value of Object.values(counts)) {

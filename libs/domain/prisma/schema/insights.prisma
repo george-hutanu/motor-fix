@@ -10,7 +10,15 @@ model PlatformDaily {
   garagesListed            Int      @map("garages_listed")
   garagesApprovedThisMonth Int      @map("garages_approved_this_month")
   activeDrivers            Int?     @map("active_drivers")
-  writtenAt                DateTime @map("written_at") @db.Timestamptz(3)
+  // The day's funnel, written the next night on the `all` row only; null on
+  // city rows and on a day not yet closed. CHECK in the migration: never
+  // below 0.
+  requestsQuoted           Int?     @map("requests_quoted")
+  requestsAccepted         Int?     @map("requests_accepted")
+  bookingsConfirmed        Int?     @map("bookings_confirmed")
+  jobsDone                 Int?     @map("jobs_done")
+  reviewsPosted            Int?     @map("reviews_posted")
+  writtenAt               DateTime @map("written_at") @db.Timestamptz(3)
 
   @@id([day, city])
   @@map("platform_daily")

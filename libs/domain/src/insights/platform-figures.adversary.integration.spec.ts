@@ -138,13 +138,22 @@ describe('the snapshot at the edges', () => {
 
     await writeSnapshot(prisma, new Date('2026-10-31T22:30:00Z'));
 
-    expect(await prisma.platformDaily.findMany()).toEqual([
+    expect(
+      await prisma.platformDaily.findMany({
+        where: { day: new Date('2026-11-01') },
+      }),
+    ).toEqual([
       {
         activeDrivers: 0,
+        bookingsConfirmed: null,
         city: 'all',
         day: new Date('2026-11-01'),
         garagesApprovedThisMonth: 1,
         garagesListed: 1,
+        jobsDone: null,
+        requestsAccepted: null,
+        requestsQuoted: null,
+        reviewsPosted: null,
         writtenAt: new Date('2026-10-31T22:30:00Z'),
       },
     ]);

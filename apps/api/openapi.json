@@ -9539,6 +9539,22 @@
             "description": "Active drivers on the first day of the chosen period, absent for today, a city or a night not recorded",
             "minimum": 0
           },
+          "requestsSent": {
+            "type": "integer",
+            "description": "Quote requests created in the chosen period (the current Europe/Bucharest month by default); a request to several garages once; in a city, those with a recipient garage there",
+            "minimum": 0
+          },
+          "answerRate": {
+            "type": "integer",
+            "description": "Share of garage recipients of the last 30 days that quoted or declined within 24 hours, all hours, rounded down; absent when no recipient counted",
+            "maximum": 100,
+            "minimum": 0
+          },
+          "bookings": {
+            "type": "integer",
+            "description": "Bookings confirmed in the chosen period (the current Europe/Bucharest month by default); in a city, those at a garage there",
+            "minimum": 0
+          },
           "cities": {
             "description": "The whole country first, then every city with a listed garage, most garages first",
             "type": "array",
@@ -9557,6 +9573,8 @@
           "garagesListed",
           "garagesApprovedThisMonth",
           "activeDrivers",
+          "requestsSent",
+          "bookings",
           "cities"
         ]
       },

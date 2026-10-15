@@ -5,6 +5,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { ProviderSignUp } from './provider-sign-up';
+import { Consent } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import type { AuthSwitch } from '../sign-in';
 
@@ -20,6 +21,7 @@ type Pending = {
 } | null;
 
 let completeProviderSignUp: jest.Mock;
+let track: jest.Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 
 async function settle() {
@@ -31,8 +33,10 @@ async function settle() {
 
 async function open(pending: Pending, language: 'ro' | 'en' = 'ro') {
   completeProviderSignUp = jest.fn(async () => ({ landing: '/app/driver' }));
+  track = jest.fn();
   TestBed.configureTestingModule({
     providers: [
+      { provide: Consent, useValue: { track } },
       {
         provide: Session,
         useValue: {
@@ -165,5 +169,40 @@ describe('the new-person step after a provider', () => {
 
     await expect(result).resolves.toBe('cancelled');
     expect(completeProviderSignUp).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 250-FR-005
+describe('the sign-up completed event after a provider', () => {
+  it.each([['google' as const], ['apple' as const]])(
+    'tells a %s sign-up of a driver once the account exists',
+    async (provider) => {
+      await open({ name: 'Ana Ionescu', provider });
+      consentBox().click();
+      expect(track).not.toHaveBeenCalled();
+
+      button('Creează contul').click();
+      await settle();
+
+      await expect(result).resolves.toBe('signed-in');
+      expect(track).toHaveBeenCalledTimes(1);
+      expect(track).toHaveBeenCalledWith('sign_up_completed', {
+        method: provider,
+        role: 'driver',
+      });
+    },
+  );
+
+  it('tells nothing when the account was refused', async () => {
+    await open({ name: 'Ana Ionescu', provider: 'google' });
+    completeProviderSignUp.mockRejectedValueOnce(
+      new HttpErrorResponse({ status: 500 }),
+    );
+    consentBox().click();
+
+    button('Creează contul').click();
+    await settle();
+
+    expect(track).not.toHaveBeenCalled();
   });
 });
