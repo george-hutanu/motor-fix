@@ -62,9 +62,10 @@ function allowed(rule: Rule, value: unknown): value is string | number {
 // The properties the event may carry, or null for a name outside the list.
 export function sanitise(
   name: string,
-  props: Record<string, unknown>,
+  props: Record<string, unknown> | null | undefined,
 ): EventProps | null {
   if (!Object.hasOwn(ANALYTICS_EVENTS, name)) return null;
+  if (props === null || typeof props !== 'object') return {};
   const rules: Record<string, Rule> = ANALYTICS_EVENTS[name as AnalyticsEvent];
   const kept: EventProps = {};
   for (const [key, value] of Object.entries(props))
