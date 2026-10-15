@@ -359,6 +359,22 @@ describe('accepting again with the same key', () => {
     expect(await prisma.outboxEvent.count()).toBe(1);
   });
 
+  it('ends a same-key race across two requests with one booking and one replay', async () => {
+    const { andrei, dinamo, quote } = await quoted();
+    const second = await world.request(andrei, { status: 'quoted' });
+    const other = await world.quote(second.id, dinamo.garage.id);
+    const key = randomUUID();
+
+    const answers = await Promise.all([
+      accept(quote.id, asDriver(andrei), key),
+      accept(other.id, asDriver(andrei), key),
+    ]);
+
+    expect(answers.map((a) => a.status).sort()).toEqual([200, 201]);
+    expect(answers[0].body.id).toBe(answers[1].body.id);
+    expect(await prisma.booking.count({ where: { driverId: andrei } })).toBe(1);
+  });
+
   it('keeps the key of a refused call free', async () => {
     const { andrei, quote } = await quoted();
     const key = randomUUID();

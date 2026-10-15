@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { Queue } from 'bullmq';
@@ -209,6 +211,22 @@ describe('telling the garage its quote was accepted', () => {
       ).toBe(0);
     },
   );
+
+  it('tells nobody when the booking is gone', async () => {
+    const { job } = await acceptedQuote();
+    const { fanOut } = await start();
+
+    await fanOut.handle({
+      data: {
+        ...job.data,
+        payload: { ...job.data.payload, bookingId: randomUUID() },
+      },
+    });
+
+    expect(
+      await prisma.notification.count({ where: { kind: 'QUOTE_ACCEPTED' } }),
+    ).toBe(0);
+  });
 
   it('builds each message once when the same event is handled twice', async () => {
     const { job } = await acceptedQuote();
