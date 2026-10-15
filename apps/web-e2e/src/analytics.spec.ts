@@ -84,10 +84,13 @@ async function toProfile(page: Page, near?: typeof MILITARI) {
     .click();
   await page.getByRole('link', { name: 'Caută service‑uri' }).click();
   if (near) {
-    await expect(page).toHaveURL(/^[^?]*\/ro\/garages\?/);
-    const query = new URL(page.url()).searchParams;
-    expect(query.get('brand')).toBe('dacia');
-    expect(query.get('near')).toBe(`${near.lat},${near.lng}`);
+    // The place joins the query once the stored one is read, so wait for it.
+    await expect
+      .poll(() => {
+        const url = new URL(page.url());
+        return `${url.pathname}?brand=${url.searchParams.get('brand')}&near=${url.searchParams.get('near')}`;
+      })
+      .toBe(`/ro/garages?brand=dacia&near=${near.lat},${near.lng}`);
   } else {
     await expect(page).toHaveURL('/ro/garages?brand=dacia');
   }
