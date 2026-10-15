@@ -2,8 +2,11 @@ import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
+import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { PUBLIC_POLICY } from '../../cache/http-cache/http-cache.interceptor';
+import { purgeTags } from '../../cache/purge';
 import {
   databaseUrl,
   fixtures,
@@ -37,6 +40,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await purgeTags(app.get(AUTH_REDIS), ['search']);
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
   dacia = (
     await prisma.brand.create({
@@ -149,7 +153,7 @@ describe('GET /home', () => {
   it('lets the answer be cached for a minute', async () => {
     const res = await home({ brand: 'dacia' });
 
-    expect(res.headers['cache-control']).toBe('public, max-age=60');
+    expect(res.headers['cache-control']).toBe(PUBLIC_POLICY);
   });
 
   it('answers 0 of 0 when no garage is listed', async () => {
@@ -178,7 +182,7 @@ describe('GET /home', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('not_found');
-    expect(res.headers['cache-control']).not.toBe('public, max-age=60');
+    expect(String(res.headers['cache-control'] ?? '')).not.toContain('public');
   });
 
   it.each([
@@ -282,7 +286,7 @@ describe('GET /home near a place', () => {
     const three = await home({ brand: 'dacia', near: '46.771,23.624' });
 
     expect(six.body).toEqual(three.body);
-    expect(six.headers['cache-control']).toBe('public, max-age=60');
+    expect(six.headers['cache-control']).toBe(PUBLIC_POLICY);
   });
 
   it('answers 0 of 0 for a place with no garage near it', async () => {

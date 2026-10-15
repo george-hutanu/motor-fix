@@ -850,7 +850,7 @@
     {
       "id": 28,
       "type": "timeseries",
-      "title": "Public profile cache by outcome",
+      "title": "Cache: hit rate, stale serves, stampedes avoided",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -868,8 +868,26 @@
             "type": "prometheus",
             "uid": "${prom}"
           },
-          "expr": "sum by (outcome) (rate(motorfix_garage_profile_cache_total{service_name=\"api\", deployment_environment=\"$env\"}[5m]))",
-          "legendFormat": "{{outcome}}"
+          "expr": "sum by (kind) (rate(motorfix_cache_total{service_name=\"api\", deployment_environment=\"$env\", outcome=~\"hit|stale|coalesced|negative\"}[5m])) / sum by (kind) (rate(motorfix_cache_total{service_name=\"api\", deployment_environment=\"$env\", outcome=~\"hit|miss|stale|coalesced|negative|fallback\"}[5m]))",
+          "legendFormat": "hit rate {{kind}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind) (rate(motorfix_cache_total{service_name=\"api\", deployment_environment=\"$env\", outcome=\"stale\"}[5m]))",
+          "legendFormat": "stale serves {{kind}}"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind) (rate(motorfix_cache_total{service_name=\"api\", deployment_environment=\"$env\", outcome=\"coalesced\"}[5m]))",
+          "legendFormat": "stampedes avoided {{kind}}"
         }
       ],
       "fieldConfig": {

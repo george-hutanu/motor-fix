@@ -1,10 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { inMemory } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
-import { metrics } from '@opentelemetry/api';
-import { MeterProvider } from '@opentelemetry/sdk-metrics';
 import { Redis } from 'ioredis';
 
 import { type EventConsumer, OutboxRelay } from './outbox-relay';
@@ -24,9 +21,6 @@ const prisma = createPrisma(databaseUrl);
 const other = createPrisma(databaseUrl);
 serialDatabase(databaseUrl);
 
-const { metricReader } = inMemory();
-metrics.setGlobalMeterProvider(new MeterProvider({ readers: [metricReader] }));
-
 // A Redis that records what it was asked to publish, and can be "down".
 // Suites running beside this one record account events, which the relay here
 // may also pick up; only this file's quote events are kept.
@@ -36,6 +30,11 @@ class FakeRedis {
   failAfter = Number.POSITIVE_INFINITY;
   readonly sent: { audience: string[]; event: Record<string, string> }[] = [];
   readonly dropped: string[] = [];
+  async eval(_script: string, _keys: number, tag: string) {
+    if (this.dropDown) throw new Error('Connection is closed.');
+    this.dropped.push(`PURGE ${tag}`);
+    return [];
+  }
   async del(key: string) {
     if (this.dropDown) throw new Error('Connection is closed.');
     this.dropped.push(`DEL ${key}`);
@@ -424,19 +423,7 @@ describe('the relay loop', () => {
   });
 });
 
-describe('dropping the cached public profile', () => {
-  async function drops() {
-    const { resourceMetrics } = await metricReader.collect();
-    const point = resourceMetrics.scopeMetrics
-      .flatMap((scope) => scope.metrics)
-      .find(
-        (metric) =>
-          metric.descriptor.name === 'motorfix_garage_profile_cache_total',
-      )
-      ?.dataPoints.find((p) => p.attributes['outcome'] === 'drop');
-    return (point?.value as number | undefined) ?? 0;
-  }
-
+describe('purging the cached public reads', () => {
   const garageEvent = (garageId: string, kind: string) =>
     prisma.outboxEvent.create({
       data: {
@@ -446,30 +433,26 @@ describe('dropping the cached public profile', () => {
       },
     });
 
-  // @traces 307-FR-006 307-FR-007
-  it('drops the profile of every garage an event reaches publicly, whatever its kind', async () => {
+  // @traces 1182-FR-005 1182-FR-007 1182-FR-008
+  it('purges the garage and the search tags of every event a public garage channel reads, whatever its kind', async () => {
     const [a, b] = [randomUUID(), randomUUID()];
     await garageEvent(a, 'garage.suspended');
     await garageEvent(b, 'live.test');
     const redis = new FakeRedis();
-    const before = await drops();
 
     await new OutboxRelay(prisma, redis).relay();
 
     expect(redis.dropped).toEqual([
-      `INCR garage-profile-gen:v5:${a}`,
-      `EXPIRE garage-profile-gen:v5:${a} 600`,
-      `DEL garage-profile:v5:${a}`,
+      `PURGE v1:tag:garage:${a}`,
+      'PURGE v1:tag:search',
       'INCR garage-search-gen:v1',
-      `INCR garage-profile-gen:v5:${b}`,
-      `EXPIRE garage-profile-gen:v5:${b} 600`,
-      `DEL garage-profile:v5:${b}`,
+      `PURGE v1:tag:garage:${b}`,
+      'PURGE v1:tag:search',
       'INCR garage-search-gen:v1',
     ]);
-    expect((await drops()) - before).toBe(2);
   });
 
-  it('drops nothing for an event no public channel reads', async () => {
+  it('purges nothing for an event no public channel reads', async () => {
     await recorded(1);
     const redis = new FakeRedis();
 
@@ -478,7 +461,7 @@ describe('dropping the cached public profile', () => {
     expect(redis.dropped).toEqual([]);
   });
 
-  it('keeps the event waiting when the profile cannot be dropped', async () => {
+  it('keeps the event waiting when the purge fails', async () => {
     const garageId = randomUUID();
     await garageEvent(garageId, 'garage.suspended');
     const redis = new FakeRedis();
@@ -491,8 +474,8 @@ describe('dropping the cached public profile', () => {
         where: { relayedAt: null, subjectId: garageId },
       }),
     ).toBe(1);
-    // The drop comes before the publish: no page hears of a change while
-    // its old profile is still cached.
+    // The purge comes before the publish: no page hears of a change while
+    // its old answer is still cached.
     expect(redis.published.filter((m) => m.includes(garageId))).toEqual([]);
   });
 });

@@ -5,13 +5,9 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import {
-  dropProfiles,
-  generationKey,
-  profileKey,
-} from './public-garages.cache';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { purgeAudience } from '../../cache/purge';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -331,7 +327,7 @@ describe('the price list through the profile cache', () => {
       data: { fromBani: 90_000 },
       where: { id: row.id },
     });
-    await dropProfiles(other, [`public:garage:${garage.id}`]);
+    await purgeAudience(other, [`public:garage:${garage.id}`]);
 
     expect((await get(garage.slug)).body.prices[0].fromBani).toBe(90_000);
     expect((await get(garage.slug, bmw.slug)).body.prices[0].fromBani).toBe(
@@ -347,10 +343,8 @@ describe('the price list through the profile cache', () => {
     await get(garage.slug);
 
     const stored = JSON.parse(
-      (await other.hget(profileKey(garage.id), '-')) ?? 'null',
+      (await other.get(`v1:profile:${garage.slug}:-`)) ?? 'null',
     );
-    expect(stored.prices).toHaveLength(1);
-    expect(profileKey(garage.id)).not.toContain(':v4:');
-    expect(generationKey(garage.id)).not.toContain(':v4:');
+    expect(stored.v.prices).toHaveLength(1);
   });
 });

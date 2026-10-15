@@ -45,6 +45,7 @@ import {
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AUTH_REDIS } from '../auth/attempts';
+import { CacheModule } from '../cache/cache.module';
 import { Brevo } from '../notifications/brevo/brevo';
 import type { EmailConfig } from '../notifications/email-config';
 
@@ -83,7 +84,7 @@ export class GaragesModule {
         GaragePricesService,
         VerificationService,
       ],
-      imports: [notifications],
+      imports: [CacheModule, notifications],
       module: GaragesModule,
       providers: [
         GarageBrandsService,

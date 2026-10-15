@@ -1,23 +1,28 @@
 import { HomeDto, HomeQueryDto, parseNear } from '@motor-fix/contracts';
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Response } from 'express';
 
-import { HomeService } from './home.service';
+import { HomeService, homeRead } from './home.service';
 import { Public } from '../../auth/actor.guard';
+import { CacheService } from '../../cache/cache.service';
+import { PublicCache } from '../../cache/http-cache/http-cache.interceptor';
 
 @ApiTags('home')
 @Controller('home')
 export class HomeController {
-  constructor(private readonly home: HomeService) {}
+  constructor(
+    private readonly home: HomeService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Get()
   @Public()
+  @PublicCache()
   @ApiOkResponse({ type: HomeDto })
   @ApiBadRequestResponse({
     description:
@@ -26,12 +31,9 @@ export class HomeController {
   @ApiNotFoundResponse({
     description: 'not_found: no active brand with that slug',
   })
-  async forBrand(
-    @Query() query: HomeQueryDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<HomeDto> {
-    const home = await this.home.forBrand(query.brand, parseNear(query.near));
-    res.setHeader('Cache-Control', 'public, max-age=60');
-    return home;
+  forBrand(@Query() query: HomeQueryDto): Promise<HomeDto> {
+    return this.cache.read(
+      homeRead(this.home, query.brand, parseNear(query.near)),
+    );
   }
 }

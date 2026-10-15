@@ -13,6 +13,7 @@
         "api-down",
         "api-error-rate",
         "api-latency",
+        "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate"
       ],
@@ -73,6 +74,7 @@
         "api-down",
         "api-error-rate",
         "api-latency",
+        "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate"
       ],
@@ -414,12 +416,14 @@
     },
     {
       "kind": "product-counter",
-      "name": "motorfix_garage_profile_cache_total",
-      "source": "libs/domain/src/garages/public-garages/public-garages.metrics.ts",
+      "name": "motorfix_cache_total",
+      "source": "libs/domain/src/cache/cache.metrics.ts",
       "dashboard": "motorfix-api",
-      "alerts": "none",
-      "reason": "counts the public profile cache by outcome (hit, miss, drop); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
-      "story": "ST-307"
+      "alerts": [
+        "api-cache-fallback-rate"
+      ],
+      "reason": "counts each cached public read (profile, home, popular-brands) by outcome: hit, miss, stale (served past its soft expiry), coalesced (a concurrent read served by another read's call), negative (a remembered not-found or empty answer), fallback (Redis failed and PostgreSQL answered), warm (filled by the post-deploy warm-up), and purge (an entry removed by a tag purge, from the worker); one warn log line when Redis first fails and one when it is back; a fallback rate above 5% for 10 minutes is the api-cache-fallback-rate alert",
+      "story": "ST-1182"
     },
     {
       "kind": "product-counter",

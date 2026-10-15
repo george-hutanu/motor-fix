@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-14
+updated: 2026-10-15
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -9,6 +9,7 @@ features:
   - 226-best-rated-brand-dial
   - 227-garage-cards-home
   - 267-brand-results
+  - 1182-cache-service
 ---
 
 # Capability: Garage search
@@ -61,11 +62,11 @@ _From 043-brand-first-garage-list._
 
 _From 267-brand-results._
 
-### 229-FR-009 — `GET /api/v1/home?brand={slug}&near={lat},{lng}` MUST answer without a session, from the `search` module and the one public garage scope, with: the brand (id, name, slug), `total` (Y) and `takers` (X); when `near` is given, both count only the approved garages in the area of that point (FR-010 and FR-011), and without it they cover all of Romania; `near` MUST be two finite numbers (latitude −90..90, longitude −180..180) inside Romania (the bounding box shared in `libs/contracts`), else 400 `validation_failed`; a missing, blank, over-long or control-character `brand` answers 400 `validation_failed`; a slug with no active brand answers 404 `not_found`; the answer carries `Cache-Control: public, max-age=60`.
+### 229-FR-009 — `GET /api/v1/home?brand={slug}&near={lat},{lng}` MUST answer without a session, from the `search` module and the one public garage scope, with: the brand (id, name, slug), `total` (Y) and `takers` (X); when `near` is given, both count only the approved garages in the area of that point (FR-010 and FR-011), and without it they cover all of Romania; `near` MUST be two finite numbers (latitude −90..90, longitude −180..180) inside Romania (the bounding box shared in `libs/contracts`), else 400 `validation_failed`; a missing, blank, over-long or control-character `brand` answers 400 `validation_failed`; a slug with no active brand answers 404 `not_found`; the answer carries the public cache policy of 1182-FR-009 (`public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400`; was `public, max-age=60`, amended by 1182-cache-service).
 
 _From 229-location-or-address._
 
-### 225-FR-010 — `GET /api/v1/brands/popular?limit={n}` MUST answer without a session, from the `search` module, with the tiles of FR-003 as a list of brands (id, name, slug, popularity), `limit` a whole number 1–12 defaulting to 8 (else 400 `validation_failed`); the answer carries `Cache-Control: public, max-age=60`.
+### 225-FR-010 — `GET /api/v1/brands/popular?limit={n}` MUST answer without a session, from the `search` module, with the tiles of FR-003 as a list of brands (id, name, slug, popularity), `limit` a whole number 1–12 defaulting to 8 (else 400 `validation_failed`); the answer carries the public cache policy of 1182-FR-009 (`public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400`; was `public, max-age=60`, amended by 1182-cache-service).
 
 _From 225-brand-picker._
 
@@ -168,6 +169,10 @@ _From 267-brand-results._
 ### 267-FR-024 — Jest on real PostgreSQL and Redis MUST cover: the groups with `works_on`, `does_not_take` and an unmarked brand and draft and suspended garages excluded; the order with equal ratings and equal reviews and unrated garages last in their group, across a page boundary; the 25 km boundary, the 50 km radius and mobile mechanics in and out of their area; the slug and the id naming the brand; `ids=` with a non-public id; one SEARCH_LOG row per new search, none without `log=1`, no account id or exact point, and the search answering when the write fails; the cache key, the drop on a public garage event and the fallback with Redis down; the stream taking 20 garage ids and refusing 21. Web unit tests MUST cover the page's reading of the bar and the kept place, the title and summary texts in both languages, a card's fields for a fixed garage and a mobile mechanic, the empty, loading and error states, the 50 km offer once, and the live rules of FR-019 and FR-020. Playwright: from Home with Dacia selected, open Results and check the order and counts against the seed; in a second context suspend a garage and see its card fade out.
 
 _From 267-brand-results._
+
+### 1182-FR-008 — The brand pages MUST go through the cache service: the Home answer for a brand (`GET /api/v1/home`, keyed by brand and the shared 3-decimal place text or none) and the popular tiles (`GET /api/v1/brands/popular`, keyed by limit), each with a soft lifetime of 60 seconds, tagged so that the relay purges them on the same public garage and search events that drop the search page today (267-FR-010's rule). Their answers and validation are unchanged (229-FR-009, 225-FR-010, 227-FR-009).
+
+_From 1182-cache-service._
 
 ## Retired
 

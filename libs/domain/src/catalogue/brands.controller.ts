@@ -4,6 +4,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { BrandsService } from './brands.service';
 import { Public } from '../auth/actor.guard';
+import { PublicCache } from '../cache/http-cache/http-cache.interceptor';
 
 @ApiTags('brands')
 @Controller('brands')
@@ -12,6 +13,7 @@ export class BrandsController {
 
   @Get()
   @Public()
+  @PublicCache()
   @ApiOkResponse({ type: BrandPageDto })
   search(@Query() query: BrandsQueryDto): Promise<BrandPageDto> {
     return this.brands.search(query.q, query.cursor);

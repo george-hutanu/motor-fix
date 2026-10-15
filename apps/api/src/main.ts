@@ -8,6 +8,7 @@ import {
   BrandLoader,
   JOB_TYPES,
   JobTypeLoader,
+  warmCache,
 } from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -38,6 +39,8 @@ async function bootstrap() {
   await app.get(JobTypeLoader).load(JOB_TYPES);
   app.enableShutdownHooks();
   await app.listen(Number(process.env['PORT'] ?? 3000));
+  // Not awaited: the instance serves while the warm-up fills the cache.
+  void warmCache(app, env.RELEASE_SHA);
 }
 
 // A brand or job file that cannot load stops the process before it serves.

@@ -182,6 +182,64 @@
           ]
         },
         {
+          "uid": "api-cache-fallback-rate",
+          "title": "API cache falling back",
+          "condition": "B",
+          "for": "10m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "api"
+          },
+          "annotations": {
+            "summary": "More than 5% of cached public reads (profile, brand Home, popular tiles) fell back to PostgreSQL because Redis failed, for 10 minutes, over at least 20 reads ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-api"
+          },
+          "notification_settings": {
+            "receiver": "MotorFix owner"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "(sum by (deployment_environment) (rate(motorfix_cache_total{service_name=\"api\", outcome=\"fallback\"}[10m])) / sum by (deployment_environment) (rate(motorfix_cache_total{service_name=\"api\", outcome=~\"hit|miss|stale|coalesced|negative|fallback\"}[10m]))) and on (deployment_environment) (sum by (deployment_environment) (increase(motorfix_cache_total{service_name=\"api\", outcome=~\"hit|miss|stale|coalesced|negative|fallback\"}[10m])) >= 20)",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.05
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
           "uid": "api-search-cache-fallback-rate",
           "title": "API search cache falling back",
           "condition": "B",
