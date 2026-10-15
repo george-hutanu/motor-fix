@@ -280,23 +280,23 @@ describe('PublicLive under hostile use', () => {
     expect(seen).toEqual([]);
   });
 
-  it('announces a resync on the first open and on every re-open, never otherwise', async () => {
+  it('announces a resync on every re-open, never on the first open nor otherwise', async () => {
     const live = setUp();
     let resyncs = 0;
     live.resync.subscribe(() => resyncs++);
 
     live.register({ garage: 'g-1' });
     await settle();
-    expect(resyncs).toBe(1);
+    expect(resyncs).toBe(0);
 
     await elapse(20_000);
     bodies[0]?.send(event('garage.updated'));
     await settle();
-    expect(resyncs).toBe(1);
+    expect(resyncs).toBe(0);
 
     bodies[0]?.end();
     await elapse(1_100);
-    expect(resyncs).toBe(2);
+    expect(resyncs).toBe(1);
   });
 
   it('never sends a request other than the stream while views are open and the stream is down', async () => {

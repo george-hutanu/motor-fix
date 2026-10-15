@@ -5,12 +5,10 @@ import {
   computed,
   effect,
   inject,
-  makeStateKey,
   PendingTasks,
   PLATFORM_ID,
   RESPONSE_INIT,
   signal,
-  TransferState,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -36,6 +34,7 @@ import { sourceOf } from './view-source';
 import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import type { LiveView } from '../../live/view';
+import { publicRead } from '../../public-read';
 import { publicLiveResource } from '../live';
 import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
 
@@ -57,11 +56,6 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
   search: 'results',
   shared_link: 'shared_link',
 };
-
-// The answer the server render showed, carried to the browser so hydration
-// finds the same page instead of a skeleton.
-export const profileKey = (slug: string, brand: string | undefined) =>
-  makeStateKey<PublicGarageDto>(`garage-profile:${slug}:${brand ?? ''}`);
 
 @Component({
   imports: [
@@ -90,7 +84,6 @@ export class GarageProfile {
   private readonly consent = inject(Consent);
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
-  private readonly state = inject(TransferState);
   private readonly prefetch = inject(ProfilePrefetch);
   protected readonly i18n = inject(I18n);
 
@@ -118,7 +111,7 @@ export class GarageProfile {
       garage: this.profile?.value()?.id,
     }),
     undefined,
-    this.carried(),
+    this.takePrefetched(),
   );
   protected readonly garage = this.profile.value;
   // What the dial says, announced politely when a re-read changes it.
@@ -172,17 +165,14 @@ export class GarageProfile {
     });
   }
 
-  // The server's answer for this address, used once: a later visit reads
-  // afresh. Without one, a profile pre-fetched from the results.
-  private carried(): PublicGarageDto | undefined {
+  // A profile pre-fetched from the results, shown at once; after a server
+  // render the transfer cache answers the first read instead.
+  private takePrefetched(): PublicGarageDto | undefined {
     if (!this.browser) return undefined;
-    const slug = untracked(this.slug);
-    const brand = untracked(this.brand);
-    const key = profileKey(slug, brand);
-    const garage = this.state.get(key, null) ?? undefined;
-    this.state.remove(key);
-    if (garage) return garage;
-    this.prefetched = this.prefetch.take(slug, brand);
+    this.prefetched = this.prefetch.take(
+      untracked(this.slug),
+      untracked(this.brand),
+    );
     return this.prefetched;
   }
 
@@ -217,12 +207,14 @@ export class GarageProfile {
       slug !== untracked(this.slug) || brand !== untracked(this.brand);
     const done = this.pending.add();
     return this.garages
-      .publicGaragesControllerBySlug({ slug, ...(brand ? { brand } : {}) })
+      .publicGaragesControllerBySlug(
+        { slug, ...(brand ? { brand } : {}) },
+        publicRead(),
+      )
       .then(
         (garage) => {
           if (moved()) return this.read();
           this.status.set(undefined);
-          if (!this.browser) this.state.set(profileKey(slug, brand), garage);
           return garage;
         },
         (failure: unknown) => {

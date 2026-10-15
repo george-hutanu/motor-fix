@@ -79,6 +79,7 @@ features:
   - 1201-static-cache-headers
   - 1182-cache-service
   - 1230-qa-harness-laps
+  - 1200-transfer-cache-origin
   - 1169-prefetch-intent
 ---
 
@@ -160,9 +161,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-019 — The web app's root page MUST show "MotorFix", the deployed version (`dev` locally, the commit SHA when deployed), and "PostgreSQL: ok · Redis: ok" (or the failing part; "unknown" for both, and "version unknown", when the API does not answer). The page is server-rendered: during server rendering it calls the API's `/health/ready` through the generated client at `API_INTERNAL_URL`, and the browser reuses that result without a second call.
+### 1200-FR-006 — The hand-rolled carries of Home's tiles (`TILES`) and the garage profile (`profileKey`) MUST be removed once the cache covers them, the pages issuing the same reads in the browser as on the server: Home opened without a server render reads the tiles in the browser; the profile's server answer is used once; a gone profile (404, 410) keeps its status and gone state; Home's health checks stay a hand-written carry (`HEALTH`): the server reads `/health/ready` (a 503 report included) and hands it over, and every Home of the visit shows it, one opened in the browser after a redirect or a language change included; the browser never asks `/health/ready` itself, since on the page's origin the web server answers its own (421-FR-014) with the status alone; with nothing handed over they show "unknown". Home keeps showing "MotorFix", the deployed version (`dev` locally, the commit SHA when deployed) and "PostgreSQL: ok · Redis: ok" (or the failing part; "unknown" for both, and "version unknown", when the API does not answer), as 421-FR-019 required.
 
-_From 421-monorepo-platform._
+_From 1200-transfer-cache-origin._
 
 ### 421-FR-020 — The `web` server MUST forward `/api/` requests to the `api` service without buffering the response, close the upstream request when the browser goes away, and close the browser's response when the API breaks off. It answers its own `/health/*` and forwards none of it.
 
@@ -2016,6 +2017,34 @@ _From 1230-qa-harness-laps._
 
 _From 1230-qa-harness-laps._
 
+### 1200-FR-001 — In the browser the generated API client MUST address the API absolutely at the page's own origin (`location.origin`), so the server's and the browser's requests for one read share one address once the server's origin is mapped (FR-002); the request path, method, parameters and body are unchanged.
+
+_From 1200-transfer-cache-origin._
+
+### 1200-FR-002 — On the server, when `PUBLIC_WEB_URL` is set, the app MUST map the API's private origin (the origin of `API_INTERNAL_URL`) onto the public origin (the origin of `PUBLIC_WEB_URL`) in the transfer cache's origin map, so a read the server made at the private address is stored under the key the browser will ask for; the map is provided on the server only and never in the browser. With `PUBLIC_WEB_URL` unset, no map is provided and the behaviour is today's.
+
+_From 1200-transfer-cache-origin._
+
+### 1200-FR-003 — The auth interceptor MUST decide by the request's path, resolved against the page's origin, not by the raw address string: "is this the API" (`/api/`), "is this an auth route" (`/api/v1/auth/`), the two as-the-person auth calls and "who am I" (`GET /api/v1/me`) MUST give the same answer for a relative and an absolute address of the same path; a request to any other origin (another host, scheme or port, including the server's private API origin) is not the API, carries no token and never opens the dialog. Every other rule of the interceptor (token, renewal on 401, the dialog once, the maintenance flag) is unchanged.
+
+_From 1200-transfer-cache-origin._
+
+### 1200-FR-004 — The public reads a server-rendered page makes on the server MUST be marked as public on the request (one request-context mark), and the interceptor MUST send a marked request without the `Authorization` header, token or no token, with no 401 renewal and no sign-in dialog, so the cache can serve them to signed-in visitors too; a 503 `maintenance` answer to a marked read still turns the maintenance page on. The marked reads are the popular-brand tiles and the public garage profile. An unmarked API call carries the token exactly as today.
+
+_From 1200-transfer-cache-origin._
+
+### 1200-FR-005 — After hydration of a server-rendered page, the browser MUST NOT repeat a read the server made for that render: the server's answer is served from the transfer cache once, and only once, per hydration; a read the server did not make (the Home read for the selected brand, the Results search) is issued by the browser as today.
+
+_From 1200-transfer-cache-origin._
+
+### 1200-FR-007 — A Playwright test MUST open each public server-rendered route that reads on the server (Home, a garage profile), signed out and signed in, record the `/api/` requests the browser makes before the app is stable, and fail when any of them repeats a read the server carried (the tiles, the profile); signed out it also fails on any request outside the browser-only list (the platform status, Home's count read, `/api/v1/live/`, the profile's view count `POST /api/v1/garages/<slug>/views`), each of the first two at most once; the test runs in CI's end-to-end suite.
+
+_From 1200-transfer-cache-origin._
+
+### 1200-FR-008 — Signed-in calls MUST still carry the token: the interceptor's unit tests cover absolute addresses for every rule of FR-003, and the existing signed-in end-to-end flows pass unchanged.
+
+_From 1200-transfer-cache-origin._
+
 ### 1169-FR-001 — The API MUST have one warm-cache library built on the cache service (`libs/domain/src/cache/`): `warm` stores a read's answer under a kind, a key and tags with a life of 90 s (jittered ×0.9–1.1, so 81–99 s, inside the issue's 60–120 s), served never stale and never refreshed; `take` returns a matching entry once and removes it, or nothing (the read and the removal are one atomic step, so two simultaneous reads get the entry once between them); a `take` that finds the same key's warm still in flight in this process awaits it (the cache service's single-flight) and counts a `hit`, so a home read that overtakes the warm is not a miss and the sign-in answer is never delayed. Warm entries use the cache service's keys, tags, lock, fail-open and metrics; no second cache, no second Redis client.
 
 _From 1169-prefetch-intent._
@@ -2117,3 +2146,5 @@ _From 1169-prefetch-intent._
 - `431-FR-008` — superseded by `1159-FR-019` (2026-10-11)
 
 - `450-FR-012` — superseded by `1230-FR-002` (2026-10-15)
+
+- `421-FR-019` — superseded by `1200-FR-006` (2026-10-15)

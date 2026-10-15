@@ -18,11 +18,12 @@ import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
-import { HEALTH, Home, TILES } from './home';
+import { HEALTH, Home } from './home';
 import { PlaceDialog } from './place/place-dialog/place-dialog';
 import type { Place } from './place/place-store';
 import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
+import { PUBLIC_READ } from '../public-read';
 
 const NAMES = [
   'BMW',
@@ -135,7 +136,7 @@ beforeEach(async () => {
   homeApi.homeControllerForBrand.mockClear();
   tilesApi.popularBrandsControllerTiles.mockReset();
   tilesApi.brandsControllerSearch.mockReset();
-  healthApi.healthControllerReady.mockReset();
+  healthApi.healthControllerReady.mockReset().mockResolvedValue(null);
   await configure();
 });
 
@@ -162,8 +163,13 @@ afterEach(() => {
   Reflect.deleteProperty(document, 'hidden');
 });
 
+// No list stands for a tiles read that failed.
 async function render(tiles: BrandDto[] | null = BRANDS) {
-  TestBed.inject(TransferState).set(TILES, tiles);
+  if (tiles) tilesApi.popularBrandsControllerTiles.mockResolvedValue(tiles);
+  else
+    tilesApi.popularBrandsControllerTiles.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
   fixture = TestBed.createComponent(Home);
   fixture.detectChanges();
   await settle();
@@ -201,7 +207,7 @@ const slugsRead = () =>
   homeApi.homeControllerForBrand.mock.calls.map(([q]) => q.brand);
 
 describe('Home', () => {
-  it('shows the name, the version and both checks', async () => {
+  it('shows the name, the version and both checks the server read', async () => {
     TestBed.inject(TransferState).set(HEALTH, {
       checks: { postgres: 'ok', redis: 'ok', storage: 'ok' },
       status: 'ok',
@@ -225,11 +231,30 @@ describe('Home', () => {
     expect(text()).toContain('PostgreSQL: ok · Redis: error');
   });
 
-  it('says the status is unknown when the API did not answer', async () => {
+  it('says the status is unknown when the server render handed no answer over', async () => {
     await render();
 
     expect(text()).toContain('versiune necunoscută');
     expect(text()).toContain('PostgreSQL: necunoscut · Redis: necunoscut');
+  });
+
+  // The browser cannot reach the API's ready check: on the page's own origin
+  // the web server answers its own, with the status alone. Every Home of the
+  // visit, one the browser opened after a redirect included, shows the
+  // server's answer.
+  // @traces 1200-FR-006
+  it('never asks the ready check in the browser, and keeps the server answer for a later Home', async () => {
+    TestBed.inject(TransferState).set(HEALTH, {
+      checks: { postgres: 'ok', redis: 'ok', storage: 'ok' },
+      status: 'ok',
+      version: 'abc123',
+    });
+    await render();
+    fixture.destroy();
+    await render();
+
+    expect(healthApi.healthControllerReady).not.toHaveBeenCalled();
+    expect(text()).toContain('PostgreSQL: ok · Redis: ok');
   });
 
   // The switch itself is the site bar's, in the public frame.
@@ -504,6 +529,24 @@ describe('Home brand picker on the server', () => {
     healthApi.healthControllerReady.mockResolvedValue(null);
   });
 
+  // @traces 1200-FR-006
+  it('reads the ready check and hands it to the browser, a 503 report included', async () => {
+    const report = {
+      checks: { postgres: 'ok', redis: 'error', storage: 'ok' },
+      status: 'error',
+      version: 'abc123',
+    };
+    healthApi.healthControllerReady.mockRejectedValue(
+      new HttpErrorResponse({ error: report, status: 503 }),
+    );
+    tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
+    fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(TestBed.inject(TransferState).get(HEALTH, null)).toEqual(report);
+  });
+
   it('reads eight tiles and hands them to the browser', async () => {
     tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
     fixture = TestBed.createComponent(Home);
@@ -511,10 +554,10 @@ describe('Home brand picker on the server', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledWith({
-      limit: 8,
-    });
-    expect(TestBed.inject(TransferState).get(TILES, null)).toEqual(BRANDS);
+    expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledWith(
+      { limit: 8 },
+      expect.anything(),
+    );
     expect(tiles()).toHaveLength(8);
     expect(homeApi.homeControllerForBrand).not.toHaveBeenCalled();
     expect(count()?.getAttribute('aria-busy')).toBe('true');
@@ -541,7 +584,7 @@ describe('Home brand picker on the server', () => {
     ).toBeTruthy();
   });
 
-  it('hands the browser no tiles when the read fails', async () => {
+  it('shows no tiles when the read fails', async () => {
     tilesApi.popularBrandsControllerTiles.mockRejectedValue(
       new HttpErrorResponse({ status: 500 }),
     );
@@ -550,7 +593,6 @@ describe('Home brand picker on the server', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(TestBed.inject(TransferState).get(TILES, undefined)).toEqual([]);
     expect(tiles()).toHaveLength(0);
   });
 });
@@ -559,7 +601,6 @@ describe('Home opened from another screen in the app', () => {
   // No server render handed tiles over: the browser reads them itself, so
   // the brands and the place line still show.
   async function visit() {
-    TestBed.inject(TransferState).remove(TILES);
     fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
     await settle();
@@ -570,9 +611,10 @@ describe('Home opened from another screen in the app', () => {
     tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
     await visit();
 
-    expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledWith({
-      limit: 8,
-    });
+    expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledWith(
+      { limit: 8 },
+      expect.anything(),
+    );
     expect(tiles()).toHaveLength(8);
     expect(page().querySelector('.place')).not.toBeNull();
   });
@@ -586,10 +628,16 @@ describe('Home opened from another screen in the app', () => {
     expect(tiles()).toHaveLength(0);
   });
 
-  it('does not read the tiles again when the server handed them over', async () => {
+  // A signed-in visitor's token would keep the browser from the answer the
+  // server render handed over, so the tiles go out as a public read.
+  // @traces 1200-FR-004
+  // @traces 1200-FR-005
+  it('reads the tiles once, as a public read', async () => {
     await render();
 
-    expect(tilesApi.popularBrandsControllerTiles).not.toHaveBeenCalled();
+    expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledTimes(1);
+    const [, context] = tilesApi.popularBrandsControllerTiles.mock.calls[0];
+    expect(context.get(PUBLIC_READ)).toBe(true);
   });
 });
 
@@ -1031,7 +1079,8 @@ describe('Home place from the Setări city', () => {
       q: 'Cluj-Napoca',
     });
     expect(lineText()).toBe('Lângă Cluj-Napoca · Schimbă');
-    expect(nearsRead()).toEqual([undefined, '46.771,23.624']);
+    // The city is placed before the first Home read answers, so it is the only one.
+    expect(nearsRead()).toEqual(['46.771,23.624']);
     expect(stored()).toBeNull();
     expect(session.load).not.toHaveBeenCalled();
   });

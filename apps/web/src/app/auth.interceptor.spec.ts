@@ -413,3 +413,112 @@ describe('authInterceptor during maintenance', () => {
     expect(platformStatus.on).not.toHaveBeenCalled();
   });
 });
+
+// The browser's generated client addresses the API absolutely at the page's
+// own origin, so every rule must hold for the absolute form of its path.
+// @traces 1200-FR-003
+// @traces 1200-FR-008
+describe('authInterceptor with absolute addresses at the page origin', () => {
+  const origin = location.origin;
+
+  it('sends the access token with an API call', () => {
+    const { http, server } = setup('abc');
+
+    http.get(`${origin}/api/v1/me`).subscribe();
+    const call = server.expectOne(`${origin}/api/v1/me`);
+
+    expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
+    call.flush({});
+  });
+
+  it.each([
+    '/api/v1/auth/sign-in',
+    '/api/v1/auth/refresh',
+    '/api/v1/auth/sign-in?next=/app',
+  ])('sends no token to the auth call %s', (path) => {
+    const { http, server } = setup('abc');
+
+    http.post(`${origin}${path}`, {}).subscribe({ error: () => undefined });
+    const call = server.expectOne(`${origin}${path}`);
+
+    expect(call.request.headers.has('Authorization')).toBe(false);
+    call.flush({});
+  });
+
+  it.each(['/api/v1/auth/password', '/api/v1/auth/assistant/approve'])(
+    'sends the token with the signed-in auth call %s',
+    (path) => {
+      const { http, server } = setup('abc');
+
+      http.post(`${origin}${path}`, {}).subscribe();
+      const call = server.expectOne(`${origin}${path}`);
+
+      expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
+      call.flush({});
+    },
+  );
+
+  it('judges by the path alone, never by the query', () => {
+    const { http, server } = setup('abc');
+
+    http.get(`${origin}/api/v1/me?x=/auth/refresh`).subscribe();
+    const call = server.expectOne(`${origin}/api/v1/me?x=/auth/refresh`);
+
+    expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
+    call.flush({});
+  });
+
+  it('renews once on a 401 and repeats the call with the new token', async () => {
+    const { http, server, session } = setup('expired');
+
+    const answer = firstValueFrom(http.get(`${origin}/api/v1/garages`));
+    server.expectOne(`${origin}/api/v1/garages`).flush({}, unauthorized);
+    await tick();
+    const retry = server.expectOne(`${origin}/api/v1/garages`);
+    retry.flush([]);
+
+    expect(session.renew).toHaveBeenCalledTimes(1);
+    expect(retry.request.headers.get('Authorization')).toBe('Bearer fresh');
+    expect(await answer).toEqual([]);
+  });
+
+  it('opens no dialog when "who am I" answers that a session is needed', async () => {
+    const { gate, http, server } = setup(null, null);
+
+    const answer = firstValueFrom(http.get(`${origin}/api/v1/me`));
+    server
+      .expectOne(`${origin}/api/v1/me`)
+      .flush(signInRequired.body, signInRequired.options);
+
+    await expect(answer).rejects.toMatchObject({ status: 401 });
+    expect(gate).not.toHaveBeenCalled();
+  });
+
+  it('asks to sign in for an account call refused for want of a session', async () => {
+    const { gate, http, server } = setup('expired', null);
+
+    http.patch(`${origin}/api/v1/me`, {}).subscribe({ error: () => undefined });
+    server
+      .expectOne(`${origin}/api/v1/me`)
+      .flush(signInRequired.body, signInRequired.options);
+    await tick();
+
+    expect(gate).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['http://api.internal:3000/api/v1/me', '//evil.example/api/v1/me'])(
+    'sends no token to another origin, %s, and opens no dialog',
+    async (url) => {
+      const { gate, http, server, session } = setup('abc', null);
+
+      const answer = firstValueFrom(http.patch(url, {}));
+      const call = server.expectOne(url);
+      expect(call.request.headers.has('Authorization')).toBe(false);
+      call.flush(signInRequired.body, signInRequired.options);
+
+      await expect(answer).rejects.toMatchObject({ status: 401 });
+      expect(session.renew).not.toHaveBeenCalled();
+      expect(gate).not.toHaveBeenCalled();
+    },
+  );
+});
