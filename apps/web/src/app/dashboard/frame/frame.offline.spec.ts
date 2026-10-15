@@ -32,6 +32,8 @@ async function render(language: 'ro' | 'en' = 'ro') {
     close: jest.fn(),
     events: new Subject<LiveMessage>(),
     offline: signal(false),
+    // The views under the frame listen too; this spec sends them nothing.
+    on: () => new Subject<LiveMessage>(),
     open: jest.fn(),
     resync: new Subject<void>(),
   };

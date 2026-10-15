@@ -237,6 +237,7 @@
     "title": "Schimbă numărul de telefon"
   },
   "requests": {
-    "retry": "Încearcă din nou"
+    "retry": "Încearcă din nou",
+    "waitingGarage": "Așteaptă confirmarea service‑ului · {left}"
   }
 }

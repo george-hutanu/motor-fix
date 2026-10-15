@@ -234,6 +234,7 @@
     "title": "Change the phone number"
   },
   "requests": {
-    "retry": "Try again"
+    "retry": "Try again",
+    "waitingGarage": "Waiting for the garage · {left}"
   }
 }

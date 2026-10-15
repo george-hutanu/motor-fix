@@ -1,8 +1,12 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
+  PLATFORM_ID,
+  signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { REQUEST_STATUS_LABELS } from '@motor-fix/contracts/request-status';
@@ -10,7 +14,7 @@ import {
   type RequestSummaryDto,
   RequestsService,
 } from '@motor-fix/data-access';
-import { I18n, relativeTime, TranslatePipe } from '@motor-fix/i18n';
+import { I18n, relativeTime, TranslatePipe, timeLeft } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { EmptyState } from '../empty-state/empty-state';
@@ -23,10 +27,15 @@ interface Row {
   what: string;
   status: string;
   when: string;
+  // Set while the booking waits for the garage: the time it has left.
+  waiting?: string;
 }
 
+const TICK_MS = 60_000;
+
 // "Cererile mele": the driver's requests, newest first, kept current by the
-// request events so one sent in another tab shows up without a reload.
+// request events so one sent in another tab shows up without a reload. A
+// booked request waiting for the garage counts down its time to confirm.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [EmptyState, HlmButton, RouterLink, TranslatePipe],
@@ -40,19 +49,23 @@ export class RequestsView {
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
-    ['request.created', 'quote.sent', 'request.declined'],
+    ['request.created', 'quote.sent', 'request.declined', 'quote.accepted'],
   );
+  private readonly now = signal(new Date());
   protected readonly rows = computed(() => {
     const items = this.list.value()?.items;
     if (!items) return undefined;
     const language = this.language();
-    const now = new Date();
+    const now = this.now();
     return items.map((item) => this.row(item, language, now));
   });
 
   constructor() {
     void this.i18n.enter('driver');
     focusCard('data-request', this.rows);
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
 
   private row(item: RequestSummaryDto, language: 'ro' | 'en', now: Date): Row {
@@ -68,6 +81,10 @@ export class RequestsView {
         ? jobs.join(', ')
         : (item.description ?? '').split('\n')[0],
       when: relativeTime(item.createdAt, language, now),
+      ...(item.status === 'booked' &&
+        item.booking?.status === 'awaiting_confirmation' && {
+          waiting: timeLeft(item.booking.confirmBy, language, now),
+        }),
     };
   }
 }
