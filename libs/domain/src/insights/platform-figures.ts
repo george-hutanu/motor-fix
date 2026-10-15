@@ -148,8 +148,9 @@ export async function snapshotActiveDrivers(db: PrismaClient, day: string) {
 export const monthStartSnapshot = (db: PrismaClient, now: Date) =>
   snapshotActiveDrivers(db, monthStart(localDay(now)));
 
-// Each count dates a row by its own moment on the Bucharest day; a request
-// quoted or accepted by several garages counts once, on its earliest quote.
+// Each count dates a row by its own moment on the Bucharest day. A request
+// counts once: as quoted on the day of its first quote, and as accepted on a
+// day any of its quotes was accepted.
 async function countFunnel(db: PrismaClient, day: string) {
   const since = atLocal(day, 0);
   const until = atLocal(addDays(day, 1), 0);
@@ -167,7 +168,13 @@ async function countFunnel(db: PrismaClient, day: string) {
     db.booking.count({ where: { confirmedAt: { gte: since, lt: until } } }),
     db.job.count({ where: { finishedAt: { gte: since, lt: until } } }),
   ]);
-  return { ...requests, bookingsConfirmed, jobsDone, reviewsPosted: 0 };
+  return {
+    ...requests,
+    bookingsConfirmed,
+    jobsDone,
+    // TODO: count reviews once the review model exists
+    reviewsPosted: 0,
+  };
 }
 
 export async function writeSnapshot(db: PrismaClient, now: Date) {
