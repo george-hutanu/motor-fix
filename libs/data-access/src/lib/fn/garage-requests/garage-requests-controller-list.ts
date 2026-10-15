@@ -17,7 +17,7 @@ export interface GarageRequestsControllerList$Params {
   cursor?: string;
 
 /**
- * waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits, newest quote first
+ * waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits or was accepted and waits for the garage’s confirmation, newest quote first
  */
   status?: 'waiting' | 'closed' | 'quoted';
 }

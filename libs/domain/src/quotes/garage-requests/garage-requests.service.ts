@@ -47,8 +47,9 @@ import {
   snapshotOf,
 } from '../reads';
 
-// Only this garage's own recipient row and quote ride along.
+// Only this garage's own recipient row, quote and booking ride along.
 const summaryInclude = (garageId: string) => ({
+  bookings: { orderBy: NEWEST_FIRST, take: 1, where: { garageId } },
   driver: true,
   jobs: { include: { jobType: true }, orderBy: { position: 'asc' as const } },
   quotes: { include: { jobs: true }, where: { garageId } },
@@ -56,11 +57,22 @@ const summaryInclude = (garageId: string) => ({
 });
 
 type SummaryRow = QuoteRequest & {
+  bookings: Booking[];
   driver: Account;
   jobs: (RequestJob & { jobType: JobType })[];
   quotes: (Quote & { jobs: QuoteJob[] })[];
   recipients: RequestRecipient[];
 };
+
+// From acceptance until the garage confirms, the owner and the desk may call
+// the driver about the booking; a mechanic never reads the phone in a list.
+const listPhoneOf = (row: SummaryRow, actor: Actor) =>
+  actor.role !== 'mechanic' &&
+  row.quotes[0]?.status === 'accepted' &&
+  row.bookings[0]?.status === 'awaiting_confirmation' &&
+  row.driver.phone
+    ? { phone: row.driver.phone }
+    : {};
 
 // What the garage ticked, as "brand job" keys for the rows' car brands.
 type Offered = Set<string>;
@@ -106,16 +118,21 @@ function summaryOf(
   row: SummaryRow,
   offered: Offered,
   closed?: Closed,
+  phone: { phone?: string } = {},
 ): GarageRequestSummaryDto {
   const [recipient] = row.recipients;
   const [quote] = row.quotes;
+  const [booking] = row.bookings;
   return {
+    booking: booking
+      ? { confirmBy: booking.confirmBy.toISOString(), status: booking.status }
+      : null,
     car: snapshotOf(row),
     closedAt: closed?.closedAt ?? null,
     closedReason: closed?.closedReason ?? null,
     createdAt: row.createdAt.toISOString(),
     descriptionLine: firstLine(row.description),
-    driver: { shortName: shortName(row.driver.name) },
+    driver: { shortName: shortName(row.driver.name), ...phone },
     expiresAt: row.expiresAt.toISOString(),
     id: row.id,
     jobs: jobsOf(row.jobs).map((job) => ({
@@ -198,7 +215,9 @@ export class GarageRequestsService {
   ): Promise<GarageRequestListDto> {
     const garageId = this.garageOf(actor);
     if (query.status === 'closed') return this.closed(garageId);
-    if (query.status === 'quoted') return this.quoted(garageId, query.cursor);
+    if (query.status === 'quoted') {
+      return this.quoted(actor, garageId, query.cursor);
+    }
     const where =
       query.status === 'waiting'
         ? {
@@ -319,15 +338,23 @@ export class GarageRequestsService {
     };
   }
 
-  // The rows this garage quoted whose quote still waits, newest quote first.
+  // The rows this garage quoted whose quote still waits, or was accepted and
+  // waits for the garage to confirm the booking, newest quote first.
   private async quoted(
+    actor: Actor,
     garageId: string,
     cursor?: string,
   ): Promise<GarageRequestListDto> {
-    const where = {
+    const where: Prisma.QuoteWhereInput = {
       garageId,
-      recipient: { status: 'quoted' as const },
-      status: 'waiting' as const,
+      OR: [
+        { status: 'waiting' },
+        {
+          booking: { status: 'awaiting_confirmation' },
+          status: 'accepted',
+        },
+      ],
+      recipient: { status: 'quoted' },
     };
     const from = await assertCursor(cursor, (requestId) =>
       this.prisma.quote.findFirst({ where: { ...where, requestId } }),
@@ -354,7 +381,9 @@ export class GarageRequestsService {
     const byId = new Map(found.map((row) => [row.id, row]));
     const rows = hits.flatMap((hit) => byId.get(hit.requestId) ?? []);
     const offered = await this.offered(garageId, rows);
-    return page(rows, total, (row) => summaryOf(row, offered));
+    return page(rows, total, (row) =>
+      summaryOf(row, offered, undefined, listPhoneOf(row, actor)),
+    );
   }
 
   // The garage's price-list row for each asked job: the row for the car's

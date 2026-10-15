@@ -36,6 +36,7 @@ describe('GET /garage/requests', () => {
       older.id,
     ]);
     expect(res.body.items[1]).toEqual({
+      booking: null,
       car: {
         brand: 'Mini',
         engine: '2.0 turbo',
@@ -1183,5 +1184,210 @@ describe('GET /garage/requests?status=closed after a decline', () => {
 
     expect(waiting.body.total).toBe(0);
     expect(quoted.body.total).toBe(0);
+  });
+});
+
+// @traces 222-FR-005
+// @traces 222-FR-011
+// @traces 222-SC-003
+describe('GET /garage/requests?status=quoted once the driver accepts', () => {
+  // Andrei's request quoted by Atelier Dinamo at `sentAt`, the quote
+  // accepted and its booking in `status`.
+  async function acceptedAt(
+    garageId: string,
+    sentAt: Date,
+    status: 'awaiting_confirmation' | 'confirmed' = 'awaiting_confirmation',
+    driverId?: string,
+  ) {
+    const andrei = driverId ?? (await driver());
+    const r = await world.request(andrei, { status: 'booked' });
+    const q = await world.quote(r.id, garageId, 'accepted');
+    await prisma.quote.update({ data: { sentAt }, where: { id: q.id } });
+    const b = await world.booking(q.id, status);
+    return { booking: b, quote: q, request: r };
+  }
+
+  async function waitingAt(driverId: string, garageId: string, sentAt: Date) {
+    const r = await world.request(driverId, { status: 'quoted' });
+    const q = await world.quote(r.id, garageId);
+    await prisma.quote.update({ data: { sentAt }, where: { id: q.id } });
+    return r;
+  }
+
+  it('keeps the accepted row among the waiting ones, in quote order, with its booking’s deadline', async () => {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const older = await waitingAt(andrei, dinamo.garage.id, ago(3 * HOUR));
+    const accepted = await acceptedAt(
+      dinamo.garage.id,
+      ago(2 * HOUR),
+      'awaiting_confirmation',
+      andrei,
+    );
+    const newer = await waitingAt(andrei, dinamo.garage.id, ago(HOUR));
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(ids(res)).toEqual([newer.id, accepted.request.id, older.id]);
+    expect(res.body.total).toBe(3);
+    const row = res.body.items[1];
+    expect(row.quote.status).toBe('accepted');
+    expect(row.booking).toEqual({
+      confirmBy: accepted.booking.confirmBy.toISOString(),
+      status: 'awaiting_confirmation',
+    });
+    expect(res.body.items[0].booking).toBeNull();
+  });
+
+  it('pages the accepted rows with the waiting ones and counts them in the total', async () => {
+    const andrei = await driver();
+    const dinamo = await team('Atelier Dinamo');
+    const made: string[] = [];
+    for (let i = 0; i < 21; i++) {
+      const at = ago((i + 1) * 60_000);
+      made.push(
+        i % 2
+          ? (
+              await acceptedAt(
+                dinamo.garage.id,
+                at,
+                'awaiting_confirmation',
+                andrei,
+              )
+            ).request.id
+          : (await waitingAt(andrei, dinamo.garage.id, at)).id,
+      );
+    }
+    const auth = bearer(dinamo.owner, 'garage');
+
+    const first = await get('/garage/requests?status=quoted', auth);
+    const second = await get(
+      `/garage/requests?status=quoted&cursor=${first.body.nextCursor}`,
+      auth,
+    );
+
+    expect(first.body.total).toBe(21);
+    expect(ids(first)).toEqual(made.slice(0, 20));
+    expect(ids(second)).toEqual([made[20]]);
+  });
+
+  it('drops the row once the booking is no longer waiting for the garage', async () => {
+    const dinamo = await team('Atelier Dinamo');
+    await acceptedAt(dinamo.garage.id, ago(HOUR), 'confirmed');
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(res.body.items).toEqual([]);
+    expect(res.body.total).toBe(0);
+  });
+
+  it.each([
+    ['owner', 'garage'],
+    ['receptionist', 'receptionist'],
+  ] as const)(
+    'shows the %s the driver’s phone on the accepted row only',
+    async (who, role) => {
+      const andrei = await driver();
+      const dinamo = await team('Atelier Dinamo');
+      await waitingAt(andrei, dinamo.garage.id, ago(2 * HOUR));
+      await acceptedAt(
+        dinamo.garage.id,
+        ago(HOUR),
+        'awaiting_confirmation',
+        andrei,
+      );
+
+      const res = await get(
+        '/garage/requests?status=quoted',
+        bearer(dinamo[who], role),
+      );
+
+      expect(res.body.items[0].driver).toEqual({
+        phone: PHONE,
+        shortName: 'Andrei M.',
+      });
+      expect(res.body.items[1].driver).toEqual({ shortName: 'Andrei M.' });
+    },
+  );
+
+  it('never shows a mechanic the phone', async () => {
+    const dinamo = await team('Atelier Dinamo');
+    await acceptedAt(dinamo.garage.id, ago(HOUR));
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.answering, 'mechanic'),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0].driver).toEqual({ shortName: 'Andrei M.' });
+    expect(JSON.stringify(res.body)).not.toContain(PHONE);
+  });
+
+  it('leaves the phone out when the driver has none', async () => {
+    const dinamo = await team('Atelier Dinamo');
+    const ioana = await world.account('Ioana Pop');
+    await acceptedAt(
+      dinamo.garage.id,
+      ago(HOUR),
+      'awaiting_confirmation',
+      ioana,
+    );
+
+    const res = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(res.body.items[0].driver).toEqual({ shortName: 'Ioana P.' });
+  });
+
+  it('shows no plate and no history on the accepted row, whatever the driver shared', async () => {
+    const dinamo = await team('Atelier Dinamo');
+    const { booking, request } = await acceptedAt(dinamo.garage.id, ago(HOUR));
+    await prisma.booking.update({
+      data: { historyShared: true },
+      where: { id: booking.id },
+    });
+
+    const list = await get(
+      '/garage/requests?status=quoted',
+      bearer(dinamo.owner, 'garage'),
+    );
+    const detail = await get(
+      `/garage/requests/${request.id}`,
+      bearer(dinamo.owner, 'garage'),
+    );
+
+    expect(JSON.stringify(list.body)).not.toContain('B123ABC');
+    expect(detail.body.car.plate).toBeUndefined();
+    expect(Object.keys(list.body.items[0]).sort()).toEqual(
+      [
+        'booking',
+        'car',
+        'closedAt',
+        'closedReason',
+        'createdAt',
+        'descriptionLine',
+        'driver',
+        'expiresAt',
+        'id',
+        'jobs',
+        'quote',
+        'recipient',
+        'status',
+      ].sort(),
+    );
+    expect(list.body.items[0].booking).not.toHaveProperty('historyShared');
+    expect(detail.body.booking.historyShared).toBe(true);
+    for (const body of [list.body, detail.body]) {
+      expect(JSON.stringify(body)).not.toMatch(/repairs|history"/i);
+    }
   });
 });

@@ -69,7 +69,7 @@ export class ListQueryDto {
 export class GarageRequestsQueryDto extends ListQueryDto {
   @ApiPropertyOptional({
     description:
-      'waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits, newest quote first',
+      'waiting: the rows the garage can still answer; closed: the rows closed for it in the last 24 hours, one page; quoted: the rows the garage quoted whose quote still waits or was accepted and waits for the garage’s confirmation, newest quote first',
     enum: GARAGE_REQUEST_FILTERS,
   })
   @IsOptional()
@@ -281,6 +281,15 @@ export class BookingDto {
   createdAt!: string;
 }
 
+// The booking a list row needs to say where it stands.
+export class RequestBookingDto {
+  @ApiProperty({ enum: BOOKING_STATUSES })
+  status!: BookingStatus;
+
+  @ApiProperty({ format: 'date-time' })
+  confirmBy!: string;
+}
+
 export class RequestSummaryDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -433,14 +442,25 @@ export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
   })
   closedAt!: string | null;
 
-  @ApiProperty({ type: DriverNameDto })
-  driver!: DriverNameDto;
+  @ApiProperty({
+    description:
+      'The phone shows to the owner and the desk on a row whose quote the driver accepted while it waits for confirmation',
+    type: GarageDriverDto,
+  })
+  driver!: GarageDriverDto;
 
   @ApiProperty({ type: GarageRecipientDto })
   recipient!: GarageRecipientDto;
 
   @ApiProperty({ nullable: true, type: GarageQuoteDto })
   quote!: GarageQuoteDto | null;
+
+  @ApiProperty({
+    description: 'The booking the garage’s quote became',
+    nullable: true,
+    type: RequestBookingDto,
+  })
+  booking!: RequestBookingDto | null;
 }
 
 export class GarageRequestDto extends OmitType(GarageRequestSummaryDto, [
@@ -460,7 +480,7 @@ export class GarageRequestDto extends OmitType(GarageRequestSummaryDto, [
   description!: string | null;
 
   @ApiProperty({ nullable: true, type: GarageBookingDto })
-  booking!: GarageBookingDto | null;
+  declare booking: GarageBookingDto | null;
 }
 
 export class GarageRequestListDto {

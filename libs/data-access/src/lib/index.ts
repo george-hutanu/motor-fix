@@ -158,6 +158,7 @@ export type { RecordVerificationCheckDto } from './models/record-verification-ch
 export type { RefreshDto } from './models/refresh-dto';
 export type { ReorderJobStepsDto } from './models/reorder-job-steps-dto';
 export type { ReplaceGarageBrandsDto } from './models/replace-garage-brands-dto';
+export type { RequestBookingDto } from './models/request-booking-dto';
 export type { RequestDto } from './models/request-dto';
 export type { RequestJobDto } from './models/request-job-dto';
 export type { RequestListDto } from './models/request-list-dto';

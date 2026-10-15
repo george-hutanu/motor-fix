@@ -14,6 +14,7 @@ export const wait = (ms: number) =>
 export const requestRow = (
   over: Partial<GarageRequestSummaryDto> = {},
 ): GarageRequestSummaryDto => ({
+  booking: null,
   car: {
     brand: 'Dacia',
     engine: '1.0 TCe',
