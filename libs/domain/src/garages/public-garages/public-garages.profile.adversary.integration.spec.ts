@@ -157,7 +157,7 @@ describe('a profile read with a damaged brand parameter', () => {
       await get(`/garages/${garage.slug}?brand=nobody-${i}`);
     }
 
-    expect(await other.scard(`v1:tag:garage:${garage.id}`)).toBeLessThanOrEqual(
+    expect(await other.zcard(`v1:tag:garage:${garage.id}`)).toBeLessThanOrEqual(
       2,
     );
   });

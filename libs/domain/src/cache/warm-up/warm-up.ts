@@ -44,11 +44,23 @@ export async function warmCache(app: INestApplicationContext, release: string) {
       ORDER BY COALESCE(SUM(f.profile_views), 0) DESC,
         g.approved_at DESC NULLS LAST, g.id
       LIMIT ${PROFILES}`;
+    // A read that fails (a garage suspended meanwhile) skips that key only.
+    const failed: unknown[] = [];
+    const each = async (read: () => Promise<unknown>) => {
+      await read().catch((error: unknown) => failed.push(error));
+    };
     await cache.warm(async () => {
-      for (const { slug } of rows) await profiles.bySlug(slug);
+      for (const { slug } of rows) await each(() => profiles.bySlug(slug));
       const tiles = await cache.read(tilesRead(popular, TILES));
-      for (const { slug } of tiles) await cache.read(homeRead(home, slug));
+      for (const { slug } of tiles) {
+        await each(() => cache.read(homeRead(home, slug)));
+      }
     });
+    if (failed.length > 0) {
+      logger.warn(
+        `cache warm-up skipped ${failed.length} reads: ${String(failed[0])}`,
+      );
+    }
   } catch (error) {
     logger.warn(`cache warm-up stopped: ${String(error)}`);
   }

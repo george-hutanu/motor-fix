@@ -23,8 +23,10 @@ const LOCK_MS = 3000;
 const POLL_MS = 50;
 
 // The `v1` is the shape of what is stored: a change to it bumps the version.
+// A part's own colons are escaped, so a slug or brand a visitor types never
+// names another part's key.
 export const cacheKey = (kind: CacheKind, ...parts: string[]) =>
-  `v1:${kind}:${parts.join(':')}`;
+  `v1:${kind}:${parts.map((part) => part.replaceAll('%', '%25').replaceAll(':', '%3A')).join(':')}`;
 export const lockKey = (key: string) => `v1:lock:${key}`;
 export const tagKey = (tag: string) => `v1:tag:${tag}`;
 export const purgedKey = (tag: string) => `v1:purged:${tag}`;
@@ -80,15 +82,20 @@ end
 return 0`;
 
 // Stores the entry under each tag, unless one of them was purged since the
-// read began: the purge wins.
+// read began: the purge wins. A tag holds its keys scored by when they expire,
+// and drops the expired ones on each store, so it never outgrows its live
+// entries.
 const STORE = `
 for i = 2, #KEYS, 2 do
   local purged = redis.call('GET', KEYS[i + 1])
   if purged and tonumber(purged) >= tonumber(ARGV[3]) then return 0 end
 end
+local t = redis.call('TIME')
+local now = tonumber(t[1]) * 1000 + math.floor(tonumber(t[2]) / 1000)
 redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
 for i = 2, #KEYS, 2 do
-  redis.call('SADD', KEYS[i], KEYS[1])
+  redis.call('ZREMRANGEBYSCORE', KEYS[i], '-inf', now)
+  redis.call('ZADD', KEYS[i], now + tonumber(ARGV[2]), KEYS[1])
   if redis.call('PTTL', KEYS[i]) < tonumber(ARGV[2]) then
     redis.call('PEXPIRE', KEYS[i], ARGV[2])
   end
@@ -99,8 +106,15 @@ const RELEASE = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end
 return 0`;
 
-const parse = <T>(text: string | null | undefined) =>
-  text ? (JSON.parse(text) as Entry<T>) : undefined;
+// A value that is not one of ours reads as a miss, and is written over.
+function parse<T>(text: string | null | undefined) {
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text) as Entry<T>;
+  } catch {
+    return undefined;
+  }
+}
 
 // Names the served answer's tags on the request, for its Cache-Tag header.
 function tagRequest(tags: string[] | undefined) {
@@ -133,7 +147,9 @@ export class CacheService {
     const text = await this.attempt(() => this.redis.get(spec.key));
     if (text === undefined) {
       this.count(spec.key, 'fallback');
-      return (await spec.read()).value;
+      const filled = await spec.read();
+      tagRequest(filled.tags);
+      return filled.value;
     }
     const entry = parse<T>(text);
     if (entry) return this.served(spec, entry);
@@ -180,23 +196,39 @@ export class CacheService {
   ): Promise<Entry<T> | undefined> {
     const lock = lockKey(spec.key);
     const token = randomUUID();
-    let outcome: CacheOutcome = 'miss';
-    for (let round = 0; round < 2; round += 1) {
-      const start = await this.attempt(
-        () => this.redis.eval(LOCK, 1, lock, token, LOCK_MS) as Promise<number>,
-      );
-      if (start === undefined) {
-        outcome = 'fallback';
-        break;
-      }
-      if (start > 0) return this.lead(spec, lock, token, start, background);
-      if (background) return undefined;
-      const stored = await this.stored<T>(spec.key, lock);
-      if (stored) {
-        this.count(spec.key, 'coalesced');
-        return stored;
-      }
+    const start = await this.take(lock, token);
+    if (start === undefined) return this.unstored(spec, background, 'fallback');
+    if (start > 0) return this.lead(spec, lock, token, start, background);
+    if (background) return undefined;
+    const stored = await this.stored<T>(spec.key, lock);
+    if (stored) {
+      this.count(spec.key, 'coalesced');
+      return stored;
     }
+    // The holder is gone without storing: one more try at the lock, then the
+    // read goes to the database itself.
+    const again = await this.take(lock, token);
+    if (again) return this.lead(spec, lock, token, again, false);
+    return this.unstored(
+      spec,
+      false,
+      again === undefined ? 'fallback' : 'miss',
+    );
+  }
+
+  // Takes the key's lock: Redis's time when taken, 0 when held, undefined
+  // when Redis failed.
+  private take(lock: string, token: string) {
+    return this.attempt(
+      () => this.redis.eval(LOCK, 1, lock, token, LOCK_MS) as Promise<number>,
+    );
+  }
+
+  private async unstored<T>(
+    spec: CacheRead<T>,
+    background: boolean,
+    outcome: CacheOutcome,
+  ) {
     if (background) return undefined;
     this.count(spec.key, outcome);
     return this.entry(spec, await spec.read()).entry;

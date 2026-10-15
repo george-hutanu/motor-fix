@@ -91,9 +91,7 @@ describe('cache headers on read routes', () => {
     const paths = Object.entries(openApiDocument(app).paths)
       .filter(([, item]) => 'get' in item)
       .map(([path]) => path.replace(/\{[^}]+\}/g, SOME_ID))
-      .filter(
-        (path) => !opened.has(path) && !path.startsWith('/api/v1/garages/'),
-      );
+      .filter((path) => !opened.has(path));
     expect(paths.length).toBeGreaterThan(10);
 
     for (const path of paths) {

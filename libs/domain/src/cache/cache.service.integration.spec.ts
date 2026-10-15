@@ -103,7 +103,7 @@ describe('the cache service', () => {
     const ttl = await other.pttl(k);
     expect(ttl).toBeGreaterThan(540_000 + 590_000);
     expect(ttl).toBeLessThanOrEqual(660_000 + 600_000);
-    expect(await other.smembers('v1:tag:garage:a')).toContain(k);
+    expect(await other.zrange('v1:tag:garage:a', '0', '-1')).toContain(k);
   });
 
   it('serves a stale entry at once and refreshes it once behind the read', async () => {
@@ -288,6 +288,55 @@ describe('the cache service', () => {
     );
 
     expect(outcomes).toEqual({ 'profile warm': 1 });
+  });
+
+  it('reads a value that is not one of its entries as a miss, and writes over it', async () => {
+    const cache = new CacheService(client());
+    const k = key();
+    await other.set(k, 'not json', 'PX', 60_000);
+
+    await expect(
+      cache.read({ key: k, read: source('fresh', 0).read, soft: 600 }),
+    ).resolves.toBe('fresh');
+
+    expect(String(await other.get(k))).toContain('"v":"fresh"');
+  });
+
+  it('keeps a tag no larger than its live entries', async () => {
+    const cache = new CacheService(client());
+    const tag = `garage:${randomUUID()}`;
+    const gone = key();
+    await other.zadd(`v1:tag:${tag}`, Date.now() - 1000, gone);
+
+    const k = key();
+    await cache.read({
+      key: k,
+      read: async () => ({ tags: [tag], value: 1 }),
+      soft: 600,
+    });
+
+    expect(await other.zrange(`v1:tag:${tag}`, '0', '-1')).toEqual([k]);
+  });
+
+  it('names the answer’s tags on the request while Redis is down', async () => {
+    const redis = client();
+    const cache = new CacheService(redis);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest.spyOn(redis, 'sendCommand').mockImplementation((command: Command) => {
+      command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
+      return command.promise;
+    });
+    const store: { cacheTags?: string[] } = {};
+
+    await requestContext.run(store, () =>
+      cache.read({
+        key: key(),
+        read: async () => ({ tags: ['garage:x'], value: 1 }),
+        soft: 60,
+      }),
+    );
+
+    expect(store.cacheTags).toEqual(['garage:x']);
   });
 
   it('answers from the read while Redis is down, warning once and logging the recovery', async () => {

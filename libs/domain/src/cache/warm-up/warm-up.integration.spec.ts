@@ -158,7 +158,7 @@ describe('warming the cache after a deploy', () => {
     expect(read).not.toHaveBeenCalled();
   });
 
-  it('logs one warning and stops when a read fails', async () => {
+  it('skips the reads that fail, with one warning, and warms the rest', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
@@ -173,5 +173,6 @@ describe('warming the cache after a deploy', () => {
     expect(
       warn.mock.calls.filter(([m]) => /warm-up/.test(String(m))),
     ).toHaveLength(1);
+    expect(await other.exists('v1:home:dacia:-', 'v1:home:ford:-')).toBe(2);
   });
 });

@@ -72,7 +72,7 @@ describe('the brand Home answer through the cache service', () => {
 
     expect(second.body).toEqual(first.body);
     expect(second.body.brand.name).toBe('Dacia');
-    expect((await other.smembers('v1:tag:search')).sort()).toEqual(
+    expect((await other.zrange('v1:tag:search', '0', '-1')).sort()).toEqual(
       ['v1:home:dacia:-', 'v1:home:dacia:44.433,26.104'].sort(),
     );
     const ttl = await other.pttl('v1:home:dacia:-');
@@ -105,7 +105,7 @@ describe('the popular tiles through the cache service', () => {
     const second = await get('/brands/popular', { limit: '3' });
 
     expect(second.body).toEqual(first.body);
-    expect(await other.smembers('v1:tag:search')).toEqual([
+    expect(await other.zrange('v1:tag:search', '0', '-1')).toEqual([
       'v1:popular-brands:3',
     ]);
   });

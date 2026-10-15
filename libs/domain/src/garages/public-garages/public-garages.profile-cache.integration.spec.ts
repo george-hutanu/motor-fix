@@ -115,9 +115,9 @@ describe('the profile through the cache service', () => {
       id: garage.id,
       name: 'Service Auto Militari',
     });
-    expect(await other.smembers(`v1:tag:garage:${garage.id}`)).toEqual([
-      entry(garage.slug),
-    ]);
+    expect(await other.zrange(`v1:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+      [entry(garage.slug)],
+    );
     expect((await counts()).miss - before.miss).toBe(1);
   });
 
@@ -148,9 +148,9 @@ describe('the profile through the cache service', () => {
       slug,
       stance: 'does_not_take',
     });
-    expect((await other.smembers(`v1:tag:garage:${garage.id}`)).sort()).toEqual(
-      [entry(garage.slug), entry(garage.slug, slug)].sort(),
-    );
+    expect(
+      (await other.zrange(`v1:tag:garage:${garage.id}`, '0', '-1')).sort(),
+    ).toEqual([entry(garage.slug), entry(garage.slug, slug)].sort());
   });
 
   it('reads PostgreSQL again once the garage’s tag is purged', async () => {
