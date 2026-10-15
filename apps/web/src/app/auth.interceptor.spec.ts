@@ -416,8 +416,8 @@ describe('authInterceptor during maintenance', () => {
 
 // The browser's generated client addresses the API absolutely at the page's
 // own origin, so every rule must hold for the absolute form of its path.
-// @traces 1200-transfer-cache-origin-FR-003
-// @traces 1200-transfer-cache-origin-FR-009
+// @traces 1200-FR-003
+// @traces 1200-FR-008
 describe('authInterceptor with absolute addresses at the page origin', () => {
   const origin = location.origin;
 

@@ -238,7 +238,7 @@ describe('Home', () => {
     expect(text()).toContain('PostgreSQL: necunoscut · Redis: necunoscut');
   });
 
-  // @traces 1200-transfer-cache-origin-FR-006
+  // @traces 1200-FR-006
   it('reads the checks in the browser too, where the server render hands its answer over', async () => {
     healthApi.healthControllerReady.mockResolvedValue({
       checks: { postgres: 'ok', redis: 'ok', storage: 'ok' },
@@ -253,7 +253,7 @@ describe('Home', () => {
 
   // The web server answers its own ready check with the status alone, so a
   // browser read the server render did not hand over has no checks to show.
-  // @traces 1200-transfer-cache-origin-FR-006
+  // @traces 1200-FR-006
   it('says the checks are unknown when the ready answer carries none', async () => {
     healthApi.healthControllerReady.mockRejectedValue(
       new HttpErrorResponse({ error: { status: 'unavailable' }, status: 503 }),
@@ -618,8 +618,8 @@ describe('Home opened from another screen in the app', () => {
 
   // A signed-in visitor's token would keep the browser from the answer the
   // server render handed over, so the tiles go out as a public read.
-  // @traces 1200-transfer-cache-origin-FR-004
-  // @traces 1200-transfer-cache-origin-FR-005
+  // @traces 1200-FR-004
+  // @traces 1200-FR-005
   it('reads the tiles once, as a public read', async () => {
     await render();
 

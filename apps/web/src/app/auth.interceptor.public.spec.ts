@@ -17,7 +17,7 @@ import { PlatformStatus } from './maintenance/platform-status';
 import { publicRead } from './public-read';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
-// @traces 1200-transfer-cache-origin-FR-004
+// @traces 1200-FR-004
 
 let server: HttpTestingController;
 

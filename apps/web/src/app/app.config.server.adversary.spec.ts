@@ -1,6 +1,6 @@
 import type { ApplicationConfig } from '@angular/core';
 
-// @traces 1200-transfer-cache-origin-FR-002
+// @traces 1200-FR-002
 
 type Provider = { provide?: unknown; useValue?: unknown };
 

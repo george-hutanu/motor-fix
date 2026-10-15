@@ -47,7 +47,7 @@ const signInRequired = {
 
 afterEach(() => server.verify());
 
-// @traces 1200-transfer-cache-origin-FR-003
+// @traces 1200-FR-003
 describe('authInterceptor path judgement', () => {
   it.each([
     ['/api/v1/auth/../me'],
@@ -146,7 +146,7 @@ describe('authInterceptor path judgement', () => {
   });
 });
 
-// @traces 1200-transfer-cache-origin-FR-004
+// @traces 1200-FR-004
 describe('authInterceptor and a marked request in odd places', () => {
   it.each([
     ['/api/v1/auth/password'],

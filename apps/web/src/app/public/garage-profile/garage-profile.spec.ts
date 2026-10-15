@@ -402,8 +402,8 @@ describe('the price list on the profile', () => {
 // The server render's answer reaches the browser through the transfer cache,
 // which serves it at once: hydration finds the same section it rendered.
 // @traces 355-price-list-ranges-FR-011
-// @traces 1200-transfer-cache-origin-FR-005
-// @traces 1200-transfer-cache-origin-FR-006
+// @traces 1200-FR-005
+// @traces 1200-FR-006
 describe('the profile read the server render hands over', () => {
   const BRAKES = {
     durationMinutes: 120,
@@ -429,7 +429,7 @@ describe('the profile read the server render hands over', () => {
 
   // A signed-in visitor's token would keep the browser from the cached
   // answer, so the profile goes out as a public read.
-  // @traces 1200-transfer-cache-origin-FR-004
+  // @traces 1200-FR-004
   it('reads the profile once, as a public read', async () => {
     await open('/ro/garages/service-auto-militari?brand=bmw');
 

@@ -3,8 +3,9 @@ import { expect, type Page } from '@playwright/test';
 import { ACCOUNTS, hydrated, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
-// @traces 1200-transfer-cache-origin-FR-005
-// @traces 1200-transfer-cache-origin-FR-008
+// @traces 1200-FR-001
+// @traces 1200-FR-005
+// @traces 1200-FR-007
 
 type Read = { method: string; path: string; token: boolean };
 
