@@ -16,5 +16,12 @@
 </p>
 <p class="status">
   <span class="lamp" aria-hidden="true"></span>
-  <span>{{ 'garage.quotes.sentList.waiting' | t }}</span>
+  @if (accepted()) {
+    <span>{{ 'garage.quotes.sentList.accepted' | t }} · <time [attr.datetime]="request.booking?.confirmBy">{{ left() }}</time></span>
+  } @else {
+    <span>{{ 'garage.quotes.sentList.waiting' | t }}</span>
+  }
 </p>
+@if (accepted() && request.driver.phone; as phone) {
+  <a class="phone" href="tel:{{ phone }}" [attr.aria-label]="'garage.quotes.sentList.phone' | t: { phone }">{{ phone }}</a>
+}

@@ -156,6 +156,101 @@ describe('a row under Oferte trimise', () => {
   });
 });
 
+// @traces 222-FR-008
+// @traces 222-FR-013
+describe('a row whose quote the driver accepted', () => {
+  const HOUR = 3_600_000;
+  const PHONE = '+40722111222';
+  const accepted = (
+    confirmIn: number,
+    driver: GarageRequestSummaryDto['driver'] = {
+      phone: PHONE,
+      shortName: 'Irina S.',
+    },
+  ) => {
+    const base = sample('2026-10-10T06:00:00Z', {
+      booking: {
+        confirmBy: new Date(NOW.getTime() + confirmIn).toISOString(),
+        status: 'awaiting_confirmation',
+      },
+      driver,
+    });
+    return {
+      ...base,
+      quote: base.quote && { ...base.quote, status: 'accepted' as const },
+    };
+  };
+
+  it('says it waits for the garage’s confirmation, with the time left', async () => {
+    const row = await render(accepted(5 * HOUR + 30 * 60_000));
+
+    expect(text(row.querySelector('.status'))).toBe(
+      'Acceptată · așteaptă confirmarea ta · încă 5 h',
+    );
+    expect(text(row)).not.toContain('Așteaptă răspunsul clientului');
+    expect(row.classList).toContain('accepted');
+  });
+
+  it('writes it in English for an English reader', async () => {
+    const row = await render(accepted(40 * 60_000), 'en');
+
+    expect(text(row.querySelector('.status'))).toBe(
+      'Accepted · waiting for your confirmation · 40 min left',
+    );
+  });
+
+  it('says moments once the deadline is under a minute away', async () => {
+    const row = await render(accepted(30_000));
+
+    expect(text(row.querySelector('.status'))).toContain('încă câteva secunde');
+  });
+
+  it('keeps the name, the car, the jobs, the range and the slot', async () => {
+    const row = await render(accepted(5 * HOUR));
+
+    expect(text(row.querySelector('.name'))).toBe('Irina S.');
+    expect(text(row.querySelector('.car'))).toBe('BMW X3 · 2019');
+    expect(text(row.querySelector('.jobs'))).toBe('Frâne spate · Schimb ulei');
+    expect(text(row.querySelector('.range'))).toBe('650–800 lei');
+    expect(text(row.querySelector('.slot'))).toBe('mâine, 09:00');
+  });
+
+  it('links the driver’s phone for a call when the row carries it', async () => {
+    const row = await render(accepted(5 * HOUR));
+
+    const link = row.querySelector('a.phone');
+    expect(link?.getAttribute('href')).toBe(`tel:${PHONE}`);
+    expect(text(link)).toBe(PHONE);
+    expect(link?.getAttribute('aria-label')).toBe(`Sună clientul: ${PHONE}`);
+  });
+
+  it('shows no phone when the row carries none', async () => {
+    const row = await render(accepted(5 * HOUR, { shortName: 'Irina S.' }));
+
+    expect(row.querySelector('a')).toBeNull();
+  });
+
+  it('reads as waiting when the booking no longer waits for the garage', async () => {
+    const base = accepted(5 * HOUR);
+    const row = await render({
+      ...base,
+      booking: base.booking && { ...base.booking, status: 'confirmed' },
+    });
+
+    expect(text(row.querySelector('.status'))).not.toContain('Acceptată');
+    expect(row.classList).not.toContain('accepted');
+  });
+
+  it('gives the phone link a 44 px target and a green lamp', () => {
+    const css = readFileSync(join(__dirname, 'quote-sent-row.css'), 'utf8');
+
+    expect(css).toMatch(/\.phone \{[^}]*min-height: 44px/);
+    expect(css).toMatch(
+      /:host\(\.accepted\) \.lamp \{[^}]*background: var\(--mf-green\)/,
+    );
+  });
+});
+
 describe('type scale on a phone', () => {
   // @traces 975-type-scale-FR-003
   // @traces 975-type-scale-FR-008

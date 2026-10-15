@@ -393,6 +393,35 @@ describe('GarageRequestsFeed: the quotes sent', () => {
     expect(feed.quotedLoading()).toBe(false);
   });
 
+  // @traces 222-FR-009
+  it('reads the quoted rows again on quote.accepted, so the row turns accepted in place', async () => {
+    const waiting = quotedRow({ id: 'req-q1' });
+    const accepted = quotedRow(
+      {
+        booking: {
+          confirmBy: new Date(Date.now() + 3_600_000).toISOString(),
+          status: 'awaiting_confirmation',
+        },
+        id: 'req-q1',
+      },
+      { status: 'accepted' },
+    );
+    const feed = await start({
+      quoted: [listOf([waiting]), listOf([accepted])],
+    });
+
+    live.emit('quote.accepted', 'quote-1');
+    await wait(400);
+    await settle();
+
+    expect(reads('quoted')).toHaveLength(2);
+    expect(feed.quoted()?.[0]).toMatchObject({
+      booking: { status: 'awaiting_confirmation' },
+      id: 'req-q1',
+      quote: { status: 'accepted' },
+    });
+  });
+
   it('says it is loading until the first quoted read answers', async () => {
     const feed = await start({
       quoted: [new Promise<GarageRequestListDto>(() => undefined) as never],

@@ -27,6 +27,7 @@ export {
   relativeTime,
   requestAge,
   requestExpiry,
+  timeLeft,
 } from './formats';
 export { I18n, provideI18n } from './i18n';
 export {
