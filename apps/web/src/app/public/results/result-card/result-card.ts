@@ -20,9 +20,9 @@ import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
 import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
 
-// Whole keys, so the workspace check finds each one.
 const REST_MS = 100;
 
+// Whole keys, so the workspace check finds each one.
 const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
   courtesy_car: 'public.listing.hours.facility.courtesy_car',
   pickup_dropoff: 'public.listing.hours.facility.pickup_dropoff',

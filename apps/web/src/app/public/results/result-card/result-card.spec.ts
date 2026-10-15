@@ -331,8 +331,7 @@ describe('a result card about to be opened', () => {
     expect(want).not.toHaveBeenCalled();
   });
 
-  it('is not pre-fetched for being on screen when drawn after an earlier scroll', async () => {
-    window.dispatchEvent(new Event('scroll'));
+  it('is not pre-fetched for being on screen when drawn on a later page', async () => {
     const card = await render(garageOf());
 
     intersect(card);
@@ -340,9 +339,8 @@ describe('a result card about to be opened', () => {
     expect(want).not.toHaveBeenCalled();
   });
 
-  it('is pre-fetched when it scrolls into view after the first scroll', async () => {
+  it('is pre-fetched when it comes into view after it was drawn off screen', async () => {
     const card = await render(garageOf());
-    window.dispatchEvent(new Event('scroll'));
 
     intersect(card, false);
     expect(want).not.toHaveBeenCalled();
