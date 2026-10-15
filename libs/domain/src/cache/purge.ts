@@ -48,18 +48,23 @@ export async function purgeTags(
 }
 
 const PUBLIC_GARAGE = /^public:garage:(.+)$/;
+const PRIVATE = /^(account|garage):/;
 
-// The tags an event's audience changes: each garage whose public page it
+// The tags an event's audience changes: the sign-in warm of each account and
+// garage it reaches, whatever the event, each garage whose public page it
 // reaches, and the brand pages whenever it would drop the cached searches.
 export function purgeAudience(
   redis: Purger,
   audience: string[],
   hook?: (tag: string) => unknown,
 ) {
-  const tags = audience.flatMap((key) => {
+  const tags = audience
+    .filter((key) => PRIVATE.test(key))
+    .map((key) => `warm:${key}`);
+  for (const key of audience) {
     const garageId = PUBLIC_GARAGE.exec(key)?.[1];
-    return garageId ? [`garage:${garageId}`] : [];
-  });
+    if (garageId) tags.push(`garage:${garageId}`);
+  }
   if (audience.some((key) => SEARCH_AUDIENCE.test(key))) tags.push('search');
   return purgeTags(redis, tags, hook);
 }

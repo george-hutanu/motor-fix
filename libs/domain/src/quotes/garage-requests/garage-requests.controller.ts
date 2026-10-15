@@ -32,6 +32,7 @@ import { GarageRequestsService } from './garage-requests.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
+import { CacheService, cacheKey } from '../../cache/cache.service';
 import { DeclineService } from '../decline/decline.service';
 
 @ApiTags('garage-requests')
@@ -41,17 +42,28 @@ export class GarageRequestsController {
   constructor(
     private readonly requests: GarageRequestsService,
     private readonly declines: DeclineService,
+    private readonly cache: CacheService,
   ) {}
 
   @Get()
   @ApiOkResponse({ type: GarageRequestListDto })
   @ApiBadRequestResponse({ description: 'validation_failed; invalid_cursor' })
   @ApiNotFoundResponse({ description: 'not_found: may not answer requests' })
-  list(
+  async list(
     @CurrentActor() actor: Actor,
     @Query() query: GarageRequestsQueryDto,
   ): Promise<GarageRequestListDto> {
-    return this.requests.list(actor, query);
+    // The owner's only: the list shows the phone by who reads it.
+    const warmed =
+      actor.role === 'garage' &&
+      actor.garageId &&
+      query.status &&
+      query.cursor === undefined
+        ? await this.cache.take<GarageRequestListDto>(
+            cacheKey('garage-home', actor.garageId, query.status),
+          )
+        : undefined;
+    return warmed ?? this.requests.list(actor, query);
   }
 
   @Get(':id')

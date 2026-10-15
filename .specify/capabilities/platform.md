@@ -80,6 +80,7 @@ features:
   - 1182-cache-service
   - 1230-qa-harness-laps
   - 1200-transfer-cache-origin
+  - 1169-prefetch-intent
 ---
 
 # Capability: Platform
@@ -2043,6 +2044,26 @@ _From 1200-transfer-cache-origin._
 ### 1200-FR-008 — Signed-in calls MUST still carry the token: the interceptor's unit tests cover absolute addresses for every rule of FR-003, and the existing signed-in end-to-end flows pass unchanged.
 
 _From 1200-transfer-cache-origin._
+
+### 1169-FR-001 — The API MUST have one warm-cache library built on the cache service (`libs/domain/src/cache/`): `warm` stores a read's answer under a kind, a key and tags with a life of 90 s (jittered ×0.9–1.1, so 81–99 s, inside the issue's 60–120 s), served never stale and never refreshed; `take` returns a matching entry once and removes it, or nothing (the read and the removal are one atomic step, so two simultaneous reads get the entry once between them); a `take` that finds the same key's warm still in flight in this process awaits it (the cache service's single-flight) and counts a `hit`, so a home read that overtakes the warm is not a miss and the sign-in answer is never delayed. Warm entries use the cache service's keys, tags, lock, fail-open and metrics; no second cache, no second Redis client.
+
+_From 1169-prefetch-intent._
+
+### 1169-FR-006 — A write that changes a warmed answer MUST evict it before its next read: the outbox relay's purge (`purgeAudience`) MUST purge the tag `warm:{key}` for every `account:{id}` and `garage:{id}` audience key of the relayed event, on every relayed event, whatever its kind (no kind table: over-eviction is safe and short), so car added/updated/removed, request created/cancelled/updated, a decline (which carries only `garage:{id}` and changes no driver list) and quote created/sent/accepted/closed evict the driver's and the garage's warm entries by the same path that drops the public cache. A purge Redis refuses retries with the event as today.
+
+_From 1169-prefetch-intent._
+
+### 1169-FR-009 — No pre-fetch and no route preload MUST run when the browser reports `Save-Data`, an effective connection type of `2g` or `slow-2g`, or when the document is not visible, each judged afresh at every signal; none runs during server-side rendering. A pre-fetch is a read only: it sends no beacon, writes nothing and records no profile view.
+
+_From 1169-prefetch-intent._
+
+### 1169-FR-010 — The warm entries are private: stored only after the token or identity was verified, keyed by the account or garage they belong to, held in Redis only (PostgreSQL stays the truth), and gone after 120 s at most. Public data (the profile) may be pre-fetched in the browser; no private read is ever pre-fetched in the browser.
+
+_From 1169-prefetch-intent._
+
+### 1169-FR-014 — FR-001 to FR-012 MUST each have failing-first automated tests beside the code they exercise (Constitution II): the API ones on real PostgreSQL and Redis, including a test that an existing and an unknown account get the same refused sign-in path with nothing warmed (FR-002), that no warm entry reaches an unauthenticated or another account's request (FR-005, FR-010), that a write evicts the entry so the next read is fresh (FR-006), and that a warm entry is taken once (FR-001); the web ones in Jest for the card's signals, the cap, the cancel, the guards and the store's age rule.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 

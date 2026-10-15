@@ -317,7 +317,7 @@ describe('Results', () => {
       await reads[0]?.answer();
 
       const cards = [...page().querySelectorAll('mf-result-card')];
-      expect(cards.map((card) => said(card.querySelector('h3')))).toEqual([
+      expect(cards.map((card) => said(card.querySelector('h2')))).toEqual([
         'Atelier Unu',
         'Service Doi',
       ]);
@@ -536,7 +536,7 @@ describe('Results', () => {
       await settle();
     };
     const cards = () => [...page().querySelectorAll('.cards > li')];
-    const names = () => cards().map((card) => said(card.querySelector('h3')));
+    const names = () => cards().map((card) => said(card.querySelector('h2')));
     const reviewsOf = (n: number) =>
       said(cards()[n]?.querySelector('.reviews'));
     const tally = () => said(page().querySelector('.summary .tally'));

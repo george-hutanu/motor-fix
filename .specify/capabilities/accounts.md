@@ -28,6 +28,7 @@ features:
   - 243-terms-privacy
   - 1203-legal-operator
   - 250-launch-analytics-events
+  - 1169-prefetch-intent
 ---
 
 # Capability: Accounts
@@ -871,6 +872,10 @@ _From 250-launch-analytics-events._
 ### 250-FR-010 — When Plausible cannot be reached or is blocked, no screen, flow or database figure MUST be affected; the events are lost silently.
 
 _From 250-launch-analytics-events._
+
+### 1169-FR-002 — Every sign-in that ends in `SignInService.openSession` (password, Google, Apple, phone code, sign-up, password reset) MUST, after the credentials or identity were verified and the session issued, start the warm for that account and role without delaying the sign-in answer: the answer is sent whether the warm has finished, failed or was skipped. A refused sign-in (unknown account, wrong password, too many attempts, suspended, maintenance) warms nothing and keeps its answer, status and timing path exactly as today, so an observer learns nothing about whether the account exists.
+
+_From 1169-prefetch-intent._
 
 ## Retired
 

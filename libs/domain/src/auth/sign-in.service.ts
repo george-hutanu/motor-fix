@@ -7,6 +7,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 
 import { signAccessToken } from './access-token';
@@ -36,6 +37,14 @@ type Renewable = NonNullable<Awaited<ReturnType<SignInService['presented']>>>;
 
 // Where the open dashboards hear that their session ended: the live fan-out.
 export const SESSION_EVENTS = Symbol('SESSION_EVENTS');
+
+// Where a new session's home reads are warmed (cache/warm), when the app has
+// one: started, never awaited, and it never throws.
+export const HOME_WARM = Symbol('HOME_WARM');
+
+export interface HomeWarmer {
+  homes(accountId: string, role: Role): Promise<void>;
+}
 
 export interface Issued {
   accessToken: string;
@@ -80,6 +89,7 @@ export class SignInService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     @Inject(SESSION_EVENTS) private readonly sessionEvents: LivePublisher,
+    @Optional() @Inject(HOME_WARM) private readonly warm?: HomeWarmer,
   ) {}
 
   async signIn(
@@ -127,11 +137,13 @@ export class SignInService {
     role: Role,
     remember: boolean,
   ): Promise<Issued> {
-    return {
+    const issued = {
       accessToken: this.accessToken(accountId, role),
       refreshToken: await this.openFamily(accountId, remember),
       remember,
     };
+    this.warm?.homes(accountId, role).catch(() => undefined);
+    return issued;
   }
 
   // A renewal of the browser's session in another of its roles, so a session
