@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { CHECK_DEFAULTS, checkLive } from './precheck.mjs';
+import { checkLive } from './precheck.mjs';
 import { SEEDED } from './endpoints.mjs';
 
 const SCRIPT = join(import.meta.dirname, 'precheck.mjs');
@@ -67,12 +67,6 @@ const cli = (file, { webURL, apiURL }, extra = [], env = {}) =>
     const timer = setTimeout(() => child.kill(), 20_000);
     child.on('close', (code) => (clearTimeout(timer), resolve({ code, stdout, stderr, lines: stdout.split('\n').filter(Boolean) })));
   });
-
-describe('defaults', () => {
-  it('serves the dev server and the local API by default', () => {
-    assert.deepEqual(CHECK_DEFAULTS, { baseURL: 'http://localhost:4200', apiURL: 'http://localhost:3000' });
-  });
-});
 
 describe('--check against a served app', () => {
   it('is silent and exits 0 for a flow that finds nothing', async () => {

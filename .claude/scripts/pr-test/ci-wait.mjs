@@ -64,7 +64,7 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
     const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link"]);
     checks = NO_CHECKS.test(out.stderr) ? [] : parsed(out.stdout);
     if (!Array.isArray(checks)) return { code: 2, lines: [`CI: ${String(out.stderr).trim() || "unreadable gh output"}`] };
-    const stale = await staleReview(gh, checks);
+    const stale = await staleReview(gh, pr, checks);
     if (stale) return { code: 1, lines: [stale] };
     const pending = checks.filter((c) => c.bucket === "pending").map((c) => c.name);
     if (checks.length > 0 && pending.length === 0) break;
@@ -80,14 +80,23 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
  * (a cancelled lap, or one whose last step never ran): nothing will ever replace that status. Null otherwise,
  * a status that links no run included.
  */
-async function staleReview(gh, checks) {
-  const review = checks.find((c) => c.name === "agent-review" && c.bucket === "pending");
-  const run = /\/actions\/runs\/(\d+)/.exec(review?.link ?? "")?.[1];
+async function staleReview(gh, pr, checks) {
+  const run = pendingReviewRun(checks);
   if (!run) return null;
   const out = await gh(["run", "view", run, "--json", "status,conclusion"]);
   const state = out.code === 0 ? parsed(out.stdout) : undefined;
-  return state?.status === "completed" ? `CI: agent-review pending but its run ${run} is ${state.conclusion || "completed"}; dispatch a new lap` : null;
+  if (state?.status !== "completed") return null;
+  // The run may have set its verdict between the checks read and this one: read the checks again before
+  // calling the status stale, so a lap that just finished is not mistaken for one that never will.
+  const again = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link"]);
+  const now = parsed(again.stdout);
+  if (Array.isArray(now) && pendingReviewRun(now) !== run) return null;
+  return `CI: agent-review pending but its run ${run} is ${state.conclusion || "completed"}; dispatch a new lap`;
 }
+
+/** The Actions run id a pending agent-review status links, or undefined. */
+const pendingReviewRun = (checks) =>
+  /\/actions\/runs\/(\d+)/.exec(checks.find((c) => c.name === "agent-review" && c.bucket === "pending")?.link ?? "")?.[1];
 
 /** The QA run's wait: until it has completed, whatever CI is doing. */
 async function waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs }) {

@@ -80,4 +80,12 @@ describe('accounts', () => {
     assert.equal(accounts, SEEDED);
     assert.equal(accounts.driver, 'sofer@example.test');
   });
+
+  it('cannot be changed by a flows file, so a later sign-in still uses the seeded account', () => {
+    assert.ok(Object.isFrozen(accounts));
+    assert.throws(() => {
+      accounts.driver = 'someone@else.test';
+    }, TypeError);
+    assert.equal(SEEDED.driver, 'sofer@example.test');
+  });
 });

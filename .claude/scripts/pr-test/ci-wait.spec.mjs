@@ -144,9 +144,16 @@ describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
         const w = world({ checks: [stale(88)], run: [{ status: 'completed', conclusion }] });
         const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
         assert.deepEqual(out, { code: 1, lines: [`CI: agent-review pending but its run 88 is ${conclusion}; dispatch a new lap`] });
-        assert.equal(w.calls.filter((c) => c.startsWith('pr checks')).length, 1);
+        // One read, and one more to confirm the status is still pending once the run is seen finished.
+        assert.equal(w.calls.filter((c) => c.startsWith('pr checks')).length, 2);
         assert.ok(w.calls.includes('run view 88 --json status,conclusion'), w.calls.join('\n'));
       }
+    });
+
+    it('keeps waiting when the run set its verdict between the checks read and the run read', async () => {
+      const verdict = [...green, { name: 'agent-review', bucket: 'pass', link: 'https://github.com/o/r/actions/runs/88' }];
+      const w = world({ checks: [stale(88), verdict], run: [{ status: 'completed', conclusion: 'success' }] });
+      assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
     });
 
     it('keeps waiting while the run it names is still going', async () => {

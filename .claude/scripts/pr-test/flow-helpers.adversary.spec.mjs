@@ -2,8 +2,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { SEEDED } from './endpoints.mjs';
-import { accounts, openSheet, stepButton, waitForText } from './flow-helpers.mjs';
+import { openSheet, stepButton, waitForText } from './flow-helpers.mjs';
 
 // A page whose locators log what they were asked and fail the wait on demand.
 function fakePage({ visible = true, clickFails = false } = {}) {
@@ -84,16 +83,10 @@ describe('openSheet', () => {
   });
 });
 
-describe('stepButton and accounts', () => {
+describe('stepButton', () => {
   it('asks for a button by the label it was given', () => {
     const page = fakePage();
     stepButton(page, 'Continue');
     assert.deepEqual(page.log[0], ['getByRole', 'button', { name: 'Continue' }]);
-  });
-
-  it('holds the seeded accounts the API calls use, role to e-mail', () => {
-    assert.equal(accounts, SEEDED);
-    assert.ok(Object.keys(accounts).includes('driver'));
-    for (const email of Object.values(accounts)) assert.match(email, /^[^@\s]+@[^@\s]+$/);
   });
 });

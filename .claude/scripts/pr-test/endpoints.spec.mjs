@@ -287,7 +287,7 @@ describe('the account language of a signed-in sweep', () => {
   it('is set through PATCH /api/v1/me with the bearer token', async () => {
     const api = await accountApi();
     try {
-      await setLanguage(api.apiURL, 'token-driver', 'en');
+      await setLanguage(api.apiURL, 'token-driver', 'en', 'driver');
       assert.deepEqual(api.seen, [{ method: 'PATCH', url: '/api/v1/me', auth: 'Bearer token-driver', body: { language: 'en' } }]);
     } finally {
       await close(api.server);
@@ -297,11 +297,11 @@ describe('the account language of a signed-in sweep', () => {
   it('rejects naming the call and the status when the API refuses it, and when it cannot be reached', async () => {
     const api = await accountApi({ me: 500 });
     try {
-      await assert.rejects(setLanguage(api.apiURL, 't', 'en'), /PATCH \/api\/v1\/me \{"language":"en"\}.*HTTP 500/);
+      await assert.rejects(setLanguage(api.apiURL, 't', 'en', 'driver'), /PATCH \/api\/v1\/me \{"language":"en"\} as driver.*HTTP 500/);
     } finally {
       await close(api.server);
     }
-    await assert.rejects(setLanguage('http://127.0.0.1:9', 't', 'ro'), /PATCH \/api\/v1\/me \{"language":"ro"\}/);
+    await assert.rejects(setLanguage('http://127.0.0.1:9', 't', 'ro', 'driver'), /PATCH \/api\/v1\/me \{"language":"ro"\}/);
   });
 
   it('is set before the session is handed over when a language is asked for, and not otherwise', async () => {

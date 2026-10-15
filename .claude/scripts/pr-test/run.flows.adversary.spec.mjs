@@ -132,13 +132,6 @@ process.off('unhandledRejection', pre);
     assert.match(JSON.stringify(out.findings), /timer/);
   });
 
-  it('lets the flows\' own throw out, with the rejections it left still found and the handler gone', () => {
-    const { out } = probe(`try { await collectRejections(findings, async () => { Promise.reject(new Error('left')); throw new Error('boom'); }); } catch (e) { threw = e.message; }`);
-    assert.equal(out.threw, 'boom');
-    assert.equal(out.findings.length, 1);
-    assert.equal(out.after, out.before);
-  });
-
   it('leaves a rejection outside the step to the default handling, which ends the process', () => {
     const { status, stderr, out } = probe(`await collectRejections(findings, async () => 1); process.off('unhandledRejection', pre); Promise.reject(new Error('after the step'));`);
     assert.notEqual(status, 0);

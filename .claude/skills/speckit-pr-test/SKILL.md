@@ -137,7 +137,8 @@ without a status, so the test runs again.
 - Prove the flows before dispatching them:
   `node .claude/scripts/pr-test/precheck.mjs --flows <file> --check` against
   the app and API already serving (`--base-url`, default
-  http://localhost:4200; `--api-url`, default http://localhost:3000).
+  http://localhost:4200; `--api-url`, default http://localhost:3000); flows
+  still running after ten minutes are one line and exit 1.
 
 ## Evidence
 
