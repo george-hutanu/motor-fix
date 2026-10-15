@@ -1,3 +1,4 @@
+import { HTTP_TRANSFER_CACHE_ORIGIN_MAP } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -31,7 +32,15 @@ const serverConfig: ApplicationConfig = {
       });
     }),
     ...(publicUrl
-      ? [{ provide: SITE_ORIGIN, useValue: publicUrl.origin }]
+      ? [
+          { provide: SITE_ORIGIN, useValue: publicUrl.origin },
+          // Each read handed to the browser is keyed by the address the
+          // browser will ask, not the API's private one.
+          {
+            provide: HTTP_TRANSFER_CACHE_ORIGIN_MAP,
+            useValue: { [new URL(apiInternalUrl()).origin]: publicUrl.origin },
+          },
+        ]
       : []),
   ],
 };
