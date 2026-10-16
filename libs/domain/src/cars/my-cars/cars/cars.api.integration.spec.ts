@@ -739,3 +739,86 @@ describe("the plate stays the owner's", () => {
     expect(await cars(andrei.id)).toBe(2);
   });
 });
+
+// @traces 029-FR-006
+describe('the next service in the car answers', () => {
+  const edit = (auth: string, id: string, body: Record<string, unknown>) =>
+    http().patch(`/cars/${id}`).set('Authorization', auth).send(body);
+
+  it('answers nextServiceKm as null until a value is held', async () => {
+    const { auth } = await driver();
+    const { id: brandId } = await brand('BMW');
+
+    const saved = await add(auth, bmw320d(brandId));
+
+    expect(saved.body.nextServiceKm).toBeNull();
+    expect((await list(auth)).body.items[0].nextServiceKm).toBeNull();
+  });
+
+  it('answers the value the car holds in the list and after an edit', async () => {
+    const { auth } = await driver();
+    const { id: brandId } = await brand('BMW');
+    const saved = await add(auth, bmw320d(brandId));
+    await prisma.car.update({
+      data: { nextServiceKm: 152000 },
+      where: { id: saved.body.id },
+    });
+
+    const listed = (await list(auth)).body.items[0];
+    const edited = await edit(auth, saved.body.id, {
+      odometerKm: 148300,
+      version: listed.updatedAt,
+    });
+
+    expect(listed.nextServiceKm).toBe(152000);
+    expect(edited.status).toBe(200);
+    expect(edited.body.nextServiceKm).toBe(152000);
+  });
+
+  it('lists only the caller’s cars not removed, and answers 404 for another driver’s car', async () => {
+    const andrei = await driver();
+    const maria = await driver('maria');
+    const { id: brandId } = await brand('BMW');
+    const kept = await add(andrei.auth, bmw320d(brandId, { model: 'X1' }));
+    const gone = await add(andrei.auth, bmw320d(brandId, { model: 'X3' }));
+    const hers = await add(maria.auth, bmw320d(brandId, { model: 'X5' }));
+    await prisma.car.update({
+      data: { nextServiceKm: 160000, removedAt: new Date() },
+      where: { id: gone.body.id },
+    });
+
+    const items = (await list(andrei.auth)).body.items;
+    const reached = await edit(andrei.auth, hers.body.id, {
+      odometerKm: 1,
+      version: hers.body.updatedAt,
+    });
+
+    expect(items.map((c: { id: string }) => c.id)).toEqual([kept.body.id]);
+    expect(reached.status).toBe(404);
+  });
+
+  it('refuses nextServiceKm on a save and on an edit', async () => {
+    const { auth, id } = await driver();
+    const { id: brandId } = await brand('BMW');
+
+    const created = await add(
+      auth,
+      bmw320d(brandId, { nextServiceKm: 152000 }),
+    );
+    const saved = await add(auth, bmw320d(brandId));
+    const edited = await edit(auth, saved.body.id, {
+      nextServiceKm: 152000,
+      version: saved.body.updatedAt,
+    });
+
+    expect(created.status).toBe(400);
+    expect(created.body.code).toBe('validation_failed');
+    expect(edited.status).toBe(400);
+    expect(edited.body.code).toBe('validation_failed');
+    expect(await cars(id)).toBe(1);
+    expect(
+      (await prisma.car.findUniqueOrThrow({ where: { id: saved.body.id } }))
+        .nextServiceKm,
+    ).toBeNull();
+  });
+});

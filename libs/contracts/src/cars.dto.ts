@@ -264,6 +264,14 @@ export class CarDto {
   @ApiProperty({ type: 'integer' })
   odometerKm!: number;
 
+  @ApiProperty({
+    description:
+      'The odometer reading the next oil service is due at; read-only',
+    nullable: true,
+    type: 'integer',
+  })
+  nextServiceKm!: number | null;
+
   @ApiProperty({ example: 'B123ABC', nullable: true, type: String })
   plate!: string | null;
 
