@@ -119,8 +119,8 @@ A retired requirement now prints `⊘ retired` instead of `✗ UNTESTED`.
 
 Steps 1–3 run before the feature's PR goes ready: the capability merge rides
 in its own PR, the feature folder goes to the private specs repository
-(AGENTS.md, lifecycle step 4); steps
-4–5 run after the merge, by whoever merged it (under `/speckit-auto`, the
+(AGENTS.md, lifecycle step 4); step
+4 runs after the merge, by whoever merged it (under `/speckit-auto`, the
 tail agent), and commit nothing.
 
 1. Mark the feature's `spec.md` status line `Archived (<date>)`.
