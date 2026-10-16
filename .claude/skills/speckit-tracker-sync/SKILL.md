@@ -44,7 +44,16 @@ node .claude/scripts/tracker-sync.mjs finish --body-file <comment.md>   # or --n
 node .claude/scripts/tracker-sync.mjs ready --tick ST-30,ST-31 --hold "ST-32=waits on the lawyer"
 node .claude/scripts/tracker-sync.mjs file --type <story|task|bug|tech debt|decision> --title "ST-<n> …" --body-file <f> [--epic EP-<n>] [--priority <p>]
 node .claude/scripts/tracker-sync.mjs check   # read-only: does the token reach Project #11
+node .claude/scripts/tracker-sync.mjs next --epic EP-<n>   # read-only: the epic's ready issues, by priority then number
 ```
+
+`next` is how the next task is picked: one REST issue search (`is:open
+label:EP-<n> label:"ready to work" -label:needs-confirmation`) and one
+GraphQL read of their Priority per 100 issues, never `gh project
+item-list`, which reads the whole Project from the GraphQL quota. It needs no
+active feature and writes nothing. A GraphQL call answered with a rate limit
+or "submitted too quickly" waits 60 s, doubling, and is tried at most 5 times
+(`tracker/github.mjs`).
 
 Each call prints one JSON line and appends `- <date> · <event> · <item> ·
 <text>` lines to `specs/<feature>/tracker-sync.md`, the feature's one tracker

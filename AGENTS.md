@@ -231,7 +231,11 @@ Read only what decides the next step; every check still runs:
 - CI: the background wait prints only what did not pass —
   `node .claude/scripts/pr-test/ci-wait.mjs <n>` (`--run <id>` waits for the
   QA run only), which also waits while a fresh head has no checks yet
-  (empty output means green). A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
+  (empty output means green). It reads over REST, as every PR and check
+  read does on the laptop too (`.claude/scripts/lib/gh-rest.mjs`), polls at
+  most once a minute and returns at once for a run already finished; the
+  GraphQL quota is left to the Project writes, which back off on a rate
+  limit. A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
 - Jest, Playwright, Nx: run into a log file, then read the exit code, the
   summary and the failures — `<command> > <log> 2>&1; echo "exit $?"; tail -n 40 <log>`,
   and `grep -nE '✕|●|FAIL|Error' <log> | head -n 40` when it failed.
@@ -308,9 +312,10 @@ that variable, so the laptop behaves as before.
   `proxy-injected`; nothing overwrites them, and no gh login is needed.
   The proxy refuses `workflow_dispatch`, commit statuses and GraphQL (so
   every `gh pr …` fails); REST pushes, reviews, comments, labels, ready and
-  merge go through. `lifecycle.mjs` and the `stop:pr-lifecycle` gate fall
-  back to REST on their own
-  (`.claude/scripts/lib/gh-rest.mjs`); by hand, run
+  merge go through. REST is the default for PR and check reads everywhere,
+  the laptop included: `lifecycle.mjs`, `ci-wait.mjs`, `dispatch.mjs`, the
+  merge gate and the `stop:pr-lifecycle` gate read over REST
+  (`.claude/scripts/lib/gh-rest.mjs`), and in the cloud their writes too; by hand, run
   `node .claude/scripts/gh.mjs` in place of `gh` for `pr
   list|view|create|edit|ready|comment|checks` (`--watch` too) and `label
   create`.

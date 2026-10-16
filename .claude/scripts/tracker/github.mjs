@@ -14,6 +14,10 @@ export const TIMEOUT_MS = 60_000;
 export const TRIES = 3;
 const SECONDARY_WAIT_MS = 60_000;
 const MAX_THROTTLES = 5;
+/** A GraphQL answer refused for its rate: the first wait, doubled on each later one, and the tries in all. */
+const RATE_LIMITED = /rate.?limit|submitted too quickly/i;
+const GRAPHQL_WAIT_MS = 60_000;
+const GRAPHQL_TRIES = 5;
 /** The most pages one list is followed through: a Link or cursor that never ends stops here. */
 export const MAX_PAGES = 50;
 
@@ -173,7 +177,7 @@ export function githubClient({
     return all;
   }
 
-  async function graphql(query, variables, { idempotent = false } = {}) {
+  async function graphqlOnce(query, variables, idempotent) {
     const mutation = /^\s*mutation\b/.test(query);
     const { data } = await send("POST", "/graphql", { query, variables }, mutation, !mutation || idempotent);
     if (data?.errors?.length) {
@@ -181,6 +185,26 @@ export function githubClient({
     }
     if (!data?.data) throw new GitHubError("parse", scrub(`POST /graphql: ${data === null ? "an empty answer" : "an answer with no data"}`));
     return data.data;
+  }
+
+  /**
+   * A GraphQL call. An answer GitHub refused as rate-limited or submitted too
+   * quickly was not applied, so it is sent again after 60 s, doubling, at most
+   * GRAPHQL_TRIES tries in all (1323-FR-004). A throttle `send` already waited
+   * out (type "rate limit") is not waited for twice.
+   */
+  async function graphql(query, variables, { idempotent = false } = {}) {
+    for (let tries = 1; ; tries++) {
+      try {
+        return await graphqlOnce(query, variables, idempotent);
+      } catch (error) {
+        const limited = error instanceof GitHubError && error.type !== "rate limit" && RATE_LIMITED.test(`${error.type} ${error.message}`);
+        if (!limited || tries >= GRAPHQL_TRIES) throw error;
+        const wait = GRAPHQL_WAIT_MS * 2 ** (tries - 1);
+        log?.(`wait      ${wait / 1000}s (GraphQL rate limit)`);
+        await sleep(wait);
+      }
+    }
   }
 
   return { rest, pages, graphql, stats };

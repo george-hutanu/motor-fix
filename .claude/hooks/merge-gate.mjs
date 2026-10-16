@@ -46,11 +46,13 @@
 // is agent-review, which the workflow sets, and a run a newer lap cancelled is
 // history, not a red check.
 //
-// A cloud session (CLAUDE_CODE_REMOTE=true) has no GraphQL, so `gh pr view`
-// fails there: the gate reads the PR, its commits, head's combined status, its
-// check runs and their workflows over REST instead, shapes them as gh's
-// rollup, and applies the same rule. It needs the PR's number (or URL) in the
-// command; the cloud merge is `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`.
+// GraphQL is one hourly budget every session shares, and a cloud session
+// (CLAUDE_CODE_REMOTE=true) has none, so a PR named by number or URL is read
+// over REST everywhere: its commits, head's combined status, its check runs
+// and their workflows, shaped as gh's rollup, under the same rule. Off the
+// cloud a branch or no target still goes through `gh pr view`; in the cloud
+// the command must name the PR. `lifecycle.mjs merge` merges with
+// `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`.
 //
 // SPECKIT_PR_STATE (the PR as JSON) replaces the gh read for the eval cases,
 // with SPECKIT_CARRY_DELAY_MS to slow the carry read down;
@@ -214,7 +216,8 @@ function ghAsync(cwd, signal) {
 export async function readPr(target, gh, { cloud = process.env.CLAUDE_CODE_REMOTE === "true" } = {}) {
   const raw = process.env.SPECKIT_PR_STATE;
   if (raw) return JSON.parse(raw);
-  if (cloud) return readPrRest(target, gh);
+  // GraphQL is a budget every session shares (1323-FR-002): a numbered PR is read over REST everywhere.
+  if (cloud || PR_NUMBER.test(String(target ?? ""))) return readPrRest(target, gh);
   const out = await gh(["pr", "view", ...(target ? [target] : []), "--json", "author,commits,number,state,headRefOid,statusCheckRollup"]);
   if (out.code !== 0) throw new Error(String(out.stderr).trim());
   const pr = JSON.parse(out.stdout);
@@ -237,9 +240,11 @@ async function api(gh, args) {
 
 const upper = (v) => (v == null ? null : String(v).toUpperCase());
 
+const PR_NUMBER = /^(?:https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/)?(\d+)$/;
+
 /** The PR over REST, shaped as `gh pr view --json author,commits,number,state,headRefOid,statusCheckRollup`. */
 async function readPrRest(target, gh) {
-  const number = /^(?:https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/)?(\d+)$/.exec(String(target ?? ""))?.[1];
+  const number = PR_NUMBER.exec(String(target ?? ""))?.[1];
   if (!number) throw new Error(`a cloud session reads the PR over REST and needs its PR number in the command, got ${target ? `"${target}"` : "none"}`);
   const p = await api(gh, [`repos/{owner}/{repo}/pulls/${number}`]);
   const sha = p.head.sha;
