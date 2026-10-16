@@ -571,16 +571,16 @@ describe("failures never stop the build", () => {
   });
 
   // @traces 1323-FR-006
-  it("next lists the epic's ready issues over REST search, with no feature and no Project scan", async () => {
+  it("next lists the To do issues over REST search, with no feature and no Project scan", async () => {
     const urls = [];
     const fetchImpl = async (url) => {
       urls.push(String(url));
       if (String(url).includes("/search/issues"))
         return new Response(JSON.stringify({ items: [{ number: 77, node_id: "I_77", title: "ST-77 x", html_url: `${ISSUES}77`, labels: [] }] }), { status: 200 });
-      return new Response(JSON.stringify({ data: { nodes: [{ id: "I_77", projectItems: { nodes: [{ project: { title: "MotorFix" }, fieldValueByName: { name: "High" } }] } }] } }), { status: 200 });
+      return new Response(JSON.stringify({ data: { nodes: [{ id: "I_77", projectItems: { nodes: [{ project: { title: "MotorFix" }, status: { name: "To do" }, priority: { name: "High" } }] }, blockedBy: { nodes: [] } }] } }), { status: 200 });
     };
     const repo = mkdtempSync(join(tmpdir(), "tracker-sync-next-"));
-    const r = await run(["next", "--epic", "EP-1"], { repo, fetchImpl });
+    const r = await run(["next"], { repo, fetchImpl });
     assert.equal(r.code, 0, r.err.join("\n"));
     assert.deepEqual(r.json.next, [{ id: "ST-77", number: 77, title: "ST-77 x", url: `${ISSUES}77`, priority: "High" }]);
     assert.equal(urls.length, 2, urls.join("\n"));
@@ -588,10 +588,20 @@ describe("failures never stop the build", () => {
   });
 
   // @traces 1323-FR-006
-  it("next without --epic EP-<n> is a usage error", async () => {
+  it("next that cannot read GitHub exits 1 and queues nothing to replay", async () => {
+    const repo = repoWith();
+    const fetchImpl = async () => new Response(JSON.stringify({ message: "Validation Failed" }), { status: 422 });
+    const r = await run(["next"], { repo, fetchImpl });
+    assert.equal(r.code, 1);
+    assert.match(r.err.join("\n"), /tracker-sync: next: .*422/);
+    assert.ok(!r.log.includes("PENDING"), r.log);
+  });
+
+  // @traces 1323-FR-006
+  it("next with an --epic that is not EP-<n> is a usage error", async () => {
     const r = await run(["next", "--epic", "1"]);
     assert.equal(r.code, 64);
-    assert.match(r.err.join("\n"), /next needs --epic EP-<n>/);
+    assert.match(r.err.join("\n"), /next: --epic is EP-<n>/);
   });
 });
 

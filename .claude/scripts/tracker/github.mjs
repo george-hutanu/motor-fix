@@ -190,7 +190,7 @@ export function githubClient({
   /**
    * A GraphQL call. An answer GitHub refused as rate-limited or submitted too
    * quickly was not applied, so it is sent again after 60 s, doubling, at most
-   * GRAPHQL_TRIES tries in all (1323-FR-004). A throttle `send` already waited
+   * GRAPHQL_TRIES tries in all. A throttle `send` already waited
    * out (type "rate limit") is not waited for twice.
    */
   async function graphql(query, variables, { idempotent = false } = {}) {

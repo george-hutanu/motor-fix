@@ -82,7 +82,7 @@
       "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
       "fail_closed": true,
       "timeout_ms": 45000,
-      "fingerprint": "fc7c19fe846a"
+      "fingerprint": "4f6df043e997"
     },
     {
       "id": "pre:tool:agent-model",

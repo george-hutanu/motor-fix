@@ -10,7 +10,7 @@ const FEATURE = 'specs/900-demo';
 const LOG_SEED = '# Auto run\n';
 const GIT = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim();
 
-// gh's PR reads go over REST (1323-FR-001): the branch's pulls, then the pull itself.
+// gh's PR reads go over REST: the branch's pulls, then the pull itself.
 const MERGED_REST = `case "$*" in *head=*) echo '[[{"number":9,"state":"closed"}]]';; *) echo '{"number":9,"state":"closed","merged_at":"2026-10-16T00:00:00Z"}';; esac`;
 
 let repo;

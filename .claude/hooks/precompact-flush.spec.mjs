@@ -12,7 +12,7 @@ const GIT = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).t
 
 // The hook runs with only this directory on PATH, so the real gh (on a CI
 // runner it sits in /usr/bin) can never answer in its place.
-// gh's PR reads go over REST (1323-FR-001): the branch's pulls, then the pull itself.
+// gh's PR reads go over REST: the branch's pulls, then the pull itself.
 const MERGED_REST = `case "$*" in *head=*) echo '[[{"number":9,"state":"closed"}]]';; *) echo '{"number":9,"state":"closed","merged_at":"2026-10-16T00:00:00Z"}';; esac`;
 const GH = {
   MERGED: MERGED_REST,

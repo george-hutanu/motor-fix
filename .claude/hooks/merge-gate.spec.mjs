@@ -251,7 +251,7 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
   });
 });
 
-// A numbered PR is read over REST everywhere (1323-FR-002); only a branch-only merge keeps gh's GraphQL read.
+// A numbered PR is read over REST everywhere; only a branch-only merge keeps gh's GraphQL read.
 describe('merge gate — reading a Dependabot PR\'s committers', () => {
   const BRANCH = 'dependabot/npm_and_yarn/x';
   const view = (author) => JSON.stringify({ number: 82, author: { login: author }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }] });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// ST-1323: PR and check reads go over REST on the laptop as in the cloud, so
+// PR and check reads go over REST on the laptop as in the cloud, so
 // the GraphQL quota is left to the Project writes. The docs agents read say so
 // where they look: AGENTS.md's CI line and its cloud GitHub bullet, and the
 // tracker-sync skill names `next` in place of `gh project item-list`.
@@ -28,7 +28,7 @@ describe('REST is the default for PR and check reads', () => {
 
   it('picks the next task by REST search, never by reading the whole Project', () => {
     const skill = read('.claude/skills/speckit-tracker-sync/SKILL.md');
-    assert.match(skill, /tracker-sync\.mjs next --epic EP-<n>/);
+    assert.match(skill, /tracker-sync\.mjs next \[--epic EP-<n>\]/);
     assert.match(skill, /never `gh project item-list`/);
   });
 });

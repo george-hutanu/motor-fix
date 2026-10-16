@@ -167,7 +167,7 @@ function readRun({ pr, sha, out, run, conclusion, nonce = null }) {
   return report.verdict === "failure" ? 1 : 0;
 }
 
-/** The PR's state and head over REST, never GraphQL (1323-FR-003), shaped as `gh pr view --json state,headRefOid`. */
+/** The PR's state and head over REST, never GraphQL, shaped as `gh pr view --json state,headRefOid`. */
 function restPr(pr) {
   const p = JSON.parse(gh(["api", `repos/{owner}/{repo}/pulls/${pr}`]));
   return { state: String(p.state).toUpperCase(), headRefOid: p.head.sha };

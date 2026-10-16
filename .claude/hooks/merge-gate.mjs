@@ -216,7 +216,7 @@ function ghAsync(cwd, signal) {
 export async function readPr(target, gh, { cloud = process.env.CLAUDE_CODE_REMOTE === "true" } = {}) {
   const raw = process.env.SPECKIT_PR_STATE;
   if (raw) return JSON.parse(raw);
-  // GraphQL is a budget every session shares (1323-FR-002): a numbered PR is read over REST everywhere.
+  // GraphQL is a budget every session shares: a numbered PR is read over REST everywhere.
   if (cloud || PR_NUMBER.test(String(target ?? ""))) return readPrRest(target, gh);
   const out = await gh(["pr", "view", ...(target ? [target] : []), "--json", "author,commits,number,state,headRefOid,statusCheckRollup"]);
   if (out.code !== 0) throw new Error(String(out.stderr).trim());

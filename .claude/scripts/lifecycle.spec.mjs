@@ -35,7 +35,7 @@ function fixture({ trackerScript = true } = {}) {
  * result; the first prefix that matches wins. Every call and gate is recorded.
  */
 const REST = 'gh api repos/{owner}/{repo}/';
-// The branch has no PR: gh's PR reads go over REST (1323-FR-001), the branch's pulls first.
+// The branch has no PR: gh's PR reads go over REST, the branch's pulls first.
 const MERGE = 'gh api -X PUT repos/{owner}/{repo}/pulls/141/merge -f merge_method=merge';
 const NO_PR = [`${REST}pulls?head=`, { stdout: '[[]]' }];
 /** The branch's pull as REST answers it, overriding the harness default. */
@@ -823,7 +823,7 @@ describe('gates, main and identity', () => {
   it('judges every git and gh command with the gates before it runs, in the same order', () => {
     const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], NO_PR] });
     step(['open', '--title', TITLE], h.io);
-    // A gh PR read is judged as written, then runs as its REST calls (1323-FR-001).
+    // A gh PR read is judged as written, then runs as its REST calls.
     const tools = h.calls.filter((c) => /^(git|gh) /.test(c) && !c.startsWith('gh auth token') && !c.startsWith(REST));
     const gated = h.gated.map((c) => c.replace(/"/g, ''));
     const writes = gated.filter((c) => !/^gh pr (list|view|checks) /.test(c));

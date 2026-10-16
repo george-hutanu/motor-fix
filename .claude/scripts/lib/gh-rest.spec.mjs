@@ -91,6 +91,13 @@ describe('outside the cloud', () => {
     assert.deepEqual(f.calls.filter((c) => c.file === 'gh' && c.args[0] !== 'api'), []);
   });
 
+  it('fails on a --json field it does not read, as gh does, never answering null', () => {
+    const f = fake({ 'GET pulls/160': pull() });
+    const r = gh(['pr', 'view', '160', '--json', 'state,reviewDecision'], f, {});
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /Unknown JSON field: "reviewDecision"/);
+  });
+
   for (const args of [['pr', 'create', '--draft', '--title', 't'], ['pr', 'ready', '160'], ['pr', 'comment', '160', '--body', 'b'], ['pr', 'edit', '160', '--add-label', 'QA'], ['label', 'create', 'QA']]) {
     it(`runs gh ${args.slice(0, 2).join(' ')} exactly as asked`, () => {
       const f = fake();

@@ -405,7 +405,7 @@ function handoff(ctx, flags) {
   return { pr: Number(n), note: "restored" };
 }
 
-// gh pr view reads over REST everywhere (lib/gh-rest.mjs, 1323-FR-002), and
+// gh pr view reads over REST everywhere (lib/gh-rest.mjs), and
 // the merge is `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`, which the
 // merge gate judges as it judges gh pr merge: neither spends GraphQL. A cloud
 // session has none at all, so its comment goes over REST too.

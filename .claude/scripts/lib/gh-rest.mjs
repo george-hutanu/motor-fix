@@ -134,7 +134,14 @@ function rollup(run, sha) {
   ];
 }
 
-const pick = (pull, fields, run) => Object.fromEntries(fields.map((f) => [f, FIELDS[f] ? FIELDS[f](pull, run) : null]));
+/** The asked `--json` fields; one this translation lacks fails, as gh fails on a field it does not know. */
+const pick = (pull, fields, run) =>
+  Object.fromEntries(
+    fields.map((f) => {
+      if (!FIELDS[f]) throw new GhError(`Unknown JSON field: "${f}" (not read over REST by gh-rest.mjs)`);
+      return [f, FIELDS[f](pull, run)];
+    }),
+  );
 
 function currentBranch(run) {
   const r = run("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
