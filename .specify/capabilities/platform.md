@@ -2180,10 +2180,6 @@ _From 1324-retire-debt-and-ready._
 
 _From 1324-retire-debt-and-ready._
 
-### 1324-FR-011 — `npm run test:harness` MUST be green and `node .claude/scripts/doctor.mjs` MUST pass after `--bless-hooks` for any edited gate.
-
-_From 1324-retire-debt-and-ready._
-
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2270,3 +2266,4 @@ _From 1324-retire-debt-and-ready._
 - `421-FR-019` — superseded by `1200-FR-006` (2026-10-15)
 
 - `696-FR-002` — superseded by `1324-FR-012` (2026-10-16)
+- `1324-FR-011` — removed by 1324-retire-debt-and-ready (2026-10-16): a process check, not a behaviour; SC-004's doctor run is the check
