@@ -46,6 +46,7 @@ describe("next task", () => {
     assert.equal(calls.length, 2, "no GraphQL call when nothing is found");
   });
 
+  // @traces 1324-FR-013
   it("orders by Project priority, then by issue number", async () => {
     const found = [issue(40, "ST-40 Low one"), issue(12, "ST-12 Urgent later"), issue(9, "ST-9 Urgent first"), issue(30, "ST-30 no priority"), issue(20, "ST-20 High")];
     const nodes = [node(40, "Low"), node(12, "Urgent"), node(9, "Urgent"), node(30, null), node(20, "High")];

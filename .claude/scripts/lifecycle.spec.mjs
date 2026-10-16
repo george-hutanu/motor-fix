@@ -258,6 +258,17 @@ describe('ready', () => {
     assert.ok(result.did.includes('handoff comment skipped (not a cloud session)'), JSON.stringify(result.did));
   });
 
+  // @traces 1324-FR-006
+  // @traces 1324-FR-012
+  it('files no deferred.md bullet and writes no Deferred line, even with a deferred.md in the feature', () => {
+    writeFileSync(join(featureDir, 'deferred.md'), '# Deferred\n\n- MEDIUM: tidy `x.mjs` (code-reviewer)\n');
+    const h = harness({ answers: [staged([1, 1])] });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(!h.calls.some((c) => /tracker-sync\.mjs debt/.test(c)), h.calls.join('\n'));
+    assert.doesNotMatch(readFileSync(join(featureDir, 'handoff.md'), 'utf8'), /Deferred/);
+  });
+
   it('commits .specify/capabilities on the branch when it exists, and makes no commit when nothing changed', () => {
     mkdirSync(join(repo, '.specify', 'capabilities'));
     const h = harness({ answers: [staged([0, 0])] });
@@ -483,6 +494,8 @@ describe('merge', () => {
     assert.match(comment, /- one/);
     assert.match(comment, /finish · ST-696 · QA → Done/);
     assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
+    // @traces 1324-FR-006
+    assert.ok(!('ready_logged' in result) && !('review' in result), JSON.stringify(result));
   });
 
   // @traces 1018-FR-005
