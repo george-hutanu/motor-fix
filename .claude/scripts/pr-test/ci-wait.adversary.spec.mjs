@@ -51,10 +51,12 @@ describe('ci-wait with --run', () => {
     assert.equal(w.calls.filter((c) => c.startsWith('run view')).length, 3);
   });
 
-  it('exits 3 on a conflicting PR even when the run has finished', async () => {
+  // @traces 1323-FR-005 — a run already completed returns before any other read; the merge gate still refuses a conflicting PR
+  it('returns a finished run at once, before reading whether the PR conflicts', async () => {
     const w = world({ mergeable: ['CONFLICTING'] });
     const out = await waitForCi({ pr: 5, run: 99, gh: w.gh, sleep: w.sleep, now: w.now });
-    assert.deepEqual(out, { code: 3, lines: ['conflict: merge origin/main'] });
+    assert.deepEqual(out, { code: 0, lines: ['QA run: success'] });
+    assert.deepEqual(w.calls, ['run view 99 --json status,conclusion']);
   });
 
   it('exits 3 when the PR turns conflicting while the run is still going', async () => {

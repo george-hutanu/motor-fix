@@ -34,6 +34,23 @@ function fixture({ trackerScript = true } = {}) {
  * Stubbed git, gh, gates and tracker CLI. `answers` maps a command prefix to a
  * result; the first prefix that matches wins. Every call and gate is recorded.
  */
+const REST = 'gh api repos/{owner}/{repo}/';
+// The branch has no PR: gh's PR reads go over REST (1323-FR-001), the branch's pulls first.
+const MERGE = 'gh api -X PUT repos/{owner}/{repo}/pulls/141/merge -f merge_method=merge';
+const NO_PR = [`${REST}pulls?head=`, { stdout: '[[]]' }];
+/** The branch's pull as REST answers it, overriding the harness default. */
+const pullAt = (props) => {
+  const p = defaultPull(props.head?.ref ?? BRANCH, props);
+  return [
+    [`${REST}pulls?head=`, (cmd) => ({ stdout: JSON.stringify([/state=all/.test(cmd) || p.state === 'open' ? [p] : []]) })],
+    [`${REST}pulls/${p.number} -X GET`, { stdout: JSON.stringify(p) }],
+  ];
+};
+function defaultPull(branch, props = {}) {
+  return { number: 141, state: 'open', merged_at: null, draft: true, title: TITLE, html_url: PR_URL, merge_commit_sha: 'feed1234beef', head: { ref: branch, sha: 'abcdef1234567890' }, labels: [], ...props };
+}
+const restComments = (comments) => [`${REST}issues/141/comments?per_page=100 -X GET`, { stdout: JSON.stringify([comments]) }];
+
 function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = [], refuse = null } = {}) {
   const calls = [];
   const gated = [];
@@ -43,10 +60,7 @@ function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = 
     ['git rev-parse HEAD', { stdout: 'abcdef1234567890\n' }],
     ['gh auth token -u george-hutanu', { stdout: 'tok-from-gh\n' }],
     ['gh pr create', { stdout: `${PR_URL}\n` }],
-    ['gh pr view --json number,state,url', { stdout: JSON.stringify({ number: 141, state: 'OPEN', url: PR_URL }) }],
-    ['gh pr view 141 --json number,state,url', { stdout: JSON.stringify({ number: 141, state: 'OPEN', url: PR_URL }) }],
-    ['gh pr view 141 --json mergeCommit', { stdout: 'feed1234beef\n' }],
-    [`gh pr view ${branch} --json number,title,isDraft,url`, { stdout: JSON.stringify({ number: 141, title: TITLE, isDraft: true, url: PR_URL }) }],
+    ...pullAt({ head: { ref: branch, sha: 'abcdef1234567890' } }),
     ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"ready":{"review":["ST-30"]}}\n' }],
     ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"ready":{"review":["ST-31"]}}\n' }],
   ];
@@ -73,7 +87,7 @@ describe('open', () => {
   beforeEach(() => fixture());
 
   it('makes the start commit, pushes, opens the labelled draft, then runs the tracker start and pr', () => {
-    const h = harness({ answers: [['git rev-list --count origin/main..HEAD', { stdout: '0\n' }], ['gh pr list', { stdout: '\n' }]] });
+    const h = harness({ answers: [['git rev-list --count origin/main..HEAD', { stdout: '0\n' }], NO_PR] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(result.pr, 141);
@@ -82,7 +96,7 @@ describe('open', () => {
     assert.equal(calls[0], 'git rev-list --count origin/main..HEAD');
     assert.equal(calls[1], 'git commit --allow-empty -m chore(harness): ST-696 start lifecycle steps as one script call each');
     assert.equal(calls[2], `git push -u origin ${BRANCH}`);
-    assert.match(calls[3], new RegExp(`^gh pr list --head ${BRANCH} --state open`));
+    assert.equal(calls[3], `${REST}pulls?head={owner}:${BRANCH}&state=open&per_page=100 -X GET --paginate --slurp`);
     assert.equal(calls[4], 'gh label create scope: harness --force');
     assert.match(calls[5], /^gh pr create --draft --base main --head 696-lifecycle-script --title chore\(harness\): ST-696 lifecycle steps as one script call each --body-file \S+ --label planning --label tooling --label scope: harness$/);
     assert.equal(calls[6], 'node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696');
@@ -95,7 +109,7 @@ describe('open', () => {
     const h = harness({
       answers: [
         ['git rev-list', { stdout: '0\n' }],
-        ['gh pr list', { stdout: '' }],
+        NO_PR,
         ['gh pr create', (cmd) => { body = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return { stdout: `${PR_URL}\n` }; }],
       ],
     });
@@ -106,14 +120,14 @@ describe('open', () => {
   });
 
   it('adds breaking for a title with ! and the type label from the title', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '2\n' }], ['gh pr list', { stdout: '' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '2\n' }], NO_PR] });
     step(['open', '--title', 'feat(api)!: ST-696 change the contract'], h.io);
     const create = h.calls.find((c) => c.startsWith('gh pr create'));
     assert.match(create, /--label planning --label feature --label breaking --label scope: api$/);
   });
 
   it('a second open makes no commit, opens no second PR, and still pushes and links', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '3\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '3\n' }]] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, true);
     assert.ok(!h.calls.some((c) => c.startsWith('git commit')));
@@ -124,7 +138,7 @@ describe('open', () => {
 
   it('stops at a failing tracker event and lists the events left and the rerun', () => {
     const h = harness({
-      answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 1, stdout: 'tracker-sync: GitHub refused\n' }]],
+      answers: [['git rev-list', { stdout: '1\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 1, stdout: 'tracker-sync: GitHub refused\n' }]],
     });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, false);
@@ -135,7 +149,7 @@ describe('open', () => {
 
   it('treats a missing tracker-sync.mjs like a failing event', () => {
     fixture({ trackerScript: false });
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }]] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, false);
     assert.deepEqual(result.left, ['speckit-tracker-sync start', 'speckit-tracker-sync pr 141']);
@@ -143,7 +157,7 @@ describe('open', () => {
   });
 
   it('--tracker-done skips the tracker events', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }]] });
     const result = step(['open', '--title', TITLE, '--tracker-done'], h.io);
     assert.equal(result.ok, true);
     assert.ok(!h.calls.some((c) => c.includes('tracker-sync')));
@@ -153,7 +167,7 @@ describe('open', () => {
     mkdirSync(join(repo, 'specs', '685-news-relay'), { recursive: true });
     writeFileSync(join(repo, 'specs', '685-news-relay', 'spec.md'), '# Spec\n');
     writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ level: 2, feature_directory: 'specs/685-news-relay' }));
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }]] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(JSON.parse(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8')).feature_directory, `specs/${FEATURE}`);
@@ -228,7 +242,8 @@ describe('ready', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
     assert.deepEqual(calls, [
-      `gh pr view ${BRANCH} --json number,title,isDraft,url`,
+      `${REST}pulls?head={owner}:${BRANCH}&state=all&per_page=100 -X GET --paginate --slurp`,
+      `${REST}pulls/141 -X GET`,
       'node .claude/scripts/level.mjs check --ready --json',
       `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 feature records -- ${FEATURE}`,
       `node scripts/pr-body-check.ts --body-file ${body} --title ${TITLE}`,
@@ -290,7 +305,7 @@ describe('ready', () => {
   });
 
   it('does not run gh pr ready on a PR that is already ready', () => {
-    const h = harness({ answers: [staged([0, 0]), [`gh pr view ${BRANCH}`, { stdout: JSON.stringify({ number: 141, title: TITLE, isDraft: false, url: PR_URL }) }]] });
+    const h = harness({ answers: [staged([0, 0]), ...pullAt({ draft: false })] });
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, true);
     assert.ok(!h.calls.includes('gh pr ready 141'));
@@ -327,7 +342,7 @@ describe('ready', () => {
   });
 
   it('stops when the branch has no PR', () => {
-    const h = harness({ answers: [[`gh pr view ${BRANCH}`, { code: 1, stderr: 'no pull requests found' }]] });
+    const h = harness({ answers: [NO_PR] });
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, false);
     assert.match(result.fix, /lifecycle\.mjs open/);
@@ -338,7 +353,7 @@ describe('ready', () => {
 describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
   const MARK = '<!-- speckit-handoff -->';
   const note = () => join(featureDir, 'handoff.md');
-  const comments = (...bodies) => ['gh pr view 141 --json comments', { stdout: JSON.stringify({ comments: bodies.map((body, i) => ({ body, createdAt: `2026-10-06T10:0${i}:00Z` })) }) }];
+  const comments = (...bodies) => restComments(bodies.map((body, i) => ({ user: { login: 'george-hutanu' }, body, created_at: `2026-10-06T10:0${i}:00Z` })));
   beforeEach(() => fixture());
 
   const CLOUD = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
@@ -391,7 +406,7 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
 
   it('finds the PR from the branch when --pr is not given', () => {
     writeFileSync(note(), '# Hand-off\n');
-    const h = harness({ answers: [[`gh pr view ${BRANCH} --json number`, { stdout: '{"number":141}' }]] });
+    const h = harness();
     const result = step(['handoff'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(result.pr, 141);
@@ -414,10 +429,10 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
 
   it('--restore orders by creation time, not by list position', () => {
     const h = harness({
-      answers: [['gh pr view 141 --json comments', { stdout: JSON.stringify({ comments: [
-        { body: `${MARK}\nnewer\n`, createdAt: '2026-10-06T12:00:00Z' },
-        { body: `${MARK}\nolder\n`, createdAt: '2026-10-06T09:00:00Z' },
-      ] }) }]],
+      answers: [restComments([
+        { body: `${MARK}\nnewer\n`, created_at: '2026-10-06T12:00:00Z' },
+        { body: `${MARK}\nolder\n`, created_at: '2026-10-06T09:00:00Z' },
+      ])],
     });
     step(['handoff', '--restore', '--pr', '141'], h.io);
     assert.equal(readFileSync(note(), 'utf8'), 'newer\n');
@@ -435,7 +450,7 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
     const result = step(['handoff', '--restore', '--pr', '141'], h.io);
     assert.equal(result.ok, true);
     assert.equal(readFileSync(note(), 'utf8'), 'local\n');
-    assert.ok(!h.calls.some((c) => c.includes('--json comments')));
+    assert.ok(!h.calls.some((c) => c.includes('/comments')));
   });
 
   it('--restore with no marked comment stops, names the fix and writes nothing', () => {
@@ -462,16 +477,17 @@ describe('merge', () => {
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
-    assert.equal(calls[0], 'gh pr view --json number,state,url,title,headRefName');
-    assert.equal(calls[1], 'gh pr merge 141 --merge');
-    assert.equal(calls[2], 'gh pr view 141 --json mergeCommit --jq .mergeCommit.oid');
-    assert.equal(calls[3], 'git worktree list --porcelain');
-    assert.equal(calls[4], `node scripts/test-services.ts down ${repo}`);
-    assert.equal(calls[5], `node .claude/scripts/tracker-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
-    assert.equal(calls[6], `git -C specs diff -U0 -- ${FEATURE}/tracker-sync.md`);
-    assert.equal(calls[7], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`);
-    assert.match(calls[8], /^gh pr comment 141 --body-file \S+$/);
-    assert.equal(calls.length, 9);
+    assert.equal(calls[0], `${REST}pulls?head={owner}:${BRANCH}&state=all&per_page=100 -X GET --paginate --slurp`);
+    assert.equal(calls[1], `${REST}pulls/141 -X GET`);
+    assert.equal(calls[2], MERGE);
+    assert.equal(calls[3], `${REST}pulls/141 -X GET`);
+    assert.equal(calls[4], 'git worktree list --porcelain');
+    assert.equal(calls[5], `node scripts/test-services.ts down ${repo}`);
+    assert.equal(calls[6], `node .claude/scripts/tracker-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
+    assert.equal(calls[7], `git -C specs diff -U0 -- ${FEATURE}/tracker-sync.md`);
+    assert.equal(calls[8], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`);
+    assert.match(calls[9], /^gh pr comment 141 --body-file \S+$/);
+    assert.equal(calls.length, 10);
     assert.match(comment, /^## Finish log/);
     assert.match(comment, /feed1234beef/);
     assert.match(comment, /- one/);
@@ -522,22 +538,22 @@ describe('merge', () => {
 
   it('refuses exactly when the merge gate does, prints its refusal, and runs nothing after it', () => {
     const message = 'Merge gate (Constitution VII): PR #141 cannot merge: no agent-review success on abc1234.';
-    const h = harness({ refuse: { prefix: 'gh pr merge', message } });
+    const h = harness({ refuse: { prefix: 'gh api -X PUT', message } });
     const result = step(['merge'], h.io);
     assert.equal(result.ok, false);
-    assert.equal(result.stopped, 'gate: gh pr merge 141 --merge');
+    assert.equal(result.stopped, `gate: ${MERGE}`);
     assert.equal(result.fix, message);
-    assert.ok(!h.calls.some((c) => c.startsWith('gh pr merge')));
-    assert.equal(h.calls.at(-1), 'gh pr view --json number,state,url,title,headRefName');
+    assert.ok(!h.calls.includes(MERGE));
+    assert.equal(h.calls.at(-1), `${REST}pulls/141 -X GET`);
     assert.ok(!h.calls.some((c) => c.includes('test-services')), 'no stack is stopped for a PR that did not merge');
     assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
   });
 
   it('skips the merge on a PR already merged and finishes the rest', () => {
-    const h = harness({ answers: [diff, ['gh pr view --json number,state,url', { stdout: JSON.stringify({ number: 141, state: 'MERGED', url: PR_URL }) }]] });
+    const h = harness({ answers: [diff, ...pullAt({ state: 'closed', merged_at: '2026-10-05T10:00:00Z' })] });
     const result = step(['merge', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(!h.calls.some((c) => c.startsWith('gh pr merge')));
+    assert.ok(!h.calls.includes(MERGE));
     assert.ok(!h.calls.some((c) => c.includes('tracker-sync.mjs')));
     assert.ok(h.calls.some((c) => c.startsWith('gh pr comment 141')));
     assert.ok(h.calls.includes(`node scripts/test-services.ts down ${repo}`), 'a rerun stops the stack again');
@@ -560,7 +576,7 @@ describe('merge stops the merged worktree test stack', () => {
 
   const diff = ['git -C specs diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
   const WT = '/machine/motor-fix/.claude/worktrees/696-lifecycle-script';
-  const viewHead = ['gh pr view --json number,state,url,title,headRefName', { stdout: JSON.stringify({ number: 141, state: 'OPEN', url: PR_URL, title: TITLE, headRefName: BRANCH }) }];
+  const viewHead = pullAt({})[1];
   const worktrees = ['git worktree list --porcelain', { stdout: `worktree /machine/motor-fix\nHEAD 1\nbranch refs/heads/main\n\nworktree ${WT}\nHEAD 2\nbranch refs/heads/${BRANCH}\n\nworktree /machine/motor-fix/.claude/worktrees/loose\nHEAD 3\ndetached\n` }];
   const down = (out) => ['node scripts/test-services.ts down', out];
   const stopped = { stdout: '{"project":"mf-test-696-lifecycle-script-abc123","stopped":true}\n' };
@@ -570,7 +586,7 @@ describe('merge stops the merged worktree test stack', () => {
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const at = h.calls.indexOf(`node scripts/test-services.ts down ${WT}`);
-    assert.ok(at > h.calls.indexOf('gh pr merge 141 --merge'), 'after the merge');
+    assert.ok(at > h.calls.indexOf(MERGE), 'after the merge');
     assert.ok(at < h.calls.findIndex((c) => c.includes('tracker-sync.mjs finish')), 'before the finish');
     assert.deepEqual(result.test_stack, { project: 'mf-test-696-lifecycle-script-abc123', stopped: true });
     assert.ok(result.did.includes('test stack mf-test-696-lifecycle-script-abc123 stopped'));
@@ -633,11 +649,10 @@ describe('merge stops the merged worktree test stack', () => {
 
   it('reads the head branch over REST in a cloud session', () => {
     const cloud = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
-    const rest = ['gh api repos/{owner}/{repo}/pulls/141 --jq', { stdout: `${JSON.stringify({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef', title: TITLE, head: BRANCH })}\n` }];
-    const h = harness({ env: cloud, answers: [diff, rest, worktrees, down(stopped)] });
+    const h = harness({ env: cloud, answers: [diff, ...pullAt({ state: 'closed', merged_at: '2026-10-05T10:00:00Z' }), worktrees, down(stopped)] });
     const result = step(['merge', '--pr', '141', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.some((c) => c.startsWith('gh api repos/{owner}/{repo}/pulls/141 --jq') && c.includes('head: .head.ref')));
+    assert.ok(h.calls.includes(`${REST}pulls/141 -X GET`));
     assert.ok(h.calls.includes(`node scripts/test-services.ts down ${WT}`));
   });
 });
@@ -653,7 +668,7 @@ describe('merge removes the merged worktree as its last step', () => {
   const WT = '/machine/motor-fix/.worktrees/696-lifecycle-script';
   const list = (path, lock = '') => ['git worktree list --porcelain', { stdout: `worktree /machine/motor-fix\nHEAD 1\nbranch refs/heads/main\n\nworktree ${path}\nHEAD 2\nbranch refs/heads/${BRANCH}\n${lock}` }];
   const REMOVE = `node .claude/scripts/worktree-remove.mjs ${WT}`;
-  const viewHead = ['gh pr view --json number,state,url,title,headRefName', { stdout: JSON.stringify({ number: 141, state: 'OPEN', url: PR_URL, title: TITLE, headRefName: BRANCH }) }];
+  const viewHead = pullAt({})[1];
   const removed = { stdout: `${JSON.stringify({ path: WT, removed: true, backup: { specs: 'pushed', product: 'clean' }, test_stack: { project: 'p', stopped: true } })}\n` };
   const removal = (out) => ['node .claude/scripts/worktree-remove.mjs', out];
 
@@ -740,10 +755,7 @@ describe('merge in a cloud session: REST only', () => {
 
   const cloud = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
   const diff = ['git -C specs diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
-  // What gh prints after lifecycle's --jq: the state MERGED once merged, else upper-cased.
-  const restView = (pr) => ['gh api repos/{owner}/{repo}/pulls/141 --jq', { stdout: `${JSON.stringify(pr)}\n` }];
-  const open = restView({ number: 141, state: 'OPEN', merge_commit_sha: null });
-  const MERGE = 'gh api -X PUT repos/{owner}/{repo}/pulls/141/merge -f merge_method=merge';
+  const merged = pullAt({ state: 'closed', merged_at: '2026-10-05T10:00:00Z' });
 
   it('reads, merges, reads the merge commit and comments over REST, never through gh pr', () => {
     let merged = false;
@@ -752,7 +764,7 @@ describe('merge in a cloud session: REST only', () => {
       env: cloud,
       answers: [
         diff,
-        ['gh api repos/{owner}/{repo}/pulls/141 --jq', () => ({ stdout: `${JSON.stringify({ number: 141, state: merged ? 'MERGED' : 'OPEN', merge_commit_sha: merged ? 'feed1234beef' : null })}\n` })],
+        [`${REST}pulls/141 -X GET`, () => ({ stdout: JSON.stringify(defaultPull(BRANCH, merged ? { state: 'closed', merged_at: '2026-10-05T10:00:00Z' } : { merge_commit_sha: null })) })],
         [MERGE, () => ((merged = true), {})],
         ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', (cmd) => ((comment = readFileSync(cmd.match(/body=@(\S+)/)[1], 'utf8')), {})],
       ],
@@ -770,7 +782,7 @@ describe('merge in a cloud session: REST only', () => {
 
   it('refuses exactly when the merge gate does, and merges nothing', () => {
     const message = 'Merge gate (Constitution VII): PR #141 cannot merge: agent-review is pending.';
-    const h = harness({ env: cloud, answers: [open], refuse: { prefix: 'gh api -X PUT "repos/{owner}/{repo}/pulls/141/merge"', message } });
+    const h = harness({ env: cloud, refuse: { prefix: 'gh api -X PUT "repos/{owner}/{repo}/pulls/141/merge"', message } });
     const result = step(['merge', '--pr', '141'], h.io);
     assert.equal(result.ok, false, JSON.stringify(result));
     assert.equal(result.fix, message);
@@ -779,24 +791,25 @@ describe('merge in a cloud session: REST only', () => {
   });
 
   it('skips the merge on a PR already merged', () => {
-    const h = harness({ env: cloud, answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' })] });
+    const h = harness({ env: cloud, answers: [diff, ...merged] });
     const result = step(['merge', '--pr', '141', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(!h.calls.some((c) => c.startsWith('gh api -X PUT')));
   });
 
-  it('needs --pr: without GraphQL the branch cannot be resolved to its PR', () => {
-    const h = harness({ env: cloud });
-    const result = step(['merge'], h.io);
-    assert.equal(result.ok, false);
-    assert.match(result.fix, /--pr/);
-    assert.ok(!h.calls.some((c) => c.startsWith('gh ')));
+  // @traces 1323-FR-002
+  it('finds the branch PR over REST without --pr', () => {
+    const h = harness({ env: cloud, answers: [diff, ...merged] });
+    const result = step(['merge', '--tracker-done'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(`${REST}pulls?head={owner}:${BRANCH}&state=all&per_page=100 -X GET --paginate --slurp`), h.calls.join('\n'));
+    assert.equal(h.calls.filter((c) => c.startsWith('gh pr ')).length, 0);
   });
 
   it('keeps the comment for a rerun over REST when posting it fails', () => {
     const h = harness({
       env: cloud,
-      answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' }), ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', { code: 1, stderr: 'HTTP 502' }]],
+      answers: [diff, ...merged, ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', { code: 1, stderr: 'HTTP 502' }]],
     });
     const result = step(['merge', '--pr', '141', '--tracker-done'], h.io);
     assert.equal(result.ok, false);
@@ -808,11 +821,15 @@ describe('gates, main and identity', () => {
   beforeEach(() => fixture());
 
   it('judges every git and gh command with the gates before it runs, in the same order', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], ['gh pr list', { stdout: '' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], NO_PR] });
     step(['open', '--title', TITLE], h.io);
-    const tools = h.calls.filter((c) => /^(git|gh) /.test(c) && !c.startsWith('gh auth token'));
-    assert.equal(h.gated.length, tools.length);
-    h.gated.forEach((command, i) => assert.equal(command.replace(/"/g, ''), tools[i]));
+    // A gh PR read is judged as written, then runs as its REST calls (1323-FR-001).
+    const tools = h.calls.filter((c) => /^(git|gh) /.test(c) && !c.startsWith('gh auth token') && !c.startsWith(REST));
+    const gated = h.gated.map((c) => c.replace(/"/g, ''));
+    const writes = gated.filter((c) => !/^gh pr (list|view|checks) /.test(c));
+    assert.equal(writes.length, tools.length);
+    writes.forEach((command, i) => assert.equal(command, tools[i]));
+    assert.ok(gated.some((c) => c.startsWith(`gh pr list --head ${BRANCH}`)), gated.join('\n'));
   });
 
   it('a gate refusal stops the step before the command runs', () => {
@@ -836,19 +853,19 @@ describe('gates, main and identity', () => {
   it('never pushes to main or with force in any step', () => {
     for (const argv of [['open', '--title', TITLE], ['ready', '--body-file', join(repo, 'b.md')], ['merge']]) {
       writeFileSync(join(repo, 'b.md'), 'x');
-      const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], ['gh pr list', { stdout: '' }], ['git diff --cached --quiet', { code: 1 }]] });
+      const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], NO_PR, ['git diff --cached --quiet', { code: 1 }]] });
       step(argv, h.io);
       for (const push of h.calls.filter((c) => c.startsWith('git push'))) assert.equal(push, `git push -u origin ${BRANCH}`);
     }
   });
 
   it('runs gh with the caller GH_TOKEN, or george-hutanu\'s token when unset', () => {
-    const own = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const own = harness({ answers: [['git rev-list', { stdout: '1\n' }]] });
     step(['open', '--title', TITLE, '--tracker-done'], own.io);
     assert.ok(own.envs.filter((e) => e.cmd.startsWith('gh ')).every((e) => e.env.GH_TOKEN === 'tok-george'));
     assert.ok(!own.calls.includes('gh auth token -u george-hutanu'));
 
-    const none = harness({ env: {}, answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const none = harness({ env: {}, answers: [['git rev-list', { stdout: '1\n' }]] });
     step(['open', '--title', TITLE, '--tracker-done'], none.io);
     assert.equal(none.calls[0], 'gh auth token -u george-hutanu');
     assert.ok(none.envs.filter((e) => e.cmd.startsWith('gh ') && !e.cmd.startsWith('gh auth')).every((e) => e.env.GH_TOKEN === 'tok-from-gh'));
@@ -917,7 +934,7 @@ describe('temp files, the token stop, reruns and the finish order', () => {
 
   it('removes the temp files when gh pr create or gh pr comment fails', () => {
     let body = '';
-    const o = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '' }], ['gh pr create', (cmd) => { body = cmd.match(/--body-file (\S+)/)[1]; return { code: 1, stderr: 'boom' }; }]] });
+    const o = harness({ answers: [['git rev-list', { stdout: '1\n' }], NO_PR, ['gh pr create', (cmd) => { body = cmd.match(/--body-file (\S+)/)[1]; return { code: 1, stderr: 'boom' }; }]] });
     assert.equal(step(['open', '--title', TITLE], o.io).ok, false);
     assert.ok(body && !existsSync(body), body);
     let finish = '';
@@ -946,7 +963,7 @@ describe('temp files, the token stop, reruns and the finish order', () => {
     const h = harness({
       answers: [
         ['git diff --cached --quiet', () => ({ code: i++ === 0 ? 1 : 0 })],
-        [`gh pr view ${BRANCH} --json`, { stdout: JSON.stringify({ number: 141, title: 'fix(web): ST-702 a fix', isDraft: true, url: PR_URL }) }],
+        ...pullAt({ title: 'fix(web): ST-702 a fix' }),
       ],
     });
     step(['ready', '--body-file', body], h.io);
@@ -956,7 +973,7 @@ describe('temp files, the token stop, reruns and the finish order', () => {
   it('removes the draft body temp file after gh pr create', () => {
     let file = '';
     const h = harness({
-      answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '' }], ['gh pr create', (cmd) => { file = cmd.match(/--body-file (\S+)/)[1]; return { stdout: `${PR_URL}\n` }; }]],
+      answers: [['git rev-list', { stdout: '1\n' }], NO_PR, ['gh pr create', (cmd) => { file = cmd.match(/--body-file (\S+)/)[1]; return { stdout: `${PR_URL}\n` }; }]],
     });
     assert.equal(step(['open', '--title', TITLE], h.io).ok, true);
     assert.ok(file && !existsSync(file), file);
@@ -988,7 +1005,7 @@ describe('temp files, the token stop, reruns and the finish order', () => {
   });
 
   it('quotes the title and the body path in the reruns', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 1 }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 1 }]] });
     const title = 'feat(api): ST-696 a $HOME `x` "y"';
     assert.equal(step(['open', '--title', title], h.io).then, 'node .claude/scripts/lifecycle.mjs open --title "feat(api): ST-696 a \\$HOME \\`x\\` \\"y\\"" --tracker-done');
     const spaced = join(repo, 'my body.md');
@@ -998,13 +1015,13 @@ describe('temp files, the token stop, reruns and the finish order', () => {
   });
 
   it('takes the start commit ST from the title when it has one', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '0\n' }]] });
     step(['open', '--title', 'fix(web): ST-701 a fix', '--tracker-done'], h.io);
     assert.ok(h.calls.includes('git commit --allow-empty -m chore(web): ST-701 start a fix'), h.calls.join('\n'));
   });
 
   it('stops when gh pr create prints no PR URL', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '' }], ['gh pr create', { stdout: 'something else\n' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], NO_PR, ['gh pr create', { stdout: 'something else\n' }]] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, false);
     assert.match(result.stopped, /^gh pr create/);
@@ -1087,11 +1104,13 @@ describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
     assert.deepEqual(graphql(h.calls), []);
   });
 
-  it('on the laptop the same steps call gh pr as before', () => {
-    const h = harness({ answers: [['git rev-list --count origin/main..HEAD', { stdout: '1\n' }], ['gh pr list', { stdout: '\n' }]] });
+  // @traces 1323-FR-001
+  it('on the laptop the writes stay gh pr, the reads go over REST', () => {
+    const h = harness({ answers: [['git rev-list --count origin/main..HEAD', { stdout: '1\n' }], NO_PR] });
     step(['open', '--title', TITLE], h.io);
     assert.ok(h.calls.some((c) => c.startsWith('gh pr create --draft')));
-    assert.ok(!h.calls.some((c) => c.startsWith('gh api')));
+    const api = h.calls.filter((c) => c.startsWith('gh api'));
+    assert.ok(api.length > 0 && api.every((c) => / -X GET( |$)/.test(c)), api.join('\n'));
   });
 });
 
@@ -1100,10 +1119,9 @@ describe('the story: --story, the PR title, feature.json, then the folder number
   const OTHER = '854-precompact-pr-signal';
   const T660 = 'fix(harness): ST-660 precompact PR signal';
   const state = () => JSON.parse(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8'));
-  const view = (title, prState = 'OPEN') => ['gh pr view --json number,state,url,title', { stdout: JSON.stringify({ number: 244, state: prState, url: PR_URL, title }) }];
-  const readyView = (title) => [`gh pr view ${OTHER} --json number,title,isDraft,url`, { stdout: JSON.stringify({ number: 244, title, isDraft: true, url: PR_URL }) }];
+  const view = (title, props = {}) => pullAt({ number: 244, title, head: { ref: OTHER, sha: 'abcdef1234567890' }, ...props });
   const diff = ['git -C specs diff -U0 --', { stdout: '' }];
-  const sideEffects = (calls) => calls.filter((c) => /^(git push|git commit|gh pr merge|gh pr ready|gh pr edit|gh pr create|node \.claude\/scripts\/(tracker-sync|specs-repo)\.mjs)/.test(c));
+  const sideEffects = (calls) => calls.filter((c) => /^(git push|git commit|gh api -X PUT|gh pr ready|gh pr edit|gh pr create|node \.claude\/scripts\/(tracker-sync|specs-repo)\.mjs)/.test(c));
 
   beforeEach(() => {
     fixture();
@@ -1116,10 +1134,10 @@ describe('the story: --story, the PR title, feature.json, then the folder number
 
   // @traces 891-FR-001 891-FR-002 891-FR-005
   it('merge finishes the story the PR title names, not the folder number, and never says ST-854', () => {
-    const h = harness({ branch: OTHER, answers: [diff, view(T660), ['gh pr view 244 --json mergeCommit', { stdout: 'feed1234beef\n' }]] });
+    const h = harness({ branch: OTHER, answers: [diff, ...view(T660)] });
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.equal(h.calls.find((c) => !c.startsWith('git rev-parse') && !c.startsWith('gh auth')), 'gh pr view --json number,state,url,title,headRefName');
+    assert.equal(h.calls.find((c) => !c.startsWith('git rev-parse') && !c.startsWith('gh auth')), `${REST}pulls?head={owner}:${OTHER}&state=all&per_page=100 -X GET --paginate --slurp`);
     assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
     assert.ok(!h.calls.some((c) => c.includes('ST-854')), h.calls.join('\n'));
@@ -1127,7 +1145,7 @@ describe('the story: --story, the PR title, feature.json, then the folder number
 
   // @traces 891-FR-001 891-FR-005
   it('falls back to the folder number, with no refusal, when no other source names a story', () => {
-    const h = harness({ branch: OTHER, answers: [diff, view('chore(harness): a title without a story')] });
+    const h = harness({ branch: OTHER, answers: [diff, ...view('chore(harness): a title without a story')] });
     const result = step(['merge', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-854 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
@@ -1135,22 +1153,22 @@ describe('the story: --story, the PR title, feature.json, then the folder number
 
   // @traces 891-FR-001 891-FR-002
   it('reads the title over REST in a cloud session', () => {
-    const rest = ['gh api repos/{owner}/{repo}/pulls/244 --jq', { stdout: `${JSON.stringify({ number: 244, state: 'MERGED', merge_commit_sha: 'feed1234beef', title: T660 })}\n` }];
-    const h = harness({ branch: OTHER, env: { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' }, answers: [diff, rest, ['gh api -X POST', {}]] });
+    const rest = view(T660, { state: 'closed', merged_at: '2026-10-05T10:00:00Z' });
+    const h = harness({ branch: OTHER, env: { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' }, answers: [diff, ...rest, ['gh api -X POST', {}]] });
     const result = step(['merge', '--pr', '244'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.match(h.calls.find((c) => c.startsWith('gh api repos/{owner}/{repo}/pulls/244 --jq')), /title/);
+    assert.ok(h.calls.includes(`${REST}pulls/244 -X GET`), h.calls.join('\n'));
     assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
   });
 
   // @traces 891-FR-004 891-FR-005
   it('open --story records the story for this feature, keeping the other keys, and a later merge reads it back', () => {
-    const o = harness({ branch: OTHER, answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '244\n' }]] });
+    const o = harness({ branch: OTHER, answers: [['git rev-list', { stdout: '1\n' }], ...view('fix(harness): precompact PR signal')] });
     const opened = step(['open', '--title', 'fix(harness): precompact PR signal', '--story', 'ST-660'], o.io);
     assert.equal(opened.ok, true, JSON.stringify(opened));
     assert.ok(o.calls.includes('node .claude/scripts/tracker-sync.mjs start --pr 244 --story ST-660'), o.calls.join('\n'));
     assert.deepEqual(state(), { level: 1, level_for: `specs/${OTHER}`, feature_directory: `specs/${OTHER}`, story: 'ST-660', story_for: `specs/${OTHER}` });
-    const m = harness({ branch: OTHER, answers: [diff, view('fix(harness): precompact PR signal')] });
+    const m = harness({ branch: OTHER, answers: [diff, ...view('fix(harness): precompact PR signal')] });
     const merged = step(['merge', '--tracker-done'], m.io);
     assert.equal(merged.ok, true, JSON.stringify(merged));
     assert.ok(m.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), m.calls.join('\n'));
@@ -1159,7 +1177,7 @@ describe('the story: --story, the PR title, feature.json, then the folder number
   // @traces 891-FR-001 891-FR-004 891-FR-005
   it('ignores a recorded story whose story_for names another feature', () => {
     writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ feature_directory: `specs/${OTHER}`, story: 'ST-661', story_for: `specs/${FEATURE}` }));
-    const h = harness({ branch: OTHER, answers: [diff, view(T660)] });
+    const h = harness({ branch: OTHER, answers: [diff, ...view(T660)] });
     const result = step(['merge', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
@@ -1168,7 +1186,7 @@ describe('the story: --story, the PR title, feature.json, then the folder number
   // @traces 891-FR-002 891-FR-003 891-FR-005
   it('merge refuses --story against a title that names another story, before the merge and with feature.json untouched', () => {
     const before = readFileSync(join(repo, '.specify', 'feature.json'), 'utf8');
-    const h = harness({ branch: OTHER, answers: [view('fix(harness): ST-661 something else')] });
+    const h = harness({ branch: OTHER, answers: [...view('fix(harness): ST-661 something else')] });
     const result = step(['merge', '--story', 'ST-660'], h.io);
     assert.equal(result.ok, false);
     assert.equal(result.stopped, 'story');
@@ -1183,7 +1201,7 @@ describe('the story: --story, the PR title, feature.json, then the folder number
     writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ feature_directory: `specs/${OTHER}`, story: 'ST-661', story_for: `specs/${OTHER}` }));
     const body = join(repo, 'body.md');
     writeFileSync(body, '## Why\n\nfilled\n');
-    const h = harness({ branch: OTHER, answers: [readyView(T660)] });
+    const h = harness({ branch: OTHER, answers: [...view(T660)] });
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, false);
     assert.equal(result.stopped, 'story');
@@ -1195,7 +1213,7 @@ describe('the story: --story, the PR title, feature.json, then the folder number
 
   // @traces 891-FR-003
   it('compares stories by number, so ST-0660 and ST-660 agree', () => {
-    const h = harness({ branch: OTHER, answers: [diff, view(T660)] });
+    const h = harness({ branch: OTHER, answers: [diff, ...view(T660)] });
     const result = step(['merge', '--story', 'ST-0660', '--tracker-done'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/tracker-sync.md`), h.calls.join('\n'));
@@ -1232,7 +1250,7 @@ describe('every feature runs tracker-sync.mjs', () => {
   ];
 
   it('open runs start and pr through tracker-sync.mjs', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ...tracker] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ...tracker] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
@@ -1241,12 +1259,12 @@ describe('every feature runs tracker-sync.mjs', () => {
   });
 
   it('a failing tracker-sync stops the step with its output and a --tracker-done rerun', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 64, stderr: 'tracker-sync: bad\n' }]] });
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['node .claude/scripts/tracker-sync.mjs start', { code: 64, stderr: 'tracker-sync: bad\n' }]] });
     const result = step(['open', '--title', TITLE], h.io);
     assert.equal(result.ok, false);
     assert.equal(result.stopped, 'tracker-sync start');
     assert.match(result.fix, /tracker-sync: bad/);
-    const done = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const done = harness({ answers: [['git rev-list', { stdout: '1\n' }]] });
     assert.equal(step(['open', '--title', TITLE, '--tracker-done'], done.io).ok, true);
     assert.ok(!done.calls.some((c) => c.includes('tracker-sync')));
   });

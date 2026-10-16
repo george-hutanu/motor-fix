@@ -64,6 +64,45 @@ describe("requests", () => {
     await assert.rejects(github.graphql("query X { a }"), (e) => e instanceof GitHubError && e.type === "NOT_FOUND" && /Could not resolve/.test(e.message));
   });
 
+  // @traces 1323-FR-004
+  it("waits 60 s on a GraphQL rate limit and sends the query again", async () => {
+    const clock = fakeClock();
+    const limited = json({ errors: [{ type: "RATE_LIMITED", message: "API rate limit exceeded for user" }] });
+    const { github, calls } = client(clock, [limited, json({ data: { ok: 1 } })]);
+    assert.deepEqual(await github.graphql("query Q { ok }"), { ok: 1 });
+    assert.equal(calls.length, 2);
+    assert.deepEqual(clock.waits, [60_000]);
+  });
+
+  // @traces 1323-FR-004
+  it("doubles the wait on each rate limit and gives up after five tries", async () => {
+    const clock = fakeClock();
+    const limited = json({ errors: [{ type: "RATE_LIMITED", message: "API rate limit exceeded" }] });
+    const { github, calls } = client(clock, [limited]);
+    await assert.rejects(github.graphql("query Q { ok }"), (e) => e instanceof GitHubError && e.type === "RATE_LIMITED");
+    assert.equal(calls.length, 5);
+    assert.deepEqual(clock.waits, [60_000, 120_000, 240_000, 480_000]);
+  });
+
+  // @traces 1323-FR-004
+  it("retries a mutation GitHub refused as submitted too quickly", async () => {
+    const clock = fakeClock();
+    const quick = json({ message: "was submitted too quickly" }, 403);
+    const { github, calls } = client(clock, [quick, json({ data: { set: {} } })]);
+    assert.deepEqual(await github.graphql("mutation Set { set }"), { set: {} });
+    assert.equal(calls.length, 2);
+    assert.ok(clock.waits.includes(60_000), JSON.stringify(clock.waits));
+  });
+
+  // @traces 1323-FR-004
+  it("does not retry a GraphQL error that is not a rate limit", async () => {
+    const clock = fakeClock();
+    const { github, calls } = client(clock, [json({ errors: [{ type: "FORBIDDEN", message: "Resource not accessible" }] })]);
+    await assert.rejects(github.graphql("query Q { ok }"), (e) => e.type === "FORBIDDEN");
+    assert.equal(calls.length, 1);
+    assert.deepEqual(clock.waits, []);
+  });
+
   it("names a failed REST call by method, path and status, with the token scrubbed", async () => {
     const clock = fakeClock();
     const { github } = client(clock, [json({ message: `bad credentials ${TOKEN}` }, 401)]);
