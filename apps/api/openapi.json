@@ -3358,7 +3358,7 @@
               "minimum": 0,
               "maximum": 10000,
               "default": 0,
-              "type": "number"
+              "type": "integer"
             }
           },
           {
@@ -3370,7 +3370,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 20,
-              "type": "number"
+              "type": "integer"
             }
           }
         ],

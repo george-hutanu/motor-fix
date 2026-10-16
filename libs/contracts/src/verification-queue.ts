@@ -9,7 +9,12 @@ import {
 } from './verification-target';
 
 export class VerificationQueueQueryDto {
-  @ApiPropertyOptional({ default: 0, maximum: 10_000, minimum: 0 })
+  @ApiPropertyOptional({
+    default: 0,
+    maximum: 10_000,
+    minimum: 0,
+    type: 'integer',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -22,6 +27,7 @@ export class VerificationQueueQueryDto {
     description: 'A live re-read asks for every row already shown',
     maximum: VERIFICATION_QUEUE_MAX,
     minimum: 1,
+    type: 'integer',
   })
   @IsOptional()
   @Type(() => Number)
