@@ -425,7 +425,7 @@
         "api-cache-fallback-rate",
         "api-prefetch-hit-rate"
       ],
-      "reason": "counts each cached read (profile, home, popular-brands, and the pre-fetched driver-home and garage-home lists) by outcome: hit, miss, stale (served past its soft expiry), coalesced (a concurrent read served by another read's call), negative (a remembered not-found or empty answer), fallback (Redis failed and PostgreSQL answered), warm (filled by the post-deploy warm-up or, for driver-home and garage-home, by a sign-in), and purge (an entry removed by a tag purge, from the worker); one warn log line when Redis first fails and one when it is back; a fallback rate above 5% for 10 minutes is the api-cache-fallback-rate alert, and a driver-home or garage-home hit rate (hits / warms) under 30% for 60 minutes over at least 50 warms is the api-prefetch-hit-rate alert",
+      "reason": "counts each cached read (profile, home, popular-brands, brands (whether a brand slug a profile read names is in the catalogue), and the pre-fetched driver-home and garage-home lists) by outcome: hit, miss, stale (served past its soft expiry), coalesced (a concurrent read served by another read's call), negative (a remembered not-found or empty answer), fallback (Redis failed and PostgreSQL answered), warm (filled by the post-deploy warm-up or, for driver-home and garage-home, by a sign-in), and purge (an entry removed by a tag purge, from the worker); one warn log line when Redis first fails and one when it is back; a fallback rate above 5% for 10 minutes is the api-cache-fallback-rate alert, and a driver-home or garage-home hit rate (hits / warms) under 30% for 60 minutes over at least 50 warms is the api-prefetch-hit-rate alert",
       "story": "ST-1182"
     },
     {

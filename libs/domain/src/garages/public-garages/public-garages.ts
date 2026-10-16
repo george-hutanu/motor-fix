@@ -48,6 +48,20 @@ const brandSlug = (brand: unknown) =>
     ? brand
     : undefined;
 
+type CatalogueBrand = Pick<PublicGarageBrandDto, 'id' | 'name' | 'slug'>;
+
+// The brand in context and whether the garage works on it.
+const inContextOf = (
+  held: CatalogueBrand,
+  rows: { brand: { id: string }; stance: string }[],
+): PublicGarageBrandDto => ({
+  ...held,
+  stance:
+    rows.find((r) => r.brand.id === held.id)?.stance === 'works_on'
+      ? 'works_on'
+      : 'does_not_take',
+});
+
 // What the profile shows of the price list: the jobs a request can ask for,
 // the labour rate when both ends are set, and each public job's range for the
 // brand in context, listed as the garage ticked them for it.
@@ -104,33 +118,41 @@ export class PublicGaragesService {
     // PostgreSQL refuses a NUL byte in text; no slug holds a control character.
     if (CONTROL.test(slug)) throw notFound();
     const wanted = brandSlug(brand);
+    const held = wanted ? await this.held(wanted) : null;
     const answer = await this.cache.read<PublicGarageDto | null>({
-      key: cacheKey('profile', slug, wanted ?? NO_BRAND),
-      read: () => this.fill(slug, wanted),
+      key: cacheKey('profile', slug, held?.slug ?? NO_BRAND),
+      read: () => this.fill(slug, held),
       soft: PROFILE_SECONDS,
     });
     if (!answer) throw notFound();
     return answer;
   }
 
-  // An unknown brand reads as none and fills the no-brand entry, so made-up
-  // brands never grow the cache. A slug nobody holds is remembered as not
-  // found; a garage not listed is refused uncached, so its approval or its
-  // restore shows on the next read.
+  // The catalogue brand a slug names, retired ones too, read through the
+  // cache: a brand nobody holds is remembered 60 seconds as none, so its
+  // profile reads find the no-brand entry and never grow the cache.
+  private held(slug: string) {
+    return this.cache.read<CatalogueBrand | null>({
+      key: cacheKey('brands', slug),
+      read: async () => {
+        const found = await this.prisma.brand.findUnique({
+          select: { id: true, name: true, slug: true },
+          where: { slug },
+        });
+        return found ? { value: found } : { negative: true, value: null };
+      },
+      soft: PROFILE_SECONDS,
+    });
+  }
+
+  // A slug nobody holds is remembered as not found; a garage not listed is
+  // refused uncached, so its approval or its restore shows on the next read.
   private async fill(
     slug: string,
-    wanted: string | undefined,
+    held: CatalogueBrand | null,
   ): Promise<Filled<PublicGarageDto | null>> {
-    const answer = await this.read(slug, wanted);
-    if (answer) {
-      return {
-        tags: [`garage:${answer.id}`],
-        value: answer,
-        ...(wanted && !answer.brand
-          ? { key: cacheKey('profile', slug, NO_BRAND) }
-          : {}),
-      };
-    }
+    const answer = await this.read(slug, held);
+    if (answer) return { tags: [`garage:${answer.id}`], value: answer };
     const hidden = await this.prisma.garage.findUnique({
       select: { status: true },
       where: { slug },
@@ -144,7 +166,7 @@ export class PublicGaragesService {
 
   private async read(
     slug: string,
-    wanted: string | undefined,
+    wanted: CatalogueBrand | null,
   ): Promise<PublicGarageDto | null> {
     const garage = await this.prisma.garage.findFirst({
       select: {
@@ -235,7 +257,7 @@ export class PublicGaragesService {
       ...texts
     } = garage;
     const verifiedAt = verificationFiles[0]?.decidedAt ?? approvedAt;
-    const inContext = wanted ? await this.brand(wanted, brands) : undefined;
+    const inContext = wanted ? inContextOf(wanted, brands) : undefined;
     return {
       id,
       name,
@@ -325,22 +347,5 @@ export class PublicGaragesService {
       }),
     );
     return answered.filter((photo) => photo !== null);
-  }
-
-  // Retired brands answer too: a garage may still hold one.
-  private async brand(
-    slug: string,
-    rows: { brand: { id: string }; stance: string }[],
-  ): Promise<PublicGarageBrandDto | undefined> {
-    const found = await this.prisma.brand.findUnique({
-      select: { id: true, name: true, slug: true },
-      where: { slug },
-    });
-    if (!found) return undefined;
-    const row = rows.find((r) => r.brand.id === found.id);
-    return {
-      ...found,
-      stance: row?.stance === 'works_on' ? 'works_on' : 'does_not_take',
-    };
   }
 }
