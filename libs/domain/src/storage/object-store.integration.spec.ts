@@ -32,10 +32,20 @@ const PNG = Buffer.concat([
 const PART = 5 * 1024 * 1024;
 const WEB_ORIGIN = 'http://localhost:4200';
 
+function variable(name: (typeof STORAGE_ENV)[number]): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`missing environment variable ${name}`);
+  return value;
+}
+
 function storageEnv(): StorageEnv {
-  return Object.fromEntries(
-    STORAGE_ENV.map((name) => [name, process.env[name] ?? '']),
-  ) as StorageEnv;
+  return {
+    STORAGE_ACCESS_KEY_ID: variable('STORAGE_ACCESS_KEY_ID'),
+    STORAGE_BUCKET: variable('STORAGE_BUCKET'),
+    STORAGE_ENDPOINT: variable('STORAGE_ENDPOINT'),
+    STORAGE_REGION: variable('STORAGE_REGION'),
+    STORAGE_SECRET_ACCESS_KEY: variable('STORAGE_SECRET_ACCESS_KEY'),
+  };
 }
 
 async function bytesAt(url: string, init?: RequestInit) {
@@ -50,8 +60,8 @@ async function bytesAt(url: string, init?: RequestInit) {
 describeStore(
   `the object store at STORAGE_ENDPOINT (${endpoint ?? 'unset'})`,
   () => {
-    const env = storageEnv();
-    const bucket = env.STORAGE_BUCKET;
+    let env: StorageEnv;
+    let bucket: string;
     const owner = `store-${randomUUID().slice(0, 8)}`;
     const written: string[] = [];
     let storage: StorageService;
@@ -83,6 +93,8 @@ describeStore(
     };
 
     beforeAll(() => {
+      env = storageEnv();
+      bucket = env.STORAGE_BUCKET;
       storage = new StorageService(env);
       s3 = new S3Client({
         credentials: {
@@ -98,13 +110,16 @@ describeStore(
     });
 
     afterAll(async () => {
-      await Promise.all(
-        written.map((key) =>
-          s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })),
-        ),
-      );
-      storage.onApplicationShutdown();
-      s3.destroy();
+      try {
+        await Promise.all(
+          written.map((key) =>
+            s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })),
+          ),
+        );
+      } finally {
+        storage.onApplicationShutdown();
+        s3.destroy();
+      }
     });
 
     it('takes a browser upload through a presigned POST policy', async () => {
@@ -113,7 +128,7 @@ describeStore(
       expect(await read(key)).toEqual(PNG);
     });
 
-    it('copies an upload only while its ETag still matches', async () => {
+    it('confirms an upload by copying it pinned to its ETag', async () => {
       const key = await storage.confirmUpload(
         await postUpload(),
         'garage_photo',
