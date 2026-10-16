@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-15
+updated: 2026-10-16
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -24,6 +24,7 @@ features:
   - 1182-cache-service
   - 1175-valkey
   - 1169-prefetch-intent
+  - 1235-unknown-brand-cache
 ---
 
 # Capability: Observability
@@ -571,6 +572,10 @@ _From 1169-prefetch-intent._
 ### 1169-FR-012 — The API dashboard (`infra/observability/grafana/dashboards/motorfix-api.json`) MUST gain one panel "Pre-fetch: warms, hits, misses, hit rate and latency saved" over the server paths, and the web-vitals dashboard one panel for the `profile` path from the collector's data. `infra/observability/alerts/api.json` MUST gain `api-prefetch-hit-rate`, firing per kind when a server path's hit rate (hits / warms) stays under 30% for 60 minutes with at least 50 warms, and `web.json` `web-prefetch-hit-rate` for the browser path by the same rule, its hit rate being `hit / fetched` (recorded as deferred, the panel standing, if the collector's data cannot be alerted on: see Assumptions); `infra/observability/inventory.json` MUST list the histogram, the two alerts and the collector's new measurement, and `scripts/observability-inventory.ts` and `scripts/alert-rules.spec.ts` MUST pass.
 
 _From 1169-prefetch-intent._
+
+### 1235-FR-004 — The `brands` kind MUST be counted by `motorfix_cache_total` like every other kind and named in the observability inventory.
+
+_From 1235-unknown-brand-cache._
 
 ## Retired
 
