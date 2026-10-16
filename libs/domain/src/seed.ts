@@ -160,9 +160,10 @@ const LISTED: {
 ];
 
 // Two garages waiting for an admin, so the admin dashboard has a known count;
-// the first sent a week ago, so its queue row is flagged.
+// the first sent 30 days ago, so its queue row is flagged whatever holidays
+// fall in between (no run of legal holidays and weekends is that long).
 const WAITING = [
-  { garage: 'service-dobre', sent: '7 days', status: 'submitted' },
+  { garage: 'service-dobre', sent: '30 days', status: 'submitted' },
   { garage: 'atelier-dinamo', sent: '0 days', status: 'in_review' },
 ];
 
