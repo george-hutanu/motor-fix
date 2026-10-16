@@ -72,7 +72,6 @@ describe("a first run on a fresh account", () => {
     assert.deepEqual(optionNames(gh, "Priority"), ["Urgent", "Highest", "High", "Medium", "Low"]);
     assert.deepEqual(optionNames(gh, "Work type"), ["Story", "Task", "Bug", "Tech debt", "Decision", "Epic", "Feature", "Group"]);
     assert.deepEqual(optionNames(gh, "Epic"), EPICS);
-    assert.equal(fieldNamed(gh, "Ready to work"), undefined, "readiness is Status To do and not blocked");
     for (const name of ["Started", "QA from", "Merged at", "Planned start", "Planned end"]) assert.equal(fieldNamed(gh, name).dataType, "DATE", name);
     assert.equal(fieldNamed(gh, "Story points").dataType, "NUMBER");
     const iteration = fieldNamed(gh, "Sprint");
@@ -224,59 +223,6 @@ describe("views", () => {
     const writes = gh.writes().length;
     assert.equal((await run(gh)).exit, 0);
     assert.equal(gh.writes().length, writes);
-  });
-});
-
-describe("the obsolete Ready to work field", () => {
-  async function withLeftover(dataType = "SINGLE_SELECT", options = [{ name: "Yes" }, { name: "No" }]) {
-    const gh = fakeGitHub();
-    const dir = formsDir();
-    await run(gh, { formsDir: dir });
-    const p = project(gh);
-    const id = `F_old_${dataType}`;
-    p.fields.push({ id, name: "Ready to work", dataType, ...(dataType === "SINGLE_SELECT" ? { options: options.map((o, i) => ({ id: `O_old_${i}`, name: o.name, color: "GRAY" })) } : {}) });
-    for (const v of p.views.filter((w) => w.layout !== "ROADMAP_LAYOUT" && /^(Board|Table|EP-\d+)$/.test(w.name))) v.visibleFieldIds.push(id);
-    return { gh, dir, id };
-  }
-
-  it("deletes the one bootstrap made, prints it as removed, and exits 0", async () => {
-    const { gh, dir } = await withLeftover();
-    const r = await run(gh, { formsDir: dir });
-    assert.equal(r.exit, 0);
-    assert.equal(fieldNamed(gh, "Ready to work"), undefined);
-    assert.equal(ops(gh, "DeleteField").length, 1);
-    assert.ok(r.lines.some((l) => /^field\s+removed\s+Ready to work$/.test(l)));
-    assert.ok(!r.lines.some((l) => /differs/.test(l) && !/^summary/.test(l)));
-  });
-
-  it("does nothing once it is gone", async () => {
-    const { gh, dir } = await withLeftover();
-    await run(gh, { formsDir: dir });
-    const before = gh.writes().length;
-    const r = await run(gh, { formsDir: dir });
-    assert.equal(r.exit, 0);
-    assert.equal(gh.writes().length, before);
-    assert.ok(!r.lines.some((l) => /Ready to work/.test(l)));
-  });
-
-  it("only says it would remove it on a dry run, and exits 0", async () => {
-    const { gh, dir } = await withLeftover();
-    const before = gh.writes().length;
-    const r = await run(gh, { formsDir: dir, dryRun: true });
-    assert.equal(r.exit, 0);
-    assert.equal(gh.writes().length, before);
-    assert.ok(r.lines.some((l) => /^field\s+would remove\s+Ready to work$/.test(l)));
-  });
-
-  it("keeps a Ready to work field it did not make, says so, and exits 0", async () => {
-    for (const [type, options] of [["TEXT"], ["SINGLE_SELECT", [{ name: "Yes" }, { name: "No" }, { name: "Maybe" }]]]) {
-      const { gh, dir } = await withLeftover(type, options);
-      const r = await run(gh, { formsDir: dir });
-      assert.equal(r.exit, 0, type);
-      assert.ok(fieldNamed(gh, "Ready to work"), type);
-      assert.equal(ops(gh, "DeleteField").length, 0, type);
-      assert.ok(r.lines.some((l) => /^field\s+kept\s+Ready to work /.test(l)), type);
-    }
   });
 });
 

@@ -112,44 +112,25 @@ multiline flag; whether a construct is portable across Bun and Node; whether a
 symlink is relative to the repo (follow) or external (block); test temp files
 under `node_modules/.cache`, never in the tree.
 
-## Triage — every finding takes one of three routes
+## Triage — every finding takes one of two routes
 
-Borrowed from BMAD's code review, which routes each verified finding to
-**patch**, **defer** or **decision needed**. The route follows the size of the
-fix, not whose problem it is (AGENTS.md, "Technical debt a review defers"): a
-small or medium fix is made in this PR, even for a bug that existed before the
-change or sits next to it, so a finding is neither dropped nor turned into a
-ticket it did not need. Add a **Route** column and fill it for every row.
-
-The size test: A fix is large when it needs its own design or decision, a data
-migration, a different area or epic, or work clearly bigger than the story
-itself. Anything else is small or medium.
+Every verified review, QA or harden finding is fixed in the current task's PR
+before ready or merge, even a bug that existed before the change or sits next
+to it (AGENTS.md); there are no tech-debt tickets. Add a **Route** column and
+fill it for every row.
 
 | Route | When | What happens |
 | --- | --- | --- |
-| `patch` | a small or medium fix, this change's problem or not (pre-existing or adjacent included) | the caller fixes it and re-runs you once |
-| `defer` | a real issue whose fix is **large** by the size test | append it to `specs/<feature>/deferred.md`, naming the arm it meets |
-| `decision` | an ambiguous choice only a human can settle | name the two options and what each costs; never pick one silently |
-
-`decision` is available only when the feature has a spec to be ambiguous about.
-With no spec, a finding is `patch` or `defer` — there is nothing to be ambiguous
-against.
+| `patch` | any verified finding, this change's problem or not (pre-existing or adjacent included) | the caller fixes it in this PR and re-runs you once |
+| `decision` | a choice only the owner can settle | name the two options and what each costs; the caller asks it as a `needs-confirmation` question on the task; never pick one silently |
 
 Route every finding yourself first. Then, once the list is verified, write it
 to a scratch JSON array (`title`, `detail`, `file`) and cross-check the routes:
 `node .claude/scripts/jev.mjs triage <file>.json`. It returns a route and a
 severity per finding, and routes anything it is under 0.6 confident about to
 `decision-needed` rather than guessing. Where it disagrees with you, say so in
-the row and keep your own route — you read the code and it did not. Its value
-is catching the finding you routed to `patch` out of momentum. An unavailable
-lane changes nothing: your routes stand.
-
-A `defer` row is written to `specs/<feature>/deferred.md` in the format
-`.specify/templates/deferred-template.md` gives, one line, with its `path:line`
-source. `.claude/scripts/retro-evidence.mjs` reads that file, so `/speckit-retro`
-reports what is still open instead of the finding evaporating. A `defer` never
-lowers a severity: a deferred CRITICAL still blocks, because "large" is a
-statement about the fix, not about danger.
+the row and keep your own route — you read the code and it did not. An
+unavailable lane changes nothing: your routes stand.
 
 ## Output
 

@@ -64,7 +64,7 @@ holding only the PR number, the worktree and the note's path:
 > `.claude/skills/speckit-auto/SKILL.md`, then run "The tail" in `tail.md`
 > beside it.
 
-The tail reads the note, `deferred.md` and the PR, not the story's transcript,
+The tail reads the note and the PR, not the story's transcript,
 and runs lifecycle steps 5–7. It first runs
 `node .claude/scripts/lifecycle.mjs handoff --restore --pr <n>`: a note that
 is missing (a cloud session resumed on a fresh VM) is written from the PR's
@@ -105,9 +105,10 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
      report): dispatch again once for that head, the same way, at the same
      lap. A second unusable run for the head is posted with
      `post.mjs --missing` and blocks the run (`verification-failed`).
-   - **A failing lap** (blocking findings, a failing check, or a medium or
-     low finding whose fix is small or medium by the size test in AGENTS.md,
-     "Technical debt a review defers"): fix every one, tests first, commit
+   - **A failing lap** (blocking findings, a failing check, or any medium or
+     low finding: fix every verified finding in this PR; an owner decision is
+     a `needs-confirmation` question, `speckit-tracker-sync blocked
+     <question>`): fix every one, tests first, commit
      and push the fix, then the lap's report and any new `tracker-sync.md`
      lines through the specs repo
      (`node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`), then
@@ -119,16 +120,10 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
      with `--no-wait` as above, rewrite the note's `QA run:` line, post it
      (`lifecycle.mjs handoff --pr <n>`), and end with
      `NEXT: tail #<n> after QA run <id>`.
-4. After a passing lap, `speckit-tracker-sync debt` files every deferred bullet
-   not yet filed (reviewers' and the tester's; each a large fix by the size
-   test) as a To do issue in the tracker. Its
-   URLs change `deferred.md`, which lives in the specs repo: commit and push
-   it there (`node .claude/scripts/specs-repo.mjs commit "<message>" --
-   <feature>`). The PR head does not change, so no new lap or carry is needed.
-5. On `agent-review` success with every other check green (a check still
+4. On `agent-review` success with every other check green (a check still
    pending: end with `NEXT: merge #<n> after CI`): merge `origin/main` in
    again with `merge-main.mjs` if it moved (a new head needs a new tester run), write
-   `specs/<feature>/finish-comment.md` (`speckit-tracker-sync` §5) when there
+   `specs/<feature>/finish-comment.md` (`speckit-tracker-sync` §4) when there
    is something to record, then `node .claude/scripts/lifecycle.mjs merge --pr <n>`
    (in a cloud session it merges over REST, `gh api -X PUT …/pulls/<n>/merge`;
    never merge past a blocking finding of the tester's, which the workflow's
@@ -137,9 +132,7 @@ dispatches it and ends, and a pending check is left to the session's CI wait.
    otherwise it merges, runs the tracker's `finish`, posts one finish comment on the
    merged PR, restores `tracker-sync.md` and deletes `handoff.md`. On `left`,
    run those events through `speckit-tracker-sync`, then its `then`.
-6. Run the hold review on its `review` candidates (`speckit-tracker-sync` §4)
-   and the archive check (`speckit-archive`, Phase 4 step 5); when it exits 1,
-   do what its reason says and check again, once. A tracker write still PENDING
+5. A tracker write still PENDING
    is retried by the next `speckit-tracker-sync` run and does not hold the
    tail. Last, when the merge result's `worktree.removed` is false because
    it was this tail's own checkout, `ExitWorktree` (keep) and run

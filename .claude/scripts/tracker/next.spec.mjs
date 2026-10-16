@@ -43,7 +43,6 @@ describe("next task", () => {
     assert.equal(new URL(calls[0].url).pathname, "/search/issues");
     assert.equal(q(0), "repo:george-hutanu/motor-fix-specs is:issue is:open -label:needs-confirmation");
     assert.equal(q(1), "repo:george-hutanu/motor-fix-specs is:issue is:open -label:needs-confirmation label:EP-1");
-    assert.doesNotMatch(q(0), /ready to work/);
     assert.equal(calls.length, 2, "no GraphQL call when nothing is found");
   });
 

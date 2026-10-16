@@ -61,8 +61,8 @@ function harness({ branch = BRANCH, env = { GH_TOKEN: 'tok-george' }, answers = 
     ['gh auth token -u george-hutanu', { stdout: 'tok-from-gh\n' }],
     ['gh pr create', { stdout: `${PR_URL}\n` }],
     ...pullAt({ head: { ref: branch, sha: 'abcdef1234567890' } }),
-    ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"ready":{"review":["ST-30"]}}\n' }],
-    ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"ready":{"review":["ST-31"]}}\n' }],
+    ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"status":"Planning"}\n' }],
+    ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"status":"Done"}\n' }],
   ];
   const table = [...answers, ...base];
   const run = (file, args, opts = {}) => {
@@ -101,7 +101,6 @@ describe('open', () => {
     assert.match(calls[5], /^gh pr create --draft --base main --head 696-lifecycle-script --title chore\(harness\): ST-696 lifecycle steps as one script call each --body-file \S+ --label planning --label tooling --label scope: harness$/);
     assert.equal(calls[6], 'node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696');
     assert.equal(calls[7], 'node .claude/scripts/tracker-sync.mjs pr 141 --story ST-696');
-    assert.deepEqual(result.review, ['ST-30']);
   });
 
   it('opens the draft from the PR template with the story and spec folder filled in', () => {
@@ -283,15 +282,6 @@ describe('ready', () => {
     assert.equal(result.ok, false);
     assert.match(result.fix, /specs-repo\.mjs ensure/);
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr ready')));
-  });
-
-  it('files unfiled deferred bullets through the tracker debt before the records commit', () => {
-    writeFileSync(join(featureDir, 'deferred.md'), '# Deferred\n\n- MEDIUM: tidy `x.mjs` (code-reviewer)\n');
-    const h = harness({ answers: [staged([1, 1])] });
-    step(['ready', '--body-file', body], h.io);
-    const debt = h.calls.indexOf('node .claude/scripts/tracker-sync.mjs debt --pr 141 --story ST-696');
-    assert.ok(debt > -1, h.calls.join('\n'));
-    assert.ok(debt < h.calls.indexOf(`${'node .claude/scripts/specs-repo.mjs commit'} chore(specs): ST-696 feature records -- ${FEATURE}`));
   });
 
   it('stops when the body check fails: no edit, no ready, the checker says why', () => {
@@ -493,7 +483,6 @@ describe('merge', () => {
     assert.match(comment, /- one/);
     assert.match(comment, /finish · ST-696 · QA → Done/);
     assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
-    assert.deepEqual(result.review, ['ST-31']);
   });
 
   // @traces 1018-FR-005
@@ -1244,7 +1233,7 @@ describe('every feature runs tracker-sync.mjs', () => {
   });
   const staged = ['git diff --cached --quiet', { code: 1 }];
   const tracker = [
-    ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"event":"start","ready":{"review":["ST-40"]}}\n' }],
+    ['node .claude/scripts/tracker-sync.mjs start', { stdout: '{"event":"start"}\n' }],
     ['node .claude/scripts/tracker-sync.mjs qa', { stdout: `{"event":"qa","issue":60,"url":"${ISSUE}"}\n` }],
     ['node .claude/scripts/tracker-sync.mjs finish', { stdout: '{"event":"finish"}\n' }],
   ];
@@ -1255,7 +1244,6 @@ describe('every feature runs tracker-sync.mjs', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
     assert.ok(h.calls.includes('node .claude/scripts/tracker-sync.mjs pr 141 --story ST-696'));
-    assert.deepEqual(result.review, ['ST-40']);
   });
 
   it('a failing tracker-sync stops the step with its output and a --tracker-done rerun', () => {

@@ -13,7 +13,7 @@ const docsCompare = (over = {}) => ({
   base_commit: { sha: FROM },
   total_commits: 1,
   commits: [{ sha: HEAD }],
-  files: [{ filename: 'specs/194-email-sending/deferred.md' }],
+  files: [{ filename: 'docs/how-to/email-sending.md' }],
   ...over,
 });
 const passing = (over = {}) => ({ from: FROM, head: HEAD, fromReview: { state: 'success', description: 'No blocking findings' }, compare: docsCompare(), between: [], headReviews: [], ...over });
@@ -63,13 +63,19 @@ describe('judging a carry', () => {
   });
 
   it('refuses a diff that is not documentation only, by the docs-only.ts definition', () => {
-    const code = docsCompare({ files: [{ filename: 'specs/x/deferred.md' }, { filename: 'apps/api/src/main.ts' }] });
+    const code = docsCompare({ files: [{ filename: 'docs/x.md' }, { filename: 'apps/api/src/main.ts' }] });
     assert.match(judgeCarry(passing({ compare: code })), /apps\/api\/src\/main\.ts/);
     // Markdown the harness reads is not documentation (scripts/docs-only.ts).
     assert.match(judgeCarry(passing({ compare: docsCompare({ files: [{ filename: '.claude/skills/x/SKILL.md' }] }) })), /not documentation only/);
     // A rename lists both paths, so code moved into Markdown is a code change.
     assert.match(judgeCarry(passing({ compare: docsCompare({ files: [{ filename: 'docs/notes.md', previous_filename: 'scripts/x.ts' }] }) })), /scripts\/x\.ts/);
     assert.match(judgeCarry(passing({ compare: docsCompare({ files: [] }) })), /not documentation only/);
+  });
+
+  // @traces 1324-FR-007
+  it('refuses a range that touches a deferred.md, since tech-debt tickets are retired', () => {
+    assert.match(judgeCarry(passing({ compare: docsCompare({ files: [{ filename: 'specs/194-email-sending/deferred.md' }] }) })), /deferred\.md/);
+    assert.match(judgeCarry(passing({ compare: docsCompare({ files: [{ filename: 'README.md' }, { filename: 'notes/deferred.md' }] }) })), /notes\/deferred\.md/);
   });
 
   it('refuses a diff GitHub truncated, since the unseen files cannot be judged', () => {

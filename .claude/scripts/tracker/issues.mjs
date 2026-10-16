@@ -6,8 +6,7 @@ import { findProject, projectState } from "./bootstrap.mjs";
 import { GitHubError } from "./github.mjs";
 import { ISSUE_REPO, OWNER } from "./repos.mjs";
 
-export const READY_LABEL = "ready to work";
-/** Issues that hold others and are never a unit of work: never ready, never counted for the epic's Done. */
+/** Issues that hold others and are never a unit of work: never a task, never counted for the epic's Done. */
 export const CONTAINER_LABELS = ["epic", "type: feature", "type: group"];
 export const issueUrl = (number) => `https://github.com/${OWNER}/${ISSUE_REPO}/issues/${number}`;
 
