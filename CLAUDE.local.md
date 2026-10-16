@@ -37,7 +37,7 @@ feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
 
 ## Gates
 
-Constitution v3.3.0 (`.specify/memory/constitution.md`) maps each rule to its
+Constitution v4.0.0 (`.specify/memory/constitution.md`) maps each rule to its
 check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |
@@ -107,8 +107,8 @@ npm run test:harness                             # the harness's own specs
   artifacts a change owes — never whether its tests come first.
 - **Retrospectives with a verdict.** `/speckit-retro` records `accepted`,
   `accepted-with-open-items` or `rejected`; open action items carry forward.
-- **A defer route for reviews.** Only a large fix (AGENTS.md's size test)
-  goes to `specs/<feature>/deferred.md`; fix the rest in the PR.
+- **Fix it in the PR.** Every verified finding is fixed in this task's PR;
+  an owner decision is a `needs-confirmation` question.
 - **Machine-readable run state.** `.specify/run-state.json` carries `status`,
   `blocking_condition` and `repair_iterations`; a fix/re-verify loop blocks at
   ten laps (`SPECKIT_MAX_REPAIR_ITERATIONS`).

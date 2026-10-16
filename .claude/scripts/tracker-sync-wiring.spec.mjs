@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 // The GitHub tracker's skill is prose an agent follows, and the spec-kit hooks
 // and lifecycle docs call it: these checks keep every event on the script, the
-// labels, finish comment, readiness and build plan in the skill, and the hooks
+// labels, finish comment and build plan in the skill, and the hooks
 // on it.
 
 const root = join(import.meta.dirname, '..', '..');
@@ -15,7 +15,7 @@ const skill = read('.claude/skills/speckit-tracker-sync/SKILL.md');
 describe('speckit-tracker-sync', () => {
   // @traces 1036-FR-016
   it('runs every event through the script', () => {
-    for (const event of ['start', 'implement', 'pr <n>', 'qa', 'finish', 'blocked', 'unblock', 'debt', 'ready', 'file', 'check'])
+    for (const event of ['start', 'implement', 'pr <n>', 'qa', 'finish', 'blocked', 'unblock', 'file', 'check', 'next'])
       assert.ok(skill.includes(`tracker-sync.mjs ${event}`), `no script call for ${event}`);
   });
 
@@ -26,13 +26,13 @@ describe('speckit-tracker-sync', () => {
   });
 
   // @traces 1037-FR-015
-  it('carries the PR labels, the finish comment, the ready refresh and the build plan', () => {
+  it('carries the PR labels, the finish comment and the build plan', () => {
     assert.match(skill, /## \d+[a-z]?\. PR labels/);
     assert.match(skill, /`dependencies`/);
     assert.match(skill, /## \d+[a-z]?\. Finish comment/);
     assert.match(skill, /Build brief/);
     assert.match(skill, /no comment/i);
-    assert.match(skill, /tracker\/ready\.mjs/);
+    assert.doesNotMatch(skill, /tracker\/ready\.mjs/);
     assert.match(skill, /## \d+[a-z]?\. Build plan/);
     assert.match(skill, /docs\/reference\/build-plans\//);
     assert.match(skill, /llms\.txt/);
@@ -46,10 +46,9 @@ describe('speckit-tracker-sync', () => {
     assert.doesNotMatch(skill, /gh-motorfix/);
   });
 
-  // @traces 1036-FR-008
-  it('keeps the hold review before a ready label goes on', () => {
-    assert.match(skill, /--tick/);
-    assert.match(skill, /closed or Done/);
+  // @traces 1324-FR-008
+  it('names no debt filing and no ready refresh', () => {
+    assert.doesNotMatch(skill, /--tick|--hold|deferred\.md/);
   });
 });
 
@@ -78,17 +77,17 @@ describe('the lifecycle docs', () => {
 });
 
 describe('the archive and AGENTS.md', () => {
-  // @traces 1037-FR-002
-  it('the archive runs the ready check before closing', () => {
-    assert.match(read('.claude/skills/speckit-archive/SKILL.md'), /tracker\/ready\.mjs check/);
+  // @traces 1324-FR-009
+  it('the archive no longer runs a ready check', () => {
+    assert.doesNotMatch(read('.claude/skills/speckit-archive/SKILL.md'), /tracker\/ready\.mjs/);
   });
 
-  // @traces 1037-FR-002
-  it('AGENTS.md states the readiness rule and the finish comment rule', () => {
+  // @traces 1324-FR-001
+  it('AGENTS.md keeps the finish comment rule and no ready refresh', () => {
     const agents = read('AGENTS.md');
-    assert.match(agents, /ready to work/i);
-    assert.match(agents, /tracker\/ready\.mjs check -/);
+    assert.match(agents, /A finished task says what happened/);
     assert.match(agents, /comments on the task when there is something to record/);
+    assert.doesNotMatch(agents, /ready[ ]to[ ]work|tracker\/ready\.mjs/i);
   });
 });
 

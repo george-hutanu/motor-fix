@@ -1,17 +1,14 @@
 #!/usr/bin/env node
 // One Bash call per `speckit-tracker-sync` event: the story's issue in
 // george-hutanu/motor-fix-specs and its item in Project "MotorFix" (#11) move
-// with the lifecycle, on the ladder in tracker/status.mjs and the readiness
-// rule in tracker/ready.mjs; the PR's labels move with them, and
-// each step appends a line to specs/<feature>/tracker-sync.md.
+// with the lifecycle, on the ladder in tracker/status.mjs; the PR's labels
+// move with them, and each step appends a line to specs/<feature>/tracker-sync.md.
 //
 //   node .claude/scripts/tracker-sync.mjs <event> [args] [--story ST-<n>] [--pr <n>]
 //     start | implement | qa | review | unblock
 //     blocked <reason>
 //     finish --body-file <comment.md> | finish --no-comment
 //     pr <n>
-//     debt
-//     ready [--tick ST-<n>,…] [--hold ST-<n>=<reason>]   labels only what the hold review confirmed
 //     file --type <story|task|bug|tech debt|decision> --title <t> --body-file <f> [--epic EP-<n>] [--priority <p>]
 //     log [--pending] <event> <item> <text>
 //     check                                              read-only: does the token reach Project #11
@@ -20,34 +17,36 @@
 // Prints one JSON line. Exit 0 (a GitHub failure is logged PENDING and retried
 // on the next run; a token without the project scope prints one line naming
 // the fix), 1 when `check` fails or `pr <n>` cannot read the PR, 64 on a usage
-// error. The token never reaches output or the log.
+// error. `debt` and `ready` are retired: they exit 1 before any GitHub call.
+// The token never reaches output or the log.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { markFiled, parseDeferred, taskFor } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
 import { ghSync } from "./lib/gh-rest.mjs";
 import { readState } from "./run-state.mjs";
 import { GitHubError, githubClient } from "./tracker/github.mjs";
-import { epicLabel, isContainer, READY_LABEL, statusOf, tracker } from "./tracker/issues.mjs";
+import { epicLabel, isContainer, statusOf, tracker } from "./tracker/issues.mjs";
 import { nextTasks } from "./tracker/next.mjs";
-import { decideReady } from "./tracker/ready.mjs";
 import { closesLine, pullPath } from "./tracker/repos.mjs";
 import { decide, recordPrior } from "./tracker/status.mjs";
 import { assertProjectScope, projectToken, REFRESH, TokenError } from "./tracker/token.mjs";
 
 const STATUS_EVENTS = new Set(["start", "implement", "qa", "review", "finish", "blocked", "unblock"]);
 const BOOLEAN = new Set(["no-comment", "pending"]);
-/** Where a repeated flag's value splits: `--tick` at every comma, `--hold` only where the next `ST-<n>=` begins, so a reason keeps its commas. */
-const REPEATED = { tick: /,/, hold: /,(?=\s*(?:ST|EP)-\d+=)/ };
+/** Events that no longer exist: each refuses with its message before any GitHub call or log write. */
+const RETIRED = {
+  debt: "tech-debt tickets are retired; fix it in this task",
+  ready: "the ready refresh is retired; pick the next task with tracker-sync.mjs next",
+};
 const TYPES = { story: "Story", task: "Task", bug: "Bug", "tech debt": "Tech debt", decision: "Decision" };
 const DATE_FIELD = { start: "Started", qa: "QA from", review: "QA from", finish: "Merged at" };
 /** Content writes paced at 1 s: one event makes a handful, far under GitHub's 80 a minute. */
 const PACE_MS = 1000;
 const USAGE =
-  "usage: tracker-sync.mjs <start|implement|qa|review|unblock | blocked <reason> | finish --body-file <f>|--no-comment | pr <n> | debt | ready [--tick ids] [--hold ST-n=reason] | file --type <t> --title <t> --body-file <f> [--epic EP-n] [--priority p] | log [--pending] <event> <item> <text> | check | next [--epic EP-n]> [--story ST-<n>] [--pr <n>]";
+  "usage: tracker-sync.mjs <start|implement|qa|review|unblock | blocked <reason> | finish --body-file <f>|--no-comment | pr <n> | file --type <t> --title <t> --body-file <f> [--epic EP-n] [--priority p] | log [--pending] <event> <item> <text> | check | next [--epic EP-n]> [--story ST-<n>] [--pr <n>]";
 
 export const LOG_FILE = "tracker-sync.md";
 const logLine = ({ date, event, item, text }) => `- ${date} · ${event} · ${item} · ${text}`;
@@ -57,12 +56,11 @@ const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2
 
 function parseArgs(argv) {
   const positional = [];
-  const flags = { tick: [], hold: [] };
+  const flags = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (!arg.startsWith("--")) positional.push(arg);
     else if (BOOLEAN.has(arg.slice(2))) flags[arg.slice(2)] = true;
-    else if (Object.hasOwn(REPEATED, arg.slice(2))) flags[arg.slice(2)].push(...String(argv[++i] ?? "").split(REPEATED[arg.slice(2)]).map((v) => v.trim()).filter(Boolean));
     else flags[arg.slice(2)] = argv[++i];
   }
   return { positional, flags };
@@ -83,7 +81,7 @@ function usageError({ positional: [event, ...rest], flags }) {
     return null;
   }
   if (event === "next") return flags.epic === undefined || /^EP-\d+$/.test(flags.epic) ? null : "next: --epic is EP-<n>";
-  if (STATUS_EVENTS.has(event) || event === "debt" || event === "ready" || event === "check") return null;
+  if (STATUS_EVENTS.has(event) || event === "check") return null;
   if (event === "pr") return /^\d+$/.test(rest[0] ?? "") ? null : "pr needs the PR number";
   if (event === "log") return rest.length >= 3 ? null : "log needs <event> <item> <text>";
   return `unknown event "${event ?? ""}"`;
@@ -111,6 +109,10 @@ export async function main(argv, io = {}) {
   const parsed = parseArgs(argv);
   const { env = process.env, gh = defaultGh, now = () => new Date(), stdout = console.log, stderr = console.error } = io;
   const repo = io.repo ?? gitRoot();
+  if (Object.hasOwn(RETIRED, parsed.positional[0] ?? "")) {
+    stderr(`tracker-sync: ${RETIRED[parsed.positional[0]]}`);
+    return 1;
+  }
   const problem = usageError(parsed);
   if (problem) {
     stderr(`tracker-sync: ${problem}\n${USAGE}`);
@@ -204,7 +206,7 @@ export async function main(argv, io = {}) {
     if (io.replay !== false) await replayPending(logFile, date, io, stderr);
     ctx.story = await t.find(st);
     if (!ctx.story) return done({ event, story: st, skipped: `no issue titled ${st} in the issue repository` });
-    const handler = event === "pr" ? linkPr : event === "debt" ? fileDebt : event === "ready" ? readyEvent : statusEvent;
+    const handler = event === "pr" ? linkPr : statusEvent;
     const result = await handler(ctx);
     return done({ event, story: st, issue: ctx.story.number, url: ctx.story.url, ...result, ...(ctx.pending ? { pending: ctx.pending } : {}) });
   } catch (error) {
@@ -317,9 +319,7 @@ async function statusEvent(ctx) {
     const labels = [...decision.labels.matchAll(/--(add|remove)-label "([^"]*)"/g)].flatMap((m) => [`--${m[1]}-label`, m[2]]);
     if (ctx.prWrite(["pr", "edit", pr, ...labels], `labels PR #${pr}`)) log("labels", `PR #${pr}`, decision.stage ?? "none");
   }
-  const out = { status: decision.story, write: decision.write };
-  if (event === "start" || event === "finish") out.ready = await refreshReady(ctx, { epic });
-  return out;
+  return { status: decision.story, write: decision.write };
 }
 
 function prCommentLogged(ctx, pr, reason) {
@@ -365,47 +365,6 @@ async function finishComment(ctx) {
   ctx.log("comment", st, `posted (${body.split("\n").filter((l) => /^\s*[-*] /.test(l)).length} items)`);
 }
 
-/**
- * Unlabels what stopped being ready and reports the candidates: whether one
- * waits on someone outside the build is judgement, so the label is added only
- * by `ready --tick` once the hold review confirmed it. A dependency (blocked
- * by, or a sub-issue) counts as finished only when closed or at Done.
- */
-async function refreshReady(ctx, { epic, confirm }) {
-  const name = epic?.code ?? ctx.st;
-  ctx.step = Object.assign(ctx.step, { name: "ready", item: name });
-  const work = epic ? await epicWork(ctx, epic.code) : [ctx.story];
-  const holds = new Map(ctx.flags.hold.map((h) => h.split("=")).map(([id, ...why]) => [id, why.join("=") || "held by the hold review"]));
-  const byKey = new Map();
-  const items = work.map((i) => {
-    const self = i.number === ctx.story.number ? ctx.story : i;
-    byKey.set(self.key, self);
-    return {
-      id: self.key,
-      status: statusOf(self),
-      priority: self.values.Priority ?? null,
-      blockers: [...(self.blockedBy ?? []), ...(self.subIssues ?? [])].map((b) => ({ id: b.key, status: statusOf(b) })),
-      hold: holds.get(self.key) ?? null,
-      ticked: self.labels.includes(READY_LABEL),
-    };
-  });
-  const decision = decideReady(items);
-  const tick = confirm ? decision.tick.filter((id) => confirm.includes(id)) : [];
-  const review = confirm ? [] : decision.tick;
-  const held = [...decision.held, ...(confirm ? decision.tick.filter((id) => !confirm.includes(id)).map((id) => ({ id, reason: "not confirmed by the hold review" })) : [])];
-  for (const id of decision.untick) await ctx.t.removeLabel(byKey.get(id), READY_LABEL);
-  for (const id of tick) await ctx.t.addLabels(byKey.get(id), [READY_LABEL]);
-  const parts = [tick.length && `+${tick.join(", +")}`, decision.untick.length && `−${decision.untick.join(", −")}`, review.length && `review: ${review.join(", ")}`].filter(Boolean);
-  ctx.log("ready", name, `${parts.join(", ") || "no change"}${epic ? "" : " (the story has no epic)"}`);
-  return { tick, untick: decision.untick, review, held };
-}
-
-async function readyEvent(ctx) {
-  // No --tick and no --hold: the hold review has not run, so its candidates are listed, not held.
-  const reviewed = ctx.flags.tick.length > 0 || ctx.flags.hold.length > 0;
-  return { ready: await refreshReady(ctx, { epic: await epicOf(ctx), confirm: reviewed ? ctx.flags.tick : undefined }) };
-}
-
 const PLACEHOLDER = /^_\(fill in: the story link[^\n]*\)_[ \t]*$/m;
 const CLOSES = /^Closes george-hutanu\/motor-fix-specs#(\d*)[ \t]*$/m;
 
@@ -444,34 +403,6 @@ async function linkPr(ctx) {
   }
   ctx.log("pr", st, text);
   return { pr: url };
-}
-
-async function fileDebt(ctx) {
-  const { t, story, st } = ctx;
-  const file = join(ctx.feature.dir, "deferred.md");
-  if (!existsSync(file)) return { filed: [] };
-  let markdown = readFileSync(file, "utf8");
-  const epic = await epicOf(ctx);
-  const pr = story.values.PR || ctx.gh(["pr", "view", "--json", "url", "-q", ".url"]).trim();
-  const filed = [];
-  for (const entry of parseDeferred(markdown).filter((e) => e.pending)) {
-    const task = taskFor(entry, { story: story.url, epic: null, feature: null, pr, storyId: st });
-    const kind = task.properties["Issue type"];
-    ctx.step = Object.assign(ctx.step, { name: "debt", item: `${st} line ${entry.line}` });
-    const made = await t.create({
-      title: task.properties.Story,
-      numbered: true,
-      body: task.content,
-      labels: [...(epic ? [epic.code] : []), `type: ${kind.toLowerCase()}`],
-      fields: { Status: "To do", "Work type": kind, Priority: task.properties.Priority, ...(epic ? { Epic: epic.code } : {}) },
-      parent: epic?.issue,
-    });
-    markdown = markFiled(markdown, entry.line, made.url, "Issue");
-    writeFileSync(file, markdown);
-    ctx.log("debt", st, `deferred.md line ${entry.line} → ${made.url}${made.placed ? "" : " (the epic is full: not a sub-issue)"}`);
-    filed.push(made.url);
-  }
-  return { filed };
 }
 
 async function fileIssue(ctx) {

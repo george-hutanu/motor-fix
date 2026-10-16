@@ -119,8 +119,8 @@ A retired requirement now prints `⊘ retired` instead of `✗ UNTESTED`.
 
 Steps 1–3 run before the feature's PR goes ready: the capability merge rides
 in its own PR, the feature folder goes to the private specs repository
-(AGENTS.md, lifecycle step 4); steps
-4–5 run after the merge, by whoever merged it (under `/speckit-auto`, the
+(AGENTS.md, lifecycle step 4); step
+4 runs after the merge, by whoever merged it (under `/speckit-auto`, the
 tail agent), and commit nothing.
 
 1. Mark the feature's `spec.md` status line `Archived (<date>)`.
@@ -134,19 +134,7 @@ tail agent), and commit nothing.
    the PR merged): the story's issue goes to Done and closes, and the
    epic to Done once every story in it is Done. Skip this if the merge to
    `main` already ran it. Its log lines go into one comment on the merged PR,
-   not a commit (`speckit-tracker-sync`, §6).
-5. The archive check, over the log and the merged PR's comments, must exit 0:
-
-   ```bash
-   { cat specs/<feature>/tracker-sync.md; gh pr view <n> --json comments --jq '.comments[].body'; } \
-     | node .claude/scripts/tracker/ready.mjs check -
-   ```
-
-   Ready to work was refreshed (or logged PENDING) after the last `finish`.
-   When it exits 1, do what its reason says — usually run `speckit-tracker-sync ready`
-   and add the line to the PR's finish comment (`speckit-tracker-sync`, §4) —
-   and check again. The feature is not closed until it passes. A feature with
-   no PR checks the file alone: `tracker/ready.mjs check specs/<feature>/tracker-sync.md`.
+   not a commit (`speckit-tracker-sync`, §5).
 
 ## What this never does
 

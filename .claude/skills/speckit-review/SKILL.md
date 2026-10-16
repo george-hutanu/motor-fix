@@ -183,13 +183,12 @@ and mark the PR ready exactly as `/speckit-auto`'s hand-off steps 1–3 do
 `speckit-tracker-sync qa` and its line pushed; ready is QA). `lifecycle.mjs
 ready` may refuse a level 2 or 3 feature whose owed artifacts are missing
 (`level.mjs check --ready`): run the phases it names, then run it again. Then run the QA step
-and merge exactly as `/speckit-auto`'s "The tail" steps 1–6 do: green CI, `/speckit-pr-test <n>`
+and merge exactly as `/speckit-auto`'s "The tail" steps 1–5 do: green CI, `/speckit-pr-test <n>`
 (story → QA) until `agent-review` is success on the head commit, then merge.
-MEDIUM/LOW findings with a small or medium fix are fixed on the branch before
-ready, pre-existing or adjacent ones included; only a large fix (the size test
-in AGENTS.md, "Technical debt a review defers") is routed to defer, goes to
-`specs/<feature>/deferred.md` and is filed as a tracker issue
-(`speckit-tracker-sync debt`). With a blocker left, do none of this.
+MEDIUM/LOW findings are fixed on the branch before ready too, pre-existing or
+adjacent ones included: fix every verified finding in this PR; an owner
+decision is a `needs-confirmation` question (`speckit-tracker-sync blocked
+<question>`). With a blocker left, do none of this.
 
 ## Done When
 

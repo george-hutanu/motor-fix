@@ -168,7 +168,7 @@ describe('answer readers', () => {
   });
 
   it('defaults a missing confidence to 0 so a caller never treats it as certain', () => {
-    assert.equal(choiceOf({ choice: 'defer' }).confidence, 0);
+    assert.equal(choiceOf({ choice: 'patch' }).confidence, 0);
     assert.equal(scoreOf({ score: 1 }).confidence, 0);
   });
 

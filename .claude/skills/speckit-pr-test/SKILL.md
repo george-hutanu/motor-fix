@@ -107,16 +107,11 @@ without a status, so the test runs again.
 
    Then dispatch the new head's run with `dispatch.mjs <n> --no-wait` and
    end (speckit-auto "The tail"); the next tail comes back to step 2 with its
-   `RUN`. A medium or low finding whose fix is small or medium is fixed the
-   same way in the lap (test first, counted as a lap), pre-existing or
-   adjacent ones included, even when `agent-review` passed; only a large fix
-   by the size test in AGENTS.md ("Technical debt a review defers") goes to
-   `specs/<feature>/deferred.md`, and every deferred bullet is filed as a
-   tracker issue (`speckit-tracker-sync debt`).
-   On success, file the lap's deferred findings the same way before merging,
-   in the order `/speckit-auto`'s "The tail" step 4 gives (commit the task URLs,
-   which step 2 carries without a lap; the new head's own findings, if a lap
-   ran, go to the tracker directly).
+   `RUN`. A medium or low finding is fixed the same way in the lap (test
+   first, counted as a lap), pre-existing or adjacent ones included, even
+   when `agent-review` passed: fix every verified finding in this PR; an
+   owner decision is a `needs-confirmation` question (`speckit-tracker-sync
+   blocked <question>`).
 7. **Cap reached** (`repair` exits 1): the run is blocked with
    `repair-loop-exceeded`. Run `speckit-tracker-sync blocked` with the reason
    (open findings, laps used), comment the same on the PR

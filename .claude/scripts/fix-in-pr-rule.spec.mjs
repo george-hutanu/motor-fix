@@ -3,74 +3,70 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// The owner's rule of 2026-10-08: a verified finding whose fix is
-// small or medium is fixed in the same PR; only a large fix is deferred. Every
-// file that routes findings carries the size test, verbatim or as a pointer to
-// AGENTS.md, and none keeps the old wording, so the rule cannot drift back.
+// The owner's rule of 2026-10-16: no tech-debt tickets. Every verified
+// finding is fixed in the current task's PR before ready or merge; one that
+// needs an owner decision is a needs-confirmation question on the task. The
+// rule files carry it verbatim, every file that routes findings names the
+// question, and none keeps a defer route, so it cannot drift back.
 
 const repo = join(import.meta.dirname, '..', '..');
 
-const normalise = (text) => text.replace(/[*>`]/g, '').replace(/\s+/g, ' ');
+// HTML comments (the constitution's Sync Impact Reports) are history, not rules.
+const normalise = (text) => text.replace(/<!--[\s\S]*?-->/g, '').replace(/[*>`]/g, '').replace(/\s+/g, ' ');
 
-const SIZE_TEST = normalise(
-  'A fix is large when it needs its own design or decision, a data migration, a different area or epic, or work clearly bigger than the story itself.',
+const RULE = normalise(
+  "every verified review, QA or harden finding is fixed in the current task's PR before ready or merge; one needing an owner decision becomes a needs-confirmation question on the task",
 );
 
-const VERBATIM = [
-  'AGENTS.md',
-  '.specify/memory/constitution.md',
+const VERBATIM = ['AGENTS.md', '.specify/memory/constitution.md'];
+const ROUTERS = [
+  'CLAUDE.local.md',
   '.claude/agents/code-reviewer.md',
   '.claude/agents/spec-reviewer.md',
-  '.specify/templates/deferred-template.md',
   '.claude/scripts/jev.mjs',
-];
-const POINTER = [
-  'CLAUDE.local.md',
   '.claude/skills/speckit-review/SKILL.md',
   '.claude/skills/speckit-harden/SKILL.md',
   '.claude/skills/speckit-auto/phases-close.md',
   '.claude/skills/speckit-auto/tail.md',
-  '.claude/skills/speckit-auto/hand-off.md',
   '.claude/skills/speckit-pr-test/SKILL.md',
-  '.claude/skills/speckit-tracker-sync/SKILL.md',
 ];
+const QUIET = ['.claude/skills/speckit-auto/hand-off.md', '.claude/skills/speckit-tracker-sync/SKILL.md'];
 const OLD = [
   'unless they are one-line fixes',
   'not this change — pre-existing, or out of scope',
   'instead of scope creep',
   'is NOT fixed, optimized, or extended',
+  'Technical debt a review defers',
+  'deferred.md',
+  'tracker-sync debt',
+  'tracker-sync.mjs debt',
+  'only a large fix',
 ];
 
 const read = (file) => normalise(readFileSync(join(repo, file), 'utf8'));
 
 describe('the fix-in-PR rule', () => {
-  it.each(VERBATIM)('%s carries the size test verbatim', (file) => {
-    assert.ok(read(file).includes(SIZE_TEST), `${file} lacks the size test`);
+  // @traces 1324-FR-001
+  // @traces 1324-FR-002
+  it.each(VERBATIM)('%s carries the rule verbatim', (file) => {
+    assert.ok(read(file).toLowerCase().includes(RULE.toLowerCase()), `${file} lacks the rule`);
   });
 
-  it.each(POINTER)('%s points at the size test in AGENTS.md', (file) => {
-    const sentences = read(file).split(/\.\s/);
-    assert.ok(
-      sentences.some((s) => /size test/i.test(s) && s.includes('AGENTS.md')),
-      `${file} has no sentence pointing at AGENTS.md's size test`,
-    );
+  // @traces 1324-FR-003
+  // @traces 1324-FR-004
+  it.each(ROUTERS)('%s routes an owner decision to a needs-confirmation question', (file) => {
+    assert.match(read(file), /needs-confirmation/);
   });
 
-  it.each([...VERBATIM, ...POINTER])('%s keeps none of the old routing wording', (file) => {
+  it.each([...VERBATIM, ...ROUTERS, ...QUIET])('%s keeps no defer route', (file) => {
     const text = read(file);
     for (const phrase of OLD) assert.ok(!text.includes(normalise(phrase)), `${file} still says "${phrase}"`);
   });
 
-  it('the deferred template no longer gives "pre-existing" as the reason', () => {
-    assert.ok(!read('.specify/templates/deferred-template.md').includes('pre-existing:'));
-  });
-
-  it("jev's triage routes small and medium fixes to patch and large ones to defer", () => {
+  // @traces 1324-FR-004
+  it("jev's triage offers patch and decision only", () => {
     const text = read('.claude/scripts/jev.mjs');
-    const patch = text.match(/patch: "([^"]+)"/)?.[1] ?? '';
-    const defer = text.match(/defer: "([^"]+)"/)?.[1] ?? '';
-    assert.match(patch, /small or medium/);
-    assert.match(patch, /pre-existing/);
-    assert.ok(normalise(defer).includes(SIZE_TEST), 'jev defer description lacks the size test');
+    assert.match(text, /patch: "[^"]+"/);
+    assert.doesNotMatch(text, /defer: "/);
   });
 });

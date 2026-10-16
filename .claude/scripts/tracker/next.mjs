@@ -6,8 +6,11 @@
 // To do issues with no open blocker are kept, ordered by Priority, then by
 // number.
 import { isContainer } from "./issues.mjs";
-import { rank } from "./ready.mjs";
 import { ISSUE_REPO, OWNER } from "./repos.mjs";
+
+const RANK = ["Urgent", "Highest", "High", "Medium", "Low"];
+/** A priority's place on the Project's ladder; none, or one off it, sorts last. */
+const rank = (priority) => (RANK.includes(priority) ? RANK.indexOf(priority) : RANK.length);
 
 const PROJECT_TITLE = "MotorFix";
 const single = (name) => `${name.toLowerCase()}: fieldValueByName(name: "${name}") { ... on ProjectV2ItemFieldSingleSelectValue { name } }`;

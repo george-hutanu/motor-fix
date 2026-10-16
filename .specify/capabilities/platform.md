@@ -84,6 +84,7 @@ features:
   - 1169-prefetch-intent
   - 1176-replace-object-store
   - 1323-rest-not-graphql
+  - 1324-retire-debt-and-ready
 ---
 
 # Capability: Platform
@@ -574,9 +575,9 @@ _From 704-auto-phase-model-pins._
 
 _From 696-lifecycle-script._
 
-### 696-FR-002 — `lifecycle.mjs ready --body-file <f>` MUST, in this order: file the unfiled `deferred.md` bullets with the tracker `debt` event; commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the tracker `qa` event; commit and push the `qa` line; write `handoff.md`.
+### 1324-FR-012 — `lifecycle.mjs ready --body-file <f>` MUST, in this order: commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the tracker `qa` event; commit and push the `qa` line; write `handoff.md` (no `deferred.md` filing and no `Deferred:` line).
 
-_From 696-lifecycle-script._
+_From 1324-retire-debt-and-ready._
 
 ### 696-FR-003 — `lifecycle.mjs merge` MUST run the merge gate on `gh pr merge <n> --merge` and refuse exactly when it refuses; otherwise merge, then run the tracker `finish` event, post one finish comment on the merged PR, restore `tracker-sync.md` and delete `handoff.md`.
 
@@ -2147,6 +2148,38 @@ _From 1323-rest-not-graphql._
 
 _From 1323-rest-not-graphql._
 
+### 1324-FR-001 — AGENTS.md MUST name no `deferred.md` route and MUST replace the "Technical debt a review defers" paragraph with the rule that every verified review, QA or harden finding is fixed in the current task's PR before ready or merge, and one needing an owner decision becomes a `needs-confirmation` question on the task; the hand-off note's listed contents MUST drop "deferred items"; the "Ready to work stays current" paragraph MUST keep only the finish comment rule, under the lead "A finished task says what happened"; a decision finding is a comment and the `needs-confirmation` label on the task's issue, with the task Blocked on it.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-002 — The constitution MUST drop Principle VII's `ready to work` label sentence and replace the Agent Execution Rules' defer clause with FR-001's rule, bumping to 4.0.0 (a rule removed), with the card and CLAUDE.local.md's version line updated and `constitution-card.spec.mjs` green.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-003 — `speckit-review`, `speckit-auto` (`phases-close.md`, `hand-off.md`, `tail.md`), `speckit-pr-test` and `speckit-harden` MUST route every verified finding to fix-now or a `needs-confirmation` question, name no `deferred.md`, carry no `Deferred:` line in the hand-off note and run no `debt` event.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-004 — `spec-reviewer.md` and `code-reviewer.md` MUST offer only `patch` and `decision`; `agent-replies.spec.mjs` and the reviewer fixtures MUST pass.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-006 — `lifecycle.mjs ready` MUST no longer file `deferred.md` bullets nor write a `Deferred:` line to `handoff.md`; `lifecycle.mjs merge` MUST no longer report `ready_logged`.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-007 — The merge gate's carry check (`carry.mjs judgeCarry`) MUST refuse a range that touches any path whose file name is `deferred.md`, whatever else it touches; a spec case MUST cover it.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-009 — `speckit-archive` MUST no longer require `tracker/ready.mjs check -`.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-010 — A case-insensitive grep of AGENTS.md and `.claude` (worktrees excluded) for the retired ready label or the name of its old helper script MUST print nothing.
+
+_From 1324-retire-debt-and-ready._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2231,3 +2264,6 @@ _From 1323-rest-not-graphql._
 
 - `421-FR-026` — superseded by `1175-FR-001` (2026-10-15)
 - `421-FR-019` — superseded by `1200-FR-006` (2026-10-15)
+
+- `696-FR-002` — superseded by `1324-FR-012` (2026-10-16)
+- `1324-FR-011` — removed by 1324-retire-debt-and-ready (2026-10-16): a process check, not a behaviour; SC-004's doctor run is the check

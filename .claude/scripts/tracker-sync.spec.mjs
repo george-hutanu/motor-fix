@@ -4,7 +4,6 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { readyLogged } from "./tracker/ready.mjs";
 import { SCHEMA } from "./tracker/bootstrap.mjs";
 import { fakeGitHub } from "./tracker/fixtures/github.mjs";
 import { main } from "./tracker-sync.mjs";
@@ -65,7 +64,7 @@ function world({ story = "To do", epic = "To do", items = {}, issues = [], pr = 
       issue(691, "EP-6 Garages", ["epic"]),
       issue(740, "Garage profile", ["type: feature", "EP-6"]),
       issue(60, "ST-1036 Harness: run the task lifecycle on GitHub", ["type: story", "EP-6"]),
-      issue(61, "ST-313 Garage photos", ["type: story", "EP-6", "ready to work"]),
+      issue(61, "ST-313 Garage photos", ["type: story", "EP-6"]),
       issue(62, "ST-290 Garage hours", ["type: story", "EP-6"]),
       issue(63, "ST-330 Garage map", ["type: story", "EP-6"]),
       issue(64, "ST-12 Garage list", ["type: story", "EP-6"], { state: "closed", state_reason: "completed" }),
@@ -130,7 +129,6 @@ async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_T
   };
 }
 
-const labelsOf = (gh, number) => gh.state.issues.find((i) => i.number === number).labels.map((l) => l.name);
 const issueOf = (gh, number) => gh.state.issues.find((i) => i.number === number);
 const prEdits = (r) => r.gh.filter((a) => a[0] === "pr" && a[1] === "edit");
 
@@ -344,136 +342,25 @@ describe("pr links the PR and the issue both ways", () => {
   });
 });
 
-// @traces 1036-FR-008
-describe("Ready to work is computed from the real state of each dependency", () => {
-  it("unticks a story whose dependency is Blocked and only reports a candidate whose dependency is closed (ST-313, ST-330)", async () => {
-    const gh = world();
-    const r = await run(["start", "--pr", "335"], { gh });
-    assert.ok(!labelsOf(gh, 61).includes("ready to work"), "ST-313 waits on the Blocked ST-290");
-    assert.ok(!labelsOf(gh, 63).includes("ready to work"), "a candidate waits for the hold review");
-    assert.deepEqual(r.json.ready.review, ["ST-330"]);
-    assert.ok(r.json.ready.held.some((h) => h.id === "ST-313" && h.reason.includes("ST-290 (Blocked)")), JSON.stringify(r.json.ready));
-    assert.ok(r.lines.some((l) => l.includes("· ready · EP-6 · −ST-313, review: ST-330")), r.log);
-  });
-
-  it("counts an open dependency at To do as blocking, and an open sub-issue too", async () => {
-    const gh = world({
-      issues: [issue(65, "ST-400 Garage reviews", ["type: story", "EP-6", "ready to work"]), issue(66, "ST-401 Review form", ["type: task"])],
-      items: { 65: "To do", 66: "To do" },
-      subIssues: { 65: [66] },
+// @traces 1324-FR-005
+// @traces 1324-FR-008
+describe("debt and ready are retired", () => {
+  for (const [event, message] of [
+    ["debt", "tech-debt tickets are retired; fix it in this task"],
+    ["ready", "the ready refresh is retired; pick the next task with tracker-sync.mjs next"],
+  ]) {
+    it(`${event} refuses before any GitHub call or log write`, async () => {
+      const repo = repoWith({ deferred: "# Deferred\n\n- **medium** `lib/x.mjs` — retry loop has no cap (code-reviewer)\n" });
+      const r = await run([event, "--pr", "335"], { repo });
+      assert.equal(r.code, 1);
+      assert.deepEqual(r.err, [`tracker-sync: ${message}`]);
+      assert.deepEqual(r.out, []);
+      assert.deepEqual(r.urls, []);
+      assert.deepEqual(r.gh, []);
+      assert.equal(r.log, "");
+      assert.ok(!readFileSync(join(repo, FEATURE, "deferred.md"), "utf8").includes("Issue:"));
     });
-    const r = await run(["ready"], { gh });
-    assert.ok(!labelsOf(gh, 65).includes("ready to work"));
-    assert.ok(r.json.ready.untick.includes("ST-400"));
-  });
-
-  it("ready --tick labels only what the hold review confirmed, and --hold keeps one back", async () => {
-    const gh = world();
-    const r = await run(["ready", "--tick", "ST-330"], { gh });
-    assert.ok(labelsOf(gh, 63).includes("ready to work"));
-    assert.deepEqual(r.json.ready.tick, ["ST-330"]);
-
-    const gh2 = world();
-    await run(["ready", "--hold", "ST-330=waits on the owner"], { gh: gh2 });
-    assert.ok(!labelsOf(gh2, 63).includes("ready to work"));
-  });
-
-  // @traces 1132-FR-001 1132-FR-002
-  it("--hold keeps a reason with commas and an = whole, and splits only where the next hold begins", async () => {
-    const gh = world();
-    const r = await run(["ready", "--hold", "ST-330=waits on the owner, then the lawyer, a=b"], { gh });
-    assert.deepEqual(
-      r.json.ready.held.filter((h) => h.id === "ST-330"),
-      [{ id: "ST-330", reason: "waits on the owner, then the lawyer, a=b" }],
-    );
-    assert.ok(!r.json.ready.held.some((h) => /lawyer|a=b/.test(h.id)), JSON.stringify(r.json.ready.held));
-    assert.ok(!labelsOf(gh, 63).includes("ready to work"));
-
-    const two = () => world({ issues: [issue(66, "ST-331 Garage reviews", ["type: story", "EP-6"])], items: { 66: "To do" }, subIssues: { 740: [60, 61, 62, 63, 64, 66] } });
-    const r2 = await run(["ready", "--hold", "ST-330=owner decision, later,ST-331=the lawyer"], { gh: two() });
-    assert.deepEqual(
-      r2.json.ready.held.filter((h) => h.id === "ST-330" || h.id === "ST-331"),
-      [
-        { id: "ST-330", reason: "owner decision, later" },
-        { id: "ST-331", reason: "the lawyer" },
-      ],
-    );
-
-    const r3 = await run(["ready", "--tick", "ST-330,ST-331"], { gh: two() });
-    assert.deepEqual(r3.json.ready.tick, ["ST-330", "ST-331"]);
-  });
-
-  it("a bare ready lists its candidates for the hold review rather than holding them", async () => {
-    const gh = world();
-    const r = await run(["ready"], { gh });
-    assert.ok(r.json.ready.review.includes("ST-330"), JSON.stringify(r.json.ready));
-    assert.ok(!r.json.ready.held.some((h) => h.id === "ST-330"), JSON.stringify(r.json.ready));
-    assert.ok(!labelsOf(gh, 63).includes("ready to work"));
-  });
-
-  it("never labels the epic or a feature issue, and removes the started story's own label", async () => {
-    const gh = world({ issues: [], items: {} });
-    issueOf(gh, 60).labels.push({ name: "ready to work" });
-    await run(["start", "--pr", "335"], { gh });
-    assert.ok(!labelsOf(gh, 60).includes("ready to work"));
-    assert.ok(!labelsOf(gh, 740).includes("ready to work"));
-    assert.ok(!labelsOf(gh, 691).includes("ready to work"));
-  });
-
-  it("refreshes a story with no epic alone and still logs its ready line", async () => {
-    const gh = world();
-    issueOf(gh, 60).labels = [{ name: "type: story" }];
-    const r = await run(["finish", "--pr", "335", "--no-comment"], { gh });
-    assert.ok(r.lines.some((l) => l.includes("· ready · ST-1036 · ") && l.endsWith("(the story has no epic)")), r.log);
-    assert.equal(readyLogged(r.log).ok, true);
-  });
-});
-
-// @traces 1036-FR-009
-describe("debt files each deferred bullet as a To do issue", () => {
-  const DEFERRED = "# Deferred\n\n- **medium** `lib/x.mjs` — retry loop has no cap (code-reviewer)\n";
-
-  it("creates the issue under the epic, in Project #11 at To do, and marks the bullet so a rerun files nothing", async () => {
-    const gh = world();
-    const repo = repoWith({ deferred: DEFERRED });
-    const r = await run(["debt", "--pr", "335"], { gh, repo });
-    assert.equal(r.code, 0, r.err.join("\n"));
-    const made = gh.state.issues.find((i) => /retry loop has no cap/.test(i.title));
-    assert.ok(made, "the issue exists");
-    // @traces 1132-FR-005
-    assert.ok(made.title.startsWith(`ST-${made.number} Tech debt (ST-1036): `), made.title);
-    assert.deepEqual(made.labels.map((l) => l.name).sort(), ["EP-6", "type: tech debt"]);
-    assert.ok(made.body.includes(`${ISSUES}60`), made.body);
-    assert.equal(gh.itemValues(made.number).Status, "To do");
-    assert.equal(gh.itemValues(made.number)["Work type"], "Tech debt");
-    assert.equal(gh.itemValues(made.number).Epic, "EP-6");
-    assert.equal(gh.itemValues(made.number).Priority, "Medium");
-    assert.ok(gh.state.subIssues.get(691).includes(made.id), "a sub-issue of the epic");
-    const marked = readFileSync(join(repo, FEATURE, "deferred.md"), "utf8");
-    assert.ok(marked.includes(`— Issue: ${ISSUES}${made.number}`), marked);
-
-    const count = gh.state.issues.length;
-    await run(["debt", "--pr", "335"], { gh, repo });
-    assert.equal(gh.state.issues.length, count);
-  });
-
-  it("a failure after the issue was created leaves it pending, and the rerun reuses that issue instead of filing a second", async () => {
-    const gh = world();
-    const repo = repoWith({ deferred: DEFERRED });
-    const refuse = async (url, init) =>
-      /\/sub_issues$/.test(new URL(url).pathname) && init.method === "POST"
-        ? new Response(JSON.stringify({ message: "Forbidden" }), { status: 403, headers: { "content-type": "application/json" } })
-        : gh.fetchImpl(url, init);
-    const first = await run(["debt", "--pr", "335"], { gh, repo, fetchImpl: refuse });
-    assert.equal(first.code, 0, first.err.join("\n"));
-    const count = gh.state.issues.length;
-    assert.ok(first.log.includes("[TRACKER-SYNC PENDING: debt"), first.log);
-    const again = await run(["debt", "--pr", "335"], { gh, repo });
-    assert.equal(again.code, 0, again.err.join("\n"));
-    assert.equal(gh.state.issues.length, count, "no second issue");
-    const made = gh.state.issues.find((i) => /retry loop has no cap/.test(i.title));
-    assert.ok(readFileSync(join(repo, FEATURE, "deferred.md"), "utf8").includes(`— Issue: ${ISSUES}${made.number}`));
-  });
+  }
 });
 
 // @traces 1036-FR-010

@@ -72,8 +72,17 @@ describe('the constitution card', () => {
       assert.match(text, /GitHub issue|issue in the private/);
     }
     assert.match(seventh, /Project "MotorFix" \(#11\)/);
-    assert.match(seventh, /closed or Done/);
     assert.ok(atLeast(full, 2, 0));
+  });
+
+  // @traces 1324-FR-002
+  it('retires the ready label under principle VII, at 4.0 or later, and CLAUDE.local.md names the same version', () => {
+    const start = full.indexOf('### VII.');
+    const seventh = full.slice(start, full.indexOf('\n## ', start));
+    assert.doesNotMatch(seventh, /ready[ ]to[ ]work/i);
+    assert.ok(atLeast(full, 4, 0));
+    const local = readFileSync(join(memory, '..', '..', 'CLAUDE.local.md'), 'utf8');
+    assert.equal(versionOf(local, /Constitution v(\d+\.\d+\.\d+)/), versionOf(full, /^\*\*Version\*\*: (\d+\.\d+\.\d+)/m));
   });
 
   it('stays a card', () => {

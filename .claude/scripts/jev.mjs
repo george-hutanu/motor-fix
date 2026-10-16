@@ -13,13 +13,12 @@
 //       that came back with nothing to say.
 //
 //   node .claude/scripts/jev.mjs triage <findings.json>
-//       Route each verified review finding to patch (a small or medium fix,
-//       made in this PR) / defer (a large fix only, AGENTS.md's size test) /
-//       decision-needed, and rank it by severity. The route already exists
-//       in code-reviewer and spec-reviewer as prose; this makes it a typed
-//       answer with a confidence, so a finding the model is unsure about
-//       goes to the human by rule rather than by disposition. Feeds
-//       specs/<feature>/deferred.md.
+//       Route each verified review finding to patch (fixed in this PR) /
+//       decision-needed (a needs-confirmation question on the task), and
+//       rank it by severity. The route already exists in code-reviewer and
+//       spec-reviewer as prose; this makes it a typed answer with a
+//       confidence, so a finding the model is unsure about goes to the human
+//       by rule rather than by disposition.
 //
 //   node .claude/scripts/jev.mjs rank <items.json> --about "<what matters>"
 //       Order candidate items by impact. Two callers: /speckit-clarify, which
@@ -110,9 +109,8 @@ if (command === "triage") {
   const questions = {};
   items.forEach((item, i) => {
     questions[qid("route", i)] = choice(`How should finding ${i} be handled?`, {
-      patch: "a small or medium fix, made in this PR whether or not this change caused it (pre-existing or adjacent included)",
-      defer: "a large fix. A fix is large when it needs its own design or decision, a data migration, a different area or epic, or work clearly bigger than the story itself. Record it with its path:line",
-      "decision-needed": "fixing it requires a judgement about intent that only the author can make",
+      patch: "fixed in this PR whether or not this change caused it (pre-existing or adjacent included)",
+      "decision-needed": "fixing it requires a judgement only the owner can make: a needs-confirmation question on the task",
     });
     questions[qid("sev", i)] = score(`How severe is finding ${i}?`, ["cosmetic", "low", "medium", "high", "critical"]);
   });

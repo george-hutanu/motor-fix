@@ -74,8 +74,7 @@ to `tracker-sync.md` at its next event.
      run for the head without waiting for it
      (`.claude/scripts/pr-test/dispatch.mjs <n> --no-wait`), writes
      `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the story's
-     issue, the `QA run:` line, open decisions, deferred items; git
-     ignores it) and returns `NEXT: tail #<n> after QA run <id>`, its last
+     issue, the `QA run:` line, open decisions; git ignores it) and returns `NEXT: tail #<n> after QA run <id>`, its last
      action. No agent is alive while CI and the run work: a context that
      sleeps past the 5-minute prompt cache is written again in full. The
      session holds one background wait for the QA run only, then
@@ -121,8 +120,7 @@ to `tracker-sync.md` at its next event.
      end, as at ready; each lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (10), and at the cap the task goes to
      Blocked and the PR stays unmerged. A head that differs from the last
-     tested commit by documentation only (`scripts/docs-only.ts`, e.g. the
-     `deferred.md` task URLs) carries that verdict instead of a new lap
+     tested commit by documentation only (`scripts/docs-only.ts`) carries that verdict instead of a new lap
      (`.claude/scripts/pr-test/carry.mjs`); the merge gate verifies the carry.
   7. Merge on `agent-review` success with every other check green, at once
      (`gh pr merge <n> --merge`; a check still pending ends the tail with
@@ -142,18 +140,15 @@ to `tracker-sync.md` at its next event.
      other check green, `CI OK` included, with no `agent-review` status; a
      failing, pending or missing check still refuses it.
 
-  Technical debt a review defers is only a large fix. A verified finding from
-  review, harden, QA or the PR tester (code-reviewer, spec-reviewer,
-  test-adversary, a mutation survivor, pr-tester) whose fix is small or medium
-  is fixed in the same PR (route `patch`), even when the problem existed
-  before the change or sits next to it. The size test: A fix is large when it
-  needs its own design or decision, a data migration, a different area or
-  epic, or work clearly bigger than the story itself. A different area is an
-  Nx project or harness area the branch does not touch; the file or module
-  the change touches is never one. Only a large fix is routed `defer`: a
-  bullet in `specs/<feature>/deferred.md` naming the arm it meets, filed as a
-  To do issue in the tracker (`speckit-tracker-sync debt`) before the merge; each
-  bullet carries its issue's URL so it is never filed twice.
+  Every verified review, QA or harden finding is fixed in the current task's
+  PR before ready or merge; one needing an owner decision becomes a
+  needs-confirmation question on the task. That holds for every source
+  (code-reviewer, spec-reviewer, test-adversary, a mutation survivor,
+  pr-tester) and for a problem that existed before the change or sits next
+  to it (route `patch`). The question is a comment on the task's issue with
+  the `needs-confirmation` label, and the task goes to Blocked
+  (`speckit-tracker-sync blocked <question>`) until the owner answers. There
+  are no tech-debt tickets.
 
   Whenever the work cannot go on without something outside it (a Hard Stop,
   red CI the agent cannot fix, the repair cap, an unresolved Blocked by), set
@@ -171,19 +166,12 @@ to `tracker-sync.md` at its next event.
   merging on green CI and the tracker writes are all standing instructions. The
   tracker writes cover the story's issue and the epic's (Implementing at its
   first story, Done and closed at its last).
-- **Ready to work stays current, and a finished task says what happened.**
-  Every `start` and `finish` ends with a ready refresh, which puts the
-  `ready to work` label on the To do issues whose every dependency is now
-  closed or Done (after the hold review) and takes it off the one that
-  started. Every `finish` also
+- **A finished task says what happened.** Every `finish`
   comments on the task when there is something to record: deviations from
-  the Build brief, decisions taken on the owner's behalf, deferred follow-ups,
-  open questions. `/speckit-archive` will not close a feature until the
-  refresh is logged after its finish, in `tracker-sync.md` or the merged
-  PR's finish comment (`tracker/ready.mjs check -`).
+  the Build brief, decisions taken on the owner's behalf, open questions.
 - **Plans:** each epic's build plan is a file in the specs repo's
   `docs/reference/build-plans/`, written with `llms.txt` in one specs-repo
-  commit (`speckit-tracker-sync plan`, §7); its waves and blocked-by edges
+  commit (`speckit-tracker-sync plan`, §6); its waves and blocked-by edges
   are the epic's sub-issues and their "blocked by" links.
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
   `after_specify`, `before_plan`, `before_implement`), and so do

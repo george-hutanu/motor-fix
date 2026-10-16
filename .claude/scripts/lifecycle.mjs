@@ -36,12 +36,10 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileS
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
-import { parseDeferred } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
-import { readyLogged } from "./tracker/ready.mjs";
 import { featuresDir } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
@@ -204,13 +202,12 @@ function context(io, flags, did) {
   };
   ctx.done = "--tracker-done";
   // Every tracker event in order; a failure or no script stops with what is left.
-  // `later` are events this call does not run but a stop must still list.
-  ctx.track = (events, rerun, later = []) => {
+  ctx.track = (events, rerun) => {
     if (flags["tracker-done"]) return [];
     const outputs = [];
     for (const [i, args] of events.entries()) {
       const label = ([event, arg]) => `speckit-tracker-sync ${event === "pr" ? `pr ${arg}` : event}`;
-      const left = () => ({ left: [...events.slice(i), ...later].map(label), then: rerun });
+      const left = () => ({ left: events.slice(i).map(label), then: rerun });
       if (!existsSync(join(io.repo, TRACKER))) throw new Stop("tracker-sync", "tracker-sync.mjs is not on this branch: run the events by hand, then the rerun", left());
       const r = ctx.node([TRACKER, ...args, "--story", ctx.story], [0, 1, 64]);
       if (r.code !== 0) throw new Stop(`tracker-sync ${args[0]}`, (r.stderr || r.stdout).trim().slice(-400), left());
@@ -298,8 +295,8 @@ function open(ctx, flags) {
     ctx.did.push(`opened draft #${pr}`);
   }
   const rerun = `${SELF} open --title ${quote(title)} ${ctx.done}`;
-  const [start] = ctx.track([["start", "--pr", String(pr)], ["pr", String(pr)]], rerun);
-  return { pr, review: start?.ready?.review ?? [] };
+  ctx.track([["start", "--pr", String(pr)], ["pr", String(pr)]], rerun);
+  return { pr };
 }
 
 function draftBody(ctx) {
@@ -331,10 +328,7 @@ function ready(ctx, flags) {
   // phases stays a draft. A check that crashes (exit 1) is not a refusal.
   const level = ctx.node([LEVEL, "check", "--ready", "--json"], [0, 1, 2]);
   if (level.code === 2) throw new Stop("level check", `${level.stderr}`.trim() || "the level owes phases that have not run");
-  const deferredFile = join(ctx.feature.dir, "deferred.md");
-  const unfiled = existsSync(deferredFile) ? parseDeferred(readFileSync(deferredFile, "utf8")).filter((e) => e.pending) : [];
   const qa = ["qa", "--pr", String(pr.number)];
-  if (unfiled.length) ctx.track([["debt", "--pr", String(pr.number)]], rerun, [qa]);
 
   ctx.commitSpecs([ctx.specsRel], `chore(specs): ${ctx.story} feature records`);
   if (existsSync(join(ctx.repo, ".specify", "capabilities")) && ctx.commitStaged([".specify/capabilities"], `chore(specs): ${ctx.story} capability records`)) ctx.push();
@@ -351,7 +345,6 @@ function ready(ctx, flags) {
   ctx.commitSpecs([`${ctx.specsRel}/${LOG}`], `chore(specs): ${ctx.story} qa`);
 
   const head = ctx.git("rev-parse", "HEAD").stdout.trim();
-  const deferred = !existsSync(deferredFile) ? "none" : unfiled.length && flags["tracker-done"] ? unfiled.map((e) => e.title).join("; ") : "all filed";
   writeFileSync(
     join(ctx.feature.dir, "handoff.md"),
     [
@@ -359,7 +352,6 @@ function ready(ctx, flags) {
       `- PR: #${pr.number} ${pr.url} · branch ${ctx.branch} · worktree ${resolve(ctx.repo)} · head ${head}`,
       `- Tracker: issue ${qaOut?.url ?? ctx.story} (${ctx.story}) · events in ${ctx.rel}/${LOG}`,
       `- Open decisions: ${flags.decisions ?? "none"}`,
-      `- Deferred: ${deferred}`,
       "",
     ].join("\n"),
   );
@@ -426,7 +418,7 @@ function merge(ctx, flags) {
   const { stack: testStack, worktree } = stopTestStack(ctx, view.headRefName);
   const commentFile = join(ctx.feature.dir, "finish-comment.md");
   const hasComment = existsSync(commentFile);
-  const [finish] = ctx.track([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} ${ctx.done}`);
+  ctx.track([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} ${ctx.done}`);
 
   const log = `${ctx.specsRel}/${LOG}`;
   const lines = ctx.git("-C", ctx.specsGit, "diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
@@ -449,7 +441,7 @@ function merge(ctx, flags) {
   rmSync(join(ctx.feature.dir, "handoff.md"), { force: true });
   ctx.did.push("handoff.md removed");
   const removal = removeMergedWorktree(ctx, worktree);
-  return { pr: view.number, merged: sha.slice(0, 7), review: finish?.ready?.review ?? [], ready_logged: readyLogged(lines.join("\n")).ok, test_stack: testStack, worktree: removal };
+  return { pr: view.number, merged: sha.slice(0, 7), test_stack: testStack, worktree: removal };
 }
 
 const samePath = (a, b) => {

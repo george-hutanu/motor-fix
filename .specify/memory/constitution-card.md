@@ -1,4 +1,4 @@
-# Constitution card — v3.3.0
+# Constitution card — v4.0.0
 
 For authors: each principle of `.specify/memory/constitution.md` in one line,
 with the gate that enforces it. The full text governs, and the reviewers and
