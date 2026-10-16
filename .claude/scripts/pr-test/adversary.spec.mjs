@@ -777,7 +777,7 @@ describe('what a killed lap left behind, hostile directories', () => {
     for (const c of contents) {
       writeFileSync(join(dead, 'redis.pid'), c);
       writeFileSync(join(dead, 'minio.pid'), c);
-      const { run, calls } = recorder((cmd) => (cmd === 'ps' ? { code: 0, stdout: 'redis-server minio server' } : undefined));
+      const { run, calls } = recorder((cmd) => (cmd === 'ps' ? { code: 0, stdout: 'valkey-server minio server' } : undefined));
       cleanStale({ tmp, repo: '/repo', run, isAlive: () => false });
       for (const call of calls.filter((x) => x.startsWith('kill'))) assert.match(call, /^kill [1-9]\d*$/, `pid file ${JSON.stringify(String(c))} gave "${call}"`);
       mkdirSync(dead, { recursive: true });

@@ -99,12 +99,15 @@ describe('service plans', () => {
     assert.deepEqual(plan.setup, ['compose', '-p', 'mf-prtest-21-x1', '-f', '/wt/docker-compose.yml', 'run', '--rm', 'minio-setup']);
   });
 
+  // @traces 1175-FR-002 1175-FR-004
   it('without Docker, starts a private PostgreSQL and Redis on the given ports inside the run directory', () => {
     const plan = localPlan({ dir: '/tmp/run', ports });
     const flat = plan.start.map((c) => c.join(' ')).join('\n');
     assert.match(flat, /initdb .*\/tmp\/run\/pg/);
     assert.match(flat, /pg_ctl .*-p 55001/);
-    assert.match(flat, /redis-server --port 55002/);
+    assert.match(flat, /valkey-server --port 55002 .*--maxmemory-policy noeviction/);
+    assert.ok(plan.stop.some((c) => c[0] === "valkey-cli" && c.includes("shutdown")));
+    assert.doesNotMatch(flat, /redis-server|redis-cli/);
     assert.ok(plan.stop.some((c) => c.join(' ').includes('pg_ctl') && c.includes('stop')));
     assert.equal(plan.storage, false);
   });
@@ -209,7 +212,7 @@ describe('what a killed lap left behind', () => {
       calls.push([cmd, ...args].join(' '));
       const ps = {
         9000: '/opt/homebrew/bin/postgres -D x',
-        9001: 'redis-server 127.0.0.1:6000',
+        9001: 'valkey-server 127.0.0.1:6000',
         9002: '/usr/local/bin/minio server x',
         9003: '/usr/local/bin/node dist/apps/api/main.js',
         9004: '/usr/local/bin/node dist/apps/web/server/server.mjs',
@@ -260,7 +263,7 @@ describe('what a killed lap left behind', () => {
     const s = scene();
     const run = (cmd, args) => {
       s.calls.push([cmd, ...args].join(' '));
-      return { code: 0, stdout: cmd === 'ps' ? 'vim /tmp/minio.pid redis-server postgres dist/apps/api/main.js.bak' : '' };
+      return { code: 0, stdout: cmd === 'ps' ? 'vim /tmp/minio.pid valkey-server.bak postgres dist/apps/api/main.js.bak' : '' };
     };
     try {
       cleanStale({ tmp: s.tmp, repo: '/repo', isAlive: s.isAlive, run });

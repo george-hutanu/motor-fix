@@ -1,5 +1,18 @@
 <!--
-Sync Impact Report (v3.2.0)
+Sync Impact Report (v3.3.0)
+- Version change: 3.2.0 → 3.3.0 (MINOR: the store is Valkey 9 instead of
+  Redis 7. Principle III names Valkey as the given store, II its containers,
+  IV the one broker, VI the store that never holds the only copy and runs
+  with `noeviction`. Protocol-level names (`REDIS_URL`, the service `redis`,
+  `motorfix_redis_*`) stay. No principle or gate removed)
+- Source: ST-1175.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line, II, III, VI
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ AGENTS.md — Product and stack
+  - ✅ .specify/templates/, .specify/contexts/ — no store named
+
+Previous report (v3.2.0)
 - Version change: 3.1.0 → 3.2.0 (MINOR: Principle II and VII step 5 move the
   integration suite (API tests on real PostgreSQL and Redis) off every PR and
   every commit: unit tests run in CI on every PR; the integration suite runs
@@ -415,9 +428,10 @@ might be useful later" is not a defense.
   requirements into red tests, then `/speckit-implement` makes them green.
 - Unit and API tests run on Jest from the root config, colocated with the
   source they cover (`foo.ts` / `foo.spec.ts`). API tests run against real
-  PostgreSQL and Redis in containers, never mocks of either.
+  PostgreSQL and Valkey (the store, Redis protocol) in containers, never
+  mocks of either.
 - Unit tests run in CI on every PR. The integration suite (the API tests on
-  real PostgreSQL and Redis) runs on demand (`gh workflow run ci.yml`, or
+  real PostgreSQL and Valkey) runs on demand (`gh workflow run ci.yml`, or
   locally) and in CI before every release, not on every PR or commit.
 - End-to-end flows run on Playwright in the app's `*-e2e` project; the three
   core flows are covered end to end before every release, against staging.
@@ -448,7 +462,9 @@ The owner's stack is decided, not proposed:
   components plus the few custom ones it needs (dial, lamp, rolling digits).
   Every front-end dependency is free and open source; a library that needs a
   paid licence or a licence key MUST NOT land.
-- Back end: NestJS on Node.js, PostgreSQL, Redis.
+- Back end: NestJS on Node.js, PostgreSQL, Valkey 9 (the BSD-licensed fork
+  of Redis, spoken to over the Redis protocol with ioredis; names such as
+  `REDIS_URL` and the service `redis` stay).
 - TypeScript everywhere; types are shared between browser, API, worker and
   MCP server.
 - Each at its current long-term-support release when the build starts; no
@@ -466,7 +482,7 @@ documentation assumes it; a quiet substitute invalidates the documentation the b
 - One API and one worker — no microservices. Modules follow the product areas
   and stay separable; nothing is split early.
 - No GraphQL, no global front-end store library, no separate search engine,
-  no message broker besides Redis.
+  no message broker besides Valkey.
 - Biome is the only linter and formatter, from the root `biome.jsonc`. No
   eslint, no prettier, no per-project Biome config; a genuinely
   project-specific need is a scoped `overrides` entry in the root file.
@@ -501,15 +517,16 @@ changes; a check made only in the browser is not a check.
 
 ### VI. PostgreSQL Is the Truth
 
-- PostgreSQL is the single source of truth. Redis only caches, queues, fans
-  out and counts; nothing in Redis is the only copy of anything, and emptying
-  it loses nothing.
+- PostgreSQL is the single source of truth. Valkey only caches, queues, fans
+  out and counts; nothing in Valkey is the only copy of anything, and emptying
+  it loses nothing. It runs with `noeviction`, so a full store refuses writes
+  instead of dropping BullMQ's keys.
 - Every state change is saved with the event that announces it, in the same
   transaction (transactional outbox). An event is never published outside the
   transaction that saved its change.
 
 Rationale: no change without its event is what keeps trackers, inboxes and
-notifications in step, even when Redis is down.
+notifications in step, even when Valkey is down.
 
 ### VII. The Task Lifecycle Is Autonomous (NON-NEGOTIABLE)
 
@@ -712,4 +729,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 3.2.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-11
+**Version**: 3.3.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-15

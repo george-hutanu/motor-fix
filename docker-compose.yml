@@ -12,8 +12,16 @@ services:
       POSTGRES_DB: motorfix
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
+  # Valkey, the BSD-licensed fork of Redis, under the old service name: the apps
+  # reach it at REDIS_URL. noeviction: BullMQ's jobs are refused, never dropped.
   redis:
-    image: redis:7
+    image: valkey/valkey:9
+    command: ['valkey-server', '--maxmemory-policy', 'noeviction']
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 2s
+      timeout: 2s
+      retries: 15
     ports:
       - '${REDIS_PORT:-6379}:6379'
   # MinIO's own images left Docker Hub; these are the pgsty community builds

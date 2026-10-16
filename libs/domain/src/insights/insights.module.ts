@@ -12,7 +12,7 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
 
 import { writeDailyFigures } from './daily-figures/daily-figures';
 import { placeGarages } from './place-garages';
@@ -23,6 +23,7 @@ import type { PrismaClient } from '../generated/prisma/client';
 import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
 import { type PlacesConfig, providerFor } from '../places/places.module';
+import { borrowStore, returnStore } from '../store/store';
 
 export const INSIGHTS_QUEUE = 'insights';
 const INSIGHTS_PRISMA = Symbol('INSIGHTS_PRISMA');
@@ -71,7 +72,7 @@ export class InsightsModule
           provide: INSIGHTS_JOBS,
           useFactory: () => {
             const queue = new Queue(INSIGHTS_QUEUE, {
-              connection: { url: options.redisUrl },
+              connection: { maxRetriesPerRequest: null, url: options.redisUrl },
               telemetry: queueTelemetry(),
             });
             observeQueue(queue);
@@ -81,18 +82,8 @@ export class InsightsModule
         {
           // The profile view counters the API writes.
           provide: INSIGHTS_REDIS,
-          // A Redis that stops answering fails the night, which is retried.
-          useFactory: () => {
-            const redis = new Redis(options.redisUrl, {
-              commandTimeout: 10_000,
-              connectTimeout: 5000,
-              maxRetriesPerRequest: 1,
-            });
-            redis.on('error', (error) =>
-              logger.error(`profile view counters: ${error.message}`),
-            );
-            return redis;
-          },
+          // A store that stops answering fails the night, which is retried.
+          useFactory: () => borrowStore(options.redisUrl),
         },
         {
           inject: [INSIGHTS_PRISMA, INSIGHTS_REDIS],
@@ -176,7 +167,7 @@ export class InsightsModule
   async onApplicationShutdown() {
     await this.worker.close();
     await this.jobs.close();
-    await this.redis.quit();
+    await returnStore(this.redis);
     await this.prisma.$disconnect();
   }
 }

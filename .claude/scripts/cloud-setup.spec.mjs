@@ -143,7 +143,7 @@ describe('cloud-setup.sh', { timeout: 30_000 }, () => {
 
   // @traces 768-FR-002
   it('pulls postgres and redis when one of their images is missing', () => {
-    const { run, calls } = setup({ node: '26', docker: true, present: ['redis:7'] });
+    const { run, calls } = setup({ node: '26', docker: true, present: ['valkey/valkey:9'] });
     const out = run();
     assert.equal(out.status, 0, out.stderr + out.stdout);
     assert.ok(calls().includes('docker compose pull postgres redis'), calls().join('\n'));

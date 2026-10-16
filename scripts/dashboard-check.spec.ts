@@ -303,6 +303,30 @@ describe('the dashboard check', () => {
     ]);
   });
 
+  // @traces 1175-FR-006
+  it("draws the memory alert's 70 % line beside the store's used memory", () => {
+    const redis = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          'infra',
+          'observability',
+          'grafana',
+          'dashboards',
+          'motorfix-redis.json',
+        ),
+        'utf8',
+      ),
+    );
+    const memory = redis.panels.find((p: Json) => p['title'] === 'Memory');
+    const exprs = memory.targets.map((t: Json) => t['expr']);
+    expect(exprs).toContain(`max(motorfix_redis_memory_used_bytes{${ENV}})`);
+    expect(exprs).toContain(
+      `0.7 * clamp_min(max(motorfix_redis_memory_max_bytes{${ENV}}), 335544320)`,
+    );
+  });
+
   it('passes on this repository', () => {
     expect(checkDashboards(join(__dirname, '..'))).toEqual([]);
   });

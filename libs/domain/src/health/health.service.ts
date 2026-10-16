@@ -1,10 +1,11 @@
 import type { HealthReadyDto } from '@motor-fix/contracts';
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
 
 import { PrismaClient } from '../generated/prisma/client';
 import { StorageService } from '../storage/storage.service';
+import { borrowStore, returnStore } from '../store/store';
 
 export const HEALTH_OPTIONS = Symbol('HEALTH_OPTIONS');
 
@@ -42,14 +43,7 @@ export class HealthService implements OnApplicationShutdown {
         connectionTimeoutMillis: LIMIT_MS,
       }),
     });
-    this.redis = new Redis(options.redisUrl, {
-      connectTimeout: LIMIT_MS,
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-    });
-    // Without a listener ioredis reports every failed reconnect as unhandled;
-    // the ready check is where a down Redis is reported.
-    this.redis.on('error', () => undefined);
+    this.redis = borrowStore(options.redisUrl);
   }
 
   async ready(): Promise<HealthReadyDto> {
@@ -72,7 +66,7 @@ export class HealthService implements OnApplicationShutdown {
   }
 
   async onApplicationShutdown() {
-    this.redis.disconnect();
+    await returnStore(this.redis);
     await this.prisma.$disconnect();
   }
 }

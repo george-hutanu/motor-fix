@@ -10,14 +10,14 @@ import {
   type OnApplicationShutdown,
   type OnModuleInit,
 } from '@nestjs/common';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
 import { Pool } from 'pg';
 
 import { oldestPendingSeconds } from './outbox-age';
+import { borrowStore, returnStore } from '../store/store';
 
 const DATA_STORE_CLIENTS = Symbol('DATA_STORE_CLIENTS');
 const DATA_STORE_INTERVAL = Symbol('DATA_STORE_INTERVAL');
-const LIMIT_MS = 2_000;
 const STATEMENT_LIMIT_MS = 5_000;
 
 interface DataStoreOptions {
@@ -68,14 +68,7 @@ function connect(options: DataStoreOptions): Clients | undefined {
       : bounded(options.monitorUrl, {
           options: '-c default_transaction_read_only=on',
         });
-  const redis = new Redis(options.redisUrl, {
-    commandTimeout: LIMIT_MS,
-    connectTimeout: LIMIT_MS,
-    enableOfflineQueue: false,
-    lazyConnect: true,
-    maxRetriesPerRequest: 1,
-  });
-  redis.on('error', ignore);
+  const redis = borrowStore(options.redisUrl);
   return { outbox: bounded(options.databaseUrl), pool, redis };
 }
 
@@ -114,12 +107,7 @@ export class DataStoreMetricsModule
         oldestPendingSeconds: () => oldestPendingSeconds(session(outbox)),
       },
       ...(pool && { postgres: session(pool) }),
-      redis: {
-        info: async () => {
-          if (redis.status === 'wait') await redis.connect();
-          return redis.info();
-        },
-      },
+      redis: { info: () => redis.info() },
     });
   }
 
@@ -127,7 +115,7 @@ export class DataStoreMetricsModule
     this.stop?.();
     const clients = this.clients;
     if (!clients) return;
-    clients.redis.disconnect();
+    await returnStore(clients.redis);
     await Promise.allSettled([clients.pool?.end(), clients.outbox.end()]);
   }
 }

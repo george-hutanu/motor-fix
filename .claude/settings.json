@@ -187,7 +187,7 @@
       "Bash(tar:*)",
       "Bash(unzip:*)",
       "Bash(psql:*)",
-      "Bash(redis-cli:*)",
+      "Bash(valkey-cli:*)",
       "mcp__github",
       "mcp__claude-code-remote",
       "Edit",

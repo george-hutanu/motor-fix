@@ -377,7 +377,7 @@ source for anything the constitution does not fix.
 
 - Given: Angular (standalone, signals) + Spartan UI (brain primitives, helm
   components copied into `libs/ui-cockpit`, Angular CDK) with the Cockpit
-  theme; NestJS, PostgreSQL, Redis; TypeScript everywhere. Front-end
+  theme; NestJS, PostgreSQL, Valkey 9 (Redis protocol); TypeScript everywhere. Front-end
   dependencies stay free and open source: no PrimeNG (licence key since v22).
 - Repo: one Nx monorepo — apps `web` (Angular SSR), `api`, `worker` (NestJS),
   `mcp`, `web-e2e` (Playwright); libs `contracts` (DTOs, env), `domain`
