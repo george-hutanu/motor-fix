@@ -1,8 +1,7 @@
 // Carry an `agent-review` success over a head that changes documentation only.
 //
 // A commit that adds only documentation after the PR tester passed a commit
-// (the `deferred.md` task URLs after `speckit-tracker-sync debt` are the usual
-// one) would otherwise cost a full tester lap that judges nothing new. Instead
+// would otherwise cost a full tester lap that judges nothing new. Instead
 // the earlier verdict is carried: the head gets `agent-review` success with the
 // description `carried from <sha>: docs-only change`, and the PR's "Agent
 // review" section says so.
@@ -11,8 +10,9 @@
 // re-checks the claim with `judgeCarry`: the named commit has a success of its
 // own (not itself carried), it is an ancestor of head, every path between them
 // is documentation by `scripts/docs-only.ts` (the definition CI's docs-only
-// skip uses), and no real lap failed on a commit after it or on head. Anything
-// else needs a real lap.
+// skip uses) and none is a `deferred.md` (tech-debt tickets are retired), and
+// no real lap failed on a commit after it or on head. Anything else needs a
+// real lap.
 //
 //   node .claude/scripts/pr-test/carry.mjs <pr> [--dry-run]
 // exits 0 when it carried (or would, on --dry-run), 1 when the head needs a
@@ -55,6 +55,8 @@ export function judgeCarry({ from, head, fromReview, compare, between = [], head
   if (fromReview?.state !== "success") return `${f} has no agent-review success${fromReview ? ` (it is ${fromReview.state})` : ""}`;
   if (carriedFrom(fromReview.description)) return `${f}'s own agent-review success was itself carried; name the commit the PR tester passed`;
   const paths = files.flatMap((x) => [x.filename, x.previous_filename]).filter(Boolean);
+  const deferred = paths.find((p) => p.split("/").pop() === "deferred.md");
+  if (deferred) return `${f}..${h} changes ${deferred}: tech-debt tickets are retired, so it needs a real lap`;
   if (!isDocsOnly(paths)) {
     const code = paths.filter((p) => !isDocumentation(p));
     return `${f}..${h} is not documentation only${code.length ? `: it changes ${code.slice(0, 3).join(", ")}${code.length > 3 ? ` and ${code.length - 3} more` : ""}` : ""}`;

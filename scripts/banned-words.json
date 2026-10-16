@@ -5,7 +5,7 @@
       "reason": "History: requirements of the documentation migration (1018, 1026), the import client (745) and the feature slugs that retired the old tracker."
     },
     ".specify/capabilities/tracker.md": {
-      "count": 5,
+      "count": 3,
       "reason": "History: the slug of the feature that retired the old tracker."
     }
   },

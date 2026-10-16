@@ -63,6 +63,7 @@ export function featureStatus(repo, dir, { covered, retired, capabilities, stale
   const spec = read("spec.md");
   const tasks = read("tasks.md");
   const retro = read("retrospective.md");
+  // An archived feature's deferred.md is history; under the "No tech-debt tickets" rule no new feature writes one.
   const deferred = read("deferred.md");
 
   const taskLines = (tasks ?? "").split("\n");

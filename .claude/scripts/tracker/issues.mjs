@@ -6,8 +6,7 @@ import { findProject, projectState } from "./bootstrap.mjs";
 import { GitHubError } from "./github.mjs";
 import { ISSUE_REPO, OWNER } from "./repos.mjs";
 
-export const READY_LABEL = "ready to work";
-/** Issues that hold others and are never a unit of work: never ready, never counted for the epic's Done. */
+/** Issues that hold others and are never a unit of work: never a task, never counted for the epic's Done. */
 export const CONTAINER_LABELS = ["epic", "type: feature", "type: group"];
 export const issueUrl = (number) => `https://github.com/${OWNER}/${ISSUE_REPO}/issues/${number}`;
 
@@ -26,9 +25,7 @@ export function setFieldsMutation(count) {
 const fieldName = "field { ... on ProjectV2FieldCommon { name } }";
 const values = (n) =>
   `fieldValues(first: ${n}) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name ${fieldName} } ... on ProjectV2ItemFieldDateValue { date ${fieldName} } ... on ProjectV2ItemFieldTextValue { text ${fieldName} } ... on ProjectV2ItemFieldNumberValue { number ${fieldName} } } }`;
-// A dependency only needs its state and Status, so its connections are kept small (GitHub caps a query at 500,000 nodes).
-const LINKED = `id databaseId number title url state labels(first: 20) { nodes { name } } projectItems(first: 3) { nodes { id project { id } ${values(20)} } }`;
-const DETAIL = `id databaseId number title url state labels(first: 50) { nodes { name } } projectItems(first: 5) { nodes { id project { id } ${values(30)} } } blockedBy(first: 20) { nodes { ${LINKED} } } subIssues(first: 50) { nodes { ${LINKED} } }`;
+const DETAIL = `id databaseId number title url state labels(first: 50) { nodes { name } } projectItems(first: 5) { nodes { id project { id } ${values(30)} } }`;
 const ISSUE_DETAIL = `query IssueDetail($id: ID!) { node(id: $id) { ... on Issue { ${DETAIL} } } }`;
 const LABEL_ISSUES = `query LabelIssues($owner: String!, $repo: String!, $label: String!, $after: String) { repository(owner: $owner, name: $repo) { issues(first: 50, after: $after, states: OPEN, labels: [$label]) { pageInfo { hasNextPage endCursor } nodes { ${DETAIL} } } } }`;
 const MAX_LABEL_PAGES = 20;
@@ -48,7 +45,7 @@ function itemIn(node, projectId) {
   return { id: item.id, values: vals };
 }
 
-/** An issue as the tracker reads it: open or closed, its Project values, labels and dependencies. */
+/** An issue as the tracker reads it: open or closed, its Project values and labels. */
 function shape(node, projectId) {
   const item = itemIn(node, projectId);
   const out = {
@@ -63,12 +60,10 @@ function shape(node, projectId) {
     values: item?.values ?? {},
   };
   out.key = idOf(out);
-  if (node.blockedBy) out.blockedBy = node.blockedBy.nodes.map((n) => shape(n, projectId));
-  if (node.subIssues) out.subIssues = node.subIssues.nodes.map((n) => shape(n, projectId));
   return out;
 }
 
-/** The status a dependency counts with: a closed issue is finished whatever its Status says. */
+/** The status an issue counts with: a closed issue is finished whatever its Status says. */
 export const statusOf = (issue) => (issue.open ? (issue.values.Status ?? "To do") : "Done");
 
 export function tracker(github) {
@@ -154,14 +149,6 @@ export function tracker(github) {
     return skipped;
   }
 
-  const addLabels = (issue, labels) => github.rest("POST", `issues/${issue.number}/labels`, { labels }, { idempotent: true });
-  async function removeLabel(issue, label) {
-    try {
-      await github.rest("DELETE", `issues/${issue.number}/labels/${encodeURIComponent(label)}`, undefined, { idempotent: true });
-    } catch (error) {
-      if (!(error instanceof GitHubError && error.type === "404")) throw error;
-    }
-  }
   const comment = (issue, body) => github.rest("POST", `issues/${issue.number}/comments`, { body });
   const close = (issue) => github.rest("PATCH", `issues/${issue.number}`, { state: "closed", state_reason: "completed" });
 
@@ -193,5 +180,5 @@ export function tracker(github) {
     return { ...issue, placed };
   }
 
-  return { project: theProject, find, labelled, setFields, addLabels, removeLabel, comment, close, create };
+  return { project: theProject, find, labelled, setFields, comment, close, create };
 }

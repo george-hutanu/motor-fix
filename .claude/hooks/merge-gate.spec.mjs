@@ -310,7 +310,7 @@ describe('merge gate — a verdict carried over a docs-only head is verified, no
   const carried = (description = `carried from ${FROM}: docs-only change`) => ({ ...review('SUCCESS'), description });
   const state = (over = {}) => ({
     fromReview: { state: 'success', description: 'No blocking findings' },
-    compare: { status: 'ahead', total_commits: 1, commits: [{ sha: 'abc1234def5678' }], files: [{ filename: 'specs/194-email-sending/deferred.md' }] },
+    compare: { status: 'ahead', total_commits: 1, commits: [{ sha: 'abc1234def5678' }], files: [{ filename: 'docs/how-to/email-sending.md' }] },
     between: [],
     headReviews: [],
     ...over,
@@ -340,8 +340,14 @@ describe('merge gate — a verdict carried over a docs-only head is verified, no
   });
 
   it('refuses a carry over a diff that is not documentation only', () => {
-    const compare = { ...state().compare, files: [{ filename: 'specs/x/deferred.md' }, { filename: '.claude/hooks/merge-gate.mjs' }] };
+    const compare = { ...state().compare, files: [{ filename: 'docs/x.md' }, { filename: '.claude/hooks/merge-gate.mjs' }] };
     assert.match(decideMerge(prc([...green, carried()]), lookup(state({ compare }))), /merge-gate\.mjs/);
+  });
+
+  // @traces 1324-FR-007
+  it('refuses a carry over a deferred.md change, since tech-debt tickets are retired', () => {
+    const compare = { ...state().compare, files: [{ filename: 'specs/194-email-sending/deferred.md' }] };
+    assert.match(decideMerge(prc([...green, carried()]), lookup(state({ compare }))), /deferred\.md/);
   });
 
   it('refuses a carry naming a commit that is not one of the PR\'s own, such as a tested commit on main', () => {
@@ -378,7 +384,7 @@ describe('merge gate — a check it cannot finish refuses the merge', () => {
   });
   const goodState = {
     fromReview: { state: 'success', description: 'No blocking findings' },
-    compare: { status: 'ahead', total_commits: 1, commits: [{ sha: HEAD }], files: [{ filename: 'specs/194-email-sending/deferred.md' }] },
+    compare: { status: 'ahead', total_commits: 1, commits: [{ sha: HEAD }], files: [{ filename: 'docs/how-to/email-sending.md' }] },
     between: [],
     headReviews: [],
   };
@@ -472,7 +478,7 @@ describe('merge gate — a check it cannot finish refuses the merge', () => {
     let most = 0;
     const answer = (line) => {
       if (/compare\//.test(line))
-        return { status: 'ahead', base_commit: { sha: FROM }, total_commits: 3, commits: [{ sha: MID }, { sha: MID2 }, { sha: HEAD }], files: [{ filename: 'specs/x/deferred.md' }] };
+        return { status: 'ahead', base_commit: { sha: FROM }, total_commits: 3, commits: [{ sha: MID }, { sha: MID2 }, { sha: HEAD }], files: [{ filename: 'docs/x.md' }] };
       if (line.includes(`commits/${FROM}/`)) return [{ context: 'agent-review', state: 'success', description: 'No blocking findings' }];
       if (line.includes(`commits/${HEAD}/`)) return [{ context: 'agent-review', state: 'success', description: `carried from ${FROM}: docs-only change` }];
       return [];

@@ -150,11 +150,10 @@ code-reviewer`) with the diff range. It applies the rubric below with no memory
 of why the code was written that way — which is the bias this step exists to
 remove; the context that made a decision is the worst judge of whether it was
 necessary. Its report is not shown to the user; every CRITICAL and HIGH is
-fixed in step 4, and so is every MEDIUM/LOW whose fix is small or medium,
-pre-existing or adjacent included. Only a large fix (the size test in
-AGENTS.md, "Technical debt a review defers") is relayed as a `defer` bullet
-for `specs/<feature>/deferred.md`; an adversary defect or a mutation survivor
-is routed the same way.
+fixed in step 4, and so is every MEDIUM/LOW, pre-existing or adjacent
+included: fix every verified finding in this PR; an owner decision is a
+`needs-confirmation` question (`speckit-tracker-sync blocked <question>`). An
+adversary defect or a mutation survivor is routed the same way.
 
 The rubric it applies, so you can judge its findings:
 

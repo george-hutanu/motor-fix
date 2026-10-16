@@ -74,7 +74,7 @@ describe('the documentation source', () => {
 
   it('plan writes the build plan under docs/reference/build-plans/, regenerates llms.txt, in one specs-repo commit', () => {
     const body = read('.claude/skills/speckit-tracker-sync/SKILL.md');
-    const plan = body.slice(body.indexOf('## 7. Build plan'));
+    const plan = body.slice(body.indexOf('## 6. Build plan'));
     assert.match(plan, /docs\/reference\/build-plans\/ep-<n>-/);
     assert.match(plan, /docs-lint\.mjs --write/);
     assert.match(plan, /specs-repo\.mjs commit "docs: <EP-n> build plan" -- docs\/reference\/build-plans\/ep-<n>-<slug>\.md llms\.txt/);

@@ -36,7 +36,7 @@ describe('the hand-off', () => {
 
   it('gives the tail lifecycle steps 5-7, on the default model', () => {
     const tail = section(auto, '## The tail');
-    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /lifecycle\.mjs merge --pr <n>/, /tracker's `finish`/, /tracker\/ready|archive check/])
+    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /lifecycle\.mjs merge --pr <n>/, /tracker's `finish`/, /worktree-remove\.mjs/])
       assert.match(tail, step);
     assert.match(tail, /stays on Opus/);
     assert.doesNotMatch(tail, /model: "sonnet"/);
@@ -66,18 +66,19 @@ describe('the feature records go to the specs repo', () => {
   const viaSpecsRepo = /specs-repo\.mjs commit/;
 
   it('pushes the log through the specs repo and comments it on the PR after the merge', () => {
-    const step = section(read('.claude/skills/speckit-tracker-sync/SKILL.md'), '## 6. Record it');
+    const step = section(read('.claude/skills/speckit-tracker-sync/SKILL.md'), '## 5. Record it');
     assert.match(step, viaSpecsRepo);
     assert.match(step, /gh pr comment/);
     assert.match(step, /After the merge/);
   });
 
-  it('archives before ready and checks the PR comments after the merge', () => {
+  // @traces 1324-FR-009
+  it('archives before ready and finishes after the merge, with no ready check', () => {
     const phase = section(read('.claude/skills/speckit-archive/SKILL.md'), '## Phase 4');
     assert.match(phase, /before the feature's PR goes ready/);
     assert.match(phase, viaSpecsRepo);
-    assert.match(phase, /gh pr view <n> --json comments/);
-    assert.match(phase, /tracker\/ready\.mjs check -/);
+    assert.match(phase, /speckit-tracker-sync finish/);
+    assert.doesNotMatch(phase, /tracker\/ready\.mjs/);
   });
 
   it('commits a retrospective and every QA lap report to the specs repo, never the branch', () => {

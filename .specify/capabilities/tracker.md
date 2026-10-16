@@ -8,6 +8,7 @@ features:
   - 1169-prefetch-intent
   - 1132-hold-reason-commas
   - 1323-rest-not-graphql
+  - 1324-retire-debt-and-ready
 ---
 
 # Capability: Tracker
@@ -44,14 +45,6 @@ _From 1036-github-tracker-lifecycle._
 
 _From 1036-github-tracker-lifecycle._
 
-### 1036-FR-008 — The ready refresh (end of `start` and `finish`, and `ready`) MUST judge each open issue labelled with the story's epic (the epic, feature and group issues aside): ready when Status is To do and every "blocked by" dependency and every sub-issue is closed or at Status Done. The `ready to work` label MUST be removed from every issue that is not ready, and added only to candidates the hold review confirms (`ready --tick`).
-
-_From 1036-github-tracker-lifecycle._
-
-### 1036-FR-009 — `debt` MUST file each unfiled `deferred.md` bullet as a To do issue (FR in User Story 4) and mark the bullet with the issue URL.
-
-_From 1036-github-tracker-lifecycle._
-
 ### 1036-FR-010 — `file --type <story|task|bug|tech debt|decision> --title <t> [--epic EP-<n>] [--priority <p>] --body-file <f>` MUST create the issue with its form's type label and add it to Project #11 at Status To do.
 
 _From 1036-github-tracker-lifecycle._
@@ -72,13 +65,9 @@ _From 1037-remove-notion._
 
 _From 1036-github-tracker-lifecycle._
 
-### 1037-FR-002 — The status ladder (`decide`, `recordPrior`) MUST live in `.claude/scripts/tracker/status.mjs` and the ready rule (`decideReady`, `readyLogged`, the `check` command) in `.claude/scripts/tracker/ready.mjs`, behaving as before; the run-state key is `prior_status`.
+### 1324-FR-013 — The status ladder (`decide`, `recordPrior`) MUST live in `.claude/scripts/tracker/status.mjs`, behaving as before, the run-state key `prior_status`; the priority order `next` uses MUST live in `.claude/scripts/tracker/next.mjs`.
 
-_From 1037-remove-notion._
-
-### 1037-FR-007 — `debt-tasks.mjs` MUST treat only `— Issue: <url>` as filed.
-
-_From 1037-remove-notion._
+_From 1324-retire-debt-and-ready._
 
 ### 1037-FR-010 — `scripts/banned-words.ts` MUST fail when a tracked file's path or text contains a banned word (case-insensitive) and the file is not in `scripts/banned-words.json`, when a listed file holds more mentions than its count, when a listed file holds fewer (stale), and, with `--base <ref>`, when the list has an entry or a higher count than the base's list; CI's Changes job MUST run it on every pull request.
 
@@ -96,23 +85,11 @@ _From 1135-drop-legacy-pr-body._
 
 _From 1169-prefetch-intent._
 
-### 1132-FR-001 — `ready --hold` MUST keep a reason whole, commas and `=` included; a comma splits the value only where the next hold (`ST-<n>=` or `EP-<n>=`) begins.
-
-_From 1132-hold-reason-commas._
-
-### 1132-FR-002 — `ready --tick` MUST keep splitting its value on commas.
-
-_From 1132-hold-reason-commas._
-
 ### 1132-FR-003 — `file` MUST title a new issue `ST-<issue number> <title>` unless the title already starts with an `ST-<n>` or `EP-<n>` id.
 
 _From 1132-hold-reason-commas._
 
 ### 1132-FR-004 — `file` MUST stay idempotent: a rerun finds an open issue it already filed and retitled, by `ST-<its number> <title>`, and files nothing new.
-
-_From 1132-hold-reason-commas._
-
-### 1132-FR-005 — `debt` MUST title each task it files `ST-<issue number> <title>`, as `file` does, so a later `start` finds it.
 
 _From 1132-hold-reason-commas._
 
@@ -124,7 +101,23 @@ _From 1323-rest-not-graphql._
 
 _From 1323-rest-not-graphql._
 
+### 1324-FR-005 — `tracker-sync.mjs debt` MUST refuse with "tech-debt tickets are retired; fix it in this task" on stderr, exit 1 before any GitHub call, file nothing and log nothing; a spec MUST cover it.
+
+_From 1324-retire-debt-and-ready._
+
+### 1324-FR-008 — The ready refresh MUST be removed: `tracker/ready.mjs`, its specs and its skill section deleted; `start` and `finish` run no refresh; the `ready` event refuses with "the ready refresh is retired; pick the next task with tracker-sync.mjs next" on stderr and exits 1 before any GitHub call; `rank` lives in `tracker/next.mjs`; the label constant goes and bootstrap stops creating the label (issues that carry it keep it).
+
+_From 1324-retire-debt-and-ready._
+
 ## Retired
 
 - `1036-FR-013` — superseded by `1037-FR-003` (2026-10-10)
 - `1036-FR-015` — superseded by `1037-FR-002` (2026-10-10)
+
+- `1036-FR-008` — removed by 1324-retire-debt-and-ready (2026-10-16)
+- `1036-FR-009` — removed by 1324-retire-debt-and-ready (2026-10-16)
+- `1037-FR-007` — removed by 1324-retire-debt-and-ready (2026-10-16)
+- `1132-FR-001` — removed by 1324-retire-debt-and-ready (2026-10-16)
+- `1132-FR-002` — removed by 1324-retire-debt-and-ready (2026-10-16)
+- `1132-FR-005` — removed by 1324-retire-debt-and-ready (2026-10-16)
+- `1037-FR-002` — superseded by `1324-FR-013` (2026-10-16)

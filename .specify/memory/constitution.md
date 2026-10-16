@@ -1,5 +1,22 @@
 <!--
-Sync Impact Report (v3.3.0)
+Sync Impact Report (v4.0.0)
+- Version change: 3.3.0 → 4.0.0 (MAJOR: a rule removed. No tech-debt
+  tickets: every verified review, QA or harden finding is fixed in the
+  current task's PR before ready or merge, and one needing an owner decision
+  becomes a needs-confirmation question on the task; the size test and the
+  defer route are gone (Agent Execution Rules, "Scope is the deliverable").
+  Principle VII drops the ready-to-work label: the next task is picked with
+  `tracker-sync.mjs next`)
+- Source: ST-1324, the owner's rule of 2026-10-16.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line
+  - ✅ CLAUDE.local.md — the version line and the fix-in-PR bullet
+  - ✅ AGENTS.md — the fix-in-PR rule and "A finished task says what happened"
+  - ✅ .specify/templates/deferred-template.md — deleted
+  - ✅ .claude/agents/code-reviewer.md, spec-reviewer.md, the review, harden,
+    pr-test, auto and tracker-sync skills — patch or decision only
+
+Previous report (v3.3.0)
 - Version change: 3.2.0 → 3.3.0 (MINOR: the store is Valkey 9 instead of
   Redis 7. Principle III names Valkey as the given store, II its containers,
   IV the one broker, VI the store that never holds the only copy and runs
@@ -570,9 +587,8 @@ waits for the owner:
 
 The tracker is GitHub: each story, task and epic is an issue in the private
 `george-hutanu/motor-fix-specs`, its ST or EP id first in the title, with its
-Status and dates in Project "MotorFix" (#11), the only tracker. Ready to work
-is the `ready to work` label, on a To do issue whose every dependency is
-closed or Done.
+Status and dates in Project "MotorFix" (#11), the only tracker. The next task
+is a To do issue with no open blocker (`tracker-sync.mjs next`).
 
 The main checkout is a mirror of `origin/main`: it holds no edits to tracked
 files, and every change rides a PR from a worktree. `SPECKIT_ALLOW_MAIN_EDIT=1`
@@ -680,13 +696,11 @@ prompt-level, and `spec-reviewer` is where deviations surface.
   call for. While implementing, a pre-existing bug, performance concern,
   cleanup, or behavior the task doesn't mention is left alone unless the
   requested behavior cannot work without it — it goes under "Follow-ups"
-  in the completion report. A verified finding of the story's own review,
-  harden, QA or PR-tester laps is different: a small or medium fix is made
-  in the same PR, even when the problem existed before or sits next to the
-  change; only a large fix is deferred (`specs/<feature>/deferred.md` and a
-  tech-debt issue in the tracker). A fix is large when it needs its own design or
-  decision, a data migration, a different area or epic, or work clearly
-  bigger than the story itself.
+  in the completion report. A finding of the story's own laps is different:
+  every verified review, QA or harden finding is fixed in the current task's
+  PR before ready or merge; one needing an owner decision becomes a
+  needs-confirmation question on the task. That holds even when the problem
+  existed before or sits next to the change. There are no tech-debt tickets.
 - **Ambiguity.** Implement the reading the wording and surrounding code
   most directly support, state that assumption in the report, and don't
   build for the other readings too. Ask only when different readings mean
@@ -729,4 +743,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 3.3.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-15
+**Version**: 4.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-16
