@@ -54,7 +54,7 @@ test.describe('the verification queue @seeded', () => {
   test.afterEach(async () => {
     if (!garageId) return;
     await db.query(
-      'DELETE FROM outbox_event WHERE subject_id IN (SELECT id FROM verification_file WHERE garage_id = $1)',
+      'DELETE FROM outbox_event WHERE subject_id IN (SELECT id::text FROM verification_file WHERE garage_id = $1)',
       [garageId],
     );
     await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
@@ -135,7 +135,12 @@ test.describe('the verification queue @seeded', () => {
       await menu(page).locator('a[href="/app/admin"]').click();
       await expect(page).toHaveURL('/app/admin');
       await expect(heading(page)).toHaveText(HEADING);
-      expect(await counted(page)).toBe(after);
+      // Other workers may send files meanwhile: the overview's three counts
+      // agree with each other and hold at least the new one.
+      const panel = await counted(page);
+      expect(panel).toBeGreaterThanOrEqual(after);
+      await expect(chip).toHaveText(String(panel));
+      await expect(line).toContainText(` ${panel} `);
       await expect(
         queue(page).locator('li.row', { hasText: name }),
       ).toBeVisible();
