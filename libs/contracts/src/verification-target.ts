@@ -7,7 +7,7 @@ import type { Lamp, VerificationCheckResult } from './verification-checks';
 export const VERIFICATION_TARGET_WORKING_DAYS = 2;
 export const VERIFICATION_QUEUE_PAGE = 20;
 export const VERIFICATION_QUEUE_PANEL = 5;
-// The most rows one read answers: the view shows no more than this.
+// The most rows one read answers; the view reads more in several reads.
 export const VERIFICATION_QUEUE_MAX = 200;
 
 // A row's one lamp: a failed check first, then the flag or a warning, then

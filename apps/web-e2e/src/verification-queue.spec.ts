@@ -118,7 +118,19 @@ test.describe('the verification queue @seeded', () => {
     );
     const after = await counted(page);
     expect(after).toBeGreaterThan(before);
+    // The four counts: the view's heading, the menu counter, the header
+    // line and, one router step away with no reload, the overview's panel.
     await expect(chip).toHaveText(String(after));
+    const line = page.locator('.admin-line');
+    await expect(line).toContainText(` ${after} `);
+    await expect(line).toContainText('așteaptă verificarea');
+    await page.locator('aside nav a[href="/app/admin"]').click();
+    await expect(page).toHaveURL('/app/admin');
+    await expect(heading(page)).toHaveText(HEADING);
+    expect(await counted(page)).toBe(after);
+    await expect(
+      queue(page).locator('li.row', { hasText: name }),
+    ).toBeVisible();
   });
 
   // @traces 301-FR-005 301-FR-012
