@@ -1,7 +1,7 @@
 name: PR QA
 
 # The PR tester's mechanical half on a GitHub runner instead of the owner's
-# 16 GB laptop: boot the PR head with PostgreSQL+PostGIS, Redis and MinIO,
+# 16 GB laptop: boot the PR head with PostgreSQL+PostGIS, Redis and the object store,
 # check /health/live and /health/ready, call the changed endpoints, run the viewport sweep
 # (desktop, tablet, 390 and 320 px phones x light/dark x ro/en), the agent's
 # flows, the measured layout checks and a pixel diff of every screenshot
@@ -133,16 +133,15 @@ jobs:
       # changes the stack (an image, a service) is tested on it, and no image
       # is pinned here a second time. Its default ports are the ones run.mjs
       # --tree gives the apps (services.mjs EXTERNAL_PORTS), and so are its
-      # credentials and bucket. The job's end removes the containers.
-      - name: Start PostgreSQL, Redis and MinIO from the PR's compose file, and the bucket
+      # credentials and bucket. The object store is healthy only once its
+      # bucket exists, within its own 120 s health bound. The job's end
+      # removes the containers.
+      - name: Start PostgreSQL, Redis and the object store from the PR's compose file
         run: |
-          docker compose -p pr-qa -f pr/docker-compose.yml up -d --wait postgres redis minio
+          docker compose -p pr-qa -f pr/docker-compose.yml config --services | grep -qx storage || { echo "::error::the PR's docker-compose.yml has no storage service: merge main into the branch"; exit 1; }
+          timeout 150 docker compose -p pr-qa -f pr/docker-compose.yml up -d --wait postgres redis storage
           for _ in $(seq 1 60); do docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -U motorfix && break; sleep 1; done
           docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -U motorfix || { echo "::error::PostgreSQL did not accept connections within 60 s"; exit 1; }
-          for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:9000/minio/health/live && break; sleep 1; done
-          curl -fsS http://127.0.0.1:9000/minio/health/live || { echo "::error::MinIO was not healthy within 60 s"; exit 1; }
-          # minio-setup retries its alias until MinIO answers; bound it.
-          timeout 120 docker compose -p pr-qa -f pr/docker-compose.yml run --rm minio-setup
 
       - uses: actions/setup-node@v7
         with:

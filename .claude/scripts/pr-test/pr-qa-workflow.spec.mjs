@@ -1,3 +1,4 @@
+// @traces 1176-FR-004
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -177,12 +178,16 @@ describe('PR QA workflow: services', () => {
 
   it('runs no service container of its own, so no image is pinned twice', () => {
     assert.doesNotMatch(job.join('\n'), /^ {4}services:/m);
-    assert.doesNotMatch(code, /docker run [^\n]*minio\/(minio|mc)\b/);
+    assert.doesNotMatch(code, /docker run [^\n]*seaweedfs/);
   });
 
-  it("starts PostgreSQL, Redis and MinIO from the PR's own compose file, then the bucket", () => {
-    assert.match(steps, /docker compose -p pr-qa -f pr\/docker-compose\.yml up -d --wait postgres redis minio/);
-    assert.match(steps, /docker compose -p pr-qa -f pr\/docker-compose\.yml run --rm minio-setup/);
+  it("starts PostgreSQL, Redis and the object store with its bucket from the PR's own compose file", () => {
+    assert.match(steps, /timeout \d+ docker compose -p pr-qa -f pr\/docker-compose\.yml up -d --wait postgres redis storage/);
+    assert.doesNotMatch(steps, /run --rm \S*setup/);
+  });
+
+  it('names the fix when the PR predates the storage service', () => {
+    assert.match(steps, /config --services \| grep -qx storage \|\| \{ echo "::error::[^"]*merge main[^"]*"; exit 1; \}/);
   });
 
   it('waits until PostgreSQL accepts connections before the run migrates', () => {
@@ -191,8 +196,8 @@ describe('PR QA workflow: services', () => {
 
   it('fails the step when a service never comes up, rather than running on', () => {
     assert.match(steps, /pg_isready -U motorfix[^\n]*\n[^\n]*\|\| \{ echo "::error::PostgreSQL[^\n]*exit 1; \}/);
-    assert.match(steps, /minio\/health\/live[^\n]*\n[^\n]*\|\| \{ echo "::error::MinIO[^\n]*exit 1; \}/);
-    assert.match(steps, /timeout \d+ docker compose -p pr-qa -f pr\/docker-compose\.yml run --rm minio-setup/);
+    const bound = Number(/timeout (\d+) docker compose -p pr-qa -f pr\/docker-compose\.yml up/.exec(steps)?.[1]);
+    assert.ok(bound > 120 && bound <= 180, `the store's own health bound (120 s) fits inside the step's ${bound} s`);
   });
 
   it('serves the standard ports and the credentials and bucket the apps are given', () => {
@@ -200,13 +205,13 @@ describe('PR QA workflow: services', () => {
     assert.equal(url.port, String(EXTERNAL_PORTS.postgres));
     assert.match(compose, /\$\{POSTGRES_PORT:-5432\}:5432/);
     assert.match(compose, /\$\{REDIS_PORT:-6379\}:6379/);
-    assert.match(compose, /\$\{MINIO_PORT:-9000\}:9000/);
+    assert.match(compose, new RegExp(`\\$\\{STORAGE_PORT:-${EXTERNAL_PORTS.storage}\\}:8333`));
     assert.match(compose, new RegExp(`POSTGRES_USER: ${url.username}\\b`));
     assert.match(compose, new RegExp(`POSTGRES_PASSWORD: ${url.password}\\b`));
     assert.match(compose, new RegExp(`POSTGRES_DB: ${url.pathname.slice(1)}\\b`));
-    assert.match(compose, new RegExp(`MINIO_ROOT_USER: ${env.STORAGE_ACCESS_KEY_ID}\\b`));
-    assert.match(compose, new RegExp(`MINIO_ROOT_PASSWORD: ${env.STORAGE_SECRET_ACCESS_KEY}\\b`));
-    assert.match(compose, new RegExp(`mc mb --ignore-existing local/${env.STORAGE_BUCKET}\\b`));
+    assert.match(compose, new RegExp(`AWS_ACCESS_KEY_ID: ${env.STORAGE_ACCESS_KEY_ID}\\b`));
+    assert.match(compose, new RegExp(`AWS_SECRET_ACCESS_KEY: ${env.STORAGE_SECRET_ACCESS_KEY}\\b`));
+    assert.match(compose, new RegExp(`-bucket=${env.STORAGE_BUCKET}\\b`));
   });
 });
 

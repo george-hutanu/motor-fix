@@ -1,3 +1,4 @@
+// @traces 1176-FR-004
 import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
@@ -5,15 +6,13 @@ import { createServer } from 'node:http';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { SEEDED, callEndpoints, changedEndpoints, exampleValue, firstId, roleFor, seedPassword } from './endpoints.mjs';
 import { cutOffFinding, readinessOutcome } from './findings.mjs';
-import { cleanStale, createBucket, localPlan, runDirPrefix, appEnv } from './services.mjs';
+import { cleanStale, localPlan, runDirPrefix, appEnv } from './services.mjs';
 import { missingReport, postVerdict } from './post.mjs';
 import { dropExpected, loadProblem, parseRoute, sessionCookie } from './sweep.mjs';
 
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 const secured = { security: [{ bearer: [] }] };
 const listen = (server, port = 0) => new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server.address().port)));
 const close = (server) => new Promise((resolve) => server.close(() => resolve()));
@@ -621,63 +620,26 @@ describe('the session cookie, odd origins', () => {
 });
 
 describe('an object store without Docker, odd inputs', () => {
-  const ports = { postgres: 55001, redis: 55002, minio: 55003, minioConsole: 55004 };
+  const ports = { postgres: 55001, redis: 55002, storage: 55003, storageInner: [55010, 55011, 55012, 55013, 55014, 55015, 55016, 55017, 55018] };
 
   it('has no object store when the flag is left out', () => {
     const plan = localPlan({ dir: '/tmp/run', ports });
     assert.equal(plan.storage, false);
-    assert.equal(plan.minio, undefined);
+    assert.equal(plan.store, undefined);
   });
 
   it('keeps a run directory with spaces as one argument and never doubles a slash', () => {
-    const spaced = localPlan({ dir: '/tmp/my run', ports, minio: true });
-    assert.equal(spaced.minio.cmd[2], '/tmp/my run/minio');
-    const slashed = localPlan({ dir: '/tmp/run/', ports, minio: true });
-    assert.doesNotMatch(slashed.minio.cmd[2], /\/\//);
+    const spaced = localPlan({ dir: '/tmp/my run', ports, storage: true });
+    assert.equal(spaced.store.cmd[2], '-dir=/tmp/my run/storage');
+    const slashed = localPlan({ dir: '/tmp/run/', ports, storage: true });
+    assert.doesNotMatch(slashed.store.cmd[2], /\/\//);
   });
 
-  it('gives the apps the storage keys MinIO is started with', () => {
-    const plan = localPlan({ dir: '/tmp/run', ports, minio: true });
+  it('gives the apps the storage keys the store is started with', () => {
+    const plan = localPlan({ dir: '/tmp/run', ports, storage: true });
     const env = appEnv({ ports, storage: true });
-    assert.equal(plan.minio.env.MINIO_ROOT_USER, env.STORAGE_ACCESS_KEY_ID);
+    assert.equal(plan.store.env.AWS_ACCESS_KEY_ID, env.STORAGE_ACCESS_KEY_ID);
     assert.match(env.STORAGE_ENDPOINT, /:55003/);
-  });
-});
-
-describe('creating the bucket, hostile answers', () => {
-  const ports = { postgres: 1, redis: 2, minio: 3, minioConsole: 4 };
-
-  async function s3(status, body = '') {
-    const server = createServer((_req, res) => {
-      res.writeHead(status, { 'content-type': 'application/xml' });
-      res.end(body);
-    });
-    const port = await listen(server);
-    cleanups.push(() => close(server));
-    return appEnv({ ports: { ...ports, minio: port } });
-  }
-
-  it('rejects when nothing listens', { timeout: 30000 }, async () => {
-    const probe = createServer();
-    const port = await listen(probe);
-    await close(probe);
-    await assert.rejects(createBucket({ repoRoot, env: appEnv({ ports: { ...ports, minio: port } }) }));
-  });
-
-  it('rejects on a server error', { timeout: 30000 }, async () => {
-    const env = await s3(500, '<?xml version="1.0"?><Error><Code>InternalError</Code><Message>x</Message></Error>');
-    await assert.rejects(createBucket({ repoRoot, env }));
-  });
-
-  it('rejects on an empty 403', { timeout: 30000 }, async () => {
-    const env = await s3(403, '');
-    await assert.rejects(createBucket({ repoRoot, env }));
-  });
-
-  it('is fine twice in a row', async () => {
-    const env = await s3(200);
-    await createBucket({ repoRoot, env });
-    await createBucket({ repoRoot, env });
   });
 });
 
@@ -773,11 +735,11 @@ describe('what a killed lap left behind, hostile directories', () => {
     const dead = join(tmp, 'mf-prtest-12-111-aB3dE9');
     mkdirSync(dead);
     const contents = ['-1', '0', 'abc', '', '  ', '1e3', '12 34', '9001; rm -rf /', Buffer.from([0xff, 0xfe, 0x39, 0x00])];
-    contents.forEach((c, i) => writeFileSync(join(dead, i % 2 ? 'redis.pid' : 'minio.pid'), c));
+    contents.forEach((c, i) => writeFileSync(join(dead, i % 2 ? 'redis.pid' : 'storage.pid'), c));
     for (const c of contents) {
       writeFileSync(join(dead, 'redis.pid'), c);
-      writeFileSync(join(dead, 'minio.pid'), c);
-      const { run, calls } = recorder((cmd) => (cmd === 'ps' ? { code: 0, stdout: 'valkey-server minio server' } : undefined));
+      writeFileSync(join(dead, 'storage.pid'), c);
+      const { run, calls } = recorder((cmd) => (cmd === 'ps' ? { code: 0, stdout: 'valkey-server weed mini' } : undefined));
       cleanStale({ tmp, repo: '/repo', run, isAlive: () => false });
       for (const call of calls.filter((x) => x.startsWith('kill'))) assert.match(call, /^kill [1-9]\d*$/, `pid file ${JSON.stringify(String(c))} gave "${call}"`);
       mkdirSync(dead, { recursive: true });

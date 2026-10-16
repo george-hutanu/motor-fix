@@ -2,6 +2,7 @@
 // @traces 879-FR-015
 // @traces 1037-FR-010
 // @traces 1170-FR-001 1170-FR-002 1170-FR-003
+// @traces 1176-FR-002 1176-FR-004
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -206,7 +207,7 @@ describe('ci workflow', () => {
     [
       'checks',
       'Compose stack',
-      'docker compose up -d --wait postgres redis minio',
+      'docker compose up -d --wait postgres redis storage',
     ],
     ['unit', 'Unit tests', 'npx nx $NX_SCOPE -t test --passWithNoTests'],
   ])(
@@ -380,5 +381,86 @@ describe('playwright config', () => {
       failOnFlakyTests: null,
       workers: 1,
     });
+  });
+});
+
+describe('the object store the stack boots', () => {
+  const compose = readFileSync(join(root, 'docker-compose.yml'), 'utf8');
+  const services = [...compose.matchAll(/^ {2}([\w-]+):$/gm)].map((m) => m[1]);
+  const storage =
+    compose.match(/^ {2}storage:\n((?: {4}.*\n|\n)+)/m)?.[1] ?? '';
+  const value = (key: string) =>
+    storage.match(new RegExp(`^ +${key}: *(.+)$`, 'm'))?.[1]?.trim();
+  const seconds = (key: string) =>
+    Number(/^(\d+)s?$/.exec(value(key) ?? '')?.[1]);
+  const storageEnv = {
+    STORAGE_ACCESS_KEY_ID: 'motorfix',
+    STORAGE_BUCKET: 'motorfix',
+    STORAGE_ENDPOINT: 'http://localhost:9000',
+    STORAGE_SECRET_ACCESS_KEY: 'motorfix-secret',
+  };
+
+  it('is one storage service with no setup service beside it', () => {
+    expect(services).toEqual([
+      'postgres',
+      'redis',
+      'storage',
+      'keycloak',
+      'otel-lgtm',
+    ]);
+  });
+
+  it("runs a release pinned by digest, creating the apps' bucket as it starts", () => {
+    expect(value('image')).toMatch(
+      /^chrislusf\/seaweedfs:\d+\.\d+@sha256:[0-9a-f]{64}$/,
+    );
+    expect(value('command')).toMatch(/^mini .*-bucket=motorfix\b/);
+    expect(value('command')).toContain('-master.telemetry=false');
+  });
+
+  it("serves the apps' endpoint and keys, its host port overridable", () => {
+    expect(storage).toMatch(/- '\$\{STORAGE_PORT:-9000\}:8333'/);
+    expect(value('AWS_ACCESS_KEY_ID')).toBe(storageEnv.STORAGE_ACCESS_KEY_ID);
+    expect(value('AWS_SECRET_ACCESS_KEY')).toBe(
+      storageEnv.STORAGE_SECRET_ACCESS_KEY,
+    );
+  });
+
+  it('reports healthy only once the bucket exists, within 120 seconds', () => {
+    expect(value('test')).toContain('/healthz');
+    expect(value('test')).toContain('/buckets/motorfix/');
+    expect(
+      seconds('start_period') + seconds('interval') * seconds('retries'),
+    ).toBeLessThanOrEqual(120);
+  });
+
+  it('runs the store spec in the compose stack check, against the store it started', () => {
+    const block = step(job('checks'), 'Compose stack');
+
+    expect(block).not.toContain('setup');
+    expect(block).toMatch(
+      /npx jest -c libs\/domain\/jest\.config\.cts libs\/domain\/src\/storage\/object-store\.integration\.spec\.ts/,
+    );
+    for (const [name, value] of Object.entries(storageEnv)) {
+      expect(block).toContain(`${name}: ${value}`);
+    }
+  });
+
+  it('starts the store for the integration suite, so the store spec never skips there', () => {
+    const integration = job('integration');
+
+    expect(step(integration, 'Object storage')).toContain(
+      'docker compose up -d --wait storage',
+    );
+    for (const [name, value] of Object.entries(storageEnv)) {
+      expect(integration).toContain(`${name}: ${value}`);
+    }
+  });
+
+  it('starts the store for the end-to-end photo flows with no setup step', () => {
+    const block = step(job('e2e'), 'Object storage');
+
+    expect(block).toContain('docker compose up -d --wait storage');
+    expect(block).not.toContain('setup');
   });
 });

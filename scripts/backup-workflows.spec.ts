@@ -153,7 +153,23 @@ describe('the restore drill workflow', () => {
     const text = read('scripts', 'backup', 'restore-drill.sh');
     expect(text).toMatch(/trap [^\n]*EXIT/);
     expect(text).toContain('DB=mf-restore-drill');
-    expect(text).toContain('docker rm -f "$DB" "$REDIS" "$MINIO"');
+    expect(text).toContain('docker rm -f "$DB" "$REDIS" "$STORE"');
+  });
+
+  // @traces 1176-FR-004
+  it("boots the compose file's object store with an empty drill bucket, waiting a bounded time", () => {
+    const text = read('scripts', 'backup', 'restore-drill.sh');
+    const image = /^ {4}image: (\S+)$/m.exec(
+      read('docker-compose.yml').split(/^ {2}storage:$/m)[1] ?? '',
+    )?.[1];
+
+    expect(text).toContain('STORE=mf-restore-drill-storage');
+    expect(image).toBeDefined();
+    expect(text).toContain(`${image} mini -bucket=drill`);
+    expect(text).toMatch(
+      /for _ in \$\(seq 60\); do docker exec "\$STORE" [^\n]*\/buckets\/drill\/ && break; sleep 1; done/,
+    );
+    expect(text).not.toMatch(/\bmc\b/);
   });
 
   // @traces 1175-FR-001 1175-FR-004
