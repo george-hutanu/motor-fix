@@ -169,9 +169,15 @@ export function tracker(github) {
    * A new issue, in the Project with `fields`, and under `parent` when one is
    * given. An open issue already titled `title` (left by a run that failed
    * after its POST) is finished instead, so a rerun never files it twice.
+   * `numbered` titles it `ST-<its number> <title>` once GitHub has given the
+   * number, and a rerun finds it under that title too.
    */
-  async function create({ title, body, labels, fields, parent }) {
-    const made = (await allIssues()).find((i) => i.state === "open" && i.title === title) ?? (await github.rest("POST", "issues", { title, body, labels }));
+  async function create({ title, body, labels, fields, parent, numbered = false }) {
+    const withId = (i) => `ST-${i.number} ${title}`;
+    const made =
+      (await allIssues()).find((i) => i.state === "open" && (i.title === title || (numbered && i.title === withId(i)))) ??
+      (await github.rest("POST", "issues", { title, body, labels }));
+    if (numbered && made.title !== withId(made)) made.title = (await github.rest("PATCH", `issues/${made.number}`, { title: withId(made) })).title;
     const issue = { nodeId: made.node_id, id: made.id, number: made.number, title: made.title, url: made.html_url ?? issueUrl(made.number), open: true, labels, itemId: null, values: {} };
     await setFields(issue, fields);
     let placed = true;

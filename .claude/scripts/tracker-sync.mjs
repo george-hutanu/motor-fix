@@ -38,7 +38,8 @@ import { assertProjectScope, projectToken, REFRESH, TokenError } from "./tracker
 
 const STATUS_EVENTS = new Set(["start", "implement", "qa", "review", "finish", "blocked", "unblock"]);
 const BOOLEAN = new Set(["no-comment", "pending"]);
-const REPEATED = new Set(["tick", "hold"]);
+/** Where a repeated flag's value splits: `--tick` at every comma, `--hold` only where the next `ST-<n>=` begins, so a reason keeps its commas. */
+const REPEATED = { tick: /,/, hold: /,(?=\s*(?:ST|EP)-\d+=)/ };
 const TYPES = { story: "Story", task: "Task", bug: "Bug", "tech debt": "Tech debt", decision: "Decision" };
 const DATE_FIELD = { start: "Started", qa: "QA from", review: "QA from", finish: "Merged at" };
 /** Content writes paced at 1 s: one event makes a handful, far under GitHub's 80 a minute. */
@@ -59,7 +60,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (!arg.startsWith("--")) positional.push(arg);
     else if (BOOLEAN.has(arg.slice(2))) flags[arg.slice(2)] = true;
-    else if (REPEATED.has(arg.slice(2))) flags[arg.slice(2)].push(...String(argv[++i] ?? "").split(",").filter(Boolean));
+    else if (Object.hasOwn(REPEATED, arg.slice(2))) flags[arg.slice(2)].push(...String(argv[++i] ?? "").split(REPEATED[arg.slice(2)]).map((v) => v.trim()).filter(Boolean));
     else flags[arg.slice(2)] = argv[++i];
   }
   return { positional, flags };
@@ -445,6 +446,7 @@ async function fileDebt(ctx) {
     ctx.step = Object.assign(ctx.step, { name: "debt", item: `${st} line ${entry.line}` });
     const made = await t.create({
       title: task.properties.Story,
+      numbered: true,
       body: task.content,
       labels: [...(epic ? [epic.code] : []), `type: ${kind.toLowerCase()}`],
       fields: { Status: "To do", "Work type": kind, Priority: task.properties.Priority, ...(epic ? { Epic: epic.code } : {}) },
@@ -464,6 +466,8 @@ async function fileIssue(ctx) {
   const epic = flags.epic ? await t.find(flags.epic, { label: "epic" }) : null;
   const made = await t.create({
     title: flags.title.trim(),
+    // A later `start --story ST-<n>` finds the issue by its id; one given already is kept.
+    numbered: !/^(?:ST|EP)-\d+\b/.test(flags.title.trim()),
     body: readFileSync(flags["body-file"], "utf8"),
     labels: [...(flags.epic ? [flags.epic] : []), `type: ${flags.type}`],
     fields: { Status: "To do", "Work type": kind, Priority: flags.priority ?? "Medium", ...(flags.epic ? { Epic: flags.epic } : {}) },

@@ -378,6 +378,31 @@ describe("Ready to work is computed from the real state of each dependency", () 
     assert.ok(!labelsOf(gh2, 63).includes("ready to work"));
   });
 
+  // @traces 1132-FR-001 1132-FR-002
+  it("--hold keeps a reason with commas and an = whole, and splits only where the next hold begins", async () => {
+    const gh = world();
+    const r = await run(["ready", "--hold", "ST-330=waits on the owner, then the lawyer, a=b"], { gh });
+    assert.deepEqual(
+      r.json.ready.held.filter((h) => h.id === "ST-330"),
+      [{ id: "ST-330", reason: "waits on the owner, then the lawyer, a=b" }],
+    );
+    assert.ok(!r.json.ready.held.some((h) => /lawyer|a=b/.test(h.id)), JSON.stringify(r.json.ready.held));
+    assert.ok(!labelsOf(gh, 63).includes("ready to work"));
+
+    const two = () => world({ issues: [issue(66, "ST-331 Garage reviews", ["type: story", "EP-6"])], items: { 66: "To do" }, subIssues: { 740: [60, 61, 62, 63, 64, 66] } });
+    const r2 = await run(["ready", "--hold", "ST-330=owner decision, later,ST-331=the lawyer"], { gh: two() });
+    assert.deepEqual(
+      r2.json.ready.held.filter((h) => h.id === "ST-330" || h.id === "ST-331"),
+      [
+        { id: "ST-330", reason: "owner decision, later" },
+        { id: "ST-331", reason: "the lawyer" },
+      ],
+    );
+
+    const r3 = await run(["ready", "--tick", "ST-330,ST-331"], { gh: two() });
+    assert.deepEqual(r3.json.ready.tick, ["ST-330", "ST-331"]);
+  });
+
   it("a bare ready lists its candidates for the hold review rather than holding them", async () => {
     const gh = world();
     const r = await run(["ready"], { gh });
@@ -415,7 +440,8 @@ describe("debt files each deferred bullet as a To do issue", () => {
     assert.equal(r.code, 0, r.err.join("\n"));
     const made = gh.state.issues.find((i) => /retry loop has no cap/.test(i.title));
     assert.ok(made, "the issue exists");
-    assert.ok(made.title.startsWith("Tech debt (ST-1036): "), made.title);
+    // @traces 1132-FR-005
+    assert.ok(made.title.startsWith(`ST-${made.number} Tech debt (ST-1036): `), made.title);
     assert.deepEqual(made.labels.map((l) => l.name).sort(), ["EP-6", "type: tech debt"]);
     assert.ok(made.body.includes(`${ISSUES}60`), made.body);
     assert.equal(gh.itemValues(made.number).Status, "To do");
@@ -459,12 +485,35 @@ describe("file", () => {
     const r = await run(["file", "--type", "task", "--title", "Harness: drop the old sync", "--epic", "EP-6", "--priority", "High", "--body-file", join(repo, "body.md")], { gh, repo });
     assert.equal(r.code, 0, r.err.join("\n"));
     const made = issueOf(gh, r.json.issue);
-    assert.equal(made.title, "Harness: drop the old sync");
+    assert.equal(made.title, `ST-${made.number} Harness: drop the old sync`);
     assert.deepEqual(made.labels.map((l) => l.name).sort(), ["EP-6", "type: task"]);
     assert.equal(gh.itemValues(made.number).Status, "To do");
     assert.equal(gh.itemValues(made.number)["Work type"], "Task");
     assert.equal(gh.itemValues(made.number).Priority, "High");
     assert.equal(r.json.url, `${ISSUES}${made.number}`);
+  });
+
+  // @traces 1132-FR-003 1132-FR-004
+  it("titles the new issue with its ST id, and a rerun finds the retitled issue instead of filing again", async () => {
+    const gh = world();
+    const repo = repoWith();
+    writeFileSync(join(repo, "body.md"), "## Goal\n\nA thing.\n");
+    const argv = ["file", "--type", "task", "--title", "Harness: drop the old sync", "--body-file", join(repo, "body.md")];
+    const r = await run(argv, { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(issueOf(gh, r.json.issue).title, `ST-${r.json.issue} Harness: drop the old sync`);
+
+    const again = await run(argv, { gh, repo });
+    assert.equal(again.json.issue, r.json.issue);
+  });
+
+  // @traces 1132-FR-003
+  it("keeps a title that already carries an ST or EP id", async () => {
+    const gh = world();
+    const repo = repoWith();
+    writeFileSync(join(repo, "body.md"), "body\n");
+    const r = await run(["file", "--type", "story", "--title", "ST-77 Old story, refiled", "--body-file", join(repo, "body.md")], { gh, repo });
+    assert.equal(issueOf(gh, r.json.issue).title, "ST-77 Old story, refiled");
   });
 
   it("refuses an unknown type as a usage error", async () => {
