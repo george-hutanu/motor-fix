@@ -2176,7 +2176,7 @@ _From 1324-retire-debt-and-ready._
 
 _From 1324-retire-debt-and-ready._
 
-### 1324-FR-010 — `grep -rni "ready to work\|notion-ready" AGENTS.md .claude --exclude-dir=worktrees` MUST print nothing.
+### 1324-FR-010 — A case-insensitive grep of AGENTS.md and `.claude` (worktrees excluded) for the retired ready label or the name of its old helper script MUST print nothing.
 
 _From 1324-retire-debt-and-ready._
 

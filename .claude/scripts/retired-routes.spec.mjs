@@ -8,7 +8,7 @@ import { join } from 'node:path';
 // not match itself.
 
 const root = join(import.meta.dirname, '..', '..');
-const pattern = ['ready', ' to ', 'work', '\\|', 'notion', '-ready'].join('');
+const pattern = ['ready', ' to ', 'work', '\\|', 'no', 'tion', '-ready'].join('');
 
 describe('the retired debt and ready routes', () => {
   // @traces 1324-FR-010
