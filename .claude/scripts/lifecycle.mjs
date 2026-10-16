@@ -16,9 +16,9 @@
 //
 // A hook only sees `node lifecycle.mjs …`, so every git and gh command is first
 // fed to the Bash gates settings.json registers (run-hook.mjs <id>), exactly as
-// Claude Code would: a refusal is the gate's own. In a cloud session gh's pr
-// commands then run through REST (lib/gh-rest.mjs), the gates still judging
-// the gh command as written. The tracker events go through tracker-sync.mjs
+// Claude Code would: a refusal is the gate's own. gh's PR reads then run
+// through REST (lib/gh-rest.mjs), and in a cloud session its writes too, the
+// gates still judging the gh command as written. The tracker events go through tracker-sync.mjs
 // (the story's GitHub issue and Project #11); a failing event stops the step
 // with the events left and the `--tracker-done` rerun that finishes it.
 // specs/ is its own repository (specs-repo.mjs): the feature records, the qa
@@ -405,33 +405,25 @@ function handoff(ctx, flags) {
   return { pr: Number(n), note: "restored" };
 }
 
-// A cloud session (CLAUDE_CODE_REMOTE=true) has no GraphQL, so gh pr view,
-// merge and comment fail there: the same steps go over REST, the merge as
-// `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`, which the merge gate
-// judges as it judges gh pr merge.
-const PR_JQ = "{number, state: (if .merged then \"MERGED\" else (.state | ascii_upcase) end), merge_commit_sha, title, head: .head.ref}";
+// gh pr view reads over REST everywhere (lib/gh-rest.mjs), and
+// the merge is `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`, which the
+// merge gate judges as it judges gh pr merge: neither spends GraphQL. A cloud
+// session has none at all, so its comment goes over REST too.
 
 /** A PR comment over REST: the body from a file. */
 const restComment = (n, file) => ["api", "-X", "POST", `repos/{owner}/{repo}/issues/${n}/comments`, "-F", `body=@${file}`];
 
 function merge(ctx, flags) {
   const cloud = ctx.env.CLAUDE_CODE_REMOTE === "true";
-  if (cloud && !/^\d+$/.test(String(flags.pr ?? "")))
-    throw new Stop("no --pr", "a cloud session has no GraphQL to find the branch's PR: run merge --pr <n>");
-  const viewPr = () =>
-    cloud
-      ? JSON.parse(ctx.gh("api", `repos/{owner}/{repo}/pulls/${flags.pr}`, "--jq", PR_JQ).stdout)
-      : JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url,title,headRefName").stdout);
-  const view = viewPr();
+  const view = JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url,title,headRefName").stdout);
   settleStory(ctx, flags, view.title);
   const n = String(view.number);
   if (view.state !== "MERGED") {
-    if (cloud) ctx.gh("api", "-X", "PUT", `repos/{owner}/{repo}/pulls/${n}/merge`, "-f", "merge_method=merge");
-    else ctx.gh("pr", "merge", n, "--merge");
+    ctx.gh("api", "-X", "PUT", `repos/{owner}/{repo}/pulls/${n}/merge`, "-f", "merge_method=merge");
     ctx.did.push("merged");
   }
-  const sha = cloud ? String(viewPr().merge_commit_sha ?? "") : ctx.gh("pr", "view", n, "--json", "mergeCommit", "--jq", ".mergeCommit.oid").stdout.trim();
-  const { stack: testStack, worktree } = stopTestStack(ctx, cloud ? view.head : view.headRefName);
+  const sha = ctx.gh("pr", "view", n, "--json", "mergeCommit", "--jq", ".mergeCommit.oid").stdout.trim();
+  const { stack: testStack, worktree } = stopTestStack(ctx, view.headRefName);
   const commentFile = join(ctx.feature.dir, "finish-comment.md");
   const hasComment = existsSync(commentFile);
   const [finish] = ctx.track([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} ${ctx.done}`);

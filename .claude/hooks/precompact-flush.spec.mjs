@@ -12,8 +12,10 @@ const GIT = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).t
 
 // The hook runs with only this directory on PATH, so the real gh (on a CI
 // runner it sits in /usr/bin) can never answer in its place.
+// gh's PR reads go over REST: the branch's pulls, then the pull itself.
+const MERGED_REST = `case "$*" in *head=*) echo '[[{"number":9,"state":"closed"}]]';; *) echo '{"number":9,"state":"closed","merged_at":"2026-10-16T00:00:00Z"}';; esac`;
 const GH = {
-  MERGED: 'echo \'{"state":"MERGED"}\'',
+  MERGED: MERGED_REST,
   OPEN: 'echo \'{"state":"OPEN"}\'',
   failing: 'echo "no pull requests found" >&2; exit 1',
   stalled: 'exec /bin/sleep 10',
@@ -85,7 +87,7 @@ describe('pre-compact flush', () => {
   it('leaves the run log unchanged once the PR is merged', () => {
     setup('Archived', { gh: 'MERGED' });
     untouched(run());
-    assert.match(readFileSync(join(bin, 'calls'), 'utf8'), /^pr view 900-demo --json state$/m);
+    assert.match(readFileSync(join(bin, 'calls'), 'utf8'), /^api repos\/\{owner\}\/\{repo\}\/pulls\?head=\{owner\}:900-demo&state=all/m);
   });
 
   it('appends the block when the PR cannot be read', () => {

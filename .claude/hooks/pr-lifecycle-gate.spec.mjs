@@ -506,17 +506,8 @@ describe('PR lifecycle gate — reading the PR', () => {
     assert.equal(readPr(BRANCH, '.', { env: {}, run: failing('HTTP 403: GitHub GraphQL is not available') }), null);
   });
 
-  it('on the laptop asks gh pr view for the fields it judges', () => {
-    const calls = [];
-    const run = (file, args) => {
-      calls.push([file, ...args].join(' '));
-      return { code: 0, stdout: JSON.stringify({ number: 7, state: 'OPEN', isDraft: true, labels: [], author: { login: 'george-hutanu' } }), stderr: '' };
-    };
-    assert.equal(readPr(BRANCH, '.', { env: {}, run }).pr.number, 7);
-    assert.deepEqual(calls, [`gh pr view ${BRANCH} --json author,commits,number,state,isDraft,labels,mergeable,statusCheckRollup,title`]);
-  });
-
-  it('in a cloud session reads it through REST and judges it the same', () => {
+  // @traces 1323-FR-001
+  it('reads it through REST, in a cloud session and on the laptop alike, and judges it the same', () => {
     const REPO = 'repos/{owner}/{repo}/';
     const routes = {
       [`pulls?head={owner}:${BRANCH}&state=all&per_page=100`]: [[{ number: 160 }]],
@@ -531,10 +522,13 @@ describe('PR lifecycle gate — reading the PR', () => {
       const hit = routes[args[1].replace(REPO, '')];
       return hit === undefined ? { code: 1, stdout: '', stderr: 'HTTP 403' } : { code: 0, stdout: JSON.stringify(hit), stderr: '' };
     };
-    const read = readPr(BRANCH, '.', { env: { CLAUDE_CODE_REMOTE: 'true' }, run });
-    assert.ok(calls.every((c) => c.startsWith('gh api ')), calls.join('\n'));
-    assert.deepEqual(read.pr.statusCheckRollup, [{ __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS' }]);
-    assert.equal(read.pr.mergeable, 'MERGEABLE');
-    assert.match(decide({ branch: BRANCH, ahead: 1, unpushed: 0, pr: read.pr }), /no agent-review status/);
+    for (const env of [{ CLAUDE_CODE_REMOTE: 'true' }, {}]) {
+      calls.length = 0;
+      const read = readPr(BRANCH, '.', { env, run });
+      assert.ok(calls.every((c) => c.startsWith('gh api ')), calls.join('\n'));
+      assert.deepEqual(read.pr.statusCheckRollup, [{ __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS' }]);
+      assert.equal(read.pr.mergeable, 'MERGEABLE');
+      assert.match(decide({ branch: BRANCH, ahead: 1, unpushed: 0, pr: read.pr }), /no agent-review status/);
+    }
   });
 });

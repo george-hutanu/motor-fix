@@ -364,53 +364,6 @@ describe('the negative cache', () => {
   });
 });
 
-// @traces 1182-FR-007
-describe('many made-up brands on one profile', () => {
-  it('fills one stored entry when every unknown brand answers under the no-brand key', async () => {
-    const cache = new CacheService(client());
-    const garage = randomUUID();
-    const shared = cacheKey('profile', garage, '-');
-    const read = async () => ({
-      key: shared,
-      tags: [`garage:${garage}`],
-      value: { id: garage },
-    });
-
-    await Promise.all(
-      Array.from({ length: 300 }, (_x, n) =>
-        cache.read({
-          key: cacheKey('profile', garage, `made-up-${n}`),
-          read,
-          soft: 600,
-        }),
-      ),
-    );
-
-    expect(await other.zcard(tagKey(`garage:${garage}`))).toBe(1);
-    expect(await other.exists(shared)).toBe(1);
-  });
-
-  it('answers a made-up brand from the no-brand entry without reading again', async () => {
-    const cache = new CacheService(client());
-    const garage = randomUUID();
-    const shared = cacheKey('profile', garage, '-');
-    const read = jest.fn(async () => ({
-      key: shared,
-      tags: [`garage:${garage}`],
-      value: 'plain',
-    }));
-
-    await cache.read({
-      key: cacheKey('profile', garage, 'zzz'),
-      read,
-      soft: 60,
-    });
-    await cache.read({ key: shared, read, soft: 60 });
-
-    expect(read).toHaveBeenCalledTimes(1);
-  });
-});
-
 // @traces 1182-FR-015
 describe('Redis failing', () => {
   const dead = () => {

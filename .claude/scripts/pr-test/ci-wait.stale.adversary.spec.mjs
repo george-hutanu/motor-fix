@@ -35,7 +35,7 @@ describe('a pending agent-review whose run is over', () => {
   for (const conclusion of ['cancelled', 'success', 'failure', 'timed_out', 'skipped']) {
     it(`ends the wait at once with one line and code 1 when its run is ${conclusion}`, async () => {
       const w = world({ checks: [pendingReview(900), { name: 'Checks', bucket: 'pending' }], runs: { 900: done(conclusion) } });
-      const out = await wait(w);
+      const out = await wait(w, { pollMs: 15_000 });
       assert.equal(out.code, 1);
       assert.equal(out.lines.length, 1);
       assert.match(out.lines[0], /agent-review/);
@@ -69,7 +69,7 @@ describe('a pending agent-review whose run is over', () => {
   it('ends once a run that was still going when first seen is over on a later poll', async () => {
     let n = 0;
     const w = world({ checks: [pendingReview(903)], runs: { 903: () => (++n < 3 ? { status: 'in_progress', conclusion: '' } : done('cancelled')) } });
-    const out = await wait(w);
+    const out = await wait(w, { pollMs: 15_000 });
     assert.equal(out.code, 1);
     assert.match(out.lines[0], /agent-review/);
     assert.ok(w.elapsed() <= 2 * 15_000 + 1, `${w.elapsed()} ms`);

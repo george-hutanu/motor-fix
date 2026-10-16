@@ -83,6 +83,7 @@ features:
   - 1200-transfer-cache-origin
   - 1169-prefetch-intent
   - 1176-replace-object-store
+  - 1323-rest-not-graphql
 ---
 
 # Capability: Platform
@@ -2125,6 +2126,26 @@ _From 1176-replace-object-store._
 ### 1176-FR-004 — The CI Compose stack step (which also runs the FR-003 test) and the E2E job's object storage step, the CI integration job (which starts the store so the FR-003 test runs there), the PR QA workflow's boot (`up --wait` bounded by the store's health check), the PR tester's compose plan and its local plan (the replacement's binary on the PATH, started inside the run directory on the lap's ports with the apps' keys, its pid file, stopped at teardown; 450-FR-001 and 450-FR-009, reworded in place to name the store generically) and the restore drill MUST boot the replacement in place of the retired store, and their existing specs MUST describe the replacement.
 
 _From 1176-replace-object-store._
+
+### 1323-FR-001 — `ghRun` (`gh-rest.mjs`) MUST answer `gh pr view`, `gh pr list` and `gh pr checks` over REST on the laptop as in the cloud, so `lifecycle.mjs` and the `stop:pr-lifecycle` gate read PRs, check runs and commit statuses over REST; the writes it translates (pr create/edit/ready/comment, label create) stay plain gh outside the cloud.
+
+_From 1323-rest-not-graphql._
+
+### 1323-FR-002 — The merge gate MUST read a PR named by number or URL over REST on the laptop as in the cloud; `lifecycle.mjs merge` MUST merge through `gh api -X PUT …/pulls/<n>/merge` and read the PR and its merge commit over REST everywhere.
+
+_From 1323-rest-not-graphql._
+
+### 1323-FR-003 — `dispatch.mjs` and `ci-wait.mjs` MUST read the PR's state, head, mergeability and checks over REST everywhere.
+
+_From 1323-rest-not-graphql._
+
+### 1323-FR-005 — `ci-wait.mjs` MUST poll at most once every 60 s, and a QA run already completed when the wait starts MUST return at once, before any other read.
+
+_From 1323-rest-not-graphql._
+
+### 1323-FR-007 — AGENTS.md MUST say REST is the default for these reads everywhere, in the "Agent replies" CI line and the cloud section.
+
+_From 1323-rest-not-graphql._
 
 ## Retired
 

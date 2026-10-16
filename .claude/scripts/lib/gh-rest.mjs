@@ -1,10 +1,10 @@
-// gh without GraphQL. A Claude Code cloud session (CLAUDE_CODE_REMOTE=true)
-// reaches GitHub through a proxy that answers every GraphQL call with 403, and
-// gh's `pr` commands are GraphQL. There, the commands the lifecycle scripts run
-// (pr list|view|create|edit|ready|comment|checks, label create) are answered
-// through `gh api` REST calls, in gh's own output shape: the GraphQL field names
-// for --json, --jq/-q, the URL `pr create` prints, gh's exit codes. Every other
-// command, and every command outside the cloud, is plain gh.
+// gh's reads without GraphQL. GraphQL is one 5000-point hourly budget that
+// every session on the account shares, and a cloud session's proxy refuses it
+// outright. So the PR reads the lifecycle scripts run (pr list|view|checks)
+// are answered through `gh api` REST calls everywhere, in gh's own output
+// shape: the GraphQL field names for --json, --jq/-q, gh's exit codes. In a
+// cloud session the writes (pr create|edit|ready|comment, label create) go the
+// same way; outside it they stay plain gh, as does every other command.
 //
 // `run(file, args, { input })` returns { code, stdout, stderr }; callers inject
 // their own (lifecycle.mjs gates first), tests a fake GitHub.
@@ -134,7 +134,14 @@ function rollup(run, sha) {
   ];
 }
 
-const pick = (pull, fields, run) => Object.fromEntries(fields.map((f) => [f, FIELDS[f] ? FIELDS[f](pull, run) : null]));
+/** The asked `--json` fields; one this translation lacks fails, as gh fails on a field it does not know. */
+const pick = (pull, fields, run) =>
+  Object.fromEntries(
+    fields.map((f) => {
+      if (!FIELDS[f]) throw new GhError(`Unknown JSON field: "${f}" (not read over REST by gh-rest.mjs)`);
+      return [f, FIELDS[f](pull, run)];
+    }),
+  );
 
 function currentBranch(run) {
   const r = run("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
@@ -287,21 +294,22 @@ function labelCreate(run, flags) {
 }
 
 const BARE = new Set(["draft", "force", "watch", "fill"]);
+const READS = new Set(["list", "view", "checks"]);
 
-/** The translation of one gh command, or null when it is not one the REST layer answers. */
-function translate(args) {
+/** The translation of one gh command, or null when it is not one the REST layer answers here. */
+function translate(args, cloud) {
   const [group, verb, ...rest_] = args;
-  if (group === "pr" && Object.hasOwn(PR, verb)) return (run, sleep) => PR[verb](run, flagsOf(rest_, BARE), sleep);
-  if (group === "label" && verb === "create") return (run) => labelCreate(run, flagsOf(rest_, BARE));
+  if (group === "pr" && Object.hasOwn(PR, verb) && (cloud || READS.has(verb))) return (run, sleep) => PR[verb](run, flagsOf(rest_, BARE), sleep);
+  if (cloud && group === "label" && verb === "create") return (run) => labelCreate(run, flagsOf(rest_, BARE));
   return null;
 }
 
 /**
- * One gh command: through REST in a cloud session when it is one the lifecycle
- * scripts run, else plain gh. Returns { code, stdout, stderr }.
+ * One gh command: a PR read through REST always, a lifecycle write through REST
+ * in a cloud session, else plain gh. Returns { code, stdout, stderr }.
  */
 export function ghRun(args, { run = spawnRun(), env = process.env, sleep = sleepSync } = {}) {
-  const translated = isCloud(env) ? translate(args) : null;
+  const translated = translate(args, isCloud(env));
   if (!translated) return run("gh", args);
   try {
     const out = translated(run, sleep);

@@ -50,13 +50,11 @@ export function lifetimes(
 }
 
 // What a read function answers: the value, the tags whose purge removes it,
-// whether it is a not-found or empty answer, and the key to store it under
-// when that is not the key read (an unknown brand fills the no-brand entry).
+// and whether it is a not-found or empty answer.
 export interface Filled<T> {
   value: T;
   tags?: string[];
   negative?: boolean;
-  key?: string;
 }
 
 export interface CacheRead<T> {
@@ -280,7 +278,7 @@ export class CacheService {
         this.redis.eval(
           STORE,
           1 + tags.length * 2,
-          filled.key ?? spec.key,
+          spec.key,
           ...tags.flatMap((tag) => [tagKey(tag), purgedKey(tag)]),
           JSON.stringify(entry),
           hardMs,

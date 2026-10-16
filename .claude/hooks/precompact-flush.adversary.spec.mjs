@@ -10,6 +10,9 @@ const FEATURE = 'specs/900-demo';
 const LOG_SEED = '# Auto run\n';
 const GIT = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim();
 
+// gh's PR reads go over REST: the branch's pulls, then the pull itself.
+const MERGED_REST = `case "$*" in *head=*) echo '[[{"number":9,"state":"closed"}]]';; *) echo '{"number":9,"state":"closed","merged_at":"2026-10-16T00:00:00Z"}';; esac`;
+
 let repo;
 let bin;
 const git = (...args) => execFileSync('git', args, { cwd: repo, stdio: 'ignore' });
@@ -96,7 +99,7 @@ describe('pre-compact flush, hostile inputs', () => {
   }
 
   it('leaves the log unchanged for a merged PR even when the spec says Draft', () => {
-    setup({ gh: `echo '{"state":"MERGED"}'` });
+    setup({ gh: MERGED_REST });
     writeFileSync(join(repo, FEATURE, 'spec.md'), '# Spec\n\n**Status**: Draft\n');
     assert.equal(run().status, 0);
     assert.equal(log(), LOG_SEED);

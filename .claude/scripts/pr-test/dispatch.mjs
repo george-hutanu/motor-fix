@@ -23,8 +23,9 @@
 // run as a dispatched lap would, exiting 2 while it has not completed. With
 // neither, it dispatches and watches the run, for a lap run by hand.
 //
-// A cloud session (CLAUDE_CODE_REMOTE=true) cannot dispatch (403) or use
-// GraphQL, so it dispatches nothing: the workflow starts by itself when the PR
+// The PR is read over REST everywhere (GraphQL is a budget every session
+// shares). A cloud session (CLAUDE_CODE_REMOTE=true) cannot dispatch (403),
+// so it dispatches nothing: the workflow starts by itself when the PR
 // is marked ready or pushed to, and this finds that pull_request run for the
 // head commit over REST and prints the same hand-off line. --flows, --routes
 // and --ref cannot reach such a run (it runs the default routes, no flows).
@@ -166,7 +167,7 @@ function readRun({ pr, sha, out, run, conclusion, nonce = null }) {
   return report.verdict === "failure" ? 1 : 0;
 }
 
-/** The PR's state and head over REST, shaped as `gh pr view --json state,headRefOid`. */
+/** The PR's state and head over REST, never GraphQL, shaped as `gh pr view --json state,headRefOid`. */
 function restPr(pr) {
   const p = JSON.parse(gh(["api", `repos/{owner}/{repo}/pulls/${pr}`]));
   return { state: String(p.state).toUpperCase(), headRefOid: p.head.sha };
@@ -220,7 +221,7 @@ async function main(argv) {
     return 64;
   }
   const cloud = process.env.CLAUDE_CODE_REMOTE === "true";
-  const info = cloud ? restPr(opt.pr) : JSON.parse(gh(["pr", "view", opt.pr, "--json", "state,headRefOid"]));
+  const info = restPr(opt.pr);
   if (info.state !== "OPEN") {
     console.error(`dispatch: PR #${opt.pr} is ${info.state}; nothing to test`);
     return 3;

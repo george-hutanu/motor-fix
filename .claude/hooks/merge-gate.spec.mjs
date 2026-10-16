@@ -251,7 +251,9 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
   });
 });
 
+// A numbered PR is read over REST everywhere; only a branch-only merge keeps gh's GraphQL read.
 describe('merge gate — reading a Dependabot PR\'s committers', () => {
+  const BRANCH = 'dependabot/npm_and_yarn/x';
   const view = (author) => JSON.stringify({ number: 82, author: { login: author }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }] });
   const rows = '{"sha":"aaa111","login":"web-flow","verified":true}\n';
   const ghOf = (author, committers) => {
@@ -263,19 +265,19 @@ describe('merge gate — reading a Dependabot PR\'s committers', () => {
   // @traces 610-FR-002
   it('reads the REST committers for a PR Dependabot opened, and only for it', async () => {
     const bot = ghOf('app/dependabot', { code: 0, stdout: rows, stderr: '' });
-    const pr = await readPr('82', bot.gh, { cloud: false });
+    const pr = await readPr(BRANCH, bot.gh, { cloud: false });
     assert.deepEqual(pr.commits[0].committer, { login: 'web-flow' });
     assert.equal(pr.commits[0].verified, true);
     assert.match(bot.calls[1].join(' '), /pulls\/82\/commits/);
     const human = ghOf('george-hutanu', { code: 0, stdout: rows, stderr: '' });
-    assert.equal((await readPr('82', human.gh, { cloud: false })).commits[0].committer, undefined);
+    assert.equal((await readPr(BRANCH, human.gh, { cloud: false })).commits[0].committer, undefined);
     assert.equal(human.calls.length, 1, 'no extra GitHub call for anyone else\'s PR');
   });
 
   // @traces 610-FR-002
   it('throws on a failed committer read, so the gate refuses with a retry; garbled rows leave the PR not exempt', async () => {
-    await assert.rejects(readPr('82', ghOf('app/dependabot', { code: 1, stdout: '', stderr: 'HTTP 502' }).gh, { cloud: false }), /committers: HTTP 502/);
-    const garbled = await readPr('82', ghOf('app/dependabot', { code: 0, stdout: 'not json', stderr: '' }).gh, { cloud: false });
+    await assert.rejects(readPr(BRANCH, ghOf('app/dependabot', { code: 1, stdout: '', stderr: 'HTTP 502' }).gh, { cloud: false }), /committers: HTTP 502/);
+    const garbled = await readPr(BRANCH, ghOf('app/dependabot', { code: 0, stdout: 'not json', stderr: '' }).gh, { cloud: false });
     assert.equal(garbled.commits[0].committer, undefined);
   });
 });
@@ -630,6 +632,17 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
     assert.deepEqual(got.statusCheckRollup.find((c) => c.context === 'agent-review'), { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS', description: 'PR QA lap 1 passed' });
     assert.deepEqual(got.statusCheckRollup.find((c) => c.name === 'CI OK'), { __typename: 'CheckRun', name: 'CI OK', workflowName: 'CI', status: 'COMPLETED', conclusion: 'SUCCESS', startedAt: '2026-10-05T07:01:00Z' });
     assert.equal(decideMerge(got), null);
+  });
+
+  // @traces 1323-FR-002
+  it('reads a numbered or URL PR over REST on the laptop too, with GraphQL unavailable', async () => {
+    for (const target of ['21', 'https://github.com/george-hutanu/motor-fix/pull/21']) {
+      const { gh, calls } = restGh();
+      const got = await readPr(target, gh, { cloud: false });
+      assert.equal(calls.filter((c) => c[0] !== 'api').length, 0, target);
+      assert.equal(got.headRefOid, HEAD);
+      assert.equal(decideMerge(got), null);
+    }
   });
 
   it('refuses on the REST read exactly as on the GraphQL one: a red check, a pending review', async () => {

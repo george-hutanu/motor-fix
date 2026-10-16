@@ -85,14 +85,14 @@ const rename = (id: string, name: string) =>
 
 const entry = (slug: string, brand = '-') => `v1:profile:${slug}:${brand}`;
 
-async function counts() {
+async function counts(kind: 'profile' | 'brands' = 'profile') {
   const { resourceMetrics } = await metricReader.collect();
   const found = resourceMetrics.scopeMetrics
     .flatMap((scope) => scope.metrics)
     .find((metric) => metric.descriptor.name === 'motorfix_cache_total');
   const by = Object.fromEntries(
     (found?.dataPoints ?? [])
-      .filter((point) => point.attributes['kind'] === 'profile')
+      .filter((point) => point.attributes['kind'] === kind)
       .map((point) => [point.attributes['outcome'], point.value as number]),
   );
   return {
@@ -151,6 +151,65 @@ describe('the profile through the cache service', () => {
     expect(
       (await other.zrange(`v1:tag:garage:${garage.id}`, '0', '-1')).sort(),
     ).toEqual([entry(garage.slug), entry(garage.slug, slug)].sort());
+  });
+
+  // @traces 1235-FR-001 1235-FR-003
+  it('serves a repeat of a made-up brand from the no-brand entry', async () => {
+    const garage = await garageOf();
+    const madeUp = `made-up-${randomUUID()}`;
+    const before = await counts();
+    const brandsBefore = await counts('brands');
+
+    const first = await read(garage.slug, { brand: madeUp });
+    const second = await read(garage.slug, { brand: madeUp });
+
+    expect([first.status, second.status]).toEqual([200, 200]);
+    expect(second.body.brand).toBeUndefined();
+    const after = await counts();
+    expect([after.miss - before.miss, after.hit - before.hit]).toEqual([1, 1]);
+    const brandsAfter = await counts('brands');
+    expect([
+      brandsAfter.miss - brandsBefore.miss,
+      brandsAfter.negative - brandsBefore.negative,
+    ]).toEqual([1, 1]);
+    expect(await other.exists(entry(garage.slug, madeUp))).toBe(0);
+  });
+
+  // @traces 1235-FR-001
+  it('answers any made-up brand from the cached no-brand profile', async () => {
+    const garage = await garageOf();
+    await read(garage.slug);
+    const before = await counts();
+
+    const res = await read(garage.slug, { brand: `nobody-${randomUUID()}` });
+
+    expect(res.status).toBe(200);
+    expect((await counts()).hit - before.hit).toBe(1);
+    expect((await counts()).miss - before.miss).toBe(0);
+  });
+
+  // @traces 1235-FR-002 1235-FR-003
+  it('keeps a held brand, retired too, in its own entry', async () => {
+    const slug = `opel-${randomUUID()}`;
+    await prisma.brand.create({
+      data: { active: false, key: slug, name: `Opel ${slug}`, slug },
+    });
+    const garage = await garageOf();
+    const before = await counts();
+    const brandsBefore = await counts('brands');
+
+    await read(garage.slug, { brand: slug });
+    const again = await read(garage.slug, { brand: slug });
+
+    expect(again.body.brand).toMatchObject({ slug, stance: 'does_not_take' });
+    expect(await other.exists(entry(garage.slug, slug))).toBe(1);
+    const after = await counts();
+    expect([after.miss - before.miss, after.hit - before.hit]).toEqual([1, 1]);
+    const brandsAfter = await counts('brands');
+    expect([
+      brandsAfter.miss - brandsBefore.miss,
+      brandsAfter.hit - brandsBefore.hit,
+    ]).toEqual([1, 1]);
   });
 
   it('reads PostgreSQL again once the garage’s tag is purged', async () => {
