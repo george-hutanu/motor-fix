@@ -25,8 +25,7 @@
 // GraphQL is one hourly budget every session on the account shares, and the
 // cloud refuses it, so `pr checks` and `pr view` go over REST everywhere
 // (lib/gh-rest.mjs: REST's true/false/null become MERGEABLE/CONFLICTING/
-// UNKNOWN), and a wait polls at most once a minute (SPECKIT_CI_POLL_S, never
-// below 60). A QA run that has already completed returns at once, before any
+// UNKNOWN), and a wait polls at most once a minute. A QA run that has already completed returns at once, before any
 // other read: the conflict is still read by the wait for CI before the merge,
 // and a conflicting PR gets no `CI OK` check, which the merge gate requires.
 import { ghRun, spawnRun } from "../lib/gh-rest.mjs";
@@ -133,7 +132,6 @@ if (isEntryPoint(import.meta.url)) {
     now: Date.now,
     noChecksMs: limit("SPECKIT_CI_NO_CHECKS_MIN", 10),
     waitMs: limit("SPECKIT_CI_WAIT_MIN", 120),
-    pollMs: Math.max(60, Number(process.env.SPECKIT_CI_POLL_S) || 60) * 1000,
   });
   for (const line of out.lines) console.log(line);
   process.exit(out.code);

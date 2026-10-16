@@ -51,7 +51,8 @@ describe('ci-wait with --run', () => {
     assert.equal(w.calls.filter((c) => c.startsWith('run view')).length, 3);
   });
 
-  // @traces 1323-FR-005 — a run already completed returns before any other read; the merge gate still refuses a conflicting PR
+  // A run already completed returns before any other read; the merge gate still refuses a conflicting PR.
+  // @traces 1323-FR-005
   it('returns a finished run at once, before reading whether the PR conflicts', async () => {
     const w = world({ mergeable: ['CONFLICTING'] });
     const out = await waitForCi({ pr: 5, run: 99, gh: w.gh, sleep: w.sleep, now: w.now });
