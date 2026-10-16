@@ -8,8 +8,6 @@ import {
   VERIFICATION_QUEUE_PAGE,
 } from './verification-target';
 
-export * from './verification-target';
-
 export class VerificationQueueQueryDto {
   @ApiPropertyOptional({ default: 0, maximum: 10_000, minimum: 0 })
   @IsOptional()

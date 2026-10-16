@@ -242,17 +242,26 @@ describe('the panel', () => {
     expect(button(el, 'Mai multe')).toBeUndefined();
   });
 
-  it('stops offering more at the 200 rows one read answers', async () => {
-    answer = async ({ limit = 20 }) => queueOf(Math.min(limit, 500), 500);
+  it('keeps offering more past 200, reading every row shown in reads of at most 200', async () => {
+    answer = async ({ limit = 20, offset = 0 }) => ({
+      items: Array.from(
+        { length: Math.max(0, Math.min(limit, 230 - offset)) },
+        (_, i) => row(offset + i + 1),
+      ),
+      total: 230,
+    });
     const el = await open();
 
-    for (let press = 0; press < 9; press++) {
+    for (let press = 0; press < 11; press++) {
       button(el, 'Mai multe')?.click();
       await settle();
     }
 
-    expect(asked.at(-1)).toEqual({ limit: 200, offset: 0 });
-    expect(rows(el)).toHaveLength(200);
+    expect(asked.slice(-2)).toEqual([
+      { limit: 200, offset: 0 },
+      { limit: 40, offset: 200 },
+    ]);
+    expect(rows(el)).toHaveLength(230);
     expect(button(el, 'Mai multe')).toBeUndefined();
   });
 

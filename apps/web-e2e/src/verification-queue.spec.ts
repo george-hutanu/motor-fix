@@ -122,17 +122,19 @@ test.describe('the verification queue @seeded', () => {
   });
 
   // @traces 301-FR-005 301-FR-012
-  test('reads on a 320 px phone with no sideways scroll', async ({ page }) => {
-    await page.setViewportSize({ height: 640, width: 320 });
-    await signInAsAdmin(page);
+  for (const width of [320, 834]) {
+    test(`reads ${width} px wide with no sideways scroll`, async ({ page }) => {
+      await page.setViewportSize({ height: 640, width });
+      await signInAsAdmin(page);
 
-    await expect(heading(page)).toHaveText(HEADING);
-    expect(await sideways(page)).toBeLessThanOrEqual(0);
+      await expect(heading(page)).toHaveText(HEADING);
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
 
-    await page.goto('/app/admin/garages');
-    await expect(
-      queue(page).locator('li.row', { hasText: 'Service Dobre' }),
-    ).toBeVisible();
-    expect(await sideways(page)).toBeLessThanOrEqual(0);
-  });
+      await page.goto('/app/admin/garages');
+      await expect(
+        queue(page).locator('li.row', { hasText: 'Service Dobre' }),
+      ).toBeVisible();
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+    });
+  }
 });

@@ -72,6 +72,7 @@ mf-lamp {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-4);
   font: inherit;

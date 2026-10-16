@@ -59,3 +59,4 @@ export * from './search-place';
 export * from './staff-invite.dto';
 export * from './verification-checks';
 export * from './verification-queue';
+export * from './verification-target';

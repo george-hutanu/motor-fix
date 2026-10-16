@@ -13,6 +13,7 @@ import {
 } from '@motor-fix/contracts/verification-target';
 import {
   AdminService,
+  type VerificationQueueDto,
   type VerificationQueueRowDto,
 } from '@motor-fix/data-access';
 import { appliedAt, formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
@@ -44,11 +45,7 @@ export class AdminQueue {
     : VERIFICATION_QUEUE_PAGE;
   private readonly pages = signal(1);
   private readonly queue = liveResource(
-    () =>
-      this.api.adminOverviewControllerQueue({
-        limit: this.pages() * this.pageSize,
-        offset: 0,
-      }),
+    () => this.read(this.pages() * this.pageSize),
     [
       'verification.submitted',
       'verification.opened',
@@ -85,13 +82,7 @@ export class AdminQueue {
     const value = this.queue.value();
     return value ? value.total > value.items.length : false;
   });
-  // One read answers at most VERIFICATION_QUEUE_MAX rows.
-  protected readonly more = computed(
-    () =>
-      !this.overview &&
-      this.hidden() &&
-      (this.pages() + 1) * this.pageSize <= VERIFICATION_QUEUE_MAX,
-  );
+  protected readonly more = computed(() => !this.overview && this.hidden());
   protected readonly all = computed(() => this.overview && this.hidden());
 
   showMore() {
@@ -101,6 +92,23 @@ export class AdminQueue {
 
   retry() {
     this.queue.reload();
+  }
+
+  // Every row shown, from offset 0, in reads of at most VERIFICATION_QUEUE_MAX
+  // rows (the most one read answers); a file that moved between two reads is
+  // kept once.
+  private async read(wanted: number): Promise<VerificationQueueDto> {
+    const reads: Promise<VerificationQueueDto>[] = [];
+    for (let offset = 0; offset < wanted; offset += VERIFICATION_QUEUE_MAX) {
+      const limit = Math.min(VERIFICATION_QUEUE_MAX, wanted - offset);
+      reads.push(this.api.adminOverviewControllerQueue({ limit, offset }));
+    }
+    const answers = await Promise.all(reads);
+    const seen = new Set<string>();
+    const items = answers
+      .flatMap((answer) => answer.items)
+      .filter((row) => !seen.has(row.id) && seen.add(row.id));
+    return { items, total: answers[0]?.total ?? items.length };
   }
 
   private t(key: string, params?: Record<string, string | number>) {
