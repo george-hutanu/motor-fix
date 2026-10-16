@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
+  VERIFICATION_QUEUE_MAX,
   VERIFICATION_QUEUE_PAGE,
   VERIFICATION_QUEUE_PANEL,
 } from '@motor-fix/contracts/verification-target';
@@ -84,7 +85,13 @@ export class AdminQueue {
     const value = this.queue.value();
     return value ? value.total > value.items.length : false;
   });
-  protected readonly more = computed(() => !this.overview && this.hidden());
+  // One read answers at most VERIFICATION_QUEUE_MAX rows.
+  protected readonly more = computed(
+    () =>
+      !this.overview &&
+      this.hidden() &&
+      (this.pages() + 1) * this.pageSize <= VERIFICATION_QUEUE_MAX,
+  );
   protected readonly all = computed(() => this.overview && this.hidden());
 
   showMore() {

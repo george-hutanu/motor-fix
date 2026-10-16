@@ -10,7 +10,6 @@ import {
   HttpStatus,
   Inject,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -33,7 +32,6 @@ import type {
   VerificationReopenReason,
 } from '../../generated/prisma/client';
 import { countApproval } from '../../metrics/product-counters';
-import { NotificationsService } from '../../notifications/notifications.service';
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
 
@@ -81,13 +79,10 @@ const refused = (detail: string) =>
 // same commit; a move, its history entry and its event commit together.
 @Injectable()
 export class VerificationService {
-  private readonly logger = new Logger('Verification');
-
   constructor(
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     @Inject(VERIFICATION_CONFIG) private readonly config: VerificationConfig,
-    private readonly notifications: NotificationsService,
   ) {}
 
   // Every garage on the platform, or only those placed in one city.
@@ -173,7 +168,6 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
-    await this.tellAdmins(tx, file);
     if (!this.config.skipManualApproval) return file;
     return this.decide(tx, SYSTEM, file.id, { outcome: 'approved' });
   }
@@ -287,7 +281,6 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
-    await this.tellAdmins(tx, file);
     return file;
   }
 
@@ -415,41 +408,6 @@ export class VerificationService {
       payload: { fileId: file.id, garageId: file.garageId, ...extra },
       subjectId: file.id,
     });
-  }
-
-  // Every active admin, once per sending: the event id carries the sending's
-  // time. The rows are the notifications service's own, written beside the
-  // caller's transaction, so a failure here never undoes the sending.
-  private async tellAdmins(
-    tx: Prisma.TransactionClient,
-    file: VerificationFile,
-  ) {
-    try {
-      const { webUrl } = this.config;
-      if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
-      const [garage, admins] = await Promise.all([
-        tx.garage.findUniqueOrThrow({
-          select: { name: true },
-          where: { id: file.garageId },
-        }),
-        tx.account.findMany({
-          select: { id: true },
-          where: { roles: { some: { role: 'admin' } }, status: 'active' },
-        }),
-      ]);
-      if (admins.length === 0) return;
-      await this.notifications.notify({
-        eventId: `verification.queued:${file.id}:${file.submittedAt.toISOString()}`,
-        kind: 'ADMIN_VERIFICATION_QUEUED',
-        params: { dashboard: `${webUrl}/app/admin`, garage: garage.name },
-        recipients: admins.map(({ id }) => id),
-        subjectId: file.id,
-      });
-    } catch (error) {
-      this.logger.error(
-        `file ${file.id} admins not told: ${(error as Error).message}`,
-      );
-    }
   }
 
   // The file's status and who set it, read after the refusal.

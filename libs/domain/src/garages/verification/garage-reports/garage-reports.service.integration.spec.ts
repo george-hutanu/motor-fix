@@ -12,7 +12,6 @@ import type { NotificationsService } from '../../../notifications/notifications.
 import {
   databaseUrl,
   fixtures,
-  noNotifications,
 } from '../../../notifications/notifications.testing';
 import { VerificationService } from '../verification.service';
 
@@ -42,14 +41,9 @@ let notify: Notify;
 const service = (options: { webUrl?: string } = { webUrl: WEB }) =>
   new GarageReportsService(
     prisma,
-    new VerificationService(
-      new AuditService(),
-      outbox,
-      {
-        skipManualApproval: false,
-      },
-      noNotifications,
-    ),
+    new VerificationService(new AuditService(), outbox, {
+      skipManualApproval: false,
+    }),
     new AuditService(),
     outbox,
     { notify } as unknown as NotificationsService,

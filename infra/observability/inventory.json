@@ -206,7 +206,7 @@
       "alerts": [
         "verification-result-failed"
       ],
-      "reason": "counted by motorfix_verification_result_total (built, skipped) on motorfix-queues; one VerificationResult log line per event with the file id, the decision and the owners told; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the alert fires on a job's final failure",
+      "reason": "counted by motorfix_verification_result_total (built, skipped) on motorfix-queues; one VerificationResult log line per event with the file id, the decision and the owners told, or for a sending (ST-301) the admins told; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the alert fires on a job's final failure",
       "story": "ST-209"
     },
     {

@@ -26,7 +26,6 @@ import { NotificationsProcessor } from '../notifications.processor';
 import {
   databaseUrl,
   fixtures,
-  noNotifications,
   redisUrlFor,
   testConfig,
   testPhoneConfig,
@@ -103,12 +102,7 @@ async function start(withRelay = false) {
 }
 
 const verification = (skipManualApproval = false) =>
-  new VerificationService(
-    new AuditService(),
-    outbox,
-    { skipManualApproval },
-    noNotifications,
-  );
+  new VerificationService(new AuditService(), outbox, { skipManualApproval });
 
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);
@@ -221,35 +215,35 @@ describe('telling a garage’s owners the verification result', () => {
     expect(await messages(mechanic)).toEqual([]);
   });
 
-  it('listens to verification.decided alone', () => {
+  it('listens to the decisions and the sendings', () => {
     expect(VERIFICATION_RESULT_CONSUMER.kinds).toEqual([
       'verification.decided',
+      'verification.submitted',
     ]);
   });
 
-  it.each([
-    'verification.reopened',
-    'verification.submitted',
-    'verification.opened',
-  ])('builds nothing for a %s event handed to it', async (kind) => {
-    const { file, owner } = await staffedGarage();
-    await decided(file.id, { outcome: 'approved' });
-    const { fanOut } = await start();
-    await prisma.outboxEvent.create({
-      data: {
-        audience: [`garage:${file.garageId}`],
-        kind,
-        payload: { fileId: file.id, garageId: file.garageId },
-        subjectId: file.id,
-      },
-    });
-    const before = await counted('skipped');
+  it.each(['verification.reopened', 'verification.opened'])(
+    'builds nothing for a %s event handed to it',
+    async (kind) => {
+      const { file, owner } = await staffedGarage();
+      await decided(file.id, { outcome: 'approved' });
+      const { fanOut } = await start();
+      await prisma.outboxEvent.create({
+        data: {
+          audience: [`garage:${file.garageId}`],
+          kind,
+          payload: { fileId: file.id, garageId: file.garageId },
+          subjectId: file.id,
+        },
+      });
+      const before = await counted('skipped');
 
-    await fanOut.handle((await jobOf(file.id, kind)).job);
+      await fanOut.handle((await jobOf(file.id, kind)).job);
 
-    expect(await messages(owner)).toEqual([]);
-    expect(await counted('skipped')).toBe(before + 1);
-  });
+      expect(await messages(owner)).toEqual([]);
+      expect(await counted('skipped')).toBe(before + 1);
+    },
+  );
 
   it('builds nothing, without failing, for a garage with no owner or only deleted ones', async () => {
     const empty = await staffedGarage('gol');
@@ -313,8 +307,9 @@ describe('the approved message each owner gets', () => {
     await start(true);
 
     await inTx((tx) => verification(true).submit(tx, SYSTEM, file.garageId));
-    await until('the approval message', () => handled.mock.calls.length >= 1);
-    await handled.mock.results[0].value;
+    // The sending's event, then the decision's.
+    await until('the approval message', () => handled.mock.calls.length >= 2);
+    await Promise.all(handled.mock.results.map((r) => r.value));
 
     const email = await emailOf(owner);
     expect(email?.params).toMatchObject({ decision: 'approved' });
@@ -530,5 +525,97 @@ describe('what the fan-out reports', () => {
     expect(lines[0]).toMatch(/\b2\b/);
     expect(lines[0]).not.toMatch(/CUI|@|motorfix\.test/);
     expect(lines[0]).not.toContain(slug);
+  });
+});
+
+// @traces 301-FR-010
+describe('telling the admins a file arrived', () => {
+  const queued = (accountId: string) =>
+    prisma.notification.findMany({
+      where: { accountId, fallbackOf: null, kind: 'ADMIN_VERIFICATION_QUEUED' },
+    });
+
+  // A garage with an owner and no file yet, sent as the service sends it.
+  async function sent() {
+    const garage = await prisma.garage.create({
+      data: { name: 'Auto Vest Motors', slug: `auto-vest-${randomUUID()}` },
+    });
+    const owner = await account('vest-owner', ['garage']);
+    await prisma.garageMember.create({
+      data: { accountId: owner, garageId: garage.id, role: 'owner' },
+    });
+    const file = await inTx((tx) =>
+      verification().submit(tx, { accountId: null, role: 'system' }, garage.id),
+    );
+    return { file, owner, ...(await jobOf(file.id, 'verification.submitted')) };
+  }
+
+  it('tells every active admin once, naming the garage, and nobody else', async () => {
+    const ioana = await account('Ioana', ['admin']);
+    const dan = await account('Dan', ['admin'], { language: 'en' });
+    const gone = await account('Gone', ['admin'], { status: 'suspended' });
+    const { file, job, owner } = await sent();
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+    await fanOut.handle(job);
+
+    for (const admin of [ioana, dan]) {
+      const rows = await queued(admin);
+      // The bell and the e-mail; a push needs a device.
+      expect(rows.map((r) => r.channel).sort()).toEqual(['email', 'in_app']);
+      expect(rows.every((r) => r.subjectId === file.id)).toBe(true);
+      expect(rows[0]?.params).toMatchObject({
+        dashboard: 'https://motorfix.test/app/admin',
+        garage: 'Auto Vest Motors',
+      });
+    }
+    expect(await queued(gone)).toEqual([]);
+    expect(await queued(owner)).toEqual([]);
+  });
+
+  it('tells them again when the file is sent again', async () => {
+    const ioana = await account('Ioana', ['admin']);
+    const first = await sent();
+    const { fanOut } = await start();
+    await fanOut.handle(first.job);
+    await inTx(async (tx) => {
+      await verification().decide(
+        tx,
+        SYSTEM,
+        first.file.id,
+        negative('more_requested'),
+      );
+      await verification().resend(
+        tx,
+        { accountId: null, role: 'system' },
+        first.file.id,
+      );
+    });
+    const again = await jobOf(first.file.id, 'verification.submitted');
+
+    await fanOut.handle(again.job);
+
+    expect(again.job.data.id).not.toBe(first.job.data.id);
+    expect(await queued(ioana)).toHaveLength(4);
+  });
+
+  it('skips an event whose file is gone', async () => {
+    await account('Ioana', ['admin']);
+    const { fanOut } = await start();
+
+    await fanOut.handle({
+      data: {
+        id: '9999',
+        kind: 'verification.submitted',
+        payload: { fileId: randomUUID(), garageId: randomUUID() },
+      },
+    } as never);
+
+    expect(
+      await prisma.notification.count({
+        where: { kind: 'ADMIN_VERIFICATION_QUEUED' },
+      }),
+    ).toBe(0);
   });
 });

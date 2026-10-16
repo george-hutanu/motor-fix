@@ -110,10 +110,7 @@ export class GaragesModule {
         PublicGaragesService,
         VerificationService,
         VerificationChecksService,
-        {
-          provide: VERIFICATION_CONFIG,
-          useValue: { ...verification, webUrl: email.webUrl },
-        },
+        { provide: VERIFICATION_CONFIG, useValue: verification },
         ...(observabilityUrl
           ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]
           : []),

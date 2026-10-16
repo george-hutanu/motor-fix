@@ -1,7 +1,6 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 
 import { emailConfig } from './email-config';
-import type { NotificationsService } from './notifications.service';
 import { phoneConfig } from './phone-config';
 import { AuditService } from '../audit/audit.service';
 import { AccountsService } from '../auth/accounts.service';
@@ -103,8 +102,3 @@ export function failWritesAfter(
     prisma.$transaction = real;
   };
 }
-
-// For a use case whose notifications a spec does not read.
-export const noNotifications = {
-  notify: () => Promise.resolve(0),
-} as unknown as NotificationsService;

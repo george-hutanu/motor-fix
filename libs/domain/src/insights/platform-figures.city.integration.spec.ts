@@ -8,11 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { outbox } from '../events/event.port';
 import { VerificationService } from '../garages/verification/verification.service';
-import {
-  databaseUrl,
-  fixtures,
-  noNotifications,
-} from '../notifications/notifications.testing';
+import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -121,14 +117,9 @@ describe('the figures of a city', () => {
   });
 
   it('counts the garages of the city waiting for verification', async () => {
-    const verification = new VerificationService(
-      new AuditService(),
-      outbox,
-      {
-        skipManualApproval: false,
-      },
-      noNotifications,
-    );
+    const verification = new VerificationService(new AuditService(), outbox, {
+      skipManualApproval: false,
+    });
     const system = { accountId: null, role: 'system' } as const;
     for (const city of [CLUJ, BUCHAREST, null]) {
       const { id } = await garage(city, 'draft');

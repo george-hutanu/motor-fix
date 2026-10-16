@@ -11,7 +11,6 @@ import type { Prisma } from '../../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
-  noNotifications,
 } from '../../../notifications/notifications.testing';
 import { VerificationService } from '../verification.service';
 
@@ -30,14 +29,9 @@ const REASON = { code: 'documents_unreadable', note: 'The CUI is blurred' };
 const checksService = (events: EventPort = outbox) =>
   new VerificationChecksService(new AuditService(), events);
 const files = () =>
-  new VerificationService(
-    new AuditService(),
-    outbox,
-    {
-      skipManualApproval: false,
-    },
-    noNotifications,
-  );
+  new VerificationService(new AuditService(), outbox, {
+    skipManualApproval: false,
+  });
 
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);

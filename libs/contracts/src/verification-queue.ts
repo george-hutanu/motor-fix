@@ -3,7 +3,10 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 import { CheckSummaryDto, type Lamp } from './verification-checks';
-import { VERIFICATION_QUEUE_PAGE } from './verification-target';
+import {
+  VERIFICATION_QUEUE_MAX,
+  VERIFICATION_QUEUE_PAGE,
+} from './verification-target';
 
 export * from './verification-target';
 
@@ -19,14 +22,14 @@ export class VerificationQueueQueryDto {
   @ApiPropertyOptional({
     default: VERIFICATION_QUEUE_PAGE,
     description: 'A live re-read asks for every row already shown',
-    maximum: 200,
+    maximum: VERIFICATION_QUEUE_MAX,
     minimum: 1,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(200)
+  @Max(VERIFICATION_QUEUE_MAX)
   limit?: number;
 }
 

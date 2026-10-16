@@ -1,43 +1,30 @@
 import { randomUUID } from 'node:crypto';
 
-import { Logger } from '@nestjs/common';
-
 import { VerificationService } from './verification.service';
 import { AuditService } from '../../audit/audit.service';
 import type { Actor } from '../../auth/policy';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { outbox } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
-import type { NotificationsService } from '../../notifications/notifications.service';
 import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
 
-// @traces 301-FR-001 301-FR-002 301-FR-003 301-FR-004 301-FR-006 301-FR-010 301-FR-011
+// @traces 301-FR-001 301-FR-002 301-FR-003 301-FR-004 301-FR-006 301-FR-011
 
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
-const WEB = 'https://motorfix.test';
 const NONE = {
   canAnswerQuotes: false,
   canMoveBookings: false,
   canRecordFinalPrice: false,
 };
-type Notify = jest.Mock<
-  Promise<number>,
-  [Parameters<NotificationsService['notify']>[0]]
->;
-
-let notify: Notify;
-const service = (webUrl: string | null = WEB) =>
-  new VerificationService(
-    new AuditService(),
-    outbox,
-    { skipManualApproval: false, webUrl: webUrl ?? undefined },
-    { notify } as unknown as NotificationsService,
-  );
+const service = () =>
+  new VerificationService(new AuditService(), outbox, {
+    skipManualApproval: false,
+  });
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);
 const page = (offset = 0, limit = 20) => ({ limit, offset });
@@ -47,7 +34,6 @@ let owner: Actor;
 
 beforeEach(async () => {
   await reset();
-  notify = jest.fn().mockResolvedValue(1);
   admin = {
     accountId: await account('Ioana Popa', ['admin']),
     garageId: null,
@@ -318,76 +304,5 @@ describe('the time of the latest sending', () => {
 
     expect(resent.submittedAt.getTime()).toBeGreaterThan(old.getTime());
     expect(reopened.submittedAt.getTime()).toBeGreaterThan(old.getTime());
-  });
-});
-
-describe("the admins' alert", () => {
-  it('goes once per sending to every active admin, naming the garage', async () => {
-    const dan = await account('Dan Ene', ['admin']);
-    const gone = await account('Gone', ['admin']);
-    await prisma.account.update({
-      data: { status: 'suspended' },
-      where: { id: gone },
-    });
-    const { id: garageId } = await garage();
-
-    const file = await inTx((tx) => service().submit(tx, owner, garageId));
-
-    expect(notify).toHaveBeenCalledTimes(1);
-    const [input] = notify.mock.calls[0];
-    expect(input).toMatchObject({
-      eventId: `verification.queued:${file.id}:${file.submittedAt.toISOString()}`,
-      kind: 'ADMIN_VERIFICATION_QUEUED',
-      params: { dashboard: `${WEB}/app/admin`, garage: 'Auto Vest Motors' },
-      subjectId: file.id,
-    });
-    expect([...input.recipients].sort()).toEqual([admin.accountId, dan].sort());
-  });
-
-  it('goes again, under a new event, when the file is resent', async () => {
-    const { id: garageId } = await garage();
-    const verification = service();
-    const file = await inTx((tx) => verification.submit(tx, owner, garageId));
-    await inTx((tx) =>
-      verification.decide(tx, admin, file.id, {
-        outcome: 'more_requested',
-        reason: { code: 'documents_unreadable', note: 'Blurred' },
-      }),
-    );
-
-    await inTx((tx) => verification.resend(tx, owner, file.id));
-
-    expect(notify).toHaveBeenCalledTimes(2);
-    const [first, second] = notify.mock.calls.map(([input]) => input.eventId);
-    expect(second).not.toBe(first);
-    expect(second).toMatch(new RegExp(`^verification\\.queued:${file.id}:`));
-  });
-
-  it('leaves the sending standing when it cannot be sent', async () => {
-    const error = jest
-      .spyOn(Logger.prototype, 'error')
-      .mockImplementation(() => undefined);
-    notify.mockRejectedValue(new Error('queue down'));
-    const { id: garageId } = await garage();
-
-    const file = await inTx((tx) => service().submit(tx, owner, garageId));
-
-    expect(
-      await prisma.verificationFile.count({ where: { id: file.id } }),
-    ).toBe(1);
-    expect(error).toHaveBeenCalled();
-    error.mockRestore();
-  });
-
-  it('is not sent without the web address', async () => {
-    const error = jest
-      .spyOn(Logger.prototype, 'error')
-      .mockImplementation(() => undefined);
-    const { id: garageId } = await garage();
-
-    await inTx((tx) => service(null).submit(tx, owner, garageId));
-
-    expect(notify).not.toHaveBeenCalled();
-    error.mockRestore();
   });
 });

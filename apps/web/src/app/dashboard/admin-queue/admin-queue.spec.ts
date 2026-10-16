@@ -242,6 +242,20 @@ describe('the panel', () => {
     expect(button(el, 'Mai multe')).toBeUndefined();
   });
 
+  it('stops offering more at the 200 rows one read answers', async () => {
+    answer = async ({ limit = 20 }) => queueOf(Math.min(limit, 500), 500);
+    const el = await open();
+
+    for (let press = 0; press < 9; press++) {
+      button(el, 'Mai multe')?.click();
+      await settle();
+    }
+
+    expect(asked.at(-1)).toEqual({ limit: 200, offset: 0 });
+    expect(rows(el)).toHaveLength(200);
+    expect(button(el, 'Mai multe')).toBeUndefined();
+  });
+
   it('says so when no file waits, with a count of 0', async () => {
     answer = async () => queueOf(0);
     const el = await open();

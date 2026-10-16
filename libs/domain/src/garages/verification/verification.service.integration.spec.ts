@@ -12,7 +12,6 @@ import type { Prisma } from '../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
-  noNotifications,
 } from '../../notifications/notifications.testing';
 
 // @traces 207-FR-001 207-FR-002 207-FR-003 207-FR-004 207-FR-008 207-FR-010
@@ -45,12 +44,7 @@ const NONE = {
 const SYSTEM = { accountId: null, role: 'system' } as const;
 
 const service = (skipManualApproval = false, events: EventPort = outbox) =>
-  new VerificationService(
-    new AuditService(),
-    events,
-    { skipManualApproval },
-    noNotifications,
-  );
+  new VerificationService(new AuditService(), events, { skipManualApproval });
 
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);
