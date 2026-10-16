@@ -15,6 +15,7 @@
 //     file --type <story|task|bug|tech debt|decision> --title <t> --body-file <f> [--epic EP-<n>] [--priority <p>]
 //     log [--pending] <event> <item> <text>
 //     check                                              read-only: does the token reach Project #11
+//     next [--epic EP-<n>]                               read-only: To do issues with no open blocker, by priority then number
 //
 // Prints one JSON line. Exit 0 (a GitHub failure is logged PENDING and retried
 // on the next run; a token without the project scope prints one line naming
@@ -31,6 +32,7 @@ import { ghSync } from "./lib/gh-rest.mjs";
 import { readState } from "./run-state.mjs";
 import { GitHubError, githubClient } from "./tracker/github.mjs";
 import { epicLabel, isContainer, READY_LABEL, statusOf, tracker } from "./tracker/issues.mjs";
+import { nextTasks } from "./tracker/next.mjs";
 import { decideReady } from "./tracker/ready.mjs";
 import { closesLine, pullPath } from "./tracker/repos.mjs";
 import { decide, recordPrior } from "./tracker/status.mjs";
@@ -45,7 +47,7 @@ const DATE_FIELD = { start: "Started", qa: "QA from", review: "QA from", finish:
 /** Content writes paced at 1 s: one event makes a handful, far under GitHub's 80 a minute. */
 const PACE_MS = 1000;
 const USAGE =
-  "usage: tracker-sync.mjs <start|implement|qa|review|unblock | blocked <reason> | finish --body-file <f>|--no-comment | pr <n> | debt | ready [--tick ids] [--hold ST-n=reason] | file --type <t> --title <t> --body-file <f> [--epic EP-n] [--priority p] | log [--pending] <event> <item> <text> | check> [--story ST-<n>] [--pr <n>]";
+  "usage: tracker-sync.mjs <start|implement|qa|review|unblock | blocked <reason> | finish --body-file <f>|--no-comment | pr <n> | debt | ready [--tick ids] [--hold ST-n=reason] | file --type <t> --title <t> --body-file <f> [--epic EP-n] [--priority p] | log [--pending] <event> <item> <text> | check | next [--epic EP-n]> [--story ST-<n>] [--pr <n>]";
 
 export const LOG_FILE = "tracker-sync.md";
 const logLine = ({ date, event, item, text }) => `- ${date} · ${event} · ${item} · ${text}`;
@@ -80,6 +82,7 @@ function usageError({ positional: [event, ...rest], flags }) {
     if (!flags["body-file"] || !existsSync(flags["body-file"])) return `file: no body file at ${flags["body-file"] ?? "(none)"}`;
     return null;
   }
+  if (event === "next") return flags.epic === undefined || /^EP-\d+$/.test(flags.epic) ? null : "next: --epic is EP-<n>";
   if (STATUS_EVENTS.has(event) || event === "debt" || event === "ready" || event === "check") return null;
   if (event === "pr") return /^\d+$/.test(rest[0] ?? "") ? null : "pr needs the PR number";
   if (event === "log") return rest.length >= 3 ? null : "log needs <event> <item> <text>";
@@ -116,7 +119,7 @@ export async function main(argv, io = {}) {
   const [event, ...rest] = parsed.positional;
   const date = isoDate(now());
   const feature = activeFeature(repo);
-  if (event !== "check" && event !== "file" && !feature) {
+  if (event !== "check" && event !== "file" && event !== "next" && !feature) {
     stderr("tracker-sync: no active feature (.specify/feature.json, or specs/<branch>/spec.md)");
     return 64;
   }
@@ -181,6 +184,17 @@ export async function main(argv, io = {}) {
   };
 
   try {
+    // Read-only and quota-light: one REST search, one GraphQL read per 100 issues.
+    if (event === "next") {
+      // A read is never queued PENDING or replayed: a failure exits 1 and says why.
+      try {
+        return done({ event, ...(parsed.flags.epic ? { epic: parsed.flags.epic } : {}), next: await nextTasks(github, { epic: parsed.flags.epic }) });
+      } catch (error) {
+        if (!(error instanceof GitHubError)) throw error;
+        stderr(`tracker-sync: next: ${scrub(error.message)}`);
+        return 1;
+      }
+    }
     const login = await assertProjectScope(github);
     if (event === "check") {
       const { number } = await t.project();

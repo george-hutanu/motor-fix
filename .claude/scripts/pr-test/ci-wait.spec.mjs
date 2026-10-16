@@ -97,6 +97,26 @@ describe('waiting for the QA run before the tail starts, and for CI before the m
   });
 });
 
+// @traces 1323-FR-005
+describe('sparing the API: one read a minute, none to wait for a finished run', () => {
+  it('polls CI and the QA run at most once every 60 s by default', async () => {
+    const ci = world({ checks: [[{ name: 'Checks', bucket: 'pending' }], green] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: ci.gh, sleep: ci.sleep, now: ci.now }), { code: 0, lines: [] });
+    assert.equal(ci.now(), 60_000);
+    const qa = world({ run: [{ status: 'in_progress', conclusion: '' }, done] });
+    assert.deepEqual(await waitForCi({ pr: 21, run: '123', gh: qa.gh, sleep: qa.sleep, now: qa.now }), { code: 0, lines: ['QA run: success'] });
+    assert.equal(qa.now(), 60_000);
+  });
+
+  it('returns at once, with one read of the run, when the QA run has already completed', async () => {
+    const w = world({ run: [done] });
+    assert.deepEqual(await waitForCi({ pr: 21, run: '123', gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: ['QA run: success'] });
+    assert.equal(w.now(), 0);
+    assert.equal(w.calls.filter((c) => c.startsWith('run view 123')).length, 1);
+    assert.equal(w.calls.filter((c) => c.startsWith('pr checks')).length, 0);
+  });
+});
+
 describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
   const conflict = { code: 3, lines: ['conflict: merge origin/main'] };
 
@@ -115,7 +135,7 @@ describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
   it('ends on a conflict while the QA run is polled, printing only the conflict', async () => {
     const w = world({ run: [{ status: 'in_progress', conclusion: '' }], mergeable: ['MERGEABLE', 'CONFLICTING'] });
     assert.deepEqual(await waitForCi({ pr: 21, run: '123', gh: w.gh, sleep: w.sleep, now: w.now }), conflict);
-    assert.equal(w.calls.filter((c) => c.startsWith('run view')).length, 1);
+    assert.equal(w.calls.filter((c) => c.startsWith('run view')).length, 2);
   });
 
   it('keeps polling while GitHub has not worked the state out, never calling it a conflict', async () => {
@@ -126,13 +146,13 @@ describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
     assert.equal(out.code, 1);
   });
 
-  it('reads the state on every poll of either wait', async () => {
+  it('reads the state on every poll of either wait, after a QA run that is still going', async () => {
     const ci = world({ checks: [[{ name: 'Checks', bucket: 'pending' }], green] });
     assert.deepEqual(await waitForCi({ pr: 21, gh: ci.gh, sleep: ci.sleep, now: ci.now }), { code: 0, lines: [] });
     assert.equal(ci.calls.filter((c) => c === 'pr view 21 --json mergeable').length, 2);
     const qa = world({ run: [{ status: 'queued', conclusion: '' }, done] });
     assert.deepEqual(await waitForCi({ pr: 21, run: '123', gh: qa.gh, sleep: qa.sleep, now: qa.now }), { code: 0, lines: ['QA run: success'] });
-    assert.equal(qa.calls.filter((c) => c === 'pr view 21 --json mergeable').length, 2);
+    assert.equal(qa.calls.filter((c) => c === 'pr view 21 --json mergeable').length, 1);
   });
 
   // @traces 1230-FR-010

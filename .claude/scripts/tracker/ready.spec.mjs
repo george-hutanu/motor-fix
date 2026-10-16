@@ -69,6 +69,12 @@ describe('the ready list', () => {
     ]);
     assert.deepEqual(ids(result.ready), ['ST-194', 'ST-20', 'ST-432', 'ST-441', 'ST-450', 'ST-479', 'ST-1000']);
   });
+
+  // @traces 1323-FR-006
+  it('puts Urgent, the Project\'s top priority, before Highest', () => {
+    const result = decideReady([item('ST-194', { priority: 'Highest' }), item('ST-1323', { priority: 'Urgent' })]);
+    assert.deepEqual(ids(result.ready), ['ST-1323', 'ST-194']);
+  });
 });
 
 const log = (...lines) => ['# Tracker sync — 490-ready-to-work', '', ...lines].join('\n');

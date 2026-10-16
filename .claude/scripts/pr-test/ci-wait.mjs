@@ -22,11 +22,13 @@
 // again); UNKNOWN, which GitHub answers until it has worked the state out, is
 // read again on the next poll.
 //
-// In a cloud session gh's GraphQL is refused, so `pr checks` goes through
-// .claude/scripts/gh.mjs, which reads it over REST (`pr view --json
-// mergeable` too: REST's true/false/null become MERGEABLE/CONFLICTING/UNKNOWN).
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+// GraphQL is one hourly budget every session on the account shares, and the
+// cloud refuses it, so `pr checks` and `pr view` go over REST everywhere
+// (lib/gh-rest.mjs: REST's true/false/null become MERGEABLE/CONFLICTING/
+// UNKNOWN), and a wait polls at most once a minute. A QA run that has already completed returns at once, before any
+// other read: the conflict is still read by the wait for CI before the merge,
+// and a conflicting PR gets no `CI OK` check, which the merge gate requires.
+import { ghRun, spawnRun } from "../lib/gh-rest.mjs";
 import { isEntryPoint } from "../lib/entry.mjs";
 import { realGh } from "./post.mjs";
 
@@ -52,14 +54,14 @@ async function conflictOrFailure(gh, pr) {
 }
 
 /** Polls `gh` until the run (when given) or else CI has finished, or a limit is reached; never throws. */
-export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 15_000 }) {
+export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 60_000 }) {
   const start = now();
   if (run) return waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs });
   let checks;
   for (;;) {
     const stop = await conflictOrFailure(gh, pr);
     if (stop) return stop;
-    // The cloud's gh.mjs keeps gh's plain exit codes under --json (8 pending,
+    // The REST layer keeps gh's plain exit codes under --json (8 pending,
     // 1 failing), so its answer is read whatever the code; real gh exits 0.
     const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link"]);
     checks = NO_CHECKS.test(out.stderr) ? [] : parsed(out.stdout);
@@ -101,12 +103,12 @@ const pendingReviewRun = (checks) =>
 /** The QA run's wait: until it has completed, whatever CI is doing. */
 async function waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs }) {
   for (;;) {
-    const stop = await conflictOrFailure(gh, pr);
-    if (stop) return stop;
     const out = await gh(["run", "view", String(run), "--json", "status,conclusion"]);
     const state = out.code === 0 ? parsed(out.stdout) : undefined;
     if (!state) return { code: 2, lines: [`QA run: ${String(out.stderr).trim() || "unreadable gh output"}`] };
     if (state.status === "completed") return { code: 0, lines: [`QA run: ${state.conclusion}`] };
+    const stop = await conflictOrFailure(gh, pr);
+    if (stop) return stop;
     if (now() - start >= waitMs) return { code: 1, lines: [`QA run: still ${state.status} after ${minutes(waitMs)} min`] };
     await sleep(pollMs);
   }
@@ -118,17 +120,9 @@ if (isEntryPoint(import.meta.url)) {
     console.error("usage: ci-wait.mjs <n> [--run <id>]");
     process.exit(64);
   }
-  const ghScript = join(dirname(fileURLToPath(import.meta.url)), "..", "gh.mjs");
-  const cloud = process.env.CLAUDE_CODE_REMOTE === "true";
-  const gh = async (args) => {
-    if (!cloud || args[0] !== "pr") return realGh(args);
-    const { execFileSync } = await import("node:child_process");
-    try {
-      return { code: 0, stdout: execFileSync(process.execPath, [ghScript, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }), stderr: "" };
-    } catch (error) {
-      return { code: error.status ?? 1, stdout: `${error.stdout ?? ""}`, stderr: `${error.stderr ?? error.message}` };
-    }
-  };
+  // Every read is bounded like realGh's: a hung gh never holds the wait the session sleeps on.
+  const bounded = spawnRun({ timeout: 60_000 });
+  const gh = async (args) => (args[0] === "pr" ? ghRun(args, { run: bounded }) : realGh(args));
   const limit = (name, fallback) => (Number(process.env[name]) || fallback) * 60_000;
   const out = await waitForCi({
     pr,

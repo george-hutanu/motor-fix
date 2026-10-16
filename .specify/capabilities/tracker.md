@@ -7,6 +7,7 @@ features:
   - 1135-drop-legacy-pr-body
   - 1169-prefetch-intent
   - 1132-hold-reason-commas
+  - 1323-rest-not-graphql
 ---
 
 # Capability: Tracker
@@ -114,6 +115,14 @@ _From 1132-hold-reason-commas._
 ### 1132-FR-005 — `debt` MUST title each task it files `ST-<issue number> <title>`, as `file` does, so a later `start` finds it.
 
 _From 1132-hold-reason-commas._
+
+### 1323-FR-004 — A GraphQL call of the tracker client (Project field writes and reads) answered with a rate limit or "submitted too quickly" MUST be tried again after 60 s, doubling each time, at most 5 tries in all, before it fails.
+
+_From 1323-rest-not-graphql._
+
+### 1323-FR-006 — `tracker-sync.mjs next [--epic EP-<n>]` MUST find the open issues without `needs-confirmation` (of the named epic only, when one is named) by REST issue search, read only their Project Status, Priority and blockers, keep those in To do with no open blocker, and print them ordered by Priority (Urgent, Highest, High, Medium, Low, none) then issue number, never reading the whole Project. (Changed 2026-10-16 on the owner's rule: the `ready to work` label is retired and the epic no longer orders the pick.)
+
+_From 1323-rest-not-graphql._
 
 ## Retired
 

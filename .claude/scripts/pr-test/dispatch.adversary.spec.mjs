@@ -13,12 +13,13 @@ afterEach(() => {
   while (dirs.length) rmSync(dirs.pop(), { recursive: true, force: true });
 });
 
-/** A gh on PATH that logs every call and answers `pr view` with an open PR. */
+/** A gh on PATH that logs every call, answers the REST pull read with an open PR and refuses GraphQL's `pr view`. */
 function sandbox() {
   const d = mkdtempSync(join(tmpdir(), 'dispatch-adv-'));
   dirs.push(d);
   const log = join(d, 'calls.log');
-  writeFileSync(join(d, 'gh'), `#!/bin/sh\necho "$*" >> "${log}"\ncase "$1 $2" in\n  "pr view") echo '{"state":"OPEN","headRefOid":"${'a'.repeat(40)}"}';;\n  *) echo '[]';;\nesac\n`);
+  const pull = `{"state":"open","head":{"sha":"${'a'.repeat(40)}"}}`;
+  writeFileSync(join(d, 'gh'), `#!/bin/sh\necho "$*" >> "${log}"\ncase "$*" in\n  "pr view"*) echo 'GraphQL: API rate limit exceeded' >&2; exit 1;;\n  "api repos/{owner}/{repo}/pulls/"*) echo '${pull}';;\n  *) echo '[]';;\nesac\n`);
   chmodSync(join(d, 'gh'), 0o755);
   return { d, log, calls: () => (existsSync(log) ? readFileSync(log, 'utf8') : '') };
 }
@@ -69,6 +70,15 @@ describe('dispatch --flows pre-check', () => {
     const f = join(sb.d, 'flows.mjs');
     writeFileSync(f, 'export default async () => {};\n');
     cli(sb, '12', '--flows', f, '--spec', join(sb.d, 'none.md'), '--no-wait');
+    assert.match(sb.calls(), /workflow run/);
+  }, 15_000);
+
+  // @traces 1323-FR-003
+  it('reads the PR over REST on the laptop, so a GraphQL refusal does not stop the dispatch', () => {
+    const sb = sandbox();
+    cli(sb, '12', '--no-wait');
+    assert.match(sb.calls(), /^api repos\/\{owner\}\/\{repo\}\/pulls\/12$/m);
+    assert.doesNotMatch(sb.calls(), /^pr view/m);
     assert.match(sb.calls(), /workflow run/);
   }, 15_000);
 });

@@ -66,13 +66,46 @@ describe('isCloud', () => {
   });
 });
 
+// @traces 1323-FR-001
 describe('outside the cloud', () => {
-  it('runs gh exactly as asked', () => {
-    const f = fake();
-    const r = gh(['pr', 'view', BRANCH, '--json', 'number'], f, {});
-    assert.deepEqual(f.calls, [{ file: 'gh', args: ['pr', 'view', BRANCH, '--json', 'number'], input: undefined }]);
-    assert.equal(r.stdout, `plain pr view ${BRANCH} --json number\n`);
+  const graphqlDown = (routes) => {
+    const f = fake(routes);
+    const run = (file, args, opts) =>
+      file === 'gh' && args[0] !== 'api' ? (f.calls.push({ file, args }), { code: 1, stdout: '', stderr: 'GraphQL: API rate limit already exceeded for user ID 1.' }) : f.run(file, args, opts);
+    return { ...f, run };
+  };
+
+  it('reads pr view, list and checks over REST, so a spent GraphQL quota does not stop them', () => {
+    const f = graphqlDown({
+      ...byBranch([pull()]),
+      'GET pulls/160': pull(),
+      'GET commits/head1/check-runs?per_page=100': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }] },
+      'GET commits/head1/status': { statuses: [] },
+      [`GET pulls?head={owner}:${BRANCH}&state=open&per_page=100`]: [pull()],
+    });
+    assert.equal(gh(['pr', 'view', '160', '--json', 'state,mergeable', '-q', '.mergeable'], f, {}).stdout, 'MERGEABLE\n');
+    assert.equal(gh(['pr', 'list', '--head', BRANCH, '--json', 'number', '-q', '.[0].number'], f, {}).stdout, '160\n');
+    const checks = gh(['pr', 'checks', '160', '--json', 'name,bucket'], f, {});
+    assert.equal(checks.code, 0, checks.stderr);
+    assert.deepEqual(JSON.parse(checks.stdout), [{ name: 'CI OK', bucket: 'pass' }]);
+    assert.deepEqual(f.calls.filter((c) => c.file === 'gh' && c.args[0] !== 'api'), []);
   });
+
+  it('fails on a --json field it does not read, as gh does, never answering null', () => {
+    const f = fake({ 'GET pulls/160': pull() });
+    const r = gh(['pr', 'view', '160', '--json', 'state,reviewDecision'], f, {});
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /Unknown JSON field: "reviewDecision"/);
+  });
+
+  for (const args of [['pr', 'create', '--draft', '--title', 't'], ['pr', 'ready', '160'], ['pr', 'comment', '160', '--body', 'b'], ['pr', 'edit', '160', '--add-label', 'QA'], ['label', 'create', 'QA']]) {
+    it(`runs gh ${args.slice(0, 2).join(' ')} exactly as asked`, () => {
+      const f = fake();
+      const r = gh(args, f, {});
+      assert.deepEqual(f.calls, [{ file: 'gh', args, input: undefined }]);
+      assert.equal(r.stdout, `plain ${args.join(' ')}\n`);
+    });
+  }
 });
 
 describe('in the cloud, commands it does not translate', () => {

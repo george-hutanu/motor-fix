@@ -21,8 +21,9 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const FINISHED = new Set(['Done', 'Merged']);
-const RANK = ['Highest', 'High', 'Medium', 'Low'];
-const rank = (priority) => (RANK.includes(priority) ? RANK.indexOf(priority) : RANK.length);
+const RANK = ['Urgent', 'Highest', 'High', 'Medium', 'Low'];
+/** A priority's place on the Project's ladder; none, or one off it, sorts last. */
+export const rank = (priority) => (RANK.includes(priority) ? RANK.indexOf(priority) : RANK.length);
 const number = (id) => Number(String(id).match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
 
 function holdOf(item) {
