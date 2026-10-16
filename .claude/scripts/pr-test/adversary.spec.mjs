@@ -10,11 +10,10 @@ import { fileURLToPath } from 'node:url';
 
 import { SEEDED, callEndpoints, changedEndpoints, exampleValue, firstId, roleFor, seedPassword } from './endpoints.mjs';
 import { cutOffFinding, readinessOutcome } from './findings.mjs';
-import { cleanStale, createBucket, localPlan, runDirPrefix, appEnv } from './services.mjs';
+import { cleanStale, localPlan, runDirPrefix, appEnv } from './services.mjs';
 import { missingReport, postVerdict } from './post.mjs';
 import { dropExpected, loadProblem, parseRoute, sessionCookie } from './sweep.mjs';
 
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 const secured = { security: [{ bearer: [] }] };
 const listen = (server, port = 0) => new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server.address().port)));
 const close = (server) => new Promise((resolve) => server.close(() => resolve()));
@@ -642,43 +641,6 @@ describe('an object store without Docker, odd inputs', () => {
     const env = appEnv({ ports, storage: true });
     assert.equal(plan.store.env.AWS_ACCESS_KEY_ID, env.STORAGE_ACCESS_KEY_ID);
     assert.match(env.STORAGE_ENDPOINT, /:55003/);
-  });
-});
-
-describe('creating the bucket, hostile answers', () => {
-  const ports = { postgres: 1, redis: 2, storage: 3 };
-
-  async function s3(status, body = '') {
-    const server = createServer((_req, res) => {
-      res.writeHead(status, { 'content-type': 'application/xml' });
-      res.end(body);
-    });
-    const port = await listen(server);
-    cleanups.push(() => close(server));
-    return appEnv({ ports: { ...ports, storage: port } });
-  }
-
-  it('rejects when nothing listens', { timeout: 30000 }, async () => {
-    const probe = createServer();
-    const port = await listen(probe);
-    await close(probe);
-    await assert.rejects(createBucket({ repoRoot, env: appEnv({ ports: { ...ports, storage: port } }) }));
-  });
-
-  it('rejects on a server error', { timeout: 30000 }, async () => {
-    const env = await s3(500, '<?xml version="1.0"?><Error><Code>InternalError</Code><Message>x</Message></Error>');
-    await assert.rejects(createBucket({ repoRoot, env }));
-  });
-
-  it('rejects on an empty 403', { timeout: 30000 }, async () => {
-    const env = await s3(403, '');
-    await assert.rejects(createBucket({ repoRoot, env }));
-  });
-
-  it('is fine twice in a row', async () => {
-    const env = await s3(200);
-    await createBucket({ repoRoot, env });
-    await createBucket({ repoRoot, env });
   });
 });
 

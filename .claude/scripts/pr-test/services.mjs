@@ -4,7 +4,6 @@
 // wait, and the cleanup of what a killed run left. Nothing here touches the
 // shared default ports other sessions use.
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
-import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { basename, join } from "node:path";
 
@@ -80,8 +79,8 @@ export const STORE_INNER_PORTS = ["s3.port.grpc", "master.port", "master.port.gr
  * directory, on the run's ports, and the object store beside them when
  * `storage` (the `weed` binary is on the PATH). It does not daemonize: the
  * caller spawns `store.cmd` detached, writes its pid to `store.pidFile`,
- * waits for `store.health` (the bucket, which it creates as it starts) and
- * creates the bucket again, which is fine. Without it there is no object
+ * waits for `store.health`, which answers once the bucket it creates as it
+ * starts exists. Without it there is no object
  * store and the caller reports storage down as a note.
  */
 export function localPlan({ dir, ports, storage = false }) {
@@ -122,25 +121,6 @@ export function localPlan({ dir, ports, storage = false }) {
     }),
     storage,
   };
-}
-
-/** Create the apps' bucket on the run's object store; one that is already there is fine. */
-export async function createBucket({ repoRoot, env }) {
-  const { CreateBucketCommand, S3Client } = createRequire(join(repoRoot, "package.json"))("@aws-sdk/client-s3");
-  const client = new S3Client({
-    endpoint: env.STORAGE_ENDPOINT,
-    region: env.STORAGE_REGION,
-    forcePathStyle: true,
-    maxAttempts: 1,
-    credentials: { accessKeyId: env.STORAGE_ACCESS_KEY_ID, secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY },
-  });
-  try {
-    await client.send(new CreateBucketCommand({ Bucket: env.STORAGE_BUCKET }));
-  } catch (error) {
-    if (error.name !== "BucketAlreadyOwnedByYou") throw error;
-  } finally {
-    client.destroy();
-  }
 }
 
 /** The start of a local run's directory name: the PR and the process that owns it. */

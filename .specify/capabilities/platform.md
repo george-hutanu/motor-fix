@@ -327,7 +327,7 @@ _From 159-form-saving._
 
 _From 516-production-release-queue._
 
-### 450-FR-001 — Without Docker, when the binary of the object store `docker-compose.yml` names is on the PATH, the local plan MUST start that store on the lap's own ports with its data inside the run directory and the apps' storage credentials, wait for it to answer, create the `motorfix` bucket (an existing bucket is fine), and stop it at teardown; the lap then reports storage booted.
+### 450-FR-001 — Without Docker, when the binary of the object store `docker-compose.yml` names is on the PATH, the local plan MUST start that store on the lap's own ports with its data inside the run directory and the apps' storage credentials, wait until its `motorfix` bucket exists, and stop it at teardown; the lap then reports storage booted.
 
 _From 450-pr-tester-env-gaps._
 

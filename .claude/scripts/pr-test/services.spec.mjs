@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { HEALTH, apiHealth, appEnv, cleanStale, composePlan, createBucket, freePorts, localPlan, runDirPrefix, waitForHttp } from './services.mjs';
+import { HEALTH, apiHealth, appEnv, cleanStale, composePlan, freePorts, localPlan, runDirPrefix, waitForHttp } from './services.mjs';
 
 const listen = (server, port = 0) =>
   new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server.address().port)));
@@ -132,7 +132,7 @@ describe('an object store without Docker', () => {
       assert.ok(flags.includes(flag), flag);
     }
     const bound = flags.filter((f) => /^-[a-z0-9.]+port[a-z.]*=\d+$/.test(f)).map((f) => Number(f.split('=')[1]));
-    assert.deepEqual(bound.filter(Boolean).sort(), [55003, ...inner], 'every port it listens on is one of the run\'s');
+    assert.deepEqual(bound.filter(Boolean).sort((a, b) => a - b), [55003, ...inner], 'every port it listens on is one of the run\'s');
     assert.ok(flags.includes('-s3.port.iceberg=0') && flags.includes('-s3.port.lance=0'), 'the fixed-port extras are off');
     const env = appEnv({ ports });
     assert.equal(plan.store.env.AWS_ACCESS_KEY_ID, env.STORAGE_ACCESS_KEY_ID);
@@ -145,47 +145,6 @@ describe('an object store without Docker', () => {
     const plan = localPlan({ dir: '/tmp/run', ports, storage: false });
     assert.equal(plan.storage, false);
     assert.equal(plan.store, undefined);
-  });
-
-  /** A fake S3 endpoint answering bucket creation with `status` and `body`. */
-  async function fakeS3(status, body = '') {
-    const seen = [];
-    const server = createServer((req, res) => {
-      seen.push(`${req.method} ${req.url}`);
-      res.writeHead(status, { 'content-type': 'application/xml' });
-      res.end(body);
-    });
-    const port = await listen(server);
-    return { server, seen, env: appEnv({ ports: { ...ports, storage: port } }) };
-  }
-  const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-
-  it('creates the bucket the apps use', async () => {
-    const s3 = await fakeS3(200);
-    try {
-      await createBucket({ repoRoot, env: s3.env });
-      assert.ok(s3.seen.some((l) => /^PUT \/motorfix\/?$/.test(l)), s3.seen.join(', '));
-    } finally {
-      await close(s3.server);
-    }
-  });
-
-  it('accepts a bucket that is already there', async () => {
-    const s3 = await fakeS3(409, '<?xml version="1.0"?><Error><Code>BucketAlreadyOwnedByYou</Code><Message>yours</Message></Error>');
-    try {
-      await createBucket({ repoRoot, env: s3.env });
-    } finally {
-      await close(s3.server);
-    }
-  });
-
-  it('fails on any other refusal', async () => {
-    const s3 = await fakeS3(403, '<?xml version="1.0"?><Error><Code>AccessDenied</Code><Message>no</Message></Error>');
-    try {
-      await assert.rejects(createBucket({ repoRoot, env: s3.env }));
-    } finally {
-      await close(s3.server);
-    }
   });
 });
 

@@ -57,7 +57,6 @@ import {
   appEnv,
   cleanStale,
   composePlan,
-  createBucket,
   externalPlan,
   freePorts,
   localPlan,
@@ -336,12 +335,10 @@ async function main(argv) {
         });
         const h = await waitForHttp(plan.store.health, { timeoutMs: 30000, intervalMs: 250 });
         log(`health storage: ${h.ok ? `HTTP ${h.status}` : h.error}`);
-        if (!h.ok) findings.push(stepFinding("The object store did not come up", `${h.error}; see ${join(logs, "storage.out.log")}`));
-        else
-          await createBucket({ repoRoot, env })
-            .then(() => log(`bucket ${env.STORAGE_BUCKET} ready`))
-            .catch((error) => findings.push(stepFinding("Bucket setup failed", String(error.message).split("\n")[0])));
-        if (findings.length) return finish();
+        if (!h.ok) {
+          findings.push(stepFinding("The object store did not come up", `${h.error}; see ${join(logs, "storage.out.log")}`));
+          return finish();
+        }
       }
     }
     booted.push("postgres", "redis", ...(plan.storage ? ["storage"] : []));
