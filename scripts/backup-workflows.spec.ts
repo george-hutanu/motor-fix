@@ -171,6 +171,15 @@ describe('the restore drill workflow', () => {
     );
     expect(text).not.toMatch(/\bmc\b/);
   });
+
+  // @traces 1175-FR-001 1175-FR-004
+  it('starts its throw-away store from the Valkey image, refusing writes rather than evicting', () => {
+    const text = read('scripts', 'backup', 'restore-drill.sh');
+    expect(text).toMatch(
+      /docker run [^\n]*"\$REDIS"[^\n]* valkey\/valkey:9 valkey-server --maxmemory-policy noeviction/,
+    );
+    expect(text).not.toMatch(/redis:\d|redis-server|redis-cli/);
+  });
 });
 
 // @traces 251-FR-013 251-FR-017

@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-14
+updated: 2026-10-15
 features:
   - 253-live-connection
   - 254-live-audience
@@ -15,6 +15,7 @@ features:
   - 261-maintenance-mode
   - 260-rule-off-confirm
   - 267-brand-results
+  - 1175-valkey
 ---
 
 # Capability: Live updates
@@ -362,6 +363,10 @@ _From 267-brand-results._
 ### 267-FR-021 — A changed value is highlighted for 1 second (none with reduced motion) and announced politely, and no live update reloads the page, changes the route or moves focus (256-FR-005, FR-009, FR-010).
 
 _From 267-brand-results._
+
+### 1175-FR-009 — The clients MUST run on ioredis's default protocol (RESP3, `replyMapping: "legacy"`): no client pins `protocol`, except the live subscriber, which MUST be pinned to `protocol: 2` if and only if a live-update test (publisher, subscriber and relay specs in Jest; the web-e2e live scenarios) fails twice under RESP3 against Valkey 9 and passes under `protocol: 2` on the same head; the pin, when made, carries a comment naming the failing case and the plan records it.
+
+_From 1175-valkey._
 
 ## Retired
 

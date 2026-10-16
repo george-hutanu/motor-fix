@@ -36,7 +36,7 @@ describe('cloud-setup.sh image check, hostile inputs', () => {
   // @traces 768-FR-001
   it('skips the pull for images named by registry and digest', () => {
     const digest = `ghcr.io/org/pg@sha256:${'a'.repeat(64)}`;
-    const { run, pulled } = scene({ config: `${digest}\nredis:7-alpine\n`, present: [digest, 'redis:7-alpine'] });
+    const { run, pulled } = scene({ config: `${digest}\nvalkey/valkey:9-alpine\n`, present: [digest, 'valkey/valkey:9-alpine'] });
     const out = run();
     assert.equal(out.status, 0, out.stderr + out.stdout);
     assert.equal(pulled(), false);

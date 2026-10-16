@@ -18,9 +18,9 @@ describe('cloud-setup fixture docker stub', () => {
   });
 
   it('inspects only the images present, never an empty or padded name', () => {
-    const vm = setup({ docker: true, present: ['redis:7', ''] });
-    assert.equal(docker(vm, 'image', 'inspect', 'redis:7').status, 0);
-    assert.notEqual(docker(vm, 'image', 'inspect', 'redis:7 ').status, 0);
+    const vm = setup({ docker: true, present: ['valkey/valkey:9', ''] });
+    assert.equal(docker(vm, 'image', 'inspect', 'valkey/valkey:9').status, 0);
+    assert.notEqual(docker(vm, 'image', 'inspect', 'valkey/valkey:9 ').status, 0);
     assert.notEqual(docker(vm, 'image', 'inspect', '').status, 0);
     assert.notEqual(docker(vm, 'image', 'inspect', 'postgres:16').status, 0);
   });

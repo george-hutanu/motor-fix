@@ -156,7 +156,7 @@ export class RemindersModule
           provide: REMINDERS_JOBS,
           useFactory: () => {
             const queue = new Queue(REMINDERS_QUEUE, {
-              connection: { url: options.redisUrl },
+              connection: { maxRetriesPerRequest: null, url: options.redisUrl },
               telemetry: queueTelemetry(),
             });
             observeQueue(queue);

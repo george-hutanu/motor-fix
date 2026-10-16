@@ -76,7 +76,7 @@
             "service": "redis"
           },
           "annotations": {
-            "summary": "Redis has used more than 80% of its maximum memory (or more than 256 MiB when none is set) for 5 minutes ({{ $labels.deployment_environment }}).",
+            "summary": "Redis has used more than 70% of its maximum memory (or more than 224 MiB when none is set) for 5 minutes ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-redis"
           },
           "notification_settings": {
@@ -114,7 +114,7 @@
                     "evaluator": {
                       "type": "gt",
                       "params": [
-                        0.8
+                        0.7
                       ]
                     }
                   }

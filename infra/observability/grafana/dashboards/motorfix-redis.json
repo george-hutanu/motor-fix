@@ -316,6 +316,15 @@
           },
           "expr": "max(motorfix_redis_memory_max_bytes{deployment_environment=\"$env\"})",
           "legendFormat": "max"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "0.7 * clamp_min(max(motorfix_redis_memory_max_bytes{deployment_environment=\"$env\"}), 335544320)",
+          "legendFormat": "alert (70 %)"
         }
       ],
       "fieldConfig": {

@@ -13,7 +13,7 @@ import {
   type Provider,
 } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
 
 import { BellController } from './bell/bell.controller';
 import { BellService } from './bell/bell.service';
@@ -73,6 +73,7 @@ import { createPrisma, PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
+import { borrowStore, returnStore } from '../store/store';
 
 interface NotificationsOptions {
   databaseUrl: string;
@@ -100,11 +101,14 @@ function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
       provide: NOTIFICATIONS_JOBS,
       useFactory: () =>
         new Queue(NOTIFICATIONS_QUEUE, {
-          connection: { url: options.redisUrl },
+          connection: { maxRetriesPerRequest: null, url: options.redisUrl },
           telemetry: queueTelemetry(),
         }),
     },
-    { provide: LIVE_PUBLISHER, useFactory: () => new Redis(options.redisUrl) },
+    {
+      provide: LIVE_PUBLISHER,
+      useFactory: () => borrowStore(options.redisUrl),
+    },
     { provide: PUSH_CONFIG, useValue: options.push ?? null },
     { provide: AUDIT_PORT, useClass: AuditService },
   ];
@@ -394,7 +398,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.verificationResultWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
-    this.publisher.disconnect();
+    await returnStore(this.publisher);
     // In the API the client is AuthModule's, which closes it.
     if (this.worker !== undefined) await this.prisma.$disconnect();
   }

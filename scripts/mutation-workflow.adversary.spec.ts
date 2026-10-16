@@ -69,7 +69,10 @@ describe('the matrix job', () => {
     expect(services).toMatch(
       /postgres:\n(?: {8}.+\n)*? {8}image: postgis\/postgis/,
     );
-    expect(services).toMatch(/redis:\n(?: {8}.+\n)*? {8}image: redis/);
+    expect(services).toMatch(
+      /redis:\n(?: {8}.+\n)*? {8}image: valkey\/valkey:9\n/,
+    );
+    expect(services).toContain('--health-cmd "valkey-cli ping"');
     expect(services.match(/--health-cmd/g)).toHaveLength(2);
     expect(services).toMatch(/'5432:5432'/);
     expect(services).toMatch(/'6379:6379'/);

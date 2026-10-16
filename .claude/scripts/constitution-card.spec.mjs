@@ -104,4 +104,18 @@ describe('the author skills', () => {
       .map(({ line, at }) => `speckit-${name}/SKILL.md:${at}: ${line.trim()}`);
     assert.deepEqual(loads, []);
   });
+
+  // @traces 1175-FR-011
+  it('names Valkey as the store in principles II, III, IV and VI, in the constitution and the card', () => {
+    const card = readFileSync(CARD, 'utf8');
+    const full = readFileSync(join(memory, 'constitution.md'), 'utf8');
+    const section = (n, next) => full.slice(full.indexOf(`### ${n}.`), full.indexOf(`### ${next}.`));
+    for (const text of [section('II', 'III'), section('III', 'IV'), section('IV', 'V'), section('VI', 'VII')]) {
+      assert.match(text, /Valkey/);
+    }
+    for (const n of ['II', 'III', 'VI']) {
+      assert.match(card.split('\n').find((line) => line.startsWith(`- **${n}.`)), /Valkey/);
+    }
+    assert.ok(atLeast(full, 3, 3));
+  });
 });
