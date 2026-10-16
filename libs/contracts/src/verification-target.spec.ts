@@ -3,7 +3,7 @@ import {
   VERIFICATION_QUEUE_PAGE,
   VERIFICATION_QUEUE_PANEL,
   VERIFICATION_TARGET_WORKING_DAYS,
-} from './verification-queue';
+} from './verification-target';
 
 // @traces 301-FR-002 301-FR-004
 

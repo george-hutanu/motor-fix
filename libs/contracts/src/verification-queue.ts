@@ -2,30 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
-import {
-  CheckSummaryDto,
-  type Lamp,
-  type VerificationCheckResult,
-} from './verification-checks';
+import { CheckSummaryDto, type Lamp } from './verification-checks';
+import { VERIFICATION_QUEUE_PAGE } from './verification-target';
 
-// The target shown to garages is 1 to 2 working days: a file that has
-// waited longer is flagged in the admins' queue.
-export const VERIFICATION_TARGET_WORKING_DAYS = 2;
-export const VERIFICATION_QUEUE_PAGE = 20;
-export const VERIFICATION_QUEUE_PANEL = 5;
-
-// A row's one lamp: a failed check first, then the flag or a warning, then
-// any check passed.
-export function queueLamp(
-  checks: readonly { result: VerificationCheckResult }[],
-  flagged: boolean,
-): Lamp {
-  const has = (result: VerificationCheckResult) =>
-    checks.some((check) => check.result === result);
-  if (has('failed')) return 'red';
-  if (flagged || has('warning')) return 'amber';
-  return has('ok') ? 'green' : 'grey';
-}
+export * from './verification-target';
 
 export class VerificationQueueQueryDto {
   @ApiPropertyOptional({ default: 0, maximum: 10_000, minimum: 0 })

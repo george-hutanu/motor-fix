@@ -152,6 +152,7 @@
         "apps/web/src/app/consent/consent-bar/consent-bar.html",
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
+        "apps/web/src/app/dashboard/admin-queue/admin-queue.html",
         "apps/web/src/app/dashboard/driver-home/driver-home.html",
         "apps/web/src/app/dashboard/due-date-line/due-date-line.html",
         "apps/web/src/app/dashboard/frame/frame.html",

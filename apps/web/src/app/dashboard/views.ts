@@ -85,6 +85,8 @@ export const DASHBOARDS: Record<
         capability: 'admin.garages',
         counter: 'garagesWaiting',
         label: 'shell.frame.nav.admin.garages',
+        load: () =>
+          import('./admin-queue/admin-queue').then((m) => m.AdminQueue),
         path: 'garages',
         tab: 'shell.frame.tab.garages',
       },

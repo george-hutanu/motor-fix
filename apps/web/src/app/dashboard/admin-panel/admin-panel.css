@@ -101,3 +101,6 @@ button {
     font-size: var(--mf-size-heading);
   }
 }
+mf-admin-queue {
+  grid-column: 1 / -1;
+}

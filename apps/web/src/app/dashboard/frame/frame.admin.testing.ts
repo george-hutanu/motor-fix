@@ -119,6 +119,7 @@ export async function renderAdmin(url = '/app/admin') {
               ...(city && { cityGaragesWaiting: CITY_WAITING[city] }),
             };
           },
+          adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
         },
       },
     ],

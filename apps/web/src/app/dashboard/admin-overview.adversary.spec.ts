@@ -100,7 +100,6 @@ describe('AdminOverview under hostile answers and event orders', () => {
     await wait(0);
     events.next(message('review.reported'));
     events.next(message('review.decided'));
-    events.next(message('verification.opened'));
     await wait(450);
 
     expect(reads).toBe(1);

@@ -1,0 +1,126 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Phones stack the row; wide screens line it up, the button at its end. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mf-space-2);
+  padding: var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+}
+.row:first-child,
+.skeleton-row:first-child {
+  border-top: 0;
+}
+@media (min-width: 900px) {
+  .row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, auto) auto;
+    align-items: center;
+    gap: var(--mf-space-3);
+  }
+}
+.who,
+.state {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+.name {
+  font-weight: 700;
+  color: var(--mf-text);
+  overflow-wrap: anywhere;
+}
+.area,
+.applied,
+.waiting {
+  font-size: var(--mf-size-body);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.waiting {
+  color: var(--mf-text);
+  font-weight: 600;
+}
+mf-lamp {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) {
+  .area,
+  .applied,
+  .waiting,
+  mf-lamp {
+    font-size: var(--mf-size-small);
+  }
+}
+@media (min-width: 900px) {
+  .applied {
+    white-space: nowrap;
+  }
+}
+.open,
+.all,
+.retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-4);
+  font: inherit;
+  font-weight: 600;
+  color: var(--mf-text);
+  text-decoration: none;
+  background: var(--mf-panel-raised);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  cursor: pointer;
+}
+.open {
+  width: 100%;
+}
+@media (min-width: 900px) {
+  .open {
+    width: auto;
+    white-space: nowrap;
+  }
+}
+.all,
+.more {
+  margin-top: var(--mf-space-3);
+}
+.open:focus-visible,
+.all:focus-visible,
+.retry:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
+  outline-offset: var(--mf-focus-offset);
+}
+.skeleton-row {
+  padding: var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+}
+.skeleton {
+  display: block;
+  height: 1em;
+  width: 70%;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.empty,
+.failed p {
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.failed {
+  display: grid;
+  justify-items: start;
+  gap: var(--mf-space-3);
+  padding-top: var(--mf-space-3);
+}
