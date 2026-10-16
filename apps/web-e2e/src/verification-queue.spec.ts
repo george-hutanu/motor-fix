@@ -28,6 +28,11 @@ const queue = (page: Page) => page.locator('mf-admin-queue');
 const heading = (page: Page) => queue(page).locator('h2');
 const counted = async (page: Page) =>
   Number(HEADING.exec((await heading(page).textContent())?.trim() ?? '')?.[1]);
+// The dashboard menu: the side menu from a tablet up, the tab bar on a phone.
+const menu = (page: Page) =>
+  (page.viewportSize()?.width ?? 1280) < 768
+    ? page.locator('mf-dashboard-tab-bar nav')
+    : page.locator('aside nav');
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
@@ -59,79 +64,82 @@ test.describe('the verification queue @seeded', () => {
     await db.end();
   });
 
-  // @traces 301-FR-001 301-FR-005 301-FR-006 301-FR-009
-  test('lists the waiting files oldest first and gains a new one without a reload', async ({
-    page,
-  }) => {
-    await signInAsAdmin(page);
-    await page.goto('/app/admin/garages');
+  // @traces 301-FR-001 301-FR-005 301-FR-006 301-FR-009 301-FR-013
+  for (const width of [undefined, 320]) {
+    test(`lists the waiting files oldest first and gains a new one without a reload${width ? ` at ${width} px` : ''}`, async ({
+      page,
+    }) => {
+      if (width) await page.setViewportSize({ height: 640, width });
+      await signInAsAdmin(page);
+      await page.goto('/app/admin/garages');
 
-    // The seed's two: Service Dobre sent a week ago and is flagged.
-    const dobre = queue(page).locator('li.row', { hasText: 'Service Dobre' });
-    await expect(dobre.locator('.waiting')).toHaveText(
-      /^așteaptă de \d+ (de )?zile lucrătoare$/,
-    );
-    await expect(dobre.locator('mf-lamp')).toHaveAttribute(
-      'data-state',
-      'amber',
-    );
-    const names = await queue(page).locator('li.row .name').allTextContents();
-    expect(names.indexOf('Service Dobre')).toBeLessThan(
-      names.indexOf('Atelier Dinamo'),
-    );
+      // The seed's two: Service Dobre sent a week ago and is flagged.
+      const dobre = queue(page).locator('li.row', { hasText: 'Service Dobre' });
+      await expect(dobre.locator('.waiting')).toHaveText(
+        /^așteaptă de \d+ (de )?zile lucrătoare$/,
+      );
+      await expect(dobre.locator('mf-lamp')).toHaveAttribute(
+        'data-state',
+        'amber',
+      );
+      const names = await queue(page).locator('li.row .name').allTextContents();
+      expect(names.indexOf('Service Dobre')).toBeLessThan(
+        names.indexOf('Atelier Dinamo'),
+      );
 
-    await expect(heading(page)).toHaveText(HEADING);
-    const before = await counted(page);
-    const chip = page.locator('aside nav a[href="/app/admin/garages"] .chip');
-    await expect(chip).toHaveText(String(before));
+      await expect(heading(page)).toHaveText(HEADING);
+      const before = await counted(page);
+      const chip = menu(page).locator('a[href="/app/admin/garages"] .chip');
+      await expect(chip).toHaveText(String(before));
 
-    garageId = randomUUID();
-    const name = `Coada Test ${garageId.slice(0, 8)}`;
-    await db.query(
-      "INSERT INTO garage (id, name, slug, city_key, city_name) VALUES ($1, $2, $3, 'bucuresti', 'București')",
-      [garageId, name, `coada-${garageId}`],
-    );
-    const { rows } = await db.query<{ id: string }>(
-      `INSERT INTO verification_file (id, garage_id, status)
-       VALUES (gen_random_uuid(), $1, 'submitted') RETURNING id::text`,
-      [garageId],
-    );
-    const fileId = rows[0]?.id ?? '';
-    await db.query(
-      `INSERT INTO outbox_event (audience, kind, payload, subject_id)
-       VALUES ($1, 'verification.submitted', $2, $3)`,
-      [
-        ['admin', `garage:${garageId}`],
-        JSON.stringify({ fileId, garageId }),
-        fileId,
-      ],
-    );
+      garageId = randomUUID();
+      const name = `Coada Test ${garageId.slice(0, 8)}`;
+      await db.query(
+        "INSERT INTO garage (id, name, slug, city_key, city_name) VALUES ($1, $2, $3, 'bucuresti', 'București')",
+        [garageId, name, `coada-${garageId}`],
+      );
+      const { rows } = await db.query<{ id: string }>(
+        `INSERT INTO verification_file (id, garage_id, status)
+         VALUES (gen_random_uuid(), $1, 'submitted') RETURNING id::text`,
+        [garageId],
+      );
+      const fileId = rows[0]?.id ?? '';
+      await db.query(
+        `INSERT INTO outbox_event (audience, kind, payload, subject_id)
+         VALUES ($1, 'verification.submitted', $2, $3)`,
+        [
+          ['admin', `garage:${garageId}`],
+          JSON.stringify({ fileId, garageId }),
+          fileId,
+        ],
+      );
 
-    const fresh = queue(page).locator('li.row', { hasText: name });
-    await expect(fresh).toBeVisible({ timeout: 15_000 });
-    await expect(fresh.locator('.area')).toHaveText(
-      'București · 0 mărci · 0 mecanici',
-    );
-    await expect(fresh.locator('a.open')).toHaveAttribute(
-      'href',
-      `/app/admin/garages/${fileId}`,
-    );
-    const after = await counted(page);
-    expect(after).toBeGreaterThan(before);
-    // The four counts: the view's heading, the menu counter, the header
-    // line and, one router step away with no reload, the overview's panel.
-    await expect(chip).toHaveText(String(after));
-    const line = page.locator('.admin-line');
-    await expect(line).toContainText(` ${after} `);
-    await expect(line).toContainText('așteaptă verificarea');
-    await page.locator('aside nav a[href="/app/admin"]').click();
-    await expect(page).toHaveURL('/app/admin');
-    await expect(heading(page)).toHaveText(HEADING);
-    expect(await counted(page)).toBe(after);
-    await expect(
-      queue(page).locator('li.row', { hasText: name }),
-    ).toBeVisible();
-  });
+      const fresh = queue(page).locator('li.row', { hasText: name });
+      await expect(fresh).toBeVisible({ timeout: 15_000 });
+      await expect(fresh.locator('.area')).toHaveText(
+        'București · 0 mărci · 0 mecanici',
+      );
+      await expect(fresh.locator('a.open')).toHaveAttribute(
+        'href',
+        `/app/admin/garages/${fileId}`,
+      );
+      const after = await counted(page);
+      expect(after).toBeGreaterThan(before);
+      // The four counts: the view's heading, the menu counter, the header
+      // line and, one router step away with no reload, the overview's panel.
+      await expect(chip).toHaveText(String(after));
+      const line = page.locator('.admin-line');
+      await expect(line).toContainText(` ${after} `);
+      await expect(line).toContainText('așteaptă verificarea');
+      await menu(page).locator('a[href="/app/admin"]').click();
+      await expect(page).toHaveURL('/app/admin');
+      await expect(heading(page)).toHaveText(HEADING);
+      expect(await counted(page)).toBe(after);
+      await expect(
+        queue(page).locator('li.row', { hasText: name }),
+      ).toBeVisible();
+    });
+  }
 
   // @traces 301-FR-005 301-FR-012
   for (const width of [320, 834]) {
