@@ -70,7 +70,7 @@ without a status, so the test runs again.
    cover the spec's. Without it, by hand, it dispatches `.github/workflows/pr-qa.yml`
    through `.claude/scripts/pr-test/dispatch.mjs` (`gh workflow run`, the
    run found by the nonce in its title, then `gh run watch`): a GitHub runner boots the PR head with PostgreSQL, Redis
-   and MinIO from the PR's own compose file, sweeps the screens, runs its flows
+   and the object store from the PR's own compose file, sweeps the screens, runs its flows
    and the API calls (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release), and uploads the
    report and screenshots as an artifact. The
    agent downloads it into its `--out` (through a fresh folder of its own, so

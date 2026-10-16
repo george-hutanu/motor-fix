@@ -50,8 +50,8 @@ function withSection(body: string, heading: string, content: string) {
 const NO_STORY_LINK =
   '"## Story" has no link to the story (its issue in george-hutanu/motor-fix-specs), or N/A and the reason.';
 
-// The retired tracker's name, read from the banned-words list so this file
-// never holds it.
+// The retired tracker's name, the banned-words list's first word, read from
+// the list so this file never holds it.
 const bannedWords = (
   JSON.parse(readFileSync(join(__dirname, 'banned-words.json'), 'utf8')) as {
     words: string[];
@@ -283,8 +283,6 @@ describe('checkPrBody on a ready PR', () => {
 
   // @traces 1135-FR-002
   it('refuses a link to the retired tracker in the Story section', () => {
-    // The cases below name the retired tracker only if it is the list's one word.
-    expect(bannedWords).toHaveLength(1);
     for (const link of [
       `https://www.${retired}.so/motorfix/ST-1-abc`,
       `https://app.${retired}.com/p/0000000000000000000000000000000a (ST-1)`,

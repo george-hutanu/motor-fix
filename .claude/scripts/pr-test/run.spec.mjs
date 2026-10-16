@@ -1,3 +1,4 @@
+// @traces 1176-FR-004
 import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -67,7 +68,7 @@ describe('run: what the QA flows are given', () => {
 
 describe('services someone else runs', () => {
   it('are on the standard ports, with an object store, and nothing to start or stop', () => {
-    assert.deepEqual(EXTERNAL_PORTS, { postgres: 5432, redis: 6379, minio: 9000 });
+    assert.deepEqual(EXTERNAL_PORTS, { postgres: 5432, redis: 6379, storage: 9000 });
     const plan = externalPlan();
     assert.equal(plan.kind, 'external');
     assert.equal(plan.storage, true);

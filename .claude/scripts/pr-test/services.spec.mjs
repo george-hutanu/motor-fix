@@ -1,3 +1,4 @@
+// @traces 1176-FR-004
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -7,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { HEALTH, apiHealth, appEnv, cleanStale, composePlan, createBucket, freePorts, localPlan, runDirPrefix, waitForHttp } from './services.mjs';
+import { HEALTH, apiHealth, appEnv, cleanStale, composePlan, freePorts, localPlan, runDirPrefix, waitForHttp } from './services.mjs';
 
 const listen = (server, port = 0) =>
   new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server.address().port)));
@@ -80,7 +81,7 @@ describe('the API health routes', () => {
 });
 
 describe('service plans', () => {
-  const ports = { postgres: 55001, redis: 55002, minio: 55003 };
+  const ports = { postgres: 55001, redis: 55002, storage: 55003 };
 
   it('runs compose as its own project on the given ports and removes volumes on the way down', () => {
     const plan = composePlan({ project: 'mf-prtest-21-x1', file: '/wt/docker-compose.yml', ports });
@@ -89,14 +90,14 @@ describe('service plans', () => {
     assert.ok(plan.down.includes('down') && plan.down.includes('-v'));
     assert.equal(plan.env.POSTGRES_PORT, '55001');
     assert.equal(plan.env.REDIS_PORT, '55002');
-    assert.equal(plan.env.MINIO_PORT, '55003');
+    assert.equal(plan.env.STORAGE_PORT, '55003');
     assert.equal(plan.storage, true);
   });
 
-  it('waits only for the long-running services, then runs the one-shot bucket setup to its exit', () => {
+  it('waits for the services, the store healthy only once its bucket is there, with no setup step', () => {
     const plan = composePlan({ project: 'mf-prtest-21-x1', file: '/wt/docker-compose.yml', ports });
-    assert.deepEqual(plan.up.slice(5), ['up', '-d', '--wait', 'postgres', 'redis', 'minio']);
-    assert.deepEqual(plan.setup, ['compose', '-p', 'mf-prtest-21-x1', '-f', '/wt/docker-compose.yml', 'run', '--rm', 'minio-setup']);
+    assert.deepEqual(plan.up.slice(5), ['up', '-d', '--wait', 'postgres', 'redis', 'storage']);
+    assert.equal(plan.setup, undefined);
   });
 
   // @traces 1175-FR-002 1175-FR-004
@@ -122,64 +123,31 @@ describe('service plans', () => {
 });
 
 describe('an object store without Docker', () => {
-  const ports = { postgres: 55001, redis: 55002, minio: 55003, minioConsole: 55004 };
+  const inner = [55010, 55011, 55012, 55013, 55014, 55015, 55016, 55017, 55018];
+  const ports = { postgres: 55001, redis: 55002, storage: 55003, storageInner: inner };
 
-  it('starts MinIO on the run ports, inside the run directory, with the storage keys the apps get', () => {
-    const plan = localPlan({ dir: '/tmp/run', ports, minio: true });
+  it('starts the store on the run ports, inside the run directory, with the storage keys the apps get', () => {
+    const plan = localPlan({ dir: '/tmp/run', ports, storage: true });
     assert.equal(plan.storage, true);
-    assert.deepEqual(plan.minio.cmd, ['minio', 'server', '/tmp/run/minio', '--address', '127.0.0.1:55003', '--console-address', '127.0.0.1:55004']);
+    const [weed, mini, ...flags] = plan.store.cmd;
+    assert.deepEqual([weed, mini], ['weed', 'mini']);
+    for (const flag of ['-dir=/tmp/run/storage', '-ip=127.0.0.1', '-ip.bind=127.0.0.1', '-bucket=motorfix', '-s3.port=55003', '-master.telemetry=false']) {
+      assert.ok(flags.includes(flag), flag);
+    }
+    const bound = flags.filter((f) => /^-[a-z0-9.]+port[a-z.]*=\d+$/.test(f)).map((f) => Number(f.split('=')[1]));
+    assert.deepEqual(bound.filter(Boolean).sort((a, b) => a - b), [55003, ...inner], 'every port it listens on is one of the run\'s');
+    assert.ok(flags.includes('-s3.port.iceberg=0') && flags.includes('-s3.port.lance=0'), 'the fixed-port extras are off');
     const env = appEnv({ ports });
-    assert.equal(plan.minio.env.MINIO_ROOT_USER, env.STORAGE_ACCESS_KEY_ID);
-    assert.equal(plan.minio.env.MINIO_ROOT_PASSWORD, env.STORAGE_SECRET_ACCESS_KEY);
-    assert.equal(plan.minio.health, 'http://127.0.0.1:55003/minio/health/live');
-    assert.equal(plan.minio.pidFile, '/tmp/run/minio.pid');
+    assert.equal(plan.store.env.AWS_ACCESS_KEY_ID, env.STORAGE_ACCESS_KEY_ID);
+    assert.equal(plan.store.env.AWS_SECRET_ACCESS_KEY, env.STORAGE_SECRET_ACCESS_KEY);
+    assert.equal(plan.store.health, 'http://127.0.0.1:55015/buckets/motorfix/');
+    assert.equal(plan.store.pidFile, '/tmp/run/storage.pid');
   });
 
   it('has none without the binary', () => {
-    const plan = localPlan({ dir: '/tmp/run', ports, minio: false });
+    const plan = localPlan({ dir: '/tmp/run', ports, storage: false });
     assert.equal(plan.storage, false);
-    assert.equal(plan.minio, undefined);
-  });
-
-  /** A fake S3 endpoint answering bucket creation with `status` and `body`. */
-  async function fakeS3(status, body = '') {
-    const seen = [];
-    const server = createServer((req, res) => {
-      seen.push(`${req.method} ${req.url}`);
-      res.writeHead(status, { 'content-type': 'application/xml' });
-      res.end(body);
-    });
-    const port = await listen(server);
-    return { server, seen, env: appEnv({ ports: { ...ports, minio: port } }) };
-  }
-  const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-
-  it('creates the bucket the apps use', async () => {
-    const s3 = await fakeS3(200);
-    try {
-      await createBucket({ repoRoot, env: s3.env });
-      assert.ok(s3.seen.some((l) => /^PUT \/motorfix\/?$/.test(l)), s3.seen.join(', '));
-    } finally {
-      await close(s3.server);
-    }
-  });
-
-  it('accepts a bucket that is already there', async () => {
-    const s3 = await fakeS3(409, '<?xml version="1.0"?><Error><Code>BucketAlreadyOwnedByYou</Code><Message>yours</Message></Error>');
-    try {
-      await createBucket({ repoRoot, env: s3.env });
-    } finally {
-      await close(s3.server);
-    }
-  });
-
-  it('fails on any other refusal', async () => {
-    const s3 = await fakeS3(403, '<?xml version="1.0"?><Error><Code>AccessDenied</Code><Message>no</Message></Error>');
-    try {
-      await assert.rejects(createBucket({ repoRoot, env: s3.env }));
-    } finally {
-      await close(s3.server);
-    }
+    assert.equal(plan.store, undefined);
   });
 });
 
@@ -199,7 +167,7 @@ describe('what a killed lap left behind', () => {
       mkdirSync(join(d, 'pg'), { recursive: true });
       writeFileSync(join(d, 'pg', 'postmaster.pid'), `9000\n${join(d, 'pg')}\n`);
       writeFileSync(join(d, 'redis.pid'), '9001\n');
-      writeFileSync(join(d, 'minio.pid'), '9002');
+      writeFileSync(join(d, 'storage.pid'), '9002');
       writeFileSync(join(d, 'api.pid'), '9003');
       writeFileSync(join(d, 'web.pid'), '9004');
       mkdirSync(join(d, 'mf-prtest-12-abc1234-x'), { recursive: true });
@@ -213,7 +181,7 @@ describe('what a killed lap left behind', () => {
       const ps = {
         9000: '/opt/homebrew/bin/postgres -D x',
         9001: 'valkey-server 127.0.0.1:6000',
-        9002: '/usr/local/bin/minio server x',
+        9002: '/opt/homebrew/bin/weed mini -dir=x',
         9003: '/usr/local/bin/node dist/apps/api/main.js',
         9004: '/usr/local/bin/node dist/apps/web/server/server.mjs',
       };
@@ -263,7 +231,7 @@ describe('what a killed lap left behind', () => {
     const s = scene();
     const run = (cmd, args) => {
       s.calls.push([cmd, ...args].join(' '));
-      return { code: 0, stdout: cmd === 'ps' ? 'vim /tmp/minio.pid valkey-server.bak postgres dist/apps/api/main.js.bak' : '' };
+      return { code: 0, stdout: cmd === 'ps' ? 'vim /tmp/storage.pid valkey-server.bak postgres dist/apps/api/main.js.bak' : '' };
     };
     try {
       cleanStale({ tmp: s.tmp, repo: '/repo', isAlive: s.isAlive, run });
