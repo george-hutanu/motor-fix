@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-15
+updated: 2026-10-16
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -82,6 +82,7 @@ features:
   - 1175-valkey
   - 1200-transfer-cache-origin
   - 1169-prefetch-intent
+  - 1176-replace-object-store
 ---
 
 # Capability: Platform
@@ -2108,6 +2109,22 @@ _From 1169-prefetch-intent._
 ### 1169-FR-014 — FR-001 to FR-012 MUST each have failing-first automated tests beside the code they exercise (Constitution II): the API ones on real PostgreSQL and Redis, including a test that an existing and an unknown account get the same refused sign-in path with nothing warmed (FR-002), that no warm entry reaches an unauthenticated or another account's request (FR-005, FR-010), that a write evicts the entry so the next read is fresh (FR-006), and that a warm entry is taken once (FR-001); the web ones in Jest for the card's signals, the cap, the cancel, the guards and the store's age rule.
 
 _From 1169-prefetch-intent._
+
+### 1176-FR-001 — No tracked file of the repository (outside `specs/`, which is its own repository, the dated history entries of `.specify/capabilities/`, and `scripts/banned-words.json`, the list that bans the word; requirement bodies are not exempt) MUST contain the retired store's name, in any case (the second word of `scripts/banned-words.json`): `docker-compose.yml`, both workflows, the PR tester's scripts, their specs and agent definition, the restore drill, `.env.example` and the skills all name the replacement instead. A test fails on any match.
+
+_From 1176-replace-object-store._
+
+### 1176-FR-002 — `docker compose up -d --wait postgres redis storage` MUST start the replacement as the service `storage` on the endpoint, bucket and keys the apps read today (`http://localhost:9000`, `motorfix`, `motorfix` / `motorfix-secret`; the host port overridable through `STORAGE_PORT`, as `POSTGRES_PORT` and `REDIS_PORT` are). The store MUST create the `motorfix` bucket itself as it starts (no separate setup service), its compose health check MUST report healthy only once the bucket exists, and that check MUST be bounded (interval × retries plus start period at most 120 seconds) so `up --wait` fails naming the service instead of hanging. The store's image MUST be pinned by digest.
+
+_From 1176-replace-object-store._
+
+### 1176-FR-003 — Against the running replacement, an integration test MUST perform and pass, each as its own case: the presigned POST policy upload (the fields and the file, the file last), a conditional copy pinning the upload's ETag, a signed download address with an `inline` and with an `attachment` disposition, the bucket probe, the multi-key delete, a presigned PUT and a presigned multipart upload (create, parts, complete), each reading back the uploaded bytes; and, on a bucket of its own that it removes after, MUST set a CORS rule for the local web origin (POST and PUT, `ETag` exposed), read it back, and assert the preflight from that origin is allowed with `ETag` exposed and from a foreign origin is refused. The storage unit tests keep the in-memory test store.
+
+_From 1176-replace-object-store._
+
+### 1176-FR-004 — The CI Compose stack step (which also runs the FR-003 test) and the E2E job's object storage step, the CI integration job (which starts the store so the FR-003 test runs there), the PR QA workflow's boot (`up --wait` bounded by the store's health check), the PR tester's compose plan and its local plan (the replacement's binary on the PATH, started inside the run directory on the lap's ports with the apps' keys, its pid file, stopped at teardown; 450-FR-001 and 450-FR-009, reworded in place to name the store generically) and the restore drill MUST boot the replacement in place of the retired store, and their existing specs MUST describe the replacement.
+
+_From 1176-replace-object-store._
 
 ## Retired
 
