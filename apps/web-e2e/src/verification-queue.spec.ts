@@ -6,7 +6,8 @@ import { Client } from 'pg';
 import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
-const HEADING = /^Service‑uri de verificat · (\d+)$/;
+// The panel's h2 keeps the template's spaces around its text.
+const HEADING = /^\s*Service‑uri de verificat · (\d+)\s*$/;
 
 async function signInAsAdmin(page: Page) {
   await ready(page, '/ro/garages');
