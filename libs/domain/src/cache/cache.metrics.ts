@@ -4,6 +4,7 @@ export type CacheKind =
   | 'profile'
   | 'home'
   | 'popular-brands'
+  | 'brands'
   | 'driver-home'
   | 'garage-home';
 

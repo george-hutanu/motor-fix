@@ -40,6 +40,15 @@ describe('counting the cache', () => {
   });
 });
 
+// @traces 1235-FR-004
+describe('counting the brand lookups', () => {
+  it('counts the brands kind like any other', async () => {
+    recordCache('brands', 'negative');
+
+    expect((await counts())['brands negative']).toBe(1);
+  });
+});
+
 // @traces 1169-FR-011
 describe('counting the sign-in warm', () => {
   it('counts the home kinds and records each warm read’s time by kind only', async () => {

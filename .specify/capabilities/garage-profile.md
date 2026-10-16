@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-15
+updated: 2026-10-16
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -10,6 +10,7 @@ features:
   - 355-price-list-ranges
   - 1182-cache-service
   - 1169-prefetch-intent
+  - 1235-unknown-brand-cache
 ---
 
 # Capability: Garage profile
@@ -241,6 +242,18 @@ _From 355-price-list-ranges._
 ### 1169-FR-008 — The pre-fetched answer MUST be kept in one root-level store keyed by slug and brand with its fetch time; the profile page, when opened with a matching entry younger than 120 s, MUST draw from it with no first read, then join the garage's live stream and re-read on its messages as today; an older or missing entry leaves the page's reads as today. A profile that answered not found or gone is remembered in the store for 120 s and not fetched again on another signal.
 
 _From 1169-prefetch-intent._
+
+### 1235-FR-001 — The profile read MUST look up a brand the catalogue does not hold under the no-brand key, so a repeat of the same or any other made-up brand is served from that one entry.
+
+_From 1235-unknown-brand-cache._
+
+### 1235-FR-002 — A brand the catalogue holds, active or retired, MUST keep its own profile entry and its brand in context.
+
+_From 1235-unknown-brand-cache._
+
+### 1235-FR-003 — The brand a profile read names MUST be looked up through the cache service (kind `brands`, one entry per slug: a held brand kept 10 minutes, a slug no brand holds remembered 60 seconds as none), so a repeat read with the same brand, held or not, costs no PostgreSQL read, and a made-up brand adds no profile entry.
+
+_From 1235-unknown-brand-cache._
 
 ## Retired
 
