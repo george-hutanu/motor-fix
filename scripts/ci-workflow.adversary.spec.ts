@@ -61,7 +61,7 @@ describe('CI workflow still performs every check', () => {
     ['Harness test', /npm run test:harness/],
     ['Audit', /npm audit --omit=dev --audit-level=high/],
     ['Dependency resolve', /npm install --dry-run/],
-    ['Compose stack', /docker compose up -d --wait postgres redis minio/],
+    ['Compose stack', /docker compose up -d --wait postgres redis storage/],
     ['Unit tests', /JEST_SUITE: unit/],
     ['Integration tests', /JEST_SUITE: integration/],
     ['E2E', /-t e2e/],

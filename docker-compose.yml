@@ -16,23 +16,22 @@ services:
     image: redis:7
     ports:
       - '${REDIS_PORT:-6379}:6379'
-  # MinIO's own images left Docker Hub; these are the pgsty community builds
-  # of the same server and client, a drop-in on the same env, ports and data.
-  minio:
-    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
-    command: server /data
+  # SeaweedFS (Apache-2.0) as one process: master, volume, filer and S3 on
+  # 8333. It creates the bucket as it starts, and its filer lists the bucket
+  # only once it exists, so healthy means the bucket is ready.
+  storage:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    command: mini -dir=/data -bucket=motorfix -admin.ui=false -webdav=false -master.telemetry=false
     environment:
-      MINIO_ROOT_USER: motorfix
-      MINIO_ROOT_PASSWORD: motorfix-secret
+      AWS_ACCESS_KEY_ID: motorfix
+      AWS_SECRET_ACCESS_KEY: motorfix-secret
     ports:
-      - '${MINIO_PORT:-9000}:9000'
-  minio-setup:
-    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
-    depends_on:
-      - minio
-    entrypoint: >-
-      sh -c "until mc alias set local http://minio:9000 motorfix motorfix-secret; do sleep 1; done
-      && mc mb --ignore-existing local/motorfix"
+      - '${STORAGE_PORT:-9000}:8333'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8333/healthz && wget -q -O /dev/null http://127.0.0.1:8888/buckets/motorfix/']
+      start_period: 20s
+      interval: 2s
+      retries: 45
   # The AI assistants' identity server, for development and CI only:
   # `docker compose --profile assistants up -d --wait keycloak`. It reaches the
   # api and the test's client documents on the host as host.docker.internal.

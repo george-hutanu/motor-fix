@@ -1,6 +1,6 @@
 // Private services for one PR tester run: free ports, the compose project (or,
 // on a machine without Docker, a private PostgreSQL cluster, Redis and, when
-// its binary is installed, MinIO), the environment the apps get, the health
+// its binary is installed, the object store), the environment the apps get, the health
 // wait, and the cleanup of what a killed run left. Nothing here touches the
 // shared default ports other sessions use.
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
@@ -54,30 +54,37 @@ export async function waitForHttp(url, { timeoutMs = 120000, intervalMs = 1000 }
 
 /**
  * `docker` arguments for the compose services on the run's own ports and project.
- * The one-shot minio-setup stays out of `up --wait`, which fails whenever it
- * exits before compose sees it running; `run --rm` returns its exit code.
+ * The object store creates its bucket and is healthy only once it exists, so
+ * `up --wait` is the whole setup.
  */
 export function composePlan({ project, file, ports }) {
   const base = ["compose", "-p", project, "-f", file];
   return {
     kind: "docker",
-    up: [...base, "up", "-d", "--wait", "postgres", "redis", "minio"],
-    setup: [...base, "run", "--rm", "minio-setup"],
+    up: [...base, "up", "-d", "--wait", "postgres", "redis", "storage"],
     down: [...base, "down", "-v", "--remove-orphans"],
-    env: { POSTGRES_PORT: String(ports.postgres), REDIS_PORT: String(ports.redis), MINIO_PORT: String(ports.minio) },
+    env: { POSTGRES_PORT: String(ports.postgres), REDIS_PORT: String(ports.redis), STORAGE_PORT: String(ports.storage) },
     storage: true,
   };
 }
 
 /**
- * Without Docker: a throwaway PostgreSQL cluster and Redis inside the run's
- * directory, on the run's ports, and MinIO beside them when `minio` (its
- * binary is on the PATH). MinIO does not daemonize: the caller spawns
- * `minio.cmd` detached, writes its pid to `minio.pidFile`, waits for
- * `minio.health` and creates the bucket. Without it there is no object store
- * and the caller reports storage down as a note.
+ * The ports of SeaweedFS's `weed mini` besides S3, each set from the run's
+ * free ports (`ports.storageInner`, in this order): its defaults are fixed,
+ * and each gRPC port would otherwise be its HTTP port + 10000.
  */
-export function localPlan({ dir, ports, minio = false }) {
+export const STORE_INNER_PORTS = ["s3.port.grpc", "master.port", "master.port.grpc", "volume.port", "volume.port.grpc", "filer.port", "filer.port.grpc", "admin.port", "admin.port.grpc"];
+
+/**
+ * Without Docker: a throwaway PostgreSQL cluster and Redis inside the run's
+ * directory, on the run's ports, and the object store beside them when
+ * `storage` (the `weed` binary is on the PATH). It does not daemonize: the
+ * caller spawns `store.cmd` detached, writes its pid to `store.pidFile`,
+ * waits for `store.health` (the bucket, which it creates as it starts) and
+ * creates the bucket again, which is fine. Without it there is no object
+ * store and the caller reports storage down as a note.
+ */
+export function localPlan({ dir, ports, storage = false }) {
   const pg = join(dir, "pg");
   return {
     kind: "local",
@@ -91,15 +98,29 @@ export function localPlan({ dir, ports, minio = false }) {
       ["pg_ctl", "-D", pg, "-m", "immediate", "-w", "stop"],
       ["redis-cli", "-p", String(ports.redis), "shutdown", "nosave"],
     ],
-    ...(minio && {
-      minio: {
-        cmd: ["minio", "server", join(dir, "minio"), "--address", `127.0.0.1:${ports.minio}`, "--console-address", `127.0.0.1:${ports.minioConsole}`],
-        env: { MINIO_ROOT_USER: STORAGE_KEYS.id, MINIO_ROOT_PASSWORD: STORAGE_KEYS.secret },
-        health: `http://127.0.0.1:${ports.minio}/minio/health/live`,
-        pidFile: join(dir, "minio.pid"),
+    ...(storage && {
+      store: {
+        cmd: [
+          "weed",
+          "mini",
+          `-dir=${join(dir, "storage")}`,
+          "-ip=127.0.0.1",
+          "-ip.bind=127.0.0.1",
+          "-bucket=motorfix",
+          "-admin.ui=false",
+          "-webdav=false",
+          "-master.telemetry=false",
+          "-s3.port.iceberg=0",
+          "-s3.port.lance=0",
+          `-s3.port=${ports.storage}`,
+          ...STORE_INNER_PORTS.map((flag, i) => `-${flag}=${ports.storageInner[i]}`),
+        ],
+        env: { AWS_ACCESS_KEY_ID: STORAGE_KEYS.id, AWS_SECRET_ACCESS_KEY: STORAGE_KEYS.secret },
+        health: `http://127.0.0.1:${ports.storageInner[STORE_INNER_PORTS.indexOf("filer.port")]}/buckets/motorfix/`,
+        pidFile: join(dir, "storage.pid"),
       },
     }),
-    storage: minio,
+    storage,
   };
 }
 
@@ -135,7 +156,7 @@ const worktreeOwner = (name) => pidIn(/^mf-prtest-\d+-[0-9a-f]{7}-(\d+)$/, name)
 export const APP_SCRIPTS = { api: "dist/apps/api/main.js", web: "dist/apps/web/server/server.mjs", worker: "dist/apps/worker/main.js" };
 
 /** What a run's pid files name: a program (its command's first word) or a script it runs. */
-const PID_FILES = [["redis.pid", "redis-server"], ["minio.pid", "minio"], ...Object.entries(APP_SCRIPTS).map(([app, script]) => [`${app}.pid`, script])];
+const PID_FILES = [["redis.pid", "redis-server"], ["storage.pid", "weed"], ...Object.entries(APP_SCRIPTS).map(([app, script]) => [`${app}.pid`, script])];
 
 /** The pid on a file's first line, when it is one a process can have and is not init. */
 function pidFrom(file) {
@@ -160,7 +181,7 @@ function isAlive(pid) {
 
 /**
  * Remove what killed local runs left in `tmp`: for each run directory whose
- * owning process is gone, stop its PostgreSQL, Redis, MinIO and apps (by pid
+ * owning process is gone, stop its PostgreSQL, Redis, object store and apps (by pid
  * file, only while that pid is still the service), delete the directory with
  * its worktree; take down compose projects of dead runs; then prune the
  * repository's worktree list. `run(cmd, args)` returns { code, stdout } and
@@ -202,11 +223,11 @@ export function cleanStale({ tmp, repo, isAlive: alive = isAlive, run }) {
 }
 
 /** Where the PR QA workflow's containers listen (.github/workflows/pr-qa.yml). */
-export const EXTERNAL_PORTS = { postgres: 5432, redis: 6379, minio: 9000 };
+export const EXTERNAL_PORTS = { postgres: 5432, redis: 6379, storage: 9000 };
 
 /**
  * Services something else already runs, on EXTERNAL_PORTS: on a GitHub runner
- * the workflow starts PostgreSQL, Redis and MinIO (with its bucket) and stops
+ * the workflow starts PostgreSQL, Redis and the object store (with its bucket) and stops
  * them with the job, so there is nothing to start or tear down here.
  */
 export function externalPlan() {
@@ -224,7 +245,7 @@ export function appEnv({ ports }) {
     // The local cluster trusts its one user, so the compose password does for both.
     DATABASE_URL: `postgresql://motorfix:motorfix@127.0.0.1:${ports.postgres}/motorfix`,
     REDIS_URL: `redis://127.0.0.1:${ports.redis}`,
-    STORAGE_ENDPOINT: `http://127.0.0.1:${ports.minio}`,
+    STORAGE_ENDPOINT: `http://127.0.0.1:${ports.storage}`,
     STORAGE_REGION: "eu-central-1",
     STORAGE_BUCKET: "motorfix",
     STORAGE_ACCESS_KEY_ID: STORAGE_KEYS.id,

@@ -327,7 +327,7 @@ _From 159-form-saving._
 
 _From 516-production-release-queue._
 
-### 450-FR-001 — Without Docker, when a `minio` binary is on the PATH, the local plan MUST start MinIO on the lap's own API and console ports with its data inside the run directory and the apps' storage credentials, wait for it to answer, create the `motorfix` bucket (an existing bucket is fine), and stop it at teardown; the lap then reports storage booted.
+### 450-FR-001 — Without Docker, when the binary of the object store `docker-compose.yml` names is on the PATH, the local plan MUST start that store on the lap's own ports with its data inside the run directory and the apps' storage credentials, wait for it to answer, create the `motorfix` bucket (an existing bucket is fine), and stop it at teardown; the lap then reports storage booted.
 
 _From 450-pr-tester-env-gaps._
 
@@ -359,7 +359,7 @@ _From 450-pr-tester-env-gaps._
 
 _From 450-pr-tester-env-gaps._
 
-### 450-FR-009 — A local lap's run directory MUST carry its process id; before a local lap boots, every PR-tester run directory and compose project whose process is gone MUST have its PostgreSQL, Redis and MinIO stopped, its compose project removed with volumes, its directory deleted, and `git worktree prune` run. A run whose process is alive MUST be left alone.
+### 450-FR-009 — A local lap's run directory MUST carry its process id; before a local lap boots, every PR-tester run directory and compose project whose process is gone MUST have its PostgreSQL, Redis and object store stopped, its compose project removed with volumes, its directory deleted, and `git worktree prune` run. A run whose process is alive MUST be left alone.
 
 _From 450-pr-tester-env-gaps._
 

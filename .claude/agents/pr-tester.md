@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and the object store, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit suites are CI's; the integration suite runs on demand and at release; the end-to-end suite runs on demand and, its core flows, at release); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -146,7 +146,7 @@ head commit, with the flows file gzipped and base64-encoded as the `flows`
 input, finds the run by the nonce in its title (the quoted `run-name` in
 `pr-qa.yml`), waits for it (`gh run watch`) and downloads
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
-that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
+that exact SHA, starts PostgreSQL with PostGIS, Redis and the object store with its
 bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
 worker, `/health/live` and `/health/ready` (storage included), the seed, the viewport
 sweep (4 viewports — desktop, tablet, 390 and 320 px phones — × light/dark ×
@@ -183,10 +183,10 @@ Start it with `run_in_background` and wait for its exit notice, never in the
 foreground: a lap outlives a foreground call's timeout, and a killed call
 kills the lap. The same run on the laptop, holding one `scripts/heavy.sh` slot for the whole
 boot-test-teardown sequence (it takes the slot itself). It creates a worktree
-at the PR head and starts PostgreSQL/Redis and MinIO with its bucket from the
+at the PR head and starts PostgreSQL/Redis and the object store with its bucket from the
 PR's own compose file (a compose project on free ports), or private local
-servers without Docker: PostgreSQL, Redis and, when the `minio` binary is
-installed, MinIO with its bucket. With no object store at all, a readiness
+servers without Docker: PostgreSQL, Redis and, when the `weed` binary is
+installed, SeaweedFS with its bucket. With no object store at all, a readiness
 failing only on `storage` is a note in the report, never a finding. Before it
 boots it stops and removes what a killed lap left (a run directory or compose
 project whose process is gone), then prunes worktrees. A signal still writes
@@ -340,7 +340,7 @@ FILES: <paths written, comma-separated> | none
 VERDICT: success | failure
 Findings: blocker N · high N · medium N · low N
 Ran: GitHub Actions <run URL> | --local (why)
-Booted: api, web, worker; services: postgres, redis, minio | compose | local
+Booted: api, web, worker; services: postgres, redis, storage | compose | local
 Readiness: <the packet's readiness line>
 Evidence: <out>/report.md, <out>/shots/ (<n> screenshots)
 

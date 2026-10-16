@@ -142,18 +142,21 @@ jobs:
           # The plugin's validate and tests run on a pinned Claude CLI.
           npm run test:mods
       # The local stack (docker-compose.yml) the PR tester boots: every image
-      # still pulls, the services come up healthy and the one-shot setup creates
-      # the bucket. The setup stays out of --wait, which fails when it exits
-      # before compose sees it running; run returns its exit code. On main,
-      # release.yml calls this workflow and the stack is not checked; a PR
-      # checks it only when it changes the stack's inputs.
+      # still pulls, the services come up healthy (the object store only once
+      # its bucket exists) and the app's storage operations pass against the
+      # store. On main, release.yml calls this workflow and the stack is not
+      # checked; a PR checks it only when it changes the stack's inputs.
       - name: Compose stack
         if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.changes.outputs.compose == 'true' }}
+        env:
+          STORAGE_ENDPOINT: http://localhost:9000
+          STORAGE_REGION: eu-central-1
+          STORAGE_BUCKET: motorfix
+          STORAGE_ACCESS_KEY_ID: motorfix
+          STORAGE_SECRET_ACCESS_KEY: motorfix-secret
         run: |
-          docker compose up -d --wait postgres redis minio
-          docker compose run --rm minio-setup
-          docker compose run --rm --entrypoint sh minio-setup -c \
-            "mc alias set local http://minio:9000 motorfix motorfix-secret && mc ls local/motorfix"
+          docker compose up -d --wait postgres redis storage
+          npx jest -c libs/domain/jest.config.cts libs/domain/src/storage/object-store.integration.spec.ts
           docker compose --profile observability up -d otel-lgtm
           for i in $(seq 60); do curl -fsS localhost:3300/api/health && break; sleep 2; done
           curl -fsS localhost:3300/api/health
@@ -212,11 +215,19 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379
       AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
+      # The store spec runs against the compose object store, started below.
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_REGION: eu-central-1
+      STORAGE_BUCKET: motorfix
+      STORAGE_ACCESS_KEY_ID: motorfix
+      STORAGE_SECRET_ACCESS_KEY: motorfix-secret
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Object storage
+        run: docker compose up -d --wait storage
       # Service containers take no command, so the slow-statement view is
       # preloaded here: the data-store specs read it, never skip it.
       - name: Preload pg_stat_statements
@@ -275,7 +286,7 @@ jobs:
       # Pages name an analytics domain, so a granted choice loads the
       # analytics script; the tests answer plausible.io themselves.
       PLAUSIBLE_DOMAIN: e2e.motorfix.invalid
-      # The photo flows upload to the compose MinIO, started in the steps below.
+      # The photo flows upload to the compose object store, started below.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1
       STORAGE_BUCKET: motorfix
@@ -296,9 +307,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Object storage
-        run: |
-          docker compose up -d --wait minio
-          docker compose run --rm minio-setup
+        run: docker compose up -d --wait storage
       - name: Identity server
         run: docker compose --profile assistants up -d --wait keycloak
       - name: Migrate the test database

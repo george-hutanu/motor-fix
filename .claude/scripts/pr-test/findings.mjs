@@ -165,7 +165,7 @@ export function readinessOutcome({ name, status, body, storage, url }) {
       .map(([k]) => k);
   } catch {}
   if (!storage && failed.length === 1 && failed[0] === "storage")
-    return { note: `${name} readiness: storage down, every other check ok. This lap had no object store (no Docker and no minio binary): a limit of this machine, not the change.` };
+    return { note: `${name} readiness: storage down, every other check ok. This lap had no object store (no Docker and no weed binary): a limit of this machine, not the change.` };
   return { finding: stepFinding(`${name} readiness failed: ${failed.join(", ") || status}`, `GET ${url} answered ${status}: ${String(body).slice(0, 300)}`) };
 }
 

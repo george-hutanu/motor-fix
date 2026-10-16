@@ -48,10 +48,11 @@ const DOCKER: Rule[] = [
   matching(/^apps\/[^/]+\/(project\.json|tsconfig[^/]*\.json)$/),
 ];
 
-// The local stack the PR tester boots (docker-compose.yml) and what it mounts.
+// The local stack the PR tester boots (docker-compose.yml), what it mounts,
+// and the storage code whose spec the stack check runs against its store.
 const COMPOSE: Rule[] = [
   matching(/^docker-compose[^/]*\.ya?ml$/),
-  under('infra/'),
+  under('infra/', 'libs/domain/src/storage/'),
   exactly(WORKFLOW),
 ];
 

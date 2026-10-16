@@ -22,7 +22,7 @@
 //
 // --tree <dir> --sha <sha> is how the PR QA workflow (.github/workflows/pr-qa.yml)
 // runs it on a GitHub runner: the PR is already checked out at <dir>, pinned
-// to <sha>, with its dependencies installed; PostgreSQL, Redis and MinIO are
+// to <sha>, with its dependencies installed; PostgreSQL, Redis and the object store are
 // the workflow's containers on the standard ports; the worker always boots.
 // No gh, no worktree, nothing to tear down but the apps; the change is
 // measured against origin/main.
@@ -52,6 +52,7 @@ import {
   APP_SCRIPTS,
   EXTERNAL_PORTS,
   HEALTH,
+  STORE_INNER_PORTS,
   apiHealth,
   appEnv,
   cleanStale,
@@ -291,52 +292,51 @@ async function main(argv) {
     const apps = { ...appsFor(files), ...(opt.tree ? { worker: true } : {}) };
     log(`${files.length} changed files; web code ${web ? "touched" : "untouched"}; worker ${apps.worker ? "booted" : "not needed"}`);
 
-    const [pgPort, redisPort, minioPort, minioConsole, apiPort, webPort, workerPort] = await freePorts(7);
-    const ports = opt.tree ? EXTERNAL_PORTS : { postgres: pgPort, redis: redisPort, minio: minioPort, minioConsole };
+    const [pgPort, redisPort, storagePort, apiPort, webPort, workerPort, ...storageInner] = await freePorts(6 + STORE_INNER_PORTS.length);
+    const ports = opt.tree ? EXTERNAL_PORTS : { postgres: pgPort, redis: redisPort, storage: storagePort, storageInner };
     const env = { ...process.env, ...appEnv({ ports }), NX_DAEMON: "false" };
     const project = `mf-prtest-${opt.pr}-${process.pid}`;
     let plan;
     if (opt.tree) {
       plan = externalPlan();
       const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: id } = process.env;
-      notes.push(`Ran on GitHub Actions${server && repo && id ? ` (${server}/${repo}/actions/runs/${id})` : ""}: PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.`);
+      notes.push(`Ran on GitHub Actions${server && repo && id ? ` (${server}/${repo}/actions/runs/${id})` : ""}: PostgreSQL with PostGIS, Redis and the object store from the PR's own compose file, started by the PR QA workflow.`);
     } else if (has("docker", ["info"])) {
       // The PR's own compose file: a PR that changes the stack is tested on it.
       plan = composePlan({ project, file: join(wt.dir, "docker-compose.yml"), ports });
       const composeEnv = { env: { ...process.env, ...plan.env } };
       teardown.push({ name: `docker compose -p ${project} down -v`, run: () => sh("docker", plan.down, composeEnv) });
       if (!mustPass("services", step("services", "docker", plan.up, composeEnv))) return finish();
-      if (!mustPass("bucket setup", step("bucket-setup", "docker", plan.setup, composeEnv))) return finish();
     } else {
-      plan = localPlan({ dir: runDir, ports, minio: has("minio", ["--version"]) });
+      plan = localPlan({ dir: runDir, ports, storage: has("weed", ["version"]) });
       notes.push(
         plan.storage
-          ? "No Docker on this machine: private PostgreSQL, Redis and MinIO (its binary) on free ports."
-          : "No Docker on this machine: private PostgreSQL and Redis on free ports, and no object store (no minio binary; `brew install minio` adds one).",
+          ? "No Docker on this machine: private PostgreSQL, Redis and SeaweedFS (its weed binary) on free ports."
+          : "No Docker on this machine: private PostgreSQL and Redis on free ports, and no object store (no weed binary; `brew install seaweedfs` adds one).",
       );
       // PostgreSQL refuses to start under a locale the C library cannot load.
       const cEnv = { ...process.env, LC_ALL: "C", LANG: "C" };
       teardown.push({ name: "stop private PostgreSQL and Redis", run: () => plan.stop.forEach(([c, ...l]) => spawnSync(c, l, { stdio: "ignore", env: cEnv })) });
       for (const [i, [cmd, ...list]] of plan.start.entries())
         if (!mustPass(`services-${i + 1}`, step(`services-${i + 1}`, cmd, list, { env: cEnv }))) return finish();
-      if (plan.minio) {
-        phase = "minio";
-        const fd = openSync(join(logs, "minio.out.log"), "w");
-        const [cmd, ...list] = plan.minio.cmd;
-        const child = spawn(cmd, list, { env: { ...process.env, ...plan.minio.env }, stdio: ["ignore", fd, fd], detached: true });
+      if (plan.store) {
+        phase = "storage";
+        const fd = openSync(join(logs, "storage.out.log"), "w");
+        const [cmd, ...list] = plan.store.cmd;
+        const child = spawn(cmd, list, { env: { ...process.env, ...plan.store.env }, stdio: ["ignore", fd, fd], detached: true });
         closeSync(fd);
-        writeFileSync(plan.minio.pidFile, String(child.pid));
+        writeFileSync(plan.store.pidFile, String(child.pid));
         teardown.push({
-          name: `stop MinIO (pid ${child.pid})`,
+          name: `stop the object store (pid ${child.pid})`,
           run: () => {
             try {
               process.kill(-child.pid, "SIGTERM");
             } catch {}
           },
         });
-        const h = await waitForHttp(plan.minio.health, { timeoutMs: 30000, intervalMs: 250 });
-        log(`health minio: ${h.ok ? `HTTP ${h.status}` : h.error}`);
-        if (!h.ok) findings.push(stepFinding("MinIO did not come up", `${h.error}; see ${join(logs, "minio.out.log")}`));
+        const h = await waitForHttp(plan.store.health, { timeoutMs: 30000, intervalMs: 250 });
+        log(`health storage: ${h.ok ? `HTTP ${h.status}` : h.error}`);
+        if (!h.ok) findings.push(stepFinding("The object store did not come up", `${h.error}; see ${join(logs, "storage.out.log")}`));
         else
           await createBucket({ repoRoot, env })
             .then(() => log(`bucket ${env.STORAGE_BUCKET} ready`))
@@ -344,7 +344,7 @@ async function main(argv) {
         if (findings.length) return finish();
       }
     }
-    booted.push("postgres", "redis", ...(plan.storage ? ["minio"] : []));
+    booted.push("postgres", "redis", ...(plan.storage ? ["storage"] : []));
 
     const deps = opt.tree ? null : depsToClone({ repoRoot, lock: readFileSync(join(wt.dir, "package-lock.json"), "utf8") });
     let install = { code: 1 };

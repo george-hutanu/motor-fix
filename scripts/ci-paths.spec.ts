@@ -1,3 +1,4 @@
+// @traces 1176-FR-004
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -60,6 +61,8 @@ describe('classify', () => {
     'docker-compose.yml',
     'docker-compose.override.yml',
     'infra/observability/inventory.json',
+    'libs/domain/src/storage/storage.service.ts',
+    'libs/domain/src/storage/object-store.integration.spec.ts',
   ])('boots the compose stack for %s', (path) => {
     expect(classify([path]).compose).toBe(true);
   });

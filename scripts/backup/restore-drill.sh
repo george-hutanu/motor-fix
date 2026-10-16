@@ -16,14 +16,14 @@
 # Fails at the first step that does: a size that differs from the manifest's,
 # a dump that does not decrypt, a restore error, a table whose row count
 # differs, or an API not ready within 120 s. Prints each step's seconds and
-# the total. The database, Redis, MinIO and the API are removed however it
+# the total. The database, Redis, the object store and the API are removed however it
 # ends.
 
 set -euo pipefail
 
 DB=mf-restore-drill
 REDIS=mf-restore-drill-redis
-MINIO=mf-restore-drill-minio
+STORE=mf-restore-drill-storage
 API_PORT=3999
 
 work=$(mktemp -d)
@@ -34,7 +34,7 @@ teardown() {
     kill "$api" 2>/dev/null || true
     wait "$api" 2>/dev/null || true
   fi
-  docker rm -f "$DB" "$REDIS" "$MINIO" >/dev/null 2>&1 || true
+  docker rm -f "$DB" "$REDIS" "$STORE" >/dev/null 2>&1 || true
   rm -rf "$work"
 }
 trap teardown EXIT
@@ -83,7 +83,7 @@ fi
 step decrypt
 
 major=$(jq -r '.server_version' "$work/manifest.json" | cut -d. -f1)
-docker rm -f "$DB" "$REDIS" "$MINIO" >/dev/null 2>&1 || true
+docker rm -f "$DB" "$REDIS" "$STORE" >/dev/null 2>&1 || true
 docker run -d --name "$DB" -p 127.0.0.1::5432 \
   -e POSTGRES_PASSWORD=drill -e POSTGRES_DB=drill "${DRILL_IMAGE:-postgres:$major}" >/dev/null
 # Over TCP: the image's first-start server listens on its socket only.
@@ -118,18 +118,19 @@ npx nx run api:build --configuration=production --skip-nx-cache >"$work/build.lo
   || { tail -n 40 "$work/build.log" >&2; exit 1; }
 step build
 
-# Files are not in a backup: an empty bucket of the compose images lets the
-# ready check's storage probe pass.
+# Files are not in a backup: an empty bucket in the compose file's object
+# store lets the ready check's storage probe pass. The store creates the
+# bucket as it starts; its filer lists the bucket once it exists.
 docker run -d --name "$REDIS" -p 127.0.0.1::6379 redis:7 >/dev/null
-docker run -d --name "$MINIO" -p 127.0.0.1::9000 \
-  -e MINIO_ROOT_USER=drill -e MINIO_ROOT_PASSWORD=drill-secret \
-  pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data >/dev/null
-docker run --rm --network "container:$MINIO" --entrypoint sh \
-  pgsty/mc:RELEASE.2026-09-16T00-00-00Z -c \
-  'for _ in $(seq 60); do mc alias set local http://127.0.0.1:9000 drill drill-secret >/dev/null && break; sleep 1; done && mc mb -q local/drill' >/dev/null
+docker run -d --name "$STORE" -p 127.0.0.1::8333 \
+  -e AWS_ACCESS_KEY_ID=drill -e AWS_SECRET_ACCESS_KEY=drill-secret \
+  chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d mini -bucket=drill \
+  -dir=/data -admin.ui=false -webdav=false -master.telemetry=false >/dev/null
+for _ in $(seq 60); do docker exec "$STORE" wget -q -O /dev/null http://127.0.0.1:8888/buckets/drill/ && break; sleep 1; done
+docker exec "$STORE" wget -q -O /dev/null http://127.0.0.1:8888/buckets/drill/ || { echo "drill failed: the object store had no bucket within 60 s" >&2; exit 1; }
 db_port=$(docker port "$DB" 5432/tcp | head -n 1 | cut -d: -f2)
 redis_port=$(docker port "$REDIS" 6379/tcp | head -n 1 | cut -d: -f2)
-minio_port=$(docker port "$MINIO" 9000/tcp | head -n 1 | cut -d: -f2)
+store_port=$(docker port "$STORE" 8333/tcp | head -n 1 | cut -d: -f2)
 
 (
   cd dist/apps/api
@@ -137,7 +138,7 @@ minio_port=$(docker port "$MINIO" 9000/tcp | head -n 1 | cut -d: -f2)
     DATABASE_URL="postgresql://postgres:drill@127.0.0.1:$db_port/restored" \
     REDIS_URL="redis://127.0.0.1:$redis_port" \
     AUTH_TOKEN_SECRET="drill-$RANDOM-$RANDOM" \
-    STORAGE_ENDPOINT="http://127.0.0.1:$minio_port" STORAGE_REGION=us-east-1 \
+    STORAGE_ENDPOINT="http://127.0.0.1:$store_port" STORAGE_REGION=us-east-1 \
     STORAGE_BUCKET=drill STORAGE_ACCESS_KEY_ID=drill STORAGE_SECRET_ACCESS_KEY=drill-secret \
     node main.js
 ) >"$work/api.log" 2>&1 &
