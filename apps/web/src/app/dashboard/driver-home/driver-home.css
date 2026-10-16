@@ -45,3 +45,31 @@ p {
     width: 100%;
   }
 }
+.cars {
+  display: grid;
+  gap: var(--mf-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cars li {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+h3 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.facts {
+  color: var(--mf-text-secondary);
+}
+.all {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  margin-top: var(--mf-space-2);
+  overflow-wrap: anywhere;
+}

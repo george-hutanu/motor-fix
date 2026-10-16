@@ -21,6 +21,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   id: 'car-1',
   itpUntil: null,
   model: '320d',
+  nextServiceKm: null,
   odometerKm: 148200,
   plate: null,
   rcaUntil: null,
@@ -575,6 +576,30 @@ describe('a car card', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(card.querySelectorAll('mf-due-date-line a')).toHaveLength(0);
+  });
+
+  // @traces 029-FR-007
+  it('shows the oil-service line after the rovinietă line when the car has a next service', async () => {
+    const { element, settle } = await render([
+      car({ itpUntil: '2026-11-13', nextServiceKm: 152000 }),
+    ]);
+    await settle();
+
+    const card = cards(element)[0];
+    const lamps = [...card.querySelectorAll<HTMLElement>('mf-lamp')];
+    expect(lamps).toHaveLength(4);
+    expect(lamps[3].closest('mf-oil-line')).not.toBeNull();
+    expect((lamps[3].textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'Schimb de ulei peste 3.800 km',
+    );
+  });
+
+  // @traces 029-FR-007
+  it('shows no oil-service line without a next service', async () => {
+    const { element, settle } = await render([car()]);
+    await settle();
+
+    expect(cards(element)[0].querySelector('mf-oil-line')).toBeNull();
   });
 
   // @traces 092-FR-009
