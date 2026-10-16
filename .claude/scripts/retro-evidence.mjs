@@ -76,10 +76,9 @@ export function diffStat(repo, from) {
 }
 
 /**
- * Findings a reviewer deliberately did not act on. Borrowed from BMAD's review
- * triage, which routes each verified finding to patch, defer or
- * decision-needed. Here defer holds only a large fix (AGENTS.md, "Technical
- * debt a review defers"); a small or medium one is made in the PR.
+ * Findings an archived feature deferred to `deferred.md`, read as history.
+ * No new feature writes one: under the "No tech-debt tickets" rule every
+ * verified finding is fixed in the task's own PR.
  */
 export function parseDeferred(text) {
   const items = [];

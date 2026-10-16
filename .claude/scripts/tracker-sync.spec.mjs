@@ -129,7 +129,6 @@ async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_T
   };
 }
 
-const labelsOf = (gh, number) => gh.state.issues.find((i) => i.number === number).labels.map((l) => l.name);
 const issueOf = (gh, number) => gh.state.issues.find((i) => i.number === number);
 const prEdits = (r) => r.gh.filter((a) => a[0] === "pr" && a[1] === "edit");
 
