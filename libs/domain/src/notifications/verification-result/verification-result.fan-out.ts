@@ -34,7 +34,7 @@ export const VERIFICATION_RESULT_CONSUMER = {
 };
 
 // A job as the relay queues it: `id` is the outbox event's.
-export interface VerificationDecidedEvent {
+export interface VerificationEvent {
   id: string;
   kind?: string;
   // Unchecked: the relay passes the payload through as recorded, so handle()
@@ -58,9 +58,7 @@ export class VerificationResultFanOut {
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
   ) {}
 
-  async handle(
-    job: Pick<Job<VerificationDecidedEvent>, 'data'>,
-  ): Promise<void> {
+  async handle(job: Pick<Job<VerificationEvent>, 'data'>): Promise<void> {
     if (job.data.kind === 'verification.submitted')
       return this.queued(job.data);
     const { id: eventId, payload } = job.data;
@@ -109,15 +107,16 @@ export class VerificationResultFanOut {
   }
 
   // Every active admin, once per sending: the event id is the sending's.
-  private async queued({ id: eventId, payload }: VerificationDecidedEvent) {
+  private async queued({ id: eventId, payload }: VerificationEvent) {
     const { fileId, garageId } = payload;
-    const file =
-      typeof fileId === 'string' && typeof garageId === 'string'
-        ? await this.prisma.verificationFile.findFirst({
-            select: { garage: { select: { name: true } } },
-            where: { garageId, id: fileId },
-          })
-        : null;
+    if (typeof fileId !== 'string' || typeof garageId !== 'string') {
+      this.logger.log('verification file ? sent: nobody told');
+      return;
+    }
+    const file = await this.prisma.verificationFile.findFirst({
+      select: { garage: { select: { name: true } } },
+      where: { garageId, id: fileId },
+    });
     const admins = file
       ? await this.prisma.account.findMany({
           select: { id: true },
@@ -125,7 +124,7 @@ export class VerificationResultFanOut {
         })
       : [];
     if (!file || admins.length === 0) {
-      this.logger.log(`verification file ${fileId ?? '?'} sent: nobody told`);
+      this.logger.log(`verification file ${fileId} sent: nobody told`);
       return;
     }
     await this.notifications.notify({
@@ -136,7 +135,7 @@ export class VerificationResultFanOut {
         garage: file.garage.name,
       },
       recipients: admins.map(({ id }) => id),
-      subjectId: fileId as string,
+      subjectId: fileId,
     });
     this.logger.log(
       `verification file ${fileId} sent: told to ${admins.length} admins`,
