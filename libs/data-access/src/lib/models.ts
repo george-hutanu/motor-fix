@@ -185,3 +185,6 @@ export type { UpdateNotificationPreferenceDto } from './models/update-notificati
 export type { UpdateNotificationPreferencesDto } from './models/update-notification-preferences-dto';
 export type { VerificationCheckDto } from './models/verification-check-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
+export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
+export type { VerificationQueueDto } from './models/verification-queue-dto';
+export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';

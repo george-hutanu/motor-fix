@@ -52,7 +52,7 @@ const ENTRIES: Record<string, Entry> = {
   ADMIN_REVIEW_REPORTED: ['event', EPW, null],
   ADMIN_RULE_APPROVAL_NEEDED: ['event', ['email', 'push'], null],
   ADMIN_STATUS_ALERT: ['event', ['email', 'push'], null, 'always'],
-  ADMIN_VERIFICATION_QUEUED: ['event', EPW, null],
+  ADMIN_VERIFICATION_QUEUED: ['event', ['email', 'push'], null],
   ASSISTANT_APPROVAL_NEEDED: ['event', ['push'], null, 'transactional'],
   BOOKING_CANCELLED: ['event', EPW, 'bookings', 'always'],
   BOOKING_CONFIRM_REMINDER: ['timer', EPW, null, 'always'],

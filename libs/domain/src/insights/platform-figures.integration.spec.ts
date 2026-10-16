@@ -8,7 +8,11 @@ import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { outbox } from '../events/event.port';
 import { VerificationService } from '../garages/verification/verification.service';
-import { databaseUrl, fixtures } from '../notifications/notifications.testing';
+import {
+  databaseUrl,
+  fixtures,
+  noNotifications,
+} from '../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -100,9 +104,14 @@ describe('the platform figures', () => {
   });
 
   it('knows a garage the verification flow approved, reopened and approved again by its first approval', async () => {
-    const verification = new VerificationService(new AuditService(), outbox, {
-      skipManualApproval: false,
-    });
+    const verification = new VerificationService(
+      new AuditService(),
+      outbox,
+      {
+        skipManualApproval: false,
+      },
+      noNotifications,
+    );
     const system = { accountId: null, role: 'system' } as const;
     const { id } = await garage('draft');
     const decided = await prisma.$transaction(async (tx) => {

@@ -1,6 +1,8 @@
 export interface VerificationConfig {
   // Approve every submission at once, as the system. Test environments only.
   skipManualApproval: boolean;
+  // The web app's address, for the admins' alert link; unset, none is sent.
+  webUrl?: string;
 }
 
 export const VERIFICATION_CONFIG = Symbol('VERIFICATION_CONFIG');

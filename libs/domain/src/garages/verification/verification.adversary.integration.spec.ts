@@ -11,6 +11,7 @@ import type { Prisma } from '../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
+  noNotifications,
 } from '../../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();
@@ -25,7 +26,12 @@ const SYSTEM = { accountId: null, role: 'system' } as const;
 const REASON = { code: 'documents_unreadable', note: 'Blurred' };
 
 const service = (skipManualApproval = false) =>
-  new VerificationService(new AuditService(), outbox, { skipManualApproval });
+  new VerificationService(
+    new AuditService(),
+    outbox,
+    { skipManualApproval },
+    noNotifications,
+  );
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);
 const person = (

@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 116,
+    "count": 117,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -750,6 +750,18 @@
       ],
       "reason": "read-only and writes nothing; a 422 is the owner's form still lacking values, not a failure, so it is read by status on the dashboard and not alerted on; the api traces carry the route span",
       "story": "ST-115"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-queue",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-queue",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-301"
     },
     {
       "kind": "endpoint",

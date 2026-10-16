@@ -26,6 +26,7 @@ import { NotificationsProcessor } from '../notifications.processor';
 import {
   databaseUrl,
   fixtures,
+  noNotifications,
   redisUrlFor,
   testConfig,
   testPhoneConfig,
@@ -102,7 +103,12 @@ async function start(withRelay = false) {
 }
 
 const verification = (skipManualApproval = false) =>
-  new VerificationService(new AuditService(), outbox, { skipManualApproval });
+  new VerificationService(
+    new AuditService(),
+    outbox,
+    { skipManualApproval },
+    noNotifications,
+  );
 
 const inTx = <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
   prisma.$transaction(fn);

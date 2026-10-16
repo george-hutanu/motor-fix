@@ -342,6 +342,9 @@ model VerificationFile {
   declaredAt     DateTime?              @map("declared_at") @db.Timestamptz(3)
   declaredByName String?                @map("declared_by_name")
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  // The latest sending: set at submitting, reset at a resending or a
+  // reopening. The admins' queue waits from it.
+  submittedAt    DateTime               @default(now()) @map("submitted_at") @db.Timestamptz(3)
   garage         Garage                 @relation(fields: [garageId], references: [id], onDelete: Cascade)
   previousFile   VerificationFile?      @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
   nextFile       VerificationFile?      @relation("follows")
@@ -351,6 +354,7 @@ model VerificationFile {
   documents      LegalDocument[]
 
   @@index([garageId, createdAt])
+  @@index([status, submittedAt])
   @@map("verification_file")
 }
 
