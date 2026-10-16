@@ -1,11 +1,12 @@
 ---
 capability: tracker
-updated: 2026-10-15
+updated: 2026-10-16
 features:
   - 1036-github-tracker-lifecycle
   - 1037-remove-notion
   - 1135-drop-legacy-pr-body
   - 1169-prefetch-intent
+  - 1132-hold-reason-commas
 ---
 
 # Capability: Tracker
@@ -93,6 +94,26 @@ _From 1135-drop-legacy-pr-body._
 ### 1169-FR-013 — The run MUST post one comment each on ST-267 (#49), ST-426 (#210), ST-222 (#35) and ST-349 (#73) in `george-hutanu/motor-fix-specs` stating the acceptance criterion from the issue's part 3, 4 or 5 and linking #1169, never twice (a comment already there is left), and log the four in `specs/1169-prefetch-intent/tracker-sync.md`.
 
 _From 1169-prefetch-intent._
+
+### 1132-FR-001 — `ready --hold` MUST keep a reason whole, commas and `=` included; a comma splits the value only where the next hold (`ST-<n>=` or `EP-<n>=`) begins.
+
+_From 1132-hold-reason-commas._
+
+### 1132-FR-002 — `ready --tick` MUST keep splitting its value on commas.
+
+_From 1132-hold-reason-commas._
+
+### 1132-FR-003 — `file` MUST title a new issue `ST-<issue number> <title>` unless the title already starts with an `ST-<n>` or `EP-<n>` id.
+
+_From 1132-hold-reason-commas._
+
+### 1132-FR-004 — `file` MUST stay idempotent: a rerun finds an open issue it already filed and retitled, by `ST-<its number> <title>`, and files nothing new.
+
+_From 1132-hold-reason-commas._
+
+### 1132-FR-005 — `debt` MUST title each task it files `ST-<issue number> <title>`, as `file` does, so a later `start` finds it.
+
+_From 1132-hold-reason-commas._
 
 ## Retired
 
