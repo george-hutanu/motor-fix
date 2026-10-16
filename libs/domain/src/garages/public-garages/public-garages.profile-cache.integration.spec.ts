@@ -156,11 +156,12 @@ describe('the profile through the cache service', () => {
   // @traces 1235-FR-001 1235-FR-003
   it('serves a repeat of a made-up brand from the no-brand entry', async () => {
     const garage = await garageOf();
+    const madeUp = `made-up-${randomUUID()}`;
     const before = await counts();
     const brandsBefore = await counts('brands');
 
-    const first = await read(garage.slug, { brand: 'made-up-brand' });
-    const second = await read(garage.slug, { brand: 'made-up-brand' });
+    const first = await read(garage.slug, { brand: madeUp });
+    const second = await read(garage.slug, { brand: madeUp });
 
     expect([first.status, second.status]).toEqual([200, 200]);
     expect(second.body.brand).toBeUndefined();
@@ -171,7 +172,7 @@ describe('the profile through the cache service', () => {
       brandsAfter.miss - brandsBefore.miss,
       brandsAfter.negative - brandsBefore.negative,
     ]).toEqual([1, 1]);
-    expect(await other.exists(entry(garage.slug, 'made-up-brand'))).toBe(0);
+    expect(await other.exists(entry(garage.slug, madeUp))).toBe(0);
   });
 
   // @traces 1235-FR-001
