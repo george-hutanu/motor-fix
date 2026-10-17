@@ -16,6 +16,7 @@ features:
   - 301-verification-queue
   - 103-demand-brands-jobs
   - 066-suspended-garages
+  - 1346-release-green
 ---
 
 # Capability: Admin dashboard
@@ -196,9 +197,9 @@ _From 162-growth-12-months._
 
 _From 162-growth-12-months._
 
-### 162-FR-011 — Below 768 px the two charts MUST stack one under the other; from 768 px they MUST sit side by side; at 320 px the page MUST NOT scroll sideways, and each chart MUST fit its panel with the shared chart's label skipping.
+### 1346-FR-006 — On the admin dashboard's growth panel, below 768 px the two charts MUST stack one under the other; from 768 px they MUST sit side by side, except on "Panou" from 1024 px, where the growth panel shares its row with the brand-demand panel (103-FR-008) and its two charts stack; at 320 px the page MUST NOT scroll sideways, and each chart MUST fit its panel with the shared chart's label skipping.
 
-_From 162-growth-12-months._
+_From 1346-release-green._
 
 ### 162-FR-012 — Tests MUST cover, against seeded snapshot rows on a real database: the month-end selection (the following month's first-day row, the last-day fallback, neither); the live current month; months before the first snapshot empty; a garage approved mid-range and suspended later counted only while listed (the snapshot write run at simulated month ends, the garage's status changed between runs); the Europe/Bucharest month boundary; and 404 for each non-admin role. An end-to-end check answers the growth read with twelve months of figures (stubbed in the browser, since the end-to-end suite also runs against a deployed address and writes no database rows; the real-database path is the integration tests above), opens "Panou" as the seeded admin and reads the first and last labels, the latest values (the seeded live counts) and one tooltip, on a phone and a desktop, in both languages.
 
@@ -616,3 +617,5 @@ _From 066-suspended-garages._
 - `161-FR-002` — superseded by `250-FR-008` (2026-10-15)
 
 - `160-FR-012` — superseded by `301-FR-009` (2026-10-16)
+
+- `162-FR-011` — superseded by `1346-FR-006` (2026-10-17)
