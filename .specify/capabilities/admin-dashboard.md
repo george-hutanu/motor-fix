@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-16
+updated: 2026-10-17
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -14,6 +14,7 @@ features:
   - 002-find-account-search
   - 250-launch-analytics-events
   - 301-verification-queue
+  - 103-demand-brands-jobs
 ---
 
 # Capability: Admin dashboard
@@ -521,6 +522,58 @@ _From 002-find-account-search._
 ### 250-FR-007 — The night job MUST write, on the whole-country row of the previous Europe/Bucharest day, the funnel counts of that day: requests whose first quote was sent that day, requests whose quote was accepted that day, bookings confirmed that day (whatever happened to them after), jobs that reached done that day, reviews posted that day (0 until reviews exist); a request counted once however many garages it went to; the counts written onto that day's existing row with its other fields untouched (a day whose row the night job missed gets no funnel counts: the job never back-fills a missed day, 161-FR-010), and a rerun replacing the day's counts.
 
 _From 250-launch-analytics-events._
+
+### 103-FR-001 — An admin MUST be able to read the demand of the last 30 days (`GET /api/v1/admin/demand`): the window's first and last Europe/Bucharest day, the window's total requests, every brand with at least one request in the window (its name from the car snapshot and its request count) and every job type with at least one request (its key, its Romanian and English names and its request count), each list ordered by count descending, then brands by their stored name and jobs by their key, in plain code-point order. Nothing in the answer is personal data; every value is a count or a catalogue name. The DTO lives in the contracts library and the generated client is regenerated.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-002 — The demand read MUST follow the `admin/*` access policy (161-FR-003): an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; the route joins the admin-route guard test's list of known routes. A failure inside the read answers the API's standard error body (no partial answer).
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-003 — A request MUST count once for its brand (the exact brand string stored in its car snapshot, not normalised; an empty string is its own brand, labelled as stored) and once for each of its REQUEST_JOB rows, in the calendar day of its creation in Europe/Bucharest, whatever its status today and however many garages it was sent to; so the brand counts add up to the window's total requests and the job counts add up to the window's request-job rows.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-004 — The window MUST be the 30 Europe/Bucharest calendar days ending today: today, counted live from the requests at every read, and the 29 closed days before it, read from DEMAND_DAILY; a closed day of the window that has no DEMAND_DAILY total row MUST be counted live too, so the answer is complete before the first night and after a missed one. Days before the first Europe/Bucharest day of the window are never counted.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-005 — The `insights` nightly job (01:00 Europe/Bucharest, `0 1 * * *`, beside the existing schedulers with its own id) MUST write to DEMAND_DAILY, for every closed day of the last 30 that has no total row yet, one row per brand with at least one request (dimension `brand`, key the snapshot's brand name, requests), one row per job type with at least one request-job row (dimension `job`, key the job type's key, requests) and always one total row (dimension `total`, key `all`, the day's requests, 0 included), in one transaction per day; running it again for a written day changes nothing. The job and the new route are listed in the observability inventory with their dashboard and alerts.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-006 — The admin dashboard MUST get the view "Mărci și lucrări" / "Brands and jobs" (the existing unreleased placeholder: path `catalogue`, capability `admin.catalogue`, tab "Mărci" / "Brands", in the side menu and the tab bar as the other admin views, released by this story), whose body opens with the subtitle "Ce au cerut șoferii în ultimele 30 de zile" / "What drivers asked for in the last 30 days" as its first line under the view header, then two panels in this order: "Cereri pe marcă, 30 de zile" / "Requests by brand, 30 days" and "Cereri pe lucrare, 30 de zile" / "Requests by job, 30 days". Each panel is a labelled section whose heading is its title and holds one bar chart in the shared Cockpit chart style (cockpit-charts) with the count unit, one bar per brand or job, most first, labelled with the brand name or the job's name in the interface language.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-007 — Each report MUST show at most 10 bars; when the read holds more than 10 brands (jobs), the panel MUST show under the chart a button "Vezi toate mărcile" / "See all brands" ("Vezi toate lucrările" / "See all jobs") that reveals, in the panel, the full list of brands (jobs) with their counts, most first, and becomes "Arată mai puține" / "Show fewer", which hides it again; with 10 or fewer the button is not rendered.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-008 — "Panou" MUST show, under the growth panel (162-FR-004), one panel "Cereri pe marcă, 30 de zile" / "Requests by brand, 30 days" with the top 8 brands of the same demand read as a bar chart in the shared chart style, and no "Vezi toate" button; "Panou" shows no requests-by-job report. The tiles and the growth panel are not affected by this panel's loading or failure.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-009 — Every count on screen MUST be formatted through the shared locale formatters for the current language (Romanian grouping "2.140", English grouping "2,140") in the chart's bars, tooltips, summary, table and the full list, and the subtitle, titles, job names and numbers MUST re-render in the other language when the admin switches it, without a reload; every text exists in Romanian and English in the shared i18n files.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-010 — While the demand read is on its way, each report, and the overview panel, MUST show the shared chart skeleton; when the read fails, each report MUST show its own shared retry button "Reîncearcă" / "Retry", and each press sends one read and redraws both reports from it; when the read succeeds with no request in the window, each report MUST show "Încă nu sunt cereri în ultimele 30 de zile." / "No requests in the last 30 days yet." in place of its chart. The view and the overview panel read the demand once when they open and again on retry; no event, polling or cache is added.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-011 — Below 768 px the two panels of "Mărci și lucrări" MUST stack one under the other; from 768 px they MUST sit side by side; at 320 px neither the view nor "Panou" scrolls sideways, every rendered label is 12 px or larger, and a brand or job whose axis label is skipped stays reachable through the shared chart's tooltip and "Vezi ca tabel" table, and the subtitle and counts are 12 px or larger on a phone.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-012 — Tests MUST cover, on a real database: one request with two jobs counted once per brand and once per job; a request sent to several garages counted once; the Europe/Bucharest day edge at 00:00 and the window's first day; today counted live beside DEMAND_DAILY rows; a closed day without rows counted live; the nightly job's rows and its idempotence; brand counts adding up to the total; ties ordered by stored brand name and job key; an empty brand string counted as its own brand; top 10 with the full list and top 8 on the overview; 404 for each non-admin role. An end-to-end check answers the demand read for three brands and two jobs (stubbed in the browser, as the growth check does, since the suite also runs against a deployed address), opens "Mărci și lucrări" as the seeded admin and reads both reports and then the overview panel, on a phone and a desktop, in both languages.
+
+_From 103-demand-brands-jobs._
+
+### 103-FR-013 — Accessibility: the "Vezi toate" / "Arată mai puține" buttons are native buttons reachable and operable by keyboard, in the page's tab order after their chart, and carry `aria-expanded` for the list they reveal; each retry button is a native button; each chart keeps the shared chart's text alternative (its summary line and the "Vezi ca tabel" table, so no figure is conveyed by bar length or colour alone); bar colours meet the shared chart's contrast in light and dark; after a retry press focus stays on the control that was pressed or moves to the redrawn panel's heading, never to the page top; loading and error changes are announced through the shared chart's live region. A brand or job name too long for its label at 320 px wraps or is truncated with the full name in the tooltip and the table, never widening the page.
+
+_From 103-demand-brands-jobs._
 
 ## Retired
 
