@@ -82,7 +82,7 @@
   <p class="live-status" role="status" [mfLiveChange]="lastTest()">
     @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
   </p>
-  <main><router-outlet /></main>
+  <main id="main"><router-outlet /></main>
   <mf-consent-bar />
   <mf-dashboard-tab-bar [base]="base()" [views]="menu()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" (act)="act($event)" />
 </div>

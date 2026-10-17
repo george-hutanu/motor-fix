@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { TestBed } from '@angular/core/testing';
@@ -80,6 +80,19 @@ describe('the skip link', () => {
     const shell = read('../app.html').trim();
 
     expect(shell.startsWith('<mf-skip-link />')).toBe(true);
+  });
+
+  it('finds its target on every page: each main in the app is the #main it points at', () => {
+    const app = join(__dirname, '..');
+    const templates = readdirSync(app, { encoding: 'utf8', recursive: true })
+      .filter((file) => file.endsWith('.html'))
+      .map((file) => readFileSync(join(app, file), 'utf8'));
+    const mains = templates.flatMap(
+      (html) => html.match(/<main\b[^>]*>/g) ?? [],
+    );
+
+    expect(mains.length).toBeGreaterThan(0);
+    expect(mains.filter((tag) => !/\bid="main"/.test(tag))).toEqual([]);
   });
 
   it('stays out of sight until it has the keyboard focus, with no transition', () => {
