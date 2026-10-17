@@ -212,6 +212,16 @@ describe('consent at sign-up', () => {
     },
   );
 
+  // @traces 366-FR-004
+  it('refuses a sign-up that accepted the privacy notice replaced on 2026-10-17', async () => {
+    const res = await signUp({
+      consent: { privacyVersion: '2026-10-12', termsVersion: TERMS_VERSION },
+    });
+
+    refusedForConsent(res);
+    await nothingWritten();
+  });
+
   it('refuses a version that is not a string by validation and writes nothing', async () => {
     const res = await signUp({
       consent: { privacyVersion: 1, termsVersion: TERMS_VERSION },

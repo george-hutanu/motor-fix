@@ -5218,7 +5218,7 @@
           },
           "privacyVersion": {
             "type": "string",
-            "example": "2026-10-12",
+            "example": "2026-10-17",
             "maxLength": 32
           }
         },
