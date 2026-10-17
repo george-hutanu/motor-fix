@@ -115,7 +115,7 @@ describe('e-mail configuration', () => {
   });
 });
 
-// @traces 279-email-inbox-FR-001
+// @traces 279-FR-001
 describe('the sending domain', () => {
   afterEach(() => jest.restoreAllMocks());
 
@@ -154,7 +154,7 @@ describe('the sending domain', () => {
   });
 });
 
-// @traces 279-email-inbox-FR-002
+// @traces 279-FR-002
 describe('the sender the domain gives', () => {
   it('sends as MotorFix no-reply at the domain when EMAIL_FROM is unset', () => {
     expect(
@@ -209,7 +209,7 @@ describe('the sender the domain gives', () => {
   });
 });
 
-// @traces 279-email-inbox-FR-003
+// @traces 279-FR-003
 describe('the support address', () => {
   it('is SUPPORT_EMAIL when it is an address, on any domain', () => {
     expect(
@@ -242,7 +242,7 @@ describe('the support address', () => {
   });
 });
 
-// @traces 279-email-inbox-FR-004 279-email-inbox-FR-011
+// @traces 279-FR-004 279-FR-011
 describe('the envelope of every automatic e-mail', () => {
   const to = { email: 'ana@example.test', name: 'Ana' };
 

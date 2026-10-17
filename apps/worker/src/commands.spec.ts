@@ -25,7 +25,7 @@ function deps() {
   };
 }
 
-// @traces 279-email-inbox-FR-012
+// @traces 279-FR-012
 describe('the worker commands', () => {
   it('answers null for anything else, so the worker boots', async () => {
     const d = deps();
@@ -62,7 +62,7 @@ describe('the worker commands', () => {
     expect(d.printed.join('\n')).toMatch(/EMAIL_DOMAIN/);
   });
 
-  // @traces 279-email-inbox-FR-006
+  // @traces 279-FR-006
   it('checks the domain through the resolver it is given', async () => {
     const d = deps();
     expect(

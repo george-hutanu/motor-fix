@@ -70,7 +70,7 @@ describe('the support settings', () => {
     },
   );
 
-  // @traces 279-email-inbox-FR-003
+  // @traces 279-FR-003
   it('falls back to support at the sending domain, without a warning', () => {
     expect(supportConfig({ EMAIL_DOMAIN: 'Example.test' }, NOW)).toEqual({
       email: 'support@example.test',

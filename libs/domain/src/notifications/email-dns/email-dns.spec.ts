@@ -54,7 +54,7 @@ const state = async (dns: DnsResolver) =>
 const result = async (dns: DnsResolver, record: string) =>
   (await checkEmailDns(DOMAIN, dns)).find((r) => r.record === record);
 
-// @traces 279-email-inbox-FR-005 279-email-inbox-FR-006
+// @traces 279-FR-005 279-FR-006
 describe('the sending domain DNS check', () => {
   it('reads all three records ok', async () => {
     const results = await checkEmailDns(DOMAIN, healthy());

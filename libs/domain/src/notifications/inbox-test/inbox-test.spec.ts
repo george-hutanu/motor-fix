@@ -48,7 +48,7 @@ function run(
   return done.then((code) => ({ code, printed, sent }));
 }
 
-// @traces 279-email-inbox-FR-007
+// @traces 279-FR-007
 describe('the inbox test matrix', () => {
   it('reads the mailboxes trimmed, lower-cased and once each', () => {
     expect(
@@ -83,7 +83,7 @@ describe('the inbox test matrix', () => {
     expect(invite?.mail?.text).toContain(`${WEB}/ro/invite/example`);
   });
 
-  // @traces 279-email-inbox-FR-008
+  // @traces 279-FR-008
   it('holds the launch types and no release-2 type', () => {
     const names = new Set(
       inboxMatrix(['a@example.test'], WEB).map((r) => r.template),
@@ -106,7 +106,7 @@ describe('the inbox test matrix', () => {
   });
 });
 
-// @traces 279-email-inbox-FR-009
+// @traces 279-FR-009
 describe('the inbox test dry run', () => {
   it('prints every row and sends nothing', async () => {
     const { code, printed, sent } = await run({ dryRun: true });
@@ -154,7 +154,7 @@ describe('the inbox test dry run', () => {
   });
 });
 
-// @traces 279-email-inbox-FR-010
+// @traces 279-FR-010
 describe('the inbox test real run', () => {
   it.each([
     [
@@ -208,7 +208,7 @@ describe('the inbox test real run', () => {
     );
   });
 
-  // @traces 279-email-inbox-FR-011
+  // @traces 279-FR-011
   it('gives the one-click headers to the news rows only', async () => {
     const { sent } = await run({ mailboxes: ['a@example.test'] });
     const withHeaders = sent.filter((mail) => mail.headers);
