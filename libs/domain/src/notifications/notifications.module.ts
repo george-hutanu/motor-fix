@@ -69,7 +69,7 @@ import {
 } from './request-received/request-received.fan-out';
 import {
   VERIFICATION_RESULT_QUEUE,
-  type VerificationDecidedEvent,
+  type VerificationEvent,
   VerificationResultFanOut,
 } from './verification-result/verification-result.fan-out';
 import { AUDIT_PORT } from '../audit/audit.port';
@@ -380,7 +380,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               );
               return null;
             }
-            const worker = new Worker<VerificationDecidedEvent>(
+            const worker = new Worker<VerificationEvent>(
               VERIFICATION_RESULT_QUEUE,
               (job) => inJob(job, () => fanOut.handle(job)),
               {

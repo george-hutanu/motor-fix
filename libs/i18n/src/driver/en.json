@@ -61,6 +61,11 @@
       "name": "Actions for {car}",
       "remove": "Remove the car"
     },
+    "oil": {
+      "due": "Oil service due in {km} km",
+      "now": "Oil service due now",
+      "overdue": "Oil service overdue by {km} km"
+    },
     "rca": {
       "days": {
         "one": "RCA expires tomorrow",
@@ -180,6 +185,10 @@
   },
   "panel": {
     "activeRequest": "Active request",
+    "cars": {
+      "all": "All cars ({n})",
+      "failed": "We could not load your cars. Try again."
+    },
     "quotes": "Quotes received",
     "repairs": "Repair history"
   },

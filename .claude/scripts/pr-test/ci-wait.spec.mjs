@@ -184,7 +184,7 @@ describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
     it('asks for each check\'s link', async () => {
       const w = world({ checks: [green] });
       await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
-      assert.ok(w.calls.includes('pr checks 21 --json name,bucket,link'), w.calls.join('\n'));
+      assert.ok(w.calls.includes('pr checks 21 --json name,bucket,link,workflow'), w.calls.join('\n'));
     });
 
     it('keeps waiting on a pending status that links no Actions run', async () => {
@@ -199,5 +199,29 @@ describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
     const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
     assert.equal(out.code, 2);
     assert.match(out.lines[0], /HTTP 502/);
+  });
+});
+
+describe('a Mutation run on the head, which no task waits for', () => {
+  const mutation = (bucket) => ({ name: 'scripts', bucket, workflow: 'Mutation' });
+
+  // @traces 1344-FR-010
+  it('ends green while a Mutation run is still going, and reports none that failed', async () => {
+    const w = world({ checks: [[...green, mutation('pending'), mutation('fail')]] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+    assert.ok(w.calls.some((c) => c.startsWith('pr checks 21 --json') && c.includes('workflow')));
+  });
+
+  // @traces 1344-FR-010
+  it('keeps waiting when the head carries Mutation checks alone, as when it has none', async () => {
+    const w = world({ checks: [[mutation('pending')], [mutation('pending'), ...green]] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+    assert.equal(w.calls.filter((c) => c.startsWith('pr checks')).length, 2);
+  });
+
+  // @traces 1344-FR-010
+  it('still reports a failing check of any other workflow', async () => {
+    const w = world({ checks: [[...green, { name: 'Unit tests', bucket: 'fail', workflow: 'CI' }, mutation('fail')]] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: ['Unit tests: fail'] });
   });
 });

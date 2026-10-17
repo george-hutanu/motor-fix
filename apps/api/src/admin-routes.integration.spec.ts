@@ -24,6 +24,7 @@ const KNOWN = [
   'GET /api/v1/admin/platform-rule-changes',
   'GET /api/v1/admin/platform-rules',
   'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url',
+  'GET /api/v1/admin/verification-queue',
   'PATCH /api/v1/admin/platform-rules/{key}',
   'POST /api/v1/admin/garages/{id}/suspend',
   'POST /api/v1/admin/live/test',

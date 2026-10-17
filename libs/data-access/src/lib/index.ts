@@ -194,6 +194,9 @@ export type { UpdateNotificationPreferenceDto } from './models/update-notificati
 export type { UpdateNotificationPreferencesDto } from './models/update-notification-preferences-dto';
 export type { VerificationCheckDto } from './models/verification-check-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
+export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
+export type { VerificationQueueDto } from './models/verification-queue-dto';
+export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
 export { AuthService } from './services/auth.service';
@@ -327,6 +330,8 @@ export type { AdminAccountsControllerSummary$Params as AdminAccountsControllerSu
 export { adminAccountsControllerSummary as adminAccountsControllerSummary } from './fn/admin/admin-accounts-controller-summary';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
+export type { AdminOverviewControllerQueue$Params as AdminOverviewControllerQueue$Params } from './fn/admin/admin-overview-controller-queue';
+export { adminOverviewControllerQueue as adminOverviewControllerQueue } from './fn/admin/admin-overview-controller-queue';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
 export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$Params } from './fn/admin/suspension-controller-suspend';

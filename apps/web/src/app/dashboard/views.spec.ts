@@ -223,6 +223,7 @@ describe('the dashboard view lists', () => {
         capability: 'admin.garages',
         counter: 'garagesWaiting',
         label: 'shell.frame.nav.admin.garages',
+        load: expect.any(Function),
         path: 'garages',
         tab: 'shell.frame.tab.garages',
       },

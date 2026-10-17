@@ -37,6 +37,7 @@ function answer(car: CarRow): CarDto {
     id: car.id,
     itpUntil: day(car.itpUntil),
     model: car.model,
+    nextServiceKm: car.nextServiceKm,
     odometerKm: car.odometerKm,
     plate: car.plate,
     rcaUntil: day(car.rcaUntil),

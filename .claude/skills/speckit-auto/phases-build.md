@@ -56,7 +56,9 @@ Invoke `speckit-harden`. It runs the mechanical audits (`artifact-lint.mjs`,
 the author's model) and `code-reviewer` (the durability read) — then fixes
 what they find. Mutation testing is not part of this phase: it never runs on
 this machine or in PR CI, only in `.github/workflows/mutation.yml` (every 3 days on
-`main`, or `workflow_dispatch` with `projects` and `shards`).
+`main`, or `workflow_dispatch` with `projects` and `shards`). This run
+dispatches no Mutation workflow run and waits for none, and a Mutation check
+on the head holds no wait and no merge.
 
 Gate overrides:
 
@@ -65,8 +67,8 @@ Gate overrides:
 - **A suppression is never the fix** — not a `biome-ignore`, not a `.skip`, not
   a Stryker disable added to reach the floor. Hard Stop 5 applies if the same
   finding survives three attempts.
-- Never report a mutation score this run did not get from CI; a project's
-  floor in `stryker.config.json` only rises.
+- Report no mutation score: this run gets none. A project's floor in
+  `stryker.config.json` only rises.
 - Fixes here are refactors, deletions and added tests. A finding that needs a
   behavior change is Hard Stop 7, not an edit.
 

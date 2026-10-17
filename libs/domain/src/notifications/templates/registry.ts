@@ -10,6 +10,7 @@ import {
   ADMIN_OUTAGE_ALERT_DOWN,
 } from './admin-outage-alert';
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
+import { ADMIN_VERIFICATION_QUEUED } from './admin-verification-queued';
 import { DUE_ITP } from './due-itp';
 import { GARAGE_SUSPENDED } from './garage-suspended';
 import { GENERIC, GENERIC_GROUPED } from './generic';
@@ -46,6 +47,7 @@ export const TEMPLATES: Registry = {
   'ADMIN_OUTAGE_ALERT.back': ADMIN_OUTAGE_ALERT_BACK,
   'ADMIN_OUTAGE_ALERT.down': ADMIN_OUTAGE_ALERT_DOWN,
   ADMIN_RULE_APPROVAL_NEEDED,
+  ADMIN_VERIFICATION_QUEUED,
   DUE_ITP,
   GARAGE_SUSPENDED,
   GENERIC,

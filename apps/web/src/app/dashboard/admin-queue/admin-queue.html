@@ -1,0 +1,53 @@
+<mf-panel [heading]="heading()">
+  @switch (state()) {
+    @case ('loading') {
+      <ul class="list" aria-busy="true" [attr.aria-label]="'admin.queue.loading' | t">
+        @for (n of skeletonRows; track n) {
+          <li class="skeleton-row"><span class="skeleton"></span></li>
+        }
+      </ul>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'admin.queue.failed' | t }}</p>
+        <button type="button" class="retry" (click)="retry()">{{ 'admin.queue.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (rows().length === 0) {
+        <p class="empty">{{ 'admin.queue.empty' | t }}</p>
+      } @else {
+        <ul class="list">
+          @for (row of rows(); track row.id) {
+            <li class="row">
+              <span class="who">
+                <span class="name">{{ row.name }}</span>
+                <span class="area">{{ row.area }}</span>
+              </span>
+              <span class="state">
+                <mf-lamp [state]="row.lamp" [label]="row.summary" />
+                @if (row.waiting) {
+                  <span class="waiting">{{ row.waiting }}</span>
+                }
+              </span>
+              <span class="applied">{{ row.applied }}</span>
+              <a class="open" [routerLink]="row.link" [attr.aria-label]="row.open">{{ 'admin.queue.open' | t }}</a>
+            </li>
+          }
+        </ul>
+      }
+      @if (stale()) {
+        <div class="failed" role="alert">
+          <p>{{ 'admin.queue.failed' | t }}</p>
+          <button type="button" class="retry" (click)="retry()">{{ 'admin.queue.retry' | t }}</button>
+        </div>
+      }
+      @if (more()) {
+        <button type="button" class="retry more" (click)="showMore()">{{ 'admin.queue.more' | t }}</button>
+      }
+      @if (all()) {
+        <a class="all" routerLink="/app/admin/garages">{{ 'admin.queue.all' | t }}</a>
+      }
+    }
+  }
+</mf-panel>

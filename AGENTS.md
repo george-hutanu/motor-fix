@@ -143,8 +143,7 @@ to `tracker-sync.md` at its next event.
   Every verified review, QA or harden finding is fixed in the current task's
   PR before ready or merge; one needing an owner decision becomes a
   needs-confirmation question on the task. That holds for every source
-  (code-reviewer, spec-reviewer, test-adversary, a mutation survivor,
-  pr-tester) and for a problem that existed before the change or sits next
+  (code-reviewer, spec-reviewer, test-adversary, pr-tester) and for a problem that existed before the change or sits next
   to it (route `patch`). The question is a comment on the task's issue with
   the `needs-confirmation` label, and the task goes to Blocked
   (`speckit-tracker-sync blocked <question>`) until the owner answers. There
@@ -419,7 +418,12 @@ source for anything the constitution does not fix.
   shard of one (each project's `test:mutation` target, the shards in
   `scripts/mutation-shards.json`), against the floor in each project's
   `stryker.config.json`, which only rises. The root `test:mutation` and
-  `test:mutation:affected` scripts stay (431-FR-006), never for a laptop. A spec that
+  `test:mutation:affected` scripts stay (431-FR-006), never for a laptop.
+  Mutation is never part of a task's lifecycle: no task dispatches, reads or
+  waits for a Mutation run, and no wait or gate counts its check on a PR head
+  (`.claude/scripts/lib/mutation-check.mjs`). Its schedule on `main` and
+  `workflow_dispatch` are the only places it runs; a surviving mutant is
+  picked from the Project like any task. A spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`;
   `npm run test:unit` leaves those out and `npm run test:integration` runs
   only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration

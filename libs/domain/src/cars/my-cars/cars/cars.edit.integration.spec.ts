@@ -182,6 +182,7 @@ describe('PATCH /cars/:id', () => {
       id: car.id,
       itpUntil: '2027-11-13',
       model: 'Logan',
+      nextServiceKm: null,
       odometerKm: 151000,
       plate: 'CJ12ABC',
       rcaUntil: '2027-01-20',

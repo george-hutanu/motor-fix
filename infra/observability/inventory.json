@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 117,
+    "count": 118,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -206,7 +206,7 @@
       "alerts": [
         "verification-result-failed"
       ],
-      "reason": "counted by motorfix_verification_result_total (built, skipped) on motorfix-queues; one VerificationResult log line per event with the file id, the decision and the owners told; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the alert fires on a job's final failure",
+      "reason": "counted by motorfix_verification_result_total (built, skipped) on motorfix-queues; one VerificationResult log line per event with the file id, the decision and the owners told, and one for a sending (ST-301) with the number of admins told (the counter counts decisions only); the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the alert fires on a job's final failure",
       "story": "ST-209"
     },
     {
@@ -793,6 +793,18 @@
       ],
       "reason": "read-only and writes nothing; a 422 is the owner's form still lacking values, not a failure, so it is read by status on the dashboard and not alerted on; the api traces carry the route span",
       "story": "ST-115"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-queue",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-queue",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-301"
     },
     {
       "kind": "endpoint",
