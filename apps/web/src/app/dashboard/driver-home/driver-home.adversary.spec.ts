@@ -5,13 +5,20 @@ import {
   type CarDto,
   CarsService,
   type MeDto,
+  PlacesService,
   type RequestSummaryDto,
   RequestsService,
+  SavedGaragesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
 import { DriverHome } from './driver-home';
+import { SavedGarages } from '../../public/saved-garages/saved-garages';
+import {
+  fakeSavedGarages,
+  pageOf,
+} from '../saved-garages/saved-garages.testing';
 import { Session } from '../session';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
@@ -106,6 +113,15 @@ async function render({
       },
       { provide: Overlays, useValue: { open } },
       { provide: Session, useValue: { current, shown: current } },
+      {
+        provide: SavedGaragesService,
+        useValue: { savedGaragesControllerList: async () => pageOf([]) },
+      },
+      { provide: SavedGarages, useValue: fakeSavedGarages() },
+      {
+        provide: PlacesService,
+        useValue: { placesControllerSearch: async () => ({ items: [] }) },
+      },
     ],
   });
   await TestBed.inject(I18n).enter('driver');

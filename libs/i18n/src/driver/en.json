@@ -144,7 +144,7 @@
     "cars": "Add your first car. We use it to show you the right garages and to remind you about the ITP.",
     "findGarage": "Find a garage",
     "findGarageForCar": "Find a garage for your car",
-    "findOthers": "Find others",
+    "findOthers": "Find more",
     "quotes": "No quotes yet. Send a request and compare the quotes here.",
     "repairs": "No repairs yet. Repairs done through MotorFix appear here by themselves.",
     "requests": "No requests yet. Ask several garages for a quote at once.",
@@ -281,5 +281,22 @@
     "compare": "Compare the quotes",
     "retry": "Try again",
     "waitingGarage": "Waiting for the garage · {left}"
+  },
+  "saved": {
+    "comesToYou": "comes to you",
+    "failed": "We could not load your saved garages.",
+    "loading": "Loading your saved garages",
+    "noCar": "Add a car to see whether it works on it",
+    "outsideArea": "outside its area",
+    "remove": "Remove from saved",
+    "retry": "Try again",
+    "seeAll": "See all",
+    "subtitle": {
+      "one": "{count} garage that works on your cars",
+      "other": "{count} garages that work on your cars"
+    },
+    "unavailable": "Unavailable",
+    "worksOn": "Works on {brands}",
+    "worksOnNone": "Does not work on your cars"
   }
 }

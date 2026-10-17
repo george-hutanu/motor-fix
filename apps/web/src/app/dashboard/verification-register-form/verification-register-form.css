@@ -1,0 +1,88 @@
+form {
+  display: grid;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+.results,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.results {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.results legend {
+  width: 100%;
+  margin-bottom: var(--mf-space-2);
+  padding: 0;
+  font-weight: 700;
+}
+.results button,
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.results button[aria-pressed="true"] {
+  border-color: var(--mf-text);
+  font-weight: 700;
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.field > label,
+.ticks legend {
+  padding: 0;
+  font-weight: 700;
+}
+input[type="text"],
+textarea {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+textarea {
+  resize: vertical;
+}
+.ticks {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.tick {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+}
+.tick input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mf-green);
+}
+.tick-text {
+  display: grid;
+  min-width: 0;
+}
+.note,
+.hint {
+  color: var(--mf-text-secondary);
+}
+p,
+.tick-text span {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.error {
+  color: var(--mf-red-ink);
+  font-weight: 700;
+}

@@ -6,9 +6,15 @@ import {
   type DocumentKind,
   SUSPENSION_CAUSES,
   type SuspensionCause,
+  VERIFICATION_CHECK_KINDS,
+  VERIFICATION_CHECK_RESULTS,
+  type VerificationCheckKind,
+  type VerificationCheckResult,
 } from '@motor-fix/contracts';
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
+import type { Kind } from '../admin/system-log/entry';
+import type { Outcome } from '../admin/system-log/system-log';
 import { TEMPLATES } from '../notifications/templates/registry';
 import {
   DECLINE_WINDOW_OUTCOMES,
@@ -78,6 +84,11 @@ const suspensions = () =>
   counter(
     'motorfix_garage_suspensions_total',
     'Garages taken off the map, by cause',
+  );
+const verificationChecks = () =>
+  counter(
+    'motorfix_verification_checks_total',
+    "Checks an admin recorded on a garage's file, by kind and result",
   );
 const quotes = () => counter('motorfix_quotes_total', 'Quotes sent to drivers');
 const emails = () =>
@@ -155,6 +166,13 @@ export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
 
 export function countGarageSuspension(cause: SuspensionCause) {
   suspensions().add(1, { cause });
+}
+
+export function countVerificationCheck(
+  kind: VerificationCheckKind,
+  result: VerificationCheckResult,
+) {
+  verificationChecks().add(1, { kind, result });
 }
 
 export function countQuote() {
@@ -248,6 +266,13 @@ const STARTS: Record<
     [garageSignUps, [{}]],
     [approvals, each('outcome', APPROVAL_OUTCOMES)],
     [suspensions, each('cause', SUSPENSION_CAUSES)],
+    [
+      verificationChecks,
+      across(
+        each('kind', VERIFICATION_CHECK_KINDS),
+        each('result', VERIFICATION_CHECK_RESULTS),
+      ),
+    ],
     [notifications, [{ channel: 'in-app' }]],
     [jobSteps, each('action', STEP_ACTIONS)],
     [documentsUploaded, each('kind', DOCUMENT_KINDS)],
@@ -298,4 +323,12 @@ export function initProductCounters(process: 'api' | 'worker') {
     const started = series();
     for (const one of labels) started.add(0, one);
   }
+}
+
+// Every write to the system status log, by kind and what became of it.
+export function countSystemLogEntry(kind: Kind, outcome: Outcome) {
+  counter(
+    'motorfix_system_log_entries_total',
+    'System status log writes, by kind and outcome',
+  ).add(1, { kind, outcome });
 }

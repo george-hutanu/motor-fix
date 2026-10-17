@@ -31,8 +31,10 @@ features:
   - 1169-prefetch-intent
   - 029-overview-panels-own-data
   - 366-assistant-privacy
-  - 1345-staging-observability
+  - 291-saved-garages
   - 066-suspended-garages
+  - 1345-staging-observability
+  - 005-data-requests
 ---
 
 # Capability: Accounts
@@ -841,9 +843,9 @@ _From 1203-legal-operator._
 
 _From 1203-legal-operator._
 
-### 1203-FR-010 — No legal fact beyond the ones in FR-001, FR-002 and FR-004 is added: no DPO appointment, no other address, telephone number or supervisory-authority wording, no change to any other section.
+### 005-FR-014 — Every paragraph of the privacy notice in `apps/web/src/app/public/legal-texts.ts` that says how to use a right (closing the account or erasure, objecting to the profile-view count, "Your rights" / "Drepturile tale") MUST point to the e-mail address of the first section ("the e-mail address above" / "adresa de e‑mail de mai sus", worded so it cannot be read as the postal seat) as well as the account, in both languages, so it agrees with the contact paragraph and the procedure; the address itself stays written once per notice (1203-FR-010, `legal-texts.operator.adversary.spec.ts`); the terms of use are unchanged. It carries 1203-FR-010's rule forward: no legal fact beyond 1203-FR-001, 1203-FR-002 and 1203-FR-004 is added to the operator details (no DPO appointment, no other address, telephone number or supervisory-authority wording), and no section changes beyond these paragraphs.
 
-_From 1203-legal-operator._
+_From 005-data-requests._
 
 ### 250-FR-001 — The web app MUST send every analytics event through one analytics service that drops the call without a valid "granted" consent, stops at once when consent is withdrawn during the visit, and never runs on the server.
 
@@ -936,6 +938,41 @@ _From 366-assistant-privacy._
 
 _From 366-assistant-privacy._
 
+### 291-FR-006 — The panel "Service-uri salvate" on Panou (registry key `saved`, 029-FR-010, released and behind `driver.saved_garages` as today) and the view "Service-uri salvate" at `/app/driver/saved` (028-FR-001, title "Service-uri salvate" / "Saved garages", 028-FR-002) MUST show the same list from FR-001, through one root-provided store: activating either reads the first page once, and the other shows the store's rows when it opens and reads again. The view MUST show under its title the subtitle "{n} service-uri care lucrează pe mașinile tale" / "{n} garages that work on your cars" from `workingCount`, with the Romanian count forms of the shared formatter: "1 service care lucrează…", "0 service-uri…", "2–19 service-uri…" and from 20 "20 de service-uri care lucrează pe mașinile tale".
+
+_From 291-saved-garages._
+
+### 291-FR-007 — Each row MUST show: the rating dial (the shared dial the result cards and Home cards use, with its unrated state), the garage's name, the lamp line of FR-008, a remove control (icon only, accessible name "Scoate din salvate" / "Remove from saved"), and an arrow; the name and the arrow open the garage's public profile `/<lang>/garages/<slug>` in the person's language (the profile opened from here reports its source as `saved`, as today). Rows are helm cards, in the order the API gives.
+
+_From 291-saved-garages._
+
+### 291-FR-008 — The lamp line MUST be composed from the item: with `brands` not empty, a green lamp (the shared `mf-lamp`) and "Lucrează pe {brands}" / "Works on {brands}", the names joined with ", " and the last with " și " / " and "; with `brands` empty and the driver owning at least one car, a red lamp and "Nu lucrează pe mașinile tale" / "Does not work on your cars"; with no car, a grey lamp and "Adaugă o mașină ca să vezi dacă lucrează pe ea" / "Add a car to see whether it works on it". After it, separated by " · ", the distance when the item has one, in the language's format with one decimal and " km" (019-FR-004); for a mobile mechanic "vine la tine" / "comes to you" when `comesToYou` is true and "în afara zonei" / "outside its area" when false; nothing, and no separator, without a place. The colour is never the only signal: the text states the case and the dot is hidden from assistive technology. An `available: false` item is drawn greyed with "Indisponibil" / "Unavailable" in place of the lamp line (its name and arrow still open the profile, which shows the "no longer available" page, A34) and keeps its remove control; its dial shows the garage's stored rating, or the unrated state, like any other row.
+
+_From 291-saved-garages._
+
+### 291-FR-009 — The panel MUST show the newest 3 rows; when `total` exceeds 3 it ends with the link "Vezi toate" / "See all" to the view. The view MUST show the first page and read the next page with its cursor when the last row comes into view (infinite scroll), appending; a failed page read shows the error text of FR-012 under the loaded rows with "Reîncearcă".
+
+_From 291-saved-garages._
+
+### 291-FR-010 — The place for `near` MUST be the one the browser keeps for Home and the results (the place store, 229-FR-005: location or typed address) and, with none kept, the Setări city as Home takes it (229-FR-006: through the address look-up once, not stored); with neither, or when the browser refused the location, the read is sent without `near`. The place is rounded to three decimals before it leaves the browser (229-FR-008). A change of the place while the dashboard is open re-reads the list once.
+
+_From 291-saved-garages._
+
+### 291-FR-011 — The remove control MUST remove the row at once (optimistic), send ST-290's removal, show the undo bar of 290-FR-013 ("Scos din salvate · Anulează" / "Removed from saved · Undo", 8 seconds, announced, keyboard-operable) and update `total`, `workingCount` and the panel's "Vezi toate" in place; "Anulează" sends the undo save and puts the row back in its former place; a failed removal puts the row back, drops the bar and shows the error toast ("Fără conexiune" / "No connection" offline, else the shared error text). When a row goes, keyboard focus moves to the next row's link, else the previous row's, else "Caută altele". The shared control and undo of ST-290 are reused, not rewritten.
+
+_From 291-saved-garages._
+
+### 291-FR-012 — States: while the first read is open the panel and the view show three row skeletons; a failed read shows "Nu am putut încărca service-urile salvate." / "We could not load your saved garages." with "Reîncearcă" / "Try again"; an empty list shows "Nu ai salvat încă niciun service." / "You have not saved any garage yet." with the button "Caută altele" / "Find more" (the existing empty state of the view, 030-FR-011, now also the panel's). "Caută altele" MUST also sit at the top right of the panel's and the view's header, as the mock draws it (design.md), not at the foot; it opens the results in the person's language for the brand of the driver's first car (`/<lang>/garages?brand=<brand id>`, which the results page reads as a brand id, with the kept place as the results page already read it; amended at review: the car carries the brand's id, not its slug) or Home when the driver has no car.
+
+_From 291-saved-garages._
+
+### 291-FR-013 — The panel and the view MUST subscribe to `saved_garage.added` and `saved_garage.removed` on the driver's signed-in live stream (290-FR-008) and read the list again on either (the first page, then, in the view, the further pages again up to as many rows as were shown, through the dashboard's shared `moreRows`), so a save or removal in another tab shows within seconds; an event for a removal this screen itself made is harmless (the re-read answers the same list). A rating or status change shows on the next read, with no subscription.
+
+_From 291-saved-garages._
+
+### 291-FR-014 — Every text MUST live in the dashboard's texts in Romanian and English, and the panel and the view MUST render well at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll (286-FR, 288-FR); a row's remove control and arrow are at least 44 px targets.
+
+_From 291-saved-garages._
 ### 1345-FR-006 — The web app's background calls that need a session MUST NOT be sent without an access token: the bell's unread-count poll (each tick, and the first) and the push device's key request check the token first and skip the call without one, as the live stream already does. A dashboard tab whose renewal was refused therefore makes no further background call until the account signs in again, and the poll resumes with the new token. Explicit asks (the area and account guards, the sign-in return, the invite, the sign-in dialog, the report link) keep their single renewal; the session's `ask()` and the refresh endpoint are unchanged (the signed-out refresh is ST-510, #398). Colocated unit tests cover the bell and the push device.
 
 _From 1345-staging-observability._
@@ -946,6 +983,66 @@ _From 1345-staging-observability._
 ### 066-FR-012 — The admin read of accounts (`GET /api/v1/admin/accounts`) MUST carry on each account `serviceSuspended`, true when the account holds a mechanic card at a garage whose status is `suspended`, false otherwise; no screen shows it in this story (the Mecanici table of #27 and the detail page of #28 will show "service suspendat" in red from it). Tests MUST cover a mechanic of a suspended garage (true), of an approved garage (false), an owner of a suspended garage with no mechanic card (false), and the flag turning false once the garage is no longer suspended.
 
 _From 066-suspended-garages._
+
+### 005-FR-001 — The specs repo MUST hold a procedure page "Cereri privind datele personale" at `docs/reference/data-requests.md` with the eight front-matter keys, listed in `llms.txt` with its summary, passing `scripts/docs-lint.mjs`.
+
+_From 005-data-requests._
+
+### 005-FR-002 — The page MUST be marked owner-approved on 2026-10-16 under the owner's 2026-10-11 rule and MUST name the lawyer's later review as a follow-up that does not block anything.
+
+_From 005-data-requests._
+
+### 005-FR-003 — The page MUST cover these request kinds, each in its own section: access, correction, deletion, copy (portability), objection, restriction, consent withdrawal.
+
+_From 005-data-requests._
+
+### 005-FR-004 — For each kind the page MUST state: the channels a request may come through (e-mail to hutanugeorge40@gmail.com, from the account, the contact form), how identity is checked before answering, the deadline (one month from receipt, extendable by two months with a notice to the person that states why, GDPR art. 12(3)), who handles it (the MotorFix admin, one admin role at launch [X21]), the steps, and the reply texts in Romanian and English; for correction, deletion and restriction, the step that tells each recipient the data was shared with (a garage, a processor) of the change, unless impossible or disproportionate (GDPR art. 19).
+
+_From 005-data-requests._
+
+### 005-FR-005 — The page MUST give reply texts, in Romanian and English, for: acknowledgement of receipt, an identity question, the extension notice, each kind's answer, and the refusals (identity not confirmed; manifestly unfounded or excessive), every refusal and extension text naming the person's right to complain to the supervisory authority (ANSPDCP) and to go to court (GDPR art. 12(4)).
+
+_From 005-data-requests._
+
+### 005-FR-006 — The page MUST state what is kept after a deletion and for how long, marked owner-approved: legal documents and audit history while the account or garage is active, then 5 years after closing; photos, clips and recordings 90 days; day-sheet PDFs 30 days; held in one config read by the retention job (ST-1156); the lawyer may change the values later.
+
+_From 005-data-requests._
+
+### 005-FR-007 — The page MUST list the fields an admin fills before deleting an account on request: request reference, date received, identity-checked tick; and MUST say ST-3 (issue 84) uses them.
+
+_From 005-data-requests._
+
+### 005-FR-008 — The page MUST state that each request is recorded as an admin action in the audit history with: who asked, when received, what for (the kind), who handled it, when answered, and the address answered to; for a person without an account the entry has no subject account and its text carries these facts; and how the admin records it until the product does.
+
+_From 005-data-requests._
+
+### 005-FR-009 — The page MUST state the deletion rules: a driver's open quote requests are closed, future bookings are cancelled by the system, the garages concerned are told [X11]; a mechanic or receptionist leaves the team and the reviews of their work stay with the garage [X12]; a garage owner's account is deleted only after the garage is closed through support [X12].
+
+_From 005-data-requests._
+
+### 005-FR-010 — The page MUST state that a deleted driver's reviews stay, shown under "Șofer MotorFix", with the garages' ratings unchanged (ST-140).
+
+_From 005-data-requests._
+
+### 005-FR-011 — The page MUST define the content and format of a data copy (ST-140): a ZIP archive with one JSON file per area of the person's data, the person's media files as they are, and one readable summary in the person's language; the areas listed.
+
+_From 005-data-requests._
+
+### 005-FR-012 — The page MUST state that requests are accepted from people without an account and how their identity is checked.
+
+_From 005-data-requests._
+
+### 005-FR-013 — The issues of ST-3 (george-hutanu/motor-fix-specs#84) and ST-129 (#235) and the feature page `docs/reference/features/admin/mf-46-users-accounts-overview.md` MUST link to the procedure page; MF-46's stale lawyer lines ("Lawyer, still open" on retention and the download, "agreed with the lawyer") and MF-28's download-format NEEDS CLARIFICATION MUST be replaced by a pointer to the page and the owner's 2026-10-16 sign-off.
+
+_From 005-data-requests._
+
+### 005-FR-014 — Every paragraph of the privacy notice in `apps/web/src/app/public/legal-texts.ts` that says how to use a right (closing the account or erasure, objecting to the profile-view count, "Your rights" / "Drepturile tale") MUST point to the e-mail address of the first section ("the e-mail address above" / "adresa de e‑mail de mai sus", worded so it cannot be read as the postal seat) as well as the account, in both languages, so it agrees with the contact paragraph and the procedure; the address itself stays written once per notice (1203-FR-010, `legal-texts.operator.adversary.spec.ts`); the terms of use are unchanged. It carries 1203-FR-010's rule forward: no legal fact beyond 1203-FR-001, 1203-FR-002 and 1203-FR-004 is added to the operator details (no DPO appointment, no other address, telephone number or supervisory-authority wording), and no section changes beyond these paragraphs.
+
+_From 005-data-requests._
+
+### 005-FR-015 — The owner-only follow-ups (the lawyer's review, legal wording changes, the controller's contact details if they change, a processor contract list) MUST be raised in one `needs-confirmation` comment on the story with exact instructions; the comment does not set the task to Blocked and does not hold the merge.
+
+_From 005-data-requests._
 
 ## Retired
 
@@ -979,3 +1076,5 @@ _From 066-suspended-garages._
 - `030-FR-001` — superseded by `029-FR-010` (2026-10-17)
 - `030-FR-006` — superseded by `029-FR-008` (2026-10-17)
 - `1203-FR-005` — superseded by `366-FR-003` (2026-10-17)
+
+- `1203-FR-010` — superseded by `005-FR-014` (2026-10-17)

@@ -2073,6 +2073,63 @@
         ]
       }
     },
+    "/api/v1/me/saved-garages": {
+      "get": {
+        "operationId": "SavedGaragesController_list",
+        "parameters": [
+          {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the page before; opaque",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedGaragesPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: near outside Romania or a cursor too long; invalid_cursor: a cursor this list did not give out"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's saved garages, newest first, 20 a page, with the brands of their cars each works on",
+        "tags": [
+          "saved-garages"
+        ]
+      }
+    },
     "/api/v1/me/saved-garages/ids": {
       "get": {
         "operationId": "SavedGaragesController_ids",
@@ -7828,6 +7885,123 @@
           "savedAt"
         ]
       },
+      "SavedGarageBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "SavedGarageItemDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviewed",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number"
+          },
+          "available": {
+            "type": "boolean",
+            "description": "False unless the garage is approved"
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "savedAt": {
+            "type": "string",
+            "description": "UTC",
+            "format": "date-time"
+          },
+          "brands": {
+            "description": "Brands of the driver's cars the garage works on with that car's fuel, newest car first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavedGarageBrandDto"
+            }
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal; null for a mobile mechanic or a garage with no position. Only with near",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "For a mobile mechanic only: whether its area holds the place. Only with near"
+          }
+        },
+        "required": [
+          "garageId",
+          "name",
+          "slug",
+          "rating",
+          "reviewCount",
+          "available",
+          "businessKind",
+          "savedAt",
+          "brands"
+        ]
+      },
+      "SavedGaragesPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest saved first, then by garage id; 20 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavedGarageItemDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "The cursor of the next page; null on the last",
+            "nullable": true
+          },
+          "total": {
+            "type": "number",
+            "description": "Every saved garage, not the page"
+          },
+          "workingCount": {
+            "type": "number",
+            "description": "Saved garages that work on at least one of the driver's cars"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total",
+          "workingCount"
+        ]
+      },
       "SavedGarageIdsDto": {
         "type": "object",
         "properties": {
@@ -12068,6 +12242,28 @@
           "fromTime"
         ]
       },
+      "RecordCheckEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The company name as the register shows it; company only",
+            "maxLength": 200
+          },
+          "certificate": {
+            "type": "boolean",
+            "description": "4520 on the ONRC certificate; caen only"
+          },
+          "onrc": {
+            "type": "boolean",
+            "description": "4520 in the ONRC record; caen only"
+          },
+          "address": {
+            "type": "boolean",
+            "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
+          }
+        }
+      },
       "RecordVerificationCheckDto": {
         "type": "object",
         "properties": {
@@ -12091,13 +12287,70 @@
             "items": {
               "type": "string"
             }
+          },
+          "evidence": {
+            "description": "What the admin found; company and caen only, refused with not_run",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordCheckEvidenceDto"
+              }
+            ]
           }
         },
         "required": [
           "result"
         ]
       },
-      "VerificationCheckDto": {
+      "VerificationCheckEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The company name as the register shows it; company only",
+            "maxLength": 200
+          },
+          "certificate": {
+            "type": "boolean",
+            "description": "4520 on the ONRC certificate; caen only"
+          },
+          "onrc": {
+            "type": "boolean",
+            "description": "4520 in the ONRC record; caen only"
+          },
+          "address": {
+            "type": "boolean",
+            "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
+          },
+          "certificateUploaded": {
+            "type": "boolean",
+            "description": "Whether the file held an ONRC certificate at the save; caen only"
+          },
+          "lookedUpOn": {
+            "type": "string",
+            "description": "The day of the look-up, in Bucharest",
+            "format": "date"
+          }
+        }
+      },
+      "VerificationActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Null for the system",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "VerificationFileCheckDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -12138,6 +12391,16 @@
             "type": "string",
             "nullable": true
           },
+          "evidence": {
+            "description": "What the admin found, for company and caen; null otherwise",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationCheckEvidenceDto"
+              }
+            ]
+          },
           "recordedBy": {
             "type": "string",
             "format": "uuid",
@@ -12147,6 +12410,16 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "recorder": {
+            "description": "Null while never recorded; MotorFix for an automatic record",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
           }
         },
         "required": [
@@ -12156,15 +12429,17 @@
           "automatic",
           "result",
           "detail",
+          "evidence",
           "recordedBy",
-          "recordedAt"
+          "recordedAt",
+          "recorder"
         ]
       },
       "VerificationCheckRecordedDto": {
         "type": "object",
         "properties": {
           "check": {
-            "$ref": "#/components/schemas/VerificationCheckDto"
+            "$ref": "#/components/schemas/VerificationFileCheckDto"
           },
           "summary": {
             "$ref": "#/components/schemas/CheckSummaryDto"
@@ -12181,24 +12456,6 @@
           "check",
           "summary",
           "rarActivities"
-        ]
-      },
-      "VerificationActorDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Null for the system",
-            "format": "uuid",
-            "nullable": true
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name"
         ]
       },
       "VerificationFileStateDto": {
@@ -12375,80 +12632,6 @@
           "phone",
           "brands",
           "photos"
-        ]
-      },
-      "VerificationFileCheckDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "fileId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "company",
-              "caen",
-              "rar",
-              "activities",
-              "representative",
-              "address",
-              "photos",
-              "documents"
-            ]
-          },
-          "automatic": {
-            "type": "boolean",
-            "description": "False until automatic look-ups exist"
-          },
-          "result": {
-            "type": "string",
-            "enum": [
-              "not_run",
-              "ok",
-              "warning",
-              "failed"
-            ]
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "recordedBy": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "recordedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "recorder": {
-            "description": "Null while never recorded; MotorFix for an automatic record",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationActorDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "fileId",
-          "kind",
-          "automatic",
-          "result",
-          "detail",
-          "recordedBy",
-          "recordedAt",
-          "recorder"
         ]
       },
       "VerificationFileActivityDto": {

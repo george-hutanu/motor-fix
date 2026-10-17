@@ -17,6 +17,10 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
   ),
 }));
 
+// Each test builds a TestBed and waits out several macrotasks; on a loaded
+// machine that has run past Jest's 5 s default with nothing hung.
+jest.setTimeout(15_000);
+
 type Role = MeDto['role'];
 
 const problem = (status: number, code = 'x') =>

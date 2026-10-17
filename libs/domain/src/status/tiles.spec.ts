@@ -1,4 +1,4 @@
-import { nextTile, stateOf, TILES, type TileRow } from './tiles';
+import { limitCrossed, nextTile, stateOf, TILES, type TileRow } from './tiles';
 
 const at = (iso: string) => new Date(iso);
 const t0 = at('2026-10-17T10:00:00Z');
@@ -216,5 +216,51 @@ describe('the stored state of a tile', () => {
     expect(events).toBe(0);
     expect(current.state).toBe('green');
     expect(current.pendingState).toBeNull();
+  });
+});
+
+// @traces 297-FR-006
+describe('the limit a tile crossed', () => {
+  it.each([
+    [
+      { latency_ms: 700 },
+      latency,
+      'amber',
+      { figure: 'latency_ms', limit: 500 },
+    ],
+    [
+      { latency_ms: 2500 },
+      latency,
+      'red',
+      { figure: 'latency_ms', limit: 2000 },
+    ],
+    [
+      { failed_share: 0.2, latency_ms: 80 },
+      email,
+      'amber',
+      { figure: 'failed_share', limit: 0.1 },
+    ],
+    [
+      { failed_share: 0, oldest_waiting_s: 1000 },
+      queue,
+      'red',
+      { figure: 'oldest_waiting_s', limit: 900 },
+    ],
+    [
+      { backup_age_h: 30 },
+      backup,
+      'amber',
+      { figure: 'backup_age_h', limit: 26 },
+    ],
+  ] as const)(
+    'of %j against %j turning %s is %j',
+    (figures, limits, state, crossed) => {
+      expect(limitCrossed(figures, limits, state)).toEqual(crossed);
+    },
+  );
+
+  it('is none for a green tile, or a red one with no figures (a failed check)', () => {
+    expect(limitCrossed({ latency_ms: 80 }, latency, 'green')).toBeNull();
+    expect(limitCrossed(null, latency, 'red')).toBeNull();
   });
 });

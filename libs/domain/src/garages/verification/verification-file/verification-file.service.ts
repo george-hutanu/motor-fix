@@ -4,6 +4,7 @@ import {
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TIMELINE_MAX,
   type VerificationActorDto,
+  type VerificationCheckEvidenceDto,
   type VerificationFileDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { isUUID } from 'class-validator';
 import { firstName } from '../../../audit/audit.service';
 import { auditEntryOf } from '../../../audit/audit-history/audit-history.service';
 import { PRISMA } from '../../../auth/prisma';
+import { localDay } from '../../../bucharest';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
@@ -20,19 +22,11 @@ const SYSTEM_NAME = 'MotorFix';
 
 const calendarDay = (at: Date) => at.toISOString().slice(0, 10);
 
-const bucharestDay = (at: Date) =>
-  new Intl.DateTimeFormat('en-CA', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: 'Europe/Bucharest',
-    year: 'numeric',
-  }).format(at);
-
 // The certificate counts from the day it was sent, in Bucharest; one with no
 // issue date cannot be judged recent.
 export function certificateStale(issuedOn: Date | null, sentAt: Date) {
   if (!issuedOn) return true;
-  return !issuedWithinWindow(calendarDay(issuedOn), bucharestDay(sentAt));
+  return !issuedWithinWindow(calendarDay(issuedOn), localDay(sentAt));
 }
 
 // The file's own lines: its sending and status changes, its checks' records
@@ -165,6 +159,7 @@ export class VerificationFileService {
           ({
             automatic,
             detail,
+            evidence,
             fileId,
             id,
             kind,
@@ -174,6 +169,7 @@ export class VerificationFileService {
           }) => ({
             automatic,
             detail,
+            evidence: evidence as VerificationCheckEvidenceDto | null,
             fileId,
             id,
             kind,

@@ -15,7 +15,7 @@ import {
   type NotificationDto,
   NotificationsService,
 } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 
@@ -209,7 +209,6 @@ export class BellStore {
 // a phone.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
   providers: [BellStore],
   selector: 'mf-bell',
   styleUrl: './bell.css',

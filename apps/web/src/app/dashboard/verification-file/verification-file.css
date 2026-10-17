@@ -122,6 +122,26 @@ h4 {
 .tick input:disabled + span {
   color: var(--mf-text-secondary);
 }
+.register-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+.lookup {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-2);
+  font-weight: 600;
+  color: var(--mf-text);
+}
+.register-form {
+  padding: var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  min-width: 0;
+}
 .problem {
   display: grid;
   gap: var(--mf-space-1);
@@ -159,6 +179,7 @@ h4 {
   opacity: 0.55;
 }
 .action:focus-visible,
+.lookup:focus-visible,
 .tick input:focus-visible,
 .photos a:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);

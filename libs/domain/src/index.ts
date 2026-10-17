@@ -1,5 +1,7 @@
 export { AdminAccountsModule } from './admin/admin-accounts/admin-accounts.module';
 export { PlatformRulesModule } from './admin/platform-rules/platform-rules.module';
+export { systemLog } from './admin/system-log/system-log';
+export { SystemLogModule } from './admin/system-log/system-log.module';
 export { AUDIT_PORT, type AuditPort } from './audit/audit.port';
 export { AuditService } from './audit/audit.service';
 export { signAccessToken } from './auth/access-token';

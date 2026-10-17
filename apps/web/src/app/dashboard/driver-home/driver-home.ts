@@ -29,6 +29,8 @@ import { Live } from '../live';
 import { OilLine } from '../oil-line/oil-line';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
+import { SavedGaragesList } from '../saved-garages/saved-garages-list';
+import { SavedGaragesPanel } from '../saved-garages/saved-garages-panel/saved-garages-panel';
 import { Session } from '../session';
 import { TiePipe } from '../tie/tie';
 import { allowedViews } from '../views';
@@ -58,6 +60,7 @@ const TICK_MS = 60_000;
     Panel,
     QuotesCompare,
     RouterLink,
+    SavedGaragesPanel,
     TiePipe,
     TranslatePipe,
   ],
@@ -111,6 +114,16 @@ export class DriverHome {
       (view) => view.path === 'saved',
     ),
   );
+  private readonly savedList = inject(SavedGaragesList);
+  // As the other panels: only a list with rows links its heading.
+  protected readonly savedLink = computed(() =>
+    this.savedList.rows()?.length ? ['/app', 'driver', 'saved'] : undefined,
+  );
+  // The cars as the saved panel reads them: undefined until known.
+  protected readonly carList = computed(() => {
+    const cars = this.cars();
+    return Array.isArray(cars) ? cars : undefined;
+  });
   protected readonly panels = computed(() =>
     panelsToDraw(null).filter((key) => key !== 'saved' || this.saved()),
   );
