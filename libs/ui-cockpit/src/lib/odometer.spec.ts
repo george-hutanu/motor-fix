@@ -157,3 +157,82 @@ describe('Odometer', () => {
     expect(odometer.match(/animation|transition/g)).toHaveLength(1);
   });
 });
+
+@Component({
+  imports: [Odometer],
+  template: `<mf-odometer [from]="from()" [cells]="5" />`,
+})
+class CellsHost {
+  readonly from = signal<unknown>(0);
+}
+
+function renderCells(from: unknown) {
+  const fixture = TestBed.createComponent(CellsHost);
+  fixture.componentInstance.from.set(from);
+  fixture.detectChanges();
+  const part = (fixture.nativeElement as HTMLElement).querySelector(
+    'mf-odometer',
+  ) as HTMLElement;
+  const digits = () => [
+    ...part.querySelectorAll<HTMLElement>('.mf-odometer-digit'),
+  ];
+  return {
+    digits: () =>
+      digits()
+        .map((d) => d.textContent)
+        .join(''),
+    dim: () => digits().map((d) => d.classList.contains('mf-odometer-dim')),
+    fixture,
+    part,
+  };
+}
+
+// @traces 356-live-estimate-FR-004
+describe('Odometer in cells', () => {
+  it('pads whole lei with leading zeros to the cells asked, with no separator or unit', () => {
+    const { digits, part } = renderCells(104000);
+
+    expect(digits()).toBe('01040');
+    expect(part.textContent).not.toContain('lei');
+    expect(part.textContent).not.toContain('.');
+  });
+
+  it('grows past the cells asked for a larger amount', () => {
+    expect(renderCells(12345600).digits()).toBe('123456');
+  });
+
+  it('rounds bani to the nearest whole leu', () => {
+    expect(renderCells(15049).digits()).toBe('00150');
+    expect(renderCells(15050).digits()).toBe('00151');
+  });
+
+  it('dims the leading zeros, and all but the last cell of zero', () => {
+    expect(renderCells(15000).dim()).toEqual([true, true, false, false, false]);
+    expect(renderCells(0).dim()).toEqual([true, true, true, true, false]);
+  });
+
+  it('keeps the cells away from assistive technology and has no live region', () => {
+    const { part } = renderCells(104000);
+
+    expect(part.querySelectorAll('[aria-live]')).toHaveLength(0);
+    expect(
+      part.querySelector('.mf-odometer-value')?.getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
+
+  it('shows the dash for an amount that is not a number', () => {
+    const { digits, part } = renderCells(Number.NaN);
+
+    expect(digits()).toBe('');
+    expect(part.textContent?.trim()).toBe('—');
+  });
+
+  it('rolls to the new amount when it changes', () => {
+    const { digits, fixture } = renderCells(104000);
+
+    fixture.componentInstance.from.set(15000);
+    fixture.detectChanges();
+
+    expect(digits()).toBe('00150');
+  });
+});

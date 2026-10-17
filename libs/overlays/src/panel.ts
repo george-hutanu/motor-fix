@@ -538,8 +538,11 @@ export class OverlayPanel {
   }
 
   private focusStart() {
+    // A field the task marks autofocus goes before its first field.
+    const body = this.body().nativeElement;
     const field = this.window?.matchMedia?.(COMPUTER).matches
-      ? this.body().nativeElement.querySelector<HTMLElement>(FIELD)
+      ? (body.querySelector<HTMLElement>('[autofocus]') ??
+        body.querySelector<HTMLElement>(FIELD))
       : null;
     const target =
       field ??

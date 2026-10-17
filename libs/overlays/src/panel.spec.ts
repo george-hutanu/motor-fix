@@ -487,3 +487,52 @@ describe('the sheet styles', () => {
     ).toMatch(/transition:\s*none/);
   });
 });
+
+@Component({
+  template: `
+    <label for="car">Mașina</label>
+    <select id="car"><option>Logan</option></select>
+    <label for="what">Ce s-a întâmplat</label>
+    <textarea id="what" autofocus></textarea>
+  `,
+})
+class AutofocusTask {}
+
+@Component({
+  template: `<button id="opener" type="button" (click)="open()">Deschide</button>`,
+})
+class AutofocusHost {
+  private readonly overlays = inject(Overlays);
+
+  open() {
+    this.overlays.open(AutofocusTask, {
+      shape: 'dialog',
+      title: 'shell.brand',
+    });
+  }
+}
+
+async function openAutofocus() {
+  const fixture = TestBed.createComponent(AutofocusHost);
+  fixture.detectChanges();
+  document.querySelector<HTMLButtonElement>('#opener')?.click();
+  await settle();
+}
+
+// @traces 356-live-estimate-FR-011
+describe('a field the task marks autofocus', () => {
+  it('takes the focus before the first field on a computer', async () => {
+    wide = true;
+    await openAutofocus();
+
+    expect(document.activeElement?.id).toBe('what');
+  });
+
+  it('is left alone on a phone, where the sheet itself takes the focus', async () => {
+    await openAutofocus();
+
+    expect(document.activeElement).toBe(
+      panel().closest('[role="dialog"]') ?? panel(),
+    );
+  });
+});

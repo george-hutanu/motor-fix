@@ -45,7 +45,7 @@ const toWholeLei = (bani: unknown) =>
       content: "0\\A 1\\A 2\\A 3\\A 4\\A 5\\A 6\\A 7\\A 8\\A 9";
       position: absolute;
       inset: 0 0 auto;
-      color: var(--mf-text);
+      color: var(--mf-odometer-ink, var(--mf-text));
       line-height: calc(1em + 8px);
       white-space: pre;
       translate: 0 calc(var(--mf-digit) * -1 * (1em + 8px));
@@ -58,6 +58,9 @@ const toWholeLei = (bani: unknown) =>
       .mf-odometer-digit::before {
         content: none;
       }
+    }
+    .mf-odometer-digit.mf-odometer-dim::before {
+      color: var(--mf-line-strong);
     }
     .mf-odometer-spoken {
       position: absolute;
@@ -72,15 +75,17 @@ const toWholeLei = (bani: unknown) =>
     <span class="mf-odometer-value" aria-hidden="true">
       @for (char of chars(); track $index) {
         @if (char >= '0' && char <= '9') {
-          <span class="mf-odometer-digit" [style.--mf-digit]="char">{{ char }}</span>
+          <span class="mf-odometer-digit" [class.mf-odometer-dim]="$index < dimmed()" [style.--mf-digit]="char">{{ char }}</span>
         } @else {
           <span>{{ char }}</span>
         }
       }
     </span>
-    <span aria-live="polite" aria-atomic="true">
-      <span class="mf-odometer-spoken">{{ text() }}</span>
-    </span>
+    @if (cells() === undefined) {
+      <span aria-live="polite" aria-atomic="true">
+        <span class="mf-odometer-spoken">{{ text() }}</span>
+      </span>
+    }
   `,
 })
 export class Odometer {
@@ -92,7 +97,19 @@ export class Odometer {
   // expecting a single price.
   readonly to = input<unknown>();
 
+  // Bound, the amount shows as bare whole lei padded with zeros to this many
+  // cells (more for a larger amount), the leading zeros dimmed; the caller
+  // writes the unit and says the amount itself.
+  readonly cells = input<number>();
+
   protected readonly text = computed(() => {
+    const cells = this.cells();
+    if (cells !== undefined) {
+      const from = toWholeLei(this.from());
+      return typeof from === 'number' && Number.isFinite(from)
+        ? String(Math.max(0, from / 100)).padStart(cells, '0')
+        : formatLei(from, this.i18n.language());
+    }
     const language = this.i18n.language();
     const from = toWholeLei(this.from());
     return this.to() === undefined
@@ -100,4 +117,10 @@ export class Odometer {
       : formatLeiRange(from, toWholeLei(this.to()), language);
   });
   protected readonly chars = computed(() => [...this.text()]);
+  protected readonly dimmed = computed(() => {
+    if (this.cells() === undefined) return 0;
+    const text = this.text();
+    const lead = text.length - text.replace(/^0+/, '').length;
+    return Math.min(lead, text.length - 1);
+  });
 }
