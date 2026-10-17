@@ -45,10 +45,10 @@ const checkTile = (
   for (const field of fields) {
     const limit = limits[field];
     if (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0) {
-      fail(`${tile}.${field} must be a number of 0 or more`);
+      return fail(`${tile}.${field} must be a number of 0 or more`);
     }
-    if (field.endsWith('_share') && (limit as number) > 1) {
-      fail(`${tile}.${field} is a share and must be 1 or less`);
+    if (field.endsWith('_share') && limit > 1) {
+      return fail(`${tile}.${field} is a share and must be 1 or less`);
     }
   }
 };
