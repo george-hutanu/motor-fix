@@ -1,7 +1,8 @@
-import { request as httpRequest } from 'node:http';
+import { type ClientRequest, request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 
-import { setRoute } from '@motor-fix/observability';
+import { logEntry, setRoute } from '@motor-fix/observability';
+import { scrub } from '@motor-fix/observability/scrub';
 import type { Express } from 'express';
 
 import { reportServerError } from './render-error/render-error';
@@ -37,35 +38,73 @@ export function mountEdge(app: Express, apiUrl: string) {
     setRoute('/api');
     const caller = req.socket.remoteAddress ?? '';
     const given = req.headers['x-forwarded-for'];
-    const upstream = send(
-      {
-        headers: {
-          ...req.headers,
-          host: api.host,
-          // The API limits sign-in attempts per caller.
-          'x-forwarded-for': given ? `${given}, ${caller}` : caller,
+    const where = {
+      method: req.method,
+      path: scrub(req.originalUrl.split('?')[0] ?? ''),
+    };
+    // A pooled socket the API has already closed fails before a byte comes
+    // back: a GET or HEAD is sent once more on a fresh one. A body is never
+    // replayed.
+    const retriable = req.method === 'GET' || req.method === 'HEAD';
+    let retried = false;
+    // The browser went away: nothing is retried or reported.
+    let left = false;
+    // The API cut the answer after its headers and the proxy cut the browser.
+    let failed = false;
+    let upstream: ClientRequest | undefined;
+    const cut = () => {
+      if (failed) return;
+      failed = true;
+      logEntry(
+        'warn',
+        'api proxy: upstream closed before the response was complete',
+        where,
+      );
+      res.destroy();
+    };
+    const refused = (error: Error) => {
+      if (left) return;
+      if (res.headersSent) return cut();
+      if (retriable && !retried) {
+        retried = true;
+        return attempt(true);
+      }
+      reportServerError(error, 'api proxy: upstream request failed', where);
+      res.status(502).end();
+    };
+    const attempt = (fresh: boolean) => {
+      const sent = send(
+        {
+          ...(fresh && { agent: false }),
+          headers: {
+            ...req.headers,
+            host: api.host,
+            // The API limits sign-in attempts per caller.
+            'x-forwarded-for': given ? `${given}, ${caller}` : caller,
+          },
+          hostname: api.hostname,
+          method: req.method,
+          path: req.originalUrl,
+          port: api.port,
         },
-        hostname: api.hostname,
-        method: req.method,
-        path: req.originalUrl,
-        port: api.port,
-      },
-      (answer) => {
-        res.writeHead(answer.statusCode ?? 502, answer.headers);
-        answer.on('close', () => {
-          if (!answer.complete) res.destroy();
-        });
-        answer.pipe(res);
-      },
-    );
+        (answer) => {
+          res.writeHead(answer.statusCode ?? 502, answer.headers);
+          answer.on('close', () => {
+            if (!answer.complete && !left && !res.writableFinished) cut();
+          });
+          answer.pipe(res);
+        },
+      );
+      sent.on('error', refused);
+      if (fresh) sent.end();
+      else req.pipe(sent);
+      upstream = sent;
+    };
     res.on('close', () => {
-      if (!res.writableFinished) upstream.destroy();
+      if (res.writableFinished || failed) return;
+      left = true;
+      upstream?.destroy();
     });
-    upstream.on('error', (error) => {
-      reportServerError(error);
-      if (res.headersSent) res.destroy();
-      else res.status(502).end();
-    });
-    req.pipe(upstream);
+    attempt(false);
   });
 }
