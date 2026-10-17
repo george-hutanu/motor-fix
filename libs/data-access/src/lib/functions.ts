@@ -111,6 +111,10 @@ export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerO
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerQueue$Params as AdminOverviewControllerQueue$Params } from './fn/admin/admin-overview-controller-queue';
 export { adminOverviewControllerQueue as adminOverviewControllerQueue } from './fn/admin/admin-overview-controller-queue';
+export type { AdminOverviewControllerGaragesSummary$Params as AdminOverviewControllerGaragesSummary$Params } from './fn/admin/admin-overview-controller-garages-summary';
+export { adminOverviewControllerGaragesSummary as adminOverviewControllerGaragesSummary } from './fn/admin/admin-overview-controller-garages-summary';
+export type { AdminOverviewControllerGarages$Params as AdminOverviewControllerGarages$Params } from './fn/admin/admin-overview-controller-garages';
+export { adminOverviewControllerGarages as adminOverviewControllerGarages } from './fn/admin/admin-overview-controller-garages';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
 export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$Params } from './fn/admin/suspension-controller-suspend';

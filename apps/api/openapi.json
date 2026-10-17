@@ -3434,6 +3434,102 @@
         ]
       }
     },
+    "/api/v1/admin/garages/summary": {
+      "get": {
+        "operationId": "AdminOverviewController_garagesSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGaragesSummaryDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/garages": {
+      "get": {
+        "operationId": "AdminOverviewController_garages",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "suspended"
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "A live re-read asks for every row already shown",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGaragesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a missing or unknown status, an offset or a limit out of range"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/growth": {
       "get": {
         "operationId": "AdminOverviewController_growth",
@@ -7007,6 +7103,10 @@
             "description": "The garage of the first role: owned, worked at as receptionist, or of the mechanic card",
             "nullable": true
           },
+          "serviceSuspended": {
+            "type": "boolean",
+            "description": "True when the account's mechanic card is at a garage whose status is suspended"
+          },
           "carsCount": {
             "type": "integer",
             "description": "Cars not removed",
@@ -7038,6 +7138,7 @@
           "name",
           "roles",
           "garageName",
+          "serviceSuspended",
           "carsCount",
           "status",
           "since",
@@ -9988,6 +10089,111 @@
           "total": {
             "type": "integer",
             "description": "Every file waiting, as the overview counts them",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "AdminGaragesSummaryDto": {
+        "type": "object",
+        "properties": {
+          "listed": {
+            "type": "integer",
+            "description": "Garages approved",
+            "minimum": 0
+          },
+          "waiting": {
+            "type": "integer",
+            "description": "Verification files submitted or in review",
+            "minimum": 0
+          },
+          "suspended": {
+            "type": "integer",
+            "description": "Garages suspended",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "listed",
+          "waiting",
+          "suspended"
+        ]
+      },
+      "SuspendedGarageRowDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string",
+            "description": "The garage's newest verification file; absent when none",
+            "format": "uuid"
+          },
+          "area": {
+            "description": "Absent when the garage has no town recorded",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationQueueAreaDto"
+              }
+            ]
+          },
+          "cause": {
+            "type": "string",
+            "description": "The open suspension; absent when the garage has none",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "The reason as stored"
+          },
+          "fromTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledBookings": {
+            "type": "integer",
+            "description": "Bookings cancelled by the suspension since it began",
+            "minimum": 0
+          },
+          "rarVerdict": {
+            "type": "string",
+            "description": "Only for a failed re-check that names the verdict",
+            "enum": [
+              "expired",
+              "suspended",
+              "withdrawn"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "AdminGaragesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuspendedGarageRowDto"
+            }
+          },
+          "total": {
+            "type": "integer",
             "minimum": 0
           }
         },

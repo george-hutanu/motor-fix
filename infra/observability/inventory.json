@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 119,
+    "count": 121,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -805,6 +805,30 @@
         "api-latency"
       ],
       "story": "ST-301"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-garages-summary",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages/summary",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-66"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-garages",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-66"
     },
     {
       "kind": "endpoint",
