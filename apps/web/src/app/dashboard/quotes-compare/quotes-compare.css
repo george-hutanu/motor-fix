@@ -12,11 +12,10 @@ p {
 .header {
   color: var(--mf-text-secondary);
 }
+/* The four sorts sit in one row where the panel has room for them, else two by two: never three and one. */
 .segments {
-  display: flex;
-  flex-wrap: wrap;
-  align-self: flex-start;
-  max-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
   overflow: hidden;
@@ -25,14 +24,34 @@ p {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-3);
   font-size: var(--mf-size-small);
+  text-align: center;
   color: var(--mf-text-secondary);
   cursor: pointer;
 }
-.segments label + label {
+.segments label:nth-child(even) {
   border-left: 1px solid var(--mf-line);
+}
+.segments label:nth-child(n + 3) {
+  border-top: 1px solid var(--mf-line);
+}
+@container quotes (min-width: 440px) {
+  .segments {
+    grid-template-columns: repeat(4, max-content);
+    align-self: flex-start;
+  }
+  .segments label {
+    white-space: nowrap;
+  }
+  .segments label + label {
+    border-left: 1px solid var(--mf-line);
+  }
+  .segments label:nth-child(n + 3) {
+    border-top: 0;
+  }
 }
 /* The radio covers its segment: a press anywhere on it is the radio's. */
 .segments input {

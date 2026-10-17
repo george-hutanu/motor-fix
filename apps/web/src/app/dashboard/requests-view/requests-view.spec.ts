@@ -564,6 +564,61 @@ describe('Cererile mele comparing a request’s quotes', () => {
     expect(compare).not.toHaveBeenCalled();
   });
 
+  // @traces 313-FR-010
+  it('stays on the request it shows when a newer one gets its first quote', async () => {
+    await open('/requests');
+    expect(shown()).toEqual(['req-new']);
+
+    const quoted = ITEMS.map((item) =>
+      item.id === 'req-none'
+        ? { ...item, quotesCount: 1, status: 'quoted' as const }
+        : item,
+    );
+    list.mockImplementation(async () => ({
+      items: quoted,
+      nextCursor: null,
+      total: quoted.length,
+    }));
+    events.next({
+      at: new Date().toISOString(),
+      id: 'quote-9',
+      kind: 'quote.sent',
+    });
+    await wait(400);
+    for (let i = 0; i < 4; i++) {
+      TestBed.tick();
+      await wait(0);
+    }
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(shown()).not.toContain('req-none');
+  });
+
+  it('shows the first request to get a quote when none was shown', async () => {
+    const before = [row({ id: 'req-a', quotesCount: 0 })];
+    await open('/requests', before);
+    expect(shown()).toEqual([]);
+
+    const after = [row({ id: 'req-a', quotesCount: 1, status: 'quoted' })];
+    list.mockImplementation(async () => ({
+      items: after,
+      nextCursor: null,
+      total: after.length,
+    }));
+    events.next({
+      at: new Date().toISOString(),
+      id: 'quote-1',
+      kind: 'quote.sent',
+    });
+    await wait(400);
+    for (let i = 0; i < 4; i++) {
+      TestBed.tick();
+      await wait(0);
+    }
+
+    expect(shown()).toEqual(['req-a']);
+  });
+
   it('links each request with quotes to its comparison, and no other', async () => {
     const element = await open('/requests');
 

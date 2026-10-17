@@ -5,6 +5,7 @@ import {
   computed,
   DestroyRef,
   inject,
+  linkedSignal,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
@@ -72,15 +73,27 @@ export class RequestsView {
   });
 
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap);
+  // The default request: the newest still open, picked once and kept while
+  // it is listed, so a live re-read never moves the panel (313-FR-010).
+  private readonly fallback = linkedSignal<
+    readonly RequestSummaryDto[],
+    string | undefined
+  >({
+    computation: (items, previous) =>
+      previous?.value && items.some((i) => i.id === previous.value)
+        ? previous.value
+        : openRequestOf(items)?.id,
+    source: () => this.list.value()?.items ?? [],
+  });
   // The request whose quotes are compared above the list: the one the
-  // address names when it is the driver's and has quotes, else the newest
-  // still open. A list of one, so another request makes a new panel.
+  // address names when it is the driver's and has quotes, else the default.
+  // A list of one, so another request makes a new panel.
   protected readonly compared = computed(() => {
     const items = this.list.value()?.items ?? [];
     const asked = this.query()?.get('request');
     const named = items.find((i) => i.id === asked && i.quotesCount > 0);
-    const shown = named ?? openRequestOf(items);
-    return shown ? [shown.id] : [];
+    const shown = named?.id ?? this.fallback();
+    return shown ? [shown] : [];
   });
 
   constructor() {
