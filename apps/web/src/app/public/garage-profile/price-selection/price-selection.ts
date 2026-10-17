@@ -12,6 +12,7 @@ const key = (garageId: string) => `mf.estimate.${garageId}`;
 export class PriceSelection {
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private garageId: string | undefined;
+  private listed: ReadonlySet<string> = new Set();
 
   readonly on = signal<ReadonlySet<string>>(new Set());
   // A job switched on that the latest read no longer lists was switched off.
@@ -21,12 +22,14 @@ export class PriceSelection {
 
   sync(garage: PublicGarageDto) {
     const listed = new Set(garage.prices.map((price) => price.jobTypeId));
+    this.listed = listed;
     const fresh = garage.id !== this.garageId;
     const before = fresh ? this.read(garage.id) : [...this.on()];
     this.garageId = garage.id;
     const kept = before.filter((id) => listed.has(id));
     if (fresh) {
       this.dropped.set(false);
+      this.changes.set(0);
     } else if (kept.length < before.length) {
       this.dropped.set(true);
     }
@@ -37,6 +40,7 @@ export class PriceSelection {
   }
 
   toggle(id: string, checked: boolean) {
+    if (checked && !this.listed.has(id)) return;
     const next = new Set(this.on());
     if (checked) next.add(id);
     else next.delete(id);

@@ -17,8 +17,6 @@ import { Odometer } from '@motor-fix/ui-cockpit';
 import { PriceSelection } from '../price-selection/price-selection';
 import { RequestQuoteButton } from '../request-quote-button/request-quote-button';
 
-const wholeLei = (bani: number) => Math.round(bani / 100);
-
 // "Estimarea ta": the jobs switched on in the price list, added up into a
 // range in digit cells, and a request button that takes them to the dialog.
 // The ranges already carry the brand in context. One polite live region says
@@ -56,11 +54,12 @@ export class EstimateSection {
       range: formatWholeLeiRange(row.fromBani, row.toBani, language),
     }));
   });
+  // Summed in bani, then rounded once to whole lei.
   protected readonly from = computed(() =>
-    this.chosen().reduce((sum, row) => sum + wholeLei(row.fromBani), 0),
+    Math.round(this.chosen().reduce((sum, row) => sum + row.fromBani, 0) / 100),
   );
   protected readonly to = computed(() =>
-    this.chosen().reduce((sum, row) => sum + wholeLei(row.toBani), 0),
+    Math.round(this.chosen().reduce((sum, row) => sum + row.toBani, 0) / 100),
   );
   protected readonly spoken = computed(() => {
     const language = this.i18n.language();

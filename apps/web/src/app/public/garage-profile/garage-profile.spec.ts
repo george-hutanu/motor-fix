@@ -524,6 +524,28 @@ describe('the estimate box on the profile', () => {
     ).toBe('Estimare de la 890 la 1.400 lei');
   });
 
+  it('gives each request button its own note when the brand is refused', async () => {
+    await open('/ro/garages/service-auto-militari?brand=dacia');
+    await reads[0]?.answer({
+      ...FIXED,
+      brand: { ...DACIA, stance: 'does_not_take' },
+      prices: [BRAKES],
+    });
+    await settle();
+
+    const buttons = [
+      ...page().querySelectorAll<HTMLButtonElement>(
+        'mf-request-quote-button button',
+      ),
+    ];
+    expect(buttons).toHaveLength(2);
+    const ids = buttons.map((b) => b.getAttribute('aria-describedby'));
+    expect(new Set(ids).size).toBe(2);
+    for (const id of ids) {
+      expect(page().querySelector(`#${id}`)?.classList).toContain('note');
+    }
+  });
+
   it('restores the jobs kept for this garage in the session', async () => {
     sessionStorage.setItem(
       `mf.estimate.${FIXED.id}`,

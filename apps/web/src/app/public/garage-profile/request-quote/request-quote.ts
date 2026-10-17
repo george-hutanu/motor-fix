@@ -139,9 +139,10 @@ export class RequestQuote {
   private readonly session = inject(Session);
   private readonly signIn = inject(SignInDialog);
   protected readonly garage = this.task.data.garage;
-  // A job the garage no longer offers is left out of the ticks.
-  private readonly prefill = (this.task.data.jobTypeIds ?? []).filter((id) =>
-    this.garage.jobTypes.some((job) => job.id === id),
+  // A job the garage no longer offers is left out of the ticks, and each
+  // job is ticked once.
+  private readonly prefill = [...new Set(this.task.data.jobTypeIds)].filter(
+    (id) => this.garage.jobTypes.some((job) => job.id === id),
   );
   protected readonly describeFirst = this.task.data.jobTypeIds?.length === 0;
 
