@@ -597,6 +597,7 @@ describe('the company check', () => {
       400,
       'validation_failed',
     ]);
+    expect(answer.body.message).toBe('Lipsește numele firmei');
     expect(await refusal(record('company', { result: 'ok' }))).toMatchObject({
       status: 400,
     });
@@ -615,7 +616,13 @@ describe('the company check', () => {
       await refusal(
         record('company', { evidence: { name: NAME }, result: 'ok' }),
       ),
-    ).toMatchObject({ body: { code: 'validation_failed' }, status: 400 });
+    ).toMatchObject({
+      body: {
+        code: 'validation_failed',
+        message: 'CUI-ul service-ului nu e valid',
+      },
+      status: 400,
+    });
     expect(await check('company')).toMatchObject({ result: 'not_run' });
   });
 

@@ -105,9 +105,9 @@ function companyRecord(
   if (body.result !== 'ok') {
     return { evidence: { ...(name && { name }), lookedUpOn } };
   }
-  if (!name) throw invalid('an ok company check needs the company name');
+  if (!name) throw invalid('Lipsește numele firmei');
   if (!isValidCui(facts.cui ?? '')) {
-    throw invalid("the garage's CUI is not valid");
+    throw invalid('CUI-ul service-ului nu e valid');
   }
   return { detail: companyOk(name), evidence: { lookedUpOn, name } };
 }
