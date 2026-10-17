@@ -210,10 +210,12 @@ describe('the night job schedule', () => {
     const counts = await queue.getJobCounts();
     await app.close();
 
+    // One delayed run per nightly job: the snapshot, response figures, demand
+    // and profile views.
     expect(counts).toMatchObject({
       active: 0,
       completed: 0,
-      delayed: 3,
+      delayed: 4,
       failed: 0,
       waiting: 0,
     });

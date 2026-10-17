@@ -50,6 +50,10 @@ describe('GET /admin/verification-queue', () => {
   it('answers a page of waiting files, oldest first, with the total', async () => {
     const garage = randomUUID();
     const file = randomUUID();
+    // An earlier run on the same database left its file at this instant.
+    await db.query(
+      "DELETE FROM verification_file WHERE submitted_at = '2000-01-03T10:00:00Z'",
+    );
     await db.query(
       "INSERT INTO garage (id, name, slug, city_key, city_name) VALUES ($1, 'Auto Vest Motors', $2, 'bucuresti', 'București')",
       [garage, `g-${garage}`],
