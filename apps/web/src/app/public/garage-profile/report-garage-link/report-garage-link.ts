@@ -48,7 +48,11 @@ export class ReportGarageLink {
   protected async open() {
     // A page opened by its address has not loaded the session yet: someone
     // signed in is not asked to sign in again.
-    if (!(await this.session.load()) && !(await this.signIn.gate())) return;
+    if (
+      !(await this.session.load({ keepLanguage: true })) &&
+      !(await this.signIn.gate())
+    )
+      return;
     if (this.session.current()?.role !== 'driver') {
       this.outcome.set('hidden');
       return;

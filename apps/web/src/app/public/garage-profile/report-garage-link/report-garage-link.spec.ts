@@ -18,6 +18,7 @@ const GARAGE = {
 
 let open: jest.Mock;
 let gate: jest.Mock;
+let load: jest.Mock;
 
 async function render(
   options: {
@@ -41,6 +42,10 @@ async function render(
     current.set({ role: options.signsIn });
     return true;
   });
+  load = jest.fn(async () => {
+    if (!current() && options.restores) current.set({ role: options.restores });
+    return current();
+  });
   TestBed.configureTestingModule({
     providers: [
       { provide: Overlays, useValue: { open } },
@@ -49,11 +54,7 @@ async function render(
         provide: Session,
         useValue: {
           current,
-          load: jest.fn(async () => {
-            if (!current() && options.restores)
-              current.set({ role: options.restores });
-            return current();
-          }),
+          load,
           renew: jest.fn(async () => true),
           roleHint: signal(options.hint ?? null),
         },
@@ -213,6 +214,8 @@ describe('the link to report a garage, for a visitor', () => {
 
     await press(host);
 
+    // The profile's address names its language (021-FR-002).
+    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
     expect(gate).not.toHaveBeenCalled();
     expect(open).toHaveBeenCalledTimes(1);
   });

@@ -105,6 +105,16 @@ describe('reading what a driver saved', () => {
     expect([...saved.ids()].sort()).toEqual(['g1', 'g2']);
   });
 
+  // The page's address names its language (021-FR-002): reading the session
+  // for the role keeps it.
+  it("reads the session without taking the account's language", async () => {
+    const saved = await store({ hint: 'driver' });
+
+    await saved.load();
+
+    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
+  });
+
   it('reads nothing for a visitor', async () => {
     const saved = await store({ role: null });
 
@@ -319,7 +329,7 @@ describe('a visitor who taps save', () => {
 
     await saved.tap('g1');
 
-    expect(load).toHaveBeenCalled();
+    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
     expect(gate).toHaveBeenCalledTimes(1);
     expect(api.savedGaragesControllerSave).not.toHaveBeenCalled();
     expect(saved.ids().has('g1')).toBe(false);
