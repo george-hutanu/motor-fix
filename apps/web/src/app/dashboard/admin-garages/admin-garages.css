@@ -1,0 +1,50 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+.counts {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  margin: 0;
+  font-size: var(--mf-size-body);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.skeleton {
+  display: block;
+  height: 1em;
+  width: min(28rem, 80%);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.info {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--mf-tap);
+  min-height: var(--mf-tap);
+  padding: 0;
+  color: var(--mf-text-secondary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.tip {
+  position: absolute;
+  inset: 100% auto auto 0;
+  z-index: 1;
+  padding: var(--mf-space-2);
+  font-size: var(--mf-size-body);
+  color: var(--mf-text);
+  background: var(--mf-panel-raised);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-chip);
+}
+.info:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
+  outline-offset: var(--mf-focus-offset);
+}
