@@ -1,8 +1,8 @@
-import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import { Logger } from '@nestjs/common';
 
 import { awayAhead, realDay } from './promise/promise';
 import { localDay } from '../bucharest';
+import { supportAddress } from '../notifications/email-config';
 
 export interface SupportConfig {
   // Where the support e-mail goes; unset, it waits and the alert says so.
@@ -24,11 +24,11 @@ export function supportConfig(
 ): SupportConfig {
   const logger = new Logger('Support');
   const config: SupportConfig = {};
-  const email = source['SUPPORT_EMAIL']?.trim() ?? '';
-  if (EMAIL_PATTERN.test(email)) config.email = email;
+  const email = supportAddress(source);
+  if (email) config.email = email;
   else
     logger.warn(
-      'SUPPORT_EMAIL is not set to an address: support e-mails wait unsent',
+      'Neither SUPPORT_EMAIL nor EMAIL_DOMAIN is set: support e-mails wait unsent',
     );
   const away = source['SUPPORT_AWAY_UNTIL']?.trim();
   if (away && realDay(away)) {

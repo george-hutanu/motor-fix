@@ -5,6 +5,7 @@ import { initProductCounters, JsonLogger } from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 
+import { runCommand } from './commands';
 import { WORKER_ENV, workerModule } from './worker.module';
 
 initProductCounters('worker');
@@ -20,4 +21,7 @@ async function bootstrap() {
   await app.listen(Number(process.env['PORT'] ?? 3001));
 }
 
-void bootstrap();
+// `inbox-test` and `email-dns-check` run and exit; anything else boots.
+void runCommand(process.argv.slice(2), process.env).then((code) =>
+  code === null ? bootstrap() : process.exit(code),
+);
