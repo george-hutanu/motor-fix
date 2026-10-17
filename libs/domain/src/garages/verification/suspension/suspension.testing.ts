@@ -11,15 +11,11 @@ type NewAccount = (
 
 // An approved garage with an owner, a receptionist, a mechanic with an
 // account, and a driver who belongs to none of it.
-export async function staffedGarage(
-  prisma: PrismaClient,
-  account: NewAccount,
-  name = 'Atelier Dinamo',
-) {
+export async function staffedGarage(prisma: PrismaClient, account: NewAccount) {
   const garage = await prisma.garage.create({
     data: {
       approvedAt: new Date(),
-      name,
+      name: 'Atelier Dinamo',
       slug: `dinamo-${randomUUID()}`,
       status: 'approved',
     },

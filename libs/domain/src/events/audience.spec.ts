@@ -142,20 +142,11 @@ describe('audienceOf', () => {
     ]);
   });
 
+  // @traces 049-FR-007
   it("adds the garage's public page and the results channel when an approval publishes it", () => {
     expect(
       audienceOf({ garageId: garage, published: true, type: 'verification' }),
     ).toEqual(['admin', 'garage:g1', 'public:garage:g1', 'public:search']);
-  });
-
-  // @traces 049-FR-006
-  it('takes a suspended garage off its public page and the results with the same audience', () => {
-    expect(
-      audienceOf({ garageId: garage, published: true, type: 'verification' }),
-    ).toContain('public:search');
-    expect(
-      audienceOf({ garageId: garage, published: true, type: 'verification' }),
-    ).toContain(`public:garage:${garage}`);
   });
 
   it("sends a garage's public change to its staff and its public page", () => {

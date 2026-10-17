@@ -245,6 +245,21 @@ describe('a garage that cannot be suspended', () => {
     });
   });
 
+  it('still answers 409 when the refused attempt cannot be written', async () => {
+    await service().suspend(admin, garage.id, 'recheck_failed', REASON);
+    const audit = new AuditService();
+    audit.record = () => Promise.reject(new Error('audit down'));
+
+    const res = await refusal(
+      service(outbox, audit).suspend(admin, garage.id, 'admin', REASON),
+    );
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('garage_already_suspended');
+    expect(await rows(garage.id)).toHaveLength(1);
+    expect(await history(garage.id)).toHaveLength(1);
+  });
+
   it('refuses a draft garage and writes nothing', async () => {
     await prisma.garage.update({
       data: { approvedAt: null, status: 'draft' },

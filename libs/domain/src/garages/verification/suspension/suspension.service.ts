@@ -21,7 +21,7 @@ import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { countGarageSuspension } from '../../../metrics/product-counters';
 import type { VerificationActor } from '../verification.service';
 
-export interface Suspension {
+interface Suspension {
   id: string;
   garageId: string;
   cause: SuspensionCause;
@@ -76,10 +76,15 @@ export class SuspensionService {
       return suspension;
     } catch (error) {
       if (!(error instanceof Refused)) throw error;
-      // The attempt is history even though nothing else changed.
-      await this.prisma.$transaction((tx) =>
-        this.audit.record(tx, error.attempt),
-      );
+      // The attempt is history even though nothing else changed; a history
+      // write that fails is logged, and the caller still learns the refusal.
+      await this.prisma
+        .$transaction((tx) => this.audit.record(tx, error.attempt))
+        .catch((auditError: unknown) =>
+          this.logger.error(
+            `refusal not audited garage=${garageId} code=${ALREADY}: ${String(auditError)}`,
+          ),
+        );
       this.logger.log(
         `refused garage=${garageId} cause=${cause} actor=${actor.role} code=${ALREADY}`,
       );

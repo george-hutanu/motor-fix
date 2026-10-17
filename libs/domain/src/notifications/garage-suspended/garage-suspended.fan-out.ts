@@ -34,7 +34,7 @@ export const GARAGE_SUSPENDED_CONSUMER = {
 export interface GarageSuspendedEvent {
   id: string;
   // Unchecked: the relay passes the payload through as recorded.
-  payload: { cause?: unknown; garageId?: unknown };
+  payload: { garageId?: unknown };
 }
 
 // Tells a suspended garage's owners why and what to do, each in their own
@@ -60,7 +60,6 @@ export class GarageSuspendedFanOut {
       return;
     }
     const suspension = await this.prisma.garageSuspension.findFirst({
-      orderBy: { fromTime: 'desc' },
       select: { cause: true, garage: { select: { name: true } }, reason: true },
       where: { garageId, untilTime: null },
     });
