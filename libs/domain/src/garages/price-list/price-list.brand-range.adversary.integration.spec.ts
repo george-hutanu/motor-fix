@@ -443,6 +443,24 @@ describe('the profile range when the garage changes its stance', () => {
     expect(taken[0]).toMatchObject(BMW_RANGE);
   });
 
+  it('gives the default range once the garage stops naming the brand', async () => {
+    const w = await world();
+    await put(w, BMW_RANGE);
+    await prisma.garageBrand.delete({
+      where: { garageId_brandId: { brandId: w.bmw.id, garageId: w.nord.id } },
+    });
+    await redis.flushall();
+
+    const res = await http()
+      .get(`/garages/${w.nord.slug}`)
+      .query({ brand: w.bmw.slug });
+
+    expect(res.body.prices[0]).toMatchObject({
+      fromBani: 89_000,
+      toBani: 140_000,
+    });
+  });
+
   it('gives the default range to a slug that matches no brand', async () => {
     const w = await world();
     await put(w, BMW_RANGE);

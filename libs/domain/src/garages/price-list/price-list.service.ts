@@ -252,7 +252,7 @@ export class PriceListService {
         type: 'public_garage',
       },
       kind: 'price_list.updated',
-      payload: { ...payload },
+      payload,
       subjectId: pair.garageId,
     });
   }

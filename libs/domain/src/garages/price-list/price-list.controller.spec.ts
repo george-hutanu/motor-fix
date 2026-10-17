@@ -24,7 +24,7 @@ const uuidParams = (handler: object) =>
     .sort();
 
 describe('PriceListController OpenAPI', () => {
-  it('declares garageId as a uuid, as ParseUUIDPipe enforces (FR-009)', () => {
+  it('declares garageId as a uuid, as ParseUUIDPipe enforces', () => {
     expect(uuidParams(PriceListController.prototype.read)).toEqual([
       'garageId',
     ]);
