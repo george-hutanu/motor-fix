@@ -26,7 +26,11 @@ const garage = (
       name,
       slug: `g-${randomUUID()}`,
       status,
-      ...(place.cityName && { cityName: place.cityName }),
+      // A city carries its name and its key together (garage_city_both).
+      ...(place.cityName && {
+        cityKey: place.cityName.toLowerCase(),
+        cityName: place.cityName,
+      }),
       ...(place.radiusKm !== undefined && {
         businessKind: 'mobile',
         serviceRadiusKm: place.radiusKm,
@@ -225,8 +229,11 @@ async function booking(
   const request = await world.request(driverId, { status: 'booked' });
   const quote = await world.quote(request.id, garageId, 'accepted');
   const { id } = await world.booking(quote.id, 'cancelled');
+  // A reason belongs to one side (booking_cancel_reason_side_check).
+  const cancelledBySide =
+    cancelReason === 'garage_suspended' ? 'system' : 'driver';
   await prisma.booking.update({
-    data: { cancelledAt, cancelReason },
+    data: { cancelledAt, cancelledBySide, cancelReason },
     where: { id },
   });
 }
