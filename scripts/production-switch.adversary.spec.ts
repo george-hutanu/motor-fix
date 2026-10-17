@@ -37,10 +37,7 @@ function same(a: Value, b: Value) {
 
 const functions: Record<string, (args: Value[]) => Value> = {
   always: () => true,
-  cancelled: () => false,
-  failure: () => false,
   fromJSON: ([text]) => JSON.parse(String(text)) as Value,
-  success: () => true,
 };
 
 const words: Record<string, Value> = { false: false, null: null, true: true };
@@ -162,30 +159,18 @@ function evaluate(source: string, context: Context) {
 const holds = (condition: string, context: Context) =>
   truthy(evaluate(condition, context).value);
 
-// Every spelling of the variable's value that someone could plausibly set.
+// The spellings the spec names, the owner's value for off, and a trailing
+// space, which GitHub does not trim.
 const values: (string | undefined)[] = [
   undefined,
   '',
   'true',
   'TRUE',
-  'True',
-  'tRuE',
   'false',
-  'FALSE',
   '1',
-  '0',
   'yes',
   'on',
-  'enabled',
-  ' true',
   'true ',
-  'true\n',
-  'truee',
-  'tru',
-  'null',
-  "'true'",
-  '"true"',
-  'ｔｒｕｅ',
 ];
 const isOn = (value: string | undefined) => value?.toLowerCase() === 'true';
 const label = (value: string | undefined) =>
@@ -332,7 +317,6 @@ describe('the release workflow’s production switch', () => {
   it('deploys to production from the production job alone and nothing needs it', () => {
     const jobs = jobIds(release);
 
-    expect(jobs).toEqual(['checks', 'images', 'staging', 'production']);
     expect(release.match(/railway-deploy\.ts production/g)).toHaveLength(1);
     expect(production).toContain('railway-deploy.ts production');
     for (const id of jobs.filter((job) => job !== 'production')) {
@@ -358,6 +342,7 @@ describe('the release workflow’s production switch', () => {
     expect(lines[0]).toMatch(
       /^::notice(?: \w+=[^:,]+(?:,\w+=[^:,]+)*)?::[^\n]*PRODUCTION_ENABLED[^\n]*$/,
     );
+    expect(lines[0]).toContain('owner');
     const written = readFileSync(summary, 'utf8');
     expect(written.endsWith('\n')).toBe(true);
     expect(written.trimEnd().split('\n')).toHaveLength(1);

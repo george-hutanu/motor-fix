@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { script } from './workflow-text.ts';
@@ -106,7 +105,7 @@ describe('release workflow', () => {
     },
   );
 
-  // @traces 1348-FR-001
+  // @traces 1348-FR-001 1348-FR-002
   it('promotes to production only after images and staging pass, and only while it is on', () => {
     const block = job('production');
     const condition = setting(block, 'if');
@@ -119,40 +118,6 @@ describe('release workflow', () => {
     expect(block).toContain(
       'run: exec node scripts/railway-deploy.ts production',
     );
-  });
-
-  // @traces 1348-FR-001
-  it('ends staging with a note, after the core flows, while production is off', () => {
-    const block = job('staging');
-    const at = block.indexOf('- name: Note that production is off');
-    const note = block.slice(at);
-
-    expect(at).toBeGreaterThan(block.indexOf('- name: Core flows on staging'));
-    expect(note).not.toMatch(/^ {6}- /m);
-    expect(setting(note, 'if')).toBe("vars.PRODUCTION_ENABLED != 'true'");
-  });
-
-  // @traces 1348-FR-001
-  it('says in a notice and in the run summary that production is off and who turns it on', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'release-note-'));
-    try {
-      const summary = join(dir, 'summary.md');
-      const { code, out } = stepRun('Note that production is off', {
-        GITHUB_STEP_SUMMARY: summary,
-      });
-      const notice = out
-        .split('\n')
-        .find((line) => line.startsWith('::notice'));
-
-      expect(code).toBe(0);
-      expect(notice).toContain('PRODUCTION_ENABLED');
-      expect(notice).toContain('owner');
-      const lines = readFileSync(summary, 'utf8').trim().split('\n');
-      expect(lines).toHaveLength(1);
-      expect(lines[0]).toContain('PRODUCTION_ENABLED');
-    } finally {
-      rmSync(dir, { force: true, recursive: true });
-    }
   });
 
   it.each(['staging', 'production'])(

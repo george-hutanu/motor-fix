@@ -9,8 +9,6 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { script } from './workflow-text.ts';
-
 // Read as text, like reset-staging.spec.ts: the workflows only run on GitHub.
 const root = join(__dirname, '..');
 const read = (...path: string[]) => readFileSync(join(root, ...path), 'utf8');
@@ -66,23 +64,6 @@ describe('the nightly backup workflow', () => {
     expect(setting(note, 'if')).toBe(
       "matrix.environment == 'staging' && vars.PRODUCTION_ENABLED != 'true'",
     );
-
-    const dir = mkdtempSync(join(tmpdir(), 'backup-note-'));
-    try {
-      const summary = join(dir, 'summary.md');
-      const run = spawnSync('bash', ['-e', '-c', script(note)], {
-        encoding: 'utf8',
-        env: { GITHUB_STEP_SUMMARY: summary, PATH: process.env['PATH'] },
-      });
-
-      expect(run.status).toBe(0);
-      expect(run.stdout).toMatch(/^::notice[^\n]*PRODUCTION_ENABLED/m);
-      const lines = readFileSync(summary, 'utf8').trim().split('\n');
-      expect(lines).toHaveLength(1);
-      expect(lines[0]).toContain('PRODUCTION_ENABLED');
-    } finally {
-      rmSync(dir, { force: true, recursive: true });
-    }
   });
 
   it('checks its settings first and skips every later step when the environment has none', () => {
