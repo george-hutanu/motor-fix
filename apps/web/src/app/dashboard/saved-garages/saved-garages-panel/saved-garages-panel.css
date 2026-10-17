@@ -33,7 +33,7 @@ p {
 .rows {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
-  gap: var(--mf-space-1) var(--mf-space-6);
+  gap: var(--mf-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -45,7 +45,7 @@ p {
 .skeleton {
   height: 72px;
   background: var(--mf-line);
-  border-radius: var(--mf-radius-chip);
+  border-radius: var(--mf-radius-panel);
 }
 .problem {
   display: flex;

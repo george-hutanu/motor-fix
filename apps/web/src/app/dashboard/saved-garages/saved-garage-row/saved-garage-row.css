@@ -1,8 +1,15 @@
+/* A card, like the result and Home cards (FR-007). */
 :host {
   display: flex;
   align-items: center;
   gap: var(--mf-space-2);
   min-width: 0;
+  box-sizing: border-box;
+  padding-block: var(--mf-space-1);
+  padding-inline: var(--mf-space-4) var(--mf-space-2);
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
 }
 .profile {
   display: flex;

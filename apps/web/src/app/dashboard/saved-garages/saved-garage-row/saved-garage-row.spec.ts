@@ -102,6 +102,27 @@ describe('a saved garage’s row', () => {
   });
 });
 
+// @traces 291-FR-007
+describe('the row as a card', () => {
+  // jsdom computes no stylesheet, so the row's own rules are read: the same
+  // panel, line and radius tokens as the result and Home cards.
+  const host = (() => {
+    const css = readFileSync(join(__dirname, 'saved-garage-row.css'), 'utf8');
+    return css.match(/:host\s*\{([^}]*)\}/)?.[1] ?? '';
+  })();
+
+  it('draws each row on the card surface, bordered and rounded', () => {
+    expect(host).toMatch(/background:\s*var\(--mf-panel\)/);
+    expect(host).toMatch(/border:\s*1px solid var\(--mf-line\)/);
+    expect(host).toMatch(/border-radius:\s*var\(--mf-radius-panel\)/);
+  });
+
+  it('pads the card, so the link and the remove button stay inside it', () => {
+    expect(host).toMatch(/padding(-inline)?:\s*[^;]*var\(--mf-space-/);
+    expect(host).toMatch(/box-sizing:\s*border-box/);
+  });
+});
+
 // @traces 291-FR-008
 describe('the row’s lamp line', () => {
   it.each([
