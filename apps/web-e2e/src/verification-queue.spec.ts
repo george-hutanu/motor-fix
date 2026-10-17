@@ -150,11 +150,15 @@ test.describe('the verification queue @seeded', () => {
       await expect(line(page)).toContainText('așteaptă verificarea');
       await menu(page).locator('a[href="/app/admin"]').click();
       await expect(page).toHaveURL('/app/admin');
+      // The panel reads afresh here while the menu and the header keep the
+      // shell's read, which other spec files' direct database writes (no
+      // event) can leave behind: the panel shows the new file, and its count
+      // agrees with the view's own, compared above.
       await expect(heading(page)).toHaveText(HEADING);
-      await countsAgree(page);
       await expect(
         queue(page).locator('li.row', { hasText: name }),
       ).toBeVisible();
+      expect(await counted(page)).toBeGreaterThan(0);
     });
   }
 
