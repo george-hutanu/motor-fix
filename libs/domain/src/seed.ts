@@ -641,6 +641,32 @@ async function quoteable(db: Client) {
      ON CONFLICT DO NOTHING`,
   );
   await priceList(db);
+  await dinamoForms(db);
+}
+
+// Atelier Dinamo's waiting file, as the admin's RAR and activities forms read
+// it: a workshop address under "aceeași adresă" and two priced jobs to mark
+// covered or not. Neither job type maps to a RAR activity yet (#242), so both
+// read covered. Set once: an owner's later edit is never put back.
+async function dinamoForms(db: Client) {
+  await db.query(
+    `UPDATE garage SET address = 'Strada Dinamo 12, Cluj-Napoca'
+     WHERE slug = 'atelier-dinamo' AND address IS NULL`,
+  );
+  for (const [position, job] of ['oil-service', 'front-brakes'].entries()) {
+    await db.query(
+      `INSERT INTO garage_price (id, garage_id, job_type_id, from_bani, to_bani, position, updated_at, updated_by)
+       SELECT gen_random_uuid(), g.id, j.id, 30000, 50000, $2, now(), a.id
+       FROM garage g
+       JOIN job_type j ON j.key = $1
+       JOIN account a ON a.email = 'comutare@example.test'
+       WHERE g.slug = 'atelier-dinamo'
+         AND NOT EXISTS (
+           SELECT 1 FROM garage_price p WHERE p.garage_id = g.id AND p.job_type_id = j.id
+         )`,
+      [job, position],
+    );
+  }
 }
 
 // Service Auto Militari's price list as the mock shows it: six jobs, the
