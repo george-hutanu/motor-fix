@@ -28,6 +28,7 @@ const row = (
   jobType: PriceRow['jobType'],
   extra: Partial<Omit<PriceRow, 'jobType'>> = {},
 ): PriceRow => ({
+  brand: null,
   brandId: null,
   durationMinutes: null,
   fromBani: 1000,
