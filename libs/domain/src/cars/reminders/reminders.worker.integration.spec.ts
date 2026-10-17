@@ -12,6 +12,7 @@ import {
   RemindersScheduler,
 } from './reminders.module';
 import { RemindersService } from './reminders.service';
+import { systemLog } from '../../admin/system-log/system-log';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { addDays } from '../../bucharest';
 import { NotificationsModule } from '../../notifications/notifications.module';
@@ -194,6 +195,49 @@ describe('the reminders schedule at start-up', () => {
       expect.stringMatching(/car\.updated.*41.*database down/),
     );
     error.mockRestore();
+  });
+
+  // @traces 297-FR-007
+  it('writes one job_failed entry when a run or a car event fails for good, not before', () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const write = jest.spyOn(systemLog, 'write').mockResolvedValue('written');
+    const s = scheduler('2026-11-10T07:00:00Z');
+    const job = (name: string, attemptsMade: number, attempts: number) =>
+      ({
+        attemptsMade,
+        data: { day: '2026-11-10', id: '41', kind: 'car.updated' },
+        name,
+        opts: { attempts },
+      }) as Job;
+
+    s.failed(job('daily', 2, 4), new Error('database down'));
+    s.failed(job('event', 5, 6), new Error('database down'));
+    expect(write).not.toHaveBeenCalled();
+    s.failed(job('daily', 4, 4), new Error('database down'));
+    s.failed(job('event', 6, 6), new Error('database down'));
+    expect(write.mock.calls).toEqual([
+      [
+        'job_failed',
+        'worker',
+        {
+          attempts: 4,
+          error_code: 'Error',
+          job: 'daily',
+          queue: REMINDERS_QUEUE,
+        },
+      ],
+      [
+        'job_failed',
+        'worker',
+        {
+          attempts: 6,
+          error_code: 'Error',
+          job: 'event',
+          queue: REMINDERS_QUEUE,
+        },
+      ],
+    ]);
+    jest.restoreAllMocks();
   });
 });
 

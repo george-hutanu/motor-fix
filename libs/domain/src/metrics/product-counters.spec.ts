@@ -19,8 +19,10 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countSystemLogEntry,
   countVerificationResult,
 } from './product-counters';
+import { KINDS } from '../admin/system-log/entry';
 import { TEMPLATES } from '../notifications/templates/registry';
 
 const STEP_ACTIONS = [
@@ -98,7 +100,28 @@ function countEverySeries() {
   (['built', 'skipped'] as const).forEach((outcome) => {
     countVerificationResult(outcome);
   });
+  for (const kind of KINDS) {
+    for (const outcome of ['written', 'grouped', 'dropped'] as const)
+      countSystemLogEntry(kind, outcome);
+  }
 }
+
+// @traces 297-FR-014
+describe('the system log counter', () => {
+  it('counts one entry by kind and outcome', async () => {
+    const before = await total('motorfix_system_log_entries_total', {
+      kind: 'deploy',
+      outcome: 'grouped',
+    });
+    countSystemLogEntry('deploy', 'grouped');
+    expect(
+      await total('motorfix_system_log_entries_total', {
+        kind: 'deploy',
+        outcome: 'grouped',
+      }),
+    ).toBe(before + 1);
+  });
+});
 
 // @traces 206-FR-016
 // @traces 244-FR-016 244-FR-018
