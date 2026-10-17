@@ -1,7 +1,12 @@
+/* A row is one track of the panel's grid (quotes-compare.css): every row shares the panel's columns, so the
+   dials and actions line up from row to row. The panel's width, not the screen's, picks the layout. */
 :host {
+  position: relative;
+  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: var(--mf-space-1) var(--mf-space-4);
+  grid-template-columns: subgrid;
+  grid-auto-flow: row dense;
+  row-gap: var(--mf-space-1);
   padding: var(--mf-space-3) 0;
   border-top: 1px solid var(--mf-line);
   min-width: 0;
@@ -24,25 +29,12 @@ p {
 .changed {
   color: var(--mf-text-secondary);
 }
-/* The dial carries the number; the line keeps it for screen readers and the phone. */
+/* A narrow panel: one column, the number alone (the dial hidden, as on the phone in the mock). */
 .dial {
-  grid-column: 2;
-  grid-row: 1 / span 3;
-  align-self: start;
-  width: 56px;
-}
-.dial + .rating {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  display: none;
 }
 .action {
-  grid-column: 3;
-  grid-row: 1 / span 2;
-  align-self: start;
+  grid-column: 1;
 }
 .state {
   font-weight: 600;
@@ -51,23 +43,40 @@ p {
   grid-column: 1 / -1;
   color: var(--mf-red-ink);
 }
-@media (max-width: 479px) {
-  :host {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* Name over area, the dial, the action; the range and its lines stay under the name. */
+@container quotes (min-width: 400px) {
   .dial {
-    display: none;
+    display: block;
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: start;
+    width: 56px;
   }
+  /* The dial carries the number; the line keeps it for screen readers. */
   .dial + .rating {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
-    white-space: normal;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .action {
-    grid-column: 1;
-    grid-row: auto;
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+}
+/* The board's four cells: name and area, the dial, the range and its lines, the action. */
+@container quotes (min-width: 640px) {
+  .price,
+  .duration,
+  .note,
+  .missing,
+  .changed {
+    grid-column: 3;
+  }
+  .action {
+    grid-column: 4;
   }
 }
