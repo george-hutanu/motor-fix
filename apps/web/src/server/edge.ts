@@ -38,10 +38,11 @@ export function mountEdge(app: Express, apiUrl: string) {
     setRoute('/api');
     const caller = req.socket.remoteAddress ?? '';
     const given = req.headers['x-forwarded-for'];
-    const where = {
+    // Built only for a failure: the masks are not run on every request.
+    const where = () => ({
       method: req.method,
       path: scrub(req.originalUrl.split('?')[0] ?? ''),
-    };
+    });
     // A pooled socket the API has already closed fails before a byte comes
     // back: a GET or HEAD is sent once more on a fresh one. A body is never
     // replayed.
@@ -58,7 +59,7 @@ export function mountEdge(app: Express, apiUrl: string) {
       logEntry(
         'warn',
         'api proxy: upstream closed before the response was complete',
-        where,
+        where(),
       );
       res.destroy();
     };
@@ -69,7 +70,7 @@ export function mountEdge(app: Express, apiUrl: string) {
         retried = true;
         return attempt(true);
       }
-      reportServerError(error, 'api proxy: upstream request failed', where);
+      reportServerError(error, 'api proxy: upstream request failed', where());
       res.status(502).end();
     };
     const attempt = (fresh: boolean) => {

@@ -203,6 +203,7 @@ describe('the observability README after the staging review', () => {
     }
   });
 
+  // @traces 1345-FR-016 1345-FR-017
   it('records why the failed-job counter keeps its version and why one failed job stays', () => {
     for (const fact of [
       'motorfix_queue_failed_total',
@@ -215,6 +216,7 @@ describe('the observability README after the staging review', () => {
     }
   });
 
+  // @traces 1345-FR-003 1345-FR-019
   it('lists the owner steps with the variables to set', () => {
     const steps = section('Owner steps');
 

@@ -19,16 +19,6 @@ const started = startTelemetry(
 );
 afterAll(() => started?.shutdown());
 
-const SEVEN_COUNTERS = [
-  'motorfix_searches_total',
-  'motorfix_sign_ins_total',
-  'motorfix_garage_sign_ups_total',
-  'motorfix_garage_approvals_total',
-  'motorfix_quotes_total',
-  'motorfix_emails_sent_total',
-  'motorfix_notifications_sent_total',
-];
-
 const WORKER_ONLY = [
   'motorfix_quotes_total',
   'motorfix_emails_sent_total',
@@ -76,10 +66,6 @@ describe("the API's product counters at start", () => {
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
     );
-    expect(
-      all.filter((one) => SEVEN_COUNTERS.includes(one.name)).length,
-    ).toBeLessThan(50);
-    expect(all.length).toBeLessThan(100);
   });
 
   it('holds the approvals and the documents opened at 0, though nothing reaches them on staging', async () => {

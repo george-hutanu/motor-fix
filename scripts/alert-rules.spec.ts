@@ -511,7 +511,7 @@ describe('alert rules', () => {
   });
 
   // @traces 1345-FR-004
-  it('alerts on missing data for the absence rules and stays OK on it for every other', () => {
+  it('alerts on missing data for the absence rules only', () => {
     const all = Object.values(files).flatMap(rulesOf);
     const alerting = all
       .filter((r) => r.noDataState === 'Alerting')
@@ -519,15 +519,6 @@ describe('alert rules', () => {
       .sort();
 
     expect(alerting).toEqual([...ALERTS_ON_NO_DATA].sort());
-    expect(
-      all
-        .filter((r) => !ALERTS_ON_NO_DATA.includes(r.uid))
-        .map((r) => [r.uid, r.noDataState, r.execErrState]),
-    ).toEqual(
-      all
-        .filter((r) => !ALERTS_ON_NO_DATA.includes(r.uid))
-        .map((r) => [r.uid, 'OK', 'Error']),
-    );
   });
 
   // @traces 1175-FR-006

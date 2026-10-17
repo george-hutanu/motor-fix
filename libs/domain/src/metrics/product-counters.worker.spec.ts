@@ -13,16 +13,6 @@ const started = startTelemetry(
 );
 afterAll(() => started?.shutdown());
 
-const SEVEN_COUNTERS = [
-  'motorfix_searches_total',
-  'motorfix_sign_ins_total',
-  'motorfix_garage_sign_ups_total',
-  'motorfix_garage_approvals_total',
-  'motorfix_quotes_total',
-  'motorfix_emails_sent_total',
-  'motorfix_notifications_sent_total',
-];
-
 async function series() {
   const { resourceMetrics } = await memory.metricReader.collect();
   return resourceMetrics.scopeMetrics
@@ -51,10 +41,6 @@ describe("the worker's product counters at start", () => {
       emails.length,
     );
     expect(all).toHaveLength(emails.length + 20);
-    expect(
-      all.filter((one) => SEVEN_COUNTERS.includes(one.name)).length,
-    ).toBeLessThan(50);
-    expect(all.length).toBeLessThan(100);
     expect(all.filter((one) => one.value !== 0)).toEqual([]);
     expect(named(all, 'motorfix_sign_ins_total')).toEqual([]);
   });

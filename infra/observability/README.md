@@ -191,16 +191,15 @@ Every product counter starts at 0 for each of its label combinations when
 its process starts (`initProductCounters` in
 `libs/domain/src/metrics/product-counters.ts`), so a panel shows 0 rather
 than no data, and the Error % panels read `or vector(0)` for the same
-reason. Each process starts only the series it writes: the api 63, the worker
-46.
+reason. Each process starts only the series it writes.
 
 Three counters cannot fire on staging today, and are kept at 0 until the
 stories that reach them:
 
 - `motorfix_garage_approvals_total` and `motorfix_verification_result_total`
   count the verification decision, which only the automatic approval reaches,
-  and that holds only under `APP_ENV=test`; the admin approve and reject
-  endpoints come with ST-302..305.
+  and that holds only under `APP_ENV=test`; no admin approve or reject
+  endpoint exists yet.
 - `motorfix_documents_opened_total` counts the admin document download
   address, which no web screen calls yet.
 
@@ -256,7 +255,7 @@ committed by the repo or its agents:
    on production's when it is back. Until then `postgres-unreachable` fires
    on no data, as it should.
 2. `FARO_URL` on the staging web. Faro keeps no session and stores nothing
-   on the device, so it does not wait for the analytics consent (ST-947).
+   on the device, so it does not wait for the analytics consent.
 3. `GEOAPIFY_API_KEY` on the staging worker (its `address search off`
    warning says so).
 4. Optional: read the `notifications` queue's one failed job in the staging
