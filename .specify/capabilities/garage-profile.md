@@ -13,6 +13,7 @@ features:
   - 1235-unknown-brand-cache
   - 290-save-garage
   - 386-brand-price-range
+  - 356-live-estimate
 ---
 
 # Capability: Garage profile
@@ -217,9 +218,9 @@ _From 355-price-list-ranges._
 
 _From 355-price-list-ranges._
 
-### 355-FR-011 — Each row's switch MUST be off when the list loads, be labelled by the job's name for assistive technology, keep its state only in the open page (nothing is written and nothing is added up: specs issue #75 sums the states), and be dropped with its row when a re-read no longer lists the job; a row still listed after a re-read keeps its state; a row is identified by its job (`jobTypeId`), not by the price row behind it.
+### 356-FR-009 — The switched-on jobs MUST be kept per garage in the browser's session storage (keyed by the garage's id, holding job ids), restored when the same profile opens again in the same browser tab's session and forgotten when the session ends (a new tab starts empty); a job restored that the list does not carry is dropped silently and pruned from storage (what is stored is what is on, so a job hidden for the brand in context does not come back on the default list); a refused or failing storage, or a stored value that is not a list of job ids, leaves the box working for the open page and is treated as nothing on; the server render and the first client render show nothing on, and the stored selection is applied after hydration, so the markup never disagrees with the server's.
 
-_From 355-price-list-ranges._
+_From 356-live-estimate._
 
 ### 355-FR-012 — On `price_list.updated` (and every other message the profile already reacts to) the section MUST re-read with the profile, with the same brand, and show the new list in place, keeping the scroll position (307-FR-018). The swap is silent for assistive technology (no live region): the list is not an alert, and the page's other sections re-read the same way.
 
@@ -289,6 +290,62 @@ _From 386-brand-price-range._
 
 _From 386-brand-price-range._
 
+### 356-FR-001 — The profile page MUST show an "Estimarea ta" / "Your estimate" box whenever the price list has at least one row (355-FR-006), placed directly after the price list section in the sections stack at every width, and not shown when the list is empty (355-FR-010) or while the profile loads (the page's skeleton, 307-FR-015).
+
+_From 356-live-estimate._
+
+### 356-FR-002 — The box MUST list every switched-on job (355-FR-011) in the list's order, each with its name in the page's language and the range the list shows for it (355-FR-002, 355-FR-008), and nothing else about jobs that are off.
+
+_From 356-live-estimate._
+
+### 356-FR-003 — The totals MUST be, in bani, the sum of the `fromBani` of the switched-on rows and the sum of their `toBani`, each row's range being the one the profile answer carries for the brand in context (the brand's range where the garage set one, else the default; 355-FR-002), shown as whole lei through the shared money format (019-FR-002: "1.040" in Romanian, "1,040" in English), labelled "DE LA" / "FROM" and "PÂNĂ LA" / "TO" (the mock's English); with nothing on both are 0.
+
+_From 356-live-estimate._
+
+### 356-FR-004 — The totals MUST be shown in the Cockpit odometer (the shared rolling-digit component) as digit cells only, padded with leading zeros to 5 places and, each total on its own, to 6 places when it is above 99.999 lei (the mock: "01040", no group separator in the cells, the leading zeros dimmed, "LEI" written once after both totals); the digits roll to the new value on every switch change, and under the person's reduced-motion setting there is no roll, only the new number (the theme's reduced-motion rule).
+
+_From 356-live-estimate._
+
+### 356-FR-005 — The totals block MUST read to assistive technology as one sentence, "Estimare de la {from} la {to} lei" / "Estimate from {from} to {to} lei", both amounts in the shared money format (019-FR-002), and the box MUST hold exactly one polite live region, which carries that sentence once after each switch change; the digit cells and the odometers' own live texts are hidden from assistive technology; when the last job is switched off the live region carries the empty text (FR-006) once instead; on load nothing is announced.
+
+_From 356-live-estimate._
+
+### 356-FR-006 — With nothing switched on the box MUST show "Pornește lucrările de care ai nevoie în lista de prețuri și contorul le adună." / "Switch on the jobs you need in the price list and the counter adds them up." in place of the job rows, with the totals at 0 and the button still shown.
+
+_From 356-live-estimate._
+
+### 356-FR-007 — Under the button the box MUST always show "Unde ajungi în interval depinde de mașină. Service-ul confirmă după ce o vede." / "Where you land in the range depends on your car. The garage confirms once it has seen it." (the brief and the mock show it with or without jobs on).
+
+_From 356-live-estimate._
+
+### 356-FR-008 — The box MUST show the line "Mecanic: Orice mecanic" / "Mechanic: Any mechanic"; it is a preference, not a choice, and no control changes it in this story (picking one is #107; hiding the line when the garage's team feature is off waits for the profile answer to carry that flag, which #107 adds).
+
+_From 356-live-estimate._
+
+### 356-FR-009 — The switched-on jobs MUST be kept per garage in the browser's session storage (keyed by the garage's id, holding job ids), restored when the same profile opens again in the same browser tab's session and forgotten when the session ends (a new tab starts empty); a job restored that the list does not carry is dropped silently and pruned from storage (what is stored is what is on, so a job hidden for the brand in context does not come back on the default list); a refused or failing storage, or a stored value that is not a list of job ids, leaves the box working for the open page and is treated as nothing on; the server render and the first client render show nothing on, and the stored selection is applied after hydration, so the markup never disagrees with the server's.
+
+_From 356-live-estimate._
+
+### 356-FR-010 — On a re-read of the profile (355-FR-012) a switched-on job no longer listed MUST be switched off and leave the box and the stored selection at once, the totals following; the box MUST then show, until the next switch change, "O lucrare pornită nu mai este oferită de service." / "A job you switched on is no longer offered by the garage." as visible text that the box's one polite live region (FR-005) carries once, so the box never holds a second live region; a job still listed keeps its state and takes its new range.
+
+_From 356-live-estimate._
+
+### 356-FR-011 — The box MUST hold a "CERE OFERTĂ" / "REQUEST A QUOTE" button that opens the profile's existing request dialog for this garage with the switched-on jobs ticked (the dialog's `jobTypeIds` prefilled; ids are the catalogue job ids, the same in the list and in `jobTypes`) and, when nothing is on, with no job ticked and the description field focused; it follows the header button's rules unchanged: shown to a visitor or a driver only, disabled with the same note when the page's brand is refused, the same sign-in demand for a visitor, the same `quote_request_started` analytics event with `source: profile`; the selection is left as it is when the dialog is closed or a request is sent, and the dialog's own focus return on close is unchanged.
+
+_From 356-live-estimate._
+
+### 356-FR-012 — The box MUST render at 320 px and 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, with its texts in the public texts for both languages (307-FR-016); the box is a named region with an `h2` heading (the profile's section heading level); the button is reachable by keyboard with a visible focus ring; every text, the rows and the digits meet 4.5:1 contrast against the box in light and dark (the PR QA sweep's axe and contrast checks).
+
+_From 356-live-estimate._
+
+### 356-FR-013 — Nothing is written to the server and no event is emitted: the box reads the profile answer the page already holds and re-reads with it; it adds no endpoint, no metric, no dashboard panel and no alert (`infra/observability/inventory.json` unchanged).
+
+_From 356-live-estimate._
+
+### 356-FR-014 — The end-to-end walk MUST run against the seeded garage (`service-auto-militari`, 355-FR-015): for BMW, switch on diagnosis and front brakes and read 1.250 and 1.920 lei; switch brakes off and read 150 and 220 lei; unit tests cover the sums with default and brand ranges, switching off, nothing on, a job removed by a re-read, the session storage round trip and the hand-over to the dialog.
+
+_From 356-live-estimate._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -299,3 +356,5 @@ _From 386-brand-price-range._
 - `307-FR-006` — superseded by `1182-FR-007` (2026-10-15)
 
 - `355-FR-002` — superseded by `386-FR-002` (2026-10-17)
+
+- `355-FR-011` — superseded by `356-FR-009` (2026-10-17)
