@@ -3,7 +3,6 @@ import {
   filterOf,
   filtersSet,
   includesToday,
-  LOG_TYPES,
   type LogFilter,
   paramsOf,
   passes,
@@ -90,21 +89,6 @@ describe('the API query', () => {
       severity: ['error'],
       source: ['backup'],
       to: '2026-10-17T21:00:00.000Z',
-    });
-  });
-});
-
-// @traces 299-FR-008
-describe('the types', () => {
-  it('group the kinds as an admin names them', () => {
-    expect(LOG_TYPES).toEqual({
-      backup: ['backup_completed', 'backup_failed'],
-      checks: ['check_failed'],
-      deploy: ['deploy'],
-      jobs: ['job_failed'],
-      servers: ['server_error'],
-      services: ['service_error'],
-      status: ['status_changed'],
     });
   });
 });

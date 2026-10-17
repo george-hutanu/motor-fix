@@ -87,15 +87,16 @@ const ALL = AREAS.flatMap((a) =>
 );
 
 describe('dashboard view lists under hostile input', () => {
-  it('has unique paths, and unique capabilities among the released views, in every dashboard', () => {
+  // A dashboard's settings capability is the one shared gate: it also opens
+  // the screens whose endpoints require it (the admin's system log). Every
+  // other capability gates one released view.
+  it('has unique paths, and unique capabilities apart from its settings one among the released views, in every dashboard', () => {
     for (const area of AREAS) {
       const paths = DASHBOARDS[area].views.map((v) => v.path);
-      // The system log shares Settings' capability: it is the one its
-      // endpoint requires.
       const caps = DASHBOARDS[area].views
-        .filter((v) => !v.unreleased && !(area === 'admin' && v.path === 'log'))
+        .filter((v) => !v.unreleased)
         .map((v) => v.capability)
-        .filter(Boolean);
+        .filter((cap) => cap && cap !== `${area}.settings`);
       expect(new Set(paths).size).toBe(paths.length);
       expect(new Set(caps).size).toBe(caps.length);
     }

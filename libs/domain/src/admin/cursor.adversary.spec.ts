@@ -3,7 +3,7 @@ import { decodeCursor, encodeCursor } from './cursor';
 const ID = '0b6f2a52-3f7e-4c1a-9a6b-8f2d1c3e4a5b';
 const raw = (text: string) => Buffer.from(text).toString('base64url');
 
-// @traces 299-system-log-search-FR-002
+// @traces 299-FR-002
 describe('the list cursor under hostile input', () => {
   it.each([
     ['the epoch', new Date('1970-01-01T00:00:00.000Z')],

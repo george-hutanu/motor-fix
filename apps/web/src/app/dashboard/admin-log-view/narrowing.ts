@@ -14,7 +14,7 @@ import type { SystemLogControllerList$Params } from '@motor-fix/data-access';
 import { bucharestDayStart } from '@motor-fix/i18n';
 
 // The types an admin picks and the kinds each sends.
-export const LOG_TYPES = {
+const LOG_TYPES = {
   backup: ['backup_completed', 'backup_failed'],
   checks: ['check_failed'],
   deploy: ['deploy'],

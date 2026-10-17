@@ -20,7 +20,7 @@ const base: LogFilter = {
   type: null,
 };
 
-// @traces 299-system-log-search-FR-009 299-system-log-search-FR-011
+// @traces 299-FR-009 299-FR-011
 describe('the address under hostile values', () => {
   it.each([
     ['a day that does not exist', '2026-02-30'],
@@ -139,7 +139,7 @@ describe('the address under hostile values', () => {
   });
 });
 
-// @traces 299-system-log-search-FR-010
+// @traces 299-FR-010
 describe('the API query at the changes of the clock', () => {
   it('starts the day of the change to summer time at 22:00 UTC the evening before', () => {
     const query = queryOf({ ...base, from: '2026-03-29', to: '2026-03-29' });
@@ -181,7 +181,7 @@ describe('the API query at the changes of the clock', () => {
   });
 });
 
-// @traces 299-system-log-search-FR-010
+// @traces 299-FR-010
 describe('the range check at its edges', () => {
   it('accepts today alone and the oldest day alone', () => {
     const { min, max } = dayLimits(NOW);
@@ -218,7 +218,7 @@ describe('the range check at its edges', () => {
   );
 });
 
-// @traces 299-system-log-search-FR-014
+// @traces 299-FR-014
 describe('which new entries count under hostile events', () => {
   const event = {
     entryKind: 'deploy',
