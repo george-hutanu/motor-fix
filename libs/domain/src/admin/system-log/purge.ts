@@ -1,6 +1,6 @@
 import type { PrismaClient } from '../../generated/prisma/client';
 
-// How long an entry is kept (OD-33): the nightly purge deletes what is older.
+// How long an entry is kept: the nightly purge deletes what is older.
 const RETENTION_DAYS = 90;
 
 export async function purgeSystemLog(
