@@ -105,11 +105,17 @@ test.describe('the suspended garages @seeded', () => {
       page.on('response', (answer) => {
         if (!answer.url().includes('/api/v1/admin/garages/summary')) return;
         reads++;
-        // A 304 keeps the figure the page already shows.
+        // A 304 keeps the figure the page already shows. A body that cannot
+        // be read (the page closing first) leaves no figure to compare.
         if (answer.status() === 200)
-          void answer.json().then((body: { suspended: number }) => {
-            read = body.suspended;
-          });
+          void answer.json().then(
+            (body: { suspended: number }) => {
+              read = body.suspended;
+            },
+            () => {
+              read = Number.NaN;
+            },
+          );
       });
 
       await page.setViewportSize({ height, width });
