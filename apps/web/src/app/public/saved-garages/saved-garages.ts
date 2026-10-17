@@ -51,6 +51,8 @@ export class SavedGarages {
   // Garages the server no longer lets anyone save (not approved any more).
   readonly unavailable = signal<ReadonlySet<string>>(new Set());
   private readonly inFlight = new Set<string>();
+  // Garages tapped while an ids read is out: its answer predates the tap.
+  private touched: Set<string> | null = null;
   private bar: string | number | null = null;
 
   // Once per route activation. A visitor's page asks nobody; a browser last
@@ -96,17 +98,27 @@ export class SavedGarages {
   }
 
   private async read() {
+    const touched = new Set<string>();
+    this.touched = touched;
     try {
       const { ids } = await this.api.savedGaragesControllerIds();
-      this.ids.set(new Set(ids));
+      const next = new Set(ids);
+      for (const id of touched) {
+        if (this.ids().has(id)) next.add(id);
+        else next.delete(id);
+      }
+      this.ids.set(next);
     } catch {
       // The controls stay unsaved and usable; a tap tells the truth.
+    } finally {
+      if (this.touched === touched) this.touched = null;
     }
   }
 
   // `savedAt` is an undo's: the first time comes back, with no toast.
   private async save(garageId: string, savedAt?: string, announce = true) {
     this.inFlight.add(garageId);
+    this.touched?.add(garageId);
     this.ids.update((ids) => added(ids, garageId));
     try {
       await this.api.savedGaragesControllerSave({
@@ -127,13 +139,20 @@ export class SavedGarages {
 
   private async remove(garageId: string) {
     this.inFlight.add(garageId);
+    this.touched?.add(garageId);
     this.ids.update((ids) => without(ids, garageId));
     if (this.bar !== null) toast.dismiss(this.bar);
     const removal = this.api.savedGaragesControllerRemove({ garageId });
+    let undone = false;
     const bar = toast(this.i18n.t('public.saveGarage.removed'), {
       action: {
         label: this.i18n.t('public.saveGarage.undo'),
-        onClick: () => void this.undo(garageId, removal),
+        // One undo per bar, however often the button is pressed.
+        onClick: () => {
+          if (undone) return;
+          undone = true;
+          void this.undo(garageId, removal);
+        },
       },
       duration: 8000,
     });

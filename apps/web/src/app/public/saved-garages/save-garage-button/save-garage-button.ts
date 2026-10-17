@@ -1,15 +1,13 @@
-import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
   input,
-  PLATFORM_ID,
 } from '@angular/core';
 import { TranslatePipe } from '@motor-fix/i18n';
 
-import { Session } from '../../../dashboard/session';
+import { confirmRoleHint, Session } from '../../../dashboard/session';
 import { SavedGarages } from '../saved-garages';
 
 // "Salvează" on a garage's profile (labelled) and the bookmark on a result
@@ -43,16 +41,7 @@ export class SaveGarageButton {
   );
 
   constructor() {
-    // A garage-side role last seen may outlive its session: one renewal
-    // confirms it, and a failed one clears it, as "Cere ofertă" does.
-    const hint = this.session.roleHint();
-    if (
-      isPlatformBrowser(inject(PLATFORM_ID)) &&
-      !this.session.current() &&
-      hint !== null &&
-      hint !== 'driver'
-    )
-      void this.session.renew();
+    confirmRoleHint(this.session);
   }
 
   // On a card the button sits beside the profile link: the tap stays here.
