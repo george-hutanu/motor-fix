@@ -158,6 +158,32 @@ export class SuspensionService {
       payload: { cause, garageId },
       subjectId: garageId,
     });
+    // Its waiting quotes now read as withdrawn: each driver's comparison is
+    // told, since garage.suspended never reaches a driver's channel.
+    const waiting = await tx.quote.findMany({
+      select: {
+        id: true,
+        request: { select: { driverId: true } },
+        requestId: true,
+      },
+      where: { garageId, status: 'waiting' },
+    });
+    for (const quote of waiting) {
+      await this.events.record(tx, {
+        audience: {
+          driverAccountId: quote.request.driverId,
+          garageId,
+          type: 'quote',
+        },
+        kind: 'quote.withdrawn',
+        payload: {
+          quoteId: quote.id,
+          reason: 'suspended',
+          requestId: quote.requestId,
+        },
+        subjectId: quote.id,
+      });
+    }
     return {
       cause: row.cause,
       fromTime: row.fromTime,

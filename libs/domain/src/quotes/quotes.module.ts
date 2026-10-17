@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 
 import { AcceptController } from './accept/accept.controller';
 import { AcceptService } from './accept/accept.service';
+import { CompareController } from './compare/compare.controller';
+import { CompareService } from './compare/compare.service';
 import { DeclineService } from './decline/decline.service';
 import { GarageRequestsController } from './garage-requests/garage-requests.controller';
 import { GarageRequestsService } from './garage-requests/garage-requests.service';
@@ -24,6 +26,7 @@ import { CacheModule } from '../cache/cache.module';
     QuoteRequestsController,
     QuotesController,
     AcceptController,
+    CompareController,
   ],
   exports: [DeclineService, GarageRequestsService, RequestsService],
   imports: [CacheModule],
@@ -34,6 +37,7 @@ import { CacheModule } from '../cache/cache.module';
     QuotesService,
     DeclineService,
     AcceptService,
+    CompareService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

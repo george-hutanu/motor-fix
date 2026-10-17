@@ -566,3 +566,118 @@ export class AcceptQuoteDto {
   @IsBoolean()
   historyShared?: boolean;
 }
+
+// A garage as the driver's comparison shows it: no phone, address or e-mail.
+export class CompareGarageDto extends GarageRefDto {
+  @ApiProperty({
+    description: 'One decimal; null until the garage is reviewed',
+    nullable: true,
+    type: Number,
+  })
+  rating!: number | null;
+
+  @ApiProperty()
+  reviewCount!: number;
+
+  @ApiProperty({
+    description: 'The garage’s city; null when unknown',
+    nullable: true,
+    type: String,
+  })
+  area!: string | null;
+
+  @ApiProperty({ description: 'A mobile mechanic' })
+  mobile!: boolean;
+}
+
+export class CompareQuoteJobDto extends QuoteJobDto {
+  @ApiProperty()
+  nameRo!: string;
+
+  @ApiProperty()
+  nameEn!: string;
+}
+
+const COMPARE_QUOTE_STATUSES = QUOTE_STATUSES.filter(
+  (status) => status !== 'withdrawn',
+);
+
+export class CompareQuoteDto extends PickType(QuoteDto, [
+  'id',
+  'fromBani',
+  'toBani',
+  'durationMinutes',
+  'slot',
+  'note',
+  'sentAt',
+  'changedAt',
+  'expiresAt',
+] as const) {
+  @ApiProperty({ type: CompareGarageDto })
+  garage!: CompareGarageDto;
+
+  @ApiProperty({ enum: COMPARE_QUOTE_STATUSES })
+  status!: Exclude<QuoteStatus, 'withdrawn'>;
+
+  @ApiProperty({ type: [CompareQuoteJobDto] })
+  jobs!: CompareQuoteJobDto[];
+}
+
+const WITHDRAWN_REASONS = ['garage', 'suspended'] as const;
+
+export class WithdrawnQuoteDto {
+  @ApiProperty()
+  garageName!: string;
+
+  @ApiProperty({ enum: WITHDRAWN_REASONS })
+  reason!: (typeof WITHDRAWN_REASONS)[number];
+}
+
+export class DeclinedGarageDto {
+  @ApiProperty()
+  garageName!: string;
+
+  @ApiProperty({ enum: DECLINE_REASON_CODES })
+  declineReason!: DeclineReasonCode;
+}
+
+export class CompareRequestDto extends PickType(RequestSummaryDto, [
+  'id',
+  'status',
+  'jobs',
+  'car',
+  'booking',
+] as const) {
+  @ApiProperty({
+    description: 'The description’s first line',
+    nullable: true,
+    type: String,
+  })
+  description!: string | null;
+}
+
+export class QuoteComparisonDto {
+  @ApiProperty({ type: CompareRequestDto })
+  request!: CompareRequestDto;
+
+  @ApiProperty({
+    description: 'Fastest answer first, equal times by id',
+    type: [CompareQuoteDto],
+  })
+  quotes!: CompareQuoteDto[];
+
+  @ApiProperty({ type: [WithdrawnQuoteDto] })
+  withdrawn!: WithdrawnQuoteDto[];
+
+  @ApiProperty({
+    description: 'Declines past the garage’s undo window',
+    type: [DeclinedGarageDto],
+  })
+  declined!: DeclinedGarageDto[];
+
+  @ApiProperty({
+    description: 'Names of the garages that have not answered yet',
+    type: [String],
+  })
+  waiting!: string[];
+}
