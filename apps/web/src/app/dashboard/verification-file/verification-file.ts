@@ -29,7 +29,7 @@ import {
   TranslatePipe,
 } from '@motor-fix/i18n';
 import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
-import { Lamp, toast } from '@motor-fix/ui-cockpit';
+import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
 import { VerificationProblem } from '../verification-problem/verification-problem';
@@ -95,7 +95,7 @@ interface VerificationFileData {
 // call; a decided file reads only. The decisions stay disabled until the decision story wires them.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Lamp, TranslatePipe, VerificationRegisterForm],
+  imports: [HlmButton, Lamp, TranslatePipe, VerificationRegisterForm],
   selector: 'mf-verification-file',
   styleUrl: './verification-file.css',
   templateUrl: './verification-file.html',

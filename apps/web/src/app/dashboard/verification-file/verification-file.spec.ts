@@ -1647,6 +1647,24 @@ describe('the RAR and activities rows', () => {
     expect(text(rar())).toContain('CJ 221/2021');
   });
 
+  // @traces 204-FR-014
+  it("gives the correction's Save and Cancel the record form's buttons", async () => {
+    const host = await open();
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const buttons = [
+      ...(rar()?.querySelectorAll('[data-part="correct"] button') ?? []),
+    ];
+
+    expect(buttons.map((b) => b.hasAttribute('hlmbtn'))).toEqual([true, true]);
+    expect(buttons.map((b) => b.getAttribute('variant'))).toEqual([
+      null,
+      'ghost',
+    ]);
+  });
+
   it('refuses a number too short before sending, and names the field', async () => {
     const host = await open();
     const rar = () => row(host, 'register', 'rar');

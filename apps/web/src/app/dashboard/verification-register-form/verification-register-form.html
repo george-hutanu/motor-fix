@@ -73,9 +73,7 @@
             @for (j of jobList(); track j.id) {
               <li data-job [class.uncovered]="j.uncovered">
                 <span>{{ j.name }}</span>
-                @if (j.mark) {
-                  <span class="mark">{{ j.mark }}</span>
-                }
+                <span class="mark">{{ j.mark }}</span>
               </li>
             }
           </ul>

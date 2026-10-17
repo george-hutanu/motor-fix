@@ -141,8 +141,8 @@
                   <p class="error" role="alert" id="mf-rar-number-error">{{ e }}</p>
                 }
                 <span class="register-actions">
-                  <button type="submit" class="action primary">{{ 'admin.file.register.form.save' | t }}</button>
-                  <button type="button" class="action ghost" (click)="toggleCorrect()">{{ 'admin.file.register.form.cancel' | t }}</button>
+                  <button hlmBtn type="submit">{{ 'admin.file.register.form.save' | t }}</button>
+                  <button hlmBtn variant="ghost" type="button" (click)="toggleCorrect()">{{ 'admin.file.register.form.cancel' | t }}</button>
                 </span>
               </form>
             }
