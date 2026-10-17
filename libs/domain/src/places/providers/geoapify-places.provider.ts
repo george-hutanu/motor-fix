@@ -47,7 +47,11 @@ export class GeoapifyPlaces implements PlacesProvider {
     private readonly fetchFn: Fetch = fetch,
   ) {}
 
-  async search(q: string, lang: string): Promise<PlacesAnswer> {
+  async search(
+    q: string,
+    lang: string,
+    signal?: AbortSignal,
+  ): Promise<PlacesAnswer> {
     const url = new URL(ENDPOINT);
     url.search = new URLSearchParams({
       apiKey: this.apiKey,
@@ -59,8 +63,9 @@ export class GeoapifyPlaces implements PlacesProvider {
     }).toString();
     let response: Response;
     try {
+      const timeout = AbortSignal.timeout(TIMEOUT_MS);
       response = await this.fetchFn(url.toString(), {
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: signal ? AbortSignal.any([timeout, signal]) : timeout,
       });
     } catch (error) {
       const timedOut = (error as Error | undefined)?.name === 'TimeoutError';
