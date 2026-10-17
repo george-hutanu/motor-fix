@@ -21,27 +21,14 @@ interface Counts {
 const add = (into: Map<string, number>, key: string, n: number) =>
   into.set(key, (into.get(key) ?? 0) + n);
 
-// Each run of consecutive days as one [start, end) instant range.
-function ranges(days: readonly string[]) {
-  const sorted = [...days].sort();
-  const out: { gte: Date; lt: Date }[] = [];
-  let start: string | undefined;
-  sorted.forEach((day, i) => {
-    start ??= day;
-    const next = addDays(day, 1);
-    if (sorted[i + 1] === next) return;
-    out.push({ gte: atLocal(start, 0), lt: atLocal(next, 0) });
-    start = undefined;
-  });
-  return out;
-}
-
 // The requests created on `days`, whatever their status: once per brand as
 // stored in the car snapshot, once per job asked for.
 async function countDays(db: Db, days: readonly string[]): Promise<Counts> {
   const counts: Counts = { brands: new Map(), jobs: new Map(), requests: 0 };
   if (days.length === 0) return counts;
-  const createdAt = ranges(days).map((range) => ({ createdAt: range }));
+  const createdAt = days.map((day) => ({
+    createdAt: { gte: atLocal(day, 0), lt: atLocal(addDays(day, 1), 0) },
+  }));
   const [brands, jobs] = await Promise.all([
     db.quoteRequest.groupBy({
       _count: { _all: true },
@@ -93,9 +80,21 @@ async function writtenDays(db: Db, days: readonly string[]) {
   return new Map(totals.map((row) => [dayOf(row.day), row.requests]));
 }
 
+// Plain code-point order; `<` would compare UTF-16 units and put an astral
+// character before U+E000..U+FFFF.
+function byCodePoint(a: string, b: string) {
+  const x = [...a];
+  const y = [...b];
+  for (let i = 0; i < Math.min(x.length, y.length); i++) {
+    const d = (x[i].codePointAt(0) ?? 0) - (y[i].codePointAt(0) ?? 0);
+    if (d !== 0) return d;
+  }
+  return x.length - y.length;
+}
+
 // Most first, then by name (key) in plain code-point order.
 const ranked = (counts: Map<string, number>) =>
-  [...counts].sort(([a, n], [b, m]) => m - n || (a < b ? -1 : a > b ? 1 : 0));
+  [...counts].sort(([a, n], [b, m]) => m - n || byCodePoint(a, b));
 
 // The demand of the last 30 days: the written closed days from their rows,
 // today and any closed day the night has not written counted live.
