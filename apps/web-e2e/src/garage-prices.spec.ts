@@ -70,8 +70,9 @@ test.describe('the garage price list @seeded', () => {
   for (const [size, width, height] of [
     ['a desktop', 1440, 900],
     ['a 390 px phone', 390, 844],
+    ['a 320 px phone', 320, 800],
   ] as const) {
-    // @traces 172-price-list-states-FR-001 172-price-list-states-FR-002 172-price-list-states-FR-003 172-price-list-states-FR-004 172-price-list-states-FR-005 172-price-list-states-FR-006 172-price-list-states-FR-011
+    // @traces 172-FR-001 172-FR-002 172-FR-003 172-FR-004 172-FR-005 172-FR-006 172-FR-010 172-FR-011
     test(`the owner reads each job's state, its brand range and the labour note on ${size}, in Romanian and English`, async ({
       page,
     }) => {
@@ -109,7 +110,7 @@ test.describe('the garage price list @seeded', () => {
     });
   }
 
-  // @traces 172-price-list-states-FR-009 172-price-list-states-FR-011
+  // @traces 172-FR-009 172-FR-011
   test('the receptionist finds no Prețuri and its address returns to the dashboard', async ({
     page,
   }) => {

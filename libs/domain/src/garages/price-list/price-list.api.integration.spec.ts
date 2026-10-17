@@ -367,7 +367,7 @@ describe('the public profile and the owner agree', () => {
   });
 });
 
-// @traces 172-price-list-states-FR-006
+// @traces 172-FR-006
 describe("the owner's read and the hourly labour range", () => {
   it('gives the labour range the profile gives, when both ends are set', async () => {
     const w = await world();

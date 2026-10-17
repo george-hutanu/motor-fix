@@ -23,6 +23,17 @@ import { Live } from '../live';
 import { garageOf, Session } from '../session';
 
 type Range = { fromBani?: number; toBani?: number };
+type Reason = NonNullable<PriceListItemDto['reason']>;
+
+// Each reason the client knows, typed from it so a new code fails the build
+// here; a code that arrives without a label (or none at all) reads "hidden".
+const REASONS: Record<Reason, true> = {
+  awaiting_approval: true,
+  hidden_by_garage: true,
+  no_top_price: true,
+  not_authorised: true,
+  rejected: true,
+};
 
 // "Prețuri": every job of the garage's price list in the list's order, with
 // whether drivers see it and why not, its range and its brand ranges, then the
@@ -74,8 +85,11 @@ export class PricesView {
     return formatDuration(row.durationMinutes, this.i18n.language());
   }
 
-  protected state(row: PriceListItemDto) {
-    return `garage.prices.state.${row.public ? 'public' : row.reason}`;
+  protected state({ public: shown, reason }: PriceListItemDto) {
+    if (shown) return 'garage.prices.state.public';
+    return reason && Object.hasOwn(REASONS, reason)
+      ? `garage.prices.state.${reason}`
+      : 'garage.prices.state.hidden';
   }
 
   // Both ends as a range; the low end alone as a starting price.

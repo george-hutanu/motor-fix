@@ -77,6 +77,7 @@
     "retry": "Încearcă din nou",
     "state": {
       "awaiting_approval": "ascuns · așteaptă aprobarea",
+      "hidden": "ascuns",
       "hidden_by_garage": "ascuns de tine",
       "no_top_price": "ascuns · fără preț maxim",
       "not_authorised": "ascuns · nu e în autorizația RAR",

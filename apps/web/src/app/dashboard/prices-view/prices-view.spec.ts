@@ -149,9 +149,9 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 172-price-list-states-FR-001 172-price-list-states-FR-002
-// @traces 172-price-list-states-FR-003 172-price-list-states-FR-005
-// @traces 172-price-list-states-FR-006 172-price-list-states-FR-010
+// @traces 172-FR-001 172-FR-002
+// @traces 172-FR-003 172-FR-005
+// @traces 172-FR-006 172-FR-010
 describe('Prețuri: every job with its state', () => {
   it("reads the session garage's list once and shows its title and one list item per job, in the read's order", async () => {
     const { element, settle } = await render();
@@ -280,7 +280,54 @@ describe('Prețuri: every job with its state', () => {
   });
 });
 
-// @traces 172-price-list-states-FR-004
+// @traces 172-FR-002 172-FR-003
+describe('Prețuri: a row the read gives oddly', () => {
+  it('reads a hidden job with no or an unknown reason as hidden, a stray reason on a public one as on the profile, and no range as the missing mark', async () => {
+    const { element, settle } = await render(
+      async () => ({
+        items: [
+          item({ jobTypeId: 'a', public: false, reason: undefined }),
+          item({
+            jobTypeId: 'b',
+            public: false,
+            reason: 'frozen' as unknown as 'rejected',
+          }),
+          item({ jobTypeId: 'c', reason: 'rejected' }),
+          item({
+            durationMinutes: undefined,
+            fromBani: undefined,
+            jobTypeId: 'd',
+            nameEn: '   ',
+            nameRo: '<img src=x> Lucrare ț',
+            toBani: undefined,
+          }),
+        ],
+      }),
+      'en',
+    );
+    await settle();
+
+    const shown = rows(element);
+    expect(shown.map((row) => cell(row, 'state'))).toEqual([
+      'hidden',
+      'hidden',
+      'on the profile',
+      'on the profile',
+    ]);
+    expect(shown.map((row) => row.dataset['public'])).toEqual([
+      'false',
+      'false',
+      'true',
+      'true',
+    ]);
+    expect(cell(shown[3], 'price')).toBe('—');
+    expect(cell(shown[3], 'name')).toBe('<img src=x> Lucrare ț');
+    expect(element.querySelector('img')).toBeNull();
+    expect(shown[3].querySelector('[data-duration]')).toBeNull();
+  });
+});
+
+// @traces 172-FR-004
 describe('Prețuri: brand ranges under their job', () => {
   it('lists a job’s brand ranges under its row, in the read’s order, and none under a job without', async () => {
     const { element, settle } = await render(async () => ({
@@ -312,7 +359,7 @@ describe('Prețuri: brand ranges under their job', () => {
   });
 });
 
-// @traces 172-price-list-states-FR-007 172-price-list-states-FR-008
+// @traces 172-FR-007 172-FR-008
 describe('Prețuri: live, loading, failure and an empty list', () => {
   it('shows busy skeleton rows with no text while the first read runs', async () => {
     let finish: (() => void) | undefined;

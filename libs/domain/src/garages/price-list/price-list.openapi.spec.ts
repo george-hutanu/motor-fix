@@ -39,7 +39,7 @@ describe('the brand range writes in the OpenAPI document', () => {
   });
 });
 
-// @traces 172-price-list-states-FR-006
+// @traces 172-FR-006
 describe("the owner's price list read's labour range in the OpenAPI document", () => {
   it('may carry the hourly labour range, as the public profile gives it', () => {
     const list = doc.components.schemas.PriceListDto;

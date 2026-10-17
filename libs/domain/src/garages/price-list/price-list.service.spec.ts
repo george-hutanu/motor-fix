@@ -114,7 +114,7 @@ const stored = (
   rarActivities: [],
 });
 
-// @traces 172-price-list-states-FR-006
+// @traces 172-FR-006
 describe("the owner's price list read and the labour range", () => {
   it('gives the hourly labour range when both ends are set', async () => {
     const { findUnique, service } = reading(stored(18_000, 24_000));
