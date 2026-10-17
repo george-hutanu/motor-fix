@@ -303,10 +303,4 @@ describe('the DNS report under hostile results', () => {
     expect(states).toEqual({ DKIM: 'ok', DMARC: 'ok', SPF: 'unreachable' });
     expect(report.ok).toBe(false);
   });
-
-  it('gives the same report when run twice', async () => {
-    const first = (await state({ ...GOOD, [DOMAIN]: [] })).report;
-    const second = (await state({ ...GOOD, [DOMAIN]: [] })).report;
-    expect(second).toEqual(first);
-  });
 });

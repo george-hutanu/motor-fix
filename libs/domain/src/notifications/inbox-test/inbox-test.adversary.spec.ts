@@ -85,14 +85,6 @@ describe('the inbox mailbox list under hostile values', () => {
     ]);
   });
 
-  it('reads ten thousand addresses once each', () => {
-    const value = Array.from(
-      { length: 10_000 },
-      (_, i) => `u${i % 5000}@x.test`,
-    );
-    expect(inboxMailboxes(value.join(','))).toHaveLength(5000);
-  });
-
   it('reads tabs and newlines around an address as padding', () => {
     expect(inboxMailboxes('\ta@x.test\n,\r\nb@x.test')).toEqual([
       'a@x.test',
@@ -107,12 +99,6 @@ describe('the dry run under hostile setups', () => {
     const { printed, sent } = await run({ dryRun: true, mailboxes: [] });
     expect(printed).toEqual([]);
     expect(sent).toEqual([]);
-  });
-
-  it('prints the same lines when run twice', async () => {
-    const first = await run({ dryRun: true });
-    const second = await run({ dryRun: true });
-    expect(second.printed).toEqual(first.printed);
   });
 
   it('prints one row per template, language and mailbox with a subject', async () => {

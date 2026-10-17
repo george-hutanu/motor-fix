@@ -1,4 +1,4 @@
-import { inboxMailboxes, inboxMatrix, runInboxTest } from './inbox-test';
+import { inboxMailboxes, runInboxTest } from './inbox-test';
 import type { Brevo } from '../brevo/brevo';
 import { emailConfig } from '../email-config';
 import type { Registry, Template } from '../templates';
@@ -57,37 +57,40 @@ describe('the inbox test matrix', () => {
     expect(inboxMailboxes(undefined)).toEqual([]);
   });
 
-  it('holds every e-mail template in both languages for every mailbox', () => {
-    const rows = inboxMatrix(MAILBOXES, WEB);
-    expect(rows).toHaveLength(WITH_EMAIL.length * 2 * MAILBOXES.length);
+  it('holds every e-mail template in both languages for every mailbox', async () => {
+    const { printed } = await run({ dryRun: true });
+    expect(printed).toHaveLength(WITH_EMAIL.length * 2 * MAILBOXES.length);
     for (const name of WITH_EMAIL) {
       for (const language of ['ro', 'en']) {
         for (const to of MAILBOXES) {
-          expect(rows).toContainEqual(
-            expect.objectContaining({ language, template: name, to }),
-          );
+          expect(
+            printed.some((l) => l.startsWith(`${name} ${language} ${to} `)),
+          ).toBe(true);
         }
       }
     }
   });
 
-  it('renders every example with the web app as the link base', () => {
-    for (const row of inboxMatrix(['a@example.test'], WEB)) {
-      expect(row.error).toBeUndefined();
-      expect(row.mail?.html).not.toContain('motorfix.example');
-      expect(row.mail?.text).not.toContain('motorfix.example');
+  it('renders every example with the web app as the link base', async () => {
+    const { printed, sent } = await run({ mailboxes: ['a@example.test'] });
+    expect(printed.some((line) => line.includes(' FAILED '))).toBe(false);
+    for (const mail of sent) {
+      expect(mail.html).not.toContain('motorfix.example');
+      expect(mail.text).not.toContain('motorfix.example');
     }
-    const invite = inboxMatrix(['a@example.test'], WEB).find(
-      (row) => row.template === 'STAFF_INVITE.mechanic',
+    const invite = printed.findIndex((line) =>
+      line.startsWith('STAFF_INVITE.mechanic ro '),
     );
-    expect(invite?.mail?.text).toContain(`${WEB}/ro/invite/example`);
+    expect(sent[invite]?.text).toContain(`${WEB}/ro/invite/example`);
   });
 
   // @traces 279-FR-008
-  it('holds the launch types and no release-2 type', () => {
-    const names = new Set(
-      inboxMatrix(['a@example.test'], WEB).map((r) => r.template),
-    );
+  it('holds the launch types and no release-2 type', async () => {
+    const { printed } = await run({
+      dryRun: true,
+      mailboxes: ['a@example.test'],
+    });
+    const names = new Set(printed.map((line) => line.split(' ')[0]));
     for (const name of [
       'SUPPORT_ACKNOWLEDGEMENT',
       'ADMIN_OUTAGE_ALERT.down',
@@ -221,9 +224,11 @@ describe('the inbox test real run', () => {
         'List-Unsubscribe=One-Click',
       );
     }
-    const news = inboxMatrix(['a@example.test'], WEB)
-      .filter((row) => row.template === 'NEWS')
-      .map((row) => row.mail?.subject);
+    const news = (
+      await run({ dryRun: true, mailboxes: ['a@example.test'] })
+    ).printed
+      .filter((line) => line.startsWith('NEWS '))
+      .map((line) => line.split(' ').slice(3).join(' '));
     expect(withHeaders.map((mail) => mail.subject)).toEqual(news);
   });
 

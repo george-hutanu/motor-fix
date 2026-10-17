@@ -56,7 +56,7 @@ function written(
 
 // Every template with an e-mail, in both languages, to every mailbox, each
 // written from its example values as the queue would write it.
-export function inboxMatrix(
+function inboxMatrix(
   mailboxes: readonly string[],
   webUrl: string | undefined,
   registry: Registry = TEMPLATES,
