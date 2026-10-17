@@ -12,7 +12,7 @@
           "title": "PostgreSQL unreachable",
           "condition": "B",
           "for": "5m",
-          "noDataState": "OK",
+          "noDataState": "Alerting",
           "execErrState": "Error",
           "labels": {
             "service": "postgres"
