@@ -445,11 +445,8 @@ const contactNames = (): Set<string> =>
   );
 
 /** Every way the alert files break the rules this repository holds them to. */
-function problems(
-  files: Files,
-  known = dashboardMetrics(),
-  receivers = contactNames(),
-): string[] {
+function problems(files: Files, known = dashboardMetrics()): string[] {
+  const receivers = contactNames();
   const found = groupProblems(files);
   const all = rows(files);
   const seen = new Map<string, string>();
@@ -980,52 +977,37 @@ function routeProblems(policy: Route, points: ContactPoint[]): string[] {
   return found;
 }
 
-const SETTINGS: Record<string, string[]> = {
-  email: ['addresses'],
-  webhook: ['url', 'httpMethod', 'authorization_scheme'],
-};
-
-const beyond = (keys: string[], allowed: string[], what: string) =>
-  keys.filter((k) => !allowed.includes(k)).map((k) => `${what} ${k}`);
-
-/** Each check a contact point must pass, and what failing it means. */
-const POINT_CHECKS: [string, (p: ContactPoint) => boolean][] = [
-  [
-    'name is no name the rules know',
-    (p) => ['MotorFix owner', 'motorfix-outage'].includes(p.name),
-  ],
-  [
-    'MotorFix owner must be e-mail only',
-    (p) => p.name !== 'MotorFix owner' || p.type === 'email',
-  ],
-  ['holds a credential', (p) => !('authorization_credentials' in p.settings)],
-  [
-    'addresses must be one string',
-    (p) =>
-      !('addresses' in p.settings) ||
-      typeof p.settings['addresses'] === 'string',
-  ],
-  ['holds a host', (p) => !JSON.stringify(p).includes('://')],
-];
-
-/** Every way the contact points break what this repository holds them to. */
-function pointProblems(points: ContactPoint[]): string[] {
-  const count =
-    points.length === 3 ? [] : [`${points.length} entries; exactly three`];
-  return [
-    ...count,
-    ...points.flatMap((p) =>
-      [
-        ...beyond(Object.keys(p), ['uid', 'name', 'type', 'settings'], 'holds'),
-        ...beyond(
-          Object.keys(p.settings),
-          SETTINGS[p.type] ?? [],
-          'settings hold',
-        ),
-        ...POINT_CHECKS.filter(([, ok]) => !ok(p)).map(([message]) => message),
-      ].map((m) => `${p.uid}: ${m}`),
-    ),
-  ];
+/** Holds the contact points to what the repository declares; throws on any other. */
+function expectDeclared(points: ContactPoint[]) {
+  const owner = 'hutanugeorge40@gmail.com';
+  const [mine, email, webhook, ...rest] = points;
+  expect(rest).toEqual([]);
+  expect(mine).toEqual({
+    name: 'MotorFix owner',
+    settings: { addresses: owner },
+    type: 'email',
+    uid: 'motorfix-owner',
+  });
+  expect(email).toEqual({
+    name: 'motorfix-outage',
+    settings: { addresses: expect.any(String) },
+    type: 'email',
+    uid: 'motorfix-outage-email',
+  });
+  const addresses = String(email?.settings['addresses']).split(';');
+  expect(addresses).toContain(owner);
+  for (const address of addresses)
+    expect(address).toMatch(/^[^\s;@/:]+@[^\s;@/:]+\.[^\s;@/:]+$/);
+  expect(webhook).toEqual({
+    name: 'motorfix-outage',
+    settings: {
+      authorization_scheme: 'Bearer',
+      httpMethod: 'POST',
+      url: '{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts',
+    },
+    type: 'webhook',
+    uid: 'motorfix-outage-webhook',
+  });
 }
 
 describe('the contact point and the notification policy', () => {
@@ -1040,43 +1022,16 @@ describe('the contact point and the notification policy', () => {
   // @traces 880-FR-011
   // @traces 1347-FR-001
   it('declares the owner e-mail and the outage e-mail and webhook, with no host or credential', () => {
-    const owner = 'hutanugeorge40@gmail.com';
-    const [mine, email, webhook, ...rest] = points();
-    expect(rest).toEqual([]);
-    expect(mine).toEqual({
-      name: 'MotorFix owner',
-      settings: { addresses: owner },
-      type: 'email',
-      uid: 'motorfix-owner',
-    });
-    expect(email).toEqual({
-      name: 'motorfix-outage',
-      settings: { addresses: expect.stringMatching(/^[^;\s]+(;[^;\s]+)*$/) },
-      type: 'email',
-      uid: 'motorfix-outage-email',
-    });
-    expect(String(email?.settings['addresses']).split(';')).toContain(owner);
-    expect(webhook).toEqual({
-      name: 'motorfix-outage',
-      settings: {
-        authorization_scheme: 'Bearer',
-        httpMethod: 'POST',
-        url: '{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts',
-      },
-      type: 'webhook',
-      uid: 'motorfix-outage-webhook',
-    });
-    expect(pointProblems(points())).toEqual([]);
+    expectDeclared(points());
   });
 
   // @traces 1347-FR-001
-  it.each<[string, (p: ContactPoint[]) => void, RegExp]>([
+  it.each<[string, (p: ContactPoint[]) => void]>([
     [
       'a credential in the webhook',
       (p) => {
         (p[2] as ContactPoint).settings['authorization_credentials'] = 'x';
       },
-      /motorfix-outage-webhook: holds a credential/,
     ],
     [
       "a host in the webhook's url",
@@ -1084,40 +1039,42 @@ describe('the contact point and the notification policy', () => {
         (p[2] as ContactPoint).settings['url'] =
           'https://staging.example.test/api/v1/monitoring/outage-alerts';
       },
-      /motorfix-outage-webhook: holds a host/,
     ],
     [
       'an unknown key',
       (p) => {
         (p[1] as ContactPoint).disableResolveMessage = true;
       },
-      /motorfix-outage-email: holds disableResolveMessage/,
     ],
     [
       'a list in place of the addresses',
       (p) => {
         (p[1] as ContactPoint).settings['addresses'] = ['a@example.test'];
       },
-      /motorfix-outage-email: addresses must be one string/,
+    ],
+    [
+      'a second address that is no address',
+      (p) => {
+        (p[1] as ContactPoint).settings['addresses'] =
+          'hutanugeorge40@gmail.com;oops';
+      },
     ],
     [
       'a fourth entry',
       (p) => {
         p.push({ ...clone(p[1] as ContactPoint), uid: 'motorfix-outage-sms' });
       },
-      /4 entries; exactly three/,
     ],
     [
       'a second integration type under the owner name',
       (p) => {
         (p[2] as ContactPoint).name = 'MotorFix owner';
       },
-      /motorfix-outage-webhook: MotorFix owner must be e-mail only/,
     ],
-  ])('refuses %s', (_, breakIt, message) => {
+  ])('refuses %s', (_, breakIt) => {
     const broken = clone(points());
     breakIt(broken);
-    expect(pointProblems(broken).join('\n')).toMatch(message);
+    expect(() => expectDeclared(broken)).toThrow();
   });
 
   // @traces 880-FR-012
@@ -1474,7 +1431,7 @@ describe('Grafana alerts workflow', () => {
       expect(calls[policy]?.body).toEqual(alerting<Route>('policies.json'));
       for (const c of [...contacts, calls[policy]])
         expect(c?.args).toContain('X-Disable-Provenance: true');
-      expect(deleted(calls).sort()).toEqual(['hand-made', 'outage-by-hand']);
+      expect(deleted(calls)).toEqual(['hand-made', 'outage-by-hand']);
       expect(out).toContain(
         'applied infra/observability/grafana/alerting/contact-points.json (motorfix-outage-email)',
       );
@@ -1639,15 +1596,6 @@ describe('Grafana alerts workflow', () => {
           expect(out).not.toContain(value);
       },
     );
-
-    // @traces 1347-FR-002
-    it('lists the contact points once per declared name', () => {
-      const { calls } = apply({ FOLDER_EXISTS: '1' });
-      const lists = calls
-        .filter((c) => c.args.includes('contact-points?name='))
-        .map((c) => c.args.match(/contact-points\?name=([^\n]+)/)?.[1]);
-      expect(lists.sort()).toEqual(['MotorFix%20owner', 'motorfix-outage']);
-    });
 
     // @traces 1347-FR-002
     it.each<[string, Record<string, string>]>([

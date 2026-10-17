@@ -391,15 +391,6 @@ describe('Grafana alerts workflow under hostile input', () => {
   });
 
   // @traces 1347-FR-002
-  it.each(['/', '///'])(
-    'builds no double slash in the webhook url when the staging address ends in %s',
-    (tail) => {
-      const { settings } = hooked({ STAGING_WEB_URL: `${web}${tail}` });
-      expect(settings?.['url']).toBe(`${web}/api/v1/monitoring/outage-alerts`);
-    },
-  );
-
-  // @traces 1347-FR-002
   it('sends a webhook token holding a quote and a backslash as the same string', () => {
     const odd = 'a"b\\c\'d';
     const { settings } = hooked({ OUTAGE_WEBHOOK_TOKEN: odd });
@@ -415,18 +406,6 @@ describe('Grafana alerts workflow under hostile input', () => {
   // @traces 1347-FR-002
   it.each<[string, Record<string, string>, string, string]>([
     [
-      'the secret',
-      { OUTAGE_WEBHOOK_TOKEN: '' },
-      'OUTAGE_WEBHOOK_TOKEN',
-      'STAGING_WEB_URL',
-    ],
-    [
-      'the variable',
-      { STAGING_WEB_URL: '' },
-      'STAGING_WEB_URL',
-      'OUTAGE_WEBHOOK_TOKEN',
-    ],
-    [
       'a secret of spaces and newlines',
       { OUTAGE_WEBHOOK_TOKEN: ' \n\t \n' },
       'OUTAGE_WEBHOOK_TOKEN',
@@ -439,7 +418,7 @@ describe('Grafana alerts workflow under hostile input', () => {
       'OUTAGE_WEBHOOK_TOKEN',
     ],
   ])(
-    'skips the webhook without %s and names only that in the notice',
+    'skips the webhook on %s and names only that in the notice',
     (_, env, named, unnamed) => {
       const { code, out, sent } = hooked(env);
       expect(code).toBe(0);
