@@ -1,6 +1,6 @@
 @if (rows(); as list) {
-  <p class="header" data-part="header" aria-live="polite">{{ header() }}</p>
   @if (list.length) {
+    <p class="header" data-part="header" aria-live="polite">{{ header() }}</p>
     <div class="segments" role="radiogroup" [attr.aria-label]="'driver.quotes.sort.label' | t">
       @for (option of sorts; track option) {
         <label>
@@ -23,19 +23,21 @@
         ></li>
       }
     </ul>
+    <ul class="lines" aria-live="polite">
+      @for (line of lines(); track $index) {
+        <li data-line>{{ line }}</li>
+      }
+    </ul>
   } @else {
-    <mf-empty-state icon="quote" text="driver.empty.quotes" />
+    <mf-empty-state icon="quote" text="driver.empty.quotes">
+      <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t | tie }}</a>
+    </mf-empty-state>
   }
-  <ul class="lines" aria-live="polite">
-    @for (line of lines(); track $index) {
-      <li data-line>{{ line }}</li>
-    }
-  </ul>
 } @else if (view.failed()) {
   <p role="alert">{{ 'driver.quotes.failed' | t }}</p>
   <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'driver.quotes.retry' | t }}</button>
 } @else {
-  <div class="rows" aria-busy="true" [attr.aria-label]="'driver.quotes.loading' | t">
+  <div class="rows" role="status" aria-busy="true" [attr.aria-label]="'driver.quotes.loading' | t">
     <div class="skeleton" aria-hidden="true"></div>
     <div class="skeleton" aria-hidden="true"></div>
     <div class="skeleton" aria-hidden="true"></div>

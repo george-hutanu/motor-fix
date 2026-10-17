@@ -1,14 +1,18 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   Injector,
   inject,
   input,
   type OnInit,
+  PLATFORM_ID,
   runInInjectionContext,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import type { EventKind } from '@motor-fix/contracts';
 import { DECLINE_REASON_TEXTS } from '@motor-fix/contracts/request-status';
 import {
@@ -34,6 +38,7 @@ import { QuoteRow } from './quote-row/quote-row';
 import type { LiveView } from '../../live/view';
 import { EmptyState } from '../empty-state/empty-state';
 import { Live, liveResource } from '../live';
+import { TiePipe } from '../tie/tie';
 
 // Every event that changes a row, a line or whether Acceptă is offered.
 const KINDS: readonly EventKind[] = [
@@ -50,6 +55,9 @@ const KINDS: readonly EventKind[] = [
   'booking.lapsed',
 ];
 
+// The clock the rows read: expiry, "azi" and "Modificată acum …" move with it.
+const TICK_MS = 60_000;
+
 const SORT_LABELS: Record<Sort, string> = {
   earliest: 'driver.quotes.sort.earliest',
   fastest: 'driver.quotes.sort.fastest',
@@ -62,7 +70,14 @@ const SORT_LABELS: Record<Sort, string> = {
 // rows follow the quote events, so a new answer shows up without a reload.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EmptyState, HlmButton, QuoteRow, TranslatePipe],
+  imports: [
+    EmptyState,
+    HlmButton,
+    QuoteRow,
+    RouterLink,
+    TiePipe,
+    TranslatePipe,
+  ],
   selector: 'mf-quotes-compare',
   styleUrl: './quotes-compare.css',
   templateUrl: './quotes-compare.html',
@@ -91,6 +106,12 @@ export class QuotesCompare implements OnInit {
   // server answers it once.
   private unanswered: { id: string; key: string } | null = null;
   protected readonly now = signal(new Date());
+
+  constructor() {
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(tick));
+  }
 
   protected readonly header = computed(() => {
     const data = this.view.value();

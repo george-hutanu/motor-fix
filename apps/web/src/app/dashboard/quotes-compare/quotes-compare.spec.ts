@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   type CompareQuoteDto,
@@ -134,6 +135,7 @@ async function render(
   });
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       {
         provide: QuoteRequestsService,
         useValue: { compareControllerGet: read },
@@ -356,7 +358,7 @@ describe('the comparison panel’s states', () => {
     expect(order(element)).toEqual(['q-fast']);
   });
 
-  it('shows the empty state when every quote was withdrawn', async () => {
+  it('shows #262’s state, its link and no header or line, when every quote was withdrawn', async () => {
     const { element } = await render([
       comparison({
         quotes: [],
@@ -368,6 +370,20 @@ describe('the comparison panel’s states', () => {
     expect(text(element)).toContain(
       'Încă nu ai oferte. Trimite o cerere și compari ofertele aici.',
     );
+    expect(
+      element.querySelector('mf-empty-state a[href="/ro"]'),
+    ).not.toBeNull();
+    expect(element.querySelector('[data-part="header"]')).toBeNull();
+    expect(text(element)).not.toContain('0 oferte');
+    expect(lines(element)).toEqual([]);
+  });
+
+  it('labels the skeleton as a status while the read is in flight', async () => {
+    const { element } = await render([new Promise<never>(() => undefined)]);
+
+    const busy = element.querySelector('[aria-busy="true"]');
+    expect(busy?.getAttribute('role')).toBe('status');
+    expect(busy?.getAttribute('aria-label')).toBeTruthy();
   });
 });
 
@@ -560,6 +576,42 @@ describe('the comparison kept current', () => {
     await settle();
 
     expect(text(acceptOf(rows(element)[0]))).toBe('Acceptă');
+  });
+});
+
+// @traces 313-FR-007
+describe('the comparison’s clock', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('takes Acceptă away once a quote expires while the panel is open', async () => {
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+      ],
+      now: Date.parse('2026-10-17T10:00:00.000Z'),
+    });
+    const soon = quote({
+      expiresAt: '2026-10-17T10:00:30.000Z',
+      id: 'q-soon',
+      sentAt: '2026-10-17T07:00:00.000Z',
+      slot: '2026-10-19T10:00:00.000Z',
+    });
+    const { element, settle } = await render([
+      comparison({ quotes: [soon, CHEAP] }),
+    ]);
+    expect(acceptOf(rows(element)[0])).not.toBeNull();
+
+    jest.advanceTimersByTime(60_000);
+    await settle();
+
+    expect(acceptOf(rows(element)[0])).toBeNull();
+    expect(rows(element)[0]?.classList).toContain('greyed');
+    expect(acceptOf(rows(element)[1])).not.toBeNull();
   });
 });
 
