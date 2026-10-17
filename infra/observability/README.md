@@ -121,9 +121,9 @@ hour, and the spec fails on one.
 
 The "Grafana alerts" workflow (`.github/workflows/grafana-alerts.yml`) applies
 every file on a push to `main` that changes one, and by hand
-(`workflow_dispatch`): it puts the contact point by its uid (creating it when
-Grafana has none), replaces the whole notification policy tree, then creates the `MotorFix` folder (uid `motorfix`) when
-missing and replaces each file's group whole, so a rule removed from a file
+(`workflow_dispatch`): it creates the `MotorFix` folder (uid `motorfix`) when
+missing, puts the contact point by its uid (creating it when Grafana has none),
+replaces the whole notification policy tree, then replaces each file's group whole, so a rule removed from a file
 leaves Grafana too, and a group whose file is gone is left alone. It uses
 `GRAFANA_SA_TOKEN` and `GRAFANA_URL`, as the release does, and without either
 it is skipped with a notice. A change made only in the Grafana UI is

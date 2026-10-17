@@ -80,7 +80,14 @@ jobs:
           policy_file=infra/observability/grafana/alerting/policies.json
           failed=0
           contacts=1
+          if ! points=$(jq -c 'if type == "array" then .[] else error("list") end' "$cp_file" 2> /dev/null); then
+            echo "::error::$cp_file: not a list of contact points."
+            failed=1
+            contacts=0
+            points=""
+          fi
           while IFS= read -r point; do
+            [ -n "$point" ] || continue
             uid=$(jq -r .uid <<< "$point")
             if call -X PUT "$api/v1/provisioning/contact-points/$uid" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point" \
               || call -X POST "$api/v1/provisioning/contact-points" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point"; then
@@ -90,7 +97,7 @@ jobs:
               failed=1
               contacts=0
             fi
-          done < <(jq -c '.[]' "$cp_file")
+          done <<< "$points"
           if call -X PUT "$api/v1/provisioning/policies" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- < "$policy_file"; then
             echo "applied $policy_file"
           else
@@ -127,14 +134,20 @@ jobs:
                 failed=1
                 continue
               fi
-              for old in $(jq -r --arg keep "$keep" '.[] | select(.uid != $keep) | .uid' "$list"); do
-                if call -X DELETE "$api/v1/provisioning/contact-points/$old" -H 'X-Disable-Provenance: true'; then
+              if ! olds=$(jq -r --arg keep "$keep" 'if type == "array" then .[] | select(.uid != $keep) | .uid else error("list") end' "$list" 2> /dev/null); then
+                echo "::error::$cp_file: Grafana's list of the contact points named $name is not a list."
+                failed=1
+                continue
+              fi
+              while IFS= read -r old; do
+                [ -n "$old" ] || continue
+                if call -X DELETE "$api/v1/provisioning/contact-points/$(jq -rn --arg u "$old" '$u | @uri')" -H 'X-Disable-Provenance: true'; then
                   echo "removed contact point $old ($name)"
                 else
                   echo "::error::$cp_file: Grafana refused to remove contact point $old (exit code $?)."
                   failed=1
                 fi
-              done
+              done <<< "$olds"
             done < <(jq -r '.[] | [.name, .uid] | @tsv' "$cp_file")
             rm -f "$list"
           fi
