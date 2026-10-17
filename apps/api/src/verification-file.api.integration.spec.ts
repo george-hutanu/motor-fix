@@ -108,7 +108,7 @@ afterAll(async () => {
   await api.stop();
 });
 
-// @traces 302-FR-001 302-FR-002
+// @traces 302-FR-001 302-FR-002 302-FR-012 302-FR-013
 describe('POST /admin/verification-files/:id/open', () => {
   it('moves a submitted file to in_review once, with one entry and one event', async () => {
     const { id } = await file();
@@ -173,7 +173,7 @@ describe('POST /admin/verification-files/:id/open', () => {
   });
 });
 
-// @traces 302-FR-001
+// @traces 302-FR-001 302-FR-012 302-FR-013
 describe('GET /admin/verification-files/:id', () => {
   it('reads the file and writes nothing', async () => {
     const { garage, id } = await file();
