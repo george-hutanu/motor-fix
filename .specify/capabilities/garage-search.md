@@ -14,6 +14,7 @@ features:
   - 269-map-price-pins
   - 049-garage-suspension
   - 290-save-garage
+  - 270-card-pin-link
 ---
 
 # Capability: Garage search
@@ -259,6 +260,54 @@ _From 290-save-garage._
 ### 049-FR-006 — Every public read MUST keep going through the one public scope (`status = approved`), so a suspended garage is in neither group and neither count of the brand search (043-FR-002), absent from the brand pages' counts and dials, answers 410 `gone` on its profile (307-FR-001) and is never a recipient of request routing (221-FR-007). This story adds no new read and MUST prove the rule with tests on a garage suspended through the use case.
 
 _From 049-garage-suspension._
+
+### 270-FR-001 — Results MUST hold, in the page only (no address bar entry, no storage, no request), one **selected** garage id or none and one **pointed** garage id or none; the lit pin (or circle) is the pointed garage's while there is one, else the selected garage's; the card in the amber state is the selected garage's; never two cards or two pins at once.
+
+_From 270-card-pin-link._
+
+### 270-FR-002 — A card MUST become pointed while a pointer (not a touch) rests on it or while an element inside it holds the keyboard focus, and stop being pointed when the pointer leaves it or focus leaves it.
+
+_From 270-card-pin-link._
+
+### 270-FR-003 — A tap or click on a card anywhere but its "Vezi service-ul" link and its bookmark button MUST select its garage; the link and the button keep doing what they do (267-FR-014, 290-FR-010) and select nothing.
+
+_From 270-card-pin-link._
+
+### 270-FR-004 — A tap on a pin (its dot or its rate label) or on a mobile mechanic's rate label MUST select its garage and, when its card is in the list, scroll that card into view (the nearest edge, smooth unless reduced motion), without moving the keyboard focus; a tap on a circle's fill, on the map away from any pin, or on the cluster selects nothing. A tap on a cluster MUST zoom the map to the zoom at which it splits, as the page's own move (no list reload, no selection change). Selecting a card MUST NOT move the map.
+
+_From 270-card-pin-link._
+
+### 270-FR-005 — When the list shown is replaced by a fresh answer (a new brand, place or radius, a visible-area load of 269-FR-007, "Înapoi la 25 km" of 269-FR-008, the "Reîncarcă" chip of 267-FR-020, and any later sort or filter change) the first card's garage MUST become selected and the pointed state cleared, without scrolling the list; with an empty list nothing is selected. An in-place card change (267-FR-019) and a pins re-read (269-FR-018) MUST keep the selection.
+
+_From 270-card-pin-link._
+
+### 270-FR-007 — The selected card MUST show the theme's selected state (050-FR-007: amber border and text accent on the 10% amber tint, the `--mf-amber*` tokens of `libs/ui-cockpit`), in both schemes; its lamp, texts and controls are otherwise unchanged. A pointed card that is not selected shows no card change: only its pin lights.
+
+_From 270-card-pin-link._
+
+### 270-FR-008 — The lit pin MUST be amber (`--mf-amber`) with its rate label in the on-amber ink (`--mf-on-amber`), drawn above every other pin and circle; every other pin keeps its lamp colour (269-FR-013). A lit mobile mechanic's circle MUST fill and outline amber (a fill denser than the resting 12% so it reads as active, still letting the map show through) with its rate label readable; a resting circle is unchanged (269-FR-014). A cluster is never lit.
+
+_From 270-card-pin-link._
+
+### 270-FR-009 — When the map's style failed, the pins request failed, or the selected garage is not among the pins (the 500 cap, a cluster) the card states of FR-001 to FR-007 MUST work unchanged and nothing is drawn for the pin; no message is shown.
+
+_From 270-card-pin-link._
+
+### 270-FR-010 — When a tapped pin's garage is not in the list shown, a small card MUST open on the map at the pin, outside the hidden canvas so its text is readable, showing at once the pin's lamp (green for `works_on`, red otherwise, with the lamp's words) and rate ("de la {n} lei/oră"; no rate line when null), and, once read through the `ids=` read of 267-FR-006 with the brand, the garage's name, its rating as the list card shows it ("fără recenzii" when unrated) and the link "Vezi service-ul" to `/:lang/garages/{slug}?brand={slug}`; it closes when another pin or card is selected, when the map is tapped away from any pin, or when the list is replaced (FR-005). When the read fails or answers no item, the small card closes and nothing else happens. The small card is not designed (Build brief, Screens): it follows the Cockpit panel look. It stays inside the map's box (clamped, not flipped, at 320 px too), takes no focus when it opens, is not a dialog and has no Escape handling; its link is an ordinary tab stop, and it shows a skeleton line for the name until the read answers.
+
+_From 270-card-pin-link._
+
+### 270-FR-011 — The map MUST stay out of the accessible path (269-FR-016): the pins are pointer targets only, nothing new takes focus, no announcement is made for a pin tap, and the keyboard user reaches every garage through the list, its focus lighting the garage's pin (FR-002); no new tab stop is added to the card. A pin's tap target is the drawn box of its dot or label (no larger hit area is added); the list is the path for anyone who cannot hit it. The page MUST never scroll sideways at 320 px, and the selected card and the small card MUST pass the QA sweep's axe checks.
+
+_From 270-card-pin-link._
+
+### 270-FR-012 — Observability: the story adds no service, endpoint, queue, outside call or product action (the `ids=` read exists); the PR's Observability section states this and the inventory is unchanged.
+
+_From 270-card-pin-link._
+
+### 270-FR-013 — Web unit tests (Jest) MUST cover the active-garage state: set by a card tap, set by a pointer and cleared on leave, set by focus and cleared on blur, set by a pin tap, the first card on a fresh list (brand, place, visible area, back, reload), kept on an in-place change, passed on a fade-out, none on an empty list; the card's selected state; the pin, circle and cluster look for the active garage; the small card's fields and its close rules; the no-map case. Playwright, with the tile style stubbed: hover a card and check its pin's state; click a pin and check its card is amber and in view. Every test file carries a whole-line `// @traces 270-FR-<n>` comment (Constitution II).
+
+_From 270-card-pin-link._
 
 ## Retired
 
