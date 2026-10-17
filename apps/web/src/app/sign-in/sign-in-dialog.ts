@@ -30,11 +30,16 @@ export class SignInDialog {
   private open: Promise<boolean> | null = null;
 
   // overMaintenance: /admin, where admins sign in while the site is down.
-  async start({ overMaintenance = false } = {}): Promise<void> {
+  // signedOut: the area guard has just asked and found no session.
+  async start({
+    overMaintenance = false,
+    signedOut = false,
+  } = {}): Promise<void> {
     // At /admin a browser that has seen no account asks for no session: a
     // visitor's ask is refused, and the console reports that 401 as an error.
+    // After the guard's refused renewal, a second ask would only renew again.
     const me =
-      overMaintenance && !this.session.roleHint()
+      signedOut || (overMaintenance && !this.session.roleHint())
         ? null
         : await this.session.load();
     if (me) {
