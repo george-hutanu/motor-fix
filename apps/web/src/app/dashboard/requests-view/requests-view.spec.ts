@@ -522,11 +522,10 @@ describe('Cererile mele comparing a request’s quotes', () => {
     const panel = element.querySelector('mf-quotes-compare');
     const rows = element.querySelector('ul.rows');
     expect(panel).not.toBeNull();
+    expect(rows).not.toBeNull();
     expect(
-      panel &&
-        rows &&
-        panel.compareDocumentPosition(rows) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+      panel!.compareDocumentPosition(rows!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
     expect(shown()).toEqual(['req-new']);
   });
 

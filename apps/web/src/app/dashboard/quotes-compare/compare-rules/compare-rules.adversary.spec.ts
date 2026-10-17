@@ -9,6 +9,7 @@ import {
   headerWhat,
   openRequestOf,
   rowState,
+  SORT_KEY,
   sortQuotes,
   storedSort,
 } from './compare-rules';
@@ -255,15 +256,6 @@ describe('the header, the edges', () => {
     );
   });
 
-  it('names a request without a job by the first line of its description', () => {
-    expect(
-      headerWhat(
-        request({ description: 'Scârțâie la frână\nmai ales dimineața' }),
-        'ro',
-      ),
-    ).toBe('Scârțâie la frână');
-  });
-
   it('reads nothing, not the word null, for a request with no job and no description', () => {
     expect(headerWhat(request(), 'ro')).toBe('');
   });
@@ -364,5 +356,190 @@ describe('the request the overview shows, the edges', () => {
     openRequestOf(items);
 
     expect(items.map((r) => r.id)).toEqual(['a', 'b']);
+  });
+});
+
+// @traces 313-FR-004
+describe('sorting and storing, more edges', () => {
+  it('keeps the session key the panel and the spec name', () => {
+    expect(SORT_KEY).toBe('mf.quotes.sort');
+  });
+
+  it('starts on the fastest when reading the storage throws', () => {
+    expect(
+      storedSort(() => {
+        throw new DOMException('denied', 'SecurityError');
+      }),
+    ).toBe('fastest');
+  });
+
+  it('orders equal starting prices by the upper end', () => {
+    const quotes = [
+      quote({ fromBani: 100, id: 'b', toBani: 900 }),
+      quote({ fromBani: 100, id: 'a', toBani: 500 }),
+      quote({ fromBani: 50, id: 'c', toBani: 5000 }),
+    ];
+
+    expect(ids(sortQuotes(quotes, 'price'))).toEqual(['c', 'a', 'b']);
+  });
+
+  it('orders by the moment of the slot, not by its text', () => {
+    const quotes = [
+      quote({ id: 'a', slot: '2026-10-19T10:00:00.000+03:00' }),
+      quote({ id: 'b', slot: '2026-10-19T06:30:00.000Z' }),
+    ];
+
+    expect(ids(sortQuotes(quotes, 'earliest'))).toEqual(['b', 'a']);
+  });
+
+  it('ranks a garage rated 0 above one with no rating', () => {
+    const quotes = [
+      quote({ garage: rated(null, 0), id: 'none' }),
+      quote({ garage: rated(0, 3), id: 'zero' }),
+    ];
+
+    expect(ids(sortQuotes(quotes, 'rating'))).toEqual(['zero', 'none']);
+  });
+
+  it('leaves the list it was given in its order', () => {
+    const quotes = [
+      quote({ fromBani: 9, id: 'b' }),
+      quote({ fromBani: 1, id: 'a' }),
+    ];
+
+    sortQuotes(quotes, 'price');
+
+    expect(ids(quotes)).toEqual(['b', 'a']);
+  });
+
+  it('gives the same order twice for the same input', () => {
+    const quotes = [
+      quote({ garage: rated(4, 2), id: 'b' }),
+      quote({ garage: rated(4, 2), id: 'a' }),
+      quote({ garage: rated(null, 0), id: 'c' }),
+    ];
+
+    expect(ids(sortQuotes(sortQuotes(quotes, 'rating'), 'rating'))).toEqual(
+      ids(sortQuotes(quotes, 'rating')),
+    );
+  });
+
+  it('puts equal ids last-resort in code order for non-ASCII ids', () => {
+    const quotes = [quote({ id: 'é' }), quote({ id: 'z' }), quote({ id: 'a' })];
+
+    expect(ids(sortQuotes(quotes, 'fastest'))).toEqual(['a', 'z', 'é']);
+  });
+});
+
+// @traces 313-FR-005
+describe('the header, more edges', () => {
+  it('counts accepted, lost, expired and waiting rows and skips the declined one', () => {
+    const quotes = (
+      ['waiting', 'accepted', 'lost', 'expired', 'declined_by_driver'] as const
+    ).map((status, i) => quote({ id: `q${i}`, status }));
+
+    expect(headerCount(quotes)).toBe(4);
+  });
+
+  it('reads the description in either language alike', () => {
+    expect(headerWhat(request({ description: 'Scârțâie' }), 'en')).toBe(
+      'Scârțâie',
+    );
+  });
+
+  it('names the jobs in the reader’s language joined by a comma and a space', () => {
+    const jobs = [job(0, 'A', 'a'), job(1, 'B', 'b'), job(2, 'C', 'c')];
+
+    expect(headerWhat(request({ jobs }), 'en')).toBe('a, b, c');
+  });
+
+  it('does not reorder the jobs it was given', () => {
+    const jobs = [job(1, 'B', 'b'), job(0, 'A', 'a')];
+
+    headerWhat(request({ jobs }), 'ro');
+
+    expect(jobs.map((j) => j.position)).toEqual([1, 0]);
+  });
+});
+
+// @traces 313-FR-007
+describe('a row’s state, more edges', () => {
+  it('reads a waiting quote as expired at the very millisecond it expires', () => {
+    const q = quote({ expiresAt: NOW.toISOString() });
+
+    expect(rowState(q, null, NOW)).toBe('expired');
+  });
+
+  it('holds an open waiting quote while a booking awaits confirmation', () => {
+    const booking = {
+      confirmBy: '2026-10-18T10:00:00.000Z',
+      status: 'awaiting_confirmation' as const,
+    };
+
+    expect(rowState(quote(), booking, NOW)).toBe('on_hold');
+  });
+});
+
+// @traces 313-FR-012
+describe('the request the overview shows, more edges', () => {
+  it('picks a booked request whose booking awaits confirmation', () => {
+    const items = [
+      summary({
+        booking: {
+          confirmBy: '2026-10-18T10:00:00.000Z',
+          status: 'awaiting_confirmation',
+        },
+        id: 'held',
+        status: 'booked',
+      }),
+    ];
+
+    expect(openRequestOf(items)?.id).toBe('held');
+  });
+
+  it('skips a held request that has no quotes', () => {
+    const items = [
+      summary({
+        booking: {
+          confirmBy: '2026-10-18T10:00:00.000Z',
+          status: 'awaiting_confirmation',
+        },
+        quotesCount: 0,
+        status: 'booked',
+      }),
+    ];
+
+    expect(openRequestOf(items)).toBeUndefined();
+  });
+
+  it('skips requests that are neither quoted nor booked', () => {
+    const items = (['open', 'closed', 'cancelled', 'expired'] as const).map(
+      (status) => summary({ id: status, status: status as never }),
+    );
+
+    expect(openRequestOf(items)).toBeUndefined();
+  });
+
+  it('prefers a newer quoted request to an older held one', () => {
+    const items = [
+      summary({
+        booking: {
+          confirmBy: '2026-10-18T10:00:00.000Z',
+          status: 'awaiting_confirmation',
+        },
+        createdAt: '2026-10-01T09:00:00.000Z',
+        id: 'old-held',
+        status: 'booked',
+      }),
+      summary({ createdAt: '2026-10-12T09:00:00.000Z', id: 'new-quoted' }),
+    ];
+
+    expect(openRequestOf(items)?.id).toBe('new-quoted');
+  });
+
+  it('keeps the first of two requests created at the same instant', () => {
+    const items = [summary({ id: 'first' }), summary({ id: 'second' })];
+
+    expect(openRequestOf(items)?.id).toBe('first');
   });
 });

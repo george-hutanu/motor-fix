@@ -26,13 +26,13 @@ type Booking = Pick<RequestBookingDto, 'status' | 'confirmBy'> | null;
 export const headerCount = (quotes: readonly CompareQuoteDto[]) =>
   quotes.filter((q) => q.status !== 'declined_by_driver').length;
 
-// What the request asks for: its jobs, else its description's first line.
+// What the request asks for: its jobs, else its description, which the API
+// already cuts to its first line.
 export function headerWhat(
   request: Pick<CompareRequestDto, 'jobs' | 'description'>,
   language: Language,
 ): string {
-  if (request.jobs.length === 0)
-    return request.description?.split(/\r?\n/, 1)[0].trim() ?? '';
+  if (request.jobs.length === 0) return request.description ?? '';
   return request.jobs
     .toSorted((a, b) => a.position - b.position)
     .map((job) => (language === 'en' ? job.nameEn : job.nameRo))

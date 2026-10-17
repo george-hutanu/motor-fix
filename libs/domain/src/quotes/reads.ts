@@ -54,9 +54,14 @@ export const jobsOf = (
     position: job.position,
   }));
 
-// The description's first line, or null when there is none.
+// The description's first non-blank line, trimmed, or null when there is none.
 export function firstLine(text: string | null): string | null {
-  return text?.split(/\r?\n/, 1)[0].trim() || null;
+  return (
+    text
+      ?.split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) ?? null
+  );
 }
 
 const UNDO_MS = DECLINE_UNDO_MINUTES * 60_000;

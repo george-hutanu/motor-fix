@@ -102,10 +102,11 @@ export class CompareService {
           reason: quote.status === 'withdrawn' ? 'garage' : 'suspended',
         });
     }
-    await this.prisma.quote.updateMany({
-      data: { firstSeenAt: now },
-      where: { firstSeenAt: null, id: { in: quotes.map((q) => q.id) } },
-    });
+    if (quotes.length > 0)
+      await this.prisma.quote.updateMany({
+        data: { firstSeenAt: now },
+        where: { firstSeenAt: null, id: { in: quotes.map((q) => q.id) } },
+      });
     const [booking] = row.bookings;
     return {
       declined: row.recipients.flatMap((recipient) =>
