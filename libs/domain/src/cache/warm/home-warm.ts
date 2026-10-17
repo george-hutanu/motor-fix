@@ -36,8 +36,9 @@ export class HomeWarm implements HomeWarmer, BeforeApplicationShutdown {
   homes(accountId: string, role: Role): Promise<void> {
     if (this.closed) return Promise.resolve();
     const warming = this.warm(accountId, role);
+    const done = () => this.running.delete(warming);
     this.running.add(warming);
-    warming.then(() => this.running.delete(warming));
+    warming.then(done, done);
     return warming;
   }
 
