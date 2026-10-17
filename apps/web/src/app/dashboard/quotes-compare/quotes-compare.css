@@ -1,0 +1,112 @@
+:host {
+  container: quotes / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.header {
+  color: var(--mf-text-secondary);
+}
+/* The four sorts sit in one row where the panel has room for them, else two by two: never three and one. */
+.segments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  overflow: hidden;
+}
+.segments label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  font-size: var(--mf-size-small);
+  text-align: center;
+  color: var(--mf-text-secondary);
+  cursor: pointer;
+}
+.segments label:nth-child(even) {
+  border-left: 1px solid var(--mf-line);
+}
+.segments label:nth-child(n + 3) {
+  border-top: 1px solid var(--mf-line);
+}
+@container quotes (min-width: 440px) {
+  .segments {
+    grid-template-columns: repeat(4, max-content);
+    align-self: flex-start;
+  }
+  .segments label {
+    white-space: nowrap;
+  }
+  .segments label + label {
+    border-left: 1px solid var(--mf-line);
+  }
+  .segments label:nth-child(n + 3) {
+    border-top: 0;
+  }
+}
+/* The radio covers its segment: a press anywhere on it is the radio's. */
+.segments input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.segments label:has(input:checked) {
+  color: var(--mf-on-amber);
+  background: var(--mf-amber);
+  font-weight: 700;
+}
+.segments label:has(input:focus-visible) {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+/* The rows' shared columns (quote-row.css places each row's parts on them), by the panel's width. */
+.rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--mf-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@container quotes (min-width: 400px) {
+  .rows {
+    grid-template-columns: minmax(0, 1fr) 56px max-content;
+  }
+}
+@container quotes (min-width: 640px) {
+  .rows {
+    grid-template-columns: minmax(0, 1fr) 56px max-content max-content;
+  }
+}
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.lines:empty {
+  display: none;
+}
+.skeleton {
+  grid-column: 1 / -1;
+  height: 88px;
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-line);
+}

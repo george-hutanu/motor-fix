@@ -3100,6 +3100,47 @@
         ]
       }
     },
+    "/api/v1/quote-requests/{id}/quotes": {
+      "get": {
+        "operationId": "CompareController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteComparisonDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not the driver’s request"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "quote-requests"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -10006,6 +10047,280 @@
             "default": false
           }
         }
+      },
+      "CompareRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "quoted",
+              "booked",
+              "in_work",
+              "done",
+              "closed"
+            ]
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarSnapshotDto"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "booking": {
+            "description": "The request’s newest booking",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RequestBookingDto"
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "The description’s first line",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "car",
+          "jobs",
+          "booking",
+          "description"
+        ]
+      },
+      "CompareGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number",
+            "description": "One decimal; null until the garage is reviewed",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number"
+          },
+          "area": {
+            "type": "string",
+            "description": "The garage’s city; null when unknown",
+            "nullable": true
+          },
+          "mobile": {
+            "type": "boolean",
+            "description": "A mobile mechanic"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "rating",
+          "reviewCount",
+          "area",
+          "mobile"
+        ]
+      },
+      "CompareQuoteJobDto": {
+        "type": "object",
+        "properties": {
+          "requestJobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "included": {
+            "type": "boolean"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestJobId",
+          "included",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "CompareQuoteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromBani": {
+            "type": "number",
+            "description": "Lower end of the price, in bani"
+          },
+          "toBani": {
+            "type": "number",
+            "description": "Upper end of the price, in bani"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "slot": {
+            "type": "string",
+            "description": "The proposed start",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/CompareGarageDto"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "accepted",
+              "expired",
+              "lost",
+              "declined_by_driver"
+            ]
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompareQuoteJobDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fromBani",
+          "toBani",
+          "durationMinutes",
+          "slot",
+          "note",
+          "sentAt",
+          "changedAt",
+          "expiresAt",
+          "garage",
+          "status",
+          "jobs"
+        ]
+      },
+      "WithdrawnQuoteDto": {
+        "type": "object",
+        "properties": {
+          "garageName": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "garage",
+              "suspended"
+            ]
+          }
+        },
+        "required": [
+          "garageName",
+          "reason"
+        ]
+      },
+      "DeclinedGarageDto": {
+        "type": "object",
+        "properties": {
+          "garageName": {
+            "type": "string"
+          },
+          "declineReason": {
+            "type": "string",
+            "enum": [
+              "fully_booked",
+              "job_not_done",
+              "make_model_engine_not_done",
+              "need_to_see_car"
+            ]
+          }
+        },
+        "required": [
+          "garageName",
+          "declineReason"
+        ]
+      },
+      "QuoteComparisonDto": {
+        "type": "object",
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/CompareRequestDto"
+          },
+          "quotes": {
+            "description": "Fastest answer first, equal times by id",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompareQuoteDto"
+            }
+          },
+          "withdrawn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WithdrawnQuoteDto"
+            }
+          },
+          "declined": {
+            "description": "Declines past the garage’s undo window",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeclinedGarageDto"
+            }
+          },
+          "waiting": {
+            "description": "Names of the garages that have not answered yet",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "request",
+          "quotes",
+          "withdrawn",
+          "declined",
+          "waiting"
+        ]
       },
       "DriverNameDto": {
         "type": "object",

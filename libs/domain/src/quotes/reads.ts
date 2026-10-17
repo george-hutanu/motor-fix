@@ -8,7 +8,7 @@ import type {
 } from '@motor-fix/contracts';
 import { BadRequestException } from '@nestjs/common';
 
-import { PAGE_SIZE } from './quotes-config';
+import { DECLINE_UNDO_MINUTES, PAGE_SIZE } from './quotes-config';
 import type {
   Booking,
   Garage,
@@ -19,6 +19,7 @@ import type {
   QuoteRequest,
   RecipientStatus,
   RequestJob,
+  RequestRecipient,
 } from '../generated/prisma/client';
 
 export const iso = (at: Date | null) => at?.toISOString() ?? null;
@@ -53,10 +54,27 @@ export const jobsOf = (
     position: job.position,
   }));
 
-// The description's first line, or null when there is none.
+// The description's first non-blank line, trimmed, or null when there is none.
 export function firstLine(text: string | null): string | null {
-  return text?.split(/\r?\n/, 1)[0].trim() || null;
+  return (
+    text
+      ?.split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) ?? null
+  );
 }
+
+const UNDO_MS = DECLINE_UNDO_MINUTES * 60_000;
+
+// A decline the garage may still undo is not news yet: the driver sees the
+// garage waiting until its window has closed.
+export const declineShown = (
+  recipient: Pick<RequestRecipient, 'status' | 'declinedAt'>,
+  now: Date,
+) =>
+  recipient.status === 'declined' &&
+  recipient.declinedAt !== null &&
+  now.getTime() - recipient.declinedAt.getTime() >= UNDO_MS;
 
 const BOOKED = new Set(['booked', 'in_work', 'done']);
 const BOOKING_ENDED = new Set([
@@ -122,7 +140,7 @@ export const bookingOf = (
 
 // A waiting quote of a suspended garage reads as withdrawn: nothing writes
 // the withdrawal to the quote, so the garage's status decides.
-const shownStatus = (
+export const shownStatus = (
   quote: Quote & { garage?: Pick<Garage, 'status'> },
 ): Quote['status'] =>
   quote.status === 'waiting' && quote.garage?.status === 'suspended'
