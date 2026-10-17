@@ -42,7 +42,7 @@ test.describe('the public tab bar on a 375 px phone', () => {
   }) => {
     await open(page, '/ro/garages');
 
-    await bar(page).getByRole('link', { name: 'Cont' }).click();
+    await bar(page).getByRole('link', { exact: true, name: 'Cont' }).click();
 
     // On a phone the sign-in opens as a sheet; the dialog container has no box.
     await expect(
@@ -58,10 +58,9 @@ test.describe('the public tab bar on a 375 px phone', () => {
   }) => {
     await open(page, '/ro/account');
 
-    await expect(bar(page).getByRole('link', { name: 'Cont' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    await expect(
+      bar(page).getByRole('link', { exact: true, name: 'Cont' }),
+    ).toHaveAttribute('aria-current', 'page');
   });
 
   test('opens the dashboard of a signed-in person from Cont', async ({
@@ -70,7 +69,7 @@ test.describe('the public tab bar on a 375 px phone', () => {
     await signInAs(page, 'driver', '/app/driver');
     await open(page, '/ro');
 
-    await bar(page).getByRole('link', { name: 'Cont' }).click();
+    await bar(page).getByRole('link', { exact: true, name: 'Cont' }).click();
 
     await expect(page).toHaveURL('/app/driver');
   });

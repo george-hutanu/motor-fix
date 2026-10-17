@@ -16,6 +16,7 @@ import {
   AdminService,
   type AuditEntryDto,
   type VerificationCheckRecordedDto,
+  type VerificationDecisionDto,
   VerificationDocumentsService,
   type VerificationFileCheckDto,
   type VerificationFileDocumentDto,
@@ -34,6 +35,7 @@ import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 import { liveResource } from '../live';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
+import { VerificationReopen } from '../verification-reopen/verification-reopen';
 
 type CheckKind = VerificationFileCheckDto['kind'];
 type Result = VerificationFileCheckDto['result'];
@@ -80,6 +82,11 @@ const STATUS_LINES: Record<string, string | undefined> = {
   rejected: 'rejected',
   submitted: 'resent',
 };
+// The 409s a decision answers in the footer, each by its line.
+const REFUSALS: Record<string, string | undefined> = {
+  caen_check_required: 'caenRequired',
+  rar_check_required: 'rarCheckRequired',
+};
 const SKELETON_SECTIONS = [0, 1, 2, 3];
 // How often a drawer left open reads the clock again, so "azi" turns into
 // "ieri" soon after midnight with no new read.
@@ -92,7 +99,8 @@ interface VerificationFileData {
 // "Dosar de verificare": everything an admin reads to decide one garage's
 // file, opened once (the file moves to "in review") and read again on every
 // change to it. The four manual checks tick and untick through the record
-// call; a decided file reads only. The decisions stay disabled until the decision story wires them.
+// call; a decided file reads only and can be reopened. decide() sends a
+// decision and answers a refusal in the footer.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, Lamp, TranslatePipe, VerificationRegisterForm],
@@ -138,6 +146,10 @@ export class VerificationFile {
   private readonly now = signal(new Date());
   // The register row whose record form is open, one at a time.
   protected readonly formOpen = signal<FormKind | null>(null);
+  // Why the last decision was refused, kept over later reads until the next.
+  protected readonly refused = signal<string | null>(null);
+  // A decision or a reopening on its way: a second press waits for nothing.
+  protected readonly busy = signal(false);
   // The RAR number's correction field: what is typed, and its refusal.
   protected readonly correcting = signal<string | null>(null);
   protected readonly correctError = signal<string | null>(null);
@@ -338,6 +350,85 @@ export class VerificationFile {
 
   retry() {
     this.file.reload();
+  }
+
+  // The display follows the server's answer: a decision taken first by
+  // another admin is named and read again; a missing register check is
+  // named, with nothing to re-read.
+  async decide(body: VerificationDecisionDto) {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerDecision({
+        body,
+        id: this.fileId,
+      });
+      this.file.reload();
+    } catch (error) {
+      this.refusal(error);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  // Asks first; a decision that is reopened stays shown until the next one.
+  // The button is disabled only while the call is out, so a cancelled
+  // confirmation can hand focus back to it.
+  async reopen() {
+    if (this.busy() || !this.decided()) return;
+    const answer = await this.overlays.open<true>(VerificationReopen, {
+      shape: 'dialog',
+      title: 'admin.file.reopen.title',
+    });
+    if (answer !== true) {
+      this.focusReopen();
+      return;
+    }
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerReopen({ id: this.fileId });
+      this.file.reload();
+      this.focusHeading();
+    } catch {
+      toast(this.t('reopen.failed'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private refusal(error: unknown) {
+    const problem = toProblem(error);
+    const known = REFUSALS[problem.code ?? ''];
+    if (known) {
+      this.refused.set(this.t(`footer.${known}`));
+    } else if (problem.code === 'verification_transition_refused') {
+      this.refused.set(
+        this.t('footer.alreadyDecided', {
+          name: problem.decidedBy || SYSTEM_NAME,
+          time: this.when(problem.decidedAt ?? null),
+        }),
+      );
+      this.file.reload();
+    } else {
+      toast(this.t('footer.saveFailed'));
+    }
+  }
+
+  private focusHeading() {
+    setTimeout(() =>
+      this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
+    );
+  }
+
+  private focusReopen() {
+    setTimeout(() =>
+      this.host.nativeElement
+        .querySelector<HTMLElement>('[data-part="reopen"]')
+        ?.focus(),
+    );
   }
 
   // The display follows the server's answer, never the press.

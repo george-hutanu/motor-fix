@@ -61,10 +61,14 @@ import { verificationChecksControllerRecord } from '../fn/admin/verification-che
 import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
 import { verificationFileControllerCorrect } from '../fn/admin/verification-file-controller-correct';
 import { VerificationFileControllerCorrect$Params } from '../fn/admin/verification-file-controller-correct';
+import { verificationFileControllerDecision } from '../fn/admin/verification-file-controller-decision';
+import { VerificationFileControllerDecision$Params } from '../fn/admin/verification-file-controller-decision';
 import { verificationFileControllerOpen } from '../fn/admin/verification-file-controller-open';
 import { VerificationFileControllerOpen$Params } from '../fn/admin/verification-file-controller-open';
 import { verificationFileControllerRead } from '../fn/admin/verification-file-controller-read';
 import { VerificationFileControllerRead$Params } from '../fn/admin/verification-file-controller-read';
+import { verificationFileControllerReopen } from '../fn/admin/verification-file-controller-reopen';
+import { VerificationFileControllerReopen$Params } from '../fn/admin/verification-file-controller-reopen';
 import { VerificationFileDto } from '../models/verification-file-dto';
 import { VerificationQueueDto } from '../models/verification-queue-dto';
 
@@ -379,6 +383,56 @@ export class AdminService extends BaseService {
    */
   verificationFileControllerOpen(params: VerificationFileControllerOpen$Params, context?: HttpContext): Promise<VerificationFileDto> {
     const resp = this.verificationFileControllerOpen$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerDecision()` */
+  static readonly VerificationFileControllerDecisionPath = '/api/v1/admin/verification-files/{id}/decision';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerDecision()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  verificationFileControllerDecision$Response(params: VerificationFileControllerDecision$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationFileDto>> {
+    const obs = verificationFileControllerDecision(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerDecision$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  verificationFileControllerDecision(params: VerificationFileControllerDecision$Params, context?: HttpContext): Promise<VerificationFileDto> {
+    const resp = this.verificationFileControllerDecision$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerReopen()` */
+  static readonly VerificationFileControllerReopenPath = '/api/v1/admin/verification-files/{id}/reopen';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerReopen()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerReopen$Response(params: VerificationFileControllerReopen$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationFileDto>> {
+    const obs = verificationFileControllerReopen(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerReopen$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerReopen(params: VerificationFileControllerReopen$Params, context?: HttpContext): Promise<VerificationFileDto> {
+    const resp = this.verificationFileControllerReopen$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
   }
 

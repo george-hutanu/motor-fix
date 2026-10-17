@@ -197,3 +197,25 @@ describe('the map pins and verification file entries', () => {
     );
   });
 });
+
+// @traces 270-FR-012
+describe('the reads a result card and its pin use', () => {
+  it('are the search and pins routes the inventory already lists, with their alerts', () => {
+    const paths = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths;
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: { name?: string; alerts?: string[] }[] = Object.values(
+      inventory,
+    ).flatMap((each) => (Array.isArray(each) ? each : []));
+    const alerted = (name: string) =>
+      entries.find((each) => each.name === name)?.alerts?.length ?? 0;
+
+    expect(Object.keys(paths['/api/v1/search/garages'])).toContain('get');
+    expect(Object.keys(paths['/api/v1/search/garages/pins'])).toContain('get');
+    expect(alerted('search-garages')).toBeGreaterThan(0);
+    expect(alerted('search-garages-pins')).toBeGreaterThan(0);
+  });
+});

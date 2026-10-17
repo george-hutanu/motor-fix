@@ -1,0 +1,20 @@
+<div class="card">
+  @if (garage(); as garage) {
+    <p class="name">{{ garage.name }}</p>
+    <p class="score">
+      <mf-rating-dial size="small" aria-hidden="true" [value]="garage.rating" />
+      <span class="reviews">{{ reviews() }}</span>
+    </p>
+  } @else {
+    <span class="name skeleton" aria-hidden="true"></span>
+  }
+  <mf-lamp [state]="takes() ? 'green' : 'red'" [label]="stance()" />
+  @if (rate(); as rate) {
+    <p class="rate">{{ rate }}</p>
+  }
+  @if (garage(); as garage) {
+    <a class="view" [routerLink]="['/', i18n.language(), 'garages', garage.slug]" [queryParams]="{ brand: brand().slug }">{{
+      'public.results.card.view' | t
+    }}</a>
+  }
+</div>

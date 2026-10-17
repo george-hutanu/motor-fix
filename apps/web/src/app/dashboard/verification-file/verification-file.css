@@ -192,6 +192,21 @@ h4 {
 .decision {
   font-weight: 700;
 }
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+}
+h3:focus {
+  outline: none;
+}
+.refused {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 /* Phones: every button spans the width. */
 @media (max-width: 767px) {
   .pages,

@@ -18,7 +18,12 @@
   @default {
     @if (header(); as h) {
       <section class="header" data-section="header">
-        <h3>{{ h.name }}</h3>
+        <div class="title">
+          <h3 tabindex="-1">{{ h.name }}</h3>
+          @if (decided()) {
+            <button type="button" class="action reopen" data-part="reopen" [disabled]="busy()" (click)="reopen()">{{ 'admin.file.reopen.button' | t }}</button>
+          }
+        </div>
         <div class="facts">
           @if (h.kind) {
             <p>{{ h.kind }}</p>
@@ -246,6 +251,9 @@
     }
 
     <section class="footer" data-section="footer">
+      @if (refused(); as line) {
+        <p class="refused" role="alert">{{ line }}</p>
+      }
       @if (footer(); as f) {
         <p class="decision">{{ f.line }}</p>
         @if (f.reason) {
@@ -260,8 +268,8 @@
         @if (rarRequired()) {
           <p class="note" data-part="rar-required">{{ 'admin.file.footer.rarRequired' | t }}</p>
         }
-        <p class="note">{{ 'admin.file.footer.note' | t }}</p>
       }
+      <p class="note">{{ 'admin.file.footer.note' | t }}</p>
     </section>
   }
 }

@@ -107,6 +107,16 @@ const verificationChecks = () =>
     'motorfix_verification_checks_total',
     "Checks an admin recorded on a garage's file, by kind and result",
   );
+const decisionRefusals = () =>
+  counter(
+    'motorfix_verification_decision_refusals_total',
+    'Verification decisions refused, by reason',
+  );
+const reopenings = () =>
+  counter(
+    'motorfix_verification_reopenings_total',
+    'Decided verification files reopened, by actor role',
+  );
 const quotes = () => counter('motorfix_quotes_total', 'Quotes sent to drivers');
 const supportMessages = () =>
   counter(
@@ -200,6 +210,23 @@ export function countVerificationCheck(
   result: VerificationCheckResult,
 ) {
   verificationChecks().add(1, { kind, result });
+}
+
+const DECISION_REFUSAL_REASONS = [
+  'already_decided',
+  'rar_check_required',
+  'caen_check_required',
+] as const;
+type DecisionRefusalReason = (typeof DECISION_REFUSAL_REASONS)[number];
+
+export function countDecisionRefusal(reason: DecisionRefusalReason) {
+  decisionRefusals().add(1, { reason });
+}
+
+const REOPENING_ROLES = ['admin', 'system'] as const;
+
+export function countReopening(role: (typeof REOPENING_ROLES)[number]) {
+  reopenings().add(1, { role });
 }
 
 export function countQuote() {
@@ -300,6 +327,8 @@ const STARTS: Record<
         each('result', VERIFICATION_CHECK_RESULTS),
       ),
     ],
+    [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
+    [reopenings, each('role', REOPENING_ROLES)],
     [notifications, [{ channel: 'in-app' }]],
     [jobSteps, each('action', STEP_ACTIONS)],
     [documentsUploaded, each('kind', DOCUMENT_KINDS)],
