@@ -10,6 +10,9 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+// Kept decorator-free for the web app; read here as everywhere else.
+import { CHECK_DETAIL_MAX } from './verification-target';
+
 // In the order the summary reads them when two problems weigh the same.
 export const VERIFICATION_CHECK_KINDS = [
   'company',
@@ -32,25 +35,16 @@ export const VERIFICATION_CHECK_RESULTS = [
 export type VerificationCheckResult =
   (typeof VERIFICATION_CHECK_RESULTS)[number];
 
-// What an admin may record: a check goes back to not run only by a new file.
-export const RECORDED_RESULTS = ['ok', 'warning', 'failed'] as const;
-
-export const CHECK_DETAIL_MAX = 200;
+// What an admin may record: `not_run` unticks a check, with no detail.
+export const RECORDED_RESULTS = ['ok', 'warning', 'failed', 'not_run'] as const;
 
 export type Lamp = 'green' | 'amber' | 'red' | 'grey';
 
-const LAMPS: Record<VerificationCheckResult, Lamp> = {
-  failed: 'red',
-  not_run: 'grey',
-  ok: 'green',
-  warning: 'amber',
-};
+export { CHECK_DETAIL_MAX, lamp } from './verification-target';
 
-export const lamp = (result: VerificationCheckResult): Lamp => LAMPS[result];
+type SummaryLanguage = 'ro' | 'en';
 
-export type SummaryLanguage = 'ro' | 'en';
-
-export interface SummaryCheck {
+interface SummaryCheck {
   kind: VerificationCheckKind;
   result: VerificationCheckResult;
   detail: string | null;
@@ -166,7 +160,7 @@ export class RecordVerificationCheckDto {
 
   @ApiPropertyOptional({
     description:
-      'Trimmed; required for warning and failed; replaces the stored detail',
+      'Trimmed; required for warning and failed, refused with not_run; replaces the stored detail',
     maxLength: CHECK_DETAIL_MAX,
   })
   @Transform(trimmed)

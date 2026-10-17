@@ -121,6 +121,10 @@ export type { SuspensionControllerSuspend$Params as SuspensionControllerSuspend$
 export { suspensionControllerSuspend as suspensionControllerSuspend } from './fn/admin/suspension-controller-suspend';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
+export type { VerificationFileControllerRead$Params as VerificationFileControllerRead$Params } from './fn/admin/verification-file-controller-read';
+export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
+export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
+export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';

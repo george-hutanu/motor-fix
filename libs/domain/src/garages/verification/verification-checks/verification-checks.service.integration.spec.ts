@@ -404,7 +404,7 @@ describe('a record that is refused', () => {
       { activities: ['mechanics'], result: 'ok' },
     ],
     ['activities ok without a list', 'activities', { result: 'ok' }],
-    ['a result that is not one', 'rar', { result: 'not_run' }],
+    ['a result that is not one', 'rar', { result: 'pending' }],
   ])('refuses %s with 400', async (_, kind, body) => {
     expect(await refusal(record(kind, body))).toMatchObject({
       body: { code: 'validation_failed' },
@@ -432,5 +432,65 @@ describe('a record that is refused', () => {
       { status: 404 },
     );
     expect(await check('rar')).toMatchObject({ result: 'not_run' });
+  });
+});
+
+describe('the four tick results', () => {
+  // @traces 302-FR-007
+  it('records ok with no detail, as a tick does', async () => {
+    await record('address', { result: 'ok' });
+
+    expect(await check('photos')).toMatchObject({ result: 'not_run' });
+    const address = await prisma.verificationCheck.findUniqueOrThrow({
+      where: { fileId_kind: { fileId, kind: 'address' } },
+    });
+    expect(address).toMatchObject({ detail: null, result: 'ok' });
+  });
+
+  // @traces 302-FR-007
+  it('records not_run with no detail, as an untick does, with its entry and event', async () => {
+    await record('photos', { detail: 'Poze neclare', result: 'warning' });
+
+    const answer = await record('photos', { result: 'not_run' });
+
+    expect(answer.check).toMatchObject({ detail: null, result: 'not_run' });
+    expect(await check('photos')).toMatchObject({
+      detail: null,
+      recordedBy: ioana.accountId,
+      result: 'not_run',
+    });
+    const [, unticked] = await entries();
+    expect(unticked).toMatchObject({
+      kind: 'verification_check_recorded',
+      newValue: { result: 'not_run' },
+    });
+    expect(await recorded()).toHaveLength(2);
+  });
+
+  // @traces 302-FR-007
+  it.each([
+    ['warning', 'Adresa diferă de certificat'],
+    ['failed', 'Firma e radiată'],
+  ])('records %s with its detail', async (result, detail) => {
+    await record('representative', { detail, result });
+
+    const row = await prisma.verificationCheck.findUniqueOrThrow({
+      where: { fileId_kind: { fileId, kind: 'representative' } },
+    });
+    expect(row).toMatchObject({ detail, result });
+  });
+
+  // @traces 302-FR-007
+  it.each([
+    ['a detail', 'photos', { detail: 'x', result: 'not_run' }],
+    ['a list', 'activities', { activities: ['brakes'], result: 'not_run' }],
+  ])('refuses not_run with %s and writes nothing', async (_, kind, body) => {
+    const answer = await refusal(record(kind, body));
+
+    expect([answer.status, answer.body.code]).toEqual([
+      400,
+      'validation_failed',
+    ]);
+    expect(await entries()).toHaveLength(0);
   });
 });

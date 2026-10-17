@@ -73,6 +73,9 @@ model Garage {
   phone                      String?
   knownFor                   String?                  @map("known_for")
   businessKind               BusinessKind?            @map("business_kind")
+  // The fiscal code, 2 to 10 digits (a CHECK in the migration); the admin
+  // reads it in the verification file. Never in a public read.
+  cui                        String?                  @db.VarChar(10)
   mobileLegalForm            MobileLegalForm?         @map("mobile_legal_form")
   proposedJobs               JobType[]
   address                    String?                  @db.VarChar(200)

@@ -10,6 +10,19 @@ export const VERIFICATION_QUEUE_PANEL = 5;
 // The most rows one read answers; the view reads more in several reads.
 export const VERIFICATION_QUEUE_MAX = 200;
 
+// The most characters a check's detail holds.
+export const CHECK_DETAIL_MAX = 200;
+
+const LAMPS: Record<VerificationCheckResult, Lamp> = {
+  failed: 'red',
+  not_run: 'grey',
+  ok: 'green',
+  warning: 'amber',
+};
+
+// A check's lamp: its result as a colour.
+export const lamp = (result: VerificationCheckResult): Lamp => LAMPS[result];
+
 // A row's one lamp: a failed check first, then the flag or a warning, then
 // any check passed.
 export function queueLamp(

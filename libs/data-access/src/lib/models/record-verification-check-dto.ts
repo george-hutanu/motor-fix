@@ -9,8 +9,8 @@ export interface RecordVerificationCheckDto {
   activities?: Array<string>;
 
   /**
-   * Trimmed; required for warning and failed; replaces the stored detail
+   * Trimmed; required for warning and failed, refused with not_run; replaces the stored detail
    */
   detail?: string;
-  result: 'ok' | 'warning' | 'failed';
+  result: 'ok' | 'warning' | 'failed' | 'not_run';
 }

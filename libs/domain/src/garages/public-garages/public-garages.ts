@@ -303,7 +303,8 @@ export class PublicGaragesService {
 
   // A row the worker has sized has its copies. An unsized one is asked of its
   // thumbnail, which also carries the size; without one it is not ready yet.
-  private async photos(
+  // The admin's verification file signs the gallery the same way.
+  async photos(
     rows: {
       fileKey: string;
       height: number | null;

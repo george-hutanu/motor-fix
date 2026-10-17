@@ -1,0 +1,182 @@
+@switch (state()) {
+  @case ('loading') {
+    <div class="skeleton-file" aria-busy="true" [attr.aria-label]="'admin.file.loading' | t">
+      @for (n of skeleton; track n) {
+        <div class="skeleton-section">
+          <span class="skeleton wide"></span>
+          <span class="skeleton"></span>
+        </div>
+      }
+    </div>
+  }
+  @case ('failed') {
+    <div class="failed" role="alert">
+      <p>{{ 'admin.file.failed' | t }}</p>
+      <button type="button" class="action" (click)="retry()">{{ 'admin.file.retry' | t }}</button>
+    </div>
+  }
+  @default {
+    @if (header(); as h) {
+      <section class="header" data-section="header">
+        <h3>{{ h.name }}</h3>
+        <div class="facts">
+          @if (h.kind) {
+            <p>{{ h.kind }}</p>
+          }
+          @if (h.cui) {
+            <p>{{ h.cui }}</p>
+          }
+          @if (h.address) {
+            <p>{{ h.address }}</p>
+          }
+          @if (h.phone) {
+            <p data-part="phone"><a href="tel:{{ h.phone }}">{{ h.phone }}</a></p>
+          }
+          @if (h.brands) {
+            <p data-part="brands">{{ h.brands }}</p>
+          }
+        </div>
+        @if (h.photos.length) {
+          <ul class="photos">
+            @for (photo of h.photos; track photo.id) {
+              <li>
+                <a href="{{ photo.display }}" target="_blank" rel="noopener noreferrer">
+                  <img src="{{ photo.thumbnail }}" alt="{{ photo.alt }}" [attr.width]="photo.width" [attr.height]="photo.height" loading="lazy" />
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    @if (reported(); as r) {
+      <section class="notice" data-section="reported">
+        <mf-lamp state="amber" [label]="'admin.file.reported' | t" />
+        @for (line of r.reports; track $index) {
+          <p>{{ line }}</p>
+        }
+        @if (r.reopened) {
+          <p>{{ r.reopened }}</p>
+        }
+      </section>
+    }
+
+    @if (rejected(); as line) {
+      <section class="notice" data-section="rejected">
+        <p>{{ line }}</p>
+      </section>
+    }
+
+    <section data-section="register">
+      <h4>{{ 'admin.file.register.heading' | t }}</h4>
+      <ul class="rows">
+        @for (row of register(); track row.kind) {
+          <li class="check" [attr.data-kind]="row.kind">
+            <span class="label">{{ row.label }}</span>
+            <mf-lamp [state]="row.lamp" [label]="row.resultLabel" />
+            @if (row.detail) {
+              <span class="detail">{{ row.detail }}</span>
+            }
+            @if (row.activities) {
+              <span class="detail">{{ row.activities }}</span>
+            }
+            @if (row.recorded) {
+              <span class="by">{{ row.recorded }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section data-section="documents">
+      <h4>{{ 'admin.file.documents.heading' | t }}</h4>
+      <ul class="rows">
+        @for (row of documents(); track row.doc.kind) {
+          <li class="document" [attr.data-kind]="row.doc.kind" [attr.data-missing]="row.doc.present ? null : ''">
+            <span class="line">{{ row.line }}</span>
+            @if (row.stale) {
+              <span class="stale">{{ row.stale }}</span>
+            }
+            @if (row.unavailable) {
+              <span class="unavailable">{{ 'admin.file.documents.unavailable' | t }}</span>
+            }
+            @if (row.buttons.length) {
+              <span class="pages">
+                @for (button of row.buttons; track button.n) {
+                  <button type="button" class="action" [attr.aria-label]="button.named" (click)="openPage(row.doc, button.n)">{{ button.label }}</button>
+                }
+              </span>
+            }
+            @if (row.failed !== null) {
+              <span class="page-failed" role="alert">
+                <span>{{ 'admin.file.documents.failed' | t }}</span>
+                <button type="button" class="action" (click)="openPage(row.doc, row.failed)">{{ 'admin.file.retry' | t }}</button>
+              </span>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section data-section="manual">
+      <h4>{{ 'admin.file.manual.heading' | t }}</h4>
+      <ul class="rows">
+        @for (row of manual(); track row.kind) {
+          <li class="manual" [attr.data-kind]="row.kind">
+            <label class="tick">
+              <input type="checkbox" [checked]="row.checked" [disabled]="row.locked" [attr.aria-busy]="row.busy || null" (change)="tick($event, row.kind)" />
+              <span>{{ row.text }}</span>
+            </label>
+            @if (row.missing) {
+              <span class="detail">{{ 'admin.file.manual.missingDocument' | t }}</span>
+            }
+            @if (row.problem) {
+              <span class="problem">
+                <mf-lamp [state]="row.lamp" [label]="row.resultLabel" />
+                @if (row.detail) {
+                  <span class="detail">{{ row.detail }}</span>
+                }
+              </span>
+            }
+            <button type="button" class="action ghost" [disabled]="decided()" [attr.aria-label]="row.problemLabel" (click)="markProblem(row.kind)">{{ 'admin.file.manual.problem' | t }}</button>
+          </li>
+        }
+      </ul>
+    </section>
+
+    @if (history(); as hist) {
+      <section data-section="history">
+        <h4>{{ 'admin.file.history.heading' | t }}</h4>
+        @if (hist.lines.length) {
+          <ol class="history">
+            @for (line of hist.lines; track line.id) {
+              <li>{{ line.text }}</li>
+            }
+          </ol>
+        } @else {
+          <p class="empty">{{ 'admin.file.history.empty' | t }}</p>
+        }
+        @if (hist.more) {
+          <p class="more">{{ hist.more }}</p>
+        }
+      </section>
+    }
+
+    <section class="footer" data-section="footer">
+      @if (footer(); as f) {
+        <p class="decision">{{ f.line }}</p>
+        @if (f.reason) {
+          <p>{{ f.reason }}</p>
+        }
+      } @else {
+        <div class="decisions">
+          <button type="button" class="action primary" disabled>{{ 'admin.file.footer.approve' | t }}</button>
+          <button type="button" class="action" disabled>{{ 'admin.file.footer.ask' | t }}</button>
+          <button type="button" class="action danger" disabled>{{ 'admin.file.footer.reject' | t }}</button>
+        </div>
+        <p class="note">{{ 'admin.file.footer.note' | t }}</p>
+      }
+    </section>
+  }
+}
