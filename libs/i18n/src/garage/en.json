@@ -70,6 +70,21 @@
     },
     "stepsDone": "{done} of {total} done"
   },
+  "prices": {
+    "empty": "No jobs in your list yet.",
+    "from": "from {amount}",
+    "labour": "Labour: {range} / hour. The low end is the small, easy car; the high end is the big or awkward one.",
+    "retry": "Try again",
+    "state": {
+      "awaiting_approval": "hidden · awaiting approval",
+      "hidden_by_garage": "hidden by you",
+      "no_top_price": "hidden · no top price set",
+      "not_authorised": "hidden · not in your RAR authorisation",
+      "public": "on the profile",
+      "rejected": "rejected"
+    },
+    "title": "Price list"
+  },
   "quotes": {
     "send": {
       "cancel": "Cancel",

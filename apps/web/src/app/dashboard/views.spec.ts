@@ -821,9 +821,9 @@ describe('the dashboard view routes', () => {
     expect(element.textContent).not.toContain(
       'Aici vei vedea ce se întâmplă azi în service.',
     );
-    await harness.navigateByUrl('/app/garage/prices');
+    await harness.navigateByUrl('/app/garage/reviews');
     expect(harness.routeNativeElement?.textContent).toContain(
-      'Aici vei vedea intervalele de preț pe lucrări.',
+      'Aici vei vedea recenziile șoferilor și vei putea răspunde.',
     );
     expect(harness.routeNativeElement?.textContent).not.toContain(
       'Profilul tău e în verificare.',
