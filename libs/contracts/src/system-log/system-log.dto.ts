@@ -9,37 +9,15 @@ import {
   Min,
 } from 'class-validator';
 
-import { toQueryNumber } from './verification-queue';
-
-export const SYSTEM_LOG_KINDS = [
-  'status_changed',
-  'check_failed',
-  'job_failed',
-  'service_error',
-  'server_error',
-  'backup_completed',
-  'backup_failed',
-  'deploy',
-] as const;
-export type SystemLogKind = (typeof SYSTEM_LOG_KINDS)[number];
-
-export const SYSTEM_LOG_SOURCES = [
-  'api',
-  'search',
-  'maps',
-  'email',
-  'notifications',
-  'backup',
-  'worker',
-  'webrtc',
-  'identity',
-  'storage',
-] as const;
-export type SystemLogSource = (typeof SYSTEM_LOG_SOURCES)[number];
-
-const SEVERITIES = ['info', 'warning', 'error'] as const;
-
-export const SYSTEM_LOG_PAGE = 20;
+import {
+  SYSTEM_LOG_KINDS,
+  SYSTEM_LOG_PAGE,
+  SYSTEM_LOG_SEVERITIES,
+  SYSTEM_LOG_SOURCES,
+  type SystemLogKind,
+  type SystemLogSource,
+} from './system-log';
+import { toQueryNumber } from '../verification-queue';
 
 // An instant, never a calendar day: the panel turns Bucharest's midnight into one.
 const INSTANT =
@@ -78,8 +56,8 @@ export class SystemLogEntryDto {
   @ApiProperty({ enum: SYSTEM_LOG_SOURCES })
   source!: SystemLogSource;
 
-  @ApiProperty({ enum: SEVERITIES })
-  severity!: (typeof SEVERITIES)[number];
+  @ApiProperty({ enum: SYSTEM_LOG_SEVERITIES })
+  severity!: (typeof SYSTEM_LOG_SEVERITIES)[number];
 
   @ApiProperty({ enum: SYSTEM_LOG_KINDS })
   kind!: SystemLogKind;

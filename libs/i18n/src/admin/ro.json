@@ -154,6 +154,56 @@
   "growth": {
     "title": "Creștere, ultimele 12 luni"
   },
+  "log": {
+    "empty": "Nimic de semnalat azi.",
+    "failed": "Nu am putut citi jurnalul.",
+    "figure": {
+      "backup_age_h": "vechimea backupului",
+      "failed_share": "rata trimiterilor eșuate",
+      "latency_ms": "timpul de răspuns",
+      "oldest_waiting_s": "cel mai vechi job în așteptare"
+    },
+    "kind": {
+      "backup_completed": "Backup finalizat la {at}.",
+      "backup_failed": "Niciun backup din {since}.",
+      "check_failed": "{source}: verificarea a eșuat ({reason}).",
+      "deploy": "Versiune nouă instalată: {version}.",
+      "job_failed": "Jobul {job} din {queue} a eșuat definitiv după {attempts} încercări ({error_code}).",
+      "server_error": "Eroare neașteptată la {method} {route}.",
+      "service_error": "{provider} a răspuns {answer}.",
+      "status_changed": {
+        "green": "{source}: a revenit la normal.",
+        "limit": "{source}: {figure} a trecut de {limit}.",
+        "turned": "{source}: a trecut pe {state}.",
+        "turnedReason": "{source}: a trecut pe {state} ({reason})."
+      }
+    },
+    "retry": "Reîncearcă",
+    "severity": {
+      "error": "Eroare",
+      "info": "Info",
+      "warning": "Avertisment"
+    },
+    "source": {
+      "api": "API",
+      "backup": "Backup",
+      "email": "E‑mail",
+      "identity": "Identitate",
+      "maps": "Hărți",
+      "notifications": "Notificări",
+      "search": "Căutare",
+      "storage": "Stocare",
+      "webrtc": "WebRTC",
+      "worker": "Worker"
+    },
+    "state": {
+      "amber": "galben",
+      "green": "verde",
+      "red": "roșu"
+    },
+    "times": "de {n} de ori",
+    "title": "Jurnal"
+  },
   "panel": {
     "activeDrivers": "Șoferi activi",
     "answerRate": "Rată de răspuns",

@@ -1,7 +1,8 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { SYSTEM_LOG_PAGE, SystemLogQueryDto } from './system-log.dto';
+import { SYSTEM_LOG_PAGE } from './system-log';
+import { SystemLogQueryDto } from './system-log.dto';
 
 function parse(query: Record<string, unknown>) {
   const dto = plainToInstance(SystemLogQueryDto, query);
