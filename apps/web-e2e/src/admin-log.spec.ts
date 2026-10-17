@@ -1,4 +1,4 @@
-// @traces 298-FR-003 298-FR-009 298-FR-011
+// @traces 298-FR-003 298-FR-009 298-FR-011 298-FR-014
 import { expect, type Page } from '@playwright/test';
 import { Redis } from 'ioredis';
 import { Client } from 'pg';

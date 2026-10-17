@@ -8,7 +8,7 @@ import request from 'supertest';
 
 import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
-// @traces 298-FR-001 298-FR-003
+// @traces 298-FR-001 298-FR-003 298-FR-014
 
 const api = apiBoot();
 let app: INestApplication;
