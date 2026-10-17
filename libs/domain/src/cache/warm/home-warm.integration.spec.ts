@@ -419,20 +419,12 @@ describe('a garage owner’s sign-in', () => {
 
 // @traces 1348-FR-005
 describe('the app’s shutdown', () => {
-  function deferred() {
-    let resolve = () => {};
-    const promise = new Promise<void>((done) => {
-      resolve = done;
-    });
-    return { promise, resolve };
-  }
-
   it('waits for the warm in flight before the stores close, and starts none while it waits', async () => {
     const second = await start();
-    const held = deferred();
-    const listCalled = deferred();
-    const storesClosing = deferred();
-    const waitBegan = deferred();
+    const held = Promise.withResolvers<void>();
+    const listCalled = Promise.withResolvers<void>();
+    const storesClosing = Promise.withResolvers<void>();
+    const waitBegan = Promise.withResolvers<void>();
     const order: string[] = [];
     let closing: Promise<void> | undefined;
     try {

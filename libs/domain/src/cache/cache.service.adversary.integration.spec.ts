@@ -49,21 +49,13 @@ async function since(before: Record<string, number>) {
   );
 }
 
-function deferred() {
-  let resolve = () => {};
-  const promise = new Promise<void>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-}
-
 // Lets each entry reach Redis, then holds the store's reply until released:
 // what a reader of Redis sees in between is what a test that waits for the
 // key sees before the service has heard back.
 function holdStoreReplies(redis: Redis) {
   const evaluate = redis.eval.bind(redis);
-  const landed = deferred();
-  const gate = deferred();
+  const landed = Promise.withResolvers<void>();
+  const gate = Promise.withResolvers<void>();
   jest.spyOn(redis, 'eval').mockImplementation(async (...args) => {
     const reply = await evaluate(...args);
     if (String(args[0]).includes('ZADD')) {
@@ -205,8 +197,8 @@ describe('the cache service’s count of a fill', () => {
   it('counts nothing while the read function has not answered', async () => {
     const cache = new CacheService(client());
     const k = key();
-    const reading = deferred();
-    const answer = deferred();
+    const reading = Promise.withResolvers<void>();
+    const answer = Promise.withResolvers<void>();
     const before = await counts();
 
     const read = cache.read({
@@ -298,8 +290,8 @@ describe('the cache service’s count of a fill', () => {
   it('counts a plain read as a miss while a warm of another key is in flight, and the warm as a warm', async () => {
     const cache = new CacheService(client());
     const [inside, outside] = [key(), key()];
-    const reading = deferred();
-    const answer = deferred();
+    const reading = Promise.withResolvers<void>();
+    const answer = Promise.withResolvers<void>();
     const before = await counts();
 
     const warming = cache.warm(() =>

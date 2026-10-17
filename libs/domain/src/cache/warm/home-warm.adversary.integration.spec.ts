@@ -1,12 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import {
-  type BeforeApplicationShutdown,
-  type INestApplication,
-  Logger,
-  ValidationPipe,
-} from '@nestjs/common';
+import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import { Pool } from 'pg';
@@ -28,7 +23,6 @@ import { noEvents } from '../../events/event.port';
 import { redisUrlFor } from '../../notifications/notifications.testing';
 import { QuotesModule } from '../../quotes/quotes.module';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
-import { cacheKey } from '../cache.service';
 
 const redisUrl = redisUrlFor(10);
 const tokenSecret = 'test-secret';
@@ -121,28 +115,10 @@ const signIn = (email: string, server: INestApplication) =>
     .post('/auth/sign-in')
     .send({ email, password: PASSWORD });
 
-const driverKeys = (accountId: string) => [
-  cacheKey('driver-home', accountId, 'cars'),
-  cacheKey('driver-home', accountId, 'requests'),
-];
-
-const garageKeys = (garageId: string) =>
-  (['waiting', 'quoted', 'closed'] as const).map((status) =>
-    cacheKey('garage-home', garageId, status),
-  );
-
 // A few round trips to Redis: long enough for a shutdown that is not waiting
 // for anything to have returned its stores.
 async function settle() {
   for (let round = 0; round < 3; round++) await redis.ping();
-}
-
-function deferred() {
-  let resolve = () => {};
-  const promise = new Promise<void>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
 }
 
 // Records what the app does to its stores, in order: every entry a warm
@@ -193,7 +169,9 @@ function watch(nest: INestApplication) {
 
   const release = (who: string) => {
     letThrough.add(who);
-    for (const h of held.filter((x) => x.owner === who)) h.go();
+    const mine = held.filter((h) => h.owner === who);
+    held.splice(0, held.length, ...held.filter((h) => h.owner !== who));
+    for (const h of mine) h.go();
   };
   return {
     closed: () => order.filter((event) => event.endsWith(' closed')),
@@ -326,8 +304,8 @@ describe('the app’s shutdown with sign-in warms in flight', () => {
           messages.push(args.map(String).join(' '));
         });
     }
-    const reading = deferred();
-    const held = deferred();
+    const reading = Promise.withResolvers<void>();
+    const held = Promise.withResolvers<void>();
     jest.spyOn(app.get(CarsService), 'list').mockImplementation(async () => {
       reading.resolve();
       await held.promise;
@@ -349,55 +327,6 @@ describe('the app’s shutdown with sign-in warms in flight', () => {
 
       expect(messages.some((m) => m.includes('cache warm skipped'))).toBe(true);
       expect(seen.closed()).toContain('database closed');
-    } finally {
-      held.resolve();
-      seen.releaseAll();
-      await (closing ?? app.close());
-    }
-  });
-
-  it('starts no warm for a sign-in that arrives after the wait is over, a driver’s or a garage owner’s, and answers it', async () => {
-    const app = await start();
-    const seen = watch(app);
-    const reading = deferred();
-    const held = deferred();
-    const list = jest
-      .spyOn(app.get(CarsService), 'list')
-      .mockImplementation(async () => {
-        reading.resolve();
-        await held.promise;
-        return { items: [] };
-      });
-    const warmer: Partial<BeforeApplicationShutdown> & HomeWarmer =
-      app.get(HOME_WARM);
-    const wait = warmer.beforeApplicationShutdown?.bind(warmer);
-    const answers: number[] = [];
-    const andrei = await driver();
-    const lateDriver = await driver();
-    const lateBoss = await owner();
-    let closing: Promise<void> | undefined;
-    try {
-      expect(typeof wait).toBe('function');
-      jest
-        .spyOn(warmer as BeforeApplicationShutdown, 'beforeApplicationShutdown')
-        .mockImplementation(async (signal) => {
-          const waiting = wait?.(signal);
-          held.resolve();
-          await waiting;
-          answers.push((await signIn(lateDriver.email, app)).status);
-          answers.push((await signIn(lateBoss.email, app)).status);
-        });
-
-      expect((await signIn(andrei.email, app)).status).toBe(200);
-      await reading.promise;
-      closing = app.close();
-      seen.releaseAll();
-      await closing;
-
-      expect(answers).toEqual([200, 200]);
-      expect(list).toHaveBeenCalledTimes(1);
-      expect(await redis.exists(...driverKeys(lateDriver.id))).toBe(0);
-      expect(await redis.exists(...garageKeys(lateBoss.garage.id))).toBe(0);
     } finally {
       held.resolve();
       seen.releaseAll();

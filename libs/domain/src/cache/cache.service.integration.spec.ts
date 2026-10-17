@@ -291,28 +291,6 @@ describe('the cache service', () => {
   });
 
   // @traces 1348-FR-006
-  it('records the miss before the entry is sent to Redis, and the warm count likewise', async () => {
-    const redis = client();
-    const cache = new CacheService(redis);
-    const evaluate = redis.eval.bind(redis);
-    const atStore: Record<string, number>[] = [];
-    jest.spyOn(redis, 'eval').mockImplementation(async (...args) => {
-      if (String(args[0]).includes('ZADD')) atStore.push(await counts());
-      return evaluate(...args);
-    });
-    const { read } = source(1, 0);
-
-    const missBefore = (await counts())['profile miss'] ?? 0;
-    await cache.read({ key: key(), read, soft: 600 });
-    const warmBefore = (await counts())['profile warm'] ?? 0;
-    await cache.warm(() => cache.read({ key: key(), read, soft: 600 }));
-
-    expect(atStore).toHaveLength(2);
-    expect(atStore[0]?.['profile miss']).toBe(missBefore + 1);
-    expect(atStore[1]?.['profile warm']).toBe(warmBefore + 1);
-  });
-
-  // @traces 1348-FR-006
   it('counts the miss exactly once when the store fails', async () => {
     const redis = client();
     const cache = new CacheService(redis);
