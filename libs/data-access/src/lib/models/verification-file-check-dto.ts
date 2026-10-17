@@ -12,7 +12,7 @@ export interface VerificationFileCheckDto {
   detail: string | null;
 
   /**
-   * What the admin found, for company and caen; null otherwise
+   * What the admin found and the server noted, for company, caen, rar and activities; null otherwise
    */
   evidence: (VerificationCheckEvidenceDto & {
 }) | null;

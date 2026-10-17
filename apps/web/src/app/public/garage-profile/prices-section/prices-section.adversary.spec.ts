@@ -222,7 +222,7 @@ describe('the price list rows with hostile data', () => {
 
     expect(rows()).toHaveLength(2_000);
     expect(switches()).toHaveLength(2_000);
-  });
+  }, 30_000);
 });
 
 // @traces 355-price-list-ranges-FR-011

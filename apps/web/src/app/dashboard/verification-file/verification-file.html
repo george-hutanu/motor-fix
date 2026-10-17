@@ -18,7 +18,12 @@
   @default {
     @if (header(); as h) {
       <section class="header" data-section="header">
-        <h3>{{ h.name }}</h3>
+        <div class="title">
+          <h3 tabindex="-1">{{ h.name }}</h3>
+          @if (decided()) {
+            <button type="button" class="action reopen" data-part="reopen" [disabled]="busy()" (click)="reopen()">{{ 'admin.file.reopen.button' | t }}</button>
+          }
+        </div>
         <div class="facts">
           @if (h.kind) {
             <p>{{ h.kind }}</p>
@@ -84,13 +89,31 @@
             @if (row.ticks) {
               <span class="detail" data-part="ticks">{{ row.ticks }}</span>
             }
+            @if (row.uncovered) {
+              <span class="detail" data-part="uncovered">{{ row.uncovered }}</span>
+            }
+            @if (row.number) {
+              <span class="detail" data-part="number">{{ 'admin.file.register.number' | t }}: {{ row.number }}</span>
+            }
             @if (row.recorded) {
               <span class="by">{{ row.recorded }}</span>
             }
             @if (row.links.length || row.form) {
               <span class="register-actions">
                 @for (link of row.links; track link.text) {
-                  <a class="lookup" href="{{ link.url }}" target="_blank" rel="noopener noreferrer" (click)="copyCui()">{{ link.text }}</a>
+                  <a class="lookup" href="{{ link.url }}" target="_blank" rel="noopener noreferrer" (click)="copy(link.copy)">{{ link.text }}</a>
+                }
+                @if (row.correctable) {
+                  <button
+                    type="button"
+                    class="action"
+                    data-toggle="correct"
+                    [attr.aria-expanded]="correcting() !== null"
+                    aria-controls="mf-rar-correct"
+                    (click)="toggleCorrect()"
+                  >
+                    {{ 'admin.file.register.correct' | t }}
+                  </button>
                 }
                 @if (row.form) {
                   <button
@@ -106,6 +129,28 @@
                 }
               </span>
             }
+            @if (row.correctable && correcting() !== null) {
+              <form class="correct" id="mf-rar-correct" data-part="correct" novalidate (submit)="saveCorrection($event)">
+                <label for="mf-rar-number">{{ 'admin.file.register.number' | t }}</label>
+                <input
+                  id="mf-rar-number"
+                  type="text"
+                  autocomplete="off"
+                  maxlength="200"
+                  [value]="correcting()"
+                  [attr.aria-invalid]="correctError() ? 'true' : null"
+                  [attr.aria-describedby]="correctError() ? 'mf-rar-number-error' : null"
+                  (input)="correctTyped($event)"
+                />
+                @if (correctError(); as e) {
+                  <p class="error" role="alert" id="mf-rar-number-error">{{ e }}</p>
+                }
+                <span class="register-actions">
+                  <button hlmBtn type="submit">{{ 'admin.file.register.form.save' | t }}</button>
+                  <button hlmBtn variant="ghost" type="button" (click)="toggleCorrect()">{{ 'admin.file.register.form.cancel' | t }}</button>
+                </span>
+              </form>
+            }
             @if (row.open && row.form) {
               <div class="register-form" [id]="'mf-register-form-' + row.form">
                 <mf-verification-register-form
@@ -115,8 +160,14 @@
                   [certificate]="formFacts().certificate"
                   [mobile]="formFacts().mobile"
                   [address]="formFacts().address"
+                  [rarNumber]="formFacts().rarNumber"
+                  [catalogue]="data()?.catalogue ?? []"
+                  [jobs]="data()?.jobs ?? []"
+                  [activities]="activityCodes()"
+                  [document]="authorisation()"
                   (recorded)="formRecorded(row.form, $event)"
                   (decided)="formDecided()"
+                  (page)="openAuthorisation($event)"
                 />
               </div>
             }
@@ -200,6 +251,9 @@
     }
 
     <section class="footer" data-section="footer">
+      @if (refused(); as line) {
+        <p class="refused" role="alert">{{ line }}</p>
+      }
       @if (footer(); as f) {
         <p class="decision">{{ f.line }}</p>
         @if (f.reason) {
@@ -211,8 +265,11 @@
           <button type="button" class="action" disabled>{{ 'admin.file.footer.ask' | t }}</button>
           <button type="button" class="action danger" disabled>{{ 'admin.file.footer.reject' | t }}</button>
         </div>
-        <p class="note">{{ 'admin.file.footer.note' | t }}</p>
+        @if (rarRequired()) {
+          <p class="note" data-part="rar-required">{{ 'admin.file.footer.rarRequired' | t }}</p>
+        }
       }
+      <p class="note">{{ 'admin.file.footer.note' | t }}</p>
     </section>
   }
 }

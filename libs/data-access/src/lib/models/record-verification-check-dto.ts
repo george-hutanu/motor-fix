@@ -15,7 +15,7 @@ export interface RecordVerificationCheckDto {
   detail?: string;
 
   /**
-   * What the admin found; company and caen only, refused with not_run
+   * What the admin found; company, caen and rar only, refused with not_run
    */
   evidence?: RecordCheckEvidenceDto;
   result: 'ok' | 'warning' | 'failed' | 'not_run';

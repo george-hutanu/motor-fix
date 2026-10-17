@@ -12,12 +12,22 @@ export interface VerificationFileStateDto {
   openedAt: string | null;
   openedBy: (VerificationActorDto & {
 }) | null;
+
+  /**
+   * The garage's RAR authorisation number, normalised
+   */
+  rarNumber: string | null;
   reasonCode: string | null;
   reasonNote: string | null;
   reopenReason: 'garage_report' | null;
   reopenedAt: string | null;
   reopenedBy: (VerificationActorDto & {
 }) | null;
+
+  /**
+   * What the latest request for more asked for; empty otherwise
+   */
+  requestedItems: Array<string>;
   status: 'submitted' | 'in_review' | 'approved' | 'more_requested' | 'rejected';
 
   /**

@@ -315,3 +315,251 @@ describe('a document page of the file', () => {
     expect(await entries(documentId)).toHaveLength(0);
   });
 });
+
+const post = (
+  id: string,
+  action: 'decision' | 'reopen',
+  authorization?: string,
+  body?: object,
+) => {
+  const req = request(app.getHttpServer())
+    .post(`/api/v1/admin/verification-files/${id}/${action}`)
+    .send(body ?? {});
+  return authorization ? req.set('Authorization', authorization) : req;
+};
+
+const checked = (id: string, kind: 'rar' | 'caen', result: string) =>
+  db.query(
+    'UPDATE verification_check SET result = $3::verification_check_result WHERE file_id = $1 AND kind = $2::verification_check_kind',
+    [id, kind, result],
+  );
+
+const decided = async (id: string) =>
+  (
+    await db.query(
+      "SELECT payload FROM outbox_event WHERE kind = 'verification.decided' AND subject_id = $1",
+      [id],
+    )
+  ).rows;
+
+// @traces 306-FR-001 306-FR-006
+describe('POST /admin/verification-files/:id/decision', () => {
+  it('stores a request for more and answers with the file read, its items included', async () => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', admin, {
+      decision: 'more_requested',
+      note: 'Trimite pozele atelierului.',
+      requestedItems: ['photos', 'documents'],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.file).toMatchObject({
+      decidedBy: { id: adminId, name: 'Ioana' },
+      id,
+      reasonCode: null,
+      reasonNote: 'Trimite pozele atelierului.',
+      requestedItems: ['photos', 'documents'],
+      status: 'more_requested',
+    });
+    expect(res.body.checks).toHaveLength(8);
+    expect(await decided(id)).toHaveLength(1);
+  });
+
+  it('approves a file whose rar and caen checks are ok', async () => {
+    const { id } = await file('in_review');
+    await checked(id, 'rar', 'ok');
+    await checked(id, 'caen', 'ok');
+
+    const res = await post(id, 'decision', admin, { decision: 'approved' });
+
+    expect([res.status, res.body.file.status]).toEqual([200, 'approved']);
+    expect(res.body.file.requestedItems).toEqual([]);
+  });
+
+  it.each([
+    ['rar_check_required', 'warning', 'ok'],
+    ['caen_check_required', 'ok', 'not_run'],
+  ])('answers 409 %s and writes nothing', async (code, rar, caen) => {
+    const { id } = await file('in_review');
+    await checked(id, 'rar', rar);
+    await checked(id, 'caen', caen);
+
+    const res = await post(id, 'decision', admin, { decision: 'approved' });
+
+    expect([res.status, res.body.code]).toEqual([409, code]);
+    expect((await fileRow(id)).status).toBe('in_review');
+    expect(await entries(id)).toHaveLength(0);
+    expect(await decided(id)).toHaveLength(0);
+  });
+
+  it('answers 409 naming who decided first, and when', async () => {
+    const { id } = await file('in_review');
+    await post(id, 'decision', admin, {
+      decision: 'rejected',
+      note: 'Lipsește certificatul ONRC.',
+      reason: 'documents',
+    });
+    const at = (await fileRow(id)).decided_at.toISOString();
+    const other = bearer(await account('admin', 'Dan Ene'), 'admin');
+
+    const res = await post(id, 'decision', other, {
+      decision: 'more_requested',
+      note: 'Trimite pozele.',
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      code: 'verification_transition_refused',
+      currentStatus: 'rejected',
+      decidedAt: at,
+      decidedBy: 'Ioana',
+      detail: `already decided by Ioana at ${at}`,
+    });
+    expect(await decided(id)).toHaveLength(1);
+  });
+
+  it.each([
+    ['an unknown decision', { decision: 'maybe', note: 'x' }],
+    [
+      'an unknown reason',
+      { decision: 'rejected', note: 'x', reason: 'weather' },
+    ],
+    [
+      'an unknown requested item',
+      { decision: 'more_requested', note: 'x', requestedItems: ['cake'] },
+    ],
+    [
+      'a note over 1,000 characters',
+      { decision: 'rejected', note: 'a'.repeat(1001), reason: 'other' },
+    ],
+    ['an unknown field', { decision: 'approved', urgent: true }],
+    ['a reason with an approval', { decision: 'approved', reason: 'rar' }],
+    [
+      'requested items with a rejection',
+      {
+        decision: 'rejected',
+        note: 'x',
+        reason: 'other',
+        requestedItems: ['photos'],
+      },
+    ],
+  ])('answers 400 validation_failed to %s', async (_name, body) => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', admin, body);
+
+    expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
+    expect((await fileRow(id)).status).toBe('in_review');
+  });
+
+  it.each([
+    ['reason_required', { decision: 'rejected', note: 'Lipsește ONRC' }],
+    [
+      'note_required',
+      { decision: 'rejected', note: '   ', reason: 'documents' },
+    ],
+    ['note_required', { decision: 'more_requested' }],
+  ])('answers 422 %s', async (code, body) => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'decision', admin, body);
+
+    expect([res.status, res.body.code]).toEqual([422, code]);
+    expect((await fileRow(id)).status).toBe('in_review');
+  });
+
+  it('reads a file never asked for more with no requested items', async () => {
+    const { id } = await file();
+
+    const res = await read(id, admin);
+
+    expect(res.body.file.requestedItems).toEqual([]);
+  });
+});
+
+// @traces 306-FR-006
+describe('POST /admin/verification-files/:id/reopen', () => {
+  it('reopens a rejected file and answers with the file read', async () => {
+    const { id } = await file('rejected');
+
+    const res = await post(id, 'reopen', admin);
+
+    expect(res.status).toBe(200);
+    expect(res.body.file).toMatchObject({ id, status: 'in_review' });
+    expect((await fileRow(id)).reopened_by).toBe(adminId);
+  });
+
+  it('answers 409 to a file already under review', async () => {
+    const { id } = await file('in_review');
+
+    const res = await post(id, 'reopen', admin);
+
+    expect([res.status, res.body.code]).toEqual([
+      409,
+      'verification_transition_refused',
+    ]);
+  });
+});
+
+// @traces 306-FR-006 306-FR-012
+describe('who may decide or reopen', () => {
+  it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
+    'answers 404 to a %s of the garage on both, with no garage data',
+    async (role) => {
+      const { garage, id } = await file('rejected');
+      const accountId = await account(role);
+      if (role === 'garage' || role === 'receptionist') {
+        await db.query(
+          'INSERT INTO garage_member (garage_id, account_id, role) VALUES ($1, $2, $3::garage_member_role)',
+          [garage, accountId, role === 'garage' ? 'owner' : 'receptionist'],
+        );
+      }
+      if (role === 'mechanic') {
+        await db.query(
+          "INSERT INTO mechanic (id, garage_id, account_id, name) VALUES (gen_random_uuid(), $1, $2, 'Vlad')",
+          [garage, accountId],
+        );
+      }
+      const token = bearer(accountId, role);
+
+      const decision = await post(id, 'decision', token, {
+        decision: 'approved',
+      });
+      const reopen = await post(id, 'reopen', token);
+
+      expect([decision.status, reopen.status]).toEqual([404, 404]);
+      expect(JSON.stringify([decision.body, reopen.body])).not.toContain(
+        'Atelier Dinamo',
+      );
+      expect((await fileRow(id)).status).toBe('rejected');
+    },
+  );
+
+  it('answers 401 sign_in_required with no token on both', async () => {
+    const { id } = await file('rejected');
+
+    const decision = await post(id, 'decision', undefined, {
+      decision: 'approved',
+    });
+    const reopen = await post(id, 'reopen');
+
+    expect([decision.body.code, reopen.body.code]).toEqual([
+      'sign_in_required',
+      'sign_in_required',
+    ]);
+    expect([decision.status, reopen.status]).toEqual([401, 401]);
+  });
+
+  it.each([randomUUID(), 'not-a-uuid'])(
+    'answers 404 for the file %s on both',
+    async (id) => {
+      const decision = await post(id, 'decision', admin, {
+        decision: 'approved',
+      });
+      const reopen = await post(id, 'reopen', admin);
+
+      expect([decision.status, reopen.status]).toEqual([404, 404]);
+    },
+  );
+});

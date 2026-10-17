@@ -250,7 +250,6 @@ function fromBody(answer: unknown, status: number): Problem {
   if (!code) return { code: codeForStatus(status), status };
   const errors = fieldProblems(body['errors']);
   const warnings = fieldProblems(body['warnings']);
-  const detail = typeof body['detail'] === 'string' ? body['detail'] : null;
   const attemptsLeft = wholeFrom(body['attemptsLeft'], 0);
   const retryAfterSeconds = wholeFrom(body['retryAfterSeconds'], 1);
   return {
@@ -258,10 +257,25 @@ function fromBody(answer: unknown, status: number): Problem {
     status,
     ...(attemptsLeft !== null && { attemptsLeft }),
     ...(retryAfterSeconds !== null && { retryAfterSeconds }),
-    ...(detail && { detail }),
+    ...texts(body),
     ...(errors && { errors }),
     ...(warnings && { warnings }),
   };
+}
+
+// The problem's text members that are present: a detail, and who decided
+// first and when on a refused decision.
+function texts(body: Record<string, unknown>) {
+  const found: Pick<Problem, 'detail' | 'decidedBy' | 'decidedAt'> = {};
+  for (const key of ['detail', 'decidedBy', 'decidedAt'] as const) {
+    const value = textFrom(body[key]);
+    if (value) found[key] = value;
+  }
+  return found;
+}
+
+function textFrom(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 // A whole number at or above the floor, else none.

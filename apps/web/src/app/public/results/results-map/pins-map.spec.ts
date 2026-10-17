@@ -6,6 +6,8 @@ import { ring } from '../../map-libre/map-libre';
 
 const GREEN = 'rgb(0, 128, 0)';
 const RED = 'rgb(200, 0, 0)';
+const AMBER = 'rgb(255, 176, 0)';
+const ON_AMBER = 'rgb(11, 12, 14)';
 const PLACE = { lat: 44.437, lng: 26.117 };
 
 const pinOf = (n: number, over: Partial<GaragePinDto> = {}): GaragePinDto => ({
@@ -21,14 +23,23 @@ const answer = (pins: GaragePinDto[]): GaragePinsDto => ({
   total: pins.length,
 });
 
-type Source = { setData: jest.Mock };
+type Source = { setData: jest.Mock; getClusterExpansionZoom: jest.Mock };
+type Hit = {
+  geometry?: { coordinates: number[] };
+  properties: Record<string, unknown>;
+};
 function mapFake() {
   const sources = new Map<string, Source>();
+  const canvas = document.createElement('canvas');
   return {
     addLayer: jest.fn(),
     addSource: jest.fn((id: string, _spec: { cluster?: boolean }) => {
-      sources.set(id, { setData: jest.fn() });
+      sources.set(id, {
+        getClusterExpansionZoom: jest.fn(async () => 13),
+        setData: jest.fn(),
+      });
     }),
+    easeTo: jest.fn(),
     fitBounds: jest.fn(),
     getBounds: jest.fn(() => ({
       getEast: () => shown.east,
@@ -36,12 +47,19 @@ function mapFake() {
       getSouth: () => shown.south,
       getWest: () => shown.west,
     })),
+    getCanvas: () => canvas,
     getLayer: jest.fn(() => ({})),
     getSource: jest.fn((id: string) => sources.get(id)),
     jumpTo: jest.fn(),
     on: jest.fn(),
+    project: jest.fn(([lng, lat]: [number, number]) => ({
+      x: lng * 10,
+      y: lat * 10,
+    })),
+    queryRenderedFeatures: jest.fn((): Hit[] => []),
     removeLayer: jest.fn(),
     removeSource: jest.fn((id: string) => sources.delete(id)),
+    setFilter: jest.fn(),
     sources,
   };
 }
@@ -50,19 +68,31 @@ let map: ReturnType<typeof mapFake>;
 let host: HTMLElement;
 let shown = { east: 26.2, north: 44.5, south: 44.4, west: 26 };
 const moved = jest.fn();
+const picked = jest.fn();
+const shifted = jest.fn();
 
 beforeEach(() => {
   map = mapFake();
   moved.mockClear();
+  picked.mockClear();
+  shifted.mockClear();
   host = document.createElement('div');
   host.style.setProperty('--mf-green', GREEN);
   host.style.setProperty('--mf-red', RED);
+  host.style.setProperty('--mf-amber', AMBER);
+  host.style.setProperty('--mf-on-amber', ON_AMBER);
   document.body.append(host);
 });
 
 afterEach(() => host.remove());
 
-const draw = () => drawPins(map as unknown as MapLibre, host, moved);
+const draw = () =>
+  drawPins(map as unknown as MapLibre, host, { moved, picked, shifted });
+const fire = (type: string, event: object = {}) => {
+  for (const [name, handler] of map.on.mock.calls) {
+    if (name === type) handler(event);
+  }
+};
 const lastData = () => map.sources.get('pins')?.setData.mock.calls.at(-1)?.[0];
 const layer = (id: string) =>
   map.addLayer.mock.calls.map(([spec]) => spec).findLast((l) => l.id === id);
@@ -326,6 +356,8 @@ describe('a mobile mechanic on the results map', () => {
     expect(order().filter((id) => id.startsWith('areas'))).toEqual([
       'areas-fill',
       'areas-line',
+      'areas-lit-fill',
+      'areas-lit-line',
       'areas-rate',
     ]);
   });
@@ -354,11 +386,6 @@ describe('a mobile mechanic on the results map', () => {
 // @traces 269-FR-007
 // @traces 269-FR-009
 describe('a move of the map by the driver', () => {
-  const fire = (type: string, event: object = {}) => {
-    for (const [name, handler] of map.on.mock.calls) {
-      if (name === type) handler(event);
-    }
-  };
   const drag = () => fire('moveend', { originalEvent: new MouseEvent('up') });
 
   beforeEach(() => {
@@ -450,5 +477,195 @@ describe('a move of the map by the driver', () => {
 
     expect(moved).not.toHaveBeenCalled();
     expect(map.getBounds).not.toHaveBeenCalled();
+  });
+});
+
+const added = () => map.addLayer.mock.calls.map(([spec]) => spec.id);
+const lastFilter = (id: string) =>
+  map.setFilter.mock.calls.findLast(([layer]) => layer === id)?.[1];
+const single = ['!', ['has', 'point_count']];
+
+// @traces 270-FR-008
+// @traces 270-FR-009
+describe('the lit garage on the results map', () => {
+  it('draws the lit pin above every other pin, and the lit circle under the circle labels', () => {
+    draw();
+    const order = added();
+
+    expect(order.indexOf('pins-lit-dot')).toBeGreaterThan(
+      order.indexOf('pins-rate'),
+    );
+    expect(order.indexOf('pins-lit-rate')).toBeGreaterThan(
+      order.indexOf('pins-lit-dot'),
+    );
+    expect(order.indexOf('areas-lit-fill')).toBeGreaterThan(
+      order.indexOf('areas-line'),
+    );
+    expect(order.indexOf('areas-lit-line')).toBeLessThan(
+      order.indexOf('areas-rate'),
+    );
+  });
+
+  it('colours the lit pin amber, its rate in the ink on amber', () => {
+    draw();
+
+    expect(layer('pins-lit-dot')).toMatchObject({
+      paint: { 'circle-color': AMBER },
+    });
+    expect(layer('pins-lit-rate')).toMatchObject({
+      paint: { 'text-color': ON_AMBER, 'text-halo-color': AMBER },
+    });
+  });
+
+  it('fills the lit circle amber, denser than a resting one yet still see-through, with an amber outline', () => {
+    draw();
+    const fill = layer('areas-lit-fill');
+
+    expect(fill).toMatchObject({ paint: { 'fill-color': AMBER } });
+    expect(fill.paint['fill-opacity']).toBeGreaterThan(
+      layer('areas-fill').paint['fill-opacity'],
+    );
+    expect(fill.paint['fill-opacity']).toBeLessThan(1);
+    expect(layer('areas-lit-line')).toMatchObject({
+      paint: { 'line-color': AMBER },
+    });
+  });
+
+  it('lights one garage by its id, never a cluster, and redraws no data', () => {
+    const view = draw();
+    view.show(answer([pinOf(1), pinOf(2)]));
+    const sets = map.sources.get('pins')?.setData.mock.calls.length;
+
+    view.light('g-2');
+
+    expect(lastFilter('pins-lit-dot')).toEqual([
+      'all',
+      single,
+      ['==', ['get', 'id'], 'g-2'],
+    ]);
+    expect(lastFilter('pins-lit-rate')).toEqual([
+      'all',
+      single,
+      ['==', ['get', 'id'], 'g-2'],
+    ]);
+    expect(lastFilter('areas-lit-fill')).toEqual(['==', ['get', 'id'], 'g-2']);
+    expect(lastFilter('areas-lit-line')).toEqual(['==', ['get', 'id'], 'g-2']);
+    expect(map.sources.get('pins')?.setData.mock.calls.length).toBe(sets);
+  });
+
+  it('lights nothing once no garage is lit', () => {
+    const view = draw();
+    view.light('g-2');
+
+    view.light(undefined);
+
+    expect(lastFilter('pins-lit-dot')).toEqual([
+      'all',
+      single,
+      ['==', ['get', 'id'], ''],
+    ]);
+    expect(lastFilter('areas-lit-fill')).toEqual(['==', ['get', 'id'], '']);
+  });
+
+  it('keeps the lit garage when the pins switch to clusters and back', () => {
+    const view = draw();
+    view.light('g-3');
+
+    view.show(answer(Array.from({ length: 51 }, (_, i) => pinOf(i))));
+
+    expect(lastFilter('pins-lit-dot')).toEqual([
+      'all',
+      single,
+      ['==', ['get', 'id'], 'g-3'],
+    ]);
+  });
+});
+
+// @traces 270-FR-004
+// @traces 270-FR-010
+// @traces 270-FR-011
+describe('a tap on the results map', () => {
+  const tap = (hits: Hit[]) => {
+    map.queryRenderedFeatures.mockReturnValueOnce(hits);
+    fire('click', { point: { x: 5, y: 6 } });
+  };
+
+  it('asks only the pins, the circle labels and the clusters what was tapped', () => {
+    draw();
+    tap([]);
+
+    const [, options] = map.queryRenderedFeatures.mock.calls[0] as unknown as [
+      unknown,
+      { layers: string[] },
+    ];
+    expect([...options.layers].sort()).toEqual(
+      [
+        'areas-rate',
+        'pins-cluster',
+        'pins-dot',
+        'pins-lit-dot',
+        'pins-lit-rate',
+        'pins-rate',
+      ].sort(),
+    );
+  });
+
+  it('gives the garage of a tapped pin or circle label', () => {
+    draw();
+
+    tap([{ properties: { id: 'g-7', rate: '150' } }]);
+
+    expect(picked).toHaveBeenCalledWith('g-7');
+  });
+
+  it('gives no garage for a tap away from every pin, a circle fill among them', () => {
+    draw();
+
+    tap([]);
+
+    expect(picked).toHaveBeenCalledWith(undefined);
+  });
+
+  it('zooms into a tapped cluster where it splits, as its own move, and gives no garage', async () => {
+    const view = draw();
+    view.show(answer(Array.from({ length: 51 }, (_, i) => pinOf(i))));
+
+    tap([
+      {
+        geometry: { coordinates: [26.1, 44.4] },
+        properties: { cluster: true, cluster_id: 9, point_count: 12 },
+      },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(
+      map.sources.get('pins')?.getClusterExpansionZoom,
+    ).toHaveBeenCalledWith(9);
+    expect(map.easeTo).toHaveBeenCalledWith({ center: [26.1, 44.4], zoom: 13 });
+    expect(picked).not.toHaveBeenCalled();
+  });
+
+  it('shows the pointer over what can be tapped, and the plain cursor elsewhere', () => {
+    draw();
+    const canvas = map.getCanvas();
+
+    map.queryRenderedFeatures.mockReturnValueOnce([
+      { properties: { id: 'g-1' } },
+    ]);
+    fire('mousemove', { point: { x: 1, y: 1 } });
+    expect(canvas.style.cursor).toBe('pointer');
+
+    fire('mousemove', { point: { x: 2, y: 2 } });
+    expect(canvas.style.cursor).toBe('');
+  });
+
+  it('finds a place on the map in pixels, and says when the map moved', () => {
+    const view = draw();
+
+    expect(view.spot({ lat: 44.4, lng: 26.1 })).toEqual({ x: 261, y: 444 });
+
+    fire('move');
+    expect(shifted).toHaveBeenCalledTimes(1);
   });
 });

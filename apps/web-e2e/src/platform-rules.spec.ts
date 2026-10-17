@@ -92,7 +92,7 @@ test.describe('the platform rules in Setări @seeded', () => {
     await ready(page, '/ro');
     await page
       .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { name: 'Cont' })
+      .getByRole('link', { exact: true, name: 'Cont' })
       .click();
     await signIn(page, ACCOUNTS.admin);
     await expect(page).toHaveURL('/app/admin');

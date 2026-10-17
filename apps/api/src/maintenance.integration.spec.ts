@@ -34,6 +34,7 @@ const OPEN = [
   'GET /api/v1/live',
   'GET /api/v1/live/public',
   'GET /api/v1/platform-status',
+  'GET /api/v1/support/contact',
   'GET /health/live',
   'GET /health/ready',
   'POST /api/v1/auth/oauth/apple/callback',

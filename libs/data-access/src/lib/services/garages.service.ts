@@ -9,6 +9,7 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { BrandRangeSavedDto } from '../models/brand-range-saved-dto';
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
 import { garageBrandsControllerReplace } from '../fn/garages/garage-brands-controller-replace';
 import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brands-controller-replace';
@@ -26,6 +27,10 @@ import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-sett
 import { GarageSettingsDto } from '../models/garage-settings-dto';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
 import { PriceListControllerRead$Params } from '../fn/garages/price-list-controller-read';
+import { priceListControllerRemoveBrandRange } from '../fn/garages/price-list-controller-remove-brand-range';
+import { PriceListControllerRemoveBrandRange$Params } from '../fn/garages/price-list-controller-remove-brand-range';
+import { priceListControllerSetBrandRange } from '../fn/garages/price-list-controller-set-brand-range';
+import { PriceListControllerSetBrandRange$Params } from '../fn/garages/price-list-controller-set-brand-range';
 import { PriceListDto } from '../models/price-list-dto';
 import { profileViewsControllerRecord } from '../fn/garages/profile-views-controller-record';
 import { ProfileViewsControllerRecord$Params } from '../fn/garages/profile-views-controller-record';
@@ -270,6 +275,72 @@ export class GaragesService extends BaseService {
   priceListControllerRead(params: PriceListControllerRead$Params, context?: HttpContext): Promise<PriceListDto> {
     const resp = this.priceListControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<PriceListDto>): PriceListDto => r.body);
+  }
+
+  /** Path part for operation `priceListControllerSetBrandRange()` */
+  static readonly PriceListControllerSetBrandRangePath = '/api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}';
+
+  /**
+   * Sets a job's own range for a brand the garage takes, creating it or changing it in place.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `priceListControllerSetBrandRange()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  priceListControllerSetBrandRange$Response(params: PriceListControllerSetBrandRange$Params, context?: HttpContext): Promise<StrictHttpResponse<BrandRangeSavedDto>> {
+    const obs = priceListControllerSetBrandRange(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Sets a job's own range for a brand the garage takes, creating it or changing it in place.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `priceListControllerSetBrandRange$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  priceListControllerSetBrandRange(params: PriceListControllerSetBrandRange$Params, context?: HttpContext): Promise<BrandRangeSavedDto> {
+    const resp = this.priceListControllerSetBrandRange$Response(params, context);
+    return resp.then((r: StrictHttpResponse<BrandRangeSavedDto>): BrandRangeSavedDto => r.body);
+  }
+
+  /** Path part for operation `priceListControllerRemoveBrandRange()` */
+  static readonly PriceListControllerRemoveBrandRangePath = '/api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}';
+
+  /**
+   * Removes a job's own range for a brand.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `priceListControllerRemoveBrandRange()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  priceListControllerRemoveBrandRange$Response(params: PriceListControllerRemoveBrandRange$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = priceListControllerRemoveBrandRange(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Removes a job's own range for a brand.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `priceListControllerRemoveBrandRange$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  priceListControllerRemoveBrandRange(params: PriceListControllerRemoveBrandRange$Params, context?: HttpContext): Promise<void> {
+    const resp = this.priceListControllerRemoveBrandRange$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `publicGaragesControllerBySlug()` */

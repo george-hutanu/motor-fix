@@ -292,6 +292,7 @@ describe('the price list through the profile cache', () => {
     const bmw = await brand('BMW');
     const audi = await brand('Audi');
     const { garage, price } = await setup();
+    await stance(garage.id, bmw.id, 'works_on');
     const job = await jobType('Frâne');
     await price(job.id, 0, { fromBani: 89_000, toBani: 140_000 });
     await price(job.id, 0, {

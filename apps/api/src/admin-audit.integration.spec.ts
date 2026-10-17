@@ -127,10 +127,24 @@ const FIXTURES: Record<
     path: async () =>
       `/api/v1/admin/platform-rule-changes/${await waiting(randomUUID())}/refuse`,
   },
+  'POST /api/v1/admin/verification-files/{id}/decision': {
+    body: () => ({
+      decision: 'rejected',
+      note: 'Lipsă acte',
+      reason: 'documents',
+    }),
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/decision`,
+  },
   'POST /api/v1/admin/verification-files/{id}/open': {
     body: () => ({}),
     path: async () =>
       `/api/v1/admin/verification-files/${await submitted()}/open`,
+  },
+  'POST /api/v1/admin/verification-files/{id}/reopen': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted('rejected')}/reopen`,
   },
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
     body: () => ({ detail: 'Autorizație găsită', result: 'ok' }),
@@ -155,15 +169,15 @@ const FIXTURES: Record<
   },
 };
 
-// A garage's file waiting to be opened.
-async function submitted() {
+// A garage's file waiting to be opened, or already decided.
+async function submitted(status = 'submitted') {
   return (
     await db.query(
       `WITH g AS (INSERT INTO garage (id, name, slug)
          VALUES (gen_random_uuid(), 'Audit', $1) RETURNING id)
        INSERT INTO verification_file (id, garage_id, status)
-       SELECT gen_random_uuid(), id, 'submitted' FROM g RETURNING id`,
-      [`audit-${randomUUID()}`],
+       SELECT gen_random_uuid(), id, $2::verification_file_status FROM g RETURNING id`,
+      [`audit-${randomUUID()}`, status],
     )
   ).rows[0].id as string;
 }

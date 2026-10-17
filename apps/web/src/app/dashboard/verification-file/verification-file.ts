@@ -10,11 +10,13 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
 import { lamp } from '@motor-fix/contracts/verification-target';
 import {
   AdminService,
   type AuditEntryDto,
   type VerificationCheckRecordedDto,
+  type VerificationDecisionDto,
   VerificationDocumentsService,
   type VerificationFileCheckDto,
   type VerificationFileDocumentDto,
@@ -28,29 +30,41 @@ import {
   TranslatePipe,
 } from '@motor-fix/i18n';
 import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
-import { Lamp, toast } from '@motor-fix/ui-cockpit';
+import { HlmButton, Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
 import { VerificationProblem } from '../verification-problem/verification-problem';
 import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
+import { VerificationReopen } from '../verification-reopen/verification-reopen';
 
 type CheckKind = VerificationFileCheckDto['kind'];
 type Result = VerificationFileCheckDto['result'];
 
 const REGISTER: readonly CheckKind[] = ['company', 'caen', 'rar', 'activities'];
+// What a look-up copies to the clipboard as it opens.
+type Copied = 'cui' | 'rar';
+type Lookup = { name: string; url: string; copy: Copied };
+const ONRC: Lookup = {
+  copy: 'cui',
+  name: 'onrc',
+  url: 'https://portal.onrc.ro/',
+};
 // The register checks an admin records through the form, each with the
-// public look-ups it is checked against. Fixed addresses: no CUI in them.
-const LOOKUPS: Partial<Record<CheckKind, { name: string; url: string }[]>> = {
-  caen: [{ name: 'onrc', url: 'https://portal.onrc.ro/' }],
+// public look-ups it is checked against. Fixed addresses: no CUI or number
+// in them.
+const LOOKUPS: Partial<Record<CheckKind, Lookup[]>> = {
+  caen: [ONRC],
   company: [
     {
+      copy: 'cui',
       name: 'anaf',
       url: 'https://mfinante.gov.ro/ro/web/site/info-pj-selectie-dupa-cui',
     },
-    { name: 'onrc', url: 'https://portal.onrc.ro/' },
+    ONRC,
   ],
+  rar: [{ copy: 'rar', name: 'rarRegister', url: 'https://portal.rarom.ro/' }],
 };
-type FormKind = 'company' | 'caen';
+type FormKind = 'company' | 'caen' | 'rar' | 'activities';
 const MANUAL: readonly CheckKind[] = [
   'address',
   'photos',
@@ -68,6 +82,11 @@ const STATUS_LINES: Record<string, string | undefined> = {
   rejected: 'rejected',
   submitted: 'resent',
 };
+// The 409s a decision answers in the footer, each by its line.
+const REFUSALS: Record<string, string | undefined> = {
+  caen_check_required: 'caenRequired',
+  rar_check_required: 'rarCheckRequired',
+};
 const SKELETON_SECTIONS = [0, 1, 2, 3];
 // How often a drawer left open reads the clock again, so "azi" turns into
 // "ieri" soon after midnight with no new read.
@@ -80,10 +99,11 @@ interface VerificationFileData {
 // "Dosar de verificare": everything an admin reads to decide one garage's
 // file, opened once (the file moves to "in review") and read again on every
 // change to it. The four manual checks tick and untick through the record
-// call; a decided file reads only. The decisions stay disabled until the decision story wires them.
+// call; a decided file reads only and can be reopened. decide() sends a
+// decision and answers a refusal in the footer.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Lamp, TranslatePipe, VerificationRegisterForm],
+  imports: [HlmButton, Lamp, TranslatePipe, VerificationRegisterForm],
   selector: 'mf-verification-file',
   styleUrl: './verification-file.css',
   templateUrl: './verification-file.html',
@@ -110,26 +130,37 @@ export class VerificationFile {
     () => this.fileId,
   );
 
+  // The file as last read, or as a correction answered it.
+  protected readonly data = linkedSignal(() => this.file.value());
+
   protected readonly skeleton = SKELETON_SECTIONS;
   protected readonly state = computed(() => {
-    if (this.file.value()) return 'ready';
+    if (this.data()) return 'ready';
     return this.file.failed() || this.file.gone() ? 'failed' : 'loading';
   });
 
   // The checks as last read, each replaced by its own save's answer.
-  private readonly checks = linkedSignal(() => this.file.value()?.checks ?? []);
+  private readonly checks = linkedSignal(() => this.data()?.checks ?? []);
   private readonly pending = signal<ReadonlySet<CheckKind>>(new Set());
   private readonly pageFailed = signal<{ id: string; n: number } | null>(null);
   private readonly now = signal(new Date());
   // The register row whose record form is open, one at a time.
   protected readonly formOpen = signal<FormKind | null>(null);
+  // Why the last decision was refused, kept over later reads until the next.
+  protected readonly refused = signal<string | null>(null);
+  // A decision or a reopening on its way: a second press waits for nothing.
+  protected readonly busy = signal(false);
+  // The RAR number's correction field: what is typed, and its refusal.
+  protected readonly correcting = signal<string | null>(null);
+  protected readonly correctError = signal<string | null>(null);
+  private readonly correctBusy = signal(false);
 
   protected readonly decided = computed(() =>
-    DECIDED.includes(this.file.value()?.file.status ?? ''),
+    DECIDED.includes(this.data()?.file.status ?? ''),
   );
 
   protected readonly header = computed(() => {
-    const value = this.file.value();
+    const value = this.data();
     if (!value) return undefined;
     const { garage } = value;
     const language = this.i18n.language();
@@ -159,7 +190,7 @@ export class VerificationFile {
   });
 
   protected readonly reported = computed(() => {
-    const value = this.file.value();
+    const value = this.data();
     if (!value) return undefined;
     const when = (at: string) => this.when(at);
     const reports = value.reports.map((r) =>
@@ -173,7 +204,7 @@ export class VerificationFile {
   });
 
   protected readonly rejected = computed(() => {
-    const previous = this.file.value()?.previousRejection;
+    const previous = this.data()?.previousRejection;
     if (!previous) return undefined;
     return this.t('rejectedBefore', {
       reason: this.reason(previous.reasonCode, previous.reasonNote),
@@ -184,28 +215,46 @@ export class VerificationFile {
   protected readonly register = computed(() => {
     const decided = this.decided();
     const open = this.formOpen();
+    const number = this.data()?.file.rarNumber ?? this.t('register.noNumber');
     return REGISTER.map((kind) => {
       const row = this.checkRow(kind);
-      const recordable = kind in LOOKUPS && !decided;
+      const form = decided ? null : (kind as FormKind);
       return {
         ...row,
-        form: recordable ? (kind as FormKind) : null,
-        links: (LOOKUPS[kind] ?? []).map((l) => ({
-          text: this.t(`register.${l.name}`),
-          url: l.url,
-        })),
-        open: recordable && open === kind,
-        ticks: kind === 'caen' ? this.storedTicks() : null,
+        correctable: form === 'rar',
+        form,
+        links: this.links(kind),
+        number: kind === 'rar' ? number : null,
+        open: form !== null && open === kind,
+        ticks: this.storedTicks(kind),
         toggle: this.t(
           row.result === 'not_run' ? 'register.open' : 'register.change',
         ),
+        uncovered: kind === 'activities' ? this.uncoveredLine() : null,
       };
     });
   });
 
+  // What the activities form shows beside the catalogue: the RAR
+  // authorisation as the documents section reads it.
+  protected readonly authorisation = computed(() => {
+    const row = this.documents().find(
+      (d) => d.doc.kind === 'rar_authorisation' && d.doc.present,
+    );
+    return row ? { buttons: row.buttons, doc: row.doc, line: row.line } : null;
+  });
+  protected readonly activityCodes = computed(() =>
+    (this.data()?.activities ?? []).map((a) => a.code),
+  );
+
+  // The footer's reminder while the file waits on a RAR check not yet OK.
+  protected readonly rarRequired = computed(
+    () => !this.decided() && this.result('rar') !== 'ok',
+  );
+
   // What the register form needs to know about the garage and its file.
   protected readonly formFacts = computed(() => {
-    const value = this.file.value();
+    const value = this.data();
     const mobile = value?.garage.businessKind === 'mobile';
     return {
       address:
@@ -214,15 +263,16 @@ export class VerificationFile {
         (d) => d.kind === 'onrc_certificate' && d.present,
       ),
       mobile,
+      rarNumber: value?.file.rarNumber ?? null,
     };
   });
 
   private readonly missing = computed(() =>
-    (this.file.value()?.documents ?? []).some((d) => !d.present),
+    (this.data()?.documents ?? []).some((d) => !d.present),
   );
 
   protected readonly manual = computed(() => {
-    const value = this.file.value();
+    const value = this.data();
     const mobile = value?.garage.businessKind === 'mobile';
     const pending = this.pending();
     const decided = this.decided();
@@ -249,7 +299,7 @@ export class VerificationFile {
   });
 
   protected readonly documents = computed(() => {
-    const value = this.file.value();
+    const value = this.data();
     if (!value) return [];
     const failed = this.pageFailed();
     return value.documents.map((doc) => ({
@@ -263,7 +313,7 @@ export class VerificationFile {
   });
 
   protected readonly history = computed(() => {
-    const value = this.file.value();
+    const value = this.data();
     if (!value) return undefined;
     const { entries, total } = value.timeline;
     const more = total - entries.length;
@@ -282,7 +332,7 @@ export class VerificationFile {
   });
 
   protected readonly footer = computed(() => {
-    const file = this.file.value()?.file;
+    const file = this.data()?.file;
     if (!file || !this.decided()) return undefined;
     return {
       line: this.t(`lines.${file.status}`, {
@@ -300,6 +350,85 @@ export class VerificationFile {
 
   retry() {
     this.file.reload();
+  }
+
+  // The display follows the server's answer: a decision taken first by
+  // another admin is named and read again; a missing register check is
+  // named, with nothing to re-read.
+  async decide(body: VerificationDecisionDto) {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerDecision({
+        body,
+        id: this.fileId,
+      });
+      this.file.reload();
+    } catch (error) {
+      this.refusal(error);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  // Asks first; a decision that is reopened stays shown until the next one.
+  // The button is disabled only while the call is out, so a cancelled
+  // confirmation can hand focus back to it.
+  async reopen() {
+    if (this.busy() || !this.decided()) return;
+    const answer = await this.overlays.open<true>(VerificationReopen, {
+      shape: 'dialog',
+      title: 'admin.file.reopen.title',
+    });
+    if (answer !== true) {
+      this.focusReopen();
+      return;
+    }
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.refused.set(null);
+    try {
+      await this.api.verificationFileControllerReopen({ id: this.fileId });
+      this.file.reload();
+      this.focusHeading();
+    } catch {
+      toast(this.t('reopen.failed'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private refusal(error: unknown) {
+    const problem = toProblem(error);
+    const known = REFUSALS[problem.code ?? ''];
+    if (known) {
+      this.refused.set(this.t(`footer.${known}`));
+    } else if (problem.code === 'verification_transition_refused') {
+      this.refused.set(
+        this.t('footer.alreadyDecided', {
+          name: problem.decidedBy || SYSTEM_NAME,
+          time: this.when(problem.decidedAt ?? null),
+        }),
+      );
+      this.file.reload();
+    } else {
+      toast(this.t('footer.saveFailed'));
+    }
+  }
+
+  private focusHeading() {
+    setTimeout(() =>
+      this.host.nativeElement.querySelector<HTMLElement>('h3')?.focus(),
+    );
+  }
+
+  private focusReopen() {
+    setTimeout(() =>
+      this.host.nativeElement
+        .querySelector<HTMLElement>('[data-part="reopen"]')
+        ?.focus(),
+    );
   }
 
   // The display follows the server's answer, never the press.
@@ -321,18 +450,77 @@ export class VerificationFile {
     if (answer !== 'cancelled' && answer) this.apply(answer);
   }
 
-  // The look-up opens in its own tab as any link does; the CUI goes to the
-  // clipboard beside it, quietly when there is no clipboard to write to.
-  async copyCui() {
-    const cui = this.file.value()?.garage.cui;
+  // The look-up opens in its own tab as any link does; the CUI or the RAR
+  // number goes to the clipboard beside it, quietly when there is nothing to
+  // copy or no clipboard to write to.
+  async copy(what: Copied) {
+    const value = this.data();
+    const text = what === 'cui' ? value?.garage.cui : value?.file.rarNumber;
     const clipboard = globalThis.navigator?.clipboard;
-    if (!cui || !clipboard) return;
+    if (!text || !clipboard) return;
     try {
-      await clipboard.writeText(cui);
-      toast(this.t('register.copied'));
+      await clipboard.writeText(text);
+      toast(this.t(what === 'cui' ? 'register.copied' : 'register.rarCopied'));
     } catch {
-      // The tab still opens; the admin types the CUI there.
+      // The tab still opens; the admin types it there.
     }
+  }
+
+  toggleCorrect() {
+    const closing = this.correcting() !== null;
+    this.correctError.set(null);
+    this.correcting.set(closing ? null : (this.data()?.file.rarNumber ?? ''));
+    setTimeout(() =>
+      this.host.nativeElement
+        .querySelector<HTMLElement>(
+          closing ? '[data-toggle="correct"]' : '[data-part="correct"] input',
+        )
+        ?.focus(),
+    );
+  }
+
+  correctTyped(event: Event) {
+    this.correcting.set((event.target as HTMLInputElement).value);
+  }
+
+  // The number as typed goes to the server, which stores it normalised; one
+  // too short or with a control character is refused here first.
+  async saveCorrection(event?: Event) {
+    event?.preventDefault();
+    const rarNumber = this.correcting() ?? '';
+    if (rarNumberRefused(rarNumber)) {
+      this.correctError.set(this.t('register.errors.number'));
+      return;
+    }
+    if (this.correctBusy()) return;
+    this.correctBusy.set(true);
+    try {
+      this.data.set(
+        await this.api.verificationFileControllerCorrect({
+          body: { rarNumber },
+          id: this.fileId,
+        }),
+      );
+      this.toggleCorrect();
+    } catch (error) {
+      this.correctFailed(error);
+    } finally {
+      this.correctBusy.set(false);
+    }
+  }
+
+  private correctFailed(error: unknown) {
+    const problem = toProblem(error);
+    if (problem.code === 'verification_file_decided') {
+      this.correcting.set(null);
+      this.file.reload();
+      return;
+    }
+    if (problem.status === 400) {
+      this.correctError.set(this.t('register.errors.number'));
+      return;
+    }
+    toast(this.t('manual.saveFailed'));
   }
 
   toggleForm(kind: FormKind) {
@@ -360,13 +548,31 @@ export class VerificationFile {
     );
   }
 
-  // "certificat · ONRC · adresă": the ticks an ok CAEN check was saved with, a
-  // file that held no certificate then read as "fără certificat". A warning
-  // or a failure shows its detail alone: the ticks are cleared from the row.
-  private storedTicks() {
-    const caen = this.checks().find((c) => c.kind === 'caen');
-    const evidence = caen?.result === 'ok' ? caen.evidence : null;
+  // The ticks an ok check was saved with, as text. A warning or a failure
+  // shows its detail alone: the ticks are cleared from the row.
+  private storedTicks(kind: CheckKind) {
+    const check = this.checks().find((c) => c.kind === kind);
+    const evidence = check?.result === 'ok' ? check.evidence : null;
     if (!evidence) return null;
+    if (kind === 'rar') return this.rarTicks(evidence);
+    return kind === 'caen' ? this.caenTicks(evidence) : null;
+  }
+
+  // "găsită · firmă · adresă".
+  private rarTicks(
+    evidence: NonNullable<VerificationFileCheckDto['evidence']>,
+  ) {
+    const parts = (['found', 'sameCompany', 'sameAddress'] as const)
+      .filter((tick) => evidence[tick])
+      .map((tick) => this.t(`register.stored.${tick}`));
+    return parts.length ? parts.join(' · ') : null;
+  }
+
+  // "certificat · ONRC · adresă", a file that held no certificate then read
+  // as "fără certificat".
+  private caenTicks(
+    evidence: NonNullable<VerificationFileCheckDto['evidence']>,
+  ) {
     const parts = [
       evidence.certificateUploaded === false
         ? this.t('register.stored.noCertificate')
@@ -377,6 +583,35 @@ export class VerificationFile {
       evidence.address ? this.t('register.stored.address') : null,
     ].filter(Boolean);
     return parts.length ? parts.join(' · ') : null;
+  }
+
+  // "Neacoperite: Plăcuțe de frână": the jobs a recorded activities check
+  // left uncovered, by their names on the price list.
+  private uncoveredLine() {
+    const check = this.checks().find((c) => c.kind === 'activities');
+    const ids = check?.evidence?.uncoveredJobTypeIds ?? [];
+    if (check?.result === 'not_run' || !ids.length) return null;
+    const en = this.i18n.language() === 'en';
+    const names = (this.data()?.jobs ?? [])
+      .filter((job) => ids.includes(job.jobTypeId))
+      .map((job) => (en ? job.nameEn : job.nameRo));
+    return names.length
+      ? this.t('register.uncoveredLine', { jobs: names.join(', ') })
+      : null;
+  }
+
+  private links(kind: CheckKind) {
+    return (LOOKUPS[kind] ?? []).map((l) => ({
+      copy: l.copy,
+      text: this.t(`register.${l.name}`),
+      url: l.url,
+    }));
+  }
+
+  // A page of the RAR authorisation, asked for by the activities form.
+  openAuthorisation(n: number) {
+    const doc = this.authorisation()?.doc;
+    if (doc) void this.openPage(doc, n);
   }
 
   // A blank tab first, while the press still counts as one, then its address.
@@ -473,6 +708,16 @@ export class VerificationFile {
     return file;
   }
 
+  // The garage's recorded activities by name, or a line saying the list is
+  // empty, so a recorded check never reads as if the list were unread.
+  private activitiesLine() {
+    const value = this.data();
+    if (!value) return null;
+    const en = this.i18n.language() === 'en';
+    const names = value.activities.map((a) => (en ? a.nameEn : a.nameRo));
+    return names.length ? names.join(', ') : this.t('register.noActivities');
+  }
+
   private result(kind: CheckKind): Result {
     return this.checks().find((c) => c.kind === kind)?.result ?? 'not_run';
   }
@@ -480,20 +725,17 @@ export class VerificationFile {
   private checkRow(kind: CheckKind) {
     const check = this.checks().find((c) => c.kind === kind);
     const result = check?.result ?? 'not_run';
-    const value = this.file.value();
-    const language = this.i18n.language();
-    const activities =
-      kind === 'activities' && result === 'ok' && value
-        ? value.activities
-            .map((a) => (language === 'en' ? a.nameEn : a.nameRo))
-            .join(', ')
-        : null;
     const recorder = check?.recorder;
     return {
-      activities: activities || null,
+      activities:
+        kind === 'activities' && result !== 'not_run'
+          ? this.activitiesLine()
+          : null,
       detail: check?.detail ?? null,
       kind,
-      label: REGISTER.includes(kind) ? this.t(`register.${kind}`) : '',
+      label: REGISTER.includes(kind)
+        ? this.t(`register.${this.labelKey(kind, result)}`)
+        : '',
       lamp: lamp(result),
       recorded: recorder
         ? check?.recordedAt
@@ -506,6 +748,11 @@ export class VerificationFile {
       result,
       resultLabel: this.t(`results.${result}`),
     };
+  }
+
+  // A failed RAR check reads as the authorisation not found.
+  private labelKey(kind: CheckKind, result: Result) {
+    return kind === 'rar' && result === 'failed' ? 'rarFailed' : kind;
   }
 
   // "emis azi", "emis ieri", "emis acum 6 zile", counted in Bucharest.
@@ -552,8 +799,19 @@ export class VerificationFile {
     return this.statusLine(entry, name, when);
   }
 
-  // A status change: opened, decided, reopened (with its reason) or resent.
+  // A change to the file: its RAR number corrected, or its status opened,
+  // decided, reopened (with its reason) or resent.
   private statusLine(entry: AuditEntryDto, name: string, when: string) {
+    if (
+      entry.subjectType === 'verification_file' &&
+      entry.field === 'rar_number'
+    )
+      return this.t('lines.rarNumber', {
+        name,
+        new: String(entry.newValue ?? '—'),
+        old: String(entry.oldValue ?? '—'),
+        when,
+      });
     if (entry.kind === 'verification_reopened')
       return entry.text
         ? this.t('lines.reopenedWhy', { name, reason: entry.text, when })

@@ -5,6 +5,7 @@ import { VerificationFileActivityDto } from '../models/verification-file-activit
 import { VerificationFileCheckDto } from '../models/verification-file-check-dto';
 import { VerificationFileDocumentDto } from '../models/verification-file-document-dto';
 import { VerificationFileGarageDto } from '../models/verification-file-garage-dto';
+import { VerificationFileJobDto } from '../models/verification-file-job-dto';
 import { VerificationFileRejectionDto } from '../models/verification-file-rejection-dto';
 import { VerificationFileReportDto } from '../models/verification-file-report-dto';
 import { VerificationFileStateDto } from '../models/verification-file-state-dto';
@@ -17,6 +18,11 @@ export interface VerificationFileDto {
   activities: Array<VerificationFileActivityDto>;
 
   /**
+   * The whole RAR activity catalogue, by code
+   */
+  catalogue: Array<VerificationFileActivityDto>;
+
+  /**
    * The 8 kinds, in their order
    */
   checks: Array<VerificationFileCheckDto>;
@@ -27,6 +33,11 @@ export interface VerificationFileDto {
   documents: Array<VerificationFileDocumentDto>;
   file: VerificationFileStateDto;
   garage: VerificationFileGarageDto;
+
+  /**
+   * The garage's price-list jobs, once each, in the list's order
+   */
+  jobs: Array<VerificationFileJobDto>;
   previousRejection: (VerificationFileRejectionDto & {
 }) | null;
 

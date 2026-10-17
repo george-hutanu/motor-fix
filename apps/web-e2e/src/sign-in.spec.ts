@@ -149,7 +149,7 @@ test.describe('signing in for real @seeded', () => {
 
     await page
       .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { name: 'Cont' })
+      .getByRole('link', { exact: true, name: 'Cont' })
       .click();
 
     await expect(page).toHaveURL('/ro/garages');
@@ -242,7 +242,10 @@ const TITLE = { en: 'Sign in', ro: 'Autentificare' } as const;
 async function openAt(page: Page, width: number, language: 'ro' | 'en') {
   if (width < 768) {
     await page
-      .getByRole('link', { name: language === 'ro' ? 'Cont' : 'Account' })
+      .getByRole('link', {
+        exact: true,
+        name: language === 'ro' ? 'Cont' : 'Account',
+      })
       .click();
   } else {
     await openFromHeader(page, TITLE[language]);

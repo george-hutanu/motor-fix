@@ -1,4 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 
 import { AuditEntryDto } from './audit-history.dto';
 import {
@@ -19,6 +30,73 @@ import {
 export const VERIFICATION_TIMELINE_MAX = 50;
 
 const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
+
+const VERIFICATION_DECISIONS = [
+  'approved',
+  'more_requested',
+  'rejected',
+] as const;
+type VerificationDecision = (typeof VERIFICATION_DECISIONS)[number];
+
+// What a rejection names, and what a request for more may ask for.
+const VERIFICATION_REASON_CODES = [
+  'documents',
+  'rar',
+  'address',
+  'photos',
+  'other',
+] as const;
+type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
+
+const VERIFICATION_NOTE_MAX = 1000;
+
+// A note blank after trimming is no note: the use case asks for one where
+// the decision needs it.
+const note = ({ value }: { value: unknown }) => {
+  if (typeof value !== 'string') return value;
+  return value.trim() || undefined;
+};
+const given = (_: object, value: unknown) => value !== undefined;
+
+export class VerificationDecisionDto {
+  @ApiProperty({ enum: VERIFICATION_DECISIONS })
+  @IsIn(VERIFICATION_DECISIONS)
+  decision!: VerificationDecision;
+
+  @ApiPropertyOptional({
+    description: 'Required with rejected, optional with more_requested',
+    enum: VERIFICATION_REASON_CODES,
+  })
+  @ValidateIf(given)
+  @IsIn(VERIFICATION_REASON_CODES)
+  reason?: VerificationReasonCode;
+
+  @ApiPropertyOptional({
+    description: 'What is missing; only with more_requested',
+    enum: VERIFICATION_REASON_CODES,
+    isArray: true,
+  })
+  @ValidateIf(given)
+  @IsArray()
+  @ArrayMaxSize(VERIFICATION_REASON_CODES.length)
+  @IsIn(VERIFICATION_REASON_CODES, { each: true })
+  requestedItems?: VerificationReasonCode[];
+
+  @ApiPropertyOptional({
+    description:
+      'Trimmed; required with rejected and more_requested, optional with approved',
+    maxLength: VERIFICATION_NOTE_MAX,
+  })
+  @Transform(note)
+  @ValidateIf(given)
+  @IsString()
+  @Length(1, VERIFICATION_NOTE_MAX)
+  // A note is written in a text area: line breaks and tabs are its own.
+  @Matches(/^(?:[\t\n\r]|\P{Cc})*$/u, {
+    message: 'note must not hold control characters',
+  })
+  note?: string;
+}
 
 export class VerificationFileStateDto {
   @ApiProperty({ format: 'uuid' })
@@ -48,6 +126,12 @@ export class VerificationFileStateDto {
   @ApiProperty({ nullable: true, type: String })
   reasonNote!: string | null;
 
+  @ApiProperty({
+    description: 'What the latest request for more asked for; empty otherwise',
+    type: [String],
+  })
+  requestedItems!: string[];
+
   @ApiProperty({ nullable: true, type: VerificationActorDto })
   reopenedBy!: VerificationActorDto | null;
 
@@ -62,6 +146,25 @@ export class VerificationFileStateDto {
 
   @ApiProperty({ nullable: true, type: String })
   declaredByName!: string | null;
+
+  @ApiProperty({
+    description: "The garage's RAR authorisation number, normalised",
+    nullable: true,
+    type: String,
+  })
+  rarNumber!: string | null;
+}
+
+// An admin's correction of the file's RAR number. The service normalises it
+// and refuses one too short or holding control characters.
+export class CorrectRarNumberDto {
+  @ApiProperty({
+    description: 'Trimmed, upper-cased and cut at 40; at least 3 characters',
+    maxLength: 200,
+  })
+  @IsString()
+  @MaxLength(200)
+  rarNumber!: string;
 }
 
 export class VerificationFileGarageDto {
@@ -116,6 +219,21 @@ export class VerificationFileActivityDto {
 
   @ApiProperty()
   nameEn!: string;
+}
+
+// A job of the garage's price list, with the RAR activity it falls under.
+export class VerificationFileJobDto {
+  @ApiProperty({ format: 'uuid' })
+  jobTypeId!: string;
+
+  @ApiProperty()
+  nameRo!: string;
+
+  @ApiProperty()
+  nameEn!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  rarActivity!: string | null;
 }
 
 export class VerificationFileDocumentDto {
@@ -191,6 +309,18 @@ export class VerificationFileDto {
     type: [VerificationFileActivityDto],
   })
   activities!: VerificationFileActivityDto[];
+
+  @ApiProperty({
+    description: 'The whole RAR activity catalogue, by code',
+    type: [VerificationFileActivityDto],
+  })
+  catalogue!: VerificationFileActivityDto[];
+
+  @ApiProperty({
+    description: "The garage's price-list jobs, once each, in the list's order",
+    type: [VerificationFileJobDto],
+  })
+  jobs!: VerificationFileJobDto[];
 
   @ApiProperty({
     description: 'One per kind, in their order',

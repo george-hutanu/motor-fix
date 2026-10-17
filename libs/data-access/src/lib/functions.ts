@@ -125,6 +125,12 @@ export type { VerificationFileControllerRead$Params as VerificationFileControlle
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
+export type { VerificationFileControllerDecision$Params as VerificationFileControllerDecision$Params } from './fn/admin/verification-file-controller-decision';
+export { verificationFileControllerDecision as verificationFileControllerDecision } from './fn/admin/verification-file-controller-decision';
+export type { VerificationFileControllerReopen$Params as VerificationFileControllerReopen$Params } from './fn/admin/verification-file-controller-reopen';
+export { verificationFileControllerReopen as verificationFileControllerReopen } from './fn/admin/verification-file-controller-reopen';
+export type { VerificationFileControllerCorrect$Params as VerificationFileControllerCorrect$Params } from './fn/admin/verification-file-controller-correct';
+export { verificationFileControllerCorrect as verificationFileControllerCorrect } from './fn/admin/verification-file-controller-correct';
 export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
 export { systemLogControllerList as systemLogControllerList } from './fn/admin/system-log-controller-list';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
@@ -223,6 +229,10 @@ export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerU
 export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
 export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
 export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
+export type { PriceListControllerSetBrandRange$Params as PriceListControllerSetBrandRange$Params } from './fn/garages/price-list-controller-set-brand-range';
+export { priceListControllerSetBrandRange as priceListControllerSetBrandRange } from './fn/garages/price-list-controller-set-brand-range';
+export type { PriceListControllerRemoveBrandRange$Params as PriceListControllerRemoveBrandRange$Params } from './fn/garages/price-list-controller-remove-brand-range';
+export { priceListControllerRemoveBrandRange as priceListControllerRemoveBrandRange } from './fn/garages/price-list-controller-remove-brand-range';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';

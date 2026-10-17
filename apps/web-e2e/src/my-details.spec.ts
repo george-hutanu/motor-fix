@@ -54,7 +54,7 @@ async function openSignIn(page: Page) {
   if ((page.viewportSize()?.width ?? 1280) < 768) {
     await page
       .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { name: 'Cont' })
+      .getByRole('link', { exact: true, name: 'Cont' })
       .click();
   } else {
     await page

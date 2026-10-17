@@ -236,6 +236,33 @@ describe('a row', () => {
     expect(row.summary.en).toMatch(/checked/i);
   });
 
+  // @traces 204-FR-010
+  it('names the missing RAR licence until the document is on the file, whatever the check', async () => {
+    const file = await waiting(MONDAY);
+    await prisma.verificationCheck.create({
+      data: { fileId: file.id, kind: 'rar', result: 'ok' },
+    });
+
+    const [missing] = (await service().queue(prisma, page(), NOW)).items;
+    expect(missing.summary).toEqual({
+      en: 'RAR licence missing',
+      ro: 'Lipsește autorizația RAR',
+    });
+
+    await prisma.legalDocument.create({
+      data: {
+        kind: 'rar_authorisation',
+        pages: ['rar/1.pdf'],
+        verificationFileId: file.id,
+      },
+    });
+    const [held] = (await service().queue(prisma, page(), NOW)).items;
+    expect(held.summary).toEqual({
+      en: 'RAR licence checked',
+      ro: 'Autorizație RAR verificată',
+    });
+  });
+
   it('flags a file waiting more than 2 working days, amber unless a check failed', async () => {
     const late = await waiting(MONDAY);
     const failed = await waiting(MONDAY);
@@ -282,8 +309,9 @@ describe('the time of the latest sending', () => {
     await inTx((tx) => verification.open(tx, admin, file.id));
     await inTx((tx) =>
       verification.decide(tx, admin, file.id, {
+        note: 'Blurred',
         outcome: 'more_requested',
-        reason: { code: 'documents_unreadable', note: 'Blurred' },
+        reason: 'documents_unreadable',
       }),
     );
     const decided = await prisma.verificationFile.findUniqueOrThrow({

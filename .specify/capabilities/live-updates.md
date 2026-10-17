@@ -18,6 +18,7 @@ features:
   - 1175-valkey
   - 290-save-garage
   - 049-garage-suspension
+  - 270-card-pin-link
 ---
 
 # Capability: Live updates
@@ -376,6 +377,10 @@ _From 290-save-garage._
 ### 049-FR-007 — The `garage.suspended` event MUST reach, through the existing audience resolver (419-FR-006): the garage's staff channel `garage:{garageId}`, `public:garage:{garageId}`, the all-brands results channel `public:search` (which every open results page and brand page joins beside its brand's channel, 419-FR-003) and `admin`; and the relay MUST drop the garage's cached public answers (its profile entries, the search and brand-page entries) as it does for every public garage change (267-FR-010, 1182-FR-007). An open results page re-reads and drops the card without a reload; an open profile re-reads, gets 410 and switches to the "no longer available" view (307-FR-018). Both behaviours exist; this story proves them end to end for a suspension.
 
 _From 049-garage-suspension._
+
+### 270-FR-006 — When the selected garage's card fades out (267-FR-019) the selection MUST pass to the first card left in the list (none when the list is empty); a pointed garage whose card fades out MUST stop being pointed.
+
+_From 270-card-pin-link._
 
 ## Retired
 

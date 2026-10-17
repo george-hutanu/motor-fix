@@ -173,6 +173,7 @@ describe('removing rows', () => {
   });
 });
 
+// @traces 386-FR-004
 describe('the brands a range can be given for', () => {
   it('offers the brands step 2 takes that the job has no range for yet', () => {
     const section: PricesSection = {

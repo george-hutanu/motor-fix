@@ -185,6 +185,7 @@ describe('GET /garages/:garageId/prices', () => {
     expect(res.body).toEqual({
       items: [
         {
+          brandRanges: [],
           durationMinutes: 60,
           fromBani: 35_000,
           jobTypeId: oil.id,
@@ -194,6 +195,14 @@ describe('GET /garages/:garageId/prices', () => {
           toBani: 48_000,
         },
         {
+          brandRanges: [
+            {
+              brandId: bmw.id,
+              fromBani: 40_000,
+              name: bmw.name,
+              toBani: 48_000,
+            },
+          ],
           durationMinutes: 90,
           fromBani: 35_000,
           jobTypeId: suspension.id,
