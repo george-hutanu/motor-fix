@@ -1,5 +1,6 @@
 import type { EventKind } from '@motor-fix/contracts';
 import {
+  isFinalFailure,
   observeQueue,
   observeWorker,
   queueTelemetry,
@@ -94,7 +95,7 @@ export class RemindersScheduler {
   }
 
   failed(job: Job<Daily | CarEvent>, error: Error): void {
-    if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
+    if (!isFinalFailure(job, error)) return;
     if (job.name === 'event') {
       const { id, kind } = job.data as CarEvent;
       this.logger.error(`reminders lost ${kind} event ${id}: ${error.message}`);
