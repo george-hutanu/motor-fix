@@ -35,6 +35,24 @@ describe('the Brevo e-mail adapter', () => {
     });
   });
 
+  // @traces 280-FR-015
+  it('sets the reply-to address when given one', async () => {
+    mock.answer({ body: { messageId: '<abc@relay>' }, status: 201 });
+    await brevo().send({
+      ...mail,
+      replyTo: { email: 'ion@example.test', name: 'Ion' },
+    });
+    expect(mock.emails()[0].body).toMatchObject({
+      replyTo: { email: 'ion@example.test', name: 'Ion' },
+    });
+  });
+
+  it('sends no reply-to when given none', async () => {
+    mock.answer({ body: { messageId: '<abc@relay>' }, status: 201 });
+    await brevo().send(mail);
+    expect(mock.emails()[0].body).not.toHaveProperty('replyTo');
+  });
+
   it.each([500, 503, 429])(
     'treats a %s answer as worth retrying',
     async (status) => {

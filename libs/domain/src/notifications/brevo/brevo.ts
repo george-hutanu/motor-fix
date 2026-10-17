@@ -11,6 +11,8 @@ interface OutgoingEmail {
   text: string;
   html: string;
   headers?: Record<string, string>;
+  // Where a reply goes, when not to the sender.
+  replyTo?: Mailbox;
 }
 
 interface OutgoingSms {
@@ -55,6 +57,7 @@ export class Brevo {
     return this.post('/smtp/email', {
       ...(mail.headers ? { headers: mail.headers } : {}),
       htmlContent: mail.html,
+      ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
       sender: mail.from,
       subject: mail.subject,
       textContent: mail.text,

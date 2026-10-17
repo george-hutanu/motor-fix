@@ -46,8 +46,8 @@ describe('the support settings', () => {
         supportConfig({
           SUPPORT_AWAY_UNTIL: value,
           SUPPORT_EMAIL: 'help@example.test',
-        }).awayUntil,
-      ).toBeUndefined();
+        }),
+      ).toEqual({ awayUnreadable: true, email: 'help@example.test' });
       expect(error).toHaveBeenCalledWith(
         expect.stringContaining('SUPPORT_AWAY_UNTIL'),
       );

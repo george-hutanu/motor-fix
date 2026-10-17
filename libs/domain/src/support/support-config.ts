@@ -6,6 +6,9 @@ export interface SupportConfig {
   email?: string;
   // The owner is away until this Bucharest day (YYYY-MM-DD).
   awayUntil?: string;
+  // SUPPORT_AWAY_UNTIL was set to something that is no day, logged at each
+  // send as well as at start.
+  awayUnreadable?: true;
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -34,8 +37,10 @@ export function supportConfig(
     );
   const away = source['SUPPORT_AWAY_UNTIL']?.trim();
   if (away && isDay(away)) config.awayUntil = away;
-  else if (away)
+  else if (away) {
+    config.awayUnreadable = true;
     logger.error('SUPPORT_AWAY_UNTIL is not a YYYY-MM-DD day: read as unset');
+  }
   return config;
 }
 
