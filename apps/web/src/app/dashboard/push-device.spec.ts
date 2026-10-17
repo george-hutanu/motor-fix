@@ -6,6 +6,7 @@ import { BehaviorSubject } from 'rxjs';
 
 import { PushDevice } from './push-device';
 import { PUSH_ENV, type PushEnv } from './push-support';
+import { Session } from './session';
 
 const subscription = {
   endpoint: 'https://push.example.test/abc',
@@ -20,6 +21,7 @@ let sw: {
   subscription: BehaviorSubject<PushSubscription | null>;
   unsubscribe: jest.Mock;
 };
+let token: string | null;
 let api: {
   pushSubscriptionsControllerKey: jest.Mock;
   pushSubscriptionsControllerRemove: jest.Mock;
@@ -57,10 +59,15 @@ function device(env: Partial<PushEnv> = {}, withSw = true) {
       },
       ...(withSw ? [{ provide: SwPush, useValue: sw }] : []),
       { provide: NotificationsService, useValue: api },
+      { provide: Session, useValue: { token: () => token } },
     ],
   });
   return TestBed.inject(PushDevice);
 }
+
+beforeEach(() => {
+  token = 'access';
+});
 
 describe('PushDevice', () => {
   it('starts loading and asks nothing of the browser', () => {
@@ -264,5 +271,25 @@ describe('PushDevice', () => {
     await d.refresh();
     await d.forget();
     expect(api.pushSubscriptionsControllerRemove).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1345-FR-006
+describe('PushDevice without a session', () => {
+  it('asks for no key and reads unavailable, then fetches the key once a token is held', async () => {
+    token = null;
+    const d = device();
+
+    await d.refresh();
+    expect(api.pushSubscriptionsControllerKey).not.toHaveBeenCalled();
+    expect(d.state()).toBe('unavailable');
+
+    token = 'access';
+    permission = 'granted';
+    current.next(subscription);
+    await d.refresh();
+    await d.refresh();
+    expect(api.pushSubscriptionsControllerKey).toHaveBeenCalledTimes(1);
+    expect(d.state()).toBe('on');
   });
 });

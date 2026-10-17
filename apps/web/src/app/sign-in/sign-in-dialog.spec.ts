@@ -109,6 +109,28 @@ describe('SignInDialog', () => {
     expect(navigate).toHaveBeenCalledWith('/app/garage');
   });
 
+  // The area guard's read was just refused: a second would renew again.
+  // @traces 1345-FR-006
+  it('asks for no session again when the area guard has just found none', async () => {
+    const { dialog, open, session } = setup(null, 'cancelled');
+
+    await dialog.start({ signedOut: true });
+
+    expect(session.load).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1345-FR-006 261-FR-010
+  it('opens no dialog over maintenance the area guard has just met', async () => {
+    const { dialog, down, open, session } = setup(null, 'cancelled');
+    down.set(true);
+
+    await dialog.start({ signedOut: true });
+
+    expect(session.load).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it('opens the dialog over the current screen for a visitor', async () => {
     const { dialog, open } = setup(null, 'cancelled');
 

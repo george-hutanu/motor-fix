@@ -87,6 +87,7 @@ features:
   - 1324-retire-debt-and-ready
   - 1344-no-mutation-wait
   - 430-cdn-waf
+  - 1019-staging-mcp-connect
 ---
 
 # Capability: Platform
@@ -2249,6 +2250,10 @@ _From 430-cdn-waf._
 ### 430-FR-011 — The specs repo MUST gain a how-to for setting the CDN up (account, pull zone, DNS, the secret, applying the configuration) and a how-to for rolling back (addresses pointed straight at the origin by hand, the secret unset), and `docs/reference/stack.md`'s Edge row MUST move from Proposed to the decided provider.
 
 _From 430-cdn-waf._
+
+### 1019-FR-007 — The release's staging job MUST run the check after the deploy against the staging MCP address, before the core flows, when the staging environment names both the MCP service and the MCP address (`MCP_URL`), and its failure MUST fail the job; when either is missing it MUST skip the check with one notice naming what is missing.
+
+_From 1019-staging-mcp-connect._
 
 ## Retired
 

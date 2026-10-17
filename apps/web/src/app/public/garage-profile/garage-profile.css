@@ -50,7 +50,7 @@
 }
 
 mf-lamp[data-state="green"] {
-  color: var(--mf-green);
+  color: var(--mf-green-ink);
 }
 
 mf-lamp[data-state="red"] {

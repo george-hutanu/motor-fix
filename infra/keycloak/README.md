@@ -117,14 +117,63 @@ else; *address* is a public or internal address; *name* is a plain value.
    `ASSISTANT_ALLOW_HTTP` is not set on staging: it is for development and CI only.
 4. On the GitHub `staging` environment, set the variables
    `RAILWAY_SERVICE_MCP` and `RAILWAY_SERVICE_KEYCLOAK` to the two services'
-   ids. The next release deploys both.
+   ids, and `MCP_URL` to the MCP server's public address (the same value as
+   step 3, ending in `/mcp`). The next release deploys both and then runs the
+   connection check below against `MCP_URL`; until both `RAILWAY_SERVICE_MCP`
+   and `MCP_URL` are set, it skips the check with a notice.
 5. Sign in to Keycloak's admin console once with the bootstrap admin, create a
    permanent admin, then remove the bootstrap one.
 6. Import `infra/observability/alerts/mcp.json` into Grafana Cloud: it carries
    `mcp-down` and `mcp-issuer-unreachable` for these two services.
-7. Connect Claude and ChatGPT to the staging MCP server and record the result
-   on the story pages.
+7. Connect Claude and ChatGPT to the staging MCP server and record the
+   result: see "Connecting Claude and ChatGPT" below.
 
 Known limit: the realm is imported only when it does not exist yet. A change
 to `realm-motorfix-assistants.json` reaches staging through the admin console
 (or by deleting the realm before a release), never by the release alone.
+
+## Connecting Claude and ChatGPT
+
+The owner does this once staging runs both services, and again whenever the
+address changes: it is `MCP_URL`, the MCP server's own address today, and
+changes if #1307 moves /mcp into the api (then update `MCP_URL` everywhere it
+is set, and connect again).
+
+1. Run the connection check first, from a checkout:
+
+   ```sh
+   node scripts/mcp-smoke.ts "<MCP_URL>"
+   ```
+
+   It needs no credential. Every line must read `PASS`: the 401's challenge,
+   the resource metadata, the identity server's metadata, a client registered
+   for Claude and one for ChatGPT, and both deleted again. A `FAIL` line names
+   the step and the reason; fix that before going on, since Claude and ChatGPT
+   would fail at the same step with a less helpful message. The release runs
+   the same check after every staging deploy.
+2. Claude (claude.ai): Settings, Connectors, "Add custom connector". Name it
+   `MotorFix staging`, paste `MCP_URL` as the address, leave the OAuth client
+   id and secret empty, and add it. Claude registers itself with the identity
+   server.
+3. ChatGPT (chatgpt.com): Settings, Apps & Connectors, Advanced settings,
+   turn on Developer mode; then Apps & Connectors, Create. Name it
+   `MotorFix staging`, paste `MCP_URL`, choose OAuth as the authentication,
+   leave the client fields empty (ChatGPT registers itself through dynamic
+   registration) and create it.
+4. In each, connect: the MotorFix sign-in page opens. Sign in as a staging
+   account, then allow the access on the consent screen.
+5. In a new chat with the connector on, ask for your MotorFix account, so the
+   assistant calls `get_my_account`. A pass is an answer with that account's
+   name, e-mail and role; a fail is an error, a sign-in loop or no tool call.
+6. Record each attempt as one comment on both #1106 (ST-1016) and #869
+   (ST-365), in this shape:
+
+   ```text
+   Staging MCP connection
+   - date: <YYYY-MM-DD>
+   - client: Claude | ChatGPT
+   - tool called: get_my_account
+   - result: pass or fail
+   - error text: <the exact text shown, or none>
+   ```
+

@@ -18,21 +18,26 @@ function answer(url: string, status: number) {
   res.emit('finish');
 }
 
+let lines: unknown[];
+let infos: unknown[];
+
+beforeEach(() => {
+  lines = [];
+  infos = [];
+  jest
+    .spyOn(Logger.prototype, 'warn')
+    .mockImplementation((message: unknown) => {
+      lines.push(message);
+    });
+  jest.spyOn(Logger.prototype, 'log').mockImplementation((message: unknown) => {
+    infos.push(message);
+  });
+});
+
+afterEach(() => jest.restoreAllMocks());
+
 // @traces 001-FR-014
 describe('FailureLog', () => {
-  let lines: unknown[];
-
-  beforeEach(() => {
-    lines = [];
-    jest
-      .spyOn(Logger.prototype, 'warn')
-      .mockImplementation((message: unknown) => {
-        lines.push(message);
-      });
-  });
-
-  afterEach(() => jest.restoreAllMocks());
-
   it('writes one line with the route and status when a request fails, never the cursor', () => {
     answer('/api/v1/admin/accounts?cursor=secret', 400);
 
@@ -63,7 +68,7 @@ describe('FailureLog', () => {
     expect(JSON.stringify(lines)).not.toMatch(/andrei|gmail|0722/);
   });
 
-  it.each([401, 403, 404, 500])(
+  it.each([403, 404, 500])(
     'logs a %s, including a refusal the guard answers before the route runs',
     (status) => {
       answer('/api/v1/admin/accounts/summary', status);
@@ -82,5 +87,36 @@ describe('FailureLog', () => {
     answer('/api/v1/admin/accounts', 200);
 
     expect(lines).toEqual([]);
+  });
+});
+
+// @traces 1345-FR-018
+describe('FailureLog and the session a visitor lacks', () => {
+  it('logs a 401 once at info, with the route and status and never the cursor', () => {
+    answer('/api/v1/admin/accounts?cursor=secret', 401);
+
+    expect(infos).toEqual([
+      {
+        message: 'admin accounts request failed',
+        route: 'GET /api/v1/admin/accounts',
+        status: 401,
+      },
+    ]);
+    expect(lines).toEqual([]);
+    expect(JSON.stringify(infos)).not.toContain('secret');
+  });
+
+  it.each([403, 500])('logs a %s as a warning, not at info', (status) => {
+    answer('/api/v1/admin/accounts', status);
+
+    expect(lines).toHaveLength(1);
+    expect(infos).toEqual([]);
+  });
+
+  it.each([200, 304, 399])('logs nothing for a %s', (status) => {
+    answer('/api/v1/admin/accounts', status);
+
+    expect(lines).toEqual([]);
+    expect(infos).toEqual([]);
   });
 });

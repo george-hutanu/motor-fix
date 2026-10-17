@@ -70,6 +70,7 @@ export async function renderAdmin(url = '/app/admin') {
           reload: jest.fn(async () => undefined),
           shown: computed(() => me()),
           signOut: jest.fn(),
+          token: () => 'access',
         },
       },
       {

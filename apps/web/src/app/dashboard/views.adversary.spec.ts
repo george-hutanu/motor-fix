@@ -47,6 +47,7 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
           ended: new Subject<void>(),
           shown: current,
           signOut: jest.fn(),
+          token: () => 'access',
         },
       },
       {

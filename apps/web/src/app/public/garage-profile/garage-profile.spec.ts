@@ -196,6 +196,16 @@ describe('the garage profile', () => {
     );
   });
 
+  it('writes the brand chip in the ink shades, which hold 4.5:1 on the raised panel', () => {
+    const sheet = css('garage-profile.css');
+    expect(sheet).toMatch(
+      /mf-lamp\[data-state="green"\] \{[^}]*color: var\(--mf-green-ink\)/,
+    );
+    expect(sheet).toMatch(
+      /mf-lamp\[data-state="red"\] \{[^}]*color: var\(--mf-red-ink\)/,
+    );
+  });
+
   it('shows the header of a mobile mechanic in order, with its area and no address', async () => {
     await open('/ro/garages/mecanic-mobil-ilfov');
     await reads[0]?.answer(MOBILE);
