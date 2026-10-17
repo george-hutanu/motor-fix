@@ -13,6 +13,14 @@ import type { GarageAccess, LoadGarageAccess } from '../garage-access';
 
 export const LIVE_CHANNEL = 'live:events';
 
+// What a stream opens with: no-transform keeps an edge from compressing
+// (and so holding) the events, X-Accel-Buffering keeps a proxy from buffering.
+export const LIVE_HEADERS = {
+  'Cache-Control': 'no-cache, no-transform',
+  'Content-Type': 'text/event-stream; charset=utf-8',
+  'X-Accel-Buffering': 'no',
+};
+
 const HEARTBEAT_MS = 25_000;
 const STREAMS_PER_ACCOUNT = 10;
 const PUBLIC_STREAMS_PER_ADDRESS = 20;

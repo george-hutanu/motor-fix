@@ -1,0 +1,21 @@
+@if (shown()) {
+  @if (unavailable()) {
+    <span class="unavailable">{{ 'public.saveGarage.unavailable' | t }}</span>
+  } @else {
+    <button
+      type="button"
+      class="save"
+      [class.icon]="look() === 'icon'"
+      [attr.aria-pressed]="pressed()"
+      [attr.aria-label]="look() === 'icon' ? (label() | t) : null"
+      (click)="tap($event)"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+        <path d="M6 3.75h12a.75.75 0 0 1 .75.75v16.2l-6.75-4.5-6.75 4.5V4.5A.75.75 0 0 1 6 3.75Z" [attr.fill]="pressed() ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      </svg>
+      @if (look() === 'labelled') {
+        <span>{{ label() | t }}</span>
+      }
+    </button>
+  }
+}

@@ -115,12 +115,17 @@ export function chartConfig(
   language: Language,
   theme: ChartTheme,
   reducedMotion: boolean,
+  // Bars running across, one category per row: for long names.
+  horizontal = false,
 ): ChartConfiguration<ChartType, number[], string> {
   const format = (value: unknown) => formatValue(unit, value, language);
   const ticks = {
     color: theme.textSecondary,
     font: { family: theme.font, size: theme.labelSize },
   };
+  const [categoryAxis, valueAxis] = horizontal
+    ? (['y', 'x'] as const)
+    : (['x', 'y'] as const);
   return {
     data: {
       datasets: [
@@ -136,7 +141,8 @@ export function chartConfig(
       animation: reducedMotion
         ? false
         : { duration: 1000, easing: 'easeOutQuart' },
-      interaction: { axis: 'x', intersect: false, mode: 'nearest' },
+      ...(horizontal && { indexAxis: 'y' as const }),
+      interaction: { axis: categoryAxis, intersect: false, mode: 'nearest' },
       maintainAspectRatio: false,
       plugins: {
         tooltip: {
@@ -155,16 +161,22 @@ export function chartConfig(
         },
       },
       scales: {
-        x: {
+        [categoryAxis]: {
           border: { display: false },
           grid: { display: false },
           ticks: { ...ticks, autoSkip: true, maxRotation: 0, minRotation: 0 },
         },
-        y: {
+        [valueAxis]: {
           beginAtZero: true,
           border: { display: false },
           grid: { color: theme.line, drawTicks: false, lineWidth: 1 },
-          ticks: { ...ticks, callback: format, maxTicksLimit: 5 },
+          ticks: {
+            ...ticks,
+            callback: format,
+            maxTicksLimit: 5,
+            // A count is whole: no 0,5 request between 0 and 1.
+            ...(unit === 'count' && { precision: 0 }),
+          },
         },
       },
     },

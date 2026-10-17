@@ -56,6 +56,7 @@ export * from './quote-limits';
 export * from './quote-requests.dto';
 export * from './quotes.dto';
 export * from './request-status';
+export * from './saved-garages.dto';
 export * from './search-place';
 export * from './staff-invite.dto';
 export * from './verification-checks';

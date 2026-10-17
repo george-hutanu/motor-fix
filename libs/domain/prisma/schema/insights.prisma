@@ -55,3 +55,19 @@ model GarageDailyFigures {
   @@id([garageId, day])
   @@map("garage_daily_figures")
 }
+
+// What drivers asked for on one closed Europe/Bucharest day, written by the
+// night job: dimension "brand" (key: the car snapshot's brand name), "job"
+// (key: the job type's key) or "total" (key "all", 0 included). Counts and
+// catalogue names only.
+model DemandDaily {
+  day       DateTime @db.Date
+  dimension String   @db.VarChar(8)
+  key       String
+  // CHECK in the migration: never below 0.
+  requests  Int
+  writtenAt DateTime @map("written_at") @db.Timestamptz(3)
+
+  @@id([day, dimension, key])
+  @@map("demand_daily")
+}

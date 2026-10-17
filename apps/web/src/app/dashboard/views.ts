@@ -108,9 +108,10 @@ export const DASHBOARDS: Record<
       {
         capability: 'admin.catalogue',
         label: 'shell.frame.nav.admin.catalogue',
+        load: () =>
+          import('./admin-demand/admin-demand').then((m) => m.AdminDemand),
         path: 'catalogue',
         tab: 'shell.frame.tab.brands',
-        unreleased: true,
       },
       {
         capability: 'admin.settings',

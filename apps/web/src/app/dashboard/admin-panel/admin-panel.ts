@@ -2,6 +2,7 @@ import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import type { Period } from '@motor-fix/contracts/figure-choices';
 import { formatNum, formatPct, I18n } from '@motor-fix/i18n';
 
+import { AdminDemand } from '../admin-demand/admin-demand';
 import { AdminGrowth } from '../admin-growth/admin-growth';
 import { AdminOverview } from '../admin-overview';
 import { AdminQueue } from '../admin-queue/admin-queue';
@@ -58,7 +59,7 @@ const MISSING = '—';
 
 @Component({
   host: { '[attr.aria-busy]': "regionBusy() ? 'true' : null" },
-  imports: [AdminGrowth, AdminQueue],
+  imports: [AdminDemand, AdminGrowth, AdminQueue],
   selector: 'mf-admin-panel',
   styleUrl: './admin-panel.css',
   templateUrl: './admin-panel.html',

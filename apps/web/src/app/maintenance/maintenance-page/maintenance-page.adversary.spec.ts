@@ -91,7 +91,7 @@ describe('MaintenancePage under odd conditions', () => {
       await render();
 
       expect(init.status).toBe(503);
-      expect(init.headers).toEqual({ 'Retry-After': '300' });
+      expect(new Headers(init.headers).get('retry-after')).toBe('300');
     }
   });
 

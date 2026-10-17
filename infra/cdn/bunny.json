@@ -1,0 +1,230 @@
+{
+  "$comment": [
+    "The Bunny pull zone in front of the web app, one per environment. scripts/cdn.ts apply writes pullZone, hostnames and edgeRules; check compares them with the live zone.",
+    "A value written $NAME is read from that environment variable when the script runs, so neither the zone's number nor its API credential is ever in this file.",
+    "Pages cache by the origin's Cache-Control (s-maxage=60 on public pages, a year on hashed files); the edge rules only stop caching.",
+    "shield is recorded here and set by hand in Bunny's Shield panel (docs/how-to/cdn-setup.md): the script does not check it."
+  ],
+  "environments": {
+    "staging": {
+      "pullZone": {
+        "OriginUrl": "$CDN_ORIGIN_URL",
+        "OriginHostHeader": "$CDN_ORIGIN_HOST",
+        "OriginResponseTimeout": 60,
+        "EnableRequestCoalescing": false,
+        "EnableGeoZoneEU": true,
+        "EnableGeoZoneUS": false,
+        "EnableGeoZoneASIA": false,
+        "EnableGeoZoneSA": false,
+        "EnableGeoZoneAF": false,
+        "CacheErrorResponses": false,
+        "DisableCookies": false,
+        "EnableCookieVary": false
+      },
+      "hostnames": {
+        "ForceSSL": true
+      },
+      "edgeRules": [
+        {
+          "Description": "mf-no-cache-app-api",
+          "ActionType": "OverrideCacheTime",
+          "ActionParameter1": "0",
+          "TriggerMatchingType": "Any",
+          "Triggers": [
+            {
+              "Type": "Url",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*/api/*",
+                "*/app/*"
+              ]
+            }
+          ]
+        },
+        {
+          "Description": "mf-no-cache-signed-in",
+          "ActionType": "OverrideCacheTime",
+          "ActionParameter1": "0",
+          "TriggerMatchingType": "Any",
+          "Triggers": [
+            {
+              "Type": "RequestHeader",
+              "Parameter1": "Cookie",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*mf_refresh*"
+              ]
+            },
+            {
+              "Type": "RequestHeader",
+              "Parameter1": "Authorization",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*"
+              ]
+            }
+          ]
+        },
+        {
+          "Description": "mf-origin-secret",
+          "ActionType": "SetRequestHeader",
+          "ActionParameter1": "X-Origin-Secret",
+          "ActionParameter2": "$ORIGIN_SECRET_EDGE",
+          "TriggerMatchingType": "Any",
+          "Triggers": [
+            {
+              "Type": "Url",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      "shield": {
+        "managedRules": "basic",
+        "mode": "block",
+        "rateLimits": [
+          {
+            "name": "auth",
+            "method": "POST",
+            "paths": [
+              "/api/v1/auth/sign-in",
+              "/api/v1/auth/sign-up",
+              "/api/v1/auth/phone-sign-in",
+              "/api/v1/auth/phone-code",
+              "/api/v1/auth/oauth/complete",
+              "/api/v1/auth/password-reset*",
+              "/api/v1/me/email",
+              "/api/v1/me/phone*"
+            ],
+            "per": "client-ip",
+            "requestsPerMinute": 20,
+            "status": 429
+          },
+          {
+            "name": "quote-requests",
+            "method": "POST",
+            "paths": [
+              "/api/v1/quote-requests"
+            ],
+            "per": "client-ip",
+            "requestsPerMinute": 10,
+            "status": 429
+          }
+        ]
+      }
+    },
+    "production": {
+      "pullZone": {
+        "OriginUrl": "$CDN_ORIGIN_URL",
+        "OriginHostHeader": "$CDN_ORIGIN_HOST",
+        "OriginResponseTimeout": 60,
+        "EnableRequestCoalescing": false,
+        "EnableGeoZoneEU": true,
+        "EnableGeoZoneUS": false,
+        "EnableGeoZoneASIA": false,
+        "EnableGeoZoneSA": false,
+        "EnableGeoZoneAF": false,
+        "CacheErrorResponses": false,
+        "DisableCookies": false,
+        "EnableCookieVary": false
+      },
+      "hostnames": {
+        "ForceSSL": true
+      },
+      "edgeRules": [
+        {
+          "Description": "mf-no-cache-app-api",
+          "ActionType": "OverrideCacheTime",
+          "ActionParameter1": "0",
+          "TriggerMatchingType": "Any",
+          "Triggers": [
+            {
+              "Type": "Url",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*/api/*",
+                "*/app/*"
+              ]
+            }
+          ]
+        },
+        {
+          "Description": "mf-no-cache-signed-in",
+          "ActionType": "OverrideCacheTime",
+          "ActionParameter1": "0",
+          "TriggerMatchingType": "Any",
+          "Triggers": [
+            {
+              "Type": "RequestHeader",
+              "Parameter1": "Cookie",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*mf_refresh*"
+              ]
+            },
+            {
+              "Type": "RequestHeader",
+              "Parameter1": "Authorization",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*"
+              ]
+            }
+          ]
+        },
+        {
+          "Description": "mf-origin-secret",
+          "ActionType": "SetRequestHeader",
+          "ActionParameter1": "X-Origin-Secret",
+          "ActionParameter2": "$ORIGIN_SECRET_EDGE",
+          "TriggerMatchingType": "Any",
+          "Triggers": [
+            {
+              "Type": "Url",
+              "PatternMatchingType": "Any",
+              "PatternMatches": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      "shield": {
+        "managedRules": "basic",
+        "mode": "block",
+        "rateLimits": [
+          {
+            "name": "auth",
+            "method": "POST",
+            "paths": [
+              "/api/v1/auth/sign-in",
+              "/api/v1/auth/sign-up",
+              "/api/v1/auth/phone-sign-in",
+              "/api/v1/auth/phone-code",
+              "/api/v1/auth/oauth/complete",
+              "/api/v1/auth/password-reset*",
+              "/api/v1/me/email",
+              "/api/v1/me/phone*"
+            ],
+            "per": "client-ip",
+            "requestsPerMinute": 20,
+            "status": 429
+          },
+          {
+            "name": "quote-requests",
+            "method": "POST",
+            "paths": [
+              "/api/v1/quote-requests"
+            ],
+            "per": "client-ip",
+            "requestsPerMinute": 10,
+            "status": 429
+          }
+        ]
+      }
+    }
+  }
+}

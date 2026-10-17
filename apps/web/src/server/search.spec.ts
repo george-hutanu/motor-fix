@@ -73,6 +73,16 @@ describe('search engine rules', () => {
       }
     });
 
+    // @traces 430-FR-002 430-FR-003
+    it('lets the edge keep the sitemap a minute, tagged as a search page', async () => {
+      const answer = await fetch(`${base}/sitemap.xml`);
+
+      expect(answer.headers.get('cache-control')).toBe(
+        'public, max-age=0, s-maxage=60, must-revalidate',
+      );
+      expect(answer.headers.get('cdn-tag')).toBe('search');
+    });
+
     it('allows crawling and names the sitemap in robots.txt', async () => {
       const answer = await fetch(`${base}/robots.txt`);
       const text = await answer.text();
