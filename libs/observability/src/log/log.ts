@@ -28,11 +28,12 @@ export function logEntry(
       ]),
   ) as Record<string, string | number | boolean>;
   const ids = trace.getActiveSpan()?.spanContext();
+  // The entry's own fields come last: an attribute never overrides them.
   const line = JSON.stringify({
-    level,
-    message: body,
     ...masked,
     ...(ids && { span_id: ids.spanId, trace_id: ids.traceId }),
+    level,
+    message: body,
   });
   if (level === 'error') console.error(line);
   else console.log(line);
