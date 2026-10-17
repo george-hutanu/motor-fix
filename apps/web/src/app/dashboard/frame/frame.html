@@ -2,14 +2,18 @@
   <a routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
   <span class="eyebrow">{{ dashboard().tag | t }}</span>
   <nav [attr.aria-label]="'shell.frame.menu' | t">
-    @for (view of entries(); track view.path) {
+    @for (view of menu(); track view.path) {
       @let count = view.counter ? counts()[view.counter] : undefined;
+      @if (view.action) {
+        <button type="button" class="action" (click)="act(view)">{{ view.label | t }}</button>
+      } @else {
       <a
         [routerLink]="view.path ? [base(), view.path] : base()"
         routerLinkActive=""
         ariaCurrentWhenActive="page"
         [routerLinkActiveOptions]="{ exact: !view.path }"
       >{{ view.label | t }}@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span><span class="sr-only"> {{ 'shell.frame.counter' | t: { waiting: count } }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</a>
+      }
     }
   </nav>
   <div class="account">
@@ -80,6 +84,6 @@
   </p>
   <main><router-outlet /></main>
   <mf-consent-bar />
-  <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" />
+  <mf-dashboard-tab-bar [base]="base()" [views]="menu()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" (act)="act($event)" />
 </div>
 <hlm-toaster />

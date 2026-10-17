@@ -156,6 +156,17 @@ aside nav a {
   align-items: center;
   gap: var(--mf-space-2);
 }
+/* "Ajutor și contact" opens a task: a button drawn as the links around it. */
+aside nav .action {
+  min-height: var(--mf-tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
 .chip {
   min-width: 20px;
   height: 20px;

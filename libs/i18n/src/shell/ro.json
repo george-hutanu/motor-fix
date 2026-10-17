@@ -161,6 +161,7 @@
         "settings": "Setări",
         "users": "Utilizatori"
       },
+      "contact": "Ajutor și contact",
       "dashboard": "Panou",
       "driver": {
         "assistant": "Asistent AI",
@@ -215,6 +216,7 @@
       "assistant": "Asistent",
       "brands": "Mărci",
       "cars": "Mașini",
+      "contact": "Ajutor și contact",
       "dashboard": "Panou",
       "garages": "Service‑uri",
       "history": "Istoric",
@@ -290,6 +292,7 @@
   "maintenance": {
     "adminLink": "Administrator? Intră în cont",
     "banner": "Mentenanță activă",
+    "contact": "Ai o întrebare? Scrie‑ne la",
     "heading": "Mentenanță",
     "message": "MotorFix este în mentenanță. Revenim în curând."
   },
