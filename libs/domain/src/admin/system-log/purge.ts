@@ -1,13 +1,16 @@
+import { SYSTEM_LOG_RETENTION_DAYS } from '@motor-fix/contracts';
+
 import type { PrismaClient } from '../../generated/prisma/client';
 
-// How long an entry is kept: the nightly purge deletes what is older.
-const RETENTION_DAYS = 90;
+// The nightly purge deletes what is older than the retention.
 
 export async function purgeSystemLog(
   prisma: PrismaClient,
   now: Date,
 ): Promise<number> {
-  const before = new Date(now.getTime() - RETENTION_DAYS * 86_400_000);
+  const before = new Date(
+    now.getTime() - SYSTEM_LOG_RETENTION_DAYS * 86_400_000,
+  );
   const { count } = await prisma.systemLogEntry.deleteMany({
     where: { at: { lt: before } },
   });

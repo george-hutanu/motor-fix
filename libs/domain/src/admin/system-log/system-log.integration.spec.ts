@@ -267,16 +267,23 @@ describe('personal data', () => {
   });
 });
 
-// @traces 297-FR-005
+// @traces 297-FR-005 299-FR-019
 describe('the live nudge', () => {
-  it('tells only the admins about a new entry, with its id, kind and time', async () => {
+  it('tells only the admins about a new entry, with its id, time, kind, severity and source', async () => {
     await systemLog.write('deploy', 'worker', { version: 'a1b2c3d' }, at);
     await settle();
     const [row] = await rows();
     expect(heard).toEqual([
       {
         audience: ['admin'],
-        event: { at: at.toISOString(), id: row?.id, kind: 'system_log.added' },
+        event: {
+          at: at.toISOString(),
+          entryKind: 'deploy',
+          id: row?.id,
+          kind: 'system_log.added',
+          severity: 'info',
+          source: 'worker',
+        },
       },
     ]);
   });

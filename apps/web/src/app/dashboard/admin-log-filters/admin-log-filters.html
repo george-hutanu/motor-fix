@@ -1,0 +1,25 @@
+<form class="search" role="search" (submit)="$event.preventDefault()" [attr.aria-label]="'admin.log.view.search' | t">
+  <svg class="glass" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+    <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" />
+    <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+  </svg>
+  <input
+    type="search"
+    autocomplete="off"
+    [attr.maxlength]="max"
+    [placeholder]="'admin.log.view.search' | t"
+    [attr.aria-label]="'admin.log.view.search' | t"
+    [value]="text()"
+    (input)="type($any($event.target).value)"
+  />
+</form>
+<mf-log-pickers class="wide" [choice]="choice()" (chosen)="choose($event)" />
+<button type="button" class="filter" [attr.aria-label]="buttonName()" (click)="openSheet()">
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+    <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+  </svg>
+  <span>{{ 'admin.log.view.filters.button' | t }}</span>
+  @if (set() > 0) {
+    &ngsp;<span class="count" aria-hidden="true">{{ set() }}</span>
+  }
+</button>

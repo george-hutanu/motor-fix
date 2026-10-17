@@ -39,6 +39,10 @@ const FIXTURES: Record<
     path: async () =>
       '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
   },
+  'GET /api/v1/admin/system-log': {
+    path: async () =>
+      `/api/v1/admin/system-log?from=${new Date(Date.now() - 86_400_000).toISOString()}`,
+  },
   'GET /api/v1/admin/verification-files/{id}': {
     path: async () => `/api/v1/admin/verification-files/${await submitted()}`,
   },

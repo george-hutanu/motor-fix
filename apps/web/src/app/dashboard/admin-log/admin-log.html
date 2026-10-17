@@ -14,19 +14,7 @@
   } @else if (lines().length === 0) {
     <p class="empty">{{ 'admin.log.empty' | t }}</p>
   } @else {
-    <ol>
-      @for (line of lines(); track line.id) {
-        <li>
-          <time [attr.datetime]="line.at">{{ line.clock }}</time>
-          <span class="entry">
-            <mf-lamp [state]="line.lamp" [label]="line.word" />
-            <span class="text">{{ line.text }}</span>
-            @if (line.count; as count) {
-              <span class="count"><span aria-hidden="true">{{ count.mark }}</span><span class="sr-only">{{ count.words }}</span></span>
-            }
-          </span>
-        </li>
-      }
-    </ol>
+    <mf-log-lines [lines]="lines()" />
   }
+  <a class="all" routerLink="/app/admin/log">{{ 'admin.log.all' | t }}</a>
 </section>

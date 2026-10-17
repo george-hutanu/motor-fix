@@ -178,13 +178,20 @@ describe('DashboardTabBar on the admin dashboard', () => {
 
     expect(
       tabs(element).map((a) => a.querySelector('.label')?.textContent?.trim()),
-    ).toEqual(['Panou', 'Service‑uri', 'Utilizatori', 'Mărci', 'Setări']);
+    ).toEqual([
+      'Panou',
+      'Service‑uri',
+      'Utilizatori',
+      'Mărci',
+      'Jurnal',
+      'Setări',
+    ]);
   });
 
   it('puts the count on the garages tab and on no other', async () => {
     const { element } = await openAdmin(4);
 
-    expect(chips(element)).toEqual([null, '4', null, null, null]);
+    expect(chips(element)).toEqual([null, '4', null, null, null, null]);
     expect(tabs(element)[1]?.hasAttribute('aria-label')).toBe(false);
     expect(spoken(tabs(element)[1])).toBe('Service‑uri 4 în așteptare');
   });
@@ -192,12 +199,12 @@ describe('DashboardTabBar on the admin dashboard', () => {
   it('shows no count at zero, nor while the count is unknown', async () => {
     const { element, harness, host } = await openAdmin(0);
 
-    expect(chips(element)).toEqual([null, null, null, null, null]);
+    expect(chips(element)).toEqual([null, null, null, null, null, null]);
     expect(tabs(element)[1]?.hasAttribute('aria-label')).toBe(false);
     expect(spoken(tabs(element)[1])).not.toMatch(/așteptare|waiting/);
     host.counts.set({});
     harness.detectChanges();
-    expect(chips(element)).toEqual([null, null, null, null, null]);
+    expect(chips(element)).toEqual([null, null, null, null, null, null]);
   });
 
   it('caps the chip at 99+ and keeps the full count in the name', async () => {
