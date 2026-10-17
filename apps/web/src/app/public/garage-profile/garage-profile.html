@@ -90,6 +90,9 @@
     <section data-slot="brands"></section>
     <section data-slot="mechanics"></section>
     <section data-slot="prices" mf-prices-section [garage]="garage"></section>
+    @if (garage.prices.length) {
+      <section mf-estimate-section [garage]="garage"></section>
+    }
     <section data-slot="reviews"></section>
     <section data-slot="where"></section>
   </div>

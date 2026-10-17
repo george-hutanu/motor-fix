@@ -75,6 +75,7 @@
           formControlName="description"
           [maxLength]="max"
           aria-describedby="mf-quote-description-hint mf-quote-description-error"
+          [attr.autofocus]="describeFirst ? '' : null"
         ></textarea>
         <div class="under">
           <p class="note" id="mf-quote-description-hint">{{ 'public.requestQuote.descriptionHint' | t }}</p>

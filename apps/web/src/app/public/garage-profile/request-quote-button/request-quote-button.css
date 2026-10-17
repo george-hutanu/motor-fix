@@ -39,3 +39,17 @@ p {
     width: 100%;
   }
 }
+/* The estimate box's button: full width, with a trailing arrow nobody hears. */
+:host(.wide) .request {
+  justify-items: stretch;
+}
+:host(.wide) button::after {
+  content: "→" / "";
+  margin-left: var(--mf-space-2);
+}
+/* On a 320 px phone the arrow would push the label onto a second line. */
+@media (max-width: 359.98px) {
+  :host(.wide) button::after {
+    content: none;
+  }
+}

@@ -33,7 +33,7 @@ const row = (
   ...extra,
 });
 
-// @traces 357-public-price-jobs-FR-001
+// @traces 357-FR-001
 describe('priceListJobs edge inputs for the public rule', () => {
   it('treats an empty-string RAR activity on the job as no activity', () => {
     const [item] = priceListJobs([row(job('approved', ''))], ['B']);
@@ -62,7 +62,7 @@ describe('priceListJobs edge inputs for the public rule', () => {
   });
 });
 
-// @traces 357-public-price-jobs-FR-002
+// @traces 357-FR-002
 describe('priceListJobs reason precedence over all combinations', () => {
   it('gives rejected over every other failing condition', () => {
     const [item] = priceListJobs(
@@ -97,7 +97,7 @@ describe('priceListJobs reason precedence over all combinations', () => {
   });
 });
 
-// @traces 357-public-price-jobs-FR-003
+// @traces 357-FR-003
 describe('priceListJobs brand rows', () => {
   it('ignores any number of brand rows, hidden or incomplete, beside a complete default', () => {
     const j = job();
@@ -153,7 +153,7 @@ describe('priceListJobs brand rows', () => {
   });
 });
 
-// @traces 357-public-price-jobs-FR-007
+// @traces 357-FR-007
 describe('priceListJobs item shape', () => {
   it('has no reason key on a public item', () => {
     const [item] = priceListJobs([row(job())], []);
@@ -186,7 +186,7 @@ describe('priceListJobs item shape', () => {
   });
 });
 
-// @traces 357-public-price-jobs-FR-006
+// @traces 357-FR-006
 describe('priceListJobs ordering', () => {
   it('breaks equal positions by row id regardless of input order', () => {
     const a = job();

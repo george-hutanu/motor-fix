@@ -1,13 +1,13 @@
 @if (shown()) {
   <div class="request">
-    <button hlmBtn type="button" [disabled]="refusedBrand() !== null" [attr.aria-describedby]="refusedBrand() ? 'mf-quote-refused' : null" (click)="open()">
-      {{ 'public.requestQuote.button' | t }}
+    <button hlmBtn type="button" [disabled]="refusedBrand() !== null" [attr.aria-describedby]="refusedBrand() ? noteId() : null" (click)="open()">
+      {{ textKey() | t }}
     </button>
     @if (refusedBrand(); as brand) {
-      <p class="note" id="mf-quote-refused">{{ 'public.garageProfile.refuses' | t: { brand } }}</p>
+      <p class="note" [id]="noteId()">{{ 'public.garageProfile.refuses' | t: { brand } }}</p>
     }
     @if (sent()) {
-      <p class="sent" role="status"><span class="dot" aria-hidden="true"></span>{{ line() }}</p>
+      <p class="sent" [attr.role]="announce() ? 'status' : null"><span class="dot" aria-hidden="true"></span>{{ line() }}</p>
       <a class="link" routerLink="/app/driver/requests">{{ 'public.requestQuote.seeRequests' | t }}</a>
     }
   </div>
