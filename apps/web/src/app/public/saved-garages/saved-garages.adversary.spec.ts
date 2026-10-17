@@ -349,3 +349,52 @@ describe('a visitor and the kept garage', () => {
     expect(sessionStorage.getItem('mf-pending-save')).toBeNull();
   });
 });
+
+// @traces 290-FR-011 290-FR-013 290-FR-014
+describe('review fixes', () => {
+  it('shares one ids read between two loads that overlap', async () => {
+    const saved = await store({ role: 'driver' });
+    const read = pending();
+    api.savedGaragesControllerIds.mockReturnValueOnce(read.promise);
+
+    const first = saved.load();
+    const second = saved.load();
+    await settle();
+    const saving = saved.tap('g1');
+    read.answer({ ids: [] });
+    await Promise.all([first, second, saving]);
+
+    expect(api.savedGaragesControllerIds).toHaveBeenCalledTimes(1);
+    expect(saved.ids().has('g1')).toBe(true);
+  });
+
+  it('sends no undo save when a tap saved the garage again first', async () => {
+    const saved = await store({ role: 'driver', saved: ['g1'] });
+    await saved.load();
+    await saved.tap('g1');
+    await saved.tap('g1');
+    api.savedGaragesControllerSave.mockClear();
+
+    undoOf()();
+    await settle();
+
+    expect(api.savedGaragesControllerSave).not.toHaveBeenCalled();
+    expect(saved.ids().has('g1')).toBe(true);
+  });
+
+  it.each([
+    ['the hint', null, 'garage'],
+    ['the session', 'garage', null],
+  ] as const)(
+    'forgets a kept tap when %s brings back a garage-side role',
+    async (_title, role, hint) => {
+      sessionStorage.setItem('mf-pending-save', 'g1');
+      const saved = await store({ hint, role });
+
+      await saved.load();
+
+      expect(sessionStorage.getItem('mf-pending-save')).toBeNull();
+      expect(api.savedGaragesControllerSave).not.toHaveBeenCalled();
+    },
+  );
+});

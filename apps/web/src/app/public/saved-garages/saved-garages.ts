@@ -53,14 +53,23 @@ export class SavedGarages {
   private readonly inFlight = new Set<string>();
   // Garages tapped while an ids read is out: its answer predates the tap.
   private touched: Set<string> | null = null;
+  private reading: Promise<void> | null = null;
   private bar: string | number | null = null;
 
   // Once per route activation. A visitor's page asks nobody; a browser last
   // seen as a driver confirms its session first.
   async load(): Promise<void> {
     const role = this.session.current()?.role ?? this.session.roleHint();
-    if (role !== 'driver') return;
-    if ((await this.session.load())?.role !== 'driver') return;
+    // A tap kept for a sign-in that brought back another role saves nothing,
+    // now or after a later driver sign-in in this tab.
+    if (role !== 'driver') {
+      if (role) keep(null);
+      return;
+    }
+    if ((await this.session.load())?.role !== 'driver') {
+      keep(null);
+      return;
+    }
     await this.read();
     const kept = pending();
     if (!kept) return;
@@ -97,7 +106,15 @@ export class SavedGarages {
     if (!this.ids().has(garageId)) await this.save(garageId);
   }
 
-  private async read() {
+  // One read at a time: a second caller shares the one that is out.
+  private read(): Promise<void> {
+    this.reading ??= this.readIds().finally(() => {
+      this.reading = null;
+    });
+    return this.reading;
+  }
+
+  private async readIds() {
     const touched = new Set<string>();
     this.touched = touched;
     try {
@@ -111,7 +128,7 @@ export class SavedGarages {
     } catch {
       // The controls stay unsaved and usable; a tap tells the truth.
     } finally {
-      if (this.touched === touched) this.touched = null;
+      this.touched = null;
     }
   }
 
@@ -180,6 +197,8 @@ export class SavedGarages {
     } catch {
       return;
     }
+    // A tap saved it again meanwhile: that save stands.
+    if (this.inFlight.has(garageId) || this.ids().has(garageId)) return;
     await this.save(garageId, row?.savedAt, false);
   }
 

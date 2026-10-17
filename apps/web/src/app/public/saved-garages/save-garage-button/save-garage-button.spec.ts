@@ -12,6 +12,7 @@ type Role = MeDto['role'];
 let ids: ReturnType<typeof signal<ReadonlySet<string>>>;
 let unavailable: ReturnType<typeof signal<ReadonlySet<string>>>;
 let tap: jest.Mock;
+let renew: jest.Mock;
 
 async function render(
   options: {
@@ -26,6 +27,7 @@ async function render(
   ids = signal(new Set(options.saved ? ['g1'] : []));
   unavailable = signal(new Set(options.unavailable ? ['g1'] : []));
   tap = jest.fn(async () => undefined);
+  renew = jest.fn(async () => true);
   TestBed.configureTestingModule({
     providers: [
       { provide: SavedGarages, useValue: { ids, tap, unavailable } },
@@ -33,7 +35,7 @@ async function render(
         provide: Session,
         useValue: {
           current: signal(options.role ? { role: options.role } : null),
-          renew: jest.fn(async () => true),
+          renew,
           roleHint: signal(options.hint ?? null),
         },
       },
@@ -143,4 +145,23 @@ describe('who sees the button', () => {
       expect(button(hinted.host)).toBeNull();
     },
   );
+});
+
+// @traces 290-FR-014
+describe('a role last seen in this browser', () => {
+  it('renews the session once for a garage-side hint, to confirm or clear it', async () => {
+    await render({ hint: 'garage' });
+
+    expect(renew).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['a driver hint', null, 'driver'],
+    ['no hint', null, null],
+    ['a signed-in garage role', 'garage', 'garage'],
+  ] as const)('asks nobody with %s', async (_title, role, hint) => {
+    await render({ hint, role });
+
+    expect(renew).not.toHaveBeenCalled();
+  });
 });
