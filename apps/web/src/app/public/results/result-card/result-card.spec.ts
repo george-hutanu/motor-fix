@@ -366,4 +366,12 @@ describe('the bookmark on a card', () => {
     expect(save?.closest('a')).toBeNull();
     expect(save?.textContent?.trim()).toBe('');
   });
+
+  it("sits in the card's top-right corner, not in the rating row", async () => {
+    const card = await render(garageOf());
+
+    const article = card.querySelector('article.card');
+    expect(article?.lastElementChild?.tagName).toBe('MF-SAVE-GARAGE-BUTTON');
+    expect(card.querySelector('.score mf-save-garage-button')).toBeNull();
+  });
 });

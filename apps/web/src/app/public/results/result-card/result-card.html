@@ -18,7 +18,6 @@
           <span class="sr-only">{{ rated }}</span>
         }
         <span class="reviews">{{ reviews() }}</span>
-        <mf-save-garage-button look="icon" [garageId]="garage().id" />
       </div>
     </div>
     <mf-lamp [state]="takes() ? 'green' : 'red'" [label]="stance()" />
@@ -40,4 +39,5 @@
       }
     </div>
   </div>
+  <mf-save-garage-button class="bookmark" look="icon" [garageId]="garage().id" />
 </article>

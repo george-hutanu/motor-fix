@@ -17,6 +17,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -45,6 +46,7 @@ export class SavedGaragesController {
 
   @Put(':garageId')
   @ApiOperation({ summary: "Save an approved garage on the caller's account" })
+  @ApiBody({ required: false, type: SaveGarageDto })
   @ApiCreatedResponse({ description: 'Saved now', type: SavedGarageDto })
   @ApiOkResponse({
     description: 'Saved already; nothing changed',

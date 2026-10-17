@@ -12,7 +12,7 @@ import { SaveGarageDto } from '../../models/save-garage-dto';
 
 export interface SavedGaragesControllerSave$Params {
   garageId: string;
-      body: SaveGarageDto
+      body?: SaveGarageDto
 }
 
 export function savedGaragesControllerSave(http: HttpClient, rootUrl: string, params: SavedGaragesControllerSave$Params, context?: HttpContext): Observable<StrictHttpResponse<SavedGarageDto>> {
