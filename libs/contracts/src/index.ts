@@ -18,6 +18,7 @@ export * from './garage-reports';
 export * from './garage-search.dto';
 export * from './garage-settings.dto';
 export * from './garage-status';
+export * from './garage-suspension.dto';
 export * from './garages.dto';
 export * from './health.dto';
 export * from './home.dto';

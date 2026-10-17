@@ -302,7 +302,11 @@ export class Frame implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((message) => {
         if (message.kind === 'live.test') this.lastTest.set(message.at);
-        if (message.kind === 'account.email_confirmed') {
+        // A suspension changes what the garage's dashboard shows.
+        if (
+          message.kind === 'account.email_confirmed' ||
+          message.kind === 'garage.suspended'
+        ) {
           void this.session.reload();
         }
         if (message.kind === 'session.revoked') void this.sessionsEnded();

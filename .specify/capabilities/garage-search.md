@@ -12,6 +12,7 @@ features:
   - 1182-cache-service
   - 1169-prefetch-intent
   - 290-save-garage
+  - 049-garage-suspension
 ---
 
 # Capability: Garage search
@@ -183,6 +184,9 @@ _From 1169-prefetch-intent._
 ### 290-FR-010 — Each result card on the results page, list and map (267-FR-014), MUST show the same control as an icon-only bookmark button (accessible name "Salvează" / "Salvat", outline or filled), for a signed-in driver or a visitor, absent in the other roles; tapping it MUST not open the card's profile link.
 
 _From 290-save-garage._
+### 049-FR-006 — Every public read MUST keep going through the one public scope (`status = approved`), so a suspended garage is in neither group and neither count of the brand search (043-FR-002), absent from the brand pages' counts and dials, answers 410 `gone` on its profile (307-FR-001) and is never a recipient of request routing (221-FR-007). This story adds no new read and MUST prove the rule with tests on a garage suspended through the use case.
+
+_From 049-garage-suspension._
 
 ## Retired
 

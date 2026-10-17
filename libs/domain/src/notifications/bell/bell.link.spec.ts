@@ -41,6 +41,7 @@ const REQUEST_KINDS = [
   'MEDIA_ADDED',
   'MEDIA_REMOVED',
 ];
+const GARAGE_KINDS = ['GARAGE_SUSPENDED'];
 const REVIEW_KINDS = [
   'REVIEW_INVITE',
   'REVIEW_REPLIED',
@@ -71,9 +72,16 @@ describe('the view a bell row opens', () => {
     );
   });
 
+  // @traces 049-FR-011
+  it.each(GARAGE_KINDS)('opens %s on the garage dashboard', (kind) => {
+    expect(
+      bellLink({ kind, params: { link: requestLink }, subjectId: CAR }),
+    ).toBe('/app/garage');
+  });
+
   it('maps exactly the kinds named, each one a catalogue type', () => {
     expect(Object.keys(VIEW_OF_KIND).sort()).toEqual(
-      [...CAR_KINDS, ...REQUEST_KINDS, ...REVIEW_KINDS].sort(),
+      [...CAR_KINDS, ...REQUEST_KINDS, ...REVIEW_KINDS, ...GARAGE_KINDS].sort(),
     );
     for (const kind of Object.keys(VIEW_OF_KIND))
       expect(Object.hasOwn(NOTIFICATION_TYPES, kind)).toBe(true);

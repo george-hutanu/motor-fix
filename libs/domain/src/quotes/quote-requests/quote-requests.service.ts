@@ -46,7 +46,8 @@ const invalid = (field: string, code: string, message: string) =>
   ]);
 
 // An id no garage holds reads as a garage not taking requests, with no name,
-// so the answer never tells an existing garage from a missing one.
+// so the answer never tells an existing garage from a missing one. A
+// suspended garage was public, so naming it hides nothing: it answers 409.
 function cannotReceive(
   garageId: string,
   garageName: string,
@@ -60,7 +61,12 @@ function cannotReceive(
       message: 'A garage of the request cannot receive it',
       reason,
     };
-  return new HttpException(body, HttpStatus.BAD_REQUEST);
+  return new HttpException(
+    body,
+    reason === 'garage_suspended'
+      ? HttpStatus.CONFLICT
+      : HttpStatus.BAD_REQUEST,
+  );
 }
 
 // What the body must hold beyond its own field rules.
@@ -158,6 +164,7 @@ function refusedFor(
   fuel: Fuel,
   jobTypeIds: string[],
 ): CannotReceiveReason | null {
+  if (garage.status === 'suspended') return 'garage_suspended';
   if (garage.status !== 'approved') return 'not_taking_requests';
   const [row] = garage.brands;
   if (row?.stance !== 'works_on') return 'brand';

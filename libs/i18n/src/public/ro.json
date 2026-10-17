@@ -539,6 +539,7 @@
     "cannotReceive": {
       "brand": "{garage} nu lucrează pe {brand}.",
       "fuel": "{garage} nu lucrează pe {fuel} la {brand}.",
+      "garage_suspended": "{garage} nu mai primește cereri.",
       "jobs": "{garage} nu face lucrările cerute la {brand}.",
       "not_taking_requests": "{garage} nu primește cereri acum."
     },

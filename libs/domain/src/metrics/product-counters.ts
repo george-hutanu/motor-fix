@@ -1,4 +1,4 @@
-import type { DocumentKind } from '@motor-fix/contracts';
+import type { DocumentKind, SuspensionCause } from '@motor-fix/contracts';
 import { type Counter, metrics } from '@opentelemetry/api';
 
 // The product's key numbers, one counter each; a process that never starts
@@ -46,6 +46,13 @@ export function countApproval(outcome: ApprovalOutcome) {
   ).add(1, { outcome });
 }
 
+export function countGarageSuspension(cause: SuspensionCause) {
+  counter(
+    'motorfix_garage_suspensions_total',
+    'Garages taken off the map, by cause',
+  ).add(1, { cause });
+}
+
 export function countQuote() {
   counter('motorfix_quotes_total', 'Quotes sent to drivers').add(1);
 }
@@ -84,6 +91,15 @@ export function countVerificationResult(outcome: 'built' | 'skipped') {
   counter(
     'motorfix_verification_result_total',
     'Verification decisions told to garage owners, by outcome',
+  ).add(1, { outcome });
+}
+
+// A suspension told to the garage's owners, or one with nobody or nothing
+// to tell.
+export function countGarageSuspendedNotice(outcome: 'built' | 'skipped') {
+  counter(
+    'motorfix_garage_suspended_notices_total',
+    'Garage suspensions told to garage owners, by outcome',
   ).add(1, { outcome });
 }
 
