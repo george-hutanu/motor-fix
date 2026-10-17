@@ -80,7 +80,7 @@ export class InvitePage implements OnInit {
     this.failed.set(false);
     this.state.set('accepting');
     try {
-      if (!(await this.session.load())) {
+      if (!(await this.session.load({ keepLanguage: true }))) {
         const joined = await this.dialog.join({
           email: invite.email,
           name: invite.name,

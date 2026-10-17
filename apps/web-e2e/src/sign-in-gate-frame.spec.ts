@@ -51,6 +51,12 @@ async function sessionEndsWhileWorking(page: Page) {
   await page.route(/\/api\/v1\/(cars|requests)(\?.*)?$/, (route) =>
     route.fulfill({ json: { items: [] } }),
   );
+  // Panou reads the saved garages on load: none saved.
+  await page.route(/\/api\/v1\/me\/saved-garages(\?.*)?$/, (route) =>
+    route.fulfill({
+      json: { items: [], nextCursor: null, total: 0, workingCount: 0 },
+    }),
+  );
   await page.route('**/api/v1/auth/sign-in', (route) => {
     signedIn = true;
     return route.fulfill({ json: { accessToken: 'after-sign-in' } });

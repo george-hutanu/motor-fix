@@ -58,7 +58,7 @@ export class PublicFrame {
       .subscribe(() => {
         this.onResults.set(this.isResults());
         if (router.currentNavigation()?.extras.state?.['signIn']) {
-          void this.signIn.start();
+          void this.signIn.start({ signedOut: true });
         }
       });
   }

@@ -66,7 +66,7 @@ export class SavedGarages {
       if (role) keep(null);
       return;
     }
-    if ((await this.session.load())?.role !== 'driver') {
+    if ((await this.session.load({ keepLanguage: true }))?.role !== 'driver') {
       keep(null);
       return;
     }
@@ -91,7 +91,7 @@ export class SavedGarages {
     try {
       // A page opened by its address has not loaded the session yet:
       // someone signed in is not asked to sign in again.
-      if (!(await this.session.load())) {
+      if (!(await this.session.load({ keepLanguage: true }))) {
         keep(garageId);
         const signed = await this.signIn.gate();
         keep(null);
@@ -154,7 +154,8 @@ export class SavedGarages {
     }
   }
 
-  private async remove(garageId: string) {
+  // Also the dashboard list's remove button: the same bar and undo.
+  async remove(garageId: string) {
     this.inFlight.add(garageId);
     this.touched?.add(garageId);
     this.ids.update((ids) => without(ids, garageId));

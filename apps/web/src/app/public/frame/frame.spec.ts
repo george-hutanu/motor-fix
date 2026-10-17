@@ -97,6 +97,18 @@ describe('the public site bar', () => {
     expect(signIn.start).toHaveBeenCalledTimes(2);
   });
 
+  // @traces 1345-FR-006
+  it('opens the sign-in dialog without asking for the session again after a dashboard sent the visitor here', async () => {
+    await open('/ro');
+
+    await TestBed.inject(Router).navigateByUrl('/ro', {
+      onSameUrlNavigation: 'reload',
+      state: { signIn: true },
+    });
+
+    expect(signIn.start).toHaveBeenCalledWith({ signedOut: true });
+  });
+
   it('names its links in English on an English page', async () => {
     await open('/en', 'en');
 

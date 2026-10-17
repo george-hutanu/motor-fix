@@ -31,6 +31,14 @@ Locally, `docker compose --profile observability up -d otel-lgtm` runs
 `grafana/otel-lgtm`: Grafana on `${GRAFANA_PORT:-3300}` (clear of the api's
 3000), OTLP on 4317 and 4318. Without the profile compose starts what it always has.
 
+Two start-up warnings name a variable that leaves a dashboard empty; each is
+one `warn` JSON line and one OTel WARN record, so it shows in Loki:
+
+| Warning | Logged by | Set |
+|---|---|---|
+| `datastore metrics: MONITOR_DATABASE_URL unset, PostgreSQL readings off` | the worker, its only reader | `MONITOR_DATABASE_URL` (the monitoring role) on the worker |
+| `browser telemetry off: FARO_URL unset` | the web server, only while its own telemetry is on | `FARO_URL` on the web |
+
 ## The web app and the browser
 
 The web server is a service like the others (`service.name` `web`): request
@@ -111,13 +119,38 @@ it lasts) and staging more quietly (5 minutes, then once a day). No route
 carries a mute or active time interval: an alert reaches the owner at any
 hour, and the spec fails on one.
 
-| Service | Signals (the file holds each threshold) |
-|---|---|
-| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time, memory over 85% of the container's limit (`api-memory`, `web-memory`); api also the garage search p95 over 300 ms for 10 minutes (`api-search-latency`) |
-| worker | down, event-loop delay, oldest waiting job per queue, waiting jobs growing for 15 minutes per queue (`worker-queue-growing`), a job's final failure per queue (`verification-result` keeps its own rule), memory (`worker-memory`) |
-| mcp | memory (`mcp-memory`, in `mcp.json`) beside its own signals |
-| PostgreSQL | unreachable, connections used, database size, the oldest outbox event waiting more than 60 s for 5 minutes (`postgres-outbox-stuck`) |
-| Redis | unreachable, memory used, connected clients |
+| Service | Signals (the file holds each threshold) | No data |
+|---|---|---|
+| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time, memory over 85% of the container's limit (`api-memory`, `web-memory`); api also the garage search p95 over 300 ms for 10 minutes (`api-search-latency`) | OK |
+| worker | down, event-loop delay, oldest waiting job per queue, waiting jobs growing for 15 minutes per queue (`worker-queue-growing`), a job's final failure per queue (`verification-result` keeps its own rule), memory (`worker-memory`) | `worker-queue-backlog` alerts |
+| mcp | memory (`mcp-memory`, in `mcp.json`) beside its own signals | OK |
+| PostgreSQL | unreachable, connections used, database size, the oldest outbox event waiting more than 60 s for 5 minutes (`postgres-outbox-stuck`) | `postgres-unreachable` alerts |
+| Redis | unreachable, memory used, connected clients | `redis-unreachable` alerts |
+
+Those three read a gauge that is always reported while its source is up
+(the oldest waiting age starts at 0), so a missing series means the reading
+stopped: they alert within about 11 minutes of the last sample (5 minutes of
+staleness, the rule's 5 minutes, one evaluation). Every other rule keeps
+`noDataState: OK`: a rate or share over no requests is rightly empty, the
+`down` rules express absence themselves, and the threshold rules on the same
+stores are covered by the unreachable ones.
+
+The event-loop delay is the instrumentation's own p99, sampled every 10 ms;
+the two live streams (`/api/v1/live`, `/api/v1/live/public`) are neither
+traced nor in the HTTP duration histograms, so the p95 panels and rules read
+requests only.
+
+`motorfix_queue_failed_total` carries `service_version` like every metric:
+Grafana Cloud promotes the `service.version` resource attribute onto each
+one, and the version panels read it from `target_info`, so it stays on the
+resource. Leaving it off one metric would need a second meter provider; the
+metric's one reader, the queues dashboard, sums it with `max by (queue)`.
+
+The `notifications` queue holds one failed job by design: the send job keeps
+its last 1000 final failures (`removeOnFail: 1000`). That one failed before
+telemetry reached Grafana (the gauge read 1 from its first sample on
+2026-10-09, with no failure or retry counted since); which job it is can be
+read only in the staging Redis.
 
 The "Grafana alerts" workflow (`.github/workflows/grafana-alerts.yml`) applies
 every file on a push to `main` that changes one, and by hand
@@ -168,6 +201,27 @@ Set up by hand in Grafana Cloud, once per stack (nothing here calls its API):
 A failed nightly backup run (`.github/workflows/backup.yml`) is the backup
 alert: GitHub e-mails the owner about the failed run.
 
+## Product counters
+
+Every product counter starts at 0 for each of its label combinations when
+its process starts (`initProductCounters` in
+`libs/domain/src/metrics/product-counters.ts`), so a panel shows 0 rather
+than no data, and the Error % panels read `or vector(0)` for the same
+reason. Each process starts only the series it writes.
+
+Three counters cannot fire on staging today, and are kept at 0 until the
+stories that reach them:
+
+- `motorfix_garage_approvals_total` and `motorfix_verification_result_total`
+  count the verification decision, which only the automatic approval reaches,
+  and that holds only under `APP_ENV=test`; no admin approve or reject
+  endpoint exists yet.
+- `motorfix_documents_opened_total` counts the admin document download
+  address, which no web screen calls yet.
+
+`motorfix_decline_windows_closed_total` fires on a real decline, from the
+worker's sweep or the garage's own decline.
+
 ## Inventory
 
 `inventory.json` lists every app, Railway service, queue and outside service
@@ -201,9 +255,26 @@ Rules that keep it there:
   storage figures add at most 150 series per environment, every label value in
   use (`libs/observability/src/datastores/series.spec.ts` holds the ceiling);
   slow statements are WARN log records, never labels.
-- **Product counters.** The `motorfix_*` counters add fewer than 60 series
-  per instance, one e-mail series per template key included
-  (`libs/domain/src/metrics/product-counters.spec.ts` holds the ceiling); a
-  story that passes it cuts a label before raising it.
+- **Product counters.** The `motorfix_*` counters add fewer than 100 series
+  per process, one e-mail series per template key included, the seven
+  product counters fewer than 50 (`libs/domain/src/metrics/product-counters*.spec.ts`
+  hold the ceilings); a story that passes one cuts a label before raising it.
 - Check usage in Grafana Cloud's billing dashboard when a story adds a signal;
   past half of any limit, cut before adding.
+
+## Owner steps
+
+Set in Railway by the owner; their values are never read, printed or
+committed by the repo or its agents:
+
+1. `MONITOR_DATABASE_URL` (the monitoring role) on the staging worker, and
+   on production's when it is back. Until then `postgres-unreachable` fires
+   on no data, as it should.
+2. `FARO_URL` on the staging web, only once the analytics consent gate
+   ships (the owner's decision, 2026-10-17). Until then it stays unset: the
+   Web Vitals dashboard is empty, as expected, and the web warns once at
+   start-up.
+3. `GEOAPIFY_API_KEY` on the staging worker (its `address search off`
+   warning says so).
+4. Optional: read the `notifications` queue's one failed job in the staging
+   Redis, if which job it was matters.

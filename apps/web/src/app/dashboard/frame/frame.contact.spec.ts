@@ -58,6 +58,7 @@ async function render(
           current: account,
           ended: new Subject<void>(),
           shown: account,
+          token: () => 'access',
         },
       },
       {

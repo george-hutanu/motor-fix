@@ -1,5 +1,5 @@
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
-import { Public } from '@motor-fix/domain';
+import { MAINTENANCE, Public } from '@motor-fix/domain';
 import {
   Body,
   Controller,
@@ -100,7 +100,12 @@ async function start(appEnv = 'test') {
   const moduleRef = await Test.createTestingModule({
     controllers: [ThingController],
     imports: [AppModule.register(config)],
-  }).compile();
+  })
+    // These are the error conventions, not maintenance: another spec on the
+    // same database may switch maintenance on while this one runs.
+    .overrideProvider(MAINTENANCE)
+    .useValue({ on: async () => false, set: async () => undefined })
+    .compile();
   const app = moduleRef.createNestApplication({ bufferLogs: true });
   configureApp(app, config);
   await app.init();

@@ -622,7 +622,9 @@ test.describe('the growth panel', () => {
     ['a 320 px phone', 320, 640, false],
     ['a 390 px phone', 390, 844, false],
     ['a 768 px tablet', 768, 1024, true],
-    ['a desktop', 1280, 800, true],
+    // From 1024 px the growth panel shares its row with the brand-demand
+    // panel, so its two charts stack again.
+    ['a desktop', 1280, 800, false],
   ] as const) {
     test(`${side ? 'sets the charts side by side' : 'stacks the charts'} on ${device}, with no sideways scroll`, async ({
       page,

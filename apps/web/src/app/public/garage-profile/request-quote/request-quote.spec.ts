@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import {
@@ -19,7 +19,9 @@ import {
   type RequestQuoteResult,
 } from './request-quote';
 import { Consent } from '../../../consent/consent';
+import { Session } from '../../../dashboard/session';
 import { PlaceStore } from '../../../home/place/place-store';
+import { SignInDialog } from '../../../sign-in/sign-in-dialog';
 
 @Component({ template: '' })
 class Host {
@@ -124,6 +126,7 @@ let send: jest.Mock;
 let nearby: jest.Mock;
 let onSent: jest.Mock;
 let track: jest.Mock;
+let gate: jest.Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -143,9 +146,13 @@ async function open(
     language?: 'ro' | 'en';
     garage?: PublicGarageDto;
     reply?: RequestDto;
+    token?: string | null;
+    hint?: 'driver' | null;
+    signsIn?: boolean;
   } = {},
 ) {
   list = jest.fn(async () => ({ items: options.cars ?? [LOGAN] }));
+  gate = jest.fn(async () => options.signsIn ?? false);
   send = jest.fn(async () => options.reply ?? sent([GARAGE.name]));
   nearby = jest.fn(async () => ({ items: options.candidates ?? [] }));
   onSent = jest.fn();
@@ -154,6 +161,14 @@ async function open(
     providers: [
       provideRouter([]),
       { provide: Consent, useValue: { track } },
+      {
+        provide: Session,
+        useValue: {
+          roleHint: signal(options.hint ?? null),
+          token: () => (options.token === undefined ? 'access' : options.token),
+        },
+      },
+      { provide: SignInDialog, useValue: { gate } },
       { provide: CarsService, useValue: { carsControllerList: list } },
       {
         provide: QuoteRequestsService,
@@ -440,6 +455,41 @@ describe('the quote request dialog', () => {
     );
     expect(jobSwitch('Oil change')).toBeDefined();
     expect(button('Send')).toBeDefined();
+  });
+});
+
+// @traces 1345-FR-007
+describe('the quote request dialog for a visitor with no session', () => {
+  it('asks the visitor to sign in before loading their cars, then loads them once', async () => {
+    await open({ signsIn: true, token: null });
+
+    expect(gate).toHaveBeenCalledTimes(1);
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(gate.mock.invocationCallOrder[0]).toBeLessThan(
+      list.mock.invocationCallOrder[0],
+    );
+    expect(select().value).toBe(LOGAN.id);
+  });
+
+  it('shows the cars that could not load, with no call, when the sign-in is dismissed', async () => {
+    await open({ signsIn: false, token: null });
+
+    expect(list).not.toHaveBeenCalled();
+    expect(text()).toContain('Nu am putut încărca mașinile tale.');
+  });
+
+  it('loads the cars at once with a token', async () => {
+    await open({ token: 'access' });
+
+    expect(gate).not.toHaveBeenCalled();
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads the cars at once with a stored role hint and no token', async () => {
+    await open({ hint: 'driver', token: null });
+
+    expect(gate).not.toHaveBeenCalled();
+    expect(list).toHaveBeenCalledTimes(1);
   });
 });
 

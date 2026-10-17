@@ -44,6 +44,7 @@ async function render(language: 'ro' | 'en' = 'ro') {
     reload: jest.fn(async () => undefined),
     shown: current,
     signOut: jest.fn(),
+    token: () => 'access',
   };
   TestBed.configureTestingModule({
     providers: [

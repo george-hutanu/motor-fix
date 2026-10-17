@@ -35,7 +35,7 @@ export interface DashboardView {
   empty?: string;
   // ...or, for a view whose story says what it shows with nothing yet, its
   // empty state: the icon, the text and, if any, the label of a link to Home.
-  emptyState?: { icon: EmptyIcon; text: string; action?: string };
+  emptyState?: { icon: EmptyIcon; text: string };
   // The view's body carries this device's push panel.
   push?: boolean;
   // ...and, under it, the person's staff notification choices.
@@ -186,12 +186,11 @@ export const DASHBOARDS: Record<
       },
       {
         capability: 'driver.saved_garages',
-        emptyState: {
-          action: 'driver.empty.findOthers',
-          icon: 'bookmark',
-          text: 'driver.empty.saved',
-        },
         label: 'shell.frame.nav.driver.savedGarages',
+        load: () =>
+          import('./saved-garages/saved-garages-view/saved-garages-view').then(
+            (m) => m.SavedGaragesView,
+          ),
         path: 'saved',
         tab: 'shell.frame.tab.saved',
         title: 'shell.frame.title.driver.saved',

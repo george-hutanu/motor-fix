@@ -37,12 +37,21 @@ const centreOf = ({ south, west, north, east }: SearchBbox) => ({
 });
 
 // Haversine on a sphere of the Earth's mean radius: within a metre of the
-// ellipsoid at these distances, and it needs no PostGIS extension. Distances
-// run from the place, else the box's centre, else Romania's. A mobile
-// mechanic is in when the place is inside the area it serves around its
-// seat, whatever the radius or box; with a box and no place there is no place
-// to come to, so none is. A fixed garage is in when inside the box, else
-// within the radius of the place. With neither, every garage with a position.
+// ellipsoid at these distances, and it needs no PostGIS extension. Metres
+// from the point to the garage row's own latitude and longitude.
+export const distanceMetersSql = ({ lat, lng }: SearchPoint) => Prisma.sql`
+  2 * 6371008.8 * asin(sqrt(
+    power(sin(radians(garage.latitude - ${lat}) / 2), 2)
+    + cos(radians(${lat})) * cos(radians(garage.latitude))
+      * power(sin(radians(garage.longitude - ${lng}) / 2), 2)
+  ))`;
+
+// Distances run from the place, else the box's centre, else Romania's. A
+// mobile mechanic is in when the place is inside the area it serves around
+// its seat, whatever the radius or box; with a box and no place there is no
+// place to come to, so none is. A fixed garage is in when inside the box,
+// else within the radius of the place. With neither, every garage with a
+// position.
 export async function garagesInArea(
   prisma: PrismaClient,
   { bbox, point, radiusKm = SEARCH_RADIUS_DEFAULT_KM, limit }: AreaOf,
@@ -75,11 +84,7 @@ export async function garagesInArea(
         longitude,
         business_kind IS NOT DISTINCT FROM 'mobile' AS mobile,
         service_radius_km,
-        2 * 6371008.8 * asin(sqrt(
-          power(sin(radians(latitude - ${lat}) / 2), 2)
-          + cos(radians(${lat})) * cos(radians(latitude))
-            * power(sin(radians(longitude - ${lng}) / 2), 2)
-        )) AS distance_m
+        ${distanceMetersSql({ lat, lng })} AS distance_m
       FROM garage
       WHERE status = 'approved' AND latitude IS NOT NULL
     ) measured

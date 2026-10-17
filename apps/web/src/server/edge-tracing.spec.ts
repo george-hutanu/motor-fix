@@ -7,6 +7,7 @@ import { type AddressInfo, connect } from 'node:net';
 import { startTelemetry } from '@motor-fix/observability';
 import { inMemory, patchForJest } from '@motor-fix/observability/testing';
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import express from 'express';
 
 import { mountEdge } from './edge';
@@ -33,10 +34,29 @@ let upstream: Server;
 let web: Server;
 let base: string;
 let traceparents: (string | undefined)[];
+let drops: number;
+let streamClosed: () => void;
 
 beforeAll(async () => {
   upstream = createServer((req, res) => {
     traceparents.push(req.headers['traceparent'] as string | undefined);
+    if (req.url?.startsWith('/api/v1/cut')) {
+      res.writeHead(200, { 'content-length': '1000' });
+      res.write('partial');
+      setTimeout(() => req.socket.destroy(), 10);
+      return;
+    }
+    if (req.url?.startsWith('/api/v1/live')) {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write('data: 1\n\n');
+      res.on('close', () => streamClosed());
+      return;
+    }
+    if (drops > 0) {
+      drops--;
+      req.socket.destroy();
+      return;
+    }
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end('{}');
   });
@@ -55,14 +75,32 @@ afterAll(async () => {
 
 beforeEach(async () => {
   traceparents = [];
+  drops = 0;
   await started?.flush();
   memory.spanExporter.reset();
+  memory.logExporter.reset();
 });
 
 async function finished() {
   await started?.flush();
   return memory.spanExporter.getFinishedSpans();
 }
+
+// The records a dashboard would count as a problem: anything above INFO.
+async function problems() {
+  await started?.flush();
+  return memory.logExporter
+    .getFinishedLogRecords()
+    .filter((record) => (record.severityNumber ?? 0) > SeverityNumber.INFO);
+}
+
+const quiet = () => ({
+  err: jest.spyOn(console, 'error').mockImplementation(() => {}),
+  out: jest.spyOn(console, 'log').mockImplementation(() => {}),
+});
+
+const parsed = (spy: jest.SpyInstance) =>
+  spy.mock.calls.map(([line]) => JSON.parse(String(line)));
 
 describe('the web edge, traced', () => {
   it('names the pass-through /api, whatever the path', async () => {
@@ -159,5 +197,113 @@ describe('the web edge, traced', () => {
       trace_id: web?.spanContext().traceId,
     });
     expect(lines[0]).not.toContain('a@b.ro');
+  });
+});
+
+// @traces 1345-FR-009
+describe('the web edge, reporting an API call that failed', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('logs one error line and one ERROR record naming the method and the masked path', async () => {
+    const down = express();
+    mountEdge(down, 'http://127.0.0.1:1');
+    const server = createServer(down);
+    const downBase = await listen(server);
+    const { err } = quiet();
+
+    try {
+      const answer = await fetch(
+        `${downBase}/api/v1/accounts/ana@example.com/notes?draft=1`,
+        { body: 'x', method: 'POST' },
+      );
+      expect(answer.status).toBe(502);
+    } finally {
+      server.closeAllConnections();
+      await close(server);
+    }
+
+    const where = { method: 'POST', path: '/api/v1/accounts/***/notes' };
+    const lines = parsed(err);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      level: 'error',
+      message: 'api proxy: upstream request failed',
+      ...where,
+    });
+    const [record, ...rest] = await problems();
+    expect(rest).toEqual([]);
+    expect(record?.severityText).toBe('ERROR');
+    expect(record?.body).toBe('api proxy: upstream request failed');
+    expect(record?.attributes).toMatchObject(where);
+  });
+});
+
+// @traces 1345-FR-010
+describe('the web edge, when an answer is cut short', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('gives one WARN record and cuts the browser off when the API closes after the headers', async () => {
+    const { err, out } = quiet();
+
+    const answer = await fetch(`${base}/api/v1/cut?brand=dacia`);
+    const body = await answer.text().then(
+      () => 'whole',
+      () => 'cut',
+    );
+
+    expect(answer.status).toBe(200);
+    expect(body).toBe('cut');
+    expect(err).not.toHaveBeenCalled();
+    const where = { method: 'GET', path: '/api/v1/cut' };
+    expect(parsed(out)).toEqual([
+      expect.objectContaining({
+        level: 'warn',
+        message: 'api proxy: upstream closed before the response was complete',
+        ...where,
+      }),
+    ]);
+    const [record, ...rest] = await problems();
+    expect(rest).toEqual([]);
+    expect(record?.severityText).toBe('WARN');
+    expect(record?.body).toBe(
+      'api proxy: upstream closed before the response was complete',
+    );
+    expect(record?.attributes).toMatchObject(where);
+  });
+
+  it('records nothing above INFO when the browser leaves a stream', async () => {
+    const { err, out } = quiet();
+    const closed = new Promise<void>((resolve) => {
+      streamClosed = resolve;
+    });
+    const controller = new AbortController();
+    const answer = await fetch(`${base}/api/v1/live`, {
+      signal: controller.signal,
+    });
+    await answer.body?.getReader().read();
+
+    controller.abort();
+    await closed;
+
+    expect(await problems()).toEqual([]);
+    expect(err).not.toHaveBeenCalled();
+    expect(out).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1345-FR-011
+describe('the web edge, retrying a stale connection', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('writes no record when the second attempt answers', async () => {
+    const { err, out } = quiet();
+    drops = 1;
+
+    const answer = await fetch(`${base}/api/v1/brands`);
+
+    expect(answer.status).toBe(200);
+    expect(await problems()).toEqual([]);
+    expect(err).not.toHaveBeenCalled();
+    expect(out).not.toHaveBeenCalled();
   });
 });

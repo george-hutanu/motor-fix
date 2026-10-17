@@ -14,6 +14,31 @@ aside nav {
   flex-direction: column;
   gap: 0.25rem;
 }
+/* The wordmark and the menu take the theme's colours, never the browser's link blue and purple. */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  color: var(--mf-text);
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-body);
+  letter-spacing: 0.3em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+aside nav a {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  border-radius: var(--mf-radius-chip);
+  color: var(--mf-text-secondary);
+  text-decoration: none;
+}
+aside nav a:hover {
+  color: var(--mf-text);
+}
 aside nav a[aria-current="page"] {
   color: var(--mf-amber-ink);
 }
@@ -151,21 +176,20 @@ header h1 {
   background: var(--mf-line);
   vertical-align: middle;
 }
-aside nav a {
-  display: flex;
-  align-items: center;
-  gap: var(--mf-space-2);
-}
 /* "Ajutor și contact" opens a task: a button drawn as the links around it. */
 aside nav .action {
   min-height: var(--mf-tap);
-  padding: 0;
+  padding: 0 var(--mf-space-3);
   border: 0;
+  border-radius: var(--mf-radius-chip);
   background: none;
-  color: inherit;
+  color: var(--mf-text-secondary);
   font: inherit;
   text-align: start;
   cursor: pointer;
+}
+aside nav .action:hover {
+  color: var(--mf-text);
 }
 .chip {
   min-width: 20px;

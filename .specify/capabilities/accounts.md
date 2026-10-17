@@ -31,7 +31,9 @@ features:
   - 1169-prefetch-intent
   - 029-overview-panels-own-data
   - 366-assistant-privacy
+  - 291-saved-garages
   - 066-suspended-garages
+  - 1345-staging-observability
 ---
 
 # Capability: Accounts
@@ -935,6 +937,48 @@ _From 366-assistant-privacy._
 
 _From 366-assistant-privacy._
 
+### 291-FR-006 — The panel "Service-uri salvate" on Panou (registry key `saved`, 029-FR-010, released and behind `driver.saved_garages` as today) and the view "Service-uri salvate" at `/app/driver/saved` (028-FR-001, title "Service-uri salvate" / "Saved garages", 028-FR-002) MUST show the same list from FR-001, through one root-provided store: activating either reads the first page once, and the other shows the store's rows when it opens and reads again. The view MUST show under its title the subtitle "{n} service-uri care lucrează pe mașinile tale" / "{n} garages that work on your cars" from `workingCount`, with the Romanian count forms of the shared formatter: "1 service care lucrează…", "0 service-uri…", "2–19 service-uri…" and from 20 "20 de service-uri care lucrează pe mașinile tale".
+
+_From 291-saved-garages._
+
+### 291-FR-007 — Each row MUST show: the rating dial (the shared dial the result cards and Home cards use, with its unrated state), the garage's name, the lamp line of FR-008, a remove control (icon only, accessible name "Scoate din salvate" / "Remove from saved"), and an arrow; the name and the arrow open the garage's public profile `/<lang>/garages/<slug>` in the person's language (the profile opened from here reports its source as `saved`, as today). Rows are helm cards, in the order the API gives.
+
+_From 291-saved-garages._
+
+### 291-FR-008 — The lamp line MUST be composed from the item: with `brands` not empty, a green lamp (the shared `mf-lamp`) and "Lucrează pe {brands}" / "Works on {brands}", the names joined with ", " and the last with " și " / " and "; with `brands` empty and the driver owning at least one car, a red lamp and "Nu lucrează pe mașinile tale" / "Does not work on your cars"; with no car, a grey lamp and "Adaugă o mașină ca să vezi dacă lucrează pe ea" / "Add a car to see whether it works on it". After it, separated by " · ", the distance when the item has one, in the language's format with one decimal and " km" (019-FR-004); for a mobile mechanic "vine la tine" / "comes to you" when `comesToYou` is true and "în afara zonei" / "outside its area" when false; nothing, and no separator, without a place. The colour is never the only signal: the text states the case and the dot is hidden from assistive technology. An `available: false` item is drawn greyed with "Indisponibil" / "Unavailable" in place of the lamp line (its name and arrow still open the profile, which shows the "no longer available" page, A34) and keeps its remove control; its dial shows the garage's stored rating, or the unrated state, like any other row.
+
+_From 291-saved-garages._
+
+### 291-FR-009 — The panel MUST show the newest 3 rows; when `total` exceeds 3 it ends with the link "Vezi toate" / "See all" to the view. The view MUST show the first page and read the next page with its cursor when the last row comes into view (infinite scroll), appending; a failed page read shows the error text of FR-012 under the loaded rows with "Reîncearcă".
+
+_From 291-saved-garages._
+
+### 291-FR-010 — The place for `near` MUST be the one the browser keeps for Home and the results (the place store, 229-FR-005: location or typed address) and, with none kept, the Setări city as Home takes it (229-FR-006: through the address look-up once, not stored); with neither, or when the browser refused the location, the read is sent without `near`. The place is rounded to three decimals before it leaves the browser (229-FR-008). A change of the place while the dashboard is open re-reads the list once.
+
+_From 291-saved-garages._
+
+### 291-FR-011 — The remove control MUST remove the row at once (optimistic), send ST-290's removal, show the undo bar of 290-FR-013 ("Scos din salvate · Anulează" / "Removed from saved · Undo", 8 seconds, announced, keyboard-operable) and update `total`, `workingCount` and the panel's "Vezi toate" in place; "Anulează" sends the undo save and puts the row back in its former place; a failed removal puts the row back, drops the bar and shows the error toast ("Fără conexiune" / "No connection" offline, else the shared error text). When a row goes, keyboard focus moves to the next row's link, else the previous row's, else "Caută altele". The shared control and undo of ST-290 are reused, not rewritten.
+
+_From 291-saved-garages._
+
+### 291-FR-012 — States: while the first read is open the panel and the view show three row skeletons; a failed read shows "Nu am putut încărca service-urile salvate." / "We could not load your saved garages." with "Reîncearcă" / "Try again"; an empty list shows "Nu ai salvat încă niciun service." / "You have not saved any garage yet." with the button "Caută altele" / "Find more" (the existing empty state of the view, 030-FR-011, now also the panel's). "Caută altele" MUST also sit at the top right of the panel's and the view's header, as the mock draws it (design.md), not at the foot; it opens the results in the person's language for the brand of the driver's first car (`/<lang>/garages?brand=<brand id>`, which the results page reads as a brand id, with the kept place as the results page already read it; amended at review: the car carries the brand's id, not its slug) or Home when the driver has no car.
+
+_From 291-saved-garages._
+
+### 291-FR-013 — The panel and the view MUST subscribe to `saved_garage.added` and `saved_garage.removed` on the driver's signed-in live stream (290-FR-008) and read the list again on either (the first page, then, in the view, the further pages again up to as many rows as were shown, through the dashboard's shared `moreRows`), so a save or removal in another tab shows within seconds; an event for a removal this screen itself made is harmless (the re-read answers the same list). A rating or status change shows on the next read, with no subscription.
+
+_From 291-saved-garages._
+
+### 291-FR-014 — Every text MUST live in the dashboard's texts in Romanian and English, and the panel and the view MUST render well at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll (286-FR, 288-FR); a row's remove control and arrow are at least 44 px targets.
+
+_From 291-saved-garages._
+### 1345-FR-006 — The web app's background calls that need a session MUST NOT be sent without an access token: the bell's unread-count poll (each tick, and the first) and the push device's key request check the token first and skip the call without one, as the live stream already does. A dashboard tab whose renewal was refused therefore makes no further background call until the account signs in again, and the poll resumes with the new token. Explicit asks (the area and account guards, the sign-in return, the invite, the sign-in dialog, the report link) keep their single renewal; the session's `ask()` and the refresh endpoint are unchanged (the signed-out refresh is ST-510, #398). Colocated unit tests cover the bell and the push device.
+
+_From 1345-staging-observability._
+
+### 1345-FR-007 — A public screen that needs a session for part of its work (the request-a-quote dialog's car list) MUST, when it holds no access token and no stored role hint, open the sign-in dialog without an API call and load once signed in; if the visitor dismisses the sign-in dialog, the request-a-quote dialog shows the state it shows today when the list cannot load, still without a call; with a token or a hint it loads as today. One Playwright test loads `/ro`, `/ro/garages?brand=dacia` and a seeded garage profile and opens its request-a-quote dialog in a fresh context, records every request and response, and asserts none is a 401 and no `POST /api/v1/auth/refresh` is sent.
+
+_From 1345-staging-observability._
 ### 066-FR-012 — The admin read of accounts (`GET /api/v1/admin/accounts`) MUST carry on each account `serviceSuspended`, true when the account holds a mechanic card at a garage whose status is `suspended`, false otherwise; no screen shows it in this story (the Mecanici table of #27 and the detail page of #28 will show "service suspendat" in red from it). Tests MUST cover a mechanic of a suspended garage (true), of an approved garage (false), an owner of a suspended garage with no mechanic card (false), and the flag turning false once the garage is no longer suspended.
 
 _From 066-suspended-garages._

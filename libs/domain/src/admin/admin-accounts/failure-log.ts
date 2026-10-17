@@ -13,11 +13,14 @@ export class FailureLog implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     res.on('finish', () => {
       if (res.statusCode < 400) return;
-      this.logger.warn({
+      const line = {
         message: 'admin accounts request failed',
         route: `${req.method} ${req.originalUrl.split('?')[0]}`,
         status: res.statusCode,
-      });
+      };
+      // A lapsed session is routine, not a fault worth a warning.
+      if (res.statusCode === 401) this.logger.log(line);
+      else this.logger.warn(line);
     });
     next();
   }

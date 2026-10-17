@@ -89,8 +89,8 @@ test.describe('the suspended garages @seeded', () => {
     }) => {
       const name = `Atelier Dinamo ${stamp} ${width}`;
       const made = await db.query<{ id: string }>(
-        `INSERT INTO garage (id, name, slug, status, approved_at, city_name)
-         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), 'Pantelimon') RETURNING id`,
+        `INSERT INTO garage (id, name, slug, status, approved_at, city_key, city_name)
+         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), 'pantelimon', 'Pantelimon') RETURNING id`,
         [name, `e2e-oprit-${stamp}-${width}`],
       );
       const id = made.rows[0]?.id ?? '';
@@ -101,7 +101,8 @@ test.describe('the suspended garages @seeded', () => {
       await page.goto('/app/admin/garages');
       await expect(counts(page)).toHaveText(COUNTS);
       await expect(panel(page).getByRole('heading', { level: 2 })).toHaveText(
-        /^Service‑uri suspendate\s·\s\d+/,
+        // The panel's title sits between the template's own spaces.
+        /^\s*Service‑uri suspendate\s·\s\d+\s*$/,
       );
       expect(await sideways(page)).toBeLessThanOrEqual(0);
       expect(

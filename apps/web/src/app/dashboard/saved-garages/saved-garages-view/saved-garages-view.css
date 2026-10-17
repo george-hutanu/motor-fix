@@ -1,0 +1,9 @@
+:host {
+  display: block;
+  margin: var(--mf-space-4);
+  min-width: 0;
+}
+.end {
+  display: block;
+  height: 1px;
+}
