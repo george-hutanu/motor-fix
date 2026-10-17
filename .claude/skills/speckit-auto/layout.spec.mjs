@@ -79,6 +79,8 @@ const RULES = [
   ['Loop limit: 2 converge cycles', 'phases-build.md'],
   ['A suppression is never the fix', 'phases-build.md'],
   ['Mutation testing is not part of this phase', 'phases-build.md'],
+  ['dispatches no Mutation workflow run and waits for none', 'phases-build.md'],
+  ['no Mutation run dispatched or waited for', 'report.md'],
   ['A finding that needs a behavior change is Hard Stop 7', 'phases-build.md'],
   // phases-close.md: phases 13-17
   ['An empty refresh is a complete phase', 'phases-close.md'],
@@ -197,6 +199,7 @@ describe('speckit-auto layout', () => {
     }
   });
 
+  // @traces 1344-FR-002
   it('keeps every rule exactly once, in the file it applies to', () => {
     const lost = [];
     for (const [phrase, file] of RULES) {

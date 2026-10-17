@@ -34,7 +34,7 @@ The report's sections:
 - [ ] both were run in their REPORT form, not `--check`: `--check` turns the semantic lane off, so a
       run that only ever used it has not asked whether a requirement is testable or a dependency earns
       its place. If the lane reported itself unavailable, say so in the report — that is not "clean"
-- [ ] No Stryker disable added; no mutation score reported that CI did not produce
+- [ ] No Stryker disable added; no mutation score reported; no Mutation run dispatched or waited for
 - [ ] Ticket re-read (comments included) after implementation, and any scope-moving comment reported
 - [ ] One commit per implementation slice, each pushed to the feature branch
 - [ ] Hand-off done on a clean finish: records committed, PR ready, story Implementing → QA, `qa` line pushed, `handoff.md` written, `NEXT: tail #<n>` returned

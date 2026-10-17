@@ -1,6 +1,6 @@
 ---
 name: test-adversary
-description: Writes tests that try to break a feature from the outside, seeing only the spec, the contract and the public surface — never the implementation. Adds *.spec.ts files only. Invoked by /speckit-harden before the mutation run, and optionally by /speckit-tests.
+description: Writes tests that try to break a feature from the outside, seeing only the spec, the contract and the public surface — never the implementation. Adds *.spec.ts files only. Invoked by /speckit-harden, and optionally by /speckit-tests.
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet
 ---

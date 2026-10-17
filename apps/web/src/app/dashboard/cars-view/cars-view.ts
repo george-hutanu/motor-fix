@@ -16,6 +16,7 @@ import { openAddCar } from '../add-car/open-add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
+import { OilLine } from '../oil-line/oil-line';
 import { openRemoveCar } from '../remove-car/open-remove-car';
 
 // "Mașinile mele": a card per car, newest first, and the button that adds one.
@@ -23,6 +24,7 @@ import { openRemoveCar } from '../remove-car/open-remove-car';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DueDateLine,
+    OilLine,
     EmptyState,
     HlmButton,
     HlmPopoverImports,
@@ -37,6 +39,7 @@ export class CarsView implements OnInit {
   private readonly api = inject(CarsService);
   private readonly overlays = inject(Overlays);
   protected readonly cars = signal<CarDto[] | undefined>(undefined);
+  // Stryker disable next-line BooleanLiteral: load() resets it before the first render.
   protected readonly failed = signal(false);
   protected readonly grouped = groupPlate;
   private readonly i18n = inject(I18n);

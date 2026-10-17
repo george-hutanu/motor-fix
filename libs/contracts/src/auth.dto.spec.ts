@@ -170,7 +170,7 @@ describe('ConsentDto', () => {
     Reflect.getMetadata('swagger/apiModelProperties', ConsentDto.prototype, key)
       ?.example;
 
-  // @traces 1203-FR-007
+  // @traces 1203-FR-007 366-FR-005
   it('documents the current versions as its example', () => {
     expect(example('termsVersion')).toBe(TERMS_VERSION);
     expect(example('privacyVersion')).toBe(PRIVACY_VERSION);

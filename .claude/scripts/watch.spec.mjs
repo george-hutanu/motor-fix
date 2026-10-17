@@ -176,6 +176,14 @@ describe('PR summary', () => {
     assert.equal(summarizePr(pr({ statusCheckRollup: [review('FAILURE')] })).agentReview, 'failure');
     assert.equal(summarizePr(pr()).agentReview, null);
   });
+
+  // @traces 1344-FR-010
+  it('leaves a Mutation run on the head out of the checks, going, failed or alone', () => {
+    const mutation = (conclusion, status) => ({ ...check(conclusion, status), workflowName: 'Mutation' });
+    assert.equal(summarizePr(pr({ statusCheckRollup: [check('SUCCESS'), mutation(null, 'IN_PROGRESS')] })).checks, 'pass');
+    assert.equal(summarizePr(pr({ statusCheckRollup: [check('SUCCESS'), mutation('FAILURE')] })).checks, 'pass');
+    assert.equal(summarizePr(pr({ statusCheckRollup: [mutation('SUCCESS')] })).checks, 'none');
+  });
 });
 
 describe('phase', () => {
@@ -757,7 +765,7 @@ describe('the command, started from a path with a space or through a symlink', (
       mkdirSync(dir, { recursive: true });
       for (const name of ['watch.mjs', 'run-state.mjs', 'worktree-remove.mjs', 'specs-repo.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
       mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
-      for (const name of ['feature.mjs', 'watch-wait.mjs', 'entry.mjs', 'worktrees.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      for (const name of ['feature.mjs', 'watch-wait.mjs', 'entry.mjs', 'worktrees.mjs', 'mutation-check.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
       mkdirSync(join(dir, 'pr-test'));
       for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs', 'qa-run.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
       mkdirSync(join(f.root, 'with space', 'scripts'));

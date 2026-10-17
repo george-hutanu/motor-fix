@@ -16,6 +16,7 @@ const car = (id: string): CarDto => ({
   id,
   itpUntil: null,
   model: '320d',
+  nextServiceKm: null,
   odometerKm: 148200,
   plate: null,
   rcaUntil: null,

@@ -96,18 +96,23 @@ const FIELDS = {
   statusCheckRollup: (p, run) => rollup(run, p.head.sha),
 };
 
-/**
- * The latest run of each check per workflow, as gh keeps it: a re-triggered
- * workflow leaves its cancelled run on the commit too. Workflow names are read
- * only when a name repeats; unreadable, every run stays (never a false green).
- */
-function latestRuns(run, sha, runs) {
-  if (new Set(runs.map((c) => c.name)).size === runs.length) return runs;
-  let workflow = {};
+/** Each check suite's workflow name on the commit; unreadable, none (a check then names no workflow). */
+function workflowNames(run, sha) {
   try {
     const wf = pages(run, `actions/runs?head_sha=${sha}&per_page=100`).flatMap((page) => page.workflow_runs ?? []);
-    workflow = Object.fromEntries(wf.map((w) => [w.check_suite_id, w.name]));
-  } catch {}
+    return Object.fromEntries(wf.map((w) => [w.check_suite_id, w.name]));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * The latest run of each check per workflow, as gh keeps it: a re-triggered
+ * workflow leaves its cancelled run on the commit too. Without a workflow
+ * name, every run of that check stays (never a false green).
+ */
+function latestRuns(runs, workflow) {
+  if (new Set(runs.map((c) => c.name)).size === runs.length) return runs;
   const key = (c) => `${c.name}\0${workflow[c.check_suite?.id] ?? `suite ${c.check_suite?.id}`}`;
   const latest = new Map();
   for (const c of runs) {
@@ -118,9 +123,11 @@ function latestRuns(run, sha, runs) {
   return runs.filter((c) => keep.has(c));
 }
 
-/** The head commit's check runs (the latest of each) and commit statuses, as REST returns them. */
+/** The head commit's check runs (the latest of each, with its workflow's name) and commit statuses. */
 function headChecks(run, sha) {
-  const runs = latestRuns(run, sha, pages(run, `commits/${sha}/check-runs?per_page=100`).flatMap((page) => page.check_runs ?? []));
+  const all = pages(run, `commits/${sha}/check-runs?per_page=100`).flatMap((page) => page.check_runs ?? []);
+  const workflow = all.length ? workflowNames(run, sha) : {};
+  const runs = latestRuns(all, workflow).map((c) => ({ ...c, workflow: workflow[c.check_suite?.id] ?? "" }));
   const statuses = rest(run, "GET", `commits/${sha}/status`)?.statuses ?? [];
   return { runs, statuses };
 }
@@ -129,7 +136,7 @@ function headChecks(run, sha) {
 function rollup(run, sha) {
   const { runs, statuses } = headChecks(run, sha);
   return [
-    ...runs.map((c) => ({ __typename: "CheckRun", name: c.name, status: upper(c.status), conclusion: upper(c.conclusion) })),
+    ...runs.map((c) => ({ __typename: "CheckRun", name: c.name, status: upper(c.status), conclusion: upper(c.conclusion), workflowName: c.workflow })),
     ...statuses.map((s) => ({ __typename: "StatusContext", context: s.context, state: upper(s.state) })),
   ];
 }
@@ -212,8 +219,8 @@ const statusBucket = (s) => ({ success: "pass", pending: "pending" })[s.state] ?
 function checksOnce(run, flags, pull) {
   const { runs, statuses } = headChecks(run, pull.head.sha);
   const checks = [
-    ...runs.map((c) => ({ name: c.name, bucket: runBucket(c), state: upper(c.conclusion || c.status), link: c.html_url ?? "" })),
-    ...statuses.map((s) => ({ name: s.context, bucket: statusBucket(s), state: upper(s.state), link: s.target_url ?? "" })),
+    ...runs.map((c) => ({ name: c.name, bucket: runBucket(c), state: upper(c.conclusion || c.status), link: c.html_url ?? "", workflow: c.workflow })),
+    ...statuses.map((s) => ({ name: s.context, bucket: statusBucket(s), state: upper(s.state), link: s.target_url ?? "", workflow: "" })),
   ];
   if (checks.length === 0) throw new GhError(`no checks reported on the '${pull.head.ref}' branch`);
   const code = checks.some((c) => c.bucket === "pending") ? 8 : checks.some((c) => c.bucket === "fail" || c.bucket === "cancel") ? 1 : 0;
