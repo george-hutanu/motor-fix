@@ -712,6 +712,26 @@ describe('the company check', () => {
   });
 });
 
+describe('the register checks at launch', () => {
+  // @traces 203-FR-005
+  it('are recorded by hand, with no outside register called', async () => {
+    const fetch = jest.spyOn(globalThis, 'fetch');
+    try {
+      await record('company', { evidence: { name: NAME }, result: 'ok' });
+      await record('caen', {
+        evidence: { address: true, certificate: false, onrc: true },
+        result: 'ok',
+      });
+
+      expect(await check('company')).toMatchObject({ automatic: false });
+      expect(await check('caen')).toMatchObject({ automatic: false });
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+});
+
 describe('the CAEN check', () => {
   const PREMISES =
     'Întreținerea și repararea autovehiculelor, la punctul de lucru';

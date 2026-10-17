@@ -30,10 +30,6 @@ import {
   INVITE_EMAIL,
   StaffInviteService,
 } from './staff-invite/staff-invite.service';
-import {
-  COMPANY_REGISTER,
-  ManualCompanyRegister,
-} from './verification/company-register/company-register';
 import { GarageReportsController } from './verification/garage-reports/garage-reports.controller';
 import {
   GARAGE_REPORTS_OPTIONS,
@@ -122,7 +118,6 @@ export class GaragesModule {
         VerificationService,
         VerificationChecksService,
         VerificationFileService,
-        { provide: COMPANY_REGISTER, useClass: ManualCompanyRegister },
         { provide: VERIFICATION_CONFIG, useValue: verification },
         ...(observabilityUrl
           ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]
