@@ -180,7 +180,7 @@ const negative = (
   outcome: 'more_requested' | 'rejected',
   code = 'documents',
   note = NOTE,
-): Decision => ({ outcome, reason: { code, note } });
+): Decision => ({ note, outcome, reason: code });
 
 const messages = (accountId: string) =>
   prisma.notification.findMany({

@@ -12,6 +12,8 @@ features:
   - 066-suspended-garages
   - 302-garage-verification-file
   - 203-company-caen-check
+  - 306-decision-record
+  - 204-rar-activities-check
 ---
 
 # Capability: Garage verification
@@ -48,9 +50,9 @@ _From 207-garage-approval-flow._
 
 _From 207-garage-approval-flow._
 
-### 207-FR-008 — Every transition MUST write, in its own transaction, one audit entry on subject `verification_file` (or `garage` for the garage's status) with actor, actor role, old and new status, and reason code and note when there is one, and one outbox row: `verification.submitted`, `verification.opened`, `verification.decided` (with the decision), `verification.reopened`, each carrying the garage id and file id and the audiences `admin`, `garage:{garageId}`; `verification.decided` on an approval also carries `public:garage:{garageId}` and `public:search:{brandId}` for each brand the garage serves (none until a brands story exists). A failed audit or outbox write MUST fail the transition.
+### 306-FR-004 — Every accepted decision MUST store, in the same transaction, the status, `decided_by`, `decided_at`, `reason_code` (null for `approved`), `reason_note` (the note, or null) and `requested_items` (the list for `more_requested`, empty otherwise, a new non-null list column defaulting to empty), write one audit entry on the file with the old and new status, the reason code and the note, and one `verification.decided` outbox row whose payload gains `reason` and `note` beside `fileId`, `garageId` and `decision` (modifies 207-FR-008); the file keeps only its latest decision in its columns. A failed audit or outbox write fails the decision. The approval's publishing of the garage, the audiences and the decisions counter stay as they are.
 
-_From 207-garage-approval-flow._
+_From 306-decision-record._
 
 ### 207-FR-009 — When `skip_manual_approval` is on (`SKIP_MANUAL_APPROVAL` read as `1` or `true`) and `APP_ENV` is `test`, submitting MUST approve the new file at once in the same transaction with actor `system` ("MotorFix"), writing the audit entries and outbox rows of both transitions; under any other `APP_ENV` (`development`, `staging`, `production`) the switch MUST be ignored and it MUST NOT be a required variable (A33).
 
@@ -80,13 +82,13 @@ _From 203-company-caen-check._
 
 _From 300-verification-checks._
 
-### 300-FR-005 — The RAR activity catalogue MUST exist with a code and a Romanian and English name per activity, seeded with mechanics, brakes, steering, suspension and air-con.
+### 204-FR-013 — The five seeded RAR activity codes (mechanics, brakes, steering, suspension, air_con) stand until the lawyer's later review (owner, 2026-10-16, under the 2026-10-11 rule; a follow-up, not a gate, #578). The capability spec records that a migration replacing them must map or report every stored `GARAGE.rar_activities` value, and a migration test proves, after the migrations run, that the catalogue holds exactly those five codes and that every stored value is one of them. The seed migration's `TODO` comment stays: that migration is applied, and editing it would change its checksum on every deployed database.
 
-_From 300-verification-checks._
+_From 204-rar-activities-check._
 
-### 203-FR-004 — Every `company` and `caen` record MUST keep what 300-FR-003, 300-FR-006, 300-FR-007, 300-FR-010 and 300-FR-011 already give the record call: `recorded_by` and `recorded_at` set, `automatic = false`, one audit entry whose old and new values now include the evidence, the `verification.check_recorded` event in the outbox in the same transaction, 409 "Dosarul e deja decis" on a decided file that was not reopened, and 404 for anyone but a MotorFix admin. This story adds no second write path.
+### 204-FR-005 — Every `rar` and `activities` record MUST keep what 300-FR-003, 300-FR-006, 300-FR-007, 300-FR-010, 300-FR-011 and 203-FR-004 already give the record call: `recorded_by` and `recorded_at` set, `automatic = false`, one audit entry whose old and new values carry the result, the detail, the evidence and (for `activities`) the list, the `verification.check_recorded` event in the outbox in the same transaction, `price_list.updated` when the list changes, 409 "Dosarul e deja decis" on a decided file that was not reopened, and 404 for anyone but a MotorFix admin. This story adds no second write path.
 
-_From 203-company-caen-check._
+_From 204-rar-activities-check._
 
 ### 300-FR-007 — Every record MUST emit `verification.check_recorded` with fileId, kind and result through the outbox, in the same transaction, to the admin channel.
 
@@ -96,9 +98,9 @@ _From 300-verification-checks._
 
 _From 300-verification-checks._
 
-### 300-FR-009 — The system MUST build a summary line, in Romanian and English, of at most two parts joined with " · ": the first names the register checks that are `ok` — only `company` ("CUI") and `rar` ("autorizație RAR"): "CUI verificat", "Autorizație RAR verificată", "CUI și autorizație RAR verificate"; the second names the most serious problem — `failed` before `warning`, `rar` before any other kind, then the kinds' order — as `<kind name> <detail>`, with `rar = failed` reading "Lipsește autorizația RAR"; the line starts with a capital; with neither part it reads "Neverificat". The record call returns the file's new summary in both languages.
+### 204-FR-010 — The summary line MUST take the file's legal document rows beside its checks (modifies 300-FR-009): a file without a `rar_authorisation` document reads "Lipsește autorizația RAR" / "RAR licence missing" in its problem part whatever the `rar` result (ok included) and for every garage kind, until the document is on the file, ranked as a failed `rar` is; the queue and the record call's answer both pass the documents. The line reads "Autorizație RAR verificată" / "RAR licence checked" (the English line 300-FR-009 shipped) once `rar` is `ok` and the document is on the file (the wording SC-001 reads). A unit test covers it (#319).
 
-_From 300-verification-checks._
+_From 204-rar-activities-check._
 
 ### 302-FR-007 — Ticking MUST record the kind `ok` with no detail through the existing record call (300-FR-003) at once, with no confirmation; unticking MUST record `not_run` with no detail, which the record call MUST now accept (`not_run` joins its recorded results, with no detail and no activities; modifies 300-FR-003 and 300-FR-010). "Marchează o problemă" MUST open a small task (`dialog` shape) with the choice "Avertisment" / "Warning" or "Problemă" / "Failure" and a required detail field of 1 to 200 characters, whose save records `warning` or `failed` with the detail and closes; the row then shows the lamp and the detail and the checkbox is unchecked. The drawer MUST show the saved state only from the server's answer: on a failure the control reverts to the last answer and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` it re-reads the file (FR-001) and turns read-only. Every tick's audit entry and event are the record call's (300-FR-006, FR-007); this story writes none of its own.
 
@@ -270,9 +272,12 @@ _From 066-suspended-garages._
 ### 066-FR-011 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the three counts (approved, waiting as `submitted` or `in_review`, suspended; a `draft` garage counting nowhere) and `waiting` equal to the overview's count; the list's filter and order (most recent start first), `total`, the 400s of FR-002, a garage with no open suspension; `cancelledBookings` counting only `garage_suspended` cancellations at or after `fromTime`; `rarVerdict` for each of the three words, for a reason naming none and for the other three causes; 404 for a driver, an owner, a receptionist and a mechanic on both reads; no audit entry written by a read. Web unit tests MUST cover the counts line's three states and its plural forms in both languages, and the panel's state text per cause and verdict, the date, the cancelled count, the empty, loading, failed and stale states, in both languages. Playwright MUST show, as the seeded admin at desktop and a 320 px phone, the counts line and the panel on "Service-uri", then Atelier Dinamo suspended from a second context through the suspend endpoint: the line's figures and the panel's new row appear without a reload; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
 
 _From 066-suspended-garages._
-### 302-FR-001 — The system MUST expose an admin-only read of one verification file, `GET /api/v1/admin/verification-files/{id}`, answering in one response: the file (id, status, latest sending time, who opened it and when, who decided it and when, reason code and note, who reopened it and when and the reopen reason, the declaring name and time); the garage header (garage id and name, kind of business, CUI, the workshop address or, for a mobile mechanic, the registered seat and the service radius in km, phone, the names of the brands it works on, its photos as short-lived thumbnail and display addresses as the public profile issues them); the 8 checks (kind, result, detail, who recorded it, when; for `activities` the recorded activities' names in both languages); the documents, one entry per kind of the contracts list in its order, present (id, page count, issue date, and, for the ONRC certificate only, whether the issue date is absent or more than 30 days before the latest sending; null for every other kind) or missing; whether the document store is reachable (the API's storage probe); the garage's `open` reports (text, time); the earlier rejection when `previous_file_id` names one (reason code, note, decision time); and the timeline of FR-010. Anyone who is not a MotorFix admin MUST get 404 with no garage data, no token 401; the read MUST write no audit entry and change nothing.
+### 306-FR-006 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/decision`, taking FR-001's payload through a DTO in the contracts library validated at the edge, and `POST /api/v1/admin/verification-files/{id}/reopen` with no body; both run the use case with the signed-in admin as actor (the `admin.garages` capability, as the open call) and answer 200 with the file read's body (302-FR-001), which now carries `requested_items`; anyone who is not a MotorFix admin MUST get 404 with no garage data, no token 401, an unknown id 404. The OpenAPI document and the generated client MUST be regenerated.
 
-_From 302-garage-verification-file._
+_From 306-decision-record._
+### 204-FR-009 — The file read MUST give the form what it compares: the garage's price-list jobs (job type id, Romanian and English name, the RAR activity each maps to) and the whole RAR activity catalogue by code and name (modifies 302-FR-001; the garage's recorded activities it already returns). After a save, the row MUST show only the server's answer: the lamp, the detail, the ticks of a `rar` check as text ("găsită · firmă · adresă" or the English equivalents), the ticked activities of an `activities` check by name and its uncovered jobs by name, the recorder's name and the time; the queue line is updated from the answer's summary. On a failure the form keeps what was typed and ticked and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` the drawer re-reads the file and turns read-only (302-FR-007). Another admin's open drawer refreshes through the existing `verification-file:{fileId}` live update, with no new channel. While the file is undecided and `rar` is not `ok`, the footer MUST show "Verificarea RAR e obligatorie" / "The RAR check is required" beside the disabled "Aprobă și publică" (302-FR-009); the server's refusal and the button itself stay with #173 and #58.
+
+_From 204-rar-activities-check._
 
 ### 302-FR-002 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/open`, which runs the existing open use case (207-FR-002) for the signed-in admin and answers the same body as FR-001: a `submitted` file becomes `in_review` with `opened_by` and `opened_at`, one audit entry and one `verification.opened` outbox row in the same transaction; a file already `in_review` is answered unchanged with no entry and no row; every status other than `submitted` (`in_review`, decided, `more_requested`) is answered unchanged with no transition, no entry and no row, which changes the existing use case so it no longer refuses a decided file with 409 (modifies 207-FR-002), so the drawer opens read-only; an unknown id and every non-admin get 404.
 
@@ -282,9 +287,9 @@ _From 302-garage-verification-file._
 
 _From 302-garage-verification-file._
 
-### 203-FR-006 — In the drawer, the `company` row MUST read "Firmă activă la ANAF și ONRC" / "Active company at ANAF and ONRC" and the `caen` row "Cod CAEN 4520" / "CAEN code 4520" (modifies the labels of 302-FR-004), each grey "neverificat" / "not checked" until recorded. The `company` row MUST carry two links, "ANAF" and "ONRC", and the `caen` row one, "ONRC", each opening the public look-up page (ANAF: `https://mfinante.gov.ro/ro/web/site/info-pj-selectie-dupa-cui`; ONRC: `https://portal.onrc.ro/`) in a new tab and copying the garage's CUI to the clipboard, with a toast "CUI copiat" / "CUI copied"; when the clipboard is unavailable the tab still opens and nothing else happens. The links are plain links to fixed public addresses with no CUI in them; MotorFix sends nothing to those sites.
+### 204-FR-007 — In the drawer, the `rar` row MUST read "Autorizație RAR găsită în registru" / "RAR authorisation found in the register", and "Autorizația RAR nu apare în registru" / "RAR authorisation not found in the register" while its result is `failed`; the `activities` row "Activitățile autorizate acoperă lista de prețuri" / "Authorised activities cover the price list" (modifies the labels of 302-FR-004 and 203-FR-006); each grey "neverificat" / "not checked" until recorded. The `rar` row MUST show the file's RAR number as stored, or "număr lipsă" / "number missing", a "Corectează" / "Correct" action on an undecided file that opens a one-field form calling FR-001, and one link "Registrul RAR" / "RAR register" opening `https://portal.rarom.ro/` in a new tab and copying the number to the clipboard with a toast "Număr RAR copiat" / "RAR number copied"; when the clipboard is unavailable the tab still opens and nothing else happens. The link is a plain link to a fixed public address with no number in it; MotorFix sends nothing to that site.
 
-_From 203-company-caen-check._
+_From 204-rar-activities-check._
 
 ### 302-FR-005 — Each document kind of the contracts list MUST be one row: label from the kind's shared labels (206-FR-004); when present, "· emis acum <n> zile" / "· issued <n> days ago" ("emis azi" / "issued today", "emis ieri" / "issued yesterday") from its issue date, else "· <n> pagini" / "· <n> pages" (singular "1 pagină" / "1 page"); a second line in the warning colour "Mai vechi de 30 de zile la data trimiterii" / "Older than 30 days at the time of sending" or "Data emiterii lipsește" / "Issue date missing" for the certificate when so; one "Deschide" / "Open" button for a one-page document, else "Deschide pagina <n>" / "Open page <n>" per page; when missing, "· lipsește" / "· missing" in the failed colour and no button; when the store is unreachable, "indisponibil" / "unavailable" in place of the buttons. Pressing a button MUST ask the existing page address (206-FR-014) and open it in a new tab; a failed request shows "Nu am putut deschide documentul" / "Could not open the document" with "Reîncearcă" / "Retry" on that row only. This story adds no address route and no audit write of its own: every opening is the one 206-FR-014 already logs.
 
@@ -302,9 +307,9 @@ _From 302-garage-verification-file._
 
 _From 302-garage-verification-file._
 
-### 302-FR-009 — On a `submitted` or `in_review` file the footer MUST show the three buttons "Aprobă și publică" / "Approve and publish", "Cere completări" / "Ask for more" and "Respinge" / "Reject", disabled, with the note "Service-ul primește decizia pe e-mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot." / "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over." (#173, #58, #59 and #172 enable them). On an `approved`, `rejected` or `more_requested` file the drawer MUST be read-only — checkboxes and problem buttons disabled, no save attempted — and the footer MUST read "Aprobat de <first name>, <date time>" / "Approved by …", "Respins de …" / "Rejected by …" or "Completări cerute de …" / "More requested by …", with the reason label and note when there is one; "Redeschide dosarul" is #173's.
+### 306-FR-007 — The drawer MUST show the note "Service-ul primește decizia pe e-mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot." / "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over." in the footer of a decided file too, under the decision line (modifies 302-FR-009); the decided footer keeps its line with the admin's first name, the time, the reason label and the note, and is shown by status: only on `approved`, `rejected` and `more_requested`, never on a reopened `in_review` file, whose earlier decision the timeline shows.
 
-_From 302-garage-verification-file._
+_From 306-decision-record._
 
 ### 302-FR-010 — The read of FR-001 MUST include the file's timeline: the audit entries whose subject is the file, one of its checks or one of its documents and whose action is one of the file's sending, opening, decision, reopening or resending, a check record, or a document `open` (a document upload and the declaration write are left out, on the server), newest first, at most 50 of those with their total, each with action, field, old and new values, actor's first name ("MotorFix" for `system`), reason text and time; the drawer MUST render each as one line in the admin's language and Europe/Bucharest as US4 scenario 1 lists, and "și încă <n>" / "and <n> more" past 50.
 
@@ -322,9 +327,9 @@ _From 302-garage-verification-file._
 
 _From 302-garage-verification-file._
 
-### 203-FR-001 — Each `company` and `caen` check MUST carry evidence beside its result and detail, stored with the check and returned with it in the file: for `company`, the company name as the admin typed it, trimmed of surrounding whitespace (1 to 200 characters after trimming, so a name of spaces only counts as empty; no control characters; optional unless `ok`); for `caen`, whether 4520 is on the certificate, whether 4520 is in the ONRC record, whether the address matches, and whether an ONRC certificate was uploaded at the time of the save; for both, the day of the save (Bucharest calendar day, written by the server) as the date the registers were looked up. The admin's part of the evidence (the name; the three ticks) is sent with the record call (modifies 300-FR-003), while whether a certificate was uploaded and the look-up date are written by the server and are not part of the request, is accepted only for these two kinds and only with `ok`, `warning` or `failed` (400 `validation_failed` otherwise), and a `not_run` record clears it.
+### 204-FR-002 — Each `rar` and `activities` check MUST carry evidence beside its result and detail, stored with the check and returned with it (extends 203-FR-001's evidence to these two kinds): for `rar`, whether the authorisation was found, whether it is for the same company, whether it is for the same address (the registered seat for a mobile mechanic), the authorisation number as stored at the save, and the day of the save; for `activities`, the price-list jobs the ticked activities do not cover (job type ids) and the day of the save. The admin's part (the three ticks) is sent with the record call; the number, the uncovered jobs and the date are written by the server and refused in the request like any unknown field. Evidence is accepted only on `company`, `caen`, `rar` and `activities`, only with `ok`, `warning` or `failed`, and a `not_run` record clears it.
 
-_From 203-company-caen-check._
+_From 204-rar-activities-check._
 
 ### 203-FR-002 — A `company` record MUST be accepted as `ok` only when the evidence holds a company name and the garage's stored CUI passes the shared CUI validator (an optional "RO" prefix, 2 to 10 digits whose last is the control digit under key 753217532, stored without "RO"; the one step 6 uses); the server then writes the detail "CUI valid · <name>" itself, whatever detail was sent. An `ok` save without a name, or on a CUI that fails the validator, is refused with 400 `validation_failed` naming the reason. `warning` and `failed` keep the rules of 300-FR-010: a typed detail of 1 to 200 characters, required.
 
@@ -358,6 +363,97 @@ _From 203-company-caen-check._
 
 _From 203-company-caen-check._
 
+### 306-FR-001 — The decision payload MUST be `decision` ∈ `approved`, `more_requested`, `rejected`; `reason` ∈ `documents`, `rar`, `address`, `photos`, `other`, required for `rejected`, optional for `more_requested` and refused (400) with `approved`; `requested_items`, an optional list of the same codes, accepted only with `more_requested`; `note`, 1 to 1,000 characters after trimming, required for `rejected` and `more_requested` and optional for `approved`, where a note empty after trimming is stored as null (the conditional approval-note rule is #58's). The use case MUST answer 422 `reason_required` when a rejection lacks its reason and 422 `note_required` when a rejection or a request for more lacks its note; every other shape fault (an unknown value, a note too long, a reason or `requested_items` with the wrong decision, an unknown field) is the edge's 400 `validation_failed`. The existing 400 of the use case's reason check is replaced by these 422s (modifies the refusal of 207-FR-001's reason rule).
+
+_From 306-decision-record._
+
+### 306-FR-002 — A decision MUST be accepted only while the file is `submitted` or `in_review`, as one conditional update on the status (unchanged); the refusal of an already decided file MUST answer 409 `verification_transition_refused` with the details `decidedBy` (the deciding admin's first name, "MotorFix" for `system`), `decidedAt` (UTC) and `currentStatus`, and the text "already decided by <name> at <time>" (modifies the refusal text of the existing guard). Two concurrent decisions on one file MUST end with exactly one committed.
+
+_From 306-decision-record._
+
+### 306-FR-003 — Inside the decision's transaction, after the file is read for the conditional update, `approved` from any actor whose role is `admin` MUST be refused with 409 `rar_check_required` unless the file's `rar` check is `ok`, and with 409 `caen_check_required` unless its `caen` check is `ok` (RAR first); the refusal writes no audit entry and no event. The `system` actor (207-FR-009) is exempt. A `caen` recorded ok from the ONRC record alone (203-FR-003, OD-29) passes.
+
+_From 306-decision-record._
+
+### 306-FR-005 — Reopening MUST be allowed from `approved`, `rejected` and `more_requested` and refused from `submitted` and `in_review` with 409 `verification_transition_refused` (unchanged); an admin's reopening MUST set `reopened_by` to the admin, `reopened_at`, reset `submitted_at`, keep the earlier decision's columns, write its audit entry and one `verification.reopened` row whose payload gains `adminId` (the account id, null for `system`) beside `fileId`, `garageId` and, when set, `reason` (modifies 207-FR-008); the garage's status and `approved_at` MUST NOT change (207-FR-003, unchanged), and no notification is built for the garage.
+
+_From 306-decision-record._
+
+### 306-FR-006 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/decision`, taking FR-001's payload through a DTO in the contracts library validated at the edge, and `POST /api/v1/admin/verification-files/{id}/reopen` with no body; both run the use case with the signed-in admin as actor (the `admin.garages` capability, as the open call) and answer 200 with the file read's body (302-FR-001), which now carries `requested_items`; anyone who is not a MotorFix admin MUST get 404 with no garage data, no token 401, an unknown id 404. The OpenAPI document and the generated client MUST be regenerated.
+
+_From 306-decision-record._
+
+### 306-FR-008 — The drawer component MUST offer one `decide(decision)` method, calling the decision endpoint and showing the server's answer (the decided state) on success, for the button stories (#58, #59, #172) to call; on 409 `verification_transition_refused` it MUST show a red inline message above the buttons, "Deja decis de {name} la {time}" / "Already decided by {name} at {time}" (the time in Europe/Bucharest, the drawer's existing short format), conveyed by text and an alert role, and re-read the file; on 409 `rar_check_required` or `caen_check_required` the same slot reads "Aprobarea cere verificarea RAR" / "Approval needs the RAR check" or "… CAEN"; on any other failure a toast reads "Nu am putut salva decizia" / "Could not save the decision". The message stays over the re-read state until the admin's next decide or reopen call, or until the drawer closes; no re-read clears it. While a decide or reopen call is in flight, a further call from the same drawer is ignored and the controls are disabled, so one press sends one request.
+
+_From 306-decision-record._
+
+### 306-FR-009 — On an `approved`, `rejected` or `more_requested` file the drawer's header MUST hold a text button "Redeschide dosarul" / "Reopen the file", at least 44 px tall and reachable by keyboard, which opens a confirmation (the `dialog` shape the problem dialog uses) reading "Redeschizi dosarul? Decizia rămâne până iei una nouă." / "Reopen the file? The decision stands until you take a new one." with "Redeschide" / "Reopen" and "Renunță" / "Cancel"; confirming calls the reopen endpoint and the drawer shows the server's answer (`in_review`, the three buttons back, the reopen button gone); a failed call shows the toast "Nu am putut redeschide dosarul" / "Could not reopen the file" and changes nothing. The button is absent on a `submitted` or `in_review` file.
+
+_From 306-decision-record._
+
+### 306-FR-010 — Every new text MUST live in the shared i18n files in Romanian and English; the message, the button and the dialog MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, inside the drawer, which stays the one modal dialog (302-FR-011); the confirmation returns focus to the reopen button on cancel and to the drawer's title on success.
+
+_From 306-decision-record._
+
+### 306-FR-011 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the API's request metrics by route, a dashboard panel and the reason no alert of their own is needed; the system MUST count decisions refused by reason (`already_decided`, `rar_check_required`, `caen_check_required`) and reopenings by actor role (`admin`, `system`) in two product counters, listed with their panel on the product dashboard and the reason a count needs no alert; the use case MUST log one line per decision (file id, decision, admin id), per refusal (file id, reason) and per reopening (file id, admin id); the inventory entries whose reason reads "no admin decision endpoint exists" (the decisions counter, VERIFICATION_RESULT) MUST be reworded now that one does.
+
+_From 306-decision-record._
+
+### 306-FR-012 — Tests MUST cover, in Jest on real PostgreSQL and Redis: each payload rule of FR-001 (the two 422s, the 400s); the three decisions storing their columns, the audit entry and the outbox row with `reason` and `note` in one transaction, rolled back together; `requested_items` stored and read; the 409 with the first admin's name and time; two concurrent decisions ending 200 and 409; `rar_check_required` and `caen_check_required` for each non-ok result, the OD-29 case passing, the system actor exempt; reopening from each decided state with `adminId` in the event, refused from `submitted` and `in_review`; a reopened approved garage still public with its last approved details; 404 for a driver, an owner, a receptionist and a mechanic and 401 with no token, on both endpoints; VERIFICATION_RESULT queued once per decision (the existing fan-out, verified). Web unit tests MUST cover `decide()` on success, on the two 409 kinds (the message text in both languages and the re-read) and on a failure, the note line under the decided footer, the reopen button's presence per status, the confirmation's two outcomes and the failed-reopen toast. Playwright MUST show two admin contexts on one seeded file: the first rejects through the endpoint and the second's open drawer shows "Respins de …" without a reload; the second reopens from the drawer and confirms, the buttons come back; the first approves through the endpoint (`rar` and `caen` seeded ok) and the timeline shows the rejection, the reopening and the approval, at desktop and a 320 px phone; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 306-decision-record._
+### 204-FR-001 — The verification file MUST carry the garage's RAR authorisation number: a new nullable field, filled when the submit use case is given one (an optional argument; no shipped flow passes it yet, so a real file starts with none and an admin sets it), kept by a resend, given to the seeded files by the seed, and returned in the file read (modifies 302-FR-001). An admin MUST be able to set or correct it on an undecided file through one admin-only call: the value is normalised as step 6 normalises it, refused with 400 `validation_failed` when shorter than 3 characters or holding control characters, written with one audit entry on the file (old and new number, admin, time) and no outbox event, and shown in the timeline (302-FR-010); a decided file that was not reopened answers 409 "Dosarul e deja decis", a non-admin 404, and an unchanged value writes nothing. The garage is not told and is not asked again.
+
+_From 204-rar-activities-check._
+
+### 204-FR-002 — Each `rar` and `activities` check MUST carry evidence beside its result and detail, stored with the check and returned with it (extends 203-FR-001's evidence to these two kinds): for `rar`, whether the authorisation was found, whether it is for the same company, whether it is for the same address (the registered seat for a mobile mechanic), the authorisation number as stored at the save, and the day of the save; for `activities`, the price-list jobs the ticked activities do not cover (job type ids) and the day of the save. The admin's part (the three ticks) is sent with the record call; the number, the uncovered jobs and the date are written by the server and refused in the request like any unknown field. Evidence is accepted only on `company`, `caen`, `rar` and `activities`, only with `ok`, `warning` or `failed`, and a `not_run` record clears it.
+
+_From 204-rar-activities-check._
+
+### 204-FR-003 — A `rar` record MUST be accepted as `ok` only when the file holds a RAR number and the evidence says found, same company and same address; the server then writes the detail "aceeași firmă și adresă", or "aceeași firmă și sediu social" for a mobile mechanic, whatever detail was sent. An `ok` save that lacks a tick or a number is refused with 400 `validation_failed` naming what is missing. `warning` and `failed` keep the typed, required detail (300-FR-010) and store the ticks as sent.
+
+_From 204-rar-activities-check._
+
+### 204-FR-004 — An `activities` record MUST compute, on the server at the save, the garage's price-list jobs whose RAR activity is not among the sent activities, with the price list's own rule (a job with no mapped activity is covered; an empty list covers every job), and store them in the evidence. Every price row of the garage counts, whatever its status, judged by the activity rule alone. It MUST be accepted as `ok` only when at least one activity is sent and no job is uncovered (the list is still required, 300-FR-004); the server then writes the detail "toate lucrările sunt acoperite", whatever detail was sent. An `ok` save with an empty list or an uncovered job is refused with 400 `validation_failed` naming what is missing. `warning` and `failed` keep the typed, required detail. The garage's RAR activities are written as 300-FR-004 already writes them, in the same save.
+
+_From 204-rar-activities-check._
+
+### 204-FR-006 — The system MUST record the RAR and activities results by hand only at launch: every record of either stores `automatic = false` and calls no outside register. No `RarRegister` seam, adapter, alert, metric or retry ships with this story (owner precedent of 2026-10-17 on ST-203's `CompanyRegister`; Principle I); the automatic look-up story adds the seam together with its call site.
+
+_From 204-rar-activities-check._
+
+### 204-FR-007 — In the drawer, the `rar` row MUST read "Autorizație RAR găsită în registru" / "RAR authorisation found in the register", and "Autorizația RAR nu apare în registru" / "RAR authorisation not found in the register" while its result is `failed`; the `activities` row "Activitățile autorizate acoperă lista de prețuri" / "Authorised activities cover the price list" (modifies the labels of 302-FR-004 and 203-FR-006); each grey "neverificat" / "not checked" until recorded. The `rar` row MUST show the file's RAR number as stored, or "număr lipsă" / "number missing", a "Corectează" / "Correct" action on an undecided file that opens a one-field form calling FR-001, and one link "Registrul RAR" / "RAR register" opening `https://portal.rarom.ro/` in a new tab and copying the number to the clipboard with a toast "Număr RAR copiat" / "RAR number copied"; when the clipboard is unavailable the tab still opens and nothing else happens. The link is a plain link to a fixed public address with no number in it; MotorFix sends nothing to that site.
+
+_From 204-rar-activities-check._
+
+### 204-FR-008 — Each of the two rows MUST offer a record form while the file is undecided, in the register form's shape (203-FR-007): three buttons "OK" / "Atenție" / "Problemă", a detail field required for Atenție and Problemă (1 to 200 characters, hidden for OK since the server writes that detail), and "Resetează" / "Clear" recording `not_run` when the row has a result. The `rar` form holds the ticks "găsită" / "found", "aceeași firmă" / "same company" and "aceeași adresă" / "same address" with the workshop address beneath it, or "același sediu social" / "same registered seat" with the seat address for a mobile mechanic; when "găsită" is unticked and Problemă is chosen, the detail is proposed as "numărul introdus nu există în registrul public RAR" / "the number entered is not in the public RAR register", editable. The `activities` form is a two-column view, stacked on a phone: the file's `rar_authorisation` document on the left as the documents section already shows it (its pages or "fără autorizație încărcată" / "no authorisation uploaded"), and on the right one tick per RAR activity of the catalogue by name (pre-ticked from the garage's stored activities), with the garage's price-list jobs beneath, each marked "acoperit" / "covered" or "neacoperit" / "not covered" as the ticks change; when a job is uncovered and Atenție or Problemă is chosen, the detail is proposed as "<Job> nu apare în autorizație" / "<Job>, <Job> nu apar în autorizație" (English "<Job> is not on the authorisation" / "… are not …"), editable. OK is refused in the form with the missing tick, the missing number or the uncovered jobs named before anything is sent, and the server's refusal (FR-003, FR-004) is shown the same way when it arrives. Saving records the kind through the existing record call with the result, the detail, the evidence ticks and (for `activities`) the list.
+
+_From 204-rar-activities-check._
+
+### 204-FR-009 — The file read MUST give the form what it compares: the garage's price-list jobs (job type id, Romanian and English name, the RAR activity each maps to) and the whole RAR activity catalogue by code and name (modifies 302-FR-001; the garage's recorded activities it already returns). After a save, the row MUST show only the server's answer: the lamp, the detail, the ticks of a `rar` check as text ("găsită · firmă · adresă" or the English equivalents), the ticked activities of an `activities` check by name and its uncovered jobs by name, the recorder's name and the time; the queue line is updated from the answer's summary. On a failure the form keeps what was typed and ticked and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` the drawer re-reads the file and turns read-only (302-FR-007). Another admin's open drawer refreshes through the existing `verification-file:{fileId}` live update, with no new channel. While the file is undecided and `rar` is not `ok`, the footer MUST show "Verificarea RAR e obligatorie" / "The RAR check is required" beside the disabled "Aprobă și publică" (302-FR-009); the server's refusal and the button itself stay with #173 and #58.
+
+_From 204-rar-activities-check._
+
+### 204-FR-011 — The result and detail rules of a check MUST live in one layer: the relationship rules (a detail required for `warning` and `failed` and refused with `not_run`; a list, evidence or ticks only on their kind and never with `not_run`; `ok` only with its ticks, number or covered jobs; the fixed `ok` details) in the verification-checks service, and the per-field shape (types, enums, lengths, no control characters) in the DTO; the one rule checked in both is the 200-character detail length, which the service keeps for the detail it stores, so a direct caller that skips the DTO gets a 400 and never the database's 500 (Principle V); one suite covers the service's rules (#591).
+
+_From 204-rar-activities-check._
+
+### 204-FR-012 — Files decided before the verification-check migration MUST keep their eight back-filled `not_run` checks and their decision; no migration removes them (OD-33, 2026-10-16, #592). The capability spec records it; a test proves no migration after the verification-check migration deletes or rewrites a decided file's checks, and an integration test proves a decided file holding the back-fill's eight `not_run` checks reads them and its decision unchanged.
+
+_From 204-rar-activities-check._
+
+### 204-FR-013 — The five seeded RAR activity codes (mechanics, brakes, steering, suspension, air_con) stand until the lawyer's later review (owner, 2026-10-16, under the 2026-10-11 rule; a follow-up, not a gate, #578). The capability spec records that a migration replacing them must map or report every stored `GARAGE.rar_activities` value, and a migration test proves, after the migrations run, that the catalogue holds exactly those five codes and that every stored value is one of them. The seed migration's `TODO` comment stays: that migration is applied, and editing it would change its checksum on every deployed database.
+
+_From 204-rar-activities-check._
+
+### 204-FR-014 — Every text of the forms, rows and footer note MUST live in the shared i18n files in Romanian and English; the fixed `ok` details the server writes (FR-003, FR-004) are stored in Romanian, like every typed detail, and shown as stored in both languages; the forms MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll (the two-column view stacked under the tablet width), every state conveyed by text as well as colour, the ticks, buttons and the correction field reachable by keyboard and named for a screen reader; a form opens inside the drawer, which stays the one modal dialog (302-FR-011); opening a form moves focus to its first control and closing it returns focus to the button that opened it; a refusal is announced to assistive technology and names the control at fault; every control keeps the drawer's minimum touch target of 44 px.
+
+_From 204-rar-activities-check._
+
+### 204-FR-015 — The evidence shape, the file's new field and the correction call live in the contracts and domain libraries; the record call's contract and the file read are extended, not duplicated, with OpenAPI updated and the generated client regenerated. The correction route is listed in `infra/observability/inventory.json` with the API's request metrics and one log line per correction (file id, admin id), with the reason a correction needs no alert; the record route's product action (203-FR-010) already counts `rar` and `activities` by kind and result.
+
+_From 204-rar-activities-check._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -370,3 +466,13 @@ _From 203-company-caen-check._
 - `302-FR-007` — superseded by `203-FR-007` (2026-10-17)
 - `300-FR-006` — superseded by `203-FR-004` (2026-10-17)
 - `302-FR-004` — superseded by `203-FR-006` (2026-10-17)
+
+- `207-FR-008` — superseded by `306-FR-004` (2026-10-17)
+- `302-FR-009` — superseded by `306-FR-007` (2026-10-17)
+- `302-FR-001` — superseded by `306-FR-006` (2026-10-17)
+- `300-FR-009` — superseded by `204-FR-010` (2026-10-17)
+- `302-FR-001` — superseded by `204-FR-009` (2026-10-17)
+- `203-FR-006` — superseded by `204-FR-007` (2026-10-17)
+- `203-FR-001` — superseded by `204-FR-002` (2026-10-17)
+- `203-FR-004` — superseded by `204-FR-005` (2026-10-17)
+- `300-FR-005` — superseded by `204-FR-013` (2026-10-17)

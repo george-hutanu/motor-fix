@@ -17,6 +17,7 @@ import { localDay } from '../../../bucharest';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../../public-garages/public-garages';
+import { pricedJobs } from '../priced-jobs';
 
 const SYSTEM_NAME = 'MotorFix';
 
@@ -29,7 +30,8 @@ export function certificateStale(issuedOn: Date | null, sentAt: Date) {
   return !issuedWithinWindow(calendarDay(issuedOn), localDay(sentAt));
 }
 
-// The file's own lines: its sending and status changes, its checks' records
+// The file's own lines: its sending, status changes and RAR number
+// corrections, its checks' records
 // and its documents' openings. A document upload and the declaration stay out.
 // Every one of them carries the garage, so the (garageId, at) index reads it.
 export function timelineWhere(
@@ -42,7 +44,11 @@ export function timelineWhere(
     garageId,
     OR: [
       {
-        OR: [{ action: 'create' }, { action: 'update', field: 'status' }],
+        OR: [
+          { action: 'create' },
+          { action: 'update', field: 'status' },
+          { action: 'update', field: 'rar_number' },
+        ],
         subjectId: fileId,
         subjectType: 'verification_file',
       },
@@ -111,7 +117,7 @@ export class VerificationFileService {
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),
     );
-    const [names, activities, reports, entries, total, photos] =
+    const [names, catalogue, prices, reports, entries, total, photos] =
       await Promise.all([
         this.names([
           file.openedBy,
@@ -121,8 +127,9 @@ export class VerificationFileService {
         ]),
         this.prisma.rarActivity.findMany({
           orderBy: { code: 'asc' },
-          where: { code: { in: garage.rarActivities } },
+          select: { code: true, nameEn: true, nameRo: true },
         }),
+        pricedJobs(this.prisma, garage.id),
         this.prisma.garageReport.findMany({
           orderBy: { createdAt: 'desc' },
           select: { createdAt: true, text: true },
@@ -144,11 +151,10 @@ export class VerificationFileService {
     const previous = file.previousFile;
 
     return {
-      activities: activities.map(({ code, nameEn, nameRo }) => ({
-        code,
-        nameEn,
-        nameRo,
-      })),
+      activities: catalogue.filter((a) =>
+        garage.rarActivities.includes(a.code),
+      ),
+      catalogue,
       checks: [...file.checks]
         .sort(
           (a, b) =>
@@ -202,11 +208,13 @@ export class VerificationFileService {
         id: file.id,
         openedAt: iso(file.openedAt),
         openedBy: actor(file.openedBy, file.openedAt),
+        rarNumber: file.rarNumber,
         reasonCode: file.reasonCode,
         reasonNote: file.reasonNote,
         reopenedAt: iso(file.reopenedAt),
         reopenedBy: actor(file.reopenedBy, file.reopenedAt),
         reopenReason: file.reopenReason,
+        requestedItems: file.requestedItems,
         status: file.status,
         submittedAt: file.submittedAt.toISOString(),
       },
@@ -224,6 +232,7 @@ export class VerificationFileService {
         seatAddress: garage.seatAddress,
         serviceRadiusKm: garage.serviceRadiusKm,
       },
+      jobs: prices,
       previousRejection:
         previous?.status === 'rejected' && previous.decidedAt
           ? {

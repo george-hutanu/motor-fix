@@ -29,7 +29,11 @@
     [loading]="mapLoading()"
     [pins]="pinned()"
     [place]="place()"
+    [lit]="lit()"
+    [card]="card()"
+    [cardBrand]="answer()?.brand"
     (moved)="move($event)"
+    (picked)="picked($event)"
   />
 }
 <div class="found">
@@ -50,7 +54,13 @@
               [mfLiveChange]="garage"
               [mfLiveChangeSay]="'public.results.live.updated' | t: { name: garage.name }"
             >
-              <mf-result-card [brand]="answer.brand" [garage]="garage" />
+              <mf-result-card
+                [brand]="answer.brand"
+                [garage]="garage"
+                [selected]="selected() === garage.id"
+                (point)="point(garage.id, $event)"
+                (pick)="select(garage.id)"
+              />
             </li>
           }
         </ul>

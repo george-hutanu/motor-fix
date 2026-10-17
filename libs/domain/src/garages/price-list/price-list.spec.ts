@@ -1,3 +1,5 @@
+import { coversJob } from '@motor-fix/contracts';
+
 import { type PriceRow, priceListJobs, publicPriceRows } from './price-list';
 
 // The profile read's two steps, as public-garages.ts runs them.
@@ -470,4 +472,25 @@ describe('the public price rows of a profile read with a brand', () => {
       expect(publicRows(rows, ['B'], { id: 'bmw', ticks: [j.id] })).toEqual([]);
     },
   );
+});
+
+// @traces 204-FR-004
+describe('a job not authorised is a job the activities do not cover', () => {
+  const activities = [null, 'brakes', 'paintwork'];
+  const lists = [
+    [],
+    ['brakes'],
+    ['mechanics', 'paintwork'],
+    ['brakes', 'paintwork'],
+  ];
+
+  it.each(
+    activities.flatMap((activity) =>
+      lists.map((list) => [activity, list] as const),
+    ),
+  )('agrees with coversJob for %s against %j', (activity, list) => {
+    const notAuthorised =
+      stateOf([row(job('approved', activity))], [...list]) === 'not_authorised';
+    expect(notAuthorised).toBe(!coversJob(activity, list));
+  });
 });

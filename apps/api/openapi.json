@@ -5090,6 +5090,158 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/decision": {
+      "post": {
+        "operationId": "VerificationFileController_decision",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          },
+          "409": {
+            "description": "verification_transition_refused (decidedBy, decidedAt, currentStatus), rar_check_required, caen_check_required"
+          },
+          "422": {
+            "description": "reason_required, note_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}/reopen": {
+      "post": {
+        "operationId": "VerificationFileController_reopen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          },
+          "409": {
+            "description": "verification_transition_refused"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}/rar-number": {
+      "put": {
+        "operationId": "VerificationFileController_correct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectRarNumberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: under 3 characters or holding control characters"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          },
+          "409": {
+            "description": "verification_file_decided: the file is decided"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/listing-drafts/{id}/photos/upload-url": {
       "post": {
         "operationId": "ListingPhotosController_uploadAddress",
@@ -12765,6 +12917,18 @@
           "address": {
             "type": "boolean",
             "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
+          },
+          "found": {
+            "type": "boolean",
+            "description": "The file's RAR number is in the public register; rar only"
+          },
+          "sameCompany": {
+            "type": "boolean",
+            "description": "The register names the same company; rar only"
+          },
+          "sameAddress": {
+            "type": "boolean",
+            "description": "The register shows the workshop address, or the registered seat for a mobile mechanic; rar only"
           }
         }
       },
@@ -12793,7 +12957,7 @@
             }
           },
           "evidence": {
-            "description": "What the admin found; company and caen only, refused with not_run",
+            "description": "What the admin found; company, caen and rar only, refused with not_run",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RecordCheckEvidenceDto"
@@ -12825,6 +12989,18 @@
             "type": "boolean",
             "description": "The workshop address, or the registered seat for a mobile mechanic, matches; caen only"
           },
+          "found": {
+            "type": "boolean",
+            "description": "The file's RAR number is in the public register; rar only"
+          },
+          "sameCompany": {
+            "type": "boolean",
+            "description": "The register names the same company; rar only"
+          },
+          "sameAddress": {
+            "type": "boolean",
+            "description": "The register shows the workshop address, or the registered seat for a mobile mechanic; rar only"
+          },
           "certificateUploaded": {
             "type": "boolean",
             "description": "Whether the file held an ONRC certificate at the save; caen only"
@@ -12833,6 +13009,18 @@
             "type": "string",
             "description": "The day of the look-up, in Bucharest",
             "format": "date"
+          },
+          "rarNumber": {
+            "type": "string",
+            "description": "The file's RAR number at the save; rar only",
+            "nullable": true
+          },
+          "uncoveredJobTypeIds": {
+            "description": "The price-list job types the recorded activities leave uncovered; activities only",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -12896,7 +13084,7 @@
             "nullable": true
           },
           "evidence": {
-            "description": "What the admin found, for company and caen; null otherwise",
+            "description": "What the admin found and the server noted, for company, caen, rar and activities; null otherwise",
             "nullable": true,
             "type": "object",
             "allOf": [
@@ -13020,6 +13208,13 @@
             "type": "string",
             "nullable": true
           },
+          "requestedItems": {
+            "description": "What the latest request for more asked for; empty otherwise",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "reopenedBy": {
             "nullable": true,
             "type": "object",
@@ -13049,6 +13244,11 @@
           "declaredByName": {
             "type": "string",
             "nullable": true
+          },
+          "rarNumber": {
+            "type": "string",
+            "description": "The garage's RAR authorisation number, normalised",
+            "nullable": true
           }
         },
         "required": [
@@ -13061,11 +13261,13 @@
           "decidedAt",
           "reasonCode",
           "reasonNote",
+          "requestedItems",
           "reopenedBy",
           "reopenedAt",
           "reopenReason",
           "declaredAt",
-          "declaredByName"
+          "declaredByName",
+          "rarNumber"
         ]
       },
       "VerificationFileGarageDto": {
@@ -13155,6 +13357,31 @@
           "code",
           "nameRo",
           "nameEn"
+        ]
+      },
+      "VerificationFileJobDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "rarActivity": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "rarActivity"
         ]
       },
       "VerificationFileDocumentDto": {
@@ -13281,6 +13508,20 @@
               "$ref": "#/components/schemas/VerificationFileActivityDto"
             }
           },
+          "catalogue": {
+            "description": "The whole RAR activity catalogue, by code",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileActivityDto"
+            }
+          },
+          "jobs": {
+            "description": "The garage's price-list jobs, once each, in the list's order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileJobDto"
+            }
+          },
           "documents": {
             "description": "One per kind, in their order",
             "type": "array",
@@ -13317,11 +13558,72 @@
           "garage",
           "checks",
           "activities",
+          "catalogue",
+          "jobs",
           "documents",
           "storageReady",
           "reports",
           "previousRejection",
           "timeline"
+        ]
+      },
+      "VerificationDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "more_requested",
+              "rejected"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Required with rejected, optional with more_requested",
+            "enum": [
+              "documents",
+              "rar",
+              "address",
+              "photos",
+              "other"
+            ]
+          },
+          "requestedItems": {
+            "type": "array",
+            "description": "What is missing; only with more_requested",
+            "items": {
+              "type": "string",
+              "enum": [
+                "documents",
+                "rar",
+                "address",
+                "photos",
+                "other"
+              ]
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "Trimmed; required with rejected and more_requested, optional with approved",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "CorrectRarNumberDto": {
+        "type": "object",
+        "properties": {
+          "rarNumber": {
+            "type": "string",
+            "description": "Trimmed, upper-cased and cut at 40; at least 3 characters",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "rarNumber"
         ]
       },
       "PhotoUploadRequestDto": {

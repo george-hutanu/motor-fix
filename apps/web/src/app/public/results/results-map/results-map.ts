@@ -1,10 +1,11 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   Component,
   computed,
   DestroyRef,
-  type ElementRef,
+  ElementRef,
   effect,
   InjectionToken,
   inject,
@@ -15,10 +16,16 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import type { GaragePinsDto } from '@motor-fix/data-access';
+import type {
+  BrandRefDto,
+  GaragePinDto,
+  GaragePinsDto,
+  ListedGarageDto,
+} from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
 
-import { drawPins, type MapMove } from './pins-map';
+import { MapCard } from './map-card/map-card';
+import { drawPins, type MapEvents, type MapMove } from './pins-map';
 import {
   closeMapLibre,
   keepOutOfTabOrder,
@@ -27,15 +34,28 @@ import {
   styleFor,
 } from '../../map-libre/map-libre';
 
+// The small card keeps 8 px below the map's top and 14 px above its pin;
+// results-map.css keeps the same 8 px at its sides.
+const EDGE = 8;
+const GAP = 14;
+
 export interface ResultsMapView {
   destroy(): void;
   fit(place: LatLng | undefined, answer: GaragePinsDto | undefined): void;
   show(answer: GaragePinsDto | undefined): void;
+  light(id: string | undefined): void;
+  spot(at: LatLng): { x: number; y: number };
+}
+
+// A tapped pin whose garage the list does not show, and that garage once read.
+export interface PinCard {
+  pin: GaragePinDto;
+  garage?: ListedGarageDto;
 }
 
 type OpenResultsMap = (
   host: HTMLElement,
-  moved: (move: MapMove) => void,
+  on: MapEvents,
 ) => Promise<ResultsMapView>;
 
 // Opens the results map in the browser; the component never sees MapLibre,
@@ -43,10 +63,10 @@ type OpenResultsMap = (
 export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return async (host, moved) => {
+    return async (host, on) => {
       const map = await openMapLibre(host, styleFor(document));
       const stop = keepOutOfTabOrder(host);
-      const pins = drawPins(map, host, moved);
+      const pins = drawPins(map, host, on);
       return {
         ...pins,
         destroy: () => {
@@ -62,7 +82,7 @@ export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
 // accessible path: the list carries every garage, so the canvas stays out
 // of the keyboard order and away from assistive technology.
 @Component({
-  imports: [TranslatePipe],
+  imports: [MapCard, TranslatePipe],
   selector: 'mf-results-map',
   styleUrl: './results-map.css',
   templateUrl: './results-map.html',
@@ -72,8 +92,14 @@ export class ResultsMap {
   readonly place = input<LatLng | undefined>();
   readonly brand = input.required<string>();
   readonly loading = input(false);
+  // The garage whose pin is lit, and the small card of a tapped pin.
+  readonly lit = input<string | undefined>();
+  readonly card = input<PinCard | undefined>();
+  readonly cardBrand = input<BrandRefDto | undefined>();
   // The box the driver moved the map to, once it has settled.
   readonly moved = output<string>();
+  // The garage of a tapped pin, or none for a tap away from every pin.
+  readonly picked = output<string | undefined>();
   protected readonly tooWide = signal(false);
   // The style failed or never loaded; the grey map stays and says so.
   protected readonly failed = signal(false);
@@ -84,6 +110,26 @@ export class ResultsMap {
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   protected readonly view = signal<ResultsMapView | undefined>(undefined);
   private fitWanted = false;
+  // Bumped on every move of the map, so the small card follows its pin.
+  private readonly shifts = signal(0);
+  // The small card's own height once drawn, to keep it inside the map.
+  private readonly small = viewChild<unknown, ElementRef<HTMLElement>>(
+    'small',
+    { read: ElementRef },
+  );
+  private readonly smallHeight = signal(0);
+  // Where the small card stands: above its pin, pushed down rather than
+  // flipped where the pin sits too near the top.
+  protected readonly cardAt = computed(() => {
+    const view = this.view();
+    const card = this.card();
+    const brand = this.cardBrand();
+    if (!view || !card || !brand) return undefined;
+    this.shifts();
+    const { x, y } = view.spot({ lat: card.pin.lat, lng: card.pin.lng });
+    const top = Math.max(EDGE, y - this.smallHeight() - GAP);
+    return { brand, card, top: `${top}px`, x: `${x}px` };
+  });
 
   constructor() {
     const open = inject(RESULTS_MAP);
@@ -95,7 +141,11 @@ export class ResultsMap {
     });
     afterNextRender(() => {
       if (!browser) return;
-      open(this.host().nativeElement, (move) => this.follow(move)).then(
+      open(this.host().nativeElement, {
+        moved: (move) => this.follow(move),
+        picked: (id) => this.picked.emit(id),
+        shifted: () => this.shifts.update((n) => n + 1),
+      }).then(
         (view) => {
           if (closed) return view.destroy();
           this.view.set(view);
@@ -105,6 +155,13 @@ export class ResultsMap {
       );
     });
     effect(() => this.view()?.show(this.pins()));
+    effect(() => this.view()?.light(this.lit()));
+    // Measured again once the garage fills the card, which makes it taller.
+    afterRenderEffect(() => {
+      this.card();
+      const small = this.small()?.nativeElement;
+      if (small) this.smallHeight.set(small.offsetHeight);
+    });
   }
 
   private follow(move: MapMove) {

@@ -1,0 +1,5 @@
+<p>{{ 'admin.file.reopen.question' | t }}</p>
+<div class="actions">
+  <button hlmBtn variant="secondary" type="button" (click)="task.close('cancelled')">{{ 'admin.file.reopen.cancel' | t }}</button>
+  <button hlmBtn type="button" (click)="task.close(true)">{{ 'admin.file.reopen.confirm' | t }}</button>
+</div>

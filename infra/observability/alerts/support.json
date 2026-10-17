@@ -18,9 +18,9 @@
             "service": "worker"
           },
           "annotations": {
-            "summary": "A contact message has waited more than an hour for its support e-mail: SUPPORT_EMAIL is unset or sending fails ({{ $labels.deployment_environment }}).",
+            "summary": "A contact message has waited more than an hour for its support e-mail: neither SUPPORT_EMAIL nor EMAIL_DOMAIN is set, or sending fails ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-product",
-            "runbook": "Check SUPPORT_EMAIL and EMAIL_FROM on the worker, the worker's Support log lines and the support-messages queue on the queues dashboard; once the address is set, the waiting messages are mailed by the worker's next sweep."
+            "runbook": "Check SUPPORT_EMAIL, EMAIL_DOMAIN and EMAIL_FROM on the worker, the worker's Support log lines and the support-messages queue on the queues dashboard; once the address is set, the waiting messages are mailed by the worker's next sweep."
           },
           "data": [
             {

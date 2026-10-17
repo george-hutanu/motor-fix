@@ -600,3 +600,133 @@ describe('the timeline', () => {
     expect(await prisma.activityLog.count()).toBe(before);
   });
 });
+
+// @traces 204-FR-001
+// @traces 204-FR-009
+describe('what the RAR forms compare', () => {
+  const priced = async (
+    key: string,
+    rarActivity: string | null,
+    position: number,
+    brandId: string | null = null,
+  ) => {
+    const job =
+      (await prisma.jobType.findFirst({ where: { nameEn: key } })) ??
+      (await prisma.jobType.create({
+        data: {
+          key: `${key}-${randomUUID()}`,
+          nameEn: key,
+          nameRo: `${key} ro`,
+          rarActivity,
+          status: 'approved',
+        },
+      }));
+    await prisma.garagePrice.create({
+      data: {
+        brandId,
+        fromBani: 10_000,
+        garageId,
+        jobTypeId: job.id,
+        position,
+        updatedBy: ioana,
+      },
+    });
+    return job.id;
+  };
+
+  it('carries the RAR number as stored, or none', async () => {
+    const file = await sent({ rarNumber: 'B 1234/2019' });
+    expect((await service().read(file.id)).file.rarNumber).toBe('B 1234/2019');
+
+    await prisma.verificationFile.update({
+      data: { rarNumber: null },
+      where: { id: file.id },
+    });
+    expect((await service().read(file.id)).file.rarNumber).toBeNull();
+  });
+
+  it('carries the whole activity catalogue by code', async () => {
+    const file = await sent();
+
+    const { catalogue } = await service().read(file.id);
+
+    expect(catalogue.map((a) => a.code)).toEqual([
+      'air_con',
+      'brakes',
+      'mechanics',
+      'steering',
+      'suspension',
+    ]);
+    expect(catalogue[1]).toEqual({
+      code: 'brakes',
+      nameEn: 'Brakes',
+      nameRo: 'Frâne',
+    });
+  });
+
+  it("carries the price list's jobs once each, in the list's order, with their activity", async () => {
+    const audi = await brand('Audi');
+    const paint = await priced('Paint', 'paintwork', 1);
+    const brakes = await priced('Brakes', 'brakes', 0);
+    await priced('Brakes', 'brakes', 2, audi.id);
+    const file = await sent();
+
+    const { jobs } = await service().read(file.id);
+
+    expect(jobs).toEqual([
+      {
+        jobTypeId: brakes,
+        nameEn: 'Brakes',
+        nameRo: 'Brakes ro',
+        rarActivity: 'brakes',
+      },
+      {
+        jobTypeId: paint,
+        nameEn: 'Paint',
+        nameRo: 'Paint ro',
+        rarActivity: 'paintwork',
+      },
+    ]);
+  });
+
+  it('shows a RAR number correction in the timeline', async () => {
+    const file = await sent();
+    await prisma.activityLog.create({
+      data: {
+        action: 'update',
+        actorId: ioana,
+        actorName: 'Ioana',
+        actorRole: 'admin',
+        field: 'rar_number',
+        garageId,
+        newValue: 'B 1234/2019',
+        subjectId: file.id,
+        subjectType: 'verification_file',
+      },
+    });
+
+    const { timeline } = await service().read(file.id);
+
+    expect(timeline.entries.map((e) => e.field)).toContain('rar_number');
+  });
+});
+
+// @traces 204-FR-012
+describe('a file decided before the checks existed', () => {
+  it('reads its eight checks not run and its decision unchanged', async () => {
+    const file = await sent({
+      decidedAt: SENT,
+      decidedBy: ioana,
+      status: 'approved',
+    });
+
+    const read = await service().read(file.id);
+
+    expect(read.checks).toHaveLength(8);
+    expect(read.checks.every((c) => c.result === 'not_run')).toBe(true);
+    expect(read.file).toMatchObject({
+      decidedAt: SENT.toISOString(),
+      status: 'approved',
+    });
+  });
+});

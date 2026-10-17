@@ -3,6 +3,7 @@ capability: support
 updated: 2026-10-17
 features:
   - 280-contact-motorfix
+  - 279-email-inbox
 ---
 
 # Capability: Support
@@ -79,9 +80,9 @@ _From 280-contact-motorfix._
 
 _From 280-contact-motorfix._
 
-### 280-FR-018 — The support address and the sending domain MUST come only from configuration (`SUPPORT_EMAIL`, `EMAIL_FROM`); no address or domain appears in source, templates or texts, and the end-to-end and API tests use their own test values.
+### 279-FR-003 — The support address MUST be `SUPPORT_EMAIL` when set to an address, else `support@<domain>` when the domain is set, else none (as today). The contact page, the support e-mails and the reply-to all use this one value. The support address and the sending domain MUST come only from configuration (`EMAIL_DOMAIN`, `EMAIL_FROM`, `SUPPORT_EMAIL`); no address or domain appears in source, templates or texts, and tests use their own test values.
 
-_From 280-contact-motorfix._
+_From 279-email-inbox._
 
 ### 280-FR-019 — Every text of the page, the task, the form, its errors, the confirmation and both e-mails MUST exist in Romanian and English; the e-mails' templates sit beside the existing ones and the acknowledgement's promise line is a unit-tested function of the date and the setting.
 
@@ -100,3 +101,5 @@ _From 280-contact-motorfix._
 _From 280-contact-motorfix._
 
 ## Retired
+
+- `280-FR-018` — superseded by `279-FR-003` (2026-10-17)

@@ -33,6 +33,55 @@
         (input)="typed('name', $event)"
       />
     </div>
+  } @else if (kind() === 'activities') {
+    <div class="columns">
+      <section class="authorisation" data-part="authorisation" [attr.aria-labelledby]="id + '-doc'">
+        <h4 [id]="id + '-doc'">{{ 'admin.file.register.form.authorisation' | t }}</h4>
+        @if (document(); as doc) {
+          <p>{{ doc.line }}</p>
+          <div class="pages">
+            @for (b of doc.buttons; track b.n) {
+              <button hlmBtn variant="secondary" type="button" [attr.aria-label]="b.named" (click)="page.emit(b.n)">
+                {{ b.label }}
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="note">{{ 'admin.file.register.form.noDocument' | t }}</p>
+        }
+      </section>
+      <div class="catalogue">
+        <fieldset class="ticks">
+          <legend>{{ 'admin.file.register.form.ticks' | t }}</legend>
+          @for (a of catalogueList(); track a.code; let first = $first) {
+            <label class="tick">
+              <input
+                type="checkbox"
+                [attr.data-fault]="first ? 'activities' : null"
+                [checked]="ticked().has(a.code)"
+                [attr.aria-invalid]="faulty('activities') ? 'true' : null"
+                [attr.aria-describedby]="faulty('activities') ? id + '-error' : null"
+                (change)="toggleActivity(a.code, $event)"
+              />
+              <span class="tick-text"><span>{{ a.name }}</span></span>
+            </label>
+          }
+        </fieldset>
+        <h4>{{ 'admin.file.register.form.priceList' | t }}</h4>
+        @if (jobList().length) {
+          <ul class="jobs">
+            @for (j of jobList(); track j.id) {
+              <li data-job [class.uncovered]="j.uncovered">
+                <span>{{ j.name }}</span>
+                <span class="mark">{{ j.mark }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="note">{{ 'admin.file.register.form.noJobs' | t }}</p>
+        }
+      </div>
+    </div>
   } @else {
     <fieldset class="ticks">
       <legend>{{ 'admin.file.register.form.ticks' | t }}</legend>

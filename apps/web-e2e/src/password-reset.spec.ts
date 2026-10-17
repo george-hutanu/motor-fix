@@ -158,7 +158,7 @@ test.describe('a reset link that no longer works', () => {
   }) => {
     await page.setViewportSize({ height: 640, width: 320 });
     await ready(page, '/ro');
-    await page.getByRole('link', { name: 'Cont' }).click();
+    await page.getByRole('link', { exact: true, name: 'Cont' }).click();
     await expect(
       page.getByRole('button', { name: 'Ai uitat parola?' }),
     ).toBeVisible();

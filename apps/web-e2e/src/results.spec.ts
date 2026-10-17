@@ -479,6 +479,203 @@ test.describe('the map beside the results @seeded', () => {
     await expect(page.locator('.state[role="alert"]')).toHaveCount(0);
   });
 
+  // A card and its pin, read through the map the page exposes: the lit
+  // layers' filters name the lit garage, and a pin is clicked where the map
+  // projects it.
+  type Lit = 'pins-lit-dot' | 'areas-lit-fill';
+  const litIn = (page: Page, layer: Lit) =>
+    page.evaluate((id) => {
+      const map = (
+        window as unknown as {
+          __MF_MAP?: { getFilter(id: string): unknown };
+        }
+      ).__MF_MAP;
+      return JSON.stringify(map?.getFilter(id) ?? null);
+    }, layer);
+  async function mapSettled(page: Page) {
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          const map = (
+            window as unknown as {
+              __MF_MAP?: {
+                getSource(
+                  id: string,
+                ): { getData(): Promise<{ features: unknown[] }> } | undefined;
+                isMoving(): boolean;
+                loaded(): boolean;
+              };
+            }
+          ).__MF_MAP;
+          if (!map?.loaded() || map.isMoving()) return 0;
+          return (await map.getSource('pins')?.getData())?.features.length ?? 0;
+        }),
+      )
+      .toBeGreaterThan(0);
+  }
+  async function clickAt(page: Page, at: readonly [number, number]) {
+    const spot = await page.evaluate(([lat, lng]) => {
+      const map = (
+        window as unknown as {
+          __MF_MAP: {
+            getCanvas(): HTMLCanvasElement;
+            project(at: [number, number]): { x: number; y: number };
+          };
+        }
+      ).__MF_MAP;
+      const { x, y } = map.project([lng, lat]);
+      const box = map.getCanvas().getBoundingClientRect();
+      return { x: box.left + x, y: box.top + y };
+    }, at);
+    await page.mouse.click(spot.x, spot.y);
+  }
+  const named = (page: Page, i: number) =>
+    page.locator('mf-result-card').filter({
+      has: page.getByRole('heading', { name: `Service Harta ${stamp} ${i}` }),
+    });
+
+  // @traces 270-FR-001 270-FR-002 270-FR-003 270-FR-007 270-FR-013
+  test('lights the pin of the card the pointer or the focus rests on, and turns the card tapped amber', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapSettled(page);
+    const first = page.locator('mf-result-card').first();
+    await expect(first.locator('article.card')).toHaveClass(/selected/);
+
+    await named(page, 1).hover();
+    await expect.poll(() => litIn(page, 'pins-lit-dot')).toContain(ids[1]);
+
+    await page.mouse.move(0, 0);
+    await expect.poll(() => litIn(page, 'pins-lit-dot')).not.toContain(ids[1]);
+    await named(page, 1).locator('a').first().focus();
+    await expect.poll(() => litIn(page, 'pins-lit-dot')).toContain(ids[1]);
+
+    await named(page, 1).getByRole('heading').click();
+    await expect(named(page, 1).locator('article.card')).toHaveClass(
+      /selected/,
+    );
+    await expect(page.locator('article.card.selected')).toHaveCount(1);
+  });
+
+  // @traces 270-FR-004 270-FR-013
+  test('selects the card of a tapped pin and brings it into view, focus unmoved', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await page.setViewportSize({ height: 480, width: 1280 });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapSettled(page);
+
+    await clickAt(page, placed[2].at);
+
+    const card = named(page, 2);
+    await expect(card.locator('article.card')).toHaveClass(/selected/);
+    await expect(card).toBeInViewport();
+    expect(await page.evaluate(() => document.activeElement?.tagName)).toBe(
+      'BODY',
+    );
+  });
+
+  // The empty style carries no glyphs, so the circle's rate label is not
+  // drawn here; its tap is the unit suite's. A tap on the fill names nothing.
+  // @traces 270-FR-004 270-FR-008 270-FR-013
+  test('lights the mobile mechanic circle of its card, and selects nothing for a tap on its fill', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapSettled(page);
+
+    await named(page, 3).hover();
+    await expect.poll(() => litIn(page, 'areas-lit-fill')).toContain(ids[3]);
+
+    await page.mouse.move(0, 0);
+    const selected = await page
+      .locator('mf-result-card:has(article.card.selected) h2')
+      .textContent();
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          __MF_MAP: { jumpTo(view: object): void };
+        }
+      ).__MF_MAP.jumpTo({ center: [22.87, 45.35], zoom: 12 }),
+    );
+    await clickAt(page, [45.37, 22.87]);
+    await expect(
+      page.locator('mf-result-card:has(article.card.selected) h2'),
+    ).toHaveText(selected ?? '');
+  });
+
+  // @traces 270-FR-010 270-FR-011 270-FR-013
+  test('opens the small card for a pin whose garage the list does not show', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    // The search near the place finds all four; the list answer drops one so
+    // its pin has no card, and the ids= read still brings it.
+    await page.route(
+      (url) =>
+        url.pathname === '/api/v1/search/garages' &&
+        !url.searchParams.has('ids'),
+      async (route) => {
+        const response = await route.fetch();
+        if (!response.ok()) return route.fulfill({ response });
+        const json = (await response.json()) as {
+          items: { id: string }[];
+        };
+        json.items = json.items.filter((item) => item.id !== ids[0]);
+        await route.fulfill({ json, response });
+      },
+    );
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapSettled(page);
+    await expect(named(page, 0)).toHaveCount(0);
+
+    await clickAt(page, placed[0].at);
+
+    const small = page.locator('mf-map-card');
+    await expect(small).toBeVisible();
+    await expect(small).toContainText(`Service Harta ${stamp} 0`);
+    await expect(
+      small.getByRole('link', { name: 'Vezi service‑ul' }),
+    ).toHaveAttribute(
+      'href',
+      `/ro/garages/e2e-harta-${stamp}-0?brand=${brand.slug}`,
+    );
+    await expect(page.locator('article.card.selected')).toHaveCount(0);
+
+    await named(page, 1).getByRole('heading').click();
+    await expect(small).toHaveCount(0);
+  });
+
+  // @traces 270-FR-009 270-FR-011 270-FR-013
+  test('turns the card tapped amber when the map cannot load', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as { __MF_MAP_STYLE?: string }).__MF_MAP_STYLE =
+        '/map/no-such-style.json';
+    });
+    await page.setViewportSize({ height: 800, width: 320 });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+
+    await named(page, 1).getByRole('heading').click();
+    await expect(named(page, 1).locator('article.card')).toHaveClass(
+      /selected/,
+    );
+    await expect(page.locator('article.card.selected')).toHaveCount(1);
+    await expect(page.locator('.state[role="alert"]')).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+
   // Last: the garage it suspends stays suspended for the rest of the file.
   // @traces 269-FR-018
   test('takes the pin of a garage suspended while the page is open off the map within 2 seconds', async ({

@@ -8,7 +8,7 @@ import {
   type VerificationFileCheckDto,
   type VerificationFileDto,
 } from '@motor-fix/data-access';
-import { I18n } from '@motor-fix/i18n';
+import { appliedAt, I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
@@ -17,6 +17,7 @@ import { VerificationFile } from './verification-file';
 import { Live } from '../live';
 
 // @traces 203-FR-006 203-FR-008
+// @traces 204-FR-007 204-FR-009
 // @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-009 302-FR-010 302-FR-011
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -73,6 +74,10 @@ function fileOf(
   const { file, garage, ...rest } = extra;
   return {
     activities: [],
+    catalogue: [
+      { code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
+      { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+    ],
     checks: KINDS.map((kind) => check(kind)),
     documents: [
       {
@@ -92,6 +97,20 @@ function fileOf(
         stale: null,
       },
     ],
+    jobs: [
+      {
+        jobTypeId: 'job-oil',
+        nameEn: 'Oil change',
+        nameRo: 'Schimb de ulei',
+        rarActivity: 'mechanics',
+      },
+      {
+        jobTypeId: 'job-pads',
+        nameEn: 'Brake pads',
+        nameRo: 'Plăcuțe de frână',
+        rarActivity: 'brakes',
+      },
+    ],
     previousRejection: null,
     reports: [],
     storageReady: true,
@@ -105,6 +124,7 @@ function fileOf(
       id: FILE,
       openedAt: NOW.toISOString(),
       openedBy: ioana,
+      rarNumber: 'B 1234/2019',
       reasonCode: null,
       reasonNote: null,
       reopenedAt: null,
@@ -142,12 +162,16 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let answer: () => Promise<VerificationFileDto>;
 let api: {
+  verificationFileControllerCorrect: jest.Mock;
+  verificationFileControllerDecision: jest.Mock;
   verificationFileControllerOpen: jest.Mock;
+  verificationFileControllerReopen: jest.Mock;
   verificationFileControllerRead: jest.Mock;
   verificationChecksControllerRecord: jest.Mock;
 };
 let documents: { legalDocumentsControllerPageAddress: jest.Mock };
 let overlays: { open: jest.Mock };
+let drawer: VerificationFile;
 let tab: { close: jest.Mock; location: { href: string }; opener: unknown };
 
 async function settle() {
@@ -166,8 +190,11 @@ async function open(
   answer = typeof file === 'function' ? file : async () => file;
   api = {
     verificationChecksControllerRecord: jest.fn(),
+    verificationFileControllerCorrect: jest.fn(),
+    verificationFileControllerDecision: jest.fn(),
     verificationFileControllerOpen: jest.fn(() => answer()),
     verificationFileControllerRead: jest.fn(() => answer()),
+    verificationFileControllerReopen: jest.fn(),
   };
   documents = {
     legalDocumentsControllerPageAddress: jest.fn(async () => ({
@@ -209,6 +236,7 @@ async function open(
   await i18n.enter('admin');
   await i18n.enter('public');
   const fixture = TestBed.createComponent(VerificationFile);
+  drawer = fixture.componentInstance;
   document.body.append(fixture.nativeElement);
   await settle();
   return fixture.nativeElement as HTMLElement;
@@ -1280,7 +1308,7 @@ describe('the company and CAEN rows', () => {
     expect(links(host, 'caen')).toEqual([
       { href: ONRC, text: 'ONRC', ...tabbed },
     ]);
-    expect(links(host, 'rar')).toEqual([]);
+    expect(links(host, 'activities')).toEqual([]);
   });
 
   it('copies the CUI when a look-up opens, and says so', async () => {
@@ -1307,9 +1335,6 @@ describe('the company and CAEN rows', () => {
     const host = await open();
     const company = row(host, 'register', 'company');
 
-    expect(buttons(row(host, 'register', 'rar'))).not.toContain(
-      'Înregistrează',
-    );
     press(company, 'Înregistrează');
     await settle();
     expect(form(host, 'company')).not.toBeNull();
@@ -1490,4 +1515,789 @@ describe('the company and CAEN rows', () => {
       expect(text(caen)).toContain('Codul lipsește din ONRC');
     },
   );
+});
+
+// The surface the decision buttons call.
+interface Deciding {
+  decide(body: {
+    decision: 'approved' | 'more_requested' | 'rejected';
+    note?: string;
+    reason?: string;
+    requestedItems?: string[];
+  }): Promise<void>;
+  reopen(): Promise<void>;
+}
+const deciding = () => drawer as unknown as Deciding;
+
+const dan = { id: 'admin-2', name: 'Dan' };
+const DECIDED_AT = new Date(NOW.getTime() - 3_600_000).toISOString();
+const rejected = (by = ioana) =>
+  fileOf({
+    file: {
+      decidedAt: DECIDED_AT,
+      decidedBy: by,
+      reasonCode: 'documents',
+      reasonNote: 'Lipsește certificatul ONRC.',
+      status: 'rejected',
+    },
+  });
+const refusedBy = (code: string, extra: object = {}) =>
+  new HttpErrorResponse({
+    error: { code, status: 409, ...extra },
+    status: 409,
+  });
+const alertIn = (host: HTMLElement) =>
+  section(host, 'footer')?.querySelector('[role="alert"]') ?? null;
+const reopenButton = (host: HTMLElement) =>
+  [...(section(host, 'header')?.querySelectorAll('button') ?? [])].find((b) =>
+    ['Redeschide dosarul', 'Reopen the file'].includes(text(b)),
+  ) ?? null;
+const REJECT = {
+  decision: 'rejected' as const,
+  note: 'Lipsește certificatul ONRC.',
+  reason: 'documents',
+};
+
+// @traces 306-FR-007 306-FR-008
+describe('deciding', () => {
+  it("sends the decision and shows the server's answer", async () => {
+    const host = await open();
+    api.verificationFileControllerDecision.mockImplementation(async () => {
+      answer = async () => rejected();
+      return rejected();
+    });
+
+    await deciding().decide(REJECT);
+    await settle();
+
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledWith({
+      body: REJECT,
+      id: FILE,
+    });
+    expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
+    expect(alertIn(host)).toBeNull();
+  });
+
+  it.each([
+    ['ro', 'Deja decis de Dan la'],
+    ['en', 'Already decided by Dan at'],
+  ] as const)(
+    'says in %s who decided first, re-reads, and keeps the line over later reads',
+    async (language, line) => {
+      const host = await open(fileOf(), language);
+      api.verificationFileControllerDecision.mockImplementation(async () => {
+        answer = async () => rejected(dan);
+        throw refusedBy('verification_transition_refused', {
+          currentStatus: 'rejected',
+          decidedAt: DECIDED_AT,
+          decidedBy: 'Dan',
+        });
+      });
+      const reads = api.verificationFileControllerRead.mock.calls.length;
+
+      await deciding().decide({ decision: 'approved' });
+      await settle();
+
+      const alert = alertIn(host);
+      expect(text(alert)).toBe(
+        `${line} ${appliedAt(DECIDED_AT, language, new Date())}`,
+      );
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(
+        reads + 1,
+      );
+      expect(text(section(host, 'footer'))).toContain(
+        language === 'ro' ? 'Respins de Dan' : 'Rejected by Dan',
+      );
+
+      events.next({
+        at: NOW.toISOString(),
+        id: FILE,
+        kind: 'verification.decided',
+      });
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      await settle();
+
+      expect(text(alertIn(host))).toContain(line);
+    },
+  );
+
+  it('names MotorFix when the system decided first', async () => {
+    const host = await open();
+    api.verificationFileControllerDecision.mockRejectedValue(
+      refusedBy('verification_transition_refused', {
+        currentStatus: 'approved',
+        decidedAt: DECIDED_AT,
+        decidedBy: 'MotorFix',
+      }),
+    );
+
+    await deciding().decide({ decision: 'approved' });
+    await settle();
+
+    expect(text(alertIn(host))).toContain('Deja decis de MotorFix la');
+  });
+
+  it('clears the line at the next decision', async () => {
+    const host = await open();
+    api.verificationFileControllerDecision.mockRejectedValueOnce(
+      refusedBy('rar_check_required'),
+    );
+    await deciding().decide({ decision: 'approved' });
+    await settle();
+    expect(alertIn(host)).not.toBeNull();
+    let settleCall: (value: VerificationFileDto) => void = () => undefined;
+    api.verificationFileControllerDecision.mockReturnValueOnce(
+      new Promise((resolve) => {
+        settleCall = resolve;
+      }),
+    );
+
+    const second = deciding().decide(REJECT);
+    await settle();
+
+    expect(alertIn(host)).toBeNull();
+    settleCall(rejected());
+    await second;
+  });
+
+  it.each([
+    ['rar_check_required', 'ro', 'Aprobarea cere verificarea RAR'],
+    ['caen_check_required', 'ro', 'Aprobarea cere verificarea CAEN'],
+    ['rar_check_required', 'en', 'Approval needs the RAR check'],
+    ['caen_check_required', 'en', 'Approval needs the CAEN check'],
+  ] as const)(
+    'reads %s in %s in the same slot, with no re-read',
+    async (code, language, line) => {
+      const host = await open(fileOf(), language);
+      api.verificationFileControllerDecision.mockRejectedValue(refusedBy(code));
+      const reads = api.verificationFileControllerRead.mock.calls.length;
+
+      await deciding().decide({ decision: 'approved' });
+      await settle();
+
+      expect(text(alertIn(host))).toBe(line);
+      const decisions = section(host, 'footer')?.querySelector('.decisions');
+      expect(
+        alertIn(host)?.compareDocumentPosition(decisions as Node) ?? 0,
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(api.verificationFileControllerRead.mock.calls.length).toBe(reads);
+      expect(buttons(section(host, 'footer'))).toContain(
+        language === 'ro' ? 'Aprobă și publică' : 'Approve and publish',
+      );
+    },
+  );
+
+  it.each([
+    ['ro', 'Aprobarea cere verificarea RAR', 'Verificarea RAR e obligatorie'],
+    ['en', 'Approval needs the RAR check', 'The RAR check is required'],
+  ] as const)(
+    'keeps the RAR note apart from the RAR refusal in %s',
+    async (language, refusal, note) => {
+      const host = await open(fileOf(), language);
+      api.verificationFileControllerDecision.mockRejectedValue(
+        refusedBy('rar_check_required'),
+      );
+
+      await deciding().decide({ decision: 'approved' });
+      await settle();
+
+      const footer = section(host, 'footer');
+      expect(text(alertIn(host))).toBe(refusal);
+      expect(text(footer?.querySelector('[data-part="rar-required"]'))).toBe(
+        note,
+      );
+      expect(text(footer).split(refusal)).toHaveLength(2);
+    },
+  );
+
+  it('says in a toast that the decision could not be saved on any other failure', async () => {
+    const host = await open();
+    api.verificationFileControllerDecision.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
+
+    await deciding().decide(REJECT);
+    await settle();
+
+    expect(toast).toHaveBeenCalledWith('Nu am putut salva decizia');
+    expect(alertIn(host)).toBeNull();
+    expect(text(section(host, 'footer'))).not.toContain('Respins de');
+  });
+
+  it('sends one request for two presses while the first is on its way', async () => {
+    await open();
+    let settleCall: (value: VerificationFileDto) => void = () => undefined;
+    api.verificationFileControllerDecision.mockReturnValue(
+      new Promise((resolve) => {
+        settleCall = resolve;
+      }),
+    );
+
+    const first = deciding().decide(REJECT);
+    const second = deciding().decide({ decision: 'approved' });
+    const third = deciding().reopen();
+    await settle();
+
+    expect(api.verificationFileControllerDecision).toHaveBeenCalledTimes(1);
+    expect(overlays.open).not.toHaveBeenCalled();
+    settleCall(rejected());
+    await Promise.all([first, second, third]);
+  });
+
+  it.each(['approved', 'rejected', 'more_requested'] as const)(
+    'keeps the e-mail note under the decided line of a %s file',
+    async (status) => {
+      const host = await open(
+        fileOf({
+          file: { decidedAt: DECIDED_AT, decidedBy: ioana, status },
+        }),
+      );
+      const footer = section(host, 'footer');
+
+      expect(text(footer)).toContain('Service‑ul primește decizia pe e‑mail.');
+      const parts = [...(footer?.querySelectorAll('p') ?? [])].map(text);
+      expect(parts.findIndex((p) => p.includes('de Ioana'))).toBeLessThan(
+        parts.findIndex((p) => p.includes('Service‑ul primește')),
+      );
+    },
+  );
+
+  it('shows no decided line on a reopened file under review, only the decisions', async () => {
+    const host = await open(
+      fileOf({
+        file: {
+          decidedAt: DECIDED_AT,
+          decidedBy: ioana,
+          reasonCode: 'documents',
+          reasonNote: 'Lipsește certificatul ONRC.',
+          reopenedAt: NOW.toISOString(),
+          reopenedBy: dan,
+          status: 'in_review',
+        },
+      }),
+    );
+    const footer = section(host, 'footer');
+
+    expect(text(footer)).not.toContain('Respins de');
+    expect(buttons(footer)).toEqual([
+      'Aprobă și publică',
+      'Cere completări',
+      'Respinge',
+    ]);
+    expect(text(footer)).toContain('Service‑ul primește decizia pe e‑mail.');
+  });
+});
+
+// @traces 306-FR-009 306-FR-010
+describe('reopening', () => {
+  it.each(['approved', 'rejected', 'more_requested'] as const)(
+    'offers "Redeschide dosarul" in the header of a %s file, reachable by keyboard',
+    async (status) => {
+      const host = await open(
+        fileOf({ file: { decidedAt: DECIDED_AT, decidedBy: ioana, status } }),
+      );
+
+      const button = reopenButton(host);
+      expect(button).not.toBeNull();
+      expect(button?.getAttribute('type')).toBe('button');
+      expect(button?.disabled).toBe(false);
+      expect(button?.tabIndex).toBe(0);
+    },
+  );
+
+  it('reads "Reopen the file" in English', async () => {
+    const host = await open(rejected(), 'en');
+
+    expect(text(reopenButton(host))).toBe('Reopen the file');
+  });
+
+  it.each(['submitted', 'in_review'] as const)(
+    'offers no reopening on a %s file',
+    async (status) => {
+      const host = await open(fileOf({ file: { status } }));
+
+      expect(reopenButton(host)).toBeNull();
+    },
+  );
+
+  it('asks first, then reopens and shows the file under review with the decisions back', async () => {
+    const host = await open(rejected());
+    overlays.open.mockResolvedValue(true);
+    api.verificationFileControllerReopen.mockImplementation(async () => {
+      const reopened = fileOf({
+        file: {
+          decidedAt: DECIDED_AT,
+          decidedBy: ioana,
+          reopenedAt: NOW.toISOString(),
+          reopenedBy: ioana,
+          status: 'in_review',
+        },
+      });
+      answer = async () => reopened;
+      return reopened;
+    });
+
+    reopenButton(host)?.click();
+    await settle();
+
+    expect(overlays.open).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        shape: 'dialog',
+        title: 'admin.file.reopen.title',
+      }),
+    );
+    expect(api.verificationFileControllerReopen).toHaveBeenCalledWith({
+      id: FILE,
+    });
+    expect(buttons(section(host, 'footer'))).toEqual([
+      'Aprobă și publică',
+      'Cere completări',
+      'Respinge',
+    ]);
+    expect(reopenButton(host)).toBeNull();
+    expect(document.activeElement).toBe(host.querySelector('h3'));
+  });
+
+  it('changes nothing and returns to the button when the admin cancels', async () => {
+    const host = await open(rejected());
+    overlays.open.mockResolvedValue('cancelled');
+
+    reopenButton(host)?.click();
+    await settle();
+
+    expect(api.verificationFileControllerReopen).not.toHaveBeenCalled();
+    expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
+    expect(document.activeElement).toBe(reopenButton(host));
+  });
+
+  it('disables the reopen button while the reopening is on its way', async () => {
+    const host = await open(rejected());
+    overlays.open.mockResolvedValue(true);
+    let settleCall: (value: VerificationFileDto) => void = () => undefined;
+    api.verificationFileControllerReopen.mockReturnValue(
+      new Promise((resolve) => {
+        settleCall = resolve;
+      }),
+    );
+
+    reopenButton(host)?.click();
+    await settle();
+
+    expect(reopenButton(host)?.disabled).toBe(true);
+    settleCall(rejected());
+    await settle();
+  });
+
+  it('says in a toast that the file could not be reopened, and changes nothing', async () => {
+    const host = await open(rejected());
+    overlays.open.mockResolvedValue(true);
+    api.verificationFileControllerReopen.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
+
+    reopenButton(host)?.click();
+    await settle();
+
+    expect(toast).toHaveBeenCalledWith('Nu am putut redeschide dosarul');
+    expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
+    expect(reopenButton(host)).not.toBeNull();
+  });
+
+  it('clears an earlier refusal line when the reopening call starts, even if it then fails', async () => {
+    const host = await open();
+    api.verificationFileControllerDecision.mockRejectedValueOnce(
+      refusedBy('verification_transition_refused', {
+        currentStatus: 'rejected',
+        decidedAt: DECIDED_AT,
+        decidedBy: 'Ioana',
+      }),
+    );
+    answer = async () => rejected();
+    await deciding().decide({ decision: 'approved' });
+    await settle();
+    expect(alertIn(host)).not.toBeNull();
+    overlays.open.mockResolvedValue(true);
+    let failCall: (error: unknown) => void = () => undefined;
+    api.verificationFileControllerReopen.mockReturnValue(
+      new Promise((_, reject) => {
+        failCall = reject;
+      }),
+    );
+
+    reopenButton(host)?.click();
+    await settle();
+
+    expect(alertIn(host)).toBeNull();
+    failCall(new HttpErrorResponse({ status: 500 }));
+    await settle();
+    expect(toast).toHaveBeenCalledWith('Nu am putut redeschide dosarul');
+    expect(alertIn(host)).toBeNull();
+  });
+});
+
+describe('the RAR and activities rows', () => {
+  const RAR = 'https://portal.rarom.ro/';
+  const withCheck = (
+    kind: (typeof KINDS)[number],
+    extra: Partial<VerificationFileCheckDto>,
+    more: Parameters<typeof fileOf>[0] = {},
+  ) =>
+    fileOf({
+      checks: KINDS.map((k) => (k === kind ? check(k, extra) : check(k))),
+      ...more,
+    });
+  const anchor = (host: HTMLElement, name: string) =>
+    [
+      ...(row(host, 'register', 'rar')?.querySelectorAll<HTMLAnchorElement>(
+        'a',
+      ) ?? []),
+    ].find((a) => text(a) === name) as HTMLAnchorElement | undefined;
+  const follow = async (a: HTMLAnchorElement) => {
+    const stay = (event: Event) => event.preventDefault();
+    document.addEventListener('click', stay);
+    a.click();
+    document.removeEventListener('click', stay);
+    await settle();
+  };
+  const clipboard = (writeText?: jest.Mock) =>
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: writeText ? { writeText } : undefined,
+    });
+  const input = (el: Element | null | undefined) =>
+    el?.querySelector<HTMLInputElement>('input[type="text"]') ?? null;
+  const reset = () => {
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+  };
+
+  it('labels the rows by what is checked, the RAR row by its result', async () => {
+    const host = await open();
+    expect(text(row(host, 'register', 'rar'))).toContain(
+      'Autorizație RAR găsită în registru',
+    );
+    expect(text(row(host, 'register', 'rar'))).toContain('neverificat');
+    expect(text(row(host, 'register', 'activities'))).toContain(
+      'Activitățile autorizate acoperă lista de prețuri',
+    );
+
+    reset();
+    const failed = await open(
+      withCheck('rar', {
+        detail: 'numărul introdus nu există în registrul public RAR',
+        recorder: ioana,
+        result: 'failed',
+      }),
+    );
+    expect(text(row(failed, 'register', 'rar'))).toContain(
+      'Autorizația RAR nu apare în registru',
+    );
+
+    reset();
+    const english = await open(fileOf(), 'en');
+    expect(text(row(english, 'register', 'rar'))).toContain(
+      'RAR authorisation found in the register',
+    );
+    expect(text(row(english, 'register', 'activities'))).toContain(
+      'Authorised activities cover the price list',
+    );
+  });
+
+  it('shows the number as stored, or that it is missing', async () => {
+    const host = await open();
+    expect(text(row(host, 'register', 'rar'))).toContain('B 1234/2019');
+
+    reset();
+    const none = await open(fileOf({ file: { rarNumber: null } }));
+    expect(text(row(none, 'register', 'rar'))).toContain('număr lipsă');
+  });
+
+  it('links the public RAR register in a new tab, with no number in the address', async () => {
+    const host = await open();
+    const link = anchor(host, 'Registrul RAR');
+
+    expect(link?.getAttribute('href')).toBe(RAR);
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('copies the number when the register opens, and says so', async () => {
+    const writeText = jest.fn(async () => undefined);
+    clipboard(writeText);
+    const host = await open();
+
+    await follow(anchor(host, 'Registrul RAR') as HTMLAnchorElement);
+
+    expect(writeText).toHaveBeenCalledWith('B 1234/2019');
+    expect(toast).toHaveBeenCalledWith('Număr RAR copiat');
+  });
+
+  it('opens the register quietly when there is no number or no clipboard', async () => {
+    const writeText = jest.fn(async () => undefined);
+    clipboard(writeText);
+    const host = await open(fileOf({ file: { rarNumber: null } }));
+    await follow(anchor(host, 'Registrul RAR') as HTMLAnchorElement);
+    expect(writeText).not.toHaveBeenCalled();
+
+    reset();
+    clipboard();
+    const bare = await open();
+    await follow(anchor(bare, 'Registrul RAR') as HTMLAnchorElement);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('corrects the number through the admin call and shows the answer', async () => {
+    const host = await open();
+    api.verificationFileControllerCorrect.mockResolvedValue(
+      fileOf({ file: { rarNumber: 'CJ 221/2021' } }),
+    );
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const field = input(rar()?.querySelector('[data-part="correct"]'));
+    expect(field?.value).toBe('B 1234/2019');
+    expect(document.activeElement).toBe(field);
+    (field as HTMLInputElement).value = ' cj 221/2021 ';
+    field?.dispatchEvent(new Event('input', { bubbles: true }));
+    press(rar()?.querySelector('[data-part="correct"]') ?? null, 'Salvează');
+    await settle();
+
+    expect(api.verificationFileControllerCorrect).toHaveBeenCalledWith({
+      body: { rarNumber: ' cj 221/2021 ' },
+      id: FILE,
+    });
+    expect(rar()?.querySelector('[data-part="correct"]')).toBeNull();
+    expect(text(rar())).toContain('CJ 221/2021');
+  });
+
+  // @traces 204-FR-014
+  it("gives the correction's Save and Cancel the record form's buttons", async () => {
+    const host = await open();
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const buttons = [
+      ...(rar()?.querySelectorAll('[data-part="correct"] button') ?? []),
+    ];
+
+    expect(buttons.map((b) => b.hasAttribute('hlmbtn'))).toEqual([true, true]);
+    expect(buttons.map((b) => b.getAttribute('variant'))).toEqual([
+      null,
+      'ghost',
+    ]);
+  });
+
+  it('refuses a number too short before sending, and names the field', async () => {
+    const host = await open();
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const field = input(rar()?.querySelector('[data-part="correct"]'));
+    (field as HTMLInputElement).value = ' b1 ';
+    field?.dispatchEvent(new Event('input', { bubbles: true }));
+    press(rar()?.querySelector('[data-part="correct"]') ?? null, 'Salvează');
+    await settle();
+
+    expect(api.verificationFileControllerCorrect).not.toHaveBeenCalled();
+    expect(text(rar()?.querySelector('[role="alert"]'))).toContain(
+      'Numărul RAR',
+    );
+    expect(field?.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('re-reads the file when a correction finds it decided', async () => {
+    const host = await open();
+    api.verificationFileControllerCorrect.mockRejectedValue(
+      new HttpErrorResponse({
+        error: { code: 'verification_file_decided', status: 409 },
+        status: 409,
+      }),
+    );
+    api.verificationFileControllerRead.mockClear();
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const field = input(rar()?.querySelector('[data-part="correct"]'));
+    (field as HTMLInputElement).value = 'CJ 221/2021';
+    field?.dispatchEvent(new Event('input', { bubbles: true }));
+    press(rar()?.querySelector('[data-part="correct"]') ?? null, 'Salvează');
+    await settle();
+
+    expect(api.verificationFileControllerRead).toHaveBeenCalled();
+  });
+
+  it('offers the correction and the forms only on an undecided file', async () => {
+    const host = await open();
+    expect(buttons(row(host, 'register', 'rar'))).toEqual(
+      expect.arrayContaining(['Corectează', 'Înregistrează']),
+    );
+    expect(buttons(row(host, 'register', 'activities'))).toContain(
+      'Înregistrează',
+    );
+
+    reset();
+    const decided = await open(
+      fileOf({
+        file: {
+          decidedAt: NOW.toISOString(),
+          decidedBy: ioana,
+          status: 'approved',
+        },
+      }),
+    );
+    expect(buttons(row(decided, 'register', 'rar'))).toEqual([]);
+    expect(buttons(row(decided, 'register', 'activities'))).toEqual([]);
+  });
+
+  it('hands the RAR form the number and the activities form the catalogue and the jobs', async () => {
+    const host = await open();
+
+    press(row(host, 'register', 'rar'), 'Înregistrează');
+    await settle();
+    const rarForm = row(host, 'register', 'rar')?.querySelector(
+      'mf-verification-register-form',
+    );
+    expect(text(rarForm)).toContain('B 1234/2019');
+    expect(text(rarForm)).toContain('aceeași firmă');
+
+    press(row(host, 'register', 'activities'), 'Înregistrează');
+    await settle();
+    const activitiesForm = row(host, 'register', 'activities')?.querySelector(
+      'mf-verification-register-form',
+    );
+    expect(text(activitiesForm)).toContain('Frâne');
+    expect(text(activitiesForm)).toContain('Plăcuțe de frână');
+  });
+
+  it('reads the stored RAR ticks as text on an OK row', async () => {
+    const host = await open(
+      withCheck('rar', {
+        detail: 'aceeași firmă și adresă',
+        evidence: {
+          found: true,
+          lookedUpOn: daysAgo(0),
+          rarNumber: 'B 1234/2019',
+          sameAddress: true,
+          sameCompany: true,
+        },
+        recorder: ioana,
+        result: 'ok',
+      } as Partial<VerificationFileCheckDto>),
+    );
+
+    expect(text(row(host, 'register', 'rar'))).toContain(
+      'găsită · firmă · adresă',
+    );
+    expect(text(row(host, 'register', 'rar'))).toContain(
+      'aceeași firmă și adresă',
+    );
+  });
+
+  it('names the ticked activities and the uncovered jobs of a recorded activities row', async () => {
+    const more = {
+      activities: [
+        { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+      ],
+    };
+    const warning = {
+      detail: 'Plăcuțe de frână nu apare în autorizație',
+      evidence: { lookedUpOn: daysAgo(0), uncoveredJobTypeIds: ['job-pads'] },
+      recorder: ioana,
+      result: 'warning',
+    } as Partial<VerificationFileCheckDto>;
+    const host = await open(withCheck('activities', warning, more));
+    const activities = text(row(host, 'register', 'activities'));
+    expect(activities).toContain('Mecanică');
+    expect(activities).toContain('Neacoperite: Plăcuțe de frână');
+
+    reset();
+    const english = await open(withCheck('activities', warning, more), 'en');
+    expect(text(row(english, 'register', 'activities'))).toContain(
+      'Not covered: Brake pads',
+    );
+  });
+
+  // @traces 204-FR-009
+  it('says no activity is recorded when the list was saved empty, and nothing while unchecked', async () => {
+    const warning = {
+      detail: 'autorizația nu e lizibilă',
+      evidence: { lookedUpOn: daysAgo(0), uncoveredJobTypeIds: [] },
+      recorder: ioana,
+      result: 'warning',
+    } as Partial<VerificationFileCheckDto>;
+    const host = await open(
+      withCheck('activities', warning, { activities: [] }),
+    );
+    const line = text(row(host, 'register', 'activities'));
+    expect(line).toContain('nicio activitate înregistrată');
+    expect(line).toContain('autorizația nu e lizibilă');
+
+    reset();
+    const english = await open(
+      withCheck('activities', warning, { activities: [] }),
+      'en',
+    );
+    expect(text(row(english, 'register', 'activities'))).toContain(
+      'no activity recorded',
+    );
+
+    reset();
+    const unchecked = await open();
+    expect(text(row(unchecked, 'register', 'activities'))).not.toContain(
+      'nicio activitate',
+    );
+  });
+
+  it('notes in the footer that the RAR check is required until it is OK', async () => {
+    const host = await open();
+    expect(text(section(host, 'footer'))).toContain(
+      'Verificarea RAR e obligatorie',
+    );
+
+    reset();
+    const ok = await open(withCheck('rar', { recorder: ioana, result: 'ok' }));
+    expect(text(section(ok, 'footer'))).not.toContain(
+      'Verificarea RAR e obligatorie',
+    );
+
+    reset();
+    const decided = await open(
+      fileOf({
+        file: {
+          decidedAt: NOW.toISOString(),
+          decidedBy: ioana,
+          status: 'rejected',
+        },
+      }),
+    );
+    expect(text(section(decided, 'footer'))).not.toContain(
+      'Verificarea RAR e obligatorie',
+    );
+  });
+
+  it('lists a number correction in the history', async () => {
+    const host = await open(
+      fileOf({
+        timeline: {
+          entries: [
+            entry({
+              field: 'rar_number',
+              newValue: 'CJ 221/2021',
+              oldValue: null,
+            }),
+          ],
+          total: 1,
+        },
+      }),
+    );
+
+    expect(text(section(host, 'history'))).toContain(
+      'Număr RAR: — → CJ 221/2021 — Ioana',
+    );
+  });
 });

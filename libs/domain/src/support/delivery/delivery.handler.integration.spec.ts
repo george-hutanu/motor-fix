@@ -114,6 +114,24 @@ describe('delivering a support message', () => {
     expect(await emails('support', 'sent')).toBe(sentBefore + 1);
   });
 
+  // @traces 279-FR-004
+  it('keeps the writer as reply-to of the support e-mail when the domain sets one', async () => {
+    const { id } = await store();
+    const config = testConfig(mock.url, { EMAIL_DOMAIN: 'example.test' });
+
+    await delivery({ email: SUPPORT }, config).handle(job(id));
+
+    const [toSupport, toSender] = sent();
+    expect(toSupport).toMatchObject({
+      replyTo: { email: 'ana@example.test', name: 'Ana Pop' },
+      to: [{ email: SUPPORT }],
+    });
+    expect(toSender).toMatchObject({
+      replyTo: { email: 'support@example.test', name: 'MotorFix' },
+      to: [{ email: 'ana@example.test', name: 'Ana Pop' }],
+    });
+  });
+
   // The migrations hold Saint Andrew's day and the national day.
   it('promises the first working day after the away date, past the public holidays', async () => {
     const { id } = await store({ language: 'ro' });

@@ -21,6 +21,10 @@ export interface Problem {
   currentStatus?: string;
   to?: string;
   rule?: string;
+  // A verification file already decided: the deciding admin's first name
+  // ("MotorFix" for the system) and when, in UTC.
+  decidedBy?: string;
+  decidedAt?: string;
 }
 
 export interface FieldProblem {

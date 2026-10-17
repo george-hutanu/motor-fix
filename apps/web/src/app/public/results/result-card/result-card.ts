@@ -6,6 +6,7 @@ import {
   ElementRef,
   inject,
   input,
+  output,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
@@ -33,6 +34,11 @@ const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
 // One garage of the results: who it is, where, whether it takes the brand,
 // what it costs and how it is rated, and the way to its page.
 @Component({
+  host: {
+    '(click)': 'picked($event)',
+    '(focusin)': 'aim("focus", true)',
+    '(focusout)': 'blurred($event)',
+  },
   imports: [Lamp, RatingDial, RouterLink, SaveGarageButton, TranslatePipe],
   selector: 'mf-result-card',
   styleUrl: './result-card.css',
@@ -43,10 +49,21 @@ export class ResultCard {
 
   readonly brand = input.required<BrandRefDto>();
   readonly garage = input.required<ListedGarageDto>();
+  // Whether its garage is the selected one, drawn in the amber state.
+  readonly selected = input(false);
+  // A pointer (not a touch) or the focus resting on it, and leaving it.
+  readonly point = output<boolean>();
+  // A tap anywhere on it but its link and its bookmark.
+  readonly pick = output<void>();
+
+  private readonly host: HTMLElement = inject(ElementRef).nativeElement;
+  // The card is pointed while the pointer or the focus rests on it; either
+  // leaving alone does not end it.
+  private readonly on = { focus: false, pointer: false };
 
   constructor() {
     const prefetch = inject(ProfilePrefetch);
-    const host: HTMLElement = inject(ElementRef).nativeElement;
+    const host = this.host;
     const destroyRef = inject(DestroyRef);
     const want = () => prefetch.want(this.garage().slug, this.brand().slug);
     // A pointer resting on the card, a touch on it, or the card scrolled into
@@ -56,11 +73,13 @@ export class ResultCard {
       let rest: ReturnType<typeof setTimeout> | undefined;
       const enter = (event: Event) => {
         if ((event as PointerEvent).pointerType === 'touch') return;
+        this.aim('pointer', true);
         clearTimeout(rest);
         rest = setTimeout(want, REST_MS);
       };
       const leave = (event: Event) => {
         if ((event as PointerEvent).pointerType === 'touch') return;
+        this.aim('pointer', false);
         clearTimeout(rest);
         prefetch.cancel(this.garage().slug, this.brand().slug);
       };
@@ -86,6 +105,35 @@ export class ResultCard {
         host.removeEventListener('touchstart', want);
       });
     });
+  }
+
+  // Brings the card into the list's view at its nearest edge; the focus
+  // stays where it is.
+  reveal(smooth: boolean) {
+    this.host.scrollIntoView({
+      behavior: smooth ? 'smooth' : 'auto',
+      block: 'nearest',
+    });
+  }
+
+  protected picked(event: Event) {
+    const target = event.target as Element | null;
+    if (target?.closest('a, button, mf-save-garage-button')) return;
+    this.pick.emit();
+  }
+
+  // Focus moving between the card's own controls keeps it pointed.
+  protected blurred(event: FocusEvent) {
+    const next = event.relatedTarget as Node | null;
+    if (next && this.host.contains(next)) return;
+    this.aim('focus', false);
+  }
+
+  protected aim(by: 'focus' | 'pointer', on: boolean) {
+    const was = this.on.focus || this.on.pointer;
+    this.on[by] = on;
+    const is = this.on.focus || this.on.pointer;
+    if (is !== was) this.point.emit(is);
   }
 
   protected readonly initials = computed(() =>
