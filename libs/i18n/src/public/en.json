@@ -39,7 +39,7 @@
       "from": "FROM",
       "lei": "LEI",
       "mechanic": "Mechanic",
-      "note": "Where you land in the range depends on the car. The garage confirms once it has seen it.",
+      "note": "Where you land in the range depends on your car. The garage confirms once it has seen it.",
       "request": "REQUEST A QUOTE",
       "spoken": "Estimate from {from} to {to} lei",
       "title": "Your estimate",

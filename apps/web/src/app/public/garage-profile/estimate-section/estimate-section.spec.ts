@@ -235,6 +235,9 @@ describe('the jobs on and their totals', () => {
     );
     expect(text('.totals')).toContain('FROM');
     expect(text('.totals')).toContain('TO');
+    expect(text('.note')).toBe(
+      'Where you land in the range depends on your car. The garage confirms once it has seen it.',
+    );
   });
 });
 

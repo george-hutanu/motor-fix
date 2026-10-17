@@ -60,7 +60,7 @@ const toWholeLei = (bani: unknown) =>
       }
     }
     .mf-odometer-digit.mf-odometer-dim::before {
-      color: var(--mf-line-strong);
+      color: var(--mf-text-secondary);
     }
     .mf-odometer-spoken {
       position: absolute;

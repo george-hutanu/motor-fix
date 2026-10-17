@@ -227,6 +227,14 @@ describe('Odometer in cells', () => {
     expect(part.textContent?.trim()).toBe('—');
   });
 
+  it('dims the leading zeros in the secondary ink, which holds contrast in both schemes', () => {
+    const source = readFileSync(join(__dirname, 'odometer.ts'), 'utf8');
+
+    expect(source).toMatch(
+      /\.mf-odometer-dim::before \{\s*color: var\(--mf-text-secondary\);/,
+    );
+  });
+
   it('rolls to the new amount when it changes', () => {
     const { digits, fixture } = renderCells(104000);
 
