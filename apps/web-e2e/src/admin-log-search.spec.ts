@@ -97,6 +97,7 @@ test.describe('searching the whole log @seeded', () => {
   });
 
   test.afterAll(async () => {
+    if (!db) return;
     await db.query('DELETE FROM system_log_entry WHERE id = ANY($1)', [ids]);
     await db.end();
   });
@@ -141,12 +142,16 @@ test.describe('searching the whole log @seeded', () => {
     await page.setViewportSize({ height: 740, width: 320 });
     await inEnglish(page);
     await signInAsAdmin(page);
-    await page.goto(`/app/admin/log?from=${day(5).iso}&to=${day(0).iso}`);
+    await page.goto('/app/admin/log');
 
     await page.getByRole('button', { name: /^Filters/ }).click();
     const sheet = page.getByRole('dialog');
     await sheet.getByRole('combobox', { name: 'Type' }).selectOption('backup');
+    await sheet.getByLabel('From').fill(day(5).iso);
+    await sheet.getByLabel('To', { exact: true }).fill(day(0).iso);
     await sheet.getByRole('button', { name: 'Apply' }).click();
+    await expect(page).toHaveURL(new RegExp(`from=${day(5).iso}`));
+    await expect(page).toHaveURL(new RegExp(`to=${day(0).iso}`));
     await page.getByRole('searchbox', { name: 'Search the log' }).fill(word);
 
     await expect(texts(page)).toHaveCount(1);
