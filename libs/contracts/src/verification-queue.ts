@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 import { CheckSummaryDto, type Lamp } from './verification-checks';
@@ -7,6 +7,10 @@ import {
   VERIFICATION_QUEUE_MAX,
   VERIFICATION_QUEUE_PAGE,
 } from './verification-target';
+
+// A query number: an empty `?offset=` is malformed, not zero.
+export const toQueryNumber = ({ value }: { value: unknown }) =>
+  value === '' ? Number.NaN : value === undefined ? value : Number(value);
 
 export class VerificationQueueQueryDto {
   @ApiPropertyOptional({
@@ -16,7 +20,7 @@ export class VerificationQueueQueryDto {
     type: 'integer',
   })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toQueryNumber)
   @IsInt()
   @Min(0)
   @Max(10_000)
@@ -30,7 +34,7 @@ export class VerificationQueueQueryDto {
     type: 'integer',
   })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toQueryNumber)
   @IsInt()
   @Min(1)
   @Max(VERIFICATION_QUEUE_MAX)

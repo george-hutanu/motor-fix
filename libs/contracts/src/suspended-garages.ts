@@ -1,18 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 
 import {
   SUSPENSION_CAUSES,
   type SuspensionCause,
 } from './garage-suspension.dto';
-import { VerificationQueueAreaDto } from './verification-queue';
+import { toQueryNumber, VerificationQueueAreaDto } from './verification-queue';
 import {
   VERIFICATION_QUEUE_MAX,
   VERIFICATION_QUEUE_PAGE,
 } from './verification-target';
 
-export const RAR_VERDICTS = ['expired', 'suspended', 'withdrawn'] as const;
+const RAR_VERDICTS = ['expired', 'suspended', 'withdrawn'] as const;
 export type RarVerdict = (typeof RAR_VERDICTS)[number];
 
 export class AdminGaragesSummaryDto {
@@ -46,7 +46,7 @@ export class AdminGaragesQueryDto {
     type: 'integer',
   })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toQueryNumber)
   @IsInt()
   @Min(0)
   @Max(10_000)
@@ -60,7 +60,7 @@ export class AdminGaragesQueryDto {
     type: 'integer',
   })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toQueryNumber)
   @IsInt()
   @Min(1)
   @Max(VERIFICATION_QUEUE_MAX)
