@@ -6,17 +6,27 @@ import {
   type CarDto,
   CarsService,
   type MeDto,
+  PlacesService,
   type RequestSummaryDto,
   RequestsService,
+  type SavedGaragesPageDto,
+  SavedGaragesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { DriverHome } from './driver-home';
+import { SavedGarages } from '../../public/saved-garages/saved-garages';
 import { AddCar } from '../add-car/add-car';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { Live } from '../live';
+import {
+  fakeSavedGarages,
+  pageOf,
+  savedItem,
+  savedItems,
+} from '../saved-garages/saved-garages.testing';
 import { Session } from '../session';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
@@ -72,6 +82,7 @@ type Answer<T> = T[] | Error | Promise<never>;
 interface Setup {
   cars?: Answer<CarDto>;
   requests?: Answer<RequestSummaryDto>;
+  saved?: SavedGaragesPageDto | Error | Promise<never>;
   // null: no session shown, as for a moment after signing out.
   capabilities?: string[] | null;
   language?: 'ro' | 'en';
@@ -79,6 +90,7 @@ interface Setup {
 
 let carsList: jest.Mock;
 let requestsList: jest.Mock;
+let savedList: jest.Mock;
 let open: jest.Mock;
 let events: Subject<LiveMessage>;
 
@@ -96,11 +108,15 @@ const answer = <T>(value: Answer<T>) =>
 async function render({
   cars = [],
   requests = [],
+  saved = pageOf([]),
   capabilities = DRIVER,
   language = 'ro',
 }: Setup = {}) {
   carsList = jest.fn(() => answer(cars));
   requestsList = jest.fn(() => answer(requests));
+  savedList = jest.fn(() =>
+    saved instanceof Error ? Promise.reject(saved) : Promise.resolve(saved),
+  );
   open = jest.fn(async () => 'cancelled');
   events = new Subject();
   const current = signal(
@@ -117,6 +133,15 @@ async function render({
         useValue: { requestsControllerList: requestsList },
       },
       { provide: Overlays, useValue: { open } },
+      {
+        provide: SavedGaragesService,
+        useValue: { savedGaragesControllerList: savedList },
+      },
+      { provide: SavedGarages, useValue: fakeSavedGarages() },
+      {
+        provide: PlacesService,
+        useValue: { placesControllerSearch: async () => ({ items: [] }) },
+      },
       { provide: Session, useValue: { current, shown: current } },
       {
         provide: Live,
@@ -369,10 +394,11 @@ describe('the Panou grid', () => {
 
 // @traces 030-FR-011
 describe('Service-uri salvate on Panou', () => {
-  it('shows its empty state and Caută altele to Home, with no saved-garages read', async () => {
+  it('shows its empty state and Caută altele to Home for a driver with no car', async () => {
     const { element } = await render();
     const saved = panel(element, 'saved');
 
+    expect(savedList).toHaveBeenCalledTimes(1);
     expect(text(saved)).toContain(EMPTY.saved);
     expect(control(saved, 'Caută altele')?.getAttribute('href')).toBe('/ro');
   });
@@ -390,6 +416,87 @@ describe('Service-uri salvate on Panou', () => {
     });
 
     expect(panel(element, 'saved')).toBeNull();
+  });
+});
+
+// @traces 291-FR-006
+// @traces 291-FR-009
+// @traces 291-FR-012
+describe('Service-uri salvate on Panou, filled', () => {
+  const names = (element: HTMLElement) =>
+    [
+      ...(panel(element, 'saved')?.querySelectorAll('a[data-profile]') ?? []),
+    ].map((link) => text(link));
+
+  it('shows the newest 3 rows and Vezi toate to the view when more are saved', async () => {
+    const { element } = await render({
+      saved: pageOf(savedItems(5), { total: 5 }),
+    });
+    const saved = panel(element, 'saved');
+
+    expect(names(element)).toEqual(['Service 1', 'Service 2', 'Service 3']);
+    expect(control(saved, 'Vezi toate')?.getAttribute('href')).toBe(
+      '/app/driver/saved',
+    );
+    expect(saved?.querySelector('h2 a')?.getAttribute('href')).toBe(
+      '/app/driver/saved',
+    );
+  });
+
+  it('shows no Vezi toate for 3 saved garages or fewer', async () => {
+    const { element } = await render({ saved: pageOf(savedItems(3)) });
+
+    expect(names(element)).toHaveLength(3);
+    expect(control(panel(element, 'saved'), 'Vezi toate')).toBeUndefined();
+  });
+
+  it('links its heading only while the list has rows, as the other panels', async () => {
+    const { element } = await render({ saved: pageOf([]) });
+
+    expect(panel(element, 'saved')?.querySelector('h2 a')).toBeNull();
+  });
+
+  it('says See all in English', async () => {
+    const { element } = await render({
+      language: 'en',
+      saved: pageOf(savedItems(4), { total: 4 }),
+    });
+
+    expect(control(panel(element, 'saved'), 'See all')).toBeDefined();
+  });
+
+  it('keeps Caută altele in its header, to the first car’s brand', async () => {
+    const { element } = await render({
+      cars: [car({ brandId: 'b-dacia' })],
+      saved: pageOf([savedItem()]),
+    });
+
+    expect(
+      panel(element, 'saved')
+        ?.querySelector('a[data-find-more]')
+        ?.getAttribute('href'),
+    ).toBe('/ro/garages?brand=b-dacia');
+  });
+
+  it('shows three row placeholders while the list loads', async () => {
+    const { element } = await render({ saved: new Promise<never>(() => {}) });
+
+    expect(panel(element, 'saved')?.querySelectorAll('.skeleton')).toHaveLength(
+      3,
+    );
+    expect(text(panel(element, 'saved'))).not.toContain(EMPTY.saved);
+  });
+
+  it('says it could not load the list, and reads again on Reîncearcă', async () => {
+    const { element, settle } = await render({ saved: new Error('down') });
+    const saved = panel(element, 'saved');
+
+    expect(text(saved)).toContain('Nu am putut încărca service‑urile salvate.');
+    savedList.mockResolvedValueOnce(pageOf(savedItems(1)));
+    control(saved, 'Reîncearcă')?.click();
+    await settle();
+
+    expect(names(element)).toEqual(['Service 1']);
   });
 });
 
@@ -419,7 +526,7 @@ describe('the empty panels', () => {
     expect(text(panel(element, 'cars'))).toContain(EMPTY_EN.cars);
     expect(text(panel(element, 'repairs'))).toContain(EMPTY_EN.repairs);
     expect(text(panel(element, 'saved'))).toContain(EMPTY_EN.saved);
-    expect(control(panel(element, 'saved'), 'Find others')).toBeDefined();
+    expect(control(panel(element, 'saved'), 'Find more')).toBeDefined();
   });
 
   it('give each panel its heading', async () => {

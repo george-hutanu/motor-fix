@@ -75,4 +75,35 @@ describe('the rows after a list’s first page', () => {
     expect(page.mock.calls.length).toBeLessThan(5);
     expect(rows()).toEqual([]);
   });
+
+  // @traces 291-FR-009
+  it('says a further page failed, keeps the rows shown and reads it again on retry', async () => {
+    let fail = true;
+    const page = jest.fn(async (cursor: string) => {
+      if (fail) throw new Error('offline');
+      return { items: [cursor], nextCursor: null };
+    });
+    const rows = TestBed.runInInjectionContext(() =>
+      moreRows(
+        signal(1),
+        signal('c1'),
+        page,
+        signal(new ElementRef(document.createElement('div'))),
+      ),
+    );
+    TestBed.tick();
+
+    inView([{ isIntersecting: true }]);
+    await settle();
+
+    expect(rows.failed()).toBe(true);
+    expect(rows()).toEqual([]);
+
+    fail = false;
+    rows.retry();
+    await settle();
+
+    expect(rows.failed()).toBe(false);
+    expect(rows()).toEqual(['c1']);
+  });
 });

@@ -1,8 +1,7 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { EmptyState } from '../empty-state/empty-state';
 import { garageOf, Session } from '../session';
@@ -12,7 +11,7 @@ import type { Area, DashboardView } from '../views';
 // appear there, or, on the dashboard of a garage still under review, that;
 // or the view's own empty state, when its story has given it one.
 @Component({
-  imports: [EmptyState, HlmButton, RouterLink, TranslatePipe],
+  imports: [EmptyState, TranslatePipe],
   selector: 'mf-dashboard-view',
   styleUrl: './view.css',
   templateUrl: './view.html',
@@ -20,7 +19,6 @@ import type { Area, DashboardView } from '../views';
 export class View {
   private readonly session = inject(Session);
   private readonly i18n = inject(I18n);
-  protected readonly language = this.i18n.language;
   private readonly data = toSignal(inject(ActivatedRoute).data, {
     initialValue: {},
   });

@@ -36,7 +36,7 @@ import { BrandChoice } from './brand-choice/brand-choice';
 import { BrandPicker } from './brand-picker/brand-picker';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { HomeCards, type ResultsRoute } from './cards/cards';
-import { type Place, PlaceStore } from './place/place-store';
+import { cityPlace, type Place, PlaceStore } from './place/place-store';
 import { HomePreview } from './preview/preview';
 import { garageWhere } from './where/where';
 import { Consent } from '../consent/consent';
@@ -248,18 +248,9 @@ export class Home {
   // look-up leaves all of Romania, saying nothing.
   private async fromCity(city: string) {
     const chosen = this.chosen;
-    const items = await this.places
-      .placesControllerSearch({ lang: this.i18n.language(), q: city })
-      .then((answer) => answer.items)
-      .catch(() => []);
-    const [first] = items;
-    if (!first || chosen !== this.chosen || this.place()) return;
-    this.store.use({
-      label: city,
-      lat: first.lat,
-      lng: first.lng,
-      origin: 'address',
-    });
+    const place = await cityPlace(this.places, city, this.i18n.language());
+    if (!place || chosen !== this.chosen || this.place()) return;
+    this.store.use(place);
   }
 
   protected choose(slug: string) {

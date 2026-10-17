@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 127,
+    "count": 128,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -822,14 +822,14 @@
       "kind": "endpoint",
       "name": "saved-garages",
       "source": "libs/domain/src/cars/saved-garages/saved-garages.controller.ts",
-      "metric": "http.server.request.duration by http.route /api/v1/me/saved-garages/:garageId and /api/v1/me/saved-garages/ids",
+      "metric": "http.server.request.duration by http.route /api/v1/me/saved-garages, /api/v1/me/saved-garages/:garageId and /api/v1/me/saved-garages/ids",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "PUT, DELETE and GET ids show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, so no product counter is added",
-      "story": "ST-290"
+      "reason": "PUT, DELETE, GET ids and the GET list (ST-291) show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, and reading the list changes nothing, so no product counter is added; the list's spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-290, ST-291"
     },
     {
       "kind": "product-counter",
