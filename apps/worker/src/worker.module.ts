@@ -1,5 +1,6 @@
 import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
+  backupLister,
   CAR_REMINDERS_CONSUMER,
   DataStoreMetricsModule,
   DECLINE_WINDOW_CONSUMER,
@@ -21,6 +22,7 @@ import {
   REQUEST_RECEIVED_CONSUMER,
   RemindersModule,
   reminderDayMs,
+  StatusModule,
   StorageModule,
   VERIFICATION_RESULT_CONSUMER,
 } from '@motor-fix/domain';
@@ -40,8 +42,9 @@ class WorkerModule {}
 // streams, consumes the notifications queue, sending e-mail, SMS and
 // WhatsApp, runs the monthly news, the daily reminders, the decline windows,
 // the listing draft sweep, the listing photos' copies and the nightly
-// platform figures (placing the garages with no city first), and reads the
-// data stores for their figures.
+// platform figures (placing the garages with no city first), checks the
+// services behind the admin dashboard's tiles and reads the data stores for
+// their figures.
 export function workerModule(
   env: Env<(typeof WORKER_ENV)[number]>,
 ): DynamicModule {
@@ -97,6 +100,16 @@ export function workerModule(
         // Places the garages with no city before the night's figures.
         places: placesConfig(env.APP_ENV, process.env),
         redisUrl: env.REDIS_URL,
+      }),
+      // The admin dashboard's six service tiles, checked every 30 seconds.
+      StatusModule.registerWorker({
+        backup: backupLister(env.APP_ENV, process.env),
+        brevo: { apiKey: email.apiKey, apiUrl: email.apiUrl },
+        databaseUrl: env.DATABASE_URL,
+        places: placesConfig(env.APP_ENV, process.env),
+        redisUrl: env.REDIS_URL,
+        thresholds: process.env['STATUS_THRESHOLDS'],
+        webUrl: email.webUrl,
       }),
       DataStoreMetricsModule.register({
         databaseUrl: env.DATABASE_URL,

@@ -147,6 +147,18 @@
     },
     {
       "kind": "queue",
+      "name": "status-checks",
+      "source": "libs/domain/src/status/status.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed"
+      ],
+      "reason": "one job every 30 seconds probes the admin dashboard's six service tiles and stores them in status_tile, counted by motorfix_jobs_total{job_name,outcome} and logged once on its final failure; a confirmed tile change logs 'StatusChecks <tile> <state> <figures>' and writes status_tile.changed; a failed run is not retried, the next one follows in 30 seconds; the tiles' own alerting is #170",
+      "story": "ST-294"
+    },
+    {
+      "kind": "queue",
       "name": "reminders",
       "source": "libs/domain/src/cars/reminders/reminders.module.ts",
       "dashboard": "motorfix-queues",
@@ -306,7 +318,8 @@
         "api-error-rate",
         "api-latency"
       ],
-      "story": "ST-881"
+      "story": "ST-881",
+      "reason": "the app's object store; the worker's status checks also list the nightly backup bucket with their own client (libs/domain/src/status/probes/probes.ts, BACKUP_S3_*, ST-294), a failed listing showing the backup tile red with its reason"
     },
     {
       "kind": "outside-service",
@@ -356,6 +369,17 @@
       ],
       "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}",
       "story": "ST-111"
+    },
+    {
+      "kind": "outside-service",
+      "name": "public-web",
+      "source": "libs/domain/src/status/probes/probes.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "the status checks call the public web address every 30 seconds (/health/ready, the popular brands and one garage search without the log flag), timed on the Outside calls row (http_client_request_duration_seconds by server_address); a failed probe shows its tile red, the tiles' own alerting is #170",
+      "story": "ST-294"
     },
     {
       "kind": "outside-service",
