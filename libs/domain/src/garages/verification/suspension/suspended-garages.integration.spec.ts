@@ -5,9 +5,17 @@ import type { SuspensionCause } from '@motor-fix/contracts';
 import { countGarages, suspendedGarages } from './suspended-garages';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import type { BookingCancelReason } from '../../../generated/prisma/enums';
+import { cityOf } from '../../../places/city';
 import { databaseUrl, quotesWorld } from '../../../quotes/quotes.testing';
 
 // @traces 066-FR-001 066-FR-002 066-FR-003 066-FR-004 066-FR-005 066-FR-011
+
+// The key the app derives from a city's name (places/city.ts).
+const cityColumns = (name: string) => {
+  const city = cityOf(name);
+  if (!city) throw new Error(`no city key for "${name}"`);
+  return { cityKey: city.key, cityName: city.name };
+};
 
 const world = quotesWorld();
 const { prisma } = world;
@@ -27,10 +35,7 @@ const garage = (
       slug: `g-${randomUUID()}`,
       status,
       // A city carries its name and its key together (garage_city_both).
-      ...(place.cityName && {
-        cityKey: place.cityName.toLowerCase(),
-        cityName: place.cityName,
-      }),
+      ...(place.cityName && cityColumns(place.cityName)),
       ...(place.radiusKm !== undefined && {
         businessKind: 'mobile',
         serviceRadiusKm: place.radiusKm,
