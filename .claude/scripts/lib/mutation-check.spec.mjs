@@ -2,6 +2,7 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fingerprint, hookById, scriptPath } from './hooks.mjs';
 import { isMutationCheck, MUTATION_WORKFLOW } from './mutation-check.mjs';
 
 const root = join(import.meta.dirname, '..', '..', '..');
@@ -25,5 +26,13 @@ describe('a Mutation workflow check', () => {
     assert.equal(isMutationCheck({ name: 'Mutation', workflow: '' }), false);
     assert.equal(isMutationCheck({ __typename: 'StatusContext', context: 'Mutation', state: 'PENDING' }), false);
     assert.equal(isMutationCheck({ name: 'Mutation' }), false);
+  });
+
+  // @traces 1344-FR-009
+  it('is read by gates blessed as they stand', () => {
+    for (const id of ['pre:bash:merge-gate', 'stop:pr-lifecycle']) {
+      const entry = hookById(root, id);
+      assert.equal(fingerprint(scriptPath(root, entry)), entry.fingerprint, id);
+    }
   });
 });

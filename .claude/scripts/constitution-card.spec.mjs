@@ -85,6 +85,15 @@ describe('the constitution card', () => {
     assert.equal(versionOf(local, /Constitution v(\d+\.\d+\.\d+)/), versionOf(full, /^\*\*Version\*\*: (\d+\.\d+\.\d+)/m));
   });
 
+  // @traces 1344-FR-007
+  it('keeps mutation out of every task under principle II, at 4.1 or later, in the constitution and the card', () => {
+    const start = full.indexOf('### II.');
+    const second = full.slice(start, full.indexOf('\n### ', start + 1)).replace(/\s+/g, ' ');
+    assert.match(second, /Mutation testing is never part of a task's lifecycle/);
+    assert.ok(atLeast(full, 4, 1));
+    assert.match(readFileSync(CARD, 'utf8'), /\*\*II\. Test Discipline\*\*[^\n]*no mutation run in a task/);
+  });
+
   it('stays a card', () => {
     const bytes = Buffer.byteLength(readFileSync(CARD, 'utf8'));
     assert.ok(bytes <= MAX_BYTES, `${bytes} bytes, above ${MAX_BYTES}`);

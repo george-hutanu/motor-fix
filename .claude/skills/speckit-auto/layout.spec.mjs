@@ -199,6 +199,7 @@ describe('speckit-auto layout', () => {
     }
   });
 
+  // @traces 1344-FR-002
   it('keeps every rule exactly once, in the file it applies to', () => {
     const lost = [];
     for (const [phrase, file] of RULES) {

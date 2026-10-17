@@ -18,6 +18,7 @@ function job(name: string): string {
 }
 
 describe('mutation workflow triggers', () => {
+  // @traces 1344-FR-008
   it('runs every 3 days at 02:00 and on demand, never on a pull request', () => {
     expect(workflow).toMatch(/^ {4}- cron: '0 2 \*\/3 \* \*'$/m);
     expect(workflow).toMatch(/^ {2}workflow_dispatch:$/m);
@@ -154,6 +155,7 @@ describe('the docs that describe a mutation run', () => {
     },
   );
 
+  // @traces 1344-FR-001 1344-FR-003 1344-FR-005
   it('leaves mutation out of harden: only the mutation-runner, asked for by name, dispatches a run', () => {
     for (const path of [
       '.claude/skills/speckit-harden/SKILL.md',
@@ -168,5 +170,26 @@ describe('the docs that describe a mutation run', () => {
     expect(doc('.claude/agents/mutation-runner.md')).toMatch(
       /gh workflow run mutation\.yml/,
     );
+  });
+
+  // @traces 1344-FR-004
+  it('keeps the mutation-runner for a review asked for by name, and the adversary before no mutation run', () => {
+    expect(doc('.claude/agents/mutation-runner.md')).toMatch(
+      /^description: .*only by an explicit mutation review.*no lifecycle command calls it/m,
+    );
+    expect(doc('.claude/agents/test-adversary.md')).not.toMatch(
+      /before the mutation run/,
+    );
+  });
+
+  // @traces 1344-FR-006
+  it('says in AGENTS.md that mutation is never part of a task and runs only on its schedule and by hand', () => {
+    const agents = doc('AGENTS.md').replace(/\s+/g, ' ');
+
+    expect(agents).toMatch(/Mutation is never part of a task's lifecycle/);
+    expect(agents).toMatch(
+      /schedule on `main` and `workflow_dispatch` are the only places it runs/,
+    );
+    expect(agents).toMatch(/surviving mutant is picked from the Project/);
   });
 });
