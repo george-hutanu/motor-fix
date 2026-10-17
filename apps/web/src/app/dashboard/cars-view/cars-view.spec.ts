@@ -602,6 +602,17 @@ describe('a car card', () => {
     expect(cards(element)[0].querySelector('mf-oil-line')).toBeNull();
   });
 
+  // @traces 029-FR-007
+  it('shows no oil-service line for a cached car answered before the next service existed', async () => {
+    const { nextServiceKm: _, ...cached } = car();
+    const { element, settle } = await render([
+      cached as ReturnType<typeof car>,
+    ]);
+    await settle();
+
+    expect(cards(element)[0].querySelector('mf-oil-line')).toBeNull();
+  });
+
   // @traces 092-FR-009
   it('asks for the three dates on grey lines in English', async () => {
     const { element, settle } = await render([car()], 'en');

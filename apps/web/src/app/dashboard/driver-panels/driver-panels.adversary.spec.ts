@@ -1,4 +1,6 @@
-import { DRIVER_PANELS, type LayoutEntry, panelsToDraw } from './driver-panels';
+import { DRIVER_PANELS, panelsToDraw } from './driver-panels';
+
+type LayoutEntry = { hidden: boolean; key: string };
 
 const show = (...keys: string[]): LayoutEntry[] =>
   keys.map((key) => ({ hidden: false, key }));

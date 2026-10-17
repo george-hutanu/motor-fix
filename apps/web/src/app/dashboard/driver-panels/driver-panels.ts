@@ -15,7 +15,7 @@ interface PanelEntry {
 }
 
 // One entry of a saved layout; its key may name a panel that no longer exists.
-export interface LayoutEntry {
+interface LayoutEntry {
   hidden: boolean;
   key: string;
 }
