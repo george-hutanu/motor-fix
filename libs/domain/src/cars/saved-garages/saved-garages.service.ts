@@ -22,6 +22,7 @@ import {
 
 // Whether the save made the row, so the controller answers 201 or 200.
 type Saved = { created: boolean; row: SavedGarageDto };
+type Key = { accountId: string; garageId: string };
 
 const answer = (row: SavedGarage): SavedGarageDto => ({
   garageId: row.garageId,
@@ -72,8 +73,9 @@ function driverOnly(actor: Actor) {
   requireCapability(actor, 'driver.saved_garages');
 }
 
-// A driver's saved garages. The audit entry carries no garage id, so the
-// garage's own history never shows who saved it.
+// A driver's saved garages. Their audit entries are of subject type
+// `saved_garage`, which the garage's own history does not read, so a garage
+// never learns who saved it.
 @Injectable()
 export class SavedGaragesService {
   constructor(
@@ -82,12 +84,7 @@ export class SavedGaragesService {
     @Inject(EVENT_PORT) private readonly events: EventPort,
   ) {}
 
-  async save(
-    actor: Actor,
-    garageId: string,
-    savedAt?: string,
-    again = true,
-  ): Promise<Saved> {
+  async save(actor: Actor, garageId: string, savedAt?: string): Promise<Saved> {
     driverOnly(actor);
     const at = savedAt ? new Date(savedAt) : new Date();
     if (at.getTime() > Date.now()) {
@@ -98,37 +95,41 @@ export class SavedGaragesService {
       );
     }
     const key = { accountId: actor.accountId, garageId };
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        const kept = await tx.savedGarage.findUnique({
-          where: { accountId_garageId: key },
-        });
-        if (kept) return { created: false, row: answer(kept) };
-        const garage = await tx.garage.findFirst({
-          select: { id: true },
-          where: { id: garageId, status: 'approved' },
-        });
-        if (!garage) {
-          throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
-        }
-        const row = answer(
-          await tx.savedGarage.create({ data: { ...key, savedAt: at } }),
-        );
-        await this.audit.record(tx, entry(actor, 'added', row));
-        await this.events.record(tx, event(actor, 'added', row));
-        return { created: true, row };
-      });
-    } catch (error) {
-      // Two tabs saving at once: the first made the row, this one found it.
-      if (!isUniqueViolation(error)) throw error;
-      const kept = await this.prisma.savedGarage.findUnique({
+    const once = () =>
+      this.create(actor, key, at).catch((error) => this.raced(error, key));
+    // Null: a removal took the row another save had made. Once more only.
+    return (await once()) ?? (await this.create(actor, key, at));
+  }
+
+  private create(actor: Actor, key: Key, at: Date): Promise<Saved> {
+    return this.prisma.$transaction(async (tx) => {
+      const kept = await tx.savedGarage.findUnique({
         where: { accountId_garageId: key },
       });
       if (kept) return { created: false, row: answer(kept) };
-      // A removal landed in between: this save goes again, once.
-      if (again) return this.save(actor, garageId, savedAt, false);
-      throw error;
-    }
+      const garage = await tx.garage.findFirst({
+        select: { id: true },
+        where: { id: key.garageId, status: 'approved' },
+      });
+      if (!garage) {
+        throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
+      }
+      const row = answer(
+        await tx.savedGarage.create({ data: { ...key, savedAt: at } }),
+      );
+      await this.audit.record(tx, entry(actor, 'added', row));
+      await this.events.record(tx, event(actor, 'added', row));
+      return { created: true, row };
+    });
+  }
+
+  // Two tabs saving at once: the first made the row, this one finds it.
+  private async raced(error: unknown, key: Key): Promise<Saved | null> {
+    if (!isUniqueViolation(error)) throw error;
+    const kept = await this.prisma.savedGarage.findUnique({
+      where: { accountId_garageId: key },
+    });
+    return kept ? { created: false, row: answer(kept) } : null;
   }
 
   // The removed row, whose time an undo sends back; null when none was saved.
