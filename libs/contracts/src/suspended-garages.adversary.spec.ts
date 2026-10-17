@@ -100,4 +100,12 @@ describe('AdminGaragesQueryDto', () => {
       'offset',
     ]);
   });
+
+  // @traces 066-FR-002
+  it.each([' ', '0x10', '1e2', '+5'])(
+    'rejects the offset %j instead of reading it as a number',
+    (offset) => {
+      expect(errorsOf({ offset, status: 'suspended' })).toEqual(['offset']);
+    },
+  );
 });

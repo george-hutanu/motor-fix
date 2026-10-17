@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import {
+  AccountsService,
+  MAINTENANCE,
+  type Maintenance,
+  signAccessToken,
+} from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -152,5 +157,19 @@ describe('GET /admin/garages?status=suspended', () => {
 
   it('asks for a session', async () => {
     expect((await get('garages?status=suspended')).status).toBe(401);
+  });
+});
+
+describe('both reads in maintenance', () => {
+  // @traces 066-FR-005
+  it('stay open to an admin while the platform is in maintenance', async () => {
+    const maintenance = app.get<Maintenance>(MAINTENANCE, { strict: false });
+    const on = jest.spyOn(maintenance, 'on').mockResolvedValue(true);
+    try {
+      expect((await get('garages/summary', admin)).status).toBe(200);
+      expect((await get('garages?status=suspended', admin)).status).toBe(200);
+    } finally {
+      on.mockRestore();
+    }
   });
 });

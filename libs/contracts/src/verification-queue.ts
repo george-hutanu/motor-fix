@@ -8,9 +8,14 @@ import {
   VERIFICATION_QUEUE_PAGE,
 } from './verification-target';
 
-// A query number: an empty `?offset=` is malformed, not zero.
+// A query number is digits only: an empty, blank or hex `?offset=` is
+// malformed, never read as 0 or 16.
 export const toQueryNumber = ({ value }: { value: unknown }) =>
-  value === '' ? Number.NaN : value === undefined ? value : Number(value);
+  typeof value === 'string'
+    ? /^\d+$/.test(value)
+      ? Number(value)
+      : Number.NaN
+    : value;
 
 export class VerificationQueueQueryDto {
   @ApiPropertyOptional({

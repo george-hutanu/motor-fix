@@ -80,8 +80,11 @@ describe('rarVerdict', () => {
 
   // @traces 066-FR-004
   it('reads a decomposed unicode reason around the word', () => {
-    expect(rarVerdict('recheck_failed', 'Autorizația ar fi expirată')).toBe(
-      'expired',
-    );
+    expect(
+      rarVerdict(
+        'recheck_failed',
+        'Autorizația ar fi expirată'.normalize('NFD'),
+      ),
+    ).toBe('expired');
   });
 });
