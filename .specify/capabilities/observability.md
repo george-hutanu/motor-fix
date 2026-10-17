@@ -26,6 +26,7 @@ features:
   - 1169-prefetch-intent
   - 1235-unknown-brand-cache
   - 880-grafana-alerts
+  - 1345-staging-observability
 ---
 
 # Capability: Observability
@@ -94,7 +95,7 @@ _From 876-otel-instrumentation._
 
 _From 876-otel-instrumentation._
 
-### 876-FR-008 — The API MUST report a request-duration histogram (the OTel instrument `http.server.request.duration`) labelled by route template, method and status, sufficient to derive request rate, error rate and duration per route.
+### 876-FR-008 — The API MUST report a request-duration histogram (the OTel instrument `http.server.request.duration`) labelled by route template, method and status, sufficient to derive request rate, error rate and duration per route. (Amended 2026-10-17: the request-duration histogram leaves out the two live event streams (1345-FR-008).)
 
 _From 876-otel-instrumentation._
 
@@ -102,7 +103,7 @@ _From 876-otel-instrumentation._
 
 _From 876-otel-instrumentation._
 
-### 876-FR-010 — The API, worker and MCP MUST report the Node runtime metrics (event-loop lag, heap, garbage collection, CPU).
+### 876-FR-010 — The API, worker and MCP MUST report the Node runtime metrics (event-loop lag, heap, garbage collection, CPU). (Amended 2026-10-17: the event-loop delay is sampled at the instrumentation's default resolution, never a precision of a second or more (1345-FR-001).)
 
 _From 876-otel-instrumentation._
 
@@ -218,11 +219,11 @@ _From 877-web-health-grafana._
 
 _From 877-web-health-grafana._
 
-### 877-FR-004 — The web server MUST report the request-duration histogram (`http.server.request.duration`) labelled by route template, method and status, and the Node runtime metrics, with labels from small fixed sets only (876-FR-008, -010, -011).
+### 877-FR-004 — The web server MUST report the request-duration histogram (`http.server.request.duration`) labelled by route template, method and status, and the Node runtime metrics, with labels from small fixed sets only (876-FR-008, -010, -011). (Amended 2026-10-17: the request-duration histogram leaves out the two live event streams (1345-FR-008).)
 
 _From 877-web-health-grafana._
 
-### 877-FR-005 — The web server's log lines MUST carry the trace id and span id when one is active; a request ending in a server error MUST write one error log line with the trace id and mark the span as error; e-mails, Romanian phone numbers and plates MUST be masked in spans, logs and exceptions (876-FR-006, -007, -012).
+### 877-FR-005 — The web server's log lines MUST carry the trace id and span id when one is active; a request ending in a server error MUST write one error log line with the trace id and mark the span as error; e-mails, Romanian phone numbers and plates MUST be masked in spans, logs and exceptions (876-FR-006, -007, -012). (Amended 2026-10-17: a proxy failure record carries the method and the masked path, and one after the response started is WARN (1345-FR-009, 1345-FR-010).)
 
 _From 877-web-health-grafana._
 
@@ -230,7 +231,7 @@ _From 877-web-health-grafana._
 
 _From 877-web-health-grafana._
 
-### 877-FR-007 — The web server MUST read the browser collector URL from its runtime configuration (one optional variable, proposed `FARO_URL`, an absolute https URL in staging and production) and hand it, with the release version, to the browser inside the HTML it renders (no new endpoint); unset or empty → no browser telemetry and no telemetry code loaded in the browser. A malformed value MUST fail at start naming the variable and never print its value. `.env.example` MUST list the variable by name with no value.
+### 877-FR-007 — The web server MUST read the browser collector URL from its runtime configuration (one optional variable, proposed `FARO_URL`, an absolute https URL in staging and production) and hand it, with the release version, to the browser inside the HTML it renders (no new endpoint); unset or empty → no browser telemetry and no telemetry code loaded in the browser. A malformed value MUST fail at start naming the variable and never print its value. `.env.example` MUST list the variable by name with no value. (Amended 2026-10-17: an unset collector URL with telemetry on is one warning (1345-FR-005).)
 
 _From 877-web-health-grafana._
 
@@ -282,7 +283,7 @@ _From 877-web-health-grafana._
 
 _From 878-data-store-metrics._
 
-### 878-FR-002 — The worker MUST read PostgreSQL through a separate connection, `MONITOR_DATABASE_URL` (optional), whose sessions are read-only, with a 5 s statement timeout; no other part of the system uses it. Unset, the PostgreSQL readings are off (one log line).
+### 878-FR-002 — The worker MUST read PostgreSQL through a separate connection, `MONITOR_DATABASE_URL` (optional), whose sessions are read-only, with a 5 s statement timeout; no other part of the system uses it. Unset, the PostgreSQL readings are off (one log line). (Amended 2026-10-17: an unset `MONITOR_DATABASE_URL` is one WARN record through the OTel log pipeline and its stdout line (1345-FR-002).)
 
 _From 878-data-store-metrics._
 
@@ -374,7 +375,7 @@ _From 879-dashboards._
 
 _From 879-dashboards._
 
-### 879-FR-005 — The overview dashboard MUST show one row per service — api, worker, web, mcp, postgres, redis — with up/down, request (or operation) rate, error %, p95 latency, CPU, memory and the deployed release sha (the service version resource attribute) for the four apps, and for the two data stores the figures ST-878 exports (PostgreSQL: up, connections, transactions/s; Redis: up, memory, commands hit ratio), since a managed store reports no request, CPU or release signal, where error % is 5xx responses over all responses, p95 latency and rates use a 5-minute window, and up means the service's `target_info` series is present (OTLP push yields no `up` series; data stores: `motorfix_datastore_up` reads 1), down means it reads 0, and no series in the last 5 minutes shows "No data", never down, and one Grafana Cloud usage row with active metric series, log volume and trace volume for the period beside the free-tier limits.
+### 879-FR-005 — The overview dashboard MUST show one row per service — api, worker, web, mcp, postgres, redis — with up/down, request (or operation) rate, error %, p95 latency, CPU, memory and the deployed release sha (the service version resource attribute) for the four apps, and for the two data stores the figures ST-878 exports (PostgreSQL: up, connections, transactions/s; Redis: up, memory, commands hit ratio), since a managed store reports no request, CPU or release signal, where error % is 5xx responses over all responses, p95 latency and rates use a 5-minute window, and up means the service's `target_info` series is present (OTLP push yields no `up` series; data stores: `motorfix_datastore_up` reads 1), down means it reads 0, and no series in the last 5 minutes shows "No data", never down, and one Grafana Cloud usage row with active metric series, log volume and trace volume for the period beside the free-tier limits. (Amended 2026-10-17: error % reads 0 with no 5xx (1345-FR-015).)
 
 _From 879-dashboards._
 
@@ -390,7 +391,7 @@ _From 879-dashboards._
 
 _From 879-dashboards._
 
-### 879-FR-009 — The domain lib MUST report seven OpenTelemetry counters, incremented once per successful action in the use case that performs it (never by reading the database): `motorfix_searches_total{outcome}` (results | none), `motorfix_sign_ins_total{method}` (password | phone | google | apple), `motorfix_garage_sign_ups_total` (incremented where a garage listing draft is created until a use case creates garage accounts), `motorfix_garage_approvals_total{outcome}` (approved | rejected), `motorfix_quotes_total` (incremented where the quote-received notification is sent until a quote use case exists), `motorfix_emails_sent_total{template}` and `motorfix_notifications_sent_total{channel}` (push | in-app).
+### 879-FR-009 — The domain lib MUST report seven OpenTelemetry counters, incremented once per successful action in the use case that performs it (never by reading the database): `motorfix_searches_total{outcome}` (results | none), `motorfix_sign_ins_total{method}` (password | phone | google | apple), `motorfix_garage_sign_ups_total` (incremented where a garage listing draft is created until a use case creates garage accounts), `motorfix_garage_approvals_total{outcome}` (approved | rejected), `motorfix_quotes_total` (incremented where the quote-received notification is sent until a quote use case exists), `motorfix_emails_sent_total{template}` and `motorfix_notifications_sent_total{channel}` (push | in-app). (Amended 2026-10-17: every product counter starts at 0 per label combination in the process that writes it (1345-FR-012).)
 
 _From 879-dashboards._
 
@@ -402,7 +403,7 @@ _From 244-analytics-news-consent._
 
 _From 251-monitoring-backups._
 
-### 879-FR-011 — With telemetry off the counters MUST be no-ops with no behaviour change to the use cases (876-FR-014); each counter MUST have a colocated test that runs the action with a metrics reader attached and asserts the increment and its labels, and a failed action (a refused sign-in, a search that throws) MUST count nothing.
+### 879-FR-011 — With telemetry off the counters MUST be no-ops with no behaviour change to the use cases (876-FR-014); each counter MUST have a colocated test that runs the action with a metrics reader attached and asserts the increment and its labels, and a failed action (a refused sign-in, a search that throws) MUST count nothing. (Amended 2026-10-17: every product counter starts at 0 per label combination in the process that writes it (1345-FR-012).)
 
 _From 879-dashboards._
 
@@ -526,15 +527,15 @@ _From 1024-alert-rules._
 
 _From 1024-alert-rules._
 
-### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`).
+### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`). (Amended 2026-10-17: `worker-queue-backlog` alerts on no data (1345-FR-004).)
 
 _From 1024-alert-rules._
 
-### 1024-FR-006 — `postgres.json` MUST hold `postgres-unreachable` (`motorfix_datastore_up{store="postgres"}` read 0 for 5 minutes), `postgres-connections` (the sum of `motorfix_pg_connections` over `motorfix_pg_connections_max` above 80 % for 5 minutes) and `postgres-size` (`motorfix_pg_database_size_bytes` above 4 GiB for 5 minutes; the memory arm, since PostgreSQL exposes no memory figure).
+### 1024-FR-006 — `postgres.json` MUST hold `postgres-unreachable` (`motorfix_datastore_up{store="postgres"}` read 0 for 5 minutes), `postgres-connections` (the sum of `motorfix_pg_connections` over `motorfix_pg_connections_max` above 80 % for 5 minutes) and `postgres-size` (`motorfix_pg_database_size_bytes` above 4 GiB for 5 minutes; the memory arm, since PostgreSQL exposes no memory figure). (Amended 2026-10-17: `postgres-unreachable` alerts on no data (1345-FR-004).)
 
 _From 1024-alert-rules._
 
-### 1175-FR-006 — The `redis-memory` alert MUST fire when used memory is above 70 % of the maximum (the 320 MiB floor when the server reports none) for 5 minutes, its summary saying 70 %; the `motorfix-redis` dashboard's memory panel MUST draw the 70 % line against the used-memory series, at 70 % of the 320 MiB floor (224 MiB) because a panel threshold is an absolute number; when the server reports a maximum, the alert's ratio is the authority and the line is a reference only; `infra/observability/inventory.json` MUST keep `redis-memory` on the `redis` entry and `node scripts/observability-inventory.ts` MUST pass. `redis-unreachable` and `redis-connections` stay as they are.
+### 1175-FR-006 — The `redis-memory` alert MUST fire when used memory is above 70 % of the maximum (the 320 MiB floor when the server reports none) for 5 minutes, its summary saying 70 %; the `motorfix-redis` dashboard's memory panel MUST draw the 70 % line against the used-memory series, at 70 % of the 320 MiB floor (224 MiB) because a panel threshold is an absolute number; when the server reports a maximum, the alert's ratio is the authority and the line is a reference only; `infra/observability/inventory.json` MUST keep `redis-memory` on the `redis` entry and `node scripts/observability-inventory.ts` MUST pass. `redis-unreachable` and `redis-connections` stay as they are. (Amended 2026-10-17: `redis-unreachable` alerts on no data (1345-FR-004).)
 
 _From 1175-valkey._
 
@@ -626,9 +627,53 @@ _From 880-grafana-alerts._
 
 _From 880-grafana-alerts._
 
-### 880-FR-017 — Every new rule MUST follow the file's existing shape (1024-FR-001: uid and title prefixed by the service, `condition` `B`, `noDataState: OK`, `execErrState: Error`, the `service` label, a summary naming the environment, query `A` on `grafanacloud-prom` grouped by environment, no `outage` label, no environment named in a query), and every metric a rule names MUST be drawn by a dashboard under `infra/observability/grafana/dashboards/`.
+### 880-FR-017 — Every new rule MUST follow the file's existing shape (1024-FR-001: uid and title prefixed by the service, `condition` `B`, `noDataState: OK`, `execErrState: Error`, the `service` label, a summary naming the environment, query `A` on `grafanacloud-prom` grouped by environment, no `outage` label, no environment named in a query), and every metric a rule names MUST be drawn by a dashboard under `infra/observability/grafana/dashboards/`. (Amended 2026-10-17: `noDataState: OK` except the three absence rules, which alert on no data (1345-FR-004).)
 
 _From 880-grafana-alerts._
+
+### 1345-FR-001 — The Node runtime instrumentation of the api, worker, web and mcp MUST sample the event-loop delay at the library's default resolution (10 ms), never at a precision of a second or more, so that `nodejs_eventloop_delay_p99_seconds` on an idle process reads below 0.05 s and the `worker-saturation` rule (0.5 s for 5 minutes) fires only on a stall; the panels and the rule are unchanged. A test asserts the configured precision.
+
+_From 1345-staging-observability._
+
+### 1345-FR-002 — When telemetry is on and the worker starts its datastore readings with `MONITOR_DATABASE_URL` unset, it MUST emit exactly one WARN record through the OTel log pipeline and one `"level":"warn"` JSON line on stdout, naming the variable and that PostgreSQL readings are off; with the variable set, nothing is logged. The record MUST print no value of any variable.
+
+_From 1345-staging-observability._
+
+### 1345-FR-004 — In `infra/observability/alerts/`, the rules `postgres-unreachable`, `redis-unreachable` and `worker-queue-backlog` MUST carry `noDataState: Alerting`; every other rule MUST keep `noDataState: OK`; `execErrState` is unchanged. `scripts/alert-rules.spec.ts` asserts the value per rule uid, and the README's alert table says which rules alert on missing data.
+
+_From 1345-staging-observability._
+
+### 1345-FR-005 — When the web server starts with telemetry on (OTLP endpoint set) and `FARO_URL` unset, it MUST emit exactly one WARN record through the OTel log pipeline and one `warn` JSON line saying browser telemetry is off because `FARO_URL` is unset; with telemetry off, or `FARO_URL` set, nothing is logged. Owner step, out of code scope: set `FARO_URL` on the staging web service.
+
+_From 1345-staging-observability._
+
+### 1345-FR-008 — The server request-duration histogram (`http.server.request.duration`) of the api and of the web MUST hold no sample for the long-lived event streams, `GET /api/v1/live` and `GET /api/v1/live/public`, on either server (the web proxies them under `/api`), matched on the request path alone, so a query string (the public stream takes one) does not change the match; every other request is recorded as before. The p95 queries in the dashboards and the `api-latency` and `web-latency` rules are unchanged. `instrumentations.spec.ts` asserts a stream records no histogram sample and a plain request does.
+
+_From 1345-staging-observability._
+
+### 1345-FR-009 — Every failure the web's `/api/` proxy reports MUST carry the request's method and its path without the query string, masked as every log line is, on both the stdout line and the OTel record.
+
+_From 1345-staging-observability._
+
+### 1345-FR-010 — A proxy failure after the response started (headers sent, including an upstream response that closes before it is complete) MUST be reported once at WARN, not ERROR, and the visitor's response closed; no 502 is written. A failure the proxy causes itself, by destroying the upstream because the visitor left, MUST be neither retried nor logged above INFO.
+
+_From 1345-staging-observability._
+
+### 1345-FR-011 — A GET or HEAD whose upstream request raised an error before any byte of the response arrived (a connection reset, a hang up or a refusal; the proxy sets no upstream timeout), while the visitor is still waiting, MUST be sent once more on a fresh connection, at most once (the event streams included); a second failure, or the failure of any other method, MUST be reported at ERROR and answered 502, as today. The proxy specs cover each branch.
+
+_From 1345-staging-observability._
+
+### 1345-FR-012 — When telemetry is on, the api and the worker MUST, once their meter provider is registered, initialise every product counter they emit at 0 for each label combination its code can emit (the `motorfix_*_total` counters of `libs/domain/src/metrics/product-counters.ts`, `quotes.metrics.ts` and `garage-search.metrics.ts`, each label from its closed set: an `outcome` from its union, a decline `reason` from `DECLINE_REASON_CODES`, an e-mail `template` per registered template), each process only the counters its own modules record, within the caps `product-counters.spec.ts` asserts (under 50 series per counter, under 100 per instance), so each panel shows 0 instead of "No data"; a later action adds 1 to the matching series. With telemetry off the initialisation is a no-op (879-FR-011). A test with a metrics reader asserts the 0 data points and that the counts still increment.
+
+_From 1345-staging-observability._
+
+### 1345-FR-015 — Every Error % panel (the `motorfix-api`, `motorfix-web`, `motorfix-worker` and `motorfix-mcp` dashboards and the four service rows of `motorfix-overview`) MUST show 0 when no failure was counted in a window that holds requests (a 5xx response; for the overview's worker row, which reads jobs, a failed job, `motorfix_jobs_total{outcome="failed"}`) and the share otherwise; the numerator is `(sum(rate(…)) or vector(0))` over the label-free sums the panels use today, and a window with no request (or job) at all stays "No data". `scripts/observability-config.spec.ts` asserts the expressions.
+
+_From 1345-staging-observability._
+
+### 1345-FR-018 — The admin accounts failure log MUST log a 401 at info, with the same route and status fields, and every other status of 400 or above at warn. A colocated test asserts the level per status.
+
+_From 1345-staging-observability._
 
 ## Retired
 

@@ -31,6 +31,7 @@ features:
   - 1169-prefetch-intent
   - 029-overview-panels-own-data
   - 366-assistant-privacy
+  - 1345-staging-observability
 ---
 
 # Capability: Accounts
@@ -933,6 +934,14 @@ _From 366-assistant-privacy._
 ### 366-FR-006 — Both languages MUST keep eleven privacy sections with the same paragraph counts in the same order, and the Romanian text MUST use ș and ț with comma below only.
 
 _From 366-assistant-privacy._
+
+### 1345-FR-006 — The web app's background calls that need a session MUST NOT be sent without an access token: the bell's unread-count poll (each tick, and the first) and the push device's key request check the token first and skip the call without one, as the live stream already does. A dashboard tab whose renewal was refused therefore makes no further background call until the account signs in again, and the poll resumes with the new token. Explicit asks (the area and account guards, the sign-in return, the invite, the sign-in dialog, the report link) keep their single renewal; the session's `ask()` and the refresh endpoint are unchanged (the signed-out refresh is ST-510, #398). Colocated unit tests cover the bell and the push device.
+
+_From 1345-staging-observability._
+
+### 1345-FR-007 — A public screen that needs a session for part of its work (the request-a-quote dialog's car list) MUST, when it holds no access token and no stored role hint, open the sign-in dialog without an API call and load once signed in; if the visitor dismisses the sign-in dialog, the request-a-quote dialog shows the state it shows today when the list cannot load, still without a call; with a token or a hint it loads as today. One Playwright test loads `/ro`, `/ro/garages?brand=dacia` and a seeded garage profile and opens its request-a-quote dialog in a fresh context, records every request and response, and asserts none is a 401 and no `POST /api/v1/auth/refresh` is sent.
+
+_From 1345-staging-observability._
 
 ## Retired
 
