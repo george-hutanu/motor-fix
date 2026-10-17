@@ -2762,6 +2762,38 @@
       ],
       "title": "Verification checks recorded per hour",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 125
+      },
+      "id": 99,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, result) (increase(motorfix_verification_checks_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{kind}} {{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Verification checks recorded, last 24 hours",
+      "type": "stat"
     }
   ]
 }
