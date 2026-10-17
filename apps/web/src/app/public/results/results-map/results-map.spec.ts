@@ -427,7 +427,7 @@ describe('RESULTS_MAP, the map while it loads', () => {
     host.append(canvas);
     await Promise.resolve();
 
-    expect(canvas.getAttribute('tabindex')).toBe('-1');
+    expect(canvas.hasAttribute('tabindex')).toBe(false);
     host.remove();
   });
 });
