@@ -172,6 +172,9 @@ const NOT_CHANGES = new Set([
   // A visitor's search, counted for the Demand view: no account and no
   // change to anyone's data, so no audit entry by the search's rule.
   'SearchLogService.record',
+  // A message to support is correspondence, often from a visitor with no
+  // account, not a change to anyone's data; the row is its own record.
+  'SupportMessagesService.create',
 ]);
 
 const uncovered = (source: string) =>

@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@motor-fix/i18n';
 
@@ -19,6 +19,8 @@ export class DashboardTabBar {
   readonly counts = input<Counts>({});
   // The counts' first read is on its way.
   readonly countsLoading = input(false);
+  // An entry that opens a task over the view, not a page.
+  readonly act = output<DashboardView>();
 
   // Once the tab is marked current; `nearest` keeps the page itself still.
   // `scrollIntoView` is absent on the server and in jsdom.

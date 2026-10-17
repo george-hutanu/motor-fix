@@ -45,12 +45,24 @@ export interface DashboardView {
   unreleased?: true;
   // The admin overview number its menu entry and tab carry.
   counter?: keyof Counts;
+  // Opens its task over the view on screen instead of a page: a button in
+  // the menu and the bar, and no route. Only in a dashboard's `actions`.
+  action?: 'contact';
 }
 
 const HOME: DashboardView = {
   label: 'shell.frame.nav.dashboard',
   path: '',
   tab: 'shell.frame.tab.dashboard',
+};
+
+// "Ajutor și contact": after the views in the driver's and garage's menus,
+// so after Settings; never the admin's.
+const CONTACT: DashboardView = {
+  action: 'contact',
+  label: 'shell.frame.nav.contact',
+  path: 'contact',
+  tab: 'shell.frame.tab.contact',
 };
 
 // A garage view whose keys all follow its path.
@@ -67,7 +79,13 @@ const garageView = (path: string, capability?: string): DashboardView => ({
 // One list per dashboard: the side menu, the tab bar and the routes read it.
 export const DASHBOARDS: Record<
   Area,
-  { name: string; tag: string; views: readonly DashboardView[] }
+  {
+    name: string;
+    tag: string;
+    views: readonly DashboardView[];
+    // Entries that open a task, after the views; no route, no capability.
+    actions?: readonly DashboardView[];
+  }
 > = {
   admin: {
     name: 'shell.frame.bar.admin',
@@ -131,6 +149,7 @@ export const DASHBOARDS: Record<
     ],
   },
   driver: {
+    actions: [CONTACT],
     name: 'shell.frame.bar.driver',
     tag: 'shell.frame.area.driver',
     views: [
@@ -199,6 +218,7 @@ export const DASHBOARDS: Record<
     ],
   },
   garage: {
+    actions: [CONTACT],
     name: 'shell.frame.bar.garage',
     tag: 'shell.frame.area.garage',
     views: [

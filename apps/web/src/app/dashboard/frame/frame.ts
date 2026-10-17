@@ -43,6 +43,7 @@ import { AdminFilters } from '../admin-filters/admin-filters';
 import type { FiltersChoice } from '../admin-filters-sheet/admin-filters-sheet';
 import { AdminOverview } from '../admin-overview';
 import { Bell } from '../bell/bell';
+import { openContact } from '../contact-task/open-contact';
 import { EmailBanner } from '../email-banner/email-banner';
 import { GarageRequestsFeed } from '../garage-requests/garage-requests-feed';
 import { initials } from '../initials';
@@ -53,7 +54,13 @@ import { PushDevice } from '../push-device';
 import { garageOf, Session } from '../session';
 import { SignOutEverywhere } from '../sign-out-everywhere/sign-out-everywhere';
 import { DashboardTabBar } from '../tab-bar/tab-bar';
-import { type Area, allowedViews, type Counts, DASHBOARDS } from '../views';
+import {
+  type Area,
+  allowedViews,
+  type Counts,
+  DASHBOARDS,
+  type DashboardView,
+} from '../views';
 
 type Role = MeDto['role'];
 
@@ -210,6 +217,11 @@ export class Frame implements OnInit {
       this.garage()?.features,
     ),
   );
+  // The menu and the bar: the views, then the entries that open a task.
+  protected readonly menu = computed(() => [
+    ...this.entries(),
+    ...(this.dashboard().actions ?? []),
+  ]);
   // The address on screen.
   private readonly address = toSignal(
     this.router.events.pipe(
@@ -353,6 +365,10 @@ export class Frame implements OnInit {
       title: 'driver.cars.add.title',
     });
     if (car !== 'cancelled') await this.session.reload();
+  }
+
+  protected act({ action }: DashboardView) {
+    if (action === 'contact') void openContact(this.overlays);
   }
 
   protected invite(garageId: string) {

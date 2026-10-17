@@ -63,6 +63,23 @@ const VERIFICATION_RESULT_OUTCOMES = ['built', 'skipped'] as const;
 const SUSPENDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
 const QUOTE_RECEIVED_OUTCOMES = ['built', 'muted'] as const;
 
+const SUPPORT_MESSAGE_OUTCOMES = [
+  'stored',
+  'refused_limit',
+  'trap',
+  'invalid',
+] as const;
+type SupportMessageOutcome = (typeof SUPPORT_MESSAGE_OUTCOMES)[number];
+const SUPPORT_EMAIL_KINDS = ['support', 'acknowledgement'] as const;
+export type SupportEmailKind = (typeof SUPPORT_EMAIL_KINDS)[number];
+const SUPPORT_EMAIL_OUTCOMES = [
+  'sent',
+  'blocked',
+  'failed',
+  'unconfigured',
+] as const;
+type SupportEmailOutcome = (typeof SUPPORT_EMAIL_OUTCOMES)[number];
+
 // Looked up on every count, never cached: a counter kept from before the
 // meter provider is registered would stay a no-op for the life of the
 // process. The SDK hands back the same instrument for the same name.
@@ -91,6 +108,16 @@ const verificationChecks = () =>
     "Checks an admin recorded on a garage's file, by kind and result",
   );
 const quotes = () => counter('motorfix_quotes_total', 'Quotes sent to drivers');
+const supportMessages = () =>
+  counter(
+    'motorfix_support_messages_total',
+    'Messages sent through the contact form, by outcome',
+  );
+const supportEmails = () =>
+  counter(
+    'motorfix_support_emails_total',
+    "A support message's e-mails, by kind and outcome",
+  );
 const emails = () =>
   counter('motorfix_emails_sent_total', 'E-mails sent, by template');
 const notifications = () =>
@@ -292,6 +319,7 @@ const STARTS: Record<
     [quoteAccepts, each('outcome', QUOTE_ACCEPT_OUTCOMES)],
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],
+    [supportMessages, each('outcome', SUPPORT_MESSAGE_OUTCOMES)],
   ],
   worker: [
     [
@@ -314,6 +342,13 @@ const STARTS: Record<
         each('sweep', ['true', 'false']),
       ),
     ],
+    [
+      supportEmails,
+      across(
+        each('kind', SUPPORT_EMAIL_KINDS),
+        each('outcome', SUPPORT_EMAIL_OUTCOMES),
+      ),
+    ],
   ],
 };
 
@@ -323,6 +358,18 @@ export function initProductCounters(process: 'api' | 'worker') {
     const started = series();
     for (const one of labels) started.add(0, one);
   }
+}
+
+// A maintenance refusal is counted by motorfix_maintenance_refusals_total.
+export function countSupportMessage(outcome: SupportMessageOutcome) {
+  supportMessages().add(1, { outcome });
+}
+
+export function countSupportEmail(
+  kind: SupportEmailKind,
+  outcome: SupportEmailOutcome,
+) {
+  supportEmails().add(1, { kind, outcome });
 }
 
 // Every write to the system status log, by kind and what became of it.
