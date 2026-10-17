@@ -687,6 +687,26 @@ describe('the activities form', () => {
     expect(text(job('Încărcare freon'))).toContain('neacoperit');
   });
 
+  // @traces 204-FR-004 204-FR-008
+  it('marks a job with no mapped RAR activity covered, and every job covered when nothing is ticked', async () => {
+    await activities();
+    const mark = (name: string) => text(job(name)?.querySelector('.mark'));
+
+    expect(mark('Spălătorie')).toBe('acoperit');
+
+    await tick('Mecanică');
+
+    expect(mark('Schimb de ulei')).toBe('acoperit');
+    expect(mark('Plăcuțe de frână')).toBe('acoperit');
+    expect(mark('Spălătorie')).toBe('acoperit');
+  });
+
+  it('marks an unmapped job "covered" in English', async () => {
+    await activities(() => {}, 'en');
+
+    expect(text(job('Car wash')?.querySelector('.mark'))).toBe('covered');
+  });
+
   // @traces 204-FR-008
   it('marks a job mapped to a code outside the catalogue uncovered, with its code', async () => {
     await activities((h) =>

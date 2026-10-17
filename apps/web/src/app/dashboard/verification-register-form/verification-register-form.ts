@@ -439,9 +439,11 @@ export class VerificationRegisterForm {
 
   // A job mapped to a code outside the catalogue can never be ticked, so it
   // reads uncovered with its code.
+  // An unmapped job, or any job while nothing is ticked, is covered: the price
+  // list's own rule (FR-004), so every job carries a mark (FR-008).
   private jobMark(rarActivity: string | null, list: readonly string[]) {
-    if (!rarActivity) return null;
-    if (coversJob(rarActivity, list)) return this.t('form.covered');
+    if (!rarActivity || coversJob(rarActivity, list))
+      return this.t('form.covered');
     const known = this.catalogue().some((a) => a.code === rarActivity);
     return known
       ? this.t('form.uncovered')
