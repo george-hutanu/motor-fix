@@ -274,6 +274,41 @@ describe('the search with Redis unavailable', () => {
 const BBOX = '46.7,23.5,46.85,23.75';
 
 // @traces 269-FR-019
+// @traces 269-FR-019
+describe('the search cache for a box on the list', () => {
+  it('keys a page of a box by its rounded canonical text, and leaves the radius at its default', async () => {
+    const gen = await generation();
+
+    await search({
+      bbox: '46.70004,23.5,46.85,23.75',
+      brandId: dacia,
+      near: NEAR,
+    }).expect(200);
+    await search({
+      bbox: BBOX,
+      brandId: dacia,
+      near: NEAR,
+      radius: '50',
+    }).expect(200);
+
+    expect(await entries()).toEqual([
+      `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:${BBOX}:-`,
+    ]);
+  });
+
+  it('reads PostgreSQL for another box', async () => {
+    await search({ bbox: BBOX, brandId: dacia }).expect(200);
+    await rename('Nume nou');
+
+    const other = await search({
+      bbox: '46.7,23.5,46.86,23.75',
+      brandId: dacia,
+    });
+
+    expect(other.body.items[0].name).toBe('Nume nou');
+  });
+});
+
 describe('the search cache for the map pins', () => {
   it('keeps the pins for 60 seconds under their own kind, beside the page of the same search', async () => {
     const gen = await generation();

@@ -22,6 +22,9 @@ import { GaragePinsService } from '../garage-pins/garage-pins.service';
 const brandIn = (query: GaragePinsQueryDto) =>
   query.brand === undefined ? (query.brandId as string) : { slug: query.brand };
 
+const bboxIn = (query: GaragePinsQueryDto) =>
+  query.bbox === undefined ? undefined : parseBbox(query.bbox);
+
 @ApiTags('search')
 @Controller('search/garages')
 export class GarageSearchController {
@@ -37,7 +40,7 @@ export class GarageSearchController {
   @ApiOkResponse({ type: GarageSearchPageDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or ids not up to 20 distinct uuids; invalid_cursor: not a page of this search',
+      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, or bbox not a south,west,north,east box inside Romania at most 100 km on a side; invalid_cursor: not a page of this search or of another box',
   })
   @ApiNotFoundResponse({
     description: 'not_found: no brand with that slug or id',
@@ -45,8 +48,15 @@ export class GarageSearchController {
   forBrand(@Query() query: GarageSearchQueryDto): Promise<GarageSearchPageDto> {
     const brand = brandIn(query);
     const near = parseNear(query.near);
+    const bbox = bboxIn(query);
     if (query.ids !== undefined) {
-      return this.search.byIds(brand, query.ids.split(','), near, query.radius);
+      return this.search.byIds(
+        brand,
+        query.ids.split(','),
+        near,
+        query.radius,
+        bbox,
+      );
     }
     return this.search.forBrand(
       brand,
@@ -54,6 +64,7 @@ export class GarageSearchController {
       near,
       query.radius,
       query.log === '1',
+      bbox,
     );
   }
 
@@ -73,7 +84,7 @@ export class GarageSearchController {
       brandIn(query),
       parseNear(query.near),
       query.radius,
-      query.bbox === undefined ? undefined : parseBbox(query.bbox),
+      bboxIn(query),
     );
   }
 }

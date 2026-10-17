@@ -1,9 +1,11 @@
 import {
+  bboxOf,
   FACILITIES,
   type GarageSearchPageDto,
   type ListedGarageDto,
   nearOf,
   SEARCH_IDS_MAX,
+  type SearchBbox,
   type SearchPoint,
 } from '@motor-fix/contracts';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
@@ -26,11 +28,13 @@ const GROUPS = ['works_on', 'other'] as const;
 // Unsigned on purpose: it only says where the next page starts, and a
 // tampered one is refused or reads a page the visitor could read anyway.
 // It carries the last garage's id, not its name: a name has no length limit
-// and the query caps the cursor at 200 characters.
+// and the query caps the cursor at 200 characters. A page of a box names the
+// box, so it never pages on another box or the search around the place.
 interface Cursor {
   b: string;
   g: (typeof GROUPS)[number];
   i: string;
+  x?: string;
 }
 
 interface After extends Cursor {
@@ -74,22 +78,39 @@ const invalidCursor = () =>
     'cursor is not a page of this search',
   );
 
-function decode(cursor: string, brandId: string): Cursor {
+function decode(cursor: string, brandId: string, box?: string): Cursor {
   let parsed: Partial<Cursor>;
   try {
     parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString());
   } catch {
     throw invalidCursor();
   }
-  const { b, g, i } = parsed ?? {};
-  if (b !== brandId || !GROUPS.includes(g as Cursor['g']) || !isUUID(i)) {
+  const { b, g, i, x } = parsed ?? {};
+  if (
+    b !== brandId ||
+    !GROUPS.includes(g as Cursor['g']) ||
+    !isUUID(i) ||
+    x !== box
+  ) {
     throw invalidCursor();
   }
   return parsed as Cursor;
 }
 
-const encode = (cursor: Cursor) =>
-  Buffer.from(JSON.stringify(cursor)).toString('base64url');
+// Where the page after the one ending on `last` starts.
+const cursorAfter = (
+  brandId: string,
+  last: ListedGarageDto,
+  box: string | undefined,
+) =>
+  Buffer.from(
+    JSON.stringify({
+      b: brandId,
+      g: last.stance === 'works_on' ? 'works_on' : 'other',
+      i: last.id,
+      ...(box && { x: box }),
+    } satisfies Cursor),
+  ).toString('base64url');
 
 // The brand by its catalogue id, or by its slug as the address bar holds it.
 export type BrandKey = string | { slug: string };
@@ -185,25 +206,30 @@ export class GarageSearchService {
 
   // A page, from the cache when the same search was read in the last 60
   // seconds. `log` marks a new search: its row is written after the answer,
-  // which never waits for it.
+  // which never waits for it. A box is the map moved over the same search,
+  // never a new one: neither logged nor counted, and the radius plays no part.
   async forBrand(
     key: BrandKey,
     cursor?: string,
     point?: SearchPoint,
     radiusKm?: number,
     log = false,
+    bbox?: SearchBbox,
   ): Promise<GarageSearchPageDto> {
     const brand = await this.brandOf(key);
+    const box = bbox && bboxOf(bbox);
     const page = await this.cache.entry(
       {
+        bbox: box,
         brandId: brand.id,
         cursor,
         kind: 'page',
         near: point && nearOf(point),
-        radiusKm,
+        radiusKm: bbox ? undefined : radiusKm,
       },
-      () => this.searched(brand, cursor, point, radiusKm),
+      () => this.searched(brand, cursor, point, radiusKm, bbox),
     );
+    if (bbox) return page;
     countFirstPage(cursor, page.items.length);
     // Left to the next turn of the event loop: the answer goes out first.
     if (log) {
@@ -217,13 +243,15 @@ export class GarageSearchService {
     cursor?: string,
     point?: SearchPoint,
     radiusKm?: number,
+    bbox?: SearchBbox,
   ): Promise<GarageSearchPageDto> {
     const brandId = brand.id;
+    const box = bbox && bboxOf(bbox);
     const after =
       cursor === undefined
         ? undefined
-        : await this.after(decode(cursor, brandId));
-    const area = await this.area(point, radiusKm);
+        : await this.after(decode(cursor, brandId, box));
+    const area = await this.area(point, radiusKm, bbox);
     const groups = groupsOf(brandId, area);
     const found = await this.counted(groups);
     const rows: ListedGarageDto[] = [];
@@ -250,13 +278,7 @@ export class GarageSearchService {
       ...found,
       items,
       nextCursor:
-        rows.length > PAGE && last
-          ? encode({
-              b: brandId,
-              g: last.stance === 'works_on' ? 'works_on' : 'other',
-              i: last.id,
-            })
-          : null,
+        rows.length > PAGE && last ? cursorAfter(brandId, last, box) : null,
     };
   }
 
@@ -268,9 +290,10 @@ export class GarageSearchService {
     ids: string[],
     point?: SearchPoint,
     radiusKm?: number,
+    bbox?: SearchBbox,
   ): Promise<GarageSearchPageDto> {
     const brand = await this.brandOf(key);
-    const area = await this.area(point, radiusKm);
+    const area = await this.area(point, radiusKm, bbox);
     const groups = groupsOf(brand.id, area);
     const only = (group: Prisma.GarageWhereInput) => ({
       AND: [group, { id: { in: ids } }],
@@ -292,8 +315,14 @@ export class GarageSearchService {
     return brandOf(this.prisma, key);
   }
 
-  private async area(point: SearchPoint | undefined, radiusKm?: number) {
-    return point && garagesInArea(this.prisma, { point, radiusKm });
+  private async area(
+    point: SearchPoint | undefined,
+    radiusKm?: number,
+    bbox?: SearchBbox,
+  ) {
+    return (
+      (point || bbox) && garagesInArea(this.prisma, { bbox, point, radiusKm })
+    );
   }
 
   private counted(groups: Groups) {
