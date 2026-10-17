@@ -129,6 +129,30 @@ test.describe('with reduced motion', () => {
       }),
     ).toEqual(['1', 'none']);
   });
+
+  // @traces 248-launch-screens-accessible-FR-006
+  test('the skip link appears at once on the first Tab, still', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.locator('mf-home h1')).toBeVisible();
+
+    await page.keyboard.press('Tab');
+    const skip = page.locator('mf-skip-link a');
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeVisible();
+    expect(await running(page)).toEqual([]);
+    expect(
+      await skip.evaluate((a) => {
+        const style = getComputedStyle(a);
+        return [style.animationName, style.transitionDuration];
+      }),
+    ).toEqual(['none', '0s']);
+
+    await page.keyboard.press('Enter');
+    await expect(page.locator('main').first()).toBeFocused();
+    expect(await running(page)).toEqual([]);
+  });
 });
 
 test.describe('with full motion', () => {
