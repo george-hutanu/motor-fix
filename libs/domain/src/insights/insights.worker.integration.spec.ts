@@ -118,6 +118,7 @@ describe('the night job', () => {
     await second.close();
 
     expect(schedulers.map((s) => s.key).sort()).toEqual([
+      'demand-daily',
       'platform-daily',
       'profile-views',
       'response-stats',
@@ -161,6 +162,32 @@ describe('the night job', () => {
       attempts: 4,
       backoff: { delay: 60_000, type: 'exponential' },
     });
+  });
+
+  // @traces 103-FR-012
+  it('retries the demand rows up to three times, a minute apart and doubling, and writes them when the job runs', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE demand_daily');
+    const app = await boot();
+    const demand = await queue.getJobScheduler('demand-daily');
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    const job = await queue.add('demand-daily', {});
+    await job.waitUntilFinished(events, 10_000);
+    await events.close();
+    await app.close();
+
+    expect(demand?.template?.opts).toMatchObject({
+      attempts: 3,
+      backoff: { delay: 60_000, type: 'exponential' },
+    });
+    expect(
+      await prisma.demandDaily.count({
+        where: { dimension: 'total', key: 'all' },
+      }),
+    ).toBe(29);
   });
 
   // @traces 143-FR-011

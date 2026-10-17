@@ -19,6 +19,8 @@ const api = apiBoot();
 const KNOWN = [
   'GET /api/v1/admin/accounts',
   'GET /api/v1/admin/accounts/summary',
+  // @traces 103-FR-002
+  'GET /api/v1/admin/demand',
   'GET /api/v1/admin/growth',
   'GET /api/v1/admin/overview',
   'GET /api/v1/admin/platform-rule-changes',

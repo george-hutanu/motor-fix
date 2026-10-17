@@ -105,6 +105,8 @@ export type { AdminAccountsControllerList$Params as AdminAccountsControllerList$
 export { adminAccountsControllerList as adminAccountsControllerList } from './fn/admin/admin-accounts-controller-list';
 export type { AdminAccountsControllerSummary$Params as AdminAccountsControllerSummary$Params } from './fn/admin/admin-accounts-controller-summary';
 export { adminAccountsControllerSummary as adminAccountsControllerSummary } from './fn/admin/admin-accounts-controller-summary';
+export type { DemandControllerDemand$Params as DemandControllerDemand$Params } from './fn/admin/demand-controller-demand';
+export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
