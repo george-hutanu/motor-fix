@@ -606,7 +606,8 @@ function payloadOf(decision: Decision) {
   return {
     note: text,
     reason: reason ?? null,
-    requestedItems: requestedItems ?? [],
+    // An item listed twice is asked for once.
+    requestedItems: [...new Set(requestedItems ?? [])],
   };
 }
 

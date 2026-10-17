@@ -1224,7 +1224,7 @@ describe('recording a decision', () => {
 });
 
 describe('a file already decided', () => {
-  // @traces 306-FR-002 306-FR-012
+  // @traces 306-FR-002 306-FR-011 306-FR-012
   it('answers 409 naming who decided it, when, and its status', async () => {
     const file = await fileIn('rejected', new Date('2026-10-17T09:14:00Z'));
     const before = await refusals('already_decided');
