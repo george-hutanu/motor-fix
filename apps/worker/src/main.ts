@@ -1,11 +1,13 @@
 import './telemetry';
 
 import { readEnv } from '@motor-fix/contracts';
-import { JsonLogger } from '@motor-fix/domain';
+import { initProductCounters, JsonLogger } from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 
 import { WORKER_ENV, workerModule } from './worker.module';
+
+initProductCounters('worker');
 
 async function bootstrap() {
   const env = readEnv(WORKER_ENV);

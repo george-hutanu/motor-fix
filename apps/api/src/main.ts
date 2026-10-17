@@ -6,6 +6,7 @@ import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   BRANDS,
   BrandLoader,
+  initProductCounters,
   JOB_TYPES,
   JobTypeLoader,
   warmCache,
@@ -15,6 +16,8 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module';
 import { configureApp, openApiDocument } from './bootstrap';
+
+initProductCounters('api');
 
 async function bootstrap() {
   const env = readEnv([

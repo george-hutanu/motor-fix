@@ -29,6 +29,7 @@ jest.mock('@motor-fix/contracts', () => ({
 jest.mock('@motor-fix/domain', () => ({
   BRANDS: ['the brand file'],
   BrandLoader: class BrandLoader {},
+  initProductCounters: jest.fn(),
   warmCache: (...args: unknown[]) => mockWarm(...args),
 }));
 jest.mock('@nestjs/core', () => ({

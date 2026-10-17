@@ -76,6 +76,7 @@ export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
 export * from './logging';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
+export { initProductCounters } from './metrics/product-counters';
 export { emailConfig } from './notifications/email-config';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
