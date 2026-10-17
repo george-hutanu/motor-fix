@@ -357,6 +357,20 @@ describe('ResultsMap, a move of the map', () => {
     expect(boxes).toEqual(['44.4,26,44.5,26.2']);
   });
 
+  it('drops "Apropie harta" when the map is fitted back to the search', async () => {
+    await render();
+    await ready();
+
+    moved({ tooWide: true });
+    fixture.detectChanges();
+    expect(said(hint())).toBe('Apropie harta');
+
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+
+    expect(said(hint())).toBe('');
+  });
+
   it('says "Zoom in" in English', async () => {
     await render({ language: 'en' });
     await ready();

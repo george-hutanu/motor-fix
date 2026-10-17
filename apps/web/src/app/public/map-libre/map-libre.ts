@@ -73,9 +73,9 @@ function mapAssets(document: Document) {
   };
 }
 
-// A MapLibre map over Romania, answered once its style has loaded. A failure
-// before that, or no load within 10 s, removes it and rejects; once loaded,
-// an error (one failed tile is enough) is the caller's to handle. `loaded`
+// A MapLibre map over Romania, answered once its style has loaded. A style
+// failure before that, or no load within 10 s, removes it and rejects (a
+// failed tile does not); once loaded, an error is the caller's to handle. `loaded`
 // runs at the load itself, before any later event can reach the map.
 export async function openMapLibre(
   host: HTMLElement,
@@ -114,8 +114,13 @@ export async function openMapLibre(
       loaded?.(map);
       resolve();
     };
-    const broken = ({ error }: MapEventType['error']) => give(error);
-    map.once('error', broken);
+    // One failed tile, which names its source, is ignored; a style error
+    // is not.
+    const broken = (event: MapEventType['error']) => {
+      if ('sourceId' in event || 'tile' in event) return;
+      give(event.error);
+    };
+    map.on('error', broken);
     map.once('load', load);
   });
   // Under the test style the e2e suite reads the view off the live map.

@@ -114,10 +114,11 @@ export class ResultsMap {
   }
 
   // Frames the place and the pins, at once when the map is open, else as
-  // soon as it opens.
+  // soon as it opens; the search's own frame is never too wide.
   fit() {
     const view = untracked(this.view);
     this.fitWanted = !view;
+    this.tooWide.set(false);
     view?.fit(untracked(this.place), untracked(this.pins));
   }
 }

@@ -155,6 +155,34 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
     expect(fake.map.remove).toHaveBeenCalledTimes(1);
   });
 
+  it('ignores a tile error before the load, and still answers the map once it loads', async () => {
+    const opening = openMapLibre(document.createElement('div'), LIGHT);
+    await built();
+
+    fake.map.fire('error', {
+      error: new Error('tile 404'),
+      sourceId: 'openmaptiles',
+      tile: {},
+    });
+    expect(fake.map.remove).not.toHaveBeenCalled();
+    fake.map.fire('load');
+
+    await expect(opening).resolves.toBe(fake.map);
+    expect(fake.map.remove).not.toHaveBeenCalled();
+  });
+
+  it('still gives up on a style error that follows an ignored tile error', async () => {
+    const error = new Error('style 500');
+    const opening = openMapLibre(document.createElement('div'), LIGHT);
+    await built();
+
+    fake.map.fire('error', { error: new Error('tile 404'), sourceId: 'x' });
+    fake.map.fire('error', { error });
+
+    await expect(opening).rejects.toBe(error);
+    expect(fake.map.remove).toHaveBeenCalledTimes(1);
+  });
+
   it('gives up on a map that has not loaded within 10 seconds', async () => {
     jest.useFakeTimers();
     const opening = openMapLibre(document.createElement('div'), LIGHT);
