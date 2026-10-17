@@ -964,6 +964,110 @@ describe('Results', () => {
         reads.slice(1).every((read) => read.params.near === '46.77,23.59'),
       ).toBe(true);
     });
+
+    // @traces 269-FR-018
+    describe('the pins', () => {
+      const pinsAsked = () => pinsApi.mock.calls.map(([q]) => q);
+
+      it.each([
+        'garage.updated',
+        'garage.suspended',
+        'garage.restored',
+        'verification.decided',
+      ])(
+        'reads the pins again on %s and draws the new answer',
+        async (kind) => {
+          quietly();
+          await loaded();
+          expect(pinsAsked()).toHaveLength(1);
+          pinsAnswer = pinsOf(47);
+
+          send(kind, 'pin-3');
+          await coalesce();
+
+          expect(pinsAsked()).toEqual([{ brand: 'bmw' }, { brand: 'bmw' }]);
+          expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(47));
+        },
+      );
+
+      it('leaves the map where the driver has it on a re-read', async () => {
+        quietly();
+        await loaded();
+        const fits = mapView.fit.mock.calls.length;
+        pinsAnswer = pinsOf(47);
+
+        send('garage.suspended', 'pin-3');
+        await coalesce();
+
+        expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(47));
+        expect(mapView.fit).toHaveBeenCalledTimes(fits);
+      });
+
+      it('reads the pins once for a burst of events', async () => {
+        quietly();
+        await loaded();
+
+        send('garage.updated', 'one');
+        send('garage.suspended', 'pin-7');
+        send('garage.restored', 'pin-8');
+        send('verification.decided', 'pin-9');
+        await coalesce();
+        await reads[1]?.answer();
+        await reads[2]?.answer();
+        await settle();
+
+        expect(pinsAsked()).toHaveLength(2);
+      });
+
+      it('reads no pins on a review event', async () => {
+        await loaded();
+
+        send('review.posted', 'review-9');
+        await coalesce();
+
+        expect(pinsAsked()).toHaveLength(1);
+      });
+
+      it('reads the pins of the box the map shows', async () => {
+        keep(PLACE);
+        await loaded();
+        mapMoved({ bbox: '44.4,26,44.5,26.2' });
+        await settle();
+        await reads[1]?.answer();
+
+        send('garage.updated', 'pin-3');
+        await coalesce();
+
+        expect(pinsAsked().at(-1)).toEqual({
+          bbox: '44.4,26,44.5,26.2',
+          brand: 'bmw',
+          near: '44.447,26.117',
+        });
+      });
+
+      it('keeps the pins shown when the re-read fails', async () => {
+        await loaded();
+        pinsApi.mockImplementationOnce(() =>
+          Promise.reject(new HttpErrorResponse({ status: 500 })),
+        );
+
+        send('garage.suspended', 'pin-3');
+        await coalesce();
+
+        expect(pinsAsked()).toHaveLength(2);
+        expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(48));
+        expect(page().querySelector('[role="alert"]')).toBeNull();
+      });
+
+      it('reads the pins again on each re-open of the stream', async () => {
+        await loaded();
+
+        resync.next();
+        await settle();
+
+        expect(pinsAsked()).toHaveLength(2);
+      });
+    });
   });
 
   describe('the map beside the list', () => {
@@ -1033,6 +1137,73 @@ describe('Results', () => {
         undefined,
         50,
       ]);
+    });
+  });
+
+  // @traces 269-FR-017
+  describe('the map when something fails', () => {
+    beforeEach(() => configure());
+
+    const grey = () => page().querySelector('mf-results-map .placeholder');
+    const status = () => page().querySelector('mf-results-map [role="status"]');
+    const failPins = () =>
+      pinsApi.mockImplementationOnce(() =>
+        Promise.reject(new HttpErrorResponse({ status: 500 })),
+      );
+
+    it('shows a grey map while the search runs, even once the pins have come', async () => {
+      await open('/ro/garages?brand=bmw');
+
+      expect(pinsApi).toHaveBeenCalledTimes(1);
+      expect(grey()).not.toBeNull();
+
+      await reads[0]?.answer();
+
+      expect(grey()).toBeNull();
+    });
+
+    it('leaves the map without pins and says nothing over the list when the pins request fails', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer();
+
+      expect(page().querySelectorAll('mf-result-card')).toHaveLength(2);
+      expect(page().querySelector('[role="alert"]')).toBeNull();
+      expect(said(status())).toBe('');
+      expect(grey()).toBeNull();
+      expect(mapView.show).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it('keeps the skeletons while the search runs with the pins failed', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+
+      expect(page().querySelectorAll('.cards .skeleton')).toHaveLength(6);
+      expect(page().querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('keeps the empty state as it is with the pins failed', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(
+        pageOf({ counts: { doesNotTake: 0, worksOn: 0 }, items: [], total: 0 }),
+      );
+
+      expect(said(page().querySelector('.state h2'))).toBe(
+        'Niciun service găsit',
+      );
+    });
+
+    it('shows the list failure once, with "Reîncearcă", when both fail', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail();
+
+      expect(page().querySelectorAll('[role="alert"]')).toHaveLength(1);
+      expect(said(page().querySelector('.state[role="alert"] h1'))).toBe(
+        'Nu am putut încărca rezultatele',
+      );
+      expect(said(status())).toBe('');
     });
   });
 
@@ -1200,6 +1371,7 @@ describe('Results', () => {
       await settleOn(BOX);
 
       expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(48));
+      expect(page().querySelector('mf-results-map .placeholder')).toBeNull();
     });
 
     it('says "Apropie harta" while the box is too wide, and asks nothing', async () => {

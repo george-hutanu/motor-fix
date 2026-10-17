@@ -414,4 +414,76 @@ test.describe('the map beside the results @seeded', () => {
     await expect(tally).toContainText('4 service‑uri găsite');
     await expect(page.locator('mf-result-card')).toHaveCount(4);
   });
+
+  // @traces 269-FR-017
+  test('keeps every card when the map cannot load, and says so on the map', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as { __MF_MAP_STYLE?: string }).__MF_MAP_STYLE =
+        '/map/no-such-style.json';
+    });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+
+    await expect(page.locator('mf-result-card')).toHaveCount(4);
+    await expect(
+      page
+        .getByRole('region', { name: 'Harta service‑urilor' })
+        .getByRole('status'),
+    ).toHaveText('Harta nu este disponibilă acum');
+    await expect(page.locator('.state[role="alert"]')).toHaveCount(0);
+  });
+
+  // Last: the garage it suspends stays suspended for the rest of the file.
+  // @traces 269-FR-018
+  test('takes the pin of a garage suspended while the page is open off the map within 2 seconds', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    const stream = page.waitForResponse(
+      (r) =>
+        r.url().includes('/api/v1/live/public?') &&
+        r.url().includes('garages=') &&
+        r.ok(),
+    );
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await stream;
+    const pinned = () =>
+      page.evaluate(async () => {
+        type Feature = { properties: { id: string } };
+        const map = (
+          window as unknown as {
+            __MF_MAP?: {
+              getSource(
+                id: string,
+              ): { getData(): Promise<{ features: Feature[] }> } | undefined;
+            };
+          }
+        ).__MF_MAP;
+        const data = await map?.getSource('pins')?.getData();
+        return (data?.features ?? []).map((f) => f.properties.id).sort();
+      });
+    await expect.poll(pinned).toHaveLength(3);
+    const id = ids[0];
+
+    // Written as the admin's suspension writes it, with the same audience.
+    await db.query('BEGIN');
+    await db.query(`UPDATE garage SET status = 'suspended' WHERE id = $1`, [
+      id,
+    ]);
+    await db.query(
+      `INSERT INTO outbox_event (kind, subject_id, audience)
+       VALUES ('garage.suspended', $1, $2)`,
+      [id, [`garage:${id}`, `public:garage:${id}`, 'public:search']],
+    );
+    await db.query('COMMIT');
+
+    // The card leaves when the event arrives; the outbox relay's own delay
+    // comes before it, the 2 seconds after.
+    const card = page
+      .locator('mf-result-card')
+      .filter({ hasText: `Service Harta ${stamp} 0` });
+    await expect(card).toHaveCount(0, { timeout: 15_000 });
+    await expect.poll(pinned, { timeout: 2_000 }).not.toContain(id);
+  });
 });

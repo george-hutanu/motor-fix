@@ -75,6 +75,8 @@ export class ResultsMap {
   // The box the driver moved the map to, once it has settled.
   readonly moved = output<string>();
   protected readonly tooWide = signal(false);
+  // The style failed or never loaded; the grey map stays and says so.
+  protected readonly failed = signal(false);
   protected readonly hasArea = computed(() =>
     this.pins()?.pins.some((pin) => pin.serviceRadiusKm !== undefined),
   );
@@ -99,8 +101,7 @@ export class ResultsMap {
           this.view.set(view);
           if (this.fitWanted) this.fit();
         },
-        // The grey map stays; saying so is the unavailable state's.
-        () => undefined,
+        () => this.failed.set(true),
       );
     });
     effect(() => this.view()?.show(this.pins()));

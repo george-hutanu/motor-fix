@@ -51,6 +51,13 @@ const REVIEW_KINDS: readonly EventKind[] = EVENT_KINDS.filter((kind) =>
 );
 const REVIEWS: ReadonlySet<string> = new Set(REVIEW_KINDS);
 // What re-reads a loaded card: its reviews, its profile, its return.
+// What may move a pin: a garage changed, gone, back or newly approved.
+const PIN_KINDS: ReadonlySet<string> = new Set([
+  'garage.updated',
+  'garage.restored',
+  'garage.suspended',
+  'verification.decided',
+]);
 const CARD_KINDS: ReadonlySet<string> = new Set([
   ...REVIEW_KINDS,
   'garage.updated',
@@ -167,6 +174,10 @@ export class Results {
       now: this.pins.hasValue() ? this.pins.value() : undefined,
     }),
   });
+  // The grey map while the search runs; a box loading keeps the pins shown.
+  protected readonly mapLoading = computed(
+    () => !this.box() && (this.results.isLoading() || this.pins.isLoading()),
+  );
   // The kept place where it is the one searched, else the bar's.
   protected readonly place = computed(() => {
     const near = this.near();
@@ -263,15 +274,17 @@ export class Results {
   private readonly wanted = new Set<string>();
   private countsWanted = false;
   private pageWanted = false;
+  private pinsWanted = false;
   private reading = false;
   private burst: ReturnType<typeof setTimeout> | undefined;
   private readonly fades = new Set<ReturnType<typeof setTimeout>>();
 
   constructor() {
     if (this.server) return;
-    // After the render, so the map holds the answer it frames.
+    // After the render, so the map holds the answer it frames; a live
+    // re-read of the pins leaves the map where the driver has it.
     afterRenderEffect(() => {
-      if (this.pins.isLoading() || !this.pinned() || this.box()) return;
+      if (!this.pins.hasValue() || this.pins.isLoading() || this.box()) return;
       untracked(() => this.map()?.fit());
     });
     // The kept place goes into the bar, so the link shared opens this search.
@@ -293,6 +306,7 @@ export class Results {
       if (!untracked(this.answer)) return;
       for (const id of untracked(this.loaded)) this.wanted.add(id);
       this.countsWanted = true;
+      this.pinsWanted = true;
       void this.flush();
     });
     this.destroyRef.onDestroy(() => {
@@ -348,6 +362,7 @@ export class Results {
     const page = untracked(this.answer);
     if (!page) return;
     const loaded = page.items.some((garage) => garage.id === id);
+    if (PIN_KINDS.has(kind)) this.pinsWanted = true;
     // A suspended card fades out; the counts come from a re-read, which never
     // holds it, so one already re-read after the suspension is not lowered twice.
     if (kind === 'garage.suspended' && loaded) {
@@ -367,26 +382,34 @@ export class Results {
     if (this.reading) return;
     this.reading = true;
     try {
-      while (this.pageWanted || this.wanted.size > 0 || this.countsWanted) {
-        if (this.pageWanted) {
-          this.pageWanted = false;
-          this.wanted.clear();
-          this.countsWanted = false;
-          await this.read(undefined, (page, now) => reuse(now, page));
-        } else if (this.wanted.size > 0) {
-          const ids = [...this.wanted].join(',');
-          this.wanted.clear();
-          await this.read(ids, (page, now) =>
-            this.counted(page, this.withCards(page, now)),
-          );
-        } else {
-          this.countsWanted = false;
-          await this.read(undefined, (page, now) => this.counted(page, now));
-        }
-      }
+      let more = true;
+      while (more) more = await this.readNext();
     } finally {
       this.reading = false;
     }
+  }
+
+  // The next read wanted, the pins first; false once nothing is.
+  private async readNext() {
+    if (this.pinsWanted) {
+      this.pinsWanted = false;
+      await this.readPins();
+    } else if (this.pageWanted) {
+      this.pageWanted = false;
+      this.wanted.clear();
+      this.countsWanted = false;
+      await this.read(undefined, (page, now) => reuse(now, page));
+    } else if (this.wanted.size > 0) {
+      const ids = [...this.wanted].join(',');
+      this.wanted.clear();
+      await this.read(ids, (page, now) =>
+        this.counted(page, this.withCards(page, now)),
+      );
+    } else if (this.countsWanted) {
+      this.countsWanted = false;
+      await this.read(undefined, (page, now) => this.counted(page, now));
+    } else return false;
+    return true;
   }
 
   // A read that fails keeps the page as it is; one answered after the search
@@ -410,6 +433,20 @@ export class Results {
     if (this.destroyRef.destroyed || !now || untracked(this.query) !== query)
       return;
     this.answer.set(apply(page, now));
+  }
+
+  // Like a card's read: a failure keeps the pins shown, a late answer is dropped.
+  private async readPins() {
+    const query = untracked(this.query);
+    if (!query) return;
+    let pins: GaragePinsDto;
+    try {
+      pins = await this.search.garageSearchControllerPins(query);
+    } catch {
+      return;
+    }
+    if (this.destroyRef.destroyed || untracked(this.query) !== query) return;
+    this.pinned.set(pins);
   }
 
   // The cards read again replace theirs where they stand; the order holds.

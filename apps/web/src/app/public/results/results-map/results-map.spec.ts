@@ -203,6 +203,60 @@ describe('ResultsMap, while it opens', () => {
   });
 });
 
+// @traces 269-FR-016
+// @traces 269-FR-017
+describe('ResultsMap, when the map cannot open', () => {
+  const status = () => element().querySelector('[role="status"]');
+
+  async function broken(language: 'ro' | 'en' = 'ro') {
+    await render({ language });
+    failed(new Error('style 500'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('reads "Harta nu este disponibilă acum" in a status region, outside the hidden canvas', async () => {
+    await broken();
+
+    expect(said(status())).toBe('Harta nu este disponibilă acum');
+    expect(status()?.closest('[aria-hidden="true"]')).toBeNull();
+  });
+
+  it('reads "The map is not available now" in English', async () => {
+    await broken('en');
+
+    expect(said(status())).toBe('The map is not available now');
+  });
+
+  it('keeps the grey map and the legend, and offers nothing to focus', async () => {
+    await broken();
+
+    expect(element().querySelector('.placeholder')).not.toBeNull();
+    expect(legend()).toHaveLength(3);
+    expect(
+      element().querySelectorAll('a, button, input, [tabindex]'),
+    ).toHaveLength(0);
+  });
+
+  it('says nothing while the map opens, nor once it has', async () => {
+    await render();
+
+    expect(said(status())).toBe('');
+
+    await ready();
+
+    expect(said(status())).toBe('');
+  });
+
+  it('draws nothing it is given once it has failed', async () => {
+    await broken();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+
+    expect(view.show).not.toHaveBeenCalled();
+  });
+});
+
 // @traces 269-FR-012 269-FR-013
 describe('ResultsMap, the pins it is given', () => {
   it('draws the pins once the map has opened, and each answer after', async () => {
