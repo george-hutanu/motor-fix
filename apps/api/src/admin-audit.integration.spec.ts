@@ -150,16 +150,20 @@ const FIXTURES: Record<
     path: async () =>
       `/api/v1/admin/verification-files/${await submitted('rejected')}/reopen`,
   },
+  // OK on the RAR check needs the file's number and every tick.
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
-    body: () => ({ detail: 'Autorizație găsită', result: 'ok' }),
+    body: () => ({
+      evidence: { found: true, sameAddress: true, sameCompany: true },
+      result: 'ok',
+    }),
     path: async () => {
       const slug = `audit-${randomUUID()}`;
       const file = (
         await db.query(
           `WITH g AS (INSERT INTO garage (id, name, slug)
              VALUES (gen_random_uuid(), 'Audit', $1) RETURNING id)
-           INSERT INTO verification_file (id, garage_id)
-           SELECT gen_random_uuid(), id FROM g RETURNING id`,
+           INSERT INTO verification_file (id, garage_id, rar_number)
+           SELECT gen_random_uuid(), id, 'RAR-1234' FROM g RETURNING id`,
           [slug],
         )
       ).rows[0].id as string;
@@ -170,6 +174,11 @@ const FIXTURES: Record<
       );
       return `/api/v1/admin/verification-files/${file}/checks/rar`;
     },
+  },
+  'PUT /api/v1/admin/verification-files/{id}/rar-number': {
+    body: () => ({ rarNumber: 'RAR-5678' }),
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
 };
 
