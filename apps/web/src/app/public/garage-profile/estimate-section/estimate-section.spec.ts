@@ -320,6 +320,12 @@ describe('a job that leaves the list', () => {
     expect(live()[0].textContent?.trim()).toBe(
       'O lucrare pornită nu mai este oferită de service.',
     );
+    // The visible line is hidden from screen readers, so it is said once.
+    expect(
+      fixture.nativeElement
+        .querySelector('p.dropped')
+        ?.getAttribute('aria-hidden'),
+    ).toBe('true');
 
     toggle('j-chain');
     expect(live()[0].textContent?.trim()).not.toContain('nu mai este oferită');

@@ -24,7 +24,7 @@
   <span class="unit" aria-hidden="true">{{ 'public.garageProfile.estimate.lei' | t }}</span>
 </div>
 @if (selection.dropped()) {
-  <p class="dropped">{{ 'public.garageProfile.estimate.dropped' | t }}</p>
+  <p class="dropped" aria-hidden="true">{{ 'public.garageProfile.estimate.dropped' | t }}</p>
 }
 <mf-request-quote-button class="request wide" [garage]="garage()" [jobs]="jobs()" textKey="public.garageProfile.estimate.request" />
 <p class="note">{{ 'public.garageProfile.estimate.note' | t }}</p>
