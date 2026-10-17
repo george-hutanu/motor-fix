@@ -45,3 +45,37 @@ model PlatformRuleChange {
   @@index([ruleKey, requestedAt(sort: Desc)])
   @@map("platform_rule_change")
 }
+
+enum StatusTileKey {
+  api
+  search
+  maps
+  email
+  notifications
+  backup
+
+  @@map("status_tile_key")
+}
+
+enum StatusTileState {
+  green
+  amber
+  red
+
+  @@map("status_tile_state")
+}
+
+// The admin dashboard's service tiles, written only by the worker's checks.
+// A state changes on two agreeing checks: the first differing one waits in
+// pending_state until the next confirms or drops it.
+model StatusTile {
+  key          StatusTileKey    @id
+  state        StatusTileState
+  since        DateTime         @db.Timestamptz(3)
+  detail       Json             @default("{}")
+  checkedAt    DateTime         @map("checked_at") @db.Timestamptz(3)
+  pendingState StatusTileState? @map("pending_state")
+  pendingSince DateTime?        @map("pending_since") @db.Timestamptz(3)
+
+  @@map("status_tile")
+}
