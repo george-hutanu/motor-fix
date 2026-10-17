@@ -11,6 +11,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { NEVER, Subject } from 'rxjs';
 
+import { AdminDemand } from './admin-demand/admin-demand';
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminUsers } from './admin-users/admin-users';
@@ -243,9 +244,9 @@ describe('the dashboard view lists', () => {
       {
         capability: 'admin.catalogue',
         label: 'shell.frame.nav.admin.catalogue',
+        load: expect.any(Function),
         path: 'catalogue',
         tab: 'shell.frame.tab.brands',
-        unreleased: true,
       },
       {
         capability: 'admin.settings',
@@ -269,6 +270,15 @@ describe('the dashboard view lists', () => {
     const users = DASHBOARDS.admin.views.find((view) => view.path === 'users');
 
     await expect(users?.load?.()).resolves.toBe(AdminUsers);
+  });
+
+  // @traces 103-FR-006
+  it('downloads the brands and jobs view when it is opened, not with the first page', async () => {
+    const brands = DASHBOARDS.admin.views.find(
+      (view) => view.path === 'catalogue',
+    );
+
+    await expect(brands?.load?.()).resolves.toBe(AdminDemand);
   });
 
   it('names each dashboard for its bar and tags it for its menu', () => {
@@ -379,7 +389,7 @@ describe('the dashboard view lists', () => {
         'admin.settings',
         'admin.audit_history',
       ]),
-    ).toEqual(['', 'garages', 'users', 'settings']);
+    ).toEqual(['', 'garages', 'users', 'catalogue', 'settings']);
   });
 
   it('hides an unreleased view even from a role that may open it', () => {
@@ -726,7 +736,7 @@ describe('the dashboard view routes', () => {
     expect(TestBed.inject(Router).url).toBe('/app/garage');
   });
 
-  it.each(['reviews', 'catalogue', 'assistant'])(
+  it.each(['reviews', 'assistant'])(
     'sends an admin who types the unreleased %s address to the dashboard',
     async (path) => {
       await open(`/app/admin/${path}`, ADMIN, 'admin');

@@ -40,6 +40,10 @@ abstract class CockpitChart {
   readonly unit = input.required<ChartUnit>();
   readonly loading = input(false, { transform: booleanAttribute });
   readonly error = input(false, { transform: booleanAttribute });
+  // Bars across, one row per point, the plot as tall as its rows.
+  readonly horizontal = input(false, { transform: booleanAttribute });
+  // The host's own words for no data; the shared text otherwise.
+  readonly empty = input<string>();
   readonly retry = output<void>();
 
   private readonly i18n = inject(I18n);
@@ -51,6 +55,11 @@ abstract class CockpitChart {
 
   protected readonly tableId = inject(_IdGenerator).getId('mf-chart-table-');
   protected readonly tableShown = signal(false);
+
+  // 28 px a row keeps every 12 px name on its own line; the axis takes 24.
+  protected readonly plotHeight = computed(() =>
+    this.horizontal() ? Math.max(200, this.points().length * 28 + 24) : null,
+  );
 
   protected readonly rows = computed(() =>
     this.points().map((p) => ({
@@ -94,6 +103,7 @@ abstract class CockpitChart {
         this.i18n.language(),
         readTheme(canvas),
         reduced,
+        this.horizontal(),
       );
       if (!this.chart) {
         this.chart = new Chart(canvas, config);
@@ -147,9 +157,9 @@ const template = `
           </button>
         </div>
       } @else if (points().length === 0) {
-        <p class="mf-chart-message">{{ 'shell.chart.empty' | t }}</p>
+        <p class="mf-chart-message">{{ empty() ?? ('shell.chart.empty' | t) }}</p>
       } @else {
-        <div class="mf-chart-plot">
+        <div class="mf-chart-plot" [style.height.px]="plotHeight()">
           <canvas #canvas role="img" [attr.aria-label]="summary()"></canvas>
         </div>
         <button
@@ -179,6 +189,7 @@ const template = `
             </tbody>
           </table>
         }
+        <ng-content />
       }
     </div>
   </mf-panel>

@@ -342,3 +342,78 @@ describe('the charts under reduced motion', () => {
     expect(queries.filter((q) => q.includes('reduced-motion'))).toEqual([]);
   });
 });
+
+// @traces 103-FR-006 103-FR-008 103-FR-011
+describe('a bar chart laid on its side', () => {
+  @Component({
+    imports: [BarChart],
+    template: `
+      <mf-bar-chart
+        horizontal
+        title="Cereri pe marcă"
+        unit="count"
+        empty="Încă nu sunt cereri."
+        [points]="points()"
+      >
+        <button type="button" class="more">Vezi toate</button>
+      </mf-bar-chart>
+    `,
+  })
+  class SideHost {
+    readonly points = signal<readonly ChartPoint[]>([
+      { label: 'Dacia', value: 412 },
+      { label: 'Volkswagen', value: 288 },
+    ]);
+  }
+
+  const renderSide = async (points?: readonly ChartPoint[]) => {
+    const fixture = TestBed.createComponent(SideHost);
+    if (points) fixture.componentInstance.points.set(points);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return fixture.nativeElement as HTMLElement;
+  };
+
+  it('draws its bars across', async () => {
+    const el = await renderSide();
+
+    expect(chartOf(el)?.options.indexAxis).toBe('y');
+  });
+
+  it('grows taller with every bar, so no name is squeezed out', async () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      label: `Marca ${i}`,
+      value: 20 - i,
+    }));
+    const few = (await renderSide()).querySelector<HTMLElement>(
+      '.mf-chart-plot',
+    );
+    const tall = (await renderSide(many)).querySelector<HTMLElement>(
+      '.mf-chart-plot',
+    );
+
+    expect(Number.parseFloat(few?.style.height ?? '')).toBeGreaterThanOrEqual(
+      200,
+    );
+    expect(Number.parseFloat(tall?.style.height ?? '')).toBeGreaterThanOrEqual(
+      20 * 24,
+    );
+  });
+
+  it('shows what the host puts under it, below the table toggle', async () => {
+    const el = await renderSide();
+    const buttons = [...el.querySelectorAll('button')].map((b) =>
+      b.textContent?.trim(),
+    );
+
+    expect(buttons).toEqual(['Vezi ca tabel', 'Vezi toate']);
+  });
+
+  it("says the host's own words when there is nothing to draw", async () => {
+    const el = await renderSide([]);
+
+    expect(el.textContent).toContain('Încă nu sunt cereri.');
+    expect(el.textContent).not.toContain('Încă nu sunt date');
+    expect(el.querySelector('.more')).toBeNull();
+  });
+});

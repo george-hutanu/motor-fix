@@ -282,3 +282,53 @@ describe('readTheme', () => {
     el.remove();
   });
 });
+
+// @traces 103-FR-006 103-FR-011
+describe('chartConfig laid on its side', () => {
+  const BRANDS = [
+    { label: 'Dacia', value: 412 },
+    { label: 'Volkswagen', value: 288 },
+  ];
+  const side = (): Loose =>
+    chartConfig('bar', BRANDS, 'count', 'ro', dark, false, true);
+
+  it('runs the bars across, one category per row', () => {
+    const { options } = side();
+
+    expect(options.indexAxis).toBe('y');
+    expect(options.interaction).toMatchObject({ axis: 'y', intersect: false });
+    expect(side().data.labels).toEqual(['Dacia', 'Volkswagen']);
+  });
+
+  it('puts the counts on the across axis with hairlines and the names down the side at 12 px', () => {
+    const { scales } = side().options;
+
+    expect(scales.x).toMatchObject({
+      beginAtZero: true,
+      grid: { color: dark.line, lineWidth: 1 },
+    });
+    expect(scales.x.ticks.maxTicksLimit).toBe(5);
+    expect(scales.x.ticks.callback(1250)).toBe('1.250');
+    expect(scales.y.grid).toMatchObject({ display: false });
+    expect(scales.y.ticks).toMatchObject({
+      autoSkip: true,
+      color: dark.textSecondary,
+      font: { family: dark.font, size: dark.labelSize },
+    });
+    expect(scales.y.ticks.callback).toBeUndefined();
+  });
+
+  it('stays upright when not asked to lie down', () => {
+    const { options } = chartConfig(
+      'bar',
+      BRANDS,
+      'count',
+      'ro',
+      dark,
+      false,
+    ) as Loose;
+
+    expect(options.indexAxis).toBeUndefined();
+    expect(options.interaction.axis).toBe('x');
+  });
+});

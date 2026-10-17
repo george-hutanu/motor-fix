@@ -323,7 +323,13 @@ describe('Frame', () => {
           ])
         ).element,
       ),
-    ).toEqual(['Panou', 'Service‑uri', 'Utilizatori', 'Setări']);
+    ).toEqual([
+      'Panou',
+      'Service‑uri',
+      'Utilizatori',
+      'Mărci și lucrări',
+      'Setări',
+    ]);
   });
 
   it('gives the bar the same views as the menu, in the same order, with short labels', async () => {
@@ -537,12 +543,14 @@ describe('Frame', () => {
       'Dashboard',
       'Garages',
       'Users',
+      'Brands and jobs',
       'Settings',
     ]);
     expect(bar(admin.element).map((a) => a.textContent?.trim())).toEqual([
       'Dashboard',
       'Garages',
       'Users',
+      'Brands',
       'Settings',
     ]);
   });

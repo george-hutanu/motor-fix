@@ -1,4 +1,13 @@
 {
+  "demand": {
+    "allBrands": "See all brands",
+    "allJobs": "See all jobs",
+    "brands": "Requests by brand, 30 days",
+    "empty": "No requests in the last 30 days yet.",
+    "fewer": "Show fewer",
+    "jobs": "Requests by job, 30 days",
+    "subtitle": "What drivers asked for in the last 30 days"
+  },
   "growth": {
     "title": "Growth, last 12 months"
   },
