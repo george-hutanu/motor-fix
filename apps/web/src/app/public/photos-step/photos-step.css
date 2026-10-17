@@ -151,9 +151,3 @@ button:focus-visible {
   overflow: hidden;
   clip-path: inset(50%);
 }
-
-/* The message regions stay in the page, empty, so a reader announces what lands in them. */
-.error:empty,
-.warning:empty {
-  display: none;
-}

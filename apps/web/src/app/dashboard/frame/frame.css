@@ -219,9 +219,6 @@ main {
   border-radius: 10px;
   background: var(--mf-line);
 }
-.live-offline:empty {
-  display: none;
-}
 .live-offline {
   margin: 0 0 var(--mf-space-3);
   padding: var(--mf-space-2) var(--mf-space-4);

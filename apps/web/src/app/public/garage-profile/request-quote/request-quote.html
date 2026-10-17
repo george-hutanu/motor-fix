@@ -17,7 +17,7 @@
     <button hlmBtn type="button" (click)="task.close(request)">{{ 'public.requestQuote.close' | t }}</button>
   </div>
 } @else if (carsFailed()) {
-  <p class="error" role="alert">{{ 'public.requestQuote.carsFailed' | t }}</p>
+  <p class="error mf-message" role="alert">{{ 'public.requestQuote.carsFailed' | t }}</p>
   <div class="actions">
     <button hlmBtn variant="secondary" type="button" (click)="loadCars()">{{ 'public.requestQuote.retry' | t }}</button>
   </div>
@@ -41,7 +41,7 @@
         </select>
         <mf-field-error id="mf-quote-car-error" [save]="save" [control]="form.controls.carId" />
         @if (carRefused(); as line) {
-          <p class="error" role="status">{{ line }}</p>
+          <p class="error mf-message" role="status">{{ line }}</p>
         }
       </div>
       <fieldset>
@@ -129,19 +129,19 @@
             </div>
           }
           @case ('failed') {
-            <p class="error">{{ 'public.requestQuote.candidatesFailed' | t }}</p>
+            <p class="error mf-message">{{ 'public.requestQuote.candidatesFailed' | t }}</p>
             <div class="actions start">
               <button hlmBtn variant="secondary" type="button" (click)="retryNearby()">{{ 'public.requestQuote.retry' | t }}</button>
             </div>
           }
         }
-        <p class="error" aria-live="polite">
+        <p class="error mf-message" aria-live="polite">
           @if (limitHit()) {
             {{ 'public.requestQuote.limit' | t }}
           }
         </p>
         @if (unreceivable(); as refused) {
-          <p class="error" role="alert">{{ refusedLine() }}</p>
+          <p class="error mf-message" role="alert">{{ refusedLine() }}</p>
           @if (refused.reason === 'not_taking_requests' || refused.reason === 'garage_suspended') {
             <a class="back" [href]="backToSearch()" (click)="leave($event, backToSearch())">{{ 'public.requestQuote.backToSearch' | t }}</a>
           }
@@ -149,7 +149,7 @@
       </fieldset>
       <mf-task-error [save]="save" />
       @if (!online()) {
-        <p class="error" role="status">{{ 'public.requestQuote.offline' | t }}</p>
+        <p class="error mf-message" role="status">{{ 'public.requestQuote.offline' | t }}</p>
       }
       <div class="actions">
         <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="!online() || !!carRefused()">{{ 'public.requestQuote.submit' | t }}</button>

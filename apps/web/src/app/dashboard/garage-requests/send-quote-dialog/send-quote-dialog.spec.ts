@@ -796,3 +796,35 @@ describe('the request answered event for a quote', () => {
     expect(track).not.toHaveBeenCalled();
   });
 });
+
+// @traces 248-launch-screens-accessible-FR-008
+describe('the send-quote dialog: errors tied to their fields', () => {
+  it('points a field at its error, marks it invalid and says it politely without moving the focus', async () => {
+    await open(detail({ jobs: [job({ price: null })] }));
+    const from = field('Preț de la (lei)');
+    from.focus();
+
+    await blur('Preț de la (lei)');
+
+    expect(said('Preț de la (lei)')).toContain('Obligatoriu');
+    expect(from.getAttribute('aria-invalid')).toBe('true');
+    const region = document.getElementById(
+      from.getAttribute('aria-describedby') ?? '',
+    );
+    expect(
+      region?.getAttribute('role') === 'status' ||
+        region?.getAttribute('aria-live') === 'polite',
+    ).toBe(true);
+    expect(document.activeElement).toBe(from);
+  });
+
+  it('marks both prices invalid when the low one is above the high one', async () => {
+    await open();
+    await fillValid();
+    await fill('Preț de la (lei)', '900');
+    await fill('până la (lei)', '700');
+
+    expect(field('Preț de la (lei)').getAttribute('aria-invalid')).toBe('true');
+    expect(field('până la (lei)').getAttribute('aria-invalid')).toBe('true');
+  });
+});

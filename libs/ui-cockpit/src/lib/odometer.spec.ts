@@ -157,3 +157,19 @@ describe('Odometer', () => {
     expect(odometer.match(/animation|transition/g)).toHaveLength(1);
   });
 });
+
+// @traces 248-launch-screens-accessible-FR-007
+describe('the odometer read aloud in both languages', () => {
+  it('speaks the value in Romanian, then in English, the digits hidden', async () => {
+    const { fixture, part, spoken } = render(125000, 160000);
+
+    expect(spoken()).toBe('1.250–1.600 lei');
+
+    await TestBed.inject(I18n).use('en');
+    fixture.detectChanges();
+
+    expect(spoken()).toBe('1,250–1,600 lei');
+    for (const digit of part().querySelectorAll('.mf-odometer-digit'))
+      expect(digit.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+});

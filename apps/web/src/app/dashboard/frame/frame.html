@@ -77,7 +77,7 @@
     }
     <div class="tools"><mf-language-switch /><mf-bell /></div>
   </header>
-  <p class="live-offline" role="status">@if (offline()) { {{ 'shell.live.offline' | t }} }</p>
+  <p class="live-offline mf-message" role="status">@if (offline()) { {{ 'shell.live.offline' | t }} }</p>
   <mf-email-banner />
   <p class="live-status" role="status" [mfLiveChange]="lastTest()">
     @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }

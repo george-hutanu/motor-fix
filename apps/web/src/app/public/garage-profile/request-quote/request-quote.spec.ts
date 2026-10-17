@@ -969,3 +969,47 @@ describe('the quote request sent event', () => {
     expect(told()).toHaveLength(1);
   });
 });
+
+// The texts a field points at with aria-describedby.
+const describedBy = (field: HTMLElement) =>
+  (field.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+    .join(' ');
+
+// @traces 248-launch-screens-accessible-FR-008
+describe('the quote request’s errors tied to their fields', () => {
+  it('points the description at its error and marks it invalid while it shows', async () => {
+    await open();
+
+    type('Frâna');
+    await press();
+
+    expect(describedBy(textarea())).toContain('Scrie cel puțin 10 caractere');
+    expect(textarea().getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('drops the invalid mark once the description is long enough', async () => {
+    await open();
+    type('Frâna');
+    await press();
+
+    type('Scârțâie frâna la fiecare oprire');
+    await settle();
+
+    expect(textarea().getAttribute('aria-invalid')).not.toBe('true');
+    expect(describedBy(textarea())).not.toContain('Scrie cel puțin');
+  });
+
+  it('says a car the garage does not take in a polite region under the car, the focus left alone', async () => {
+    await open({ garage: { ...GARAGE, worksOn: [] } });
+    const focused = document.activeElement;
+
+    const line = [...panel().querySelectorAll('.error')].find((p) =>
+      p.textContent?.includes('Nu lucrează pe Dacia'),
+    );
+
+    expect(line?.getAttribute('role')).toBe('status');
+    expect(document.activeElement).toBe(focused);
+  });
+});
