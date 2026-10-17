@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import {
@@ -534,5 +534,83 @@ describe('a field the task marks autofocus', () => {
     expect(document.activeElement).toBe(
       panel().closest('[role="dialog"]') ?? panel(),
     );
+  });
+});
+
+// The form arrives after the panel opened, as one behind a load does.
+@Component({
+  template: `
+    <button id="other" type="button">Altceva</button>
+    @if (shown()) {
+      <label for="late">Ce s-a întâmplat</label>
+      <textarea id="late" autofocus></textarea>
+    }
+  `,
+})
+class LateTask {
+  private readonly task = injectOverlayTask();
+  readonly shown = signal(false);
+
+  constructor() {
+    late = this;
+  }
+
+  show() {
+    this.shown.set(true);
+    this.task.focusStart();
+  }
+}
+
+let late: LateTask | undefined;
+
+@Component({
+  template: `<button id="opener" type="button" (click)="open()">Deschide</button>`,
+})
+class LateHost {
+  private readonly overlays = inject(Overlays);
+
+  open() {
+    this.overlays.open(LateTask, { shape: 'dialog', title: 'shell.brand' });
+  }
+}
+
+async function openLate() {
+  const fixture = TestBed.createComponent(LateHost);
+  fixture.detectChanges();
+  document.querySelector<HTMLButtonElement>('#opener')?.click();
+  await settle();
+}
+
+const lateTask = () => late as LateTask;
+
+// @traces 356-FR-011
+describe('a task whose autofocus field arrives late', () => {
+  it('puts the focus on it once shown, on a computer', async () => {
+    wide = true;
+    await openLate();
+    lateTask().show();
+    await settle();
+
+    expect(document.activeElement?.id).toBe('late');
+  });
+
+  it('takes back a focus a dialog asked over it left on the page', async () => {
+    wide = true;
+    await openLate();
+    document.querySelector<HTMLButtonElement>('#opener')?.focus();
+    lateTask().show();
+    await settle();
+
+    expect(document.activeElement?.id).toBe('late');
+  });
+
+  it('leaves the focus where the person already put it', async () => {
+    wide = true;
+    await openLate();
+    document.querySelector<HTMLButtonElement>('#other')?.focus();
+    lateTask().show();
+    await settle();
+
+    expect(document.activeElement?.id).toBe('other');
   });
 });

@@ -1005,4 +1005,34 @@ describe('the dialog opened from the estimate box', () => {
 
     expect(textarea().hasAttribute('autofocus')).toBe(false);
   });
+
+  describe('on a computer', () => {
+    const before = globalThis.matchMedia;
+    afterEach(() => {
+      globalThis.matchMedia = before;
+    });
+    beforeEach(() => {
+      globalThis.matchMedia = (query: string) =>
+        ({
+          addEventListener() {},
+          addListener() {},
+          matches: query.includes('min-width: 768px'),
+          media: query,
+          removeEventListener() {},
+          removeListener() {},
+        }) as unknown as MediaQueryList;
+    });
+
+    it('puts the cursor in the description once the cars have loaded', async () => {
+      await open({ jobTypeIds: [] });
+
+      expect(document.activeElement).toBe(textarea());
+    });
+
+    it('leaves the description alone with a job handed over', async () => {
+      await open({ jobTypeIds: [OIL.id] });
+
+      expect(document.activeElement).not.toBe(textarea());
+    });
+  });
 });

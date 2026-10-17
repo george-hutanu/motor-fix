@@ -312,6 +312,8 @@ export class RequestQuote {
       const { items } = await this.carsApi.carsControllerList();
       this.cars.set(items);
       if (items.length === 1) this.form.controls.carId.setValue(items[0].id);
+      // The form shows only now, so its description takes the focus now.
+      if (this.describeFirst) this.task.focusStart();
     } catch {
       this.carsFailed.set(true);
     }

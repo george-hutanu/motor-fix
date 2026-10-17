@@ -326,6 +326,17 @@ export class OverlayPanel {
   private readonly taskApi: OverlayTask<unknown, unknown> = {
     close: (result) => this.close(result),
     data: this.context.data,
+    // A focus still on the panel, or left outside it by a dialog asked over
+    // it, moves; one inside the task stays where the person put it.
+    focusStart: () =>
+      this.afterRender(() => {
+        const active = this.window?.document.activeElement;
+        const own =
+          this.host.nativeElement.closest<HTMLElement>('[role="dialog"]') ??
+          this.host.nativeElement;
+        if (!active || active === own || !own.contains(active))
+          this.focusStart();
+      }),
     markUnchanged: () => {
       this.changed = false;
     },
