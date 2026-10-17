@@ -528,6 +528,19 @@ describe('reading the saved garages', () => {
     });
   });
 
+  // @traces 291-FR-005
+  it('records no audit entry for a read', async () => {
+    const { auth, id } = await driver();
+    const garage = await placed();
+    await saved(id, [garage]);
+    const before = await prisma.activityLog.count();
+
+    const res = await list(auth);
+
+    expect(res.status).toBe(200);
+    expect(await prisma.activityLog.count()).toBe(before);
+  });
+
   it("answers each row with the garage's own fields, newest saved first", async () => {
     const { auth, id } = await driver();
     const older = await placed({

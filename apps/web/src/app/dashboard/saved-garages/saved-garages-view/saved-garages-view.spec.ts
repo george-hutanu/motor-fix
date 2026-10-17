@@ -190,6 +190,28 @@ describe('Service-uri salvate: the rows', () => {
     expect(rows(element)).toEqual(['Service 1', 'Service 2', 'Service 3']);
   });
 
+  it('shows the error under the loaded rows when a further page fails, and reads it again on Reîncearcă', async () => {
+    const { element, settle } = await render({
+      answers: [pageOf(savedItems(2), { nextCursor: 'c-2', total: 3 })],
+      pages: { 'c-2': new Error('down') },
+    });
+
+    observers.reachEnd();
+    await settle();
+
+    expect(rows(element)).toEqual(['Service 1', 'Service 2']);
+    expect(text(element.querySelector('[data-more-failed]'))).toContain(
+      'Nu am putut încărca service‑urile salvate.',
+    );
+    const asked = () =>
+      list.mock.calls.filter(([params]) => params?.cursor === 'c-2').length;
+    const before = asked();
+    control(element.querySelector('[data-more-failed]'), 'Reîncearcă')?.click();
+    await settle();
+
+    expect(asked()).toBe(before + 1);
+  });
+
   it('shows no "Vezi toate" in the view itself', async () => {
     const { element } = await render({
       answers: [pageOf(savedItems(5), { total: 5 })],

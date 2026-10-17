@@ -19,14 +19,21 @@ interface Page<T> {
 // The rows after a list's first page: the next page each time `end` comes into
 // view. A re-read of the first page reads the further pages again, as many
 // rows as were shown, so a scrolled list keeps its depth. Call it in an
-// injection context.
+// injection context. `failed` says the last further page could not be read;
+// `retry` asks for it again.
+export type MoreRows<T> = Signal<readonly T[]> & {
+  readonly failed: Signal<boolean>;
+  retry(): void;
+};
+
 export function moreRows<T>(
   first: Signal<unknown>,
   nextCursor: Signal<string | null | undefined>,
   page: (cursor: string) => Promise<Page<T>>,
   end: Signal<ElementRef<HTMLElement> | undefined>,
-): Signal<readonly T[]> {
+): MoreRows<T> {
   const more = signal<readonly T[]>([]);
+  const failed = signal(false);
   const injector = inject(Injector);
   // Where the next page starts: undefined until the first page is read.
   let cursor: string | null | undefined;
@@ -52,6 +59,7 @@ export function moreRows<T>(
   const again = async (from: string | null | undefined) => {
     const shown = more().length;
     cursor = from;
+    failed.set(false);
     if (!shown || !from) {
       more.set([]);
       return;
@@ -75,9 +83,12 @@ export function moreRows<T>(
       if (cursor !== from) return;
       more.update((rows) => [...rows, ...read.items]);
       cursor = read.nextCursor;
+      failed.set(false);
       afterNextRender(() => watchAgain(), { injector });
     } catch {
-      // The next time the end comes into view asks again.
+      // Said under the rows, unless a newer read began; the next time the end
+      // comes into view asks again.
+      failed.set(cursor === from);
     } finally {
       reading = false;
     }
@@ -88,7 +99,11 @@ export function moreRows<T>(
     const from = nextCursor();
     untracked(() => void again(from));
   });
-  if (typeof IntersectionObserver === 'undefined') return more.asReadonly();
+  const rows = Object.assign(more.asReadonly(), {
+    failed: failed.asReadonly(),
+    retry: () => void step(),
+  });
+  if (typeof IntersectionObserver === 'undefined') return rows;
   const observer = new IntersectionObserver((entries) => {
     if (entries.some((entry) => entry.isIntersecting)) void step();
   });
@@ -106,5 +121,5 @@ export function moreRows<T>(
     observer.observe(watched);
   };
   inject(DestroyRef).onDestroy(() => observer.disconnect());
-  return more.asReadonly();
+  return rows;
 }

@@ -62,3 +62,24 @@ describe('the car edit and removal routes', () => {
     expect(checkInventory(root)).toEqual([]);
   });
 });
+
+// @traces 291-FR-005
+describe('the saved garages list route', () => {
+  it('is an OpenAPI operation the inventory lists with its metric and alerts', () => {
+    const list = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/me/saved-garages'];
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: { name?: string; metric?: string; alerts?: string[] }[] =
+      Object.values(inventory).flatMap((each) =>
+        Array.isArray(each) ? each : [],
+      );
+    const saved = entries.find((each) => each.name === 'saved-garages');
+
+    expect(Object.keys(list)).toContain('get');
+    expect(saved?.metric).toMatch(/\/api\/v1\/me\/saved-garages(,| )/);
+    expect(saved?.alerts?.length).toBeGreaterThan(0);
+  });
+});

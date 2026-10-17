@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { SavedGarageItemDto } from '@motor-fix/data-access';
@@ -252,5 +255,39 @@ describe('an unavailable saved garage', () => {
     );
     expect(text(element.querySelector('mf-rating-dial'))).toContain('4,2');
     expect(element.querySelector('button[data-remove]')).not.toBeNull();
+  });
+});
+
+// @traces 291-FR-014
+describe('the saved garages texts', () => {
+  const texts = (language: 'ro' | 'en') =>
+    JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '../../../../../../../libs/i18n/src/driver',
+          `${language}.json`,
+        ),
+        'utf8',
+      ),
+    ).saved as Record<string, unknown>;
+  const leaves = (value: unknown, at = ''): [string, string][] =>
+    typeof value === 'string'
+      ? [[at, value]]
+      : Object.entries(value as Record<string, unknown>).flatMap(
+          ([key, each]) => leaves(each, at ? `${at}.${key}` : key),
+        );
+
+  it('has every text in Romanian and English, none left untranslated', () => {
+    const ro = texts('ro');
+    const en = texts('en');
+    // A count's forms differ by language (Romanian has "few"), not its key.
+    const romanian = new Map(leaves(ro));
+
+    expect(Object.keys(en).sort()).toEqual(Object.keys(ro).sort());
+    for (const [key, said] of leaves(en)) {
+      expect(said.trim()).not.toBe('');
+      expect(said).not.toBe(romanian.get(key));
+    }
   });
 });

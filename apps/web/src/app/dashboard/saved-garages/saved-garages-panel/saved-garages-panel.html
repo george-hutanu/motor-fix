@@ -28,6 +28,12 @@
         </li>
       }
     </ul>
+    @if (moreFailed()) {
+      <div class="problem" data-more-failed>
+        <p role="alert">{{ 'driver.saved.failed' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" (click)="retried.emit()">{{ 'driver.saved.retry' | t }}</button>
+      </div>
+    }
     <ng-content />
     @if (seeAll()) {
       <a class="see-all" routerLink="/app/driver/saved">{{ 'driver.saved.seeAll' | t }}</a>

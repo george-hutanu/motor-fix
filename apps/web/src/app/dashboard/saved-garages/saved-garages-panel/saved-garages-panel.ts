@@ -7,6 +7,7 @@ import {
   Injector,
   inject,
   input,
+  output,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { CarDto, SavedGarageItemDto } from '@motor-fix/data-access';
@@ -31,6 +32,9 @@ import { SavedGaragesList } from '../saved-garages-list';
 export class SavedGaragesPanel {
   readonly limit = input<number | undefined>(undefined);
   readonly more = input<readonly SavedGarageItemDto[]>([]);
+  // A further page could not be read: said under the rows, with Reîncearcă.
+  readonly moreFailed = input(false);
+  readonly retried = output();
   readonly subtitle = input(false);
   // Undefined while the cars are not known: no row asks for a car then.
   readonly cars = input<readonly CarDto[] | undefined>(undefined);
