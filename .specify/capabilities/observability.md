@@ -29,6 +29,7 @@ features:
   - 880-grafana-alerts
   - 297-system-status-log
   - 1345-staging-observability
+  - 1348-release-green
 ---
 
 # Capability: Observability
@@ -782,6 +783,10 @@ _From 1345-staging-observability._
 ### 1345-FR-018 — The admin accounts failure log MUST log a 401 at info, with the same route and status fields, and every other status of 400 or above at warn. A colocated test asserts the level per status.
 
 _From 1345-staging-observability._
+
+### 1348-FR-006 — A cache read that fills an entry (the lead of a miss, inside a warm or not) MUST count its outcome (`miss`, or `warm` inside a warm, 1169-FR-011) as soon as its read function has answered and before the entry is sent to Redis, so that an entry found in Redis always has its count recorded; the counted outcome does not depend on the store's answer (as before this change, when the count followed the store whether or not it succeeded), so the meaning of `warm` and `miss` is unchanged and only the order moves; a background refresh of a stale entry still counts nothing. A cache service integration test MUST observe the counter at the moment the store is sent and fail while the count follows the store; `home-warm.integration.spec.ts` then passes every time, with no retry, sleep or wait added to it.
+
+_From 1348-release-green._
 
 ## Retired
 
