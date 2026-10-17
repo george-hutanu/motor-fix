@@ -66,7 +66,7 @@ const iso = (at: Date | null) => at?.toISOString() ?? null;
 
 // The price list's jobs once each, in the list's order: a job priced for
 // several brands is one job.
-function jobsOf(
+export function jobsOf(
   prices: {
     jobType: {
       id: string;

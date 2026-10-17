@@ -1203,7 +1203,8 @@ describe('the activities check', () => {
     expect(answer.body.errors).toEqual([
       { code: 'uncovered', field: 'evidence.uncoveredJobTypeIds' },
     ]);
-    expect(answer.body.message).toContain(paint);
+    expect(answer.body.message).toBe('Nu sunt acoperite: Vopsitorie');
+    expect(answer.body.message).not.toContain(paint);
     expect(await entries()).toHaveLength(0);
     const garage = await prisma.garage.findUniqueOrThrow({
       where: { id: garageId },

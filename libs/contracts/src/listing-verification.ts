@@ -28,8 +28,14 @@ export function isValidCui(stripped: string): boolean {
   return ((sum * 10) % 11) % 10 === +stripped.slice(-1);
 }
 
+// Cut at 40 UTF-16 units; a cut through a surrogate pair drops its half, so
+// the number is never stored with a lone surrogate.
 export const normaliseRarNumber = (input: string): string =>
-  input.trim().toUpperCase().slice(0, STEP6_VALUE_MAX);
+  input
+    .trim()
+    .toUpperCase()
+    .slice(0, STEP6_VALUE_MAX)
+    .replace(/[\uD800-\uDBFF]$/, '');
 
 const STEP6_KEYS = new Set(['cui', 'rarNumber']);
 

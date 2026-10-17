@@ -29,6 +29,7 @@ import {
   type VerificationCheck,
   type VerificationFileStatus,
 } from '../../../generated/prisma/client';
+import { jobsOf } from '../verification-file/verification-file.service';
 
 // A decision waits for the garage or closes the file; reopening it into review
 // lets the admin record again.
@@ -123,10 +124,7 @@ interface RegisterFacts {
 }
 
 // A job of the garage's price list, as the activities check judges it.
-interface PricedJob {
-  jobTypeId: string;
-  rarActivity: string | null;
-}
+type PricedJob = ReturnType<typeof jobsOf>[number];
 
 interface RegisterRecord {
   detail?: string;
@@ -229,10 +227,10 @@ function activitiesRecord(
   activities: readonly string[],
   jobs: readonly PricedJob[],
 ): RegisterRecord {
-  const uncovered = uncoveredJobs(jobs, activities).map((j) => j.jobTypeId);
+  const uncovered = uncoveredJobs(jobs, activities);
   const evidence = {
     lookedUpOn: localDay(new Date()),
-    uncoveredJobTypeIds: uncovered,
+    uncoveredJobTypeIds: uncovered.map((j) => j.jobTypeId),
   };
   if (body.result !== 'ok') return { evidence };
   if (activities.length === 0) {
@@ -241,9 +239,10 @@ function activitiesRecord(
     ]);
   }
   if (uncovered.length) {
-    throw invalid(`Nu sunt acoperite: ${uncovered.join(', ')}`, [
-      { code: 'uncovered', field: 'evidence.uncoveredJobTypeIds' },
-    ]);
+    throw invalid(
+      `Nu sunt acoperite: ${uncovered.map((j) => j.nameRo).join(', ')}`,
+      [{ code: 'uncovered', field: 'evidence.uncoveredJobTypeIds' }],
+    );
   }
   return { detail: ACTIVITIES_OK, evidence };
 }
@@ -264,10 +263,12 @@ function auditValue(
 }
 
 // The detail as stored: trimmed, required for a problem and refused when
-// the check is unticked. Its length is the request shape's.
-function detailOf(body: RecordVerificationCheckDto) {
+// the check is unticked. A register check's OK writes its own detail, so the
+// one sent is not measured.
+function detailOf(kind: string, body: RecordVerificationCheckDto) {
   const detail = body.detail?.trim() || null;
-  if (detail && detail.length > CHECK_DETAIL_MAX) {
+  const replaced = body.result === 'ok' && isRegister(kind);
+  if (detail && !replaced && detail.length > CHECK_DETAIL_MAX) {
     throw invalid(`detail must be at most ${CHECK_DETAIL_MAX} characters`);
   }
   if (body.result === 'not_run' && detail) {
@@ -288,7 +289,7 @@ function validated(
   if (!(RECORDED_RESULTS as readonly string[]).includes(body.result)) {
     throw invalid('result must be ok, warning, failed or not_run');
   }
-  const detail = detailOf(body);
+  const detail = detailOf(kind, body);
   evidenceShape(kind, body);
   if (body.activities !== undefined && kind !== 'activities') {
     throw invalid('activities belong to the activities check');
@@ -507,19 +508,14 @@ export class VerificationChecksService {
   ): Promise<PricedJob[]> {
     const rows = await tx.garagePrice.findMany({
       orderBy: [{ position: 'asc' }, { id: 'asc' }],
-      select: { jobType: { select: { id: true, rarActivity: true } } },
+      select: {
+        jobType: {
+          select: { id: true, nameEn: true, nameRo: true, rarActivity: true },
+        },
+      },
       where: { garageId: file.garageId },
     });
-    const seen = new Map<string, PricedJob>();
-    for (const { jobType } of rows) {
-      if (!seen.has(jobType.id)) {
-        seen.set(jobType.id, {
-          jobTypeId: jobType.id,
-          rarActivity: jobType.rarActivity,
-        });
-      }
-    }
-    return [...seen.values()];
+    return jobsOf(rows);
   }
 
   // What the server reads itself for a register check: the garage's CUI and

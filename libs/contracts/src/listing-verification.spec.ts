@@ -64,6 +64,16 @@ describe('a RAR authorisation number as the owner types it', () => {
     expect(normaliseRarNumber('b'.repeat(41))).toBe('B'.repeat(40));
   });
 
+  // @traces 204-FR-001
+  it('drops the half of a surrogate pair the 40-unit cut splits', () => {
+    expect(normaliseRarNumber(`${'b'.repeat(39)}\u{1F600}`)).toBe(
+      'B'.repeat(39),
+    );
+    expect(normaliseRarNumber(`${'b'.repeat(38)}\u{1F600}`)).toBe(
+      `${'B'.repeat(38)}\u{1F600}`,
+    );
+  });
+
   it('counts as done from 3 characters', () => {
     expect(normaliseRarNumber(' ab ').length).toBeLessThan(RAR_NUMBER_MIN);
     expect(normaliseRarNumber(' abc ').length).toBe(RAR_NUMBER_MIN);

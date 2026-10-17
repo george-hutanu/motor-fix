@@ -300,7 +300,7 @@ export class RecordVerificationCheckDto {
   evidence?: RecordCheckEvidenceDto;
 }
 
-export class VerificationCheckDto {
+class VerificationCheckDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 

@@ -33,14 +33,14 @@ type Tick = CaenTick | RarTick;
 // The control a refusal points at, so it can be named, marked and focused.
 type Fault = 'result' | 'name' | 'detail' | 'activities' | Tick;
 type Named = { nameEn: string; nameRo: string };
-export type RegisterActivity = Named & { code: string };
-export type RegisterJob = Named & {
+type RegisterActivity = Named & { code: string };
+type RegisterJob = Named & {
   jobTypeId: string;
   rarActivity: string | null;
 };
 // The RAR authorisation as the documents section shows it: its line and the
 // buttons that open each page.
-export type RegisterDocument = {
+type RegisterDocument = {
   line: string;
   buttons: { n: number; label: string; named: string }[];
 };
