@@ -51,4 +51,13 @@ describe('the room a focused control keeps clear of the bars', () => {
     expect(bottom).toMatch(/var\(--tab-bar/);
     expect(bottom).toMatch(/var\(--consent-bar/);
   });
+
+  it('keeps no room around a control inside a bar, which never scrolls away', () => {
+    const body = rule(
+      `:where(mf-public-frame > .bar, mf-public-tab-bar, mf-dashboard-tab-bar, mf-consent-bar) ${FOCUSABLES}`,
+    );
+
+    expect(body).toBeDefined();
+    expect(body).toMatch(/scroll-margin:\s*0/);
+  });
 });

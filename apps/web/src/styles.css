@@ -91,3 +91,15 @@ input[type="checkbox"].mf-check:checked::after {
     var(--mf-space-2)
   );
 }
+
+/* A control inside a bar is where the bar is: it never scrolls under it, so
+   it keeps no room, and focusing it (the focus coming back to the tab that
+   opened a sheet) never scrolls the page. */
+:where(
+  mf-public-frame > .bar,
+  mf-public-tab-bar,
+  mf-dashboard-tab-bar,
+  mf-consent-bar
+) :where(a, button, input, select, textarea, summary, [tabindex]) {
+  scroll-margin: 0;
+}
