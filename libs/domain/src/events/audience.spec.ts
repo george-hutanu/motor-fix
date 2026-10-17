@@ -148,6 +148,16 @@ describe('audienceOf', () => {
     ).toEqual(['admin', 'garage:g1', 'public:garage:g1', 'public:search']);
   });
 
+  // @traces 049-FR-006
+  it('takes a suspended garage off its public page and the results with the same audience', () => {
+    expect(
+      audienceOf({ garageId: garage, published: true, type: 'verification' }),
+    ).toContain('public:search');
+    expect(
+      audienceOf({ garageId: garage, published: true, type: 'verification' }),
+    ).toContain(`public:garage:${garage}`);
+  });
+
   it("sends a garage's public change to its staff and its public page", () => {
     expect(
       audienceOf({ garageId: garage, results: false, type: 'public_garage' }),

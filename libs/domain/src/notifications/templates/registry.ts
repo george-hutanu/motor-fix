@@ -11,6 +11,7 @@ import {
 } from './admin-outage-alert';
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
 import { DUE_ITP } from './due-itp';
+import { GARAGE_SUSPENDED } from './garage-suspended';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
 import { NEWS } from './news';
@@ -46,6 +47,7 @@ export const TEMPLATES: Registry = {
   'ADMIN_OUTAGE_ALERT.down': ADMIN_OUTAGE_ALERT_DOWN,
   ADMIN_RULE_APPROVAL_NEEDED,
   DUE_ITP,
+  GARAGE_SUSPENDED,
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,
   LISTING_CONTINUE_LINK,

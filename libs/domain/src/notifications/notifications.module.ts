@@ -20,6 +20,11 @@ import { BellService } from './bell/bell.service';
 import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
+import {
+  GARAGE_SUSPENDED_QUEUE,
+  type GarageSuspendedEvent,
+  GarageSuspendedFanOut,
+} from './garage-suspended/garage-suspended.fan-out';
 import { NewsController } from './news/news.controller';
 import {
   NEWS_QUEUE,
@@ -91,6 +96,7 @@ const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
+const GARAGE_SUSPENDED_WORKER = Symbol('GARAGE_SUSPENDED_WORKER');
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
@@ -136,6 +142,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(VERIFICATION_RESULT_WORKER)
     private readonly verificationResultWorker?: Worker | null,
+    @Optional()
+    @Inject(GARAGE_SUSPENDED_WORKER)
+    private readonly garageSuspendedWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -386,6 +395,32 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        GarageSuspendedFanOut,
+        {
+          inject: [GarageSuspendedFanOut],
+          provide: GARAGE_SUSPENDED_WORKER,
+          useFactory: (fanOut: GarageSuspendedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('GarageSuspended').error(
+                'PUBLIC_WEB_URL missing; suspension notices wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<GarageSuspendedEvent>(
+              GARAGE_SUSPENDED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            return worker;
+          },
+        },
       ],
     };
   }
@@ -396,6 +431,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
     await this.verificationResultWorker?.close();
+    await this.garageSuspendedWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
     await returnStore(this.publisher);

@@ -94,6 +94,15 @@ export function countVerificationResult(outcome: 'built' | 'skipped') {
   ).add(1, { outcome });
 }
 
+// A suspension told to the garage's owners, or one with nobody or nothing
+// to tell.
+export function countGarageSuspendedNotice(outcome: 'built' | 'skipped') {
+  counter(
+    'motorfix_garage_suspended_notices_total',
+    'Garage suspensions told to garage owners, by outcome',
+  ).add(1, { outcome });
+}
+
 export function countDocumentUploaded(kind: DocumentKind) {
   counter(
     'motorfix_documents_uploaded_total',

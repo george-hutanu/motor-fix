@@ -113,10 +113,10 @@ describe('bellLink under hostile input', () => {
   });
 
   // @traces 032-FR-001
-  it('maps only kinds named in the table and every address starts under the driver area', () => {
+  it('maps only kinds named in the table and every address is a driver view or the garage dashboard', () => {
     for (const kind of Object.keys(VIEW_OF_KIND)) {
       expect(bellLink({ kind, params: {}, subjectId: CAR } as never)).toMatch(
-        /^\/app\/driver\/(cars|requests|reviews)/,
+        /^\/app\/(driver\/(cars|requests|reviews)|garage$)/,
       );
     }
   });
