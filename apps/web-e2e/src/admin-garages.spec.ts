@@ -96,6 +96,22 @@ test.describe('the suspended garages @seeded', () => {
       const id = made.rows[0]?.id ?? '';
       garageIds.push(id);
 
+      // The line counts every garage on the platform, and the specs running
+      // beside this one suspend, restore and delete garages too: once this
+      // one is suspended the line must show the figure the page read again,
+      // not the figure from before plus one.
+      let reads = 0;
+      let read = Number.NaN;
+      page.on('response', (answer) => {
+        if (!answer.url().includes('/api/v1/admin/garages/summary')) return;
+        reads++;
+        // A 304 keeps the figure the page already shows.
+        if (answer.status() === 200)
+          void answer.json().then((body: { suspended: number }) => {
+            read = body.suspended;
+          });
+      });
+
       await page.setViewportSize({ height, width });
       await signInAsAdmin(page);
       await page.goto('/app/admin/garages');
@@ -108,12 +124,12 @@ test.describe('the suspended garages @seeded', () => {
       expect(
         await offTitle(page, 'mf-admin-garages .counts'),
       ).toBeLessThanOrEqual(1);
-      const before = await suspended(page);
       let navigations = 0;
       page.on('framenavigated', (frame) => {
         if (frame === page.mainFrame()) navigations++;
       });
 
+      const readsBefore = reads;
       const res = await request.post(`/api/v1/admin/garages/${id}/suspend`, {
         data: { cause: 'recheck_failed', reason: REASON },
         headers: { Authorization: `Bearer ${await accessToken(request)}` },
@@ -127,8 +143,12 @@ test.describe('the suspended garages @seeded', () => {
       );
       await expect(row.locator('.reason')).toHaveText(REASON);
       await expect
-        .poll(() => suspended(page), { timeout: 15_000 })
-        .toBeGreaterThanOrEqual(before + 1);
+        .poll(() => reads, { timeout: 15_000 })
+        .toBeGreaterThan(readsBefore);
+      await expect
+        .poll(async () => (await suspended(page)) === read)
+        .toBe(true);
+      expect(read).toBeGreaterThanOrEqual(1);
       expect(navigations).toBe(0);
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });
