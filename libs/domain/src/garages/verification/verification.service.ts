@@ -1,4 +1,11 @@
-import { VERIFICATION_CHECK_KINDS } from '@motor-fix/contracts';
+import {
+  checkSummary,
+  queueLamp,
+  VERIFICATION_CHECK_KINDS,
+  VERIFICATION_TARGET_WORKING_DAYS,
+  type VerificationQueueDto,
+  type VerificationQueueRowDto,
+} from '@motor-fix/contracts';
 import {
   HttpStatus,
   Inject,
@@ -11,10 +18,12 @@ import {
   VERIFICATION_CONFIG,
   type VerificationConfig,
 } from './verification-config';
+import { workingDaysWaited } from './working-days';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { firstName } from '../../audit/audit.service';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { refusal, taken } from '../../auth/sign-up.service';
+import { localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type {
   Prisma,
@@ -52,6 +61,9 @@ const KIND: Record<Transition, string> = {
 
 const LIVE: VerificationFileStatus[] = ['submitted', 'in_review', 'approved'];
 
+// Waiting for an admin; a file asked for more waits for its garage.
+const WAITING: VerificationFileStatus[] = ['submitted', 'in_review'];
+
 export const SYSTEM = { accountId: null, role: 'system' } as const;
 
 export const newestFirst = [
@@ -80,10 +92,48 @@ export class VerificationService {
   ): Promise<number> {
     return db.verificationFile.count({
       where: {
-        status: { in: ['submitted', 'in_review'] },
+        status: { in: WAITING },
         ...(cityKey !== undefined && { garage: { cityKey } }),
       },
     });
+  }
+
+  // The admins' queue, oldest sending first; `total` is the waiting count
+  // the overview, the menu and the header show.
+  async queue(
+    db: Prisma.TransactionClient,
+    { limit, offset }: { limit: number; offset: number },
+    now: Date,
+  ): Promise<VerificationQueueDto> {
+    const [files, total] = await Promise.all([
+      db.verificationFile.findMany({
+        orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
+        select: {
+          checks: { select: { detail: true, kind: true, result: true } },
+          garage: { select: QUEUE_GARAGE },
+          id: true,
+          status: true,
+          submittedAt: true,
+        },
+        skip: offset,
+        take: limit,
+        where: { status: { in: WAITING } },
+      }),
+      this.countWaiting(db),
+    ]);
+    const holidays = files.length
+      ? await db.publicHoliday.findMany({
+          select: { day: true },
+          where: {
+            day: {
+              gte: new Date(localDay(files[0].submittedAt)),
+              lte: new Date(localDay(now)),
+            },
+          },
+        })
+      : [];
+    const days = new Set(holidays.map(({ day }) => isoDay(day)));
+    return { items: files.map((file) => queueRow(file, now, days)), total };
   }
 
   // Who may submit is the submitting story's rule; here only the files count.
@@ -227,6 +277,7 @@ export class VerificationService {
     const before = await this.file(tx, fileId);
     const file = await this.move(tx, actor, before, 'resend', {
       status: 'submitted',
+      submittedAt: new Date(),
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
@@ -261,6 +312,7 @@ export class VerificationService {
         reopenedBy: actor.accountId,
         reopenReason: reason ?? null,
         status: 'in_review',
+        submittedAt: new Date(),
       },
       reason,
     ).catch((error: unknown) => {
@@ -381,6 +433,60 @@ export class VerificationService {
 // Opening, deciding and reopening are the admins' and the system's alone.
 function trust(actor: VerificationActor) {
   if (actor.role !== 'system') requireCapability(actor, 'admin.garages');
+}
+
+const QUEUE_GARAGE = {
+  _count: {
+    select: { brands: { where: { stance: 'works_on' } }, mechanics: true },
+  },
+  businessKind: true,
+  cityName: true,
+  features: { select: { enabled: true }, where: { key: 'team_mechanics' } },
+  id: true,
+  name: true,
+  serviceRadiusKm: true,
+} satisfies Prisma.GarageSelect;
+
+type QueueFile = Prisma.VerificationFileGetPayload<{
+  select: {
+    checks: { select: { detail: true; kind: true; result: true } };
+    garage: { select: typeof QUEUE_GARAGE };
+    id: true;
+    status: true;
+    submittedAt: true;
+  };
+}>;
+
+const isoDay = (day: Date) => day.toISOString().slice(0, 10);
+
+function queueRow(
+  { checks, garage, id, status, submittedAt }: QueueFile,
+  now: Date,
+  holidays: ReadonlySet<string>,
+): VerificationQueueRowDto {
+  const workingDays = workingDaysWaited(submittedAt, now, holidays);
+  const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
+  const area =
+    garage.businessKind === 'mobile' && garage.serviceRadiusKm !== null
+      ? { kind: 'mobile' as const, radiusKm: garage.serviceRadiusKm }
+      : garage.cityName
+        ? { kind: 'town' as const, name: garage.cityName }
+        : undefined;
+  const team = garage.features[0]?.enabled !== false;
+  return {
+    ...(area && { area }),
+    brands: garage._count.brands,
+    flagged,
+    garageId: garage.id,
+    garageName: garage.name,
+    id,
+    lamp: queueLamp(checks, flagged),
+    ...(team && { mechanics: garage._count.mechanics }),
+    status: status as VerificationQueueRowDto['status'],
+    submittedAt,
+    summary: { en: checkSummary(checks, 'en'), ro: checkSummary(checks, 'ro') },
+    workingDays,
+  };
 }
 
 // One check per kind, not run; a check the file already has keeps its result.

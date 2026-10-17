@@ -159,10 +159,12 @@ const LISTED: {
   },
 ];
 
-// Two garages waiting for an admin, so the admin dashboard has a known count.
+// Two garages waiting for an admin, so the admin dashboard has a known count;
+// the first sent 30 days ago, so its queue row is flagged whatever holidays
+// fall in between (no run of legal holidays and weekends is that long).
 const WAITING = [
-  { garage: 'service-dobre', status: 'submitted' },
-  { garage: 'atelier-dinamo', status: 'in_review' },
+  { garage: 'service-dobre', sent: '30 days', status: 'submitted' },
+  { garage: 'atelier-dinamo', sent: '0 days', status: 'in_review' },
 ];
 
 const PEOPLE: Person[] = [
@@ -764,13 +766,14 @@ async function seed(db: Client, secret: string) {
            AND l.field = 'status' AND l.new_value = '"suspended"'::jsonb
        )`,
   );
-  for (const { garage, status } of WAITING) {
+  for (const { garage, sent, status } of WAITING) {
     await db.query(
-      `INSERT INTO verification_file (id, garage_id, status)
-       SELECT gen_random_uuid(), g.id, $2::verification_file_status FROM garage g
+      `INSERT INTO verification_file (id, garage_id, status, submitted_at)
+       SELECT gen_random_uuid(), g.id, $2::verification_file_status, now() - $3::interval
+       FROM garage g
        WHERE g.slug = $1
          AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
-      [garage, status],
+      [garage, status, sent],
     );
   }
   // A listed garage was approved through a file, which a report reopens.

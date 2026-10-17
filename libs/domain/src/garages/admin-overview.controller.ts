@@ -4,6 +4,9 @@ import {
   AdminOverviewDto,
   AdminOverviewQueryDto,
   CITY_ALL,
+  VERIFICATION_QUEUE_PAGE,
+  VerificationQueueDto,
+  VerificationQueueQueryDto,
 } from '@motor-fix/contracts';
 import {
   Controller,
@@ -107,6 +110,21 @@ export class AdminOverviewController {
       cities: list,
       ...(this.observabilityUrl && { observabilityUrl: this.observabilityUrl }),
     };
+  }
+
+  // Reading the queue is not logged.
+  @Get('verification-queue')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: VerificationQueueDto })
+  @ApiBadRequestResponse({
+    description: 'validation_failed: an offset or a limit out of range',
+  })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin' })
+  queue(
+    @Query()
+    { limit = VERIFICATION_QUEUE_PAGE, offset = 0 }: VerificationQueueQueryDto,
+  ): Promise<VerificationQueueDto> {
+    return this.verification.queue(this.prisma, { limit, offset }, new Date());
   }
 
   @Get('growth')

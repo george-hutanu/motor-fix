@@ -67,6 +67,31 @@
     "waiting": "Waiting for another admin's approval",
     "withdraw": "Withdraw the request"
   },
+  "queue": {
+    "all": "See all",
+    "brands": {
+      "one": "{n} brand",
+      "other": "{n} brands"
+    },
+    "empty": "No garage is waiting for verification",
+    "failed": "The list could not be read",
+    "heading": "Garages to verify",
+    "loading": "Loading the garages to verify",
+    "mechanics": {
+      "one": "{n} mechanic",
+      "other": "{n} mechanics"
+    },
+    "mobile": "Mobile mechanic · {km} km radius",
+    "more": "More",
+    "open": "Open the file",
+    "openNamed": "Open the file of {name}",
+    "retry": "Try again",
+    "stale": "(not updated)",
+    "waiting": {
+      "one": "waiting {n} working day",
+      "other": "waiting {n} working days"
+    }
+  },
   "users": {
     "cars": {
       "count": {

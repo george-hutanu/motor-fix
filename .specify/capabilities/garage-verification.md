@@ -1,12 +1,13 @@
 ---
 capability: garage-verification
-updated: 2026-10-09
+updated: 2026-10-16
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
   - 307-public-garage-profile
   - 312-report-garage
   - 206-documents-declaration
+  - 301-verification-queue
 ---
 
 # Capability: Garage verification
@@ -162,6 +163,54 @@ _From 206-documents-declaration._
 ### 206-FR-014 — `GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url` MUST answer a MotorFix admin an address signed for 5 minutes (422-FR-006, `DOWNLOAD_URL_MINUTES`), inline, for page `n` (a whole number from 1 to the number of pages the document holds) of that document, with a file name `<kind>-<n>.<ext>` and its expiry; a signed-in staff member (owner, receptionist, mechanic) of the file's garage MUST get 403 with a stable code; any other actor, an unknown file, document or page, MUST get 404 (no session: 401 `sign_in_required`, as every route); no address is issued on 403 or 404. Every issued address MUST write one audit entry with action `open`, subject `legal_document`, the document id, the page number, the actor and the garage id, in the same transaction as the read that resolved the document.
 
 _From 206-documents-declaration._
+
+### 301-FR-001 — The system MUST expose an admin-only read of the verification queue, platform-wide whatever city the overview has chosen: every file whose status is `submitted` or `in_review`, oldest first by the time of its latest sending, for one page of 20 rows by default (the panel asks for 5), `offset` 0 to 10000 and `limit` 1 to 200 (a live re-read asks for every loaded row), a value outside those bounds answering 400 `validation_failed`, with the total number waiting; anyone who is not a MotorFix admin gets 404, no token 401.
+
+_From 301-verification-queue._
+
+### 301-FR-002 — Each row MUST carry the file id and status, the garage id and name, its area (the town recorded for the garage, or for a mobile mechanic its service radius in km), the count of brands the garage works on, the count of its mechanics (absent when the garage's team-mechanics switch is off), the checks' summary line in Romanian and English and its lamp colour (from 300-FR-008 and 300-FR-009: red when any check failed, amber when any check is a warning, green when at least one check is ok and none is a warning or failure, grey when nothing is recorded), the time of its latest sending, the working days it has waited and whether it is flagged; when flagged, the server's `lamp` is amber unless a check failed (red wins).
+
+_From 301-verification-queue._
+
+### 301-FR-003 — The time of a file's latest sending MUST be stored on the file (`submitted_at`): set when the garage sends the file, reset when it sends the file again after more was requested and reset when an admin reopens a decided file; files sent before this change take their creation time.
+
+_From 301-verification-queue._
+
+### 301-FR-004 — Working days MUST be counted in Europe/Bucharest as Monday to Friday minus Romania's legal holidays (the `public_holiday` table): the days after the sending day on which the sending's wall-clock time has passed; a file is flagged when it has waited more than VERIFICATION_TARGET_WORKING_DAYS = 2 working days, so a Monday 10:00 sending is flagged from Thursday 10:01 with "așteaptă de 3 zile lucrătoare" / "waiting 3 working days" ("1 zi lucrătoare" / "1 working day" in the singular).
+
+_From 301-verification-queue._
+
+### 301-FR-005 — The admin overview MUST show the panel "Service-uri de verificat" / "Garages to verify" with the 5 oldest rows, its count, and a link "Vezi toate" / "See all" to the "Service-uri" view; the "Service-uri" view MUST open with the same list at its top, every waiting file, 20 at a time with a button for the next 20; each row MUST show the name, the area · brand count · mechanic count line, the summary line with its lamp, when it applied ("azi, 09:12", "ieri, 14:30", else the date and time, in the admin's language and Europe/Bucharest) and the button "Deschide dosarul" / "Open the file", which links to the file's own page (#57); a flagged row MUST show the waiting text of FR-004 and the lamp of FR-002 (amber unless red).
+
+_From 301-verification-queue._
+
+### 301-FR-006 — The four counts — the panel's, the view's, the menu item "Service-uri" and the header line — MUST come from one count of the files waiting (`garagesWaiting`, 163-FR-007), so they agree; the queue read's total MUST be that same count. With a city chosen the header keeps its 163 rule (that city's count); the other three stay platform-wide.
+
+_From 301-verification-queue._
+
+### 301-FR-007 — With no file waiting the panel and the view MUST read "Niciun service nu așteaptă verificarea" / "No garage is waiting for verification"; the panel and the view read 0, the menu counter is hidden and the header reads its existing "none waiting" line, as the shell does today.
+
+_From 301-verification-queue._
+
+### 301-FR-008 — While the queue read is on its way the panel and the view MUST show skeleton rows; when it fails they MUST show an error line with a retry, and the counts keep their last value marked stale (the overview tile's existing failed state).
+
+_From 301-verification-queue._
+
+### 301-FR-010 — When a garage sends its file, and when it sends it again after more was requested, the system MUST notify every active MotorFix admin once per sending with ADMIN_VERIFICATION_QUEUED (bell, e-mail, push; mutable), naming the garage and linking to the admin dashboard, after the sending commits: the worker's verification fan-out reads the `verification.submitted` event, whose id makes each sending one alert; a sending rolled back tells nobody. The template exists in Romanian and English with an example, as every kind in the registry.
+
+_From 301-verification-queue._
+
+### 301-FR-011 — Reading the queue MUST write no audit entry and change nothing.
+
+_From 301-verification-queue._
+
+### 301-FR-012 — The row DTO and the queue read's query live in the contracts library, the endpoint is REST with OpenAPI and the generated client is regenerated; every text of the panel and the view lives in the shared i18n files in Romanian and English; the panel and the view read at 320 px, 390 px, tablet and desktop, in light and dark, with no sideways scroll, and the flag is conveyed by text, not by colour alone; every row's button is reachable and operable by keyboard, and its lamp carries the summary line as its text alternative.
+
+_From 301-verification-queue._
+
+### 301-FR-013 — Tests MUST cover, in Jest: the waiting-state filter (`more_requested`, `approved`, `rejected` left out) and the oldest-first order including a resend; the working-day count across a weekend and across 1 December; the flag threshold at exactly 2 and at 3 days; `submitted_at` reset on resend and on reopen; red winning over the flag; the four counts equal to the read's total; 404 for each non-admin role; one ADMIN_VERIFICATION_QUEUED per admin per sending, none duplicated on a resend; the row's lamp colour for each case. End to end, as the seeded admin: the queue open with the seeded waiting files, a submission's `verification.submitted` event recorded for another seeded garage from a second context, the row and the four counts appearing without a reload, at desktop and a 320 px phone; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 301-verification-queue._
 
 ## Retired
 
