@@ -161,10 +161,21 @@ const LISTED: {
 
 // Two garages waiting for an admin, so the admin dashboard has a known count;
 // the first sent 30 days ago, so its queue row is flagged whatever holidays
-// fall in between (no run of legal holidays and weekends is that long).
+// fall in between (no run of legal holidays and weekends is that long). Each
+// carries a RAR number for the admin to look up.
 const WAITING = [
-  { garage: 'service-dobre', sent: '30 days', status: 'submitted' },
-  { garage: 'atelier-dinamo', sent: '0 days', status: 'in_review' },
+  {
+    garage: 'service-dobre',
+    rarNumber: 'B 1234/2019',
+    sent: '30 days',
+    status: 'submitted',
+  },
+  {
+    garage: 'atelier-dinamo',
+    rarNumber: 'CJ 221/2021',
+    sent: '0 days',
+    status: 'in_review',
+  },
 ];
 
 const PEOPLE: Person[] = [
@@ -766,14 +777,14 @@ async function seed(db: Client, secret: string) {
            AND l.field = 'status' AND l.new_value = '"suspended"'::jsonb
        )`,
   );
-  for (const { garage, sent, status } of WAITING) {
+  for (const { garage, rarNumber, sent, status } of WAITING) {
     await db.query(
-      `INSERT INTO verification_file (id, garage_id, status, submitted_at)
-       SELECT gen_random_uuid(), g.id, $2::verification_file_status, now() - $3::interval
+      `INSERT INTO verification_file (id, garage_id, status, submitted_at, rar_number)
+       SELECT gen_random_uuid(), g.id, $2::verification_file_status, now() - $3::interval, $4
        FROM garage g
        WHERE g.slug = $1
          AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
-      [garage, status, sent],
+      [garage, status, sent, rarNumber],
     );
   }
   // A listed garage was approved through a file, which a report reopens.

@@ -49,6 +49,7 @@ export type { ConfirmPhotoDto } from './models/confirm-photo-dto';
 export type { ConsentDto } from './models/consent-dto';
 export type { ConsentRecordedDto } from './models/consent-recorded-dto';
 export type { ContinueLinkSentDto } from './models/continue-link-sent-dto';
+export type { CorrectRarNumberDto } from './models/correct-rar-number-dto';
 export type { CourtesyCarDto } from './models/courtesy-car-dto';
 export type { CreateCarDto } from './models/create-car-dto';
 export type { CreateGarageReportDto } from './models/create-garage-report-dto';
@@ -215,6 +216,7 @@ export type { VerificationFileCheckDto } from './models/verification-file-check-
 export type { VerificationFileDocumentDto } from './models/verification-file-document-dto';
 export type { VerificationFileDto } from './models/verification-file-dto';
 export type { VerificationFileGarageDto } from './models/verification-file-garage-dto';
+export type { VerificationFileJobDto } from './models/verification-file-job-dto';
 export type { VerificationFileRejectionDto } from './models/verification-file-rejection-dto';
 export type { VerificationFileReportDto } from './models/verification-file-report-dto';
 export type { VerificationFileStateDto } from './models/verification-file-state-dto';
@@ -374,6 +376,8 @@ export type { VerificationFileControllerRead$Params as VerificationFileControlle
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
+export type { VerificationFileControllerCorrect$Params as VerificationFileControllerCorrect$Params } from './fn/admin/verification-file-controller-correct';
+export { verificationFileControllerCorrect as verificationFileControllerCorrect } from './fn/admin/verification-file-controller-correct';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';

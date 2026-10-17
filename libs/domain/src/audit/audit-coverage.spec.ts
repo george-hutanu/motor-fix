@@ -166,6 +166,9 @@ const NOT_CHANGES = new Set([
   'ListingDocumentsService.remove',
   // Runs inside the sending transaction, which audits the new garage.
   'GaragePhotosService.saveRows',
+  // Runs inside the activities check's record, whose one entry carries the
+  // list before and after.
+  'VerificationChecksService.writeActivities',
   // A visitor's search, counted for the Demand view: no account and no
   // change to anyone's data, so no audit entry by the search's rule.
   'SearchLogService.record',

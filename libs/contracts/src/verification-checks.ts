@@ -43,7 +43,12 @@ export const RECORDED_RESULTS = ['ok', 'warning', 'failed', 'not_run'] as const;
 
 export type Lamp = 'green' | 'amber' | 'red' | 'grey';
 
-export { CHECK_DETAIL_MAX, lamp } from './verification-target';
+export {
+  CHECK_DETAIL_MAX,
+  coversJob,
+  lamp,
+  uncoveredJobs,
+} from './verification-target';
 
 type SummaryLanguage = 'ro' | 'en';
 
@@ -139,11 +144,20 @@ function problem(checks: readonly SummaryCheck[], language: SummaryLanguage) {
 }
 
 // One line for the queue: which register checks are ok, then the worst
-// problem.
+// problem. A file without its RAR authorisation reads as a failed rar,
+// whatever was recorded, until the document is on it.
 export function checkSummary(
-  checks: readonly SummaryCheck[],
+  given: readonly SummaryCheck[],
   language: SummaryLanguage,
+  documentKinds: readonly string[],
 ): string {
+  const licensed = documentKinds.includes('rar_authorisation');
+  const checks = licensed
+    ? given
+    : [
+        ...given.filter((check) => check.kind !== 'rar'),
+        { detail: null, kind: 'rar' as const, result: 'failed' as const },
+      ];
   const parts = [
     registers(checks, TEXT[language]),
     problem(checks, language),
@@ -157,7 +171,8 @@ const trimmed = ({ value }: { value: unknown }) =>
 const given = (_: object, value: unknown) => value !== undefined;
 
 // What the admin found in the registers: the company's name for `company`,
-// the three ticks for `caen`. The server adds the rest.
+// the three ticks for `caen` and for `rar`. The server adds the rest. Shape
+// only: which fields a kind takes is the service's rule.
 export class RecordCheckEvidenceDto {
   @ApiPropertyOptional({
     description: 'The company name as the register shows it; company only',
@@ -189,6 +204,28 @@ export class RecordCheckEvidenceDto {
   @ValidateIf(given)
   @IsBoolean()
   address?: boolean;
+
+  @ApiPropertyOptional({
+    description: "The file's RAR number is in the public register; rar only",
+  })
+  @ValidateIf(given)
+  @IsBoolean()
+  found?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'The register names the same company; rar only',
+  })
+  @ValidateIf(given)
+  @IsBoolean()
+  sameCompany?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'The register shows the workshop address, or the registered seat for a mobile mechanic; rar only',
+  })
+  @ValidateIf(given)
+  @IsBoolean()
+  sameAddress?: boolean;
 }
 
 // The evidence as stored: the admin's fields plus what the server wrote.
@@ -204,6 +241,20 @@ export class VerificationCheckEvidenceDto extends RecordCheckEvidenceDto {
     format: 'date',
   })
   lookedUpOn?: string;
+
+  @ApiPropertyOptional({
+    description: "The file's RAR number at the save; rar only",
+    nullable: true,
+    type: String,
+  })
+  rarNumber?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'The price-list job types the recorded activities leave uncovered; activities only',
+    type: [String],
+  })
+  uncoveredJobTypeIds?: string[];
 }
 
 export class RecordVerificationCheckDto {
@@ -239,7 +290,7 @@ export class RecordVerificationCheckDto {
 
   @ApiPropertyOptional({
     description:
-      'What the admin found; company and caen only, refused with not_run',
+      'What the admin found; company, caen and rar only, refused with not_run',
     type: RecordCheckEvidenceDto,
   })
   @ValidateIf(given)
@@ -269,7 +320,8 @@ export class VerificationCheckDto {
   detail!: string | null;
 
   @ApiProperty({
-    description: 'What the admin found, for company and caen; null otherwise',
+    description:
+      'What the admin found and the server noted, for company, caen, rar and activities; null otherwise',
     nullable: true,
     type: VerificationCheckEvidenceDto,
   })

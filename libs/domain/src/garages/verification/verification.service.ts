@@ -1,6 +1,8 @@
 import {
   checkSummary,
+  normaliseRarNumber,
   queueLamp,
+  RAR_NUMBER_MIN,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TARGET_WORKING_DAYS,
   type VerificationQueueAreaDto,
@@ -33,6 +35,9 @@ import type {
   VerificationReopenReason,
 } from '../../generated/prisma/client';
 import { countApproval } from '../../metrics/product-counters';
+
+// No control characters inside a RAR number.
+const CONTROL = /\p{Cc}/u;
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
 
@@ -111,6 +116,7 @@ export class VerificationService {
         orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
         select: {
           checks: { select: { detail: true, kind: true, result: true } },
+          documents: { select: { kind: true } },
           garage: { select: QUEUE_GARAGE },
           id: true,
           status: true,
@@ -138,10 +144,12 @@ export class VerificationService {
   }
 
   // Who may submit is the submitting story's rule; here only the files count.
+  // The RAR number, when given, is stored as step 6 normalises it.
   async submit(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
     garageId: string,
+    rarNumber?: string,
   ): Promise<VerificationFile> {
     const newest = await tx.verificationFile.findFirst({
       orderBy: newestFirst,
@@ -151,7 +159,13 @@ export class VerificationService {
       throw await this.refusalFor(tx, newest);
     }
     const file = await tx.verificationFile
-      .create({ data: { garageId, previousFileId: newest?.id ?? null } })
+      .create({
+        data: {
+          garageId,
+          previousFileId: newest?.id ?? null,
+          rarNumber: rarNumber ? normaliseRarNumber(rarNumber) || null : null,
+        },
+      })
       .catch((error: unknown) => {
         // A submission that raced this one committed first.
         throw taken(error)
@@ -171,6 +185,63 @@ export class VerificationService {
     await this.announce(tx, file, 'verification.submitted');
     if (!this.config.skipManualApproval) return file;
     return this.decide(tx, SYSTEM, file.id, { outcome: 'approved' });
+  }
+
+  // An admin sets or corrects the file's RAR number while it is undecided:
+  // one history entry, no event, and the garage is not told.
+  async correctRarNumber(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    fileId: string,
+    input: string,
+  ): Promise<void> {
+    requireCapability(actor, 'admin.garages');
+    if (!isUUID(fileId)) throw new NotFoundException();
+    const rarNumber = normaliseRarNumber(input);
+    if (rarNumber.length < RAR_NUMBER_MIN || CONTROL.test(rarNumber)) {
+      throw refusal(
+        HttpStatus.BAD_REQUEST,
+        'validation_failed',
+        'Numărul RAR: între 3 și 40 de caractere, fără caractere de control',
+        [{ code: 'invalid', field: 'rarNumber' }],
+      );
+    }
+    // Held until the correction commits, so two corrections serialise and a
+    // decision racing it waits.
+    const [file] = await tx.$queryRaw<
+      {
+        garageId: string;
+        rarNumber: string | null;
+        status: VerificationFileStatus;
+      }[]
+    >`SELECT garage_id AS "garageId", rar_number AS "rarNumber",
+        status::text AS status
+      FROM verification_file WHERE id = ${fileId}::uuid FOR UPDATE`;
+    if (!file) throw new NotFoundException();
+    // A decided file is the one a reopening starts from.
+    if (FROM.reopen.includes(file.status)) {
+      throw refusal(
+        HttpStatus.CONFLICT,
+        'verification_file_decided',
+        'Dosarul e deja decis',
+      );
+    }
+    if (file.rarNumber === rarNumber) return;
+    await tx.verificationFile.update({
+      data: { rarNumber },
+      where: { id: fileId },
+    });
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      field: 'rar_number',
+      garageId: file.garageId,
+      newValue: rarNumber,
+      oldValue: file.rarNumber,
+      subjectId: fileId,
+      subjectType: 'verification_file',
+    });
   }
 
   // A second admin's open changes nothing and says who opened it first.
@@ -458,6 +529,7 @@ const QUEUE_GARAGE = {
 type QueueFile = Prisma.VerificationFileGetPayload<{
   select: {
     checks: { select: { detail: true; kind: true; result: true } };
+    documents: { select: { kind: true } };
     garage: { select: typeof QUEUE_GARAGE };
     id: true;
     status: true;
@@ -479,7 +551,7 @@ export function garageArea(garage: {
 const isoDay = (day: Date) => day.toISOString().slice(0, 10);
 
 function queueRow(
-  { checks, garage, id, status, submittedAt }: QueueFile,
+  { checks, documents, garage, id, status, submittedAt }: QueueFile,
   now: Date,
   holidays: ReadonlySet<string>,
 ): VerificationQueueRowDto {
@@ -487,6 +559,7 @@ function queueRow(
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
   const area = garageArea(garage);
   const team = garage.features[0]?.enabled !== false;
+  const kinds = documents.map((d) => d.kind);
   return {
     ...(area && { area }),
     brands: garage._count.brands,
@@ -498,7 +571,10 @@ function queueRow(
     ...(team && { mechanics: garage._count.mechanics }),
     status: status as VerificationQueueRowDto['status'],
     submittedAt,
-    summary: { en: checkSummary(checks, 'en'), ro: checkSummary(checks, 'ro') },
+    summary: {
+      en: checkSummary(checks, 'en', kinds),
+      ro: checkSummary(checks, 'ro', kinds),
+    },
     workingDays,
   };
 }

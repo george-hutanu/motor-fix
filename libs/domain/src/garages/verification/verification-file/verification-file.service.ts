@@ -6,6 +6,7 @@ import {
   type VerificationActorDto,
   type VerificationCheckEvidenceDto,
   type VerificationFileDto,
+  type VerificationFileJobDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -29,7 +30,8 @@ export function certificateStale(issuedOn: Date | null, sentAt: Date) {
   return !issuedWithinWindow(calendarDay(issuedOn), localDay(sentAt));
 }
 
-// The file's own lines: its sending and status changes, its checks' records
+// The file's own lines: its sending, status changes and RAR number
+// corrections, its checks' records
 // and its documents' openings. A document upload and the declaration stay out.
 // Every one of them carries the garage, so the (garageId, at) index reads it.
 export function timelineWhere(
@@ -42,7 +44,11 @@ export function timelineWhere(
     garageId,
     OR: [
       {
-        OR: [{ action: 'create' }, { action: 'update', field: 'status' }],
+        OR: [
+          { action: 'create' },
+          { action: 'update', field: 'status' },
+          { action: 'update', field: 'rar_number' },
+        ],
         subjectId: fileId,
         subjectType: 'verification_file',
       },
@@ -57,6 +63,31 @@ export function timelineWhere(
 }
 
 const iso = (at: Date | null) => at?.toISOString() ?? null;
+
+// The price list's jobs once each, in the list's order: a job priced for
+// several brands is one job.
+function jobsOf(
+  prices: {
+    jobType: {
+      id: string;
+      nameEn: string;
+      nameRo: string;
+      rarActivity: string | null;
+    };
+  }[],
+) {
+  const jobs = new Map<string, VerificationFileJobDto>();
+  for (const { jobType } of prices) {
+    if (jobs.has(jobType.id)) continue;
+    jobs.set(jobType.id, {
+      jobTypeId: jobType.id,
+      nameEn: jobType.nameEn,
+      nameRo: jobType.nameRo,
+      rarActivity: jobType.rarActivity,
+    });
+  }
+  return [...jobs.values()];
+}
 
 // Everything an admin reads to decide one verification file, in one answer.
 // It writes nothing: the opening is the open use case's.
@@ -111,7 +142,7 @@ export class VerificationFileService {
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),
     );
-    const [names, activities, reports, entries, total, photos] =
+    const [names, catalogue, prices, reports, entries, total, photos] =
       await Promise.all([
         this.names([
           file.openedBy,
@@ -121,7 +152,21 @@ export class VerificationFileService {
         ]),
         this.prisma.rarActivity.findMany({
           orderBy: { code: 'asc' },
-          where: { code: { in: garage.rarActivities } },
+          select: { code: true, nameEn: true, nameRo: true },
+        }),
+        this.prisma.garagePrice.findMany({
+          orderBy: [{ position: 'asc' }, { id: 'asc' }],
+          select: {
+            jobType: {
+              select: {
+                id: true,
+                nameEn: true,
+                nameRo: true,
+                rarActivity: true,
+              },
+            },
+          },
+          where: { garageId: garage.id },
         }),
         this.prisma.garageReport.findMany({
           orderBy: { createdAt: 'desc' },
@@ -144,11 +189,10 @@ export class VerificationFileService {
     const previous = file.previousFile;
 
     return {
-      activities: activities.map(({ code, nameEn, nameRo }) => ({
-        code,
-        nameEn,
-        nameRo,
-      })),
+      activities: catalogue.filter((a) =>
+        garage.rarActivities.includes(a.code),
+      ),
+      catalogue,
       checks: [...file.checks]
         .sort(
           (a, b) =>
@@ -202,6 +246,7 @@ export class VerificationFileService {
         id: file.id,
         openedAt: iso(file.openedAt),
         openedBy: actor(file.openedBy, file.openedAt),
+        rarNumber: file.rarNumber,
         reasonCode: file.reasonCode,
         reasonNote: file.reasonNote,
         reopenedAt: iso(file.reopenedAt),
@@ -224,6 +269,7 @@ export class VerificationFileService {
         seatAddress: garage.seatAddress,
         serviceRadiusKm: garage.serviceRadiusKm,
       },
+      jobs: jobsOf(prices),
       previousRejection:
         previous?.status === 'rejected' && previous.decidedAt
           ? {

@@ -1,7 +1,8 @@
-import type {
-  PriceListItemDto,
-  PriceListReason,
-  PublicPriceRowDto,
+import {
+  coversJob,
+  type PriceListItemDto,
+  type PriceListReason,
+  type PublicPriceRowDto,
 } from '@motor-fix/contracts';
 
 import type { JobTypeStatus } from '../../generated/prisma/client';
@@ -55,13 +56,7 @@ function reasonOf(
 ): PriceListReason | undefined {
   if (jobType.status === 'rejected') return 'rejected';
   if (jobType.status === 'pending') return 'awaiting_approval';
-  if (
-    rarActivities.length > 0 &&
-    jobType.rarActivity &&
-    !rarActivities.includes(jobType.rarActivity)
-  ) {
-    return 'not_authorised';
-  }
+  if (!coversJob(jobType.rarActivity, rarActivities)) return 'not_authorised';
   if (defaultRow && !defaultRow.visible) return 'hidden_by_garage';
   if (defaultRow?.toBani == null) return 'no_top_price';
   return undefined;

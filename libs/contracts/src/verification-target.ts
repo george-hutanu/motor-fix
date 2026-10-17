@@ -35,3 +35,22 @@ export function queueLamp(
   if (flagged || has('warning')) return 'amber';
   return has('ok') ? 'green' : 'grey';
 }
+
+// Whether a price-list job falls under the ticked RAR activities: a job with
+// no mapped activity (null or empty) is covered, and an empty list covers every job.
+export function coversJob(
+  rarActivity: string | null,
+  activities: readonly string[],
+): boolean {
+  return (
+    !rarActivity || activities.length === 0 || activities.includes(rarActivity)
+  );
+}
+
+// The jobs the ticked activities leave uncovered, in their order.
+export function uncoveredJobs<T extends { rarActivity: string | null }>(
+  jobs: readonly T[],
+  activities: readonly string[],
+): T[] {
+  return jobs.filter((job) => !coversJob(job.rarActivity, activities));
+}
