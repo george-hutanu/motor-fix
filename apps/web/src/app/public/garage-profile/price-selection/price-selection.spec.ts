@@ -88,7 +88,7 @@ describe('the jobs kept for the session', () => {
 
     s.sync(DINAMO);
     expect(on(s)).toEqual([]);
-    expect(s.changes()).toBe(0);
+    expect(s.touched()).toBe(false);
     s.toggle('j-brakes', true);
 
     s.sync(MILITARI);

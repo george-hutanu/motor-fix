@@ -71,7 +71,7 @@ export class EstimateSection {
   protected readonly said = computed(() => {
     if (this.selection.dropped())
       return this.i18n.t('public.garageProfile.estimate.dropped');
-    if (this.selection.changes() === 0) return '';
+    if (!this.selection.touched()) return '';
     return this.chosen().length
       ? this.spoken()
       : this.i18n.t('public.garageProfile.estimate.empty');

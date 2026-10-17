@@ -17,8 +17,8 @@ export class PriceSelection {
   readonly on = signal<ReadonlySet<string>>(new Set());
   // A job switched on that the latest read no longer lists was switched off.
   readonly dropped = signal(false);
-  // Counts the visitor's own switch changes, so a page load stays silent.
-  readonly changes = signal(0);
+  // True once the visitor switches a job here, so a page load stays silent.
+  readonly touched = signal(false);
 
   sync(garage: PublicGarageDto) {
     const listed = new Set(garage.prices.map((price) => price.jobTypeId));
@@ -29,7 +29,7 @@ export class PriceSelection {
     const kept = before.filter((id) => listed.has(id));
     if (fresh) {
       this.dropped.set(false);
-      this.changes.set(0);
+      this.touched.set(false);
     } else if (kept.length < before.length) {
       this.dropped.set(true);
     }
@@ -46,7 +46,7 @@ export class PriceSelection {
     else next.delete(id);
     this.on.set(next);
     this.dropped.set(false);
-    this.changes.update((n) => n + 1);
+    this.touched.set(true);
     this.write();
   }
 
