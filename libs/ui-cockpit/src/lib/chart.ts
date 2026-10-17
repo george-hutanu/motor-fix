@@ -19,6 +19,7 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Chart } from 'chart.js';
 
 import {
+  type ChartHeadings,
   type ChartPoint,
   type ChartType,
   type ChartUnit,
@@ -46,6 +47,10 @@ abstract class CockpitChart {
   readonly empty = input<string>();
   // The host's word for the table's name column; "period" otherwise.
   readonly labelHeading = input<string>();
+  // The names of a point's lead and value; with a lead on the points, two
+  // bars per category and a column for each figure.
+  readonly leadHeading = input<string>();
+  readonly valueHeading = input<string>();
   readonly retry = output<void>();
 
   private readonly i18n = inject(I18n);
@@ -54,19 +59,33 @@ abstract class CockpitChart {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly scheme = signal(0);
-  private chart?: Chart<ChartType, number[], string>;
+  private chart?: Chart<ChartType, number[], string | string[]>;
 
   protected readonly tableId = inject(_IdGenerator).getId('mf-chart-table-');
   protected readonly tableShown = signal(false);
 
-  // 28 px a row keeps every 12 px name on its own line; the axis takes 24.
+  protected readonly headings = computed((): ChartHeadings | undefined => {
+    const leadHeading = this.leadHeading();
+    const valueHeading = this.valueHeading();
+    return leadHeading !== undefined &&
+      valueHeading !== undefined &&
+      this.points().some((p) => p.lead !== undefined)
+      ? { leadHeading, valueHeading }
+      : undefined;
+  });
+
+  // 28 px a row keeps every 12 px name on its own line, 44 its name over both
+  // figures; the axis takes 24.
   protected readonly plotHeight = computed(() =>
-    this.horizontal() ? Math.max(200, this.points().length * 28 + 24) : null,
+    this.horizontal()
+      ? Math.max(200, this.points().length * (this.headings() ? 44 : 28) + 24)
+      : null,
   );
 
   protected readonly rows = computed(() =>
     this.points().map((p) => ({
       label: p.label,
+      lead: formatValue(this.unit(), p.lead, this.i18n.language()),
       value: formatValue(this.unit(), p.value, this.i18n.language()),
     })),
   );
@@ -82,6 +101,19 @@ abstract class CockpitChart {
     const last = points.at(-1)?.label ?? '';
     const value = (p?: ChartPoint) =>
       formatValue(this.unit(), p?.value, language);
+    const headings = this.headings();
+    if (headings)
+      return this.i18n.t('shell.chart.summaryTwo', {
+        ...headings,
+        high: value(high),
+        highLabel: high?.label ?? value(high),
+        highLead: formatValue(this.unit(), high?.lead, language),
+        low: value(low),
+        lowLabel: low?.label ?? value(low),
+        lowLead: formatValue(this.unit(), low?.lead, language),
+        period: first === last ? first : `${first} – ${last}`,
+        title: this.title(),
+      });
     return this.i18n.t('shell.chart.summary', {
       high: value(high),
       highLabel: high?.label ?? value(high),
@@ -107,6 +139,7 @@ abstract class CockpitChart {
         readTheme(canvas),
         reduced,
         this.horizontal(),
+        this.headings(),
       );
       if (!this.chart) {
         this.chart = new Chart(canvas, config);
@@ -189,13 +222,19 @@ const template = `
             <thead hlmTHead>
               <tr hlmTr>
                 <th hlmTh scope="col">{{ labelHeading() ?? ('shell.chart.label' | t) }}</th>
-                <th hlmTh scope="col">{{ 'shell.chart.value' | t }}</th>
+                @if (headings(); as h) {
+                  <th hlmTh scope="col">{{ h.leadHeading }}</th>
+                }
+                <th hlmTh scope="col">{{ headings()?.valueHeading ?? ('shell.chart.value' | t) }}</th>
               </tr>
             </thead>
             <tbody hlmTBody>
               @for (row of rows(); track $index) {
                 <tr hlmTr>
                   <td hlmTd>{{ row.label }}</td>
+                  @if (headings()) {
+                    <td hlmTd>{{ row.lead }}</td>
+                  }
                   <td hlmTd>{{ row.value }}</td>
                 </tr>
               }

@@ -340,3 +340,80 @@ describe('chartConfig laid on its side', () => {
     expect(options.interaction.axis).toBe('x');
   });
 });
+
+// @traces 404-demand-searches-FR-008 404-demand-searches-FR-011
+describe('chartConfig with a lead figure', () => {
+  const PAIRS = [
+    { label: 'Dacia', lead: 8900, value: 2140 },
+    { label: 'BMW', lead: 2600, value: 0 },
+  ];
+  const headings = { leadHeading: 'Căutări', valueHeading: 'Cereri' };
+  const pairs = (theme = dark): Loose =>
+    chartConfig('bar', PAIRS, 'count', 'ro', theme, false, true, headings);
+
+  it('draws the lead bar first in the half-strength amber, then the amber value bar', () => {
+    const [lead, value] = pairs().data.datasets;
+
+    expect(pairs().data.datasets).toHaveLength(2);
+    expect(lead).toMatchObject({
+      backgroundColor: 'rgba(255, 176, 0, 0.5)',
+      barThickness: 8,
+      data: [8900, 2600],
+      label: 'Căutări',
+    });
+    expect(value).toMatchObject({
+      backgroundColor: dark.amber,
+      barThickness: 8,
+      data: [2140, 0],
+      label: 'Cereri',
+    });
+  });
+
+  it('writes both figures as text under each name', () => {
+    expect(pairs().data.labels).toEqual([
+      ['Dacia', 'Căutări 8.900', 'Cereri 2.140'],
+      ['BMW', 'Căutări 2.600', 'Cereri 0'],
+    ]);
+  });
+
+  it('shows both figures under the name in one tooltip', () => {
+    const { interaction, plugins } = pairs().options;
+    const { callbacks } = plugins.tooltip;
+
+    expect(interaction).toMatchObject({ axis: 'y', mode: 'index' });
+    expect(callbacks.title([{ dataIndex: 0 }])).toBe('Dacia');
+    expect(callbacks.label({ dataset: { label: 'Căutări' }, raw: 8900 })).toBe(
+      'Căutări · 8.900',
+    );
+    expect(callbacks.label({ dataset: { label: 'Cereri' }, raw: 2140 })).toBe(
+      'Cereri · 2.140',
+    );
+  });
+
+  it('takes the lead colour from the theme it is given', () => {
+    const [lead] = pairs(light).data.datasets;
+
+    expect(lead.backgroundColor).not.toBe(light.amber);
+    expect(lead.backgroundColor).toMatch(/^rgba\(.+, 0\.5\)$/);
+  });
+
+  it('draws a chart without a lead figure as it did before', () => {
+    const plain = [
+      { label: 'Dacia', value: 2140 },
+      { label: 'BMW', value: 0 },
+    ];
+
+    const { data, options } = chartConfig(
+      'bar',
+      plain,
+      'count',
+      'ro',
+      dark,
+      false,
+      true,
+    ) as Loose;
+    expect(data.datasets).toHaveLength(1);
+    expect(data.labels).toEqual(['Dacia', 'BMW']);
+    expect(options.interaction.mode).toBe('nearest');
+  });
+});
