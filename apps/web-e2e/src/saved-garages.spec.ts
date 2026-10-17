@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ready, settled, signIn } from './accounts.js';
+import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The driver, with two cars, saves two garages and finds them on Service-uri
@@ -117,8 +117,10 @@ test.describe('the saved garages list @seeded', () => {
       page.getByRole('button', { exact: true, name: 'Salvat' }),
     ).toBeVisible();
 
+    // The list keeps the live stream open, so networkidle never comes: wait
+    // for the list itself.
     await page.goto('/app/driver/saved');
-    await settled(page);
+    await expect(page.locator('[data-subtitle]')).toBeVisible();
     const row = page.locator('mf-saved-garage-row', { hasText: name });
     const other = page.locator('mf-saved-garage-row', { hasText: working });
     await expect(row.getByRole('link', { name })).toHaveAttribute(
@@ -136,15 +138,15 @@ test.describe('the saved garages list @seeded', () => {
     );
 
     await page.goto('/app/driver');
-    await settled(page);
     const panel = page.locator('[data-panel="saved"]');
+    await expect(panel).toBeVisible();
     await expect(panel.getByRole('link', { exact: true, name })).toBeVisible();
     await expect(
       panel.getByRole('link', { exact: true, name: working }),
     ).toBeVisible();
 
     await page.goto('/app/driver/saved');
-    await settled(page);
+    await expect(row).toHaveCount(1);
     await row.getByRole('button', { name: 'Scoate din salvate' }).click();
     await expect(row).toHaveCount(0);
     await expect(other).toHaveCount(1);
