@@ -118,6 +118,7 @@
       "company": "Active company at ANAF and ONRC",
       "copied": "CUI copied",
       "errors": {
+        "cui": "The garage's CUI is not valid",
         "detail": "{field}: 1 to 200 characters, no line breaks",
         "missing": "Missing: {fields}",
         "result": "Choose a result"

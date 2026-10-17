@@ -120,6 +120,7 @@
       "company": "Firmă activă la ANAF și ONRC",
       "copied": "CUI copiat",
       "errors": {
+        "cui": "CUI‑ul service‑ului nu e valid",
         "detail": "{field}: între 1 și 200 de caractere, fără rânduri noi",
         "missing": "Lipsește: {fields}",
         "result": "Alege un rezultat"

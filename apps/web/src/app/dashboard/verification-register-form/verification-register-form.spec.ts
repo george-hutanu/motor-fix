@@ -363,17 +363,19 @@ describe('the CAEN form', () => {
     });
   });
 
-  it("shows the server's refusal the same way", async () => {
+  const refused = (detail: string, errors: { code: string; field: string }[]) =>
+    new HttpErrorResponse({
+      error: { code: 'validation_failed', detail, errors, status: 400 },
+      status: 400,
+    });
+
+  // @traces 203-FR-007 203-FR-009
+  it("shows the server's refusal the same way, marking the tick at fault", async () => {
     await caen();
     record.mockRejectedValue(
-      new HttpErrorResponse({
-        error: {
-          code: 'validation_failed',
-          detail: 'Lipsește: 4520 pe certificat',
-          status: 400,
-        },
-        status: 400,
-      }),
+      refused('Lipsește: la punctul de lucru', [
+        { code: 'required', field: 'evidence.address' },
+      ]),
     );
 
     await press('OK');
@@ -382,8 +384,50 @@ describe('the CAEN form', () => {
     await tick('la punctul de lucru');
     await press('Salvează');
 
-    expect(text(alert())).toContain('Lipsește: 4520 pe certificat');
+    expect(text(alert())).toContain('Lipsește: la punctul de lucru');
+    const box = tickBox('la punctul de lucru');
+    expect(box?.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(box);
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  // @traces 203-FR-007 203-FR-009
+  it("reads the server's refusal in English", async () => {
+    await mount((h) => h.kind.set('caen'), 'en');
+    record.mockRejectedValue(
+      refused('Lipsește: 4520 în ONRC', [
+        { code: 'required', field: 'evidence.onrc' },
+      ]),
+    );
+
+    await press('OK');
+    await tick('4520 on the certificate');
+    await tick('4520 in the ONRC record');
+    await tick('at the workshop address');
+    await press('Save');
+
+    expect(text(alert())).toContain('Missing: 4520 in the ONRC record');
+    expect(text(alert())).not.toContain('Lipsește');
+    expect(
+      tickBox('4520 in the ONRC record')?.getAttribute('aria-invalid'),
+    ).toBe('true');
+  });
+
+  // @traces 203-FR-002 203-FR-009
+  it("reads the server's CUI refusal in English", async () => {
+    await mount(() => {}, 'en');
+    record.mockRejectedValue(
+      refused('CUI-ul service-ului nu e valid', [
+        { code: 'invalid', field: 'cui' },
+      ]),
+    );
+
+    await press('OK');
+    await type('Company name', 'Auto Vest Motors SRL');
+    await press('Save');
+
+    expect(text(alert())).toContain("The garage's CUI is not valid");
+    expect(text(alert())).not.toContain('CUI-ul');
   });
 
   it('names every tick for a screen reader and reads in English', async () => {

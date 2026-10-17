@@ -36,8 +36,8 @@ const DECIDED: VerificationFileStatus[] = [
   'more_requested',
 ];
 
-const invalid = (message: string) =>
-  refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message);
+const invalid = (message: string, errors?: { code: string; field: string }[]) =>
+  refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, errors);
 
 const isKind = (kind: string): kind is VerificationCheckKind =>
   (VERIFICATION_CHECK_KINDS as readonly string[]).includes(kind);
@@ -50,12 +50,17 @@ const FIELDS = {
 type RegisterKind = keyof typeof FIELDS;
 const isRegister = (kind: string): kind is RegisterKind => kind in FIELDS;
 
-// The ticks as the form names them, in the form's order.
+// The ticks as the form names them, in the form's order; the address tick
+// reads as the workshop's, or the registered seat's for a mobile mechanic.
 const TICKS = {
-  address: 'adresa',
+  address: { premises: 'la punctul de lucru', seat: 'la sediul social' },
   certificate: '4520 pe certificat',
   onrc: '4520 în ONRC',
 } as const;
+const tickName = (tick: keyof typeof TICKS, mobile: boolean) => {
+  const name = TICKS[tick];
+  return typeof name === 'string' ? name : name[mobile ? 'seat' : 'premises'];
+};
 
 // The details the server writes on an ok register check, stored in Romanian
 // like every typed detail.
@@ -105,9 +110,15 @@ function companyRecord(
   if (body.result !== 'ok') {
     return { evidence: { ...(name && { name }), lookedUpOn } };
   }
-  if (!name) throw invalid('Lipsește numele firmei');
+  if (!name) {
+    throw invalid('Lipsește numele firmei', [
+      { code: 'required', field: 'evidence.name' },
+    ]);
+  }
   if (!isValidCui(facts.cui ?? '')) {
-    throw invalid('CUI-ul service-ului nu e valid');
+    throw invalid('CUI-ul service-ului nu e valid', [
+      { code: 'invalid', field: 'cui' },
+    ]);
   }
   return { detail: companyOk(name), evidence: { lookedUpOn, name } };
 }
@@ -133,10 +144,13 @@ function caenRecord(
     (tick) =>
       !ticks[tick] && (tick !== 'certificate' || facts.certificateUploaded),
   );
-  if (missing.length) {
-    throw invalid(`Lipsește: ${missing.map((t) => TICKS[t]).join(', ')}`);
-  }
   const mobile = facts.businessKind === 'mobile';
+  if (missing.length) {
+    throw invalid(
+      `Lipsește: ${missing.map((t) => tickName(t, mobile)).join(', ')}`,
+      missing.map((t) => ({ code: 'required', field: `evidence.${t}` })),
+    );
+  }
   return { detail: mobile ? CAEN_OK.seat : CAEN_OK.premises, evidence };
 }
 

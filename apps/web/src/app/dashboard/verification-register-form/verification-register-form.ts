@@ -27,6 +27,13 @@ type Tick = 'certificate' | 'onrc' | 'address';
 type Fault = 'result' | 'name' | 'detail' | Tick;
 
 const RESULTS: readonly Recorded[] = ['ok', 'warning', 'failed'];
+// The fields a server refusal can name that the form has a control for.
+const FIELD_FAULTS: readonly Fault[] = [
+  'name',
+  'certificate',
+  'onrc',
+  'address',
+];
 // No control characters inside the detail, as the server refuses them.
 const CONTROL = /\p{Cc}/u;
 
@@ -225,13 +232,41 @@ export class VerificationRegisterForm {
       this.decided.emit();
       return;
     }
-    // The API's problem body carries the reason as its detail, a list of
-    // validation messages already joined.
-    if (problem.status === 400 && problem.detail) {
-      this.error.set({ faults: [], text: problem.detail });
-      return;
-    }
+    if (problem.status === 400 && this.serverRefusal(problem)) return;
     toast(this.i18n.t('admin.file.manual.saveFailed'));
+  }
+
+  // The server names the fields at fault: a missing tick or name is shown,
+  // marked and focused as the form's own refusal; an invalid CUI in the
+  // viewer's language; anything else as the server worded it.
+  private serverRefusal(problem: ReturnType<typeof toProblem>): boolean {
+    const fields = (problem.errors ?? []).map((e) => e.field);
+    const faults = fields
+      .map((f) => f.replace(/^evidence\./, ''))
+      .filter((f): f is Fault => FIELD_FAULTS.includes(f as Fault));
+    if (faults.length) {
+      const labels = faults.map((f) =>
+        f === 'name' ? this.t('form.name') : this.tickLabel(f as Tick),
+      );
+      this.refuse(
+        faults,
+        this.t('errors.missing', { fields: labels.join(', ') }),
+      );
+      return true;
+    }
+    if (fields.includes('cui')) {
+      this.refuse(['result'], this.t('errors.cui'));
+      return true;
+    }
+    if (!problem.detail) return false;
+    this.error.set({ faults: [], text: problem.detail });
+    return true;
+  }
+
+  private tickLabel(tick: Tick) {
+    const label =
+      tick === 'address' ? (this.mobile() ? 'seat' : 'premises') : tick;
+    return this.t(`ticks.${label}`);
   }
 
   private focus(fault: Fault | undefined) {

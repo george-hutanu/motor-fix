@@ -1460,4 +1460,34 @@ describe('the company and CAEN rows', () => {
       'no certificate · ONRC · address',
     );
   });
+
+  // @traces 203-FR-008
+  it.each([['warning'], ['failed']] as const)(
+    'clears the CAEN ticks from a %s row',
+    async (result) => {
+      const host = await open(
+        fileOf({
+          checks: KINDS.map((kind) =>
+            kind === 'caen'
+              ? check(kind, {
+                  detail: 'Codul lipsește din ONRC',
+                  evidence: {
+                    address: true,
+                    certificateUploaded: false,
+                    onrc: true,
+                  },
+                  recorder: ioana,
+                  result,
+                } as Partial<VerificationFileCheckDto>)
+              : check(kind),
+          ),
+        }),
+      );
+
+      const caen = row(host, 'register', 'caen');
+      expect(caen?.querySelector('[data-part="ticks"]')).toBeNull();
+      expect(text(caen)).not.toContain('fără certificat');
+      expect(text(caen)).toContain('Codul lipsește din ONRC');
+    },
+  );
 });

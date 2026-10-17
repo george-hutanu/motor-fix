@@ -360,10 +360,12 @@ export class VerificationFile {
     );
   }
 
-  // "certificat · ONRC · adresă": the ticks a CAEN check was saved with, a
-  // file that held no certificate then read as "fără certificat".
+  // "certificat · ONRC · adresă": the ticks an ok CAEN check was saved with, a
+  // file that held no certificate then read as "fără certificat". A warning
+  // or a failure shows its detail alone: the ticks are cleared from the row.
   private storedTicks() {
-    const evidence = this.checks().find((c) => c.kind === 'caen')?.evidence;
+    const caen = this.checks().find((c) => c.kind === 'caen');
+    const evidence = caen?.result === 'ok' ? caen.evidence : null;
     if (!evidence) return null;
     const parts = [
       evidence.certificateUploaded === false

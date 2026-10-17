@@ -75,7 +75,11 @@ async function refusal(promise: Promise<unknown>) {
   } catch (error) {
     if (error instanceof HttpException) {
       return {
-        body: error.getResponse() as { code?: string; message?: string },
+        body: error.getResponse() as {
+          code?: string;
+          errors?: { code: string; field: string }[];
+          message?: string;
+        },
         status: error.getStatus(),
       };
     }
@@ -598,6 +602,9 @@ describe('the company check', () => {
       'validation_failed',
     ]);
     expect(answer.body.message).toBe('Lipsește numele firmei');
+    expect(answer.body.errors).toEqual([
+      { code: 'required', field: 'evidence.name' },
+    ]);
     expect(await refusal(record('company', { result: 'ok' }))).toMatchObject({
       status: 400,
     });
@@ -619,6 +626,7 @@ describe('the company check', () => {
     ).toMatchObject({
       body: {
         code: 'validation_failed',
+        errors: [{ code: 'invalid', field: 'cui' }],
         message: 'CUI-ul service-ului nu e valid',
       },
       status: 400,
@@ -754,8 +762,14 @@ describe('the CAEN check', () => {
   ): string[] => [
     ...(uploaded && !ticks.certificate ? ['4520 pe certificat'] : []),
     ...(ticks.onrc ? [] : ['4520 în ONRC']),
-    ...(ticks.address ? [] : ['adresa']),
+    ...(ticks.address ? [] : ['la punctul de lucru']),
   ];
+  const fields = (ticks: (typeof TICKS)[number], uploaded: boolean) =>
+    [
+      ...(uploaded && !ticks.certificate ? ['certificate'] : []),
+      ...(ticks.onrc ? [] : ['onrc']),
+      ...(ticks.address ? [] : ['address']),
+    ].map((tick) => ({ code: 'required', field: `evidence.${tick}` }));
 
   // @traces 203-FR-003
   it.each(
@@ -788,7 +802,8 @@ describe('the CAEN check', () => {
         400,
         'validation_failed',
       ]);
-      for (const tick of absent) expect(answer.body.message).toContain(tick);
+      expect(answer.body.message).toBe(`Lipsește: ${absent.join(', ')}`);
+      expect(answer.body.errors).toEqual(fields(ticks, uploaded));
       expect(await entries()).toHaveLength(0);
     },
   );
@@ -816,6 +831,20 @@ describe('the CAEN check', () => {
     });
 
     expect(await check('caen')).toMatchObject({ detail: SEAT });
+  });
+
+  // @traces 203-FR-003
+  it("names a mobile mechanic's address tick as the form does", async () => {
+    await garageIs({ businessKind: 'mobile' });
+
+    const answer = await refusal(
+      record('caen', { evidence: { onrc: true }, result: 'ok' }),
+    );
+
+    expect(answer.body.message).toBe('Lipsește: la sediul social');
+    expect(answer.body.errors).toEqual([
+      { code: 'required', field: 'evidence.address' },
+    ]);
   });
 
   // @traces 203-FR-003
