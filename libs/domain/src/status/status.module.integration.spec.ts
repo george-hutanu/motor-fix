@@ -9,6 +9,7 @@ import type { Redis } from 'ioredis';
 import { liveProbes, type RunOptions, runChecks } from './run';
 import { STATUS_QUEUE, StatusModule } from './status.module';
 import { parseThresholds } from './thresholds';
+import { systemLog } from '../admin/system-log/system-log';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { type EventPort, outbox } from '../events/event.port';
 import {
@@ -374,6 +375,247 @@ describe('the probes', () => {
     });
     expect(tile.state).toBe('amber');
     expect(tile.detail).toMatchObject({ oldest_waiting_s: 400 });
+  });
+});
+
+// @traces 297-FR-006
+// @traces 297-FR-010
+describe('the system log entries of a run', () => {
+  const entries = (kind?: string) =>
+    prisma.systemLogEntry.findMany({
+      orderBy: [{ at: 'asc' }, { source: 'asc' }, { kind: 'asc' }],
+      where: kind ? { kind: kind as never } : {},
+    });
+  const hours = (h: number) => new Date(clock - h * 3_600_000);
+
+  beforeEach(async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE system_log_entry');
+    systemLog.start({ prisma, redis: store });
+  });
+  afterEach(() => systemLog.stop());
+
+  it('writes nothing for tiles first seen green, or a run where nothing changed', async () => {
+    tick();
+    await run({ backup: undefined });
+    tick(10);
+    await run({ backup: undefined });
+    expect((await entries()).map((e) => [e.kind, e.source, e.count])).toEqual([
+      ['status_changed', 'backup', 1],
+      ['check_failed', 'backup', 2],
+    ]);
+  });
+
+  it('writes a confirmed change once, with its reason, beside each failed check', async () => {
+    tick();
+    await run();
+    await prisma.$executeRawUnsafe('TRUNCATE system_log_entry');
+    readyStatus = 503;
+    tick();
+    await run();
+    expect(await entries('status_changed')).toEqual([]);
+    const confirmed = tick();
+    await run();
+    tick();
+    await run();
+
+    const changes = await entries('status_changed');
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({
+      at: confirmed,
+      context: { reason: 'http_503', state: 'red' },
+      fingerprint: 'red',
+      message: 'API: turned red (http_503).',
+      severity: 'warning',
+      source: 'api',
+    });
+    const failed = await entries('check_failed');
+    expect(failed.map((e) => e.source)).toEqual(['api', 'api']);
+    expect(failed.reduce((sum, e) => sum + e.count, 0)).toBe(3);
+    expect(failed[0]).toMatchObject({
+      context: { reason: 'http_503' },
+      fingerprint: 'http_503',
+      severity: 'warning',
+    });
+
+    readyStatus = 200;
+    tick();
+    await run();
+    tick();
+    await run();
+    expect((await entries('status_changed')).at(-1)).toMatchObject({
+      fingerprint: 'green',
+      message: 'API: back to normal.',
+      severity: 'info',
+    });
+  });
+
+  it('names the limit an amber tile crossed', async () => {
+    await notifications.add('send', {}, { timestamp: clock - 400_000 });
+    await run();
+    const [change] = await entries('status_changed');
+    expect(change).toMatchObject({
+      context: {
+        figure: 'oldest_waiting_s',
+        limit: 300,
+        oldest_waiting_s: 400,
+        state: 'amber',
+      },
+      message: 'Notifications: oldest waiting job went above 5 min.',
+      source: 'notifications',
+    });
+  });
+
+  it('writes a check that throws as a failed check with its reason', async () => {
+    const probes = liveProbes(options(), prisma, notifications);
+    tick();
+    await runChecks({
+      events: outbox,
+      prisma,
+      probes: {
+        ...probes,
+        now: () => new Date(clock),
+        oldestWaiting: async () => {
+          throw new Error('store down');
+        },
+      },
+      samples: store,
+      thresholds: parseThresholds(raw),
+    });
+    expect(await entries('check_failed')).toEqual([
+      expect.objectContaining({
+        context: { reason: 'store down' },
+        message: 'Notifications: check failed (store down).',
+        source: 'notifications',
+      }),
+    ]);
+  });
+
+  it('writes nothing when the tiles cannot be stored', async () => {
+    readyStatus = 503;
+    const failing: EventPort = {
+      record: async () => {
+        throw new Error('outbox down');
+      },
+    };
+    await expect(run({}, failing)).rejects.toThrow('outbox down');
+    expect(await entries()).toEqual([]);
+  });
+
+  it('writes a completed backup once per new manifest', async () => {
+    const first = hours(3);
+    const second = hours(0.5);
+    let last = first;
+    const backup = async () => last;
+    tick();
+    await run({ backup });
+    tick();
+    await run({ backup });
+    last = second;
+    tick();
+    await run({ backup });
+
+    const completed = await entries('backup_completed');
+    expect(completed.map((e) => e.context)).toEqual([
+      { backup_at: first.toISOString() },
+      { backup_at: second.toISOString() },
+    ]);
+    expect(completed[0]).toMatchObject({
+      fingerprint: first.toISOString(),
+      message: `Backup completed at ${first.toISOString()}.`,
+      severity: 'info',
+      source: 'backup',
+    });
+  });
+
+  it('does not write the same backup again when the log cannot be read', async () => {
+    const at = hours(3);
+    const backup = async () => at;
+    tick();
+    await run({ backup });
+    const read = jest
+      .spyOn(prisma.systemLogEntry, 'findFirst')
+      .mockRejectedValueOnce(new Error('log down'));
+    tick();
+    await run({ backup }).finally(() => read.mockRestore());
+    expect(await entries('backup_completed')).toHaveLength(1);
+  });
+
+  it('does not write the same backup again after a failed check in between', async () => {
+    const at = hours(3);
+    let reachable = true;
+    const backup = async () => {
+      if (!reachable) throw new Error('bucket down');
+      return at;
+    };
+    tick();
+    await run({ backup });
+    reachable = false;
+    tick();
+    await run({ backup });
+    reachable = true;
+    tick();
+    await run({ backup });
+    expect(await entries('backup_completed')).toHaveLength(1);
+  });
+
+  it('writes a late backup as failed once, when its tile turns amber', async () => {
+    const recent = hours(3);
+    let last = recent;
+    const backup = async () => last;
+    tick();
+    await run({ backup });
+    last = hours(30);
+    tick();
+    await run({ backup });
+    const changed = tick();
+    await run({ backup });
+    tick();
+    await run({ backup });
+
+    const failed = await entries('backup_failed');
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toMatchObject({
+      at: changed,
+      context: { last_backup_at: last.toISOString(), reason: 'too_old' },
+      fingerprint: changed.toISOString().slice(0, 10),
+      message: `No backup since ${last.toISOString()}.`,
+      severity: 'error',
+      source: 'backup',
+    });
+    expect(await entries('backup_completed')).toHaveLength(1);
+    expect((await entries('status_changed')).map((e) => e.message)).toEqual([
+      'Backup: backup age went above 26 h.',
+    ]);
+  });
+
+  it('still writes a late backup as failed when the log cannot be read on that run', async () => {
+    let last = hours(3);
+    const backup = async () => last;
+    tick();
+    await run({ backup });
+    last = hours(30);
+    tick();
+    await run({ backup });
+    const read = jest
+      .spyOn(prisma.systemLogEntry, 'findFirst')
+      .mockRejectedValue(new Error('log down'));
+    tick();
+    await run({ backup }).finally(() => read.mockRestore());
+
+    expect(await entries('backup_failed')).toHaveLength(1);
+    expect(await entries('backup_completed')).toHaveLength(1);
+  });
+
+  it('writes a backup bucket it cannot read as a failed check, not a failed backup', async () => {
+    tick();
+    await run({ backup: undefined });
+    expect(await entries('backup_failed')).toEqual([]);
+    expect(await entries('check_failed')).toEqual([
+      expect.objectContaining({
+        fingerprint: 'not_configured',
+        source: 'backup',
+      }),
+    ]);
   });
 });
 

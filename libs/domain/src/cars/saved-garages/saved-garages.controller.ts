@@ -1,6 +1,8 @@
 import {
   SavedGarageDto,
   SavedGarageIdsDto,
+  SavedGaragesPageDto,
+  SavedGaragesQueryDto,
   SaveGarageDto,
 } from '@motor-fix/contracts';
 import {
@@ -8,11 +10,14 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpStatus,
   Param,
   ParseUUIDPipe,
   Put,
+  Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -30,7 +35,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 
-import { SavedGaragesService } from './saved-garages.service';
+import { DriverOnly, SavedGaragesService } from './saved-garages.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
 
@@ -41,6 +46,7 @@ const FORBIDDEN = 'driver_role_required: the role in use is not driver';
 @ApiTags('saved-garages')
 @ApiBearerAuth()
 @Controller('me/saved-garages')
+@UseGuards(DriverOnly)
 export class SavedGaragesController {
   constructor(private readonly saved: SavedGaragesService) {}
 
@@ -97,6 +103,26 @@ export class SavedGaragesController {
     const row = await this.saved.remove(actor, garageId);
     res.status(row ? HttpStatus.OK : HttpStatus.NO_CONTENT);
     return row ?? undefined;
+  }
+
+  @Get()
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary:
+      "The caller's saved garages, newest first, 20 a page, with the brands of their cars each works on",
+  })
+  @ApiOkResponse({ type: SavedGaragesPageDto })
+  @ApiBadRequestResponse({
+    description:
+      'validation_failed: near outside Romania or a cursor too long; invalid_cursor: a cursor this list did not give out',
+  })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: FORBIDDEN })
+  list(
+    @CurrentActor() actor: Actor,
+    @Query() query: SavedGaragesQueryDto,
+  ): Promise<SavedGaragesPageDto> {
+    return this.saved.list(actor, query);
   }
 
   @Get('ids')

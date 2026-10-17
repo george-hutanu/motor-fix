@@ -13,6 +13,8 @@ import {
 } from '@motor-fix/contracts';
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
+import type { Kind } from '../admin/system-log/entry';
+import type { Outcome } from '../admin/system-log/system-log';
 import { TEMPLATES } from '../notifications/templates/registry';
 import {
   DECLINE_WINDOW_OUTCOMES,
@@ -321,4 +323,12 @@ export function initProductCounters(process: 'api' | 'worker') {
     const started = series();
     for (const one of labels) started.add(0, one);
   }
+}
+
+// Every write to the system status log, by kind and what became of it.
+export function countSystemLogEntry(kind: Kind, outcome: Outcome) {
+  counter(
+    'motorfix_system_log_entries_total',
+    'System status log writes, by kind and outcome',
+  ).add(1, { kind, outcome });
 }

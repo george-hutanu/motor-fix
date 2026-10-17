@@ -552,3 +552,47 @@ describe('the ids read', () => {
     expect(second.body).toEqual({ ids: [garageId] });
   });
 });
+
+const page = (auth: string, cursor?: string) =>
+  http()
+    .get(
+      `/me/saved-garages${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
+    )
+    .set('Authorization', auth);
+const forged = (at: string, id: string) =>
+  Buffer.from(JSON.stringify({ at, id })).toString('base64url');
+
+// @traces 291-FR-001
+// @traces 291-FR-015
+describe('the saved list under attack', () => {
+  it("answers none of another driver's rows to a cursor forged from them", async () => {
+    const me = await driver();
+    const other = await driver();
+    const theirs = await garage();
+    await save(other.auth, theirs);
+    const [row] = await rows(other.id);
+
+    const res = await page(
+      me.auth,
+      forged(new Date(row.savedAt.getTime() + 1).toISOString(), theirs),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([]);
+    expect(res.body.total).toBe(0);
+  });
+
+  it('answers 400 invalid_cursor to a cursor with extra or SQL-shaped fields', async () => {
+    const { auth } = await driver();
+
+    for (const cursor of [
+      forged("2026-06-01T00:00:00.000Z' OR 1=1 --", randomUUID()),
+      Buffer.from('[]').toString('base64url'),
+      Buffer.from('null').toString('base64url'),
+    ]) {
+      const res = await page(auth, cursor);
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('invalid_cursor');
+    }
+  });
+});

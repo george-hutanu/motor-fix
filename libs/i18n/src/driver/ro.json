@@ -248,5 +248,23 @@
   "requests": {
     "retry": "Încearcă din nou",
     "waitingGarage": "Așteaptă confirmarea service‑ului · {left}"
+  },
+  "saved": {
+    "comesToYou": "vine la tine",
+    "failed": "Nu am putut încărca service‑urile salvate.",
+    "loading": "Se încarcă service‑urile salvate",
+    "noCar": "Adaugă o mașină ca să vezi dacă lucrează pe ea",
+    "outsideArea": "în afara zonei",
+    "remove": "Scoate din salvate",
+    "retry": "Reîncearcă",
+    "seeAll": "Vezi toate",
+    "subtitle": {
+      "few": "{count} service‑uri care lucrează pe mașinile tale",
+      "one": "{count} service care lucrează pe mașinile tale",
+      "other": "{count} de service‑uri care lucrează pe mașinile tale"
+    },
+    "unavailable": "Indisponibil",
+    "worksOn": "Lucrează pe {brands}",
+    "worksOnNone": "Nu lucrează pe mașinile tale"
   }
 }

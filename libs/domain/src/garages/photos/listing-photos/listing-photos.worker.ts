@@ -15,6 +15,7 @@ import {
 import { type Job, Queue, Worker } from 'bullmq';
 
 import { LISTING_PHOTOS_QUEUE } from './listing-photos.service';
+import { writeJobFailed } from '../../../job-failures';
 import { inJob } from '../../../logging';
 import { StorageService } from '../../../storage/storage.service';
 import { processPhoto } from '../photo-processing';
@@ -75,6 +76,7 @@ export class ListingPhotosWorkerModule implements OnApplicationShutdown {
                   `photo processing failed for draft ${draftOf(job.data.key)}: ${job.data.key}: ${error.message}`,
                 ),
               );
+              writeJobFailed(LISTING_PHOTOS_QUEUE, job, error);
             });
             observeWorker(worker);
             return worker;

@@ -62,29 +62,6 @@ describe('a view’s own empty state', () => {
     );
   });
 
-  // @traces 030-FR-011
-  it('tells a driver with no saved garage so, with Caută altele to Home', async () => {
-    const element = await render('driver', 'saved');
-    const empty = element.querySelector('mf-empty-state');
-
-    expect(text(empty)).toContain('Nu ai salvat încă niciun service.');
-    expect(empty?.querySelector('svg[data-icon="bookmark"]')).not.toBeNull();
-    const link = empty?.querySelector('a');
-    expect(text(link ?? null)).toBe('Caută altele');
-    expect(link?.getAttribute('href')).toBe('/ro');
-  });
-
-  it('sends Find others to the English Home in English', async () => {
-    const element = await render('driver', 'saved', 'en');
-    const link = element.querySelector('mf-empty-state a');
-
-    expect(text(element.querySelector('mf-empty-state'))).toContain(
-      'You have not saved any garage yet.',
-    );
-    expect(text(link)).toBe('Find others');
-    expect(link?.getAttribute('href')).toBe('/en');
-  });
-
   it('keeps the plain line of a view with no empty state of its own', async () => {
     const element = await render('garage', 'team');
 

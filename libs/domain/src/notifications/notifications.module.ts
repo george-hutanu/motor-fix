@@ -288,6 +288,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('News'));
             return worker;
           },
         },
@@ -314,6 +315,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('RequestReceived'));
             return worker;
           },
         },
@@ -340,6 +342,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('QuoteReceived'));
             return worker;
           },
         },
@@ -366,6 +369,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('QuoteAccepted'));
             return worker;
           },
         },
@@ -392,6 +396,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('VerificationResult'));
             return worker;
           },
         },
@@ -418,6 +423,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('GarageSuspended'));
             return worker;
           },
         },
