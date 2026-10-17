@@ -7077,6 +7077,11 @@
           "odometerKm": {
             "type": "integer"
           },
+          "nextServiceKm": {
+            "type": "integer",
+            "description": "The odometer reading the next oil service is due at; read-only",
+            "nullable": true
+          },
           "plate": {
             "type": "string",
             "example": "B123ABC",
@@ -7116,6 +7121,7 @@
           "fuel",
           "engine",
           "odometerKm",
+          "nextServiceKm",
           "plate",
           "itpUntil",
           "rcaUntil",

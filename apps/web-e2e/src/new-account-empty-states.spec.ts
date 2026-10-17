@@ -143,4 +143,44 @@ test.describe('a new account sees helpful empty states @seeded', () => {
       await expect(main(page)).not.toContainText('Nothing here yet.');
     }
   });
+
+  // @traces 029-FR-009 029-FR-013 029-FR-014
+  test('a new driver adds a car from Mașinile mele on Panou and sees it at once and after a reload', async ({
+    page,
+  }) => {
+    await signUp(page);
+    const cars = page.locator('[data-panel="cars"]');
+    await expect(cars).toContainText('Adaugă prima ta mașină');
+
+    await cars
+      .getByRole('button', { exact: true, name: 'Adaugă o mașină' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Adaugă o mașină' });
+    await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
+    await dialog.getByLabel('Marcă').fill('BMW');
+    await dialog.getByRole('option', { exact: true, name: 'BMW' }).click();
+    await dialog.getByLabel('Model').fill('320d');
+    await dialog.getByLabel('An', { exact: true }).fill('2019');
+    await dialog.getByLabel('Kilometri').fill('148200');
+    await dialog.getByRole('radio', { name: 'Motorină' }).check();
+    await dialog.getByRole('button', { name: 'Adaugă mașina' }).click();
+    await expect(dialog).toHaveCount(0);
+
+    const card = cars.locator('li').filter({ hasText: 'BMW 320d' });
+    await expect(card).toContainText('2019 · 148.200 km');
+    await expect(card).toContainText('ITP: adaugă data din talon');
+    await expect(invitation(page, 'car')).toHaveCount(0);
+
+    await page.reload();
+    await expect(card).toContainText('2019 · 148.200 km');
+
+    await page.setViewportSize({ height: 640, width: 320 });
+    await expect(card).toBeVisible();
+    const sideways = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+    );
+    expect(sideways).toBe(false);
+  });
 });

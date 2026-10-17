@@ -21,6 +21,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   id: 'car-1',
   itpUntil: null,
   model: '320d',
+  nextServiceKm: null,
   odometerKm: 148200,
   plate: null,
   rcaUntil: null,
@@ -270,6 +271,7 @@ describe('Mașinile mele', () => {
   it('opens the dialog with the plates already held and puts the saved car first without reading again', async () => {
     const { element, settle } = await render([
       car({ id: 'car-1', plate: 'CJ12ABC' }),
+      car({ id: 'car-0', plate: null }),
     ]);
     await settle();
     open.mockResolvedValueOnce(
@@ -293,7 +295,7 @@ describe('Mașinile mele', () => {
     });
     expect(lines(cards(element)[0])[0]).toBe('Dacia Logan');
     expect(itp(cards(element)[0]).text).toBe('ITP‑ul expiră în 2 zile');
-    expect(cards(element)).toHaveLength(2);
+    expect(cards(element)).toHaveLength(3);
     expect(list).toHaveBeenCalledTimes(1);
   });
 
@@ -577,6 +579,41 @@ describe('a car card', () => {
     expect(card.querySelectorAll('mf-due-date-line a')).toHaveLength(0);
   });
 
+  // @traces 029-FR-007
+  it('shows the oil-service line after the rovinietă line when the car has a next service', async () => {
+    const { element, settle } = await render([
+      car({ itpUntil: '2026-11-13', nextServiceKm: 152000 }),
+    ]);
+    await settle();
+
+    const card = cards(element)[0];
+    const lamps = [...card.querySelectorAll<HTMLElement>('mf-lamp')];
+    expect(lamps).toHaveLength(4);
+    expect(lamps[3].closest('mf-oil-line')).not.toBeNull();
+    expect((lamps[3].textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'Schimb de ulei peste 3.800 km',
+    );
+  });
+
+  // @traces 029-FR-007
+  it('shows no oil-service line without a next service', async () => {
+    const { element, settle } = await render([car()]);
+    await settle();
+
+    expect(cards(element)[0].querySelector('mf-oil-line')).toBeNull();
+  });
+
+  // @traces 029-FR-007
+  it('shows no oil-service line for a cached car answered before the next service existed', async () => {
+    const { nextServiceKm: _, ...cached } = car();
+    const { element, settle } = await render([
+      cached as ReturnType<typeof car>,
+    ]);
+    await settle();
+
+    expect(cards(element)[0].querySelector('mf-oil-line')).toBeNull();
+  });
+
   // @traces 092-FR-009
   it('asks for the three dates on grey lines in English', async () => {
     const { element, settle } = await render([car()], 'en');
@@ -754,4 +791,61 @@ describe('a car card', () => {
       expect(list).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+describe('the car menu’s arrows', () => {
+  async function menu(count: number) {
+    const { fixture } = await render();
+    const view = fixture.componentInstance as unknown as {
+      moveIn(event: KeyboardEvent): void;
+    };
+    const root = document.createElement('div');
+    const items = Array.from({ length: count }, () => {
+      const item = document.createElement('button');
+      item.setAttribute('role', 'menuitem');
+      root.append(item);
+      return item;
+    });
+    root.addEventListener('keydown', (e) => view.moveIn(e));
+    document.body.append(root);
+    const press = (key: string) => {
+      const event = new KeyboardEvent('keydown', { cancelable: true, key });
+      root.dispatchEvent(event);
+      return event;
+    };
+    return { items, press, root };
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('moves up and down one item at a time, wrapping at both ends', async () => {
+    const { items, press } = await menu(3);
+    items[1].focus();
+
+    press('ArrowUp');
+    expect(document.activeElement).toBe(items[0]);
+    press('ArrowUp');
+    expect(document.activeElement).toBe(items[2]);
+    press('ArrowDown');
+    expect(document.activeElement).toBe(items[0]);
+    press('ArrowDown');
+    expect(document.activeElement).toBe(items[1]);
+  });
+
+  it('keeps the page from scrolling on an arrow and leaves other keys alone', async () => {
+    const { items, press } = await menu(3);
+    items[1].focus();
+
+    expect(press('ArrowDown').defaultPrevented).toBe(true);
+    expect(press('Tab').defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(items[2]);
+  });
+
+  it('does nothing on an arrow in a menu with no items', async () => {
+    const { press } = await menu(0);
+
+    expect(() => press('ArrowDown')).not.toThrow();
+  });
 });
