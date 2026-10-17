@@ -15,8 +15,7 @@ const VERDICTS: Record<string, RarVerdict> = {
 };
 
 // A failed re-check's verdict: the first of the three words its reason names.
-// TODO: read the verdict the re-check stores on the suspension once it stores
-// one, and drop this parse with it.
+// The suspension stores no verdict of its own, so the reason is the record.
 export function rarVerdict(
   cause: SuspensionCause,
   reason: string,

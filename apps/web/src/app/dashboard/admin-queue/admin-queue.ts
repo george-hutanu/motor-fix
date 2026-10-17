@@ -74,7 +74,8 @@ export class AdminQueue {
     const total = this.queue.value()?.total;
     const name = this.t('heading');
     if (total === undefined) return name;
-    const count = `${name} · ${formatNum(total, this.i18n.language())}`;
+    // No-break spaces keep the count on the name's line on a 320 px phone.
+    const count = `${name}\u00a0·\u00a0${formatNum(total, this.i18n.language())}`;
     return this.stale() ? `${count} ${this.t('stale')}` : count;
   });
 

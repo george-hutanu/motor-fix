@@ -101,7 +101,7 @@ test.describe('the suspended garages @seeded', () => {
       await page.goto('/app/admin/garages');
       await expect(counts(page)).toHaveText(COUNTS);
       await expect(panel(page).getByRole('heading', { level: 2 })).toHaveText(
-        /^Service‑uri suspendate · \d+/,
+        /^Service‑uri suspendate\s·\s\d+/,
       );
       expect(await sideways(page)).toBeLessThanOrEqual(0);
       expect(

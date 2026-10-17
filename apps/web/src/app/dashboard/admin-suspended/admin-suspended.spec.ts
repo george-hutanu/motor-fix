@@ -292,6 +292,14 @@ describe('the panel', () => {
     expect(text(el.querySelector('h2'))).toBe('Suspended garages · 3');
   });
 
+  it('keeps the total on the line of the name at 320 px', async () => {
+    const el = await open();
+
+    expect(el.querySelector('h2')?.textContent).toContain(
+      'suspendate\u00a0·\u00a03',
+    );
+  });
+
   it('lists 20 and reads every row shown again for the next 20', async () => {
     answer = async ({ limit = 20 }) => listOf(Math.min(limit, 25), 25);
     const el = await open();
