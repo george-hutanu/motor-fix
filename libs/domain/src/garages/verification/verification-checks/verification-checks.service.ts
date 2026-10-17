@@ -89,10 +89,10 @@ interface RegisterFacts {
   cui: string | null;
 }
 
-type RegisterRecord = {
+interface RegisterRecord {
   detail?: string;
   evidence: VerificationCheckEvidenceDto;
-};
+}
 
 // The company check: OK needs the name the register shows and a CUI that
 // passes the validator; the server writes the detail itself.
@@ -243,6 +243,8 @@ export class VerificationChecksService {
     const check = await tx.verificationCheck.update({
       data: {
         detail: register?.detail ?? next.detail,
+        // Only this write shapes the evidence, from the validated body and the
+        // facts read here, so its readers cast the column back unchecked.
         evidence: register
           ? (register.evidence as Prisma.InputJsonObject)
           : Prisma.DbNull,
