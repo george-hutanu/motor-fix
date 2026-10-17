@@ -289,6 +289,27 @@ describe('seed', () => {
     ]);
   });
 
+  // @traces 204-FR-008
+  it("gives Atelier Dinamo's waiting file a workshop address and priced jobs, so the RAR and activities forms show them", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const garage = await prisma.garage.findUniqueOrThrow({
+      include: {
+        prices: {
+          include: { jobType: { select: { key: true, rarActivity: true } } },
+          orderBy: { position: 'asc' },
+        },
+      },
+      where: { slug: 'atelier-dinamo' },
+    });
+    expect(garage.address).toBe('Strada Dinamo 12, Cluj-Napoca');
+    expect(garage.prices.map((p) => p.jobType.key)).toEqual([
+      'oil-service',
+      'front-brakes',
+    ]);
+  });
+
   // @traces 301-FR-004
   it("sends Service Dobre's file far enough back to be flagged whatever the holidays", async () => {
     const before = Date.now();

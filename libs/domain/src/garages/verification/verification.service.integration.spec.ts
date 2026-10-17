@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
-import { HttpException } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 
 import { VerificationService } from './verification.service';
 import { AuditService } from '../../audit/audit.service';
@@ -1537,5 +1537,224 @@ describe('reopening a decided file', () => {
       status: 'approved',
     });
     expect(await history(garageId)).toHaveLength(0);
+  });
+});
+
+// @traces 204-FR-001
+// @traces 204-FR-005
+describe('the RAR number of a file', () => {
+  const submitted = (rarNumber?: string) =>
+    inTx((tx) => service().submit(tx, mihai, garageId, rarNumber));
+  const correct = (fileId: string, rarNumber: string, actor: Actor = ioana) =>
+    inTx((tx) => service().correctRarNumber(tx, actor, fileId, rarNumber));
+  const numberOf = async (id: string) =>
+    (await prisma.verificationFile.findUniqueOrThrow({ where: { id } }))
+      .rarNumber;
+  const corrections = (id: string) =>
+    prisma.activityLog.findMany({
+      orderBy: { at: 'asc' },
+      where: { field: 'rar_number', subjectId: id },
+    });
+
+  it('is stored normalised at submitting, and empty when none is given', async () => {
+    const file = await submitted('  b 1234/2019 ');
+    expect(await numberOf(file.id)).toBe('B 1234/2019');
+
+    await prisma.verificationFile.update({
+      data: { status: 'rejected' },
+      where: { id: file.id },
+    });
+    const next = await submitted();
+    expect(await numberOf(next.id)).toBeNull();
+  });
+
+  it('is kept when the file is sent again', async () => {
+    const file = await submitted('B 1234/2019');
+    await prisma.verificationFile.update({
+      data: { status: 'more_requested' },
+      where: { id: file.id },
+    });
+
+    await inTx((tx) => service().resend(tx, mihai, file.id));
+
+    expect(await numberOf(file.id)).toBe('B 1234/2019');
+  });
+
+  it('is corrected by an admin, normalised, with one history entry and no event', async () => {
+    const file = await submitted();
+    const before = await prisma.outboxEvent.count();
+
+    await correct(file.id, ' cj 221/2021 ');
+
+    expect(await numberOf(file.id)).toBe('CJ 221/2021');
+    const [entry, ...more] = await corrections(file.id);
+    expect(more).toHaveLength(0);
+    expect(entry).toMatchObject({
+      action: 'update',
+      actorId: ioana.accountId,
+      actorRole: 'admin',
+      field: 'rar_number',
+      garageId,
+      newValue: 'CJ 221/2021',
+      oldValue: null,
+      subjectType: 'verification_file',
+    });
+    expect(await prisma.outboxEvent.count()).toBe(before);
+  });
+
+  it('cuts a long number at 40 characters', async () => {
+    const file = await submitted();
+
+    await correct(file.id, 'B'.repeat(50));
+
+    expect(await numberOf(file.id)).toBe('B'.repeat(40));
+  });
+
+  it('writes nothing when the normalised number is unchanged', async () => {
+    const file = await submitted('B 1234/2019');
+
+    await correct(file.id, 'b 1234/2019 ');
+
+    expect(await corrections(file.id)).toHaveLength(0);
+  });
+
+  it.each([
+    ['shorter than 3 characters', ' b1 '],
+    ['holding a control character', 'B 12\u000734'],
+  ])('refuses a number %s', async (_, rarNumber) => {
+    const file = await submitted('B 1234/2019');
+
+    const answer = await refusal(correct(file.id, rarNumber));
+
+    expect(answer).toMatchObject({
+      body: { code: 'validation_failed' },
+      status: 400,
+    });
+    expect(await numberOf(file.id)).toBe('B 1234/2019');
+  });
+
+  it.each([
+    ['shorter than 3 characters', ' b1 '],
+    ['holding a control character', 'B 12\u000734'],
+  ])(
+    'refuses a submitted number %s, and opens no file',
+    async (_, rarNumber) => {
+      const answer = await refusal(submitted(rarNumber));
+
+      expect(answer).toMatchObject({
+        body: {
+          code: 'validation_failed',
+          errors: [{ code: 'invalid', field: 'rarNumber' }],
+        },
+        status: 400,
+      });
+      expect(await prisma.verificationFile.count({ where: { garageId } })).toBe(
+        0,
+      );
+    },
+  );
+
+  // @traces 204-FR-015
+  it('logs a correction once with the file and the admin, and nothing for the same number', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    try {
+      const file = await submitted('B 1234/2019');
+
+      await correct(file.id, 'b 1234/2019');
+      expect(log).not.toHaveBeenCalled();
+
+      await correct(file.id, 'CJ 221/2021');
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(log.mock.calls[0][0]).toContain(file.id);
+      expect(log.mock.calls[0][0]).toContain(ioana.accountId);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  // @traces 204-FR-015
+  it.each([
+    ['a short number', 'submitted', ' ab ', 400],
+    ['a decided file', 'approved', 'CJ 221/2021', 409],
+    ['a non-admin', 'submitted', 'CJ 221/2021', 404],
+  ] as const)(
+    'logs nothing for a correction refused for %s',
+    async (_, status, number, code) => {
+      const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      try {
+        const file = await fileIn(status);
+        const by = code === 404 ? mihai : undefined;
+
+        expect(await refusal(correct(file.id, number, by))).toMatchObject({
+          status: code,
+        });
+        expect(log).not.toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
+
+  it.each(['approved', 'rejected', 'more_requested'] as const)(
+    'is refused with 409 on a file that is %s',
+    async (status) => {
+      const file = await fileIn(status);
+
+      expect(await refusal(correct(file.id, 'B 1234/2019'))).toEqual({
+        body: {
+          code: 'verification_file_decided',
+          message: 'Dosarul e deja decis',
+        },
+        status: 409,
+      });
+    },
+  );
+
+  it('is corrected while the file is in review', async () => {
+    const file = await fileIn('in_review');
+
+    await correct(file.id, 'B 1234/2019');
+
+    expect(await numberOf(file.id)).toBe('B 1234/2019');
+  });
+
+  it('answers 404 to anyone but an admin, and for an unknown file', async () => {
+    const file = await submitted();
+
+    expect(await refusal(correct(file.id, 'B 1234/2019', mihai))).toMatchObject(
+      { status: 404 },
+    );
+    expect(await refusal(correct(randomUUID(), 'B 1234/2019'))).toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('leaves a recorded RAR check as it is', async () => {
+    const file = await submitted('B 1234/2019');
+    await prisma.verificationCheck.update({
+      data: { detail: 'aceeași firmă și adresă', result: 'ok' },
+      where: { fileId_kind: { fileId: file.id, kind: 'rar' } },
+    });
+
+    await correct(file.id, 'B 9999/2020');
+
+    expect(
+      await prisma.verificationCheck.findUniqueOrThrow({
+        where: { fileId_kind: { fileId: file.id, kind: 'rar' } },
+      }),
+    ).toMatchObject({ detail: 'aceeași firmă și adresă', result: 'ok' });
+  });
+
+  it('serialises two racing corrections: each history entry starts from the other', async () => {
+    const file = await submitted('B 1/2019');
+
+    await Promise.all([
+      correct(file.id, 'B 2/2019'),
+      correct(file.id, 'B 3/2019', dan),
+    ]);
+
+    const [first, second] = await corrections(file.id);
+    expect(second?.oldValue).toEqual(first?.newValue);
+    expect(await numberOf(file.id)).toBe(second?.newValue);
   });
 });

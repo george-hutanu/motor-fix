@@ -1,4 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Allow, IsOptional } from 'class-validator';
+
+import { FieldProblemDto } from './listing-check/listing-check.dto';
 
 // Why drivers do not see a job, in the order the first that applies wins.
 export const PRICE_LIST_REASONS = [
@@ -9,6 +12,21 @@ export const PRICE_LIST_REASONS = [
   'no_top_price',
 ] as const;
 export type PriceListReason = (typeof PRICE_LIST_REASONS)[number];
+
+// A job's own range for one catalogue brand, listed with the brand's name.
+export class BrandRangeItemDto {
+  @ApiProperty({ format: 'uuid' })
+  brandId!: string;
+
+  @ApiProperty({ example: 'BMW' })
+  name!: string;
+
+  @ApiProperty({ type: 'integer' })
+  fromBani!: number;
+
+  @ApiPropertyOptional({ description: 'Absent when not set', type: 'integer' })
+  toBani?: number;
+}
 
 export class PriceListItemDto {
   @ApiProperty({ format: 'uuid' })
@@ -45,6 +63,13 @@ export class PriceListItemDto {
     type: 'integer',
   })
   toBani?: number;
+
+  @ApiProperty({
+    description:
+      "The job's brand ranges, by the brand's popularity rank, then name; empty without one",
+    type: [BrandRangeItemDto],
+  })
+  brandRanges!: BrandRangeItemDto[];
 }
 
 export class PriceListDto {
@@ -54,4 +79,38 @@ export class PriceListDto {
     type: [PriceListItemDto],
   })
   items!: PriceListItemDto[];
+}
+
+// Both ends are judged by the one range check, so a wrong value is a field
+// error rather than a bare 400.
+export class BrandRangeDto {
+  @ApiPropertyOptional({ example: 110_000, type: 'integer' })
+  @IsOptional()
+  @Allow()
+  fromBani?: unknown;
+
+  @ApiPropertyOptional({ example: 170_000, type: 'integer' })
+  @IsOptional()
+  @Allow()
+  toBani?: unknown;
+}
+
+export class BrandRangeSavedDto {
+  @ApiProperty({ format: 'uuid' })
+  jobTypeId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  brandId!: string;
+
+  @ApiProperty({ type: 'integer' })
+  fromBani!: number;
+
+  @ApiProperty({ type: 'integer' })
+  toBani!: number;
+
+  @ApiProperty({
+    description: 'Notes that do not stop the range from being saved',
+    type: [FieldProblemDto],
+  })
+  warnings!: FieldProblemDto[];
 }

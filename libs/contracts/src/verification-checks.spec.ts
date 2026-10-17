@@ -1,6 +1,13 @@
+import 'reflect-metadata';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+
 import {
   checkSummary,
+  coversJob,
   lamp,
+  RecordCheckEvidenceDto,
+  uncoveredJobs,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_CHECK_RESULTS,
   type VerificationCheckKind,
@@ -20,9 +27,11 @@ const checks = (recorded: Recorded = {}) =>
     return { detail: detail ?? null, kind, result };
   });
 
-const both = (recorded: Recorded) => [
-  checkSummary(checks(recorded), 'ro'),
-  checkSummary(checks(recorded), 'en'),
+const LICENCE = ['rar_authorisation'];
+
+const both = (recorded: Recorded, documents: readonly string[] = LICENCE) => [
+  checkSummary(checks(recorded), 'ro', documents),
+  checkSummary(checks(recorded), 'en', documents),
 ];
 
 describe('verification check kinds and results', () => {
@@ -116,6 +125,7 @@ describe('checkSummary', () => {
       checkSummary(
         checks({ company: ['warning', 'inactiv'], rar: ['warning', 'expiră'] }),
         'ro',
+        LICENCE,
       ),
     ).toBe('Autorizație RAR expiră');
   });
@@ -132,8 +142,8 @@ describe('checkSummary', () => {
 
   it('names each kind in both languages', () => {
     const named = (kind: VerificationCheckKind) => [
-      checkSummary(checks({ [kind]: ['warning', 'd'] }), 'ro'),
-      checkSummary(checks({ [kind]: ['warning', 'd'] }), 'en'),
+      checkSummary(checks({ [kind]: ['warning', 'd'] }), 'ro', LICENCE),
+      checkSummary(checks({ [kind]: ['warning', 'd'] }), 'en', LICENCE),
     ];
     expect(VERIFICATION_CHECK_KINDS.map(named)).toEqual([
       ['CUI d', 'Company ID d'],
@@ -149,8 +159,116 @@ describe('checkSummary', () => {
 
   it('counts a kind missing from the list as not run', () => {
     expect(
-      checkSummary([{ detail: null, kind: 'company', result: 'ok' }], 'ro'),
+      checkSummary(
+        [{ detail: null, kind: 'company', result: 'ok' }],
+        'ro',
+        LICENCE,
+      ),
     ).toBe('CUI verificat');
-    expect(checkSummary([], 'en')).toBe('Not checked');
+    expect(checkSummary([], 'en', LICENCE)).toBe('Not checked');
+  });
+});
+
+// @traces 204-FR-010
+describe("checkSummary with the file's documents", () => {
+  it('names the missing licence whatever the rar result, ok included', () => {
+    for (const result of ['ok', 'warning', 'failed', 'not_run'] as const) {
+      expect(both({ rar: [result, 'd'] }, [])).toEqual([
+        'Lipsește autorizația RAR',
+        'RAR licence missing',
+      ]);
+    }
+  });
+
+  it('names the missing licence once, beside a register that is ok', () => {
+    expect(
+      both({ company: ['ok'], rar: ['ok'] }, ['onrc_certificate']),
+    ).toEqual([
+      'CUI verificat · lipsește autorizația RAR',
+      'Company ID checked · RAR licence missing',
+    ]);
+  });
+
+  it('ranks the missing licence as a failed rar, before another failure', () => {
+    expect(both({ documents: ['failed', 'ilizibile'] }, [])).toEqual([
+      'Lipsește autorizația RAR',
+      'RAR licence missing',
+    ]);
+  });
+
+  it('reads the licence verified once rar is ok and the document is there', () => {
+    expect(
+      both({ rar: ['ok'] }, ['onrc_certificate', 'rar_authorisation']),
+    ).toEqual(['Autorizație RAR verificată', 'RAR licence checked']);
+  });
+});
+
+// @traces 204-FR-004
+describe('coversJob and uncoveredJobs', () => {
+  it('covers a job with no mapped activity', () => {
+    expect(coversJob(null, ['brakes'])).toBe(true);
+  });
+
+  it('covers every job with an empty list', () => {
+    expect(coversJob('paintwork', [])).toBe(true);
+  });
+
+  it('covers a job whose activity is ticked, and no other', () => {
+    expect(coversJob('brakes', ['mechanics', 'brakes'])).toBe(true);
+    expect(coversJob('paintwork', ['mechanics', 'brakes'])).toBe(false);
+  });
+
+  it('returns the uncovered jobs in their order', () => {
+    const jobs = [
+      { id: 'a', rarActivity: 'paintwork' },
+      { id: 'b', rarActivity: null },
+      { id: 'c', rarActivity: 'air_con' },
+      { id: 'd', rarActivity: 'brakes' },
+    ];
+    expect(uncoveredJobs(jobs, ['brakes']).map((j) => j.id)).toEqual([
+      'a',
+      'c',
+    ]);
+    expect(uncoveredJobs(jobs, [])).toEqual([]);
+  });
+});
+
+// @traces 204-FR-002
+// @traces 204-FR-011
+describe('RecordCheckEvidenceDto', () => {
+  const errorsFor = (plain: object) =>
+    validate(plainToInstance(RecordCheckEvidenceDto, plain), {
+      forbidNonWhitelisted: true,
+      whitelist: true,
+    });
+
+  it('accepts the three rar ticks, each optional', async () => {
+    expect(
+      await errorsFor({ found: true, sameAddress: false, sameCompany: true }),
+    ).toEqual([]);
+    expect(await errorsFor({ found: false })).toEqual([]);
+    expect(await errorsFor({})).toEqual([]);
+  });
+
+  it('refuses a tick that is not a boolean', async () => {
+    const errors = await errorsFor({ found: 'yes' });
+    expect(errors.map((e) => e.property)).toEqual(['found']);
+  });
+
+  it.each([
+    ['rarNumber', 'B 1234/2019'],
+    ['uncoveredJobTypeIds', ['x']],
+    ['lookedUpOn', '2026-10-17'],
+    ['certificateUploaded', true],
+    ['whatever', 1],
+  ])('refuses the server-owned or unknown field %s', async (field, value) => {
+    const errors = await errorsFor({ [field]: value });
+    expect(errors.map((e) => e.property)).toEqual([field]);
+  });
+
+  it('holds no relationship rule: a lone tick of another kind passes the shape', async () => {
+    expect(
+      await errorsFor({ found: true, name: 'SC Dobre SRL', onrc: true }),
+    ).toEqual([]);
   });
 });

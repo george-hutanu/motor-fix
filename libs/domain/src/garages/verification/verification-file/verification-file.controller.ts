@@ -1,4 +1,5 @@
 import {
+  CorrectRarNumberDto,
   VerificationDecisionDto,
   VerificationFileDto,
 } from '@motor-fix/contracts';
@@ -11,6 +12,7 @@ import {
   Logger,
   Param,
   Post,
+  Put,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -111,6 +113,29 @@ export class VerificationFileController {
   ): Promise<VerificationFileDto> {
     await this.prisma.$transaction((tx) =>
       this.verification.reopen(tx, actor, id),
+    );
+    return this.files.read(id);
+  }
+
+  // An admin sets or corrects the file's RAR number while it is undecided.
+  @Put(':id/rar-number')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: VerificationFileDto })
+  @ApiBadRequestResponse({
+    description:
+      'validation_failed: under 3 characters or holding control characters',
+  })
+  @ApiConflictResponse({
+    description: 'verification_file_decided: the file is decided',
+  })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
+  async correct(
+    @CurrentActor() actor: Actor,
+    @Param('id') id: string,
+    @Body() body: CorrectRarNumberDto,
+  ): Promise<VerificationFileDto> {
+    await this.prisma.$transaction((tx) =>
+      this.verification.correctRarNumber(tx, actor, id, body.rarNumber),
     );
     return this.files.read(id);
   }

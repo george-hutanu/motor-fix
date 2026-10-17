@@ -1165,6 +1165,9 @@ describe('the price list a profile carries', () => {
   it("caches each brand's list in its own field and drops them together", async () => {
     const bmw = await catalogueBrand('BMW');
     const { approved, jobType, price } = await priced();
+    await prisma.garageBrand.create({
+      data: { brandId: bmw.id, garageId: approved.id, stance: 'works_on' },
+    });
     const brakes = await jobType('Frâne față', 'Front brakes');
     const row = await price(brakes.id, 0, {
       fromBani: 89_000,

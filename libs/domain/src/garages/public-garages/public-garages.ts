@@ -64,7 +64,8 @@ const inContextOf = (
 
 // What the profile shows of the price list: the jobs a request can ask for,
 // the labour rate when both ends are set, and each public job's range for the
-// brand in context, listed as the garage ticked them for it.
+// brand in context, its own only while the garage takes it, listed as the
+// garage ticked them for it.
 function priceListOf(
   brands: {
     brand: { id: string };
@@ -97,7 +98,7 @@ function priceListOf(
       jobs,
       brandId === undefined
         ? undefined
-        : { id: brandId, refused: held?.stance === 'does_not_take', ticks },
+        : { id: brandId, refused: held?.stance !== 'works_on', ticks },
     ),
   };
 }

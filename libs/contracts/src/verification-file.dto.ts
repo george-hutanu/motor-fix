@@ -7,6 +7,7 @@ import {
   IsString,
   Length,
   Matches,
+  MaxLength,
   ValidateIf,
 } from 'class-validator';
 
@@ -145,6 +146,25 @@ export class VerificationFileStateDto {
 
   @ApiProperty({ nullable: true, type: String })
   declaredByName!: string | null;
+
+  @ApiProperty({
+    description: "The garage's RAR authorisation number, normalised",
+    nullable: true,
+    type: String,
+  })
+  rarNumber!: string | null;
+}
+
+// An admin's correction of the file's RAR number. The service normalises it
+// and refuses one too short or holding control characters.
+export class CorrectRarNumberDto {
+  @ApiProperty({
+    description: 'Trimmed, upper-cased and cut at 40; at least 3 characters',
+    maxLength: 200,
+  })
+  @IsString()
+  @MaxLength(200)
+  rarNumber!: string;
 }
 
 export class VerificationFileGarageDto {
@@ -199,6 +219,21 @@ export class VerificationFileActivityDto {
 
   @ApiProperty()
   nameEn!: string;
+}
+
+// A job of the garage's price list, with the RAR activity it falls under.
+export class VerificationFileJobDto {
+  @ApiProperty({ format: 'uuid' })
+  jobTypeId!: string;
+
+  @ApiProperty()
+  nameRo!: string;
+
+  @ApiProperty()
+  nameEn!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  rarActivity!: string | null;
 }
 
 export class VerificationFileDocumentDto {
@@ -274,6 +309,18 @@ export class VerificationFileDto {
     type: [VerificationFileActivityDto],
   })
   activities!: VerificationFileActivityDto[];
+
+  @ApiProperty({
+    description: 'The whole RAR activity catalogue, by code',
+    type: [VerificationFileActivityDto],
+  })
+  catalogue!: VerificationFileActivityDto[];
+
+  @ApiProperty({
+    description: "The garage's price-list jobs, once each, in the list's order",
+    type: [VerificationFileJobDto],
+  })
+  jobs!: VerificationFileJobDto[];
 
   @ApiProperty({
     description: 'One per kind, in their order',

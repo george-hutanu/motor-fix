@@ -19,6 +19,11 @@ export interface VerificationCheckEvidenceDto {
   certificateUploaded?: boolean;
 
   /**
+   * The file's RAR number is in the public register; rar only
+   */
+  found?: boolean;
+
+  /**
    * The day of the look-up, in Bucharest
    */
   lookedUpOn?: string;
@@ -32,4 +37,24 @@ export interface VerificationCheckEvidenceDto {
    * 4520 in the ONRC record; caen only
    */
   onrc?: boolean;
+
+  /**
+   * The file's RAR number at the save; rar only
+   */
+  rarNumber?: string | null;
+
+  /**
+   * The register shows the workshop address, or the registered seat for a mobile mechanic; rar only
+   */
+  sameAddress?: boolean;
+
+  /**
+   * The register names the same company; rar only
+   */
+  sameCompany?: boolean;
+
+  /**
+   * The price-list job types the recorded activities leave uncovered; activities only
+   */
+  uncoveredJobTypeIds?: Array<string>;
 }

@@ -348,6 +348,8 @@ model VerificationFile {
   requestedItems String[]                  @default([]) @map("requested_items")
   declaredAt     DateTime?                 @map("declared_at") @db.Timestamptz(3)
   declaredByName String?                   @map("declared_by_name")
+  // The garage's RAR authorisation number, normalised; an admin corrects it.
+  rarNumber      String?                   @map("rar_number") @db.VarChar(40)
   createdAt      DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
   // The latest sending: set at submitting, reset at a resending or a
   // reopening. The admins' queue waits from it.

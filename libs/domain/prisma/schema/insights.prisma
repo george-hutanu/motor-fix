@@ -18,7 +18,7 @@ model PlatformDaily {
   bookingsConfirmed        Int?     @map("bookings_confirmed")
   jobsDone                 Int?     @map("jobs_done")
   reviewsPosted            Int?     @map("reviews_posted")
-  writtenAt               DateTime @map("written_at") @db.Timestamptz(3)
+  writtenAt                DateTime @map("written_at") @db.Timestamptz(3)
 
   @@id([day, city])
   @@map("platform_daily")
