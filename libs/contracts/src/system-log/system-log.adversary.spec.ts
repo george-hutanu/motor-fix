@@ -11,7 +11,7 @@ function errorsOf(query: Record<string, unknown>) {
 
 const FROM = '2026-10-16T21:00:00.000Z';
 
-// @traces 298-FR-001
+// @traces 298-FR-001 299-FR-003
 describe('SystemLogQueryDto under hostile input', () => {
   it.each([
     ['a day that does not exist', '2026-02-30T00:00:00Z'],
@@ -72,10 +72,10 @@ describe('SystemLogQueryDto under hostile input', () => {
     expect(errorsOf({ from: '2026-10-16T16:00:00.123456-05:00' })).toEqual([]);
   });
 
-  it('takes the boundary limits 1 and 20 given as numbers', () => {
+  it('takes the boundary limits 1 and 50 given as numbers', () => {
     expect(errorsOf({ from: FROM, limit: 1 })).toEqual([]);
-    expect(errorsOf({ from: FROM, limit: 20 })).toEqual([]);
-    expect(errorsOf({ from: FROM, limit: 21 })).not.toEqual([]);
+    expect(errorsOf({ from: FROM, limit: 50 })).toEqual([]);
+    expect(errorsOf({ from: FROM, limit: 51 })).not.toEqual([]);
     expect(errorsOf({ from: FROM, limit: 0 })).not.toEqual([]);
   });
 });
