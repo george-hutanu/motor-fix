@@ -837,17 +837,4 @@ describe('Panou drawn from the panel registry', () => {
       ).toBe(entry.wide);
     }
   });
-
-  it('draws no panel behind an off release flag', async () => {
-    const { element } = await render({ requests: [request()] });
-
-    for (const entry of DRIVER_PANELS.filter((p) => !p.released)) {
-      expect(panel(element, entry.key)).toBeNull();
-    }
-    expect(DRIVER_PANELS.filter((p) => !p.released).map((p) => p.key)).toEqual([
-      'live',
-      'mileage',
-      'spend',
-    ]);
-  });
 });

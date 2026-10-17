@@ -74,7 +74,7 @@ describe('a car’s lines, most urgent first', () => {
       carLines(car({ itpUntil: '2026-11-13', nextServiceKm: 152000 }), NOW),
     ).toMatchObject([
       { days: 36, kind: 'itp', state: 'amber' },
-      { days: 116, kind: 'oil', kmLeft: 3800, state: 'green' },
+      { days: 116, kind: 'oil', state: 'green' },
       { kind: 'rca', state: 'grey' },
       { kind: 'rovinieta', state: 'grey' },
     ]);

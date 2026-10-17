@@ -10,12 +10,11 @@ export interface DueDateStatus {
 
 type LineKind = 'itp' | 'rca' | 'rovinieta' | 'oil';
 
-export interface CarLine {
+interface CarLine {
   kind: LineKind;
   state: LampState;
   days: number | null;
   expiry: string | null;
-  kmLeft?: number;
 }
 
 // Until the car's own readings exist, it is taken to run 1,000 km a month.
@@ -49,7 +48,8 @@ export function dueDateStatus(expiry: string | null, now: Date): DueDateStatus {
 
 export function oilStatus(nextServiceKm: number, odometerKm: number) {
   const kmLeft = nextServiceKm - odometerKm;
-  const days = Math.round(kmLeft / KM_PER_DAY);
+  // `|| 0` turns the -0 a few km overdue rounds to into 0.
+  const days = Math.round(kmLeft / KM_PER_DAY) || 0;
   return { days, kmLeft, state: lampFor(days) };
 }
 
@@ -77,12 +77,11 @@ export function carLines(car: Dated, now: Date): CarLine[] {
     const { days, state } = dueDateStatus(expiry, now);
     return { days, expiry, kind, state };
   });
-  if (car.nextServiceKm !== null)
-    lines.push({
-      expiry: null,
-      kind: 'oil',
-      ...oilStatus(car.nextServiceKm, car.odometerKm),
-    });
+  // An answer cached before the field existed has no nextServiceKm at all.
+  if (car.nextServiceKm != null) {
+    const { days, state } = oilStatus(car.nextServiceKm, car.odometerKm);
+    lines.push({ days, expiry: null, kind: 'oil', state });
+  }
   return lines.sort(compareLines);
 }
 

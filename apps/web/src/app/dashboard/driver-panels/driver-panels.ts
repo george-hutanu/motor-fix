@@ -1,4 +1,4 @@
-export type PanelKey =
+type PanelKey =
   | 'active_request'
   | 'live'
   | 'quotes'
@@ -8,7 +8,7 @@ export type PanelKey =
   | 'history'
   | 'saved';
 
-export interface PanelEntry {
+interface PanelEntry {
   key: PanelKey;
   released: boolean;
   wide: boolean;
