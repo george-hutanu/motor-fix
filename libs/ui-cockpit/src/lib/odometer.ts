@@ -107,7 +107,9 @@ export class Odometer {
     if (cells !== undefined) {
       const from = toWholeLei(this.from());
       return typeof from === 'number' && Number.isFinite(from)
-        ? String(Math.max(0, from / 100)).padStart(cells, '0')
+        ? Math.max(0, from / 100)
+            .toLocaleString('en-US', { useGrouping: false })
+            .padStart(cells, '0')
         : formatLei(from, this.i18n.language());
     }
     const language = this.i18n.language();
