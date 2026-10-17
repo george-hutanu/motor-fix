@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { SpanKind } from '@opentelemetry/api';
+import type { DataPoint, Histogram } from '@opentelemetry/sdk-metrics';
 import express from 'express';
 
 import { setRoute } from './route-label';
@@ -41,6 +42,12 @@ beforeAll(async () => {
   app.get('/health/ready', (_req, res) => {
     res.json({ status: 'ok' });
   });
+  app.get('/api/v1/live', (_req, res) => {
+    res.type('text/event-stream').send('');
+  });
+  app.get('/api/v1/live/public', (_req, res) => {
+    res.type('text/event-stream').send('');
+  });
   app.get('/probe', async (_req, res) => {
     await fetch(`${base}/health/ready`);
     res.json({ status: 'ok' });
@@ -60,6 +67,17 @@ beforeEach(async () => {
   await started?.flush();
   memory.spanExporter.reset();
 });
+
+async function requestsRecorded() {
+  const { resourceMetrics } = await memory.metricReader.collect();
+  return resourceMetrics.scopeMetrics
+    .flatMap((scope) => scope.metrics)
+    .filter(
+      (metric) => metric.descriptor.name === 'http.server.request.duration',
+    )
+    .flatMap((metric) => metric.dataPoints as DataPoint<Histogram>[])
+    .reduce((total, point) => total + point.value.count, 0);
+}
 
 async function spans(kind: SpanKind) {
   await started?.flush();
@@ -139,5 +157,38 @@ describe('startTelemetry for the web server', () => {
     expect(
       duration?.dataPoints.map((point) => point.attributes['http.route']),
     ).toContain('/:lang');
+  });
+});
+
+// @traces 1345-FR-001
+describe('the web runtime instrumentation', () => {
+  it('samples the event-loop delay at the library default of 10 ms', () => {
+    const runtime = startedInstrumentations().find(
+      (instrumentation) =>
+        instrumentation.instrumentationName ===
+        '@opentelemetry/instrumentation-runtime-node',
+    );
+
+    expect(runtime?.getConfig()).toMatchObject({ monitoringPrecision: 10 });
+  });
+});
+
+// @traces 1345-FR-008
+describe('the web request-duration histogram', () => {
+  it('holds no sample for the two proxied event streams, whatever the query', async () => {
+    const before = await requestsRecorded();
+
+    await (await fetch(`${base}/api/v1/live`)).text();
+    await (await fetch(`${base}/api/v1/live/public?brand=dacia`)).text();
+
+    expect(await requestsRecorded()).toBe(before);
+  });
+
+  it('still records a page request', async () => {
+    const before = await requestsRecorded();
+
+    await (await fetch(`${base}/ro/garages`)).text();
+
+    expect(await requestsRecorded()).toBe(before + 1);
   });
 });
