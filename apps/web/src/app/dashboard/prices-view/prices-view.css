@@ -91,8 +91,12 @@ h2 {
 .row[data-public="false"] .state {
   color: var(--mf-amber-ink);
 }
+/* Stacked on a phone: the state, then the price under it (FR-010). */
+.meta {
+  flex-direction: column;
+  align-items: flex-start;
+}
 .price {
-  margin-inline-start: auto;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
@@ -107,6 +111,13 @@ h2 {
   }
   .brands {
     grid-column: 1 / -1;
+  }
+  .meta {
+    flex-direction: row;
+    align-items: center;
+  }
+  .price {
+    margin-inline-start: auto;
   }
   .muted,
   .brands {
