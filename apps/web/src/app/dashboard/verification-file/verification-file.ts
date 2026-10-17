@@ -218,9 +218,10 @@ export class VerificationFile {
     const { entries, total } = value.timeline;
     const more = total - entries.length;
     return {
-      lines: entries
-        .map((entry) => ({ id: entry.id, text: this.line(entry, value) }))
-        .filter((line): line is { id: string; text: string } => !!line.text),
+      lines: entries.map((entry) => ({
+        id: entry.id,
+        text: this.line(entry, value),
+      })),
       more:
         more > 0
           ? this.t('history.more', {

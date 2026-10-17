@@ -588,7 +588,7 @@ describe('the documents', () => {
     expect(text(onrc)).toContain(
       'Certificat constatator ONRC · emis acum 6 zile',
     );
-    // Its age or its pages, never both (FR-005).
+    // Its age or its pages, never both.
     expect(text(onrc)).not.toContain('pagini');
     expect(buttons(onrc)).toEqual(['Deschide pagina 1', 'Deschide pagina 2']);
     const rar = row(host, 'documents', 'rar_authorisation');
@@ -1124,6 +1124,20 @@ describe('the history', () => {
       expect.stringMatching(/^Respins de Ioana, azi/),
       expect.stringMatching(/^Completări cerute de Ioana, azi/),
       expect.stringMatching(/^Retrimis de Andrei, azi/),
+    ]);
+  });
+
+  it('gives a status change it has no words for its one plain line', async () => {
+    const odd = entry({ field: 'status', newValue: 'archived' });
+    const ro = await open(history([odd]));
+    expect(lines(ro)).toEqual([
+      expect.stringMatching(/^Modificat de Ioana, azi, \d\d:\d\d$/),
+    ]);
+    TestBed.resetTestingModule();
+
+    const en = await open(history([odd]), 'en');
+    expect(lines(en)).toEqual([
+      expect.stringMatching(/^Changed by Ioana, today, \d\d:\d\d$/),
     ]);
   });
 
