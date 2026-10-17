@@ -28,16 +28,6 @@ describe('the kinds and sources an entry may name', () => {
       'storage',
     ]);
   });
-
-  it.each([
-    ['an unknown kind', 'garage_updated', 'api'],
-    ['an unknown source', 'deploy', 'billing'],
-    ['an empty kind', '', 'api'],
-  ])('refuse %s', (_, kind, source) => {
-    expect(
-      entryOf(kind as never, source as never, { version: 'a1b2c3d' }, at),
-    ).toBeNull();
-  });
 });
 
 // @traces 297-FR-003

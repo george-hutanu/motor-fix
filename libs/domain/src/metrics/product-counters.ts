@@ -2,6 +2,7 @@ import type { DocumentKind, SuspensionCause } from '@motor-fix/contracts';
 import { type Counter, metrics } from '@opentelemetry/api';
 
 import type { Kind } from '../admin/system-log/entry';
+import type { Outcome } from '../admin/system-log/system-log';
 
 // The product's key numbers, one counter each; a process that never starts
 // telemetry counts into the API's no-op meter and pays nothing. Every label comes from a
@@ -161,10 +162,7 @@ export function countAccountChange(field: AccountChangeField) {
 }
 
 // Every write to the system status log, by kind and what became of it.
-export function countSystemLogEntry(
-  kind: Kind,
-  outcome: 'written' | 'grouped' | 'dropped',
-) {
+export function countSystemLogEntry(kind: Kind, outcome: Outcome) {
   counter(
     'motorfix_system_log_entries_total',
     'System status log writes, by kind and outcome',

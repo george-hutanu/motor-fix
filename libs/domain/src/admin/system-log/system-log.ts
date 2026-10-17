@@ -7,6 +7,7 @@ import {
   KINDS,
   type Kind,
   minuteOf,
+  SOURCES,
   type Source,
 } from './entry';
 import { audienceOf } from '../../events/audience';
@@ -25,8 +26,10 @@ const logger = new Logger('SystemLog');
 const ADMINS = audienceOf({ adminOnly: true, type: 'platform' });
 let ports: Ports | null = null;
 
-const known = (kind: string): kind is Kind =>
-  (KINDS as readonly string[]).includes(kind);
+const known = (kind: unknown): kind is Kind =>
+  (KINDS as readonly unknown[]).includes(kind);
+const listed = (source: unknown): source is Source =>
+  (SOURCES as readonly unknown[]).includes(source);
 
 // One entry per kind, source, fingerprint and minute: a repeat in the same
 // minute only counts one more, even when many arrive at once. The entry is
@@ -40,8 +43,7 @@ async function store<K extends Kind>(
   at: Date,
 ): Promise<Outcome> {
   const masked = scrubDeep(context);
-  const entry = entryOf(kind, source, masked, at);
-  if (!entry) return 'dropped';
+  const entry = entryOf(kind, source, masked as Contexts[K], at);
   const [row] = await prisma.$queryRaw<{ id: string; inserted: boolean }[]>`
     INSERT INTO system_log_entry
       (id, at, minute, kind, source, severity, fingerprint, message, context)
@@ -84,13 +86,15 @@ export const systemLog = {
     context: Contexts[K],
     at: Date = new Date(),
   ): Promise<Outcome> {
+    // A kind or source outside the log's lists is never stored or counted.
+    if (!known(kind) || !listed(source)) return 'dropped';
     const outcome = await (ports
       ? store(ports, kind, source, context, at).catch(() => {
           logger.error(`System log entry dropped: ${kind} from ${source}`);
           return 'dropped' as const;
         })
       : Promise.resolve('dropped' as const));
-    if (known(kind)) countSystemLogEntry(kind, outcome);
+    countSystemLogEntry(kind, outcome);
     return outcome;
   },
 };

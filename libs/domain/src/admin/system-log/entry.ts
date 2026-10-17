@@ -26,7 +26,7 @@ export const SOURCES = [
 ] as const;
 export type Source = (typeof SOURCES)[number];
 
-export type Severity = 'info' | 'warning' | 'error';
+type Severity = 'info' | 'warning' | 'error';
 
 // What each kind carries: ids, codes and figures, never free text.
 export interface Contexts {
@@ -154,20 +154,14 @@ const DERIVE: { [K in Kind]: Derive<K> } = {
   }),
 };
 
-const isKind = (value: string): value is Kind =>
-  (KINDS as readonly string[]).includes(value);
-const isSource = (value: string): value is Source =>
-  (SOURCES as readonly string[]).includes(value);
-
-// Null for a kind or source outside the log's lists: it is never stored.
+// The kind and source are checked against the lists by the writer, once.
 export function entryOf<K extends Kind>(
   kind: K,
   source: Source,
-  context: [K] extends [never] ? unknown : Contexts[K],
+  context: Contexts[K],
   at: Date,
-): Entry | null {
-  if (!isKind(kind) || !isSource(source)) return null;
-  return (DERIVE[kind] as Derive<K>)(context as Contexts[K], source, at);
+): Entry {
+  return (DERIVE[kind] as Derive<K>)(context, source, at);
 }
 
 export function minuteOf(at: Date): Date {

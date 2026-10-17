@@ -116,11 +116,7 @@ export class ProblemFilter implements ExceptionFilter {
 // the path itself, which may hold ids; `unknown` when no route matched, or
 // when the error came from outside an HTTP request.
 function routeOf(host: ArgumentsHost) {
-  const http = host.switchToHttp();
-  const req =
-    typeof http.getRequest === 'function'
-      ? http.getRequest<Partial<Request> | undefined>()
-      : undefined;
+  const req = host.switchToHttp().getRequest<Partial<Request> | undefined>();
   const path = (req?.route as { path?: unknown } | undefined)?.path;
   return {
     method: typeof req?.method === 'string' ? req.method : 'unknown',
