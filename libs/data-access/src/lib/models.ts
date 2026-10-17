@@ -199,7 +199,6 @@ export type { UpdateNotificationGroupDto } from './models/update-notification-gr
 export type { UpdateNotificationPreferenceDto } from './models/update-notification-preference-dto';
 export type { UpdateNotificationPreferencesDto } from './models/update-notification-preferences-dto';
 export type { VerificationActorDto } from './models/verification-actor-dto';
-export type { VerificationCheckDto } from './models/verification-check-dto';
 export type { VerificationCheckEvidenceDto } from './models/verification-check-evidence-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
 export type { VerificationFileActivityDto } from './models/verification-file-activity-dto';

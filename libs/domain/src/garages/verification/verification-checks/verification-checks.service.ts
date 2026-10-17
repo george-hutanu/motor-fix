@@ -17,6 +17,7 @@ import {
 import { isUUID } from 'class-validator';
 
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
+import { firstName } from '../../../audit/audit.service';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { refusal } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
@@ -323,6 +324,7 @@ export class VerificationChecksService {
       check: {
         ...check,
         evidence: check.evidence as VerificationCheckEvidenceDto | null,
+        recorder: await this.recorder(tx, actor.accountId),
       },
       rarActivities: garage.rarActivities,
       summary: {
@@ -330,6 +332,15 @@ export class VerificationChecksService {
         ro: checkSummary(checks, 'ro'),
       },
     };
+  }
+
+  // Who saved it, as the file names a recorder, so the drawer shows it at once.
+  private async recorder(tx: Prisma.TransactionClient, id: string) {
+    const account = await tx.account.findUnique({
+      select: { name: true },
+      where: { id },
+    });
+    return { id, name: account ? firstName(account.name) : '' };
   }
 
   private async file(tx: Prisma.TransactionClient, id: string) {

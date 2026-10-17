@@ -171,6 +171,11 @@ describe('recording a check', () => {
     });
     expect(rar.recordedAt?.getTime()).toBeGreaterThanOrEqual(before);
     expect(answer.check).toMatchObject({ detail, id: rar.id, result: 'ok' });
+    // The saving drawer shows who and when from the answer, before any re-read.
+    expect(answer.check.recorder).toEqual({
+      id: ioana.accountId,
+      name: 'Ioana',
+    });
 
     const [entry, ...more] = await entries();
     expect(more).toHaveLength(0);

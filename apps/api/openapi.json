@@ -11843,7 +11843,25 @@
           }
         }
       },
-      "VerificationCheckDto": {
+      "VerificationActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Null for the system",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "VerificationFileCheckDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -11903,6 +11921,16 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "recorder": {
+            "description": "Null while never recorded; MotorFix for an automatic record",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
           }
         },
         "required": [
@@ -11914,14 +11942,15 @@
           "detail",
           "evidence",
           "recordedBy",
-          "recordedAt"
+          "recordedAt",
+          "recorder"
         ]
       },
       "VerificationCheckRecordedDto": {
         "type": "object",
         "properties": {
           "check": {
-            "$ref": "#/components/schemas/VerificationCheckDto"
+            "$ref": "#/components/schemas/VerificationFileCheckDto"
           },
           "summary": {
             "$ref": "#/components/schemas/CheckSummaryDto"
@@ -11938,24 +11967,6 @@
           "check",
           "summary",
           "rarActivities"
-        ]
-      },
-      "VerificationActorDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Null for the system",
-            "format": "uuid",
-            "nullable": true
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name"
         ]
       },
       "VerificationFileStateDto": {
@@ -12132,91 +12143,6 @@
           "phone",
           "brands",
           "photos"
-        ]
-      },
-      "VerificationFileCheckDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "fileId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "company",
-              "caen",
-              "rar",
-              "activities",
-              "representative",
-              "address",
-              "photos",
-              "documents"
-            ]
-          },
-          "automatic": {
-            "type": "boolean",
-            "description": "False until automatic look-ups exist"
-          },
-          "result": {
-            "type": "string",
-            "enum": [
-              "not_run",
-              "ok",
-              "warning",
-              "failed"
-            ]
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "evidence": {
-            "description": "What the admin found, for company and caen; null otherwise",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationCheckEvidenceDto"
-              }
-            ]
-          },
-          "recordedBy": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "recordedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "recorder": {
-            "description": "Null while never recorded; MotorFix for an automatic record",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VerificationActorDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "fileId",
-          "kind",
-          "automatic",
-          "result",
-          "detail",
-          "evidence",
-          "recordedBy",
-          "recordedAt",
-          "recorder"
         ]
       },
       "VerificationFileActivityDto": {
