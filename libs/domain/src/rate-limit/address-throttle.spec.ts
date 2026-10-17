@@ -99,3 +99,37 @@ describe('a limit per address over a window', () => {
     expect(keys).toEqual([]);
   });
 });
+
+// @traces 280-FR-013
+describe('a limit per key over a window', () => {
+  beforeEach(() =>
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+  );
+  afterEach(() => jest.restoreAllMocks());
+
+  it('counts a key as given, under the prefix by its digest', async () => {
+    const { expiries, keys, redis } = countingRedis(30);
+    const throttle = new AddressThrottle(redis, rule);
+    const id = 'f2b1c0de-0000-4000-8000-000000000001';
+
+    for (let i = 0; i < rule.limit; i++) {
+      expect(await throttle.takeKey(id)).toBeNull();
+    }
+    expect(await throttle.takeKey(id)).toBe(30);
+
+    const digest = createHash('sha256').update(id).digest('hex');
+    expect(keys[0]).toBe(`places:lookup:${digest}`);
+    expect(expiries[0]).toEqual([keys[0], 60, 'NX']);
+  });
+
+  it('admits every key when Redis does not answer', async () => {
+    const down = {
+      multi: () => {
+        throw new Error('Redis did not answer');
+      },
+    } as unknown as Redis;
+
+    expect(await new AddressThrottle(down, rule).takeKey('a')).toBeNull();
+    expect(Logger.prototype.warn).toHaveBeenCalled();
+  });
+});

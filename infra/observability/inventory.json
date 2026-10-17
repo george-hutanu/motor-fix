@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 128,
+    "count": 130,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1175,6 +1175,51 @@
       "alerts": "none",
       "reason": "counts each request the web origin refused with 403 because X-Origin-Secret was missing or wrong (someone reaching Railway's address past the CDN), with one warn log line per refusal; no alert: refusals are the lock-down working, and a CDN that stopped sending the secret shows as the web-down and error-rate alerts at the edge",
       "story": "ST-430"
+    },
+    {
+      "kind": "queue",
+      "name": "support-messages",
+      "source": "libs/domain/src/support/delivery/delivery.consumer.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed",
+        "support-message-unsent"
+      ],
+      "reason": "carries one job per stored contact message (the support e-mail with a reply-to, then the acknowledgement); counted by motorfix_support_emails_total with one Support log line per e-mail naming the reference; the unsent gauge motorfix_support_messages_unsent, read every 60 s, raises support-message-unsent after an hour above 0 (SUPPORT_EMAIL unset or sending failing)",
+      "story": "ST-280"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_support_messages_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts contact-form sends by outcome (stored, refused_limit, trap, invalid) with no identifiers and one Support log line per stored message naming its reference; a maintenance refusal counts in motorfix_maintenance_refusals_total; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-280"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_support_emails_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "support-message-unsent"
+      ],
+      "reason": "counts the support and acknowledgement e-mails by kind and outcome (sent, blocked, failed, unconfigured); a message left unsent is caught by the gauge's support-message-unsent alert, not by this count",
+      "story": "ST-280"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_support_messages_unsent",
+      "source": "libs/domain/src/support/delivery/gauge.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "support-message-unsent"
+      ],
+      "reason": "a gauge of stored messages whose support e-mail is pending or waiting for SUPPORT_EMAIL, read from PostgreSQL every 60 s; above 0 for an hour fires support-message-unsent",
+      "story": "ST-280"
     }
   ]
 }

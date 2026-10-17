@@ -30,6 +30,7 @@ features:
   - 297-system-status-log
   - 1345-staging-observability
   - 1347-outage-contact-point
+  - 280-contact-motorfix
 ---
 
 # Capability: Observability
@@ -772,9 +773,9 @@ _From 1345-staging-observability._
 
 _From 1345-staging-observability._
 
-### 1345-FR-012 — When telemetry is on, the api and the worker MUST, once their meter provider is registered, initialise every product counter they emit at 0 for each label combination its code can emit (the `motorfix_*_total` counters of `libs/domain/src/metrics/product-counters.ts`, `quotes.metrics.ts` and `garage-search.metrics.ts`, each label from its closed set: an `outcome` from its union, a decline `reason` from `DECLINE_REASON_CODES`, an e-mail `template` per registered template), each process only the counters its own modules record, within the caps `product-counters.spec.ts` asserts (under 50 series per counter, under 100 per instance), so each panel shows 0 instead of "No data"; a later action adds 1 to the matching series. With telemetry off the initialisation is a no-op (879-FR-011). A test with a metrics reader asserts the 0 data points and that the counts still increment.
+### 280-FR-023 — Restates `1345-FR-012` with a larger instance cap: when telemetry is on, the api and the worker MUST, once their meter provider is registered, initialise every product counter they emit at 0 for each label combination its code can emit (the `motorfix_*_total` counters of `libs/domain/src/metrics/product-counters.ts`, `quotes.metrics.ts` and `garage-search.metrics.ts`, each label from its closed set: an `outcome` from its union, a decline `reason` from `DECLINE_REASON_CODES`, an e-mail `template` per registered template), each process only the counters its own modules record (the API's `motorfix_support_messages_total{outcome}` and the worker's `motorfix_support_emails_total{kind,outcome}` included), within the caps `product-counters.spec.ts` asserts (under 50 series per counter, under 150 per instance), so each panel shows 0 instead of "No data"; a later action adds 1 to the matching series. With telemetry off the initialisation is a no-op (879-FR-011). A test with a metrics reader asserts the 0 data points and that the counts still increment.
 
-_From 1345-staging-observability._
+_From 280-contact-motorfix._
 
 ### 1345-FR-015 — Every Error % panel (the `motorfix-api`, `motorfix-web`, `motorfix-worker` and `motorfix-mcp` dashboards and the four service rows of `motorfix-overview`) MUST show 0 when no failure was counted in a window that holds requests (a 5xx response; for the overview's worker row, which reads jobs, a failed job, `motorfix_jobs_total{outcome="failed"}`) and the share otherwise; the numerator is `(sum(rate(…)) or vector(0))` over the label-free sums the panels use today, and a window with no request (or job) at all stays "No data". `scripts/observability-config.spec.ts` asserts the expressions.
 
@@ -806,3 +807,5 @@ _From 1345-staging-observability._
 - `880-FR-014` — superseded by `1347-FR-002` (2026-10-17)
 - `251-FR-003` — superseded by `1347-FR-003` (2026-10-17)
 - `251-FR-004` — superseded by `1347-FR-004` (2026-10-17)
+
+- `1345-FR-012` — superseded by `280-FR-023` (2026-10-17)

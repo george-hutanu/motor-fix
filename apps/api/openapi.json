@@ -3587,6 +3587,67 @@
         ]
       }
     },
+    "/api/v1/support/contact": {
+      "get": {
+        "operationId": "SupportContactController_contact",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportContactDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/support/messages": {
+      "post": {
+        "operationId": "SupportMessagesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSupportMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportMessageCreatedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "429": {
+            "description": "too_many_messages"
+          },
+          "503": {
+            "description": "maintenance"
+          }
+        },
+        "tags": [
+          "support"
+        ]
+      }
+    },
     "/api/v1/admin/demand": {
       "get": {
         "operationId": "DemandController_demand",
@@ -10355,6 +10416,84 @@
             ]
           }
         }
+      },
+      "SupportContactDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "CreateSupportMessageDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 254
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "request_or_booking",
+              "account",
+              "reviews",
+              "listing",
+              "other"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 2000,
+            "minLength": 20
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "subjectRef": {
+            "type": "string",
+            "description": "A request’s or a booking’s id",
+            "maxLength": 40
+          },
+          "website": {
+            "type": "string",
+            "description": "Leave empty"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "topic",
+          "message",
+          "language"
+        ]
+      },
+      "SupportMessageCreatedDto": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "example": "MF-2026-000042"
+          }
+        },
+        "required": [
+          "reference"
+        ]
       },
       "AdminDemandBrandDto": {
         "type": "object",

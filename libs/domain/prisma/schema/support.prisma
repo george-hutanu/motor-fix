@@ -1,0 +1,64 @@
+// support module models: the messages sent through the contact form.
+
+enum SupportSenderRole {
+  visitor
+  driver
+  garage
+  admin
+
+  @@map("support_sender_role")
+}
+
+enum SupportTopic {
+  request_or_booking
+  account
+  reviews
+  listing
+  other
+
+  @@map("support_topic")
+}
+
+// Where each of a message's two e-mails stands. `unconfigured`: no support
+// address was set when the worker tried; the requeue sends it once one is.
+enum SupportEmailStatus {
+  pending
+  sent
+  blocked
+  unconfigured
+
+  @@map("support_email_status")
+}
+
+// One message to MotorFix, stored before any e-mail is tried. The lengths and
+// the language are CHECKs in the migration as well.
+model SupportMessage {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reference             String             @unique
+  // The signed-in sender; kept as null once the account is gone.
+  accountId             String?            @map("account_id") @db.Uuid
+  role                  SupportSenderRole
+  name                  String
+  email                 String
+  topic                 SupportTopic
+  message               String
+  subjectRef            String?            @map("subject_ref")
+  language              String
+  supportEmailStatus    SupportEmailStatus @default(pending) @map("support_email_status")
+  supportEmailAt        DateTime?          @map("support_email_at") @db.Timestamptz(3)
+  acknowledgementStatus SupportEmailStatus @default(pending) @map("acknowledgement_status")
+  acknowledgementAt     DateTime?          @map("acknowledgement_at") @db.Timestamptz(3)
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  account               Account?           @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([accountId])
+  @@map("support_message")
+}
+
+// The last reference number given in a Bucharest calendar year.
+model SupportReference {
+  year Int @id
+  last Int
+
+  @@map("support_reference")
+}

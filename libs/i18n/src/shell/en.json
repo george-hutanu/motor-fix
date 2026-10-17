@@ -26,6 +26,34 @@
     "table": "View as table",
     "value": "Value"
   },
+  "contact": {
+    "choose": "Choose a topic",
+    "close": "Close",
+    "closeLabel": "Close the form",
+    "count": "{typed} / {max}",
+    "email": "E‑mail address",
+    "message": "Your message",
+    "name": "Your name",
+    "problem": {
+      "offline": "You are offline. The message was not sent.",
+      "too_many_messages": "Too many messages. Try again in an hour."
+    },
+    "reference": "Message number: {reference}",
+    "retry": "Try again",
+    "rule": "Between 20 and 2000 characters.",
+    "send": "Send the message",
+    "sent": "We have your message. We will answer by e‑mail.",
+    "title": "Help and contact",
+    "topic": "What is it about?",
+    "topics": {
+      "account": "My account",
+      "listing": "Listing my garage",
+      "other": "Something else",
+      "request_or_booking": "Request or booking",
+      "reviews": "Reviews"
+    },
+    "trap": "Do not fill in this field"
+  },
   "emailBanner": {
     "failed": "We could not send the link. Try again.",
     "resend": "Send again",
@@ -132,6 +160,7 @@
         "settings": "Settings",
         "users": "Users"
       },
+      "contact": "Help and contact",
       "dashboard": "Dashboard",
       "driver": {
         "assistant": "AI assistant",
@@ -186,6 +215,7 @@
       "assistant": "Assistant",
       "brands": "Brands",
       "cars": "Cars",
+      "contact": "Help and contact",
       "dashboard": "Home",
       "garages": "Garages",
       "history": "History",
@@ -260,6 +290,7 @@
   "maintenance": {
     "adminLink": "Admin? Sign in",
     "banner": "Maintenance on",
+    "contact": "A question? Write to us at",
     "heading": "Maintenance",
     "message": "MotorFix is down for maintenance. We'll be back soon."
   },
