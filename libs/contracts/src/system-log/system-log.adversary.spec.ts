@@ -80,7 +80,7 @@ describe('SystemLogQueryDto under hostile input', () => {
   });
 });
 
-// @traces 299-system-log-search-FR-001 299-system-log-search-FR-003
+// @traces 299-FR-001 299-FR-003
 describe('SystemLogQueryDto filters under hostile input', () => {
   it.each([
     ['one character', 'a'],
@@ -134,6 +134,38 @@ describe('SystemLogQueryDto filters under hostile input', () => {
 
   it('refuses a list in which one kind is unknown', () => {
     expect(errorsOf({ from: FROM, kind: ['deploy', 'nope'] })).not.toEqual([]);
+  });
+
+  // Each value becomes a bind parameter, and PostgreSQL takes 65,535.
+  it.each([
+    ['kind', 'deploy'],
+    ['severity', 'error'],
+    ['source', 'api'],
+  ])(
+    'reads a %s repeated a hundred thousand times as the one value',
+    (name, value) => {
+      const dto = plainToInstance(SystemLogQueryDto, {
+        from: FROM,
+        [name]: Array.from({ length: 100_000 }, () => value),
+      });
+
+      expect(validateSync(dto)).toEqual([]);
+      expect(dto[name as 'kind']).toEqual([value]);
+    },
+  );
+
+  it.each([
+    ['kind', 9],
+    ['severity', 4],
+    ['source', 11],
+  ])('refuses a %s list longer than its %i values', (name, length) => {
+    const values = Array.from({ length }, (_, i) => `v${i}`);
+
+    expect(
+      validateSync(
+        plainToInstance(SystemLogQueryDto, { from: FROM, [name]: values }),
+      ).flatMap((error) => Object.keys(error.constraints ?? {})),
+    ).toContain('arrayMaxSize');
   });
 
   it('reads a single kind and a repeated kind as lists', () => {

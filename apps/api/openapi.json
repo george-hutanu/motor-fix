@@ -5754,6 +5754,7 @@
             "required": false,
             "in": "query",
             "schema": {
+              "maxItems": 8,
               "type": "array",
               "items": {
                 "type": "string",
@@ -5775,6 +5776,7 @@
             "required": false,
             "in": "query",
             "schema": {
+              "maxItems": 3,
               "type": "array",
               "items": {
                 "type": "string",
@@ -5791,6 +5793,7 @@
             "required": false,
             "in": "query",
             "schema": {
+              "maxItems": 10,
               "type": "array",
               "items": {
                 "type": "string",

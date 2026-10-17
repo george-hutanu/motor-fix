@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsIn,
   IsInt,
   IsISO8601,
@@ -32,9 +33,13 @@ const INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 const ZONED = { message: '$property must be a date-time with a zone' };
 
-// A parameter given once arrives as a string, repeated as a list.
-const many = ({ value }: { value: unknown }) =>
-  value === undefined || Array.isArray(value) ? value : [value];
+// A parameter given once arrives as a string, repeated as a list. A value
+// repeated counts once, and the list is held to its enum's length after:
+// each value becomes a bind parameter of the query.
+const many = ({ value }: { value: unknown }) => {
+  if (value === undefined) return value;
+  return Array.isArray(value) ? [...new Set(value)] : [value];
+};
 const trimmed = ({ value }: { value: unknown }) => {
   if (typeof value !== 'string') return value;
   return value.trim() || undefined;
@@ -59,21 +64,36 @@ export class SystemLogQueryDto {
   @IsISO8601({ strict: true })
   to?: string;
 
-  @ApiPropertyOptional({ enum: SYSTEM_LOG_KINDS, isArray: true })
+  @ApiPropertyOptional({
+    enum: SYSTEM_LOG_KINDS,
+    isArray: true,
+    maxItems: SYSTEM_LOG_KINDS.length,
+  })
   @IsOptional()
   @Transform(many)
+  @ArrayMaxSize(SYSTEM_LOG_KINDS.length)
   @IsIn(SYSTEM_LOG_KINDS, { each: true })
   kind?: SystemLogKind[];
 
-  @ApiPropertyOptional({ enum: SYSTEM_LOG_SEVERITIES, isArray: true })
+  @ApiPropertyOptional({
+    enum: SYSTEM_LOG_SEVERITIES,
+    isArray: true,
+    maxItems: SYSTEM_LOG_SEVERITIES.length,
+  })
   @IsOptional()
   @Transform(many)
+  @ArrayMaxSize(SYSTEM_LOG_SEVERITIES.length)
   @IsIn(SYSTEM_LOG_SEVERITIES, { each: true })
   severity?: SystemLogSeverity[];
 
-  @ApiPropertyOptional({ enum: SYSTEM_LOG_SOURCES, isArray: true })
+  @ApiPropertyOptional({
+    enum: SYSTEM_LOG_SOURCES,
+    isArray: true,
+    maxItems: SYSTEM_LOG_SOURCES.length,
+  })
   @IsOptional()
   @Transform(many)
+  @ArrayMaxSize(SYSTEM_LOG_SOURCES.length)
   @IsIn(SYSTEM_LOG_SOURCES, { each: true })
   source?: SystemLogSource[];
 
