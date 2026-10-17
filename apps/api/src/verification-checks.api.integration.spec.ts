@@ -75,11 +75,26 @@ afterAll(async () => {
 describe('PUT /admin/verification-files/:id/checks/:kind', () => {
   it('records the check and answers with it, the summary and the activities', async () => {
     const id = await file();
+    // An OK RAR check needs the file's RAR number and the three ticks, and
+    // writes its own detail; the summary reads it once the licence is on the
+    // file.
+    await db.query(
+      "UPDATE verification_file SET rar_number = 'RAR-0412' WHERE id = $1",
+      [id],
+    );
+    await db.query(
+      `INSERT INTO legal_document (verification_file_id, kind, pages)
+       VALUES ($1, 'rar_authorisation', ARRAY['legal_document/checks/page'])`,
+      [id],
+    );
 
     const res = await put(
       id,
       'rar',
-      { detail: 'Autorizație găsită în registru', result: 'ok' },
+      {
+        evidence: { found: true, sameAddress: true, sameCompany: true },
+        result: 'ok',
+      },
       admin,
     );
 
@@ -87,7 +102,7 @@ describe('PUT /admin/verification-files/:id/checks/:kind', () => {
     expect(res.body).toMatchObject({
       check: {
         automatic: false,
-        detail: 'Autorizație găsită în registru',
+        detail: 'aceeași firmă și adresă',
         kind: 'rar',
         result: 'ok',
       },
