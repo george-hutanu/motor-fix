@@ -1,14 +1,11 @@
-import {
-  type GarageSearchPageDto,
-  SEARCH_RADIUS_DEFAULT_KM,
-} from '@motor-fix/contracts';
+import { SEARCH_RADIUS_DEFAULT_KM } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
 import { recordSearchCache } from './garage-search.metrics';
 import { AUTH_REDIS } from '../../auth/attempts';
 
-// A search page in Redis for 60 seconds, under one generation for every
+// A search page, or the map pins of a search, in Redis for 60 seconds, under one generation for every
 // search: a public garage change advances it, so every entry written before
 // is never read again and expires by itself. No CDN keeps an answer (the
 // route is no-store), so every search still reaches the API and its log.
@@ -17,18 +14,22 @@ const SEARCH_SECONDS = 60;
 const SEARCH_GENERATION = 'garage-search-gen:v1';
 
 interface SearchKey {
+  // A page of the list, or the pins of the map.
+  kind: 'page' | 'pins';
   brandId: string;
   // The place as its shared 3-decimal text.
   near?: string;
   radiusKm?: number;
+  // The visible box as its shared 3-decimal text.
+  bbox?: string;
   cursor?: string;
 }
 
 const searchKey = (
   generation: string,
-  { brandId, cursor, near, radiusKm }: SearchKey,
+  { bbox, brandId, cursor, kind, near, radiusKm }: SearchKey,
 ) =>
-  `garage-search:v1:${generation}:${brandId}:${near ?? '-'}:${radiusKm ?? SEARCH_RADIUS_DEFAULT_KM}:${cursor ?? '-'}`;
+  `garage-search:v1:${generation}:${kind}:${brandId}:${near ?? '-'}:${radiusKm ?? SEARCH_RADIUS_DEFAULT_KM}:${bbox ?? '-'}:${cursor ?? '-'}`;
 
 export const SEARCH_AUDIENCE = /^public:(garage:|search$|search:)/;
 
@@ -50,12 +51,9 @@ export class GarageSearchCache {
 
   constructor(@Inject(AUTH_REDIS) private readonly redis: Redis) {}
 
-  // The page from Redis, or from `read` stored for the next 60 seconds.
-  // While Redis fails every page comes from `read`, as it would without it.
-  async page(
-    key: SearchKey,
-    read: () => Promise<GarageSearchPageDto>,
-  ): Promise<GarageSearchPageDto> {
+  // The answer from Redis, or from `read` stored for the next 60 seconds.
+  // While Redis fails every answer comes from `read`, as it would without it.
+  async entry<T>(key: SearchKey, read: () => Promise<T>): Promise<T> {
     const generation = await this.attempt(() =>
       this.redis.get(SEARCH_GENERATION),
     );
@@ -66,7 +64,7 @@ export class GarageSearchCache {
         : await this.attempt(() => this.redis.get(entry));
     if (cached) {
       recordSearchCache('hit');
-      return JSON.parse(cached) as GarageSearchPageDto;
+      return JSON.parse(cached) as T;
     }
     const answer = await read();
     if (cached === undefined) {

@@ -2285,6 +2285,16 @@
             }
           },
           {
+            "name": "bbox",
+            "required": false,
+            "in": "query",
+            "description": "The visible area of the map, \"south,west,north,east\" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius",
+            "schema": {
+              "example": "44.35,26,44.5,26.25",
+              "type": "string"
+            }
+          },
+          {
             "name": "ids",
             "required": false,
             "in": "query",
@@ -2329,7 +2339,90 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or ids not up to 20 distinct uuids; invalid_cursor: not a page of this search"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, or bbox not a south,west,north,east box inside Romania at most 100 km on a side; invalid_cursor: not a page of this search or of another box"
+          },
+          "404": {
+            "description": "not_found: no brand with that slug or id"
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/search/garages/pins": {
+      "get": {
+        "operationId": "GarageSearchController_pins",
+        "parameters": [
+          {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue slug; exactly one of brand and brandId",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "example": "bmw",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brandId",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue id; exactly one of brand and brandId",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "radius",
+            "required": false,
+            "in": "query",
+            "description": "Km around near that a fixed garage may be; a mobile mechanic counts by its own area. Ignored without near",
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "enum": [
+                25,
+                50
+              ]
+            }
+          },
+          {
+            "name": "bbox",
+            "required": false,
+            "in": "query",
+            "description": "The visible area of the map, \"south,west,north,east\" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius",
+            "schema": {
+              "example": "44.35,26,44.5,26.25",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePinsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -7912,6 +8005,68 @@
           "nextCursor",
           "total",
           "counts"
+        ]
+      },
+      "GaragePinDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lat": {
+            "type": "number",
+            "description": "Where the pin stands; a mobile mechanic's area centre, two decimals",
+            "example": 44.437
+          },
+          "lng": {
+            "type": "number",
+            "example": 26.117
+          },
+          "rateLei": {
+            "type": "integer",
+            "description": "The hourly labour rate it starts from, in whole lei",
+            "nullable": true
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's area, in km; only for one"
+          }
+        },
+        "required": [
+          "id",
+          "lat",
+          "lng",
+          "rateLei",
+          "stance"
+        ]
+      },
+      "GaragePinsDto": {
+        "type": "object",
+        "properties": {
+          "pins": {
+            "description": "Every garage the search finds with a position, nearest first; 500 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaragePinDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every approved garage the search finds, as the list's total"
+          }
+        },
+        "required": [
+          "pins",
+          "total"
         ]
       },
       "HomeGarageDto": {

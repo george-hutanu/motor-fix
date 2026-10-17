@@ -1270,8 +1270,8 @@ describe('the response rate a profile carries', () => {
 // @traces 049-FR-006 049-FR-007
 describe('a garage suspended through the use case', () => {
   const uncached = {
-    page: (_key, read) => read(),
-  } satisfies Pick<GarageSearchCache, 'page'> as unknown as GarageSearchCache;
+    entry: (_key, read) => read(),
+  } satisfies Pick<GarageSearchCache, 'entry'> as unknown as GarageSearchCache;
   const search = () =>
     new GarageSearchService(prisma, uncached, new SearchLogService(prisma));
 

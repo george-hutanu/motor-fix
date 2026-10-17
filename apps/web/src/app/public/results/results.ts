@@ -1,6 +1,7 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { isPlatformServer } from '@angular/common';
 import {
+  afterRenderEffect,
   Component,
   computed,
   DestroyRef,
@@ -10,16 +11,19 @@ import {
   PLATFORM_ID,
   resource,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
 import {
   nearOf,
+  parseNear,
   SEARCH_RADII,
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
 import {
+  type GaragePinsDto,
   type GarageSearchControllerForBrand$Params,
   type GarageSearchPageDto,
   SearchService,
@@ -29,6 +33,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ResultCard } from './result-card/result-card';
+import { ResultsMap } from './results-map/results-map';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
@@ -46,6 +51,13 @@ const REVIEW_KINDS: readonly EventKind[] = EVENT_KINDS.filter((kind) =>
   kind.startsWith('review.'),
 );
 const REVIEWS: ReadonlySet<string> = new Set(REVIEW_KINDS);
+// What may move a pin: a garage changed, gone, back or newly approved.
+const PIN_KINDS: ReadonlySet<string> = new Set([
+  'garage.updated',
+  'garage.restored',
+  'garage.suspended',
+  'verification.decided',
+]);
 // What re-reads a loaded card: its reviews, its profile, its return.
 const CARD_KINDS: ReadonlySet<string> = new Set([
   ...REVIEW_KINDS,
@@ -67,7 +79,7 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
 
 @Component({
-  imports: [LiveChange, ResultCard, RouterLink, TranslatePipe],
+  imports: [LiveChange, ResultCard, ResultsMap, RouterLink, TranslatePipe],
   selector: 'mf-results',
   styleUrl: './results.css',
   templateUrl: './results.html',
@@ -102,13 +114,23 @@ export class Results {
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
 
-  // The search the bar names, without what marks a single read.
+  // The box the driver moved the map to; never in the bar, and forgotten
+  // when the bar names another search.
+  protected readonly box = linkedSignal<unknown, string | undefined>({
+    computation: () => undefined,
+    source: () => [this.brand(), this.near(), this.radius()],
+  });
+
+  // The search the bar names, in the map's box once the driver moved it,
+  // without what marks a single read.
   private readonly query = computed((): Query | undefined => {
     const brand = this.brand();
     if (this.server || !brand) return undefined;
     const near = this.near();
     const radius = this.radius();
+    const bbox = this.box();
     return {
+      ...(bbox ? { bbox } : {}),
       ...(UUID.test(brand) ? { brandId: brand } : { brand }),
       ...(near ? { near } : {}),
       ...(radius ? { radius } : {}),
@@ -116,13 +138,16 @@ export class Results {
   });
 
   // Only a new search is logged: the opening one, another brand or place in
-  // the bar, and a place chosen here; never a retry, a widening or a reload.
+  // the bar, and a place chosen here; never a retry, a widening, a reload or
+  // a move of the map.
   private logNext = false;
   private logged: string | undefined;
 
   // Never on the server: it renders the skeletons, the browser searches.
   protected readonly results = resource({
     loader: ({ params }) => {
+      if (params.bbox)
+        return this.search.garageSearchControllerForBrand(params);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
       const log = this.logNext || searched !== this.logged;
       this.logNext = false;
@@ -133,6 +158,36 @@ export class Results {
     },
     params: () => this.query(),
   });
+
+  // Every garage of the same search, for the map; never logged.
+  protected readonly pins = resource({
+    loader: ({ params }) => this.search.garageSearchControllerPins(params),
+    params: () => this.query(),
+  });
+  // A box loading, or failed, leaves the pins the map shows where they are.
+  protected readonly pinned = linkedSignal<
+    { box: string | undefined; now: GaragePinsDto | undefined },
+    GaragePinsDto | undefined
+  >({
+    computation: ({ box, now }, previous) =>
+      now ?? (box ? previous?.value : undefined),
+    source: () => ({
+      box: this.box(),
+      now: this.pins.hasValue() ? this.pins.value() : undefined,
+    }),
+  });
+  // The grey map while the search runs; a box loading keeps the pins shown.
+  protected readonly mapLoading = computed(
+    () => !this.box() && (this.results.isLoading() || this.pins.isLoading()),
+  );
+  // The kept place where it is the one searched, else the bar's.
+  protected readonly place = computed(() => {
+    const near = this.near();
+    const kept = this.store.place();
+    if (kept && nearOf(kept) === near) return { lat: kept.lat, lng: kept.lng };
+    return parseNear(near);
+  });
+  private readonly map = viewChild(ResultsMap);
 
   private readonly searched = computed(() =>
     this.results.isLoading() || !this.results.hasValue()
@@ -170,7 +225,7 @@ export class Results {
 
   // The 50 km search is offered once, near a place, before it has run.
   protected readonly widen = computed(() =>
-    this.near() && !this.radius() ? WIDE : null,
+    this.near() && !this.radius() && !this.box() ? WIDE : null,
   );
   protected readonly km = computed(
     () => this.radius() ?? SEARCH_RADIUS_DEFAULT_KM,
@@ -182,8 +237,9 @@ export class Results {
     const answer = this.answer();
     if (!answer) return '';
     const brand = answer.brand.name;
+    const found = this.box() ? 'public.results.inArea' : 'public.results.found';
     return [
-      this.i18n.t('public.results.found', { count: answer.total }),
+      this.i18n.t(found, { count: answer.total }),
       this.i18n.t('public.results.takers', {
         brand,
         count: answer.counts.worksOn,
@@ -194,10 +250,18 @@ export class Results {
     ].join(' · ');
   });
 
+  // The way back from the map's box to the search the bar names.
+  protected readonly back = computed(() => {
+    if (!this.box()) return null;
+    return this.near()
+      ? this.i18n.t('public.results.back', { km: this.km() })
+      : this.i18n.t('public.results.backRomania');
+  });
+
   // The kept place is named; a place only the bar knows is "the chosen place".
   protected readonly area = computed(() => {
     const near = this.near();
-    if (!near) return null;
+    if (!near || this.box()) return null;
     const km = this.km();
     const place = this.store.place();
     if (!place || nearOf(place) !== near) {
@@ -212,12 +276,19 @@ export class Results {
   private readonly wanted = new Set<string>();
   private countsWanted = false;
   private pageWanted = false;
+  private pinsWanted = false;
   private reading = false;
   private burst: ReturnType<typeof setTimeout> | undefined;
   private readonly fades = new Set<ReturnType<typeof setTimeout>>();
 
   constructor() {
     if (this.server) return;
+    // After the render, so the map holds the answer it frames; a live
+    // re-read of the pins leaves the map where the driver has it.
+    afterRenderEffect(() => {
+      if (!this.pins.hasValue() || this.pins.isLoading() || this.box()) return;
+      untracked(() => this.map()?.fit());
+    });
     // Which garages a driver saved, for the cards' bookmarks.
     void this.saved.load();
     // The kept place goes into the bar, so the link shared opens this search.
@@ -239,6 +310,7 @@ export class Results {
       if (!untracked(this.answer)) return;
       for (const id of untracked(this.loaded)) this.wanted.add(id);
       this.countsWanted = true;
+      this.pinsWanted = true;
       void this.flush();
     });
     this.destroyRef.onDestroy(() => {
@@ -265,6 +337,19 @@ export class Results {
 
   protected retry() {
     this.results.reload();
+    if (this.pins.error()) this.pins.reload();
+  }
+
+  // A box the map settled on; the same one again retries it after a failure.
+  protected move(bbox: string) {
+    if (bbox !== untracked(this.box)) return this.box.set(bbox);
+    if (!this.results.error() && !this.pins.error()) return;
+    this.results.reload();
+    this.pins.reload();
+  }
+
+  protected backToSearch() {
+    this.box.set(undefined);
   }
 
   protected widenTo(radius: number) {
@@ -282,6 +367,7 @@ export class Results {
     const page = untracked(this.answer);
     if (!page) return;
     const loaded = page.items.some((garage) => garage.id === id);
+    if (PIN_KINDS.has(kind)) this.pinsWanted = true;
     // A suspended card fades out; the counts come from a re-read, which never
     // holds it, so one already re-read after the suspension is not lowered twice.
     if (kind === 'garage.suspended' && loaded) {
@@ -301,26 +387,34 @@ export class Results {
     if (this.reading) return;
     this.reading = true;
     try {
-      while (this.pageWanted || this.wanted.size > 0 || this.countsWanted) {
-        if (this.pageWanted) {
-          this.pageWanted = false;
-          this.wanted.clear();
-          this.countsWanted = false;
-          await this.read(undefined, (page, now) => reuse(now, page));
-        } else if (this.wanted.size > 0) {
-          const ids = [...this.wanted].join(',');
-          this.wanted.clear();
-          await this.read(ids, (page, now) =>
-            this.counted(page, this.withCards(page, now)),
-          );
-        } else {
-          this.countsWanted = false;
-          await this.read(undefined, (page, now) => this.counted(page, now));
-        }
-      }
+      let more = true;
+      while (more) more = await this.readNext();
     } finally {
       this.reading = false;
     }
+  }
+
+  // The next read wanted, the pins first; false once nothing is.
+  private async readNext() {
+    if (this.pinsWanted) {
+      this.pinsWanted = false;
+      await this.readPins();
+    } else if (this.pageWanted) {
+      this.pageWanted = false;
+      this.wanted.clear();
+      this.countsWanted = false;
+      await this.read(undefined, (page, now) => reuse(now, page));
+    } else if (this.wanted.size > 0) {
+      const ids = [...this.wanted].join(',');
+      this.wanted.clear();
+      await this.read(ids, (page, now) =>
+        this.counted(page, this.withCards(page, now)),
+      );
+    } else if (this.countsWanted) {
+      this.countsWanted = false;
+      await this.read(undefined, (page, now) => this.counted(page, now));
+    } else return false;
+    return true;
   }
 
   // A read that fails keeps the page as it is; one answered after the search
@@ -344,6 +438,20 @@ export class Results {
     if (this.destroyRef.destroyed || !now || untracked(this.query) !== query)
       return;
     this.answer.set(apply(page, now));
+  }
+
+  // Like a card's read: a failure keeps the pins shown, a late answer is dropped.
+  private async readPins() {
+    const query = untracked(this.query);
+    if (!query) return;
+    let pins: GaragePinsDto;
+    try {
+      pins = await this.search.garageSearchControllerPins(query);
+    } catch {
+      return;
+    }
+    if (this.destroyRef.destroyed || untracked(this.query) !== query) return;
+    this.pinned.set(pins);
   }
 
   // The cards read again replace theirs where they stand; the order holds.
