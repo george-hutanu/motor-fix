@@ -1,0 +1,75 @@
+:host {
+  display: block;
+}
+
+.map {
+  background: var(--mf-panel);
+  border-radius: var(--mf-radius-panel);
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas,
+.placeholder {
+  inset: 0;
+  position: absolute;
+}
+
+/* The grey map while the search runs or the map has not opened. */
+.placeholder {
+  background: var(--mf-line);
+}
+
+.legend {
+  align-items: center;
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--mf-panel-raised) 80%, transparent);
+  border-radius: var(--mf-radius-chip);
+  bottom: var(--mf-space-3);
+  color: var(--mf-text);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--mf-size-small);
+  gap: var(--mf-space-1) var(--mf-space-3);
+  left: var(--mf-space-3);
+  list-style: none;
+  margin: 0;
+  max-width: calc(100% - 2 * var(--mf-space-3));
+  padding: var(--mf-space-2) var(--mf-space-3);
+  position: absolute;
+}
+
+.legend li {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--mf-space-1);
+  overflow-wrap: anywhere;
+}
+
+.dot {
+  border-radius: 50%;
+  flex: none;
+  height: 10px;
+  width: 10px;
+}
+
+.takes {
+  background: var(--mf-green);
+}
+
+.refuses {
+  background: var(--mf-red);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .canvas {
+    animation: mf-mapin 800ms var(--mf-motion-ease) both;
+  }
+}
+
+@keyframes mf-mapin {
+  from {
+    opacity: 0;
+  }
+}

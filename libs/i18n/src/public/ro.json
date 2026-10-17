@@ -614,6 +614,15 @@
       "updated": "{name} s‑a actualizat"
     },
     "loading": "Se încarcă rezultatele",
+    "map": {
+      "label": "Harta service‑urilor",
+      "mobile": "Mecanic mobil · zona deservită",
+      "rate": "lei pe oră",
+      "refuses": "nu primește",
+      "takes": "primește {brand}",
+      "unavailable": "Harta nu este disponibilă acum",
+      "zoomIn": "Apropie harta"
+    },
     "newSearch": "Căutare nouă",
     "none": "Niciun service găsit",
     "noneNear": "Niciun service în {km} km",

@@ -1,6 +1,7 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { isPlatformServer } from '@angular/common';
 import {
+  afterRenderEffect,
   Component,
   computed,
   DestroyRef,
@@ -10,12 +11,14 @@ import {
   PLATFORM_ID,
   resource,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EVENT_KINDS, type EventKind } from '@motor-fix/contracts/events';
 import {
   nearOf,
+  parseNear,
   SEARCH_RADII,
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
@@ -29,6 +32,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ResultCard } from './result-card/result-card';
+import { ResultsMap } from './results-map/results-map';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
@@ -66,7 +70,7 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
 
 @Component({
-  imports: [LiveChange, ResultCard, RouterLink, TranslatePipe],
+  imports: [LiveChange, ResultCard, ResultsMap, RouterLink, TranslatePipe],
   selector: 'mf-results',
   styleUrl: './results.css',
   templateUrl: './results.html',
@@ -131,6 +135,23 @@ export class Results {
     },
     params: () => this.query(),
   });
+
+  // Every garage of the same search, for the map; never logged.
+  protected readonly pins = resource({
+    loader: ({ params }) => this.search.garageSearchControllerPins(params),
+    params: () => this.query(),
+  });
+  protected readonly pinned = computed(() =>
+    this.pins.hasValue() ? this.pins.value() : undefined,
+  );
+  // The kept place where it is the one searched, else the bar's.
+  protected readonly place = computed(() => {
+    const near = this.near();
+    const kept = this.store.place();
+    if (kept && nearOf(kept) === near) return { lat: kept.lat, lng: kept.lng };
+    return parseNear(near);
+  });
+  private readonly map = viewChild(ResultsMap);
 
   private readonly searched = computed(() =>
     this.results.isLoading() || !this.results.hasValue()
@@ -216,6 +237,11 @@ export class Results {
 
   constructor() {
     if (this.server) return;
+    // After the render, so the map holds the answer it frames.
+    afterRenderEffect(() => {
+      if (this.pins.isLoading() || !this.pinned()) return;
+      untracked(() => this.map()?.fit());
+    });
     // The kept place goes into the bar, so the link shared opens this search.
     effect(() => {
       const kept = this.store.place();

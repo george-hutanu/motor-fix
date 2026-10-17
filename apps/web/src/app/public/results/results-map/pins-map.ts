@@ -1,0 +1,153 @@
+import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
+import type {
+  GeoJSONSource,
+  GeoJSONSourceSpecification,
+  LayerSpecification,
+  Map as MapLibre,
+} from 'maplibre-gl';
+
+import { type LatLng, START } from '../../map-libre/map-libre';
+
+// Past this many fixed pins, close ones merge into a counted cluster.
+const CLUSTER_ABOVE = 50;
+const SOURCE = 'pins';
+const FIT = { animate: false, maxZoom: 15, padding: 40 };
+const FONT = ['Noto Sans Bold'];
+
+export interface PinsMap {
+  show(answer: GaragePinsDto | undefined): void;
+  fit(place: LatLng | undefined, answer: GaragePinsDto | undefined): void;
+}
+
+// A mobile mechanic has no place of its own to pin; its area is drawn apart.
+const fixedOf = (answer: GaragePinsDto | undefined) =>
+  (answer?.pins ?? []).filter((pin) => pin.serviceRadiusKm === undefined);
+
+const collectionOf = (pins: GaragePinDto[]) => ({
+  features: pins.map((pin) => ({
+    geometry: { coordinates: [pin.lng, pin.lat], type: 'Point' as const },
+    properties: {
+      id: pin.id,
+      rate: pin.rateLei === null ? '' : String(pin.rateLei),
+      stance: pin.stance,
+    },
+    type: 'Feature' as const,
+  })),
+  type: 'FeatureCollection' as const,
+});
+
+// The pins of a search on a map that has loaded, coloured like the cards'
+// lamps: green for a garage that takes the brand, red for the rest.
+export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
+  const look = getComputedStyle(host);
+  const token = (name: string) => look.getPropertyValue(name).trim();
+  const green = token('--mf-green');
+  const red = token('--mf-red');
+  const halo = token('--mf-panel');
+  const ink = token('--mf-text');
+  const single = ['!', ['has', 'point_count']] as const;
+  const layers: LayerSpecification[] = [
+    {
+      filter: ['has', 'point_count'],
+      id: 'pins-cluster',
+      paint: {
+        'circle-color': green,
+        'circle-radius': 14,
+        'circle-stroke-color': halo,
+        'circle-stroke-width': 2,
+      },
+      source: SOURCE,
+      type: 'circle',
+    },
+    {
+      filter: ['has', 'point_count'],
+      id: 'pins-count',
+      layout: {
+        'text-field': ['get', 'point_count_abbreviated'],
+        'text-font': FONT,
+        'text-size': 12,
+      },
+      paint: { 'text-color': halo },
+      source: SOURCE,
+      type: 'symbol',
+    },
+    {
+      filter: single as never,
+      id: 'pins-dot',
+      paint: {
+        'circle-color': ['match', ['get', 'stance'], 'works_on', green, red],
+        'circle-radius': 7,
+        'circle-stroke-color': halo,
+        'circle-stroke-width': 2,
+      },
+      source: SOURCE,
+      type: 'circle',
+    },
+    {
+      filter: single as never,
+      id: 'pins-rate',
+      layout: {
+        'text-anchor': 'left',
+        'text-field': ['get', 'rate'],
+        'text-font': FONT,
+        'text-offset': [0.9, 0],
+        'text-size': 12,
+      },
+      paint: {
+        'text-color': ink,
+        'text-halo-color': halo,
+        'text-halo-width': 1.5,
+      },
+      source: SOURCE,
+      type: 'symbol',
+    },
+  ];
+
+  let clustered = false;
+  const drop = () => {
+    for (const { id } of layers) if (map.getLayer(id)) map.removeLayer(id);
+    map.removeSource(SOURCE);
+  };
+  // MapLibre fixes a source's clustering when it is added, so a change of
+  // mode builds the source and its layers again.
+  const build = (cluster: boolean) => {
+    const source: GeoJSONSourceSpecification = cluster
+      ? { cluster, clusterRadius: 48, data: collectionOf([]), type: 'geojson' }
+      : { cluster, data: collectionOf([]), type: 'geojson' };
+    map.addSource(SOURCE, source);
+    for (const layer of layers) map.addLayer(layer);
+    clustered = cluster;
+  };
+  build(false);
+
+  return {
+    fit(place, answer) {
+      const points = [
+        ...(place ? [place] : []),
+        ...fixedOf(answer).map(({ lat, lng }) => ({ lat, lng })),
+      ];
+      if (points.length === 0) {
+        map.jumpTo(START);
+        return;
+      }
+      const lats = points.map((p) => p.lat);
+      const lngs = points.map((p) => p.lng);
+      map.fitBounds(
+        [
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)],
+        ],
+        FIT,
+      );
+    },
+    show(answer) {
+      const fixed = fixedOf(answer);
+      const cluster = fixed.length > CLUSTER_ABOVE;
+      if (cluster !== clustered) {
+        drop();
+        build(cluster);
+      }
+      (map.getSource(SOURCE) as GeoJSONSource).setData(collectionOf(fixed));
+    },
+  };
+}

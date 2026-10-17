@@ -603,6 +603,15 @@
       "updated": "{name} was updated"
     },
     "loading": "Loading the results",
+    "map": {
+      "label": "Map of garages",
+      "mobile": "Mobile mechanic · service area",
+      "rate": "lei per hour",
+      "refuses": "doesn't",
+      "takes": "takes {brand}",
+      "unavailable": "The map is not available now",
+      "zoomIn": "Zoom in"
+    },
     "newSearch": "New search",
     "none": "No garage found",
     "noneNear": "No garage within {km} km",

@@ -6,7 +6,9 @@ import { provideRouter, type Route, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
+  type GaragePinsDto,
   type GarageSearchControllerForBrand$Params,
+  type GarageSearchControllerPins$Params,
   type GarageSearchPageDto,
   type ListedGarageDto,
   SearchService,
@@ -17,6 +19,7 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { Results } from './results';
+import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
 import { routes } from '../../app.routes';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
 import type { Place } from '../../home/place/place-store';
@@ -85,6 +88,27 @@ const searchApi = {
       }),
   ),
 };
+const pinsOf = (count: number): GaragePinsDto => ({
+  pins: Array.from({ length: count }, (_, i) => ({
+    id: `pin-${i}`,
+    lat: 44.4 + i / 1000,
+    lng: 26.1,
+    rateLei: 150,
+    stance: 'works_on' as const,
+  })),
+  total: count,
+});
+let pinsAnswer: GaragePinsDto;
+const pinsApi = jest.fn((_params: GarageSearchControllerPins$Params) =>
+  Promise.resolve(pinsAnswer),
+);
+Object.assign(searchApi, { garageSearchControllerPins: pinsApi });
+const mapView: jest.Mocked<ResultsMapView> = {
+  destroy: jest.fn(),
+  fit: jest.fn(),
+  show: jest.fn(),
+};
+const openMap = jest.fn((_host: HTMLElement) => Promise.resolve(mapView));
 let dialog: (value: OverlayResult<Place>) => void;
 const overlays = {
   open: jest.fn(
@@ -121,6 +145,7 @@ async function configure(platform = 'browser') {
       { provide: PLATFORM_ID, useValue: platform },
       { provide: PublicLive, useValue: live },
       { provide: REDUCED_MOTION, useValue: reduced },
+      { provide: RESULTS_MAP, useValue: openMap },
     ],
   });
   await TestBed.inject(I18n).enter('public');
@@ -131,6 +156,11 @@ beforeEach(() => {
   reads = [];
   localStorage.clear();
   searchApi.garageSearchControllerForBrand.mockClear();
+  pinsAnswer = pinsOf(48);
+  pinsApi.mockClear();
+  openMap.mockClear();
+  mapView.show.mockClear();
+  mapView.fit.mockClear();
   overlays.open.mockClear();
   live.register.mockClear();
   reduced.set(false);
@@ -929,6 +959,76 @@ describe('Results', () => {
     });
   });
 
+  describe('the map beside the list', () => {
+    beforeEach(() => configure());
+
+    // @traces 269-FR-001
+    it('asks for the pins of the same search, with no log and no ids', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw&radius=50');
+
+      expect(pinsApi.mock.calls.map(([q]) => q)).toEqual([
+        { brand: 'bmw', near: '44.447,26.117', radius: 50 },
+      ]);
+    });
+
+    // @traces 269-FR-016
+    it('shows the map region next to the list', async () => {
+      await open('/ro/garages?brand=bmw');
+
+      expect(
+        page()
+          .querySelector('mf-results-map section.map')
+          ?.getAttribute('aria-label'),
+      ).toBe('Harta service‑urilor');
+      expect(openMap).toHaveBeenCalledTimes(1);
+    });
+
+    // @traces 269-FR-002
+    it('draws every pin of the search while the list shows its first page', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(
+        pageOf({
+          items: Array.from({ length: 20 }, (_, i) =>
+            garageOf(`g-${i}`, `Service ${i}`),
+          ),
+        }),
+      );
+
+      expect(page().querySelectorAll('mf-result-card')).toHaveLength(20);
+      expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(48));
+      expect(mapView.show.mock.lastCall?.[0]?.pins).toHaveLength(48);
+    });
+
+    // @traces 269-FR-005
+    it('fits the map to the place and the pins once they come', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw');
+
+      expect(mapView.fit).toHaveBeenCalledWith(
+        { lat: PLACE.lat, lng: PLACE.lng },
+        pinsOf(48),
+      );
+    });
+
+    // @traces 269-FR-001
+    it('asks for the pins again when the search changes, and not on a live re-read', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(pageOf({ items: [], total: 0 }));
+      const wider = page().querySelector<HTMLButtonElement>('.state .primary');
+      expect(said(wider)).toBe('Caută în 50 km');
+      wider?.click();
+      await settle();
+      await settle();
+
+      expect(pinsApi.mock.calls.map(([q]) => q.radius)).toEqual([
+        undefined,
+        50,
+      ]);
+    });
+  });
+
   describe('on the server', () => {
     beforeEach(() => configure('server'));
 
@@ -937,6 +1037,7 @@ describe('Results', () => {
       await open('/ro/garages?brand=bmw');
 
       expect(searches()).toEqual([]);
+      expect(pinsApi).not.toHaveBeenCalled();
       expect(page().querySelectorAll('.card.skeleton')).toHaveLength(6);
     });
   });

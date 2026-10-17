@@ -1,15 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
 
-import {
-  circleBounds,
-  type LatLng,
-  mapAssets,
-  PLACE_MAP,
-  type PlaceMap,
-  viewFor,
-} from './place-map';
+import { PLACE_MAP, type PlaceMap, viewFor } from './place-map';
 import type { MapFake } from './place-step.testing';
+import { circleBounds, type LatLng, mapAssets } from '../map-libre/map-libre';
 
 jest.mock('maplibre-gl', () => jest.requireActual('./place-step.testing'));
 const { fake } = jest.requireMock<MapFake>('maplibre-gl');
