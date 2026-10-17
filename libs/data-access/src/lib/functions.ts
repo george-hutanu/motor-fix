@@ -107,6 +107,8 @@ export type { AdminAccountsControllerSummary$Params as AdminAccountsControllerSu
 export { adminAccountsControllerSummary as adminAccountsControllerSummary } from './fn/admin/admin-accounts-controller-summary';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
+export type { AdminOverviewControllerQueue$Params as AdminOverviewControllerQueue$Params } from './fn/admin/admin-overview-controller-queue';
+export { adminOverviewControllerQueue as adminOverviewControllerQueue } from './fn/admin/admin-overview-controller-queue';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';

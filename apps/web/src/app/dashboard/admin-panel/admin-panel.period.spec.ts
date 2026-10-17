@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -40,6 +41,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   const events = new Subject<LiveMessage>();
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       AdminOverview,
       {
         provide: Live,
@@ -57,6 +59,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
         useValue: {
           adminOverviewControllerGrowth: async () => ({ months: [] }),
           adminOverviewControllerOverview: (params: Params) => answer(params),
+          adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
         },
       },
     ],

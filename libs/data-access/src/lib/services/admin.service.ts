@@ -20,6 +20,8 @@ import { adminOverviewControllerGrowth } from '../fn/admin/admin-overview-contro
 import { AdminOverviewControllerGrowth$Params } from '../fn/admin/admin-overview-controller-growth';
 import { adminOverviewControllerOverview } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overview-controller-overview';
+import { adminOverviewControllerQueue } from '../fn/admin/admin-overview-controller-queue';
+import { AdminOverviewControllerQueue$Params } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
 import { PlatformRuleChangeDto } from '../models/platform-rule-change-dto';
 import { platformRuleChangesControllerApprove } from '../fn/admin/platform-rule-changes-controller-approve';
@@ -42,6 +44,7 @@ import { PlatformRulesDto } from '../models/platform-rules-dto';
 import { VerificationCheckRecordedDto } from '../models/verification-check-recorded-dto';
 import { verificationChecksControllerRecord } from '../fn/admin/verification-checks-controller-record';
 import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
+import { VerificationQueueDto } from '../models/verification-queue-dto';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService extends BaseService {
@@ -122,6 +125,31 @@ export class AdminService extends BaseService {
   adminOverviewControllerOverview(params?: AdminOverviewControllerOverview$Params, context?: HttpContext): Promise<AdminOverviewDto> {
     const resp = this.adminOverviewControllerOverview$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminOverviewDto>): AdminOverviewDto => r.body);
+  }
+
+  /** Path part for operation `adminOverviewControllerQueue()` */
+  static readonly AdminOverviewControllerQueuePath = '/api/v1/admin/verification-queue';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminOverviewControllerQueue()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerQueue$Response(params?: AdminOverviewControllerQueue$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationQueueDto>> {
+    const obs = adminOverviewControllerQueue(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminOverviewControllerQueue$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerQueue(params?: AdminOverviewControllerQueue$Params, context?: HttpContext): Promise<VerificationQueueDto> {
+    const resp = this.adminOverviewControllerQueue$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationQueueDto>): VerificationQueueDto => r.body);
   }
 
   /** Path part for operation `adminOverviewControllerGrowth()` */

@@ -10,6 +10,7 @@ export {
   RatingPipe,
 } from './format.pipes';
 export {
+  appliedAt,
   calendarNames,
   daysUntil,
   formatClock,

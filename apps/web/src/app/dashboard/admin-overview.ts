@@ -49,7 +49,13 @@ export class AdminOverview {
 
   private readonly overview = liveResource(
     () => this.read(),
-    ['verification.submitted', 'verification.decided', 'verification.reopened'],
+    [
+      'verification.submitted',
+      'verification.opened',
+      'verification.check_recorded',
+      'verification.decided',
+      'verification.reopened',
+    ],
   );
 
   readonly loading = this.overview.isLoading;

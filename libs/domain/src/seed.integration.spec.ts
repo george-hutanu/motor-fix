@@ -287,6 +287,18 @@ describe('seed', () => {
     ]);
   });
 
+  // @traces 301-FR-004
+  it("sends Service Dobre's file far enough back to be flagged whatever the holidays", async () => {
+    const before = Date.now();
+    expect(seed('test').status).toBe(0);
+
+    const file = await prisma.verificationFile.findFirstOrThrow({
+      where: { garage: { slug: 'service-dobre' }, status: 'submitted' },
+    });
+    const days = (before - file.submittedAt.getTime()) / 86_400_000;
+    expect(days).toBeGreaterThanOrEqual(29.9);
+  });
+
   it('adds no second waiting file when run twice', async () => {
     expect(seed('test').status).toBe(0);
     expect(seed('test').status).toBe(0);
