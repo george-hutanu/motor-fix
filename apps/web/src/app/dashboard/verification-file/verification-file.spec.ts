@@ -588,6 +588,8 @@ describe('the documents', () => {
     expect(text(onrc)).toContain(
       'Certificat constatator ONRC · emis acum 6 zile',
     );
+    // Its age or its pages, never both (FR-005).
+    expect(text(onrc)).not.toContain('pagini');
     expect(buttons(onrc)).toEqual(['Deschide pagina 1', 'Deschide pagina 2']);
     const rar = row(host, 'documents', 'rar_authorisation');
     expect(text(rar)).toContain('Autorizația tehnică RAR · 3 pagini');

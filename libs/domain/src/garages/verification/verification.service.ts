@@ -527,9 +527,11 @@ function reasonOf(decision: Decision) {
   return decision.reason;
 }
 
+// An open that moved nothing: the file was opened before, by this admin or another.
 function openedFirst(actor: VerificationActor, file: VerificationFile) {
   return {
     byAnother: file.openedBy !== actor.accountId,
+    first: false,
     openedAt: file.openedAt,
     openedBy: file.openedBy,
   };

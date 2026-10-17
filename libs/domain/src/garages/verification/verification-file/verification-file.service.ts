@@ -37,12 +37,15 @@ export function certificateStale(issuedOn: Date | null, sentAt: Date) {
 
 // The file's own lines: its sending and status changes, its checks' records
 // and its documents' openings. A document upload and the declaration stay out.
+// Every one of them carries the garage, so the (garageId, at) index reads it.
 export function timelineWhere(
+  garageId: string,
   fileId: string,
   checkIds: string[],
   documentIds: string[],
 ): Prisma.ActivityLogWhereInput {
   return {
+    garageId,
     OR: [
       {
         OR: [{ action: 'create' }, { action: 'update', field: 'status' }],
@@ -109,6 +112,7 @@ export class VerificationFileService {
     const { garage } = file;
 
     const where = timelineWhere(
+      garage.id,
       file.id,
       file.checks.map((c) => c.id),
       file.documents.map((d) => d.id),

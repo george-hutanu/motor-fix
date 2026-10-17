@@ -42,9 +42,9 @@ import { CHECK_DETAIL_MAX } from './verification-target';
 
 export { CHECK_DETAIL_MAX, lamp } from './verification-target';
 
-export type SummaryLanguage = 'ro' | 'en';
+type SummaryLanguage = 'ro' | 'en';
 
-export interface SummaryCheck {
+interface SummaryCheck {
   kind: VerificationCheckKind;
   result: VerificationCheckResult;
   detail: string | null;

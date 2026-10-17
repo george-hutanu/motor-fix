@@ -55,7 +55,7 @@ export class VerificationFileController {
     const opened = await this.prisma.$transaction((tx) =>
       this.verification.open(tx, actor, id),
     );
-    if ('first' in opened) {
+    if (opened.first) {
       this.logger.log(`file ${id} opened by ${actor.accountId}`);
     }
     return this.files.read(id);

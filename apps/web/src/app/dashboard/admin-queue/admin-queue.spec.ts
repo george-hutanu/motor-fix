@@ -426,6 +426,34 @@ describe('the file named in the address', () => {
     });
   });
 
+  it('closes the open drawer before it opens the next file the address names', async () => {
+    await open({ providers: providers('file-9') });
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigate')
+      .mockResolvedValue(true);
+    const first = overlays.open.mock.calls[0]?.[1] as { signal: AbortSignal };
+    const closeFirst = close;
+
+    url.next(at('file-10'));
+    await settle();
+
+    expect(first.signal.aborted).toBe(true);
+    expect(overlays.open).toHaveBeenCalledTimes(2);
+    expect(overlays.open).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ data: { fileId: 'file-10' } }),
+    );
+    closeFirst('cancelled');
+    await settle();
+    expect(navigate).not.toHaveBeenCalled();
+
+    close('cancelled');
+    await settle();
+    expect(navigate).toHaveBeenCalledWith(['/app/admin/garages'], {
+      replaceUrl: true,
+    });
+  });
+
   it('leaves the address alone when it already names another place', async () => {
     await open({ providers: providers('file-9') });
     const navigate = jest

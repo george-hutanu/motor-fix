@@ -186,6 +186,29 @@ describe('Overlays: open and close', () => {
     await expect(host.result).resolves.toBe('saved');
   });
 
+  it('closes with "cancelled" when the opener aborts its signal', async () => {
+    const opener = new AbortController();
+    const { host } = await openTask((h) => {
+      h.options = { ...h.options, signal: opener.signal };
+    });
+    expect(dialogs()).toHaveLength(1);
+
+    opener.abort();
+    await settle();
+
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.result).resolves.toBe('cancelled');
+  });
+
+  it('opens nothing for a signal already aborted', async () => {
+    const { host } = await openTask((h) => {
+      h.options = { ...h.options, signal: AbortSignal.abort() };
+    });
+
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.result).resolves.toBe('cancelled');
+  });
+
   it('passes the opener’s data to the task', async () => {
     await openTask((host) => {
       host.options = {

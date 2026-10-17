@@ -25,7 +25,7 @@ import { map } from 'rxjs';
 
 import { characters } from '../../characters';
 
-export interface VerificationProblemData {
+interface VerificationProblemData {
   fileId: string;
   kind: string;
 }

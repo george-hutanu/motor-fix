@@ -471,9 +471,11 @@ describe('the timeline', () => {
       },
       5,
     );
+    // The owner's resending after the decision.
     await entry(
       {
         field: 'status',
+        kind: 'verification_resent',
         newValue: 'submitted',
         subjectId: file.id,
         subjectType: 'verification_file',
@@ -496,6 +498,10 @@ describe('the timeline', () => {
       ['verification_file', 'update', 'in_review'],
       ['verification_file', 'create', 'submitted'],
     ]);
+    expect(timeline.entries[0]).toMatchObject({
+      actor: { name: 'Mihai', role: 'owner' },
+      kind: 'verification_resent',
+    });
     expect(timeline.entries[1]?.actor).toEqual({
       id: null,
       name: 'MotorFix',

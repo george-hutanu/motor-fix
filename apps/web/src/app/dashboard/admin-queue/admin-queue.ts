@@ -159,8 +159,10 @@ export class AdminQueue {
 
   // The file named in the address, /app/admin/garages/{fileId}, opens as a
   // drawer over the list, once; closing it returns the address to the list
-  // unless it already names another place.
+  // unless it already names another place. Another file named while one is
+  // open closes that one first: one drawer at a time.
   private shown: string | null = null;
+  private drawer?: AbortController;
   private openFiles() {
     const fileId = toSignal(
       inject(ActivatedRoute).url.pipe(map((url) => url[0]?.path ?? null)),
@@ -172,7 +174,11 @@ export class AdminQueue {
       const id = fileId();
       if (id === this.shown) return;
       this.shown = id;
+      this.drawer?.abort();
+      this.drawer = undefined;
       if (!id) return;
+      const drawer = new AbortController();
+      this.drawer = drawer;
       void overlays
         .open(
           () =>
@@ -182,10 +188,12 @@ export class AdminQueue {
           {
             data: { fileId: id },
             shape: 'drawer-wide',
+            signal: drawer.signal,
             title: 'admin.file.title',
           },
         )
         .then(() => {
+          if (this.drawer === drawer) this.drawer = undefined;
           if (this.shown !== id) return;
           this.shown = null;
           void router.navigate([LIST], { replaceUrl: true });

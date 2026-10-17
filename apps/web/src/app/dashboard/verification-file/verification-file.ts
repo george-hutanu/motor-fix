@@ -58,7 +58,7 @@ const SKELETON_SECTIONS = [0, 1, 2, 3];
 // "ieri" soon after midnight with no new read.
 const TICK_MS = 60_000;
 
-export interface VerificationFileData {
+interface VerificationFileData {
   fileId: string;
 }
 
@@ -325,11 +325,14 @@ export class VerificationFile {
   private documentLine(doc: VerificationFileDocumentDto) {
     const name = this.documentName(doc.kind);
     if (!doc.present) return `${name} · ${this.t('documents.missing')}`;
-    const pages = this.t('documents.pages', {
-      count: doc.pages,
-      n: formatNum(doc.pages, this.i18n.language()),
-    });
-    return [name, this.age(doc.issuedOn), pages].filter(Boolean).join(' · ');
+    // Its age when it has an issue date, else its pages: never both.
+    const detail =
+      this.age(doc.issuedOn) ??
+      this.t('documents.pages', {
+        count: doc.pages,
+        n: formatNum(doc.pages, this.i18n.language()),
+      });
+    return `${name} · ${detail}`;
   }
 
   // The certificate's warning: too old when sent, or no issue date at all.
@@ -413,6 +416,8 @@ export class VerificationFile {
   private line(entry: AuditEntryDto, value: VerificationFileDto) {
     const name = entry.actor?.name || SYSTEM_NAME;
     const when = this.when(entry.at);
+    // newValue is the audit's free JSON: each subject writes its own shape
+    // (a document's { page }, a check's { result }), read here defensively.
     const next = entry.newValue as unknown;
     if (entry.subjectType === 'legal_document')
       return this.t('lines.page', {

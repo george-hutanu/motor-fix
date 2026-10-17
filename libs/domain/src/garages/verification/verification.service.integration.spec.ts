@@ -324,6 +324,7 @@ describe('opening', () => {
 
     expect(opened).toMatchObject({
       byAnother: false,
+      first: true,
       openedBy: ioana.accountId,
     });
     const after = await prisma.verificationFile.findUniqueOrThrow({
@@ -344,6 +345,7 @@ describe('opening', () => {
 
     expect(second).toEqual({
       byAnother: true,
+      first: false,
       openedAt: first.openedAt,
       openedBy: ioana.accountId,
     });
@@ -922,6 +924,7 @@ describe('opening a file no longer waiting', () => {
 
       expect(answer).toEqual({
         byAnother: true,
+        first: false,
         openedAt: file.openedAt,
         openedBy: ioana.accountId,
       });

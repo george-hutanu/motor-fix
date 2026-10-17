@@ -29,8 +29,9 @@ describe('certificateStale', () => {
 });
 
 describe('timelineWhere', () => {
-  it("keeps the file's sending and status changes, its checks' records and its documents' openings", () => {
-    expect(timelineWhere('f', ['c1', 'c2'], ['d1'])).toEqual({
+  it("reads the garage's lines by its (garageId, at) index and keeps the file's sending and status changes, its checks' records and its documents' openings", () => {
+    expect(timelineWhere('g', 'f', ['c1', 'c2'], ['d1'])).toEqual({
+      garageId: 'g',
       OR: [
         {
           OR: [{ action: 'create' }, { action: 'update', field: 'status' }],
