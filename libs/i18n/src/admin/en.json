@@ -49,6 +49,7 @@
       "approve": "Approve and publish",
       "ask": "Ask for more",
       "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
+      "rarRequired": "The RAR check is required",
       "reason": "Reason: {reason}",
       "reject": "Reject"
     },
@@ -70,6 +71,7 @@
       "more_requested": "More requested by {name}, {when}",
       "opened": "Opened by {name}, {when}",
       "page": "{document}, page {n} opened by {name}, {when}",
+      "rarNumber": "RAR number: {old} → {new} — {name}, {when}",
       "rejected": "Rejected by {name}, {when}",
       "reopened": "Reopened by {name}, {when}",
       "reopenedWhy": "Reopened by {name}, {when} ({reason})",
@@ -111,46 +113,80 @@
     },
     "recorded": "{name}, {when}",
     "register": {
-      "activities": "Authorised activities",
+      "activities": "Authorised activities cover the price list",
       "anaf": "ANAF",
       "caen": "CAEN code 4520",
       "change": "Change",
       "company": "Active company at ANAF and ONRC",
       "copied": "CUI copied",
+      "correct": "Correct",
       "errors": {
         "cui": "The garage's CUI is not valid",
         "detail": "{field}: 1 to 200 characters, no line breaks",
         "missing": "Missing: {fields}",
-        "result": "Choose a result"
+        "noNumber": "The RAR number is missing: correct it first",
+        "number": "RAR number: 3 to 40 characters, no line breaks",
+        "oneActivity": "Tick at least one activity",
+        "result": "Choose a result",
+        "uncovered": "Not covered: {jobs}"
       },
       "form": {
+        "authorisation": "RAR authorisation",
+        "cancel": "Cancel",
         "clear": "Clear",
+        "covered": "covered",
         "detail": "Detail",
         "detailHint": "1–200 characters. Other admins see it.",
         "failed": "Failure",
         "name": "Company name",
+        "noDocument": "no authorisation uploaded",
+        "noJobs": "The price list has no jobs",
         "ok": "OK",
+        "priceList": "Jobs on the price list",
         "result": "Result",
         "save": "Save",
         "ticks": "What you checked",
+        "uncovered": "not covered",
+        "uncoveredCode": "not covered (code {code})",
         "warning": "Warning"
       },
       "heading": "REGISTER CHECKS",
+      "noActivities": "no activity recorded",
+      "noNumber": "number missing",
+      "number": "RAR number",
       "onrc": "ONRC",
       "open": "Record",
-      "rar": "RAR authorisation",
+      "proposed": {
+        "rarNotFound": "the number entered is not in the public RAR register",
+        "uncovered": {
+          "one": "{jobs} is not on the authorisation",
+          "other": "{jobs} are not on the authorisation"
+        }
+      },
+      "rar": "RAR authorisation found in the register",
+      "rarCopied": "RAR number copied",
+      "rarFailed": "RAR authorisation not found in the register",
+      "rarRegister": "RAR register",
       "stored": {
         "address": "address",
         "certificate": "certificate",
+        "found": "found",
         "noCertificate": "no certificate",
-        "onrc": "ONRC"
+        "onrc": "ONRC",
+        "sameAddress": "address",
+        "sameCompany": "company"
       },
       "ticks": {
         "certificate": "4520 on the certificate",
+        "found": "found",
         "onrc": "4520 in the ONRC record",
         "premises": "at the workshop address",
+        "sameAddress": "same address",
+        "sameCompany": "same company",
+        "sameSeat": "same registered seat",
         "seat": "at the registered seat"
-      }
+      },
+      "uncoveredLine": "Not covered: {jobs}"
     },
     "rejectedBefore": "Rejected before: {reason}, {when}",
     "reopenedReport": "Reopened after a report, {when}",

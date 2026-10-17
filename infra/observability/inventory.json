@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 134,
+    "count": 135,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -456,6 +456,16 @@
       "alerts": "none",
       "reason": "a link the admin opens in a new tab to look a CUI up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
       "story": "ST-203"
+    },
+    {
+      "kind": "outside-service",
+      "name": "rar-portal",
+      "host": "portal.rarom.ro",
+      "source": "apps/web/src/app/dashboard/verification-file/verification-file.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "a link the admin opens in a new tab to look a RAR number up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
+      "story": "ST-204"
     },
     {
       "kind": "product-counter",
@@ -1008,6 +1018,19 @@
       ],
       "reason": "each save logs one VerificationChecks line (file, kind, result, admin; never the detail or the company name), writes an audit entry and emits verification.check_recorded, and is counted by motorfix_verification_checks_total; the API-wide error and latency rules cover it, so it has no alert of its own",
       "story": "ST-203"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-rar-number",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/rar-number",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each correction logs one line (file, admin; never the number) and writes an audit entry with the old and new number; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-204"
     },
     {
       "kind": "product-counter",

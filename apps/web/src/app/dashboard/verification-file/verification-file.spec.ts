@@ -17,6 +17,7 @@ import { VerificationFile } from './verification-file';
 import { Live } from '../live';
 
 // @traces 203-FR-006 203-FR-008
+// @traces 204-FR-007 204-FR-009
 // @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-009 302-FR-010 302-FR-011
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -73,6 +74,10 @@ function fileOf(
   const { file, garage, ...rest } = extra;
   return {
     activities: [],
+    catalogue: [
+      { code: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
+      { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+    ],
     checks: KINDS.map((kind) => check(kind)),
     documents: [
       {
@@ -92,6 +97,20 @@ function fileOf(
         stale: null,
       },
     ],
+    jobs: [
+      {
+        jobTypeId: 'job-oil',
+        nameEn: 'Oil change',
+        nameRo: 'Schimb de ulei',
+        rarActivity: 'mechanics',
+      },
+      {
+        jobTypeId: 'job-pads',
+        nameEn: 'Brake pads',
+        nameRo: 'Plăcuțe de frână',
+        rarActivity: 'brakes',
+      },
+    ],
     previousRejection: null,
     reports: [],
     storageReady: true,
@@ -105,6 +124,7 @@ function fileOf(
       id: FILE,
       openedAt: NOW.toISOString(),
       openedBy: ioana,
+      rarNumber: 'B 1234/2019',
       reasonCode: null,
       reasonNote: null,
       reopenedAt: null,
@@ -142,6 +162,7 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let answer: () => Promise<VerificationFileDto>;
 let api: {
+  verificationFileControllerCorrect: jest.Mock;
   verificationFileControllerOpen: jest.Mock;
   verificationFileControllerRead: jest.Mock;
   verificationChecksControllerRecord: jest.Mock;
@@ -166,6 +187,7 @@ async function open(
   answer = typeof file === 'function' ? file : async () => file;
   api = {
     verificationChecksControllerRecord: jest.fn(),
+    verificationFileControllerCorrect: jest.fn(),
     verificationFileControllerOpen: jest.fn(() => answer()),
     verificationFileControllerRead: jest.fn(() => answer()),
   };
@@ -1280,7 +1302,7 @@ describe('the company and CAEN rows', () => {
     expect(links(host, 'caen')).toEqual([
       { href: ONRC, text: 'ONRC', ...tabbed },
     ]);
-    expect(links(host, 'rar')).toEqual([]);
+    expect(links(host, 'activities')).toEqual([]);
   });
 
   it('copies the CUI when a look-up opens, and says so', async () => {
@@ -1307,9 +1329,6 @@ describe('the company and CAEN rows', () => {
     const host = await open();
     const company = row(host, 'register', 'company');
 
-    expect(buttons(row(host, 'register', 'rar'))).not.toContain(
-      'Înregistrează',
-    );
     press(company, 'Înregistrează');
     await settle();
     expect(form(host, 'company')).not.toBeNull();
@@ -1490,4 +1509,370 @@ describe('the company and CAEN rows', () => {
       expect(text(caen)).toContain('Codul lipsește din ONRC');
     },
   );
+});
+
+describe('the RAR and activities rows', () => {
+  const RAR = 'https://portal.rarom.ro/';
+  const withCheck = (
+    kind: (typeof KINDS)[number],
+    extra: Partial<VerificationFileCheckDto>,
+    more: Parameters<typeof fileOf>[0] = {},
+  ) =>
+    fileOf({
+      checks: KINDS.map((k) => (k === kind ? check(k, extra) : check(k))),
+      ...more,
+    });
+  const anchor = (host: HTMLElement, name: string) =>
+    [
+      ...(row(host, 'register', 'rar')?.querySelectorAll<HTMLAnchorElement>(
+        'a',
+      ) ?? []),
+    ].find((a) => text(a) === name) as HTMLAnchorElement | undefined;
+  const follow = async (a: HTMLAnchorElement) => {
+    const stay = (event: Event) => event.preventDefault();
+    document.addEventListener('click', stay);
+    a.click();
+    document.removeEventListener('click', stay);
+    await settle();
+  };
+  const clipboard = (writeText?: jest.Mock) =>
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: writeText ? { writeText } : undefined,
+    });
+  const input = (el: Element | null | undefined) =>
+    el?.querySelector<HTMLInputElement>('input[type="text"]') ?? null;
+  const reset = () => {
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+  };
+
+  it('labels the rows by what is checked, the RAR row by its result', async () => {
+    const host = await open();
+    expect(text(row(host, 'register', 'rar'))).toContain(
+      'Autorizație RAR găsită în registru',
+    );
+    expect(text(row(host, 'register', 'rar'))).toContain('neverificat');
+    expect(text(row(host, 'register', 'activities'))).toContain(
+      'Activitățile autorizate acoperă lista de prețuri',
+    );
+
+    reset();
+    const failed = await open(
+      withCheck('rar', {
+        detail: 'numărul introdus nu există în registrul public RAR',
+        recorder: ioana,
+        result: 'failed',
+      }),
+    );
+    expect(text(row(failed, 'register', 'rar'))).toContain(
+      'Autorizația RAR nu apare în registru',
+    );
+
+    reset();
+    const english = await open(fileOf(), 'en');
+    expect(text(row(english, 'register', 'rar'))).toContain(
+      'RAR authorisation found in the register',
+    );
+    expect(text(row(english, 'register', 'activities'))).toContain(
+      'Authorised activities cover the price list',
+    );
+  });
+
+  it('shows the number as stored, or that it is missing', async () => {
+    const host = await open();
+    expect(text(row(host, 'register', 'rar'))).toContain('B 1234/2019');
+
+    reset();
+    const none = await open(fileOf({ file: { rarNumber: null } }));
+    expect(text(row(none, 'register', 'rar'))).toContain('număr lipsă');
+  });
+
+  it('links the public RAR register in a new tab, with no number in the address', async () => {
+    const host = await open();
+    const link = anchor(host, 'Registrul RAR');
+
+    expect(link?.getAttribute('href')).toBe(RAR);
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('copies the number when the register opens, and says so', async () => {
+    const writeText = jest.fn(async () => undefined);
+    clipboard(writeText);
+    const host = await open();
+
+    await follow(anchor(host, 'Registrul RAR') as HTMLAnchorElement);
+
+    expect(writeText).toHaveBeenCalledWith('B 1234/2019');
+    expect(toast).toHaveBeenCalledWith('Număr RAR copiat');
+  });
+
+  it('opens the register quietly when there is no number or no clipboard', async () => {
+    const writeText = jest.fn(async () => undefined);
+    clipboard(writeText);
+    const host = await open(fileOf({ file: { rarNumber: null } }));
+    await follow(anchor(host, 'Registrul RAR') as HTMLAnchorElement);
+    expect(writeText).not.toHaveBeenCalled();
+
+    reset();
+    clipboard();
+    const bare = await open();
+    await follow(anchor(bare, 'Registrul RAR') as HTMLAnchorElement);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('corrects the number through the admin call and shows the answer', async () => {
+    const host = await open();
+    api.verificationFileControllerCorrect.mockResolvedValue(
+      fileOf({ file: { rarNumber: 'CJ 221/2021' } }),
+    );
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const field = input(rar()?.querySelector('[data-part="correct"]'));
+    expect(field?.value).toBe('B 1234/2019');
+    expect(document.activeElement).toBe(field);
+    (field as HTMLInputElement).value = ' cj 221/2021 ';
+    field?.dispatchEvent(new Event('input', { bubbles: true }));
+    press(rar()?.querySelector('[data-part="correct"]') ?? null, 'Salvează');
+    await settle();
+
+    expect(api.verificationFileControllerCorrect).toHaveBeenCalledWith({
+      body: { rarNumber: ' cj 221/2021 ' },
+      id: FILE,
+    });
+    expect(rar()?.querySelector('[data-part="correct"]')).toBeNull();
+    expect(text(rar())).toContain('CJ 221/2021');
+  });
+
+  // @traces 204-FR-014
+  it("gives the correction's Save and Cancel the record form's buttons", async () => {
+    const host = await open();
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const buttons = [
+      ...(rar()?.querySelectorAll('[data-part="correct"] button') ?? []),
+    ];
+
+    expect(buttons.map((b) => b.hasAttribute('hlmbtn'))).toEqual([true, true]);
+    expect(buttons.map((b) => b.getAttribute('variant'))).toEqual([
+      null,
+      'ghost',
+    ]);
+  });
+
+  it('refuses a number too short before sending, and names the field', async () => {
+    const host = await open();
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const field = input(rar()?.querySelector('[data-part="correct"]'));
+    (field as HTMLInputElement).value = ' b1 ';
+    field?.dispatchEvent(new Event('input', { bubbles: true }));
+    press(rar()?.querySelector('[data-part="correct"]') ?? null, 'Salvează');
+    await settle();
+
+    expect(api.verificationFileControllerCorrect).not.toHaveBeenCalled();
+    expect(text(rar()?.querySelector('[role="alert"]'))).toContain(
+      'Numărul RAR',
+    );
+    expect(field?.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('re-reads the file when a correction finds it decided', async () => {
+    const host = await open();
+    api.verificationFileControllerCorrect.mockRejectedValue(
+      new HttpErrorResponse({
+        error: { code: 'verification_file_decided', status: 409 },
+        status: 409,
+      }),
+    );
+    api.verificationFileControllerRead.mockClear();
+    const rar = () => row(host, 'register', 'rar');
+
+    press(rar(), 'Corectează');
+    await settle();
+    const field = input(rar()?.querySelector('[data-part="correct"]'));
+    (field as HTMLInputElement).value = 'CJ 221/2021';
+    field?.dispatchEvent(new Event('input', { bubbles: true }));
+    press(rar()?.querySelector('[data-part="correct"]') ?? null, 'Salvează');
+    await settle();
+
+    expect(api.verificationFileControllerRead).toHaveBeenCalled();
+  });
+
+  it('offers the correction and the forms only on an undecided file', async () => {
+    const host = await open();
+    expect(buttons(row(host, 'register', 'rar'))).toEqual(
+      expect.arrayContaining(['Corectează', 'Înregistrează']),
+    );
+    expect(buttons(row(host, 'register', 'activities'))).toContain(
+      'Înregistrează',
+    );
+
+    reset();
+    const decided = await open(
+      fileOf({
+        file: {
+          decidedAt: NOW.toISOString(),
+          decidedBy: ioana,
+          status: 'approved',
+        },
+      }),
+    );
+    expect(buttons(row(decided, 'register', 'rar'))).toEqual([]);
+    expect(buttons(row(decided, 'register', 'activities'))).toEqual([]);
+  });
+
+  it('hands the RAR form the number and the activities form the catalogue and the jobs', async () => {
+    const host = await open();
+
+    press(row(host, 'register', 'rar'), 'Înregistrează');
+    await settle();
+    const rarForm = row(host, 'register', 'rar')?.querySelector(
+      'mf-verification-register-form',
+    );
+    expect(text(rarForm)).toContain('B 1234/2019');
+    expect(text(rarForm)).toContain('aceeași firmă');
+
+    press(row(host, 'register', 'activities'), 'Înregistrează');
+    await settle();
+    const activitiesForm = row(host, 'register', 'activities')?.querySelector(
+      'mf-verification-register-form',
+    );
+    expect(text(activitiesForm)).toContain('Frâne');
+    expect(text(activitiesForm)).toContain('Plăcuțe de frână');
+  });
+
+  it('reads the stored RAR ticks as text on an OK row', async () => {
+    const host = await open(
+      withCheck('rar', {
+        detail: 'aceeași firmă și adresă',
+        evidence: {
+          found: true,
+          lookedUpOn: daysAgo(0),
+          rarNumber: 'B 1234/2019',
+          sameAddress: true,
+          sameCompany: true,
+        },
+        recorder: ioana,
+        result: 'ok',
+      } as Partial<VerificationFileCheckDto>),
+    );
+
+    expect(text(row(host, 'register', 'rar'))).toContain(
+      'găsită · firmă · adresă',
+    );
+    expect(text(row(host, 'register', 'rar'))).toContain(
+      'aceeași firmă și adresă',
+    );
+  });
+
+  it('names the ticked activities and the uncovered jobs of a recorded activities row', async () => {
+    const more = {
+      activities: [
+        { code: 'mechanics', nameEn: 'Mechanics', nameRo: 'Mecanică' },
+      ],
+    };
+    const warning = {
+      detail: 'Plăcuțe de frână nu apare în autorizație',
+      evidence: { lookedUpOn: daysAgo(0), uncoveredJobTypeIds: ['job-pads'] },
+      recorder: ioana,
+      result: 'warning',
+    } as Partial<VerificationFileCheckDto>;
+    const host = await open(withCheck('activities', warning, more));
+    const activities = text(row(host, 'register', 'activities'));
+    expect(activities).toContain('Mecanică');
+    expect(activities).toContain('Neacoperite: Plăcuțe de frână');
+
+    reset();
+    const english = await open(withCheck('activities', warning, more), 'en');
+    expect(text(row(english, 'register', 'activities'))).toContain(
+      'Not covered: Brake pads',
+    );
+  });
+
+  // @traces 204-FR-009
+  it('says no activity is recorded when the list was saved empty, and nothing while unchecked', async () => {
+    const warning = {
+      detail: 'autorizația nu e lizibilă',
+      evidence: { lookedUpOn: daysAgo(0), uncoveredJobTypeIds: [] },
+      recorder: ioana,
+      result: 'warning',
+    } as Partial<VerificationFileCheckDto>;
+    const host = await open(
+      withCheck('activities', warning, { activities: [] }),
+    );
+    const line = text(row(host, 'register', 'activities'));
+    expect(line).toContain('nicio activitate înregistrată');
+    expect(line).toContain('autorizația nu e lizibilă');
+
+    reset();
+    const english = await open(
+      withCheck('activities', warning, { activities: [] }),
+      'en',
+    );
+    expect(text(row(english, 'register', 'activities'))).toContain(
+      'no activity recorded',
+    );
+
+    reset();
+    const unchecked = await open();
+    expect(text(row(unchecked, 'register', 'activities'))).not.toContain(
+      'nicio activitate',
+    );
+  });
+
+  it('notes in the footer that the RAR check is required until it is OK', async () => {
+    const host = await open();
+    expect(text(section(host, 'footer'))).toContain(
+      'Verificarea RAR e obligatorie',
+    );
+
+    reset();
+    const ok = await open(withCheck('rar', { recorder: ioana, result: 'ok' }));
+    expect(text(section(ok, 'footer'))).not.toContain(
+      'Verificarea RAR e obligatorie',
+    );
+
+    reset();
+    const decided = await open(
+      fileOf({
+        file: {
+          decidedAt: NOW.toISOString(),
+          decidedBy: ioana,
+          status: 'rejected',
+        },
+      }),
+    );
+    expect(text(section(decided, 'footer'))).not.toContain(
+      'Verificarea RAR e obligatorie',
+    );
+  });
+
+  it('lists a number correction in the history', async () => {
+    const host = await open(
+      fileOf({
+        timeline: {
+          entries: [
+            entry({
+              field: 'rar_number',
+              newValue: 'CJ 221/2021',
+              oldValue: null,
+            }),
+          ],
+          total: 1,
+        },
+      }),
+    );
+
+    expect(text(section(host, 'history'))).toContain(
+      'Număr RAR: — → CJ 221/2021 — Ioana',
+    );
+  });
 });

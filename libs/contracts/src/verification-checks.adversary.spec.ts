@@ -25,6 +25,10 @@ const c = (
   detail: string | null = null,
 ): Check => ({ detail, kind, result });
 
+// The file holds its RAR licence, so the licence line follows the checks.
+const summary = (checks: readonly Check[], language: 'ro' | 'en') =>
+  checkSummary(checks, language, ['rar_authorisation']);
+
 const errorsFor = async (plain: unknown) =>
   validate(plainToInstance(RecordVerificationCheckDto, plain));
 
@@ -39,46 +43,39 @@ describe('lamp', () => {
 
 describe('checkSummary', () => {
   it('reads Neverificat for an empty list', () => {
-    expect(checkSummary([], 'ro')).toBe('Neverificat');
-    expect(checkSummary([], 'en')).toBe('Not checked');
+    expect(summary([], 'ro')).toBe('Neverificat');
+    expect(summary([], 'en')).toBe('Not checked');
   });
 
   it('reads Neverificat when all eight are not_run', () => {
     const all = VERIFICATION_CHECK_KINDS.map((k) => c(k, 'not_run'));
-    expect(checkSummary(all, 'ro')).toBe('Neverificat');
+    expect(summary(all, 'ro')).toBe('Neverificat');
   });
 
   it('counts a missing kind as not_run', () => {
-    expect(checkSummary([c('rar', 'ok')], 'ro')).toBe(
-      'Autorizație RAR verificată',
-    );
-    expect(checkSummary([c('company', 'ok')], 'en')).toBe('Company ID checked');
+    expect(summary([c('rar', 'ok')], 'ro')).toBe('Autorizație RAR verificată');
+    expect(summary([c('company', 'ok')], 'en')).toBe('Company ID checked');
   });
 
   it('gives the four Romanian examples exactly', () => {
-    expect(checkSummary([c('company', 'ok'), c('rar', 'ok')], 'ro')).toBe(
+    expect(summary([c('company', 'ok'), c('rar', 'ok')], 'ro')).toBe(
       'CUI și autorizație RAR verificate',
     );
-    expect(checkSummary([c('rar', 'failed')], 'ro')).toBe(
+    expect(summary([c('rar', 'failed')], 'ro')).toBe(
       'Lipsește autorizația RAR',
     );
     expect(
-      checkSummary(
-        [c('company', 'ok'), c('photos', 'warning', 'neclare')],
-        'ro',
-      ),
+      summary([c('company', 'ok'), c('photos', 'warning', 'neclare')], 'ro'),
     ).toBe('CUI verificat · fotografii neclare');
   });
 
   it('gives the English examples exactly', () => {
-    expect(checkSummary([c('company', 'ok'), c('rar', 'ok')], 'en')).toBe(
+    expect(summary([c('company', 'ok'), c('rar', 'ok')], 'en')).toBe(
       'Company ID and RAR licence checked',
     );
-    expect(checkSummary([c('rar', 'failed')], 'en')).toBe(
-      'RAR licence missing',
-    );
-    expect(checkSummary([c('rar', 'ok')], 'en')).toBe('RAR licence checked');
-    expect(checkSummary([c('photos', 'warning', 'neclare')], 'en')).toBe(
+    expect(summary([c('rar', 'failed')], 'en')).toBe('RAR licence missing');
+    expect(summary([c('rar', 'ok')], 'en')).toBe('RAR licence checked');
+    expect(summary([c('photos', 'warning', 'neclare')], 'en')).toBe(
       'photos neclare'.replace(/^./, (x) => x.toUpperCase()),
     );
   });
@@ -87,21 +84,21 @@ describe('checkSummary', () => {
     const ok = VERIFICATION_CHECK_KINDS.filter(
       (k) => k !== 'company' && k !== 'rar',
     ).map((k) => c(k, 'ok', 'fine'));
-    expect(checkSummary(ok, 'ro')).toBe('Neverificat');
+    expect(summary(ok, 'ro')).toBe('Neverificat');
   });
 
   it('capitalises a lone problem part that starts lowercase', () => {
-    expect(checkSummary([c('photos', 'warning', 'neclare')], 'ro')).toBe(
+    expect(summary([c('photos', 'warning', 'neclare')], 'ro')).toBe(
       'Fotografii neclare',
     );
   });
 
   it('capitalises a unicode first letter', () => {
-    expect(checkSummary([c('address', 'warning', 'ă')], 'ro')).toMatch(/^A/);
+    expect(summary([c('address', 'warning', 'ă')], 'ro')).toMatch(/^A/);
   });
 
   it('puts failed before warning whatever the kind order', () => {
-    const out = checkSummary(
+    const out = summary(
       [c('company', 'warning', 'nepotrivit'), c('photos', 'failed', 'lipsesc')],
       'ro',
     );
@@ -109,7 +106,7 @@ describe('checkSummary', () => {
   });
 
   it('names rar before other kinds of the same severity', () => {
-    const out = checkSummary(
+    const out = summary(
       [c('company', 'warning', 'x'), c('rar', 'warning', 'expirată')],
       'ro',
     );
@@ -117,7 +114,7 @@ describe('checkSummary', () => {
   });
 
   it('names the earlier kind first among equal-severity non-rar problems', () => {
-    const out = checkSummary(
+    const out = summary(
       [c('photos', 'warning', 'b'), c('caen', 'warning', 'a')],
       'ro',
     );
@@ -127,65 +124,65 @@ describe('checkSummary', () => {
 
   it('keeps at most two parts joined with a middle dot', () => {
     const all = VERIFICATION_CHECK_KINDS.map((k) => c(k, 'failed', 'x'));
-    const out = checkSummary([...all, c('company', 'ok')].slice(1), 'ro');
+    const out = summary([...all, c('company', 'ok')].slice(1), 'ro');
     expect(out.split(' · ').length).toBeLessThanOrEqual(2);
   });
 
   it('does not depend on the order of the input', () => {
     const a = [c('company', 'ok'), c('rar', 'ok'), c('photos', 'warning', 'z')];
     const b = [...a].reverse();
-    expect(checkSummary(b, 'ro')).toBe(checkSummary(a, 'ro'));
+    expect(summary(b, 'ro')).toBe(summary(a, 'ro'));
   });
 
   it('does not mutate its input', () => {
     const input = [c('rar', 'ok'), c('company', 'ok')];
     const copy = JSON.parse(JSON.stringify(input));
-    checkSummary(input, 'ro');
+    summary(input, 'ro');
     expect(input).toEqual(copy);
   });
 
   it('returns the same text when called twice', () => {
     const input = [c('company', 'ok'), c('photos', 'warning', 'neclare')];
-    expect(checkSummary(input, 'en')).toBe(checkSummary(input, 'en'));
+    expect(summary(input, 'en')).toBe(summary(input, 'en'));
   });
 
   it('keeps the detail as typed, including unicode and inner spacing', () => {
-    expect(
-      checkSummary([c('photos', 'warning', 'încă  neclare ț')], 'ro'),
-    ).toBe('Fotografii încă  neclare ț');
+    expect(summary([c('photos', 'warning', 'încă  neclare ț')], 'ro')).toBe(
+      'Fotografii încă  neclare ț',
+    );
   });
 
   it('shows a problem alone when the detail is null', () => {
-    expect(checkSummary([c('photos', 'warning', null)], 'ro').trim()).not.toBe(
+    expect(summary([c('photos', 'warning', null)], 'ro').trim()).not.toBe(
       'Neverificat',
     );
   });
 
   it('shows rar failed text even when detail is present', () => {
-    expect(checkSummary([c('rar', 'failed', 'orice')], 'ro')).toBe(
+    expect(summary([c('rar', 'failed', 'orice')], 'ro')).toBe(
       'Lipsește autorizația RAR',
     );
   });
 
   it('puts the rar failed text after company ok', () => {
-    expect(checkSummary([c('company', 'ok'), c('rar', 'failed')], 'ro')).toBe(
+    expect(summary([c('company', 'ok'), c('rar', 'failed')], 'ro')).toBe(
       'CUI verificat · lipsește autorizația RAR',
     );
   });
 
   it('does not report rar as verified when it is a warning', () => {
-    const out = checkSummary([c('rar', 'warning', 'expiră')], 'ro');
+    const out = summary([c('rar', 'warning', 'expiră')], 'ro');
     expect(out).not.toContain('verificat');
   });
 
   it('handles duplicate kinds without throwing a wrong result for the clean case', () => {
-    const out = checkSummary([c('company', 'ok'), c('company', 'ok')], 'ro');
+    const out = summary([c('company', 'ok'), c('company', 'ok')], 'ro');
     expect(out).toBe('CUI verificat');
   });
 
   it('handles ten thousand checks', () => {
     const many = Array.from({ length: 10000 }, () => c('company', 'ok'));
-    expect(checkSummary(many, 'en')).toBe('Company ID checked');
+    expect(summary(many, 'en')).toBe('Company ID checked');
   });
 });
 

@@ -296,4 +296,64 @@ test.describe('the verification file @seeded', () => {
       page.locator('mf-admin-queue li.row', { hasText: name }),
     ).toContainText('CUI verificat', { timeout: 15_000 });
   });
+
+  // @traces 204-FR-001
+  // @traces 204-FR-007
+  test('corrects the RAR number and records the RAR and activities checks', async ({
+    page,
+  }) => {
+    await db.query(
+      `UPDATE garage SET rar_activities = ARRAY['mechanics'] WHERE id = $1`,
+      [garageId],
+    );
+    await signInAsAdmin(page);
+    await page.goto(`/app/admin/garages/${fileId}`);
+    await expect(drawer(page).locator('h3')).toHaveText(name);
+
+    // The file holds no number: the admin types the one the register shows.
+    const rar = register(page, 'rar');
+    await expect(rar).toContainText('număr lipsă');
+    await rar.getByRole('button', { name: 'Corectează' }).click();
+    const correct = rar.locator('[data-part="correct"]');
+    await correct.getByLabel('Număr RAR').fill('cj 221/2021');
+    await correct.getByRole('button', { name: 'Salvează' }).click();
+    await expect(correct).toHaveCount(0);
+    await expect(rar).toContainText('CJ 221/2021');
+
+    // The RAR check: OK with the three ticks.
+    await rar.getByRole('button', { name: 'Înregistrează' }).click();
+    const rarForm = rar.locator('mf-verification-register-form');
+    await rarForm.getByRole('button', { exact: true, name: 'OK' }).click();
+    for (const tick of ['găsită', 'aceeași firmă', 'aceeași adresă'])
+      await rarForm.getByLabel(tick).check();
+    await rarForm.getByRole('button', { name: 'Salvează' }).click();
+    await expect(rarForm).toHaveCount(0);
+    await expect(rar).toContainText('aceeași firmă și adresă');
+    await expect(rar).toContainText('găsită · firmă · adresă');
+    await expect(rar.locator('mf-lamp')).toHaveAttribute('data-state', 'green');
+
+    // The activities: OK with the stored list, which covers an empty price list.
+    const activities = register(page, 'activities');
+    await activities.getByRole('button', { name: 'Înregistrează' }).click();
+    const activitiesForm = activities.locator('mf-verification-register-form');
+    await expect(activitiesForm.getByLabel('Mecanică')).toBeChecked();
+    await activitiesForm
+      .getByRole('button', { exact: true, name: 'OK' })
+      .click();
+    await activitiesForm.getByRole('button', { name: 'Salvează' }).click();
+    await expect(activitiesForm).toHaveCount(0);
+    await expect(activities).toContainText('toate lucrările sunt acoperite');
+    await expect(activities.locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'green',
+    );
+    await expect(drawer(page)).not.toContainText(
+      'Verificarea RAR e obligatorie',
+    );
+
+    await page.goto('/app/admin/garages');
+    await expect(
+      page.locator('mf-admin-queue li.row', { hasText: name }),
+    ).toContainText(/autorizație RAR verificată/i, { timeout: 15_000 });
+  });
 });

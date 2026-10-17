@@ -1,6 +1,8 @@
 import {
   checkSummary,
+  normaliseRarNumber,
   queueLamp,
+  rarNumberRefused,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TARGET_WORKING_DAYS,
   type VerificationQueueAreaDto,
@@ -11,6 +13,7 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -80,6 +83,8 @@ const refused = (detail: string) =>
 // same commit; a move, its history entry and its event commit together.
 @Injectable()
 export class VerificationService {
+  private readonly logger = new Logger('Verification');
+
   constructor(
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
@@ -111,6 +116,7 @@ export class VerificationService {
         orderBy: [{ submittedAt: 'asc' }, { id: 'desc' }],
         select: {
           checks: { select: { detail: true, kind: true, result: true } },
+          documents: { select: { kind: true } },
           garage: { select: QUEUE_GARAGE },
           id: true,
           status: true,
@@ -138,11 +144,14 @@ export class VerificationService {
   }
 
   // Who may submit is the submitting story's rule; here only the files count.
+  // The RAR number, when given, is stored as step 6 normalises it.
   async submit(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
     garageId: string,
+    rarNumber?: string,
   ): Promise<VerificationFile> {
+    if (rarNumber && rarNumberRefused(rarNumber)) throw rarNumberInvalid();
     const newest = await tx.verificationFile.findFirst({
       orderBy: newestFirst,
       where: { garageId },
@@ -151,7 +160,13 @@ export class VerificationService {
       throw await this.refusalFor(tx, newest);
     }
     const file = await tx.verificationFile
-      .create({ data: { garageId, previousFileId: newest?.id ?? null } })
+      .create({
+        data: {
+          garageId,
+          previousFileId: newest?.id ?? null,
+          rarNumber: rarNumber ? normaliseRarNumber(rarNumber) : null,
+        },
+      })
       .catch((error: unknown) => {
         // A submission that raced this one committed first.
         throw taken(error)
@@ -171,6 +186,59 @@ export class VerificationService {
     await this.announce(tx, file, 'verification.submitted');
     if (!this.config.skipManualApproval) return file;
     return this.decide(tx, SYSTEM, file.id, { outcome: 'approved' });
+  }
+
+  // An admin sets or corrects the file's RAR number while it is undecided:
+  // one history entry, no event, and the garage is not told.
+  async correctRarNumber(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    fileId: string,
+    input: string,
+  ): Promise<void> {
+    requireCapability(actor, 'admin.garages');
+    if (!isUUID(fileId)) throw new NotFoundException();
+    if (rarNumberRefused(input)) throw rarNumberInvalid();
+    const rarNumber = normaliseRarNumber(input);
+    // Held until the correction commits, so two corrections serialise and a
+    // decision racing it waits.
+    const [file] = await tx.$queryRaw<
+      {
+        garageId: string;
+        rarNumber: string | null;
+        status: VerificationFileStatus;
+      }[]
+    >`SELECT garage_id AS "garageId", rar_number AS "rarNumber",
+        status::text AS status
+      FROM verification_file WHERE id = ${fileId}::uuid FOR UPDATE`;
+    if (!file) throw new NotFoundException();
+    // A decided file is the one a reopening starts from.
+    if (FROM.reopen.includes(file.status)) {
+      throw refusal(
+        HttpStatus.CONFLICT,
+        'verification_file_decided',
+        'Dosarul e deja decis',
+      );
+    }
+    if (file.rarNumber === rarNumber) return;
+    await tx.verificationFile.update({
+      data: { rarNumber },
+      where: { id: fileId },
+    });
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      field: 'rar_number',
+      garageId: file.garageId,
+      newValue: rarNumber,
+      oldValue: file.rarNumber,
+      subjectId: fileId,
+      subjectType: 'verification_file',
+    });
+    this.logger.log(
+      `file ${fileId} RAR number corrected by ${actor.accountId}`,
+    );
   }
 
   // A second admin's open changes nothing and says who opened it first.
@@ -458,6 +526,7 @@ const QUEUE_GARAGE = {
 type QueueFile = Prisma.VerificationFileGetPayload<{
   select: {
     checks: { select: { detail: true; kind: true; result: true } };
+    documents: { select: { kind: true } };
     garage: { select: typeof QUEUE_GARAGE };
     id: true;
     status: true;
@@ -479,7 +548,7 @@ export function garageArea(garage: {
 const isoDay = (day: Date) => day.toISOString().slice(0, 10);
 
 function queueRow(
-  { checks, garage, id, status, submittedAt }: QueueFile,
+  { checks, documents, garage, id, status, submittedAt }: QueueFile,
   now: Date,
   holidays: ReadonlySet<string>,
 ): VerificationQueueRowDto {
@@ -487,6 +556,7 @@ function queueRow(
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
   const area = garageArea(garage);
   const team = garage.features[0]?.enabled !== false;
+  const kinds = documents.map((d) => d.kind);
   return {
     ...(area && { area }),
     brands: garage._count.brands,
@@ -498,7 +568,10 @@ function queueRow(
     ...(team && { mechanics: garage._count.mechanics }),
     status: status as VerificationQueueRowDto['status'],
     submittedAt,
-    summary: { en: checkSummary(checks, 'en'), ro: checkSummary(checks, 'ro') },
+    summary: {
+      en: checkSummary(checks, 'en', kinds),
+      ro: checkSummary(checks, 'ro', kinds),
+    },
     workingDays,
   };
 }
@@ -542,4 +615,14 @@ function openedFirst(actor: VerificationActor, file: VerificationFile) {
     openedAt: file.openedAt,
     openedBy: file.openedBy,
   };
+}
+
+// The same refusal for a correction and a submission.
+function rarNumberInvalid() {
+  return refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'Numărul RAR: între 3 și 40 de caractere, fără caractere de control',
+    [{ code: 'invalid', field: 'rarNumber' }],
+  );
 }

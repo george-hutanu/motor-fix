@@ -59,6 +59,8 @@ import { SystemLogDto } from '../models/system-log-dto';
 import { VerificationCheckRecordedDto } from '../models/verification-check-recorded-dto';
 import { verificationChecksControllerRecord } from '../fn/admin/verification-checks-controller-record';
 import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
+import { verificationFileControllerCorrect } from '../fn/admin/verification-file-controller-correct';
+import { VerificationFileControllerCorrect$Params } from '../fn/admin/verification-file-controller-correct';
 import { verificationFileControllerOpen } from '../fn/admin/verification-file-controller-open';
 import { VerificationFileControllerOpen$Params } from '../fn/admin/verification-file-controller-open';
 import { verificationFileControllerRead } from '../fn/admin/verification-file-controller-read';
@@ -377,6 +379,31 @@ export class AdminService extends BaseService {
    */
   verificationFileControllerOpen(params: VerificationFileControllerOpen$Params, context?: HttpContext): Promise<VerificationFileDto> {
     const resp = this.verificationFileControllerOpen$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerCorrect()` */
+  static readonly VerificationFileControllerCorrectPath = '/api/v1/admin/verification-files/{id}/rar-number';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerCorrect()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  verificationFileControllerCorrect$Response(params: VerificationFileControllerCorrect$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationFileDto>> {
+    const obs = verificationFileControllerCorrect(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerCorrect$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  verificationFileControllerCorrect(params: VerificationFileControllerCorrect$Params, context?: HttpContext): Promise<VerificationFileDto> {
+    const resp = this.verificationFileControllerCorrect$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
   }
 
