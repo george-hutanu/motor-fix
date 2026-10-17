@@ -64,6 +64,18 @@ beforeEach(() => localStorage.clear());
 
 describe('reading the session while keeping the page language', () => {
   // @traces 1346-FR-005
+  it('keeps the address language on a later plain load in the same tab', async () => {
+    const { i18n, session } = setup(account('en'));
+    await i18n.use('ro');
+
+    await session.load({ keepLanguage: true });
+    await session.load();
+    await settle();
+
+    expect(i18n.language()).toBe('ro');
+  });
+
+  // @traces 1346-FR-005
   it('keeps the page language and the remembered one when the account speaks another', async () => {
     const { i18n, session } = setup(account('en'));
     await i18n.use('ro');
@@ -109,7 +121,6 @@ describe('reading the session while keeping the page language', () => {
     expect(i18n.language()).toBe('en');
   });
 
-  // @traces 1346-FR-005
   // @traces 1346-FR-005
   it('restores nothing and changes no language when the answer arrives after a sign-out', async () => {
     let open!: () => void;
