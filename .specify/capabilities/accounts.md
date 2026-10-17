@@ -34,6 +34,7 @@ features:
   - 291-saved-garages
   - 066-suspended-garages
   - 1345-staging-observability
+  - 005-data-requests
 ---
 
 # Capability: Accounts
@@ -842,9 +843,9 @@ _From 1203-legal-operator._
 
 _From 1203-legal-operator._
 
-### 1203-FR-010 — No legal fact beyond the ones in FR-001, FR-002 and FR-004 is added: no DPO appointment, no other address, telephone number or supervisory-authority wording, no change to any other section.
+### 005-FR-014 — Every paragraph of the privacy notice in `apps/web/src/app/public/legal-texts.ts` that says how to use a right (closing the account or erasure, objecting to the profile-view count, "Your rights" / "Drepturile tale") MUST point to the e-mail address of the first section ("the e-mail address above" / "adresa de e‑mail de mai sus", worded so it cannot be read as the postal seat) as well as the account, in both languages, so it agrees with the contact paragraph and the procedure; the address itself stays written once per notice (1203-FR-010, `legal-texts.operator.adversary.spec.ts`); the terms of use are unchanged. It carries 1203-FR-010's rule forward: no legal fact beyond 1203-FR-001, 1203-FR-002 and 1203-FR-004 is added to the operator details (no DPO appointment, no other address, telephone number or supervisory-authority wording), and no section changes beyond these paragraphs.
 
-_From 1203-legal-operator._
+_From 005-data-requests._
 
 ### 250-FR-001 — The web app MUST send every analytics event through one analytics service that drops the call without a valid "granted" consent, stops at once when consent is withdrawn during the visit, and never runs on the server.
 
@@ -983,6 +984,66 @@ _From 1345-staging-observability._
 
 _From 066-suspended-garages._
 
+### 005-FR-001 — The specs repo MUST hold a procedure page "Cereri privind datele personale" at `docs/reference/data-requests.md` with the eight front-matter keys, listed in `llms.txt` with its summary, passing `scripts/docs-lint.mjs`.
+
+_From 005-data-requests._
+
+### 005-FR-002 — The page MUST be marked owner-approved on 2026-10-16 under the owner's 2026-10-11 rule and MUST name the lawyer's later review as a follow-up that does not block anything.
+
+_From 005-data-requests._
+
+### 005-FR-003 — The page MUST cover these request kinds, each in its own section: access, correction, deletion, copy (portability), objection, restriction, consent withdrawal.
+
+_From 005-data-requests._
+
+### 005-FR-004 — For each kind the page MUST state: the channels a request may come through (e-mail to hutanugeorge40@gmail.com, from the account, the contact form), how identity is checked before answering, the deadline (one month from receipt, extendable by two months with a notice to the person that states why, GDPR art. 12(3)), who handles it (the MotorFix admin, one admin role at launch [X21]), the steps, and the reply texts in Romanian and English; for correction, deletion and restriction, the step that tells each recipient the data was shared with (a garage, a processor) of the change, unless impossible or disproportionate (GDPR art. 19).
+
+_From 005-data-requests._
+
+### 005-FR-005 — The page MUST give reply texts, in Romanian and English, for: acknowledgement of receipt, an identity question, the extension notice, each kind's answer, and the refusals (identity not confirmed; manifestly unfounded or excessive), every refusal and extension text naming the person's right to complain to the supervisory authority (ANSPDCP) and to go to court (GDPR art. 12(4)).
+
+_From 005-data-requests._
+
+### 005-FR-006 — The page MUST state what is kept after a deletion and for how long, marked owner-approved: legal documents and audit history while the account or garage is active, then 5 years after closing; photos, clips and recordings 90 days; day-sheet PDFs 30 days; held in one config read by the retention job (ST-1156); the lawyer may change the values later.
+
+_From 005-data-requests._
+
+### 005-FR-007 — The page MUST list the fields an admin fills before deleting an account on request: request reference, date received, identity-checked tick; and MUST say ST-3 (issue 84) uses them.
+
+_From 005-data-requests._
+
+### 005-FR-008 — The page MUST state that each request is recorded as an admin action in the audit history with: who asked, when received, what for (the kind), who handled it, when answered, and the address answered to; for a person without an account the entry has no subject account and its text carries these facts; and how the admin records it until the product does.
+
+_From 005-data-requests._
+
+### 005-FR-009 — The page MUST state the deletion rules: a driver's open quote requests are closed, future bookings are cancelled by the system, the garages concerned are told [X11]; a mechanic or receptionist leaves the team and the reviews of their work stay with the garage [X12]; a garage owner's account is deleted only after the garage is closed through support [X12].
+
+_From 005-data-requests._
+
+### 005-FR-010 — The page MUST state that a deleted driver's reviews stay, shown under "Șofer MotorFix", with the garages' ratings unchanged (ST-140).
+
+_From 005-data-requests._
+
+### 005-FR-011 — The page MUST define the content and format of a data copy (ST-140): a ZIP archive with one JSON file per area of the person's data, the person's media files as they are, and one readable summary in the person's language; the areas listed.
+
+_From 005-data-requests._
+
+### 005-FR-012 — The page MUST state that requests are accepted from people without an account and how their identity is checked.
+
+_From 005-data-requests._
+
+### 005-FR-013 — The issues of ST-3 (george-hutanu/motor-fix-specs#84) and ST-129 (#235) and the feature page `docs/reference/features/admin/mf-46-users-accounts-overview.md` MUST link to the procedure page; MF-46's stale lawyer lines ("Lawyer, still open" on retention and the download, "agreed with the lawyer") and MF-28's download-format NEEDS CLARIFICATION MUST be replaced by a pointer to the page and the owner's 2026-10-16 sign-off.
+
+_From 005-data-requests._
+
+### 005-FR-014 — Every paragraph of the privacy notice in `apps/web/src/app/public/legal-texts.ts` that says how to use a right (closing the account or erasure, objecting to the profile-view count, "Your rights" / "Drepturile tale") MUST point to the e-mail address of the first section ("the e-mail address above" / "adresa de e‑mail de mai sus", worded so it cannot be read as the postal seat) as well as the account, in both languages, so it agrees with the contact paragraph and the procedure; the address itself stays written once per notice (1203-FR-010, `legal-texts.operator.adversary.spec.ts`); the terms of use are unchanged. It carries 1203-FR-010's rule forward: no legal fact beyond 1203-FR-001, 1203-FR-002 and 1203-FR-004 is added to the operator details (no DPO appointment, no other address, telephone number or supervisory-authority wording), and no section changes beyond these paragraphs.
+
+_From 005-data-requests._
+
+### 005-FR-015 — The owner-only follow-ups (the lawyer's review, legal wording changes, the controller's contact details if they change, a processor contract list) MUST be raised in one `needs-confirmation` comment on the story with exact instructions; the comment does not set the task to Blocked and does not hold the merge.
+
+_From 005-data-requests._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1015,3 +1076,5 @@ _From 066-suspended-garages._
 - `030-FR-001` — superseded by `029-FR-010` (2026-10-17)
 - `030-FR-006` — superseded by `029-FR-008` (2026-10-17)
 - `1203-FR-005` — superseded by `366-FR-003` (2026-10-17)
+
+- `1203-FR-010` — superseded by `005-FR-014` (2026-10-17)
