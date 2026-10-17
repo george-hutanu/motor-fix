@@ -156,6 +156,7 @@ describe('POST /cars', () => {
       id: expect.any(String),
       itpUntil: '2026-11-13',
       model: '320d',
+      nextServiceKm: null,
       odometerKm: 148200,
       plate: 'B123ABC',
       rcaUntil: null,
@@ -812,9 +813,13 @@ describe('the next service in the car answers', () => {
     });
 
     expect(created.status).toBe(400);
-    expect(created.body.code).toBe('validation_failed');
+    expect(created.body.message).toEqual([
+      'property nextServiceKm should not exist',
+    ]);
     expect(edited.status).toBe(400);
-    expect(edited.body.code).toBe('validation_failed');
+    expect(edited.body.message).toEqual([
+      'property nextServiceKm should not exist',
+    ]);
     expect(await cars(id)).toBe(1);
     expect(
       (await prisma.car.findUniqueOrThrow({ where: { id: saved.body.id } }))
