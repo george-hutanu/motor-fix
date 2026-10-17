@@ -352,17 +352,25 @@ export class Session {
     return renewing;
   }
 
-  async load(): Promise<MeDto | null> {
+  // keepLanguage: a public page whose address names its language reads the
+  // role only, so the account's language does not replace the page's. Each
+  // caller decides for itself, also when it shares a read already on its way.
+  async load(options: { keepLanguage?: boolean } = {}): Promise<MeDto | null> {
     const known = this.current();
     if (known) return known;
-    if (this.loading) return this.loading;
+    const answer = await (this.loading ?? this.read());
+    // At sign-in the account's language wins over the device's.
+    if (answer && !options.keepLanguage)
+      void this.language.choose(answer.language);
+    return answer;
+  }
+
+  private read(): Promise<MeDto | null> {
     const generation = this.generation;
     const loading: Promise<MeDto | null> = this.ask().then((answer) => {
       if (this.loading === loading) this.loading = null;
       // An answer that arrives after a sign-out restores nothing.
       if (generation !== this.generation) return null;
-      // At sign-in the account's language wins over the device's.
-      if (answer) void this.language.choose(answer.language);
       this.current.set(answer);
       this.hint(answer?.role ?? null);
       return answer;

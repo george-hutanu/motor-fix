@@ -284,14 +284,22 @@ test.describe('the map beside the results @seeded', () => {
     page,
   }) => {
     await ownMap(page);
-    // Read as it lands: a body left until later may be gone from the browser.
-    const answer = page
-      .waitForResponse(
-        (r) => r.url().includes('/api/v1/search/garages/pins?') && r.ok(),
-      )
-      .then((r) => r.json() as Promise<{ total: number }>);
+    // Read on its way to the page: a response the browser hands over and
+    // then drops (a navigation, a second read) cannot lose its body here.
+    let total: number | undefined;
+    await page.route(
+      (url) => url.pathname === '/api/v1/search/garages/pins',
+      async (route) => {
+        const response = await route.fetch();
+        // An error answer passes through as it came, JSON or not, so the
+        // test fails on it instead of leaving the request hanging.
+        if (!response.ok()) return route.fulfill({ response });
+        const json = (await response.json()) as { total: number };
+        total = json.total;
+        await route.fulfill({ json, response });
+      },
+    );
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
-    const { total } = await answer;
 
     await expect(
       page.getByRole('region', { name: 'Harta service‑urilor' }),
@@ -317,7 +325,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect
       .poll(drawn)
       .toEqual(['150 works_on', '200 does_not_take', '90 works_on']);
-    expect(total).toBe(4);
+    await expect.poll(() => total).toBe(4);
   });
 
   // @traces 269-FR-014

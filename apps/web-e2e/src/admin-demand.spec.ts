@@ -60,12 +60,20 @@ async function inEnglish(page: Page) {
   });
 }
 
-const tableOf = async (page: Page, region: string) => {
+// The table's rows render a moment after the press: read them until they
+// match, never once.
+const expectTable = async (
+  page: Page,
+  region: string,
+  rows: readonly string[],
+) => {
   const report = page.getByRole('region', { exact: true, name: region });
   await report
     .getByRole('button', { name: /^(Vezi ca tabel|View as table)$/ })
     .click();
-  return report.locator('tbody tr').allInnerTexts();
+  await expect
+    .poll(() => report.locator('tbody tr').allInnerTexts())
+    .toEqual(rows);
 };
 
 const COPY = {
@@ -116,8 +124,8 @@ test.describe('requests by brand and by job @seeded', () => {
 
         await page.goto('/app/admin/catalogue');
         await expect(page.getByText(copy.subtitle)).toBeVisible();
-        expect(await tableOf(page, copy.brands)).toEqual(copy.rows.brands);
-        expect(await tableOf(page, copy.jobs)).toEqual(copy.rows.jobs);
+        await expectTable(page, copy.brands, copy.rows.brands);
+        await expectTable(page, copy.jobs, copy.rows.jobs);
         // One column below 768 px, side by side from it.
         const [brands, jobs] = await Promise.all(
           [copy.brands, copy.jobs].map((name) =>

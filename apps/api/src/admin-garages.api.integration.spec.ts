@@ -120,7 +120,7 @@ describe('GET /admin/garages?status=suspended', () => {
     const garage = randomUUID();
     const file = randomUUID();
     await db.query(
-      "INSERT INTO garage (id, name, slug, status, city_name) VALUES ($1, 'Auto Expres Pantelimon', $2, 'suspended', 'Pantelimon')",
+      "INSERT INTO garage (id, name, slug, status, city_key, city_name) VALUES ($1, 'Auto Expres Pantelimon', $2, 'suspended', 'pantelimon', 'Pantelimon')",
       [garage, `g-${garage}`],
     );
     await db.query(

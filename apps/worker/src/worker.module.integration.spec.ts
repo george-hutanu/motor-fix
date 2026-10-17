@@ -72,6 +72,15 @@ async function reported(name: string, labels: Record<string, string>) {
 }
 
 beforeAll(async () => {
+  // The service checks start only with their thresholds, which every deployed
+  // worker has; .env.example's value, unless the run sets its own.
+  process.env['STATUS_THRESHOLDS'] ??= readFileSync(
+    join(__dirname, '../../../.env.example'),
+    'utf8',
+  )
+    .split('\n')
+    .find((line) => line.startsWith('STATUS_THRESHOLDS='))
+    ?.slice('STATUS_THRESHOLDS='.length);
   await store.start();
   // Imported once telemetry has started, as main.ts does through ./telemetry.
   const { workerModule } = await import('./worker.module');
