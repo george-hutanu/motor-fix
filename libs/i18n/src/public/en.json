@@ -584,6 +584,8 @@
     "area": "within {km} km of {place}",
     "areaPicked": "within {km} km of the chosen place",
     "areaYou": "within {km} km of you",
+    "back": "Back to {km} km",
+    "backRomania": "Back to all of Romania",
     "card": {
       "doesNotTake": "doesn't take {brand}",
       "mobile": "Mobile mechanic · comes to you · {km} km radius",
@@ -596,6 +598,10 @@
     "found": {
       "one": "{count} garage found",
       "other": "{count} garages found"
+    },
+    "inArea": {
+      "one": "{count} garage in the map area",
+      "other": "{count} garages in the map area"
     },
     "list": "Garages found",
     "live": {

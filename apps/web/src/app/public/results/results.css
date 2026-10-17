@@ -31,7 +31,8 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
-.change {
+.change,
+.back {
   background: none;
   border: 0;
   color: var(--mf-amber-ink);

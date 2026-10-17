@@ -1,8 +1,9 @@
 <section class="map" [attr.aria-label]="'public.results.map.label' | t">
-  <div #host class="canvas" inert aria-hidden="true"></div>
+  <div #host class="canvas" aria-hidden="true"></div>
   @if (!view() || loading()) {
     <div class="placeholder" aria-hidden="true"></div>
   }
+  <p class="hint" role="status">@if (tooWide()) {{{ 'public.results.map.zoomIn' | t }}}</p>
   <ul class="legend">
     <li><span class="dot takes" aria-hidden="true"></span>{{ 'public.results.map.takes' | t: { brand: brand() } }}</li>
     <li><span class="dot refuses" aria-hidden="true"></span>{{ 'public.results.map.refuses' | t }}</li>

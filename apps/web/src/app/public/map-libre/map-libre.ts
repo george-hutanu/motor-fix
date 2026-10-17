@@ -130,3 +130,20 @@ export function closeMapLibre(map: MapLibre) {
   const view = globalThis as unknown as MapWindow;
   if (view.__MF_MAP === map) delete view.__MF_MAP;
 }
+
+// Keeps the map's canvas, controls and attribution links out of the keyboard
+// order, those MapLibre adds later too, while the pointer can still move the
+// map; `inert` would stop both. Returns the call that stops watching.
+export function keepOutOfTabOrder(host: HTMLElement) {
+  const hide = () => {
+    for (const control of host.querySelectorAll<HTMLElement>(
+      'a, button, canvas, [tabindex]',
+    )) {
+      if (control.tabIndex !== -1) control.tabIndex = -1;
+    }
+  };
+  hide();
+  const watch = new MutationObserver(hide);
+  watch.observe(host, { childList: true, subtree: true });
+  return () => watch.disconnect();
+}

@@ -8,6 +8,9 @@
       @if (area(); as area) {
         <span class="area">{{ area }}</span>
       }
+      @if (back(); as back) {
+        <button type="button" class="back" (click)="backToSearch()">{{ back }}</button>
+      }
       <button type="button" class="change" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
     </p>
     @if (newer()) {
@@ -26,6 +29,7 @@
     [loading]="pins.isLoading()"
     [pins]="pinned()"
     [place]="place()"
+    (moved)="move($event)"
   />
 }
 <div class="found">

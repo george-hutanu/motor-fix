@@ -216,20 +216,23 @@ test.describe('the map beside the results @seeded', () => {
     !process.env['DATABASE_URL'],
     'writes its brand and garages straight to PostgreSQL, which needs DATABASE_URL',
   );
+  // One worker seeds the brand once: parallel workers share the stamp.
+  test.describe.configure({ mode: 'serial' });
 
   const stamp = `${Date.now().toString(36)}m`;
   const brand = { name: `Marca Harta ${stamp}`, slug: `marca-harta-${stamp}` };
-  const near = '45.160,29.650';
+  // Far from the other describe's empty place, which runs beside it.
+  const near = '45.350,22.850';
   const placed = [
-    { at: [45.17, 29.66], bani: 15049, kind: 'company', stance: 'works_on' },
-    { at: [45.15, 29.64], bani: 9000, kind: 'company', stance: 'works_on' },
+    { at: [45.36, 22.86], bani: 15049, kind: 'company', stance: 'works_on' },
+    { at: [45.34, 22.84], bani: 9000, kind: 'company', stance: 'works_on' },
     {
-      at: [45.165, 29.63],
+      at: [45.355, 22.83],
       bani: 20000,
       kind: 'company',
       stance: 'does_not_take',
     },
-    { at: [45.16, 29.67], bani: 12000, kind: 'mobile', stance: 'works_on' },
+    { at: [45.35, 22.87], bani: 12000, kind: 'mobile', stance: 'works_on' },
   ] as const;
   let db: Client;
   let brandId = '';
@@ -356,5 +359,59 @@ test.describe('the map beside the results @seeded', () => {
         .getByRole('region', { name: 'Harta service‑urilor' })
         .getByText('Mecanic mobil · zona deservită'),
     ).toBeVisible();
+  });
+
+  // @traces 269-FR-007
+  // @traces 269-FR-008
+  test('follows the map the driver drags, and goes back to the 25 km search', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    const tally = page.locator('.summary .tally');
+    await expect(tally).toContainText('4 service‑uri găsite');
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as unknown as { __MF_MAP?: unknown }).__MF_MAP !==
+            undefined,
+        ),
+      )
+      .toBe(true);
+
+    // Away from the fixed garages; a jump is not the driver's, so it loads nothing.
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          __MF_MAP: { jumpTo(view: object): void };
+        }
+      ).__MF_MAP.jumpTo({ center: [22.6, 45.49], zoom: 12 }),
+    );
+    const boxed = page.waitForResponse(
+      (r) =>
+        r.url().includes('/api/v1/search/garages?') &&
+        r.url().includes('bbox=') &&
+        r.ok(),
+    );
+    const canvas = page.locator('mf-results-map .canvas canvas');
+    const at = await canvas.boundingBox();
+    if (!at) throw new Error('the map has no canvas');
+    const x = at.x + at.width / 2;
+    const y = at.y + at.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 40, y + 20, { steps: 8 });
+    await page.mouse.up();
+    await boxed;
+
+    // Only the mobile mechanic, whose area covers the place, is left.
+    await expect(tally).toContainText('1 service în zona hărții');
+    await expect(page.locator('mf-result-card')).toHaveCount(1);
+
+    await page.getByRole('button', { name: 'Înapoi la 25 km' }).click();
+
+    await expect(tally).toContainText('4 service‑uri găsite');
+    await expect(page.locator('mf-result-card')).toHaveCount(4);
   });
 });

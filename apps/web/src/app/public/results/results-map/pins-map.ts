@@ -1,3 +1,11 @@
+import { ROMANIA_BOUNDS } from '@motor-fix/contracts/place-section';
+import {
+  bboxOf,
+  bboxSideKm,
+  clampBbox,
+  roundCoordinate,
+  SEARCH_BBOX_MAX_KM,
+} from '@motor-fix/contracts/search-place';
 import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
 import type {
   GeoJSONSource,
@@ -14,6 +22,12 @@ const SOURCE = 'pins';
 const AREAS = 'areas';
 const FIT = { animate: false, maxZoom: 15, padding: 40 };
 const FONT = ['Noto Sans Bold'];
+// How long the map stays still after the driver's move before it counts.
+const SETTLE_MS = 400;
+
+// Where the driver left the map: the box it shows, inside Romania, or too
+// wide a box to ask about.
+export type MapMove = { bbox: string } | { tooWide: true };
 
 export interface PinsMap {
   show(answer: GaragePinsDto | undefined): void;
@@ -59,7 +73,11 @@ const areasOf = (answer: GaragePinsDto | undefined) => ({
 
 // The pins of a search on a map that has loaded, coloured like the cards'
 // lamps: green for a garage that takes the brand, red for the rest.
-export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
+export function drawPins(
+  map: MapLibre,
+  host: HTMLElement,
+  moved: (move: MapMove) => void,
+): PinsMap {
   const look = getComputedStyle(host);
   const token = (name: string) => look.getPropertyValue(name).trim();
   const green = token('--mf-green');
@@ -174,6 +192,7 @@ export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
   map.addSource(AREAS, { data: areasOf(undefined), type: 'geojson' });
   for (const layer of areaLayers) map.addLayer(layer);
   build(false);
+  follow(map, moved);
 
   return {
     fit(place, answer) {
@@ -206,4 +225,37 @@ export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
       (map.getSource(AREAS) as GeoJSONSource).setData(areasOf(answer));
     },
   };
+}
+
+// Only a move by the driver carries the input event that made it; the page's
+// own fit has none, and any new move restarts the wait.
+function follow(map: MapLibre, moved: (move: MapMove) => void) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Read to three decimals as the API reads it, so a box too small to
+  // survive the rounding is empty too.
+  const settled = () => {
+    const shown = map.getBounds();
+    const box = clampBbox(
+      {
+        east: roundCoordinate(shown.getEast()),
+        north: roundCoordinate(shown.getNorth()),
+        south: roundCoordinate(shown.getSouth()),
+        west: roundCoordinate(shown.getWest()),
+      },
+      ROMANIA_BOUNDS,
+    );
+    if (!box) return;
+    moved(
+      bboxSideKm(box) > SEARCH_BBOX_MAX_KM
+        ? { tooWide: true }
+        : { bbox: bboxOf(box) },
+    );
+  };
+  map.on('movestart', () => clearTimeout(timer));
+  map.on('moveend', ({ originalEvent }) => {
+    if (!originalEvent) return;
+    clearTimeout(timer);
+    timer = setTimeout(settled, SETTLE_MS);
+  });
+  map.on('remove', () => clearTimeout(timer));
 }

@@ -62,6 +62,25 @@
   background: var(--mf-red);
 }
 
+/* Asks the driver to zoom in while the map shows more than a search box. */
+.hint {
+  color: var(--mf-text);
+  font-size: var(--mf-size-small);
+  left: 50%;
+  margin: 0;
+  max-width: calc(100% - 2 * var(--mf-space-3));
+  position: absolute;
+  top: var(--mf-space-3);
+  transform: translateX(-50%);
+}
+
+.hint:not(:empty) {
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--mf-panel-raised) 80%, transparent);
+  border-radius: var(--mf-radius-chip);
+  padding: var(--mf-space-2) var(--mf-space-3);
+}
+
 /* A mobile mechanic's area: the circle's faint fill and its outline. */
 .area {
   background: color-mix(in srgb, var(--mf-green) 12%, transparent);

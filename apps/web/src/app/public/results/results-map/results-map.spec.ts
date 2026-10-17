@@ -3,6 +3,7 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
+import type { MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
 
 const PINS: GaragePinsDto = {
@@ -16,9 +17,11 @@ const PLACE = { lat: 44.437, lng: 26.117 };
 let view: jest.Mocked<ResultsMapView>;
 let opened: (value: ResultsMapView) => void;
 let failed: (error: unknown) => void;
+let moved: (move: MapMove) => void;
 const open = jest.fn(
-  (_host: HTMLElement) =>
+  (_host: HTMLElement, onMove: (move: MapMove) => void) =>
     new Promise<ResultsMapView>((resolve, reject) => {
+      moved = onMove;
       opened = resolve;
       failed = reject;
     }),
@@ -84,13 +87,13 @@ describe('ResultsMap, the map region', () => {
     ).toBe('Map of garages');
   });
 
-  it('keeps the map canvas out of the keyboard order and away from assistive technology', async () => {
+  it('keeps the map canvas away from assistive technology, yet open to the pointer', async () => {
     await render();
     const host = element().querySelector('.canvas');
 
-    expect(host?.hasAttribute('inert')).toBe(true);
+    expect(host?.hasAttribute('inert')).toBe(false);
     expect(host?.getAttribute('aria-hidden')).toBe('true');
-    expect(open).toHaveBeenCalledWith(host);
+    expect(open).toHaveBeenCalledWith(host, expect.any(Function));
   });
 });
 
@@ -247,5 +250,55 @@ describe('ResultsMap, the pins it is given', () => {
     fixture.destroy();
 
     expect(view.destroy).toHaveBeenCalled();
+  });
+});
+
+// @traces 269-FR-007
+// @traces 269-FR-009
+describe('ResultsMap, a move of the map', () => {
+  const hint = () => element().querySelector('[role="status"]');
+
+  it('gives the box the driver settled on', async () => {
+    await render();
+    await ready();
+    const boxes: string[] = [];
+    fixture.componentInstance.moved.subscribe((box) => boxes.push(box));
+
+    moved({ bbox: '44.4,26,44.5,26.2' });
+
+    expect(boxes).toEqual(['44.4,26,44.5,26.2']);
+  });
+
+  it('says "Apropie harta" in a status region while the box is too wide, and gives no box', async () => {
+    await render();
+    await ready();
+    const boxes: string[] = [];
+    fixture.componentInstance.moved.subscribe((box) => boxes.push(box));
+
+    expect(hint()).not.toBeNull();
+    expect(said(hint())).toBe('');
+
+    moved({ tooWide: true });
+    fixture.detectChanges();
+
+    expect(said(hint())).toBe('Apropie harta');
+    expect(hint()?.closest('[inert]')).toBeNull();
+    expect(boxes).toEqual([]);
+
+    moved({ bbox: '44.4,26,44.5,26.2' });
+    fixture.detectChanges();
+
+    expect(said(hint())).toBe('');
+    expect(boxes).toEqual(['44.4,26,44.5,26.2']);
+  });
+
+  it('says "Zoom in" in English', async () => {
+    await render({ language: 'en' });
+    await ready();
+
+    moved({ tooWide: true });
+    fixture.detectChanges();
+
+    expect(said(hint())).toBe('Zoom in');
   });
 });

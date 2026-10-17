@@ -1,6 +1,7 @@
 import {
   circleBounds,
   closeMapLibre,
+  keepOutOfTabOrder,
   openMapLibre,
   ring,
   STYLES,
@@ -178,5 +179,31 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
 
     expect(fake.map.remove).toHaveBeenCalledTimes(1);
     expect(view.__MF_MAP).toBeUndefined();
+  });
+});
+
+// @traces 269-FR-016
+describe('keepOutOfTabOrder', () => {
+  it('takes every control inside the map out of the keyboard order, those added later too, until stopped', async () => {
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<canvas tabindex="0"></canvas><button>+</button><a href="https://osm.org">OSM</a>';
+    document.body.append(host);
+
+    const stop = keepOutOfTabOrder(host);
+    const later = document.createElement('button');
+    host.append(later);
+    await Promise.resolve();
+
+    for (const control of host.querySelectorAll('canvas, button, a')) {
+      expect(control.getAttribute('tabindex')).toBe('-1');
+    }
+
+    stop();
+    const after = document.createElement('button');
+    host.append(after);
+    await Promise.resolve();
+    expect(after.hasAttribute('tabindex')).toBe(false);
+    host.remove();
   });
 });

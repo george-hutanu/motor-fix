@@ -594,6 +594,8 @@
     "area": "în {km} km de {place}",
     "areaPicked": "în {km} km de locul ales",
     "areaYou": "în {km} km de tine",
+    "back": "Înapoi la {km} km",
+    "backRomania": "Înapoi la toată România",
     "card": {
       "doesNotTake": "nu primește {brand}",
       "mobile": "Mecanic mobil · vine la tine · rază {km} km",
@@ -607,6 +609,11 @@
       "few": "{count} service‑uri găsite",
       "one": "{count} service găsit",
       "other": "{count} de service‑uri găsite"
+    },
+    "inArea": {
+      "few": "{count} service‑uri în zona hărții",
+      "one": "{count} service în zona hărții",
+      "other": "{count} de service‑uri în zona hărții"
     },
     "list": "Service‑uri găsite",
     "live": {

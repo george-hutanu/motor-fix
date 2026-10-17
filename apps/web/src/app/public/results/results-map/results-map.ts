@@ -9,6 +9,7 @@ import {
   InjectionToken,
   inject,
   input,
+  output,
   PLATFORM_ID,
   signal,
   untracked,
@@ -17,9 +18,10 @@ import {
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
 
-import { drawPins } from './pins-map';
+import { drawPins, type MapMove } from './pins-map';
 import {
   closeMapLibre,
+  keepOutOfTabOrder,
   type LatLng,
   openMapLibre,
   styleFor,
@@ -31,17 +33,27 @@ export interface ResultsMapView {
   show(answer: GaragePinsDto | undefined): void;
 }
 
-export type OpenResultsMap = (host: HTMLElement) => Promise<ResultsMapView>;
+export type OpenResultsMap = (
+  host: HTMLElement,
+  moved: (move: MapMove) => void,
+) => Promise<ResultsMapView>;
 
 // Opens the results map in the browser; the component never sees MapLibre,
 // which is fetched only once the page has rendered.
 export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return async (host) => {
+    return async (host, moved) => {
       const map = await openMapLibre(host, styleFor(document));
-      const pins = drawPins(map, host);
-      return { ...pins, destroy: () => closeMapLibre(map) };
+      const stop = keepOutOfTabOrder(host);
+      const pins = drawPins(map, host, moved);
+      return {
+        ...pins,
+        destroy: () => {
+          stop();
+          closeMapLibre(map);
+        },
+      };
     };
   },
 });
@@ -60,6 +72,9 @@ export class ResultsMap {
   readonly place = input<LatLng | undefined>();
   readonly brand = input.required<string>();
   readonly loading = input(false);
+  // The box the driver moved the map to, once it has settled.
+  readonly moved = output<string>();
+  protected readonly tooWide = signal(false);
   protected readonly hasArea = computed(() =>
     this.pins()?.pins.some((pin) => pin.serviceRadiusKm !== undefined),
   );
@@ -78,7 +93,7 @@ export class ResultsMap {
     });
     afterNextRender(() => {
       if (!browser) return;
-      open(this.host().nativeElement).then(
+      open(this.host().nativeElement, (move) => this.follow(move)).then(
         (view) => {
           if (closed) return view.destroy();
           this.view.set(view);
@@ -89,6 +104,12 @@ export class ResultsMap {
       );
     });
     effect(() => this.view()?.show(this.pins()));
+  }
+
+  private follow(move: MapMove) {
+    const tooWide = 'tooWide' in move;
+    this.tooWide.set(tooWide);
+    if (!tooWide) this.moved.emit(move.bbox);
   }
 
   // Frames the place and the pins, at once when the map is open, else as

@@ -30,6 +30,12 @@ function mapFake() {
       sources.set(id, { setData: jest.fn() });
     }),
     fitBounds: jest.fn(),
+    getBounds: jest.fn(() => ({
+      getEast: () => shown.east,
+      getNorth: () => shown.north,
+      getSouth: () => shown.south,
+      getWest: () => shown.west,
+    })),
     getLayer: jest.fn(() => ({})),
     getSource: jest.fn((id: string) => sources.get(id)),
     jumpTo: jest.fn(),
@@ -42,9 +48,12 @@ function mapFake() {
 
 let map: ReturnType<typeof mapFake>;
 let host: HTMLElement;
+let shown = { east: 26.2, north: 44.5, south: 44.4, west: 26 };
+const moved = jest.fn();
 
 beforeEach(() => {
   map = mapFake();
+  moved.mockClear();
   host = document.createElement('div');
   host.style.setProperty('--mf-green', GREEN);
   host.style.setProperty('--mf-red', RED);
@@ -53,7 +62,7 @@ beforeEach(() => {
 
 afterEach(() => host.remove());
 
-const draw = () => drawPins(map as unknown as MapLibre, host);
+const draw = () => drawPins(map as unknown as MapLibre, host, moved);
 const lastData = () => map.sources.get('pins')?.setData.mock.calls.at(-1)?.[0];
 const layer = (id: string) =>
   map.addLayer.mock.calls.map(([spec]) => spec).findLast((l) => l.id === id);
@@ -339,5 +348,107 @@ describe('a mobile mechanic on the results map', () => {
     view.show(undefined);
 
     expect(areasData()).toEqual({ features: [], type: 'FeatureCollection' });
+  });
+});
+
+// @traces 269-FR-007
+// @traces 269-FR-009
+describe('a move of the map by the driver', () => {
+  const fire = (type: string, event: object = {}) => {
+    for (const [name, handler] of map.on.mock.calls) {
+      if (name === type) handler(event);
+    }
+  };
+  const drag = () => fire('moveend', { originalEvent: new MouseEvent('up') });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    shown = { east: 26.20049, north: 44.50012, south: 44.40041, west: 26.0 };
+    draw();
+  });
+
+  afterEach(() => jest.useRealTimers());
+
+  it('gives the box it shows once the map has been still for 400 ms, rounded to 3 decimals', () => {
+    drag();
+    jest.advanceTimersByTime(399);
+
+    expect(moved).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(1);
+
+    expect(moved).toHaveBeenCalledTimes(1);
+    expect(moved).toHaveBeenCalledWith({ bbox: '44.4,26,44.5,26.2' });
+  });
+
+  it('waits for the last of several moves', () => {
+    drag();
+    jest.advanceTimersByTime(300);
+    shown = { ...shown, east: 26.3 };
+    drag();
+    jest.advanceTimersByTime(300);
+
+    expect(moved).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(100);
+
+    expect(moved.mock.calls).toEqual([[{ bbox: '44.4,26,44.5,26.3' }]]);
+  });
+
+  it('gives nothing while the map moves again within the 400 ms', () => {
+    drag();
+    jest.advanceTimersByTime(200);
+    fire('movestart', { originalEvent: new MouseEvent('down') });
+    jest.advanceTimersByTime(1000);
+
+    expect(moved).not.toHaveBeenCalled();
+  });
+
+  it("gives nothing after the page's own fit", () => {
+    fire('moveend', {});
+    jest.advanceTimersByTime(1000);
+
+    expect(moved).not.toHaveBeenCalled();
+  });
+
+  it('clamps the box to Romania', () => {
+    shown = { east: 30.4, north: 48.9, south: 48.0, west: 29.5 };
+    drag();
+    jest.advanceTimersByTime(400);
+
+    expect(moved).toHaveBeenCalledWith({ bbox: '48,29.5,48.4,29.8' });
+  });
+
+  it('gives nothing for a box wholly outside Romania', () => {
+    shown = { east: 19.5, north: 47.6, south: 47.4, west: 19.0 };
+    drag();
+    jest.advanceTimersByTime(400);
+
+    expect(moved).not.toHaveBeenCalled();
+  });
+
+  it('says the box is too wide past 100 km on its longer side', () => {
+    shown = { east: 26.4, north: 45.1, south: 44.9, west: 25.0 };
+    drag();
+    jest.advanceTimersByTime(400);
+
+    expect(moved).toHaveBeenCalledWith({ tooWide: true });
+  });
+
+  it('measures the box after clamping it', () => {
+    shown = { east: 21.0, north: 46.0, south: 45.6, west: 19.0 };
+    drag();
+    jest.advanceTimersByTime(400);
+
+    expect(moved).toHaveBeenCalledWith({ bbox: '45.6,20.2,46,21' });
+  });
+
+  it('gives nothing once the map is gone', () => {
+    drag();
+    fire('remove');
+    jest.advanceTimersByTime(1000);
+
+    expect(moved).not.toHaveBeenCalled();
+    expect(map.getBounds).not.toHaveBeenCalled();
   });
 });

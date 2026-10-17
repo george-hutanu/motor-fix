@@ -23,6 +23,7 @@ import {
   SEARCH_RADIUS_DEFAULT_KM,
 } from '@motor-fix/contracts/search-place';
 import {
+  type GaragePinsDto,
   type GarageSearchControllerForBrand$Params,
   type GarageSearchPageDto,
   SearchService,
@@ -104,13 +105,23 @@ export class Results {
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
 
-  // The search the bar names, without what marks a single read.
+  // The box the driver moved the map to; never in the bar, and forgotten
+  // when the bar names another search.
+  protected readonly box = linkedSignal<unknown, string | undefined>({
+    computation: () => undefined,
+    source: () => [this.brand(), this.near(), this.radius()],
+  });
+
+  // The search the bar names, in the map's box once the driver moved it,
+  // without what marks a single read.
   private readonly query = computed((): Query | undefined => {
     const brand = this.brand();
     if (this.server || !brand) return undefined;
     const near = this.near();
     const radius = this.radius();
+    const bbox = this.box();
     return {
+      ...(bbox ? { bbox } : {}),
       ...(UUID.test(brand) ? { brandId: brand } : { brand }),
       ...(near ? { near } : {}),
       ...(radius ? { radius } : {}),
@@ -118,13 +129,16 @@ export class Results {
   });
 
   // Only a new search is logged: the opening one, another brand or place in
-  // the bar, and a place chosen here; never a retry, a widening or a reload.
+  // the bar, and a place chosen here; never a retry, a widening, a reload or
+  // a move of the map.
   private logNext = false;
   private logged: string | undefined;
 
   // Never on the server: it renders the skeletons, the browser searches.
   protected readonly results = resource({
     loader: ({ params }) => {
+      if (params.bbox)
+        return this.search.garageSearchControllerForBrand(params);
       const searched = `${params.brand ?? params.brandId}|${params.near ?? ''}`;
       const log = this.logNext || searched !== this.logged;
       this.logNext = false;
@@ -141,9 +155,18 @@ export class Results {
     loader: ({ params }) => this.search.garageSearchControllerPins(params),
     params: () => this.query(),
   });
-  protected readonly pinned = computed(() =>
-    this.pins.hasValue() ? this.pins.value() : undefined,
-  );
+  // A box loading, or failed, leaves the pins the map shows where they are.
+  protected readonly pinned = linkedSignal<
+    { box: string | undefined; now: GaragePinsDto | undefined },
+    GaragePinsDto | undefined
+  >({
+    computation: ({ box, now }, previous) =>
+      now ?? (box ? previous?.value : undefined),
+    source: () => ({
+      box: this.box(),
+      now: this.pins.hasValue() ? this.pins.value() : undefined,
+    }),
+  });
   // The kept place where it is the one searched, else the bar's.
   protected readonly place = computed(() => {
     const near = this.near();
@@ -189,7 +212,7 @@ export class Results {
 
   // The 50 km search is offered once, near a place, before it has run.
   protected readonly widen = computed(() =>
-    this.near() && !this.radius() ? WIDE : null,
+    this.near() && !this.radius() && !this.box() ? WIDE : null,
   );
   protected readonly km = computed(
     () => this.radius() ?? SEARCH_RADIUS_DEFAULT_KM,
@@ -201,8 +224,9 @@ export class Results {
     const answer = this.answer();
     if (!answer) return '';
     const brand = answer.brand.name;
+    const found = this.box() ? 'public.results.inArea' : 'public.results.found';
     return [
-      this.i18n.t('public.results.found', { count: answer.total }),
+      this.i18n.t(found, { count: answer.total }),
       this.i18n.t('public.results.takers', {
         brand,
         count: answer.counts.worksOn,
@@ -213,10 +237,18 @@ export class Results {
     ].join(' · ');
   });
 
+  // The way back from the map's box to the search the bar names.
+  protected readonly back = computed(() => {
+    if (!this.box()) return null;
+    return this.near()
+      ? this.i18n.t('public.results.back', { km: this.km() })
+      : this.i18n.t('public.results.backRomania');
+  });
+
   // The kept place is named; a place only the bar knows is "the chosen place".
   protected readonly area = computed(() => {
     const near = this.near();
-    if (!near) return null;
+    if (!near || this.box()) return null;
     const km = this.km();
     const place = this.store.place();
     if (!place || nearOf(place) !== near) {
@@ -239,7 +271,7 @@ export class Results {
     if (this.server) return;
     // After the render, so the map holds the answer it frames.
     afterRenderEffect(() => {
-      if (this.pins.isLoading() || !this.pinned()) return;
+      if (this.pins.isLoading() || !this.pinned() || this.box()) return;
       untracked(() => this.map()?.fit());
     });
     // The kept place goes into the bar, so the link shared opens this search.
@@ -287,6 +319,18 @@ export class Results {
 
   protected retry() {
     this.results.reload();
+  }
+
+  // A box the map settled on; the same one again retries it after a failure.
+  protected move(bbox: string) {
+    if (bbox !== untracked(this.box)) return this.box.set(bbox);
+    if (!this.results.error() && !this.pins.error()) return;
+    this.results.reload();
+    this.pins.reload();
+  }
+
+  protected backToSearch() {
+    this.box.set(undefined);
   }
 
   protected widenTo(radius: number) {
