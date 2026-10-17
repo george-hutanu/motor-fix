@@ -1657,6 +1657,10 @@ describe('deciding', () => {
       await settle();
 
       expect(text(alertIn(host))).toBe(line);
+      const decisions = section(host, 'footer')?.querySelector('.decisions');
+      expect(
+        alertIn(host)?.compareDocumentPosition(decisions as Node) ?? 0,
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       expect(api.verificationFileControllerRead.mock.calls.length).toBe(reads);
       expect(buttons(section(host, 'footer'))).toContain(
         language === 'ro' ? 'Aprobă și publică' : 'Approve and publish',

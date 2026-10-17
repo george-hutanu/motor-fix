@@ -205,6 +205,9 @@
     }
 
     <section class="footer" data-section="footer">
+      @if (refused(); as line) {
+        <p class="refused" role="alert">{{ line }}</p>
+      }
       @if (footer(); as f) {
         <p class="decision">{{ f.line }}</p>
         @if (f.reason) {
@@ -218,9 +221,6 @@
         </div>
       }
       <p class="note">{{ 'admin.file.footer.note' | t }}</p>
-      @if (refused(); as line) {
-        <p class="refused" role="alert">{{ line }}</p>
-      }
     </section>
   }
 }
