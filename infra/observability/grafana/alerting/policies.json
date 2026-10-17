@@ -1,0 +1,23 @@
+{
+  "receiver": "MotorFix owner",
+  "group_by": ["alertname", "deployment_environment"],
+  "group_wait": "30s",
+  "group_interval": "5m",
+  "repeat_interval": "4h",
+  "routes": [
+    {
+      "receiver": "MotorFix owner",
+      "object_matchers": [["deployment_environment", "=", "production"]],
+      "group_wait": "30s",
+      "group_interval": "5m",
+      "repeat_interval": "4h"
+    },
+    {
+      "receiver": "MotorFix owner",
+      "object_matchers": [["deployment_environment", "=", "staging"]],
+      "group_wait": "5m",
+      "group_interval": "30m",
+      "repeat_interval": "24h"
+    }
+  ]
+}

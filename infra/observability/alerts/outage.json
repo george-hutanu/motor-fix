@@ -20,7 +20,8 @@
           },
           "annotations": {
             "summary": "The {{ $labels.service }} uptime check has failed every run for 3 minutes.",
-            "dashboard_uid": "motorfix-overview"
+            "dashboard_uid": "motorfix-overview",
+            "runbook": "The public uptime check is failing: open the service in Railway, check the deploy, the logs and the domain, and post on the status page."
           },
           "notification_settings": {
             "receiver": "motorfix-outage"
@@ -56,7 +57,9 @@
                   {
                     "evaluator": {
                       "type": "lt",
-                      "params": [1]
+                      "params": [
+                        1
+                      ]
                     }
                   }
                 ]

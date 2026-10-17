@@ -16,6 +16,7 @@ import type { SpanExporter } from '@opentelemetry/sdk-trace-node';
 
 import { observeCpu } from './cpu';
 import { instrumentations } from './instrumentations';
+import { observeMemory } from './memory';
 import { sampler } from './sampler';
 import { scrub } from '../scrub/scrub';
 
@@ -238,6 +239,7 @@ function boot(
     require('node:module') as typeof import('node:module')
   ).syncBuiltinESMExports();
   observeCpu(metrics.getMeter('motorfix'));
+  observeMemory(metrics.getMeter('motorfix'));
 
   const flush = async () => {
     await Promise.allSettled([

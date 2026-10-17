@@ -19,7 +19,8 @@
           },
           "annotations": {
             "summary": "The nightly profile views job failed its last attempt: yesterday's views are not written yet, and a second missed night loses a day ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-queues"
+            "dashboard_uid": "motorfix-queues",
+            "runbook": "Read the worker logs for the profile views job, fix the cause and run the job again before the next night so no day is lost."
           },
           "data": [
             {
@@ -74,7 +75,8 @@
           },
           "annotations": {
             "summary": "Profile views were not counted in the last 15 minutes because Redis did not answer ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-product"
+            "dashboard_uid": "motorfix-product",
+            "runbook": "Redis did not answer while counting profile views: check the Redis dashboard and the redis-unreachable alert."
           },
           "data": [
             {
