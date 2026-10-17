@@ -536,8 +536,7 @@ describe('the system log entries of a run', () => {
       .spyOn(prisma.systemLogEntry, 'findFirst')
       .mockRejectedValueOnce(new Error('log down'));
     tick();
-    await run({ backup });
-    read.mockRestore();
+    await run({ backup }).finally(() => read.mockRestore());
     expect(await entries('backup_completed')).toHaveLength(1);
   });
 

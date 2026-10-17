@@ -88,8 +88,9 @@ describe('the deploy entry', () => {
         await new Promise((resolve) => setTimeout(resolve, 200));
         return write(kind, source, context, at);
       });
-    const apps = await Promise.all([boot('a1b2c3d'), boot('a1b2c3d')]);
-    spy.mockRestore();
+    const apps = await Promise.all([boot('a1b2c3d'), boot('a1b2c3d')]).finally(
+      () => spy.mockRestore(),
+    );
     await Promise.all(apps.map((app) => app.close()));
     expect(await deploys()).toHaveLength(1);
   });
@@ -101,12 +102,15 @@ describe('the deploy entry', () => {
     const write = jest
       .spyOn(systemLog, 'write')
       .mockRejectedValueOnce(new Error('log down'));
-    await expect(bootOnce('a1b2c3d')).resolves.toBeUndefined();
-    write.mockRestore();
-    expect(warn).toHaveBeenCalledWith(
-      'Deploy of a1b2c3d not checked against the log',
-    );
-    warn.mockRestore();
+    try {
+      await expect(bootOnce('a1b2c3d')).resolves.toBeUndefined();
+      expect(warn).toHaveBeenCalledWith(
+        'Deploy of a1b2c3d not checked against the log',
+      );
+    } finally {
+      write.mockRestore();
+      warn.mockRestore();
+    }
     expect(await deploys()).toEqual([]);
   });
 
