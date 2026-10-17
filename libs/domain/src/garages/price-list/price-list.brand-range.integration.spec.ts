@@ -213,7 +213,7 @@ const errorsOf = (body: { errors?: { code: string; field: string }[] }) =>
 
 const BMW_RANGE = { fromBani: 110_000, toBani: 170_000 };
 
-// @traces 386-brand-price-range-FR-005
+// @traces 386-FR-005
 describe('PUT /garages/:garageId/prices/:jobTypeId/brands/:brandId', () => {
   it('creates the brand row and answers it with no warning', async () => {
     const w = await world();
@@ -283,7 +283,7 @@ describe('PUT /garages/:garageId/prices/:jobTypeId/brands/:brandId', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-006
+// @traces 386-FR-006
 describe('what the brand range write refuses', () => {
   it.each<[string, Record<string, unknown>, string[]]>([
     ['no top price', { fromBani: 110_000 }, ['toBani:required']],
@@ -442,7 +442,7 @@ describe('what the brand range write refuses', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-007
+// @traces 386-FR-007
 describe('DELETE /garages/:garageId/prices/:jobTypeId/brands/:brandId', () => {
   it('removes the brand row and keeps the default', async () => {
     const w = await world();
@@ -486,7 +486,7 @@ describe('DELETE /garages/:garageId/prices/:jobTypeId/brands/:brandId', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-008
+// @traces 386-FR-008
 describe('who may set or remove a brand range', () => {
   it.each<[string, (w: World) => string | null, number]>([
     ['the receptionist', (w) => w.receptionist, 403],
@@ -506,7 +506,7 @@ describe('who may set or remove a brand range', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-009
+// @traces 386-FR-009
 describe('the audit history of a brand range', () => {
   it('records the creation, the change with old and new values, and the removal', async () => {
     const w = await world();
@@ -561,7 +561,7 @@ describe('the audit history of a brand range', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-010
+// @traces 386-FR-010
 describe('what a brand range change tells the profile', () => {
   it('saves one price list event per change to the staff and the public page', async () => {
     const w = await world();
@@ -609,7 +609,7 @@ describe('what a brand range change tells the profile', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-002
+// @traces 386-FR-002
 describe('the profile range of a brand by its stance', () => {
   it('gives the default range to a brand the garage has not stated', async () => {
     const w = await world();
@@ -636,7 +636,7 @@ describe('the profile range of a brand by its stance', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-011
+// @traces 386-FR-011
 describe("the owner's read of brand ranges", () => {
   it('lists each job its brand rows in catalogue order, and none as empty', async () => {
     const w = await world();

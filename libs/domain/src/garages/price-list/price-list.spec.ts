@@ -233,7 +233,7 @@ describe('the price list items', () => {
     expect(ids).toEqual([first.id, second.id, brandOnly.id, tieA.id, tieB.id]);
   });
 
-  // @traces 386-brand-price-range-FR-011
+  // @traces 386-FR-011
   it("lists a job's brand ranges by popularity, then name, the unranked last", () => {
     const j = job();
     const ranked = (brandId: string, name: string, popularity: number | null) =>
@@ -337,9 +337,9 @@ describe('the public price rows of a profile read without a brand', () => {
 
 // @traces 355-price-list-ranges-FR-002
 // @traces 355-price-list-ranges-FR-003
-// @traces 386-brand-price-range-FR-001
-// @traces 386-brand-price-range-FR-002
-// @traces 386-brand-price-range-FR-003
+// @traces 386-FR-001
+// @traces 386-FR-002
+// @traces 386-FR-003
 describe('the public price rows of a profile read with a brand', () => {
   const ranges = (
     rows: PriceRow[],

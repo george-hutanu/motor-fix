@@ -35,7 +35,7 @@ async function owner(request: APIRequestContext) {
 // Militari takes BMW and lists the diagnosis for it at the default 150–220
 // lei; the seeded BMW range sits on the front brakes, which the price list
 // spec reads, so this one writes the diagnosis and removes it after.
-// @traces 386-brand-price-range-FR-002 386-brand-price-range-FR-013 386-brand-price-range-FR-014
+// @traces 386-FR-002 386-FR-013 386-FR-014
 test.describe("an owner's brand range on the profile @seeded", () => {
   test.describe.configure({ mode: 'serial' });
 

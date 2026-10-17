@@ -31,8 +31,8 @@ describe('PriceListController OpenAPI', () => {
   });
 });
 
-// @traces 386-brand-price-range-FR-005
-// @traces 386-brand-price-range-FR-007
+// @traces 386-FR-005
+// @traces 386-FR-007
 describe('the brand range routes', () => {
   const { removeBrandRange, setBrandRange } = PriceListController.prototype;
 
