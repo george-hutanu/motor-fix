@@ -125,9 +125,9 @@ h4 {
   list-style: none;
 }
 .jobs li {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
   gap: var(--mf-space-2);
   overflow-wrap: anywhere;
 }
