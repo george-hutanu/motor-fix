@@ -82,7 +82,7 @@ export class RequestReceivedFanOut {
     });
     if (!request) return;
     const [first] = request.jobs;
-    const described = firstLine(request.description?.trim() || null);
+    const described = firstLine(request.description);
     const jobName = (language: string) =>
       first
         ? language === 'en'
