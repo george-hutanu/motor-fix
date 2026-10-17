@@ -10,6 +10,9 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+// Kept decorator-free for the web app; read here as everywhere else.
+import { CHECK_DETAIL_MAX } from './verification-target';
+
 // In the order the summary reads them when two problems weigh the same.
 export const VERIFICATION_CHECK_KINDS = [
   'company',
@@ -36,9 +39,6 @@ export type VerificationCheckResult =
 export const RECORDED_RESULTS = ['ok', 'warning', 'failed', 'not_run'] as const;
 
 export type Lamp = 'green' | 'amber' | 'red' | 'grey';
-
-// Kept decorator-free for the web app; read here as everywhere else.
-import { CHECK_DETAIL_MAX } from './verification-target';
 
 export { CHECK_DETAIL_MAX, lamp } from './verification-target';
 
