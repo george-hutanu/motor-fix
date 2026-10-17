@@ -60,8 +60,8 @@ async function render(
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
 
-// @traces 270-card-pin-link-FR-010
-// @traces 270-card-pin-link-FR-011
+// @traces 270-FR-010
+// @traces 270-FR-011
 describe('the small card on the map', () => {
   it('shows the green lamp and the rate of the pin at once, and a placeholder for the name', async () => {
     const card = await render(PIN);

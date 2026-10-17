@@ -376,11 +376,11 @@ describe('the bookmark on a card', () => {
   });
 });
 
-// @traces 270-card-pin-link-FR-002
-// @traces 270-card-pin-link-FR-003
-// @traces 270-card-pin-link-FR-004
-// @traces 270-card-pin-link-FR-007
-// @traces 270-card-pin-link-FR-011
+// @traces 270-FR-002
+// @traces 270-FR-003
+// @traces 270-FR-004
+// @traces 270-FR-007
+// @traces 270-FR-011
 describe('a result card linked with its pin', () => {
   const pointer = (type: string, pointerType = 'mouse') => {
     const event = new Event(type);

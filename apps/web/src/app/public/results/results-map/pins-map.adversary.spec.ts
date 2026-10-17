@@ -79,7 +79,7 @@ const click = async (hits: Hit[]) => {
 const lastFilter = (id: string) =>
   map.setFilter.mock.calls.findLast(([layer]) => layer === id)?.[1];
 
-// @traces 270-card-pin-link-FR-004
+// @traces 270-FR-004
 describe('a tap on the results map, under attack', () => {
   it('names a numeric garage id as a string', async () => {
     draw();
@@ -161,7 +161,7 @@ describe('a tap on the results map, under attack', () => {
   });
 });
 
-// @traces 270-card-pin-link-FR-008
+// @traces 270-FR-008
 describe('the lit garage, under attack', () => {
   it('lights an id holding quote marks and brackets as plain text', () => {
     const view = draw();

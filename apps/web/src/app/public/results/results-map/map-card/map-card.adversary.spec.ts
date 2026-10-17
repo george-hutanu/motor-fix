@@ -59,7 +59,7 @@ async function render(
 const said = (el: Element | null | undefined) =>
   el?.textContent?.replace(/\s+/g, ' ').trim();
 
-// @traces 270-card-pin-link-FR-010
+// @traces 270-FR-010
 describe('the small card on the map, under attack', () => {
   it('shows a rate line for a rate of zero lei', async () => {
     const card = await render({ ...PIN, rateLei: 0 });

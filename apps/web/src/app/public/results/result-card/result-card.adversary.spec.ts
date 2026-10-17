@@ -59,7 +59,7 @@ const click = (el: Element | null) =>
     new MouseEvent('click', { bubbles: true, cancelable: true }),
   );
 
-// @traces 270-card-pin-link-FR-003
+// @traces 270-FR-003
 describe('a result card tap, under attack', () => {
   it('does not pick when the tap lands on an element inside the link', () => {
     const link = card().querySelector('a.view') as HTMLElement;
@@ -107,7 +107,7 @@ describe('a result card tap, under attack', () => {
   });
 });
 
-// @traces 270-card-pin-link-FR-002
+// @traces 270-FR-002
 describe('a result card pointer and focus, under attack', () => {
   const pointer = (type: string, pointerType: string) => {
     const event = new Event(type);
@@ -155,7 +155,7 @@ describe('a result card pointer and focus, under attack', () => {
   });
 });
 
-// @traces 270-card-pin-link-FR-004
+// @traces 270-FR-004
 describe('a result card reveal, under attack', () => {
   it('reveals the same way twice', () => {
     const scroll = jest.fn();
@@ -171,7 +171,7 @@ describe('a result card reveal, under attack', () => {
   });
 });
 
-// @traces 270-card-pin-link-FR-007
+// @traces 270-FR-007
 describe('a result card selected state, under attack', () => {
   it('leaves the lamp, the link and the bookmark in place when selected', () => {
     fixture.componentRef.setInput('selected', true);

@@ -1449,7 +1449,7 @@ describe('Results', () => {
     });
   });
 
-  // @traces 270-card-pin-link-FR-001 270-card-pin-link-FR-002 270-card-pin-link-FR-003 270-card-pin-link-FR-004 270-card-pin-link-FR-005 270-card-pin-link-FR-006 270-card-pin-link-FR-009 270-card-pin-link-FR-010 270-card-pin-link-FR-013
+  // @traces 270-FR-001 270-FR-002 270-FR-003 270-FR-004 270-FR-005 270-FR-006 270-FR-009 270-FR-010 270-FR-013
   describe('a card and its pin', () => {
     let scroll: jest.Mock;
 
@@ -1502,7 +1502,7 @@ describe('Results', () => {
       await reads[0]?.answer(answer);
     }
 
-    // @traces 270-card-pin-link-FR-001 270-card-pin-link-FR-005
+    // @traces 270-FR-001 270-FR-005
     it('selects the first card of the list and lights its pin, in the page only', async () => {
       const stored = localStorage.length;
       await loaded();
@@ -1520,7 +1520,7 @@ describe('Results', () => {
       expect(pinsApi).toHaveBeenCalledTimes(1);
     });
 
-    // @traces 270-card-pin-link-FR-001 270-card-pin-link-FR-003
+    // @traces 270-FR-001 270-FR-003
     it('selects the card tapped, one at a time', async () => {
       await loaded();
 
@@ -1535,7 +1535,7 @@ describe('Results', () => {
       expect(lit()).toBe('one');
     });
 
-    // @traces 270-card-pin-link-FR-001 270-card-pin-link-FR-002
+    // @traces 270-FR-001 270-FR-002
     it('lights the pointed card over the selected one, and the selected one again on leave', async () => {
       await loaded();
 
@@ -1549,7 +1549,7 @@ describe('Results', () => {
       expect(lit()).toBe('one');
     });
 
-    // @traces 270-card-pin-link-FR-002
+    // @traces 270-FR-002
     it('lights nothing for a touch resting on a card', async () => {
       await loaded();
       mapView.light.mockClear();
@@ -1559,7 +1559,7 @@ describe('Results', () => {
       expect(mapView.light).not.toHaveBeenCalled();
     });
 
-    // @traces 270-card-pin-link-FR-002
+    // @traces 270-FR-002
     it('lights the pin of the card holding the keyboard focus, and the selected one once focus leaves', async () => {
       await loaded();
       const link = host('Service Doi')?.querySelector('a');
@@ -1578,7 +1578,7 @@ describe('Results', () => {
       expect(lit()).toBe('one');
     });
 
-    // @traces 270-card-pin-link-FR-001
+    // @traces 270-FR-001
     it('keeps a pointed card lit while another is selected', async () => {
       await loaded();
 
@@ -1589,7 +1589,7 @@ describe('Results', () => {
       expect(amber()).toEqual(['Atelier Unu']);
     });
 
-    // @traces 270-card-pin-link-FR-004
+    // @traces 270-FR-004
     it('selects the garage of a tapped pin and scrolls its card into view smoothly, focus unmoved', async () => {
       await loaded();
       const focused = document.activeElement;
@@ -1611,7 +1611,7 @@ describe('Results', () => {
       expect(searches()).toHaveLength(1);
     });
 
-    // @traces 270-card-pin-link-FR-004
+    // @traces 270-FR-004
     it('scrolls at once under reduced motion', async () => {
       reduced.set(true);
       await loaded();
@@ -1624,7 +1624,7 @@ describe('Results', () => {
       });
     });
 
-    // @traces 270-card-pin-link-FR-004
+    // @traces 270-FR-004
     it('never moves the map when a card is selected', async () => {
       await loaded();
       const fits = mapView.fit.mock.calls.length;
@@ -1637,7 +1637,7 @@ describe('Results', () => {
       expect(mapView.show).toHaveBeenCalledTimes(shows);
     });
 
-    // @traces 270-card-pin-link-FR-004 270-card-pin-link-FR-010
+    // @traces 270-FR-004 270-FR-010
     it('selects nothing for a tap away from any pin', async () => {
       await loaded();
 
@@ -1647,7 +1647,7 @@ describe('Results', () => {
       expect(lit()).toBe('one');
     });
 
-    // @traces 270-card-pin-link-FR-010
+    // @traces 270-FR-010
     it('opens the small card for a pin whose garage is not listed, and fills it from one ids= read with the brand', async () => {
       await loaded();
 
@@ -1671,7 +1671,7 @@ describe('Results', () => {
       expect(amber()).toEqual([]);
     });
 
-    // @traces 270-card-pin-link-FR-010
+    // @traces 270-FR-010
     it.each([
       ['fails', (read: Read) => read.fail()],
       [
@@ -1693,7 +1693,7 @@ describe('Results', () => {
       },
     );
 
-    // @traces 270-card-pin-link-FR-010
+    // @traces 270-FR-010
     it('keeps the filled small card and reads nothing more when its pin is tapped again', async () => {
       await loaded();
       await picked('pin-3');
@@ -1707,7 +1707,7 @@ describe('Results', () => {
       expect(searches()).toHaveLength(2);
     });
 
-    // @traces 270-card-pin-link-FR-010
+    // @traces 270-FR-010
     it('drops a read answered after another pin was tapped', async () => {
       await loaded();
       await picked('pin-3');
@@ -1722,7 +1722,7 @@ describe('Results', () => {
       expect(reads[2]?.params).toEqual({ brand: 'bmw', ids: 'pin-4' });
     });
 
-    // @traces 270-card-pin-link-FR-005 270-card-pin-link-FR-010
+    // @traces 270-FR-005 270-FR-010
     it('drops a read answered after the search changed', async () => {
       await loaded();
       await picked('pin-3');
@@ -1740,7 +1740,7 @@ describe('Results', () => {
       expect(amber()).toEqual(['Atelier Unu']);
     });
 
-    // @traces 270-card-pin-link-FR-010
+    // @traces 270-FR-010
     it.each([
       ['a card is tapped', () => tap('Service Doi')],
       ['the map is tapped away from any pin', () => picked(undefined)],
@@ -1757,7 +1757,7 @@ describe('Results', () => {
       expect(small()).toBeNull();
     });
 
-    // @traces 270-card-pin-link-FR-005
+    // @traces 270-FR-005
     it('selects the first card of a list for another brand, clears the pointed one and scrolls nothing', async () => {
       await loaded();
       await tap('Service Doi');
@@ -1778,7 +1778,7 @@ describe('Results', () => {
       expect(scroll).not.toHaveBeenCalled();
     });
 
-    // @traces 270-card-pin-link-FR-005
+    // @traces 270-FR-005
     it('selects the first card of a visible-area load, and of the search again on "Înapoi la 25 km"', async () => {
       keep(PLACE);
       await loaded('/ro/garages?brand=bmw');
@@ -1805,7 +1805,7 @@ describe('Results', () => {
       expect(lit()).toBe('one');
     });
 
-    // @traces 270-card-pin-link-FR-005
+    // @traces 270-FR-005
     it('selects the first card of the list "Reîncarcă" brings, and clears the pointed one', async () => {
       await loaded();
       await tap('Service Doi');
@@ -1833,7 +1833,7 @@ describe('Results', () => {
       expect(scroll).not.toHaveBeenCalled();
     });
 
-    // @traces 270-card-pin-link-FR-005
+    // @traces 270-FR-005
     it('selects nothing in an empty list', async () => {
       await loaded(
         '/ro/garages?brand=bmw',
@@ -1843,7 +1843,7 @@ describe('Results', () => {
       expect(mapView.light).toHaveBeenLastCalledWith(undefined);
     });
 
-    // @traces 270-card-pin-link-FR-005
+    // @traces 270-FR-005
     it('keeps the selection through an in-place card change and a pins re-read', async () => {
       await loaded();
       await tap('Service Doi');
@@ -1865,7 +1865,7 @@ describe('Results', () => {
       expect(pinsApi.mock.calls.length).toBeGreaterThan(1);
     });
 
-    // @traces 270-card-pin-link-FR-006
+    // @traces 270-FR-006
     it('passes the selection to the first card left when the selected card fades out', async () => {
       await loaded();
 
@@ -1877,7 +1877,7 @@ describe('Results', () => {
       expect(lit()).toBe('two');
     });
 
-    // @traces 270-card-pin-link-FR-006
+    // @traces 270-FR-006
     it('selects nothing once the last card has faded out', async () => {
       await loaded(
         '/ro/garages?brand=bmw',
@@ -1891,7 +1891,7 @@ describe('Results', () => {
       expect(mapView.light).toHaveBeenLastCalledWith(undefined);
     });
 
-    // @traces 270-card-pin-link-FR-006
+    // @traces 270-FR-006
     it('stops pointing at a card that fades out', async () => {
       await loaded();
       await point('Service Doi', 'pointerenter');
@@ -1904,7 +1904,7 @@ describe('Results', () => {
       expect(amber()).toEqual(['Atelier Unu']);
     });
 
-    // @traces 270-card-pin-link-FR-009
+    // @traces 270-FR-009
     it('selects and points the cards as ever when the pins request failed, and says nothing', async () => {
       pinsApi.mockImplementationOnce(() =>
         Promise.reject(new HttpErrorResponse({ status: 500 })),
@@ -1919,7 +1919,7 @@ describe('Results', () => {
       expect(page().querySelector('[role="alert"]')).toBeNull();
     });
 
-    // @traces 270-card-pin-link-FR-009
+    // @traces 270-FR-009
     it('selects the cards as ever when the map could not open', async () => {
       openMap.mockImplementationOnce(() => Promise.reject(new Error('style')));
       await loaded();

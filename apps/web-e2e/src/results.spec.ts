@@ -534,7 +534,7 @@ test.describe('the map beside the results @seeded', () => {
       has: page.getByRole('heading', { name: `Service Harta ${stamp} ${i}` }),
     });
 
-  // @traces 270-card-pin-link-FR-001 270-card-pin-link-FR-002 270-card-pin-link-FR-003 270-card-pin-link-FR-007 270-card-pin-link-FR-013
+  // @traces 270-FR-001 270-FR-002 270-FR-003 270-FR-007 270-FR-013
   test('lights the pin of the card the pointer or the focus rests on, and turns the card tapped amber', async ({
     page,
   }) => {
@@ -548,6 +548,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect.poll(() => litIn(page, 'pins-lit-dot')).toContain(ids[1]);
 
     await page.mouse.move(0, 0);
+    await expect.poll(() => litIn(page, 'pins-lit-dot')).not.toContain(ids[1]);
     await named(page, 1).locator('a').first().focus();
     await expect.poll(() => litIn(page, 'pins-lit-dot')).toContain(ids[1]);
 
@@ -558,7 +559,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect(page.locator('article.card.selected')).toHaveCount(1);
   });
 
-  // @traces 270-card-pin-link-FR-004 270-card-pin-link-FR-013
+  // @traces 270-FR-004 270-FR-013
   test('selects the card of a tapped pin and brings it into view, focus unmoved', async ({
     page,
   }) => {
@@ -579,7 +580,7 @@ test.describe('the map beside the results @seeded', () => {
 
   // The empty style carries no glyphs, so the circle's rate label is not
   // drawn here; its tap is the unit suite's. A tap on the fill names nothing.
-  // @traces 270-card-pin-link-FR-004 270-card-pin-link-FR-008 270-card-pin-link-FR-013
+  // @traces 270-FR-004 270-FR-008 270-FR-013
   test('lights the mobile mechanic circle of its card, and selects nothing for a tap on its fill', async ({
     page,
   }) => {
@@ -607,7 +608,7 @@ test.describe('the map beside the results @seeded', () => {
     ).toHaveText(selected ?? '');
   });
 
-  // @traces 270-card-pin-link-FR-010 270-card-pin-link-FR-011 270-card-pin-link-FR-013
+  // @traces 270-FR-010 270-FR-011 270-FR-013
   test('opens the small card for a pin whose garage the list does not show', async ({
     page,
   }) => {
@@ -649,7 +650,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect(small).toHaveCount(0);
   });
 
-  // @traces 270-card-pin-link-FR-009 270-card-pin-link-FR-011 270-card-pin-link-FR-013
+  // @traces 270-FR-009 270-FR-011 270-FR-013
   test('turns the card tapped amber when the map cannot load', async ({
     page,
   }) => {

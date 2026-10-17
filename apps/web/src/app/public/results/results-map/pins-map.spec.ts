@@ -485,8 +485,8 @@ const lastFilter = (id: string) =>
   map.setFilter.mock.calls.findLast(([layer]) => layer === id)?.[1];
 const single = ['!', ['has', 'point_count']];
 
-// @traces 270-card-pin-link-FR-008
-// @traces 270-card-pin-link-FR-009
+// @traces 270-FR-008
+// @traces 270-FR-009
 describe('the lit garage on the results map', () => {
   it('draws the lit pin above every other pin, and the lit circle under the circle labels', () => {
     draw();
@@ -581,9 +581,9 @@ describe('the lit garage on the results map', () => {
   });
 });
 
-// @traces 270-card-pin-link-FR-004
-// @traces 270-card-pin-link-FR-010
-// @traces 270-card-pin-link-FR-011
+// @traces 270-FR-004
+// @traces 270-FR-010
+// @traces 270-FR-011
 describe('a tap on the results map', () => {
   const tap = (hits: Hit[]) => {
     map.queryRenderedFeatures.mockReturnValueOnce(hits);

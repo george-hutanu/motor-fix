@@ -188,7 +188,7 @@ const _searches = () =>
 const keep = (place: Place) =>
   localStorage.setItem('mf-place', JSON.stringify(place));
 
-// @traces 270-card-pin-link-FR-001 270-card-pin-link-FR-004 270-card-pin-link-FR-005 270-card-pin-link-FR-006 270-card-pin-link-FR-009 270-card-pin-link-FR-010
+// @traces 270-FR-001 270-FR-004 270-FR-005 270-FR-006 270-FR-009 270-FR-010
 describe('Results, a card and its pin, under attack', () => {
   let scroll: jest.Mock;
 

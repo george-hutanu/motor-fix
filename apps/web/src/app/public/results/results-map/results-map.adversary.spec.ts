@@ -60,7 +60,7 @@ beforeEach(() => {
   };
 });
 
-// @traces 270-card-pin-link-FR-010
+// @traces 270-FR-010
 describe('the results map, under attack', () => {
   it('opens no small card without the brand to link with', async () => {
     await render();
