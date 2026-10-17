@@ -4,6 +4,7 @@ import {
   isValidCui,
   RECORDED_RESULTS,
   type RecordVerificationCheckDto,
+  uncoveredJobs,
   VERIFICATION_CHECK_KINDS,
   type VerificationCheckEvidenceDto,
   type VerificationCheckKind,
@@ -28,6 +29,7 @@ import {
   type VerificationCheck,
   type VerificationFileStatus,
 } from '../../../generated/prisma/client';
+import { pricedJobs } from '../priced-jobs';
 
 // A decision waits for the garage or closes the file; reopening it into review
 // lets the admin record again.
@@ -43,20 +45,37 @@ const invalid = (message: string, errors?: { code: string; field: string }[]) =>
 const isKind = (kind: string): kind is VerificationCheckKind =>
   (VERIFICATION_CHECK_KINDS as readonly string[]).includes(kind);
 
-// The fields each register check takes from the admin.
-const FIELDS = {
-  caen: ['certificate', 'onrc', 'address'],
+// The fields each register check takes from the admin; the activities check
+// takes none, its evidence is the server's alone.
+const CAEN_TICKS = ['certificate', 'onrc', 'address'] as const;
+const RAR_TICKS = ['found', 'sameCompany', 'sameAddress'] as const;
+const FIELDS: Record<RegisterKind, readonly AdminField[]> = {
+  activities: [],
+  caen: CAEN_TICKS,
   company: ['name'],
-} as const;
-type RegisterKind = keyof typeof FIELDS;
+  rar: RAR_TICKS,
+};
+type RegisterKind = 'company' | 'caen' | 'rar' | 'activities';
+type AdminField =
+  | 'name'
+  | 'certificate'
+  | 'onrc'
+  | 'address'
+  | 'found'
+  | 'sameCompany'
+  | 'sameAddress';
+const ADMIN_FIELDS = [...new Set(Object.values(FIELDS).flat())];
 const isRegister = (kind: string): kind is RegisterKind => kind in FIELDS;
 
-// The ticks as the form names them, in the form's order; the address tick
-// reads as the workshop's, or the registered seat's for a mobile mechanic.
+// The ticks as the form names them, in the form's order; the address ticks
+// read as the workshop's, or the registered seat's for a mobile mechanic.
 const TICKS = {
   address: { premises: 'la punctul de lucru', seat: 'la sediul social' },
   certificate: '4520 pe certificat',
+  found: 'găsită',
   onrc: '4520 în ONRC',
+  sameAddress: { premises: 'aceeași adresă', seat: 'același sediu social' },
+  sameCompany: 'aceeași firmă',
 } as const;
 const tickName = (tick: keyof typeof TICKS, mobile: boolean) => {
   const name = TICKS[tick];
@@ -70,22 +89,30 @@ const CAEN_OK = {
   premises: 'Întreținerea și repararea autovehiculelor, la punctul de lucru',
   seat: 'Întreținerea și repararea autovehiculelor, la sediul social',
 };
+const RAR_OK = {
+  premises: 'aceeași firmă și adresă',
+  seat: 'aceeași firmă și sediu social',
+};
+const ACTIVITIES_OK = 'toate lucrările sunt acoperite';
 
-// Evidence belongs to a ticked register check, each kind to its own fields.
+// Evidence belongs to a ticked check that takes it, each kind to its own
+// fields; what the server writes itself is ignored when sent.
 function evidenceShape(
   kind: VerificationCheckKind,
   body: RecordVerificationCheckDto,
 ) {
   const { evidence } = body;
   if (evidence === undefined) return;
-  if (!isRegister(kind)) {
-    throw invalid('evidence belongs to the company and CAEN checks');
+  if (!isRegister(kind) || FIELDS[kind].length === 0) {
+    throw invalid('evidence belongs to the company, CAEN and RAR checks');
   }
   if (body.result === 'not_run') {
     throw invalid('an unticked check carries no evidence');
   }
-  const other = kind === 'company' ? FIELDS.caen : FIELDS.company;
-  const stray = other.find((field) => evidence[field] !== undefined);
+  const own: readonly AdminField[] = FIELDS[kind];
+  const stray = ADMIN_FIELDS.find(
+    (field) => evidence[field] !== undefined && !own.includes(field),
+  );
   if (stray) throw invalid(`${stray} does not belong to the ${kind} check`);
 }
 
@@ -93,7 +120,11 @@ interface RegisterFacts {
   businessKind: BusinessKind | null;
   certificateUploaded: boolean;
   cui: string | null;
+  rarNumber: string | null;
 }
+
+// A job of the garage's price list, as the activities check judges it.
+type PricedJob = Awaited<ReturnType<typeof pricedJobs>>[number];
 
 interface RegisterRecord {
   detail?: string;
@@ -141,7 +172,7 @@ function caenRecord(
     lookedUpOn: localDay(new Date()),
   };
   if (body.result !== 'ok') return { evidence };
-  const missing = FIELDS.caen.filter(
+  const missing = CAEN_TICKS.filter(
     (tick) =>
       !ticks[tick] && (tick !== 'certificate' || facts.certificateUploaded),
   );
@@ -153,6 +184,67 @@ function caenRecord(
     );
   }
   return { detail: mobile ? CAEN_OK.seat : CAEN_OK.premises, evidence };
+}
+
+// The RAR check: OK needs the file's number and every tick; the ticks are
+// stored as sent, with the number the file held at the save.
+function rarRecord(
+  body: RecordVerificationCheckDto,
+  facts: RegisterFacts,
+): RegisterRecord {
+  const ticks = {
+    found: body.evidence?.found === true,
+    sameAddress: body.evidence?.sameAddress === true,
+    sameCompany: body.evidence?.sameCompany === true,
+  };
+  const evidence = {
+    ...ticks,
+    lookedUpOn: localDay(new Date()),
+    rarNumber: facts.rarNumber,
+  };
+  if (body.result !== 'ok') return { evidence };
+  const mobile = facts.businessKind === 'mobile';
+  const missing = [
+    ...(facts.rarNumber ? [] : [{ field: 'rarNumber', name: 'numărul RAR' }]),
+    ...RAR_TICKS.filter((tick) => !ticks[tick]).map((tick) => ({
+      field: `evidence.${tick}`,
+      name: tickName(tick, mobile),
+    })),
+  ];
+  if (missing.length) {
+    throw invalid(
+      `Lipsește: ${missing.map((m) => m.name).join(', ')}`,
+      missing.map((m) => ({ code: 'required', field: m.field })),
+    );
+  }
+  return { detail: mobile ? RAR_OK.seat : RAR_OK.premises, evidence };
+}
+
+// The activities check: the server finds the price-list jobs the list leaves
+// uncovered; OK needs a list that covers every one.
+function activitiesRecord(
+  body: RecordVerificationCheckDto,
+  activities: readonly string[],
+  jobs: readonly PricedJob[],
+): RegisterRecord {
+  const uncovered = uncoveredJobs(jobs, activities);
+  const evidence = {
+    lookedUpOn: localDay(new Date()),
+    uncoveredJobTypeIds: uncovered.map((j) => j.jobTypeId),
+  };
+  if (body.result !== 'ok') return { evidence };
+  if (activities.length === 0) {
+    throw invalid('Bifează cel puțin o activitate', [
+      { code: 'required', field: 'activities' },
+    ]);
+  }
+  if (uncovered.length) {
+    throw invalid(
+      `Nu sunt acoperite: ${uncovered.map((j) => j.nameRo).join(', ')}`,
+      [{ code: 'uncovered', field: 'evidence.uncoveredJobTypeIds' }],
+    );
+  }
+  return { detail: ACTIVITIES_OK, evidence };
 }
 
 // One side of a check's audit entry: the activities check carries its list,
@@ -170,11 +262,13 @@ function auditValue(
   };
 }
 
-// The detail as stored: trimmed, at most 200 characters, required for a
-// problem and refused when the check is unticked.
-function detailOf(body: RecordVerificationCheckDto) {
+// The detail as stored: trimmed, required for a problem and refused when
+// the check is unticked. A register check's OK writes its own detail, so the
+// one sent is not measured.
+function detailOf(kind: string, body: RecordVerificationCheckDto) {
   const detail = body.detail?.trim() || null;
-  if (detail && detail.length > CHECK_DETAIL_MAX) {
+  const replaced = body.result === 'ok' && isRegister(kind);
+  if (detail && !replaced && detail.length > CHECK_DETAIL_MAX) {
     throw invalid(`detail must be at most ${CHECK_DETAIL_MAX} characters`);
   }
   if (body.result === 'not_run' && detail) {
@@ -195,7 +289,7 @@ function validated(
   if (!(RECORDED_RESULTS as readonly string[]).includes(body.result)) {
     throw invalid('result must be ok, warning, failed or not_run');
   }
-  const detail = detailOf(body);
+  const detail = detailOf(kind, body);
   evidenceShape(kind, body);
   if (body.activities !== undefined && kind !== 'activities') {
     throw invalid('activities belong to the activities check');
@@ -230,7 +324,7 @@ export class VerificationChecksService {
     body: RecordVerificationCheckDto,
   ) {
     requireCapability(actor, 'admin.garages');
-    const file = await this.file(tx, fileId);
+    const file = { ...(await this.file(tx, fileId)), id: fileId };
     if (DECIDED.includes(file.status)) {
       throw refusal(
         HttpStatus.CONFLICT,
@@ -247,7 +341,6 @@ export class VerificationChecksService {
     }
     const next = validated(kind, body);
     if (next.activities) await this.known(tx, next.activities);
-    const register = await this.register(tx, kind, body, file, fileId);
 
     const [before] = await tx.$queryRaw<
       Pick<VerificationCheck, 'id' | 'result' | 'detail' | 'evidence'>[]
@@ -255,6 +348,17 @@ export class VerificationChecksService {
       WHERE file_id = ${fileId}::uuid AND kind = ${kind}::verification_check_kind
       FOR UPDATE`;
     if (!before) throw new NotFoundException();
+    const activities =
+      kind === 'activities'
+        ? await this.lists(tx, file.garageId, next.activities)
+        : undefined;
+    const register = await this.register(
+      tx,
+      kind,
+      body,
+      file,
+      activities?.after ?? [],
+    );
     const check = await tx.verificationCheck.update({
       data: {
         detail: register?.detail ?? next.detail,
@@ -269,28 +373,8 @@ export class VerificationChecksService {
       },
       where: { id: before.id },
     });
-    // The activities check's entry always carries the list, sent or kept.
-    const held =
-      kind === 'activities'
-        ? await this.lockedActivities(tx, file.garageId)
-        : undefined;
-    const activities = held && { after: next.activities ?? held, before: held };
     if (next.activities) {
-      await tx.garage.update({
-        data: { rarActivities: next.activities },
-        where: { id: file.garageId },
-      });
-      // The activities decide which of its jobs the public profile lists.
-      await this.events.record(tx, {
-        audience: {
-          garageId: file.garageId,
-          results: false,
-          type: 'public_garage',
-        },
-        kind: 'price_list.updated',
-        payload: {},
-        subjectId: file.garageId,
-      });
+      await this.writeActivities(tx, file.garageId, next.activities);
     }
 
     await this.audit.record(tx, {
@@ -312,24 +396,62 @@ export class VerificationChecksService {
       subjectId: fileId,
     });
 
-    const checks = await tx.verificationCheck.findMany({
-      select: { detail: true, kind: true, result: true },
-      where: { fileId },
+    return this.answer(tx, fileId, file.garageId, check, actor.accountId);
+  }
+
+  // The garage's list as sent; it decides which of its jobs the public
+  // profile lists.
+  private async writeActivities(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    activities: string[],
+  ) {
+    await tx.garage.update({
+      data: { rarActivities: activities },
+      where: { id: garageId },
     });
-    const garage = await tx.garage.findUniqueOrThrow({
-      select: { rarActivities: true },
-      where: { id: file.garageId },
+    await this.events.record(tx, {
+      audience: { garageId, results: false, type: 'public_garage' },
+      kind: 'price_list.updated',
+      payload: {},
+      subjectId: garageId,
     });
+  }
+
+  // The record call's answer: the check with its recorder, the garage's list
+  // and the queue line, read inside the save.
+  private async answer(
+    tx: Prisma.TransactionClient,
+    fileId: string,
+    garageId: string,
+    check: VerificationCheck,
+    accountId: string,
+  ) {
+    const [checks, documents, garage] = await Promise.all([
+      tx.verificationCheck.findMany({
+        select: { detail: true, kind: true, result: true },
+        where: { fileId },
+      }),
+      tx.legalDocument.findMany({
+        select: { kind: true },
+        where: { verificationFileId: fileId },
+      }),
+      tx.garage.findUniqueOrThrow({
+        select: { rarActivities: true },
+        where: { id: garageId },
+      }),
+    ]);
+    const kinds = documents.map((d) => d.kind);
     return {
       check: {
         ...check,
         evidence: check.evidence as VerificationCheckEvidenceDto | null,
-        recorder: await this.recorder(tx, actor.accountId),
+        recorder: await this.recorder(tx, accountId),
       },
       rarActivities: garage.rarActivities,
       summary: {
-        en: checkSummary(checks, 'en'),
-        ro: checkSummary(checks, 'ro'),
+        en: checkSummary(checks, 'en', kinds),
+        ro: checkSummary(checks, 'ro', kinds),
       },
     };
   }
@@ -349,8 +471,13 @@ export class VerificationChecksService {
     // Held until the save commits, so a decision racing it waits and the
     // record cannot land on a file decided meanwhile.
     const [file] = await tx.$queryRaw<
-      { garageId: string; status: VerificationFileStatus }[]
-    >`SELECT garage_id AS "garageId", status::text AS status
+      {
+        garageId: string;
+        rarNumber: string | null;
+        status: VerificationFileStatus;
+      }[]
+    >`SELECT garage_id AS "garageId", rar_number AS "rarNumber",
+        status::text AS status
       FROM verification_file WHERE id = ${id}::uuid FOR SHARE`;
     if (!file) throw new NotFoundException();
     return file;
@@ -361,23 +488,29 @@ export class VerificationChecksService {
     tx: Prisma.TransactionClient,
     kind: VerificationCheckKind,
     body: RecordVerificationCheckDto,
-    file: { garageId: string },
-    fileId: string,
+    file: { garageId: string; id: string; rarNumber: string | null },
+    activities: readonly string[],
   ): Promise<RegisterRecord | undefined> {
     if (!isRegister(kind) || body.result === 'not_run') return undefined;
-    const facts = await this.facts(tx, fileId, file);
-    return kind === 'company'
-      ? companyRecord(body, facts)
-      : caenRecord(body, facts);
+    if (kind === 'activities') {
+      return activitiesRecord(
+        body,
+        activities,
+        await pricedJobs(tx, file.garageId),
+      );
+    }
+    const facts = await this.facts(tx, file);
+    if (kind === 'company') return companyRecord(body, facts);
+    return kind === 'caen' ? caenRecord(body, facts) : rarRecord(body, facts);
   }
 
   // What the server reads itself for a register check: the garage's CUI and
-  // kind, and whether the file holds an ONRC certificate.
+  // kind, the file's RAR number and whether it holds an ONRC certificate.
   private async facts(
     tx: Prisma.TransactionClient,
-    fileId: string,
-    file: { garageId: string },
+    file: { garageId: string; id: string; rarNumber: string | null },
   ): Promise<RegisterFacts> {
+    const fileId = file.id;
     const [garage, certificates] = await Promise.all([
       tx.garage.findUniqueOrThrow({
         select: { businessKind: true, cui: true },
@@ -387,7 +520,11 @@ export class VerificationChecksService {
         where: { kind: 'onrc_certificate', verificationFileId: fileId },
       }),
     ]);
-    return { ...garage, certificateUploaded: certificates > 0 };
+    return {
+      ...garage,
+      certificateUploaded: certificates > 0,
+      rarNumber: file.rarNumber,
+    };
   }
 
   private async known(tx: Prisma.TransactionClient, codes: string[]) {
@@ -395,6 +532,16 @@ export class VerificationChecksService {
       where: { code: { in: codes } },
     });
     if (found !== codes.length) throw invalid('unknown RAR activity code');
+  }
+
+  // The activities check's entry always carries the list, sent or kept.
+  private async lists(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    sent: string[] | undefined,
+  ) {
+    const before = await this.lockedActivities(tx, garageId);
+    return { after: sent ?? before, before };
   }
 
   // The garage's list before the save, held until it commits.

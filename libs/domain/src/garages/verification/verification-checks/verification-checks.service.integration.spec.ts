@@ -31,6 +31,12 @@ const REASON = { code: 'documents_unreadable', note: 'The CUI is blurred' };
 // A CUI whose control digit holds, and one whose does not.
 const VALID_CUI = '1234567897';
 const NAME = 'Auto Vest Motors SRL';
+const RAR_NUMBER = 'B 1234/2019';
+// An ok rar record: the three ticks on a file that holds its number.
+const TICKED = { found: true, sameAddress: true, sameCompany: true };
+const RAR_OK = { evidence: TICKED, result: 'ok' };
+const SAME_ADDRESS = 'aceeași firmă și adresă';
+const COVERED = 'toate lucrările sunt acoperite';
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -147,7 +153,8 @@ beforeEach(async () => {
   await prisma.garageMember.create({
     data: { accountId: mihai.accountId, garageId, role: 'owner' },
   });
-  fileId = (await inTx((tx) => files().submit(tx, mihai, garageId))).id;
+  fileId = (await inTx((tx) => files().submit(tx, mihai, garageId, RAR_NUMBER)))
+    .id;
 });
 
 afterAll(async () => {
@@ -158,9 +165,12 @@ afterAll(async () => {
 describe('recording a check', () => {
   it('saves the result with who and when, its history entry and its event', async () => {
     const before = Date.now();
-    const detail = 'Autorizație găsită în registru, aceeași firmă și adresă';
+    const detail = SAME_ADDRESS;
 
-    const answer = await record('rar', { detail, result: 'ok' });
+    const answer = await record('rar', {
+      ...RAR_OK,
+      detail: 'Autorizație găsită în registru',
+    });
 
     const rar = await check('rar');
     expect(rar).toMatchObject({
@@ -185,8 +195,12 @@ describe('recording a check', () => {
       field: 'rar',
       garageId,
       kind: 'verification_check_recorded',
-      newValue: { detail, result: 'ok' },
-      oldValue: { detail: null, result: 'not_run' },
+      newValue: {
+        detail,
+        evidence: { ...TICKED, lookedUpOn: today(), rarNumber: RAR_NUMBER },
+        result: 'ok',
+      },
+      oldValue: { detail: null, evidence: null, result: 'not_run' },
       subjectId: rar.id,
     });
 
@@ -200,8 +214,15 @@ describe('recording a check', () => {
   });
 
   it('answers with the file summary in both languages', async () => {
+    await prisma.legalDocument.create({
+      data: {
+        kind: 'rar_authorisation',
+        pages: ['rar/1.pdf'],
+        verificationFileId: fileId,
+      },
+    });
     await record('company', { evidence: { name: NAME }, result: 'ok' });
-    const answer = await record('rar', { result: 'ok' });
+    const answer = await record('rar', RAR_OK);
 
     expect(answer.summary).toEqual({
       en: 'Company ID and RAR licence checked',
@@ -232,16 +253,27 @@ describe('recording a check', () => {
     expect(entry).toMatchObject({
       newValue: {
         activities: ['mechanics', 'brakes'],
-        detail: null,
+        detail: COVERED,
+        evidence: { lookedUpOn: today(), uncoveredJobTypeIds: [] },
         result: 'ok',
       },
-      oldValue: { activities: [], detail: null, result: 'not_run' },
+      oldValue: {
+        activities: [],
+        detail: null,
+        evidence: null,
+        result: 'not_run',
+      },
     });
   });
 
-  it('accepts an empty activities list when the result is ok', async () => {
+  // @traces 204-FR-004
+  it('accepts an empty activities list on a problem, as 300-FR-004 stores it', async () => {
     await record('activities', { activities: ['brakes'], result: 'ok' });
-    await record('activities', { activities: [], result: 'ok' });
+    await record('activities', {
+      activities: [],
+      detail: 'autorizația nu listează activități',
+      result: 'failed',
+    });
 
     const garage = await prisma.garage.findUniqueOrThrow({
       where: { id: garageId },
@@ -291,10 +323,10 @@ describe('recording a check', () => {
 
   it('lets the last save win and keeps both in the history', async () => {
     await record('rar', { detail: 'nu apare', result: 'failed' });
-    await record('rar', { detail: 'găsită', result: 'ok' }, dan);
+    await record('rar', RAR_OK, dan);
 
     expect(await check('rar')).toMatchObject({
-      detail: 'găsită',
+      detail: SAME_ADDRESS,
       recordedBy: dan.accountId,
       result: 'ok',
     });
@@ -304,7 +336,7 @@ describe('recording a check', () => {
     });
     expect(second).toMatchObject({
       actorId: dan.accountId,
-      newValue: { detail: 'găsită', result: 'ok' },
+      newValue: { detail: SAME_ADDRESS, result: 'ok' },
       oldValue: { detail: 'nu apare', result: 'failed' },
     });
     expect(await recorded()).toHaveLength(2);
@@ -340,6 +372,7 @@ describe('recording a check', () => {
     await expect(
       inTx((tx) =>
         checksService(failing).record(tx, ioana, fileId, 'rar', {
+          evidence: TICKED,
           result: 'ok',
         }),
       ),
@@ -374,7 +407,7 @@ describe('a record that is refused', () => {
     async (outcome) => {
       await decide(outcome);
 
-      expect(await refusal(record('rar', { result: 'ok' }))).toEqual({
+      expect(await refusal(record('rar', RAR_OK))).toEqual({
         body: {
           code: 'verification_file_decided',
           message: 'Dosarul e deja decis',
@@ -402,7 +435,7 @@ describe('a record that is refused', () => {
     });
     await isDecided;
 
-    const recording = refusal(record('rar', { result: 'ok' }));
+    const recording = refusal(record('rar', RAR_OK));
     // Long enough for a write that did not wait to have settled.
     await new Promise((resolve) => setTimeout(resolve, 200));
     const waiting = await Promise.race([
@@ -421,7 +454,7 @@ describe('a record that is refused', () => {
     await decide('rejected');
     await inTx((tx) => files().reopen(tx, dan, fileId));
 
-    await record('rar', { result: 'ok' });
+    await record('rar', RAR_OK);
 
     expect(await check('rar')).toMatchObject({ result: 'ok' });
   });
@@ -446,11 +479,6 @@ describe('a record that is refused', () => {
     ['a failure without a detail', 'rar', { result: 'failed' }],
     ['a blank detail on a failure', 'rar', { detail: '   ', result: 'failed' }],
     [
-      'a detail over 200 characters',
-      'rar',
-      { detail: 'x'.repeat(201), result: 'ok' },
-    ],
-    [
       'an unknown activity',
       'activities',
       { activities: ['mechanics', 'tuning'], result: 'ok' },
@@ -461,6 +489,11 @@ describe('a record that is refused', () => {
       { activities: ['mechanics'], result: 'ok' },
     ],
     ['activities ok without a list', 'activities', { result: 'ok' }],
+    [
+      'activities ok with an empty list',
+      'activities',
+      { activities: [], result: 'ok' },
+    ],
     ['a result that is not one', 'rar', { result: 'pending' }],
   ])('refuses %s with 400', async (_, kind, body) => {
     expect(await refusal(record(kind, body))).toMatchObject({
@@ -471,23 +504,23 @@ describe('a record that is refused', () => {
   });
 
   it('accepts a detail of exactly 200 characters', async () => {
-    await record('rar', { detail: 'x'.repeat(200), result: 'ok' });
+    await record('rar', { detail: 'x'.repeat(200), result: 'failed' });
 
     expect((await check('rar')).detail).toHaveLength(200);
   });
 
   it('answers 404 for an unknown or malformed file', async () => {
     for (const id of [randomUUID(), 'not-a-uuid']) {
-      expect(
-        await refusal(record('rar', { result: 'ok' }, ioana, id)),
-      ).toMatchObject({ status: 404 });
+      expect(await refusal(record('rar', RAR_OK, ioana, id))).toMatchObject({
+        status: 404,
+      });
     }
   });
 
   it('answers 404 to anyone but an admin', async () => {
-    expect(await refusal(record('rar', { result: 'ok' }, mihai))).toMatchObject(
-      { status: 404 },
-    );
+    expect(await refusal(record('rar', RAR_OK, mihai))).toMatchObject({
+      status: 404,
+    });
     expect(await check('rar')).toMatchObject({ result: 'not_run' });
   });
 });
@@ -581,7 +614,8 @@ describe('the company check', () => {
     expect(answer.check).toMatchObject({
       evidence: { lookedUpOn: today(), name: NAME },
     });
-    expect(answer.summary.ro).toBe('CUI verificat');
+    // No RAR authorisation is on file, so the summary says so.
+    expect(answer.summary.ro).toBe('CUI verificat · lipsește autorizația RAR');
     const [entry, ...more] = await entries();
     expect(more).toHaveLength(0);
     expect(entry).toMatchObject({
@@ -894,6 +928,418 @@ describe('the CAEN check', () => {
   });
 });
 
+// @traces 204-FR-002
+// @traces 204-FR-003
+// @traces 204-FR-005
+// @traces 204-FR-006
+describe('the RAR check', () => {
+  const SEAT = 'aceeași firmă și sediu social';
+  const TICK_SETS = [false, true].flatMap((found) =>
+    [false, true].flatMap((sameCompany) =>
+      [false, true].map((sameAddress) => ({ found, sameAddress, sameCompany })),
+    ),
+  );
+  const faults = (ticks: (typeof TICK_SETS)[number]) =>
+    (['found', 'sameCompany', 'sameAddress'] as const)
+      .filter((tick) => !ticks[tick])
+      .map((tick) => ({ code: 'required', field: `evidence.${tick}` }));
+  const withoutNumber = () =>
+    prisma.verificationFile.update({
+      data: { rarNumber: null },
+      where: { id: fileId },
+    });
+
+  it.each(TICK_SETS)(
+    'saves ok only with all three ticks: %o',
+    async (ticks) => {
+      const saving = record('rar', { evidence: ticks, result: 'ok' });
+      const missing = faults(ticks);
+
+      if (missing.length === 0) {
+        await saving;
+        expect(await check('rar')).toMatchObject({
+          automatic: false,
+          detail: SAME_ADDRESS,
+          evidence: { ...ticks, lookedUpOn: today(), rarNumber: RAR_NUMBER },
+          result: 'ok',
+        });
+        return;
+      }
+      const answer = await refusal(saving);
+      expect([answer.status, answer.body.code]).toEqual([
+        400,
+        'validation_failed',
+      ]);
+      expect(answer.body.errors).toEqual(missing);
+      expect(await entries()).toHaveLength(0);
+    },
+  );
+
+  it.each(TICK_SETS)(
+    'refuses ok on a file without a number, whatever the ticks: %o',
+    async (ticks) => {
+      await withoutNumber();
+
+      const answer = await refusal(
+        record('rar', { evidence: ticks, result: 'ok' }),
+      );
+
+      expect([answer.status, answer.body.code]).toEqual([
+        400,
+        'validation_failed',
+      ]);
+      expect(answer.body.errors).toContainEqual({
+        code: 'required',
+        field: 'rarNumber',
+      });
+      expect(await check('rar')).toMatchObject({ result: 'not_run' });
+    },
+  );
+
+  it('writes the seat wording for a mobile mechanic, whatever detail was sent', async () => {
+    await garageIs({ businessKind: 'mobile' });
+
+    await record('rar', { ...RAR_OK, detail: 'altceva' });
+
+    expect(await check('rar')).toMatchObject({ detail: SEAT });
+  });
+
+  it('keeps the typed detail on a problem and stores the ticks as sent', async () => {
+    await record('rar', {
+      detail: 'numărul introdus nu există în registrul public RAR',
+      evidence: { sameCompany: true },
+      result: 'failed',
+    });
+
+    expect(await check('rar')).toMatchObject({
+      detail: 'numărul introdus nu există în registrul public RAR',
+      evidence: {
+        found: false,
+        lookedUpOn: today(),
+        rarNumber: RAR_NUMBER,
+        sameAddress: false,
+        sameCompany: true,
+      },
+      result: 'failed',
+    });
+  });
+
+  it('stores a null number on a problem when the file has none', async () => {
+    await withoutNumber();
+
+    await record('rar', { detail: 'număr lipsă', result: 'warning' });
+
+    expect((await check('rar')).evidence).toMatchObject({ rarNumber: null });
+  });
+
+  it('takes the number from the file, never from the body', async () => {
+    await record('rar', {
+      evidence: { ...TICKED, rarNumber: 'X 1/2000' },
+      result: 'ok',
+    });
+
+    expect((await check('rar')).evidence).toMatchObject({
+      rarNumber: RAR_NUMBER,
+    });
+  });
+
+  it('clears the result, the detail and the evidence when unticked', async () => {
+    await record('rar', RAR_OK);
+
+    await record('rar', { result: 'not_run' });
+
+    expect(await check('rar')).toMatchObject({
+      detail: null,
+      evidence: null,
+      result: 'not_run',
+    });
+    const [, cleared] = await entries();
+    expect(cleared).toMatchObject({
+      newValue: { evidence: null, result: 'not_run' },
+      oldValue: { evidence: { ...TICKED, rarNumber: RAR_NUMBER } },
+    });
+  });
+
+  it.each([
+    ['a CAEN tick', { ...TICKED, onrc: true }],
+    ['the company name', { ...TICKED, name: NAME }],
+  ])('refuses %s on the RAR check', async (_, evidence) => {
+    const answer = await refusal(record('rar', { evidence, result: 'ok' }));
+
+    expect([answer.status, answer.body.code]).toEqual([
+      400,
+      'validation_failed',
+    ]);
+    expect(await entries()).toHaveLength(0);
+  });
+
+  it('refuses RAR ticks on another register check', async () => {
+    const answer = await refusal(
+      record('company', {
+        evidence: { found: true, name: NAME },
+        result: 'ok',
+      }),
+    );
+
+    expect(answer.status).toBe(400);
+  });
+
+  it('keeps no evidence, history or event when the event cannot be written', async () => {
+    const failing: EventPort = {
+      record: async () => {
+        throw new Error('outbox down');
+      },
+    };
+
+    await expect(
+      inTx((tx) =>
+        checksService(failing).record(
+          tx,
+          ioana,
+          fileId,
+          'rar',
+          RAR_OK as never,
+        ),
+      ),
+    ).rejects.toThrow('outbox down');
+
+    expect(await check('rar')).toMatchObject({
+      evidence: null,
+      result: 'not_run',
+    });
+    expect(await recorded()).toHaveLength(0);
+  });
+
+  it('keeps the evidence as recorded when the number is corrected later', async () => {
+    await record('rar', RAR_OK);
+
+    await inTx((tx) =>
+      files().correctRarNumber(tx, ioana, fileId, 'B 9999/2020'),
+    );
+
+    expect(await check('rar')).toMatchObject({
+      detail: SAME_ADDRESS,
+      evidence: { rarNumber: RAR_NUMBER },
+      result: 'ok',
+    });
+  });
+
+  it('calls no outside register', async () => {
+    const fetch = jest.spyOn(globalThis, 'fetch');
+    try {
+      await record('rar', RAR_OK);
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+});
+
+// @traces 204-FR-002
+// @traces 204-FR-004
+// @traces 204-FR-005
+// @traces 204-FR-011
+describe('the activities check', () => {
+  const jobs: Record<string, string> = {};
+  const priced = async (
+    key: string,
+    rarActivity: string | null,
+    status: 'approved' | 'pending' | 'rejected' = 'approved',
+    visible = true,
+  ) => {
+    const job = await prisma.jobType.create({
+      data: {
+        key: `${key}-${randomUUID()}`,
+        nameEn: key,
+        nameRo: key,
+        rarActivity,
+        status,
+      },
+    });
+    jobs[key] = job.id;
+    await prisma.garagePrice.create({
+      data: {
+        fromBani: 10_000,
+        garageId,
+        jobTypeId: job.id,
+        position: Object.keys(jobs).length,
+        updatedBy: mihai.accountId,
+        visible,
+      },
+    });
+    return job.id;
+  };
+
+  it('saves ok when every priced job is covered, writing its own detail', async () => {
+    await priced('Plăcuțe frână', 'brakes');
+    await priced('Diagnoză', null);
+
+    await record('activities', {
+      activities: ['mechanics', 'brakes'],
+      detail: 'altceva',
+      result: 'ok',
+    });
+
+    expect(await check('activities')).toMatchObject({
+      automatic: false,
+      detail: COVERED,
+      evidence: { lookedUpOn: today(), uncoveredJobTypeIds: [] },
+      result: 'ok',
+    });
+  });
+
+  it('refuses ok with an uncovered job, naming it, and writes nothing', async () => {
+    const paint = await priced('Vopsitorie', 'paintwork');
+    await priced('Plăcuțe frână', 'brakes');
+
+    const answer = await refusal(
+      record('activities', { activities: ['brakes'], result: 'ok' }),
+    );
+
+    expect([answer.status, answer.body.code]).toEqual([
+      400,
+      'validation_failed',
+    ]);
+    expect(answer.body.errors).toEqual([
+      { code: 'uncovered', field: 'evidence.uncoveredJobTypeIds' },
+    ]);
+    expect(answer.body.message).toBe('Nu sunt acoperite: Vopsitorie');
+    expect(answer.body.message).not.toContain(paint);
+    expect(await entries()).toHaveLength(0);
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { id: garageId },
+    });
+    expect(garage.rarActivities).toEqual([]);
+  });
+
+  it('refuses ok with an empty list, naming the list', async () => {
+    const answer = await refusal(
+      record('activities', { activities: [], result: 'ok' }),
+    );
+
+    expect(answer.body.errors).toEqual([
+      { code: 'required', field: 'activities' },
+    ]);
+  });
+
+  it('counts every priced job whatever its status or visibility', async () => {
+    const pending = await priced('Propusă', 'paintwork', 'pending');
+    const hidden = await priced('Ascunsă', 'air_con', 'approved', false);
+
+    await record('activities', {
+      activities: ['brakes'],
+      detail: 'lipsesc două activități',
+      result: 'warning',
+    });
+
+    expect((await check('activities')).evidence).toEqual({
+      lookedUpOn: today(),
+      uncoveredJobTypeIds: [pending, hidden],
+    });
+  });
+
+  it('stores the list and its uncovered jobs on a problem, and drops the profile', async () => {
+    const paint = await priced('Vopsitorie', 'paintwork');
+
+    await record('activities', {
+      activities: ['brakes'],
+      detail: 'Vopsitorie nu apare în autorizație',
+      result: 'warning',
+    });
+
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { id: garageId },
+    });
+    expect(garage.rarActivities).toEqual(['brakes']);
+    expect(await check('activities')).toMatchObject({
+      detail: 'Vopsitorie nu apare în autorizație',
+      evidence: { uncoveredJobTypeIds: [paint] },
+      result: 'warning',
+    });
+    expect(
+      await prisma.outboxEvent.count({
+        where: { kind: 'price_list.updated', subjectId: garageId },
+      }),
+    ).toBe(1);
+  });
+
+  it('judges a problem without a list against the stored list', async () => {
+    const paint = await priced('Vopsitorie', 'paintwork');
+    await record('activities', {
+      activities: ['brakes'],
+      detail: 'x',
+      result: 'failed',
+    });
+
+    await record('activities', { detail: 'tot lipsește', result: 'warning' });
+
+    expect((await check('activities')).evidence).toMatchObject({
+      uncoveredJobTypeIds: [paint],
+    });
+  });
+
+  it('refuses any evidence the admin sends', async () => {
+    const answer = await refusal(
+      record('activities', {
+        activities: ['brakes'],
+        evidence: { found: true },
+        result: 'ok',
+      }),
+    );
+
+    expect(answer.status).toBe(400);
+  });
+
+  it('clears the evidence when unticked and keeps the garage list', async () => {
+    await record('activities', { activities: ['brakes'], result: 'ok' });
+
+    await record('activities', { result: 'not_run' });
+
+    expect(await check('activities')).toMatchObject({
+      detail: null,
+      evidence: null,
+      result: 'not_run',
+    });
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { id: garageId },
+    });
+    expect(garage.rarActivities).toEqual(['brakes']);
+  });
+
+  it('refuses a detail over 200 characters with 400', async () => {
+    expect(
+      await refusal(
+        record('activities', {
+          activities: ['brakes'],
+          detail: 'x'.repeat(201),
+          result: 'warning',
+        }),
+      ),
+    ).toMatchObject({ body: { code: 'validation_failed' }, status: 400 });
+  });
+});
+
+// @traces 204-FR-013
+describe('the RAR activity catalogue', () => {
+  it('holds exactly the five codes, and every stored list is drawn from them', async () => {
+    const codes = await prisma.rarActivity.findMany({
+      orderBy: { code: 'asc' },
+      select: { code: true },
+    });
+    expect(codes.map((c) => c.code)).toEqual([
+      'air_con',
+      'brakes',
+      'mechanics',
+      'steering',
+      'suspension',
+    ]);
+    const strays = await prisma.$queryRaw<{ code: string }[]>`
+      SELECT DISTINCT unnest(rar_activities) AS code FROM garage
+      EXCEPT SELECT code FROM rar_activity`;
+    expect(strays).toEqual([]);
+  });
+});
+
 describe('what a record reports', () => {
   // @traces 203-FR-010
   it('counts each record by kind and result, and a refusal not at all', async () => {
@@ -914,12 +1360,12 @@ describe('what a record reports', () => {
   it('logs one line with the file, the kind, the result and the admin, never the detail', async () => {
     const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
 
-    await record('rar', { detail: 'Autorizație secretă', result: 'ok' });
+    await record('rar', { detail: 'Autorizație secretă', result: 'failed' });
 
     const lines = log.mock.calls.map((call) => String(call[0]));
     log.mockRestore();
     expect(lines).toHaveLength(1);
-    for (const part of [fileId, 'rar', 'ok', ioana.accountId]) {
+    for (const part of [fileId, 'rar', 'failed', ioana.accountId]) {
       expect(lines[0]).toContain(part);
     }
     expect(lines[0]).not.toContain('Autorizație secretă');
