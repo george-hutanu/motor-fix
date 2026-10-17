@@ -7,7 +7,7 @@
   background: color-mix(in srgb, var(--mf-panel-raised) 92%, transparent);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--mf-mask) 50%, transparent);
   box-sizing: border-box;
   color: var(--mf-text);
   display: flex;
