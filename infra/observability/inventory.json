@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 128,
+    "count": 129,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1002,6 +1002,19 @@
       ],
       "reason": "the admin's demand read, counts only; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-103"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-system-log",
+      "source": "libs/domain/src/admin/system-log/system-log.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/system-log",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's read of today's log entries, twenty at most on an indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-298"
     },
     {
       "kind": "endpoint",

@@ -125,6 +125,8 @@ export type { VerificationFileControllerRead$Params as VerificationFileControlle
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
+export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
+export { systemLogControllerList as systemLogControllerList } from './fn/admin/system-log-controller-list';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';
