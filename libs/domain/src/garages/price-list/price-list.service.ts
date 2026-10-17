@@ -98,11 +98,14 @@ export class PriceListService {
     assertGarageOwner(actor, garageId);
     const [garage, brand, rows] = await Promise.all([
       this.prisma.garage.findUnique({
-        select: { brands: { select: { stance: true }, where: { brandId } } },
+        select: {
+          brands: { select: { stance: true }, where: { brandId } },
+          slug: true,
+        },
         where: { id: garageId },
       }),
       this.prisma.brand.findUnique({
-        select: { id: true },
+        select: { slug: true },
         where: { id: brandId },
       }),
       this.prisma.garagePrice.findMany({
@@ -129,7 +132,7 @@ export class PriceListService {
     else if (!defaultRow) {
       errors.push({ code: 'no_default_range', field: 'jobTypeId' });
     }
-    if (errors.length > 0 || !defaultRow) throw refuse(errors);
+    if (errors.length > 0 || !brand || !defaultRow) throw refuse(errors);
 
     const { fromBani, toBani, warnings } = range;
     const saved = { brandId, fromBani, jobTypeId, toBani, warnings };
@@ -137,11 +140,14 @@ export class PriceListService {
     if (own?.fromBani === fromBani && own.toBani === toBani) return saved;
     await this.prisma.$transaction(async (tx) => {
       const scope = this.scopeOf(actor, garageId);
-      if (own) {
-        await tx.garagePrice.update({
-          data: { fromBani, toBani, updatedBy: actor.accountId },
-          where: { id: own.id },
-        });
+      // A removal racing this write took the row first: it is stored anew.
+      const { count } = own
+        ? await tx.garagePrice.updateMany({
+            data: { fromBani, toBani, updatedBy: actor.accountId },
+            where: { id: own.id },
+          })
+        : { count: 0 };
+      if (own && count > 0) {
         await this.audit.record(tx, {
           ...scope,
           action: 'update',
@@ -180,7 +186,7 @@ export class PriceListService {
       }
       await this.changed(tx, pair);
     });
-    await this.forget(pair);
+    await this.forget(garage.slug, brand.slug);
     return saved;
   }
 
@@ -190,10 +196,17 @@ export class PriceListService {
     const { brandId, garageId, jobTypeId } = pair;
     assertGarageOwner(actor, garageId);
     const own = await this.prisma.garagePrice.findFirst({
-      select: { fromBani: true, id: true, toBani: true },
+      select: {
+        brand: { select: { slug: true } },
+        fromBani: true,
+        garage: { select: { slug: true } },
+        id: true,
+        toBani: true,
+      },
       where: { brandId, garageId, jobTypeId },
     });
-    if (!own) throw notFound();
+    if (!own?.brand) throw notFound();
+    const brandSlug = own.brand.slug;
     await this.prisma.$transaction(async (tx) => {
       // A removal racing this one took the row first.
       const { count } = await tx.garagePrice.deleteMany({
@@ -213,7 +226,7 @@ export class PriceListService {
       });
       await this.changed(tx, pair);
     });
-    await this.forget(pair);
+    await this.forget(own.garage.slug, brandSlug);
   }
 
   private scopeOf(actor: Actor, garageId: string) {
@@ -246,18 +259,7 @@ export class PriceListService {
 
   // The profile read for the written brand answers the new range at once,
   // not after the cached entry's soft period; the relay purges the rest.
-  private async forget({ brandId, garageId }: Pair) {
-    const [garage, brand] = await Promise.all([
-      this.prisma.garage.findUnique({
-        select: { slug: true },
-        where: { id: garageId },
-      }),
-      this.prisma.brand.findUnique({
-        select: { slug: true },
-        where: { id: brandId },
-      }),
-    ]);
-    if (!garage || !brand) return;
-    await this.cache.take(cacheKey('profile', garage.slug, brand.slug));
+  private forget(garageSlug: string, brandSlug: string) {
+    return this.cache.take(cacheKey('profile', garageSlug, brandSlug));
   }
 }
