@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -11,6 +11,7 @@ features:
   - 267-brand-results
   - 1182-cache-service
   - 1169-prefetch-intent
+  - 290-save-garage
 ---
 
 # Capability: Garage search
@@ -178,6 +179,10 @@ _From 1182-cache-service._
 ### 1169-FR-007 — The results page's card MUST pre-fetch the public profile of its garage, with the brand in context, on the first of: the pointer resting on the card for 100 ms, a touch starting on it, or the card scrolling into view after the visitor's first scroll (cards visible at first paint are not pre-fetched on visibility alone: first paint is not intent). At most 3 pre-fetches are in flight at once (later signals wait for a slot); a card already stored or in flight starts no second fetch; the pointer leaving a card before its answer cancels the fetch and stores nothing. On the same signal the profile route's lazy code is requested once per page life.
 
 _From 1169-prefetch-intent._
+
+### 290-FR-010 — Each result card on the results page, list and map (267-FR-014), MUST show the same control as an icon-only bookmark button (accessible name "Salvează" / "Salvat", outline or filled), for a signed-in driver or a visitor, absent in the other roles; tapping it MUST not open the card's profile link.
+
+_From 290-save-garage._
 
 ## Retired
 
