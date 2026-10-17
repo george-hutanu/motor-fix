@@ -118,3 +118,39 @@ describe('the verification result queue', () => {
     });
   });
 });
+
+// @traces 1345-FR-015
+describe('the Error % panels', () => {
+  type Panel = {
+    title?: string;
+    panels?: Panel[];
+    targets?: { expr: string }[];
+  };
+  const flatten = (panels: Panel[]): Panel[] =>
+    panels.flatMap((panel) => [panel, ...flatten(panel.panels ?? [])]);
+  const exprs = ['api', 'web', 'worker', 'mcp', 'overview'].flatMap((name) =>
+    flatten(
+      JSON.parse(
+        read(
+          'infra',
+          'observability',
+          'grafana',
+          'dashboards',
+          `motorfix-${name}.json`,
+        ),
+      ).panels,
+    )
+      .filter((panel) => panel.title === 'Error %')
+      .flatMap((panel) => panel.targets ?? [])
+      .map((target) => target.expr.replace(/\s+/g, ' ')),
+  );
+
+  it('show 0 rather than no value when nothing failed', () => {
+    expect(exprs).toHaveLength(8);
+    for (const expr of exprs) {
+      expect(expr).toMatch(
+        /^100 \* \(sum\(rate\(.+\)\) or vector\(0\)\) \/ sum\(rate\(.+\)\)$/,
+      );
+    }
+  });
+});
