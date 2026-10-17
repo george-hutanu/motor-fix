@@ -108,7 +108,9 @@ const live = {
 };
 
 let harness: RouterTestingHarness;
-let response: { status?: number };
+let response: { status?: number; headers?: HeadersInit };
+// What Angular's server render hands the page: the type it already set.
+const RENDERED = 'text/html;charset=UTF-8';
 
 async function settle() {
   for (let i = 0; i < 5; i++) await Promise.resolve();
@@ -117,7 +119,7 @@ async function settle() {
 
 beforeEach(async () => {
   reads = [];
-  response = {};
+  response = { headers: new Headers({ 'Content-Type': RENDERED }) };
   api.publicGaragesControllerBySlug.mockClear();
   api.profileViewsControllerRecord.mockClear();
   consent.track.mockClear();
@@ -342,6 +344,30 @@ describe('the garage profile', () => {
     expect(page().querySelector('h1')?.textContent).not.toContain('Titan');
     expect(response.status).toBe(410);
   });
+});
+
+// @traces 430-FR-003
+describe('the garage profile purge tag', () => {
+  it('tags the rendered page with the garage, so its edit purges the edge', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(MOBILE);
+
+    const headers = new Headers(response.headers);
+    expect(headers.get('cdn-tag')).toBe(`garage:${MOBILE.id}`);
+    expect(headers.get('content-type')).toBe(RENDERED);
+  });
+
+  it.each([404, 410])(
+    'sets no garage tag on a %s, which keeps the search tag',
+    async (status) => {
+      await open('/ro/garages/atelier-dinamo');
+      await reads[0]?.fail(status);
+
+      const headers = new Headers(response.headers);
+      expect(headers.get('cdn-tag')).toBeNull();
+      expect(headers.get('content-type')).toBe(RENDERED);
+    },
+  );
 });
 
 // @traces 355-price-list-ranges-FR-006

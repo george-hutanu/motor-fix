@@ -16,7 +16,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 
-import { LiveHub } from './live/live.hub';
+import { LIVE_HEADERS, LiveHub } from './live/live.hub';
 import { OpenInMaintenance, Public } from '../auth/actor.guard';
 import { clientOf } from '../auth/attempts';
 import { PRISMA } from '../auth/prisma';
@@ -59,11 +59,7 @@ export class PublicLiveController {
         'Too many live streams from this address',
       );
     }
-    res.writeHead(200, {
-      'Cache-Control': 'no-cache',
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'X-Accel-Buffering': 'no',
-    });
+    res.writeHead(200, LIVE_HEADERS);
     res.flushHeaders();
     this.hub.open(res, { address, channels, public: true });
   }

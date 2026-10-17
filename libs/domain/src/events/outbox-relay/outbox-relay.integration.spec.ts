@@ -2,13 +2,16 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 
 import { type EventConsumer, OutboxRelay } from './outbox-relay';
+import { OutboxRelayModule } from './outbox-relay.module';
 import { AuditService } from '../../audit/audit.service';
 import { AccountsService } from '../../auth/accounts.service';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { CdnPurgeSender } from '../../cache/cdn-purge/cdn-purge';
 import { timersArmedBy, until } from '../../waits.testing';
 import { audienceOf, type LiveSubject } from '../audience';
 import { outbox } from '../event.port';
@@ -484,6 +487,73 @@ describe('purging the cached public reads', () => {
     // The purge comes before the publish: no page hears of a change while
     // its old answer is still cached.
     expect(redis.published.filter((m) => m.includes(garageId))).toEqual([]);
+  });
+});
+
+// @traces 430-FR-003 430-FR-004
+describe('handing the purged tags to the CDN', () => {
+  it('hands every tag the relay purged to the hook, in order', async () => {
+    const garageId = randomUUID();
+    await prisma.outboxEvent.create({
+      data: {
+        audience: [`garage:${garageId}`, `public:garage:${garageId}`],
+        kind: 'garage.suspended',
+        subjectId: garageId,
+      },
+    });
+    const hook = jest.fn();
+
+    await new OutboxRelay(prisma, new FakeRedis(), [], hook).relay();
+
+    expect(hook.mock.calls.map(([tag]) => tag)).toEqual([
+      `warm:garage:${garageId}`,
+      `garage:${garageId}`,
+      'search',
+    ]);
+  });
+
+  it('starts the purge sender with the relay when the CDN is configured, and stops it on shutdown', async () => {
+    const start = jest
+      .spyOn(CdnPurgeSender.prototype, 'start')
+      .mockImplementation(() => undefined);
+    const stop = jest
+      .spyOn(CdnPurgeSender.prototype, 'stop')
+      .mockResolvedValue(undefined);
+    jest
+      .spyOn(OutboxRelay.prototype, 'start')
+      .mockImplementation(() => undefined);
+    jest.spyOn(OutboxRelay.prototype, 'stop').mockResolvedValue(undefined);
+
+    const app = await Test.createTestingModule({
+      imports: [
+        OutboxRelayModule.register({
+          cdn: { apiKey: 'key-123', pullZoneId: '42' },
+          databaseUrl,
+          redisUrl,
+        }),
+      ],
+    }).compile();
+    await app.init();
+    expect(start).toHaveBeenCalledTimes(1);
+
+    await app.close();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts no purge sender without the CDN', async () => {
+    const start = jest.spyOn(CdnPurgeSender.prototype, 'start');
+    jest
+      .spyOn(OutboxRelay.prototype, 'start')
+      .mockImplementation(() => undefined);
+    jest.spyOn(OutboxRelay.prototype, 'stop').mockResolvedValue(undefined);
+
+    const app = await Test.createTestingModule({
+      imports: [OutboxRelayModule.register({ databaseUrl, redisUrl })],
+    }).compile();
+    await app.init();
+    await app.close();
+
+    expect(start).not.toHaveBeenCalled();
   });
 });
 
