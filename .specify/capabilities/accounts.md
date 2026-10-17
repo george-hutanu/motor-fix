@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 079-account-model
   - 082-sign-in
@@ -29,6 +29,7 @@ features:
   - 1203-legal-operator
   - 250-launch-analytics-events
   - 1169-prefetch-intent
+  - 029-overview-panels-own-data
 ---
 
 # Capability: Accounts
@@ -577,9 +578,9 @@ _From 089-add-a-car._
 
 _From 089-add-a-car._
 
-### 030-FR-001 — Panou MUST show its panels in a grid in this order and placement: Cererea activă (row 1), Oferte primite and Mașinile mele (row 2), Istoric reparații (row 3, full width), Service-uri salvate (row 4); one column on a phone (below 768 px). Panels of features not yet released (În direct din service, Kilometri și reparații, Cheltuieli, Asistent AI) MUST NOT be rendered.
+### 029-FR-010 — Panou's panels MUST come from one registry with, per panel: key (`active_request`, `live`, `quotes`, `cars`, `mileage`, `spend`, `history`, `saved`), default place, width (one column or full width) and release flag; the default order and widths are 030-FR-001's. Panels of unshipped features keep their empty states (030-FR-004..006, 030-FR-011); panels behind an off release flag (`live`, `mileage`, `spend`) are not drawn and the grid closes the gap.
 
-_From 030-new-account-empty-states._
+_From 029-overview-panels-own-data._
 
 ### 030-FR-002 — For a driver with no active request (a request is active while its status is neither `done` nor `closed`), the first row MUST replace Cererea activă with the invitations: "Adaugă prima ta mașină" + button "Adaugă o mașină" when the driver has no car, and "Caută un service pentru mașina ta" + button "Caută un service" always.
 
@@ -597,9 +598,9 @@ _From 030-new-account-empty-states._
 
 _From 030-new-account-empty-states._
 
-### 030-FR-006 — A panel MUST show a skeleton while its data loads and its empty state only after the data has loaded and is empty; a failed load MUST show the shell's shared error text in the panel's place (ST-29 adds the panel's own message and retry). Panels read only the driver's cars and requests lists: Mașinile mele is empty with no car; Oferte primite is empty when no request has a quote (`quotesCount` 0); Istoric reparații is empty when no request is `done`; Cererea activă follows FR-002. Service-uri salvate follows FR-011. A panel with data shows, until ST-29 fills it, its frame with its heading as a link to its view, and nothing else.
+### 029-FR-008 — When the cars call fails, the cars panel alone MUST show "Nu am putut încărca mașinile. Reîncearcă." / "We could not load your cars. Try again." with a "Reîncearcă" / "Try again" button that reads the cars again; a retry puts the panel back to its skeleton until the answer settles; the first row follows the requests alone (with no active request: the invitations, the "add a car" one only once the cars have loaded and are none), and the other panels keep their own states.
 
-_From 030-new-account-empty-states._
+_From 029-overview-panels-own-data._
 
 ### 030-FR-007 — For a driver with at least one car and no active request, the first row MUST show only the search invitation; the due item beside it is ST-31's.
 
@@ -877,6 +878,42 @@ _From 250-launch-analytics-events._
 
 _From 1169-prefetch-intent._
 
+### 029-FR-001 — The Mașinile mele panel MUST show, for each car it lists, the brand and model, "<year> · <km>" with the kilometres in the person's number format ("148.200 km" / "148,200 km"), then its two most urgent lines; no plate in the panel.
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-002 — A car's lines MUST be the ITP, RCA and rovinietă due-date lines of 090-FR-001..005 and 092-FR-009 (their states, sentences and plurals unchanged, without the garage link and without the add buttons) plus, when the car has a next-service km, the oil-service line.
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-004 — Urgency order of a car's lines MUST be: lamp state red, then amber, then green, then grey; within a state the smaller signed day count first (a date line's days until it, the oil line's estimated days; a passed line is negative and so comes first), a date line before the oil line on a tie, and date lines tied on state and days in the order ITP, RCA, rovinietă; grey lines in the same fixed order. The panel shows the first two.
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-005 — The panel MUST order cars by their most urgent line (FR-004's full order — state, signed days, kind — applied to each car's first line), ties newest first as the list answers; it MUST show at most 3 cars and, when the driver has more, a link "Toate mașinile (<n>)" / "All cars (<n>)" to the view Mașinile mele, with n the number of cars not removed.
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-009 — A car saved from the panel's "Adaugă o mașină" MUST show in the panel at once, placed by FR-005, without a reload (030-FR-008 unchanged).
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-011 — A pure merge of a layout (an ordered list of entries, each a panel key and whether it is hidden) onto the registry MUST return the panels to draw: with no layout, the released panels in default order; with a layout, its order without its hidden entries, ignoring keys no panel has, inserting a registered released panel the layout omits right after the nearest panel before it in the default order that the result already holds (first when none is), and never a panel behind an off release flag; a key the layout repeats counts once, at its first place, and an empty layout is the same as none. No stored layout is read in this story: reading `DASHBOARD_LAYOUT` is #280's (ST-402).
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-012 — Every text this story shows MUST come from the translation files with a key present in both Romanian and English (030-FR-010).
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-013 — Tests MUST cover: the merge with no layout, a full layout, an unknown key, a missing key and an off release flag; the oil line's state and sentence at 3,800 km (green, 116 days), 1,988 km (green, 61), 1,987 km (amber, 60), 247 km (amber, 8), 246 km (red, 7), 0 and −200 km in both languages; the urgency order across date and oil lines, a passed line first, grey last; the car order and the 3-car cut with its link; the panel's own error text and retry; the car saved from the panel shown at once (Jest); `GET /api/v1/cars` carries `nextServiceKm`, answers only the caller's cars and never a removed one, and another driver's car by id answers 404 (Jest, on real PostgreSQL where the repository is used); end to end (Playwright): a new driver sees the empty states, adds a car from the panel, sees it at once, reloads and still sees it.
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-014 — Panou with a filled cars panel MUST render on a 320 px and a 390 px phone, a tablet and a desktop, in light and dark, Romanian and English, with no horizontal scroll (030-FR-012).
+
+_From 029-overview-panels-own-data._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -905,3 +942,6 @@ _From 1169-prefetch-intent._
 
 - `243-FR-011` — superseded by `1203-FR-001` (2026-10-11)
 - `243-FR-012` — superseded by `1203-FR-005` (2026-10-11)
+
+- `030-FR-001` — superseded by `029-FR-010` (2026-10-17)
+- `030-FR-006` — superseded by `029-FR-008` (2026-10-17)
