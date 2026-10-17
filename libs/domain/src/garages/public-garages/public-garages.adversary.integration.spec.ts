@@ -115,6 +115,15 @@ describe('reading a garage by slug, hostilely', () => {
       data: { name: 'A', slug: `s-${randomUUID()}`, status: 'approved' },
     });
     expect((await read(created.slug)).status).toBe(200);
+    // Other suites leave events waiting ahead of this one, more than one
+    // relay batch holds.
+    await prisma.outboxEvent.createMany({
+      data: Array.from({ length: 150 }, () => ({
+        audience: [],
+        kind: 'test.backlog',
+        subjectId: randomUUID(),
+      })),
+    });
 
     await prisma.$transaction([
       prisma.garage.update({
@@ -131,7 +140,9 @@ describe('reading a garage by slug, hostilely', () => {
     ]);
     const redis = new Redis(redisUrl);
     try {
-      await new OutboxRelay(prisma, redis).relay();
+      // Batch after batch, as the worker's loop does, until none is waiting.
+      const relay = new OutboxRelay(prisma, redis);
+      while ((await relay.relay()) > 0);
     } finally {
       redis.disconnect();
     }
