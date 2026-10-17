@@ -816,7 +816,7 @@ function expectPublicOnly(body: Record<string, unknown>, mobile: boolean) {
 }
 
 // @traces 221-FR-004
-// @traces 357-public-price-jobs-FR-006
+// @traces 357-FR-006
 describe('the jobs a profile offers', () => {
   const jobType = (nameRo: string, nameEn: string) =>
     prisma.jobType.create({
@@ -918,11 +918,11 @@ describe('the jobs a profile offers', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-001
-// @traces 355-price-list-ranges-FR-002
-// @traces 355-price-list-ranges-FR-003
-// @traces 355-price-list-ranges-FR-004
-// @traces 355-price-list-ranges-FR-005
+// @traces 355-FR-001
+// @traces 355-FR-002
+// @traces 355-FR-003
+// @traces 355-FR-004
+// @traces 355-FR-005
 describe('the price list a profile carries', () => {
   async function priced(labour: { from?: number; to?: number } = {}) {
     const approved = await prisma.garage.create({
