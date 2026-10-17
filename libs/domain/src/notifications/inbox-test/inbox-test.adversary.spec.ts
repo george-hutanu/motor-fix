@@ -95,9 +95,11 @@ describe('the inbox mailbox list under hostile values', () => {
 
 // @traces 279-FR-009
 describe('the dry run under hostile setups', () => {
-  it('prints nothing and sends nothing without mailboxes', async () => {
-    const { printed, sent } = await run({ dryRun: true, mailboxes: [] });
-    expect(printed).toEqual([]);
+  it('is never silent and never succeeds without mailboxes', async () => {
+    const { code, printed, sent } = await run({ dryRun: true, mailboxes: [] });
+    expect(code).toBe(1);
+    expect(printed[0]).toMatch(/INBOX_TEST_TO/);
+    expect(printed).toHaveLength(1 + WITH_EMAIL.length * 2);
     expect(sent).toEqual([]);
   });
 

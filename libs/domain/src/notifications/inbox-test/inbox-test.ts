@@ -91,6 +91,29 @@ function refusal(config: EmailConfig, mailboxes: readonly string[]) {
   return null;
 }
 
+// Who the rows go to, after printing why a run is refused or unaddressed;
+// null when a real run is refused. A dry run with no mailbox still shows the
+// matrix, one row per template and language under "-", and fails: a real run
+// would refuse.
+function addressees(options: {
+  config: EmailConfig;
+  mailboxes: readonly string[];
+  dryRun: boolean;
+  print: (line: string) => void;
+}): { to: readonly string[]; failed: boolean } | null {
+  const { config, mailboxes, dryRun, print } = options;
+  if (!dryRun) {
+    const refused = refusal(config, mailboxes);
+    if (refused) print(`refused: ${refused}`);
+    return refused ? null : { failed: false, to: mailboxes };
+  }
+  if (mailboxes.length > 0) return { failed: false, to: mailboxes };
+  print(
+    'no test mailbox: INBOX_TEST_TO is not set, so a real run would refuse',
+  );
+  return { failed: true, to: ['-'] };
+}
+
 const reason = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
@@ -103,14 +126,12 @@ export async function runInboxTest(options: {
   print: (line: string) => void;
   registry?: Registry;
 }): Promise<number> {
-  const { config, mailboxes, dryRun, print } = options;
-  const refused = dryRun ? null : refusal(config, mailboxes);
-  if (refused) {
-    print(`refused: ${refused}`);
-    return 1;
-  }
-  let failed = false;
-  for (const row of inboxMatrix(mailboxes, config.webUrl, options.registry)) {
+  const { config, dryRun, print } = options;
+  const start = addressees(options);
+  if (start === null) return 1;
+  let failed = start.failed;
+  const rows = inboxMatrix(start.to, config.webUrl, options.registry);
+  for (const row of rows) {
     const at = `${row.template} ${row.language} ${row.to}`;
     if (!row.mail) {
       failed = true;

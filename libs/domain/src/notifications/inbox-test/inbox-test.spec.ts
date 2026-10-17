@@ -130,6 +130,18 @@ describe('the inbox test dry run', () => {
     expect(sent).toEqual([]);
   });
 
+  it('says no mailbox is set, still prints the matrix and fails without one', async () => {
+    const { code, printed, sent } = await run({ dryRun: true, mailboxes: [] });
+    expect(code).toBe(1);
+    expect(sent).toEqual([]);
+    expect(printed[0]).toBe(
+      'no test mailbox: INBOX_TEST_TO is not set, so a real run would refuse',
+    );
+    expect(printed.slice(1)).toHaveLength(WITH_EMAIL.length * 2);
+    expect(printed).toContainEqual(expect.stringMatching(/^NEWS ro - \S/));
+    expect(printed).toContainEqual(expect.stringMatching(/^NEWS en - \S/));
+  });
+
   it('fails a row whose template does not render, and the run', async () => {
     const broken: Template = {
       audience: 'any',
