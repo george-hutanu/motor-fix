@@ -499,7 +499,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "counts each verification decision told to its garage's owners by outcome (built, skipped: no owner or no decision to tell), with the fan-out's log line naming the file id; also on motorfix-product; a count has no failure to alert on, the verification-result queue entry owns the final-failure alert",
+      "reason": "it cannot fire on staging until the admin decision endpoints (ST-302..305): only the automatic approval reaches it, and that holds only under APP_ENV=test; counts each verification decision told to its garage's owners by outcome (built, skipped: no owner or no decision to tell), with the fan-out's log line naming the file id; also on motorfix-product; a count has no failure to alert on, the verification-result queue entry owns the final-failure alert",
       "story": "ST-209"
     },
     {
@@ -604,7 +604,7 @@
       "source": "libs/domain/src/garages/verification/verification.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "reason": "it cannot fire on staging until the admin decision endpoints (ST-302..305): only the automatic approval reaches it, and that holds only under APP_ENV=test; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-879"
     },
     {
@@ -800,7 +800,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each time an admin opens a document page, by kind; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "reason": "it cannot fire on staging while no web screen calls the document download address; counts each time an admin opens a document page, by kind; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-206"
     },
     {
