@@ -17,6 +17,7 @@ features:
   - 103-demand-brands-jobs
   - 066-suspended-garages
   - 1346-release-green
+  - 298-system-log-today
 ---
 
 # Capability: Admin dashboard
@@ -592,6 +593,70 @@ _From 066-suspended-garages._
 ### 066-FR-009 — Every new text MUST exist in the shared i18n files in Romanian and English; the reason and the garage name MUST never be rendered as markup; the line and the panel MUST read at 320 px, 390 px, tablet and desktop, in light and dark, with no sideways scroll; the suspended state MUST be conveyed by text, not by the lamp's colour alone; every row's button MUST be reachable and operable by keyboard, in the reading order line, queue, suspended panel, with the queue's touch-target size and focus ring and its announcement behaviour for live changes (no new live region); switching the language re-renders every text, number and date without a reload.
 
 _From 066-suspended-garages._
+
+### 298-FR-001 — The system MUST offer an admin-only read of the System status log, `GET /api/v1/admin/system-log`, with the query `from` (a datetime; entries whose `at` is at or after it) and `limit` (1 to 20, default 20), answering the matching entries newest first, ordered by `at` descending and then by entry id descending, each with its `id`, `at`, `source`, `severity`, `kind`, `message` (the stored English text), `context` and `count`. A `from` that is not a datetime or a `limit` outside 1–20 MUST be refused with 400 `validation_failed`.
+
+_From 298-system-log-today._
+
+### 298-FR-002 — Every signed-in caller who is not an admin (every other role) MUST receive 404 from `admin/system-log`, and a visitor with no session 401 `sign_in_required`, the same refusals as the other admin reads (the route is gated by an admin capability every admin holds, as the admin overview is).
+
+_From 298-system-log-today._
+
+### 298-FR-003 — The admin dashboard MUST show a Jurnal panel (title "Jurnal" in Romanian, "System log" in English) that reads today's entries, "today" being the calendar day in Europe/Bucharest: the panel asks for entries from the start of that day, newest first, at most 20, and shows no link, button or page control to see more in this story.
+
+_From 298-system-log-today._
+
+### 298-FR-004 — Each line MUST show the entry's time as `HH:mm` in Europe/Bucharest in a fixed-width first column, then its text in the admin's language; two entries with the same time keep the server's order.
+
+_From 298-system-log-today._
+
+### 298-FR-005 — Each line's text MUST be rendered in the admin's language (Romanian or English) from the entry's kind, source and context figures, for each of the eight kinds the log writes, with the source named in the language (API, Căutare/Search, Hărți/Maps, E-mail, Notificări/Notifications, Backup, Worker, WebRTC, Identitate/Identity, Stocare/Storage) and the figures formatted in the language (Romanian "1,5 s", English "1.5 s"); an entry whose kind the panel does not know, or whose context lacks what its sentence needs, MUST show the stored English `message` instead; the raw `context` is never shown to the admin, only the figures a sentence names, and a text longer than the line wraps (long unbroken words break) rather than widening it.
+
+_From 298-system-log-today._
+
+### 298-FR-006 — Each line MUST carry its severity as a lamp with words: red for `error` ("Eroare" / "Error"), amber for `warning` ("Avertisment" / "Warning"), grey for `info` ("Info"); the words MUST be the lamp's accessible name, so the severity is never conveyed by colour alone.
+
+_From 298-system-log-today._
+
+### 298-FR-007 — A grouped entry (count greater than 1) MUST show its count as a mark after its sentence, "×40", whose accessible text is "de 40 de ori" / "40 times" (for example "Brevo a răspuns 429. ×40" / "Brevo answered 429. ×40"); an entry with count 1 shows no count.
+
+_From 298-system-log-today._
+
+### 298-FR-008 — While the entries are read the panel MUST show three line skeletons; when the read fails it MUST read "Nu am putut citi jurnalul." / "Could not read the log." with a Reîncearcă / Retry button that reads again; when today has no entries it MUST read "Nimic de semnalat azi." / "Nothing to report today.".
+
+_From 298-system-log-today._
+
+### 298-FR-009 — The panel MUST re-read today's entries when `system_log.added` arrives on the admin's live connection, so a new entry is at the top within 5 seconds of being written, without a reload; it MUST re-read when the live connection reconnects (the dashboard's resync), and it MUST follow the dashboard's polling when the live connection is down, as every live view does (ST-253).
+
+_From 298-system-log-today._
+
+### 298-FR-010 — A panel open across midnight Europe/Bucharest MUST re-read at midnight, so yesterday's lines leave it and the new day starts empty or with its own entries; every read, whenever triggered, asks from the start of the current day, never a cached one.
+
+_From 298-system-log-today._
+
+### 298-FR-011 — The panel MUST render on a 320 px and a 390 px phone, a tablet and a desktop, in light and dark, Romanian and English, with no sideways scroll at 320 px; on the phone it keeps its place in the dashboard's single column (the mobile board is the same board at 390 px).
+
+_From 298-system-log-today._
+
+### 298-FR-012 — Nothing in this story MUST list a change a person makes in the app (a price-list update, a reported review, a document submission, an account change) in Jurnal, and nothing in this story MUST write a System status log entry or an audit history row: the panel is a read.
+
+_From 298-system-log-today._
+
+### 298-FR-013 — The new read endpoint MUST be listed in `infra/observability/inventory.json` in the same change, with its metrics, logs and traces or the reason it needs none beyond the API's request instrumentation; the generated client (`libs/data-access`) MUST be regenerated from `apps/api/openapi.json`, never edited by hand.
+
+_From 298-system-log-today._
+
+### 298-FR-014 — Tests MUST exist before the implementation and MUST cover: only today's entries are answered (one at 23:59 yesterday excluded, one at 00:01 today included, Europe/Bucharest); newest first with the id tie-break; the limit of 20 and the refusal of 0 and 21; 404 for every signed-in role that is not admin and 401 for a visitor; the panel's Romanian and English rendering of each of the eight kinds, the severity lamp words, the count of a grouped entry, the fallback to the stored message; the empty, loading and failed states and the retry; a re-read keeping the lines shown and a failed re-read leaving them; the accessible names, list semantics and the Retry button's keyboard and 44 px target (FR-016); the re-read on `system_log.added`, on resync and at midnight. One end-to-end test (Playwright): as an admin with the dashboard open, one entry is inserted in PostgreSQL and `system_log.added` published on Redis by the test itself (no new route) and appears at the top of Jurnal without a reload.
+
+_From 298-system-log-today._
+
+### 298-FR-015 — A re-read (event, resync, polling, midnight, retry) MUST keep the lines already shown until the new ones arrive, with no skeleton flash; skeletons show only for the first read; a re-read that fails MUST leave the lines shown unchanged and show no error (the next event, resync or the 60 s retry reads again); the failed text and Retry show only when the first read failed and there is nothing to show. The server render shows the loading state (three skeletons); the entries are read in the browser (FR-009's `liveView`).
+
+_From 298-system-log-today._
+
+### 298-FR-016 — Accessibility: the panel is a labelled section whose heading is the panel title and whose lines are a list; each time is a `time` element; the Retry button is keyboard-operable with a visible focus ring and a touch target of at least 44 x 44 px on a phone; the failed text is announced (`role="alert"`) and the empty text is plain text; new lines are NOT announced by a live region (the log is a reference list, not an alert feed); text and lamp contrast meet WCAG 2.2 AA (4.5:1 text, 3:1 lamp) in light and dark; the skeleton does not animate under `prefers-reduced-motion`.
+
+_From 298-system-log-today._
 
 ## Retired
 

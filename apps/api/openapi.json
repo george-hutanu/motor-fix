@@ -5445,6 +5445,60 @@
         ]
       }
     },
+    "/api/v1/admin/system-log": {
+      "get": {
+        "operationId": "SystemLogController_list",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Entries at or after this instant",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemLogDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/platform-rules": {
       "get": {
         "operationId": "PlatformRulesController_list",
@@ -12997,6 +13051,93 @@
         },
         "required": [
           "accountId"
+        ]
+      },
+      "SystemLogEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "api",
+              "search",
+              "maps",
+              "email",
+              "notifications",
+              "backup",
+              "worker",
+              "webrtc",
+              "identity",
+              "storage"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "status_changed",
+              "check_failed",
+              "job_failed",
+              "service_error",
+              "server_error",
+              "backup_completed",
+              "backup_failed",
+              "deploy"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "The stored English text"
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "The kind's ids, codes and figures; never free text"
+          },
+          "count": {
+            "type": "integer",
+            "description": "How many times it happened in its minute",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "source",
+          "severity",
+          "kind",
+          "message",
+          "context",
+          "count"
+        ]
+      },
+      "SystemLogDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemLogEntryDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "PlatformRuleDto": {

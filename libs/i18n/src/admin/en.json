@@ -220,6 +220,59 @@
   "growth": {
     "title": "Growth, last 12 months"
   },
+  "log": {
+    "empty": "Nothing to report today.",
+    "failed": "Could not read the log.",
+    "figure": {
+      "backup_age_h": "backup age",
+      "failed_share": "failed sends",
+      "latency_ms": "response time",
+      "oldest_waiting_s": "oldest waiting job"
+    },
+    "kind": {
+      "backup_completed": "Backup completed at {at}.",
+      "backup_failed": "No backup since {since}.",
+      "check_failed": "{source}: check failed ({reason}).",
+      "deploy": "Deployed {version}.",
+      "job_failed": "Job {job} on {queue} failed for good after {attempts} attempts ({error_code}).",
+      "server_error": "Unexpected error on {method} {route}.",
+      "service_error": "{provider} answered {answer}.",
+      "status_changed": {
+        "green": "{source}: back to normal.",
+        "limit": "{source}: {figure} went above {limit}.",
+        "turned": "{source}: turned {state}.",
+        "turnedReason": "{source}: turned {state} ({reason})."
+      }
+    },
+    "retry": "Retry",
+    "severity": {
+      "error": "Error",
+      "info": "Info",
+      "warning": "Warning"
+    },
+    "source": {
+      "api": "API",
+      "backup": "Backup",
+      "email": "E-mail",
+      "identity": "Identity",
+      "maps": "Maps",
+      "notifications": "Notifications",
+      "search": "Search",
+      "storage": "Storage",
+      "webrtc": "WebRTC",
+      "worker": "Worker"
+    },
+    "state": {
+      "amber": "amber",
+      "green": "green",
+      "red": "red"
+    },
+    "times": {
+      "one": "once",
+      "other": "{n} times"
+    },
+    "title": "System log"
+  },
   "panel": {
     "activeDrivers": "Active drivers",
     "answerRate": "Answer rate",
