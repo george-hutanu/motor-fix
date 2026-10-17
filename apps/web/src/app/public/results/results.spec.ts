@@ -19,7 +19,7 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { Results } from './results';
-import type { MapMove } from './results-map/pins-map';
+import type { MapEvents, MapMove } from './results-map/pins-map';
 import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
 import { routes } from '../../app.routes';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
@@ -107,15 +107,17 @@ Object.assign(searchApi, { garageSearchControllerPins: pinsApi });
 const mapView: jest.Mocked<ResultsMapView> = {
   destroy: jest.fn(),
   fit: jest.fn(),
+  light: jest.fn(),
   show: jest.fn(),
+  spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 100, y: 200 })),
 };
 let mapMoved: (move: MapMove) => void;
-const openMap = jest.fn(
-  (_host: HTMLElement, onMove: (move: MapMove) => void) => {
-    mapMoved = onMove;
-    return Promise.resolve(mapView);
-  },
-);
+let mapPicked: (id: string | undefined) => void;
+const openMap = jest.fn((_host: HTMLElement, on: MapEvents) => {
+  mapMoved = on.moved;
+  mapPicked = on.picked;
+  return Promise.resolve(mapView);
+});
 let dialog: (value: OverlayResult<Place>) => void;
 const overlays = {
   open: jest.fn(
@@ -168,6 +170,7 @@ beforeEach(() => {
   openMap.mockClear();
   mapView.show.mockClear();
   mapView.fit.mockClear();
+  mapView.light.mockClear();
   overlays.open.mockClear();
   live.register.mockClear();
   reduced.set(false);
@@ -1443,6 +1446,489 @@ describe('Results', () => {
         log: '1',
         near: NEAR,
       });
+    });
+  });
+
+  // @traces 270-FR-001 270-FR-002 270-FR-003 270-FR-004 270-FR-005 270-FR-006 270-FR-009 270-FR-010 270-FR-013
+  describe('a card and its pin', () => {
+    let scroll: jest.Mock;
+
+    beforeEach(async () => {
+      await configure();
+      jest.useFakeTimers();
+      scroll = jest.fn();
+      Object.defineProperty(Element.prototype, 'scrollIntoView', {
+        configurable: true,
+        value: scroll,
+      });
+    });
+
+    const send = (kind: string, id = 'x-1') =>
+      messages.next({ at: '2026-10-17T12:00:00.000Z', id, kind });
+    const coalesce = async () => {
+      await jest.advanceTimersByTimeAsync(300);
+      await settle();
+    };
+    const hosts = () => [...page().querySelectorAll('mf-result-card')];
+    const host = (name: string) =>
+      hosts().find((card) => said(card.querySelector('h2')) === name) as
+        | HTMLElement
+        | undefined;
+    const amber = () =>
+      hosts()
+        .filter((card) => card.querySelector('article.card.selected'))
+        .map((card) => said(card.querySelector('h2')));
+    const lit = () => mapView.light.mock.calls.at(-1)?.[0];
+    const small = () => page().querySelector('mf-map-card');
+    const pointer = (type: string, pointerType = 'mouse') => {
+      const event = new Event(type);
+      Object.defineProperty(event, 'pointerType', { value: pointerType });
+      return event;
+    };
+    async function tap(name: string) {
+      host(name)?.querySelector('h2')?.click();
+      await settle();
+    }
+    async function point(name: string, type: string, pointerType = 'mouse') {
+      host(name)?.dispatchEvent(pointer(type, pointerType));
+      await settle();
+    }
+    async function picked(id: string | undefined) {
+      mapPicked(id);
+      await settle();
+    }
+    async function loaded(url = '/ro/garages?brand=bmw', answer = pageOf()) {
+      await open(url);
+      await reads[0]?.answer(answer);
+    }
+
+    // @traces 270-FR-001 270-FR-005
+    it('selects the first card of the list and lights its pin, in the page only', async () => {
+      const stored = localStorage.length;
+      await loaded();
+
+      expect(amber()).toEqual(['Atelier Unu']);
+      expect(lit()).toBe('one');
+      expect(scroll).not.toHaveBeenCalled();
+
+      await tap('Service Doi');
+      await point('Atelier Unu', 'pointerenter');
+
+      expect(TestBed.inject(Router).url).toBe('/ro/garages?brand=bmw');
+      expect(localStorage.length).toBe(stored);
+      expect(searches()).toHaveLength(1);
+      expect(pinsApi).toHaveBeenCalledTimes(1);
+    });
+
+    // @traces 270-FR-001 270-FR-003
+    it('selects the card tapped, one at a time', async () => {
+      await loaded();
+
+      await tap('Service Doi');
+
+      expect(amber()).toEqual(['Service Doi']);
+      expect(lit()).toBe('two');
+
+      await tap('Atelier Unu');
+
+      expect(amber()).toEqual(['Atelier Unu']);
+      expect(lit()).toBe('one');
+    });
+
+    // @traces 270-FR-001 270-FR-002
+    it('lights the pointed card over the selected one, and the selected one again on leave', async () => {
+      await loaded();
+
+      await point('Service Doi', 'pointerenter');
+
+      expect(lit()).toBe('two');
+      expect(amber()).toEqual(['Atelier Unu']);
+
+      await point('Service Doi', 'pointerleave');
+
+      expect(lit()).toBe('one');
+    });
+
+    // @traces 270-FR-002
+    it('lights nothing for a touch resting on a card', async () => {
+      await loaded();
+      mapView.light.mockClear();
+
+      await point('Service Doi', 'pointerenter', 'touch');
+
+      expect(mapView.light).not.toHaveBeenCalled();
+    });
+
+    // @traces 270-FR-002
+    it('lights the pin of the card holding the keyboard focus, and the selected one once focus leaves', async () => {
+      await loaded();
+      const link = host('Service Doi')?.querySelector('a');
+
+      link?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      await settle();
+
+      expect(lit()).toBe('two');
+      expect(amber()).toEqual(['Atelier Unu']);
+
+      link?.dispatchEvent(
+        new FocusEvent('focusout', { bubbles: true, relatedTarget: null }),
+      );
+      await settle();
+
+      expect(lit()).toBe('one');
+    });
+
+    // @traces 270-FR-001
+    it('keeps a pointed card lit while another is selected', async () => {
+      await loaded();
+
+      await point('Service Doi', 'pointerenter');
+      await tap('Atelier Unu');
+
+      expect(lit()).toBe('two');
+      expect(amber()).toEqual(['Atelier Unu']);
+    });
+
+    // @traces 270-FR-004
+    it('selects the garage of a tapped pin and scrolls its card into view smoothly, focus unmoved', async () => {
+      await loaded();
+      const focused = document.activeElement;
+      const fits = mapView.fit.mock.calls.length;
+
+      await picked('two');
+
+      expect(amber()).toEqual(['Service Doi']);
+      expect(lit()).toBe('two');
+      expect(scroll).toHaveBeenCalledTimes(1);
+      expect(scroll).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+      expect(scroll.mock.contexts[0]).toBe(host('Service Doi'));
+      expect(document.activeElement).toBe(focused);
+      expect(mapView.fit).toHaveBeenCalledTimes(fits);
+      expect(small()).toBeNull();
+      expect(searches()).toHaveLength(1);
+    });
+
+    // @traces 270-FR-004
+    it('scrolls at once under reduced motion', async () => {
+      reduced.set(true);
+      await loaded();
+
+      await picked('two');
+
+      expect(scroll).toHaveBeenCalledWith({
+        behavior: 'auto',
+        block: 'nearest',
+      });
+    });
+
+    // @traces 270-FR-004
+    it('never moves the map when a card is selected', async () => {
+      await loaded();
+      const fits = mapView.fit.mock.calls.length;
+      const shows = mapView.show.mock.calls.length;
+
+      await tap('Service Doi');
+      await point('Atelier Unu', 'pointerenter');
+
+      expect(mapView.fit).toHaveBeenCalledTimes(fits);
+      expect(mapView.show).toHaveBeenCalledTimes(shows);
+    });
+
+    // @traces 270-FR-004 270-FR-010
+    it('selects nothing for a tap away from any pin', async () => {
+      await loaded();
+
+      await picked(undefined);
+
+      expect(amber()).toEqual(['Atelier Unu']);
+      expect(lit()).toBe('one');
+    });
+
+    // @traces 270-FR-010
+    it('opens the small card for a pin whose garage is not listed, and fills it from one ids= read with the brand', async () => {
+      await loaded();
+
+      await picked('pin-3');
+
+      expect(lit()).toBe('pin-3');
+      expect(amber()).toEqual([]);
+      expect(small()).not.toBeNull();
+      expect(small()?.querySelector('mf-lamp')).not.toBeNull();
+      expect(reads[1]?.params).toEqual({ brand: 'bmw', ids: 'pin-3' });
+
+      await reads[1]?.answer(
+        pageOf({ items: [garageOf('pin-3', 'Service Trei')] }),
+      );
+
+      expect(said(small())).toContain('Service Trei');
+      expect(small()?.querySelector('a')?.getAttribute('href')).toBe(
+        '/ro/garages/pin-3?brand=bmw',
+      );
+      expect(searches()).toHaveLength(2);
+      expect(amber()).toEqual([]);
+    });
+
+    // @traces 270-FR-010
+    it.each([
+      ['fails', (read: Read) => read.fail()],
+      [
+        'answers no garage',
+        (read: Read) => read.answer(pageOf({ items: [], total: 0 })),
+      ],
+    ])(
+      'closes the small card when its read %s, and nothing else happens',
+      async (_, end) => {
+        await loaded();
+        await picked('pin-3');
+
+        await end(reads[1] as Read);
+
+        expect(small()).toBeNull();
+        expect(lit()).toBe('pin-3');
+        expect(page().querySelector('[role="alert"]')).toBeNull();
+        expect(hosts()).toHaveLength(2);
+      },
+    );
+
+    // @traces 270-FR-010
+    it('keeps the filled small card and reads nothing more when its pin is tapped again', async () => {
+      await loaded();
+      await picked('pin-3');
+      await reads[1]?.answer(
+        pageOf({ items: [garageOf('pin-3', 'Service Trei')] }),
+      );
+
+      await picked('pin-3');
+
+      expect(said(small())).toContain('Service Trei');
+      expect(searches()).toHaveLength(2);
+    });
+
+    // @traces 270-FR-010
+    it('drops a read answered after another pin was tapped', async () => {
+      await loaded();
+      await picked('pin-3');
+      await picked('pin-4');
+
+      await reads[1]?.answer(
+        pageOf({ items: [garageOf('pin-3', 'Service Trei')] }),
+      );
+
+      expect(small()).not.toBeNull();
+      expect(said(small())).not.toContain('Service Trei');
+      expect(reads[2]?.params).toEqual({ brand: 'bmw', ids: 'pin-4' });
+    });
+
+    // @traces 270-FR-005 270-FR-010
+    it('drops a read answered after the search changed', async () => {
+      await loaded();
+      await picked('pin-3');
+
+      await open('/ro/garages?brand=audi');
+      await reads[1]?.answer(
+        pageOf({ items: [garageOf('pin-3', 'Service Trei')] }),
+      );
+
+      expect(small()).toBeNull();
+
+      await reads[2]?.answer();
+
+      expect(small()).toBeNull();
+      expect(amber()).toEqual(['Atelier Unu']);
+    });
+
+    // @traces 270-FR-010
+    it.each([
+      ['a card is tapped', () => tap('Service Doi')],
+      ['the map is tapped away from any pin', () => picked(undefined)],
+      ['a listed pin is tapped', () => picked('two')],
+    ])('closes the small card when %s', async (_, close) => {
+      await loaded();
+      await picked('pin-3');
+      await reads[1]?.answer(
+        pageOf({ items: [garageOf('pin-3', 'Service Trei')] }),
+      );
+
+      await close();
+
+      expect(small()).toBeNull();
+    });
+
+    // @traces 270-FR-005
+    it('selects the first card of a list for another brand, clears the pointed one and scrolls nothing', async () => {
+      await loaded();
+      await tap('Service Doi');
+      await point('Service Doi', 'pointerenter');
+
+      await open('/ro/garages?brand=audi');
+      await reads[1]?.answer(
+        pageOf({
+          items: [
+            garageOf('three', 'Alt Service'),
+            garageOf('two', 'Service Doi'),
+          ],
+        }),
+      );
+
+      expect(amber()).toEqual(['Alt Service']);
+      expect(lit()).toBe('three');
+      expect(scroll).not.toHaveBeenCalled();
+    });
+
+    // @traces 270-FR-005
+    it('selects the first card of a visible-area load, and of the search again on "Înapoi la 25 km"', async () => {
+      keep(PLACE);
+      await loaded('/ro/garages?brand=bmw');
+
+      mapMoved({ bbox: '44.4,26,44.5,26.2' });
+      await settle();
+      await reads[1]?.answer(
+        pageOf({
+          items: [
+            garageOf('three', 'Alt Service'),
+            garageOf('one', 'Atelier Unu'),
+          ],
+        }),
+      );
+
+      expect(amber()).toEqual(['Alt Service']);
+
+      await tap('Atelier Unu');
+      page().querySelector<HTMLButtonElement>('.summary .back')?.click();
+      await settle();
+      await reads[2]?.answer();
+
+      expect(amber()).toEqual(['Atelier Unu']);
+      expect(lit()).toBe('one');
+    });
+
+    // @traces 270-FR-005
+    it('selects the first card of the list "Reîncarcă" brings, and clears the pointed one', async () => {
+      await loaded();
+      await tap('Service Doi');
+      await point('Service Doi', 'pointerenter');
+
+      send('verification.decided', 'verification-1');
+      await coalesce();
+      await reads[1]?.answer(pageOf({ total: 49 }));
+      [...page().querySelectorAll('button')]
+        .find((b) => said(b) === 'Reîncarcă')
+        ?.click();
+      await settle();
+      await reads[2]?.answer(
+        pageOf({
+          items: [
+            garageOf('new', 'Service Nou'),
+            garageOf('two', 'Service Doi'),
+          ],
+          total: 49,
+        }),
+      );
+
+      expect(amber()).toEqual(['Service Nou']);
+      expect(lit()).toBe('new');
+      expect(scroll).not.toHaveBeenCalled();
+    });
+
+    // @traces 270-FR-005
+    it('selects nothing in an empty list', async () => {
+      await loaded(
+        '/ro/garages?brand=bmw',
+        pageOf({ counts: { doesNotTake: 0, worksOn: 0 }, items: [], total: 0 }),
+      );
+
+      expect(mapView.light).toHaveBeenLastCalledWith(undefined);
+    });
+
+    // @traces 270-FR-005
+    it('keeps the selection through an in-place card change and a pins re-read', async () => {
+      await loaded();
+      await tap('Service Doi');
+
+      send('garage.updated', 'two');
+      await coalesce();
+      await reads[1]?.answer(
+        pageOf({
+          items: [{ ...garageOf('two', 'Service Doi'), reviewCount: 30 }],
+        }),
+      );
+      resync.next();
+      await settle();
+      await reads[2]?.answer();
+      await reads[3]?.answer();
+
+      expect(amber()).toEqual(['Service Doi']);
+      expect(lit()).toBe('two');
+      expect(pinsApi.mock.calls.length).toBeGreaterThan(1);
+    });
+
+    // @traces 270-FR-006
+    it('passes the selection to the first card left when the selected card fades out', async () => {
+      await loaded();
+
+      send('garage.suspended', 'one');
+      await jest.advanceTimersByTimeAsync(300);
+      await settle();
+
+      expect(amber()).toEqual(['Service Doi']);
+      expect(lit()).toBe('two');
+    });
+
+    // @traces 270-FR-006
+    it('selects nothing once the last card has faded out', async () => {
+      await loaded(
+        '/ro/garages?brand=bmw',
+        pageOf({ items: [garageOf('one', 'Atelier Unu')] }),
+      );
+
+      send('garage.suspended', 'one');
+      await jest.advanceTimersByTimeAsync(300);
+      await settle();
+
+      expect(mapView.light).toHaveBeenLastCalledWith(undefined);
+    });
+
+    // @traces 270-FR-006
+    it('stops pointing at a card that fades out', async () => {
+      await loaded();
+      await point('Service Doi', 'pointerenter');
+
+      send('garage.suspended', 'two');
+      await jest.advanceTimersByTimeAsync(300);
+      await settle();
+
+      expect(lit()).toBe('one');
+      expect(amber()).toEqual(['Atelier Unu']);
+    });
+
+    // @traces 270-FR-009
+    it('selects and points the cards as ever when the pins request failed, and says nothing', async () => {
+      pinsApi.mockImplementationOnce(() =>
+        Promise.reject(new HttpErrorResponse({ status: 500 })),
+      );
+      await loaded();
+
+      await tap('Service Doi');
+      await point('Atelier Unu', 'pointerenter');
+
+      expect(amber()).toEqual(['Service Doi']);
+      expect(lit()).toBe('one');
+      expect(page().querySelector('[role="alert"]')).toBeNull();
+    });
+
+    // @traces 270-FR-009
+    it('selects the cards as ever when the map could not open', async () => {
+      openMap.mockImplementationOnce(() => Promise.reject(new Error('style')));
+      await loaded();
+
+      await tap('Service Doi');
+
+      expect(amber()).toEqual(['Service Doi']);
+      expect(small()).toBeNull();
+      expect(page().querySelector('[role="alert"]')).toBeNull();
     });
   });
 
