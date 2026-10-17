@@ -58,6 +58,8 @@ export type { GarageBrandStanceDto } from './models/garage-brand-stance-dto';
 export type { GarageCarDto } from './models/garage-car-dto';
 export type { GarageDriverDto } from './models/garage-driver-dto';
 export type { GaragePermissionsDto } from './models/garage-permissions-dto';
+export type { GaragePinDto } from './models/garage-pin-dto';
+export type { GaragePinsDto } from './models/garage-pins-dto';
 export type { GarageQuoteDto } from './models/garage-quote-dto';
 export type { GarageRecipientDto } from './models/garage-recipient-dto';
 export type { GarageRefDto } from './models/garage-ref-dto';

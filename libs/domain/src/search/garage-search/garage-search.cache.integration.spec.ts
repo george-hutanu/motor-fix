@@ -91,6 +91,11 @@ const rename = (name: string) =>
 
 const generation = async () => (await other.get(GENERATION)) ?? '0';
 const entries = () => other.keys(`garage-search:v1:*:${dacia}:*`);
+const pins = (query: Record<string, string>) =>
+  request(app.getHttpServer()).get('/search/garages/pins').query(query);
+// Moved behind the API's back: no event, so only a cache miss sees it.
+const move = (latitude: number) =>
+  prisma.garage.update({ data: { latitude }, where: { id: garageId } });
 
 async function cacheCounts() {
   const { resourceMetrics } = await metricReader.collect();
@@ -127,7 +132,7 @@ describe('the search cache', () => {
     const res = await search({ brand: 'dacia', near: NEAR });
 
     expect(res.status).toBe(200);
-    const key = `garage-search:v1:${gen}:${dacia}:${NEAR}:25:-`;
+    const key = `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-`;
     expect(JSON.parse((await other.get(key)) as string)).toEqual(res.body);
     const ttl = await other.ttl(key);
     expect(ttl).toBeGreaterThan(0);
@@ -142,8 +147,8 @@ describe('the search cache', () => {
 
     expect((await entries()).sort()).toEqual(
       [
-        `garage-search:v1:${gen}:${dacia}:-:25:-`,
-        `garage-search:v1:${gen}:${dacia}:${NEAR}:25:-`,
+        `garage-search:v1:${gen}:page:${dacia}:-:25:-:-`,
+        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-`,
       ].sort(),
     );
   });
@@ -263,5 +268,89 @@ describe('the search with Redis unavailable', () => {
     down = true;
     expect((await search({ brand: 'dacia', near: NEAR })).status).toBe(200);
     expect(outageWarnings()).toBe(2);
+  });
+});
+
+const BBOX = '46.7,23.5,46.85,23.75';
+
+// @traces 269-FR-019
+describe('the search cache for the map pins', () => {
+  it('keeps the pins for 60 seconds under their own kind, beside the page of the same search', async () => {
+    const gen = await generation();
+
+    const page = await search({ brand: 'dacia', near: NEAR });
+    const res = await pins({ brand: 'dacia', near: NEAR });
+
+    expect(res.status).toBe(200);
+    const key = `garage-search:v1:${gen}:pins:${dacia}:${NEAR}:25:-:-`;
+    expect(JSON.parse((await other.get(key)) as string)).toEqual(res.body);
+    expect(
+      JSON.parse(
+        (await other.get(
+          `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-`,
+        )) as string,
+      ),
+    ).toEqual(page.body);
+    const ttl = await other.ttl(key);
+    expect(ttl).toBeGreaterThan(0);
+    expect(ttl).toBeLessThanOrEqual(60);
+  });
+
+  it('keys a box by its rounded canonical text, and leaves the radius at its default', async () => {
+    const gen = await generation();
+
+    await pins({ bbox: '46.70004,23.5,46.85,23.75', brandId: dacia }).expect(
+      200,
+    );
+    await pins({ bbox: BBOX, brandId: dacia, radius: '50' }).expect(200);
+
+    expect(await entries()).toEqual([
+      `garage-search:v1:${gen}:pins:${dacia}:-:25:${BBOX}:-`,
+    ]);
+  });
+
+  it('answers the same pins again from the cache, by slug or by id', async () => {
+    const before = await cacheCounts();
+    const first = await pins({ brand: 'dacia', near: NEAR });
+    await move(46.772);
+
+    const again = await pins({ brandId: dacia, near: NEAR });
+
+    expect(again.body).toEqual(first.body);
+    expect(again.body.pins[0].lat).toBe(46.771);
+    expect(await since(before)).toEqual({ fallback: 0, hit: 1, miss: 1 });
+  });
+
+  it('drops the pins and the pages on a public garage event', async () => {
+    await search({ brand: 'dacia', near: NEAR }).expect(200);
+    await pins({ brand: 'dacia', near: NEAR }).expect(200);
+    await move(46.772);
+    await rename('Nume nou');
+
+    await dropSearches(other, [`public:garage:${garageId}`]);
+
+    expect((await pins({ brand: 'dacia', near: NEAR })).body.pins[0].lat).toBe(
+      46.772,
+    );
+    expect(
+      (await search({ brand: 'dacia', near: NEAR })).body.items[0].name,
+    ).toBe('Nume nou');
+  });
+
+  it('answers the pins from PostgreSQL while Redis is unavailable', async () => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest
+      .spyOn(appRedis, 'sendCommand')
+      .mockImplementation((command: Command) => {
+        command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
+        return command.promise;
+      });
+    const before = await cacheCounts();
+
+    const res = await pins({ brand: 'dacia', near: NEAR });
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(await since(before)).toEqual({ fallback: 1, hit: 0, miss: 0 });
   });
 });

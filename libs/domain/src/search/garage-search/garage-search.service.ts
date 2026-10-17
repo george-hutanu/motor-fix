@@ -92,7 +92,28 @@ const encode = (cursor: Cursor) =>
   Buffer.from(JSON.stringify(cursor)).toString('base64url');
 
 // The brand by its catalogue id, or by its slug as the address bar holds it.
-type BrandKey = string | { slug: string };
+export type BrandKey = string | { slug: string };
+
+export async function brandOf(prisma: PrismaClient, key: BrandKey) {
+  const brand = await prisma.brand.findUnique({
+    select: { id: true, name: true, slug: true },
+    where: typeof key === 'string' ? { id: key } : key,
+  });
+  if (!brand) throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
+  return brand;
+}
+
+// The approved garages of each group: the counts and total of a search.
+export async function countGroups(
+  prisma: PrismaClient,
+  groups: ReturnType<typeof groupsOf>,
+) {
+  const [worksOn, doesNotTake] = await Promise.all([
+    prisma.garage.count({ where: { ...publicGarages(), ...groups.works_on } }),
+    prisma.garage.count({ where: { ...publicGarages(), ...groups.other } }),
+  ]);
+  return { counts: { doesNotTake, worksOn }, total: worksOn + doesNotTake };
+}
 
 const CARD = {
   brandNote: true,
@@ -173,8 +194,14 @@ export class GarageSearchService {
     log = false,
   ): Promise<GarageSearchPageDto> {
     const brand = await this.brandOf(key);
-    const page = await this.cache.page(
-      { brandId: brand.id, cursor, near: point && nearOf(point), radiusKm },
+    const page = await this.cache.entry(
+      {
+        brandId: brand.id,
+        cursor,
+        kind: 'page',
+        near: point && nearOf(point),
+        radiusKm,
+      },
       () => this.searched(brand, cursor, point, radiusKm),
     );
     countFirstPage(cursor, page.items.length);
@@ -261,29 +288,16 @@ export class GarageSearchService {
     };
   }
 
-  private async brandOf(key: BrandKey) {
-    const brand = await this.prisma.brand.findUnique({
-      select: { id: true, name: true, slug: true },
-      where: typeof key === 'string' ? { id: key } : key,
-    });
-    if (!brand) throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
-    return brand;
+  private brandOf(key: BrandKey) {
+    return brandOf(this.prisma, key);
   }
 
   private async area(point: SearchPoint | undefined, radiusKm?: number) {
-    return point && garagesInArea(this.prisma, point, radiusKm);
+    return point && garagesInArea(this.prisma, { point, radiusKm });
   }
 
-  private async counted(groups: Groups) {
-    const [worksOn, doesNotTake] = await Promise.all([
-      this.prisma.garage.count({
-        where: { ...publicGarages(), ...groups.works_on },
-      }),
-      this.prisma.garage.count({
-        where: { ...publicGarages(), ...groups.other },
-      }),
-    ]);
-    return { counts: { doesNotTake, worksOn }, total: worksOn + doesNotTake };
+  private counted(groups: Groups) {
+    return countGroups(this.prisma, groups);
   }
 
   // The boundary's place in the order, by id: a garage suspended since the

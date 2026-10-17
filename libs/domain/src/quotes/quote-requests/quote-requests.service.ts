@@ -316,7 +316,7 @@ export class QuoteRequestsService {
     if (!car) throw new NotFoundException();
     const point = parseNear(query.near);
     if (!point) return { items: [] };
-    const area = await garagesInArea(this.prisma, point);
+    const area = await garagesInArea(this.prisma, { point });
     area.delete(query.exclude ?? '');
     const garages = await this.prisma.garage.findMany({
       orderBy: [{ name: 'asc' }, { id: 'asc' }],

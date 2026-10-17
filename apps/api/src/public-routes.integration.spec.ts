@@ -13,6 +13,7 @@ const api = apiBoot();
 // @traces 365-FR-013
 // @traces 206-FR-005
 // @traces 143-FR-001
+// @traces 269-FR-001
 const PUBLIC = [
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000',
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/00000000-0000-4000-8000-000000000000',
@@ -34,6 +35,7 @@ const PUBLIC = [
   'GET /api/v1/platform-status',
   'GET /api/v1/public-holidays',
   'GET /api/v1/search/garages',
+  'GET /api/v1/search/garages/pins',
   'GET /health/live',
   'GET /health/ready',
   'PATCH /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000',
