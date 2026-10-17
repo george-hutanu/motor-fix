@@ -371,11 +371,14 @@ describe('Prețuri: live, loading, failure and an empty list', () => {
     );
     await settle();
 
-    expect(element.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(element.querySelectorAll('[data-skeleton]').length).toBeGreaterThan(
+    const panel = element.querySelector('section.panel');
+    expect(text(panel?.querySelector('h2') ?? null)).toBe('Lista de prețuri');
+    expect(panel?.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(panel?.querySelectorAll('[data-skeleton]').length).toBeGreaterThan(
       0,
     );
-    expect(text(element)).toBe('');
+    expect(text(panel?.querySelector('[aria-busy="true"]') ?? null)).toBe('');
+    expect(text(element)).toBe('Lista de prețuri');
     expect(rows(element)).toHaveLength(0);
     finish?.();
     await settle();
@@ -391,8 +394,10 @@ describe('Prețuri: live, loading, failure and an empty list', () => {
     });
     await settle();
 
-    expect(element.querySelector('[role="alert"]')).not.toBeNull();
-    const retry = element.querySelector('button') as HTMLButtonElement;
+    const panel = element.querySelector('section.panel');
+    expect(text(panel?.querySelector('h2') ?? null)).toBe('Lista de prețuri');
+    expect(panel?.querySelector('[role="alert"]')).not.toBeNull();
+    const retry = panel?.querySelector('button') as HTMLButtonElement;
     expect(text(retry)).toBe('Încearcă din nou');
     fail = false;
     retry.click();
@@ -410,7 +415,12 @@ describe('Prețuri: live, loading, failure and an empty list', () => {
     }));
     await settle();
 
-    expect(text(element)).toBe('Nu ai încă lucrări în listă.');
+    const panel = element.querySelector('section.panel');
+    expect(text(panel?.querySelector('h2') ?? null)).toBe('Lista de prețuri');
+    expect(text(panel?.querySelector('p') ?? null)).toBe(
+      'Nu ai încă lucrări în listă.',
+    );
+    expect(panel?.children).toHaveLength(2);
     expect(rows(element)).toHaveLength(0);
     expect(element.querySelector('[data-labour]')).toBeNull();
     expect(element.querySelector('button')).toBeNull();

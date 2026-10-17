@@ -1,7 +1,7 @@
-@if (view.value(); as list) {
-  @if (list.items.length) {
-    <section class="panel">
-      <h2>{{ 'garage.prices.title' | t }}</h2>
+<section class="panel">
+  <h2>{{ 'garage.prices.title' | t }}</h2>
+  @if (view.value(); as list) {
+    @if (list.items.length) {
       <ul class="rows">
         @for (row of list.items; track row.jobTypeId) {
           <li data-row class="row" [attr.data-public]="row.public">
@@ -31,17 +31,17 @@
       @if (list.labour; as rate) {
         <p class="muted" data-labour>{{ labour(rate) }}</p>
       }
-    </section>
-  } @else {
-    <p class="muted">{{ 'garage.prices.empty' | t }}</p>
-  }
-} @else if (view.failed()) {
-  <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
-  <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.prices.retry' | t }}</button>
-} @else {
-  <ul class="rows" aria-busy="true">
-    @for (n of skeletons; track n) {
-      <li data-skeleton class="skeleton" aria-hidden="true"></li>
+    } @else {
+      <p class="muted">{{ 'garage.prices.empty' | t }}</p>
     }
-  </ul>
-}
+  } @else if (view.failed()) {
+    <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.prices.retry' | t }}</button>
+  } @else {
+    <ul class="rows" aria-busy="true">
+      @for (n of skeletons; track n) {
+        <li data-skeleton class="skeleton" aria-hidden="true"></li>
+      }
+    </ul>
+  }
+</section>
