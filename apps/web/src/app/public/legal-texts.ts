@@ -69,7 +69,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'How long we keep it',
           paragraphs: [
-            'Account data stays while the account exists; after it is closed, only what the law requires, for as long as it requires. To close your account or have your data erased, write to us from your account; we handle it ourselves until you can do it in the service.',
+            'Account data stays while the account exists; after it is closed, only what the law requires, for as long as it requires. To close your account or have your data erased, write to us at the e-mail address above or from your account; we handle it ourselves until you can do it in the service.',
             'Legal documents and the audit history stay while the garage or the account is active, then 5 years at most.',
             'Photos on requests and replies stay 90 days at most. A garage’s workshop photos stay while its listing shows them.',
             'An unfinished garage listing is deleted 90 days after its last change. Consent records stay as long as we need them to show what was accepted. Profile-view data is kept as the next section says.',
@@ -82,7 +82,7 @@ export const LEGAL_TEXTS: Record<
             'If you are not signed in, you are counted by a one-way key: an HMAC (a one-way keyed hash) of your connection address and your browser’s description, made under a secret of 32 random bytes that is created fresh every day (Romanian time). The secret is held only in our short-lived in-memory store and is discarded at the end of that day, so the key cannot be turned back into your address and a new day gives a new key.',
             'The key is kept only in daily counters, which are discarded within two days: at the end of the second day after the day counted. After that we keep only the daily totals per garage and per way of arriving at the profile. Your address and browser description are used only for that key and for the anti-abuse limit described below; we do not store or log them, and our servers do not send them to the monitoring provider.',
             'Bots, the garage’s own staff and MotorFix’s administrators are not counted. Nothing is placed on your device and nothing is read from it, not even a cookie, so we do not ask for your consent.',
-            'This counting rests on our legitimate interest (GDPR Art. 6(1)(f)) in showing garages how many people saw their profile. You may object to it at any time by writing to us from your account.',
+            'This counting rests on our legitimate interest (GDPR Art. 6(1)(f)) in showing garages how many people saw their profile. You may object to it at any time by writing to us at the e-mail address above or from your account.',
           ],
         },
         {
@@ -108,7 +108,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Your rights',
           paragraphs: [
-            'You have the right to see your data, to have it corrected or erased, to restrict its use, to receive it in a portable form, to object to its use and to withdraw a consent without affecting what came before. To use any of these rights, write to us from your account.',
+            'You have the right to see your data, to have it corrected or erased, to restrict its use, to receive it in a portable form, to object to its use and to withdraw a consent without affecting what came before. To use any of these rights, write to us at the e-mail address above or from your account.',
             'You may also complain to the National Supervisory Authority for Personal Data Processing (ANSPDCP).',
           ],
         },
@@ -248,7 +248,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Cât timp le păstrăm',
           paragraphs: [
-            'Datele contului rămân cât timp există contul; după închidere, doar ce cere legea, cât timp cere. Ca să îți închizi contul sau să îți fie șterse datele, ne scrii din contul tău; ne ocupăm noi de asta până când vei putea face singur acest lucru în serviciu.',
+            'Datele contului rămân cât timp există contul; după închidere, doar ce cere legea, cât timp cere. Ca să îți închizi contul sau să îți fie șterse datele, ne scrii la adresa de e‑mail de mai sus sau din contul tău; ne ocupăm noi de asta până când vei putea face singur acest lucru în serviciu.',
             'Documentele legale și istoricul modificărilor rămân cât timp service‑ul sau contul este activ, apoi cel mult 5 ani.',
             'Fotografiile din cereri și răspunsuri rămân cel mult 90 de zile. Fotografiile atelierului unui service rămân cât timp înscrierea lui le arată.',
             'O înscriere de service neterminată se șterge la 90 de zile după ultima ei modificare. Acordurile rămân cât timp avem nevoie să arătăm ce s‑a acceptat. Datele despre vizualizările de profil se păstrează cum spune secțiunea următoare.',
@@ -261,7 +261,7 @@ export const LEGAL_TEXTS: Record<
             'Dacă nu ești autentificat, ești numărat după o cheie într‑un singur sens: un HMAC (o amprentă criptografică cu cheie, într‑un singur sens) al adresei conexiunii tale și al descrierii browserului tău, făcut cu un secret de 32 de octeți aleatori creat din nou în fiecare zi (după ora României). Secretul este ținut doar în memoria de scurtă durată a serviciului și este aruncat la sfârșitul acelei zile, așa că din cheie nu se poate afla adresa ta, iar o zi nouă dă o cheie nouă.',
             'Cheia este păstrată doar în contoarele zilnice, aruncate în cel mult două zile: la sfârșitul celei de‑a doua zile de după ziua numărată. După aceea păstrăm doar totalurile zilnice pe service și pe felul în care s‑a ajuns la profil. Adresa și descrierea browserului sunt folosite doar pentru această cheie și pentru limita împotriva abuzurilor descrisă mai jos; nu le stocăm, nu le înregistrăm în jurnale, iar serverele noastre nu le trimit furnizorului de monitorizare.',
             'Roboții, personalul service‑ului și administratorii MotorFix nu sunt numărați. Nu punem nimic pe dispozitivul tău și nu citim nimic de pe el, nici măcar un cookie, așa că nu îți cerem acordul.',
-            'Această numărare se bazează pe interesul nostru legitim (GDPR art. 6 alin. (1) lit. f) de a le arăta service‑urilor câți oameni le‑au văzut profilul. Te poți opune oricând acestei numărări, scriindu‑ne din contul tău.',
+            'Această numărare se bazează pe interesul nostru legitim (GDPR art. 6 alin. (1) lit. f) de a le arăta service‑urilor câți oameni le‑au văzut profilul. Te poți opune oricând acestei numărări, scriindu‑ne la adresa de e‑mail de mai sus sau din contul tău.',
           ],
         },
         {
@@ -287,7 +287,7 @@ export const LEGAL_TEXTS: Record<
         {
           heading: 'Drepturile tale',
           paragraphs: [
-            'Ai dreptul să îți vezi datele, să ceri corectarea sau ștergerea lor, să restrângi folosirea lor, să le primești într‑o formă portabilă, să te opui folosirii lor și să îți retragi un acord fără să afecteze ce a fost înainte. Ca să folosești oricare dintre aceste drepturi, ne scrii din contul tău.',
+            'Ai dreptul să îți vezi datele, să ceri corectarea sau ștergerea lor, să restrângi folosirea lor, să le primești într‑o formă portabilă, să te opui folosirii lor și să îți retragi un acord fără să afecteze ce a fost înainte. Ca să folosești oricare dintre aceste drepturi, ne scrii la adresa de e‑mail de mai sus sau din contul tău.',
             'Poți face și plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (ANSPDCP).',
           ],
         },

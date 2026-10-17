@@ -5,6 +5,7 @@ import {
 } from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
+import { type Meter, metrics } from '@opentelemetry/api';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import {
@@ -23,8 +24,12 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countSupportEmail,
+  countSupportMessage,
   countSystemLogEntry,
+  countVerificationCheck,
   countVerificationResult,
+  initProductCounters,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 
@@ -36,6 +41,19 @@ const STEP_ACTIONS = [
   'ticked',
   'unticked',
 ] as const;
+
+const SUPPORT_MESSAGE_OUTCOMES = [
+  'stored',
+  'refused_limit',
+  'trap',
+  'invalid',
+] as const;
+const SUPPORT_EMAILS = (['support', 'acknowledgement'] as const).flatMap(
+  (kind) =>
+    (['sent', 'blocked', 'failed', 'unconfigured'] as const).map(
+      (outcome) => [kind, outcome] as const,
+    ),
+);
 
 const GARAGE_REPORT_OUTCOMES = [
   'created',
@@ -68,6 +86,25 @@ const SEVEN_COUNTERS = [
   'motorfix_emails_sent_total',
   'motorfix_notifications_sent_total',
 ];
+
+// The counter names a process starts, read from its real start set: the
+// meter is swapped for one that only records the names it is asked for.
+function startedNames(process: 'api' | 'worker') {
+  const names = new Set<string>();
+  const meter = {
+    createCounter: (name: string) => {
+      names.add(name);
+      return { add: () => undefined };
+    },
+  } as unknown as Meter;
+  const spy = jest.spyOn(metrics, 'getMeter').mockReturnValue(meter);
+  try {
+    initProductCounters(process);
+  } finally {
+    spy.mockRestore();
+  }
+  return names;
+}
 
 // Every series an instance can add, once each.
 function countEverySeries() {
@@ -103,6 +140,12 @@ function countEverySeries() {
   (['built', 'skipped'] as const).forEach((outcome) => {
     countVerificationResult(outcome);
   });
+  SUPPORT_MESSAGE_OUTCOMES.forEach((outcome) => {
+    countSupportMessage(outcome);
+  });
+  SUPPORT_EMAILS.forEach(([kind, outcome]) => {
+    countSupportEmail(kind, outcome);
+  });
   for (const kind of SYSTEM_LOG_KINDS) {
     for (const outcome of ['written', 'grouped', 'dropped'] as const)
       countSystemLogEntry(kind, outcome);
@@ -131,8 +174,15 @@ describe('the system log counter', () => {
 // @traces 251-FR-018
 // @traces 139-FR-019
 // @traces 209-FR-014
+// @traces 280-FR-021
 describe('the product counters', () => {
   it.each([
+    // @traces 203-FR-010
+    [
+      () => countVerificationCheck('caen', 'warning'),
+      'motorfix_verification_checks_total',
+      { kind: 'caen', result: 'warning' },
+    ],
     [
       () => countSearch('results'),
       'motorfix_searches_total',
@@ -227,6 +277,22 @@ describe('the product counters', () => {
           { outcome },
         ] as const,
     ),
+    ...SUPPORT_MESSAGE_OUTCOMES.map(
+      (outcome) =>
+        [
+          () => countSupportMessage(outcome),
+          'motorfix_support_messages_total',
+          { outcome },
+        ] as const,
+    ),
+    ...SUPPORT_EMAILS.map(
+      ([kind, outcome]) =>
+        [
+          () => countSupportEmail(kind, outcome),
+          'motorfix_support_emails_total',
+          { kind, outcome },
+        ] as const,
+    ),
     ...GARAGE_REPORT_OUTCOMES.map(
       (outcome) =>
         [
@@ -265,9 +331,10 @@ describe('the product counters', () => {
   });
 
   // The cap of 50 covers the seven counters the observability story added;
-  // every later counter keeps its own fixed set, and the instance as a whole
-  // stays under 100 series, far inside the metrics backend's free tier.
-  it('keeps the seven counters under 50 series and the instance under 100, every label from a fixed set', async () => {
+  // every later counter keeps its own fixed set, and each instance (1345-FR-012)
+  // stays under 150 series, far inside the metrics backend's free tier: the
+  // API's are the counters it starts, the worker's the ones it starts.
+  it('keeps the seven counters under 50 series and the instance under 150, every label from a fixed set', async () => {
     countEverySeries();
 
     const { resourceMetrics } = await memory.metricReader.collect();
@@ -285,7 +352,11 @@ describe('the product counters', () => {
     expect(
       series.filter((s) => SEVEN_COUNTERS.includes(s.name)).length,
     ).toBeLessThan(50);
-    expect(series.length).toBeLessThan(100);
+    for (const process of ['api', 'worker'] as const) {
+      const names = startedNames(process);
+      expect(names.size).toBeGreaterThan(0);
+      expect(series.filter((s) => names.has(s.name)).length).toBeLessThan(150);
+    }
     expect(
       series.filter((s) => s.name === 'motorfix_account_changes_total'),
     ).toHaveLength(ACCOUNT_FIELDS.length);

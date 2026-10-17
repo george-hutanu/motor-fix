@@ -435,8 +435,18 @@ const groupProblems = (files: Files) =>
       .map((g) => `${name}: group ${g.name} must be in MotorFix every 1m`),
   ]);
 
+const contactNames = (): Set<string> =>
+  new Set(
+    (
+      JSON.parse(
+        readFileSync(join(alertingDir, 'contact-points.json'), 'utf8'),
+      ) as { name: string }[]
+    ).map((p) => p.name),
+  );
+
 /** Every way the alert files break the rules this repository holds them to. */
 function problems(files: Files, known = dashboardMetrics()): string[] {
+  const receivers = contactNames();
   const found = groupProblems(files);
   const all = rows(files);
   const seen = new Map<string, string>();
@@ -444,6 +454,9 @@ function problems(files: Files, known = dashboardMetrics()): string[] {
     const other = seen.get(rule.uid);
     if (other) found.push(`${at}: uid also in ${other}`);
     seen.set(rule.uid, name);
+    const receiver = rule.notification_settings?.receiver;
+    if (receiver !== undefined && !receivers.has(receiver))
+      found.push(`${at}: receiver ${receiver} is no contact point`);
     found.push(...waitProblems(at, rule));
     if (OWN.includes(name))
       found.push(...ruleProblems(at, group.name as Service, rule, known));
@@ -583,6 +596,7 @@ describe('alert rules', () => {
   // @traces 880-FR-002
   // @traces 880-FR-013
   // @traces 880-FR-017
+  // @traces 1347-FR-003
   it('every file breaks none of the rules', () => {
     expect(problems(files)).toEqual([]);
   });
@@ -665,8 +679,8 @@ describe('alert rules', () => {
   });
 
   // @traces 880-FR-017
-  it('holds thirty-eight rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(38);
+  it('holds thirty-nine rules in all, under the free tier cap', () => {
+    expect(rows(files)).toHaveLength(39);
   });
 
   // @traces 1345-FR-004
@@ -738,6 +752,15 @@ describe('alert rules', () => {
           first(f).notification_settings = { receiver: 'MotorFix owner' };
         },
         /api\.json api-\S+: names a receiver; the policy routes it/,
+      ],
+      // @traces 1347-FR-003
+      [
+        'a receiver no contact point declares',
+        (f) => {
+          const rule = rulesOf(f['outage.json'] as AlertFile)[0] as Rule;
+          rule.notification_settings = { receiver: 'motorfix-outage-2' };
+        },
+        /outage\.json outage: receiver motorfix-outage-2 is no contact point/,
       ],
       [
         'no runbook',
@@ -954,6 +977,39 @@ function routeProblems(policy: Route, points: ContactPoint[]): string[] {
   return found;
 }
 
+/** Holds the contact points to what the repository declares; throws on any other. */
+function expectDeclared(points: ContactPoint[]) {
+  const owner = 'hutanugeorge40@gmail.com';
+  const [mine, email, webhook, ...rest] = points;
+  expect(rest).toEqual([]);
+  expect(mine).toEqual({
+    name: 'MotorFix owner',
+    settings: { addresses: owner },
+    type: 'email',
+    uid: 'motorfix-owner',
+  });
+  expect(email).toEqual({
+    name: 'motorfix-outage',
+    settings: { addresses: expect.any(String) },
+    type: 'email',
+    uid: 'motorfix-outage-email',
+  });
+  const addresses = String(email?.settings['addresses']).split(';');
+  expect(addresses).toContain(owner);
+  for (const address of addresses)
+    expect(address).toMatch(/^[^\s;@/:]+@[^\s;@/:]+\.[^\s;@/:]+$/);
+  expect(webhook).toEqual({
+    name: 'motorfix-outage',
+    settings: {
+      authorization_scheme: 'Bearer',
+      httpMethod: 'POST',
+      url: '{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts',
+    },
+    type: 'webhook',
+    uid: 'motorfix-outage-webhook',
+  });
+}
+
 describe('the contact point and the notification policy', () => {
   const points = () => alerting<ContactPoint[]>('contact-points.json');
   const policy = () => alerting<Route>('policies.json');
@@ -964,15 +1020,61 @@ describe('the contact point and the notification policy', () => {
   });
 
   // @traces 880-FR-011
-  it("e-mails the owner's address only, under the name the rules know", () => {
-    expect(points()).toEqual([
-      {
-        name: 'MotorFix owner',
-        settings: { addresses: 'hutanugeorge40@gmail.com' },
-        type: 'email',
-        uid: 'motorfix-owner',
+  // @traces 1347-FR-001
+  it('declares the owner e-mail and the outage e-mail and webhook, with no host or credential', () => {
+    expectDeclared(points());
+  });
+
+  // @traces 1347-FR-001
+  it.each<[string, (p: ContactPoint[]) => void]>([
+    [
+      'a credential in the webhook',
+      (p) => {
+        (p[2] as ContactPoint).settings['authorization_credentials'] = 'x';
       },
-    ]);
+    ],
+    [
+      "a host in the webhook's url",
+      (p) => {
+        (p[2] as ContactPoint).settings['url'] =
+          'https://staging.example.test/api/v1/monitoring/outage-alerts';
+      },
+    ],
+    [
+      'an unknown key',
+      (p) => {
+        (p[1] as ContactPoint).disableResolveMessage = true;
+      },
+    ],
+    [
+      'a list in place of the addresses',
+      (p) => {
+        (p[1] as ContactPoint).settings['addresses'] = ['a@example.test'];
+      },
+    ],
+    [
+      'a second address that is no address',
+      (p) => {
+        (p[1] as ContactPoint).settings['addresses'] =
+          'hutanugeorge40@gmail.com;oops';
+      },
+    ],
+    [
+      'a fourth entry',
+      (p) => {
+        p.push({ ...clone(p[1] as ContactPoint), uid: 'motorfix-outage-sms' });
+      },
+    ],
+    [
+      'a second integration type under the owner name',
+      (p) => {
+        (p[2] as ContactPoint).name = 'MotorFix owner';
+      },
+    ],
+  ])('refuses %s', (_, breakIt) => {
+    const broken = clone(points());
+    breakIt(broken);
+    expect(() => expectDeclared(broken)).toThrow();
   });
 
   // @traces 880-FR-012
@@ -1115,7 +1217,8 @@ describe('Grafana alerts workflow', () => {
       // set. The contact point answers an HTTP status through -w: the one in
       // FAIL_CONTACT for its PUT and POST, the one in CONTACT_PUT for its PUT,
       // 404 for its PUT when CONTACT_MISSING is set, else 200. A list of
-      // contact points answers CONTACTS into the file -o names.
+      // contact points answers into the file -o names: CONTACTS for the
+      // owner's name, OUTAGE_CONTACTS for the outage one, nothing for others.
       const curl = join(dir, 'bin', 'curl');
       writeFileSync(
         curl,
@@ -1131,7 +1234,9 @@ describe('Grafana alerts workflow', () => {
           'for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; case "$a" in -w) w=1;; --fail|-f) fail=1;; esac; prev="$a"; done',
           'answer() { [ -n "$w" ] && printf "%s" "$1"; case "$1" in 2??) exit 0;; esac; [ -n "$fail" ] && exit 22; exit 0; }',
           'case "$*" in',
-          '  *"contact-points?name="*) [ -n "$out" ] && printf "%s" "$CONTACTS" > "$out"; exit 0;;',
+          '  *"contact-points?name=MotorFix%20owner"*) [ -n "$out" ] && printf "%s" "$CONTACTS" > "$out"; exit 0;;',
+          '  *"contact-points?name=motorfix-outage"*) [ -n "$out" ] && printf "%s" "$OUTAGE_CONTACTS" > "$out"; exit 0;;',
+          '  *"contact-points?name="*) [ -n "$out" ] && printf "[]" > "$out"; exit 0;;',
           '  *"-X DELETE"*) exit 0;;',
           '  *"/contact-points"*) [ -n "$FAIL_CONTACT" ] && answer "$FAIL_CONTACT"; case "$*" in *"-X PUT"*) [ -n "$CONTACT_PUT" ] && answer "$CONTACT_PUT"; [ -n "$CONTACT_MISSING" ] && answer 404;; esac; answer 200;;',
           '  *"-X POST"*) exit 0;;',
@@ -1172,7 +1277,10 @@ describe('Grafana alerts workflow', () => {
             FOLDER_EXISTS: '',
             GRAFANA_SA_TOKEN: token,
             GRAFANA_URL: url,
+            OUTAGE_CONTACTS: '[]',
+            OUTAGE_WEBHOOK_TOKEN: '',
             PATH: `${join(dir, 'bin')}:${process.env['PATH']}`,
+            STAGING_WEB_URL: '',
             ...env,
           },
         },
@@ -1261,39 +1369,71 @@ describe('Grafana alerts workflow', () => {
       test: (args: string) => boolean,
     ) => calls.findIndex((c) => test(c.args));
 
-    // @traces 880-FR-014
-    it('applies the contact point, then the policy, then the rules, then drops the hand-made one', () => {
-      const { code, out, calls } = apply({ FOLDER_EXISTS: '1' });
-      expect(code).toBe(0);
-      const contact = index(
-        calls,
-        (a) => a.includes('PUT') && a.includes('contact-points/motorfix-owner'),
+    const OUTAGE_LISTED = [
+      { name: 'motorfix-outage', uid: 'motorfix-outage-email' },
+      { name: 'motorfix-outage', uid: 'motorfix-outage-webhook' },
+    ];
+    const hook = 'hook-token-never-printed';
+    const web = 'https://staging.example.test';
+    const point = (uid: string) => {
+      const found = alerting<ContactPoint[]>('contact-points.json').find(
+        (p) => p.uid === uid,
       );
+      if (!found) throw new Error(`contact-points.json declares no ${uid}`);
+      return found;
+    };
+    const contactPuts = (calls: ReturnType<typeof apply>['calls']) =>
+      calls.filter(
+        (c) => c.args.includes('PUT') && c.args.includes('/contact-points/'),
+      );
+    const deleted = (calls: ReturnType<typeof apply>['calls']) =>
+      calls
+        .filter((c) => c.args.includes('DELETE'))
+        .map((c) => c.args.match(/contact-points\/([^\n]+)/)?.[1]);
+    const withOutage = () =>
+      cpSync(
+        join(alertsDir, 'outage.json'),
+        join(dir, 'infra', 'observability', 'alerts', 'outage.json'),
+      );
+
+    // @traces 880-FR-014
+    // @traces 1347-FR-002
+    it('applies the contact points, then the policy, then the rules, then drops the hand-made ones', () => {
+      const { code, out, calls } = apply({
+        FOLDER_EXISTS: '1',
+        OUTAGE_CONTACTS: JSON.stringify([
+          ...OUTAGE_LISTED,
+          { name: 'motorfix-outage', uid: 'outage-by-hand' },
+        ]),
+      });
+      expect(code).toBe(0);
+      const contacts = contactPuts(calls);
+      const contact = calls.indexOf(contacts.at(-1) as (typeof calls)[number]);
       const policy = index(calls, (a) =>
         a.includes(`${url}/api/v1/provisioning/policies`),
       );
       const rules = index(calls, (a) => a.includes('rule-groups/'));
       const list = index(calls, (a) => a.includes('contact-points?name='));
-      const removed = calls.filter((c) => c.args.includes('DELETE'));
       expect(contact).toBeGreaterThanOrEqual(0);
       expect([contact < policy, policy < rules, rules < list]).toEqual([
         true,
         true,
         true,
       ]);
-      expect(calls[contact]?.body).toEqual(
-        alerting<ContactPoint[]>('contact-points.json')[0],
-      );
-      expect(calls[policy]?.body).toEqual(alerting<Route>('policies.json'));
-      for (const c of [calls[contact], calls[policy]])
-        expect(c?.args).toContain('X-Disable-Provenance: true');
-      expect(removed.map((c) => c.args)).toEqual([
-        expect.stringContaining(
-          `${url}/api/v1/provisioning/contact-points/hand-made`,
-        ),
+      expect(contacts.map((c) => c.body)).toEqual([
+        point('motorfix-owner'),
+        point('motorfix-outage-email'),
       ]);
+      for (const c of contacts)
+        expect(c.args).toContain(
+          `${url}/api/v1/provisioning/contact-points/${(c.body as unknown as ContactPoint).uid}`,
+        );
+      expect(calls[policy]?.body).toEqual(alerting<Route>('policies.json'));
+      for (const c of [...contacts, calls[policy]])
+        expect(c?.args).toContain('X-Disable-Provenance: true');
+      expect(deleted(calls)).toEqual(['hand-made', 'outage-by-hand']);
       expect(out).toContain(
-        'applied infra/observability/grafana/alerting/contact-points.json',
+        'applied infra/observability/grafana/alerting/contact-points.json (motorfix-outage-email)',
       );
       expect(out).toContain(
         'applied infra/observability/grafana/alerting/policies.json',
@@ -1302,20 +1442,22 @@ describe('Grafana alerts workflow', () => {
     });
 
     // @traces 880-FR-014
-    it('creates the contact point when Grafana has none with its uid', () => {
+    // @traces 1347-FR-002
+    it('creates the contact points when Grafana has none with their uids', () => {
       const { code, calls } = apply({
         CONTACT_MISSING: '1',
         FOLDER_EXISTS: '1',
       });
       expect(code).toBe(0);
-      const created = calls.find(
+      const created = calls.filter(
         (c) =>
           c.args.includes('POST') &&
           c.args.includes(`${url}/api/v1/provisioning/contact-points\n`),
       );
-      expect(created?.body).toEqual(
-        alerting<ContactPoint[]>('contact-points.json')[0],
-      );
+      expect(created.map((c) => c.body)).toEqual([
+        point('motorfix-owner'),
+        point('motorfix-outage-email'),
+      ]);
     });
 
     // @traces 880-FR-014
@@ -1377,6 +1519,107 @@ describe('Grafana alerts workflow', () => {
       );
     });
 
+    // @traces 1347-FR-002
+    it.each([web, `${web}/`, `${web}//`])(
+      'applies the outage webhook with the staging address %s and the token, printing neither',
+      (address) => {
+        withOutage();
+        const { code, out, calls } = apply({
+          FOLDER_EXISTS: '1',
+          OUTAGE_WEBHOOK_TOKEN: hook,
+          STAGING_WEB_URL: address,
+        });
+        expect(code).toBe(0);
+        const declared = point('motorfix-outage-webhook');
+        const sent = contactPuts(calls).filter((c) =>
+          c.args.includes(
+            `${url}/api/v1/provisioning/contact-points/motorfix-outage-webhook\n`,
+          ),
+        );
+        expect(sent.map((c) => c.body)).toEqual([
+          {
+            ...declared,
+            settings: {
+              ...declared.settings,
+              authorization_credentials: hook,
+              url: `${web}/api/v1/monitoring/outage-alerts`,
+            },
+          },
+        ]);
+        expect(puts(calls).map((c) => c.body.title)).toContain('outage');
+        expect(out).not.toMatch(/::notice::/);
+        expect(out).toContain(
+          'applied infra/observability/grafana/alerting/contact-points.json (motorfix-outage-webhook)',
+        );
+        for (const value of [hook, 'staging.example.test', token])
+          expect(out).not.toContain(value);
+      },
+    );
+
+    // @traces 1347-FR-002
+    it.each<[string, Record<string, string>, string[], string[]]>([
+      [
+        'the variable',
+        { OUTAGE_WEBHOOK_TOKEN: hook },
+        ['STAGING_WEB_URL'],
+        ['OUTAGE_WEBHOOK_TOKEN'],
+      ],
+      [
+        'the secret',
+        { STAGING_WEB_URL: web },
+        ['OUTAGE_WEBHOOK_TOKEN'],
+        ['STAGING_WEB_URL'],
+      ],
+      ['both', {}, ['OUTAGE_WEBHOOK_TOKEN', 'STAGING_WEB_URL'], []],
+    ])(
+      'skips the outage webhook with one notice when %s is missing, and applies the rest',
+      (_, env, named, unnamed) => {
+        withOutage();
+        const { code, out, calls } = apply({ FOLDER_EXISTS: '1', ...env });
+        expect(code).toBe(0);
+        const notices = out.match(/::notice::.*/g) ?? [];
+        expect(notices).toHaveLength(1);
+        for (const n of named) expect(notices[0]).toContain(n);
+        for (const n of unnamed) expect(notices[0]).not.toContain(n);
+        expect(
+          calls.some((c) => c.args.includes('motorfix-outage-webhook')),
+        ).toBe(false);
+        expect(contactPuts(calls).map((c) => c.body)).toEqual([
+          point('motorfix-owner'),
+          point('motorfix-outage-email'),
+        ]);
+        expect(puts(calls).map((c) => c.body.title)).toContain('outage');
+        expect(out).toContain(
+          'skipped infra/observability/grafana/alerting/contact-points.json (motorfix-outage-webhook)',
+        );
+        for (const value of [hook, 'staging.example.test'])
+          expect(out).not.toContain(value);
+      },
+    );
+
+    // @traces 1347-FR-002
+    it.each<[string, Record<string, string>]>([
+      ['applied', { OUTAGE_WEBHOOK_TOKEN: hook, STAGING_WEB_URL: web }],
+      ['skipped', {}],
+    ])(
+      'drops only the hand-made outage contact point and keeps both declared ones when the webhook is %s',
+      (_, env) => {
+        const { code, calls } = apply({
+          CONTACTS: JSON.stringify([
+            { name: 'MotorFix owner', uid: 'motorfix-owner' },
+          ]),
+          FOLDER_EXISTS: '1',
+          OUTAGE_CONTACTS: JSON.stringify([
+            ...OUTAGE_LISTED,
+            { name: 'motorfix-outage', uid: 'outage-by-hand' },
+          ]),
+          ...env,
+        });
+        expect(code).toBe(0);
+        expect(deleted(calls)).toEqual(['outage-by-hand']);
+      },
+    );
+
     // @traces 1024-FR-009
     it('goes on past a refused group, names its file and fails at the end', () => {
       const { code, out, calls } = apply({
@@ -1416,6 +1659,7 @@ describe('the observability README', () => {
 
   // @traces 1024-FR-011
   // @traces 880-FR-015
+  // @traces 1347-FR-004
   it('says where the rules live, whom they notify and how they reach Grafana', () => {
     const section = readme.slice(
       readme.indexOf('## Alert rules'),
@@ -1441,6 +1685,10 @@ describe('the observability README', () => {
       'mcp-memory',
       'staging',
       'mute',
+      '`motorfix-outage`',
+      'motorfix-outage-email',
+      'motorfix-outage-webhook',
+      'keeps every uid',
     ]) {
       expect([fact, section.includes(fact)]).toEqual([fact, true]);
     }

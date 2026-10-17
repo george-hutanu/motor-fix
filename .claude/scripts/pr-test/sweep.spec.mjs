@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, SHOT_OPTIONS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, SHOT_OPTIONS, VOLATILE, shotOptions, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, routeProblem, runSweep, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -414,5 +414,13 @@ describe('the sweep\'s screenshots', () => {
   // A dial's needle caught mid-transition shows as changed pixels on a page the PR never touched.
   it('finish every transition and animation before the shot, of the whole page', () => {
     assert.deepEqual(SHOT_OPTIONS, { animations: 'disabled', fullPage: true });
+  });
+
+  // A chart whose data moves with today's date shows as changed on a PR that never touched it.
+  it('masks what a page marks as date-relative with one flat colour', () => {
+    const page = { locator: (selector) => ({ selector }) };
+    const options = shotOptions(page, '/out/shots/x.png');
+    assert.equal(VOLATILE, '[data-qa-volatile]');
+    assert.deepEqual(options, { ...SHOT_OPTIONS, path: '/out/shots/x.png', mask: [{ selector: VOLATILE }], maskColor: '#808080' });
   });
 });

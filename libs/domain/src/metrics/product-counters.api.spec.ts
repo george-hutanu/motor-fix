@@ -2,6 +2,8 @@ import {
   CONSENT_DECISIONS,
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
+  VERIFICATION_CHECK_KINDS,
+  VERIFICATION_CHECK_RESULTS,
 } from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
@@ -27,6 +29,7 @@ const WORKER_ONLY = [
   'motorfix_quote_received_total',
   'motorfix_decline_windows_closed_total',
   'motorfix_garage_suspended_notices_total',
+  'motorfix_support_emails_total',
 ];
 
 async function series() {
@@ -43,16 +46,20 @@ async function series() {
     );
 }
 
+// Every series the API starts: its own 71 and one per check kind and result.
+const API_SERIES =
+  71 + VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length;
+
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
 
-// @traces 1345-FR-012 1345-FR-013
+// @traces 1345-FR-012 1345-FR-013 280-FR-023
 describe("the API's product counters at start", () => {
   it('holds every series the API counts at 0, and none only the worker counts', async () => {
     initProductCounters('api');
 
     const all = await series();
-    expect(all).toHaveLength(67);
+    expect(all).toHaveLength(API_SERIES);
     expect(all.filter((one) => one.value !== 0)).toEqual([]);
     expect(all.filter((one) => WORKER_ONLY.includes(one.name))).toEqual([]);
     expect(
@@ -64,9 +71,19 @@ describe("the API's product counters at start", () => {
     expect(named(all, 'motorfix_consent_records_total')).toHaveLength(
       CONSENT_DECISIONS.length,
     );
+    expect(named(all, 'motorfix_verification_checks_total')).toHaveLength(
+      VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length,
+    );
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
     );
+    expect(
+      named(all, 'motorfix_support_messages_total').map(
+        (one) => one.labels['outcome'],
+      ),
+    ).toEqual(['stored', 'refused_limit', 'trap', 'invalid']);
+    // 1345-FR-012: each instance stays under 150 series.
+    expect(all.length).toBeLessThan(150);
   });
 
   it('holds the approvals and the documents opened at 0, though nothing reaches them on staging', async () => {
@@ -91,6 +108,6 @@ describe("the API's product counters at start", () => {
         method: 'google',
       }),
     ).toBe(1);
-    expect(await series()).toHaveLength(67);
+    expect(await series()).toHaveLength(API_SERIES);
   });
 });

@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
+import { isValidCui } from '@motor-fix/contracts';
+
 import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
@@ -297,6 +299,15 @@ describe('seed', () => {
     });
     const days = (before - file.submittedAt.getTime()) / 86_400_000;
     expect(days).toBeGreaterThanOrEqual(29.9);
+  });
+
+  // @traces 203-FR-002
+  it('gives every seeded garage a CUI whose control digit holds, so a company check can pass', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const garages = await prisma.garage.findMany({ select: { cui: true } });
+    expect(garages.length).toBeGreaterThan(0);
+    for (const { cui } of garages) expect(isValidCui(cui ?? '')).toBe(true);
   });
 
   it('adds no second waiting file when run twice', async () => {

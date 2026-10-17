@@ -133,6 +133,14 @@ export const routes: Routes = [
         path: 'list-your-garage',
         title: () => inject(I18n).t('public.listing.heading'),
       },
+      {
+        loadComponent: () =>
+          import('./public/contact/contact-page/contact-page').then(
+            (m) => m.ContactPage,
+          ),
+        path: 'contact',
+        title: () => inject(I18n).t('public.contact.heading'),
+      },
       ...(['terms', 'privacy'] as const).map((text) => ({
         data: { text },
         loadComponent: () =>

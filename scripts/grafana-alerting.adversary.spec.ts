@@ -17,6 +17,7 @@ import { read, script } from './workflow-text.ts';
 
 const root = join(__dirname, '..');
 const OWN = 'motorfix-owner';
+const OUTAGE = ['motorfix-outage-email', 'motorfix-outage-webhook'];
 
 const CURL = [
   '#!/usr/bin/env bash',
@@ -32,11 +33,11 @@ const CURL = [
   'done',
   'code=0',
   'case "$method $url" in',
-  '  "PUT "*contact-points/*) http="$CP_PUT";;',
+  '  "PUT "*contact-points/*) http="$CP_PUT"; if [ -n "$CP_REFUSE" ]; then case "$url" in */"$CP_REFUSE") http=500;; esac; fi;;',
   '  "POST "*contact-points) http="$CP_POST";;',
   '  "PUT "*policies) code="$POLICY";;',
   '  "PUT "*rule-groups/*) code="$GROUP";;',
-  '  "GET "*contact-points?*) code="$LIST"; if [ -n "$out" ]; then printf "%s" "$LIST_BODY" > "$out"; fi;;',
+  '  "GET "*contact-points?*) code="$LIST"; case "$url" in *"?name=motorfix-outage") list="$OUTAGE_LIST_BODY";; *) list="$LIST_BODY";; esac; if [ -n "$out" ]; then printf "%s" "$list" > "$out"; fi;;',
   '  "DELETE "*) code="$DELETE";;',
   'esac',
   '# The contact point answers an HTTP status: 000 is a dead connection',
@@ -111,15 +112,20 @@ describe('the alerting apply step under hostile Grafana answers', () => {
           CALLS: join(dir, 'calls'),
           CP_POST: '201',
           CP_PUT: '200',
+          CP_REFUSE: '',
           DELETE: '0',
           ERR_TEXT: `curl: (22) refused ${url} ${token}`,
           GRAFANA_SA_TOKEN: token,
           GRAFANA_URL: url,
           GROUP: '0',
           LIST: '0',
+          LIST_BODY: '[]',
+          OUTAGE_LIST_BODY: '[]',
+          OUTAGE_WEBHOOK_TOKEN: '',
           PATH: `${join(dir, 'bin')}:${process.env['PATH']}`,
           POLICY: '0',
           RUNNER_TEMP: temp(),
+          STAGING_WEB_URL: '',
           ...env,
         },
       },
@@ -139,37 +145,178 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   const sequence = (calls: string[]) => calls.map(kind);
   const deletes = (calls: string[]) =>
     sequence(calls).filter((c) => c.startsWith('DELETE'));
+  const hook = 'hook-secret-value';
+  const web = 'https://staging.example.test';
+  const written = (ext: string) =>
+    readdirSync(join(dir, 'calls'))
+      .filter((f) => f.endsWith(ext))
+      .map((f) => readFileSync(join(dir, 'calls', f), 'utf8'));
+  const declared = () =>
+    JSON.parse(
+      readFileSync(join(alerting(), 'contact-points.json'), 'utf8'),
+    ) as { uid: string; type: string; settings: Record<string, string> }[];
 
   // @traces 880-FR-014
-  it('deletes nothing when Grafana lists no contact point of that name', () => {
-    const { code, calls } = apply({ LIST_BODY: '[]' });
+  // @traces 1347-FR-002
+  it('deletes nothing when Grafana lists no contact point of either name', () => {
+    const { code, calls } = apply({ LIST_BODY: '[]', OUTAGE_LIST_BODY: '[]' });
     expect(code).toBe(0);
     expect(deletes(calls)).toEqual([]);
   });
 
   // @traces 880-FR-014
-  it('deletes nothing when the list holds only the repository uid', () => {
+  // @traces 1347-FR-002
+  it('deletes nothing when the lists hold only the repository uids', () => {
     const { code, calls } = apply({
       LIST_BODY: JSON.stringify([{ name: 'MotorFix owner', uid: OWN }]),
+      OUTAGE_LIST_BODY: JSON.stringify(
+        OUTAGE.map((uid) => ({ name: 'motorfix-outage', uid })),
+      ),
     });
     expect(code).toBe(0);
     expect(deletes(calls)).toEqual([]);
   });
 
   // @traces 880-FR-014
-  it('deletes every other uid and keeps the repository one', () => {
+  // @traces 1347-FR-002
+  it('deletes every other uid under either name and keeps every repository one', () => {
     const { code, calls } = apply({
       LIST_BODY: JSON.stringify([
         { uid: 'old-1' },
         { uid: OWN },
         { uid: 'old-2' },
       ]),
+      OUTAGE_LIST_BODY: JSON.stringify([
+        { uid: 'old-3' },
+        { uid: OUTAGE[0] },
+        { uid: OUTAGE[1] },
+        { uid: 'old-4' },
+      ]),
+    });
+    expect(code).toBe(0);
+    expect(deletes(calls)).toEqual(
+      ['old-1', 'old-2', 'old-3', 'old-4'].map(
+        (uid) => `DELETE /api/v1/provisioning/contact-points/${uid}`,
+      ),
+    );
+  });
+
+  // @traces 1347-FR-002
+  it.each<[string, string, Record<string, string>]>(
+    OUTAGE.flatMap((uid) => [
+      [uid, 'applied', { OUTAGE_WEBHOOK_TOKEN: hook, STAGING_WEB_URL: web }],
+      [uid, 'skipped', {}],
+    ]),
+  )('keeps %s listed alone while the webhook is %s', (uid, _, env) => {
+    const { code, calls } = apply({
+      OUTAGE_LIST_BODY: JSON.stringify([{ name: 'motorfix-outage', uid }]),
+      ...env,
+    });
+    expect(code).toBe(0);
+    expect(deletes(calls)).toEqual([]);
+  });
+
+  // @traces 1347-FR-002
+  it('deletes a hand-made uid that only resembles a declared one, and keeps the declared', () => {
+    const near = [
+      'motorfix-outage',
+      'motorfix-outage-email-old',
+      'motorfix-outage-webhoo',
+      'Motorfix-Outage-Email',
+    ];
+    const { code, calls } = apply({
+      OUTAGE_LIST_BODY: JSON.stringify(
+        [...near, ...OUTAGE].map((uid) => ({ uid })),
+      ),
+    });
+    expect(code).toBe(0);
+    expect(deletes(calls)).toEqual(
+      near.map((uid) => `DELETE /api/v1/provisioning/contact-points/${uid}`),
+    );
+  });
+
+  // @traces 1347-FR-002
+  it('sends no delete for a listed entry without a uid', () => {
+    const { code, calls } = apply({
+      OUTAGE_LIST_BODY: JSON.stringify([
+        { name: 'motorfix-outage' },
+        { uid: null },
+        { uid: '' },
+        { uid: 'hand' },
+      ]),
     });
     expect(code).toBe(0);
     expect(deletes(calls)).toEqual([
-      'DELETE /api/v1/provisioning/contact-points/old-1',
-      'DELETE /api/v1/provisioning/contact-points/old-2',
+      'DELETE /api/v1/provisioning/contact-points/hand',
     ]);
+  });
+
+  // @traces 1347-FR-002
+  it.each(['../policies', 'a?x=1', 'a#frag'])(
+    'deletes the hand-made uid %s as one path segment of the contact points',
+    (uid) => {
+      const { calls } = apply({ OUTAGE_LIST_BODY: JSON.stringify([{ uid }]) });
+      const [target] = deletes(calls).map(
+        (c) => new URL(c.replace(/^DELETE /, url)),
+      );
+      const prefix = '/api/v1/provisioning/contact-points/';
+      expect(target?.search).toBe('');
+      expect(target?.hash).toBe('');
+      expect(target?.pathname.startsWith(prefix)).toBe(true);
+      expect(
+        decodeURIComponent(String(target?.pathname.slice(prefix.length))),
+      ).toBe(uid);
+    },
+  );
+
+  // @traces 1347-FR-002
+  it('fails the step on an empty list answer for one name and still handles the other', () => {
+    const { code, calls, out } = apply({
+      LIST_BODY: JSON.stringify([{ uid: 'old-1' }]),
+      OUTAGE_LIST_BODY: '',
+    });
+    expect(code).toBe(1);
+    expect(out).toMatch(/::error::.*motorfix-outage is not a list/);
+    expect(deletes(calls)).toEqual([
+      'DELETE /api/v1/provisioning/contact-points/old-1',
+    ]);
+  });
+
+  // @traces 1347-FR-002
+  it('fails the step, still applies the policy and removes nothing, when the webhook has no url to fill in', () => {
+    const file = join(alerting(), 'contact-points.json');
+    const points = declared();
+    const webhook = points.find((p) => p.uid === OUTAGE[1]);
+    if (webhook) delete webhook.settings['url'];
+    writeFileSync(file, JSON.stringify(points));
+    const { code, calls, out } = apply({
+      LIST_BODY: JSON.stringify([{ uid: 'old-1' }]),
+      OUTAGE_WEBHOOK_TOKEN: hook,
+      STAGING_WEB_URL: web,
+    });
+    expect(code).toBe(1);
+    expect(out).toMatch(
+      /::error::.*motorfix-outage-webhook has no settings\.url/,
+    );
+    expect(sequence(calls)).toContain('PUT /api/v1/provisioning/policies');
+    expect(sequence(calls).filter((c) => c.includes('?name='))).toEqual([]);
+    expect(deletes(calls)).toEqual([]);
+    expect(written('.body').filter((b) => b.includes(hook))).toEqual([]);
+  });
+
+  // @traces 1347-FR-002
+  it('lists and deletes nothing under either name when one outage entry is refused', () => {
+    const { code, calls, out } = apply({
+      CP_REFUSE: OUTAGE[0] as string,
+      LIST_BODY: JSON.stringify([{ uid: 'old-1' }]),
+      OUTAGE_LIST_BODY: JSON.stringify([{ uid: 'old-2' }]),
+    });
+    expect(code).toBe(1);
+    expect(sequence(calls).filter((c) => c.includes('?name='))).toEqual([]);
+    expect(deletes(calls)).toEqual([]);
+    expect(out).toMatch(
+      /::error::.*contact-points\.json.*motorfix-outage-email.*HTTP 500/,
+    );
   });
 
   // @traces 880-FR-014
@@ -230,11 +377,14 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   });
 
   // @traces 880-FR-014
-  it('creates the contact point with a POST when the PUT answers 404, then goes on to the policy', () => {
+  // @traces 1347-FR-002
+  it('creates each contact point with a POST when its PUT answers 404, then goes on to the policy', () => {
     const { code, calls, out } = apply({ CP_PUT: '404', LIST_BODY: '[]' });
     expect(code).toBe(0);
-    expect(sequence(calls).slice(1, 4)).toEqual([
+    expect(sequence(calls).slice(1, 6)).toEqual([
       `PUT /api/v1/provisioning/contact-points/${OWN}`,
+      'POST /api/v1/provisioning/contact-points',
+      `PUT /api/v1/provisioning/contact-points/${OUTAGE[0]}`,
       'POST /api/v1/provisioning/contact-points',
       'PUT /api/v1/provisioning/policies',
     ]);
@@ -312,11 +462,13 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   });
 
   // @traces 880-FR-014
-  it('asks for the name percent-encoded', () => {
+  // @traces 1347-FR-002
+  it('asks once for each declared name, percent-encoded', () => {
     const { calls } = apply({ LIST_BODY: '[]' });
-    expect(sequence(calls)).toContain(
+    expect(sequence(calls).filter((c) => c.includes('?name='))).toEqual([
       'GET /api/v1/provisioning/contact-points?name=MotorFix%20owner',
-    );
+      'GET /api/v1/provisioning/contact-points?name=motorfix-outage',
+    ]);
   });
 
   // @traces 880-FR-014
@@ -390,6 +542,40 @@ describe('the alerting apply step under hostile Grafana answers', () => {
     }
   });
 
+  // @traces 1347-FR-002
+  it('carries the webhook token in the webhook body alone and prints neither token nor address', () => {
+    const { code, out } = apply({
+      ERR_TEXT: `curl: (22) refused ${url} ${web} ${token} ${hook}`,
+      LIST_BODY: JSON.stringify([{ uid: 'old' }]),
+      OUTAGE_WEBHOOK_TOKEN: hook,
+      POLICY: '22',
+      STAGING_WEB_URL: web,
+    });
+    expect(code).toBe(1);
+    expect(written('.args').filter((a) => a.includes(hook))).toEqual([]);
+    expect(written('.body').filter((b) => b.includes(hook))).toHaveLength(1);
+    for (const value of [
+      'grafana.example.test',
+      'staging.example.test',
+      token,
+      hook,
+    ])
+      expect(out).not.toContain(value);
+  });
+
+  // @traces 1347-FR-002
+  it.each<[string, Record<string, string>]>([
+    ['the secret', { STAGING_WEB_URL: web }],
+    ['the variable', { OUTAGE_WEBHOOK_TOKEN: hook }],
+  ])('sends the webhook token in no body when %s is missing', (_, env) => {
+    const { code } = apply({ LIST_BODY: '[]', ...env });
+    expect(code).toBe(0);
+    expect(written('.body').filter((b) => b.includes(hook))).toEqual([]);
+    expect(
+      written('.args').filter((a) => a.includes(OUTAGE[1] as string)),
+    ).toEqual([]);
+  });
+
   // @traces 880-FR-014
   it('gives every call a 60 second limit and every write the provenance header', () => {
     const { calls } = apply({ LIST_BODY: JSON.stringify([{ uid: 'old' }]) });
@@ -403,21 +589,16 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   });
 
   // @traces 880-FR-014
-  it('sends the contact point and the policy files verbatim', () => {
+  // @traces 1347-FR-002
+  it('sends the e-mail contact points and the policy verbatim, and no webhook without its values', () => {
     apply({ LIST_BODY: '[]' });
-    const bodies = readdirSync(join(dir, 'calls')).filter((f) =>
-      f.endsWith('.body'),
-    );
-    const sent = bodies.map((f) =>
-      JSON.parse(readFileSync(join(dir, 'calls', f), 'utf8')),
-    );
-    const point = JSON.parse(
-      readFileSync(join(alerting(), 'contact-points.json'), 'utf8'),
-    )[0];
+    const sent = written('.body').map((b) => JSON.parse(b));
     const policy = JSON.parse(
       readFileSync(join(alerting(), 'policies.json'), 'utf8'),
     );
-    expect(sent).toContainEqual(point);
+    expect(sent.filter((b) => 'type' in b)).toEqual(
+      declared().filter((p) => p.type === 'email'),
+    );
     expect(sent).toContainEqual(policy);
   });
 

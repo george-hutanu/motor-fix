@@ -59,6 +59,8 @@ export * from './request-status';
 export * from './saved-garages.dto';
 export * from './search-place';
 export * from './staff-invite.dto';
+export * from './support/support';
+export * from './support/support.dto';
 export * from './suspended-garages';
 export * from './system-log/system-log';
 export * from './system-log/system-log.dto';

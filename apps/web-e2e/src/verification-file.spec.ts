@@ -33,6 +33,8 @@ const drawer = (page: Page) => page.locator('mf-verification-file');
 const manual = (page: Page, kind: string) =>
   drawer(page).locator(`li.manual[data-kind="${kind}"]`);
 const MANUAL = ['address', 'photos', 'representative', 'documents'];
+const register = (page: Page, kind: string) =>
+  drawer(page).locator(`[data-section="register"] li[data-kind="${kind}"]`);
 
 // Each document opens in a new tab at its signed address.
 async function openDocuments(page: Page) {
@@ -89,7 +91,7 @@ const PDF = Buffer.from(
 // No endpoint sends a file with its documents yet, so the test leaves what a
 // sending would: a garage, its submitted file with its 8 checks, an ONRC
 // certificate and a RAR authorisation, their pages in the bucket.
-// @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-011
+// @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-011 203-FR-008
 test.describe('the verification file @seeded', () => {
   test.skip(
     !process.env['DATABASE_URL'] || !process.env['STORAGE_BUCKET'],
@@ -122,8 +124,8 @@ test.describe('the verification file @seeded', () => {
     garageId = randomUUID();
     name = `Dosar Test ${garageId.slice(0, 8)}`;
     await db.query(
-      `INSERT INTO garage (id, name, slug, city_key, city_name, business_kind, address, phone)
-       VALUES ($1, $2, $3, 'bucuresti', 'București', 'company', 'Str. Fabricii 12, București', '+40712345678')`,
+      `INSERT INTO garage (id, name, slug, city_key, city_name, business_kind, address, phone, cui)
+       VALUES ($1, $2, $3, 'bucuresti', 'București', 'company', 'Str. Fabricii 12, București', '+40712345678', '1234567897')`,
       [garageId, name, `dosar-${garageId}`],
     );
     const { rows } = await db.query<{ id: string }>(
@@ -239,4 +241,59 @@ test.describe('the verification file @seeded', () => {
       expect(await sideways(page)).toBeLessThanOrEqual(0);
     });
   }
+
+  test('records the company and its CAEN code by hand', async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto(`/app/admin/garages/${fileId}`);
+    await expect(drawer(page).locator('h3')).toHaveText(name);
+
+    // The company: OK with the name the register shows.
+    const company = register(page, 'company');
+    await company.getByRole('button', { name: 'Înregistrează' }).click();
+    const companyForm = company.locator('mf-verification-register-form');
+    await companyForm.getByRole('button', { exact: true, name: 'OK' }).click();
+    await companyForm
+      .getByLabel('Denumirea firmei')
+      .fill('Auto Vest Motors SRL');
+    await companyForm.getByRole('button', { name: 'Salvează' }).click();
+    await expect(companyForm).toHaveCount(0);
+    await expect(company).toContainText('CUI valid · Auto Vest Motors SRL');
+    await expect(company.locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'green',
+    );
+
+    // Its CAEN code: OK with the three ticks.
+    const caen = register(page, 'caen');
+    await caen.getByRole('button', { name: 'Înregistrează' }).click();
+    const caenForm = caen.locator('mf-verification-register-form');
+    await caenForm.getByRole('button', { exact: true, name: 'OK' }).click();
+    for (const tick of [
+      '4520 pe certificat',
+      '4520 în ONRC',
+      'la punctul de lucru',
+    ])
+      await caenForm.getByLabel(tick).check();
+    await caenForm.getByRole('button', { name: 'Salvează' }).click();
+    await expect(caenForm).toHaveCount(0);
+    await expect(caen).toContainText(
+      'Întreținerea și repararea autovehiculelor, la punctul de lucru',
+    );
+    await expect(caen).toContainText('certificat · ONRC · adresă');
+    await expect(caen.locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'green',
+    );
+
+    // Both hold after a reload, and the queue line reads the company check.
+    await page.reload();
+    await expect(register(page, 'company').locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'green',
+    );
+    await page.goto('/app/admin/garages');
+    await expect(
+      page.locator('mf-admin-queue li.row', { hasText: name }),
+    ).toContainText('CUI verificat', { timeout: 15_000 });
+  });
 });

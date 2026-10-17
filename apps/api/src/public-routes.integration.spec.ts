@@ -36,6 +36,7 @@ const PUBLIC = [
   'GET /api/v1/public-holidays',
   'GET /api/v1/search/garages',
   'GET /api/v1/search/garages/pins',
+  'GET /api/v1/support/contact',
   'GET /health/live',
   'GET /health/ready',
   'PATCH /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000',
@@ -66,6 +67,7 @@ const PUBLIC = [
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos',
   'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/upload-url',
   'POST /api/v1/notification-preferences/unsubscribe',
+  'POST /api/v1/support/messages',
 ];
 
 const SOME_ID = '00000000-0000-4000-8000-000000000000';

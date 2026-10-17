@@ -36,6 +36,7 @@ describe('the public footer', () => {
     expect(links(host)).toEqual([
       ['Termeni de utilizare', '/ro/terms'],
       ['Nota de informare', '/ro/privacy'],
+      ['Contact', '/ro/contact'],
     ]);
     expect(host.querySelector('button')?.textContent?.trim()).toBe(
       'Setări cookie',
@@ -48,10 +49,20 @@ describe('the public footer', () => {
     expect(links(host)).toEqual([
       ['Terms of use', '/en/terms'],
       ['Privacy notice', '/en/privacy'],
+      ['Contact', '/en/contact'],
     ]);
     expect(host.querySelector('button')?.textContent?.trim()).toBe(
       'Cookie settings',
     );
+  });
+
+  // @traces 280-FR-002
+  it('ends its row with the link to the contact page', async () => {
+    const host = await render();
+
+    const last = host.querySelector('nav')?.lastElementChild;
+    expect(last?.tagName).toBe('A');
+    expect(last?.getAttribute('href')).toBe('/ro/contact');
   });
 
   it('spaces the items apart with no "·" glyph, so a narrow phone never starts or ends a line with one', async () => {
@@ -59,7 +70,7 @@ describe('the public footer', () => {
 
     expect(host.textContent).not.toContain('·');
     expect(host.querySelectorAll('[aria-hidden="true"]')).toHaveLength(0);
-    expect(host.querySelectorAll('nav > a, nav > button')).toHaveLength(3);
+    expect(host.querySelectorAll('nav > a, nav > button')).toHaveLength(4);
   });
 
   it('opens the cookie settings dialog', async () => {
