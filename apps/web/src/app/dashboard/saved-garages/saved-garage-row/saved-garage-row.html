@@ -1,0 +1,21 @@
+<div class="profile" [attr.data-unavailable]="item().available ? null : ''">
+  <mf-rating-dial size="small" [value]="item().rating" />
+  <span class="text">
+    <a class="name" data-profile [routerLink]="['/', language(), 'garages', item().slug]">{{ item().name }}</a>
+    <span class="line" data-line>
+      @if (item().available) {
+        <mf-lamp [state]="lamp()" [label]="line()" />
+      } @else {
+        {{ line() }}
+      }
+    </span>
+  </span>
+  <svg class="chevron" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+    <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+</div>
+<button class="remove" type="button" data-remove [attr.aria-label]="'driver.saved.remove' | t" (click)="removed.emit(item().garageId)">
+  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+    <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  </svg>
+</button>

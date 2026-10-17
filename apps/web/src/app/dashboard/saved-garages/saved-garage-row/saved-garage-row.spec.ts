@@ -1,0 +1,256 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import type { SavedGarageItemDto } from '@motor-fix/data-access';
+import { I18n } from '@motor-fix/i18n';
+
+import { SavedGarageRow } from './saved-garage-row';
+import { savedItem } from '../saved-garages.testing';
+
+async function render(
+  item: SavedGarageItemDto,
+  {
+    hasCar = true,
+    language = 'ro',
+  }: { hasCar?: boolean; language?: 'ro' | 'en' } = {},
+) {
+  TestBed.configureTestingModule({ providers: [provideRouter([])] });
+  const i18n = TestBed.inject(I18n);
+  await i18n.enter('driver');
+  if (language === 'en') await i18n.use('en');
+  const fixture = TestBed.createComponent(SavedGarageRow);
+  fixture.componentRef.setInput('item', item);
+  fixture.componentRef.setInput('hasCar', hasCar);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  fixture.detectChanges();
+  const element = fixture.nativeElement as HTMLElement;
+  return { element, fixture };
+}
+
+const text = (element: Element | null | undefined) =>
+  (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+const line = (element: HTMLElement) =>
+  text(element.querySelector('[data-line]'));
+const lamp = (element: HTMLElement) =>
+  element.querySelector<HTMLElement>('mf-lamp');
+
+afterEach(() => TestBed.resetTestingModule());
+
+const BMW = { id: 'brand-bmw', name: 'BMW' };
+const MINI = { id: 'brand-mini', name: 'Mini' };
+const DACIA = { id: 'brand-dacia', name: 'Dacia' };
+
+// @traces 291-FR-007
+describe('a saved garage’s row', () => {
+  it('opens the garage’s profile in the reader’s language', async () => {
+    const { element } = await render(savedItem());
+
+    const link = element.querySelector<HTMLAnchorElement>('a[data-profile]');
+    expect(link?.getAttribute('href')).toBe('/ro/garages/auto-service-popescu');
+    expect(text(link)).toContain('Auto Service Popescu');
+  });
+
+  it('opens the English profile for an English reader', async () => {
+    const { element } = await render(savedItem(), { language: 'en' });
+
+    expect(element.querySelector('a[data-profile]')?.getAttribute('href')).toBe(
+      '/en/garages/auto-service-popescu',
+    );
+  });
+
+  it('shows the shared rating dial, small, with the rating', async () => {
+    const { element } = await render(savedItem({ rating: 4.6 }));
+
+    const dial = element.querySelector<HTMLElement>('mf-rating-dial');
+    expect(dial?.dataset['size']).toBe('small');
+    expect(text(dial)).toContain('4,6');
+  });
+
+  it('shows the dial’s unrated state for a garage with no rating', async () => {
+    const { element } = await render(
+      savedItem({ rating: null, reviewCount: 0 }),
+    );
+
+    expect(text(element.querySelector('mf-rating-dial'))).not.toMatch(/\d/);
+  });
+
+  it('has a remove button named for what it does, apart from the link', async () => {
+    const { element, fixture } = await render(savedItem());
+    const removed: string[] = [];
+    fixture.componentInstance.removed.subscribe((id: string) =>
+      removed.push(id),
+    );
+
+    const button = element.querySelector<HTMLButtonElement>(
+      'button[data-remove]',
+    );
+    expect(button?.getAttribute('aria-label')).toBe('Scoate din salvate');
+    expect(button?.closest('a')).toBeNull();
+    button?.click();
+
+    expect(removed).toEqual(['garage-1']);
+  });
+
+  it('names the remove button in English', async () => {
+    const { element } = await render(savedItem(), { language: 'en' });
+
+    expect(
+      element.querySelector('button[data-remove]')?.getAttribute('aria-label'),
+    ).toBe('Remove from saved');
+  });
+});
+
+// @traces 291-FR-008
+describe('the row’s lamp line', () => {
+  it.each([
+    [[BMW], 'Lucrează pe BMW'],
+    [[BMW, MINI], 'Lucrează pe BMW și Mini'],
+    [[BMW, MINI, DACIA], 'Lucrează pe BMW, Mini și Dacia'],
+  ])(
+    'lights green and names the brands it works on: %j',
+    async (brands, said) => {
+      const { element } = await render(savedItem({ brands }));
+
+      expect(lamp(element)?.dataset['state']).toBe('green');
+      expect(line(element)).toBe(said);
+    },
+  );
+
+  it.each([
+    [[BMW], 'Works on BMW'],
+    [[BMW, MINI], 'Works on BMW and Mini'],
+    [[BMW, MINI, DACIA], 'Works on BMW, Mini and Dacia'],
+  ])('says it in English: %j', async (brands, said) => {
+    const { element } = await render(savedItem({ brands }), { language: 'en' });
+
+    expect(line(element)).toBe(said);
+  });
+
+  it('lights red when the garage works on none of the driver’s cars', async () => {
+    const { element } = await render(savedItem({ brands: [] }));
+
+    expect(lamp(element)?.dataset['state']).toBe('red');
+    expect(line(element)).toBe('Nu lucrează pe mașinile tale');
+  });
+
+  it('says the red line in English', async () => {
+    const { element } = await render(savedItem({ brands: [] }), {
+      language: 'en',
+    });
+
+    expect(line(element)).toBe('Does not work on your cars');
+  });
+
+  it('is grey and asks for a car when the driver has none', async () => {
+    const { element } = await render(savedItem({ brands: [] }), {
+      hasCar: false,
+    });
+
+    expect(lamp(element)?.dataset['state']).toBe('grey');
+    expect(line(element)).toBe(
+      'Adaugă o mașină ca să vezi dacă lucrează pe ea',
+    );
+  });
+
+  it('asks for a car in English', async () => {
+    const { element } = await render(savedItem({ brands: [] }), {
+      hasCar: false,
+      language: 'en',
+    });
+
+    expect(line(element)).toBe('Add a car to see whether it works on it');
+  });
+
+  it('hides the lamp’s dot from assistive technology', async () => {
+    const { element } = await render(savedItem());
+
+    expect(
+      lamp(element)?.querySelector('.mf-lamp-dot')?.getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
+});
+
+// @traces 291-FR-008
+// @traces 291-FR-010
+describe('the row’s distance', () => {
+  it('follows the brand line with the distance to one decimal', async () => {
+    const { element } = await render(savedItem({ distanceKm: 2.4 }));
+
+    expect(line(element)).toBe('Lucrează pe BMW · 2,4 km');
+  });
+
+  it('writes the distance the English way', async () => {
+    const { element } = await render(savedItem({ distanceKm: 2.4 }), {
+      language: 'en',
+    });
+
+    expect(line(element)).toBe('Works on BMW · 2.4 km');
+  });
+
+  it('follows the red line with the distance too', async () => {
+    const { element } = await render(
+      savedItem({ brands: [], distanceKm: 12.5 }),
+    );
+
+    expect(line(element)).toBe('Nu lucrează pe mașinile tale · 12,5 km');
+  });
+
+  it.each([
+    [true, 'ro', 'Lucrează pe BMW · vine la tine'],
+    [false, 'ro', 'Lucrează pe BMW · în afara zonei'],
+    [true, 'en', 'Works on BMW · comes to you'],
+    [false, 'en', 'Works on BMW · outside its area'],
+  ] as const)(
+    'gives a mobile mechanic its area verdict, never a distance (%s, %s)',
+    async (comesToYou, language, said) => {
+      const { element } = await render(
+        savedItem({ businessKind: 'mobile', comesToYou, distanceKm: null }),
+        { language },
+      );
+
+      expect(line(element)).toBe(said);
+    },
+  );
+
+  it('shows nothing after the line, and no separator, without a place', async () => {
+    const { element } = await render(savedItem());
+
+    expect(line(element)).toBe('Lucrează pe BMW');
+  });
+
+  it('shows no distance for a fixed garage without a position', async () => {
+    const { element } = await render(savedItem({ distanceKm: null }));
+
+    expect(line(element)).toBe('Lucrează pe BMW');
+  });
+});
+
+// @traces 291-FR-008
+describe('an unavailable saved garage', () => {
+  const suspended = () =>
+    savedItem({ available: false, distanceKm: 2.4, rating: 4.2 });
+
+  it('is greyed and says Indisponibil in place of the lamp line', async () => {
+    const { element } = await render(suspended());
+
+    expect(element.querySelector('[data-unavailable]')).not.toBeNull();
+    expect(lamp(element)).toBeNull();
+    expect(line(element)).toBe('Indisponibil');
+  });
+
+  it('says Unavailable in English', async () => {
+    const { element } = await render(suspended(), { language: 'en' });
+
+    expect(line(element)).toBe('Unavailable');
+  });
+
+  it('still opens the profile, keeps its rating and its remove button', async () => {
+    const { element } = await render(suspended());
+
+    expect(element.querySelector('a[data-profile]')?.getAttribute('href')).toBe(
+      '/ro/garages/auto-service-popescu',
+    );
+    expect(text(element.querySelector('mf-rating-dial'))).toContain('4,2');
+    expect(element.querySelector('button[data-remove]')).not.toBeNull();
+  });
+});

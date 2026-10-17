@@ -1,0 +1,82 @@
+:host {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.profile {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-width: 0;
+  position: relative;
+  min-height: var(--mf-tap);
+  padding-block: var(--mf-space-2);
+  color: var(--mf-text);
+}
+mf-rating-dial {
+  width: 56px;
+}
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+.name {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+/* The name's link covers the whole row, so the row opens the profile while
+   the link's name stays the garage's own. */
+.name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--mf-radius-chip);
+}
+.name:focus-visible {
+  outline: none;
+}
+.line {
+  font-size: var(--mf-size-body);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.line mf-lamp {
+  font-weight: 400;
+  color: var(--mf-text-secondary);
+}
+.chevron {
+  flex: none;
+  color: var(--mf-amber-ink);
+}
+.remove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+  padding: 0;
+  color: var(--mf-text-secondary);
+  background: none;
+  border: 0;
+  border-radius: var(--mf-radius-chip);
+  cursor: pointer;
+}
+.remove:hover {
+  color: var(--mf-text);
+}
+.name:focus-visible::after,
+.remove:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+[data-unavailable] {
+  color: var(--mf-text-secondary);
+}

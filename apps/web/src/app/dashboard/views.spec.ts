@@ -4,9 +4,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import {
+  CarsService,
   GarageRequestsService,
   type MeDto,
   NotificationsService,
+  PlacesService,
+  SavedGaragesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { NEVER, Subject } from 'rxjs';
@@ -24,8 +27,13 @@ import { GarageRequestsView } from './garage-requests/garage-requests-view/garag
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
 import { RequestsView } from './requests-view/requests-view';
+import {
+  fakeSavedGarages,
+  pageOf,
+} from './saved-garages/saved-garages.testing';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
+import { SavedGarages } from '../public/saved-garages/saved-garages';
 
 const OWNER = [
   'garage.requests',
@@ -69,11 +77,9 @@ describe('the dashboard view lists', () => {
       icon: 'star',
       text: 'driver.empty.reviews',
     });
-    expect(byPath('saved')?.emptyState).toEqual({
-      action: 'driver.empty.findOthers',
-      icon: 'bookmark',
-      text: 'driver.empty.saved',
-    });
+    // The saved garages' view draws its own empty state (291-FR-012).
+    expect(byPath('saved')?.emptyState).toBeUndefined();
+    expect(byPath('saved')?.load).toEqual(expect.any(Function));
     expect(byPath('saved')?.capability).toBe('driver.saved_garages');
   });
 
@@ -113,12 +119,8 @@ describe('the dashboard view lists', () => {
       },
       {
         capability: 'driver.saved_garages',
-        emptyState: {
-          action: 'driver.empty.findOthers',
-          icon: 'bookmark',
-          text: 'driver.empty.saved',
-        },
         label: 'shell.frame.nav.driver.savedGarages',
+        load: expect.any(Function),
         path: 'saved',
         tab: 'shell.frame.tab.saved',
         title: 'shell.frame.title.driver.saved',
@@ -608,6 +610,25 @@ async function open(
           loading: signal(true),
           period: signal('default'),
         },
+      },
+      {
+        provide: SavedGaragesService,
+        useValue: { savedGaragesControllerList: async () => pageOf([]) },
+      },
+      { provide: SavedGarages, useValue: fakeSavedGarages() },
+      {
+        provide: CarsService,
+        useValue: {
+          carsControllerList: async () => ({
+            items: [],
+            nextCursor: null,
+            total: 0,
+          }),
+        },
+      },
+      {
+        provide: PlacesService,
+        useValue: { placesControllerSearch: async () => ({ items: [] }) },
       },
     ],
   });

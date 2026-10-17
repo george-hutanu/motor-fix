@@ -10,7 +10,6 @@ import { Session } from '../session';
 import { DASHBOARDS } from '../views';
 
 const reviews = DASHBOARDS.driver.views.find((v) => v.path === 'reviews')!;
-const saved = DASHBOARDS.driver.views.find((v) => v.path === 'saved')!;
 const settings = DASHBOARDS.driver.views.find((v) => v.path === 'settings')!;
 
 const text = (e: Element | null) =>
@@ -55,29 +54,16 @@ describe('a view body under odd routes', () => {
     expect(text(element)).toBe('Nimic aici încă.');
   });
 
-  it('swaps from the reviews state to the saved state when the route changes in place', async () => {
+  it('swaps from the reviews state to the generic text when the route changes in place', async () => {
     const { element, route, settle } = await mount({
       area: 'driver',
       view: reviews,
     });
-    route.next({ area: 'driver', view: saved });
+    route.next({ area: 'driver', view: settings });
     await settle();
 
-    expect(element.querySelectorAll('mf-empty-state')).toHaveLength(1);
-    expect(text(element)).toContain('Nu ai salvat încă niciun service.');
-    expect(text(element)).not.toContain('Nicio recenzie');
-    expect(element.querySelectorAll('a')).toHaveLength(1);
-  });
-
-  it('drops the Caută altele action when the route moves from saved to reviews', async () => {
-    const { element, route, settle } = await mount({
-      area: 'driver',
-      view: saved,
-    });
-    route.next({ area: 'driver', view: reviews });
-    await settle();
-
-    expect(element.querySelector('a, button')).toBeNull();
+    expect(element.querySelector('mf-empty-state')).toBeNull();
+    expect(text(element)).toBe('Nimic aici încă.');
   });
 
   it('shows the English empty text when the reader switched language after it rendered', async () => {

@@ -154,7 +154,8 @@ export class SavedGarages {
     }
   }
 
-  private async remove(garageId: string) {
+  // Also the dashboard list's remove button: the same bar and undo.
+  async remove(garageId: string) {
     this.inFlight.add(garageId);
     this.touched?.add(garageId);
     this.ids.update((ids) => without(ids, garageId));

@@ -123,10 +123,8 @@
       </mf-panel>
     }
     @case ('saved') {
-      <mf-panel [class.wide]="wide.has(key)" data-panel="saved" [heading]="'shell.frame.title.driver.saved' | t">
-        <mf-empty-state icon="bookmark" text="driver.empty.saved">
-          <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findOthers' | t }}</a>
-        </mf-empty-state>
+      <mf-panel [class.wide]="wide.has(key)" data-panel="saved" [heading]="'shell.frame.title.driver.saved' | t" [link]="savedLink">
+        <mf-saved-garages-panel [limit]="3" [cars]="carList()" />
       </mf-panel>
     }
   }

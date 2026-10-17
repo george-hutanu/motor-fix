@@ -27,6 +27,7 @@ import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
 import { Live } from '../live';
 import { OilLine } from '../oil-line/oil-line';
+import { SavedGaragesPanel } from '../saved-garages/saved-garages-panel/saved-garages-panel';
 import { Session } from '../session';
 import { TiePipe } from '../tie/tie';
 import { allowedViews } from '../views';
@@ -55,6 +56,7 @@ const TICK_MS = 60_000;
     OilLine,
     Panel,
     RouterLink,
+    SavedGaragesPanel,
     TiePipe,
     TranslatePipe,
   ],
@@ -104,6 +106,12 @@ export class DriverHome {
       (view) => view.path === 'saved',
     ),
   );
+  protected readonly savedLink = ['/app', 'driver', 'saved'];
+  // The cars as the saved panel reads them: undefined until known.
+  protected readonly carList = computed(() => {
+    const cars = this.cars();
+    return Array.isArray(cars) ? cars : undefined;
+  });
   protected readonly panels = computed(() =>
     panelsToDraw(null).filter((key) => key !== 'saved' || this.saved()),
   );
