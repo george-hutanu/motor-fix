@@ -291,8 +291,11 @@ test.describe('the map beside the results @seeded', () => {
       (url) => url.pathname === '/api/v1/search/garages/pins',
       async (route) => {
         const response = await route.fetch();
+        // An error answer passes through as it came, JSON or not, so the
+        // test fails on it instead of leaving the request hanging.
+        if (!response.ok()) return route.fulfill({ response });
         const json = (await response.json()) as { total: number };
-        if (response.ok()) total = json.total;
+        total = json.total;
         await route.fulfill({ json, response });
       },
     );
