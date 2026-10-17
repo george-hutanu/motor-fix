@@ -122,7 +122,7 @@ jobs:
             list="${RUNNER_TEMP:-.}/grafana-contact-points.json"
             while IFS=$'\t' read -r name keep; do
               query=$(jq -rn --arg n "$name" '$n | @uri')
-              if ! call "$api/v1/provisioning/contact-points?name=$query" -o "$list"; then
+              if ! call "$api/v1/provisioning/contact-points?name=$query" -H 'X-Disable-Provenance: true' -o "$list"; then
                 echo "::error::$cp_file: the contact points named $name could not be listed."
                 failed=1
                 continue
