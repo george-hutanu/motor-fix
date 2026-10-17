@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 import { Brevo, BrevoError } from './brevo/brevo';
 import { notificationType } from './catalogue';
-import { blockedReason, type EmailConfig } from './email-config';
+import { blockedReason, type EmailConfig, emailEnvelope } from './email-config';
 import {
   NOTIFICATIONS_CONFIG,
   NOTIFICATIONS_PRISMA,
@@ -313,12 +313,10 @@ export class NotificationsProcessor {
     let messageId: string;
     try {
       messageId = await this.brevo.send({
-        from: this.config.from,
-        headers: oneClickHeaders(rows[0]),
+        ...emailEnvelope(this.config, to, params(rows[0])),
         html: mail.html,
         subject: mail.subject,
         text: mail.text,
-        to,
       });
     } catch (error) {
       await this.refused(rows, error, attemptsMade);
@@ -605,14 +603,3 @@ const SENT_WRITES = 3;
 
 const params = (row: Notification) =>
   (row.params ?? {}) as Record<string, unknown>;
-
-// Mail apps offer their own unsubscribe button for a row that carries a
-// one-click link (RFC 8058); only news does.
-function oneClickHeaders(row: Notification) {
-  const link = params(row)['oneClick'];
-  if (typeof link !== 'string') return undefined;
-  return {
-    'List-Unsubscribe': `<${link}>`,
-    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-  };
-}

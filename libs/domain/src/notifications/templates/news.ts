@@ -22,7 +22,10 @@ export const NEWS: Template = {
       subject: '{title}',
     },
   },
+  // oneClick is no text: the queue turns it into the one-click headers.
   example: {
+    oneClick:
+      'https://motorfix.example/api/v1/notification-preferences/unsubscribe?token=token',
     text: 'Primele service-uri din Cluj sunt pe MotorFix.',
     title: 'Noutăți din octombrie',
     unsubscribe: 'https://motorfix.example/ro/unsubscribe/token',

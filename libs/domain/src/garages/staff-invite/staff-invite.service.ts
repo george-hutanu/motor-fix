@@ -26,6 +26,7 @@ import { Brevo } from '../../notifications/brevo/brevo';
 import {
   blockedReason,
   type EmailConfig,
+  emailEnvelope,
 } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { render } from '../../notifications/templates';
@@ -410,11 +411,13 @@ export class StaffInviteService {
         link,
       });
       await this.brevo.send({
-        from: this.config.from,
+        ...emailEnvelope(this.config, {
+          email: invite.email,
+          name: invite.name,
+        }),
         html: mail.html,
         subject: mail.subject,
         text: mail.text,
-        to: { email: invite.email, name: invite.name },
       });
       return { emailSent: true, id: invite.id };
     } catch (error) {

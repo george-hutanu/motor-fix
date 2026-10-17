@@ -132,6 +132,18 @@ describe('sending one e-mail', () => {
     expect(sent.sentAt?.toISOString()).toBe('2026-10-05T11:00:20.000Z');
   });
 
+  // @traces 279-FR-004
+  it('answers to the support address of the sending domain', async () => {
+    build({ EMAIL_DOMAIN: 'example.test' });
+    const andrei = await account('andrei', ['driver'], { language: 'en' });
+    const row = await quote(andrei, 'evt-reply');
+    await sendJob(row.id);
+    expect(mock.emails()[0].body).toMatchObject({
+      replyTo: { email: 'support@example.test', name: 'MotorFix' },
+      sender: { email: 'noreply@example.test', name: 'MotorFix' },
+    });
+  });
+
   it('writes the test message in the recipient language', async () => {
     const en = await account('en', ['admin'], { language: 'en' });
     const ro = await account('ro', ['driver'], { language: 'ro' });

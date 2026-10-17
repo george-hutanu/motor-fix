@@ -33,6 +33,7 @@ features:
   - 032-notifications-bell
   - 222-booking-from-quote
   - 049-garage-suspension
+  - 279-email-inbox
 ---
 
 # Capability: Notifications
@@ -701,6 +702,50 @@ _From 049-garage-suspension._
 
 _From 049-garage-suspension._
 
+### 279-FR-001 — The e-mail configuration MUST read the sending domain from `EMAIL_DOMAIN` (trimmed, lower-cased, a hostname of at least two labels). With sending on, a value that is not a hostname MUST be refused at start; with sending off it is ignored with a warning.
+
+_From 279-email-inbox._
+
+### 279-FR-002 — With the domain set and `EMAIL_FROM` unset, the sender MUST be "MotorFix" `no-reply@<domain>`. With both set and sending on, an `EMAIL_FROM` address whose host is not exactly the domain (compared lower-cased) MUST be refused at start, naming both settings. `SUPPORT_EMAIL` is not held to the domain. With no domain, `EMAIL_FROM` behaves as today.
+
+_From 279-email-inbox._
+
+### 279-FR-004 — Every e-mail the notifications queue sends MUST carry the support address as its reply-to when one is configured, and none when none is. Sender, reply-to and the one-click headers MUST be set by one function that the queue and the inbox test both use. The support message to the support mailbox MUST keep the sender of the message as its reply-to.
+
+_From 279-email-inbox._
+
+### 279-FR-005 — The DNS expectations MUST follow from the domain: SPF, exactly one `v=spf1` TXT record on the domain that includes `spf.brevo.com`; DKIM, Brevo's two CNAME records `brevo1._domainkey` and `brevo2._domainkey` pointing under `dkim.brevo.com`, or a TXT record at `mail._domainkey` holding a public key (`p=`); nothing at any of these names reads `missing`, and anything else (one CNAME of the two, a target outside `dkim.brevo.com`, a TXT without `p=`) reads `wrong`, naming the record; DMARC, one TXT record at `_dmarc.<domain>` starting `v=DMARC1` with a policy `none`, `quarantine` or `reject` and a `rua` report address.
+
+_From 279-email-inbox._
+
+### 279-FR-006 — A DNS check command MUST look up the records of FR-005 for the configured domain through a resolver it is given, report each of SPF, DKIM and DMARC as `ok`, `missing`, `wrong` (with the reason) or `unreachable`, print the expected value for each that is not ok, note a `p=none` DMARC policy with the move to `quarantine` after 4 clean weeks, and exit 0 only when all three are ok. With no domain configured it MUST exit 1 saying so.
+
+_From 279-email-inbox._
+
+### 279-FR-007 — An inbox test command MUST build its matrix from every e-mail template in the template registry, in Romanian and in English, for every address in `INBOX_TEST_TO` (comma-separated, trimmed, lower-cased, duplicates once), each row rendered from the template's example values with the web app's address as the link base.
+
+_From 279-email-inbox._
+
+### 279-FR-008 — The matrix MUST include the support acknowledgement, the admin outage alert (down and back), the sign-up check e-mail, the password reset and password changed e-mails, the continue-the-listing link and both staff invites, and MUST hold no release-2 type (photos, video, live).
+
+_From 279-email-inbox._
+
+### 279-FR-009 — With `--dry-run` the inbox test MUST print every row (type, language, mailbox, subject) and send nothing; a row whose template fails to render MUST be printed as failed and make the run exit 1.
+
+_From 279-email-inbox._
+
+### 279-FR-010 — Without `--dry-run` the inbox test MUST refuse to send anything, exiting 1 with the reason, when sending is off, no Brevo key is set, no domain is set, no test mailbox is given, or a test mailbox would be blocked by the rule the queue applies to every send (`EMAIL_ALLOWLIST` outside production, `blockedReason`). Otherwise it MUST send each row once directly through Brevo (no queue), built by the function of FR-004, continue past a refused row, print each row's message id or failure, and exit 1 when any row failed.
+
+_From 279-email-inbox._
+
+### 279-FR-011 — The news e-mail of the inbox test MUST carry `List-Unsubscribe: <https link>` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, as the notifications queue sends it; no other row MUST carry them.
+
+_From 279-email-inbox._
+
+### 279-FR-012 — Both commands MUST run from the built worker (`node dist/apps/worker/main.js inbox-test [--dry-run]`, `node dist/apps/worker/main.js email-dns-check`) without starting the worker's queues or HTTP listener, and `.env.example` MUST document `EMAIL_DOMAIN` and `INBOX_TEST_TO`.
+
+_From 279-email-inbox._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -713,3 +758,4 @@ _From 049-garage-suspension._
 - `560-FR-001` — superseded by `806-FR-001` (2026-10-07)
 
 - `199-FR-009` — superseded by `032-FR-001` (2026-10-10)
+- `279-FR-013` — the sending-domain how-to page lives in the specs repo, which CI cannot read; docs-lint checks it, no test can trace it (2026-10-18)

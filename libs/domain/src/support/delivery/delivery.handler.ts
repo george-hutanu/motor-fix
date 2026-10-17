@@ -14,6 +14,7 @@ import type { Brevo } from '../../notifications/brevo/brevo';
 import {
   blockedReason,
   type EmailConfig,
+  emailEnvelope,
 } from '../../notifications/email-config';
 import { render } from '../../notifications/templates';
 import { supportMessageValues } from '../../notifications/templates/support';
@@ -79,7 +80,7 @@ export class SupportDelivery {
     if (status === 'sent' || status === 'blocked') return;
     if (!address) {
       this.logger.error(
-        `support message ${message.reference}: SUPPORT_EMAIL is not set; its e-mail waits unsent`,
+        `support message ${message.reference}: neither SUPPORT_EMAIL nor EMAIL_DOMAIN is set; its e-mail waits unsent`,
       );
       if (status === 'pending') {
         await this.record(message.id, 'support', 'unconfigured');
@@ -128,13 +129,13 @@ export class SupportDelivery {
     }
     const { mail, replyTo, to } = build();
     try {
+      // The support mailbox answers the person who wrote, not itself.
       await this.brevo.send({
-        from: this.email.from,
-        html: mail.html,
+        ...emailEnvelope(this.email, to),
         ...(replyTo ? { replyTo } : {}),
+        html: mail.html,
         subject: mail.subject,
         text: mail.text,
-        to,
       });
     } catch (error) {
       countSupportEmail(kind, 'failed');
