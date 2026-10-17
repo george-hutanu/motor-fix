@@ -118,6 +118,14 @@ describe('AdminGrowth', () => {
     ).toEqual(['Șoferi activi', 'Service‑uri listate']);
   });
 
+  // The months move with today's date: QA's visual diff masks what carries data-qa-volatile.
+  it('marks each chart as date-relative for the visual diff', async () => {
+    answer = async () => ({ months: TWELVE });
+    const el = await open();
+
+    expect(el.querySelectorAll('.chart[data-qa-volatile]')).toHaveLength(2);
+  });
+
   it('writes the latest values grouped and the first and last month under each chart', async () => {
     answer = async () => ({ months: TWELVE });
     const el = await open();
