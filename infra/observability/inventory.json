@@ -215,9 +215,10 @@
       "source": "libs/domain/src/notifications/garage-suspended/garage-suspended.fan-out.ts",
       "dashboard": "motorfix-queues",
       "alerts": [
-        "garage-suspended-failed"
+        "worker-queue-backlog",
+        "worker-jobs-failed"
       ],
-      "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the alert fires on a job's final failure",
+      "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
       "story": "ST-49"
     },
     {
@@ -519,7 +520,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "counts each suspension told to its garage's owners by outcome (built, skipped: no owner or no open suspension), with the fan-out's log line naming the garage id; a count has no failure to alert on, the garage-suspended queue entry owns the final-failure alert",
+      "reason": "counts each suspension told to its garage's owners by outcome (built, skipped: no owner or no open suspension), with the fan-out's log line naming the garage id; a count has no failure to alert on, the garage-suspended queue entry owns the failed-job alert",
       "story": "ST-49"
     },
     {
