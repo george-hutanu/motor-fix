@@ -68,10 +68,13 @@ export const fake = {
   manualLoad: false,
   map: undefined as unknown as FakeMap,
   marker: undefined as unknown as FakeMarker,
+  workerUrl: undefined as string | undefined,
 };
 
 export { FakeMap as Map, FakeMarker as Marker };
 export const NavigationControl = class {};
-export const setWorkerUrl = () => {};
+export const setWorkerUrl = (url: string) => {
+  fake.workerUrl = url;
+};
 
 export type MapFake = { fake: typeof fake };

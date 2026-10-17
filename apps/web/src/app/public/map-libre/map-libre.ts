@@ -5,7 +5,7 @@ export interface LatLng {
   lng: number;
 }
 
-export const STYLES = {
+const STYLES = {
   dark: 'https://tiles.openfreemap.org/styles/dark',
   light: 'https://tiles.openfreemap.org/styles/liberty',
 };
@@ -57,7 +57,7 @@ export function ring({ lat, lng }: LatLng, km: number): [number, number][] {
 // (project.json assets) rather than bundled: the worker is looked up beside
 // the module that loads it, which a bundle moves, and the stylesheet would
 // weigh on every page's first load.
-export function mapAssets(document: Document) {
+function mapAssets(document: Document) {
   const sheet = new URL('/map/maplibre-gl.css', document.baseURI).href;
   const links = document.head.querySelectorAll<HTMLLinkElement>(
     'link[rel="stylesheet"]',

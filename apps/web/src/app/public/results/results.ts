@@ -50,7 +50,6 @@ const REVIEW_KINDS: readonly EventKind[] = EVENT_KINDS.filter((kind) =>
   kind.startsWith('review.'),
 );
 const REVIEWS: ReadonlySet<string> = new Set(REVIEW_KINDS);
-// What re-reads a loaded card: its reviews, its profile, its return.
 // What may move a pin: a garage changed, gone, back or newly approved.
 const PIN_KINDS: ReadonlySet<string> = new Set([
   'garage.updated',
@@ -58,6 +57,7 @@ const PIN_KINDS: ReadonlySet<string> = new Set([
   'garage.suspended',
   'verification.decided',
 ]);
+// What re-reads a loaded card: its reviews, its profile, its return.
 const CARD_KINDS: ReadonlySet<string> = new Set([
   ...REVIEW_KINDS,
   'garage.updated',

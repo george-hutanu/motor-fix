@@ -11,17 +11,19 @@ import {
 
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 
-export interface InArea {
+interface InArea {
   distanceM: number;
   lat: number;
   lng: number;
   mobile: boolean;
 }
 
-export interface AreaOf {
+interface AreaOf {
   point?: SearchPoint;
   radiusKm?: number;
   bbox?: SearchBbox;
+  // At most this many, nearest first, when nothing needs the whole area.
+  limit?: number;
 }
 
 const ROMANIA_CENTRE = {
@@ -43,7 +45,7 @@ const centreOf = ({ south, west, north, east }: SearchBbox) => ({
 // within the radius of the place. With neither, every garage with a position.
 export async function garagesInArea(
   prisma: PrismaClient,
-  { bbox, point, radiusKm = SEARCH_RADIUS_DEFAULT_KM }: AreaOf,
+  { bbox, point, radiusKm = SEARCH_RADIUS_DEFAULT_KM, limit }: AreaOf,
 ): Promise<Map<string, InArea>> {
   const { lat, lng } = point ?? (bbox ? centreOf(bbox) : ROMANIA_CENTRE);
   const mobileIn = point
@@ -82,6 +84,7 @@ export async function garagesInArea(
       WHERE status = 'approved' AND latitude IS NOT NULL
     ) measured
     WHERE CASE WHEN mobile THEN ${mobileIn} ELSE ${fixedIn} END
+    ${limit === undefined ? Prisma.empty : Prisma.sql`ORDER BY distance_m, id LIMIT ${limit}`}
   `;
   return new Map(
     rows.map((row) => [

@@ -274,7 +274,6 @@ describe('the search with Redis unavailable', () => {
 const BBOX = '46.7,23.5,46.85,23.75';
 
 // @traces 269-FR-019
-// @traces 269-FR-019
 describe('the search cache for a box on the list', () => {
   it('keys a page of a box by its rounded canonical text, and leaves the radius at its default', async () => {
     const gen = await generation();

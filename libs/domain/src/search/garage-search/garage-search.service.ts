@@ -194,8 +194,6 @@ function cardOf(
   };
 }
 
-type Groups = ReturnType<typeof groupsOf>;
-
 @Injectable()
 export class GarageSearchService {
   constructor(
@@ -216,7 +214,7 @@ export class GarageSearchService {
     log = false,
     bbox?: SearchBbox,
   ): Promise<GarageSearchPageDto> {
-    const brand = await this.brandOf(key);
+    const brand = await brandOf(this.prisma, key);
     const box = bbox && bboxOf(bbox);
     const page = await this.cache.entry(
       {
@@ -253,7 +251,7 @@ export class GarageSearchService {
         : await this.after(decode(cursor, brandId, box));
     const area = await this.area(point, radiusKm, bbox);
     const groups = groupsOf(brandId, area);
-    const found = await this.counted(groups);
+    const found = await countGroups(this.prisma, groups);
     const rows: ListedGarageDto[] = [];
     if (after?.g !== 'other') {
       rows.push(
@@ -292,14 +290,14 @@ export class GarageSearchService {
     radiusKm?: number,
     bbox?: SearchBbox,
   ): Promise<GarageSearchPageDto> {
-    const brand = await this.brandOf(key);
+    const brand = await brandOf(this.prisma, key);
     const area = await this.area(point, radiusKm, bbox);
     const groups = groupsOf(brand.id, area);
     const only = (group: Prisma.GarageWhereInput) => ({
       AND: [group, { id: { in: ids } }],
     });
     const [found, takers, others] = await Promise.all([
-      this.counted(groups),
+      countGroups(this.prisma, groups),
       this.read(brand.id, only(groups.works_on), undefined, ids.length),
       this.read(brand.id, only(groups.other), undefined, ids.length),
     ]);
@@ -311,10 +309,6 @@ export class GarageSearchService {
     };
   }
 
-  private brandOf(key: BrandKey) {
-    return brandOf(this.prisma, key);
-  }
-
   private async area(
     point: SearchPoint | undefined,
     radiusKm?: number,
@@ -323,10 +317,6 @@ export class GarageSearchService {
     return (
       (point || bbox) && garagesInArea(this.prisma, { bbox, point, radiusKm })
     );
-  }
-
-  private counted(groups: Groups) {
-    return countGroups(this.prisma, groups);
   }
 
   // The boundary's place in the order, by id: a garage suspended since the

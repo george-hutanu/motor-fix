@@ -66,12 +66,17 @@ export class GaragePinsService {
     radiusKm?: number,
     bbox?: SearchBbox,
   ): Promise<GaragePinsDto> {
-    const area = await garagesInArea(this.prisma, { bbox, point, radiusKm });
+    // With neither a place nor a box the count reads no area, so the nearest
+    // pins are all that is needed.
+    const placed = Boolean(point || bbox);
+    const area = await garagesInArea(this.prisma, {
+      bbox,
+      limit: placed ? undefined : SEARCH_PINS_MAX,
+      point,
+      radiusKm,
+    });
     const [found, rows] = await Promise.all([
-      countGroups(
-        this.prisma,
-        groupsOf(brandId, point || bbox ? area : undefined),
-      ),
+      countGroups(this.prisma, groupsOf(brandId, placed ? area : undefined)),
       this.prisma.garage.findMany({
         select: {
           brands: { select: { stance: true }, where: { brandId } },

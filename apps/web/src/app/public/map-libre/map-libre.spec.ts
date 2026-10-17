@@ -4,7 +4,6 @@ import {
   keepOutOfTabOrder,
   openMapLibre,
   ring,
-  STYLES,
   span,
   styleFor,
 } from './map-libre';
@@ -23,6 +22,8 @@ type TestWindow = {
 const view = window as unknown as TestWindow;
 const KM_PER_DEGREE = 111.32;
 const AT = { lat: 44.4512, lng: 26.1207 };
+const LIGHT = 'https://tiles.openfreemap.org/styles/liberty';
+const DARK = 'https://tiles.openfreemap.org/styles/dark';
 
 afterEach(() => {
   delete view.__MF_MAP;
@@ -43,15 +44,13 @@ describe('styleFor, the tiles a map reads', () => {
   it('reads the light style in a light scheme', () => {
     scheme(false);
 
-    expect(styleFor(document)).toBe(STYLES.light);
-    expect(STYLES.light).toBe('https://tiles.openfreemap.org/styles/liberty');
+    expect(styleFor(document)).toBe(LIGHT);
   });
 
   it('reads the dark style in a dark scheme', () => {
     scheme(true);
 
-    expect(styleFor(document)).toBe(STYLES.dark);
-    expect(STYLES.dark).toBe('https://tiles.openfreemap.org/styles/dark');
+    expect(styleFor(document)).toBe(DARK);
   });
 
   it('reads the style a test points it at, in either scheme', () => {
@@ -97,6 +96,34 @@ describe('the circle helpers', () => {
   });
 });
 
+describe('openMapLibre, what MapLibre needs that the bundle does not hold', () => {
+  const sheets = () =>
+    Array.from(
+      document.head.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'),
+    ).filter((link) => link.href.endsWith('/map/maplibre-gl.css'));
+
+  afterEach(() => {
+    for (const link of sheets()) link.remove();
+  });
+
+  it('points the worker at the copy served from /map, beside the page', async () => {
+    await openMapLibre(document.createElement('div'), LIGHT);
+
+    const workerUrl = new URL(fake.workerUrl ?? '');
+    expect(workerUrl.pathname).toBe('/map/maplibre-gl-worker.mjs');
+    expect(workerUrl.origin).toBe(new URL(document.baseURI).origin);
+  });
+
+  it('adds the map stylesheet to the page only when a map opens, once', async () => {
+    expect(sheets()).toHaveLength(0);
+
+    await openMapLibre(document.createElement('div'), LIGHT);
+    await openMapLibre(document.createElement('div'), LIGHT);
+
+    expect(sheets()).toHaveLength(1);
+  });
+});
+
 // @traces 269-FR-017
 describe('openMapLibre, a map that loads or says it cannot', () => {
   // The opener awaits MapLibre's import before it builds the map.
@@ -108,11 +135,7 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
 
   it('answers the map once it has loaded, telling the caller at the load itself', async () => {
     const loaded = jest.fn();
-    const opening = openMapLibre(
-      document.createElement('div'),
-      STYLES.light,
-      loaded,
-    );
+    const opening = openMapLibre(document.createElement('div'), LIGHT, loaded);
     await built();
 
     fake.map.fire('load');
@@ -123,7 +146,7 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
 
   it('removes a map whose style fails before it loads, and rejects with the error', async () => {
     const error = new Error('style 500');
-    const opening = openMapLibre(document.createElement('div'), STYLES.light);
+    const opening = openMapLibre(document.createElement('div'), LIGHT);
     await built();
 
     fake.map.fire('error', { error });
@@ -134,7 +157,7 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
 
   it('gives up on a map that has not loaded within 10 seconds', async () => {
     jest.useFakeTimers();
-    const opening = openMapLibre(document.createElement('div'), STYLES.light);
+    const opening = openMapLibre(document.createElement('div'), LIGHT);
     const rejected = expect(opening).rejects.toThrow();
 
     await jest.advanceTimersByTimeAsync(9999);
@@ -147,7 +170,7 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
 
   it('keeps a loaded map standing through a tile error, and past the 10 seconds', async () => {
     jest.useFakeTimers();
-    const opening = openMapLibre(document.createElement('div'), STYLES.light);
+    const opening = openMapLibre(document.createElement('div'), LIGHT);
     await jest.advanceTimersByTimeAsync(0);
 
     fake.map.fire('load');
@@ -159,7 +182,7 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
   });
 
   it('hands the map to the page under the test style only, and takes it back when closed', async () => {
-    const plain = openMapLibre(document.createElement('div'), STYLES.light);
+    const plain = openMapLibre(document.createElement('div'), LIGHT);
     await built();
     fake.map.fire('load');
     await plain;

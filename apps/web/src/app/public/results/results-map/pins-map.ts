@@ -8,6 +8,8 @@ import {
 } from '@motor-fix/contracts/search-place';
 import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
 import type {
+  ExpressionSpecification,
+  FilterSpecification,
   GeoJSONSource,
   GeoJSONSourceSpecification,
   LayerSpecification,
@@ -29,7 +31,7 @@ const SETTLE_MS = 400;
 // wide a box to ask about.
 export type MapMove = { bbox: string } | { tooWide: true };
 
-export interface PinsMap {
+interface PinsMap {
   show(answer: GaragePinsDto | undefined): void;
   fit(place: LatLng | undefined, answer: GaragePinsDto | undefined): void;
 }
@@ -84,8 +86,14 @@ export function drawPins(
   const red = token('--mf-red');
   const halo = token('--mf-panel');
   const ink = token('--mf-text');
-  const single = ['!', ['has', 'point_count']] as const;
-  const lamp = ['match', ['get', 'stance'], 'works_on', green, red] as never;
+  const single: FilterSpecification = ['!', ['has', 'point_count']];
+  const lamp: ExpressionSpecification = [
+    'match',
+    ['get', 'stance'],
+    'works_on',
+    green,
+    red,
+  ];
   // A mobile mechanic's area, under every pin; MapLibre sets a polygon's
   // label at its middle.
   const areaLayers: LayerSpecification[] = [
@@ -143,7 +151,7 @@ export function drawPins(
       type: 'symbol',
     },
     {
-      filter: single as never,
+      filter: single,
       id: 'pins-dot',
       paint: {
         'circle-color': lamp,
@@ -155,7 +163,7 @@ export function drawPins(
       type: 'circle',
     },
     {
-      filter: single as never,
+      filter: single,
       id: 'pins-rate',
       layout: {
         'text-anchor': 'left',

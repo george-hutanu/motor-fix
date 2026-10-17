@@ -3,7 +3,7 @@ import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
 
 import { PLACE_MAP, type PlaceMap, viewFor } from './place-map';
 import type { MapFake } from './place-step.testing';
-import { circleBounds, type LatLng, mapAssets } from '../map-libre/map-libre';
+import { circleBounds, type LatLng } from '../map-libre/map-libre';
 
 jest.mock('maplibre-gl', () => jest.requireActual('./place-step.testing'));
 const { fake } = jest.requireMock<MapFake>('maplibre-gl');
@@ -16,28 +16,6 @@ const sheets = () =>
 const SEAT: LatLng = { lat: 44.4512, lng: 26.1207 };
 const FAR: LatLng = { lat: 47.1585, lng: 27.6014 };
 const KM_PER_DEGREE = 111.32;
-
-describe('mapAssets, what MapLibre needs that the bundle does not hold', () => {
-  afterEach(() => {
-    for (const link of sheets()) link.remove();
-  });
-
-  it('points the worker at the copy served from /map, beside the page', () => {
-    const { workerUrl } = mapAssets(document);
-
-    expect(new URL(workerUrl).pathname).toBe('/map/maplibre-gl-worker.mjs');
-    expect(new URL(workerUrl).origin).toBe(new URL(document.baseURI).origin);
-  });
-
-  it('adds the map stylesheet to the page only when the map opens, once', () => {
-    expect(sheets()).toHaveLength(0);
-
-    mapAssets(document);
-    mapAssets(document);
-
-    expect(sheets()).toHaveLength(1);
-  });
-});
 
 describe('circleBounds, the box around a service circle', () => {
   it.each([1, 20, 100])(

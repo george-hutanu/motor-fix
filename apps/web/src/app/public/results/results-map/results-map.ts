@@ -33,7 +33,7 @@ export interface ResultsMapView {
   show(answer: GaragePinsDto | undefined): void;
 }
 
-export type OpenResultsMap = (
+type OpenResultsMap = (
   host: HTMLElement,
   moved: (move: MapMove) => void,
 ) => Promise<ResultsMapView>;
