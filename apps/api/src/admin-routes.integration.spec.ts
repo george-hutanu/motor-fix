@@ -19,7 +19,7 @@ const api = apiBoot();
 const KNOWN = [
   'GET /api/v1/admin/accounts',
   'GET /api/v1/admin/accounts/summary',
-  // @traces 103-FR-002
+  // @traces 103-FR-002 404-demand-searches-FR-006
   'GET /api/v1/admin/demand',
   // @traces 066-FR-005
   'GET /api/v1/admin/garages',
