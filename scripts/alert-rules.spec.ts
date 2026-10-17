@@ -1088,10 +1088,11 @@ describe('Grafana alerts workflow', () => {
         { recursive: true },
       );
       // Logs each call's arguments and request body; refuses a group named in
-      // FAIL_GROUP, the contact point when FAIL_CONTACT is set, its PUT when
-      // CONTACT_MISSING is, and answers 404 for the folder unless
-      // FOLDER_EXISTS is set. A list of contact points answers CONTACTS into
-      // the file -o names.
+      // FAIL_GROUP and answers 404 for the folder unless FOLDER_EXISTS is
+      // set. The contact point answers an HTTP status through -w: the one in
+      // FAIL_CONTACT for its PUT and POST, the one in CONTACT_PUT for its PUT,
+      // 404 for its PUT when CONTACT_MISSING is set, else 200. A list of
+      // contact points answers CONTACTS into the file -o names.
       const curl = join(dir, 'bin', 'curl');
       writeFileSync(
         curl,
@@ -1103,12 +1104,13 @@ describe('Grafana alerts workflow', () => {
           'case "$*" in',
           '  *"rule-groups/$FAIL_GROUP"*) [ -n "$FAIL_GROUP" ] && { echo "{\\"message\\":\\"refused\\"}"; exit 22; };;',
           'esac',
-          'out=""; prev=""',
-          'for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done',
+          'out=""; prev=""; w=""; fail=""',
+          'for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; case "$a" in -w) w=1;; --fail|-f) fail=1;; esac; prev="$a"; done',
+          'answer() { [ -n "$w" ] && printf "%s" "$1"; case "$1" in 2??) exit 0;; esac; [ -n "$fail" ] && exit 22; exit 0; }',
           'case "$*" in',
           '  *"contact-points?name="*) [ -n "$out" ] && printf "%s" "$CONTACTS" > "$out"; exit 0;;',
           '  *"-X DELETE"*) exit 0;;',
-          '  *"/contact-points"*) [ -n "$FAIL_CONTACT" ] && exit 22; case "$*" in *"-X PUT"*) [ -n "$CONTACT_MISSING" ] && exit 22;; esac; exit 0;;',
+          '  *"/contact-points"*) [ -n "$FAIL_CONTACT" ] && answer "$FAIL_CONTACT"; case "$*" in *"-X PUT"*) [ -n "$CONTACT_PUT" ] && answer "$CONTACT_PUT"; [ -n "$CONTACT_MISSING" ] && answer 404;; esac; answer 200;;',
           '  *"-X POST"*) exit 0;;',
           '  *"/api/folders/motorfix"*) [ -n "$FOLDER_EXISTS" ] && exit 0; exit 22;;',
           'esac',
@@ -1137,6 +1139,7 @@ describe('Grafana alerts workflow', () => {
           env: {
             CALLS: join(dir, 'calls'),
             CONTACT_MISSING: '',
+            CONTACT_PUT: '',
             CONTACTS: JSON.stringify([
               { name: 'MotorFix owner', uid: 'motorfix-owner' },
               { name: 'MotorFix owner', uid: 'hand-made' },
@@ -1293,9 +1296,53 @@ describe('Grafana alerts workflow', () => {
     });
 
     // @traces 880-FR-014
+    it('posts the contact point only after a PUT that answered 404, and before the policy', () => {
+      const { code, calls } = apply({
+        CONTACT_MISSING: '1',
+        FOLDER_EXISTS: '1',
+      });
+      expect(code).toBe(0);
+      const put = index(
+        calls,
+        (a) => a.includes('PUT') && a.includes('contact-points/motorfix-owner'),
+      );
+      const post = index(
+        calls,
+        (a) =>
+          a.includes('POST') &&
+          a.includes(`${url}/api/v1/provisioning/contact-points\n`),
+      );
+      const policy = index(calls, (a) =>
+        a.includes(`${url}/api/v1/provisioning/policies`),
+      );
+      expect([put >= 0, put < post, post < policy]).toEqual([true, true, true]);
+    });
+
+    // @traces 880-FR-014
+    it('sends no POST when the PUT is refused with anything but 404, names the code and fails', () => {
+      const { code, out, calls } = apply({
+        CONTACT_PUT: '500',
+        FOLDER_EXISTS: '1',
+      });
+      expect(code).not.toBe(0);
+      expect(
+        calls.some(
+          (c) =>
+            c.args.includes('POST') &&
+            c.args.includes(`${url}/api/v1/provisioning/contact-points\n`),
+        ),
+      ).toBe(false);
+      expect(out).toMatch(
+        /::error::.*contact-points\.json.*motorfix-owner.*HTTP 500/,
+      );
+      expect(calls.some((c) => c.args.includes('DELETE'))).toBe(false);
+      expect(out).not.toContain(token);
+    });
+
+    // @traces 880-FR-014
     it('keeps the hand-made contact point when its own is refused, and fails at the end', () => {
       const { code, out, calls } = apply({
-        FAIL_CONTACT: '1',
+        FAIL_CONTACT: '500',
         FOLDER_EXISTS: '1',
       });
       expect(code).not.toBe(0);

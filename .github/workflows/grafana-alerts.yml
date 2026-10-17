@@ -61,6 +61,7 @@ jobs:
           while [ "${base%/}" != "$base" ]; do base="${base%/}"; done
           api="$base/api"
           call() { curl --fail -s --max-time 60 -H "$auth" "$@" > /dev/null 2>&1; }
+          status() { curl -s -o /dev/null -w '%{http_code}' --max-time 60 -H "$auth" "$@" 2> /dev/null; }
           shopt -s nullglob
           files=(infra/observability/alerts/*.json)
           if [ "${#files[@]}" -eq 0 ]; then
@@ -90,14 +91,19 @@ jobs:
             [ -n "$point" ] || continue
             uid=$(jq -r .uid <<< "$point")
             path=$(jq -rn --arg u "$uid" '$u | @uri')
-            if call -X PUT "$api/v1/provisioning/contact-points/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point" \
-              || call -X POST "$api/v1/provisioning/contact-points" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point"; then
-              echo "applied $cp_file ($uid)"
-            else
-              echo "::error::$cp_file: Grafana refused contact point $uid (exit code $?)."
-              failed=1
-              contacts=0
+            answer=$(status -X PUT "$api/v1/provisioning/contact-points/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point") || true
+            if [ "$answer" = 404 ]; then
+              answer=$(status -X POST "$api/v1/provisioning/contact-points" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point") || true
             fi
+            case "$answer" in
+              2[0-9][0-9]) echo "applied $cp_file ($uid)" ;;
+              *)
+                [[ "$answer" =~ ^[0-9]{3}$ ]] || answer=000
+                echo "::error::$cp_file: Grafana refused contact point $uid (HTTP $answer)."
+                failed=1
+                contacts=0
+                ;;
+            esac
           done <<< "$points"
           if call -X PUT "$api/v1/provisioning/policies" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- < "$policy_file"; then
             echo "applied $policy_file"

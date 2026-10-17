@@ -231,6 +231,8 @@ describe('Grafana alerts workflow under hostile input', () => {
         // Like curl, a read with -o writes its answer to that file.
         'out=""; prev=""; for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done',
         '[ -n "$out" ] && printf "%s" "${LIST_BODY:-[]}" > "$out"',
+        // A write that asks for its status with -w is accepted with 200.
+        'case " $* " in *" -w "*) printf 200;; esac',
         'case "$*" in',
         '  *"-X POST"*) [ -n "$POST_CODE" ] && { echo "$ERR_TEXT" >&2; exit "$POST_CODE"; }; exit 0;;',
         '  *"-X PUT"*) if [ -n "$PUT_CODE" ] && case "$*" in *"$PUT_MATCH"*) true;; *) false;; esac; then echo "$ERR_TEXT" >&2; exit "$PUT_CODE"; fi; exit 0;;',

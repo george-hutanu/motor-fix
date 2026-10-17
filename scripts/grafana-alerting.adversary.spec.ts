@@ -23,22 +23,28 @@ const CURL = [
   'n=$(ls "$CALLS" | wc -l | tr -d " ")',
   'printf "%s\\n" "$@" > "$CALLS/$n.args"',
   'case " $* " in *" @- "*) cat > "$CALLS/$n.body";; esac',
-  'method=GET; out=; url=; prev=',
+  'method=GET; out=; url=; prev=; w=; fail=; http=',
   'for a in "$@"; do',
   '  [ "$prev" = -X ] && method=$a',
   '  [ "$prev" = -o ] && out=$a',
-  '  case "$a" in http*) url=$a;; esac',
+  '  case "$a" in http*) url=$a;; -w) w=1;; --fail|-f) fail=1;; esac',
   '  prev=$a',
   'done',
   'code=0',
   'case "$method $url" in',
-  '  "PUT "*contact-points/*) code="$CP_PUT";;',
-  '  "POST "*contact-points) code="$CP_POST";;',
+  '  "PUT "*contact-points/*) http="$CP_PUT";;',
+  '  "POST "*contact-points) http="$CP_POST";;',
   '  "PUT "*policies) code="$POLICY";;',
   '  "PUT "*rule-groups/*) code="$GROUP";;',
   '  "GET "*contact-points?*) code="$LIST"; if [ -n "$out" ]; then printf "%s" "$LIST_BODY" > "$out"; fi;;',
   '  "DELETE "*) code="$DELETE";;',
   'esac',
+  '# The contact point answers an HTTP status: 000 is a dead connection',
+  '# (curl exit 28), and --fail turns a 4xx or 5xx into exit 22.',
+  'if [ -n "$http" ]; then',
+  '  [ -n "$w" ] && printf "%s" "$http"',
+  '  case "$http" in 000) code=28;; 2??) ;; *) [ -n "$fail" ] && code=22;; esac',
+  'fi',
   'if [ "$code" != 0 ]; then echo "$ERR_TEXT" >&2; exit "$code"; fi',
   'exit 0',
 ].join('\n');
@@ -103,8 +109,8 @@ describe('the alerting apply step under hostile Grafana answers', () => {
         encoding: 'utf8',
         env: {
           CALLS: join(dir, 'calls'),
-          CP_POST: '0',
-          CP_PUT: '0',
+          CP_POST: '201',
+          CP_PUT: '200',
           DELETE: '0',
           ERR_TEXT: `curl: (22) refused ${url} ${token}`,
           GRAFANA_SA_TOKEN: token,
@@ -224,27 +230,51 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   });
 
   // @traces 880-FR-014
-  it('creates the contact point with a POST when the PUT is refused, then goes on to the policy', () => {
-    const { code, calls } = apply({ CP_PUT: '22', LIST_BODY: '[]' });
+  it('creates the contact point with a POST when the PUT answers 404, then goes on to the policy', () => {
+    const { code, calls, out } = apply({ CP_PUT: '404', LIST_BODY: '[]' });
     expect(code).toBe(0);
     expect(sequence(calls).slice(1, 4)).toEqual([
       `PUT /api/v1/provisioning/contact-points/${OWN}`,
       'POST /api/v1/provisioning/contact-points',
       'PUT /api/v1/provisioning/policies',
     ]);
+    expect(out).toContain(
+      `applied infra/observability/grafana/alerting/contact-points.json (${OWN})`,
+    );
   });
 
   // @traces 880-FR-014
-  it('lists and deletes nothing when both the PUT and the POST of the contact point are refused', () => {
+  it.each(['500', '400', '401', '403', '409', '000'])(
+    'sends no POST, names HTTP %s, deletes nothing and fails the step when the PUT answers it',
+    (answer) => {
+      const { code, calls, out } = apply({
+        CP_PUT: answer,
+        LIST_BODY: JSON.stringify([{ uid: 'old' }]),
+      });
+      expect(code).toBe(1);
+      expect(sequence(calls)).not.toContain(
+        'POST /api/v1/provisioning/contact-points',
+      );
+      expect(out).toMatch(
+        new RegExp(`::error::.*contact-points\\.json.*${OWN}.*HTTP ${answer}`),
+      );
+      expect(sequence(calls).filter((c) => c.includes('?name='))).toEqual([]);
+      expect(deletes(calls)).toEqual([]);
+      expect(sequence(calls)).toContain('PUT /api/v1/provisioning/policies');
+    },
+  );
+
+  // @traces 880-FR-014
+  it('lists and deletes nothing, naming the POST answer, when the PUT answers 404 and the POST is refused', () => {
     const { code, calls, out } = apply({
-      CP_POST: '22',
-      CP_PUT: '22',
+      CP_POST: '500',
+      CP_PUT: '404',
       LIST_BODY: JSON.stringify([{ uid: 'old' }]),
     });
     expect(code).toBe(1);
     expect(sequence(calls).filter((c) => c.includes('?name='))).toEqual([]);
     expect(deletes(calls)).toEqual([]);
-    expect(out).toContain('::error::');
+    expect(out).toMatch(/::error::.*contact-points\.json.*HTTP 500/);
     expect(sequence(calls)).toContain('PUT /api/v1/provisioning/policies');
   });
 
@@ -339,8 +369,8 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   // @traces 880-FR-014
   it('never prints the token or the URL, even when curl echoes them', () => {
     const { out } = apply({
-      CP_POST: '22',
-      CP_PUT: '22',
+      CP_POST: '500',
+      CP_PUT: '404',
       DELETE: '22',
       LIST_BODY: JSON.stringify([{ uid: 'old' }]),
       POLICY: '22',
