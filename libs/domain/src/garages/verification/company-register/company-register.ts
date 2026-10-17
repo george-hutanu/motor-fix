@@ -4,7 +4,7 @@ import type {
 } from '@motor-fix/contracts';
 import { Injectable } from '@nestjs/common';
 
-export interface CompanyLookup {
+interface CompanyLookup {
   result: VerificationCheckResult;
   detail?: string;
   evidence?: VerificationCheckEvidenceDto;
@@ -12,7 +12,7 @@ export interface CompanyLookup {
 
 // Where an automatic look-up of a company in the registers will plug in. Its
 // own story adds the adapter and the call site; nothing calls it at launch.
-export interface CompanyRegister {
+interface CompanyRegister {
   lookUp(cui: string): Promise<CompanyLookup>;
 }
 

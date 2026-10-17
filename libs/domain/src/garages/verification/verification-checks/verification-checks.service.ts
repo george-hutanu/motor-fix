@@ -12,7 +12,6 @@ import {
   HttpStatus,
   Inject,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -20,6 +19,7 @@ import { isUUID } from 'class-validator';
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { refusal } from '../../../auth/sign-up.service';
+import { localDay } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import {
   type BusinessKind,
@@ -27,7 +27,6 @@ import {
   type VerificationCheck,
   type VerificationFileStatus,
 } from '../../../generated/prisma/client';
-import { countVerificationCheck } from '../../../metrics/product-counters';
 
 // A decision waits for the garage or closes the file; reopening it into review
 // lets the admin record again.
@@ -66,15 +65,6 @@ const CAEN_OK = {
   seat: 'Întreținerea și repararea autovehiculelor, la sediul social',
 };
 
-// The day of the look-up, as the admin's calendar reads it.
-const bucharestDay = (at: Date) =>
-  new Intl.DateTimeFormat('en-CA', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: 'Europe/Bucharest',
-    year: 'numeric',
-  }).format(at);
-
 // Evidence belongs to a ticked register check, each kind to its own fields.
 function evidenceShape(
   kind: VerificationCheckKind,
@@ -111,7 +101,7 @@ function companyRecord(
   facts: RegisterFacts,
 ): RegisterRecord {
   const name = body.evidence?.name?.trim();
-  const lookedUpOn = bucharestDay(new Date());
+  const lookedUpOn = localDay(new Date());
   if (body.result !== 'ok') {
     return { evidence: { ...(name && { name }), lookedUpOn } };
   }
@@ -136,10 +126,10 @@ function caenRecord(
   const evidence = {
     ...ticks,
     certificateUploaded: facts.certificateUploaded,
-    lookedUpOn: bucharestDay(new Date()),
+    lookedUpOn: localDay(new Date()),
   };
   if (body.result !== 'ok') return { evidence };
-  const missing = (['certificate', 'onrc', 'address'] as const).filter(
+  const missing = FIELDS.caen.filter(
     (tick) =>
       !ticks[tick] && (tick !== 'certificate' || facts.certificateUploaded),
   );
@@ -212,8 +202,6 @@ function validated(
 // result, its history entry and its event commit together.
 @Injectable()
 export class VerificationChecksService {
-  private readonly logger = new Logger('VerificationChecks');
-
   constructor(
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
@@ -306,11 +294,6 @@ export class VerificationChecksService {
       payload: { fileId, kind, result: check.result },
       subjectId: fileId,
     });
-
-    countVerificationCheck(kind, check.result);
-    this.logger.log(
-      `check recorded file=${fileId} kind=${kind} result=${check.result} admin=${actor.accountId}`,
-    );
 
     const checks = await tx.verificationCheck.findMany({
       select: { detail: true, kind: true, result: true },

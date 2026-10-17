@@ -4,6 +4,7 @@ import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import { HttpException, Logger } from '@nestjs/common';
 
+import { VerificationChecksController } from './verification-checks.controller';
 import { VerificationChecksService } from './verification-checks.service';
 import { AuditService } from '../../../audit/audit.service';
 import type { Actor } from '../../../auth/policy';
@@ -99,7 +100,13 @@ const record = (
   },
   actor: Actor = ioana,
   id = fileId,
-) => inTx((tx) => checksService().record(tx, actor, id, kind, body as never));
+) =>
+  new VerificationChecksController(prisma, checksService()).record(
+    actor,
+    id,
+    kind,
+    body as never,
+  );
 
 const check = (
   kind: 'rar' | 'activities' | 'photos' | 'company' | 'caen' | 'representative',
