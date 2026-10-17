@@ -72,7 +72,7 @@ describe('formatLeiRange', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-008
+// @traces 355-FR-008
 describe('formatWholeLeiRange', () => {
   it('rounds each end to the nearest leu', () => {
     expect(formatWholeLeiRange(18049, 23950, 'ro')).toBe('180–240 lei');
@@ -89,7 +89,7 @@ describe('formatWholeLeiRange', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-009
+// @traces 355-FR-009
 describe('formatDuration', () => {
   it.each([
     [30, '30 min', '30 min'],

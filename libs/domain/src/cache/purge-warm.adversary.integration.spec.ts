@@ -33,7 +33,7 @@ const fill = async (
   return key;
 };
 
-// @traces 1169-prefetch-intent-FR-006
+// @traces 1169-FR-006
 describe('purging warm entries by audience', () => {
   it('purges nothing and calls no hook for an empty audience', async () => {
     const hook = jest.fn();

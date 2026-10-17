@@ -34,7 +34,7 @@ function render(from: unknown, cells = 5) {
   };
 }
 
-// @traces 356-live-estimate-FR-004
+// @traces 356-FR-004
 describe('Odometer in cells, at the edges', () => {
   it.each([
     [0, '00000'],

@@ -306,7 +306,7 @@ describe('the quote request started event', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-011
+// @traces 356-FR-011
 describe('RequestQuoteButton with jobs handed over', () => {
   it('passes no jobs from the header', async () => {
     const host = await render();

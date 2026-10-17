@@ -187,7 +187,7 @@ function renderCells(from: unknown) {
   };
 }
 
-// @traces 356-live-estimate-FR-004
+// @traces 356-FR-004
 describe('Odometer in cells', () => {
   it('pads whole lei with leading zeros to the cells asked, with no separator or unit', () => {
     const { digits, part } = renderCells(104000);

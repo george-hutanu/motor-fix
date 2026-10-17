@@ -35,7 +35,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 356-live-estimate-FR-002
+// @traces 356-FR-002
 describe('the jobs switched on', () => {
   it('starts with nothing on', () => {
     const s = selection();
@@ -58,7 +58,7 @@ describe('the jobs switched on', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-009
+// @traces 356-FR-009
 describe('the jobs kept for the session', () => {
   it('writes the jobs on under the garage, as a list of ids', () => {
     const s = selection();
@@ -146,7 +146,7 @@ describe('the jobs kept for the session', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-010
+// @traces 356-FR-010
 describe('the list read again', () => {
   it('switches off a job no longer listed and says one went', () => {
     const s = selection();

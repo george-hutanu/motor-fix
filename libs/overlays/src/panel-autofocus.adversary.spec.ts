@@ -71,7 +71,7 @@ async function openTask(task: Host['task']) {
   }
 }
 
-// @traces 356-live-estimate-FR-011
+// @traces 356-FR-011
 describe('a panel with fields marked autofocus', () => {
   it('focuses the first one when two are marked', async () => {
     await openTask(TwoAutofocusTask);

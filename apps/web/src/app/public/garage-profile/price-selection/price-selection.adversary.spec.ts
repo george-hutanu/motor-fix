@@ -35,7 +35,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 356-live-estimate-FR-009
+// @traces 356-FR-009
 describe('the stored selection, read hostile', () => {
   it('counts a job once when the stored list names it twice, and stores it once', () => {
     sessionStorage.setItem(
@@ -130,7 +130,7 @@ describe('the stored selection, read hostile', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-002 356-live-estimate-FR-009
+// @traces 356-FR-002 356-FR-009
 describe('toggles that do not fit', () => {
   it('does not switch on a job the list does not carry', () => {
     const s = selection();
@@ -172,7 +172,7 @@ describe('toggles that do not fit', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-010
+// @traces 356-FR-010
 describe('the list read again, hostile', () => {
   it('switches off every job when the list comes back empty, and says so', () => {
     const s = selection();

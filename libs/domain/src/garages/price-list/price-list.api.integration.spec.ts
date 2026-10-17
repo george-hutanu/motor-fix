@@ -152,9 +152,9 @@ const read = (w: World, as: string | null = w.owner, id = w.nord.id) => {
 
 const profile = (w: World) => http().get(`/garages/${w.nord.slug}`);
 
-// @traces 357-public-price-jobs-FR-001
-// @traces 357-public-price-jobs-FR-002
-// @traces 357-public-price-jobs-FR-007
+// @traces 357-FR-001
+// @traces 357-FR-002
+// @traces 357-FR-007
 describe('GET /garages/:garageId/prices', () => {
   it('gives every job its state, the first reason and its default range', async () => {
     const w = await world(['ITP']);
@@ -249,7 +249,7 @@ describe('GET /garages/:garageId/prices', () => {
     expect(item).not.toHaveProperty('reason');
   });
 
-  // @traces 357-public-price-jobs-FR-008
+  // @traces 357-FR-008
   it('covers every job while the garage has no RAR activity recorded', async () => {
     const w = await world();
     const itp = await jobType('Inspecție tehnică', 'approved', 'ROTI');
@@ -277,7 +277,7 @@ describe('GET /garages/:garageId/prices', () => {
     expect(res.body).toEqual({ items: [] });
   });
 
-  // @traces 357-public-price-jobs-FR-009
+  // @traces 357-FR-009
   it.each([
     ['a receptionist', 'receptionist', 403, 'forbidden'],
     ['a mechanic', 'mechanic', 403, 'forbidden'],
@@ -334,8 +334,8 @@ describe('GET /garages/:garageId/prices', () => {
   });
 });
 
-// @traces 357-public-price-jobs-FR-005
-// @traces 357-public-price-jobs-FR-006
+// @traces 357-FR-005
+// @traces 357-FR-006
 describe('the public profile and the owner agree', () => {
   it('lists on the profile exactly the jobs the owner sees as public', async () => {
     const w = await world(['ITP']);

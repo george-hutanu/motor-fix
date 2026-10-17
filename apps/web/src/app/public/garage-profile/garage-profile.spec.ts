@@ -380,9 +380,9 @@ describe('the garage profile purge tag', () => {
   );
 });
 
-// @traces 355-price-list-ranges-FR-006
-// @traces 355-price-list-ranges-FR-012
-// @traces 355-price-list-ranges-FR-013
+// @traces 355-FR-006
+// @traces 355-FR-012
+// @traces 355-FR-013
 describe('the price list on the profile', () => {
   const BRAKES = {
     durationMinutes: 120,
@@ -463,7 +463,7 @@ describe('the price list on the profile', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-001 356-live-estimate-FR-009 356-live-estimate-FR-010
+// @traces 356-FR-001 356-FR-009 356-FR-010
 describe('the estimate box on the profile', () => {
   const DIAGNOSIS = {
     durationMinutes: 30,
@@ -587,7 +587,7 @@ describe('the estimate box on the profile', () => {
 
 // The server render's answer reaches the browser through the transfer cache,
 // which serves it at once: hydration finds the same section it rendered.
-// @traces 355-price-list-ranges-FR-011
+// @traces 355-FR-011
 // @traces 1200-FR-005
 // @traces 1200-FR-006
 describe('the profile read the server render hands over', () => {

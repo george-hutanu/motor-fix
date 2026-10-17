@@ -519,7 +519,7 @@ async function openAutofocus() {
   await settle();
 }
 
-// @traces 356-live-estimate-FR-011
+// @traces 356-FR-011
 describe('a field the task marks autofocus', () => {
   it('takes the focus before the first field on a computer', async () => {
     wide = true;

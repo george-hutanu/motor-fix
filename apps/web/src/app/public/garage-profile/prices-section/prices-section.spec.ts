@@ -143,8 +143,8 @@ const switchOf = (name: string) =>
 const rowOf = (name: string) =>
   rows().find((r) => text(r).includes(name)) as HTMLElement | undefined;
 
-// @traces 355-price-list-ranges-FR-006
-// @traces 355-price-list-ranges-FR-016
+// @traces 355-FR-006
+// @traces 355-FR-016
 describe('the price list section', () => {
   it('is a region named as the price list, holding its h2 heading', () => {
     expect(section().getAttribute('aria-label')).toBe('Lista de prețuri');
@@ -182,10 +182,10 @@ describe('the price list section', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-007
-// @traces 355-price-list-ranges-FR-008
-// @traces 355-price-list-ranges-FR-009
-// @traces 355-price-list-ranges-FR-014
+// @traces 355-FR-007
+// @traces 355-FR-008
+// @traces 355-FR-009
+// @traces 355-FR-014
 describe('the rows of the price list', () => {
   it('shows each job with its name, duration and range, in the order given', () => {
     expect(rows().map((r) => text(r.querySelector('.name')))).toEqual([
@@ -247,7 +247,7 @@ describe('the rows of the price list', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-010
+// @traces 355-FR-010
 describe('a garage with no public price', () => {
   it('shows the heading and the empty text, and nothing else', async () => {
     await show({ prices: [] });
@@ -273,8 +273,8 @@ describe('a garage with no public price', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-011
-// @traces 355-price-list-ranges-FR-016
+// @traces 355-FR-011
+// @traces 355-FR-016
 describe('the switch on each row', () => {
   it('is off on load and named by its job', () => {
     expect(switches()).toHaveLength(3);
@@ -348,8 +348,8 @@ describe('the switch on each row', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-011
-// @traces 355-price-list-ranges-FR-012
+// @traces 355-FR-011
+// @traces 355-FR-012
 describe('the price list read again', () => {
   it('keeps the switch of a job still listed and shows its new range', async () => {
     switchOf('Plăcuțe și discuri de frână față')?.click();
@@ -396,7 +396,7 @@ describe('the price list read again', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-002 356-live-estimate-FR-009
+// @traces 356-FR-002 356-FR-009
 describe('the switches and the shared selection', () => {
   it('writes each switch into the page’s selection', async () => {
     switchOf('Plăcuțe și discuri de frână față')?.click();

@@ -137,7 +137,7 @@ function toggle(id: string, checked = true) {
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 356-live-estimate-FR-001 356-live-estimate-FR-012
+// @traces 356-FR-001 356-FR-012
 describe('the estimate box', () => {
   it('is a region named Estimarea ta, holding its h2 heading', async () => {
     await render();
@@ -154,7 +154,7 @@ describe('the estimate box', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-002 356-live-estimate-FR-003 356-live-estimate-FR-004
+// @traces 356-FR-002 356-FR-003 356-FR-004
 describe('the jobs on and their totals', () => {
   it('lists the jobs on, in the order of the list, each with its range', async () => {
     await render();
@@ -241,7 +241,7 @@ describe('the jobs on and their totals', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-005 356-live-estimate-FR-006 356-live-estimate-FR-007 356-live-estimate-FR-008
+// @traces 356-FR-005 356-FR-006 356-FR-007 356-FR-008
 describe('what the box says', () => {
   it('shows zero and how the counter works with nothing on, the button still there', async () => {
     await render();
@@ -301,7 +301,7 @@ describe('what the box says', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-010
+// @traces 356-FR-010
 describe('a job that leaves the list', () => {
   it('shows that a job on is no longer offered, in the one live region, until the next change', async () => {
     await render();
@@ -340,7 +340,7 @@ describe('a job that leaves the list', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-011
+// @traces 356-FR-011
 describe('the box’s request button', () => {
   it('is CERE OFERTĂ and hands the jobs on to the request dialog', async () => {
     await render();

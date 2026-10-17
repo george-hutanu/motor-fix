@@ -16,9 +16,9 @@ const sideways = (page: Page) =>
 
 // Militari's seeded list: diagnosis 150–220 lei, the front brakes 890–1.400
 // lei by default and 1.100–1.700 lei for BMW.
-// @traces 356-live-estimate-FR-001 356-live-estimate-FR-002 356-live-estimate-FR-003
-// @traces 356-live-estimate-FR-005 356-live-estimate-FR-008 356-live-estimate-FR-011
-// @traces 356-live-estimate-FR-012 356-live-estimate-FR-013
+// @traces 356-FR-001 356-FR-002 356-FR-003
+// @traces 356-FR-005 356-FR-008 356-FR-011
+// @traces 356-FR-012 356-FR-013 356-FR-014
 test.describe('the live estimate on a garage profile @seeded', () => {
   test('adds up the switched-on jobs and keeps them through a reload', async ({
     page,

@@ -137,7 +137,7 @@ async function press() {
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 356-live-estimate-FR-003 356-live-estimate-FR-004
+// @traces 356-FR-003 356-FR-004
 describe('the totals at the edges', () => {
   it('rounds the sum of the bani, not each row', async () => {
     const half = (id: string) => row(id, id, id, 15_049, 15_049);
@@ -240,7 +240,7 @@ describe('the totals at the edges', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-005 356-live-estimate-FR-010
+// @traces 356-FR-005 356-FR-010
 describe('the live region', () => {
   it('is silent on load even when a selection was restored', async () => {
     await render(GARAGE, { 'g-1': ['j-diag', 'j-brakes'] });
@@ -361,7 +361,7 @@ describe('the live region', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-009
+// @traces 356-FR-009
 describe('a selection kept for the session', () => {
   it('shows nothing on for another garage, and the first back again', async () => {
     await render();
@@ -402,7 +402,7 @@ describe('a selection kept for the session', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-011
+// @traces 356-FR-011
 describe('the hand-over to the request dialog', () => {
   it('hands over an empty list when nothing is on', async () => {
     await render();

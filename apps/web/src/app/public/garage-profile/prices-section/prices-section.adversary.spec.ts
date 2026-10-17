@@ -111,7 +111,7 @@ async function turnOn(name: string) {
   await settle();
 }
 
-// @traces 355-price-list-ranges-FR-010
+// @traces 355-FR-010
 describe('the price list section when it has nothing to list', () => {
   it('shows only the heading and the empty line, even with a labour range', async () => {
     await show({ prices: [] });
@@ -143,8 +143,8 @@ describe('the price list section when it has nothing to list', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-008
-// @traces 355-price-list-ranges-FR-009
+// @traces 355-FR-008
+// @traces 355-FR-009
 describe('the price list rows with hostile data', () => {
   it('rounds bani to the nearest leu, never truncating', async () => {
     await show({
@@ -234,7 +234,7 @@ describe('the price list rows with hostile data', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-011
+// @traces 355-FR-011
 describe('the switches of the price list', () => {
   it('starts with every switch off', () => {
     expect(checkedNames()).toEqual([]);
@@ -323,7 +323,7 @@ describe('the switches of the price list', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-016
+// @traces 355-FR-016
 describe('the price list section for assistive technology', () => {
   it('names the region, holds one h2 and no live region', () => {
     expect(section().getAttribute('aria-label')).toBe('Lista de prețuri');

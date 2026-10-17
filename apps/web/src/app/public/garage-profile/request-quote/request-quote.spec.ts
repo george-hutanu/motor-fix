@@ -972,7 +972,7 @@ describe('the quote request sent event', () => {
   });
 });
 
-// @traces 356-live-estimate-FR-011
+// @traces 356-FR-011
 describe('the dialog opened from the estimate box', () => {
   it('starts with the jobs handed over switched on, the rest off, and sends them', async () => {
     await open({ jobTypeIds: [PADS.id] });

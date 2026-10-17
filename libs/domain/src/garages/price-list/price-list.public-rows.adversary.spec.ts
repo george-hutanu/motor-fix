@@ -44,8 +44,8 @@ const BMW = 'brand-bmw';
 const ranges = (rows: ReturnType<typeof publicPriceRows>) =>
   rows.map((r) => [r.jobTypeId, r.fromBani, r.toBani]);
 
-// @traces 355-price-list-ranges-FR-001
-// @traces 355-price-list-ranges-FR-002
+// @traces 355-FR-001
+// @traces 355-FR-002
 describe('publicPriceRows with a brand range', () => {
   it('returns an empty list for no rows', () => {
     expect(publicRows([], [])).toEqual([]);
@@ -150,8 +150,8 @@ describe('publicPriceRows with a brand range', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-003
-// @traces 355-price-list-ranges-FR-004
+// @traces 355-FR-003
+// @traces 355-FR-004
 describe('publicPriceRows with brand ticks', () => {
   it('lists only ticked jobs once any tick exists', () => {
     const a = job();
@@ -195,7 +195,7 @@ describe('publicPriceRows with brand ticks', () => {
   });
 });
 
-// @traces 355-price-list-ranges-FR-005
+// @traces 355-FR-005
 describe('publicPriceRows purity', () => {
   it('answers the same twice and leaves frozen input untouched', () => {
     const j = job();
