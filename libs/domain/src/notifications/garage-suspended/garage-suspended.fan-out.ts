@@ -56,7 +56,7 @@ export class GarageSuspendedFanOut {
     const { id: eventId, payload } = job.data;
     const { garageId } = payload;
     if (typeof garageId !== 'string') {
-      this.skip(garageId);
+      this.untold(garageId);
       return;
     }
     const suspension = await this.prisma.garageSuspension.findFirst({
@@ -66,7 +66,7 @@ export class GarageSuspendedFanOut {
     });
     const owners = suspension ? await this.owners(garageId) : new Map();
     if (!suspension || owners.size === 0) {
-      this.skip(garageId);
+      this.untold(garageId);
       return;
     }
     let told = 0;
@@ -92,7 +92,7 @@ export class GarageSuspendedFanOut {
     );
   }
 
-  private skip(garageId: unknown): void {
+  private untold(garageId: unknown): void {
     countGarageSuspendedNotice('skipped');
     this.logger.log(
       `garage ${typeof garageId === 'string' ? garageId : '?'} suspended: nobody told`,
