@@ -207,7 +207,8 @@ per stack:
    the GitHub secret `OUTAGE_WEBHOOK_TOKEN` and the GitHub variable
    `STAGING_WEB_URL` (the staging web address), both set by the owner;
    without either the run skips it with a notice and still applies the
-   e-mail.
+   e-mail. It posts to the staging API only, as the checks watch staging:
+   production has no webhook.
 3. The API service in Railway: `OUTAGE_WEBHOOK_TOKEN`, the same token as the
    GitHub secret. Unset, the webhook refuses every call.
 4. A changed secret or variable takes effect at the next run of the
