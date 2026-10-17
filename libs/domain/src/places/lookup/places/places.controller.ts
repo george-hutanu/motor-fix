@@ -24,6 +24,7 @@ import type { Request, Response } from 'express';
 
 import { recordLookup } from './places.metrics';
 import { PlacesThrottle } from './places.throttle';
+import { systemLog } from '../../../admin/system-log/system-log';
 import { Public } from '../../../auth/actor.guard';
 import {
   PLACES_PROVIDER,
@@ -78,6 +79,13 @@ export class PlacesController {
     const seconds = (performance.now() - started) / 1_000;
     if ('unavailable' in answer) {
       recordLookup(name, 'unavailable', seconds);
+      // A provider left unset is a setting, not an outside error.
+      if (answer.unavailable !== 'not_configured') {
+        void systemLog.write('service_error', 'maps', {
+          provider: name,
+          reason: answer.unavailable,
+        });
+      }
       throw new HttpException(
         {
           code: 'search_unavailable',

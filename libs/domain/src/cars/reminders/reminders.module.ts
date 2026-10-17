@@ -17,6 +17,7 @@ import {
 import { type Job, type JobsOptions, Queue, Worker } from 'bullmq';
 
 import { type CarEvent, RemindersService } from './reminders.service';
+import { writeJobFailed } from '../../job-failures';
 import { inJob } from '../../logging';
 import {
   bucharestDaily,
@@ -101,6 +102,7 @@ export class RemindersScheduler {
       const { day } = job.data as Daily;
       this.logger.error(`reminders run of ${day} failed: ${error.message}`);
     }
+    writeJobFailed(REMINDERS_QUEUE, job, error);
   }
 
   private queueNext(now: Date) {

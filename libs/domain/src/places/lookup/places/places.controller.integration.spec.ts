@@ -4,6 +4,7 @@ import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { PLACES_LOOKUPS_PER_MINUTE } from './places.throttle';
+import { systemLog } from '../../../admin/system-log/system-log';
 import { AuthModule } from '../../../auth/auth.module';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import {
@@ -170,5 +171,53 @@ describe('GET /places', () => {
     expect(res.body.retryAfterSeconds).toBeGreaterThan(0);
     expect(res.body.retryAfterSeconds).toBeLessThanOrEqual(60);
     expect(calls).toEqual([]);
+  });
+});
+
+// @traces 297-FR-008
+describe('a map provider error in the system log', () => {
+  let write: jest.SpyInstance;
+
+  beforeEach(() => {
+    // A write that never finishes: the answer must not wait for it.
+    write = jest
+      .spyOn(systemLog, 'write')
+      .mockReturnValue(new Promise(() => {}));
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('is written as a maps error with the provider and its reason, without the address typed', async () => {
+    answer = async () => ({ unavailable: 'timeout' });
+
+    const res = await lookup({ q: 'Strada Exemplu 12' });
+
+    expect(res.status).toBe(503);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('service_error', 'maps', {
+      provider: 'scripted',
+      reason: 'timeout',
+    });
+    expect(JSON.stringify(write.mock.calls)).not.toContain('Exemplu');
+  });
+
+  it('is written when the provider throws', async () => {
+    answer = async () => {
+      throw new TypeError('broken');
+    };
+
+    await lookup({ q: 'Strada Exemplu' });
+
+    expect(write).toHaveBeenCalledWith('service_error', 'maps', {
+      provider: 'scripted',
+      reason: 'thrown',
+    });
+  });
+
+  it('is not written for an answer, or for a search with no provider set up', async () => {
+    await lookup({ q: 'Strada Exemplu' });
+    answer = async () => ({ unavailable: 'not_configured' });
+    await lookup({ q: 'Strada Exemplu' });
+
+    expect(write).not.toHaveBeenCalled();
   });
 });

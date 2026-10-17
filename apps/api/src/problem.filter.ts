@@ -6,6 +6,7 @@ import {
   fieldProblems,
   type Problem,
 } from '@motor-fix/contracts';
+import { systemLog } from '@motor-fix/domain';
 import {
   ArgumentsHost,
   Catch,
@@ -14,7 +15,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 
 export function sendProblem(
   res: Response,
@@ -78,6 +79,7 @@ export class ProblemFilter implements ExceptionFilter {
         exception instanceof Error ? exception : String(exception),
       );
       span?.setStatus({ code: SpanStatusCode.ERROR });
+      void systemLog.write('server_error', 'api', routeOf(host));
       sendProblem(res, 500, 'internal_error');
       return;
     }
@@ -108,6 +110,23 @@ export class ProblemFilter implements ExceptionFilter {
       },
     );
   }
+}
+
+// The method and the route template an unexpected error happened on, never
+// the path itself, which may hold ids; `unknown` when no route matched, or
+// when the error came from outside an HTTP request.
+function routeOf(host: ArgumentsHost) {
+  const http = host.switchToHttp();
+  const req =
+    typeof http.getRequest === 'function'
+      ? http.getRequest<Partial<Request> | undefined>()
+      : undefined;
+  const path = (req?.route as { path?: unknown } | undefined)?.path;
+  return {
+    method: typeof req?.method === 'string' ? req.method : 'unknown',
+    route:
+      typeof path === 'string' ? `${req?.baseUrl ?? ''}${path}` : 'unknown',
+  };
 }
 
 const tooLarge = (exception: unknown) =>

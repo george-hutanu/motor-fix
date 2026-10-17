@@ -173,6 +173,28 @@
     },
     {
       "kind": "queue",
+      "name": "system-log",
+      "source": "libs/domain/src/admin/system-log/system-log.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one scheduler, system-log-purge, at 03:30 Europe/Bucharest deletes system log entries older than 90 days, counted by motorfix_jobs_total{job_name,outcome}, logging the rows deleted and once on its final failure",
+      "story": "ST-297"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_system_log_entries_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": "none",
+      "reason": "counts every system status log write by kind and outcome (written, grouped, dropped), with one SystemLog error line per dropped entry naming only its kind and source; no panel yet, the log's screen is a later story; a dropped rate is the database being down, which postgres-unreachable and api-error-rate already alert",
+      "story": "ST-297"
+    },
+    {
+      "kind": "queue",
       "name": "reminders",
       "source": "libs/domain/src/cars/reminders/reminders.module.ts",
       "dashboard": "motorfix-queues",
