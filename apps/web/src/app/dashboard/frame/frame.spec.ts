@@ -117,6 +117,7 @@ async function render(
           reload,
           shown,
           signOut,
+          token: () => 'access',
         },
       },
       { provide: Live, useValue: live },

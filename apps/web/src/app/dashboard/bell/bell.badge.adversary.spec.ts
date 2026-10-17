@@ -9,6 +9,7 @@ import { Subject } from 'rxjs';
 
 import { Bell, BellStore } from './bell';
 import { Live } from '../live';
+import { Session } from '../session';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -51,6 +52,7 @@ function setup(count: number, items: NotificationDto[]) {
       { provide: NotificationsService, useValue: api },
       { provide: Live, useValue: { events } },
       { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Session, useValue: { token: () => 'access' } },
     ],
   });
 }

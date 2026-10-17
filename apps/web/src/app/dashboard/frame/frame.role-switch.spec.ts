@@ -73,6 +73,7 @@ async function render(
       current.set(me(to, roles));
       return current();
     }),
+    token: () => 'access',
   };
   TestBed.configureTestingModule({
     providers: [

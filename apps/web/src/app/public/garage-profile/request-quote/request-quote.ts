@@ -50,7 +50,9 @@ import { HlmButton, HlmInput, HlmSwitch } from '@motor-fix/ui-cockpit';
 
 import { answersLine, sentLine } from './sent-line';
 import { Consent } from '../../../consent/consent';
+import { Session } from '../../../dashboard/session';
 import { type Place, PlaceStore } from '../../../home/place/place-store';
+import { SignInDialog } from '../../../sign-in/sign-in-dialog';
 
 export interface RequestQuoteData {
   garage: PublicGarageDto;
@@ -130,6 +132,8 @@ export class RequestQuote {
   >();
   private readonly router = inject(Router);
   private readonly consent = inject(Consent);
+  private readonly session = inject(Session);
+  private readonly signIn = inject(SignInDialog);
   protected readonly garage = this.task.data.garage;
 
   protected readonly max = REQUEST_DESCRIPTION_MAX;
@@ -282,8 +286,18 @@ export class RequestQuote {
     );
   }
 
+  // A visitor this browser never saw signed in is asked first: the cars call
+  // would only be refused. A dismissed sign-in reads as cars that could not load.
   protected async loadCars() {
     this.carsFailed.set(false);
+    if (
+      !this.session.token() &&
+      !this.session.roleHint() &&
+      !(await this.signIn.gate())
+    ) {
+      this.carsFailed.set(true);
+      return;
+    }
     try {
       const { items } = await this.carsApi.carsControllerList();
       this.cars.set(items);

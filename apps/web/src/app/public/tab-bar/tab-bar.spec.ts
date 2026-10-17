@@ -55,6 +55,7 @@ function setUp(platform = 'browser') {
           load,
           shown: current,
           takeReturnTo: jest.fn((): string | null => null),
+          token: () => 'access',
         },
       },
       { provide: PLATFORM_ID, useValue: platform },
