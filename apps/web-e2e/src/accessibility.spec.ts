@@ -292,6 +292,16 @@ test.describe('axe on the core screens @seeded', () => {
         .click();
       await dialogShown(page);
       found.push(...(await scan(page, `a garage request ${language}`)));
+      // The quote is sent from the request, in a dialog over it.
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: /^(Trimite oferta|Send a quote)$/ })
+        .click();
+      await expect(page.getByRole('dialog')).toHaveCount(2);
+      await dialogShown(page);
+      found.push(...(await scan(page, `the send-quote dialog ${language}`)));
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(1);
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).toHaveCount(0);
     }
@@ -304,9 +314,19 @@ test.describe('axe on the core screens @seeded', () => {
     expect(await dashboards(page, ['/app/garage/profile'])).toEqual([]);
   });
 
-  test('the garages to check', async ({ page }) => {
+  test('the garages to check and one file open', async ({ page }) => {
     await signedIn(page, ACCOUNTS.admin);
-    expect(await dashboards(page, ['/app/admin/garages'])).toEqual([]);
+    const found = await dashboards(page, ['/app/admin/garages']);
+    await page.setViewportSize(DESKTOP);
+    // The open file covers the language switch: the language comes first.
+    for (const language of LANGUAGES) {
+      await dashboard(page, '/app/admin/garages');
+      await useLanguage(page, language);
+      await page.locator('mf-admin-queue a.open').first().click();
+      await expect(page.locator('mf-verification-file')).toBeVisible();
+      found.push(...(await scan(page, `a garage's file ${language}`)));
+    }
+    expect(found).toEqual([]);
   });
 });
 
