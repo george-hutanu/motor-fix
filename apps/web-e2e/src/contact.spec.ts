@@ -53,7 +53,10 @@ test('the footer links to the contact page', async ({ page }) => {
   await page.goto('/ro/');
   await settled(page);
 
-  await page.locator('footer').getByRole('link', { name: 'Contact' }).click();
+  await page
+    .locator('mf-public-footer')
+    .getByRole('link', { name: 'Contact' })
+    .click();
 
   await expect(page).toHaveURL('/ro/contact');
   await expect(page.locator('mf-contact-form')).toBeVisible();

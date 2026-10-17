@@ -69,7 +69,8 @@ export class SupportMessagesController {
   @Public()
   @OptionalActor()
   @Post()
-  @UseGuards(JsonOnly, SupportThrottleGuard)
+  // The hourly limit takes every POST first (280-FR-013), a non-JSON one too.
+  @UseGuards(SupportThrottleGuard, JsonOnly)
   @UseInterceptors(CountInvalid)
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: SupportMessageCreatedDto })
