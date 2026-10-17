@@ -2,7 +2,7 @@
   <h2 [id]="headingId">{{ title() }}</h2>
   <div class="charts">
     @for (chart of charts(); track chart.key) {
-      <div class="chart">
+      <div class="chart" data-qa-volatile>
         @if (answer()) {
           <p class="latest">{{ chart.latest }}</p>
         }

@@ -6,6 +6,10 @@ import {
   type DocumentKind,
   SUSPENSION_CAUSES,
   type SuspensionCause,
+  VERIFICATION_CHECK_KINDS,
+  VERIFICATION_CHECK_RESULTS,
+  type VerificationCheckKind,
+  type VerificationCheckResult,
 } from '@motor-fix/contracts';
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
@@ -80,6 +84,11 @@ const suspensions = () =>
   counter(
     'motorfix_garage_suspensions_total',
     'Garages taken off the map, by cause',
+  );
+const verificationChecks = () =>
+  counter(
+    'motorfix_verification_checks_total',
+    "Checks an admin recorded on a garage's file, by kind and result",
   );
 const quotes = () => counter('motorfix_quotes_total', 'Quotes sent to drivers');
 const emails = () =>
@@ -157,6 +166,13 @@ export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
 
 export function countGarageSuspension(cause: SuspensionCause) {
   suspensions().add(1, { cause });
+}
+
+export function countVerificationCheck(
+  kind: VerificationCheckKind,
+  result: VerificationCheckResult,
+) {
+  verificationChecks().add(1, { kind, result });
 }
 
 export function countQuote() {
@@ -250,6 +266,13 @@ const STARTS: Record<
     [garageSignUps, [{}]],
     [approvals, each('outcome', APPROVAL_OUTCOMES)],
     [suspensions, each('cause', SUSPENSION_CAUSES)],
+    [
+      verificationChecks,
+      across(
+        each('kind', VERIFICATION_CHECK_KINDS),
+        each('result', VERIFICATION_CHECK_RESULTS),
+      ),
+    ],
     [notifications, [{ channel: 'in-app' }]],
     [jobSteps, each('action', STEP_ACTIONS)],
     [documentsUploaded, each('kind', DOCUMENT_KINDS)],

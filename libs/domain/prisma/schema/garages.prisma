@@ -524,6 +524,8 @@ model VerificationCheck {
   detail     String?
   recordedBy String?                 @map("recorded_by") @db.Uuid
   recordedAt DateTime?               @map("recorded_at") @db.Timestamptz(3)
+  // What the admin found in the registers: company and caen only.
+  evidence   Json?
   file       VerificationFile        @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@unique([fileId, kind])

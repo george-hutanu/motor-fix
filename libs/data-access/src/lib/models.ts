@@ -156,6 +156,7 @@ export type { PushTestQueuedDto } from './models/push-test-queued-dto';
 export type { QuoteDto } from './models/quote-dto';
 export type { QuoteJobDto } from './models/quote-job-dto';
 export type { RecipientDto } from './models/recipient-dto';
+export type { RecordCheckEvidenceDto } from './models/record-check-evidence-dto';
 export type { RecordConsentDto } from './models/record-consent-dto';
 export type { RecordVerificationCheckDto } from './models/record-verification-check-dto';
 export type { RefreshDto } from './models/refresh-dto';
@@ -201,7 +202,7 @@ export type { UpdateNotificationGroupDto } from './models/update-notification-gr
 export type { UpdateNotificationPreferenceDto } from './models/update-notification-preference-dto';
 export type { UpdateNotificationPreferencesDto } from './models/update-notification-preferences-dto';
 export type { VerificationActorDto } from './models/verification-actor-dto';
-export type { VerificationCheckDto } from './models/verification-check-dto';
+export type { VerificationCheckEvidenceDto } from './models/verification-check-evidence-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
 export type { VerificationFileActivityDto } from './models/verification-file-activity-dto';
 export type { VerificationFileCheckDto } from './models/verification-file-check-dto';

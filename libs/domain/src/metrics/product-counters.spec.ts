@@ -20,6 +20,7 @@ import {
   countSearch,
   countSignIn,
   countSystemLogEntry,
+  countVerificationCheck,
   countVerificationResult,
 } from './product-counters';
 import { KINDS } from '../admin/system-log/entry';
@@ -130,6 +131,12 @@ describe('the system log counter', () => {
 // @traces 209-FR-014
 describe('the product counters', () => {
   it.each([
+    // @traces 203-FR-010
+    [
+      () => countVerificationCheck('caen', 'warning'),
+      'motorfix_verification_checks_total',
+      { kind: 'caen', result: 'warning' },
+    ],
     [
       () => countSearch('results'),
       'motorfix_searches_total',
