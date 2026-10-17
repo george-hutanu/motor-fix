@@ -32,6 +32,9 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  'GET /api/v1/admin/garages': {
+    path: async () => '/api/v1/admin/garages?status=suspended',
+  },
   'GET /api/v1/admin/platform-rule-changes': {
     path: async () =>
       '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
