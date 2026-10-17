@@ -32,6 +32,11 @@ describe('isCurrentConsent', () => {
       'the texts replaced on 2026-10-12',
       { privacyVersion: '2026-10-11', termsVersion: '2026-10-11' },
     ],
+    // @traces 366-FR-004
+    [
+      'the privacy notice replaced on 2026-10-17',
+      { privacyVersion: '2026-10-12', termsVersion: TERMS_VERSION },
+    ],
   ])('refuses %s', (_, consent) => {
     expect(isCurrentConsent(consent)).toBe(false);
   });

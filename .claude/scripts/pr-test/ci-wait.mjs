@@ -30,6 +30,7 @@
 // and a conflicting PR gets no `CI OK` check, which the merge gate requires.
 import { ghRun, spawnRun } from "../lib/gh-rest.mjs";
 import { isEntryPoint } from "../lib/entry.mjs";
+import { isMutationCheck } from "../lib/mutation-check.mjs";
 import { realGh } from "./post.mjs";
 
 const NO_CHECKS = /no checks reported/i;
@@ -63,9 +64,11 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
     if (stop) return stop;
     // The REST layer keeps gh's plain exit codes under --json (8 pending,
     // 1 failing), so its answer is read whatever the code; real gh exits 0.
-    const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link"]);
+    // A Mutation run on the head is no part of the PR: it neither holds the wait nor fails it.
+    const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link,workflow"]);
     checks = NO_CHECKS.test(out.stderr) ? [] : parsed(out.stdout);
     if (!Array.isArray(checks)) return { code: 2, lines: [`CI: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+    checks = checks.filter((c) => !isMutationCheck(c));
     const stale = await staleReview(gh, pr, checks);
     if (stale) return { code: 1, lines: [stale] };
     const pending = checks.filter((c) => c.bucket === "pending").map((c) => c.name);

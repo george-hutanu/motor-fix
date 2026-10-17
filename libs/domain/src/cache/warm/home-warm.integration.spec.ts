@@ -510,6 +510,7 @@ describe('the warmed car list', () => {
         'id',
         'itpUntil',
         'model',
+        'nextServiceKm',
         'odometerKm',
         'plate',
         'rcaUntil',

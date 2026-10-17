@@ -1,5 +1,18 @@
 <!--
-Sync Impact Report (v4.0.0)
+Sync Impact Report (v4.1.0)
+- Version change: 4.0.0 → 4.1.0 (MINOR: Principle II gains a bullet.
+  Mutation testing is never part of a task's lifecycle; it runs only on
+  `main`'s schedule and by `workflow_dispatch`, no task dispatches, reads or
+  waits for a Mutation run, and no wait or merge gate counts its check. No
+  principle or gate removed)
+- Source: ST-1344.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — the version line, II
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ AGENTS.md — the Stryker bullet and the fix-in-PR list
+  - ✅ .specify/contexts/harden.md, the harden and auto skills — no mutation step
+
+Previous report (v4.0.0)
 - Version change: 3.3.0 → 4.0.0 (MAJOR: a rule removed. No tech-debt
   tickets: every verified review, QA or harden finding is fixed in the
   current task's PR before ready or merge, and one needing an owner decision
@@ -454,6 +467,10 @@ might be useful later" is not a defense.
   core flows are covered end to end before every release, against staging.
   The full end-to-end suite runs on demand (`gh workflow run ci.yml`, or
   locally), not on every PR.
+- Mutation testing is never part of a task's lifecycle: it runs only in the
+  Mutation workflow, on `main`'s schedule and by `workflow_dispatch`. No task
+  dispatches, reads or waits for a Mutation run, no wait or merge gate counts
+  its check, and a surviving mutant is picked from the Project like any task.
 - Tests follow Principle I: cover real behavior and contracts, no padding
   suites for coverage numbers.
 - Source carries no internal identifiers — no FR id, feature number, task id,
@@ -743,4 +760,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 4.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-16
+**Version**: 4.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-17

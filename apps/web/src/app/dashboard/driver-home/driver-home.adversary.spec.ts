@@ -23,6 +23,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   id: 'car-1',
   itpUntil: null,
   model: 'Logan',
+  nextServiceKm: null,
   odometerKm: 120000,
   plate: null,
   rcaUntil: null,
@@ -256,7 +257,9 @@ describe('one list failing while the other succeeds', () => {
 
     expect(invitation(element, 'car')).toBeNull();
     expect(text(panel(element, 'cars'))).not.toContain(EMPTY.cars);
-    expect(text(panel(element, 'cars'))).toContain(ERROR);
+    expect(text(panel(element, 'cars'))).toContain(
+      'Nu am putut încărca mașinile. Reîncearcă.',
+    );
   });
 
   it('shows the error in quotes and repairs and not their empty texts when the requests failed', async () => {

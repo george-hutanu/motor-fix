@@ -37,6 +37,7 @@ import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watc
 import { ffMainCommand, lockPid, mainCheckoutState, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 import { removeWorktree } from "./worktree-remove.mjs";
 import { branchFeatureDir, locateFeature } from "./lib/feature.mjs";
+import { isMutationCheck } from "./lib/mutation-check.mjs";
 
 // done is the grace period before a merged worktree is removed: its
 // tail agent may still be finishing there, and holds it while within it.
@@ -100,7 +101,7 @@ function claudeAlive(pid) {
 export function summarizePr(pr) {
   let checks = "none";
   let agentReview = null;
-  for (const c of (pr.statusCheckRollup ?? []).filter(Boolean)) {
+  for (const c of (pr.statusCheckRollup ?? []).filter((c) => c && !isMutationCheck(c))) {
     if ((c.context ?? c.name) === "agent-review") {
       agentReview = String(c.state).toLowerCase() === "error" ? "failure" : String(c.state).toLowerCase();
       continue;

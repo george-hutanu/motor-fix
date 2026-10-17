@@ -236,4 +236,23 @@ describe('DashboardTabBar spacing', () => {
       expect(`${px[0]} ${Number(px[1]) % 4}`).toBe(`${px[0]} 0`);
     }
   });
+
+  // A phone reads its tab names and counts at the body size, never the 12 px label size.
+  it('sets every tab name and count at the body size', () => {
+    const css = readFileSync(join(__dirname, 'tab-bar.css'), 'utf8');
+    const sizes = [...css.matchAll(/font-size: ([^;]+);/g)].map((m) => m[1]);
+
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(new Set(sizes)).toEqual(new Set(['var(--mf-size-body)']));
+  });
+
+  // Six tabs at the body size fit a 390 px phone: each takes its name's width
+  // plus 4 px a side, never under the 44 px target.
+  it('keeps each tab to its name plus 4 px a side, at least 44 px wide', () => {
+    const css = readFileSync(join(__dirname, 'tab-bar.css'), 'utf8');
+    const tab = /\na \{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(tab).toContain('min-width: 44px;');
+    expect(tab).toContain('padding: 0 4px;');
+  });
 });
