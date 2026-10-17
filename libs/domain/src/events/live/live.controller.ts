@@ -22,7 +22,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 
-import { LiveHub } from './live.hub';
+import { LIVE_HEADERS, LiveHub } from './live.hub';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { verifyAccessToken } from '../../auth/access-token';
 import {
@@ -63,11 +63,7 @@ export class LiveController {
     const expiresAt =
       verifyAccessToken(token, this.auth.tokenSecret)?.expiresAt ?? Date.now();
     const channels = await this.channels(actor);
-    res.writeHead(200, {
-      'Cache-Control': 'no-cache',
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'X-Accel-Buffering': 'no',
-    });
+    res.writeHead(200, LIVE_HEADERS);
     res.flushHeaders();
     this.hub.open(res, {
       accountId: actor.accountId,

@@ -62,7 +62,8 @@
         "worker-down",
         "worker-saturation",
         "worker-queue-backlog",
-        "worker-jobs-failed"
+        "worker-jobs-failed",
+        "worker-cdn-purge-failed"
       ],
       "story": "ST-881"
     },
@@ -91,7 +92,8 @@
         "worker-down",
         "worker-saturation",
         "worker-queue-backlog",
-        "worker-jobs-failed"
+        "worker-jobs-failed",
+        "worker-cdn-purge-failed"
       ],
       "story": "ST-881"
     },
@@ -941,6 +943,40 @@
       ],
       "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, and new searches still count in motorfix_searches_total",
       "story": "ST-267"
+    },
+    {
+      "kind": "outside-service",
+      "name": "bunny",
+      "host": "api.bunny.net",
+      "source": "libs/domain/src/cache/cdn-purge/cdn-purge.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-cdn-purge-failed",
+        "worker-jobs-failed",
+        "worker-saturation"
+      ],
+      "reason": "the CDN's API, which the worker's CdnPurgeSender calls to purge a garage page (garage:<id>) or the search pages (search) by tag after a cache event; counted by motorfix_cdn_purges_total{outcome=sent|failed}, a failure logs 'cdn purge failed <tag> <status|error>' and the tag goes back on the queue; worker-cdn-purge-failed fires on purges that keep failing for 15 minutes; worker-saturation covers the sender's host, and worker-jobs-failed the relay jobs whose purges it carries. scripts/cdn.ts (release.yml's purge step and the config check) calls the same API from CI, outside the inventory's reach",
+      "story": "ST-430"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_cdn_purges_total",
+      "source": "libs/domain/src/cache/cdn-purge/cdn-purge.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-cdn-purge-failed"
+      ],
+      "reason": "counts each tag purge the worker sends to the CDN by outcome (sent, failed); a failed one is queued again and logs one warn line naming the tag and the status",
+      "story": "ST-430"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_origin_refused_total",
+      "source": "apps/web/src/server/origin-guard/origin-guard.ts",
+      "dashboard": "motorfix-web",
+      "alerts": "none",
+      "reason": "counts each request the web origin refused with 403 because X-Origin-Secret was missing or wrong (someone reaching Railway's address past the CDN), with one warn log line per refusal; no alert: refusals are the lock-down working, and a CDN that stopped sending the secret shows as the web-down and error-rate alerts at the edge",
+      "story": "ST-430"
     }
   ]
 }

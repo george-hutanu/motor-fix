@@ -86,6 +86,7 @@ features:
   - 1323-rest-not-graphql
   - 1324-retire-debt-and-ready
   - 1344-no-mutation-wait
+  - 430-cdn-waf
 ---
 
 # Capability: Platform
@@ -2204,6 +2205,50 @@ _From 1344-no-mutation-wait._
 ### 1344-FR-010 — Every reader of a PR's checks that a lifecycle step or gate uses — `merge-gate.mjs`, `pr-lifecycle-gate.mjs`, `.claude/scripts/pr-test/ci-wait.mjs`, `watch.mjs`'s PR summary, and the REST translation in `lib/gh-rest.mjs` that feeds them in a cloud session — MUST leave out the checks of the workflow named `Mutation` (`.github/workflows/mutation.yml`), whatever their state, so that a Mutation run on the PR head neither holds a wait nor refuses or delays the merge.
 
 _From 1344-no-mutation-wait._
+
+### 430-FR-001 — Every production and staging web address MUST resolve to the CDN, serve TLS only and answer plain HTTP with a redirect to HTTPS; the origin is reached only through the CDN's own origin address.
+
+_From 430-cdn-waf._
+
+### 430-FR-002 — The edge MUST keep a content-hashed static file for one year and a public page (home, brand pages, city pages, garage profiles, the sitemap) for 60 seconds, after which it fetches the page from the origin again; the origin MUST tell the browser to keep a public page for 0 seconds and revalidate while telling the edge its own 60-second lifetime (`Cache-Control: public, max-age=0, s-maxage=60, must-revalidate`).
+
+_From 430-cdn-waf._
+
+### 430-FR-003 — Every public page response MUST carry its purge tag — `garage:<id>` on a garage profile, `search` on the home, brand and city pages, and the sitemap — in the header the provider reads (one tag per response), and the purge sender MUST send to the CDN every `garage:<id>` and `search` tag that `purgeTags`/`purgeAudience` hand to their hook; a `warm:*` tag MUST never be sent.
+
+_From 430-cdn-waf._
+
+### 430-FR-004 — The purge sender MUST queue tags, batch them and send them from the worker at or under the provider's rate, keep a tag that could not be sent for the next batch, and the release workflow MUST purge the zone after each environment's deploy health check passed; a failed or skipped purge there (no key yet) is a notice or warning, never a failed release, because the 60-second edge lifetime bounds the stale window.
+
+_From 430-cdn-waf._
+
+### 430-FR-005 — A request carrying the session cookie (`mf_refresh`) or an `Authorization` header, and every request under `/api/` or `/app/`, MUST never be served from or stored at the edge.
+
+_From 430-cdn-waf._
+
+### 430-FR-006 — Server-sent event streams (`/api/v1/live` and the public live streams) MUST pass through the edge unbuffered and MUST stay open at least as long as the origin keeps them.
+
+_From 430-cdn-waf._
+
+### 430-FR-007 — When an origin secret is configured, the web server MUST answer 403 to a request that lacks the secret header or carries a value not in the configured comma-separated list, before any page, API proxy or static file handling, except `/health/live` and `/health/ready`; with no secret configured it MUST behave exactly as today.
+
+_From 430-cdn-waf._
+
+### 430-FR-008 — The provider's managed firewall rules MUST be on, and edge rate limits MUST answer 429 to a burst from one client address on sign-in (`POST /api/v1/auth/sign-in`, `/api/v1/auth/phone-sign-in`, the OAuth completion), sign-up (`POST /api/v1/auth/sign-up`), code sending (`POST /api/v1/auth/phone-code`, `/api/v1/auth/password-reset`, `/api/v1/me/email`, `/api/v1/me/phone`) and quote requests (`POST /api/v1/quote-requests`); the limits are 20 requests per minute per client address on the first three groups together and 10 per minute on quote requests (the provider's two free rules, plan R5); the API's own limits stay unchanged.
+
+_From 430-cdn-waf._
+
+### 430-FR-009 — The provider's configuration MUST live in the repo as one declarative file, with a script that applies the pull zone and its edge rules and checks the live state against them (non-zero exit naming each difference; the Shield section is recorded, not applied, FR-008); both MUST be tested against recorded provider answers without reaching the provider.
+
+_From 430-cdn-waf._
+
+### 430-FR-010 — The change MUST ship its observability: purge sends and failures as metrics with a dashboard panel and an alert on failures, origin refusals as a metric, logs for a failed send and a refusal, and the new entries in `infra/observability/inventory.json`.
+
+_From 430-cdn-waf._
+
+### 430-FR-011 — The specs repo MUST gain a how-to for setting the CDN up (account, pull zone, DNS, the secret, applying the configuration) and a how-to for rolling back (addresses pointed straight at the origin by hand, the secret unset), and `docs/reference/stack.md`'s Edge row MUST move from Proposed to the decided provider.
+
+_From 430-cdn-waf._
 
 ## Retired
 

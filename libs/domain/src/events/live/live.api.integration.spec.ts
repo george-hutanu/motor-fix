@@ -192,7 +192,7 @@ describe('the live stream', () => {
 
     expect(live.res.statusCode).toBe(200);
     expect(live.res.headers['content-type']).toMatch(/^text\/event-stream/);
-    expect(live.res.headers['cache-control']).toBe('no-cache');
+    expect(live.res.headers['cache-control']).toBe('no-cache, no-transform');
     expect(live.res.headers['x-accel-buffering']).toBe('no');
     const hello = await live.next('hello');
     expect(hello.data).toEqual({

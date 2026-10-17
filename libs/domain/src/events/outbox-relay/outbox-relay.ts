@@ -55,6 +55,8 @@ export class OutboxRelay {
     private readonly redis: LivePublisher &
       Purger & { incr(key: string): Promise<unknown> },
     private readonly consumers: readonly EventConsumer[] = [],
+    // Each tag a purge drops, handed on: the CDN's queue when it is set.
+    private readonly hook?: (tag: string) => unknown,
   ) {}
 
   // One batch. A failure rolls the batch back: its rows stay waiting and the
@@ -152,7 +154,7 @@ export class OutboxRelay {
     const id = String(row.id);
     // The cached public reads and searches go first, so a page re-reading on
     // the event never gets the answer from before it.
-    await purgeAudience(this.redis, row.audience);
+    await purgeAudience(this.redis, row.audience, this.hook);
     await dropSearches(this.redis, row.audience);
     await publishLive(
       this.redis,

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 
-import { LIVE_CHANNEL, LiveHub, publishLive } from './live.hub';
+import { LIVE_CHANNEL, LIVE_HEADERS, LiveHub, publishLive } from './live.hub';
 
 class Sink extends EventEmitter {
   chunks: string[] = [];
@@ -293,5 +293,16 @@ describe('LiveHub', () => {
     await expect(
       publishLive({ publish }, testEvent, ['account:a1']),
     ).rejects.toThrow();
+  });
+});
+
+// @traces 430-FR-006
+describe('the headers a live stream opens with', () => {
+  it('ask every proxy and edge to pass it through unbuffered and untouched', () => {
+    expect(LIVE_HEADERS).toEqual({
+      'Cache-Control': 'no-cache, no-transform',
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'X-Accel-Buffering': 'no',
+    });
   });
 });
