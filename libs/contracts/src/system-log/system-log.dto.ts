@@ -9,6 +9,8 @@ import {
   Matches,
   Max,
   Min,
+  NotContains,
+  ValidateIf,
 } from 'class-validator';
 
 import {
@@ -51,7 +53,8 @@ export class SystemLogQueryDto {
     description: 'Entries before this instant; after `from`',
     format: 'date-time',
   })
-  @IsOptional()
+  // Absent only when left out: a null end is refused like a null start.
+  @ValidateIf((_, value) => value !== undefined)
   @Matches(INSTANT, ZONED)
   @IsISO8601({ strict: true })
   to?: string;
@@ -83,6 +86,8 @@ export class SystemLogQueryDto {
   @IsOptional()
   @Transform(trimmed)
   @Length(SYSTEM_LOG_SEARCH_MIN, SYSTEM_LOG_SEARCH_MAX)
+  // PostgreSQL text cannot hold NUL, so it is refused here rather than there.
+  @NotContains('\0', { message: '$property must not contain NUL' })
   q?: string;
 
   @ApiPropertyOptional({
