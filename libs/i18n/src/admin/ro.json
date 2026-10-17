@@ -133,6 +133,24 @@
     "seat": "Sediu social: {seat} · rază {km} km",
     "title": "Dosar de verificare"
   },
+  "garages": {
+    "listed": {
+      "few": "{n} listate",
+      "one": "{n} listat",
+      "other": "{n} de listate"
+    },
+    "loading": "Se încarcă cifrele service‑urilor",
+    "suspended": {
+      "few": "{n} suspendate",
+      "one": "{n} suspendat",
+      "other": "{n} de suspendate"
+    },
+    "waiting": {
+      "few": "{n} de verificat",
+      "one": "{n} de verificat",
+      "other": "{n} de verificat"
+    }
+  },
   "growth": {
     "title": "Creștere, ultimele 12 luni"
   },
@@ -228,6 +246,30 @@
       "one": "așteaptă de {n} zi lucrătoare",
       "other": "așteaptă de {n} de zile lucrătoare"
     }
+  },
+  "suspended": {
+    "alone": "suspendat",
+    "cancelled": {
+      "few": "{n} programări anulate",
+      "one": "{n} programare anulată",
+      "other": "{n} de programări anulate"
+    },
+    "cause": {
+      "admin": "decizia unui administrator",
+      "documents_overdue": "documente anuale neîncărcate",
+      "report_confirmed": "sesizare confirmată"
+    },
+    "empty": "Niciun service suspendat",
+    "heading": "Service‑uri suspendate",
+    "loading": "Se încarcă service‑urile suspendate",
+    "rar": {
+      "expired": "autorizație RAR expirată",
+      "none": "autorizație RAR nevalidă",
+      "suspended": "autorizație RAR suspendată",
+      "withdrawn": "autorizație RAR retrasă"
+    },
+    "since": "din {date}",
+    "state": "suspendat · {text}"
   },
   "users": {
     "cars": {

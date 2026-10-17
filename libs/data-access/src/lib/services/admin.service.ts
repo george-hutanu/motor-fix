@@ -16,7 +16,13 @@ import { AdminAccountsControllerSummary$Params } from '../fn/admin/admin-account
 import { AdminAccountsPageDto } from '../models/admin-accounts-page-dto';
 import { AdminAccountsSummaryDto } from '../models/admin-accounts-summary-dto';
 import { AdminDemandDto } from '../models/admin-demand-dto';
+import { AdminGaragesDto } from '../models/admin-garages-dto';
+import { AdminGaragesSummaryDto } from '../models/admin-garages-summary-dto';
 import { AdminGrowthDto } from '../models/admin-growth-dto';
+import { adminOverviewControllerGarages } from '../fn/admin/admin-overview-controller-garages';
+import { AdminOverviewControllerGarages$Params } from '../fn/admin/admin-overview-controller-garages';
+import { adminOverviewControllerGaragesSummary } from '../fn/admin/admin-overview-controller-garages-summary';
+import { AdminOverviewControllerGaragesSummary$Params } from '../fn/admin/admin-overview-controller-garages-summary';
 import { adminOverviewControllerGrowth } from '../fn/admin/admin-overview-controller-growth';
 import { AdminOverviewControllerGrowth$Params } from '../fn/admin/admin-overview-controller-growth';
 import { adminOverviewControllerOverview } from '../fn/admin/admin-overview-controller-overview';
@@ -186,6 +192,56 @@ export class AdminService extends BaseService {
   adminOverviewControllerQueue(params?: AdminOverviewControllerQueue$Params, context?: HttpContext): Promise<VerificationQueueDto> {
     const resp = this.adminOverviewControllerQueue$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationQueueDto>): VerificationQueueDto => r.body);
+  }
+
+  /** Path part for operation `adminOverviewControllerGaragesSummary()` */
+  static readonly AdminOverviewControllerGaragesSummaryPath = '/api/v1/admin/garages/summary';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminOverviewControllerGaragesSummary()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerGaragesSummary$Response(params?: AdminOverviewControllerGaragesSummary$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminGaragesSummaryDto>> {
+    const obs = adminOverviewControllerGaragesSummary(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminOverviewControllerGaragesSummary$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerGaragesSummary(params?: AdminOverviewControllerGaragesSummary$Params, context?: HttpContext): Promise<AdminGaragesSummaryDto> {
+    const resp = this.adminOverviewControllerGaragesSummary$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminGaragesSummaryDto>): AdminGaragesSummaryDto => r.body);
+  }
+
+  /** Path part for operation `adminOverviewControllerGarages()` */
+  static readonly AdminOverviewControllerGaragesPath = '/api/v1/admin/garages';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminOverviewControllerGarages()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerGarages$Response(params: AdminOverviewControllerGarages$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminGaragesDto>> {
+    const obs = adminOverviewControllerGarages(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminOverviewControllerGarages$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerGarages(params: AdminOverviewControllerGarages$Params, context?: HttpContext): Promise<AdminGaragesDto> {
+    const resp = this.adminOverviewControllerGarages$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminGaragesDto>): AdminGaragesDto => r.body);
   }
 
   /** Path part for operation `adminOverviewControllerGrowth()` */

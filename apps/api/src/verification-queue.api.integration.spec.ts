@@ -85,6 +85,9 @@ describe('GET /admin/verification-queue', () => {
   it.each([
     '?offset=-1',
     '?offset=10001',
+    '?offset=',
+    '?offset=0x10',
+    '?limit=',
     '?limit=0',
     '?limit=201',
     '?limit=abc',

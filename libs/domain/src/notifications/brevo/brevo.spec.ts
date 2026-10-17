@@ -85,6 +85,16 @@ describe('the Brevo e-mail adapter', () => {
   });
 });
 
+describe('the Brevo account check', () => {
+  it('gives up, without waiting for its own timeout, when the caller does', async () => {
+    mock.answer({ hang: true, status: 0 });
+    const caller = new AbortController();
+    const checked = brevo(30_000).checkKey(caller.signal);
+    setTimeout(() => caller.abort(), 20);
+    await expect(checked).resolves.toBe(false);
+  });
+});
+
 describe('the Brevo SMS adapter', () => {
   const sms = {
     content: 'MotorFix: ITP-ul expiră curând.',

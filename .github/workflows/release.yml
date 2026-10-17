@@ -187,6 +187,8 @@ jobs:
       RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
       RAILWAY_SERVICE_MCP: ${{ vars.RAILWAY_SERVICE_MCP }}
       RAILWAY_SERVICE_KEYCLOAK: ${{ vars.RAILWAY_SERVICE_KEYCLOAK }}
+      # The staging MCP server's public address, ending in /mcp.
+      MCP_URL: ${{ vars.MCP_URL }}
       RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
       KEY_NAME: release-staging-${{ github.run_id }}-${{ github.run_attempt }}
       GRAFANA: ${{ secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != '' }}
@@ -224,6 +226,15 @@ jobs:
             -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
             --data-binary @- > /dev/null ||
             echo "::warning::Grafana refused the deploy annotation; the release goes on without it"
+      # What an assistant does before sign-in: the 401's challenge, the sign-in
+      # metadata, and registering a client for Claude and for ChatGPT, deleted
+      # again. A failure fails the job, so production waits. Until the owner
+      # has set up the MCP service and its address, a notice.
+      - name: Check the MCP sign-in on staging
+        run: |
+          missing=$(for v in RAILWAY_SERVICE_MCP MCP_URL; do [ -n "${!v}" ] || printf '%s, ' "$v"; done)
+          [ -z "$missing" ] || { echo "::notice::MCP sign-in check skipped (unset: ${missing%, })"; exit 0; }
+          node scripts/mcp-smoke.ts "$MCP_URL"
       # The end-to-end run signs in as the seed accounts, and only a reset used
       # to seed staging, so an account added since the last one was missing.
       # The seed only adds what is missing, and removes the requests the seed
