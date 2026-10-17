@@ -34,8 +34,13 @@ export class AddressThrottle {
       this.logger.warn('limit skipped: address unreadable');
       return null;
     }
+    return this.takeKey(client);
+  }
+
+  // The same count for any key, such as an account's id.
+  async takeKey(id: string): Promise<number | null> {
     const { key: prefix, limit, windowSeconds } = this.rule;
-    const key = `${prefix}:${createHash('sha256').update(client).digest('hex')}`;
+    const key = `${prefix}:${createHash('sha256').update(id).digest('hex')}`;
     try {
       const replies =
         (await this.redis

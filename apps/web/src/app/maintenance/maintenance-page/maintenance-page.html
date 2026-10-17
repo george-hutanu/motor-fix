@@ -5,5 +5,9 @@
 <main>
   <h1>{{ 'shell.maintenance.heading' | t }}</h1>
   <p>{{ 'shell.maintenance.message' | t }}</p>
+  @if (address(); as email) {
+    <p class="address">{{ 'shell.maintenance.contact' | t }}</p>
+    <a class="address" [href]="'mailto:' + email">{{ email }}</a>
+  }
   <a routerLink="/admin">{{ 'shell.maintenance.adminLink' | t }}</a>
 </main>

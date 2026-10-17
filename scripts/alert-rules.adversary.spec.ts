@@ -230,8 +230,9 @@ describe('Grafana alerts workflow under hostile input', () => {
         'case " $* " in *" @- "*) cat > "$CALLS/$n.body";; esac',
         // Like curl, a read with -o writes its answer to that file.
         'out=""; prev=""; for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done',
-        // biome-ignore lint/suspicious/noTemplateCurlyInString: a shell parameter expansion, not a JS template.
-        '[ -n "$out" ] && printf "%s" "${LIST_BODY:-[]}" > "$out"',
+        'case "$*" in *"?name=motorfix-outage"*) list="$OUTAGE_LIST_BODY";; *) list="$LIST_BODY";; esac',
+        '[ -n "$list" ] || list="[]"',
+        '[ -n "$out" ] && printf "%s" "$list" > "$out"',
         // A write that asks for its status with -w is accepted with 200.
         'case " $* " in *" -w "*) printf 200;; esac',
         'case "$*" in',
@@ -269,10 +270,12 @@ describe('Grafana alerts workflow under hostile input', () => {
           FOLDER_EXISTS: '1',
           GRAFANA_SA_TOKEN: token,
           GRAFANA_URL: url,
+          OUTAGE_WEBHOOK_TOKEN: '',
           PATH: `${join(dir, 'bin')}:${process.env['PATH']}`,
           POST_CODE: '',
           PUT_CODE: '',
           PUT_MATCH: '',
+          STAGING_WEB_URL: '',
           ...env,
         },
       },
@@ -359,6 +362,83 @@ describe('Grafana alerts workflow under hostile input', () => {
     expect(existsSync(join(dir, 'pwned'))).toBe(false);
     expect(existsSync(join(dir, 'pwned2'))).toBe(false);
   });
+
+  const web = 'https://staging.example.test';
+  const hooked = (env: Record<string, string>) => {
+    put('a.json', { groups: [group('a')] });
+    const r = apply({
+      OUTAGE_WEBHOOK_TOKEN: 'hook',
+      STAGING_WEB_URL: web,
+      ...env,
+    });
+    const sent = r.calls.filter((c) =>
+      c.args.includes('contact-points/motorfix-outage-webhook'),
+    );
+    const body = sent[0]?.body as unknown as
+      | { settings: Record<string, string> }
+      | undefined;
+    return { ...r, sent, settings: body?.settings };
+  };
+
+  // @traces 1347-FR-002
+  it('sends a webhook token holding shell metacharacters verbatim and runs nothing', () => {
+    const odd = 'x $(touch pwned) `touch pwned2` "q"';
+    const { code, settings } = hooked({ OUTAGE_WEBHOOK_TOKEN: odd });
+    expect(code).toBe(0);
+    expect(settings?.['authorization_credentials']).toBe(odd);
+    expect(existsSync(join(dir, 'pwned'))).toBe(false);
+    expect(existsSync(join(dir, 'pwned2'))).toBe(false);
+  });
+
+  // @traces 1347-FR-002
+  it.each([`${web}/`, `${web}///`])(
+    'builds no double slash in the webhook url when the staging address is %s',
+    (address) => {
+      const { code, settings } = hooked({ STAGING_WEB_URL: address });
+      expect(code).toBe(0);
+      expect(settings?.['url']).toBe(`${web}/api/v1/monitoring/outage-alerts`);
+    },
+  );
+
+  // @traces 1347-FR-002
+  it('sends a webhook token holding a quote and a backslash as the same string', () => {
+    const odd = 'a"b\\c\'d';
+    const { settings } = hooked({ OUTAGE_WEBHOOK_TOKEN: odd });
+    expect(settings?.['authorization_credentials']).toBe(odd);
+  });
+
+  // @traces 1347-FR-002
+  it('trims spaces and a trailing newline off the webhook token', () => {
+    const { settings } = hooked({ OUTAGE_WEBHOOK_TOKEN: '  hook-x \n' });
+    expect(settings?.['authorization_credentials']).toBe('hook-x');
+  });
+
+  // @traces 1347-FR-002
+  it.each<[string, Record<string, string>, string, string]>([
+    [
+      'a secret of spaces and newlines',
+      { OUTAGE_WEBHOOK_TOKEN: ' \n\t \n' },
+      'OUTAGE_WEBHOOK_TOKEN',
+      'STAGING_WEB_URL',
+    ],
+    [
+      'a variable of spaces',
+      { STAGING_WEB_URL: '   ' },
+      'STAGING_WEB_URL',
+      'OUTAGE_WEBHOOK_TOKEN',
+    ],
+  ])(
+    'skips the webhook on %s and names only that in the notice',
+    (_, env, named, unnamed) => {
+      const { code, out, sent } = hooked(env);
+      expect(code).toBe(0);
+      expect(sent).toHaveLength(0);
+      const notices = out.match(/::notice::.*/g) ?? [];
+      expect(notices).toHaveLength(1);
+      expect(notices[0]).toContain(named);
+      expect(notices[0]).not.toContain(unnamed);
+    },
+  );
 
   // @traces 1024-FR-009
   it('fails the step when the folder cannot be created and applies no group', () => {

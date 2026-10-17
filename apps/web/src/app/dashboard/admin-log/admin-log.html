@@ -1,0 +1,32 @@
+<section [attr.aria-labelledby]="headingId">
+  <h2 [id]="headingId">{{ 'admin.log.title' | t }}</h2>
+  @if (!view || view.isLoading()) {
+    <div class="loading" aria-hidden="true">
+      <span class="skeleton"></span>
+      <span class="skeleton"></span>
+      <span class="skeleton"></span>
+    </div>
+  } @else if (view.error() && !view.value()) {
+    <div class="failed">
+      <p role="alert">{{ 'admin.log.failed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'admin.log.retry' | t }}</button>
+    </div>
+  } @else if (lines().length === 0) {
+    <p class="empty">{{ 'admin.log.empty' | t }}</p>
+  } @else {
+    <ol>
+      @for (line of lines(); track line.id) {
+        <li>
+          <time [attr.datetime]="line.at">{{ line.clock }}</time>
+          <span class="entry">
+            <mf-lamp [state]="line.lamp" [label]="line.word" />
+            <span class="text">{{ line.text }}</span>
+            @if (line.count; as count) {
+              <span class="count"><span aria-hidden="true">{{ count.mark }}</span><span class="sr-only">{{ count.words }}</span></span>
+            }
+          </span>
+        </li>
+      }
+    </ol>
+  }
+</section>

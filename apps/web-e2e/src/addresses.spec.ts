@@ -63,6 +63,8 @@ test('the sitemap lists both language addresses, the legal pages and the list yo
     `${origin}/en/privacy`,
     `${origin}/ro/list-your-garage`,
     `${origin}/en/list-your-garage`,
+    `${origin}/ro/contact`,
+    `${origin}/en/contact`,
   ]);
   expect(await (await request.get('/robots.txt')).text()).toContain(
     `Sitemap: ${origin}/sitemap.xml`,
