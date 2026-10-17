@@ -28,8 +28,7 @@ function stepRun(name: string, env: Record<string, string>) {
   const block = job('staging');
   const start = block.indexOf(`- name: ${name}`);
   if (start < 0) throw new Error(`staging has no step ${name}`);
-  const next = block.indexOf('- name:', start + 1);
-  const step = block.slice(start, next < 0 ? undefined : next);
+  const step = block.slice(start, block.indexOf('- name:', start + 1));
   const run = spawnSync('bash', ['-e', '-c', script(step)], {
     cwd: join(__dirname, '..'),
     encoding: 'utf8',
