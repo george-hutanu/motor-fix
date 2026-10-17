@@ -22,12 +22,6 @@ label {
   font-weight: 400;
   cursor: pointer;
 }
-.remember input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--mf-amber);
-}
 .code {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2em;
