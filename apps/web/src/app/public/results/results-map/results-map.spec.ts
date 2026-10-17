@@ -399,7 +399,7 @@ describe('ResultsMap, a move of the map', () => {
 const BRAND = { id: 'b-1', name: 'BMW', slug: 'bmw' };
 const PIN = PINS.pins[0];
 
-// @traces 270-card-pin-link-FR-008
+// @traces 270-FR-008
 describe('ResultsMap, the lit garage', () => {
   it('lights the garage it is given once the map has opened, and each one after', async () => {
     await render();
@@ -432,9 +432,9 @@ describe('ResultsMap, the lit garage', () => {
   });
 });
 
-// @traces 270-card-pin-link-FR-004
-// @traces 270-card-pin-link-FR-010
-// @traces 270-card-pin-link-FR-011
+// @traces 270-FR-004
+// @traces 270-FR-010
+// @traces 270-FR-011
 describe('ResultsMap, a tapped pin and its small card', () => {
   const card = () => element().querySelector<HTMLElement>('mf-map-card');
 
@@ -465,7 +465,6 @@ describe('ResultsMap, a tapped pin and its small card', () => {
     expect(card()).not.toBeNull();
     expect(card()?.closest('[aria-hidden="true"]')).toBeNull();
     expect(card()?.style.getPropertyValue('--x')).toBe('120px');
-    expect(card()?.style.getPropertyValue('--y')).toBe('40px');
   });
 
   it('follows the pin when the map moves', async () => {
@@ -476,7 +475,7 @@ describe('ResultsMap, a tapped pin and its small card', () => {
     fixture.detectChanges();
 
     expect(card()?.style.getPropertyValue('--x')).toBe('60px');
-    expect(card()?.style.getPropertyValue('--y')).toBe('90px');
+    expect(card()?.style.top).toBe('76px');
   });
 
   it('stands above its pin, pushed inside the map near its top edge rather than flipped', async () => {

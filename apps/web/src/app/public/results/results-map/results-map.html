@@ -7,11 +7,10 @@
     <mf-map-card
       #small
       [style.--x]="at.x"
-      [style.--y]="at.y"
       [style.top]="at.top"
-      [pin]="card()!.pin"
-      [brand]="cardBrand()!"
-      [garage]="card()!.garage"
+      [pin]="at.card.pin"
+      [brand]="at.brand"
+      [garage]="at.card.garage"
     />
   }
   <p class="hint" role="status">@if (failed()) {{{ 'public.results.map.unavailable' | t }}}@else if (tooWide()) {{{ 'public.results.map.zoomIn' | t }}}</p>

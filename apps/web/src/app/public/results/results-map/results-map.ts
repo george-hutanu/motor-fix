@@ -123,11 +123,12 @@ export class ResultsMap {
   protected readonly cardAt = computed(() => {
     const view = this.view();
     const card = this.card();
-    if (!view || !card || !this.cardBrand()) return undefined;
+    const brand = this.cardBrand();
+    if (!view || !card || !brand) return undefined;
     this.shifts();
     const { x, y } = view.spot({ lat: card.pin.lat, lng: card.pin.lng });
     const top = Math.max(EDGE, y - this.smallHeight() - GAP);
-    return { top: `${top}px`, x: `${x}px`, y: `${y}px` };
+    return { brand, card, top: `${top}px`, x: `${x}px` };
   });
 
   constructor() {
