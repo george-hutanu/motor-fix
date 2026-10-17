@@ -201,7 +201,11 @@
       "green": "verde",
       "red": "roșu"
     },
-    "times": "de {n} de ori",
+    "times": {
+      "few": "de {n} ori",
+      "one": "o dată",
+      "other": "de {n} de ori"
+    },
     "title": "Jurnal"
   },
   "panel": {

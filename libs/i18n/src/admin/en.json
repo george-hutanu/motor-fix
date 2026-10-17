@@ -196,7 +196,10 @@
       "green": "green",
       "red": "red"
     },
-    "times": "{n} times",
+    "times": {
+      "one": "once",
+      "other": "{n} times"
+    },
     "title": "System log"
   },
   "panel": {

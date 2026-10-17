@@ -128,7 +128,7 @@ describe('AdminLog', () => {
     await jest.advanceTimersByTimeAsync(50);
     await opening;
 
-    expect(asked).toEqual([{ from: '2026-10-16T21:00:00.000Z', limit: 20 }]);
+    expect(asked).toEqual([{ from: '2026-10-16T21:00:00.000Z' }]);
   });
 
   // @traces 298-FR-003
@@ -234,6 +234,15 @@ describe('AdminLog', () => {
     expect(
       groupedEn.querySelector('.count .sr-only')?.textContent?.trim(),
     ).toBe('40 times');
+  });
+
+  it('says a small repeat count in the Romanian plural', async () => {
+    answer = async () => logOf(entry(1, { count: 2 }));
+    const [grouped] = lines(await open());
+
+    expect(grouped.querySelector('.count .sr-only')?.textContent?.trim()).toBe(
+      'de 2 ori',
+    );
   });
 
   // @traces 298-FR-008 298-FR-016

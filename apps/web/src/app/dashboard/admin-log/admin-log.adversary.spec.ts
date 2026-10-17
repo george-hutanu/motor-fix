@@ -272,13 +272,15 @@ describe('AdminLog under odd answers', () => {
   });
 
   // @traces 298-FR-005 298-FR-006
-  it('shows a line, in grey with the Info word, for a severity it does not know', async () => {
+  it('still shows the line, with a grey lamp, for a severity it does not know', async () => {
     answer = async () => ({ items: [entry(1, { severity: 'fatal' })] });
     const { element } = await open();
 
     const row = lines(element);
     expect(row).toHaveLength(1);
-    expect(row[0].querySelector('mf-lamp')?.textContent?.trim()).not.toBe('');
+    expect(row[0].querySelector('mf-lamp')?.getAttribute('data-state')).toBe(
+      'grey',
+    );
   });
 
   // @traces 298-FR-004
@@ -363,7 +365,7 @@ describe('AdminLog under odd answers', () => {
     await new Promise((resolve) => setTimeout(resolve, 600));
     await settle();
 
-    expect(asked.length).toBeLessThanOrEqual(3);
+    expect(asked).toHaveLength(2);
   });
 
   // @traces 298-FR-010

@@ -4,7 +4,7 @@ import { Queue } from 'bullmq';
 
 import { purgeSystemLog } from './purge';
 import { systemLog } from './system-log';
-import { SystemLogModule } from './system-log.module';
+import { SYSTEM_LOG_QUEUE, SystemLogModule } from './system-log.module';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import {
@@ -16,7 +16,7 @@ const redisUrl = redisUrlFor(8);
 serialDatabase(databaseUrl);
 
 const prisma = createPrisma(databaseUrl);
-const jobs = new Queue('system-log', { connection: { url: redisUrl } });
+const jobs = new Queue(SYSTEM_LOG_QUEUE, { connection: { url: redisUrl } });
 
 const boot = async (version: string | undefined) => {
   const app = await Test.createTestingModule({

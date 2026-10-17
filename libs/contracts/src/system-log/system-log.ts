@@ -1,5 +1,5 @@
-// The system log's names and page size, free of server code so the browser
-// can import them from `@motor-fix/contracts/system-log`.
+// The system log's names and page size, apart from the query rules that
+// read them.
 export const SYSTEM_LOG_KINDS = [
   'status_changed',
   'check_failed',

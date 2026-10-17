@@ -24,7 +24,7 @@ import { logFinalFailure } from '../../job-failures';
 import { inJob } from '../../logging';
 import { borrowStore, returnStore } from '../../store/store';
 
-const SYSTEM_LOG_QUEUE = 'system-log';
+export const SYSTEM_LOG_QUEUE = 'system-log';
 const PURGE = 'system-log-purge';
 const NIGHTLY = { pattern: '30 3 * * *', tz: 'Europe/Bucharest' };
 

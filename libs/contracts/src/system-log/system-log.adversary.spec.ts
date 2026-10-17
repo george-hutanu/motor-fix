@@ -38,8 +38,14 @@ describe('SystemLogQueryDto under hostile input', () => {
     expect(errorsOf({ from })).not.toEqual([]);
   });
 
+  it('reads a zero-padded limit as its number', () => {
+    expect(errorsOf({ from: FROM, limit: '020' })).toEqual([]);
+    expect(
+      plainToInstance(SystemLogQueryDto, { from: FROM, limit: '020' }).limit,
+    ).toBe(20);
+  });
+
   it.each([
-    '020',
     ' 5',
     '5 ',
     '1e1',
@@ -51,13 +57,7 @@ describe('SystemLogQueryDto under hostile input', () => {
     '20.0000001',
     '9007199254740993',
   ])('refuses a limit of "%s"', (limit) => {
-    const accepted = errorsOf({ from: FROM, limit }).length === 0;
-    const value = plainToInstance(SystemLogQueryDto, {
-      from: FROM,
-      limit,
-    }).limit;
-    if (accepted) expect(value).toBeGreaterThanOrEqual(1);
-    expect(accepted && !(Number.isInteger(value) && value! <= 20)).toBe(false);
+    expect(errorsOf({ from: FROM, limit })).not.toEqual([]);
   });
 
   it.each([

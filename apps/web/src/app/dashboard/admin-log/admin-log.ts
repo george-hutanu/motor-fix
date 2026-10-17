@@ -7,7 +7,6 @@ import {
   inject,
   PLATFORM_ID,
 } from '@angular/core';
-import { SYSTEM_LOG_PAGE } from '@motor-fix/contracts/system-log';
 import { AdminService, type SystemLogEntryDto } from '@motor-fix/data-access';
 import {
   bucharestDayStart,
@@ -49,7 +48,6 @@ export class AdminLog {
         () =>
           this.api.systemLogControllerList({
             from: bucharestDayStart(new Date()).toISOString(),
-            limit: SYSTEM_LOG_PAGE,
           }),
         {
           changes: this.live.events.pipe(
@@ -70,7 +68,10 @@ export class AdminLog {
         entry.count > 1
           ? {
               mark: `×${entry.count}`,
-              words: this.i18n.t('admin.log.times', { n: entry.count }),
+              words: this.i18n.t('admin.log.times', {
+                count: entry.count,
+                n: entry.count,
+              }),
             }
           : undefined,
       id: entry.id,

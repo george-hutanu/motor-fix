@@ -70,9 +70,6 @@
       "@motor-fix/contracts/search-place": [
         "./libs/contracts/src/search-place.ts"
       ],
-      "@motor-fix/contracts/system-log": [
-        "./libs/contracts/src/system-log/system-log.ts"
-      ],
       "@motor-fix/contracts/verification-target": [
         "./libs/contracts/src/verification-target.ts"
       ],
