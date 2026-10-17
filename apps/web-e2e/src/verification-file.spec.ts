@@ -34,7 +34,7 @@ const manual = (page: Page, kind: string) =>
   drawer(page).locator(`li.manual[data-kind="${kind}"]`);
 const MANUAL = ['address', 'photos', 'representative', 'documents'];
 
-// FR-005: each document opens in a new tab at its signed address.
+// Each document opens in a new tab at its signed address.
 async function openDocuments(page: Page) {
   const buttons = drawer(page).locator(
     '[data-section="documents"] button.action',
@@ -44,20 +44,25 @@ async function openDocuments(page: Page) {
     [0, 'onrc_certificate'],
     [1, 'rar_authorisation'],
   ] as const) {
-    const [tab] = await Promise.all([
+    // The page is a PDF, which the browser takes as a download: the request
+    // the new tab makes is the evidence, not where the tab lands.
+    const [tab, request] = await Promise.all([
       page.waitForEvent('popup'),
+      page.context().waitForEvent('request', (r) => {
+        const url = new URL(r.url());
+        return (
+          url.pathname.includes(`e2e-${kind}-1`) &&
+          url.searchParams.has('X-Amz-Signature')
+        );
+      }),
       buttons.nth(n).click(),
     ]);
-    await tab.waitForURL(
-      (url) =>
-        url.pathname.includes(`e2e-${kind}-1`) &&
-        url.searchParams.has('X-Amz-Signature'),
-    );
+    expect(request.url()).toContain(`e2e-${kind}-1`);
     await tab.close();
   }
 }
 
-// FR-006, FR-008: the four manual ticks hold after a reload.
+// The four manual ticks hold after a reload.
 async function tickAll(page: Page, name: string) {
   for (const kind of MANUAL) {
     const box = manual(page, kind).locator('input[type="checkbox"]');
@@ -176,7 +181,7 @@ test.describe('the verification file @seeded', () => {
       await signInAsAdmin(page);
       await page.goto('/app/admin/garages');
 
-      // FR-003, FR-004: the row opens the drawer at the file's address, and
+      // The row opens the drawer at the file's address, and
       // the opening moves the file to in_review.
       const row = page.locator('mf-admin-queue li.row', { hasText: name });
       await row.locator('a.open').click();
@@ -200,10 +205,10 @@ test.describe('the verification file @seeded', () => {
 
       await openDocuments(page);
 
-      // FR-006, FR-008: the four manual ticks hold after a reload.
+      // The four manual ticks hold after a reload.
       await tickAll(page, name);
 
-      // FR-007: a problem on the phone check, with its detail.
+      // A problem on the phone check, with its detail.
       const detail = `Nu răspunde ${garageId.slice(0, 4)}`;
       await manual(page, 'representative')
         .getByRole('button', { name: /^Marchează o problemă: / })
@@ -218,10 +223,10 @@ test.describe('the verification file @seeded', () => {
         manual(page, 'representative').locator('mf-lamp'),
       ).toHaveAttribute('data-state', 'red');
 
-      // FR-011: no sideways scroll with the drawer open.
+      // No sideways scroll with the drawer open.
       expect(await sideways(page)).toBeLessThanOrEqual(0);
 
-      // FR-003: closing returns to the list, whose row names the problem.
+      // Closing returns to the list, whose row names the problem.
       await page.keyboard.press('Escape');
       await expect(drawer(page)).toHaveCount(0);
       await expect(page).toHaveURL('/app/admin/garages');
