@@ -1,12 +1,15 @@
 name: Grafana alerts
 
-# Applies infra/observability/alerts/*.json to Grafana's MotorFix folder, one
-# rule group per call, so Grafana holds exactly what the repository holds.
+# Applies the owner's contact point and the notification policy tree from
+# infra/observability/grafana/alerting/, then infra/observability/alerts/*.json
+# to Grafana's MotorFix folder, one rule group per call, so Grafana holds
+# exactly what the repository holds. The policy PUT replaces the whole tree.
 on:
   push:
     branches: [main]
     paths:
       - 'infra/observability/alerts/**'
+      - 'infra/observability/grafana/alerting/**'
       - '.github/workflows/grafana-alerts.yml'
   workflow_dispatch:
 
@@ -49,13 +52,16 @@ jobs:
         # only; each call gives up after a minute. Every file is checked
         # first: a group named twice stops the run, since the second PUT would
         # replace the first. A refused file or group is named and the others
-        # are still applied.
+        # are still applied. The contact point is put by its uid, or created
+        # when Grafana has none; only once it is in are the other contact
+        # points of the same name (the hand-made one) removed.
         run: |
           auth="Authorization: Bearer ${GRAFANA_SA_TOKEN}"
           base="$GRAFANA_URL"
           while [ "${base%/}" != "$base" ]; do base="${base%/}"; done
           api="$base/api"
           call() { curl --fail -s --max-time 60 -H "$auth" "$@" > /dev/null 2>&1; }
+          status() { curl -s -o /dev/null -w '%{http_code}' --max-time 60 -H "$auth" "$@" 2> /dev/null; }
           shopt -s nullglob
           files=(infra/observability/alerts/*.json)
           if [ "${#files[@]}" -eq 0 ]; then
@@ -71,11 +77,44 @@ jobs:
             echo "::error::The MotorFix folder could not be created."
             exit 1
           fi
+          cp_file=infra/observability/grafana/alerting/contact-points.json
+          policy_file=infra/observability/grafana/alerting/policies.json
+          failed=0
+          contacts=1
+          if ! points=$(jq -c 'if type == "array" then .[] else error("list") end' "$cp_file" 2> /dev/null); then
+            echo "::error::$cp_file: not a list of contact points."
+            failed=1
+            contacts=0
+            points=""
+          fi
+          while IFS= read -r point; do
+            [ -n "$point" ] || continue
+            uid=$(jq -r .uid <<< "$point")
+            path=$(jq -rn --arg u "$uid" '$u | @uri')
+            answer=$(status -X PUT "$api/v1/provisioning/contact-points/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point") || true
+            if [ "$answer" = 404 ]; then
+              answer=$(status -X POST "$api/v1/provisioning/contact-points" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point") || true
+            fi
+            case "$answer" in
+              2[0-9][0-9]) echo "applied $cp_file ($uid)" ;;
+              *)
+                [[ "$answer" =~ ^[0-9]{3}$ ]] || answer=000
+                echo "::error::$cp_file: Grafana refused contact point $uid (HTTP $answer)."
+                failed=1
+                contacts=0
+                ;;
+            esac
+          done <<< "$points"
+          if call -X PUT "$api/v1/provisioning/policies" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- < "$policy_file"; then
+            echo "applied $policy_file"
+          else
+            echo "::error::$policy_file: Grafana refused the notification policies (exit code $?)."
+            failed=1
+          fi
           to_groups='def secs: (capture("^(?<n>[0-9]+)(?<u>[smh])$") // error("interval")) | (.n | tonumber) * {s: 1, m: 60, h: 3600}[.u];
             .groups | if type == "array" and length > 0 then .[] else error("groups") end
             | .name as $g | if ($g | type) != "string" or $g == "" then error("name") else . end
             | {title: $g, interval: (.interval | secs), rules: [.rules[] | . + {folderUID: "motorfix", ruleGroup: $g, orgID: 1}]}'
-          failed=0
           for f in "${files[@]}"; do
             if ! bodies=$(jq -c "$to_groups" "$f" 2> /dev/null); then
               echo "::error::$f: not a rule file (JSON with a groups list, each named, with an interval like 1m and a rules list)."
@@ -93,4 +132,30 @@ jobs:
               fi
             done <<< "$bodies"
           done
+          if [ "$contacts" -eq 1 ]; then
+            list="${RUNNER_TEMP:-.}/grafana-contact-points.json"
+            while IFS=$'\t' read -r name keep; do
+              query=$(jq -rn --arg n "$name" '$n | @uri')
+              if ! call "$api/v1/provisioning/contact-points?name=$query" -H 'X-Disable-Provenance: true' -o "$list"; then
+                echo "::error::$cp_file: the contact points named $name could not be listed."
+                failed=1
+                continue
+              fi
+              if ! olds=$(jq -r --arg keep "$keep" 'if type == "array" then .[] | select(.uid != $keep) | .uid else error("list") end' "$list" 2> /dev/null); then
+                echo "::error::$cp_file: Grafana's list of the contact points named $name is not a list."
+                failed=1
+                continue
+              fi
+              while IFS= read -r old; do
+                [ -n "$old" ] || continue
+                if call -X DELETE "$api/v1/provisioning/contact-points/$(jq -rn --arg u "$old" '$u | @uri')" -H 'X-Disable-Provenance: true'; then
+                  echo "removed contact point $old ($name)"
+                else
+                  echo "::error::$cp_file: Grafana refused to remove contact point $old (exit code $?)."
+                  failed=1
+                fi
+              done <<< "$olds"
+            done < <(jq -r '.[] | [.name, .uid] | @tsv' "$cp_file")
+            rm -f "$list"
+          fi
           exit "$failed"
