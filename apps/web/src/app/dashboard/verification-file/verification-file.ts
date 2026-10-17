@@ -458,11 +458,15 @@ export class VerificationFile {
     return this.t(`lines.${line ?? 'changed'}`, { name, when });
   }
 
-  // A reason's label when it has one, else its code; then the note.
+  // A reason's label, any code without one reading as `other` (as the
+  // garage's e-mail names it); then the note.
   private reason(code: string | null, note: string | null) {
     const key = `admin.file.reasons.${code}`;
     const label = code ? this.i18n.t(key) : '';
-    const parts = [label === key ? code : label, note].filter(Boolean);
+    const parts = [
+      label === key ? this.i18n.t('admin.file.reasons.other') : label,
+      note,
+    ].filter(Boolean);
     return parts.length ? parts.join(' — ') : this.t('noReason');
   }
 

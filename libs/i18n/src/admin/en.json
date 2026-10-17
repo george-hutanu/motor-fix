@@ -102,6 +102,13 @@
       "title": "Mark a problem",
       "warning": "Warning"
     },
+    "reasons": {
+      "address": "Address",
+      "documents": "Documents",
+      "other": "Other reason",
+      "photos": "Photos",
+      "rar": "RAR authorisation"
+    },
     "recorded": "{name}, {when}",
     "register": {
       "activities": "Authorised activities",

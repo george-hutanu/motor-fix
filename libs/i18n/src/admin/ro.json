@@ -104,6 +104,13 @@
       "title": "Marchează o problemă",
       "warning": "Avertisment"
     },
+    "reasons": {
+      "address": "Adresă",
+      "documents": "Documente",
+      "other": "Alt motiv",
+      "photos": "Fotografii",
+      "rar": "Autorizație RAR"
+    },
     "recorded": "{name}, {when}",
     "register": {
       "activities": "Activități autorizate",

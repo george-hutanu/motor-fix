@@ -439,6 +439,32 @@ describe('the sections', () => {
     );
   });
 
+  it.each([
+    ['ro', 'documents', 'Respins anterior: Documente'],
+    ['ro', 'rar', 'Respins anterior: Autorizație RAR'],
+    ['en', 'photos', 'Rejected before: Photos'],
+    ['en', 'address', 'Rejected before: Address'],
+    ['ro', 'documents_unreadable', 'Respins anterior: Alt motiv'],
+    ['en', 'other', 'Rejected before: Other reason'],
+  ] as const)(
+    'names the earlier reason by its label, never its code (%s, %s)',
+    async (language, reasonCode, line) => {
+      const host = await open(
+        fileOf({
+          previousRejection: {
+            decidedAt: NOW.toISOString(),
+            reasonCode,
+            reasonNote: null,
+          },
+        }),
+        language,
+      );
+
+      expect(text(section(host, 'rejected'))).toContain(line);
+      expect(text(section(host, 'rejected'))).not.toContain(reasonCode);
+    },
+  );
+
   it('lists the four register checks with their lamp, detail and recorder, "neverificat" when not run', async () => {
     const host = await open(
       fileOf({
