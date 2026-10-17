@@ -38,9 +38,14 @@ function cursorOf(cursor: string | undefined) {
   }
 }
 
-const anyOf = (column: string, values: readonly string[] | undefined) =>
+// One array parameter cast to the column's enum, so the comparison stays on
+// the enum and system_log_entry_kind_at_idx can serve it.
+const anyOf = (
+  column: 'kind' | 'severity' | 'source',
+  values: readonly string[] | undefined,
+) =>
   values?.length
-    ? Prisma.sql`${Prisma.raw(column)}::text IN (${Prisma.join(values)})`
+    ? Prisma.sql`${Prisma.raw(column)} = ANY(${values}::${Prisma.raw(`system_log_${column}`)}[])`
     : undefined;
 
 function where(

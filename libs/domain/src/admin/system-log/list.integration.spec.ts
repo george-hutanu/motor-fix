@@ -5,6 +5,7 @@ import { BadRequestException } from '@nestjs/common';
 import { listSystemLog } from './list';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import { databaseUrl } from '../../notifications/notifications.testing';
 import { encodeCursor } from '../cursor';
 
@@ -389,5 +390,62 @@ describe('searching the text', () => {
     expect(await found('brevo', { kind: ['check_failed'] })).toEqual([
       'BREVO check failed.',
     ]);
+  });
+});
+
+// @traces 299-FR-002 299-FR-003
+describe('the indexes a narrowed read uses', () => {
+  // The query the list sends, planned instead of run, over enough entries
+  // that the planner prefers a selective index to walking the range.
+  const planOf = async (query: Omit<Parameters<typeof read>[0], 'from'>) => {
+    let sent: Prisma.Sql | undefined;
+    const capture = {
+      $queryRaw: async (
+        strings: TemplateStringsArray,
+        ...values: unknown[]
+      ) => {
+        sent = Prisma.sql(strings, ...values);
+        return [];
+      },
+    } as unknown as PrismaClient;
+    await listSystemLog(
+      capture,
+      { from: since(80).toISOString(), ...query },
+      NOW,
+    );
+    const rows = await prisma.$queryRaw<
+      { 'QUERY PLAN': string }[]
+    >`EXPLAIN ${sent}`;
+    return rows.map((row) => row['QUERY PLAN']).join('\n');
+  };
+
+  beforeEach(async () => {
+    await prisma.$executeRawUnsafe(
+      `
+      INSERT INTO system_log_entry
+        (id, at, minute, kind, source, severity, fingerprint, message)
+      SELECT gen_random_uuid(), at, date_trunc('minute', at), 'deploy', 'worker',
+        'info', n::text, 'Deployed v' || n
+      FROM generate_series(1, 30000) AS n,
+        LATERAL (SELECT $1::timestamptz - n * interval '1 minute' AS at) AS t`,
+      NOW,
+    );
+    await entry(since(1), {
+      kind: 'job_failed',
+      message: 'Reîncercare eșuată.',
+    });
+    await prisma.$executeRawUnsafe('ANALYZE system_log_entry');
+  });
+
+  it('reads the kind through an index on it', async () => {
+    expect(await planOf({ kind: ['job_failed'] })).toMatch(
+      /Index Cond: \(kind = ANY \('\{job_failed\}'::system_log_kind\[\]\)\)/,
+    );
+  });
+
+  it('reads the folded search through its trigram index', async () => {
+    expect(await planOf({ q: 'reincercare' })).toContain(
+      'system_log_entry_message_fold_trgm_idx',
+    );
   });
 });
