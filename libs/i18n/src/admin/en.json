@@ -112,10 +112,44 @@
     "recorded": "{name}, {when}",
     "register": {
       "activities": "Authorised activities",
+      "anaf": "ANAF",
       "caen": "CAEN code 4520",
-      "company": "Company (ANAF, ONRC)",
+      "change": "Change",
+      "company": "Active company at ANAF and ONRC",
+      "copied": "CUI copied",
+      "errors": {
+        "detail": "{field}: 1 to 200 characters, no line breaks",
+        "missing": "Missing: {fields}",
+        "result": "Choose a result"
+      },
+      "form": {
+        "clear": "Clear",
+        "detail": "Detail",
+        "detailHint": "1–200 characters. Other admins see it.",
+        "failed": "Failure",
+        "name": "Company name",
+        "ok": "OK",
+        "result": "Result",
+        "save": "Save",
+        "ticks": "What you checked",
+        "warning": "Warning"
+      },
       "heading": "REGISTER CHECKS",
-      "rar": "RAR authorisation"
+      "onrc": "ONRC",
+      "open": "Record",
+      "rar": "RAR authorisation",
+      "stored": {
+        "address": "address",
+        "certificate": "certificate",
+        "noCertificate": "no certificate",
+        "onrc": "ONRC"
+      },
+      "ticks": {
+        "certificate": "4520 on the certificate",
+        "onrc": "4520 in the ONRC record",
+        "premises": "at the workshop address",
+        "seat": "at the registered seat"
+      }
     },
     "rejectedBefore": "Rejected before: {reason}, {when}",
     "reopenedReport": "Reopened after a report, {when}",

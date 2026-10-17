@@ -16,6 +16,7 @@ import { filter, Subject } from 'rxjs';
 import { VerificationFile } from './verification-file';
 import { Live } from '../live';
 
+// @traces 203-FR-006 203-FR-008
 // @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-009 302-FR-010 302-FR-011
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -50,6 +51,7 @@ const check = (
 ): VerificationFileCheckDto => ({
   automatic: false,
   detail: null,
+  evidence: null,
   fileId: FILE,
   id: `check-${kind}`,
   kind,
@@ -495,7 +497,7 @@ describe('the sections', () => {
       ),
     ).toEqual(['company', 'caen', 'rar', 'activities']);
     const company = row(host, 'register', 'company');
-    expect(text(company)).toContain('Firmă (ANAF, ONRC)');
+    expect(text(company)).toContain('Firmă activă la ANAF și ONRC');
     expect(company?.querySelector('mf-lamp')?.getAttribute('data-state')).toBe(
       'green',
     );
@@ -1194,5 +1196,268 @@ describe('the history', () => {
     await settle();
 
     expect(lines(host)[2]).toMatch(/^Opened by Ioana, today/);
+  });
+});
+
+describe('the company and CAEN rows', () => {
+  const ANAF = 'https://mfinante.gov.ro/ro/web/site/info-pj-selectie-dupa-cui';
+  const ONRC = 'https://portal.onrc.ro/';
+  const links = (host: HTMLElement, kind: string) =>
+    [
+      ...(row(host, 'register', kind)?.querySelectorAll<HTMLAnchorElement>(
+        'a',
+      ) ?? []),
+    ].map((a) => ({
+      href: a.getAttribute('href'),
+      rel: a.getAttribute('rel'),
+      target: a.getAttribute('target'),
+      text: text(a),
+    }));
+  const link = (host: HTMLElement, kind: string, name: string) =>
+    [
+      ...(row(host, 'register', kind)?.querySelectorAll<HTMLAnchorElement>(
+        'a',
+      ) ?? []),
+    ].find((a) => text(a) === name) as HTMLAnchorElement;
+  // A click on a link, its new tab left to the browser.
+  const follow = async (anchor: HTMLAnchorElement) => {
+    const stay = (event: Event) => event.preventDefault();
+    document.addEventListener('click', stay);
+    anchor.click();
+    document.removeEventListener('click', stay);
+    await settle();
+  };
+  const clipboard = (writeText?: jest.Mock) =>
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: writeText ? { writeText } : undefined,
+    });
+  const form = (host: HTMLElement, kind: string) =>
+    row(host, 'register', kind)?.querySelector(
+      'mf-verification-register-form',
+    ) ?? null;
+  const recordedCompany = {
+    check: {
+      automatic: false,
+      detail: 'CUI valid · Auto Vest Motors SRL',
+      evidence: { lookedUpOn: daysAgo(0), name: 'Auto Vest Motors SRL' },
+      fileId: FILE,
+      id: 'check-company',
+      kind: 'company',
+      recordedAt: NOW.toISOString(),
+      recordedBy: 'admin-1',
+      result: 'ok',
+    },
+    rarActivities: [],
+    summary: { en: 'Company ID checked', ro: 'CUI verificat' },
+  };
+
+  it('labels the two rows by what is checked, in both languages', async () => {
+    const host = await open();
+    expect(text(row(host, 'register', 'company'))).toContain(
+      'Firmă activă la ANAF și ONRC',
+    );
+    expect(text(row(host, 'register', 'caen'))).toContain('Cod CAEN 4520');
+    expect(text(row(host, 'register', 'company'))).toContain('neverificat');
+
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+    const english = await open(fileOf(), 'en');
+    expect(text(row(english, 'register', 'company'))).toContain(
+      'Active company at ANAF and ONRC',
+    );
+    expect(text(row(english, 'register', 'caen'))).toContain('CAEN code 4520');
+  });
+
+  it('links the public look-ups in a new tab, with no CUI in the address', async () => {
+    const host = await open();
+
+    const tabbed = { rel: 'noopener noreferrer', target: '_blank' };
+    expect(links(host, 'company')).toEqual([
+      { href: ANAF, text: 'ANAF', ...tabbed },
+      { href: ONRC, text: 'ONRC', ...tabbed },
+    ]);
+    expect(links(host, 'caen')).toEqual([
+      { href: ONRC, text: 'ONRC', ...tabbed },
+    ]);
+    expect(links(host, 'rar')).toEqual([]);
+  });
+
+  it('copies the CUI when a look-up opens, and says so', async () => {
+    const writeText = jest.fn(async () => undefined);
+    clipboard(writeText);
+    const host = await open();
+
+    await follow(link(host, 'company', 'ANAF'));
+
+    expect(writeText).toHaveBeenCalledWith('12345678');
+    expect(toast).toHaveBeenCalledWith('CUI copiat');
+  });
+
+  it('still opens the look-up when the clipboard is unavailable, quietly', async () => {
+    clipboard();
+    const host = await open();
+
+    await expect(follow(link(host, 'caen', 'ONRC'))).resolves.toBeUndefined();
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('opens the form under the row while the file is undecided, and returns focus when it closes', async () => {
+    const host = await open();
+    const company = row(host, 'register', 'company');
+
+    expect(buttons(row(host, 'register', 'rar'))).not.toContain(
+      'Înregistrează',
+    );
+    press(company, 'Înregistrează');
+    await settle();
+    expect(form(host, 'company')).not.toBeNull();
+
+    press(company, 'Înregistrează');
+    await settle();
+    expect(form(host, 'company')).toBeNull();
+    expect(text(document.activeElement)).toBe('Înregistrează');
+  });
+
+  it('offers no form on a decided file', async () => {
+    const host = await open(
+      fileOf({
+        file: {
+          decidedAt: NOW.toISOString(),
+          decidedBy: ioana,
+          status: 'approved',
+        },
+      }),
+    );
+
+    expect(buttons(row(host, 'register', 'company'))).not.toContain(
+      'Înregistrează',
+    );
+    expect(buttons(row(host, 'register', 'caen'))).not.toContain(
+      'Înregistrează',
+    );
+  });
+
+  it("shows the server's answer once the form saves, and closes it", async () => {
+    const host = await open();
+    api.verificationChecksControllerRecord.mockResolvedValue(recordedCompany);
+    const company = () => row(host, 'register', 'company');
+
+    press(company(), 'Înregistrează');
+    await settle();
+    press(company(), 'OK');
+    await settle();
+    const name = company()?.querySelector<HTMLInputElement>(
+      'input[type="text"]',
+    ) as HTMLInputElement;
+    name.value = 'Auto Vest Motors SRL';
+    name.dispatchEvent(new Event('input', { bubbles: true }));
+    press(company(), 'Salvează');
+    await settle();
+
+    expect(form(host, 'company')).toBeNull();
+    expect(text(company())).toContain('CUI valid · Auto Vest Motors SRL');
+    expect(
+      company()?.querySelector('mf-lamp')?.getAttribute('data-state'),
+    ).toBe('green');
+    expect(buttons(company())).toContain('Modifică');
+  });
+
+  it('re-reads the file when the form finds it decided', async () => {
+    const host = await open();
+    api.verificationChecksControllerRecord.mockRejectedValue(
+      new HttpErrorResponse({
+        error: { code: 'verification_file_decided', status: 409 },
+        status: 409,
+      }),
+    );
+    const company = () => row(host, 'register', 'company');
+    api.verificationFileControllerRead.mockClear();
+
+    press(company(), 'Înregistrează');
+    await settle();
+    press(company(), 'Problemă');
+    await settle();
+    const detail = company()?.querySelector<HTMLTextAreaElement>(
+      'textarea',
+    ) as HTMLTextAreaElement;
+    detail.value = 'Firma e radiată';
+    detail.dispatchEvent(new Event('input', { bubbles: true }));
+    press(company(), 'Salvează');
+    await settle();
+
+    expect(api.verificationFileControllerRead).toHaveBeenCalled();
+  });
+
+  it('leaves the certificate tick out when the file holds no ONRC certificate', async () => {
+    const host = await open(
+      fileOf({
+        documents: [
+          {
+            id: null,
+            issuedOn: null,
+            kind: 'onrc_certificate',
+            pages: 0,
+            present: false,
+            stale: null,
+          },
+        ] as VerificationFileDto['documents'],
+      }),
+    );
+
+    press(row(host, 'register', 'caen'), 'Înregistrează');
+    await settle();
+
+    expect(text(form(host, 'caen'))).not.toContain('4520 pe certificat');
+    expect(text(form(host, 'caen'))).toContain('4520 în ONRC');
+  });
+
+  it('reads the stored CAEN ticks as text, the certificate from the evidence', async () => {
+    const caen = (evidence: Record<string, unknown>) =>
+      fileOf({
+        checks: KINDS.map((kind) =>
+          kind === 'caen'
+            ? check(kind, {
+                detail:
+                  'Întreținerea și repararea autovehiculelor, la punctul de lucru',
+                evidence,
+                recorder: ioana,
+                result: 'ok',
+              } as Partial<VerificationFileCheckDto>)
+            : check(kind),
+        ),
+      });
+
+    const host = await open(
+      caen({
+        address: true,
+        certificate: true,
+        certificateUploaded: true,
+        onrc: true,
+      }),
+    );
+    expect(text(row(host, 'register', 'caen'))).toContain(
+      'certificat · ONRC · adresă',
+    );
+
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+    const without = await open(
+      caen({ address: true, certificateUploaded: false, onrc: true }),
+    );
+    expect(text(row(without, 'register', 'caen'))).toContain(
+      'fără certificat · ONRC · adresă',
+    );
+
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+    const english = await open(
+      caen({ address: true, certificateUploaded: false, onrc: true }),
+      'en',
+    );
+    expect(text(row(english, 'register', 'caen'))).toContain(
+      'no certificate · ONRC · address',
+    );
   });
 });
