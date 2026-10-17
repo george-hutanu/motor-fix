@@ -1205,6 +1205,22 @@ describe('Results', () => {
       );
       expect(said(status())).toBe('');
     });
+
+    it('asks for the pins again on "Reîncearcă" after both failed', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail();
+      const before = pinsApi.mock.calls.length;
+
+      const again = [
+        ...page().querySelectorAll<HTMLButtonElement>('.state button'),
+      ].find((b) => said(b) === 'Reîncearcă');
+      expect(again).toBeDefined();
+      again?.click();
+      await settle();
+
+      expect(pinsApi.mock.calls.length).toBe(before + 1);
+    });
   });
 
   // @traces 269-FR-006

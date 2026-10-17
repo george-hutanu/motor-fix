@@ -333,6 +333,7 @@ export class Results {
 
   protected retry() {
     this.results.reload();
+    if (this.pins.error()) this.pins.reload();
   }
 
   // A box the map settled on; the same one again retries it after a failure.
