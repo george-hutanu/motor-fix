@@ -14,6 +14,9 @@ export type { AdminAccountDto } from './models/admin-account-dto';
 export type { AdminAccountsPageDto } from './models/admin-accounts-page-dto';
 export type { AdminAccountsSummaryDto } from './models/admin-accounts-summary-dto';
 export type { AdminCityDto } from './models/admin-city-dto';
+export type { AdminDemandBrandDto } from './models/admin-demand-brand-dto';
+export type { AdminDemandDto } from './models/admin-demand-dto';
+export type { AdminDemandJobDto } from './models/admin-demand-job-dto';
 export type { AdminGrowthDto } from './models/admin-growth-dto';
 export type { AdminGrowthMonthDto } from './models/admin-growth-month-dto';
 export type { AdminOverviewDto } from './models/admin-overview-dto';
@@ -332,6 +335,8 @@ export type { AdminAccountsControllerList$Params as AdminAccountsControllerList$
 export { adminAccountsControllerList as adminAccountsControllerList } from './fn/admin/admin-accounts-controller-list';
 export type { AdminAccountsControllerSummary$Params as AdminAccountsControllerSummary$Params } from './fn/admin/admin-accounts-controller-summary';
 export { adminAccountsControllerSummary as adminAccountsControllerSummary } from './fn/admin/admin-accounts-controller-summary';
+export type { DemandControllerDemand$Params as DemandControllerDemand$Params } from './fn/admin/demand-controller-demand';
+export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerQueue$Params as AdminOverviewControllerQueue$Params } from './fn/admin/admin-overview-controller-queue';

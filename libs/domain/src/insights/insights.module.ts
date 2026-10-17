@@ -15,6 +15,7 @@ import { Queue, Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 
 import { writeDailyFigures } from './daily-figures/daily-figures';
+import { writeDemandDaily } from './demand/demand';
 import { placeGarages } from './place-garages';
 import { writeSnapshot } from './platform-figures';
 import { writeResponseStats } from './response-stats/response-stats';
@@ -34,6 +35,7 @@ const INSIGHTS_REDIS = Symbol('INSIGHTS_REDIS');
 const SNAPSHOT = 'platform-daily';
 const RESPONSE_STATS = 'response-stats';
 const PROFILE_VIEWS = 'profile-views';
+const DEMAND = 'demand-daily';
 const NIGHTLY = { pattern: '0 1 * * *', tz: 'Europe/Bucharest' };
 
 interface InsightsOptions {
@@ -47,7 +49,8 @@ interface InsightsOptions {
 // upserts the same ones. A missed or failed snapshot is not run again: the
 // deltas then show no line until the next month's first row. The response
 // figures are retried, since every profile shows them, and so are the profile
-// views, whose counters outlive one missed night.
+// views, whose counters outlive one missed night, and the demand rows, whose
+// missed days the next night catches up.
 @Module({})
 export class InsightsModule
   implements OnApplicationBootstrap, OnApplicationShutdown
@@ -91,6 +94,15 @@ export class InsightsModule
           useFactory: (prisma: PrismaClient, redis: Redis) => {
             const places = providerFor(options.places);
             const run: Record<string, () => Promise<unknown>> = {
+              [DEMAND]: async () => {
+                const { days, written } = await writeDemandDaily(
+                  prisma,
+                  new Date(),
+                );
+                logger.log(
+                  `${DEMAND} written ${written} for ${days.join(', ') || 'no day'}`,
+                );
+              },
               [PROFILE_VIEWS]: () =>
                 writeDailyFigures(prisma, redis, new Date()),
               [RESPONSE_STATS]: async () => {
@@ -147,9 +159,10 @@ export class InsightsModule
       name: SNAPSHOT,
       opts: { attempts: 1, removeOnComplete: true, removeOnFail: 10 },
     });
-    // Response figures: three attempts; profile views: three retries.
+    // Response figures and demand: three attempts; profile views: three retries.
     for (const [name, attempts] of [
       [RESPONSE_STATS, 3],
+      [DEMAND, 3],
       [PROFILE_VIEWS, 4],
     ] as const) {
       await this.jobs.upsertJobScheduler(name, NIGHTLY, {

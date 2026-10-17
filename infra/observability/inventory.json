@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 121,
+    "count": 122,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -140,7 +140,7 @@
         "worker-jobs-failed",
         "profile-views-job-failed"
       ],
-      "reason": "three nightly jobs, platform-daily, response-stats and profile-views, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; profile-views has its own final-failure alert, since its counters expire two days after their day",
+      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile; profile-views has its own final-failure alert, since its counters expire two days after their day",
       "story": "ST-881"
     },
     {
@@ -858,6 +858,19 @@
       "alerts": "none",
       "reason": "counts each time an admin opens a document page, by kind; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-206"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-demand",
+      "source": "libs/domain/src/insights/demand/demand.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/demand",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's demand read, counts only; a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-103"
     },
     {
       "kind": "endpoint",

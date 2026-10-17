@@ -178,3 +178,79 @@ export class AdminGrowthDto {
   })
   months!: AdminGrowthMonthDto[];
 }
+
+export class AdminDemandBrandDto {
+  @ApiProperty({
+    description:
+      "The brand as stored in the request's car snapshot, not normalised; may be empty",
+    example: 'Dacia',
+  })
+  name!: string;
+
+  @ApiProperty({
+    description: 'Requests for the brand in the window',
+    example: 412,
+    minimum: 1,
+    type: 'integer',
+  })
+  requests!: number;
+}
+
+export class AdminDemandJobDto {
+  @ApiProperty({ description: "The job type's key", example: 'brakes' })
+  key!: string;
+
+  @ApiProperty({ example: 'Frâne' })
+  nameRo!: string;
+
+  @ApiProperty({ example: 'Brakes' })
+  nameEn!: string;
+
+  @ApiProperty({
+    description: 'Requests that asked for the job in the window',
+    example: 288,
+    minimum: 1,
+    type: 'integer',
+  })
+  requests!: number;
+}
+
+// What drivers asked for in the last 30 Europe/Bucharest days; counts and
+// catalogue names only.
+export class AdminDemandDto {
+  @ApiProperty({
+    description: "The window's first Europe/Bucharest day",
+    example: '2026-09-18',
+    format: 'date',
+  })
+  firstDay!: string;
+
+  @ApiProperty({
+    description: "The window's last day: today in Europe/Bucharest",
+    example: '2026-10-17',
+    format: 'date',
+  })
+  lastDay!: string;
+
+  @ApiProperty({
+    description: 'Requests created in the window',
+    example: 1240,
+    minimum: 0,
+    type: 'integer',
+  })
+  requests!: number;
+
+  @ApiProperty({
+    description:
+      'Every brand with a request in the window, most first, then by name in code-point order',
+    type: [AdminDemandBrandDto],
+  })
+  brands!: AdminDemandBrandDto[];
+
+  @ApiProperty({
+    description:
+      'Every job type asked for in the window, most first, then by key in code-point order',
+    type: [AdminDemandJobDto],
+  })
+  jobs!: AdminDemandJobDto[];
+}

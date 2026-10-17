@@ -59,6 +59,14 @@ let resync: Subject<void>;
 let answer: () => Promise<Answer>;
 const NO_MONTHS = async () => ({ months: [] });
 let growth: () => Promise<{ months: unknown[] }> = NO_MONTHS;
+const NO_DEMAND = async () => ({
+  brands: [],
+  firstDay: '2026-09-18',
+  jobs: [],
+  lastDay: '2026-10-17',
+  requests: 0,
+});
+let demand: () => Promise<unknown> = NO_DEMAND;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -91,6 +99,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
           adminOverviewControllerGrowth: () => growth(),
           adminOverviewControllerOverview: () => answer(),
           adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
+          demandControllerDemand: () => demand(),
         },
       },
     ],
@@ -114,6 +123,7 @@ const text = (t: HTMLElement, part: 'number' | 'line') =>
 afterEach(() => {
   TestBed.resetTestingModule();
   growth = NO_MONTHS;
+  demand = NO_DEMAND;
 });
 
 const GRAFANA = 'https://stack.grafana.net/d/motorfix-overview?var-env=test';
@@ -196,6 +206,31 @@ describe('AdminPanel', () => {
       last.compareDocumentPosition(growth as Node) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  // @traces 103-FR-008
+  it('places the brand demand panel under the growth panel, and its failure leaves the tiles and growth as they were', async () => {
+    demand = async () => {
+      throw new Error('down');
+    };
+    answer = async () => FIGURES;
+    const element = await open();
+
+    const panel = element.querySelector('mf-admin-panel') as HTMLElement;
+    const growth = panel.querySelector('mf-admin-growth') as Node;
+    const brands = panel.querySelector('mf-admin-demand') as HTMLElement;
+    expect(brands).not.toBeNull();
+    expect(
+      growth.compareDocumentPosition(brands) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      [...brands.querySelectorAll('mf-bar-chart h2')].map((h) =>
+        h.textContent?.trim(),
+      ),
+    ).toEqual(['Cereri pe marcă, 30 de zile']);
+    expect(text(tile(element, LISTED), 'number')).toBe('214');
+    expect(tiles(element)).toHaveLength(6);
+    expect(panel.getAttribute('aria-busy')).toBeNull();
   });
 
   it('shows the six tiles in the launch order', async () => {
