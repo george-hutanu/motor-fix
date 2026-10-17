@@ -1,9 +1,4 @@
-import {
-  checkEmailDns,
-  type DnsResolver,
-  dnsReport,
-  expectedRecords,
-} from './email-dns';
+import { checkEmailDns, type DnsResolver, dnsReport } from './email-dns';
 
 const DOMAIN = 'example.test';
 const SPF = 'v=spf1 include:spf.brevo.com ~all';
@@ -66,16 +61,19 @@ describe('the sending domain DNS check', () => {
     expect(dnsReport(results).ok).toBe(true);
   });
 
-  it('names the expected value of every record from the domain', () => {
-    const expected = expectedRecords(DOMAIN);
-    expect(expected.SPF).toContain('include:spf.brevo.com');
-    expect(expected.SPF).toContain(DOMAIN);
-    expect(expected.DKIM).toContain(`brevo1._domainkey.${DOMAIN}`);
-    expect(expected.DKIM).toContain(`brevo2._domainkey.${DOMAIN}`);
-    expect(expected.DKIM).toContain('dkim.brevo.com');
-    expect(expected.DMARC).toContain(`_dmarc.${DOMAIN}`);
-    expect(expected.DMARC).toContain('v=DMARC1');
-    expect(expected.DMARC).toContain('rua=');
+  it('names the expected value of every record from the domain', async () => {
+    const { lines } = dnsReport(await checkEmailDns(DOMAIN, resolver({})));
+    const [spf, dkim, dmarc] = lines.filter((l) =>
+      l.startsWith('  expected: '),
+    );
+    expect(spf).toContain('include:spf.brevo.com');
+    expect(spf).toContain(DOMAIN);
+    expect(dkim).toContain(`brevo1._domainkey.${DOMAIN}`);
+    expect(dkim).toContain(`brevo2._domainkey.${DOMAIN}`);
+    expect(dkim).toContain('dkim.brevo.com');
+    expect(dmarc).toContain(`_dmarc.${DOMAIN}`);
+    expect(dmarc).toContain('v=DMARC1');
+    expect(dmarc).toContain('rua=');
   });
 
   describe('SPF', () => {
@@ -248,10 +246,9 @@ describe('the sending domain DNS check', () => {
     );
     const report = dnsReport(results);
     expect(report.ok).toBe(false);
-    const expected = expectedRecords(DOMAIN);
     expect(report.lines).toEqual([
       'SPF missing',
-      `  expected: ${expected.SPF}`,
+      expect.stringMatching(/^ {2}expected: .*v=spf1 include:spf\.brevo\.com/),
       expect.stringMatching(/^DKIM ok/),
       expect.stringMatching(/^DMARC ok v=DMARC1; p=none/),
       expect.stringMatching(/^ {2}note: .*quarantine/),

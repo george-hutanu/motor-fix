@@ -98,7 +98,7 @@ export function emailConfig(appEnv: AppEnv, source: Source): EmailConfig {
       .split(',')
       .map((entry) => entry.trim().toLowerCase())
       .filter(Boolean),
-    apiKey: source['BREVO_API_KEY'] || undefined,
+    apiKey: source['BREVO_API_KEY']?.trim() || undefined,
     // Only tests set it, to point at the recorded mock.
     apiUrl: source['BREVO_API_URL'] || 'https://api.brevo.com/v3',
     ...(domain ? { domain } : {}),

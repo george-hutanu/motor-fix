@@ -91,6 +91,9 @@ function refusal(config: EmailConfig, mailboxes: readonly string[]) {
   return null;
 }
 
+const reason = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
 // Answers the exit code: 1 when anything failed or the run was refused.
 export async function runInboxTest(options: {
   config: EmailConfig;
@@ -128,7 +131,7 @@ export async function runInboxTest(options: {
       print(`${at} ${row.mail.subject} sent ${id}`);
     } catch (error) {
       failed = true;
-      print(`${at} ${row.mail.subject} FAILED ${(error as Error).message}`);
+      print(`${at} ${row.mail.subject} FAILED ${reason(error)}`);
     }
   }
   return failed ? 1 : 0;

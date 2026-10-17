@@ -24,7 +24,12 @@ interface Deps {
 async function dnsCheck(env: Env, deps: Partial<Deps>, print: Print) {
   const domain = sendingDomain(env);
   if (!domain) {
-    print('EMAIL_DOMAIN is not set');
+    const value = env['EMAIL_DOMAIN']?.trim();
+    print(
+      value
+        ? `EMAIL_DOMAIN is not a domain name: ${value}`
+        : 'EMAIL_DOMAIN is not set',
+    );
     return 1;
   }
   const report = dnsReport(
@@ -71,6 +76,12 @@ export function runCommand(
   const print = deps.print ?? ((line: string) => console.log(line));
   if (command === 'email-dns-check') return dnsCheck(env, deps, print);
   if (command === 'inbox-test') {
+    // A mistyped dry-run flag must not send for real.
+    const unknown = flags.find((flag) => flag !== '--dry-run');
+    if (unknown) {
+      print(`unknown option: ${unknown} (only --dry-run)`);
+      return Promise.resolve(1);
+    }
     return inboxTest(flags.includes('--dry-run'), env, deps, print);
   }
   return Promise.resolve(null);

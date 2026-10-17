@@ -80,7 +80,7 @@ export class SupportDelivery {
     if (status === 'sent' || status === 'blocked') return;
     if (!address) {
       this.logger.error(
-        `support message ${message.reference}: SUPPORT_EMAIL is not set; its e-mail waits unsent`,
+        `support message ${message.reference}: neither SUPPORT_EMAIL nor EMAIL_DOMAIN is set; its e-mail waits unsent`,
       );
       if (status === 'pending') {
         await this.record(message.id, 'support', 'unconfigured');

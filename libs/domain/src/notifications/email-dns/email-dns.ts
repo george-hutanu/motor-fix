@@ -18,7 +18,7 @@ interface DnsResult {
 const DKIM_NAMES = ['brevo1._domainkey', 'brevo2._domainkey'] as const;
 const DKIM_HOST = 'dkim.brevo.com';
 
-export function expectedRecords(domain: string): Record<DnsRecord, string> {
+function expectedRecords(domain: string): Record<DnsRecord, string> {
   return {
     DKIM: DKIM_NAMES.map(
       (name) =>

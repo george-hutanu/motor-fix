@@ -82,4 +82,32 @@ describe('the worker commands', () => {
     expect(d.printed).toEqual(['EMAIL_DOMAIN is not set']);
     expect(d.resolver.resolveTxt).not.toHaveBeenCalled();
   });
+
+  it('names a domain setting that is not a domain name', async () => {
+    const d = deps();
+    expect(
+      await runCommand(
+        ['email-dns-check'],
+        { ...ENV, EMAIL_DOMAIN: 'https://example.test' },
+        d,
+      ),
+    ).toBe(1);
+    expect(d.printed).toEqual([
+      'EMAIL_DOMAIN is not a domain name: https://example.test',
+    ]);
+    expect(d.resolver.resolveTxt).not.toHaveBeenCalled();
+  });
+
+  it('refuses a mistyped dry-run flag instead of sending for real', async () => {
+    const d = deps();
+    const live = {
+      ...ENV,
+      BREVO_API_KEY: 'key',
+      EMAIL_DOMAIN: 'example.test',
+      EMAIL_SENDING: 'on',
+    };
+    expect(await runCommand(['inbox-test', '--dryrun'], live, d)).toBe(1);
+    expect(d.send).not.toHaveBeenCalled();
+    expect(d.printed).toEqual(['unknown option: --dryrun (only --dry-run)']);
+  });
 });
