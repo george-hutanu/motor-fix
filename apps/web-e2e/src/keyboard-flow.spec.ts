@@ -200,7 +200,15 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     // On a phone the dialog's own box is empty; its panel is what shows.
     const sheet = page.getByRole('dialog', { name: 'Autentificare' });
     await expect(sheet.locator('mf-overlay-panel')).toBeVisible();
+    // The sheet takes the focus once it has opened; a Tab before that would
+    // start from the page behind it.
+    const inSheet = () =>
+      page.evaluate(
+        () => document.activeElement?.closest('[role="dialog"]') != null,
+      );
+    await expect.poll(inSheet).toBe(true);
     await page.keyboard.press('Tab');
+    await expect.poll(inSheet).toBe(true);
     await focusShows(page);
 
     await page.keyboard.press('Escape');
