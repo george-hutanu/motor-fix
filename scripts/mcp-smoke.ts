@@ -190,7 +190,7 @@ async function register(
     headers: { 'content-type': 'application/json' },
     method: 'POST',
   });
-  const body = await res.json().catch(() => ({}) as Json);
+  const body = asObject(await res.json().catch(() => undefined));
   if (!res.ok)
     throw new Failed(`refused with ${res.status}${oauthError(body)}`);
   if (typeof body['client_id'] !== 'string') {
@@ -223,16 +223,23 @@ async function readJson(send: Send, url: string): Promise<Json> {
   const res = await send(url);
   const text = await res.text();
   if (!res.ok) throw new Failed(`${url} answered ${res.status}`);
+  let body: unknown;
   try {
-    const body: unknown = JSON.parse(text);
-    if (typeof body === 'object' && body !== null && !Array.isArray(body)) {
-      return body as Json;
-    }
+    body = JSON.parse(text);
   } catch {
     // reported below
   }
-  throw new Failed(`${url} answered something that is not JSON`);
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw new Failed(`${url} answered something that is not JSON`);
+  }
+  return body as Json;
 }
+
+// A JSON object, or an empty one for anything else (null, an array, no JSON).
+const asObject = (value: unknown): Json =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Json)
+    : {};
 
 // Only the OAuth error code: a description could echo what was sent.
 function oauthError(body: Json): string {

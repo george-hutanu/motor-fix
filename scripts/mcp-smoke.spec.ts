@@ -345,16 +345,23 @@ describe('mcp-smoke', () => {
   });
 
   // @traces 1019-staging-mcp-connect-FR-004
-  it('fails a registration whose answer carries no client id', async () => {
-    routes[
-      'POST /realms/motorfix-assistants/clients-registrations/openid-connect'
-    ] = (_r, _b, res) => json(res, 201, { client_name: 'x' });
+  it.each([
+    ['an object without one', { client_name: 'x' }],
+    ['null', null],
+    ['an array', [{ client_id: 'x' }]],
+  ])(
+    'fails a registration whose answer is %s, naming the client id',
+    async (_n, answer) => {
+      routes[
+        'POST /realms/motorfix-assistants/clients-registrations/openid-connect'
+      ] = (_r, _b, res) => json(res, 201, answer);
 
-    const { code, lines } = await check();
+      const { code, lines } = await check();
 
-    expect(code).toBe(1);
-    expect(line(lines, 'register claude')).toMatch(/^FAIL .*client id/);
-  });
+      expect(code).toBe(1);
+      expect(line(lines, 'register claude')).toMatch(/^FAIL .*client id/);
+    },
+  );
 
   // @traces 1019-staging-mcp-connect-FR-005
   it('deletes each client with its own registration access token', async () => {
@@ -420,8 +427,8 @@ describe('mcp-smoke', () => {
   });
 });
 
-// The owner's instructions (SC-004): the setup steps and the section on
-// connecting each assistant carry every item FR-008 lists.
+// The owner's instructions: the setup steps and the section on connecting
+// each assistant carry every item the instructions must name.
 describe('infra/keycloak/README.md', () => {
   const readme = readFileSync(
     join(__dirname, '..', 'infra', 'keycloak', 'README.md'),
@@ -446,11 +453,11 @@ describe('infra/keycloak/README.md', () => {
     ['custom connector', 'custom connector'],
     ['developer mode', 'Developer mode'],
     ['the tool', '`get_my_account`'],
-    ['the date field', 'date'],
-    ['the client field', 'client'],
-    ['the tool field', 'tool'],
-    ['the outcome field', 'pass or fail'],
-    ['the error field', 'error text'],
+    ['the date field', '- date:'],
+    ['the client field', '- client:'],
+    ['the tool field', '- tool called:'],
+    ['the outcome field', '- result: pass or fail'],
+    ['the error field', '- error text:'],
     ['ST-1016', '#1106'],
     ['ST-365', '#869'],
     ['the address move', '#1307'],
