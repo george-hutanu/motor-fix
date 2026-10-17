@@ -21,10 +21,7 @@ import {
 } from '../../generated/prisma/client';
 
 // Whether the save made the row, so the controller answers 201 or 200.
-export interface Saved {
-  created: boolean;
-  row: SavedGarageDto;
-}
+type Saved = { created: boolean; row: SavedGarageDto };
 
 const answer = (row: SavedGarage): SavedGarageDto => ({
   garageId: row.garageId,
@@ -85,7 +82,12 @@ export class SavedGaragesService {
     @Inject(EVENT_PORT) private readonly events: EventPort,
   ) {}
 
-  async save(actor: Actor, garageId: string, savedAt?: string): Promise<Saved> {
+  async save(
+    actor: Actor,
+    garageId: string,
+    savedAt?: string,
+    again = true,
+  ): Promise<Saved> {
     driverOnly(actor);
     const at = savedAt ? new Date(savedAt) : new Date();
     if (at.getTime() > Date.now()) {
@@ -119,10 +121,13 @@ export class SavedGaragesService {
     } catch (error) {
       // Two tabs saving at once: the first made the row, this one found it.
       if (!isUniqueViolation(error)) throw error;
-      const kept = await this.prisma.savedGarage.findUniqueOrThrow({
+      const kept = await this.prisma.savedGarage.findUnique({
         where: { accountId_garageId: key },
       });
-      return { created: false, row: answer(kept) };
+      if (kept) return { created: false, row: answer(kept) };
+      // A removal landed in between: this save goes again, once.
+      if (again) return this.save(actor, garageId, savedAt, false);
+      throw error;
     }
   }
 
