@@ -127,6 +127,14 @@ describe('the outage setup steps', () => {
     ])
       expect([fact, section.includes(fact)]).toEqual([fact, true]);
     expect(section).toMatch(/grafana-alerts\.yml|Grafana alerts/);
+    // The admin list is edited in the file, and the next run applies it.
+    const adminList = section
+      .split(/\.\s+/)
+      .find(
+        (s) => s.includes('contact-points.json') && /joins or leaves/.test(s),
+      );
+    expect(adminList).toMatch(/admin/);
+    expect(adminList).toMatch(/next run applies/);
     expect(section).not.toMatch(/by hand when an admin joins or leaves/);
     expect(section).not.toMatch(/nothing here calls its API/);
     expect(section).not.toMatch(/Alerting › Contact points/);

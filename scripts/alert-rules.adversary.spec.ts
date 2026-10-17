@@ -391,6 +391,16 @@ describe('Grafana alerts workflow under hostile input', () => {
   });
 
   // @traces 1347-FR-002
+  it.each([`${web}/`, `${web}///`])(
+    'builds no double slash in the webhook url when the staging address is %s',
+    (address) => {
+      const { code, settings } = hooked({ STAGING_WEB_URL: address });
+      expect(code).toBe(0);
+      expect(settings?.['url']).toBe(`${web}/api/v1/monitoring/outage-alerts`);
+    },
+  );
+
+  // @traces 1347-FR-002
   it('sends a webhook token holding a quote and a backslash as the same string', () => {
     const odd = 'a"b\\c\'d';
     const { settings } = hooked({ OUTAGE_WEBHOOK_TOKEN: odd });
