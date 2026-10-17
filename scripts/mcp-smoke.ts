@@ -21,6 +21,7 @@ interface Options {
 
 interface Registered {
   name: string;
+  origin: string;
   uri?: string;
   token?: string;
 }
@@ -60,7 +61,12 @@ export async function run(
       out(`SKIP ${name} — not run: an earlier step failed`);
   };
   const send: Send = (url, init = {}) =>
-    fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    fetch(url, {
+      ...init,
+      // A redirect is reported, never followed: a delete carries a token.
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
 
   const later = ['register claude', 'register chatgpt'];
   const metadata = await step('challenge', () => challenge(address, send));
@@ -113,7 +119,8 @@ async function challenge(
   await res.body?.cancel();
   if (res.status !== 401) throw new Failed(`expected 401, got ${res.status}`);
   const header = res.headers.get('www-authenticate') ?? '';
-  if (!/^Bearer\b/i.test(header)) {
+  // One header may carry several challenges (`Basic …, Bearer …`).
+  if (!/(^|,\s*)Bearer\b/i.test(header)) {
     throw new Failed('the 401 has no Bearer challenge');
   }
   const named = /resource_metadata="([^"]*)"/.exec(header)?.[1];
@@ -135,11 +142,7 @@ async function resource(
     throw new Failed(`resource is ${named || '(none)'}, expected ${address}`);
   }
   const servers = body['authorization_servers'];
-  if (
-    !Array.isArray(servers) ||
-    servers.length !== 1 ||
-    typeof servers[0] !== 'string'
-  ) {
+  if (!Array.isArray(servers) || servers.length !== 1 || !str(servers[0])) {
     throw new Failed(
       `expected exactly one authorization server, got ${Array.isArray(servers) ? servers.length : 'none'}`,
     );
@@ -160,7 +163,7 @@ async function server(issuer: string, send: Send): Promise<[string, string]> {
     'token_endpoint',
     'registration_endpoint',
   ]) {
-    if (typeof body[key] !== 'string') throw new Failed(`no ${key}`);
+    if (!str(body[key])) throw new Failed(`no ${key}`);
   }
   const methods = body['code_challenge_methods_supported'];
   if (!Array.isArray(methods) || !methods.includes('S256')) {
@@ -193,11 +196,12 @@ async function register(
   const body = asObject(await res.json().catch(() => undefined));
   if (!res.ok)
     throw new Failed(`refused with ${res.status}${oauthError(body)}`);
-  if (typeof body['client_id'] !== 'string') {
+  if (!str(body['client_id'])) {
     throw new Failed('the answer carries no client id');
   }
   registered.push({
     name,
+    origin: new URL(endpoint).origin,
     token: str(body['registration_access_token']),
     uri: str(body['registration_client_uri']),
   });
@@ -205,9 +209,15 @@ async function register(
 }
 
 async function remove(client: Registered, send: Send): Promise<[true, string]> {
-  if (!client.uri || !client.token) {
+  if (!absolute(client.uri) || !client.uri || !client.token) {
     throw new Failed(
       'the registration gave no address and token to delete it with',
+    );
+  }
+  // The token goes only to the identity server that issued it.
+  if (new URL(client.uri).origin !== client.origin) {
+    throw new Failed(
+      `the registration names a delete address on another host (${new URL(client.uri).origin})`,
     );
   }
   const res = await send(client.uri, {
@@ -268,7 +278,9 @@ function absolute(value: string | undefined): string | undefined {
 }
 
 const trim = (value: string) => value.replace(/\/$/, '');
-const str = (value: unknown) => (typeof value === 'string' ? value : undefined);
+// A non-empty string, or undefined.
+const str = (value: unknown) =>
+  typeof value === 'string' && value !== '' ? value : undefined;
 
 if (process.argv[1]?.endsWith('mcp-smoke.ts')) {
   run(process.argv.slice(2)).then((code) => {
