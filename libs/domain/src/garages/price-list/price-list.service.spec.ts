@@ -142,6 +142,25 @@ describe("the owner's price list read and the labour range", () => {
     expect('labour' in list).toBe(false);
   });
 
+  it.each([
+    [0, 0],
+    [20_000, 20_000],
+  ])('counts ends of %p and %p as set and keeps them', async (from, to) => {
+    const { service } = reading(stored(from, to));
+
+    expect((await service.read(actor, GARAGE)).labour).toEqual({
+      fromBani: from,
+      toBani: to,
+    });
+  });
+
+  it("refuses another garage's id before reading anything", async () => {
+    const { findUnique, service } = reading(stored(1, 2));
+
+    await expect(service.read(actor, 'other')).rejects.toBeDefined();
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
   it('answers not found for a garage that is gone', async () => {
     const { service } = reading(null);
 

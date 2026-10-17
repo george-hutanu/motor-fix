@@ -56,6 +56,8 @@ export class PricesView {
   );
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
+  // TODO: nothing emits catalogue_job.decided until the admin's catalogue
+  // decision story lands; the hub already routes it to the owner (FR-007).
   protected readonly view = liveView(
     () => this.api.priceListControllerRead({ garageId: this.garageId() }),
     {
