@@ -9,7 +9,13 @@ import type {
 } from '@motor-fix/contracts';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import { parseNear, type SearchPoint } from '@motor-fix/contracts/search-place';
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  type CanActivate,
+  type ExecutionContext,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 
 import {
   AUDIT_PORT,
@@ -89,6 +95,10 @@ const badCursor = () =>
     'The cursor is not one this list gave out',
   );
 
+// Only the shape `cursorOf` writes, so no year PostgreSQL cannot hold
+// reaches the query.
+const CURSOR_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
 export function readCursor(text: string): Cursor {
   let read: unknown;
   try {
@@ -97,7 +107,8 @@ export function readCursor(text: string): Cursor {
     throw badCursor();
   }
   const { at, id } = (read ?? {}) as Record<string, unknown>;
-  const time = typeof at === 'string' ? new Date(at) : undefined;
+  const time =
+    typeof at === 'string' && CURSOR_TIME.test(at) ? new Date(at) : undefined;
   if (
     typeof read !== 'object' ||
     !time ||
@@ -182,6 +193,16 @@ function driverOnly(actor: Actor) {
     );
   }
   requireCapability(actor, 'driver.saved_garages');
+}
+
+// The same check before the query or body is validated, so a garage-side
+// account sending a bad place still meets the role refusal first (291-FR-001).
+@Injectable()
+export class DriverOnly implements CanActivate {
+  canActivate(context: ExecutionContext) {
+    driverOnly(context.switchToHttp().getRequest<{ actor: Actor }>().actor);
+    return true;
+  }
 }
 
 // A driver's saved garages. Their audit entries are of subject type

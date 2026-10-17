@@ -116,6 +116,18 @@ describe('the saved list cursor', () => {
         'base64url',
       ),
     ],
+    [
+      'a time PostgreSQL cannot hold',
+      Buffer.from(
+        `{"at":"-271821-04-20T00:00:00.000Z","id":"${garageId}"}`,
+      ).toString('base64url'),
+    ],
+    [
+      'a time not in the shape the list writes',
+      Buffer.from(`{"at":"2026-10-01","id":"${garageId}"}`).toString(
+        'base64url',
+      ),
+    ],
   ])('refuses %s with 400 invalid_cursor', (_, text) => {
     expect(() => readCursor(text)).toThrow(
       expect.objectContaining({

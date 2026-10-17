@@ -2,6 +2,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { ADDRESS_MAX, inRomania } from '@motor-fix/contracts/place-section';
 import { roundCoordinate } from '@motor-fix/contracts/search-place';
+import type { PlacesService } from '@motor-fix/data-access';
+import type { Language } from '@motor-fix/i18n';
 
 export interface Place {
   // None for the browser's location: the line then says "near you".
@@ -12,6 +14,23 @@ export interface Place {
 }
 
 const KEY = 'mf-place';
+
+// The Setări city through the address look-up once, never kept (229-FR-006);
+// a failed or empty look-up places nothing.
+export async function cityPlace(
+  places: PlacesService,
+  city: string,
+  lang: Language,
+): Promise<Place | null> {
+  const items = await places
+    .placesControllerSearch({ lang, q: city })
+    .then((answer) => answer.items)
+    .catch(() => []);
+  const [first] = items;
+  return first
+    ? { label: city, lat: first.lat, lng: first.lng, origin: 'address' }
+    : null;
+}
 
 export function parsePlace(value: unknown): Place | null {
   if (typeof value !== 'object' || value === null) return null;

@@ -17,6 +17,7 @@ import {
   Put,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -34,7 +35,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 
-import { SavedGaragesService } from './saved-garages.service';
+import { DriverOnly, SavedGaragesService } from './saved-garages.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
 
@@ -45,6 +46,7 @@ const FORBIDDEN = 'driver_role_required: the role in use is not driver';
 @ApiTags('saved-garages')
 @ApiBearerAuth()
 @Controller('me/saved-garages')
+@UseGuards(DriverOnly)
 export class SavedGaragesController {
   constructor(private readonly saved: SavedGaragesService) {}
 

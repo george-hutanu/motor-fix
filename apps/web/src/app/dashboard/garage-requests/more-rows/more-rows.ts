@@ -21,7 +21,7 @@ interface Page<T> {
 // rows as were shown, so a scrolled list keeps its depth. Call it in an
 // injection context. `failed` says the last further page could not be read;
 // `retry` asks for it again.
-export type MoreRows<T> = Signal<readonly T[]> & {
+type MoreRows<T> = Signal<readonly T[]> & {
   readonly failed: Signal<boolean>;
   retry(): void;
 };

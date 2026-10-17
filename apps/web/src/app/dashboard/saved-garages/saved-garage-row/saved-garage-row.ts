@@ -57,8 +57,7 @@ export class SavedGarageRow {
   // A mobile mechanic says whether it comes to the place, never a distance.
   private where(item: SavedGarageItemDto) {
     if (item.businessKind === 'mobile') {
-      if (item.comesToYou === undefined || item.comesToYou === null)
-        return null;
+      if (item.comesToYou === undefined) return null;
       return this.i18n.t(
         item.comesToYou
           ? 'driver.saved.comesToYou'
