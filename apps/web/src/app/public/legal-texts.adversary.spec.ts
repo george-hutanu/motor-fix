@@ -33,13 +33,14 @@ describe('legal texts, structure and hygiene', () => {
     },
   );
 
-  // @traces 243-FR-012 1203-FR-005
+  // @traces 243-FR-012 1203-FR-005 366-FR-003
   it.each(languages)(
     'no %s text still names a replaced version date',
     (language) => {
       for (const kind of kinds)
         for (const replaced of ['2026-10-05', '2026-10-11'])
           expect(whole(language, kind)).not.toContain(replaced);
+      expect(whole(language, 'privacy')).not.toContain('2026-10-12');
     },
   );
 

@@ -196,7 +196,7 @@ describe('what an AI assistant receives', () => {
       /numerele de telefon și numerele de înmatriculare nu îi sunt trimise niciodată/i,
       /fotografiile doar ca un link care deschide MotorFix/,
       /doar după „da”‑ul tău.*programările.*aprobi și în aplicație/,
-      /istoricul modificărilor ca făcute printr‑un asistent AI/,
+      /istoricul modificărilor ca fiind făcute printr‑un asistent AI/,
       /după propriii termeni.*niciun acord cu MotorFix.*în afara Spațiului Economic European/,
       /îl poți deconecta oricând din contul tău/i,
     ],
