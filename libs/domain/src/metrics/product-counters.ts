@@ -319,6 +319,7 @@ const STARTS: Record<
     [quoteAccepts, each('outcome', QUOTE_ACCEPT_OUTCOMES)],
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],
+    [supportMessages, each('outcome', SUPPORT_MESSAGE_OUTCOMES)],
   ],
   worker: [
     [

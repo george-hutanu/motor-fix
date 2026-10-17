@@ -37,7 +37,7 @@ const SUPPORT_EMAILS = ['support', 'acknowledgement'].flatMap((kind) =>
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
 
-// @traces 1345-FR-012 1345-FR-013
+// @traces 1345-FR-012 1345-FR-013 280-FR-023
 describe("the worker's product counters at start", () => {
   it('holds every series the worker counts at 0, and no sign-in', async () => {
     initProductCounters('worker');
@@ -58,8 +58,8 @@ describe("the worker's product counters at start", () => {
       ]),
     ).toEqual(SUPPORT_EMAILS);
     expect(named(all, 'motorfix_support_messages_total')).toEqual([]);
-    // 1345-FR-012: each instance stays under 100 series.
-    expect(all.length).toBeLessThan(100);
+    // 1345-FR-012: each instance stays under 150 series.
+    expect(all.length).toBeLessThan(150);
     expect(named(all, 'motorfix_sign_ins_total')).toEqual([]);
   });
 

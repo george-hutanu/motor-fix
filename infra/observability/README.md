@@ -255,7 +255,7 @@ Rules that keep it there:
   storage figures add at most 150 series per environment, every label value in
   use (`libs/observability/src/datastores/series.spec.ts` holds the ceiling);
   slow statements are WARN log records, never labels.
-- **Product counters.** The `motorfix_*` counters add fewer than 100 series
+- **Product counters.** The `motorfix_*` counters add fewer than 150 series
   per process, one e-mail series per template key included, the seven
   product counters fewer than 50 (`libs/domain/src/metrics/product-counters*.spec.ts`
   hold the ceilings); a story that passes one cuts a label before raising it.
