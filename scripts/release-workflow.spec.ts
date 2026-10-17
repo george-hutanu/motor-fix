@@ -293,3 +293,54 @@ describe('the core flows a release runs', () => {
     expect(tagged(file)).toBeGreaterThan(0);
   });
 });
+
+// @traces 430-FR-004
+describe('the CDN purge after a deploy', () => {
+  // A step's lines, from its `- name:` to the next step.
+  function step(block: string, name: string): string {
+    const lines = block.split('\n');
+    const start = lines.findIndex((line) => line.trim() === `- name: ${name}`);
+    if (start < 0) return '';
+    const indent = lines[start]?.indexOf('-') ?? 0;
+    const end = lines.findIndex(
+      (line, i) =>
+        i > start &&
+        line.indexOf('- ') === indent &&
+        line.trim().startsWith('- '),
+    );
+    return lines.slice(start, end < 0 ? undefined : end).join('\n');
+  }
+
+  const stepNames = (block: string) =>
+    [...block.matchAll(/^ {6}- name: (.+)$/gm)].map((m) => m[1]?.trim());
+
+  it.each([
+    ['staging', "Deploy and wait for each service's health check"],
+    [
+      'production',
+      'Deploy the staging-proven digests and wait for /health/ready',
+    ],
+  ])('%s purges its zone right after its deploy is healthy', (name, deploy) => {
+    const names = stepNames(job(name));
+
+    expect(names.indexOf('Purge the CDN')).toBe(names.indexOf(deploy) + 1);
+  });
+
+  it.each(['staging', 'production'])(
+    '%s skips the purge with a notice until the key is set, and a failed purge only warns',
+    (name) => {
+      const purge = step(job(name), 'Purge the CDN');
+
+      expect(setting(purge, 'BUNNY_API_KEY')).toBe(gh('secrets.BUNNY_API_KEY'));
+      expect(setting(purge, 'BUNNY_PULL_ZONE_ID')).toBe(
+        gh('vars.BUNNY_PULL_ZONE_ID'),
+      );
+      expect(purge).toContain('[ -n "$BUNNY_API_KEY" ] ||');
+      expect(purge).toContain('::notice::');
+      expect(purge).toMatch(
+        /node scripts\/cdn\.ts purge --zone \|\|\s*echo "::warning::/,
+      );
+      expect(purge).not.toMatch(/continue-on-error|^\s+if:/m);
+    },
+  );
+});
