@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 079-account-model
   - 082-sign-in
@@ -29,6 +29,7 @@ features:
   - 1203-legal-operator
   - 250-launch-analytics-events
   - 1169-prefetch-intent
+  - 366-assistant-privacy
 ---
 
 # Capability: Accounts
@@ -797,9 +798,9 @@ _From 243-terms-privacy._
 
 _From 1203-legal-operator._
 
-### 1203-FR-005 — Both texts MUST be published as a new version: the terms version and the privacy version MUST both become 2026-10-12, and each text MUST carry that version in both languages.
+### 366-FR-003 — The privacy version MUST become 2026-10-17 in both languages; the terms version stays 2026-10-12.
 
-_From 1203-legal-operator._
+_From 366-assistant-privacy._
 
 ### 243-FR-014 — The news consent (#834) and the analytics consent (#150) texts MUST be referred to from the privacy notice as separate, withdrawable consents, and the notice MUST say where each is changed (the account's notification settings or the link in each news e-mail for news, where the product changes it today; the cookie settings for analytics).
 
@@ -877,6 +878,26 @@ _From 250-launch-analytics-events._
 
 _From 1169-prefetch-intent._
 
+### 366-FR-001 — The privacy notice's section "Who else handles the data" (EN) / "Cine mai prelucrează datele" (RO) MUST hold one paragraph about AI assistants, in both languages, stating: (a) only the person connects an assistant, and sending rests on their own request; (b) it reads only what the person could see in MotorFix themselves; (c) phone numbers and number plates are never sent to it, and photos only as a link that opens MotorFix; (d) every action is shown to the person and done only after their "yes", and bookings are also approved in the app; (e) its changes are recorded in the audit history as made through an AI assistant; (f) the assistant's provider handles what it receives under its own terms, with no agreement with MotorFix, and may be outside the European Economic Area; (g) the person can disconnect it at any time from their account.
+
+_From 366-assistant-privacy._
+
+### 366-FR-002 — The sentence "If you connect an AI assistant, what it reads at your request goes to that assistant's provider." and its Romanian twin MUST be removed from the paragraph that names the map, address and sign-in providers.
+
+_From 366-assistant-privacy._
+
+### 366-FR-004 — A consent naming any privacy version other than 2026-10-17 MUST not be current: a sign-up carrying privacy 2026-10-12 MUST be refused with the existing error.
+
+_From 366-assistant-privacy._
+
+### 366-FR-005 — `apps/api/openapi.json` MUST be regenerated so its consent example shows the new privacy version; the generated `libs/data-access` client is regenerated and committed only if it changes.
+
+_From 366-assistant-privacy._
+
+### 366-FR-006 — Both languages MUST keep eleven privacy sections with the same paragraph counts in the same order, and the Romanian text MUST use ș and ț with comma below only.
+
+_From 366-assistant-privacy._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -905,3 +926,5 @@ _From 1169-prefetch-intent._
 
 - `243-FR-011` — superseded by `1203-FR-001` (2026-10-11)
 - `243-FR-012` — superseded by `1203-FR-005` (2026-10-11)
+
+- `1203-FR-005` — superseded by `366-FR-003` (2026-10-17)

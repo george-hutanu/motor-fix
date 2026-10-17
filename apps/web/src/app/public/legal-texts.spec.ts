@@ -168,8 +168,64 @@ describe('the operator and how to reach it', () => {
     },
   );
 
-  // @traces 1203-FR-008
+  // @traces 1203-FR-008 366-FR-006
   it('no text uses a cedilla where Romanian takes a comma below', () => {
     expect(JSON.stringify(LEGAL_TEXTS)).not.toMatch(/[ŞşŢţ]/);
   });
+});
+
+describe('what an AI assistant receives', () => {
+  const PROVIDERS = {
+    en: 'Who else handles the data',
+    ro: 'Cine mai prelucrează datele',
+  } as const;
+  const FACTS = {
+    en: [
+      /only you can connect an AI assistant/i,
+      /only what you could see in MotorFix yourself/,
+      /phone numbers and number plates are never sent/i,
+      /photos only as a link that opens MotorFix/,
+      /only after your “yes”.*bookings.*approve in the app/,
+      /audit history as made through an AI assistant/,
+      /under its own terms.*no agreement with MotorFix.*outside the European Economic Area/,
+      /disconnect it at any time from your account/,
+    ],
+    ro: [
+      /doar tu poți conecta un asistent AI/i,
+      /doar ce ai putea vedea singur în MotorFix/,
+      /numerele de telefon și numerele de înmatriculare nu îi sunt trimise niciodată/i,
+      /fotografiile doar ca un link care deschide MotorFix/,
+      /doar după „da”‑ul tău.*programările.*aprobi și în aplicație/,
+      /istoricul modificărilor ca fiind făcute printr‑un asistent AI/,
+      /după propriii termeni.*niciun acord cu MotorFix.*în afara Spațiului Economic European/,
+      /îl poți deconecta oricând din contul tău/i,
+    ],
+  } as const;
+
+  const providers = (language: 'ro' | 'en') =>
+    LEGAL_TEXTS[language].privacy.sections.find(
+      (s) => s.heading === PROVIDERS[language],
+    )!.paragraphs;
+
+  // @traces 366-FR-001
+  it.each(languages)(
+    'the %s providers section has one paragraph saying what an assistant receives',
+    (language) => {
+      const about = providers(language).filter((p) =>
+        /asistent AI|AI assistant/.test(p),
+      );
+      expect(about).toHaveLength(1);
+      for (const fact of FACTS[language]) expect(about[0]).toMatch(fact);
+    },
+  );
+
+  // @traces 366-FR-002
+  it.each(languages)(
+    'the %s notice no longer has the one-sentence mention of assistants',
+    (language) => {
+      expect(whole(language, 'privacy')).not.toMatch(
+        /what it reads at your request goes to that assistant’s provider|ce citește acesta la cererea ta ajunge la furnizorul acelui asistent/,
+      );
+    },
+  );
 });
