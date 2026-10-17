@@ -254,8 +254,9 @@ committed by the repo or its agents:
 1. `MONITOR_DATABASE_URL` (the monitoring role) on the staging worker, and
    on production's when it is back. Until then `postgres-unreachable` fires
    on no data, as it should.
-2. `FARO_URL` on the staging web. Faro keeps no session and stores nothing
-   on the device, so it does not wait for the analytics consent.
+2. `FARO_URL` on the staging web. Whether browser telemetry may run before
+   the analytics consent gate exists is the owner's call; until it is set the Web
+   Vitals dashboard stays empty and the web warns once at start-up.
 3. `GEOAPIFY_API_KEY` on the staging worker (its `address search off`
    warning says so).
 4. Optional: read the `notifications` queue's one failed job in the staging

@@ -43,9 +43,9 @@ export function mountEdge(app: Express, apiUrl: string) {
       method: req.method,
       path: scrub(req.originalUrl.split('?')[0] ?? ''),
     });
-    // A pooled socket the API has already closed fails before a byte comes
-    // back: a GET or HEAD is sent once more on a fresh one. A body is never
-    // replayed.
+    // Any failure before a byte comes back, most often a pooled socket the
+    // API has already closed: a GET or HEAD is sent once more on a fresh one.
+    // A body is never replayed.
     const retriable = req.method === 'GET' || req.method === 'HEAD';
     let retried = false;
     // The browser went away: nothing is retried or reported.

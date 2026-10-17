@@ -279,26 +279,24 @@ describe('web edge proxy failures and retries', () => {
       };
     };
 
-    it.each(['GET'])(
-      'logs one warning and no error for a %s, with no retry and no 502',
-      async (method) => {
-        cutAfterHeaders(true);
+    it('logs one warning and no error for a GET, with no retry and no 502', async () => {
+      const method = 'GET';
+      cutAfterHeaders(true);
 
-        const res = await call('/api/v1/garages?q=secret', method);
-        await pause(100);
+      const res = await call('/api/v1/garages?q=secret', method);
+      await pause(100);
 
-        expect(res.status).toBe(200);
-        expect(res.outcome).not.toBe('ended');
-        expect(seen).toHaveLength(1);
-        expect(errors()).toEqual([]);
-        expect(warnings()).toHaveLength(1);
-        expect(warnings()[0]).toMatchObject({
-          method,
-          path: '/api/v1/garages',
-        });
-        expect(JSON.stringify(entries())).not.toContain('secret');
-      },
-    );
+      expect(res.status).toBe(200);
+      expect(res.outcome).not.toBe('ended');
+      expect(seen).toHaveLength(1);
+      expect(errors()).toEqual([]);
+      expect(warnings()).toHaveLength(1);
+      expect(warnings()[0]).toMatchObject({
+        method,
+        path: '/api/v1/garages',
+      });
+      expect(JSON.stringify(entries())).not.toContain('secret');
+    });
 
     it('logs one warning for a chunked response cut mid-stream', async () => {
       cutAfterHeaders(false);
