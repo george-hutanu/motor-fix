@@ -101,7 +101,8 @@ test.describe('the suspended garages @seeded', () => {
       await page.goto('/app/admin/garages');
       await expect(counts(page)).toHaveText(COUNTS);
       await expect(panel(page).getByRole('heading', { level: 2 })).toHaveText(
-        /^Service‑uri suspendate\s·\s\d+/,
+        // The panel's title sits between the template's own spaces.
+        /^\s*Service‑uri suspendate\s·\s\d+\s*$/,
       );
       expect(await sideways(page)).toBeLessThanOrEqual(0);
       expect(
