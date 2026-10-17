@@ -1,5 +1,8 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { script } from './workflow-text.ts';
 
 // The release workflow's job settings, read as indented text: the repository
 // has no YAML parser as a direct dependency, and these few keys are enough.
@@ -18,6 +21,21 @@ function job(name: string): string {
 
 const setting = (block: string, key: string) =>
   block.match(new RegExp(`^ +${key}: *(.+)$`, 'm'))?.[1]?.trim();
+
+// Runs one staging step's `run: |` script in bash from the repository root,
+// with only PATH and the given variables.
+function stepRun(name: string, env: Record<string, string>) {
+  const block = job('staging');
+  const start = block.indexOf(`- name: ${name}`);
+  if (start < 0) throw new Error(`staging has no step ${name}`);
+  const step = block.slice(start, block.indexOf('- name:', start + 1));
+  const run = spawnSync('bash', ['-e', '-c', script(step)], {
+    cwd: join(__dirname, '..'),
+    encoding: 'utf8',
+    env: { PATH: process.env['PATH'], ...env },
+  });
+  return { code: run.status, out: `${run.stdout}${run.stderr}` };
+}
 
 // A GitHub expression, as the workflow writes it.
 const gh = (ref: string) => `\${{ ${ref} }}`;
@@ -262,6 +280,55 @@ describe('release workflow', () => {
     expect(block).toContain(
       "- name: Deploy and wait for each service's health check",
     );
+  });
+
+  // @traces 1019-staging-mcp-connect-FR-007
+  it('checks the MCP sign-in right after the deploy, before the core flows', () => {
+    const block = job('staging');
+    const deploy = block.indexOf(
+      'run: exec node scripts/railway-deploy.ts staging',
+    );
+    const check = block.indexOf('name: Check the MCP sign-in on staging');
+    const e2e = block.indexOf('name: Core flows on staging');
+    const step = block.slice(check, block.indexOf('- name:', check + 1));
+
+    expect(setting(block, 'MCP_URL')).toBe(gh('vars.MCP_URL'));
+    expect(deploy).toBeGreaterThan(0);
+    expect(check).toBeGreaterThan(deploy);
+    expect(e2e).toBeGreaterThan(check);
+    expect(step).toContain('node scripts/mcp-smoke.ts "$MCP_URL"');
+    expect(step).not.toMatch(/continue-on-error|\|\| *true|if:/);
+  });
+
+  // @traces 1019-staging-mcp-connect-FR-007
+  it.each([
+    ['', '', 'RAILWAY_SERVICE_MCP, MCP_URL'],
+    ['svc', '', 'MCP_URL'],
+    ['', 'https://mcp.example/mcp', 'RAILWAY_SERVICE_MCP'],
+  ])(
+    'skips the MCP check with one notice when service %j or address %j is unset',
+    (service, address, missing) => {
+      const run = stepRun('Check the MCP sign-in on staging', {
+        MCP_URL: address,
+        RAILWAY_SERVICE_MCP: service,
+      });
+
+      expect(run.code).toBe(0);
+      expect(run.out.trim()).toBe(
+        `::notice::MCP sign-in check skipped (unset: ${missing})`,
+      );
+    },
+  );
+
+  // @traces 1019-staging-mcp-connect-FR-007
+  it('fails the staging job when the MCP check fails', () => {
+    const run = stepRun('Check the MCP sign-in on staging', {
+      MCP_URL: 'http://127.0.0.1:9/mcp',
+      RAILWAY_SERVICE_MCP: 'svc',
+    });
+
+    expect(run.code).toBe(1);
+    expect(run.out).toMatch(/^FAIL challenge/m);
   });
 
   it('never gives production the MCP or identity server', () => {
