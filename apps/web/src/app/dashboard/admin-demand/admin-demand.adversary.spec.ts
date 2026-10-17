@@ -24,6 +24,7 @@ const brands = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
     name: `Brand ${String(i).padStart(2, '0')}`,
     requests: 5000 - i,
+    searches: 0,
   }));
 const jobs = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
@@ -38,6 +39,7 @@ const dto = (b: number, j: number): AdminDemandDto => ({
   jobs: jobs(j),
   lastDay: '2026-10-17',
   requests: 1,
+  searches: 0,
 });
 
 let answer: () => Promise<AdminDemandDto>;
@@ -222,14 +224,16 @@ describe('AdminDemand under hostile answers', () => {
   it('writes a brand name holding markup as text', async () => {
     answer = async () => ({
       ...dto(0, 0),
-      brands: [{ name: '<img src=x onerror=alert(1)>', requests: 3 }],
+      brands: [
+        { name: '<img src=x onerror=alert(1)>', requests: 3, searches: 0 },
+      ],
       requests: 3,
     });
     const el = await open();
 
     expect(el.querySelector('img')).toBeNull();
     expect(await tableOf(charts(el)[0])).toEqual([
-      ['<img src=x onerror=alert(1)>', '3'],
+      ['<img src=x onerror=alert(1)>', '0', '3'],
     ]);
   });
 
@@ -238,16 +242,16 @@ describe('AdminDemand under hostile answers', () => {
     answer = async () => ({
       ...dto(0, 0),
       brands: [
-        { name: 'Dacia', requests: 3 },
-        { name: '', requests: 2 },
+        { name: 'Dacia', requests: 3, searches: 0 },
+        { name: '', requests: 2, searches: 0 },
       ],
       requests: 5,
     });
     const el = await open();
 
     expect(await tableOf(charts(el)[0])).toEqual([
-      ['Dacia', '3'],
-      ['', '2'],
+      ['Dacia', '0', '3'],
+      ['', '0', '2'],
     ]);
   });
 
@@ -255,11 +259,11 @@ describe('AdminDemand under hostile answers', () => {
   it('groups counts of a million and above in both languages', async () => {
     answer = async () => ({
       ...dto(0, 0),
-      brands: [{ name: 'Dacia', requests: 1234567 }],
+      brands: [{ name: 'Dacia', requests: 1234567, searches: 0 }],
       requests: 1234567,
     });
     const el = await open();
-    expect(await tableOf(charts(el)[0])).toEqual([['Dacia', '1.234.567']]);
+    expect(await tableOf(charts(el)[0])).toEqual([['Dacia', '0', '1.234.567']]);
 
     await TestBed.inject(I18n).use('en');
     await settle();
@@ -267,7 +271,7 @@ describe('AdminDemand under hostile answers', () => {
     const cells = [...charts(el)[0].querySelectorAll('tbody td')].map((td) =>
       td.textContent?.trim(),
     );
-    expect(cells).toEqual(['Dacia', '1,234,567']);
+    expect(cells).toEqual(['Dacia', '0', '1,234,567']);
   });
 
   // @traces 103-FR-009
@@ -295,7 +299,7 @@ describe('AdminDemand under hostile answers', () => {
     const el = await open({ overview: true });
 
     expect(el.querySelector('.mf-chart-message')?.textContent?.trim()).toBe(
-      'Încă nu sunt cereri în ultimele 30 de zile.',
+      'Încă nu sunt căutări sau cereri în ultimele 30 de zile.',
     );
     expect(el.querySelector('canvas')).toBeNull();
   });

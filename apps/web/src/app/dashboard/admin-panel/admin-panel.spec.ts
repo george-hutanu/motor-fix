@@ -228,7 +228,7 @@ describe('AdminPanel', () => {
       [...brands.querySelectorAll('mf-bar-chart h2')].map((h) =>
         h.textContent?.trim(),
       ),
-    ).toEqual(['Cereri pe marcă, 30 de zile']);
+    ).toEqual(['Căutări și cereri pe marcă, 30 de zile']);
     expect(text(tile(element, LISTED), 'number')).toBe('214');
     expect(tiles(element)).toHaveLength(6);
     expect(panel.getAttribute('aria-busy')).toBeNull();
