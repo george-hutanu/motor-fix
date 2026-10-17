@@ -1,14 +1,12 @@
 import type { ListedGarageDto } from '@motor-fix/contracts';
-import {
-  MOBILE_SERVICE_RADIUS_DEFAULT_KM,
-  ROMANIA_BOUNDS,
-} from '@motor-fix/contracts/place-section';
+import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import {
   SEARCH_RADIUS_DEFAULT_KM,
   type SearchBbox,
   type SearchPoint,
 } from '@motor-fix/contracts/search-place';
 
+import { centreOf, kmOf, ROMANIA_CENTRE } from './area-sql';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 
 interface InArea {
@@ -18,23 +16,13 @@ interface InArea {
   mobile: boolean;
 }
 
-interface AreaOf {
+export interface Area {
   point?: SearchPoint;
   radiusKm?: number;
   bbox?: SearchBbox;
   // At most this many, nearest first, when nothing needs the whole area.
   limit?: number;
 }
-
-const ROMANIA_CENTRE = {
-  lat: (ROMANIA_BOUNDS.latMin + ROMANIA_BOUNDS.latMax) / 2,
-  lng: (ROMANIA_BOUNDS.lngMin + ROMANIA_BOUNDS.lngMax) / 2,
-};
-
-const centreOf = ({ south, west, north, east }: SearchBbox) => ({
-  lat: (south + north) / 2,
-  lng: (west + east) / 2,
-});
 
 // Haversine on a sphere of the Earth's mean radius: within a metre of the
 // ellipsoid at these distances, and it needs no PostGIS extension. Metres
@@ -54,7 +42,7 @@ export const distanceMetersSql = ({ lat, lng }: SearchPoint) => Prisma.sql`
 // position.
 export async function garagesInArea(
   prisma: PrismaClient,
-  { bbox, point, radiusKm = SEARCH_RADIUS_DEFAULT_KM, limit }: AreaOf,
+  { bbox, point, radiusKm = SEARCH_RADIUS_DEFAULT_KM, limit }: Area,
 ): Promise<Map<string, InArea>> {
   const { lat, lng } = point ?? (bbox ? centreOf(bbox) : ROMANIA_CENTRE);
   const mobileIn = point
@@ -128,6 +116,6 @@ export function placed<T extends { id: string }>(
   return {
     ...item,
     comesToYou: found.mobile,
-    distanceKm: found.mobile ? null : Math.round(found.distanceM / 100) / 10,
+    distanceKm: found.mobile ? null : kmOf(found.distanceM),
   };
 }

@@ -10,7 +10,7 @@ import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
-import type { PrismaClient } from '../../generated/prisma/client';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
 import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
@@ -24,6 +24,8 @@ import {
 // The one scope of every read a visitor can reach: spread into the `where`
 // of a garage read. A test fails when a public handler's read skips it.
 export const publicGarages = () => ({ status: 'approved' as const });
+// The same scope for a raw read whose statement reads `garage`.
+export const publicGaragesSql = Prisma.sql`garage.status = 'approved'::garage_status`;
 
 const present = <T extends Record<string, unknown>>(fields: T) =>
   Object.fromEntries(
