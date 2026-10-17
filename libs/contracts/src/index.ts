@@ -59,5 +59,6 @@ export * from './request-status';
 export * from './search-place';
 export * from './staff-invite.dto';
 export * from './verification-checks';
+export * from './verification-file.dto';
 export * from './verification-queue';
 export * from './verification-target';

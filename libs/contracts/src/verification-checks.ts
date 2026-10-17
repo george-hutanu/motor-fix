@@ -32,8 +32,8 @@ export const VERIFICATION_CHECK_RESULTS = [
 export type VerificationCheckResult =
   (typeof VERIFICATION_CHECK_RESULTS)[number];
 
-// What an admin may record: a check goes back to not run only by a new file.
-export const RECORDED_RESULTS = ['ok', 'warning', 'failed'] as const;
+// What an admin may record: `not_run` unticks a check, with no detail.
+export const RECORDED_RESULTS = ['ok', 'warning', 'failed', 'not_run'] as const;
 
 export const CHECK_DETAIL_MAX = 200;
 
@@ -166,7 +166,7 @@ export class RecordVerificationCheckDto {
 
   @ApiPropertyOptional({
     description:
-      'Trimmed; required for warning and failed; replaces the stored detail',
+      'Trimmed; required for warning and failed, refused with not_run; replaces the stored detail',
     maxLength: CHECK_DETAIL_MAX,
   })
   @Transform(trimmed)
