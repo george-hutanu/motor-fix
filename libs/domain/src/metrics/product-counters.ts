@@ -1,4 +1,9 @@
-import type { DocumentKind, SuspensionCause } from '@motor-fix/contracts';
+import type {
+  DocumentKind,
+  SuspensionCause,
+  VerificationCheckKind,
+  VerificationCheckResult,
+} from '@motor-fix/contracts';
 import { type Counter, metrics } from '@opentelemetry/api';
 
 // The product's key numbers, one counter each; a process that never starts
@@ -51,6 +56,16 @@ export function countGarageSuspension(cause: SuspensionCause) {
     'motorfix_garage_suspensions_total',
     'Garages taken off the map, by cause',
   ).add(1, { cause });
+}
+
+export function countVerificationCheck(
+  kind: VerificationCheckKind,
+  result: VerificationCheckResult,
+) {
+  counter(
+    'motorfix_verification_checks_total',
+    "Checks an admin recorded on a garage's file, by kind and result",
+  ).add(1, { kind, result });
 }
 
 export function countQuote() {

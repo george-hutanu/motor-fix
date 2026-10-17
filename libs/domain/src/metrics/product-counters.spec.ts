@@ -19,6 +19,7 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countVerificationCheck,
   countVerificationResult,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
@@ -107,6 +108,12 @@ function countEverySeries() {
 // @traces 209-FR-014
 describe('the product counters', () => {
   it.each([
+    // @traces 203-FR-010
+    [
+      () => countVerificationCheck('caen', 'warning'),
+      'motorfix_verification_checks_total',
+      { kind: 'caen', result: 'warning' },
+    ],
     [
       () => countSearch('results'),
       'motorfix_searches_total',

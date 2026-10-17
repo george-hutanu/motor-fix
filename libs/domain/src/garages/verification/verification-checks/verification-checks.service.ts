@@ -1,15 +1,18 @@
 import {
   CHECK_DETAIL_MAX,
   checkSummary,
+  isValidCui,
   RECORDED_RESULTS,
   type RecordVerificationCheckDto,
   VERIFICATION_CHECK_KINDS,
+  type VerificationCheckEvidenceDto,
   type VerificationCheckKind,
 } from '@motor-fix/contracts';
 import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -18,11 +21,13 @@ import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { refusal } from '../../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
-import type {
+import {
+  type BusinessKind,
   Prisma,
-  VerificationCheck,
-  VerificationFileStatus,
+  type VerificationCheck,
+  type VerificationFileStatus,
 } from '../../../generated/prisma/client';
+import { countVerificationCheck } from '../../../metrics/product-counters';
 
 // A decision waits for the garage or closes the file; reopening it into review
 // lets the admin record again.
@@ -37,6 +42,128 @@ const invalid = (message: string) =>
 
 const isKind = (kind: string): kind is VerificationCheckKind =>
   (VERIFICATION_CHECK_KINDS as readonly string[]).includes(kind);
+
+// The fields each register check takes from the admin.
+const FIELDS = {
+  caen: ['certificate', 'onrc', 'address'],
+  company: ['name'],
+} as const;
+type RegisterKind = keyof typeof FIELDS;
+const isRegister = (kind: string): kind is RegisterKind => kind in FIELDS;
+
+// The ticks as the form names them, in the form's order.
+const TICKS = {
+  address: 'adresa',
+  certificate: '4520 pe certificat',
+  onrc: '4520 în ONRC',
+} as const;
+
+// The details the server writes on an ok register check, stored in Romanian
+// like every typed detail.
+const companyOk = (name: string) => `CUI valid · ${name}`;
+const CAEN_OK = {
+  premises: 'Întreținerea și repararea autovehiculelor, la punctul de lucru',
+  seat: 'Întreținerea și repararea autovehiculelor, la sediul social',
+};
+
+// The day of the look-up, as the admin's calendar reads it.
+const bucharestDay = (at: Date) =>
+  new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Europe/Bucharest',
+    year: 'numeric',
+  }).format(at);
+
+// Evidence belongs to a ticked register check, each kind to its own fields.
+function evidenceShape(
+  kind: VerificationCheckKind,
+  body: RecordVerificationCheckDto,
+) {
+  const { evidence } = body;
+  if (evidence === undefined) return;
+  if (!isRegister(kind)) {
+    throw invalid('evidence belongs to the company and CAEN checks');
+  }
+  if (body.result === 'not_run') {
+    throw invalid('an unticked check carries no evidence');
+  }
+  const other = kind === 'company' ? FIELDS.caen : FIELDS.company;
+  const stray = other.find((field) => evidence[field] !== undefined);
+  if (stray) throw invalid(`${stray} does not belong to the ${kind} check`);
+}
+
+interface RegisterFacts {
+  businessKind: BusinessKind | null;
+  certificateUploaded: boolean;
+  cui: string | null;
+}
+
+type RegisterRecord = {
+  detail?: string;
+  evidence: VerificationCheckEvidenceDto;
+};
+
+// The company check: OK needs the name the register shows and a CUI that
+// passes the validator; the server writes the detail itself.
+function companyRecord(
+  body: RecordVerificationCheckDto,
+  facts: RegisterFacts,
+): RegisterRecord {
+  const name = body.evidence?.name?.trim();
+  const lookedUpOn = bucharestDay(new Date());
+  if (body.result !== 'ok') {
+    return { evidence: { ...(name && { name }), lookedUpOn } };
+  }
+  if (!name) throw invalid('an ok company check needs the company name');
+  if (!isValidCui(facts.cui ?? '')) {
+    throw invalid("the garage's CUI is not valid");
+  }
+  return { detail: companyOk(name), evidence: { lookedUpOn, name } };
+}
+
+// The CAEN check: OK needs every tick, the certificate's only when the file
+// holds one; the ticks are stored as sent, with what the server read.
+function caenRecord(
+  body: RecordVerificationCheckDto,
+  facts: RegisterFacts,
+): RegisterRecord {
+  const ticks = {
+    address: body.evidence?.address === true,
+    certificate: body.evidence?.certificate === true,
+    onrc: body.evidence?.onrc === true,
+  };
+  const evidence = {
+    ...ticks,
+    certificateUploaded: facts.certificateUploaded,
+    lookedUpOn: bucharestDay(new Date()),
+  };
+  if (body.result !== 'ok') return { evidence };
+  const missing = (['certificate', 'onrc', 'address'] as const).filter(
+    (tick) =>
+      !ticks[tick] && (tick !== 'certificate' || facts.certificateUploaded),
+  );
+  if (missing.length) {
+    throw invalid(`Lipsește: ${missing.map((t) => TICKS[t]).join(', ')}`);
+  }
+  const mobile = facts.businessKind === 'mobile';
+  return { detail: mobile ? CAEN_OK.seat : CAEN_OK.premises, evidence };
+}
+
+// One side of a check's audit entry: the activities check carries its list,
+// a register check its evidence.
+function auditValue(
+  kind: VerificationCheckKind,
+  check: Pick<VerificationCheck, 'detail' | 'evidence' | 'result'>,
+  activities: string[] | undefined,
+) {
+  return {
+    ...(activities && { activities }),
+    detail: check.detail,
+    ...(isRegister(kind) && { evidence: check.evidence }),
+    result: check.result,
+  };
+}
 
 // The detail as stored: trimmed, at most 200 characters, required for a
 // problem and refused when the check is unticked.
@@ -64,6 +191,7 @@ function validated(
     throw invalid('result must be ok, warning, failed or not_run');
   }
   const detail = detailOf(body);
+  evidenceShape(kind, body);
   if (body.activities !== undefined && kind !== 'activities') {
     throw invalid('activities belong to the activities check');
   }
@@ -84,6 +212,8 @@ function validated(
 // result, its history entry and its event commit together.
 @Injectable()
 export class VerificationChecksService {
+  private readonly logger = new Logger('VerificationChecks');
+
   constructor(
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
@@ -114,16 +244,20 @@ export class VerificationChecksService {
     }
     const next = validated(kind, body);
     if (next.activities) await this.known(tx, next.activities);
+    const register = await this.register(tx, kind, body, file, fileId);
 
     const [before] = await tx.$queryRaw<
-      Pick<VerificationCheck, 'id' | 'result' | 'detail'>[]
-    >`SELECT id, result::text AS result, detail FROM verification_check
+      Pick<VerificationCheck, 'id' | 'result' | 'detail' | 'evidence'>[]
+    >`SELECT id, result::text AS result, detail, evidence FROM verification_check
       WHERE file_id = ${fileId}::uuid AND kind = ${kind}::verification_check_kind
       FOR UPDATE`;
     if (!before) throw new NotFoundException();
     const check = await tx.verificationCheck.update({
       data: {
-        detail: next.detail,
+        detail: register?.detail ?? next.detail,
+        evidence: register
+          ? (register.evidence as Prisma.InputJsonObject)
+          : Prisma.DbNull,
         recordedAt: new Date(),
         recordedBy: actor.accountId,
         result: next.result,
@@ -161,16 +295,8 @@ export class VerificationChecksService {
       field: kind,
       garageId: file.garageId,
       kind: 'verification_check_recorded',
-      newValue: {
-        ...(activities && { activities: activities.after }),
-        detail: check.detail,
-        result: check.result,
-      },
-      oldValue: {
-        ...(activities && { activities: activities.before }),
-        detail: before.detail,
-        result: before.result,
-      },
+      newValue: auditValue(kind, check, activities?.after),
+      oldValue: auditValue(kind, before, activities?.before),
       subjectId: check.id,
       subjectType: 'verification_check',
     });
@@ -181,6 +307,11 @@ export class VerificationChecksService {
       subjectId: fileId,
     });
 
+    countVerificationCheck(kind, check.result);
+    this.logger.log(
+      `check recorded file=${fileId} kind=${kind} result=${check.result} admin=${actor.accountId}`,
+    );
+
     const checks = await tx.verificationCheck.findMany({
       select: { detail: true, kind: true, result: true },
       where: { fileId },
@@ -190,7 +321,10 @@ export class VerificationChecksService {
       where: { id: file.garageId },
     });
     return {
-      check,
+      check: {
+        ...check,
+        evidence: check.evidence as VerificationCheckEvidenceDto | null,
+      },
       rarActivities: garage.rarActivities,
       summary: {
         en: checkSummary(checks, 'en'),
@@ -210,6 +344,40 @@ export class VerificationChecksService {
       FROM verification_file WHERE id = ${id}::uuid FOR SHARE`;
     if (!file) throw new NotFoundException();
     return file;
+  }
+
+  // A register check's record, unless it is cleared.
+  private async register(
+    tx: Prisma.TransactionClient,
+    kind: VerificationCheckKind,
+    body: RecordVerificationCheckDto,
+    file: { garageId: string },
+    fileId: string,
+  ): Promise<RegisterRecord | undefined> {
+    if (!isRegister(kind) || body.result === 'not_run') return undefined;
+    const facts = await this.facts(tx, fileId, file);
+    return kind === 'company'
+      ? companyRecord(body, facts)
+      : caenRecord(body, facts);
+  }
+
+  // What the server reads itself for a register check: the garage's CUI and
+  // kind, and whether the file holds an ONRC certificate.
+  private async facts(
+    tx: Prisma.TransactionClient,
+    fileId: string,
+    file: { garageId: string },
+  ): Promise<RegisterFacts> {
+    const [garage, certificates] = await Promise.all([
+      tx.garage.findUniqueOrThrow({
+        select: { businessKind: true, cui: true },
+        where: { id: file.garageId },
+      }),
+      tx.legalDocument.count({
+        where: { kind: 'onrc_certificate', verificationFileId: fileId },
+      }),
+    ]);
+    return { ...garage, certificateUploaded: certificates > 0 };
   }
 
   private async known(tx: Prisma.TransactionClient, codes: string[]) {

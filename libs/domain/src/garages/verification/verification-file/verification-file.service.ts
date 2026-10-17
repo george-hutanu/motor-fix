@@ -4,6 +4,7 @@ import {
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TIMELINE_MAX,
   type VerificationActorDto,
+  type VerificationCheckEvidenceDto,
   type VerificationFileDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -165,6 +166,7 @@ export class VerificationFileService {
           ({
             automatic,
             detail,
+            evidence,
             fileId,
             id,
             kind,
@@ -174,6 +176,7 @@ export class VerificationFileService {
           }) => ({
             automatic,
             detail,
+            evidence: evidence as VerificationCheckEvidenceDto | null,
             fileId,
             id,
             kind,

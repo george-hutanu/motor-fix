@@ -918,6 +918,28 @@
       "story": "ST-302"
     },
     {
+      "kind": "endpoint",
+      "name": "admin-verification-check-record",
+      "source": "libs/domain/src/garages/verification/verification-checks/verification-checks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/checks/:kind",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each save logs one VerificationChecks line (file, kind, result, admin; never the detail or the company name), writes an audit entry and emits verification.check_recorded, and is counted by motorfix_verification_checks_total; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-203"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_checks_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each check an admin records on a garage's file by kind and result; a refused save is not counted; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-203"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_documents_uploaded_total",
       "source": "libs/domain/src/metrics/product-counters.ts",

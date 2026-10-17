@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import { HttpException } from '@nestjs/common';
+import { startTelemetry } from '@motor-fix/observability';
+import { counterTotal, inMemory } from '@motor-fix/observability/testing';
+import { HttpException, Logger } from '@nestjs/common';
 
 import { VerificationChecksService } from './verification-checks.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -25,6 +27,30 @@ const NONE = {
   canRecordFinalPrice: false,
 };
 const REASON = { code: 'documents_unreadable', note: 'The CUI is blurred' };
+// A CUI whose control digit holds, and one whose does not.
+const VALID_CUI = '1234567897';
+const NAME = 'Auto Vest Motors SRL';
+
+const memory = inMemory();
+const started = startTelemetry(
+  'api',
+  { APP_ENV: 'test', OTEL_EXPORTER_OTLP_ENDPOINT: 'http://127.0.0.1:1' },
+  memory,
+);
+const counted = (kind: string, result: string) =>
+  counterTotal(memory.metricReader, 'motorfix_verification_checks_total', {
+    kind,
+    result,
+  });
+
+// The day of the save as the admin's calendar reads it.
+const today = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Europe/Bucharest',
+    year: 'numeric',
+  }).format(new Date());
 
 const checksService = (events: EventPort = outbox) =>
   new VerificationChecksService(new AuditService(), events);
@@ -65,12 +91,19 @@ let fileId: string;
 
 const record = (
   kind: string,
-  body: { result: string; detail?: string; activities?: string[] },
+  body: {
+    result: string;
+    detail?: string;
+    activities?: string[];
+    evidence?: Record<string, unknown>;
+  },
   actor: Actor = ioana,
   id = fileId,
 ) => inTx((tx) => checksService().record(tx, actor, id, kind, body as never));
 
-const check = (kind: 'rar' | 'activities' | 'photos' | 'company') =>
+const check = (
+  kind: 'rar' | 'activities' | 'photos' | 'company' | 'caen' | 'representative',
+) =>
   prisma.verificationCheck.findUniqueOrThrow({
     where: { fileId_kind: { fileId, kind } },
   });
@@ -89,7 +122,12 @@ beforeEach(async () => {
   await reset();
   await prisma.outboxEvent.deleteMany();
   const garage = await prisma.garage.create({
-    data: { name: 'Atelier Dinamo', slug: `dinamo-${randomUUID()}` },
+    data: {
+      businessKind: 'company',
+      cui: VALID_CUI,
+      name: 'Atelier Dinamo',
+      slug: `dinamo-${randomUUID()}`,
+    },
   });
   garageId = garage.id;
   ioana = person(await account('Ioana Popa', ['admin']), 'admin');
@@ -101,7 +139,10 @@ beforeEach(async () => {
   fileId = (await inTx((tx) => files().submit(tx, mihai, garageId))).id;
 });
 
-afterAll(() => prisma.$disconnect());
+afterAll(async () => {
+  await started?.shutdown();
+  await prisma.$disconnect();
+});
 
 describe('recording a check', () => {
   it('saves the result with who and when, its history entry and its event', async () => {
@@ -143,7 +184,7 @@ describe('recording a check', () => {
   });
 
   it('answers with the file summary in both languages', async () => {
-    await record('company', { result: 'ok' });
+    await record('company', { evidence: { name: NAME }, result: 'ok' });
     const answer = await record('rar', { result: 'ok' });
 
     expect(answer.summary).toEqual({
@@ -254,10 +295,10 @@ describe('recording a check', () => {
   });
 
   it('replaces the detail with the one sent, or none', async () => {
-    await record('company', { detail: 'CUI valid', result: 'ok' });
-    await record('company', { result: 'ok' });
+    await record('representative', { detail: 'Același nume', result: 'ok' });
+    await record('representative', { result: 'ok' });
 
-    expect(await check('company')).toMatchObject({ detail: null });
+    expect(await check('representative')).toMatchObject({ detail: null });
   });
 
   it('keeps two racing saves whole: each history entry starts from the other', async () => {
@@ -372,7 +413,7 @@ describe('a record that is refused', () => {
   it('is accepted while the file is under review', async () => {
     await inTx((tx) => files().open(tx, ioana, fileId));
 
-    await record('company', { result: 'ok' });
+    await record('company', { evidence: { name: NAME }, result: 'ok' });
 
     expect(await check('company')).toMatchObject({ result: 'ok' });
   });
@@ -390,7 +431,7 @@ describe('a record that is refused', () => {
     ['a blank detail on a failure', 'rar', { detail: '   ', result: 'failed' }],
     [
       'a detail over 200 characters',
-      'company',
+      'rar',
       { detail: 'x'.repeat(201), result: 'ok' },
     ],
     [
@@ -414,9 +455,9 @@ describe('a record that is refused', () => {
   });
 
   it('accepts a detail of exactly 200 characters', async () => {
-    await record('company', { detail: 'x'.repeat(200), result: 'ok' });
+    await record('rar', { detail: 'x'.repeat(200), result: 'ok' });
 
-    expect((await check('company')).detail).toHaveLength(200);
+    expect((await check('rar')).detail).toHaveLength(200);
   });
 
   it('answers 404 for an unknown or malformed file', async () => {
@@ -492,5 +533,327 @@ describe('the four tick results', () => {
       'validation_failed',
     ]);
     expect(await entries()).toHaveLength(0);
+  });
+});
+
+const garageIs = (data: Prisma.GarageUpdateInput) =>
+  prisma.garage.update({ data, where: { id: garageId } });
+const withCertificate = () =>
+  prisma.legalDocument.create({
+    data: {
+      kind: 'onrc_certificate',
+      pages: ['onrc/1.pdf'],
+      verificationFileId: fileId,
+    },
+  });
+
+describe('the company check', () => {
+  // @traces 203-FR-001 203-FR-002 203-FR-004
+  it('saves ok with the name, writing its own detail and the day of the look-up', async () => {
+    const answer = await record('company', {
+      detail: 'ce a scris adminul',
+      evidence: { name: NAME },
+      result: 'ok',
+    });
+
+    expect(await check('company')).toMatchObject({
+      detail: `CUI valid · ${NAME}`,
+      evidence: { lookedUpOn: today(), name: NAME },
+      recordedBy: ioana.accountId,
+      result: 'ok',
+    });
+    expect(answer.check).toMatchObject({
+      evidence: { lookedUpOn: today(), name: NAME },
+    });
+    expect(answer.summary.ro).toBe('CUI verificat');
+    const [entry, ...more] = await entries();
+    expect(more).toHaveLength(0);
+    expect(entry).toMatchObject({
+      newValue: {
+        detail: `CUI valid · ${NAME}`,
+        evidence: { lookedUpOn: today(), name: NAME },
+        result: 'ok',
+      },
+      oldValue: { detail: null, evidence: null, result: 'not_run' },
+    });
+    expect(await recorded()).toHaveLength(1);
+  });
+
+  // @traces 203-FR-002
+  it.each([
+    ['without a name', {}],
+    ['with a name of spaces only', { name: '   ' }],
+  ])('refuses ok %s with 400 and writes nothing', async (_, evidence) => {
+    const answer = await refusal(record('company', { evidence, result: 'ok' }));
+
+    expect([answer.status, answer.body.code]).toEqual([
+      400,
+      'validation_failed',
+    ]);
+    expect(await refusal(record('company', { result: 'ok' }))).toMatchObject({
+      status: 400,
+    });
+    expect(await entries()).toHaveLength(0);
+    expect(await recorded()).toHaveLength(0);
+  });
+
+  // @traces 203-FR-002
+  it.each([
+    ['no CUI', null],
+    ['a CUI whose control digit fails', '1234567890'],
+  ])('refuses ok when the garage has %s', async (_, cui) => {
+    await garageIs({ cui });
+
+    expect(
+      await refusal(
+        record('company', { evidence: { name: NAME }, result: 'ok' }),
+      ),
+    ).toMatchObject({ body: { code: 'validation_failed' }, status: 400 });
+    expect(await check('company')).toMatchObject({ result: 'not_run' });
+  });
+
+  // @traces 203-FR-002
+  it('records a warning with its typed detail and the name when given', async () => {
+    await record('company', {
+      detail: 'Firma e în insolvență',
+      evidence: { name: NAME },
+      result: 'warning',
+    });
+
+    expect(await check('company')).toMatchObject({
+      detail: 'Firma e în insolvență',
+      evidence: { lookedUpOn: today(), name: NAME },
+      result: 'warning',
+    });
+    expect(
+      await refusal(
+        record('company', { evidence: { name: NAME }, result: 'failed' }),
+      ),
+    ).toMatchObject({ status: 400 });
+  });
+
+  // @traces 203-FR-004
+  it('clears the result, the detail and the evidence when unticked, keeping the old evidence in the history', async () => {
+    await record('company', { evidence: { name: NAME }, result: 'ok' });
+
+    await record('company', { result: 'not_run' }, dan);
+
+    expect(await check('company')).toMatchObject({
+      detail: null,
+      evidence: null,
+      recordedBy: dan.accountId,
+      result: 'not_run',
+    });
+    const [, unticked] = await entries();
+    expect(unticked).toMatchObject({
+      newValue: { detail: null, evidence: null, result: 'not_run' },
+      oldValue: { evidence: { name: NAME }, result: 'ok' },
+    });
+  });
+
+  // @traces 203-FR-001
+  it.each([
+    [
+      'evidence on another kind',
+      'rar',
+      { evidence: { name: NAME }, result: 'ok' },
+    ],
+    [
+      'evidence on an unticked check',
+      'company',
+      { evidence: { name: NAME }, result: 'not_run' },
+    ],
+    [
+      'a CAEN tick on the company check',
+      'company',
+      { evidence: { name: NAME, onrc: true }, result: 'ok' },
+    ],
+    [
+      'a name on the CAEN check',
+      'caen',
+      { evidence: { address: true, name: NAME, onrc: true }, result: 'ok' },
+    ],
+  ])('refuses %s with 400', async (_, kind, body) => {
+    expect(await refusal(record(kind, body))).toMatchObject({
+      body: { code: 'validation_failed' },
+      status: 400,
+    });
+    expect(await entries()).toHaveLength(0);
+  });
+
+  // @traces 203-FR-004
+  it('keeps no evidence when the event cannot be written', async () => {
+    const failing: EventPort = {
+      record: async () => {
+        throw new Error('outbox down');
+      },
+    };
+
+    await expect(
+      inTx((tx) =>
+        checksService(failing).record(tx, ioana, fileId, 'company', {
+          evidence: { name: NAME },
+          result: 'ok',
+        } as never),
+      ),
+    ).rejects.toThrow('outbox down');
+
+    expect(await check('company')).toMatchObject({
+      evidence: null,
+      result: 'not_run',
+    });
+  });
+});
+
+describe('the CAEN check', () => {
+  const PREMISES =
+    'Întreținerea și repararea autovehiculelor, la punctul de lucru';
+  const SEAT = 'Întreținerea și repararea autovehiculelor, la sediul social';
+  const TICKS = [false, true].flatMap((certificate) =>
+    [false, true].flatMap((onrc) =>
+      [false, true].map((address) => ({ address, certificate, onrc })),
+    ),
+  );
+  const missing = (
+    ticks: (typeof TICKS)[number],
+    uploaded: boolean,
+  ): string[] => [
+    ...(uploaded && !ticks.certificate ? ['4520 pe certificat'] : []),
+    ...(ticks.onrc ? [] : ['4520 în ONRC']),
+    ...(ticks.address ? [] : ['adresa']),
+  ];
+
+  // @traces 203-FR-003
+  it.each(
+    [true, false].flatMap((uploaded) =>
+      TICKS.map((ticks) => [uploaded, ticks] as const),
+    ),
+  )(
+    'with a certificate uploaded %s, ticks %o save ok only when nothing is missing',
+    async (uploaded, ticks) => {
+      if (uploaded) await withCertificate();
+      const absent = missing(ticks, uploaded);
+
+      const saving = record('caen', { evidence: ticks, result: 'ok' });
+
+      if (absent.length === 0) {
+        await saving;
+        expect(await check('caen')).toMatchObject({
+          detail: PREMISES,
+          evidence: {
+            ...ticks,
+            certificateUploaded: uploaded,
+            lookedUpOn: today(),
+          },
+          result: 'ok',
+        });
+        return;
+      }
+      const answer = await refusal(saving);
+      expect([answer.status, answer.body.code]).toEqual([
+        400,
+        'validation_failed',
+      ]);
+      for (const tick of absent) expect(answer.body.message).toContain(tick);
+      expect(await entries()).toHaveLength(0);
+    },
+  );
+
+  // @traces 203-FR-003
+  it('reads the certificate from the file, never from the body', async () => {
+    await record('caen', {
+      evidence: { address: true, certificateUploaded: true, onrc: true },
+      result: 'ok',
+    });
+
+    expect((await check('caen')).evidence).toMatchObject({
+      certificateUploaded: false,
+    });
+  });
+
+  // @traces 203-FR-003
+  it('writes the seat wording for a mobile mechanic, whatever detail was sent', async () => {
+    await garageIs({ businessKind: 'mobile' });
+
+    await record('caen', {
+      detail: 'altceva',
+      evidence: { address: true, onrc: true },
+      result: 'ok',
+    });
+
+    expect(await check('caen')).toMatchObject({ detail: SEAT });
+  });
+
+  // @traces 203-FR-003
+  it('stores the ticks as sent on a warning, a missing one as false, and never promotes it', async () => {
+    await withCertificate();
+
+    await record('caen', {
+      detail: 'Codul lipsește din certificat',
+      evidence: { onrc: true },
+      result: 'warning',
+    });
+    expect(await check('caen')).toMatchObject({
+      detail: 'Codul lipsește din certificat',
+      evidence: {
+        address: false,
+        certificate: false,
+        certificateUploaded: true,
+        onrc: true,
+      },
+      result: 'warning',
+    });
+
+    await record('caen', {
+      detail: 'De verificat la ONRC',
+      evidence: { address: true, certificate: true, onrc: true },
+      result: 'failed',
+    });
+    expect(await check('caen')).toMatchObject({ result: 'failed' });
+  });
+
+  // @traces 203-FR-003
+  it('keeps the evidence as recorded when a certificate arrives later', async () => {
+    await record('caen', {
+      evidence: { address: true, onrc: true },
+      result: 'ok',
+    });
+    await withCertificate();
+
+    expect((await check('caen')).evidence).toMatchObject({
+      certificateUploaded: false,
+    });
+  });
+});
+
+describe('what a record reports', () => {
+  // @traces 203-FR-010
+  it('counts each record by kind and result, and a refusal not at all', async () => {
+    const before = {
+      company: await counted('company', 'ok'),
+      rar: await counted('rar', 'warning'),
+    };
+
+    await record('rar', { detail: 'neclar', result: 'warning' });
+    await record('company', { evidence: { name: NAME }, result: 'ok' });
+    await refusal(record('company', { result: 'ok' }));
+
+    expect((await counted('rar', 'warning')) - before.rar).toBe(1);
+    expect((await counted('company', 'ok')) - before.company).toBe(1);
+  });
+
+  // @traces 203-FR-010
+  it('logs one line with the file, the kind, the result and the admin, never the detail', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    await record('rar', { detail: 'Autorizație secretă', result: 'ok' });
+
+    const lines = log.mock.calls.map((call) => String(call[0]));
+    log.mockRestore();
+    expect(lines).toHaveLength(1);
+    for (const part of [fileId, 'rar', 'ok', ioana.accountId]) {
+      expect(lines[0]).toContain(part);
+    }
+    expect(lines[0]).not.toContain('Autorizație secretă');
   });
 });

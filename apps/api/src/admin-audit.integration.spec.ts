@@ -130,7 +130,7 @@ const FIXTURES: Record<
       `/api/v1/admin/verification-files/${await submitted()}/open`,
   },
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
-    body: () => ({ detail: 'CUI activ', result: 'ok' }),
+    body: () => ({ detail: 'Autorizație găsită', result: 'ok' }),
     path: async () => {
       const slug = `audit-${randomUUID()}`;
       const file = (
@@ -144,10 +144,10 @@ const FIXTURES: Record<
       ).rows[0].id as string;
       await db.query(
         `INSERT INTO verification_check (id, file_id, kind)
-         VALUES (gen_random_uuid(), $1, 'company')`,
+         VALUES (gen_random_uuid(), $1, 'rar')`,
         [file],
       );
-      return `/api/v1/admin/verification-files/${file}/checks/company`;
+      return `/api/v1/admin/verification-files/${file}/checks/rar`;
     },
   },
 };
