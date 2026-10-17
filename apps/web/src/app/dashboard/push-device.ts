@@ -4,6 +4,7 @@ import { NotificationsService } from '@motor-fix/data-access';
 import { firstValueFrom } from 'rxjs';
 
 import { PUSH_ENV, pushSupport } from './push-support';
+import { Session } from './session';
 import { httpStatus } from '../http-status';
 
 export type PushState =
@@ -22,6 +23,7 @@ export class PushDevice {
   private readonly env = inject(PUSH_ENV);
   private readonly sw = inject(SwPush, { optional: true });
   private readonly injector = inject(Injector);
+  private readonly session = inject(Session);
   readonly state = signal<PushState>('loading');
   // A save, a removal or the test did not go through; retry is the same button.
   readonly failed = signal(false);
@@ -60,7 +62,10 @@ export class PushDevice {
     }
   }
 
+  // Without a token the key request would only be refused; a refresh after
+  // the sign-in asks for it.
   private async read(sw: SwPush): Promise<PushState> {
+    if (!this.key && !this.session.token()) return 'unavailable';
     this.key ??= (await this.api.pushSubscriptionsControllerKey()).publicKey;
     if (!this.key) return 'unavailable';
     if (this.env.permission() === 'denied') return 'blocked';

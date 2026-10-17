@@ -13,6 +13,12 @@ const STATIC_FILE =
 const staticFile = (url: string | undefined) =>
   STATIC_FILE.test((url ?? '').split(/[?#]/)[0] ?? '');
 
+// The two event streams stay open for minutes; their samples would pin the
+// request p95 at the histogram's top bucket.
+const STREAMS = new Set(['/api/v1/live', '/api/v1/live/public']);
+const stream = (url: string | undefined) =>
+  STREAMS.has((url ?? '').split(/[?#]/)[0] ?? '');
+
 // What is traced: incoming and outgoing HTTP (http and fetch), Redis
 // commands inside a request or job, and Prisma queries. Nothing for the file
 // system, DNS or sockets. The web server has no database or Redis, and its
@@ -33,17 +39,17 @@ export function instrumentations(service?: Service): Instrumentation[] {
     return [
       new HttpInstrumentation({
         ignoreIncomingRequestHook: (req) =>
-          health(req.url) || staticFile(req.url),
+          health(req.url) || staticFile(req.url) || stream(req.url),
       }),
       new UndiciInstrumentation({
         ignoreRequestHook: (request) => health(request.path),
       }),
-      new RuntimeNodeInstrumentation({ monitoringPrecision: 5_000 }),
+      new RuntimeNodeInstrumentation(),
     ];
   }
   return [
     new HttpInstrumentation({
-      ignoreIncomingRequestHook: (req) => health(req.url),
+      ignoreIncomingRequestHook: (req) => health(req.url) || stream(req.url),
     }),
     new UndiciInstrumentation(),
     new IORedisInstrumentation({
@@ -56,6 +62,6 @@ export function instrumentations(service?: Service): Instrumentation[] {
         'prisma:client:connect',
       ],
     }),
-    new RuntimeNodeInstrumentation({ monitoringPrecision: 5_000 }),
+    new RuntimeNodeInstrumentation(),
   ];
 }

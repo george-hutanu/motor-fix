@@ -44,6 +44,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
     shown: current,
     signOut: jest.fn(async () => current.set(null)),
     signOutEverywhere: jest.fn(async () => current.set(null)),
+    token: () => 'access',
   };
   const live = {
     close: jest.fn(),
