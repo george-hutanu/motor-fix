@@ -141,7 +141,7 @@ test('a signed-in driver opens "Ajutor și contact" from the menu, filled in, an
     name: 'Test driver',
     topic: 'other',
   });
-  await drawer.getByRole('button', { name: 'Închide' }).click();
+  await drawer.getByRole('button', { name: 'Închide formularul' }).click();
   await expect(drawer).toHaveCount(0);
   await expect(page).toHaveURL('/app/driver/settings');
 });

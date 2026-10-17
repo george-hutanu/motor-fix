@@ -29,6 +29,7 @@
   "contact": {
     "choose": "Choose a topic",
     "close": "Close",
+    "closeLabel": "Close the form",
     "count": "{typed} / {max}",
     "email": "E‑mail address",
     "message": "Your message",

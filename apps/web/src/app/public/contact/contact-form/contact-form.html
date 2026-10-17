@@ -13,7 +13,15 @@
 </div>
 @if (save.state() === 'done') {
   @if (inTask()) {
-    <button hlmBtn variant="secondary" type="button" class="close" #close (click)="closed.emit()">
+    <button
+      hlmBtn
+      variant="secondary"
+      type="button"
+      class="close"
+      #close
+      [attr.aria-label]="'shell.contact.closeLabel' | t"
+      (click)="closed.emit()"
+    >
       {{ 'shell.contact.close' | t }}
     </button>
   }

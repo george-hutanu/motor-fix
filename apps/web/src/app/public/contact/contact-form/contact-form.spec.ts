@@ -365,6 +365,28 @@ describe('the contact form', () => {
     expect(document.activeElement?.textContent?.trim()).toBe('Închide');
   });
 
+  it('names the Close after the confirmation apart from the overlay X', async () => {
+    await open({ inTask: true });
+    fill();
+
+    button('Trimite mesajul')?.click();
+    await settle();
+
+    expect(button('Închide')?.getAttribute('aria-label')).toBe(
+      'Închide formularul',
+    );
+  });
+
+  it('names the Close in English apart from the overlay X', async () => {
+    await open({ inTask: true, language: 'en' });
+    fill();
+
+    button('Send the message')?.click();
+    await settle();
+
+    expect(button('Close')?.getAttribute('aria-label')).toBe('Close the form');
+  });
+
   it('on the page, offers no Close', async () => {
     await open();
     fill();

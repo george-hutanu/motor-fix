@@ -30,6 +30,7 @@
   "contact": {
     "choose": "Alege un subiect",
     "close": "Închide",
+    "closeLabel": "Închide formularul",
     "count": "{typed} / {max}",
     "email": "Adresa de e‑mail",
     "message": "Mesajul tău",
