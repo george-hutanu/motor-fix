@@ -115,7 +115,12 @@ export class VerificationFileService {
     );
     const [names, activities, reports, entries, total, photos] =
       await Promise.all([
-        this.names([file.openedBy, file.decidedBy, file.reopenedBy]),
+        this.names([
+          file.openedBy,
+          file.decidedBy,
+          file.reopenedBy,
+          ...file.checks.map((c) => c.recordedBy),
+        ]),
         this.prisma.rarActivity.findMany({
           orderBy: { code: 'asc' },
           where: { code: { in: garage.rarActivities } },
@@ -170,6 +175,7 @@ export class VerificationFileService {
             kind,
             recordedAt,
             recordedBy,
+            recorder: actor(recordedBy, recordedAt),
             result,
           }),
         ),

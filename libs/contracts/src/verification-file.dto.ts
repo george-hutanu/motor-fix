@@ -118,6 +118,16 @@ export class VerificationFileGarageDto {
   photos!: PublicGaragePhotoDto[];
 }
 
+// A check as the file shows it: who recorded it, by first name.
+export class VerificationFileCheckDto extends VerificationCheckDto {
+  @ApiProperty({
+    description: 'Null while never recorded; MotorFix for an automatic record',
+    nullable: true,
+    type: VerificationActorDto,
+  })
+  recorder!: VerificationActorDto | null;
+}
+
 export class VerificationFileActivityDto {
   @ApiProperty()
   code!: string;
@@ -193,9 +203,9 @@ export class VerificationFileDto {
 
   @ApiProperty({
     description: 'The 8 kinds, in their order',
-    type: [VerificationCheckDto],
+    type: [VerificationFileCheckDto],
   })
-  checks!: VerificationCheckDto[];
+  checks!: VerificationFileCheckDto[];
 
   @ApiProperty({
     description: "The garage's recorded RAR activities",

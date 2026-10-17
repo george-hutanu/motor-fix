@@ -196,6 +196,7 @@ export type { VerificationActorDto } from './models/verification-actor-dto';
 export type { VerificationCheckDto } from './models/verification-check-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
 export type { VerificationFileActivityDto } from './models/verification-file-activity-dto';
+export type { VerificationFileCheckDto } from './models/verification-file-check-dto';
 export type { VerificationFileDocumentDto } from './models/verification-file-document-dto';
 export type { VerificationFileDto } from './models/verification-file-dto';
 export type { VerificationFileGarageDto } from './models/verification-file-garage-dto';

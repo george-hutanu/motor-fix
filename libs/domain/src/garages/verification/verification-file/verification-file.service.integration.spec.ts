@@ -324,6 +324,27 @@ describe('reading a file', () => {
     expect((await service().read(file.id)).previousRejection).toBeNull();
   });
 
+  it("names each check's recorder, MotorFix for an automatic one and nobody for one never recorded", async () => {
+    const file = await sent();
+    const at = new Date();
+    await prisma.verificationCheck.updateMany({
+      data: { recordedAt: at, recordedBy: ioana, result: 'ok' },
+      where: { fileId: file.id, kind: 'address' },
+    });
+    await prisma.verificationCheck.updateMany({
+      data: { automatic: true, recordedAt: at, recordedBy: null, result: 'ok' },
+      where: { fileId: file.id, kind: 'company' },
+    });
+
+    const read = await service().read(file.id);
+    const recorder = (kind: string) =>
+      read.checks.find((c) => c.kind === kind)?.recorder;
+
+    expect(recorder('address')).toEqual({ id: ioana, name: 'Ioana' });
+    expect(recorder('company')).toEqual({ id: null, name: 'MotorFix' });
+    expect(recorder('photos')).toBeNull();
+  });
+
   it('names who opened and who decided, MotorFix for the system', async () => {
     const file = await sent({
       decidedAt: new Date(),

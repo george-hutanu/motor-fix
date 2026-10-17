@@ -11384,6 +11384,80 @@
           "photos"
         ]
       },
+      "VerificationFileCheckDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "caen",
+              "rar",
+              "activities",
+              "representative",
+              "address",
+              "photos",
+              "documents"
+            ]
+          },
+          "automatic": {
+            "type": "boolean",
+            "description": "False until automatic look-ups exist"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "not_run",
+              "ok",
+              "warning",
+              "failed"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "recorder": {
+            "description": "Null while never recorded; MotorFix for an automatic record",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "fileId",
+          "kind",
+          "automatic",
+          "result",
+          "detail",
+          "recordedBy",
+          "recordedAt",
+          "recorder"
+        ]
+      },
       "VerificationFileActivityDto": {
         "type": "object",
         "properties": {
@@ -11517,7 +11591,7 @@
             "description": "The 8 kinds, in their order",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/VerificationCheckDto"
+              "$ref": "#/components/schemas/VerificationFileCheckDto"
             }
           },
           "activities": {

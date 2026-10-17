@@ -35,18 +35,12 @@ export type VerificationCheckResult =
 // What an admin may record: `not_run` unticks a check, with no detail.
 export const RECORDED_RESULTS = ['ok', 'warning', 'failed', 'not_run'] as const;
 
-export const CHECK_DETAIL_MAX = 200;
-
 export type Lamp = 'green' | 'amber' | 'red' | 'grey';
 
-const LAMPS: Record<VerificationCheckResult, Lamp> = {
-  failed: 'red',
-  not_run: 'grey',
-  ok: 'green',
-  warning: 'amber',
-};
+// Kept decorator-free for the web app; read here as everywhere else.
+import { CHECK_DETAIL_MAX } from './verification-target';
 
-export const lamp = (result: VerificationCheckResult): Lamp => LAMPS[result];
+export { CHECK_DETAIL_MAX, lamp } from './verification-target';
 
 export type SummaryLanguage = 'ro' | 'en';
 
