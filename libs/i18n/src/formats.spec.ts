@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import {
   appliedAt,
+  bucharestDayStart,
   calendarNames,
   daysUntil,
   formatClock,
@@ -690,5 +691,43 @@ describe('appliedAt', () => {
 
   it.each(notNumbers)('shows a dash for %p', (value) => {
     expect(appliedAt(value, 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 298-FR-003 298-FR-010
+describe('bucharestDayStart', () => {
+  const start = (now: string) => bucharestDayStart(new Date(now)).toISOString();
+
+  it('is midnight in Bucharest, three hours before UTC in summer time', () => {
+    expect(start('2026-10-17T12:00:00Z')).toBe('2026-10-16T21:00:00.000Z');
+  });
+
+  it('is midnight in Bucharest, two hours before UTC in winter time', () => {
+    expect(start('2026-12-03T08:00:00Z')).toBe('2026-12-02T22:00:00.000Z');
+  });
+
+  it('turns over at Bucharest midnight, not at UTC midnight', () => {
+    expect(start('2026-10-16T20:59:00Z')).toBe('2026-10-15T21:00:00.000Z');
+    expect(start('2026-10-16T21:01:00Z')).toBe('2026-10-16T21:00:00.000Z');
+  });
+
+  it('keeps the summer offset on the day the clocks go back', () => {
+    expect(start('2026-10-25T10:00:00Z')).toBe('2026-10-24T21:00:00.000Z');
+  });
+
+  it('keeps the winter offset on the day the clocks go forward', () => {
+    expect(start('2027-03-28T10:00:00Z')).toBe('2027-03-27T22:00:00.000Z');
+  });
+
+  it('is the same on a device far from Bucharest', () => {
+    const script = `
+      const f = await import(${JSON.stringify(join(__dirname, 'formats.ts'))});
+      console.log(f.bucharestDayStart(new Date('2026-10-17T12:00:00Z')).toISOString());`;
+    const out = execFileSync(
+      process.execPath,
+      ['--input-type=module', '-e', script],
+      { encoding: 'utf8', env: { ...process.env, TZ: 'Pacific/Kiritimati' } },
+    );
+    expect(out.trim()).toBe('2026-10-16T21:00:00.000Z');
   });
 });

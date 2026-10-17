@@ -195,6 +195,8 @@ export type { SupportMessageCreatedDto } from './models/support-message-created-
 export type { SuspendedGarageRowDto } from './models/suspended-garage-row-dto';
 export type { SuspendGarageDto } from './models/suspend-garage-dto';
 export type { SwitchRoleDto } from './models/switch-role-dto';
+export type { SystemLogDto } from './models/system-log-dto';
+export type { SystemLogEntryDto } from './models/system-log-entry-dto';
 export type { TestMessageDto } from './models/test-message-dto';
 export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UnreadCountDto } from './models/unread-count-dto';

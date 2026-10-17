@@ -100,6 +100,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
           adminOverviewControllerOverview: () => answer(),
           adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
           demandControllerDemand: () => demand(),
+          systemLogControllerList: async () => ({ items: [] }),
         },
       },
     ],
@@ -231,6 +232,19 @@ describe('AdminPanel', () => {
     expect(text(tile(element, LISTED), 'number')).toBe('214');
     expect(tiles(element)).toHaveLength(6);
     expect(panel.getAttribute('aria-busy')).toBeNull();
+  });
+
+  // @traces 298-FR-003
+  it('places the Jurnal panel last, under the brand demand panel', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    const panel = element.querySelector('mf-admin-panel') as HTMLElement;
+    const log = panel.querySelector('mf-admin-log') as HTMLElement;
+    expect(log).not.toBeNull();
+    expect(panel.lastElementChild).toBe(log);
+    expect(log.querySelector('h2')?.textContent?.trim()).toBe('Jurnal');
+    expect(tiles(element)).toHaveLength(6);
   });
 
   it('shows the six tiles in the launch order', async () => {

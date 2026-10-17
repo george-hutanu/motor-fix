@@ -213,6 +213,16 @@ function bucharestDay(date: Date) {
   return { day, month, year };
 }
 
+// Midnight in Bucharest that starts `now`'s day: the zone is three hours
+// ahead of UTC in summer and two in winter.
+export function bucharestDayStart(now: Date): Date {
+  const { day, month, year } = bucharestDay(now);
+  const summer = new Date(Date.UTC(year, month - 1, day) - 3 * 3_600_000);
+  return clock.format(summer) === '00:00'
+    ? summer
+    : new Date(summer.getTime() + 3_600_000);
+}
+
 const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 86_400_000;
 
