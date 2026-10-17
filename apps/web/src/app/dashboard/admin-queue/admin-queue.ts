@@ -186,6 +186,8 @@ export class AdminQueue {
               (m) => m.VerificationFile,
             ),
           {
+            // Each tick saves at once: there is nothing to discard on close.
+            confirmDiscard: false,
             data: { fileId: id },
             shape: 'drawer-wide',
             signal: drawer.signal,

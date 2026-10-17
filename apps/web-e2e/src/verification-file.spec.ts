@@ -67,7 +67,8 @@ async function tickAll(page: Page, name: string) {
   for (const kind of MANUAL) {
     const box = manual(page, kind).locator('input[type="checkbox"]');
     await expect(box).toBeEnabled();
-    await box.check();
+    // The tick shows only from the server's answer: click, then wait for it.
+    await box.click();
     await expect(box).toBeChecked();
     await expect(box).not.toHaveAttribute('aria-busy', 'true');
   }

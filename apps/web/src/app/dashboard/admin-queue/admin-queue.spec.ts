@@ -409,6 +409,8 @@ describe('the file named in the address', () => {
     expect(overlays.open).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({
+        // Every tick is saved as it is made: closing never asks to discard.
+        confirmDiscard: false,
         data: { fileId: 'file-9' },
         shape: 'drawer-wide',
         title: 'admin.file.title',
