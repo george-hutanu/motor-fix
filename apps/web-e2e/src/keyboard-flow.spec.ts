@@ -32,7 +32,15 @@ function focusFacts() {
     (shown === top || shown.contains(top) || top.contains(shown));
   return {
     covered: !clear,
-    coveredBy: top?.tagName.toLowerCase() ?? 'nothing',
+    coveredBy: top
+      ? `${top.tagName.toLowerCase()}.${[...top.classList].join('.')} in ${[
+          ...document.querySelectorAll('*'),
+        ]
+          .filter((e) => e.tagName.includes('-') && e.contains(top))
+          .pop()
+          ?.tagName.toLowerCase()}`
+      : 'nothing',
+    focused: `${focused.tagName.toLowerCase()} "${(focused.getAttribute('aria-label') ?? focused.textContent ?? '').trim().slice(0, 40)}"`,
     labelled: label !== null,
     outline: [style.outlineStyle, style.outlineWidth, style.boxShadow],
     rect: rect.toJSON() as DOMRect,
@@ -53,25 +61,36 @@ async function focusShows(page: Page) {
     rect.top < viewport[1] &&
     rect.right > 0 &&
     rect.left < viewport[0];
-  expect(inView, 'the focus is in view').toBe(true);
+  expect(inView, `the focus on ${facts.focused} is in view`).toBe(true);
   const ringed =
     facts.labelled ||
     (outlineStyle !== 'none' && Number.parseFloat(outlineWidth) > 0) ||
     boxShadow !== 'none';
-  expect(ringed, 'the focus has a ring').toBe(true);
-  expect(facts.covered, `the focus is covered by ${facts.coveredBy}`).toBe(
-    false,
-  );
+  expect(ringed, `the focus on ${facts.focused} has a ring`).toBe(true);
+  expect(
+    facts.covered,
+    `the focus on ${facts.focused} is covered by ${facts.coveredBy}`,
+  ).toBe(false);
 }
 
-// Presses Tab until the focus is on `target`, checking every stop on the way.
+// Presses Tab until the focus is on `target`, checking every stop on the way;
+// past the page's last control the focus leaves for the browser's own
+// controls once, then comes back to the skip link.
 async function tabTo(
   page: Page,
   target: ReturnType<Page['locator']>,
   limit = 60,
 ) {
+  let wrapped = false;
   for (let presses = 0; presses < limit; presses++) {
     await page.keyboard.press('Tab');
+    const left = await page.evaluate(
+      () => document.activeElement === document.body,
+    );
+    if (left && !wrapped) {
+      wrapped = true;
+      continue;
+    }
     await focusShows(page);
     if (
       await target
@@ -90,14 +109,15 @@ test.describe('the core flow by keyboard alone @seeded', () => {
   test('from home to a sent request, every stop visible and ringed', async ({
     page,
   }) => {
-    await page.setViewportSize({ height: 844, width: 390 });
-    // Signed in first, so the request goes out without the sign-in sheet.
+    // Signed in first, at desktop size where the site bar shows its sign-in
+    // button, so the request goes out without the sign-in sheet.
     await ready(page, '/ro');
     await page
       .getByRole('button', { exact: true, name: 'Autentificare' })
       .click();
     await signIn(page, DRIVER);
     await expect(page).toHaveURL('/app/driver');
+    await page.setViewportSize({ height: 844, width: 390 });
     await hydrated(page, '/ro');
 
     // The skip link is the first stop and lands on the main content.
@@ -108,6 +128,21 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await page.keyboard.press('Enter');
     await expect(page.locator('main').first()).toBeFocused();
 
+    // The place dialog opens and Escape brings the focus back to its opener.
+    const place = page.locator('mf-home .place').getByRole('button');
+    await tabTo(page, place);
+    await page.keyboard.press('Enter');
+    await expect(
+      page
+        .getByRole('dialog', { name: 'Alege locul' })
+        .locator('mf-overlay-panel'),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Alege locul' })).toHaveCount(
+      0,
+    );
+    await expect(place).toBeFocused();
+
     // A brand, by arrow keys inside its radio group.
     const brands = page.getByRole('radiogroup', { name: 'Marca mașinii' });
     await tabTo(page, brands.getByRole('radio', { checked: true }));
@@ -116,29 +151,16 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await page.keyboard.press('Space');
     await expect(brands.getByRole('radio', { name: 'Dacia' })).toBeChecked();
 
-    // The place dialog opens and Escape brings the focus back to its opener.
-    const place = page.locator('mf-home .place').getByRole('button');
-    await tabTo(page, place);
-    await page.keyboard.press('Enter');
-    await expect(
-      page.getByRole('dialog', { name: 'Alege locul' }),
-    ).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(
-      page.getByRole('dialog', { name: 'Alege locul' }),
-    ).toBeHidden();
-    await expect(place).toBeFocused();
-
     await tabTo(page, page.getByRole('link', { name: 'Caută service‑uri' }));
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL('/ro/garages?brand=dacia');
     await hydrated(page);
 
     const results = page.getByRole('list', { name: 'Service‑uri găsite' });
-    await tabTo(
-      page,
-      results.getByRole('link', { name: /Service Auto Militari/ }).first(),
-    );
+    const militari = results.getByRole('listitem').filter({
+      has: page.getByRole('heading', { name: 'Service Auto Militari' }),
+    });
+    await tabTo(page, militari.getByRole('link', { name: 'Vezi service‑ul' }));
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/ro\/garages\/service-auto-militari/);
     await hydrated(page);
@@ -146,7 +168,7 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await tabTo(page, page.getByRole('button', { name: 'Cere ofertă' }));
     await page.keyboard.press('Enter');
     const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
-    await expect(quote).toBeVisible();
+    await expect(quote.locator('mf-overlay-panel')).toBeVisible();
 
     const oil = quote.getByRole('switch', { name: OIL });
     await tabTo(page, oil);
@@ -171,19 +193,18 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await page.setViewportSize({ height: 568, width: 320 });
     await ready(page, '/ro');
 
-    const opener = page.getByRole('button', {
-      exact: true,
-      name: 'Autentificare',
-    });
+    // On a phone the site bar's account button opens the sign-in sheet.
+    const opener = page.getByRole('button', { exact: true, name: 'Cont' });
     await tabTo(page, opener);
     await page.keyboard.press('Enter');
+    // On a phone the dialog's own box is empty; its panel is what shows.
     const sheet = page.getByRole('dialog', { name: 'Autentificare' });
-    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('mf-overlay-panel')).toBeVisible();
     await page.keyboard.press('Tab');
     await focusShows(page);
 
     await page.keyboard.press('Escape');
-    await expect(sheet).toBeHidden();
+    await expect(sheet).toHaveCount(0);
     await expect(opener).toBeFocused();
   });
 
