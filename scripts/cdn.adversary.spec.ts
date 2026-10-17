@@ -78,6 +78,7 @@ const recorded = () => ({
   EnableGeoZoneEU: true,
   EnableGeoZoneSA: false,
   EnableGeoZoneUS: false,
+  EnableRequestCoalescing: false,
   Hostnames: [
     {
       ForceSSL: true,

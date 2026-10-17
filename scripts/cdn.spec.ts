@@ -86,6 +86,7 @@ const recorded = () => ({
   EnableGeoZoneSA: false,
   EnableGeoZoneUS: false,
   EnableLogging: true,
+  EnableRequestCoalescing: false,
   Hostnames: [
     {
       ForceSSL: true,
@@ -259,6 +260,8 @@ describe('infra/cdn/bunny.json', () => {
       expect(zone.pullZone.OriginResponseTimeout).toBeGreaterThanOrEqual(
         2 * HEARTBEAT_SECONDS,
       );
+      // One origin stream per viewer: the edge never merges two requests.
+      expect(zone.pullZone.EnableRequestCoalescing).toBe(false);
     },
   );
 
