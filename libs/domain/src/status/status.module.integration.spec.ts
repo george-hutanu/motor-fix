@@ -588,6 +588,24 @@ describe('the system log entries of a run', () => {
     ]);
   });
 
+  it('still writes a late backup as failed when the log cannot be read on that run', async () => {
+    let last = hours(3);
+    const backup = async () => last;
+    tick();
+    await run({ backup });
+    last = hours(30);
+    tick();
+    await run({ backup });
+    const read = jest
+      .spyOn(prisma.systemLogEntry, 'findFirst')
+      .mockRejectedValue(new Error('log down'));
+    tick();
+    await run({ backup }).finally(() => read.mockRestore());
+
+    expect(await entries('backup_failed')).toHaveLength(1);
+    expect(await entries('backup_completed')).toHaveLength(1);
+  });
+
   it('writes a backup bucket it cannot read as a failed check, not a failed backup', async () => {
     tick();
     await run({ backup: undefined });

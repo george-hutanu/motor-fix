@@ -156,8 +156,8 @@ async function writeBackup(
   const last = row.detail['last_backup_at'];
   if (typeof last !== 'string') return;
   const logged = await lastCompleted(deps.prisma);
-  if (logged === undefined) return;
-  if (logged === null || Date.parse(last) > logged) {
+  // An unreadable log skips only the completed entry, never a late backup.
+  if (logged !== undefined && (logged === null || Date.parse(last) > logged)) {
     await systemLog.write(
       'backup_completed',
       'backup',
