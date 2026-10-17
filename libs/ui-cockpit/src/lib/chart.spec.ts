@@ -191,6 +191,20 @@ describe('the bar and line charts', () => {
     expect(fixture.componentInstance.retried).toBe(1);
   });
 
+  // @traces 103-FR-013
+  it('move focus to the heading on retry, never to the page top', async () => {
+    const [fixture, el] = await render((h) => {
+      h.error.set(true);
+      h.points.set([]);
+    });
+    buttonNamed(el, 'Reîncearcă')?.click();
+    fixture.componentInstance.error.set(false);
+    fixture.componentInstance.loading.set(true);
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(el.querySelector('h2'));
+  });
+
   it('show and hide the values as a table', async () => {
     const [fixture, el] = await render();
     const toggle = buttonNamed(el, 'Vezi ca tabel');

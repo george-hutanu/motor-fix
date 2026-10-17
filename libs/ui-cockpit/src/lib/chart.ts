@@ -8,7 +8,7 @@ import {
   computed,
   DestroyRef,
   Directive,
-  type ElementRef,
+  ElementRef,
   inject,
   input,
   output,
@@ -49,6 +49,7 @@ abstract class CockpitChart {
   private readonly i18n = inject(I18n);
   private readonly document = inject(DOCUMENT);
   private readonly reduced = inject(REDUCED_MOTION);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly scheme = signal(0);
   private chart?: Chart<ChartType, number[], string>;
@@ -139,6 +140,16 @@ abstract class CockpitChart {
     });
   }
 
+  // The pressed button goes with the error; focus stays in the panel.
+  protected retryPressed() {
+    const heading = this.host.nativeElement.querySelector('h2');
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus();
+    }
+    this.retry.emit();
+  }
+
   private destroyChart() {
     this.chart?.destroy();
     this.chart = undefined;
@@ -152,7 +163,7 @@ const template = `
         <div class="mf-chart-skeleton" aria-hidden="true"></div>
       } @else if (error()) {
         <div class="mf-chart-message">
-          <button hlmBtn variant="secondary" (click)="retry.emit()">
+          <button hlmBtn variant="secondary" (click)="retryPressed()">
             {{ 'shell.chart.retry' | t }}
           </button>
         </div>
