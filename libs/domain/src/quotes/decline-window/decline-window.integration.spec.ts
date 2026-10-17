@@ -1,7 +1,7 @@
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
-import { Logger } from '@nestjs/common';
+import { type FactoryProvider, Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { Queue } from 'bullmq';
+import { Queue, type Worker } from 'bullmq';
 
 import {
   DECLINE_WINDOW_CONSUMER,
@@ -9,6 +9,7 @@ import {
   DeclineWindow,
 } from './decline-window';
 import { DeclineWindowModule } from './decline-window.module';
+import { systemLog } from '../../admin/system-log/system-log';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -391,5 +392,54 @@ describe('closing the decline window', () => {
       .filter((message) => message.includes(recipient.id));
     expect(lines).toHaveLength(1);
     expect(lines[0]).not.toMatch(/Ioana|Dinamo|B123ABC/);
+  });
+});
+
+// @traces 297-FR-007
+describe('a decline-window job that failed for good', () => {
+  // The module's own worker, as the app built it.
+  const workerOf = (module: TestingModule) => {
+    const { providers = [] } = DeclineWindowModule.registerWorker({
+      notifications: NotificationsModule.registerWorker({
+        databaseUrl,
+        email: testConfig('http://127.0.0.1:9'),
+        phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+        redisUrl,
+      }),
+      redisUrl,
+      webUrl: WEB,
+    });
+    const token = providers.find(
+      (provider): provider is FactoryProvider =>
+        typeof provider === 'object' &&
+        'provide' in provider &&
+        typeof provider.provide === 'symbol' &&
+        provider.provide.description === 'DECLINE_WINDOW_WORKER',
+    )?.provide;
+    return module.get<Worker>(token as symbol);
+  };
+  const timerJob = (attemptsMade: number) => ({
+    attemptsMade,
+    data: { id: 'timer-1' },
+    id: '9',
+    name: 'event',
+    opts: { attempts: 3 },
+  });
+
+  it('writes one job_failed entry, on its last attempt only', async () => {
+    const write = jest.spyOn(systemLog, 'write').mockResolvedValue('written');
+    await start();
+    const worker = workerOf(app as TestingModule);
+
+    worker.emit('failed', timerJob(1) as never, new Error('db down'), 'active');
+    expect(write).not.toHaveBeenCalled();
+    worker.emit('failed', timerJob(3) as never, new Error('db down'), 'active');
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('job_failed', 'worker', {
+      attempts: 3,
+      error_code: 'Error',
+      job: 'event',
+      queue: DECLINE_WINDOW_QUEUE,
+    });
   });
 });

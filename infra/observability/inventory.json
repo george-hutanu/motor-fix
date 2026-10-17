@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 127,
+    "count": 128,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -170,6 +170,28 @@
       ],
       "reason": "one job every 30 seconds probes the admin dashboard's six service tiles and stores them in status_tile, counted by motorfix_jobs_total{job_name,outcome} and logged once on its final failure; a confirmed tile change logs 'StatusChecks <tile> <state> <figures>' and writes status_tile.changed; a failed run is not retried, the next one follows in 30 seconds; the tiles' own alerting is a later story",
       "story": "ST-294"
+    },
+    {
+      "kind": "queue",
+      "name": "system-log",
+      "source": "libs/domain/src/admin/system-log/system-log.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the system_log_entry table's purge: one scheduler, system-log-purge, at 03:30 Europe/Bucharest deletes system log entries older than 90 days, counted by motorfix_jobs_total{job_name,outcome}, logging the rows deleted and once on its final failure, which worker-jobs-failed alerts; each new entry also publishes system_log.added to the admin live channel straight to Redis, a failed publish logging one SystemLog warning",
+      "story": "ST-297"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_system_log_entries_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts every system status log write by kind and outcome (written, grouped, dropped), charted per hour and per day by outcome on motorfix-product, with one SystemLog error line per dropped entry naming only its kind and source; a dropped rate is the database being down, which postgres-unreachable and api-error-rate already alert",
+      "story": "ST-297"
     },
     {
       "kind": "queue",
@@ -414,6 +436,26 @@
       "alerts": "none",
       "reason": "map tiles fetched by the browser, no key; a failed load shows the map-down message and is not counted server-side",
       "story": "ST-111"
+    },
+    {
+      "kind": "outside-service",
+      "name": "onrc-portal",
+      "host": "portal.onrc.ro",
+      "source": "apps/web/src/app/dashboard/verification-file/verification-file.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "a link the admin opens in a new tab to look a company up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
+      "story": "ST-203"
+    },
+    {
+      "kind": "outside-service",
+      "name": "anaf-company-lookup",
+      "host": "mfinante.gov.ro",
+      "source": "apps/web/src/app/dashboard/verification-file/verification-file.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "a link the admin opens in a new tab to look a CUI up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
+      "story": "ST-203"
     },
     {
       "kind": "product-counter",
@@ -822,14 +864,14 @@
       "kind": "endpoint",
       "name": "saved-garages",
       "source": "libs/domain/src/cars/saved-garages/saved-garages.controller.ts",
-      "metric": "http.server.request.duration by http.route /api/v1/me/saved-garages/:garageId and /api/v1/me/saved-garages/ids",
+      "metric": "http.server.request.duration by http.route /api/v1/me/saved-garages, /api/v1/me/saved-garages/:garageId and /api/v1/me/saved-garages/ids",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "PUT, DELETE and GET ids show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, so no product counter is added",
-      "story": "ST-290"
+      "reason": "PUT, DELETE, GET ids and the GET list (ST-291) show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, and reading the list changes nothing, so no product counter is added; the list's spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-290, ST-291"
     },
     {
       "kind": "product-counter",
@@ -940,6 +982,28 @@
       ],
       "reason": "the first opening logs one line (file, admin) and emits verification.opened; the API-wide error and latency rules cover it, so it has no alert of its own",
       "story": "ST-302"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-check-record",
+      "source": "libs/domain/src/garages/verification/verification-checks/verification-checks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/checks/:kind",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each save logs one VerificationChecks line (file, kind, result, admin; never the detail or the company name), writes an audit entry and emits verification.check_recorded, and is counted by motorfix_verification_checks_total; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-203"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_checks_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each check an admin records on a garage's file by kind and result; a refused save is not counted; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-203"
     },
     {
       "kind": "product-counter",

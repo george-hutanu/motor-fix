@@ -13,10 +13,13 @@ import { SavedGarageDto } from '../models/saved-garage-dto';
 import { SavedGarageIdsDto } from '../models/saved-garage-ids-dto';
 import { savedGaragesControllerIds } from '../fn/saved-garages/saved-garages-controller-ids';
 import { SavedGaragesControllerIds$Params } from '../fn/saved-garages/saved-garages-controller-ids';
+import { savedGaragesControllerList } from '../fn/saved-garages/saved-garages-controller-list';
+import { SavedGaragesControllerList$Params } from '../fn/saved-garages/saved-garages-controller-list';
 import { savedGaragesControllerRemove } from '../fn/saved-garages/saved-garages-controller-remove';
 import { SavedGaragesControllerRemove$Params } from '../fn/saved-garages/saved-garages-controller-remove';
 import { savedGaragesControllerSave } from '../fn/saved-garages/saved-garages-controller-save';
 import { SavedGaragesControllerSave$Params } from '../fn/saved-garages/saved-garages-controller-save';
+import { SavedGaragesPageDto } from '../models/saved-garages-page-dto';
 
 @Injectable({ providedIn: 'root' })
 export class SavedGaragesService extends BaseService {
@@ -88,6 +91,39 @@ export class SavedGaragesService extends BaseService {
   savedGaragesControllerRemove(params: SavedGaragesControllerRemove$Params, context?: HttpContext): Promise<SavedGarageDto> {
     const resp = this.savedGaragesControllerRemove$Response(params, context);
     return resp.then((r: StrictHttpResponse<SavedGarageDto>): SavedGarageDto => r.body);
+  }
+
+  /** Path part for operation `savedGaragesControllerList()` */
+  static readonly SavedGaragesControllerListPath = '/api/v1/me/saved-garages';
+
+  /**
+   * The caller's saved garages, newest first, 20 a page, with the brands of their cars each works on.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `savedGaragesControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  savedGaragesControllerList$Response(params?: SavedGaragesControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<SavedGaragesPageDto>> {
+    const obs = savedGaragesControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The caller's saved garages, newest first, 20 a page, with the brands of their cars each works on.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `savedGaragesControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  savedGaragesControllerList(params?: SavedGaragesControllerList$Params, context?: HttpContext): Promise<SavedGaragesPageDto> {
+    const resp = this.savedGaragesControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SavedGaragesPageDto>): SavedGaragesPageDto => r.body);
   }
 
   /** Path part for operation `savedGaragesControllerIds()` */

@@ -50,6 +50,7 @@ const check = (
 ): VerificationFileCheckDto => ({
   automatic: false,
   detail: null,
+  evidence: null,
   fileId: FILE,
   id: `check-${kind}`,
   kind,

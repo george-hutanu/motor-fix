@@ -8,6 +8,7 @@ features:
   - 1169-prefetch-intent
   - 290-save-garage
   - 029-overview-panels-own-data
+  - 291-saved-garages
 ---
 
 # Capability: Cars
@@ -186,6 +187,30 @@ _From 029-overview-panels-own-data._
 ### 029-FR-007 — The view Mașinile mele's card MUST show the oil-service line (FR-003) after the rovinietă line when the car has a next-service km, and no line otherwise.
 
 _From 029-overview-panels-own-data._
+
+### 291-FR-001 — `GET /api/v1/me/saved-garages?near={lat},{lng}&cursor=` in the `cars` module MUST answer the actor's own saved garages, 20 a page, ordered by `saved_at` newest first then garage id, with `nextCursor` (opaque; the last row's saved time and id) when more follow; a cursor this list never gave out answers 400 `invalid_cursor`. The read covers every row whatever the garage's status; a driver with no saved garage answers an empty page. The answer is private: `Cache-Control: no-store`. The account whose list is read is always the actor's own: the route takes no account id, so another person's list cannot be asked for (the brief's 404 is moot). An account whose role in use is not `driver` answers 403 `driver_role_required` as 290-FR-006; a visitor 401 `sign_in_required`.
+
+_From 291-saved-garages._
+
+### 291-FR-002 — Each item MUST carry: `garageId`, `name`, `slug`, `rating` (null when unrated), `reviewCount`, `available` (true only for `approved`), `businessKind`, `savedAt`, `brands` (the brands that count, FR-003, as `{ id, name }` in the order of FR-003), and, only when `near` is given, `distanceKm` (one decimal; null for a mobile mechanic or a garage without a position) and, for a mobile mechanic, `comesToYou` (true when the place lies within its service radius of its seat, 229-FR-011; its seat never leaves the server). The answer MUST also carry `total` (every saved garage) and `workingCount` (those whose `brands` is not empty), both over the whole list, not the page.
+
+_From 291-saved-garages._
+
+### 291-FR-003 — A brand counts for a garage when at least one of the driver's cars not removed has that brand, the garage's row for the brand has stance `works_on`, and the row ticks that car's fuel. No row, `does_not_take`, or an unticked fuel leaves the brand out (OD-15: unmarked is a refusal). `brands` names each brand once, in the order the driver's cars are listed (newest first, 089-FR-002, by the first car of that brand); a driver with no car gets an empty `brands` for every garage. The join runs in the database in one query per page (no read per garage).
+
+_From 291-saved-garages._
+
+### 291-FR-004 — `near` MUST be validated as the garage search validates it (two numbers inside Romania's bounding box, else 400 `validation_failed`), and the distance MUST be the straight-line distance over the earth computed in the database through the shared area code of the `search` module (229-FR-013), rounded to one decimal; no radius limits the list (the 25 km search distance does not apply). Without `near`, items carry neither `distanceKm` nor `comesToYou`.
+
+_From 291-saved-garages._
+
+### 291-FR-005 — The route MUST be listed with its logs, metrics, dashboard panel and alert (or why not) in `infra/observability/inventory.json` in the same PR; reads are not recorded in the audit history. Removal from a row goes through ST-290's `DELETE /api/v1/me/saved-garages/:garageId` and its undo through the `PUT` with `savedAt` (290-FR-002, FR-004), unchanged.
+
+_From 291-saved-garages._
+
+### 291-FR-015 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the brand line with a `works_on` brand with the fuel ticked, a `does_not_take` brand, an unmarked brand and an unticked fuel; two cars of one brand named once; a removed car not counting; empty `brands` with no car; the order of the brands; `distanceKm` with `near` and neither field without; a mobile mechanic inside and outside its area; `available` for `suspended` and `draft`; `total` and `workingCount` over the whole list; the order and the cursor (21 rows: 20 then 1; a cursor that does not decode 400; a cursor whose row was removed still pages); 403 without the driver role; 401 for a visitor; 400 for a `near` outside Romania. In Jest for the web app: the lamp line in every state and language, the subtitle's forms (1, 0, 2–19 and the "de" form from 20), the panel's 3-row cut and "Vezi toate", the skeletons, the error with retry, the empty state, the remove with undo and with a failed removal, the re-read on a live event. End to end (Playwright): as a driver with two cars, save two garages, open Service-uri salvate, check both lines and the subtitle, remove one and undo.
+
+_From 291-saved-garages._
 
 ## Retired
 

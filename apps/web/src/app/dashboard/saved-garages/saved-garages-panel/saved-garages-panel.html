@@ -1,0 +1,46 @@
+@let shown = rows();
+<div class="panel" [attr.aria-busy]="list.loading() || null">
+  @if (!shown || shown.length) {
+    <div class="header">
+      @if (subtitle() && shown && said(); as line) {
+        <p class="subtitle" data-subtitle>{{ line }}</p>
+      }
+      <a class="find-more" data-find-more [routerLink]="findMore().link" [queryParams]="findMore().query">{{ 'driver.empty.findOthers' | t }}</a>
+    </div>
+  }
+  @if (list.loading()) {
+    <ul class="rows">
+      <li class="skeleton" aria-hidden="true"></li>
+      <li class="skeleton" aria-hidden="true"></li>
+      <li class="skeleton" aria-hidden="true"></li>
+    </ul>
+    <span class="sr-only" role="status">{{ 'driver.saved.loading' | t }}</span>
+  } @else if (list.failed()) {
+    <div class="problem">
+      <p role="alert">{{ 'driver.saved.failed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="list.reload()">{{ 'driver.saved.retry' | t }}</button>
+    </div>
+  } @else if (shown?.length) {
+    <ul class="rows">
+      @for (row of shown; track row.garageId; let index = $index) {
+        <li>
+          <mf-saved-garage-row [item]="row" [hasCar]="hasCar()" (removed)="remove(row, index)" />
+        </li>
+      }
+    </ul>
+    @if (moreFailed()) {
+      <div class="problem" data-more-failed>
+        <p role="alert">{{ 'driver.saved.failed' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" (click)="retried.emit()">{{ 'driver.saved.retry' | t }}</button>
+      </div>
+    }
+    <ng-content />
+    @if (seeAll()) {
+      <a class="see-all" routerLink="/app/driver/saved">{{ 'driver.saved.seeAll' | t }}</a>
+    }
+  } @else {
+    <mf-empty-state icon="bookmark" text="driver.empty.saved">
+      <a hlmBtn data-find-more [routerLink]="findMore().link" [queryParams]="findMore().query">{{ 'driver.empty.findOthers' | t }}</a>
+    </mf-empty-state>
+  }
+</div>

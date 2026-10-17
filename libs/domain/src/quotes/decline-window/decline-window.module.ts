@@ -20,6 +20,7 @@ import {
   type DeclinedEvent,
   DeclineWindow,
 } from './decline-window';
+import { logFinalFailure } from '../../job-failures';
 import { inJob } from '../../logging';
 
 const DECLINE_WINDOW_WORKER = Symbol('DECLINE_WINDOW_WORKER');
@@ -91,6 +92,7 @@ export class DeclineWindowModule
                 telemetry: queueTelemetry(),
               },
             );
+            logFinalFailure(worker, new Logger('DeclineWindow'));
             observeWorker(worker);
             return worker;
           },

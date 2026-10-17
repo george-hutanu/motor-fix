@@ -1,0 +1,92 @@
+<form (submit)="save($event)" novalidate>
+  <fieldset class="results">
+    <legend>{{ 'admin.file.register.form.result' | t }}</legend>
+    @for (r of results(); track r.result; let first = $first) {
+      <button
+        hlmBtn
+        variant="secondary"
+        type="button"
+        [attr.data-fault]="first ? 'result' : null"
+        [attr.data-result]="r.result"
+        [attr.aria-pressed]="chosen() === r.result"
+        [attr.aria-describedby]="faulty('result') ? id + '-error' : null"
+        (click)="choose(r.result)"
+      >
+        {{ r.label }}
+      </button>
+    }
+  </fieldset>
+
+  @if (kind() === 'company') {
+    <div class="field">
+      <label for="{{ id }}-name">{{ 'admin.file.register.form.name' | t }}</label>
+      <input
+        hlmInput
+        type="text"
+        data-fault="name"
+        autocomplete="off"
+        [id]="id + '-name'"
+        [value]="name()"
+        [attr.maxlength]="detailMax"
+        [attr.aria-invalid]="faulty('name') ? 'true' : null"
+        [attr.aria-describedby]="faulty('name') ? id + '-error' : null"
+        (input)="typed('name', $event)"
+      />
+    </div>
+  } @else {
+    <fieldset class="ticks">
+      <legend>{{ 'admin.file.register.form.ticks' | t }}</legend>
+      @for (t of tickList(); track t.tick) {
+        <label class="tick">
+          <input
+            type="checkbox"
+            [attr.data-fault]="t.tick"
+            [checked]="ticks()[t.tick]"
+            [attr.aria-invalid]="faulty(t.tick) ? 'true' : null"
+            [attr.aria-describedby]="faulty(t.tick) ? id + '-error' : null"
+            (change)="toggle(t.tick, $event)"
+          />
+          <span class="tick-text">
+            <span>{{ t.text }}</span>
+            @if (t.note) {
+              <span class="note">{{ t.note }}</span>
+            }
+          </span>
+        </label>
+      }
+    </fieldset>
+  }
+
+  @if (needsDetail()) {
+    <div class="field">
+      <label for="{{ id }}-detail">{{ 'admin.file.register.form.detail' | t }}</label>
+      <textarea
+        hlmInput
+        rows="3"
+        data-fault="detail"
+        [id]="id + '-detail'"
+        [value]="detail()"
+        [attr.maxlength]="detailMax"
+        [attr.aria-invalid]="faulty('detail') ? 'true' : null"
+        [attr.aria-describedby]="id + '-detail-hint' + (faulty('detail') ? ' ' + id + '-error' : '')"
+        (input)="typed('detail', $event)"
+      ></textarea>
+      <p class="hint" [id]="id + '-detail-hint'">{{ 'admin.file.register.form.detailHint' | t }}</p>
+    </div>
+  }
+
+  @if (error(); as e) {
+    <p class="error" role="alert" [id]="id + '-error'">{{ e.text }}</p>
+  }
+
+  <div class="actions">
+    <button hlmBtn type="submit" [disabled]="busy()" [attr.aria-busy]="busy()">
+      {{ 'admin.file.register.form.save' | t }}
+    </button>
+    @if (result() !== 'not_run') {
+      <button hlmBtn variant="ghost" type="button" [disabled]="busy()" (click)="clear()">
+        {{ 'admin.file.register.form.clear' | t }}
+      </button>
+    }
+  </div>
+</form>

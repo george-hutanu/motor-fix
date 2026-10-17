@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   inject,
   linkedSignal,
   PLATFORM_ID,
@@ -31,11 +32,25 @@ import { Lamp, toast } from '@motor-fix/ui-cockpit';
 
 import { liveResource } from '../live';
 import { VerificationProblem } from '../verification-problem/verification-problem';
+import { VerificationRegisterForm } from '../verification-register-form/verification-register-form';
 
 type CheckKind = VerificationFileCheckDto['kind'];
 type Result = VerificationFileCheckDto['result'];
 
 const REGISTER: readonly CheckKind[] = ['company', 'caen', 'rar', 'activities'];
+// The register checks an admin records through the form, each with the
+// public look-ups it is checked against. Fixed addresses: no CUI in them.
+const LOOKUPS: Partial<Record<CheckKind, { name: string; url: string }[]>> = {
+  caen: [{ name: 'onrc', url: 'https://portal.onrc.ro/' }],
+  company: [
+    {
+      name: 'anaf',
+      url: 'https://mfinante.gov.ro/ro/web/site/info-pj-selectie-dupa-cui',
+    },
+    { name: 'onrc', url: 'https://portal.onrc.ro/' },
+  ],
+};
+type FormKind = 'company' | 'caen';
 const MANUAL: readonly CheckKind[] = [
   'address',
   'photos',
@@ -68,7 +83,7 @@ interface VerificationFileData {
 // call; a decided file reads only. The decisions stay disabled until the decision story wires them.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Lamp, TranslatePipe],
+  imports: [Lamp, TranslatePipe, VerificationRegisterForm],
   selector: 'mf-verification-file',
   styleUrl: './verification-file.css',
   templateUrl: './verification-file.html',
@@ -78,7 +93,8 @@ export class VerificationFile {
   private readonly documentsApi = inject(VerificationDocumentsService);
   private readonly overlays = inject(Overlays);
   private readonly i18n = inject(I18n);
-  private readonly fileId =
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  protected readonly fileId =
     injectOverlayTask<VerificationFileData>().data.fileId;
 
   // The first read that succeeds opens the file; every later one only reads.
@@ -105,6 +121,8 @@ export class VerificationFile {
   private readonly pending = signal<ReadonlySet<CheckKind>>(new Set());
   private readonly pageFailed = signal<{ id: string; n: number } | null>(null);
   private readonly now = signal(new Date());
+  // The register row whose record form is open, one at a time.
+  protected readonly formOpen = signal<FormKind | null>(null);
 
   protected readonly decided = computed(() =>
     DECIDED.includes(this.file.value()?.file.status ?? ''),
@@ -163,9 +181,41 @@ export class VerificationFile {
     });
   });
 
-  protected readonly register = computed(() =>
-    REGISTER.map((kind) => this.checkRow(kind)),
-  );
+  protected readonly register = computed(() => {
+    const decided = this.decided();
+    const open = this.formOpen();
+    return REGISTER.map((kind) => {
+      const row = this.checkRow(kind);
+      const recordable = kind in LOOKUPS && !decided;
+      return {
+        ...row,
+        form: recordable ? (kind as FormKind) : null,
+        links: (LOOKUPS[kind] ?? []).map((l) => ({
+          text: this.t(`register.${l.name}`),
+          url: l.url,
+        })),
+        open: recordable && open === kind,
+        ticks: kind === 'caen' ? this.storedTicks() : null,
+        toggle: this.t(
+          row.result === 'not_run' ? 'register.open' : 'register.change',
+        ),
+      };
+    });
+  });
+
+  // What the register form needs to know about the garage and its file.
+  protected readonly formFacts = computed(() => {
+    const value = this.file.value();
+    const mobile = value?.garage.businessKind === 'mobile';
+    return {
+      address:
+        (mobile ? value?.garage.seatAddress : value?.garage.address) ?? null,
+      certificate: (value?.documents ?? []).some(
+        (d) => d.kind === 'onrc_certificate' && d.present,
+      ),
+      mobile,
+    };
+  });
 
   private readonly missing = computed(() =>
     (this.file.value()?.documents ?? []).some((d) => !d.present),
@@ -269,6 +319,64 @@ export class VerificationFile {
       title: 'admin.file.problem.title',
     });
     if (answer !== 'cancelled' && answer) this.apply(answer);
+  }
+
+  // The look-up opens in its own tab as any link does; the CUI goes to the
+  // clipboard beside it, quietly when there is no clipboard to write to.
+  async copyCui() {
+    const cui = this.file.value()?.garage.cui;
+    const clipboard = globalThis.navigator?.clipboard;
+    if (!cui || !clipboard) return;
+    try {
+      await clipboard.writeText(cui);
+      toast(this.t('register.copied'));
+    } catch {
+      // The tab still opens; the admin types the CUI there.
+    }
+  }
+
+  toggleForm(kind: FormKind) {
+    const closing = this.formOpen() === kind;
+    this.formOpen.set(closing ? null : kind);
+    if (closing) this.focusToggle(kind);
+  }
+
+  formRecorded(kind: FormKind, answer: VerificationCheckRecordedDto) {
+    this.apply(answer);
+    this.formOpen.set(null);
+    this.focusToggle(kind);
+  }
+
+  formDecided() {
+    this.formOpen.set(null);
+    this.file.reload();
+  }
+
+  private focusToggle(kind: FormKind) {
+    setTimeout(() =>
+      this.host.nativeElement
+        .querySelector<HTMLElement>(`[data-toggle="${kind}"]`)
+        ?.focus(),
+    );
+  }
+
+  // "certificat · ONRC · adresă": the ticks an ok CAEN check was saved with, a
+  // file that held no certificate then read as "fără certificat". A warning
+  // or a failure shows its detail alone: the ticks are cleared from the row.
+  private storedTicks() {
+    const caen = this.checks().find((c) => c.kind === 'caen');
+    const evidence = caen?.result === 'ok' ? caen.evidence : null;
+    if (!evidence) return null;
+    const parts = [
+      evidence.certificateUploaded === false
+        ? this.t('register.stored.noCertificate')
+        : evidence.certificate
+          ? this.t('register.stored.certificate')
+          : null,
+      evidence.onrc ? this.t('register.stored.onrc') : null,
+      evidence.address ? this.t('register.stored.address') : null,
+    ].filter(Boolean);
+    return parts.length ? parts.join(' · ') : null;
   }
 
   // A blank tab first, while the press still counts as one, then its address.

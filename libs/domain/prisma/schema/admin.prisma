@@ -79,3 +79,60 @@ model StatusTile {
 
   @@map("status_tile")
 }
+
+enum SystemLogKind {
+  status_changed
+  check_failed
+  job_failed
+  service_error
+  server_error
+  backup_completed
+  backup_failed
+  deploy
+
+  @@map("system_log_kind")
+}
+
+enum SystemLogSource {
+  api
+  search
+  maps
+  email
+  notifications
+  backup
+  worker
+  webrtc
+  identity
+  storage
+
+  @@map("system_log_source")
+}
+
+enum SystemLogSeverity {
+  info
+  warning
+  error
+
+  @@map("system_log_severity")
+}
+
+// The System status log: what the platform did and what went wrong, grouped
+// per kind, source, fingerprint and minute. Kept 90 days.
+model SystemLogEntry {
+  id          String            @id @default(uuid()) @db.Uuid
+  at          DateTime          @db.Timestamptz(3)
+  minute      DateTime          @db.Timestamptz(3)
+  kind        SystemLogKind
+  source      SystemLogSource
+  severity    SystemLogSeverity
+  fingerprint String
+  message     String
+  context     Json              @default("{}")
+  count       Int               @default(1)
+
+  @@unique([kind, source, fingerprint, minute], map: "system_log_entry_group_key")
+  @@index([at(sort: Desc)], map: "system_log_entry_at_idx")
+  @@index([kind, at], map: "system_log_entry_kind_at_idx")
+  @@index([message(ops: raw("gin_trgm_ops"))], map: "system_log_entry_message_trgm_idx", type: Gin)
+  @@map("system_log_entry")
+}
