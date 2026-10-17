@@ -16,6 +16,8 @@ type Kind = 'brands' | 'jobs';
 interface Report {
   kind: Kind;
   title: string;
+  // The table's name column: brand or job.
+  heading: string;
   points: ChartPoint[];
   // Every row, for the full list; empty where no list is offered.
   all: { label: string; count: string }[];
@@ -76,6 +78,9 @@ export class AdminDemand {
               label: r.label,
             }))
           : [],
+        heading: this.i18n.t(
+          kind === 'brands' ? 'admin.demand.brand' : 'admin.demand.job',
+        ),
         kind,
         listId: this.listIds[kind],
         more: this.i18n.t(

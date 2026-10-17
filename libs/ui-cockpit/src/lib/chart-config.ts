@@ -170,7 +170,13 @@ export function chartConfig(
           beginAtZero: true,
           border: { display: false },
           grid: { color: theme.line, drawTicks: false, lineWidth: 1 },
-          ticks: { ...ticks, callback: format, maxTicksLimit: 5 },
+          ticks: {
+            ...ticks,
+            callback: format,
+            maxTicksLimit: 5,
+            // A count is whole: no 0,5 request between 0 and 1.
+            ...(unit === 'count' && { precision: 0 }),
+          },
         },
       },
     },

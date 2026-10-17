@@ -145,6 +145,23 @@ describe('AdminDemand, the view', () => {
     expect(rows[9]).toEqual(['Hyundai', '1.240']);
   });
 
+  it('heads each table by what it lists, in either language', async () => {
+    const heads = async (chart: HTMLElement) => {
+      await tableOf(chart);
+      return [...chart.querySelectorAll('th')].map((th) =>
+        th.textContent?.trim(),
+      );
+    };
+    const ro = await open();
+    expect(await heads(charts(ro)[0])).toEqual(['Marcă', 'Valoare']);
+    expect(await heads(charts(ro)[1])).toEqual(['Lucrare', 'Valoare']);
+    TestBed.resetTestingModule();
+
+    const en = await open({ language: 'en' });
+    expect(await heads(charts(en)[0])).toEqual(['Brand', 'Value']);
+    expect(await heads(charts(en)[1])).toEqual(['Job', 'Value']);
+  });
+
   it('names each job in the interface language', async () => {
     const el = await open();
 

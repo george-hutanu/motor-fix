@@ -2,9 +2,11 @@
   "demand": {
     "allBrands": "Vezi toate mărcile",
     "allJobs": "Vezi toate lucrările",
+    "brand": "Marcă",
     "brands": "Cereri pe marcă, 30 de zile",
     "empty": "Încă nu sunt cereri în ultimele 30 de zile.",
     "fewer": "Arată mai puține",
+    "job": "Lucrare",
     "jobs": "Cereri pe lucrare, 30 de zile",
     "subtitle": "Ce au cerut șoferii în ultimele 30 de zile"
   },

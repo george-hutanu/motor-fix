@@ -44,6 +44,8 @@ abstract class CockpitChart {
   readonly horizontal = input(false, { transform: booleanAttribute });
   // The host's own words for no data; the shared text otherwise.
   readonly empty = input<string>();
+  // The host's word for the table's name column; "period" otherwise.
+  readonly labelHeading = input<string>();
   readonly retry = output<void>();
 
   private readonly i18n = inject(I18n);
@@ -186,7 +188,7 @@ const template = `
           <table hlmTable [id]="tableId">
             <thead hlmTHead>
               <tr hlmTr>
-                <th hlmTh scope="col">{{ 'shell.chart.label' | t }}</th>
+                <th hlmTh scope="col">{{ labelHeading() ?? ('shell.chart.label' | t) }}</th>
                 <th hlmTh scope="col">{{ 'shell.chart.value' | t }}</th>
               </tr>
             </thead>

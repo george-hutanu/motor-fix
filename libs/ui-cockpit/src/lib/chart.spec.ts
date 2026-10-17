@@ -367,6 +367,7 @@ describe('a bar chart laid on its side', () => {
         title="Cereri pe marcă"
         unit="count"
         empty="Încă nu sunt cereri."
+        labelHeading="Marcă"
         [points]="points()"
       >
         <button type="button" class="more">Vezi toate</button>
@@ -421,6 +422,18 @@ describe('a bar chart laid on its side', () => {
     );
 
     expect(buttons).toEqual(['Vezi ca tabel', 'Vezi toate']);
+  });
+
+  it("heads the table's name column with the host's word", async () => {
+    const el = await renderSide();
+    [...el.querySelectorAll('button')]
+      .find((b) => b.textContent?.trim() === 'Vezi ca tabel')
+      ?.click();
+    TestBed.tick();
+
+    expect(
+      [...el.querySelectorAll('th')].map((th) => th.textContent?.trim()),
+    ).toEqual(['Marcă', 'Valoare']);
   });
 
   it("says the host's own words when there is nothing to draw", async () => {

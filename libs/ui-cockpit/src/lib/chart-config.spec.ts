@@ -300,6 +300,14 @@ describe('chartConfig laid on its side', () => {
     expect(side().data.labels).toEqual(['Dacia', 'Volkswagen']);
   });
 
+  it('steps a count axis in whole numbers, so 2 requests never read 0,5', () => {
+    expect(side().options.scales.x.ticks.precision).toBe(0);
+    expect(
+      (chartConfig('line', BRANDS, 'lei', 'ro', dark, false) as Loose).options
+        .scales.y.ticks.precision,
+    ).toBeUndefined();
+  });
+
   it('puts the counts on the across axis with hairlines and the names down the side at 12 px', () => {
     const { scales } = side().options;
 
