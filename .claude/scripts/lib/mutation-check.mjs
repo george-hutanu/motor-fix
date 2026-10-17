@@ -4,5 +4,5 @@
 
 export const MUTATION_WORKFLOW = "Mutation";
 
-/** A check of the Mutation workflow: gh's rollup names it workflowName, `gh pr checks` workflow. */
-export const isMutationCheck = (c) => (c.workflowName ?? c.workflow) === MUTATION_WORKFLOW;
+/** A check run of the Mutation workflow: gh's rollup names it workflowName, `gh pr checks` workflow. A commit status never is one. */
+export const isMutationCheck = (c) => c?.__typename !== "StatusContext" && (c?.workflowName ?? c?.workflow) === MUTATION_WORKFLOW;
