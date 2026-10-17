@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
-import { CDN_PURGE_KEY, CdnPurgeSender, cdnPurgeHook } from './cdn-purge';
+import { CdnPurgeSender, cdnPurgeHook } from './cdn-purge';
 import { redisUrlFor } from '../../notifications/notifications.testing';
 
 const redis = new Redis(redisUrlFor(2));
@@ -17,7 +17,7 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 // Each test its own set, so suites sharing the database never meet.
-const ownKey = () => `${CDN_PURGE_KEY}:test:${randomUUID()}`;
+const ownKey = () => `cdn:purge:test:${randomUUID()}`;
 
 describe('the CDN purge queue in Redis', () => {
   it('keeps a tag queued many times once, and the sender drains it', async () => {

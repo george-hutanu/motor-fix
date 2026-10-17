@@ -2,13 +2,9 @@
 import { Logger } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
 
-import {
-  CDN_PURGE_KEY,
-  CDN_TAG,
-  CdnPurgeSender,
-  cdnPurgeHook,
-} from './cdn-purge';
+import { CdnPurgeSender, cdnPurgeHook } from './cdn-purge';
 
+const CDN_PURGE_KEY = 'cdn:purge';
 const CONFIG = { apiKey: 'key-123', pullZoneId: '42' };
 
 // A Redis set in memory: SPOP takes members in insertion order here, which
@@ -51,10 +47,20 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('CDN_TAG', () => {
-  it.each(['garage:g-1', 'garage:0b6f2c1e', 'search'])('takes %s', (tag) => {
-    expect(CDN_TAG.test(tag)).toBe(true);
-  });
+// Whether the hook puts the tag in the purge set.
+async function queued(tag: string) {
+  const redis = fakeRedis();
+  await cdnPurgeHook(redis)(tag);
+  return redis.set.has(tag);
+}
+
+describe('the tags the CDN takes', () => {
+  it.each(['garage:g-1', 'garage:0b6f2c1e', 'search'])(
+    'takes %s',
+    async (tag) => {
+      expect(await queued(tag)).toBe(true);
+    },
+  );
 
   it.each([
     'warm:account:a-1',
@@ -64,8 +70,8 @@ describe('CDN_TAG', () => {
     'garage:a:b',
     'searches',
     'search:dacia',
-  ])('refuses %s', (tag) => {
-    expect(CDN_TAG.test(tag)).toBe(false);
+  ])('refuses %s', async (tag) => {
+    expect(await queued(tag)).toBe(false);
   });
 });
 

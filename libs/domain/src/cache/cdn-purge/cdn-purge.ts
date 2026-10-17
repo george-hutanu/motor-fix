@@ -3,11 +3,11 @@ import { metrics } from '@opentelemetry/api';
 
 // The tags the CDN keeps pages under: a garage's profile and every search
 // page. A sign-in warm tag (`warm:*`) never leaves the worker.
-export const CDN_TAG = /^(garage:[^:]+|search)$/;
+const CDN_TAG = /^(garage:[^\s:]+|search)$/;
 
 // The tags waiting for the next send: a set, so a tag purged ten times in
 // five seconds is sent once.
-export const CDN_PURGE_KEY = 'cdn:purge';
+const CDN_PURGE_KEY = 'cdn:purge';
 
 const INTERVAL_MS = 5_000;
 // Ten calls every five seconds, well under the provider's rate.
@@ -45,6 +45,7 @@ export class CdnPurgeSender {
   ) {}
 
   start() {
+    if (!this.stopped) return;
     this.stopped = false;
     this.schedule();
   }
@@ -63,7 +64,8 @@ export class CdnPurgeSender {
       this.logger.warn(`cdn purge queue unavailable: ${String(error)}`);
       return;
     }
-    for (const tag of tags) await this.purge(tag);
+    // Only the CDN's own tags leave, whatever else reached the set.
+    for (const tag of tags) if (CDN_TAG.test(tag)) await this.purge(tag);
   }
 
   // The next tick waits for this one to end, so two never overlap.

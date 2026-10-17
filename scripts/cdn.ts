@@ -99,7 +99,13 @@ function loadZone(command: string, name: string, env: Env): Zone | number {
   const file = readConfig(env, errors);
   for (const error of errors) console.error(error);
   if (errors.length) return 2;
-  const zone = substitute(file.environments[name] as Zone, env);
+  const raw = file.environments[name] as Zone;
+  // check compares the secret by presence only, so it needs no value.
+  const read = variablesOf(raw).filter(
+    (name) => command === 'apply' || !SECRETS.has(name),
+  );
+  if (!present(env, read)) return 2;
+  const zone = substitute(raw, env);
   if (!String(zone.pullZone['OriginUrl'] ?? '').startsWith('https://')) {
     console.error('pullZone.OriginUrl must be an https:// address');
     return 2;
@@ -117,7 +123,7 @@ async function sync(command: string, zone: Zone, api: Api, env: Env) {
     // check compares the secret by presence only; apply by its value.
     return report(compare(zone, live, command === 'apply' ? env : null));
   } catch (error) {
-    console.error(error instanceof Refused ? error.message : String(error));
+    console.error(hide(message(error), env));
     return 1;
   }
 }
@@ -192,14 +198,24 @@ function compare(zone: Zone, live: Live, env: Env | null): string[] {
   return lines.filter((line): line is string => Boolean(line));
 }
 
+// The first live rule of each name; a later one of the same name is extra.
 function rulesByName(live: Live) {
-  return new Map(live.EdgeRules.map((rule) => [rule.Description, rule]));
+  const byName = new Map<string, LiveRule>();
+  for (const rule of live.EdgeRules) {
+    if (!byName.has(rule.Description)) byName.set(rule.Description, rule);
+  }
+  return byName;
 }
 
-// Every live rule the file does not name: the file owns the zone's rules.
+// Every live rule the file does not name, and every second rule of a name:
+// the file owns the zone's rules.
 function extraRules(zone: Zone, live: Live) {
   const wanted = new Set(zone.edgeRules.map((rule) => rule.Description));
-  return live.EdgeRules.filter((rule) => !wanted.has(rule.Description));
+  const byName = rulesByName(live);
+  return live.EdgeRules.filter(
+    (rule) =>
+      !wanted.has(rule.Description) || byName.get(rule.Description) !== rule,
+  );
 }
 
 function ruleDifferences(rule: Rule, live: Json, env: Env | null): string[] {
@@ -274,20 +290,23 @@ function toLive(rule: Rule, env: Env): Json {
 
 async function purge(args: string[], env: Env, send: typeof fetch) {
   const zone = args.length === 1 && args[0] === '--zone';
-  if (!args.length || (!zone && args.some((tag) => tag.startsWith('-')))) {
+  if (
+    !args.length ||
+    (!zone && args.some((tag) => !tag.trim() || tag.startsWith('-')))
+  ) {
     return usage();
   }
   if (!present(env, ['BUNNY_API_KEY', 'BUNNY_PULL_ZONE_ID'])) return 2;
   const api = client(env, send);
-  return zone ? purgeZone(api) : purgeTags(api, args);
+  return zone ? purgeZone(api, env) : purgeTags(api, args);
 }
 
-async function purgeZone(api: Api) {
+async function purgeZone(api: Api, env: Env) {
   try {
     await api('POST', '/purgeCache');
     return 0;
   } catch (error) {
-    console.error(`purge failed: ${message(error)}`);
+    console.error(`purge failed: ${hide(message(error), env)}`);
     return 1;
   }
 }
@@ -311,7 +330,7 @@ async function purgeTags(api: Api, tags: string[]) {
 // One pull zone's calls. A refused call throws its method, path, status and
 // the provider's message; the key is only ever a header.
 function client(env: Env, send: typeof fetch): Api {
-  const zone = encodeURIComponent(env['BUNNY_PULL_ZONE_ID'] ?? '');
+  const zone = encodeURIComponent(env['BUNNY_PULL_ZONE_ID']?.trim() ?? '');
   return async (method, path, body) => {
     const answer = await send(`${API}/pullzone/${zone}${path}`, {
       ...(body ? { body: JSON.stringify(body) } : {}),
@@ -337,25 +356,34 @@ function message(error: unknown) {
   return error instanceof Refused ? error.message : String(error);
 }
 
+// The key and the secret, wherever a provider or an error echoes them.
+function hide(text: string, env: Env) {
+  return ['BUNNY_API_KEY', ...SECRETS].reduce((out, name) => {
+    const value = env[name]?.trim();
+    return value ? out.split(value).join('<hidden>') : out;
+  }, text);
+}
+
 function readConfig(env: Env, errors: string[]): { environments: Json } {
   // Run from the repository root, as the release workflow does.
   const path =
     env['CDN_CONFIG'] || join(process.cwd(), 'infra', 'cdn', 'bunny.json');
-  let file: { environments?: unknown };
+  let file: unknown;
   try {
     file = JSON.parse(readFileSync(path, 'utf8'));
   } catch (error) {
     errors.push(`${path}: ${String(error)}`);
     return { environments: {} };
   }
-  if (!isObject(file.environments)) {
+  if (!isObject(file) || !isObject(file['environments'])) {
     errors.push('environments: missing');
     return { environments: {} };
   }
+  const environments = file['environments'];
   for (const name of ENVIRONMENTS) {
-    validateZone(file.environments[name], `environments.${name}`, errors);
+    validateZone(environments[name], `environments.${name}`, errors);
   }
-  return { environments: file.environments };
+  return { environments };
 }
 
 function validateZone(zone: unknown, at: string, errors: string[]) {
@@ -384,7 +412,10 @@ function validateRule(rule: unknown, at: string, errors: string[]) {
     return;
   }
   for (const key of ['Description', 'ActionParameter1']) {
-    if (typeof rule[key] !== 'string') errors.push(`${at}.${key}: missing`);
+    const value = rule[key];
+    if (typeof value !== 'string' || !value.trim()) {
+      errors.push(`${at}.${key}: missing`);
+    }
   }
   oneOf(rule['ActionType'], ACTION_TYPES, `${at}.ActionType`, errors);
   oneOf(
@@ -449,6 +480,21 @@ function substitute(zone: Zone, env: Env): Zone {
   return { ...zone, pullZone };
 }
 
+// Every variable the zone reads, in its pull zone and its rules.
+function variablesOf(zone: Zone): string[] {
+  const values = [
+    ...Object.values(zone.pullZone),
+    ...zone.edgeRules.flatMap((rule) => [
+      rule.ActionParameter1,
+      rule.ActionParameter2,
+    ]),
+  ];
+  const names = values.map((value) =>
+    typeof value === 'string' ? variable(value) : undefined,
+  );
+  return [...new Set(names)].filter((name): name is string => Boolean(name));
+}
+
 function resolve(value: string, env: Env): string {
   const name = variable(value);
   return name ? (env[name] ?? '') : value;
@@ -463,7 +509,14 @@ function present(env: Env, names: string[]): boolean {
   for (const name of missing) {
     console.error(`missing environment variable ${name}`);
   }
-  return !missing.length;
+  // The zone id goes into the address called: a number, nothing else.
+  const zone = env['BUNNY_PULL_ZONE_ID'];
+  const badZone =
+    names.includes('BUNNY_PULL_ZONE_ID') &&
+    !missing.includes('BUNNY_PULL_ZONE_ID') &&
+    !/^\d+$/.test(zone?.trim() ?? '');
+  if (badZone) console.error('BUNNY_PULL_ZONE_ID must be a number');
+  return !missing.length && !badZone;
 }
 
 function usage() {
