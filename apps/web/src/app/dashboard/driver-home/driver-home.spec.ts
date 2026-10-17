@@ -7,6 +7,8 @@ import {
   CarsService,
   type MeDto,
   PlacesService,
+  QuoteRequestsService,
+  QuotesService,
   type RequestSummaryDto,
   RequestsService,
   type SavedGaragesPageDto,
@@ -92,6 +94,7 @@ let carsList: jest.Mock;
 let requestsList: jest.Mock;
 let savedList: jest.Mock;
 let open: jest.Mock;
+let compare: jest.Mock;
 let events: Subject<LiveMessage>;
 
 const answer = <T>(value: Answer<T>) =>
@@ -118,6 +121,7 @@ async function render({
     saved instanceof Error ? Promise.reject(saved) : Promise.resolve(saved),
   );
   open = jest.fn(async () => 'cancelled');
+  compare = jest.fn(() => new Promise<never>(() => undefined));
   events = new Subject();
   const current = signal(
     capabilities === null
@@ -134,6 +138,14 @@ async function render({
       },
       { provide: Overlays, useValue: { open } },
       {
+        provide: QuoteRequestsService,
+        useValue: { compareControllerGet: compare },
+      },
+      {
+        provide: QuotesService,
+        useValue: { acceptControllerAccept: jest.fn() },
+      },
+      {
         provide: SavedGaragesService,
         useValue: { savedGaragesControllerList: savedList },
       },
@@ -147,6 +159,7 @@ async function render({
         provide: Live,
         useValue: {
           events,
+          offline: signal(false),
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
@@ -638,7 +651,10 @@ describe('the panels’ states', () => {
   it('shows a filled panel as its frame, with its heading linked to its view', async () => {
     const { element } = await render({
       cars: [car()],
-      requests: [request({ quotesCount: 1, status: 'done' })],
+      requests: [
+        request({ quotesCount: 1, status: 'quoted' }),
+        request({ id: 'req-2', status: 'done' }),
+      ],
     });
 
     expect(
@@ -653,6 +669,99 @@ describe('the panels’ states', () => {
       expect(filled.querySelector('mf-empty-state')).toBeNull();
       expect(text(filled)).toBe(text(filled.querySelector('h2')));
     }
+  });
+});
+
+// @traces 313-FR-012
+describe('Panou’s quotes panel', () => {
+  const booked = (status: 'awaiting_confirmation' | 'confirmed') =>
+    ({ confirmBy: '2026-10-18T10:00:00.000Z', status }) as const;
+  const comparison = (element: HTMLElement) =>
+    panel(element, 'quotes')?.querySelector('mf-quotes-compare');
+
+  it('compares the quotes of the most recent open request with quotes', async () => {
+    const { element } = await render({
+      requests: [
+        request({
+          createdAt: '2026-10-12T09:00:00.000Z',
+          id: 'req-new',
+          quotesCount: 0,
+        }),
+        request({
+          createdAt: '2026-10-11T09:00:00.000Z',
+          id: 'req-open',
+          quotesCount: 2,
+          status: 'quoted',
+        }),
+        request({
+          createdAt: '2026-10-10T09:00:00.000Z',
+          id: 'req-old',
+          quotesCount: 3,
+          status: 'quoted',
+        }),
+      ],
+    });
+
+    expect(comparison(element)).not.toBeNull();
+    expect(compare).toHaveBeenCalledWith({ id: 'req-open' });
+    expect(
+      panel(element, 'quotes')?.querySelector('h2 a')?.getAttribute('href'),
+    ).toBe('/app/driver/requests');
+  });
+
+  it('takes a booked request while its booking waits for the garage', async () => {
+    const { element } = await render({
+      requests: [
+        request({
+          booking: booked('confirmed'),
+          createdAt: '2026-10-12T09:00:00.000Z',
+          id: 'req-confirmed',
+          quotesCount: 2,
+          status: 'booked',
+        }),
+        request({
+          booking: booked('awaiting_confirmation'),
+          createdAt: '2026-10-11T09:00:00.000Z',
+          id: 'req-held',
+          quotesCount: 2,
+          status: 'booked',
+        }),
+      ],
+    });
+
+    expect(comparison(element)).not.toBeNull();
+    expect(compare).toHaveBeenCalledWith({ id: 'req-held' });
+  });
+
+  it('keeps the empty state when no open request has quotes', async () => {
+    const { element } = await render({
+      requests: [
+        request({ quotesCount: 2, status: 'done' }),
+        request({ id: 'req-2', quotesCount: 1, status: 'closed' }),
+        request({
+          booking: booked('confirmed'),
+          id: 'req-3',
+          quotesCount: 1,
+          status: 'booked',
+        }),
+      ],
+    });
+
+    expect(comparison(element)).toBeNull();
+    expect(compare).not.toHaveBeenCalled();
+    expect(text(panel(element, 'quotes'))).toContain(EMPTY.quotes);
+  });
+
+  it('keeps the placeholder while the requests load and the error when they fail', async () => {
+    const loading = await render({
+      requests: new Promise<never>(() => undefined),
+    });
+    expect(comparison(loading.element)).toBeNull();
+    TestBed.resetTestingModule();
+
+    const failed = await render({ requests: new Error('down') });
+    expect(comparison(failed.element)).toBeNull();
+    expect(text(panel(failed.element, 'quotes'))).not.toContain(EMPTY.quotes);
   });
 });
 

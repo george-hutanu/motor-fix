@@ -242,7 +242,43 @@
     "submit": "Send the code",
     "title": "Change the phone number"
   },
+  "quotes": {
+    "accept": "Accept",
+    "changed": "Changed {when}",
+    "count": {
+      "one": "{count} quote",
+      "other": "{count} quotes"
+    },
+    "declined": "Declined: {name} · {why}",
+    "duration": "about {duration}",
+    "failed": "We could not load the quotes.",
+    "free": "free {when}",
+    "loading": "Loading the quotes",
+    "missing": "Does not do: {jobs}",
+    "mobile": "Mobile mechanic",
+    "retry": "Retry",
+    "sort": {
+      "earliest": "Earliest",
+      "fastest": "Fastest",
+      "label": "Sort the quotes",
+      "price": "Price",
+      "rating": "Rating"
+    },
+    "state": {
+      "accepted": "Accepted",
+      "closed": "Closed",
+      "declined": "Declined by you",
+      "expired": "Expired",
+      "on_hold": "On hold"
+    },
+    "unrated": "no reviews yet",
+    "withdrawn": {
+      "garage": "{name} withdrew its quote",
+      "suspended": "{name} no longer takes requests"
+    }
+  },
   "requests": {
+    "compare": "Compare the quotes",
     "retry": "Try again",
     "waitingGarage": "Waiting for the garage · {left}"
   },

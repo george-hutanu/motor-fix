@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 133,
+    "count": 134,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -657,6 +657,19 @@
         "api-latency"
       ],
       "story": "ST-221"
+    },
+    {
+      "kind": "endpoint",
+      "name": "quote-requests-compare",
+      "source": "libs/domain/src/quotes/compare/compare.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quote-requests/{id}/quotes",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver's comparison of one request's quotes, read from PostgreSQL and writing quote.first_seen_at once; no counter or alert of its own: a read of the driver's own data, covered by the API's error-rate and latency alerts; no outside call",
+      "story": "ST-313"
     },
     {
       "kind": "endpoint",

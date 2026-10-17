@@ -245,7 +245,44 @@
     "submit": "Trimite codul",
     "title": "Schimbă numărul de telefon"
   },
+  "quotes": {
+    "accept": "Acceptă",
+    "changed": "Modificată {when}",
+    "count": {
+      "few": "{count} oferte",
+      "one": "{count} ofertă",
+      "other": "{count} de oferte"
+    },
+    "declined": "Refuzat: {name} · {why}",
+    "duration": "aprox. {duration}",
+    "failed": "Nu am putut încărca ofertele.",
+    "free": "liber {when}",
+    "loading": "Se încarcă ofertele",
+    "missing": "Nu face: {jobs}",
+    "mobile": "Mecanic mobil",
+    "retry": "Reîncearcă",
+    "sort": {
+      "earliest": "Cel mai devreme",
+      "fastest": "Cele mai rapide",
+      "label": "Ordonează ofertele",
+      "price": "Preț",
+      "rating": "Notă"
+    },
+    "state": {
+      "accepted": "Acceptată",
+      "closed": "Închisă",
+      "declined": "Refuzată de tine",
+      "expired": "Expirată",
+      "on_hold": "În așteptare"
+    },
+    "unrated": "fără recenzii",
+    "withdrawn": {
+      "garage": "{name} și‑a retras oferta",
+      "suspended": "{name} nu mai primește cereri"
+    }
+  },
   "requests": {
+    "compare": "Compară ofertele",
     "retry": "Încearcă din nou",
     "waitingGarage": "Așteaptă confirmarea service‑ului · {left}"
   },
