@@ -100,8 +100,9 @@ test.describe('the brand picker @seeded', () => {
   test('opens the results for the chosen brand @core', async ({ page }) => {
     await ready(page, '/ro');
     await tile(page, 'Dacia').click();
-    const search = page.waitForResponse((response) =>
-      response.url().includes('/api/v1/search/garages'),
+    const search = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/v1/search/garages',
     );
 
     await page.getByRole('link', { name: 'Caută service‑uri' }).click();
