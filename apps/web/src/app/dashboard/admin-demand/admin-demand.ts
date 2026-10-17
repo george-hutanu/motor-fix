@@ -42,7 +42,8 @@ export class AdminDemand {
   protected readonly answer = signal<AdminDemandDto | undefined>(undefined);
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
-  protected readonly expanded = signal<Kind | null>(null);
+  // Each report's full list opens and closes on its own.
+  protected readonly expanded = signal<ReadonlySet<Kind>>(new Set());
   private readonly listIds = {
     brands: this.ids.getId('mf-demand-brands-'),
     jobs: this.ids.getId('mf-demand-jobs-'),
@@ -92,7 +93,11 @@ export class AdminDemand {
   }
 
   protected toggle(kind: Kind) {
-    this.expanded.update((open) => (open === kind ? null : kind));
+    this.expanded.update((open) => {
+      const next = new Set(open);
+      if (!next.delete(kind)) next.add(kind);
+      return next;
+    });
   }
 
   // One read feeds every report; only the answer to the latest is shown.

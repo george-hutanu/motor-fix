@@ -92,6 +92,7 @@ const COPY = {
 test.describe('requests by brand and by job @seeded', () => {
   for (const [device, width, height] of [
     ['a 320 px phone', 320, 640],
+    ['a 390 px phone', 390, 844],
     ['a desktop', 1280, 800],
   ] as const) {
     for (const language of ['ro', 'en'] as const) {
@@ -117,6 +118,21 @@ test.describe('requests by brand and by job @seeded', () => {
         await expect(page.getByText(copy.subtitle)).toBeVisible();
         expect(await tableOf(page, copy.brands)).toEqual(copy.rows.brands);
         expect(await tableOf(page, copy.jobs)).toEqual(copy.rows.jobs);
+        // One column below 768 px, side by side from it.
+        const [brands, jobs] = await Promise.all(
+          [copy.brands, copy.jobs].map((name) =>
+            page
+              .getByRole('region', { exact: true, name })
+              .boundingBox()
+              .then((box) => box ?? { height: 0, width: 0, x: 0, y: 0 }),
+          ),
+        );
+        if (width < 768)
+          expect(jobs.y).toBeGreaterThanOrEqual(brands.y + brands.height);
+        else {
+          expect(Math.abs(jobs.y - brands.y)).toBeLessThan(1);
+          expect(jobs.x).toBeGreaterThan(brands.x);
+        }
         expect(await sideways(page)).toBeLessThanOrEqual(0);
       });
     }
