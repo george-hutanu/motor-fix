@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bullmq';
 
@@ -91,6 +92,22 @@ describe('the deploy entry', () => {
     spy.mockRestore();
     await Promise.all(apps.map((app) => app.close()));
     expect(await deploys()).toHaveLength(1);
+  });
+
+  it('never fails the boot when the log cannot be checked', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const write = jest
+      .spyOn(systemLog, 'write')
+      .mockRejectedValueOnce(new Error('log down'));
+    await expect(bootOnce('a1b2c3d')).resolves.toBeUndefined();
+    write.mockRestore();
+    expect(warn).toHaveBeenCalledWith(
+      'Deploy of a1b2c3d not checked against the log',
+    );
+    warn.mockRestore();
+    expect(await deploys()).toEqual([]);
   });
 
   it('is written for a new release, and again for a rollback to an older one', async () => {
