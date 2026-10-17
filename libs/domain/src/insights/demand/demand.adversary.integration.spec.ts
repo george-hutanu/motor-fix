@@ -69,7 +69,9 @@ describe('the demand read under hostile data', () => {
     const demand = await readDemand(prisma, NOW);
 
     expect(demand.requests).toBe(1);
-    expect(demand.brands).toEqual([{ name: 'Dacia', requests: 1 }]);
+    expect(demand.brands).toEqual([
+      { name: 'Dacia', requests: 1, searches: 0 },
+    ]);
     expect(demand.jobs).toEqual([]);
   });
 
@@ -138,7 +140,7 @@ describe('the demand read under hostile data', () => {
 
     const demand = await readDemand(prisma, atLocal(TODAY, 23));
 
-    expect(demand.brands).toEqual([{ name: 'Edge', requests: 1 }]);
+    expect(demand.brands).toEqual([{ name: 'Edge', requests: 1, searches: 0 }]);
   });
 
   // @traces 103-FR-004
@@ -151,7 +153,7 @@ describe('the demand read under hostile data', () => {
 
     expect(demand.lastDay).toBe(TODAY);
     expect(demand.firstDay).toBe('2026-09-18');
-    expect(demand.brands).toEqual([{ name: 'Old', requests: 1 }]);
+    expect(demand.brands).toEqual([{ name: 'Old', requests: 1, searches: 0 }]);
   });
 
   // @traces 103-FR-004
@@ -268,7 +270,7 @@ describe('the demand read under hostile data', () => {
 
     const demand = await readDemand(prisma, NOW);
 
-    expect(demand.brands).toEqual([{ name: 'Live', requests: 1 }]);
+    expect(demand.brands).toEqual([{ name: 'Live', requests: 1, searches: 0 }]);
     expect(demand.requests).toBe(1);
   });
 
@@ -288,7 +290,7 @@ describe('the demand read under hostile data', () => {
 
     const demand = await readDemand(prisma, NOW);
 
-    expect(demand.brands).toEqual([{ name: 'Real', requests: 1 }]);
+    expect(demand.brands).toEqual([{ name: 'Real', requests: 1, searches: 0 }]);
     expect(demand.requests).toBe(1);
   });
 
@@ -355,6 +357,8 @@ describe('the demand read under hostile data', () => {
       jobs: [],
       lastDay: TODAY,
       requests: 0,
+      searches: 0,
+      searchesFrom: TODAY,
     });
   });
 
@@ -367,7 +371,9 @@ describe('the demand read under hostile data', () => {
 
     const demand = await readDemand(prisma, NOW);
 
-    expect(demand.brands).toEqual([{ name: 'Dacia', requests: 3 }]);
+    expect(demand.brands).toEqual([
+      { name: 'Dacia', requests: 3, searches: 0 },
+    ]);
   });
 });
 
@@ -471,5 +477,74 @@ describe('the nightly write under hostile data', () => {
     expect(rows.filter((r) => r.dimension === 'job').map((r) => r.key)).toEqual(
       ['brakes'],
     );
+  });
+});
+
+describe('searches under hostile data', () => {
+  const brand = (name: string) =>
+    prisma.brand.create({
+      data: { key: `k-${name}`, name, slug: `s-${name}` },
+    });
+
+  // @traces 404-demand-searches-FR-002
+  it('counts each logged search once, however many follow it from the same driver', async () => {
+    const dacia = await brand('Dacia');
+    const at = atLocal('2026-10-12', 9);
+    await prisma.searchLog.createMany({
+      data: [0, 1, 2].map((s) => ({
+        at: new Date(at.getTime() + s * 1000),
+        brandId: dacia.id,
+      })),
+    });
+
+    const demand = await readDemand(prisma, NOW);
+
+    expect(demand.brands).toEqual([
+      { name: 'Dacia', requests: 0, searches: 3 },
+    ]);
+    expect(demand.searches).toBe(3);
+  });
+
+  // @traces 404-demand-searches-FR-001 404-demand-searches-FR-002
+  it('answers a brand searched thousands of times and never requested', async () => {
+    const bmw = await brand('BMW');
+    await prisma.searchLog.createMany({
+      data: Array.from({ length: 5000 }, (_, i) => ({
+        at: atLocal(addDays(TODAY, -(i % 29)), 12),
+        brandId: bmw.id,
+      })),
+    });
+    await writeDemandDaily(prisma, NOW);
+
+    const demand = await readDemand(prisma, NOW);
+
+    expect(demand.brands).toEqual([
+      { name: 'BMW', requests: 0, searches: 5000 },
+    ]);
+    expect(demand.requests).toBe(0);
+  });
+
+  // @traces 404-demand-searches-FR-002
+  it('counts no search logged after now or before the window', async () => {
+    const dacia = await brand('Dacia');
+    await prisma.searchLog.createMany({
+      data: [
+        { at: atLocal(addDays(TODAY, 1), 9), brandId: dacia.id },
+        { at: atLocal('2026-09-17', 23), brandId: dacia.id },
+      ],
+    });
+
+    const demand = await readDemand(prisma, NOW);
+
+    expect(demand.brands).toEqual([]);
+    expect(demand.searches).toBe(0);
+  });
+
+  // @traces 404-demand-searches-FR-001
+  it('answers zero searches and requests with no brand on an empty window', async () => {
+    const demand = await readDemand(prisma, NOW);
+
+    expect(demand.brands).toEqual([]);
+    expect([demand.searches, demand.requests]).toEqual([0, 0]);
   });
 });
