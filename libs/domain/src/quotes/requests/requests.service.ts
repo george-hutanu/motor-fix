@@ -21,10 +21,10 @@ import {
   answersSameDayOf,
   responseRateOf,
 } from '../../insights/response-stats/response-stats';
-import { DECLINE_UNDO_MINUTES } from '../quotes-config';
 import {
   assertCursor,
   bookingOf,
+  declineShown,
   garageRef,
   iso,
   jobsOf,
@@ -130,8 +130,6 @@ export class RequestsService {
   }
 }
 
-const UNDO_MS = DECLINE_UNDO_MINUTES * 60_000;
-
 // A decline the garage may still undo is not news yet: the driver sees the
 // garage waiting until its window has closed, then the decline and its
 // reason, never who declined.
@@ -141,10 +139,7 @@ function recipientOf(
   },
   now: Date,
 ): RequestDto['recipients'][number] {
-  const declined =
-    recipient.status === 'declined' &&
-    recipient.declinedAt !== null &&
-    now.getTime() - recipient.declinedAt.getTime() >= UNDO_MS;
+  const declined = declineShown(recipient, now);
   const hidden = recipient.status === 'declined' && !declined;
   return {
     answeredAt: hidden ? null : iso(recipient.answeredAt),

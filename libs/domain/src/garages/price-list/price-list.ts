@@ -1,4 +1,5 @@
 import type {
+  BrandRangeItemDto,
   PriceListItemDto,
   PriceListReason,
   PublicPriceRowDto,
@@ -10,6 +11,7 @@ import type { JobTypeStatus } from '../../generated/prisma/client';
 export interface PriceRow {
   id: string;
   brandId: string | null;
+  brand: { name: string; popularity: number | null } | null;
   visible: boolean;
   fromBani: number;
   toBani: number | null;
@@ -27,6 +29,7 @@ export interface PriceRow {
 // What the price list rule reads of each stored row; the public profile
 // reads the same.
 export const PRICE_ROW_SELECT = {
+  brand: { select: { name: true, popularity: true } },
   brandId: true,
   durationMinutes: true,
   fromBani: true,
@@ -71,6 +74,27 @@ function reasonOf(
 const before = (a: PriceRow, b: PriceRow) =>
   a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
+// Catalogue order: the popularity rank, the unranked last, then the name.
+const byCatalogue = (
+  a: { name: string; popularity: number | null },
+  b: { name: string; popularity: number | null },
+) =>
+  (a.popularity ?? Number.POSITIVE_INFINITY) -
+    (b.popularity ?? Number.POSITIVE_INFINITY) || a.name.localeCompare(b.name);
+
+const brandRangesOf = (jobRows: readonly PriceRow[]): BrandRangeItemDto[] =>
+  jobRows
+    .flatMap(({ brand, brandId, fromBani, toBani }) =>
+      brand && brandId !== null ? [{ brand, brandId, fromBani, toBani }] : [],
+    )
+    .sort((a, b) => byCatalogue(a.brand, b.brand))
+    .map(({ brand, brandId, fromBani, toBani }) => ({
+      brandId,
+      fromBani,
+      name: brand.name,
+      ...(toBani !== null && { toBani }),
+    }));
+
 // Every job of a garage's price list once, in the list's order, with whether
 // drivers see it and, when not, why. Computed on each read, never stored.
 export function priceListJobs(
@@ -87,12 +111,13 @@ export function priceListJobs(
     .map((jobRows) => {
       const defaultRow = jobRows.find((row) => row.brandId === null);
       return {
+        brandRanges: brandRangesOf(jobRows),
         defaultRow,
         place: defaultRow ?? [...jobRows].sort(before)[0],
       };
     })
     .sort((a, b) => before(a.place, b.place))
-    .map(({ defaultRow, place }) => {
+    .map(({ brandRanges, defaultRow, place }) => {
       const { id, nameEn, nameRo } = place.jobType;
       const reason = reasonOf(place, defaultRow, rarActivities);
       return {
@@ -106,6 +131,7 @@ export function priceListJobs(
         }),
         ...(defaultRow && { fromBani: defaultRow.fromBani }),
         ...(defaultRow?.toBani != null && { toBani: defaultRow.toBani }),
+        brandRanges,
       };
     });
 }

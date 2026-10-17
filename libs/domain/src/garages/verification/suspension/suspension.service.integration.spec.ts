@@ -13,6 +13,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../../notifications/notifications.testing';
+import { quotesWorld } from '../../../quotes/quotes.testing';
 
 // @traces 049-FR-001 049-FR-002 049-FR-003 049-FR-004 049-FR-014 049-FR-015
 
@@ -360,5 +361,76 @@ describe('two admins at once', () => {
         }),
       ).rejects.toThrow();
     }
+  });
+});
+
+// @traces 313-FR-010
+// @traces 313-FR-017
+describe('suspending a garage with quotes still waiting', () => {
+  const world = () => quotesWorld(prisma);
+  const withdrawals = () =>
+    prisma.outboxEvent.findMany({ where: { kind: 'quote.withdrawn' } });
+
+  // The outbox hangs off none of the rows the reset empties.
+  beforeEach(() => prisma.$executeRawUnsafe('TRUNCATE outbox_event'));
+
+  async function quotes() {
+    const w = world();
+    const andrei = await account('Andrei Marin');
+    const maria = await account('Maria Ionescu');
+    const first = await w.request(andrei, { status: 'quoted' });
+    const second = await w.request(maria, { status: 'quoted' });
+    const waiting = await w.quote(first.id, garage.id);
+    const alsoWaiting = await w.quote(second.id, garage.id);
+    const other = await w.request(andrei, { status: 'quoted' });
+    await w.quote(other.id, garage.id, 'expired');
+    const done = await w.request(maria, { status: 'quoted' });
+    await w.quote(done.id, garage.id, 'withdrawn');
+    return { alsoWaiting, andrei, first, maria, second, waiting };
+  }
+
+  it('tells each waiting quote’s driver the quote is withdrawn because of the suspension', async () => {
+    const { alsoWaiting, andrei, first, maria, second, waiting } =
+      await quotes();
+
+    await service().suspend(admin, garage.id, 'admin', REASON);
+
+    const events = await withdrawals();
+    expect(events).toHaveLength(2);
+    const byQuote = new Map(events.map((e) => [e.subjectId, e] as const));
+    expect(byQuote.get(waiting.id)?.payload).toEqual({
+      quoteId: waiting.id,
+      reason: 'suspended',
+      requestId: first.id,
+    });
+    expect(byQuote.get(alsoWaiting.id)?.payload).toEqual({
+      quoteId: alsoWaiting.id,
+      reason: 'suspended',
+      requestId: second.id,
+    });
+    expect([...(byQuote.get(waiting.id)?.audience ?? [])].sort()).toEqual(
+      [`account:${andrei}`, `garage:${garage.id}`].sort(),
+    );
+    expect([...(byQuote.get(alsoWaiting.id)?.audience ?? [])].sort()).toEqual(
+      [`account:${maria}`, `garage:${garage.id}`].sort(),
+    );
+  });
+
+  it('records none when the suspension rolls back', async () => {
+    await quotes();
+    const audit = new AuditService();
+    audit.record = () => Promise.reject(new Error('audit down'));
+
+    await expect(
+      service(outbox, audit).suspend(admin, garage.id, 'admin', REASON),
+    ).rejects.toThrow('audit down');
+
+    expect(await withdrawals()).toHaveLength(0);
+  });
+
+  it('records none for a garage with no waiting quote', async () => {
+    await service().suspend(admin, garage.id, 'admin', REASON);
+
+    expect(await withdrawals()).toHaveLength(0);
   });
 });

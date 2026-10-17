@@ -185,6 +185,8 @@ export type { QuoteRequestsControllerSend$Params as QuoteRequestsControllerSend$
 export { quoteRequestsControllerSend as quoteRequestsControllerSend } from './fn/quote-requests/quote-requests-controller-send';
 export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControllerCandidates$Params } from './fn/quote-requests/quote-requests-controller-candidates';
 export { quoteRequestsControllerCandidates as quoteRequestsControllerCandidates } from './fn/quote-requests/quote-requests-controller-candidates';
+export type { CompareControllerGet$Params as CompareControllerGet$Params } from './fn/quote-requests/compare-controller-get';
+export { compareControllerGet as compareControllerGet } from './fn/quote-requests/compare-controller-get';
 export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from './fn/quotes/quotes-controller-send';
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
 export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';
@@ -221,6 +223,10 @@ export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerU
 export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
 export type { PriceListControllerRead$Params as PriceListControllerRead$Params } from './fn/garages/price-list-controller-read';
 export { priceListControllerRead as priceListControllerRead } from './fn/garages/price-list-controller-read';
+export type { PriceListControllerSetBrandRange$Params as PriceListControllerSetBrandRange$Params } from './fn/garages/price-list-controller-set-brand-range';
+export { priceListControllerSetBrandRange as priceListControllerSetBrandRange } from './fn/garages/price-list-controller-set-brand-range';
+export type { PriceListControllerRemoveBrandRange$Params as PriceListControllerRemoveBrandRange$Params } from './fn/garages/price-list-controller-remove-brand-range';
+export { priceListControllerRemoveBrandRange as priceListControllerRemoveBrandRange } from './fn/garages/price-list-controller-remove-brand-range';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
