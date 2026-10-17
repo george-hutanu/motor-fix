@@ -72,7 +72,8 @@ type Answer<T> = T[] | Error | Promise<never>;
 interface Setup {
   cars?: Answer<CarDto>;
   requests?: Answer<RequestSummaryDto>;
-  capabilities?: string[];
+  // null: no session shown, as for a moment after signing out.
+  capabilities?: string[] | null;
   language?: 'ro' | 'en';
 }
 
@@ -102,7 +103,11 @@ async function render({
   requestsList = jest.fn(() => answer(requests));
   open = jest.fn(async () => 'cancelled');
   events = new Subject();
-  const current = signal({ capabilities, role: 'driver' } as unknown as MeDto);
+  const current = signal(
+    capabilities === null
+      ? null
+      : ({ capabilities, role: 'driver' } as unknown as MeDto),
+  );
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -372,6 +377,13 @@ describe('Service-uri salvate on Panou', () => {
     expect(control(saved, 'Caută altele')?.getAttribute('href')).toBe('/ro');
   });
 
+  it('is left out while no session is shown', async () => {
+    const { element } = await render({ capabilities: null });
+
+    expect(panel(element, 'saved')).toBeNull();
+    expect(panel(element, 'cars')).not.toBeNull();
+  });
+
   it('is left out for a driver without the saved-garages capability', async () => {
     const { element } = await render({
       capabilities: DRIVER.filter((c) => c !== 'driver.saved_garages'),
@@ -459,6 +471,9 @@ describe('the panels’ states', () => {
     expect(invitation(element, 'search')).toBeNull();
     expect(invitation(element, 'car')).toBeNull();
     expect(text(panel(element, 'cars'))).toContain(EMPTY.cars);
+    expect(
+      element.querySelector('.skeleton[aria-busy="true"]:not(mf-panel *)'),
+    ).not.toBeNull();
   });
 
   it('shows the shared error where a list could not be read, and the other panels as they are', async () => {

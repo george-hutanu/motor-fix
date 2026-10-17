@@ -271,6 +271,7 @@ describe('Mașinile mele', () => {
   it('opens the dialog with the plates already held and puts the saved car first without reading again', async () => {
     const { element, settle } = await render([
       car({ id: 'car-1', plate: 'CJ12ABC' }),
+      car({ id: 'car-0', plate: null }),
     ]);
     await settle();
     open.mockResolvedValueOnce(
@@ -294,7 +295,7 @@ describe('Mașinile mele', () => {
     });
     expect(lines(cards(element)[0])[0]).toBe('Dacia Logan');
     expect(itp(cards(element)[0]).text).toBe('ITP‑ul expiră în 2 zile');
-    expect(cards(element)).toHaveLength(2);
+    expect(cards(element)).toHaveLength(3);
     expect(list).toHaveBeenCalledTimes(1);
   });
 
@@ -790,4 +791,61 @@ describe('a car card', () => {
       expect(list).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+describe('the car menu’s arrows', () => {
+  async function menu(count: number) {
+    const { fixture } = await render();
+    const view = fixture.componentInstance as unknown as {
+      moveIn(event: KeyboardEvent): void;
+    };
+    const root = document.createElement('div');
+    const items = Array.from({ length: count }, () => {
+      const item = document.createElement('button');
+      item.setAttribute('role', 'menuitem');
+      root.append(item);
+      return item;
+    });
+    root.addEventListener('keydown', (e) => view.moveIn(e));
+    document.body.append(root);
+    const press = (key: string) => {
+      const event = new KeyboardEvent('keydown', { cancelable: true, key });
+      root.dispatchEvent(event);
+      return event;
+    };
+    return { items, press, root };
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('moves up and down one item at a time, wrapping at both ends', async () => {
+    const { items, press } = await menu(3);
+    items[1].focus();
+
+    press('ArrowUp');
+    expect(document.activeElement).toBe(items[0]);
+    press('ArrowUp');
+    expect(document.activeElement).toBe(items[2]);
+    press('ArrowDown');
+    expect(document.activeElement).toBe(items[0]);
+    press('ArrowDown');
+    expect(document.activeElement).toBe(items[1]);
+  });
+
+  it('keeps the page from scrolling on an arrow and leaves other keys alone', async () => {
+    const { items, press } = await menu(3);
+    items[1].focus();
+
+    expect(press('ArrowDown').defaultPrevented).toBe(true);
+    expect(press('Tab').defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(items[2]);
+  });
+
+  it('does nothing on an arrow in a menu with no items', async () => {
+    const { press } = await menu(0);
+
+    expect(() => press('ArrowDown')).not.toThrow();
+  });
 });

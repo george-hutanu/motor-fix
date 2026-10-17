@@ -39,6 +39,7 @@ export class CarsView implements OnInit {
   private readonly api = inject(CarsService);
   private readonly overlays = inject(Overlays);
   protected readonly cars = signal<CarDto[] | undefined>(undefined);
+  // Stryker disable next-line BooleanLiteral: load() resets it before the first render.
   protected readonly failed = signal(false);
   protected readonly grouped = groupPlate;
   private readonly i18n = inject(I18n);

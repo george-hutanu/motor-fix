@@ -91,6 +91,7 @@ export class DriverHome {
     this.filter((r) => r.status === 'done'),
   );
   protected readonly saved = computed(() =>
+    // Stryker disable next-line ArrayDeclaration: any capability but saved_garages hides the panel alike.
     allowedViews('driver', this.session.shown()?.capabilities ?? []).some(
       (view) => view.path === 'saved',
     ),
@@ -110,12 +111,10 @@ export class DriverHome {
       .subscribe(() => this.loadRequests());
   }
 
+  // Both add buttons show only once the driver is known to have no car, so no
+  // plate is taken yet.
   protected async addCar() {
-    const cars = this.cars();
-    const plates = Array.isArray(cars)
-      ? cars.flatMap((c) => c.plate ?? [])
-      : [];
-    const car = await openAddCar(this.overlays, plates);
+    const car = await openAddCar(this.overlays, []);
     if (car === 'cancelled') return;
     this.cars.update((list) => [car, ...(Array.isArray(list) ? list : [])]);
   }
