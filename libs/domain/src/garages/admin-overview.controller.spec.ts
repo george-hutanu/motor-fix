@@ -3,6 +3,10 @@ import {
   AdminOverviewController,
   observabilityUrl,
 } from './admin-overview.controller';
+import {
+  countGarages,
+  suspendedGarages,
+} from './verification/suspension/suspended-garages';
 import type { VerificationService } from './verification/verification.service';
 import type { PrismaClient } from '../generated/prisma/client';
 import {
@@ -13,6 +17,10 @@ import {
   snapshotActiveDrivers,
 } from '../insights/platform-figures';
 
+jest.mock('./verification/suspension/suspended-garages', () => ({
+  countGarages: jest.fn(),
+  suspendedGarages: jest.fn(),
+}));
 jest.mock('../insights/platform-figures', () => ({
   cities: jest.fn(),
   countPlatformFigures: jest.fn(),
@@ -281,5 +289,34 @@ describe('the observability link', () => {
 
   it('is absent when Grafana is not configured', () => {
     expect(observabilityUrl(undefined, 'production')).toBeUndefined();
+  });
+});
+
+// @traces 066-FR-001 066-FR-002
+describe('the garages reads', () => {
+  it('answers the listed and suspended counts with the one waiting count, platform-wide', async () => {
+    jest.mocked(countGarages).mockResolvedValue({ listed: 214, suspended: 2 });
+    const { countWaiting, overview } = controller(3);
+
+    await expect(overview.garagesSummary()).resolves.toEqual({
+      listed: 214,
+      suspended: 2,
+      waiting: 3,
+    });
+    expect(countWaiting).toHaveBeenCalledWith(prisma);
+  });
+
+  it('reads the first 20 suspended garages by default, and the page asked for', async () => {
+    const page = { items: [], total: 0 };
+    jest.mocked(suspendedGarages).mockResolvedValue(page);
+    const { overview } = controller(0);
+
+    await expect(overview.garages({ status: 'suspended' })).resolves.toBe(page);
+    await overview.garages({ limit: 40, offset: 200, status: 'suspended' });
+
+    expect(jest.mocked(suspendedGarages).mock.calls).toEqual([
+      [prisma, { limit: 20, offset: 0 }],
+      [prisma, { limit: 40, offset: 200 }],
+    ]);
   });
 });

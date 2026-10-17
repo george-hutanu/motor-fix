@@ -247,6 +247,14 @@ describe('the panel', () => {
     expect(text(el.querySelector('h2'))).toBe('Service‑uri de verificat · 4');
   });
 
+  it('keeps the count on the line of the name at 320 px', async () => {
+    const el = await open();
+
+    expect(el.querySelector('h2')?.textContent).toContain(
+      'verificat\u00a0·\u00a04',
+    );
+  });
+
   it('on the overview shows the 5 oldest and a link to the whole list', async () => {
     answer = async ({ limit = 20 }) => queueOf(Math.min(limit, 7), 7);
     const el = await open({ overview: true });

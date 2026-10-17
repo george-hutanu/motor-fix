@@ -59,6 +59,7 @@ export * from './request-status';
 export * from './saved-garages.dto';
 export * from './search-place';
 export * from './staff-invite.dto';
+export * from './suspended-garages';
 export * from './verification-checks';
 export * from './verification-file.dto';
 export * from './verification-queue';
