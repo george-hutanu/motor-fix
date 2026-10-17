@@ -33,6 +33,7 @@ import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { type Place, PlaceStore } from '../../home/place/place-store';
 import { httpStatus } from '../../http-status';
 import { followPublicView, PublicLive } from '../live';
+import { SavedGarages } from '../saved-garages/saved-garages';
 
 // A link from a saved car names the brand by its id; every other one by slug.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -82,6 +83,7 @@ export class Results {
   private readonly announcer = inject(LiveAnnouncer);
   private readonly reduced = inject(REDUCED_MOTION);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly saved = inject(SavedGarages);
   protected readonly i18n = inject(I18n);
 
   private readonly bar = toSignal(this.route.queryParamMap, {
@@ -216,6 +218,8 @@ export class Results {
 
   constructor() {
     if (this.server) return;
+    // Which garages a driver saved, for the cards' bookmarks.
+    void this.saved.load();
     // The kept place goes into the bar, so the link shared opens this search.
     effect(() => {
       const kept = this.store.place();
