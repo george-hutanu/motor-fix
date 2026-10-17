@@ -3,6 +3,7 @@ import {
   queueLamp,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TARGET_WORKING_DAYS,
+  type VerificationQueueAreaDto,
   type VerificationQueueDto,
   type VerificationQueueRowDto,
 } from '@motor-fix/contracts';
@@ -180,7 +181,9 @@ export class VerificationService {
   ) {
     trust(actor);
     const before = await this.file(tx, fileId);
-    if (before.status === 'in_review') return openedFirst(actor, before);
+    // Only a waiting file moves; any other is answered as it stands, so a
+    // decided file opens read-only.
+    if (before.status !== 'submitted') return openedFirst(actor, before);
     const openedAt = new Date();
     let file: VerificationFile;
     try {
@@ -196,7 +199,12 @@ export class VerificationService {
       throw error;
     }
     await this.announce(tx, file, 'verification.opened');
-    return { byAnother: false, openedAt, openedBy: actor.accountId };
+    return {
+      byAnother: false,
+      first: true,
+      openedAt,
+      openedBy: actor.accountId,
+    };
   }
 
   // An approval publishes the garage, a reopened file's included; any other
@@ -457,6 +465,17 @@ type QueueFile = Prisma.VerificationFileGetPayload<{
   };
 }>;
 
+// Where a garage works: a mobile mechanic's radius, else its town.
+export function garageArea(garage: {
+  businessKind: string | null;
+  cityName: string | null;
+  serviceRadiusKm: number | null;
+}): VerificationQueueAreaDto | undefined {
+  if (garage.businessKind === 'mobile' && garage.serviceRadiusKm !== null)
+    return { kind: 'mobile', radiusKm: garage.serviceRadiusKm };
+  return garage.cityName ? { kind: 'town', name: garage.cityName } : undefined;
+}
+
 const isoDay = (day: Date) => day.toISOString().slice(0, 10);
 
 function queueRow(
@@ -466,12 +485,7 @@ function queueRow(
 ): VerificationQueueRowDto {
   const workingDays = workingDaysWaited(submittedAt, now, holidays);
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
-  const area =
-    garage.businessKind === 'mobile' && garage.serviceRadiusKm !== null
-      ? { kind: 'mobile' as const, radiusKm: garage.serviceRadiusKm }
-      : garage.cityName
-        ? { kind: 'town' as const, name: garage.cityName }
-        : undefined;
+  const area = garageArea(garage);
   const team = garage.features[0]?.enabled !== false;
   return {
     ...(area && { area }),
@@ -520,9 +534,11 @@ function reasonOf(decision: Decision) {
   return decision.reason;
 }
 
+// An open that moved nothing: the file was opened before, by this admin or another.
 function openedFirst(actor: VerificationActor, file: VerificationFile) {
   return {
     byAnother: file.openedBy !== actor.accountId,
+    first: false,
     openedAt: file.openedAt,
     openedBy: file.openedBy,
   };

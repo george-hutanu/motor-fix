@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 123,
+    "count": 127,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -157,6 +157,19 @@
       ],
       "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile; profile-views has its own final-failure alert, since its counters expire two days after their day",
       "story": "ST-881"
+    },
+    {
+      "kind": "queue",
+      "name": "status-checks",
+      "source": "libs/domain/src/status/status.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one job every 30 seconds probes the admin dashboard's six service tiles and stores them in status_tile, counted by motorfix_jobs_total{job_name,outcome} and logged once on its final failure; a confirmed tile change logs 'StatusChecks <tile> <state> <figures>' and writes status_tile.changed; a failed run is not retried, the next one follows in 30 seconds; the tiles' own alerting is a later story",
+      "story": "ST-294"
     },
     {
       "kind": "queue",
@@ -327,7 +340,8 @@
         "api-error-rate",
         "api-latency"
       ],
-      "story": "ST-881"
+      "story": "ST-881",
+      "reason": "the app's object store; the worker's status checks also list the nightly backup bucket with their own client (libs/domain/src/status/probes/probes.ts, BACKUP_S3_*, ST-294), a failed listing showing the backup tile red with its reason"
     },
     {
       "kind": "outside-service",
@@ -378,6 +392,18 @@
       ],
       "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}",
       "story": "ST-111"
+    },
+    {
+      "kind": "outside-service",
+      "name": "public-web",
+      "source": "libs/domain/src/status/probes/probes.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-jobs-failed",
+        "worker-saturation"
+      ],
+      "reason": "the status checks call the public web address every 30 seconds (/health/ready, the popular brands and one garage search without the log flag), timed on the Outside calls row (http_client_request_duration_seconds by server_address); a failed probe shows its tile red, the tiles' own alerting is a later story",
+      "story": "ST-294"
     },
     {
       "kind": "outside-service",
@@ -854,6 +880,30 @@
     },
     {
       "kind": "endpoint",
+      "name": "admin-garages-summary",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages/summary",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-66"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-garages",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-66"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-verification-documents",
       "source": "libs/domain/src/garages/documents/legal-documents/legal-documents.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/documents/:documentId/pages/:n/download-url",
@@ -864,6 +914,32 @@
       ],
       "reason": "each issued address writes one open entry in the history and counts motorfix_documents_opened_total",
       "story": "ST-206"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-read",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read with no writes; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-302"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-open",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/open",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the first opening logs one line (file, admin) and emits verification.opened; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-302"
     },
     {
       "kind": "product-counter",

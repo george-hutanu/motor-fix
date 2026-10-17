@@ -46,7 +46,7 @@
         <button type="button" class="retry more" (click)="showMore()">{{ 'admin.queue.more' | t }}</button>
       }
       @if (all()) {
-        <a class="all" routerLink="/app/admin/garages">{{ 'admin.queue.all' | t }}</a>
+        <a class="all" [routerLink]="list">{{ 'admin.queue.all' | t }}</a>
       }
     }
   }

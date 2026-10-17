@@ -15,6 +15,7 @@ features:
   - 250-launch-analytics-events
   - 301-verification-queue
   - 103-demand-brands-jobs
+  - 066-suspended-garages
 ---
 
 # Capability: Admin dashboard
@@ -574,6 +575,22 @@ _From 103-demand-brands-jobs._
 ### 103-FR-013 — Accessibility: the "Vezi toate" / "Arată mai puține" buttons are native buttons reachable and operable by keyboard, in the page's tab order after their chart, and carry `aria-expanded` for the list they reveal; each retry button is a native button; each chart keeps the shared chart's text alternative (its summary line and the "Vezi ca tabel" table, so no figure is conveyed by bar length or colour alone); bar colours meet the shared chart's contrast in light and dark; after a retry press focus stays on the control that was pressed or moves to the redrawn panel's heading, never to the page top; loading and error changes are announced through the shared chart's live region. A brand or job name too long for its label at 320 px wraps or is truncated with the full name in the tooltip and the table, never widening the page.
 
 _From 103-demand-brands-jobs._
+
+### 066-FR-006 — The admin "Service-uri" view MUST show the counts line as the body's first line, directly under the view header, before the queue: "{listed} listate · {waiting} de verificat · {suspended} suspendat" ("{listed} listed · {waiting} to verify · {suspended} suspended"), the Romanian forms "1 listat / 2 listate / 21 de listate", "1 suspendat / 2 suspendate / 21 de suspendate" and the invariant "de verificat", with the numbers in the admin's language; while the summary read is on its way the line MUST show a skeleton, and when it fails (first read or a re-read) it MUST read "—" with the info tip "Cifrele nu au putut fi citite" / "The figures could not be read", as the "Utilizatori" totals line does (001-FR-006, 161-FR-007), never 0 and never the last number. The waiting figure MUST equal the queue panel's, the menu's and the header's platform-wide count (301-FR-006). The overview and the other views show no such line.
+
+_From 066-suspended-garages._
+
+### 066-FR-007 — The "Service-uri" view MUST show, under the queue, the panel "Service-uri suspendate · {n}" / "Suspended garages · {n}" with every suspended garage, 20 at a time with the button "Mai multe" / "More" for the next 20 (one read of every row shown, as the queue reads), read in reads of at most 200 rows as the queue's are; the heading's {n} is the list read's `total`; each row MUST show a red lamp whose text alternative is the state, the name, the area, the state of FR-004 ("suspendat" alone for a garage with no open suspension), the reason as a second line (none without a suspension), "din {date}" / "since {date}" with the date in the admin's language and Europe/Bucharest ("din 12 sept. 2026" / "since 12 Sep 2026"), "{n} programări anulate" / "{n} bookings cancelled" (singular "1 programare anulată" / "1 booking cancelled") and the button "Deschide dosarul" / "Open the file" (text alternative "Deschide dosarul {name}"), linking to the garage's newest verification file where the queue's button links (`/app/admin/garages/{file id}`), and absent when the garage has no file; with no suspended garage it MUST read "Niciun service suspendat" / "No garage is suspended"; while the read is on its way it MUST show skeleton rows; when it fails, "Lista nu a putut fi citită" / "The list could not be read" with "Reîncearcă" / "Retry"; a failed re-read keeps the rows with the heading marked "(neactualizat)" / "(stale)", as the queue does (301-FR-008). The button "Repune pe hartă" is #106's and is not shown.
+
+_From 066-suspended-garages._
+
+### 066-FR-008 — The counts line and the panel MUST re-read on `garage.suspended`, `garage.restored`, `verification.submitted`, `verification.opened`, `verification.check_recorded`, `verification.decided` and `verification.reopened` from the admin's stream, through the dashboards' shared live re-read (one re-read per 300 ms burst), and on every reconnect, the panel's re-read asking from offset 0 for as many rows as are loaded (at least one page); the admin shell's re-read list (160-FR-012) is unchanged.
+
+_From 066-suspended-garages._
+
+### 066-FR-009 — Every new text MUST exist in the shared i18n files in Romanian and English; the reason and the garage name MUST never be rendered as markup; the line and the panel MUST read at 320 px, 390 px, tablet and desktop, in light and dark, with no sideways scroll; the suspended state MUST be conveyed by text, not by the lamp's colour alone; every row's button MUST be reachable and operable by keyboard, in the reading order line, queue, suspended panel, with the queue's touch-target size and focus ring and its announcement behaviour for live changes (no new live region); switching the language re-renders every text, number and date without a reload.
+
+_From 066-suspended-garages._
 
 ## Retired
 

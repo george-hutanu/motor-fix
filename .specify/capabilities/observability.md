@@ -25,6 +25,7 @@ features:
   - 1175-valkey
   - 1169-prefetch-intent
   - 1235-unknown-brand-cache
+  - 294-status-health-checks
   - 880-grafana-alerts
   - 1345-staging-observability
 ---
@@ -579,6 +580,53 @@ _From 1169-prefetch-intent._
 
 _From 1235-unknown-brand-cache._
 
+### 294-FR-001 — The worker MUST run a `status-checks` job every 30 seconds as a repeatable job on a `status-checks` queue, started at boot only when the `STATUS_THRESHOLDS` configuration is present and valid; absent or invalid, the job MUST NOT start and one log line MUST name the setting. Nobody triggers the job by hand, and no API route starts it.
+
+_From 294-status-health-checks._
+
+### 294-FR-002 — Each run MUST probe the six tiles `api`, `search`, `maps`, `email`, `notifications` and `backup` independently: a probe that throws or exceeds the 10-second probe timeout is a failed check for its tile and MUST NOT stop the run or the other probes.
+
+_From 294-status-health-checks._
+
+### 294-FR-003 — The probes MUST measure: `api` — the response time of `GET {PUBLIC_WEB_URL}/health/ready`, the web edge's readiness check, which is ready only while the API's is and so pings PostgreSQL, Redis and the object store, a non-200 answer being a failed check; `search` — the response time of one fixed garage search on the public address (the first popular brand, Bucharest centre) sent without the `log` flag, so no SEARCH_LOG row is written; `maps` — the response time of one geocoding call to the map provider, made on every other run (every 60 seconds, and on the first run, when the tile has no row) so the probe stays well inside the provider's free daily quota; on the runs between, the tile keeps its last check; `email` — the response time of the e-mail provider's account check (an answer other than success is a failed check), and the share of `failed` e-mail NOTIFICATION rows among those `sent` or `failed` created in the last 15 minutes; `notifications` — the age of the oldest waiting job in the `notifications` queue, and the share of `failed` push, SMS and WhatsApp NOTIFICATION rows among those `sent` or `failed` created in the last 15 minutes; `backup` — the last-modified time of the newest `<environment>/…manifest.json` key in the backup bucket (the manifest is uploaded only after the dump), with the bucket's read settings on the worker.
+
+_From 294-status-health-checks._
+
+### 294-FR-004 — Each probe's latency sample MUST be kept in Redis under `status:samples:{tile}` for 10 minutes, and the figure a tile is judged on (and shows as `detail.latency_ms`) MUST be the median of that tile's samples of the last 5 minutes; a failed check adds no sample. Redis holds samples only; PostgreSQL holds the state.
+
+_From 294-status-health-checks._
+
+### 294-FR-005 — `STATUS_THRESHOLDS` MUST be one JSON configuration value with, per tile, its amber and red limits in the tile's unit: milliseconds (`amber_ms`, `red_ms`) for `api`, `search` and `maps`; `amber_ms`/`red_ms` and a failed-send share (`amber_share`, `red_share`, 0–1) for `email`; a waiting-job age in seconds (`amber_age_s`, `red_age_s`) and a failed-send share for `notifications`; hours since the last backup (`amber_h`, `red_h`) for `backup`. No limit is hard-coded in the product code; `.env.example` MUST carry the build team's default value in full, tests MUST use fixture values, and no admin screen, API route or platform rule reads or writes it.
+
+_From 294-status-health-checks._
+
+### 294-FR-006 — A check's state MUST be `green` when every figure of the tile is under its amber limit, `amber` when any figure is at or over its amber limit and none at or over its red limit, and `red` when any figure is at or over its red limit or the check failed.
+
+_From 294-status-health-checks._
+
+### 294-FR-007 — The stored state of a tile MUST change only when two consecutive checks agree on the same new state; one differing check changes nothing. "Consecutive checks" are a tile's consecutive probes: the maps tile's are 60 seconds apart, the others' 30. The differing check's state and time are kept on the row (`pending_state`, `pending_since`) until the next check confirms or drops them. On a change, `since` MUST be set to the time of the first of those two checks. When the state does not change, `checked_at` and `detail` MUST still be updated on every run.
+
+_From 294-status-health-checks._
+
+### 294-FR-008 — STATUS_TILE MUST hold one row per tile: `key` (the tile), `state` (`green`, `amber`, `red`), `since`, `detail` (JSON: `latency_ms`, `failed_share`, `oldest_waiting_s`, `last_backup_at`, `reason`, as apply), `checked_at`, and the unconfirmed check's `pending_state` and `pending_since` (null when the last check agreed with `state`). The first run after the release MUST create the six rows with that run's state and `since`, and write `status_tile.changed` for each.
+
+_From 294-status-health-checks._
+
+### 294-FR-009 — On every state change the system MUST hand `status_tile.changed` with `{ tile, state, since }` to the event port in the same transaction as the STATUS_TILE write, and MUST NOT write it when the state is unchanged. Its audience MUST be the `admin` channel alone (the platform subject, admin only); nobody is notified by this story (the alert is #170).
+
+_From 294-status-health-checks._
+
+### 294-FR-010 — The six tiles' results MUST be independent: a provider that is down (Brevo, the map provider, the backup bucket) changes only its own tile; the worker's restart keeps every tile's last state.
+
+_From 294-status-health-checks._
+
+### 294-FR-011 — The job MUST be observable as the worker's other jobs are: counted by the jobs metric with its outcome, logged once on its final failure, listed in `infra/observability/inventory.json` with the queue, the two new outside calls (the backup bucket listing and the public-address probes) and the alert for a failed job; the dashboard panel and alert follow the existing worker-jobs ones.
+
+_From 294-status-health-checks._
+
+### 294-FR-012 — Tests MUST exist before the implementation and MUST cover: the two-in-a-row rule and `since` set on the first check of the new state; the 5-minute median (one sample, several, a sample older than 5 minutes left out); each tile's probe result mapped to green, amber and red with fixture limits, including a failed check and a figure exactly at a limit; the search probe writing no SEARCH_LOG row; `status_tile.changed` written in the same transaction as the tile change and only on a change, with the `admin` audience; a probe that throws not stopping the run; the job not starting on an unset or invalid `STATUS_THRESHOLDS`; the first run creating six rows; the maps probe on alternate runs and on the first; the share figure with no sends in the window. No end-to-end test in this task (#53 runs it).
+
+_From 294-status-health-checks._
 ### 880-FR-001 — Every rule in every file under `infra/observability/alerts/` MUST carry an `annotations.runbook` line: one non-empty sentence naming what to check first (the panel, log or job to open), next to `summary`. `scripts/alert-rules.spec.ts` MUST fail a rule without one.
 
 _From 880-grafana-alerts._

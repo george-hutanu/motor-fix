@@ -1,4 +1,7 @@
 import {
+  AdminGaragesDto,
+  AdminGaragesQueryDto,
+  AdminGaragesSummaryDto,
   AdminGrowthDto,
   AdminGrowthQueryDto,
   AdminOverviewDto,
@@ -24,6 +27,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import {
+  countGarages,
+  suspendedGarages,
+} from './verification/suspension/suspended-garages';
 import { VerificationService } from './verification/verification.service';
 import { Requires } from '../auth/actor.guard';
 import { PRISMA } from '../auth/prisma';
@@ -125,6 +132,35 @@ export class AdminOverviewController {
     { limit = VERIFICATION_QUEUE_PAGE, offset = 0 }: VerificationQueueQueryDto,
   ): Promise<VerificationQueueDto> {
     return this.verification.queue(this.prisma, { limit, offset }, new Date());
+  }
+
+  // The counts line of the garages view, platform-wide; reading is not logged.
+  @Get('garages/summary')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: AdminGaragesSummaryDto })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin' })
+  async garagesSummary(): Promise<AdminGaragesSummaryDto> {
+    const [counts, waiting] = await Promise.all([
+      countGarages(this.prisma),
+      this.verification.countWaiting(this.prisma),
+    ]);
+    return { ...counts, waiting };
+  }
+
+  // The garages of one status; reading is not logged.
+  @Get('garages')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: AdminGaragesDto })
+  @ApiBadRequestResponse({
+    description:
+      'validation_failed: a missing or unknown status, an offset or a limit out of range',
+  })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin' })
+  garages(
+    @Query()
+    { limit = VERIFICATION_QUEUE_PAGE, offset = 0 }: AdminGaragesQueryDto,
+  ): Promise<AdminGaragesDto> {
+    return suspendedGarages(this.prisma, { limit, offset });
   }
 
   @Get('growth')

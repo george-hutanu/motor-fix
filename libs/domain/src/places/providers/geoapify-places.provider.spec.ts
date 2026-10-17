@@ -50,6 +50,17 @@ describe('the Geoapify address search', () => {
     expect(fetch.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it('cancels the request when the caller gives up', async () => {
+    const fetch = answer({ results: [] });
+    const caller = new AbortController();
+
+    await new GeoapifyPlaces(KEY, fetch).search('Strada', 'ro', caller.signal);
+    const sent = fetch.mock.calls[0][1]?.signal;
+    expect(sent?.aborted).toBe(false);
+    caller.abort();
+    expect(sent?.aborted).toBe(true);
+  });
+
   it('turns the answer into label, latitude and longitude', async () => {
     const fetch = answer({
       results: [

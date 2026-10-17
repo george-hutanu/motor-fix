@@ -183,6 +183,7 @@ describe('each role in the list', () => {
       id,
       name: 'Andrei',
       roles: ['driver'],
+      serviceSuspended: false,
       since: daysAgo(200).toISOString(),
       status: 'active',
     });
@@ -317,12 +318,67 @@ describe('each role in the list', () => {
       'id',
       'name',
       'roles',
+      'serviceSuspended',
       'since',
       'status',
     ]);
     for (const secret of [email, phone, 'B123ABC']) {
       expect(text).not.toContain(secret);
     }
+  });
+});
+
+describe('the mark on the mechanics of a suspended garage', () => {
+  // @traces 066-FR-012
+  const staffed = async (status: 'approved' | 'suspended') => {
+    const { id: garageId } = await garage(`Service ${status}`, 'approved');
+    if (status === 'suspended') {
+      await prisma.garage.update({
+        data: { status: 'suspended' },
+        where: { id: garageId },
+      });
+    }
+    return garageId;
+  };
+  const mechanicAt = async (garageId: string) => {
+    const id = await person('Costel', ['mechanic'], daysAgo(30));
+    await prisma.mechanic.create({
+      data: { accountId: id, garageId, name: 'Costel' },
+    });
+    return id;
+  };
+
+  it('marks a mechanic whose garage is suspended', async () => {
+    const id = await mechanicAt(await staffed('suspended'));
+
+    expect((await itemOf(id))?.serviceSuspended).toBe(true);
+  });
+
+  it('leaves a mechanic of a listed garage unmarked', async () => {
+    const id = await mechanicAt(await staffed('approved'));
+
+    expect((await itemOf(id))?.serviceSuspended).toBe(false);
+  });
+
+  it('leaves the owner of a suspended garage unmarked, holding no mechanic card', async () => {
+    const garageId = await staffed('suspended');
+    const id = await person('Mihai', ['garage'], daysAgo(30));
+    await prisma.garageMember.create({
+      data: { accountId: id, garageId, role: 'owner' },
+    });
+
+    expect((await itemOf(id))?.serviceSuspended).toBe(false);
+  });
+
+  it('drops the mark once the garage is back on the map', async () => {
+    const garageId = await staffed('suspended');
+    const id = await mechanicAt(garageId);
+    await prisma.garage.update({
+      data: { status: 'approved' },
+      where: { id: garageId },
+    });
+
+    expect((await itemOf(id))?.serviceSuspended).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 import { CheckSummaryDto, type Lamp } from './verification-checks';
@@ -7,6 +7,15 @@ import {
   VERIFICATION_QUEUE_MAX,
   VERIFICATION_QUEUE_PAGE,
 } from './verification-target';
+
+// A query number is digits only: an empty, blank or hex `?offset=` is
+// malformed, never read as 0 or 16.
+export const toQueryNumber = ({ value }: { value: unknown }) =>
+  typeof value === 'string'
+    ? /^\d+$/.test(value)
+      ? Number(value)
+      : Number.NaN
+    : value;
 
 export class VerificationQueueQueryDto {
   @ApiPropertyOptional({
@@ -16,7 +25,7 @@ export class VerificationQueueQueryDto {
     type: 'integer',
   })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toQueryNumber)
   @IsInt()
   @Min(0)
   @Max(10_000)
@@ -30,7 +39,7 @@ export class VerificationQueueQueryDto {
     type: 'integer',
   })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toQueryNumber)
   @IsInt()
   @Min(1)
   @Max(VERIFICATION_QUEUE_MAX)

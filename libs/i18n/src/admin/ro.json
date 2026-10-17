@@ -10,6 +10,147 @@
     "jobs": "Cereri pe lucrare, 30 de zile",
     "subtitle": "Ce au cerut șoferii în ultimele 30 de zile"
   },
+  "file": {
+    "checks": {
+      "activities": "Activități",
+      "address": "Adresă",
+      "caen": "Cod CAEN",
+      "company": "Firmă",
+      "documents": "Documente",
+      "photos": "Fotografii",
+      "rar": "Autorizație RAR",
+      "representative": "Telefon"
+    },
+    "cui": "CUI {cui}",
+    "documents": {
+      "ago": {
+        "few": "emis acum {n} zile",
+        "one": "emis acum {n} zi",
+        "other": "emis acum {n} de zile"
+      },
+      "failed": "Nu am putut deschide documentul",
+      "heading": "DOCUMENTE",
+      "missing": "lipsește",
+      "noDate": "Data emiterii lipsește",
+      "open": "Deschide",
+      "openNamed": "Deschide {document}",
+      "openPage": "Deschide pagina {n}",
+      "openPageNamed": "Deschide {document}, pagina {n}",
+      "pages": {
+        "few": "{n} pagini",
+        "one": "{n} pagină",
+        "other": "{n} de pagini"
+      },
+      "stale": "Mai vechi de 30 de zile la data trimiterii",
+      "today": "emis azi",
+      "unavailable": "indisponibil",
+      "yesterday": "emis ieri"
+    },
+    "failed": "Nu am putut deschide dosarul",
+    "footer": {
+      "approve": "Aprobă și publică",
+      "ask": "Cere completări",
+      "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
+      "reason": "Motiv: {reason}",
+      "reject": "Respinge"
+    },
+    "history": {
+      "empty": "Nimic de arătat încă",
+      "heading": "ISTORIC",
+      "more": "și încă {n}"
+    },
+    "kinds": {
+      "company": "Societate",
+      "ii": "Întreprindere individuală",
+      "mobile": "Mecanic mobil",
+      "pfa": "PFA"
+    },
+    "lines": {
+      "approved": "Aprobat de {name}, {when}",
+      "changed": "Modificat de {name}, {when}",
+      "check": "{check}: {result} — {name}, {when}",
+      "more_requested": "Completări cerute de {name}, {when}",
+      "opened": "Deschis de {name}, {when}",
+      "page": "{document}, pagina {n} deschisă de {name}, {when}",
+      "rejected": "Respins de {name}, {when}",
+      "reopened": "Redeschis de {name}, {when}",
+      "reopenedWhy": "Redeschis de {name}, {when} ({reason})",
+      "resent": "Retrimis de {name}, {when}",
+      "sent": "Trimis de {name}, {when}"
+    },
+    "loading": "Se deschide dosarul",
+    "manual": {
+      "address": "Adresa din documente e cea de pe profil",
+      "addressMobile": "Adresa din documente e sediul social de pe profil",
+      "documents": "Documentele sunt complete și lizibile",
+      "heading": "VERIFICĂRI MANUALE",
+      "missingDocument": "Lipsește un document",
+      "photos": "Fotografiile sunt ale atelierului",
+      "photosMobile": "Fotografiile arată duba sau trusa mobilă și sculele principale",
+      "problem": "Marchează o problemă",
+      "problemNamed": "Marchează o problemă: {check}",
+      "representative": "Telefon confirmat prin apel",
+      "saveFailed": "Nu am putut salva verificarea"
+    },
+    "noReason": "fără motiv",
+    "photo": "Fotografia {n}, deschisă în mărime mare",
+    "problem": {
+      "cancel": "Renunță",
+      "choice": "Cât de grav e",
+      "detail": "Ce ai găsit",
+      "detailHint": "1–200 caractere. Ceilalți administratori îl văd.",
+      "failed": "Problemă",
+      "save": "Salvează",
+      "title": "Marchează o problemă",
+      "warning": "Avertisment"
+    },
+    "reasons": {
+      "address": "Adresă",
+      "documents": "Documente",
+      "other": "Alt motiv",
+      "photos": "Fotografii",
+      "rar": "Autorizație RAR"
+    },
+    "recorded": "{name}, {when}",
+    "register": {
+      "activities": "Activități autorizate",
+      "caen": "Cod CAEN 4520",
+      "company": "Firmă (ANAF, ONRC)",
+      "heading": "VERIFICĂRI ÎN REGISTRE",
+      "rar": "Autorizație RAR"
+    },
+    "rejectedBefore": "Respins anterior: {reason}, {when}",
+    "reopenedReport": "Redeschis după un raport, {when}",
+    "report": "{text} · {when}",
+    "reported": "Raportat",
+    "results": {
+      "failed": "problemă",
+      "not_run": "neverificat",
+      "ok": "în regulă",
+      "warning": "avertisment"
+    },
+    "retry": "Reîncearcă",
+    "seat": "Sediu social: {seat} · rază {km} km",
+    "title": "Dosar de verificare"
+  },
+  "garages": {
+    "listed": {
+      "few": "{n} listate",
+      "one": "{n} listat",
+      "other": "{n} de listate"
+    },
+    "loading": "Se încarcă cifrele service‑urilor",
+    "suspended": {
+      "few": "{n} suspendate",
+      "one": "{n} suspendat",
+      "other": "{n} de suspendate"
+    },
+    "waiting": {
+      "few": "{n} de verificat",
+      "one": "{n} de verificat",
+      "other": "{n} de verificat"
+    }
+  },
   "growth": {
     "title": "Creștere, ultimele 12 luni"
   },
@@ -105,6 +246,30 @@
       "one": "așteaptă de {n} zi lucrătoare",
       "other": "așteaptă de {n} de zile lucrătoare"
     }
+  },
+  "suspended": {
+    "alone": "suspendat",
+    "cancelled": {
+      "few": "{n} programări anulate",
+      "one": "{n} programare anulată",
+      "other": "{n} de programări anulate"
+    },
+    "cause": {
+      "admin": "decizia unui administrator",
+      "documents_overdue": "documente anuale neîncărcate",
+      "report_confirmed": "sesizare confirmată"
+    },
+    "empty": "Niciun service suspendat",
+    "heading": "Service‑uri suspendate",
+    "loading": "Se încarcă service‑urile suspendate",
+    "rar": {
+      "expired": "autorizație RAR expirată",
+      "none": "autorizație RAR nevalidă",
+      "suspended": "autorizație RAR suspendată",
+      "withdrawn": "autorizație RAR retrasă"
+    },
+    "since": "din {date}",
+    "state": "suspendat · {text}"
   },
   "users": {
     "cars": {

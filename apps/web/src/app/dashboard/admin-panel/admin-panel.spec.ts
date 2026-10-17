@@ -495,7 +495,7 @@ describe('AdminPanel', () => {
 
     const queue = element.querySelector('mf-admin-panel mf-admin-queue');
     expect(queue?.querySelector('h2')?.textContent?.trim()).toBe(
-      'Service‑uri de verificat · 0',
+      'Service‑uri de verificat\u00a0·\u00a00',
     );
     expect(queue?.querySelector('.empty')?.textContent?.trim()).toBe(
       'Niciun service nu așteaptă verificarea',

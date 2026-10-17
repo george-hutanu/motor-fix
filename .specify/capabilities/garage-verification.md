@@ -9,6 +9,8 @@ features:
   - 206-documents-declaration
   - 049-garage-suspension
   - 301-verification-queue
+  - 066-suspended-garages
+  - 302-garage-verification-file
 ---
 
 # Capability: Garage verification
@@ -21,9 +23,9 @@ How MotorFix keeps a garage hidden from drivers until an admin approves it: the 
 
 _From 207-garage-approval-flow._
 
-### 207-FR-002 — The system MUST allow exactly these file transitions and refuse every other with 409 `verification_transition_refused`, whose detail names the current status and who set it ("already decided by {first name}"): `submitted` → `in_review` (an admin opens; sets `opened_by`, `opened_at`; an open of a file already `in_review` is not a transition: it succeeds unchanged, writes no history and no outbox row, and returns the current `opened_by` and `opened_at`); `submitted` or `in_review` → `approved`, `more_requested` or `rejected` (an admin decides; sets `decided_by`, `decided_at`, and the reason code and note, required for `more_requested` and `rejected`); `more_requested` → `submitted` (the garage sends again); `approved`, `rejected` or `more_requested` → `in_review` (an admin reopens the garage's newest file only; an older file, or any file while another file of the garage is `submitted`, `in_review` or `approved`, is refused with the same 409, so the one-live-file rule of FR-004 holds; sets `reopened_by`, `reopened_at`). Two concurrent transitions on one file MUST end with exactly one committed.
+### 302-FR-002 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/open`, which runs the existing open use case (207-FR-002) for the signed-in admin and answers the same body as FR-001: a `submitted` file becomes `in_review` with `opened_by` and `opened_at`, one audit entry and one `verification.opened` outbox row in the same transaction; a file already `in_review` is answered unchanged with no entry and no row; every status other than `submitted` (`in_review`, decided, `more_requested`) is answered unchanged with no transition, no entry and no row, which changes the existing use case so it no longer refuses a decided file with 409 (modifies 207-FR-002), so the drawer opens read-only; an unknown id and every non-admin get 404.
 
-_From 207-garage-approval-flow._
+_From 302-garage-verification-file._
 
 ### 207-FR-003 — The garage's status MUST move `draft` → `approved` only through a file approval, in the same transaction; an approval of a reopened file keeps `approved` and resets `approved_at`; no other transition of this story changes the garage's status (`approved` ↔ `suspended` belongs to MF-59). A rejection, a "more requested" or a reopening of an approved garage's file MUST leave the garage `approved`.
 
@@ -69,9 +71,9 @@ _From 300-verification-checks._
 
 _From 300-verification-checks._
 
-### 300-FR-003 — An admin MUST be able to record one check of a file by kind with a result and a detail; the save sets `recorded_by` and `recorded_at`, replaces the stored detail with the one sent (none sent leaves it empty), and the last save wins; the audit entry's old values are those the save replaced, read under a row lock so two concurrent saves each record the other's value as old.
+### 302-FR-007 — Ticking MUST record the kind `ok` with no detail through the existing record call (300-FR-003) at once, with no confirmation; unticking MUST record `not_run` with no detail, which the record call MUST now accept (`not_run` joins its recorded results, with no detail and no activities; modifies 300-FR-003 and 300-FR-010). "Marchează o problemă" MUST open a small task (`dialog` shape) with the choice "Avertisment" / "Warning" or "Problemă" / "Failure" and a required detail field of 1 to 200 characters, whose save records `warning` or `failed` with the detail and closes; the row then shows the lamp and the detail and the checkbox is unchecked. The drawer MUST show the saved state only from the server's answer: on a failure the control reverts to the last answer and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` it re-reads the file (FR-001) and turns read-only. Every tick's audit entry and event are the record call's (300-FR-006, FR-007); this story writes none of its own.
 
-_From 300-verification-checks._
+_From 302-garage-verification-file._
 
 ### 300-FR-004 — Recording the `activities` kind MUST also take the list of RAR activity codes on the garage's authorisation — required (possibly empty) when the result is `ok`, optional otherwise, an omitted list leaving the garage's list unchanged — validate each against the RAR activity catalogue, and store the list on the garage (`rar_activities`) in the same transaction as the check.
 
@@ -97,9 +99,9 @@ _From 300-verification-checks._
 
 _From 300-verification-checks._
 
-### 300-FR-010 — A record MUST be refused with 422 for an unknown kind; 400 `validation_failed` for a missing detail on `warning` or `failed`, a detail over 200 characters, an unknown activity code, or an activities list on any kind but `activities`; 409 "Dosarul e deja decis" when the file is approved, rejected or has more requested, unless it was reopened into review.
+### 302-FR-007 — Ticking MUST record the kind `ok` with no detail through the existing record call (300-FR-003) at once, with no confirmation; unticking MUST record `not_run` with no detail, which the record call MUST now accept (`not_run` joins its recorded results, with no detail and no activities; modifies 300-FR-003 and 300-FR-010). "Marchează o problemă" MUST open a small task (`dialog` shape) with the choice "Avertisment" / "Warning" or "Problemă" / "Failure" and a required detail field of 1 to 200 characters, whose save records `warning` or `failed` with the detail and closes; the row then shows the lamp and the detail and the checkbox is unchecked. The drawer MUST show the saved state only from the server's answer: on a failure the control reverts to the last answer and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` it re-reads the file (FR-001) and turns read-only. Every tick's audit entry and event are the record call's (300-FR-006, FR-007); this story writes none of its own.
 
-_From 300-verification-checks._
+_From 302-garage-verification-file._
 
 ### 300-FR-011 — Only a MotorFix admin may record a check; anyone else gets 404, as on the other admin routes.
 
@@ -208,9 +210,9 @@ _From 301-verification-queue._
 
 _From 301-verification-queue._
 
-### 301-FR-005 — The admin overview MUST show the panel "Service-uri de verificat" / "Garages to verify" with the 5 oldest rows, its count, and a link "Vezi toate" / "See all" to the "Service-uri" view; the "Service-uri" view MUST open with the same list at its top, every waiting file, 20 at a time with a button for the next 20; each row MUST show the name, the area · brand count · mechanic count line, the summary line with its lamp, when it applied ("azi, 09:12", "ieri, 14:30", else the date and time, in the admin's language and Europe/Bucharest) and the button "Deschide dosarul" / "Open the file", which links to the file's own page (#57); a flagged row MUST show the waiting text of FR-004 and the lamp of FR-002 (amber unless red).
+### 302-FR-003 — The drawer MUST open at the address `/app/admin/garages/{fileId}` under the admin shell's "Service-uri" view, through the overlay service's `drawer-wide` shape (a full-height bottom sheet under 768 px, 158-FR-001), titled "Dosar de verificare" / "Verification file" with the garage's name as its subtitle; the queue row's "Deschide dosarul" navigates there (modifies 301-FR-005: the link opens the drawer, not a separate page). Opening calls FR-002 once; closing by X, Escape, outside click or Back returns to `/app/admin/garages` with the view's scroll kept. While the call is on its way the body shows skeleton sections marked busy (157-FR-012); a failed call shows "Nu am putut deschide dosarul" / "Could not open the file" with "Reîncearcă" / "Retry".
 
-_From 301-verification-queue._
+_From 302-garage-verification-file._
 
 ### 301-FR-006 — The four counts — the panel's, the view's, the menu item "Service-uri" and the header line — MUST come from one count of the files waiting (`garagesWaiting`, 163-FR-007), so they agree; the queue read's total MUST be that same count. With a city chosen the header keeps its 163 rule (that city's count); the other three stay platform-wide.
 
@@ -240,6 +242,90 @@ _From 301-verification-queue._
 
 _From 301-verification-queue._
 
+### 066-FR-001 — The system MUST expose an admin-only summary read of the garages, `GET /api/v1/admin/garages/summary`, platform-wide whatever city the overview has chosen, answering three counts: `listed` (garages whose status is `approved`), `waiting` (the one waiting count of 301-FR-006, the files `submitted` or `in_review`) and `suspended` (garages whose status is `suspended`); every value is a count and nothing in the answer is personal data.
+
+_From 066-suspended-garages._
+
+### 066-FR-002 — The system MUST expose an admin-only list read of the garages by status, `GET /api/v1/admin/garages?status=suspended`, with `offset` 0 to 10000 and `limit` 1 to 200 (default 20; a live re-read asks for every loaded row), answering the rows and `total` (every suspended garage); `status` is required and `suspended` is the one value this story accepts, every other value, a missing status, or an offset or limit out of range answering 400 `validation_failed`. One row per suspended garage, its open suspension (empty `until_time`) when it has one, ordered by the suspension's start, most recent first, then by the garage id ascending (a garage with no open suspension last, by its name, then its id).
+
+_From 066-suspended-garages._
+
+### 066-FR-003 — Each row MUST carry the garage id and name, the id of the garage's newest verification file (absent when it has none; the "Deschide dosarul" link opens it, as the queue's rows link a file), its area (the town recorded for the garage, or for a mobile mechanic its service radius in km; absent when none, as 301-FR-002), and, from the open suspension: the cause, the reason as stored, `fromTime` (UTC), and `cancelledBookings`, the number of the garage's bookings cancelled with the reason `garage_suspended` at or after `fromTime` (0 until #204 cancels them); a garage with no open suspension carries none of these four.
+
+_From 066-suspended-garages._
+
+### 066-FR-004 — For a `recheck_failed` suspension the row MUST carry `rarVerdict` ∈ `expired`, `suspended`, `withdrawn`, decided once on the server: from the failed re-check's recorded verdict when the re-check story (#9) stores one, and until then from the reason, the one of "expirat", "suspendat", "retras" that comes first in the reason's text (any case, any ending); absent when neither names one. The state text per cause is the web's, in Romanian and English: `recheck_failed` "autorizație RAR expirată" / "autorizație RAR suspendată" / "autorizație RAR retrasă" by the verdict and "autorizație RAR nevalidă" without one ("RAR authorisation expired / suspended / withdrawn / invalid"); `documents_overdue` "documente anuale neîncărcate" ("yearly documents not uploaded"); `report_confirmed` "sesizare confirmată" ("report confirmed"); `admin` "decizia unui administrator" ("an admin's decision"); each shown as "suspendat · {text}" ("suspended · {text}").
+
+_From 066-suspended-garages._
+
+### 066-FR-005 — Both reads MUST keep the `admin/*` access policy: an admin reads them, any other role answers 404 `not_found` with no garage data, a missing token 401 `sign_in_required`; reading MUST write no audit entry and change nothing; neither read is refused by maintenance mode (160-FR-003).
+
+_From 066-suspended-garages._
+
+### 066-FR-010 — The two reads MUST be REST with OpenAPI, their query, row and answer DTOs in the contracts library validated at the edge, and the generated client regenerated; the web MUST call them through the generated client; both MUST be listed in `infra/observability/inventory.json` with their metric (the API's request duration by route), dashboard panel and alert or the reason none is needed.
+
+_From 066-suspended-garages._
+
+### 066-FR-011 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the three counts (approved, waiting as `submitted` or `in_review`, suspended; a `draft` garage counting nowhere) and `waiting` equal to the overview's count; the list's filter and order (most recent start first), `total`, the 400s of FR-002, a garage with no open suspension; `cancelledBookings` counting only `garage_suspended` cancellations at or after `fromTime`; `rarVerdict` for each of the three words, for a reason naming none and for the other three causes; 404 for a driver, an owner, a receptionist and a mechanic on both reads; no audit entry written by a read. Web unit tests MUST cover the counts line's three states and its plural forms in both languages, and the panel's state text per cause and verdict, the date, the cancelled count, the empty, loading, failed and stale states, in both languages. Playwright MUST show, as the seeded admin at desktop and a 320 px phone, the counts line and the panel on "Service-uri", then Atelier Dinamo suspended from a second context through the suspend endpoint: the line's figures and the panel's new row appear without a reload; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 066-suspended-garages._
+### 302-FR-001 — The system MUST expose an admin-only read of one verification file, `GET /api/v1/admin/verification-files/{id}`, answering in one response: the file (id, status, latest sending time, who opened it and when, who decided it and when, reason code and note, who reopened it and when and the reopen reason, the declaring name and time); the garage header (garage id and name, kind of business, CUI, the workshop address or, for a mobile mechanic, the registered seat and the service radius in km, phone, the names of the brands it works on, its photos as short-lived thumbnail and display addresses as the public profile issues them); the 8 checks (kind, result, detail, who recorded it, when; for `activities` the recorded activities' names in both languages); the documents, one entry per kind of the contracts list in its order, present (id, page count, issue date, and, for the ONRC certificate only, whether the issue date is absent or more than 30 days before the latest sending; null for every other kind) or missing; whether the document store is reachable (the API's storage probe); the garage's `open` reports (text, time); the earlier rejection when `previous_file_id` names one (reason code, note, decision time); and the timeline of FR-010. Anyone who is not a MotorFix admin MUST get 404 with no garage data, no token 401; the read MUST write no audit entry and change nothing.
+
+_From 302-garage-verification-file._
+
+### 302-FR-002 — The system MUST expose `POST /api/v1/admin/verification-files/{id}/open`, which runs the existing open use case (207-FR-002) for the signed-in admin and answers the same body as FR-001: a `submitted` file becomes `in_review` with `opened_by` and `opened_at`, one audit entry and one `verification.opened` outbox row in the same transaction; a file already `in_review` is answered unchanged with no entry and no row; every status other than `submitted` (`in_review`, decided, `more_requested`) is answered unchanged with no transition, no entry and no row, which changes the existing use case so it no longer refuses a decided file with 409 (modifies 207-FR-002), so the drawer opens read-only; an unknown id and every non-admin get 404.
+
+_From 302-garage-verification-file._
+
+### 302-FR-003 — The drawer MUST open at the address `/app/admin/garages/{fileId}` under the admin shell's "Service-uri" view, through the overlay service's `drawer-wide` shape (a full-height bottom sheet under 768 px, 158-FR-001), titled "Dosar de verificare" / "Verification file" with the garage's name as its subtitle; the queue row's "Deschide dosarul" navigates there (modifies 301-FR-005: the link opens the drawer, not a separate page). Opening calls FR-002 once; closing by X, Escape, outside click or Back returns to `/app/admin/garages` with the view's scroll kept. While the call is on its way the body shows skeleton sections marked busy (157-FR-012); a failed call shows "Nu am putut deschide dosarul" / "Could not open the file" with "Reîncearcă" / "Retry".
+
+_From 302-garage-verification-file._
+
+### 302-FR-004 — The drawer's body MUST show, in this order: the header (kind of business as "Societate" / "Company", "PFA", "Întreprindere individuală" / "Sole trader" or "Mecanic mobil" / "Mobile mechanic"; the CUI; the address, or "Sediu social: … · rază <n> km" / "Registered seat: … · <n> km radius" for a mobile mechanic; the phone; the brands; the photos as thumbnails opening the display image; each part left out when the garage has none); a "Raportat" / "Reported" line with each open report's text as escaped plain text and its time, and "Redeschis după un raport, <date>" / "Reopened after a report, <date>" when `reopen_reason` is `garage_report`; a "Respins anterior: <reason label>, <date>" / "Rejected before: …" line with the earlier note when the file follows a rejected one; "VERIFICĂRI ÎN REGISTRE" / "REGISTER CHECKS" with the rows company, CAEN, RAR, activities (labels as US1 scenario 5), each with its lamp (300-FR-008, the result as its text alternative), detail, recorder's first name and time, "neverificat" / "not checked" when `not_run`, and the activity names for `activities`; "DOCUMENTE" / "DOCUMENTS" (FR-005); "VERIFICĂRI MANUALE" / "MANUAL CHECKS" (FR-006); "ISTORIC" / "HISTORY" (FR-010); and the footer of FR-009.
+
+_From 302-garage-verification-file._
+
+### 302-FR-005 — Each document kind of the contracts list MUST be one row: label from the kind's shared labels (206-FR-004); when present, "· emis acum <n> zile" / "· issued <n> days ago" ("emis azi" / "issued today", "emis ieri" / "issued yesterday") from its issue date, else "· <n> pagini" / "· <n> pages" (singular "1 pagină" / "1 page"); a second line in the warning colour "Mai vechi de 30 de zile la data trimiterii" / "Older than 30 days at the time of sending" or "Data emiterii lipsește" / "Issue date missing" for the certificate when so; one "Deschide" / "Open" button for a one-page document, else "Deschide pagina <n>" / "Open page <n>" per page; when missing, "· lipsește" / "· missing" in the failed colour and no button; when the store is unreachable, "indisponibil" / "unavailable" in place of the buttons. Pressing a button MUST ask the existing page address (206-FR-014) and open it in a new tab; a failed request shows "Nu am putut deschide documentul" / "Could not open the document" with "Reîncearcă" / "Retry" on that row only. This story adds no address route and no audit write of its own: every opening is the one 206-FR-014 already logs.
+
+_From 302-garage-verification-file._
+
+### 302-FR-006 — The manual checks MUST be four rows, in this order and mapped to these kinds: `address` "Adresa din documente e cea de pe profil" / "The address in the documents matches the profile" (mobile mechanic: "Adresa din documente e sediul social de pe profil" / "The address in the documents is the registered seat on the profile"); `photos` "Fotografiile sunt ale atelierului" / "The photos show the actual workshop" (mobile mechanic: "Fotografiile arată duba sau trusa mobilă și sculele principale" / "The photos show the van or mobile kit and main tools"); `representative` "Telefon confirmat prin apel" / "Phone confirmed by call"; `documents` "Documentele sunt complete și lizibile" / "The documents are complete and readable". Each row is a checkbox (checked when the result is `ok`), a "Marchează o problemă" / "Mark a problem" button, and, when the result is `warning` or `failed`, its lamp and detail; the `documents` checkbox is disabled with "Lipsește un document" / "A document is missing" while a kind is missing; every control is at least 44 px tall and reachable by keyboard.
+
+_From 302-garage-verification-file._
+
+### 302-FR-007 — Ticking MUST record the kind `ok` with no detail through the existing record call (300-FR-003) at once, with no confirmation; unticking MUST record `not_run` with no detail, which the record call MUST now accept (`not_run` joins its recorded results, with no detail and no activities; modifies 300-FR-003 and 300-FR-010). "Marchează o problemă" MUST open a small task (`dialog` shape) with the choice "Avertisment" / "Warning" or "Problemă" / "Failure" and a required detail field of 1 to 200 characters, whose save records `warning` or `failed` with the detail and closes; the row then shows the lamp and the detail and the checkbox is unchecked. The drawer MUST show the saved state only from the server's answer: on a failure the control reverts to the last answer and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` it re-reads the file (FR-001) and turns read-only. Every tick's audit entry and event are the record call's (300-FR-006, FR-007); this story writes none of its own.
+
+_From 302-garage-verification-file._
+
+### 302-FR-008 — The drawer MUST re-read the file (FR-001) through the dashboards' shared live re-read when `verification.opened`, `verification.check_recorded`, `verification.decided` or `verification.reopened` arrives on the admin's stream with its own `fileId`, and on every reconnect, so another admin's tick, a record form's save and a decision show within one re-read and no reload (modifies nothing in 301-FR-009: the kinds are already in the shell's list); events of other files MUST cause no re-read. No per-file live channel is added.
+
+_From 302-garage-verification-file._
+
+### 302-FR-009 — On a `submitted` or `in_review` file the footer MUST show the three buttons "Aprobă și publică" / "Approve and publish", "Cere completări" / "Ask for more" and "Respinge" / "Reject", disabled, with the note "Service-ul primește decizia pe e-mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot." / "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over." (#173, #58, #59 and #172 enable them). On an `approved`, `rejected` or `more_requested` file the drawer MUST be read-only — checkboxes and problem buttons disabled, no save attempted — and the footer MUST read "Aprobat de <first name>, <date time>" / "Approved by …", "Respins de …" / "Rejected by …" or "Completări cerute de …" / "More requested by …", with the reason label and note when there is one; "Redeschide dosarul" is #173's.
+
+_From 302-garage-verification-file._
+
+### 302-FR-010 — The read of FR-001 MUST include the file's timeline: the audit entries whose subject is the file, one of its checks or one of its documents and whose action is one of the file's sending, opening, decision, reopening or resending, a check record, or a document `open` (a document upload and the declaration write are left out, on the server), newest first, at most 50 of those with their total, each with action, field, old and new values, actor's first name ("MotorFix" for `system`), reason text and time; the drawer MUST render each as one line in the admin's language and Europe/Bucharest as US4 scenario 1 lists, and "și încă <n>" / "and <n> more" past 50.
+
+_From 302-garage-verification-file._
+
+### 302-FR-011 — Every text of the drawer and its dialog MUST live in the shared i18n files in Romanian and English; the drawer MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll; every state MUST be conveyed by text as well as colour; the drawer is a modal dialog named by its title with focus kept inside and returned on close (157-FR-008, FR-009).
+
+_From 302-garage-verification-file._
+
+### 302-FR-012 — The file DTO and the open call live in the contracts library, both endpoints are REST with OpenAPI, and the generated client is regenerated; the two new routes are listed in `infra/observability/inventory.json` with the API's request metrics by route, their dashboard panel and the reason no alert of their own is needed; the open call MUST log one line per first opening (file id, admin id).
+
+_From 302-garage-verification-file._
+
+### 302-FR-013 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the first opening moving the file to `in_review` with its audit entry and outbox row and a second opening writing neither; the open call on a decided file changing nothing; the read's 404 for a driver, an owner, a receptionist and a mechanic and 401 with no token; the read carrying the header (company and mobile mechanic), the 8 checks, a present and a missing document kind, the 30-day and no-date flags, an open report, the earlier rejection, the storage flag and the timeline's order and cap; the read writing no audit entry; the four tick mappings (`ok`, `not_run`, `warning`, `failed` with detail) through the record call, `not_run` included; the timeline leaving out a document upload and the declaration write. Web unit tests MUST cover the section order, the two wordings (company, mobile mechanic), the document row texts, the disabled documents tick, the revert on a failed save, the read-only decided state and the re-read filter by `fileId`. Playwright MUST, as the seeded admin: open a file from the queue, see the status change in the row, open both documents (two tabs with signed addresses), tick the four manual checks (both documents present) and see them held checked after a reload, mark a problem on one and see the queue row name it, at desktop and at a 320 px phone; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 302-garage-verification-file._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
+
+- `301-FR-005` — superseded by `302-FR-003` (2026-10-17)
+- `207-FR-002` — superseded by `302-FR-002` (2026-10-17)
+- `300-FR-003` — superseded by `302-FR-007` (2026-10-17)
+- `300-FR-010` — superseded by `302-FR-007` (2026-10-17)

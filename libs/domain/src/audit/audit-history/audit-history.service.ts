@@ -68,6 +68,29 @@ const mask = (field: string | null, value: unknown) =>
 const invalid = (code: string, message: string) =>
   new BadRequestException({ code, message });
 
+// One stored entry as a reader sees it; an admin sees every value unmasked.
+export function auditEntryOf(row: ActivityLog, admin: boolean): AuditEntryDto {
+  const value = (v: unknown) => (admin ? v : mask(row.field, v));
+  return {
+    action: row.action,
+    actor: { id: row.actorId, name: row.actorName, role: row.actorRole },
+    at: row.at.toISOString(),
+    carId: row.carId,
+    field: row.field,
+    garageId: row.garageId,
+    id: row.id,
+    internal: row.internal,
+    jobId: row.jobId,
+    kind: row.kind,
+    newValue: value(row.newValue),
+    oldValue: value(row.oldValue),
+    subjectId: row.subjectId,
+    subjectType: row.subjectType,
+    text: row.text,
+    viaAssistant: row.viaAssistant,
+  };
+}
+
 @Injectable()
 export class AuditHistoryService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
@@ -121,7 +144,7 @@ export class AuditHistoryService {
     ]);
     const page = rows.slice(0, PAGE);
     return {
-      items: page.map((row) => this.entry(row, admin)),
+      items: page.map((row) => auditEntryOf(row, admin)),
       nextCursor: rows.length > PAGE ? (page.at(-1)?.id ?? null) : null,
       total,
     };
@@ -143,28 +166,6 @@ export class AuditHistoryService {
       ...(area === 'admin_actions' && { actorRole: 'admin' }),
       ...(area &&
         area !== 'admin_actions' && { subjectType: { in: SUBJECTS[area] } }),
-    };
-  }
-
-  private entry(row: ActivityLog, admin: boolean): AuditEntryDto {
-    const value = (v: unknown) => (admin ? v : mask(row.field, v));
-    return {
-      action: row.action,
-      actor: { id: row.actorId, name: row.actorName, role: row.actorRole },
-      at: row.at.toISOString(),
-      carId: row.carId,
-      field: row.field,
-      garageId: row.garageId,
-      id: row.id,
-      internal: row.internal,
-      jobId: row.jobId,
-      kind: row.kind,
-      newValue: value(row.newValue),
-      oldValue: value(row.oldValue),
-      subjectId: row.subjectId,
-      subjectType: row.subjectType,
-      text: row.text,
-      viaAssistant: row.viaAssistant,
     };
   }
 }

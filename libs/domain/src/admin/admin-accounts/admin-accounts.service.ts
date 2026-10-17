@@ -162,7 +162,7 @@ const ROW = {
   _count: { select: { cars: { where: { removedAt: null } } } },
   createdAt: true,
   id: true,
-  mechanic: { select: { garage: { select: { name: true } } } },
+  mechanic: { select: { garage: { select: { name: true, status: true } } } },
   memberships: { select: { garage: { select: { name: true } }, role: true } },
   name: true,
   roles: { select: { role: true } },
@@ -210,6 +210,7 @@ function item(row: Row, now: Date, suspendedAt?: Date): AdminAccountDto {
     id: row.id,
     name: row.name,
     roles,
+    serviceSuspended: row.mechanic?.garage.status === 'suspended',
     since:
       status === 'active'
         ? row.createdAt.toISOString()

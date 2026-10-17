@@ -87,6 +87,12 @@ export class AdminAccountDto {
   })
   garageName!: string | null;
 
+  @ApiProperty({
+    description:
+      "True when the account's mechanic card is at a garage whose status is suspended",
+  })
+  serviceSuspended!: boolean;
+
   @ApiProperty({ description: 'Cars not removed', minimum: 0, type: 'integer' })
   carsCount!: number;
 

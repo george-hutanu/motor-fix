@@ -32,6 +32,7 @@ features:
   - 029-overview-panels-own-data
   - 366-assistant-privacy
   - 1345-staging-observability
+  - 066-suspended-garages
 ---
 
 # Capability: Accounts
@@ -942,6 +943,9 @@ _From 1345-staging-observability._
 ### 1345-FR-007 — A public screen that needs a session for part of its work (the request-a-quote dialog's car list) MUST, when it holds no access token and no stored role hint, open the sign-in dialog without an API call and load once signed in; if the visitor dismisses the sign-in dialog, the request-a-quote dialog shows the state it shows today when the list cannot load, still without a call; with a token or a hint it loads as today. One Playwright test loads `/ro`, `/ro/garages?brand=dacia` and a seeded garage profile and opens its request-a-quote dialog in a fresh context, records every request and response, and asserts none is a 401 and no `POST /api/v1/auth/refresh` is sent.
 
 _From 1345-staging-observability._
+### 066-FR-012 — The admin read of accounts (`GET /api/v1/admin/accounts`) MUST carry on each account `serviceSuspended`, true when the account holds a mechanic card at a garage whose status is `suspended`, false otherwise; no screen shows it in this story (the Mecanici table of #27 and the detail page of #28 will show "service suspendat" in red from it). Tests MUST cover a mechanic of a suspended garage (true), of an approved garage (false), an owner of a suspended garage with no mechanic card (false), and the flag turning false once the garage is no longer suspended.
+
+_From 066-suspended-garages._
 
 ## Retired
 

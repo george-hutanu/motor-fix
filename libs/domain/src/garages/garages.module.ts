@@ -44,6 +44,8 @@ import {
   VERIFICATION_CONFIG,
   type VerificationConfig,
 } from './verification/verification-config';
+import { VerificationFileController } from './verification/verification-file/verification-file.controller';
+import { VerificationFileService } from './verification/verification-file/verification-file.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AUTH_REDIS } from '../auth/attempts';
@@ -78,6 +80,7 @@ export class GaragesModule {
         PublicGaragesController,
         SuspensionController,
         VerificationChecksController,
+        VerificationFileController,
       ],
       exports: [
         ListingDraftsService,
@@ -114,6 +117,7 @@ export class GaragesModule {
         SuspensionService,
         VerificationService,
         VerificationChecksService,
+        VerificationFileService,
         { provide: VERIFICATION_CONFIG, useValue: verification },
         ...(observabilityUrl
           ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]
