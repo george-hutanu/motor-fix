@@ -1068,8 +1068,8 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the admin's read of today's log entries, twenty at most on an indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
-      "story": "ST-298"
+      "reason": "the admin's read of the log, today's entries for the Jurnal panel or any range of the last 90 days for the full log, narrowed by type, severity, source and a text search, fifty a page at most behind an opaque cursor on the indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-298, ST-299"
     },
     {
       "kind": "endpoint",

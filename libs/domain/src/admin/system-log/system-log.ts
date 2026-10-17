@@ -1,6 +1,7 @@
 import {
   SYSTEM_LOG_KINDS,
   SYSTEM_LOG_SOURCES,
+  type SystemLogAddedMessage,
   type SystemLogKind,
   type SystemLogSource,
 } from '@motor-fix/contracts';
@@ -55,12 +56,16 @@ async function store<K extends SystemLogKind>(
     DO UPDATE SET count = system_log_entry.count + 1
     RETURNING id, (xmax = 0) AS inserted`;
   if (!row?.inserted) return 'grouped';
+  const added: SystemLogAddedMessage = {
+    at: at.toISOString(),
+    entryKind: kind,
+    id: row.id,
+    kind: 'system_log.added',
+    severity: entry.severity,
+    source,
+  };
   try {
-    await publishLive(
-      redis,
-      { at: at.toISOString(), id: row.id, kind: 'system_log.added' },
-      ADMINS,
-    );
+    await publishLive(redis, added, ADMINS);
   } catch {
     logger.warn(`System log entry ${row.id} written; the live nudge failed`);
   }
