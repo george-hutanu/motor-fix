@@ -2342,6 +2342,16 @@
             }
           },
           {
+            "name": "bbox",
+            "required": false,
+            "in": "query",
+            "description": "The visible area of the map, \"south,west,north,east\" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius",
+            "schema": {
+              "example": "44.35,26,44.5,26.25",
+              "type": "string"
+            }
+          },
+          {
             "name": "ids",
             "required": false,
             "in": "query",
@@ -2386,7 +2396,90 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or ids not up to 20 distinct uuids; invalid_cursor: not a page of this search"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, or bbox not a south,west,north,east box inside Romania at most 100 km on a side; invalid_cursor: not a page of this search or of another box"
+          },
+          "404": {
+            "description": "not_found: no brand with that slug or id"
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/search/garages/pins": {
+      "get": {
+        "operationId": "GarageSearchController_pins",
+        "parameters": [
+          {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue slug; exactly one of brand and brandId",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "example": "bmw",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brandId",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue id; exactly one of brand and brandId",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "radius",
+            "required": false,
+            "in": "query",
+            "description": "Km around near that a fixed garage may be; a mobile mechanic counts by its own area. Ignored without near",
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "enum": [
+                25,
+                50
+              ]
+            }
+          },
+          {
+            "name": "bbox",
+            "required": false,
+            "in": "query",
+            "description": "The visible area of the map, \"south,west,north,east\" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius",
+            "schema": {
+              "example": "44.35,26,44.5,26.25",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePinsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -3641,6 +3734,102 @@
         ]
       }
     },
+    "/api/v1/admin/garages/summary": {
+      "get": {
+        "operationId": "AdminOverviewController_garagesSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGaragesSummaryDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/garages": {
+      "get": {
+        "operationId": "AdminOverviewController_garages",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "suspended"
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "A live re-read asks for every row already shown",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGaragesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a missing or unknown status, an offset or a limit out of range"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/growth": {
       "get": {
         "operationId": "AdminOverviewController_growth",
@@ -4570,6 +4759,82 @@
           },
           "422": {
             "description": "verification_check_kind_unknown"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}": {
+      "get": {
+        "operationId": "VerificationFileController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}/open": {
+      "post": {
+        "operationId": "VerificationFileController_open",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
           }
         },
         "security": [
@@ -7214,6 +7479,10 @@
             "description": "The garage of the first role: owned, worked at as receptionist, or of the mechanic card",
             "nullable": true
           },
+          "serviceSuspended": {
+            "type": "boolean",
+            "description": "True when the account's mechanic card is at a garage whose status is suspended"
+          },
           "carsCount": {
             "type": "integer",
             "description": "Cars not removed",
@@ -7245,6 +7514,7 @@
           "name",
           "roles",
           "garageName",
+          "serviceSuspended",
           "carsCount",
           "status",
           "since",
@@ -8010,6 +8280,68 @@
           "nextCursor",
           "total",
           "counts"
+        ]
+      },
+      "GaragePinDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lat": {
+            "type": "number",
+            "description": "Where the pin stands; a mobile mechanic's area centre, two decimals",
+            "example": 44.437
+          },
+          "lng": {
+            "type": "number",
+            "example": 26.117
+          },
+          "rateLei": {
+            "type": "integer",
+            "description": "The hourly labour rate it starts from, in whole lei",
+            "nullable": true
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's area, in km; only for one"
+          }
+        },
+        "required": [
+          "id",
+          "lat",
+          "lng",
+          "rateLei",
+          "stance"
+        ]
+      },
+      "GaragePinsDto": {
+        "type": "object",
+        "properties": {
+          "pins": {
+            "description": "Every garage the search finds with a position, nearest first; 500 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaragePinDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every approved garage the search finds, as the list's total"
+          }
+        },
+        "required": [
+          "pins",
+          "total"
         ]
       },
       "HomeGarageDto": {
@@ -10364,6 +10696,111 @@
           "total"
         ]
       },
+      "AdminGaragesSummaryDto": {
+        "type": "object",
+        "properties": {
+          "listed": {
+            "type": "integer",
+            "description": "Garages approved",
+            "minimum": 0
+          },
+          "waiting": {
+            "type": "integer",
+            "description": "Verification files submitted or in review",
+            "minimum": 0
+          },
+          "suspended": {
+            "type": "integer",
+            "description": "Garages suspended",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "listed",
+          "waiting",
+          "suspended"
+        ]
+      },
+      "SuspendedGarageRowDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string",
+            "description": "The garage's newest verification file; absent when none",
+            "format": "uuid"
+          },
+          "area": {
+            "description": "Absent when the garage has no town recorded",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationQueueAreaDto"
+              }
+            ]
+          },
+          "cause": {
+            "type": "string",
+            "description": "The open suspension; absent when the garage has none",
+            "enum": [
+              "recheck_failed",
+              "documents_overdue",
+              "admin",
+              "report_confirmed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "The reason as stored"
+          },
+          "fromTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledBookings": {
+            "type": "integer",
+            "description": "Bookings cancelled by the suspension since it began",
+            "minimum": 0
+          },
+          "rarVerdict": {
+            "type": "string",
+            "description": "Only for a failed re-check that names the verdict",
+            "enum": [
+              "expired",
+              "suspended",
+              "withdrawn"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "AdminGaragesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuspendedGarageRowDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
       "AdminGrowthMonthDto": {
         "type": "object",
         "properties": {
@@ -11498,12 +11935,13 @@
             "enum": [
               "ok",
               "warning",
-              "failed"
+              "failed",
+              "not_run"
             ]
           },
           "detail": {
             "type": "string",
-            "description": "Trimmed; required for warning and failed; replaces the stored detail",
+            "description": "Trimmed; required for warning and failed, refused with not_run; replaces the stored detail",
             "maxLength": 200
           },
           "activities": {
@@ -11602,6 +12040,460 @@
           "check",
           "summary",
           "rarActivities"
+        ]
+      },
+      "VerificationActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Null for the system",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "VerificationFileStateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "in_review",
+              "approved",
+              "more_requested",
+              "rejected"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "The latest sending",
+            "format": "date-time"
+          },
+          "openedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "openedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "decidedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reasonNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "reopenedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          },
+          "reopenedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reopenReason": {
+            "type": "string",
+            "enum": [
+              "garage_report"
+            ],
+            "nullable": true
+          },
+          "declaredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "declaredByName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "submittedAt",
+          "openedBy",
+          "openedAt",
+          "decidedBy",
+          "decidedAt",
+          "reasonCode",
+          "reasonNote",
+          "reopenedBy",
+          "reopenedAt",
+          "reopenReason",
+          "declaredAt",
+          "declaredByName"
+        ]
+      },
+      "VerificationFileGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "cui": {
+            "type": "string",
+            "description": "Digits only",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "description": "The workshop; null for a mobile mechanic",
+            "nullable": true
+          },
+          "seatAddress": {
+            "type": "string",
+            "description": "A mobile mechanic's registered seat",
+            "nullable": true
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "brands": {
+            "description": "The brands it works on, by name",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicGaragePhotoDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "businessKind",
+          "cui",
+          "address",
+          "seatAddress",
+          "serviceRadiusKm",
+          "phone",
+          "brands",
+          "photos"
+        ]
+      },
+      "VerificationFileCheckDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "caen",
+              "rar",
+              "activities",
+              "representative",
+              "address",
+              "photos",
+              "documents"
+            ]
+          },
+          "automatic": {
+            "type": "boolean",
+            "description": "False until automatic look-ups exist"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "not_run",
+              "ok",
+              "warning",
+              "failed"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "recorder": {
+            "description": "Null while never recorded; MotorFix for an automatic record",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationActorDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "fileId",
+          "kind",
+          "automatic",
+          "result",
+          "detail",
+          "recordedBy",
+          "recordedAt",
+          "recorder"
+        ]
+      },
+      "VerificationFileActivityDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "VerificationFileDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "onrc_certificate",
+              "rar_authorisation"
+            ]
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "issuedOn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "The certificate only: no issue date, or issued more than 30 days before the latest sending; null for every other kind",
+            "nullable": true
+          }
+        },
+        "required": [
+          "kind",
+          "present",
+          "id",
+          "pages",
+          "issuedOn",
+          "stale"
+        ]
+      },
+      "VerificationFileReportDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Plain text, as the reporter wrote it"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "text",
+          "createdAt"
+        ]
+      },
+      "VerificationFileRejectionDto": {
+        "type": "object",
+        "properties": {
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reasonNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "reasonCode",
+          "reasonNote",
+          "decidedAt"
+        ]
+      },
+      "VerificationFileTimelineDto": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "description": "Newest first, at most 50",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "entries",
+          "total"
+        ]
+      },
+      "VerificationFileDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/VerificationFileStateDto"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/VerificationFileGarageDto"
+          },
+          "checks": {
+            "description": "The 8 kinds, in their order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileCheckDto"
+            }
+          },
+          "activities": {
+            "description": "The garage's recorded RAR activities",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileActivityDto"
+            }
+          },
+          "documents": {
+            "description": "One per kind, in their order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileDocumentDto"
+            }
+          },
+          "storageReady": {
+            "type": "boolean",
+            "description": "Whether the document store answers"
+          },
+          "reports": {
+            "description": "The garage's open reports, newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationFileReportDto"
+            }
+          },
+          "previousRejection": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationFileRejectionDto"
+              }
+            ]
+          },
+          "timeline": {
+            "$ref": "#/components/schemas/VerificationFileTimelineDto"
+          }
+        },
+        "required": [
+          "file",
+          "garage",
+          "checks",
+          "activities",
+          "documents",
+          "storageReady",
+          "reports",
+          "previousRejection",
+          "timeline"
         ]
       },
       "PhotoUploadRequestDto": {

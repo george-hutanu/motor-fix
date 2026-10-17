@@ -31,6 +31,7 @@ const item = (n: number, extra: Partial<AdminAccountDto> = {}) =>
     id: `id-${n}`,
     name: `Cont ${n}`,
     roles: ['driver'],
+    serviceSuspended: false,
     since: '2026-03-12T09:14:00.000Z',
     status: 'active',
     ...extra,

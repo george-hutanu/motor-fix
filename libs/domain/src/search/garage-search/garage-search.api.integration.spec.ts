@@ -382,3 +382,86 @@ describe('GET /search/garages with ids', () => {
     expect(bad.status).toBe(400);
   });
 });
+
+// From just south of Cluj to 0.35° north of it, 0.2° wide.
+const BBOX = '46.721,23.524,47.121,23.724';
+
+// @traces 269-FR-005
+// @traces 269-FR-006
+// @traces 269-FR-021
+describe('GET /search/garages with a box', () => {
+  it('lists the fixed garages in the box with their distance from the place, and the mobile mechanics over it', async () => {
+    await placed('Alfa', 0.01, 'works_on');
+    await placed('Beta', 0.3, 'does_not_take');
+    await placed('Gama', 0.5, 'works_on');
+    await placed('Mobil', 0.3, 'works_on', 35);
+
+    const res = await search({ bbox: BBOX, brandId: dacia, near: NEAR });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items.map((i: { name: string }) => i.name)).toEqual([
+      'Alfa',
+      'Mobil',
+      'Beta',
+    ]);
+    expect(res.body).toMatchObject({
+      counts: { doesNotTake: 1, worksOn: 2 },
+      total: 3,
+    });
+    expect(res.body.items[0].distanceKm).toBe(1.1);
+  });
+
+  it('writes no search log row for log=1 with a box', async () => {
+    await placed('Alfa', 0.01, 'works_on');
+
+    await search({ bbox: BBOX, brandId: dacia, log: '1', near: NEAR }).expect(
+      200,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(await prisma.searchLog.count()).toBe(0);
+  });
+
+  it('answers 400 invalid_cursor to a cursor of the circle search', async () => {
+    for (let n = 0; n < 21; n += 1) {
+      await placed(`Service ${String(n).padStart(2, '0')}`, 0.01, 'works_on');
+    }
+    const circle = await search({ brandId: dacia, near: NEAR });
+
+    const res = await search({
+      bbox: BBOX,
+      brandId: dacia,
+      cursor: circle.body.nextCursor,
+      near: NEAR,
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it("reads the cards shown again with the box's counts", async () => {
+    const alfa = await placed('Alfa', 0.01, 'works_on');
+    await placed('Beta', 0.3, 'works_on');
+
+    const res = await search({
+      bbox: BBOX,
+      brandId: dacia,
+      ids: alfa,
+      near: NEAR,
+    });
+
+    expect(res.body.items.map((i: { id: string }) => i.id)).toEqual([alfa]);
+    expect(res.body.total).toBe(2);
+  });
+
+  it.each([
+    ['wider than 100 km', '46.0,23.0,47.0,24.5'],
+    ['outside Romania', '47.0,19.0,47.2,19.2'],
+    ['with its corners inverted', '47.121,23.724,46.721,23.524'],
+    ['of three numbers', '46.721,23.524,47.121'],
+  ])('answers 400 to a box %s', async (_, bbox) => {
+    const res = await search({ bbox, brandId: dacia });
+
+    expect(res.status).toBe(400);
+  });
+});

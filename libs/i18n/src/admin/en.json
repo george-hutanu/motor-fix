@@ -10,6 +10,142 @@
     "jobs": "Requests by job, 30 days",
     "subtitle": "What drivers asked for in the last 30 days"
   },
+  "file": {
+    "checks": {
+      "activities": "Activities",
+      "address": "Address",
+      "caen": "CAEN code",
+      "company": "Company",
+      "documents": "Documents",
+      "photos": "Photos",
+      "rar": "RAR authorisation",
+      "representative": "Phone"
+    },
+    "cui": "CUI {cui}",
+    "documents": {
+      "ago": {
+        "one": "issued {n} day ago",
+        "other": "issued {n} days ago"
+      },
+      "failed": "Could not open the document",
+      "heading": "DOCUMENTS",
+      "missing": "missing",
+      "noDate": "Issue date missing",
+      "open": "Open",
+      "openNamed": "Open {document}",
+      "openPage": "Open page {n}",
+      "openPageNamed": "Open {document}, page {n}",
+      "pages": {
+        "one": "{n} page",
+        "other": "{n} pages"
+      },
+      "stale": "Older than 30 days at the time of sending",
+      "today": "issued today",
+      "unavailable": "unavailable",
+      "yesterday": "issued yesterday"
+    },
+    "failed": "Could not open the file",
+    "footer": {
+      "approve": "Approve and publish",
+      "ask": "Ask for more",
+      "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
+      "reason": "Reason: {reason}",
+      "reject": "Reject"
+    },
+    "history": {
+      "empty": "Nothing to show yet",
+      "heading": "HISTORY",
+      "more": "and {n} more"
+    },
+    "kinds": {
+      "company": "Company",
+      "ii": "Sole trader",
+      "mobile": "Mobile mechanic",
+      "pfa": "PFA"
+    },
+    "lines": {
+      "approved": "Approved by {name}, {when}",
+      "changed": "Changed by {name}, {when}",
+      "check": "{check}: {result} — {name}, {when}",
+      "more_requested": "More requested by {name}, {when}",
+      "opened": "Opened by {name}, {when}",
+      "page": "{document}, page {n} opened by {name}, {when}",
+      "rejected": "Rejected by {name}, {when}",
+      "reopened": "Reopened by {name}, {when}",
+      "reopenedWhy": "Reopened by {name}, {when} ({reason})",
+      "resent": "Sent again by {name}, {when}",
+      "sent": "Sent by {name}, {when}"
+    },
+    "loading": "Opening the file",
+    "manual": {
+      "address": "The address in the documents matches the profile",
+      "addressMobile": "The address in the documents is the registered seat on the profile",
+      "documents": "The documents are complete and readable",
+      "heading": "MANUAL CHECKS",
+      "missingDocument": "A document is missing",
+      "photos": "The photos show the actual workshop",
+      "photosMobile": "The photos show the van or mobile kit and main tools",
+      "problem": "Mark a problem",
+      "problemNamed": "Mark a problem: {check}",
+      "representative": "Phone confirmed by call",
+      "saveFailed": "Could not save the check"
+    },
+    "noReason": "no reason",
+    "photo": "Photo {n}, opened full size",
+    "problem": {
+      "cancel": "Cancel",
+      "choice": "How serious it is",
+      "detail": "What you found",
+      "detailHint": "1–200 characters. Other admins see it.",
+      "failed": "Failure",
+      "save": "Save",
+      "title": "Mark a problem",
+      "warning": "Warning"
+    },
+    "reasons": {
+      "address": "Address",
+      "documents": "Documents",
+      "other": "Other reason",
+      "photos": "Photos",
+      "rar": "RAR authorisation"
+    },
+    "recorded": "{name}, {when}",
+    "register": {
+      "activities": "Authorised activities",
+      "caen": "CAEN code 4520",
+      "company": "Company (ANAF, ONRC)",
+      "heading": "REGISTER CHECKS",
+      "rar": "RAR authorisation"
+    },
+    "rejectedBefore": "Rejected before: {reason}, {when}",
+    "reopenedReport": "Reopened after a report, {when}",
+    "report": "{text} · {when}",
+    "reported": "Reported",
+    "results": {
+      "failed": "failure",
+      "not_run": "not checked",
+      "ok": "passed",
+      "warning": "warning"
+    },
+    "retry": "Retry",
+    "seat": "Registered seat: {seat} · {km} km radius",
+    "title": "Verification file"
+  },
+  "garages": {
+    "listed": {
+      "one": "{n} listed",
+      "other": "{n} listed"
+    },
+    "loading": "Loading the garage figures",
+    "suspended": {
+      "one": "{n} suspended",
+      "other": "{n} suspended"
+    },
+    "waiting": {
+      "one": "{n} to verify",
+      "other": "{n} to verify"
+    }
+  },
   "growth": {
     "title": "Growth, last 12 months"
   },
@@ -102,6 +238,29 @@
       "one": "waiting {n} working day",
       "other": "waiting {n} working days"
     }
+  },
+  "suspended": {
+    "alone": "suspended",
+    "cancelled": {
+      "one": "{n} booking cancelled",
+      "other": "{n} bookings cancelled"
+    },
+    "cause": {
+      "admin": "an admin's decision",
+      "documents_overdue": "yearly documents not uploaded",
+      "report_confirmed": "report confirmed"
+    },
+    "empty": "No garage is suspended",
+    "heading": "Suspended garages",
+    "loading": "Loading the suspended garages",
+    "rar": {
+      "expired": "RAR authorisation expired",
+      "none": "RAR authorisation invalid",
+      "suspended": "RAR authorisation suspended",
+      "withdrawn": "RAR authorisation withdrawn"
+    },
+    "since": "since {date}",
+    "state": "suspended · {text}"
   },
   "users": {
     "cars": {

@@ -1,0 +1,33 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <fieldset class="choice">
+    <legend>{{ 'admin.file.problem.choice' | t }}</legend>
+    <label class="option">
+      <input type="radio" formControlName="result" value="warning" />
+      <span>{{ 'admin.file.problem.warning' | t }}</span>
+    </label>
+    <label class="option">
+      <input type="radio" formControlName="result" value="failed" />
+      <span>{{ 'admin.file.problem.failed' | t }}</span>
+    </label>
+  </fieldset>
+  <div class="field">
+    <label for="mf-problem-detail">{{ 'admin.file.problem.detail' | t }}</label>
+    <textarea
+      hlmInput
+      id="mf-problem-detail"
+      rows="3"
+      formControlName="detail"
+      [attr.maxlength]="detailMax"
+      aria-describedby="mf-problem-detail-hint mf-problem-detail-error"
+    ></textarea>
+    <p class="hint" id="mf-problem-detail-hint">{{ 'admin.file.problem.detailHint' | t }}</p>
+    <mf-field-error id="mf-problem-detail-error" [save]="save" [control]="form.controls.detail" />
+  </div>
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="!ready()">{{ 'admin.file.problem.save' | t }}</button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+      {{ 'admin.file.problem.cancel' | t }}
+    </button>
+  </div>
+</form>

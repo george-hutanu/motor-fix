@@ -57,6 +57,7 @@ export class Overlays {
     source: OverlaySource,
     options: OverlayOptions<D>,
   ): Promise<OverlayResult<R>> {
+    if (options.signal?.aborted) return Promise.resolve('cancelled');
     const titleId = `mf-overlay-title-${++titles}`;
     const sheet = !this.window?.matchMedia?.(TABLET).matches;
     const context: PanelContext = { ...options, sheet, source, titleId };
@@ -81,6 +82,9 @@ export class Overlays {
         role: 'dialog',
       },
     );
+    options.signal?.addEventListener('abort', () => ref.close(), {
+      once: true,
+    });
     // Handed a task after the close: the router replays the address of a
     // step back over a task's entry a task after the popstate, and a
     // navigation the opener starts on the result (sign-in going to a landing)

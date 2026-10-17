@@ -36,6 +36,9 @@ const FIXTURES: Record<
     path: async () =>
       '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
   },
+  'GET /api/v1/admin/verification-files/{id}': {
+    path: async () => `/api/v1/admin/verification-files/${await submitted()}`,
+  },
   'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url':
     {
       entries: 1,
@@ -121,6 +124,11 @@ const FIXTURES: Record<
     path: async () =>
       `/api/v1/admin/platform-rule-changes/${await waiting(randomUUID())}/refuse`,
   },
+  'POST /api/v1/admin/verification-files/{id}/open': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/open`,
+  },
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
     body: () => ({ detail: 'CUI activ', result: 'ok' }),
     path: async () => {
@@ -143,6 +151,19 @@ const FIXTURES: Record<
     },
   },
 };
+
+// A garage's file waiting to be opened.
+async function submitted() {
+  return (
+    await db.query(
+      `WITH g AS (INSERT INTO garage (id, name, slug)
+         VALUES (gen_random_uuid(), 'Audit', $1) RETURNING id)
+       INSERT INTO verification_file (id, garage_id, status)
+       SELECT gen_random_uuid(), id, 'submitted' FROM g RETURNING id`,
+      [`audit-${randomUUID()}`],
+    )
+  ).rows[0].id as string;
+}
 
 // The reviews rule back on, with no request waiting on it.
 async function clearRequests() {

@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-16
+updated: 2026-10-17
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -25,6 +25,8 @@ features:
   - 1175-valkey
   - 1169-prefetch-intent
   - 1235-unknown-brand-cache
+  - 294-status-health-checks
+  - 880-grafana-alerts
 ---
 
 # Capability: Observability
@@ -509,9 +511,9 @@ _From 251-monitoring-backups._
 
 _From 251-monitoring-backups._
 
-### 1024-FR-001 — The repository MUST hold five alert-rule files under `infra/observability/alerts/`: `api.json`, `worker.json`, `web.json`, `postgres.json` and `redis.json`, each in `mcp.json`'s format (`apiVersion: 1`, one group named after the service, folder `MotorFix`, `interval: 1m`), and every rule MUST carry a uid prefixed by its service name, a title starting with the service's name, `condition` `B`, `noDataState: OK`, `execErrState: Error`, the label `service` (`api`, `worker`, `web`, `postgres`, `redis`), an `annotations.summary` that names the environment (`{{ $labels.deployment_environment }}`) and a `dashboard_uid` naming the service's dashboard (`motorfix-api`, `motorfix-worker`, `motorfix-web`, `motorfix-postgres`, `motorfix-redis`), a query `A` on datasource uid `grafanacloud-prom` grouped by `deployment_environment`, and `notification_settings.receiver` `MotorFix owner`. A rule MUST NOT carry an `outage` label (251-FR-003), reference `probe_success`, or name an environment in a query.
+### 880-FR-013 — No rule of `api.json`, `worker.json`, `web.json`, `postgres.json` and `redis.json` MUST carry `notification_settings`; they are routed by the policy of FR-012. `outage.json` keeps `notification_settings.receiver` `motorfix-outage` (251-FR-003). The spec MUST fail an owner rule that names a receiver. (Replaces the receiver clause of 1024-FR-001; its other clauses hold.)
 
-_From 1024-alert-rules._
+_From 880-grafana-alerts._
 
 ### 1024-FR-002 — `api.json`, `worker.json` and `web.json` MUST each hold a "down" rule (`api-down`, `worker-down`, `web-down`) that fires, per environment, when the service's `target_info{service_name="<service>"}` had samples in the last 24 hours and none in the last 5 minutes (`mcp-down`'s pattern, not pinned to an environment), `for: 0s`.
 
@@ -541,25 +543,25 @@ _From 1175-valkey._
 
 _From 1024-alert-rules._
 
-### 1024-FR-009 — `.github/workflows/grafana-alerts.yml` ("Grafana alerts") MUST run on `push` to `main` with paths `infra/observability/alerts/**` and `.github/workflows/grafana-alerts.yml`, and on `workflow_dispatch`; when `GRAFANA_SA_TOKEN` or `GRAFANA_URL` is unset it MUST print one notice naming the missing one, apply nothing and succeed; otherwise it MUST apply every `infra/observability/alerts/*.json` file to the `MotorFix` folder (uid `motorfix`, created when missing), one `PUT /api/v1/provisioning/folder/motorfix/rule-groups/<group>` per group with `X-Disable-Provenance: true`, so that Grafana's group of that name holds exactly the file's rules, printing one line per file, with the token sent only as a request header and never printed, each call bounded by a 60 s timeout; a refused or unanswered call is printed naming the file, the remaining files are still applied, and the step fails at the end. The existing `mcp.json`, `notifications.json` and `quotes.json` are applied unchanged.
+### 880-FR-014 — `.github/workflows/grafana-alerts.yml` MUST add `infra/observability/grafana/alerting/**` to its paths and, with the token and URL set, apply in this order: the contact point (`PUT /api/v1/provisioning/contact-points/<uid>`, `POST /api/v1/provisioning/contact-points` when the `PUT` answers 404), the policy tree (`PUT /api/v1/provisioning/policies`), every rule group as today, and last, only when the contact point's own apply was accepted (a refused one leaves the hand-made contact point in place, so the owner is never left without a receiver), delete every other contact point named `MotorFix owner` with another uid (`GET /api/v1/provisioning/contact-points?name=` into a temporary file read with `jq`, then `DELETE /api/v1/provisioning/contact-points/<uid>`); each call carries `X-Disable-Provenance: true`, the token in the `Authorization` header only, answers to `/dev/null` (the one list read goes to a temporary file), a 60 s timeout, one printed line per file, a refused call named and the step failed at the end. The skip notice when either is unset stays. The files hold names and the owner's address only: no URL, token or other value.
 
-_From 1024-alert-rules._
+_From 880-grafana-alerts._
 
-### 1024-FR-010 — A colocated Jest spec, `scripts/alert-rules.spec.ts` (run by the scripts project like `scripts/pr-body-check.spec.ts`), MUST read the files under `infra/observability/alerts/` and the workflow and assert FR-001 to FR-007 and FR-009 on this repository: every file parses, the five groups and their rule uids exist, every rule's labels, annotations, receiver, datasource, thresholds, windows and `for` match this spec, no uid repeats across files, no rule carries `outage` or names an environment, at most 50 rules in all, every metric a query names is one the dashboards under `infra/observability/grafana/dashboards/` query, and the workflow has the triggers, paths and skip condition of FR-009. It MUST fail on a fixture that breaks each rule (a duplicate uid, an `outage` label, an unknown metric, a missing receiver).
+### 880-FR-016 — `scripts/alert-rules.spec.ts` MUST extend ST-1024's checks to assert FR-001 to FR-005 and FR-007 to FR-014 on this repository (every rule's runbook and `for`, the `0s` table, the new rules' thresholds, windows, waits and dashboards, the no-data and failed-job assertions, the contact point, the policy and its intervals, the absence of receivers on owner rules, the workflow's order and paths), keep the 50-rule cap, and fail on a fixture that breaks each new rule (no runbook, no `for`, `0s` on a new uid, a mute interval, an unknown receiver, a receiver on an owner rule).
 
-_From 1024-alert-rules._
+_From 880-grafana-alerts._
 
-### 1024-FR-011 — `infra/observability/README.md` MUST replace "Alert rules go in `infra/observability/alerts/`; ST-880 adds them" with one section naming the folder and files, the `MotorFix` folder, the `MotorFix owner` contact point, the rules' signals per service in one table, the workflow's name and triggers, `GRAFANA_SA_TOKEN` and `GRAFANA_URL` by name only, and that a change made only in Grafana's UI is overwritten by the next run.
+### 880-FR-015 — `infra/observability/inventory.json` MUST list `postgres-outbox-stuck` on the `postgresql` entry, `api-search-latency` on `search-garages`, `api-memory`, `worker-memory`, `web-memory` and `mcp-memory` on their service's `app` and `railway-service` entries, and `worker-queue-growing` on every entry that lists `worker-queue-backlog`; `node scripts/observability-inventory.ts` MUST pass. The README's "Alert rules" section MUST name the four new signals in its table, the runbook line, the alerting folder and its two files, that the owner rules are routed by the policy (production at once, staging quieter, no mute), and that the workflow applies the contact point and the policy before the rules.
 
-_From 1024-alert-rules._
+_From 880-grafana-alerts._
 
 ### 1024-FR-012 — Nothing in this feature MUST read, print or commit a Grafana URL, token or any other value; only variable names appear. No dependency is added, and no product source under `apps/` or `libs/*/src` changes (Constitution I).
 
 _From 1024-alert-rules._
 
-### 1024-FR-013 — The PR body's Observability section MUST list the rules per service with their thresholds, and its Notes MUST list the owner's two steps: the `MotorFix owner` contact point with the owner's e-mail exists in Grafana, and one test firing (Grafana's "Test" on the contact point, or a rule fired by hand) was received, each marked as not verifiable by the agent.
+### 880-FR-018 — The PR body's Observability section MUST list the new rules with their thresholds and the two new metrics; its Notes MUST list the owner's one step after the merge, one test firing received at the owner's address (Grafana's "Test" on the contact point, or a rule fired by hand), marked as not verifiable by the agent.
 
-_From 1024-alert-rules._
+_From 880-grafana-alerts._
 
 ### 1182-FR-014 — The cache MUST be observable: one counter with one count per read kind (`profile`, `home`, `popular-brands`) and outcome — `hit`, `miss`, `stale` (served past the soft expiry), `coalesced` (a concurrent read served by another's call), `negative` (a remembered not-found or empty), `fallback` (Redis unavailable, the database answered), `purge` and `warm` — replacing `motorfix_garage_profile_cache_total`; the inventory lists it with its panel and alert or the reason none is needed; the API dashboard gains a panel with hit rate, stale serves and stampedes avoided (the `coalesced` count).
 
@@ -577,6 +579,105 @@ _From 1169-prefetch-intent._
 
 _From 1235-unknown-brand-cache._
 
+### 294-FR-001 — The worker MUST run a `status-checks` job every 30 seconds as a repeatable job on a `status-checks` queue, started at boot only when the `STATUS_THRESHOLDS` configuration is present and valid; absent or invalid, the job MUST NOT start and one log line MUST name the setting. Nobody triggers the job by hand, and no API route starts it.
+
+_From 294-status-health-checks._
+
+### 294-FR-002 — Each run MUST probe the six tiles `api`, `search`, `maps`, `email`, `notifications` and `backup` independently: a probe that throws or exceeds the 10-second probe timeout is a failed check for its tile and MUST NOT stop the run or the other probes.
+
+_From 294-status-health-checks._
+
+### 294-FR-003 — The probes MUST measure: `api` — the response time of `GET {PUBLIC_WEB_URL}/health/ready`, the web edge's readiness check, which is ready only while the API's is and so pings PostgreSQL, Redis and the object store, a non-200 answer being a failed check; `search` — the response time of one fixed garage search on the public address (the first popular brand, Bucharest centre) sent without the `log` flag, so no SEARCH_LOG row is written; `maps` — the response time of one geocoding call to the map provider, made on every other run (every 60 seconds, and on the first run, when the tile has no row) so the probe stays well inside the provider's free daily quota; on the runs between, the tile keeps its last check; `email` — the response time of the e-mail provider's account check (an answer other than success is a failed check), and the share of `failed` e-mail NOTIFICATION rows among those `sent` or `failed` created in the last 15 minutes; `notifications` — the age of the oldest waiting job in the `notifications` queue, and the share of `failed` push, SMS and WhatsApp NOTIFICATION rows among those `sent` or `failed` created in the last 15 minutes; `backup` — the last-modified time of the newest `<environment>/…manifest.json` key in the backup bucket (the manifest is uploaded only after the dump), with the bucket's read settings on the worker.
+
+_From 294-status-health-checks._
+
+### 294-FR-004 — Each probe's latency sample MUST be kept in Redis under `status:samples:{tile}` for 10 minutes, and the figure a tile is judged on (and shows as `detail.latency_ms`) MUST be the median of that tile's samples of the last 5 minutes; a failed check adds no sample. Redis holds samples only; PostgreSQL holds the state.
+
+_From 294-status-health-checks._
+
+### 294-FR-005 — `STATUS_THRESHOLDS` MUST be one JSON configuration value with, per tile, its amber and red limits in the tile's unit: milliseconds (`amber_ms`, `red_ms`) for `api`, `search` and `maps`; `amber_ms`/`red_ms` and a failed-send share (`amber_share`, `red_share`, 0–1) for `email`; a waiting-job age in seconds (`amber_age_s`, `red_age_s`) and a failed-send share for `notifications`; hours since the last backup (`amber_h`, `red_h`) for `backup`. No limit is hard-coded in the product code; `.env.example` MUST carry the build team's default value in full, tests MUST use fixture values, and no admin screen, API route or platform rule reads or writes it.
+
+_From 294-status-health-checks._
+
+### 294-FR-006 — A check's state MUST be `green` when every figure of the tile is under its amber limit, `amber` when any figure is at or over its amber limit and none at or over its red limit, and `red` when any figure is at or over its red limit or the check failed.
+
+_From 294-status-health-checks._
+
+### 294-FR-007 — The stored state of a tile MUST change only when two consecutive checks agree on the same new state; one differing check changes nothing. "Consecutive checks" are a tile's consecutive probes: the maps tile's are 60 seconds apart, the others' 30. The differing check's state and time are kept on the row (`pending_state`, `pending_since`) until the next check confirms or drops them. On a change, `since` MUST be set to the time of the first of those two checks. When the state does not change, `checked_at` and `detail` MUST still be updated on every run.
+
+_From 294-status-health-checks._
+
+### 294-FR-008 — STATUS_TILE MUST hold one row per tile: `key` (the tile), `state` (`green`, `amber`, `red`), `since`, `detail` (JSON: `latency_ms`, `failed_share`, `oldest_waiting_s`, `last_backup_at`, `reason`, as apply), `checked_at`, and the unconfirmed check's `pending_state` and `pending_since` (null when the last check agreed with `state`). The first run after the release MUST create the six rows with that run's state and `since`, and write `status_tile.changed` for each.
+
+_From 294-status-health-checks._
+
+### 294-FR-009 — On every state change the system MUST hand `status_tile.changed` with `{ tile, state, since }` to the event port in the same transaction as the STATUS_TILE write, and MUST NOT write it when the state is unchanged. Its audience MUST be the `admin` channel alone (the platform subject, admin only); nobody is notified by this story (the alert is #170).
+
+_From 294-status-health-checks._
+
+### 294-FR-010 — The six tiles' results MUST be independent: a provider that is down (Brevo, the map provider, the backup bucket) changes only its own tile; the worker's restart keeps every tile's last state.
+
+_From 294-status-health-checks._
+
+### 294-FR-011 — The job MUST be observable as the worker's other jobs are: counted by the jobs metric with its outcome, logged once on its final failure, listed in `infra/observability/inventory.json` with the queue, the two new outside calls (the backup bucket listing and the public-address probes) and the alert for a failed job; the dashboard panel and alert follow the existing worker-jobs ones.
+
+_From 294-status-health-checks._
+
+### 294-FR-012 — Tests MUST exist before the implementation and MUST cover: the two-in-a-row rule and `since` set on the first check of the new state; the 5-minute median (one sample, several, a sample older than 5 minutes left out); each tile's probe result mapped to green, amber and red with fixture limits, including a failed check and a figure exactly at a limit; the search probe writing no SEARCH_LOG row; `status_tile.changed` written in the same transaction as the tile change and only on a change, with the `admin` audience; a probe that throws not stopping the run; the job not starting on an unset or invalid `STATUS_THRESHOLDS`; the first run creating six rows; the maps probe on alternate runs and on the first; the share figure with no sends in the window. No end-to-end test in this task (#53 runs it).
+
+_From 294-status-health-checks._
+### 880-FR-001 — Every rule in every file under `infra/observability/alerts/` MUST carry an `annotations.runbook` line: one non-empty sentence naming what to check first (the panel, log or job to open), next to `summary`. `scripts/alert-rules.spec.ts` MUST fail a rule without one.
+
+_From 880-grafana-alerts._
+
+### 880-FR-002 — Every rule in every file MUST carry an explicit `for`. It MUST be `0s` only for the rules of this table, whose query already spans the wait; every other rule, each new rule of this story included, MUST carry a non-zero `for`, and the spec MUST fail a rule with `for: 0s` whose uid is not in the table.
+
+_From 880-grafana-alerts._
+
+### 880-FR-003 — `api-error-rate` MUST keep 5 % of responses over 10 minutes with the 20-response guard and `api-latency` 1.5 s at p95 (1024-FR-003, 1024-FR-004); the spec asserts the thresholds unchanged.
+
+_From 880-grafana-alerts._
+
+### 880-FR-004 — `postgres.json` MUST gain `postgres-outbox-stuck`: fires per environment when `max by (deployment_environment) (motorfix_outbox_oldest_pending_seconds)` is above 60, `for: 5m`, `dashboard_uid` `motorfix-postgres`, the summary naming the environment.
+
+_From 880-grafana-alerts._
+
+### 880-FR-005 — `api.json` MUST gain `api-search-latency`: fires per environment when the p95 of `http_server_request_duration_seconds_bucket{service_name="api", http_route="/api/v1/search/garages"}` over 5 minutes is above 0.3 s, `for: 10m`, `dashboard_uid` `motorfix-api`; the `motorfix-api` dashboard MUST gain a panel drawing that p95 per environment with a 300 ms threshold line (#1219's panel).
+
+_From 880-grafana-alerts._
+
+### 880-FR-006 — The shared telemetry setup in `libs/observability` MUST observe, for every service that starts it (api, worker, web, mcp), the process's resident memory (`process.memory.usage`, unit bytes) and its container memory limit (`motorfix_process_memory_limit_bytes`, read from the kernel's cgroup limit, v2 then v1); when the limit is `max`, 2^62 bytes or more (cgroup v1's unlimited value) or unreadable, the limit is not observed at all. A colocated Jest spec asserts both readings and the unlimited case.
+
+_From 880-grafana-alerts._
+
+### 880-FR-007 — `api.json`, `worker.json`, `web.json` and `mcp.json` MUST each gain a memory rule (`api-memory`, `worker-memory`, `web-memory`, `mcp-memory`): fires per environment when `max by (deployment_environment) (process_memory_usage_bytes{service_name="<svc>"} / on (deployment_environment, instance) motorfix_process_memory_limit_bytes{service_name="<svc>"})` is above 0.85, `for: 10m`, `dashboard_uid` the service's dashboard; the `motorfix-overview` dashboard MUST gain one panel drawing each service's share of its limit with an 85 % threshold line.
+
+_From 880-grafana-alerts._
+
+### 880-FR-008 — The spec MUST assert that the no-data rules `api-down`, `web-down`, `worker-down` and `mcp-down` exist and that each one's title and summary name its service; no new no-data rule is added.
+
+_From 880-grafana-alerts._
+
+### 880-FR-009 — `worker.json` MUST gain `worker-queue-growing`: fires per environment and queue when `max by (deployment_environment, queue) (delta(motorfix_queue_waiting[5m]))` is above 0, `for: 15m`, `dashboard_uid` `motorfix-worker`, the summary naming the queue (`{{ $labels.queue }}`).
+
+_From 880-grafana-alerts._
+
+### 880-FR-010 — The spec MUST assert that `worker-jobs-failed` exists and fires on `motorfix_jobs_total{outcome="failed"}`, the counter of final failures only, so "a scheduled job that failed for good" is covered; no new rule is added.
+
+_From 880-grafana-alerts._
+
+### 880-FR-011 — `infra/observability/grafana/alerting/contact-points.json` MUST declare one contact point, name `MotorFix owner`, a fixed uid, one e-mail integration whose addresses hold the owner's address and nothing else; no other integration type.
+
+_From 880-grafana-alerts._
+
+### 880-FR-012 — `infra/observability/grafana/alerting/policies.json` MUST declare the notification policy tree: root receiver `MotorFix owner`, grouped by alert name and environment, with the production intervals (group wait 30 s, group interval 5 m, repeat 4 h) set explicitly; a route matched on `deployment_environment = production` to `MotorFix owner` (group wait 30 s, group interval 5 m, repeat 4 h) and a route matched on `deployment_environment = staging` to `MotorFix owner` with longer intervals (group wait 5 m, group interval 30 m, repeat 24 h). No route, the root included, MUST hold `mute_time_intervals` or `active_time_intervals`; the spec MUST fail on one, and on a route naming a receiver the contact-point file does not declare.
+
+_From 880-grafana-alerts._
+
+### 880-FR-017 — Every new rule MUST follow the file's existing shape (1024-FR-001: uid and title prefixed by the service, `condition` `B`, `noDataState: OK`, `execErrState: Error`, the `service` label, a summary naming the environment, query `A` on `grafanacloud-prom` grouped by environment, no `outage` label, no environment named in a query), and every metric a rule names MUST be drawn by a dashboard under `infra/observability/grafana/dashboards/`.
+
+_From 880-grafana-alerts._
+
 ## Retired
 
 - `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
@@ -589,3 +690,9 @@ _From 1235-unknown-brand-cache._
 - `879-FR-010` — superseded by `251-FR-018` (2026-10-10)
 
 - `1024-FR-007` — superseded by `1175-FR-006` (2026-10-15)
+
+- `1024-FR-001` — superseded by `880-FR-013` (2026-10-17)
+- `1024-FR-009` — superseded by `880-FR-014` (2026-10-17)
+- `1024-FR-011` — superseded by `880-FR-015` (2026-10-17)
+- `1024-FR-010` — superseded by `880-FR-016` (2026-10-17)
+- `1024-FR-013` — superseded by `880-FR-018` (2026-10-17)

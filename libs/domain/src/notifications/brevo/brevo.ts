@@ -80,8 +80,9 @@ export class Brevo {
     });
   }
 
-  async checkKey(): Promise<boolean> {
-    const res = await this.call('/account', { method: 'GET' }).catch(
+  // An aborted signal gives up on the check, which then answers false.
+  async checkKey(signal?: AbortSignal): Promise<boolean> {
+    const res = await this.call('/account', { method: 'GET' }, signal).catch(
       () => null,
     );
     return res?.ok ?? false;
@@ -109,7 +110,7 @@ export class Brevo {
     throw new BrevoError('provider_bad_answer', false);
   }
 
-  private async call(path: string, init: RequestInit) {
+  private async call(path: string, init: RequestInit, signal?: AbortSignal) {
     try {
       return await fetch(`${this.apiUrl}${path}`, {
         ...init,
@@ -118,7 +119,9 @@ export class Brevo {
           accept: 'application/json',
           'api-key': this.apiKey,
         },
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: signal
+          ? AbortSignal.any([AbortSignal.timeout(this.timeoutMs), signal])
+          : AbortSignal.timeout(this.timeoutMs),
       });
     } catch {
       throw new BrevoError('provider_unreachable', true);

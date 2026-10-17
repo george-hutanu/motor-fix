@@ -32,6 +32,7 @@ features:
   - 029-overview-panels-own-data
   - 366-assistant-privacy
   - 291-saved-garages
+  - 066-suspended-garages
 ---
 
 # Capability: Accounts
@@ -970,6 +971,9 @@ _From 291-saved-garages._
 ### 291-FR-014 — Every text MUST live in the dashboard's texts in Romanian and English, and the panel and the view MUST render well at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll (286-FR, 288-FR); a row's remove control and arrow are at least 44 px targets.
 
 _From 291-saved-garages._
+### 066-FR-012 — The admin read of accounts (`GET /api/v1/admin/accounts`) MUST carry on each account `serviceSuspended`, true when the account holds a mechanic card at a garage whose status is `suspended`, false otherwise; no screen shows it in this story (the Mecanici table of #27 and the detail page of #28 will show "service suspendat" in red from it). Tests MUST cover a mechanic of a suspended garage (true), of an approved garage (false), an owner of a suspended garage with no mechanic card (false), and the flag turning false once the garage is no longer suspended.
+
+_From 066-suspended-garages._
 
 ## Retired
 

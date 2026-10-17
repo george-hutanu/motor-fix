@@ -38,13 +38,17 @@ const invalid = (message: string) =>
 const isKind = (kind: string): kind is VerificationCheckKind =>
   (VERIFICATION_CHECK_KINDS as readonly string[]).includes(kind);
 
-// The detail as stored: trimmed, at most 200 characters, required for a problem.
+// The detail as stored: trimmed, at most 200 characters, required for a
+// problem and refused when the check is unticked.
 function detailOf(body: RecordVerificationCheckDto) {
   const detail = body.detail?.trim() || null;
   if (detail && detail.length > CHECK_DETAIL_MAX) {
     throw invalid(`detail must be at most ${CHECK_DETAIL_MAX} characters`);
   }
-  if (body.result !== 'ok' && !detail) {
+  if (body.result === 'not_run' && detail) {
+    throw invalid('an unticked check carries no detail');
+  }
+  if ((body.result === 'warning' || body.result === 'failed') && !detail) {
     throw invalid('a warning or a failure needs a detail');
   }
   return detail;
@@ -57,11 +61,14 @@ function validated(
   body: RecordVerificationCheckDto,
 ) {
   if (!(RECORDED_RESULTS as readonly string[]).includes(body.result)) {
-    throw invalid('result must be ok, warning or failed');
+    throw invalid('result must be ok, warning, failed or not_run');
   }
   const detail = detailOf(body);
   if (body.activities !== undefined && kind !== 'activities') {
     throw invalid('activities belong to the activities check');
+  }
+  if (body.activities !== undefined && body.result === 'not_run') {
+    throw invalid('an unticked check carries no activities');
   }
   if (kind === 'activities' && body.result === 'ok' && !body.activities) {
     throw invalid('an ok activities check needs the list');

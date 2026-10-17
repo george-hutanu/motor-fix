@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 123,
+    "count": 128,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -16,7 +16,9 @@
         "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate",
-        "api-prefetch-hit-rate"
+        "api-prefetch-hit-rate",
+        "api-search-latency",
+        "api-memory"
       ],
       "story": "ST-881"
     },
@@ -27,7 +29,8 @@
       "dashboard": "motorfix-mcp",
       "alerts": [
         "mcp-auth-failures",
-        "mcp-tool-errors"
+        "mcp-tool-errors",
+        "mcp-memory"
       ],
       "reason": "reports mcp_requests_total{outcome}, mcp_tool_calls_total{tool,outcome}, mcp_auth_failures_total{reason}, mcp_tool_call_duration_seconds{tool}, mcp_key_fetches_total{outcome} and mcp_issuer_up (the IssuerProbe, once a minute), one McpToolCall log line per tool call and an mcp.tool <name> span; a new assistant grant is an audit row and an assistant_grant.created event",
       "story": "ST-365"
@@ -40,7 +43,8 @@
       "alerts": [
         "web-down",
         "web-error-rate",
-        "web-latency"
+        "web-latency",
+        "web-memory"
       ],
       "story": "ST-877"
     },
@@ -62,8 +66,10 @@
         "worker-down",
         "worker-saturation",
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed",
-        "worker-cdn-purge-failed"
+        "worker-cdn-purge-failed",
+        "worker-memory"
       ],
       "story": "ST-881"
     },
@@ -79,7 +85,9 @@
         "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate",
-        "api-prefetch-hit-rate"
+        "api-prefetch-hit-rate",
+        "api-search-latency",
+        "api-memory"
       ],
       "story": "ST-881"
     },
@@ -92,8 +100,10 @@
         "worker-down",
         "worker-saturation",
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed",
-        "worker-cdn-purge-failed"
+        "worker-cdn-purge-failed",
+        "worker-memory"
       ],
       "story": "ST-881"
     },
@@ -105,7 +115,8 @@
       "alerts": [
         "web-down",
         "web-error-rate",
-        "web-latency"
+        "web-latency",
+        "web-memory"
       ],
       "story": "ST-877"
     },
@@ -127,7 +138,8 @@
       "dashboard": "motorfix-mcp",
       "alerts": [
         "mcp-down",
-        "mcp-issuer-unreachable"
+        "mcp-issuer-unreachable",
+        "mcp-memory"
       ],
       "reason": "staging only; health at /health/live; mcp_issuer_up is its liveness series",
       "story": "ST-1016"
@@ -139,6 +151,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed",
         "profile-views-job-failed"
       ],
@@ -147,11 +160,25 @@
     },
     {
       "kind": "queue",
+      "name": "status-checks",
+      "source": "libs/domain/src/status/status.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one job every 30 seconds probes the admin dashboard's six service tiles and stores them in status_tile, counted by motorfix_jobs_total{job_name,outcome} and logged once on its final failure; a confirmed tile change logs 'StatusChecks <tile> <state> <figures>' and writes status_tile.changed; a failed run is not retried, the next one follows in 30 seconds; the tiles' own alerting is a later story",
+      "story": "ST-294"
+    },
+    {
+      "kind": "queue",
       "name": "reminders",
       "source": "libs/domain/src/cars/reminders/reminders.module.ts",
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -163,6 +190,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -174,6 +202,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -185,6 +214,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -196,6 +226,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-343"
@@ -218,6 +249,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
@@ -230,6 +262,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "reason": "one QuoteAccepted log line per job naming the quote id and how many staff were told, or why none; BullMQ's queue metrics cover depth and failures; the acceptances themselves are counted by motorfix_quote_accepts_total",
@@ -242,6 +275,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "reason": "counted by motorfix_quote_received_total (built, muted) on motorfix-queues and motorfix-product; BullMQ's queue metrics cover depth and failures",
@@ -306,7 +340,8 @@
         "api-error-rate",
         "api-latency"
       ],
-      "story": "ST-881"
+      "story": "ST-881",
+      "reason": "the app's object store; the worker's status checks also list the nightly backup bucket with their own client (libs/domain/src/status/probes/probes.ts, BACKUP_S3_*, ST-294), a failed listing showing the backup tile red with its reason"
     },
     {
       "kind": "outside-service",
@@ -328,7 +363,8 @@
       "alerts": [
         "postgres-unreachable",
         "postgres-connections",
-        "postgres-size"
+        "postgres-size",
+        "postgres-outbox-stuck"
       ],
       "story": "ST-881"
     },
@@ -356,6 +392,18 @@
       ],
       "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}",
       "story": "ST-111"
+    },
+    {
+      "kind": "outside-service",
+      "name": "public-web",
+      "source": "libs/domain/src/status/probes/probes.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-jobs-failed",
+        "worker-saturation"
+      ],
+      "reason": "the status checks call the public web address every 30 seconds (/health/ready, the popular brands and one garage search without the log flag), timed on the Outside calls row (http_client_request_duration_seconds by server_address); a failed probe shows its tile red, the tiles' own alerting is a later story",
+      "story": "ST-294"
     },
     {
       "kind": "outside-service",
@@ -627,6 +675,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_search_pins_total",
+      "source": "libs/domain/src/search/garage-search/garage-search.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each pins answer by outcome (results, none) and mode (area, bbox) for the map on Results; a count has no failure to alert on: the route's errors and latency are the api-error-rate and api-latency rules, and its Redis fallback is in motorfix_search_cache_total under the api-search-cache-fallback-rate alert",
+      "story": "ST-269"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_sign_ins_total",
       "source": "libs/domain/src/auth/sign-in.service.ts",
       "dashboard": "motorfix-product",
@@ -823,6 +880,30 @@
     },
     {
       "kind": "endpoint",
+      "name": "admin-garages-summary",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages/summary",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-66"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-garages",
+      "source": "libs/domain/src/garages/admin-overview.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/garages",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "story": "ST-66"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-verification-documents",
       "source": "libs/domain/src/garages/documents/legal-documents/legal-documents.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/documents/:documentId/pages/:n/download-url",
@@ -833,6 +914,32 @@
       ],
       "reason": "each issued address writes one open entry in the history and counts motorfix_documents_opened_total",
       "story": "ST-206"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-read",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read with no writes; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-302"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-verification-file-open",
+      "source": "libs/domain/src/garages/verification/verification-file/verification-file.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/verification-files/:id/open",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the first opening logs one line (file, admin) and emits verification.opened; the API-wide error and latency rules cover it, so it has no alert of its own",
+      "story": "ST-302"
     },
     {
       "kind": "product-counter",
@@ -952,10 +1059,24 @@
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
-        "api-latency"
+        "api-latency",
+        "api-search-latency"
       ],
       "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, and new searches still count in motorfix_searches_total",
       "story": "ST-267"
+    },
+    {
+      "kind": "endpoint",
+      "name": "search-garages-pins",
+      "source": "libs/domain/src/search/garage-search/garage-search.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/search/garages/pins",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; no outside call (the browser fetches the tiles from the place-step map's provider)",
+      "story": "ST-269"
     },
     {
       "kind": "outside-service",

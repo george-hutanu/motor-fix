@@ -20,3 +20,15 @@ export function recordSearchLog(outcome: 'written' | 'failed') {
     outcome,
   });
 }
+
+// One count per pins answer, cached or not, by whether it found a garage and
+// by whether it read the place's area or the map's box.
+export function recordSearchPins(
+  outcome: 'results' | 'none',
+  mode: 'area' | 'bbox',
+) {
+  counter(
+    'motorfix_search_pins_total',
+    'Map pin answers, by outcome and mode',
+  ).add(1, { mode, outcome });
+}

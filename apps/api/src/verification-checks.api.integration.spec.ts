@@ -158,3 +158,48 @@ describe('PUT /admin/verification-files/:id/checks/:kind', () => {
     ).toBe(404);
   });
 });
+
+describe('PUT …/checks/:kind with not_run', () => {
+  // @traces 302-FR-007
+  it('accepts an untick and writes its entry and event', async () => {
+    const id = await file();
+    await put(id, 'photos', { result: 'ok' }, admin);
+
+    const res = await put(id, 'photos', { result: 'not_run' }, admin);
+
+    expect(res.status).toBe(200);
+    expect(res.body.check).toMatchObject({
+      detail: null,
+      kind: 'photos',
+      result: 'not_run',
+    });
+    const entries = await db.query(
+      "SELECT new_value FROM activity_log WHERE subject_type = 'verification_check' AND field = 'photos' AND subject_id = $1 ORDER BY at",
+      [res.body.check.id],
+    );
+    expect(entries.rows.map((r) => r.new_value.result)).toEqual([
+      'ok',
+      'not_run',
+    ]);
+    const events = await db.query(
+      "SELECT payload FROM outbox_event WHERE kind = 'verification.check_recorded' AND subject_id = $1",
+      [id],
+    );
+    expect(events.rows).toHaveLength(2);
+  });
+
+  // @traces 302-FR-007
+  it('refuses an untick on a decided file with 409', async () => {
+    const res = await put(
+      await file('rejected'),
+      'photos',
+      { result: 'not_run' },
+      admin,
+    );
+
+    expect([res.status, res.body.code]).toEqual([
+      409,
+      'verification_file_decided',
+    ]);
+  });
+});

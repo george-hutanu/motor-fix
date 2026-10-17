@@ -785,6 +785,13 @@ async function seed(db: Client, secret: string) {
        AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
     [LISTED.map(({ slug }) => slug)],
   );
+  // Every seeded garage has a fiscal code, as a sent listing does.
+  await db.query(
+    `UPDATE garage
+     SET cui = (10000000 + abs(hashtext(slug)) % 90000000)::text
+     WHERE cui IS NULL AND slug = ANY($1)`,
+    [[...GARAGES, ...LISTED].map(({ slug }) => slug)],
+  );
   // A file has one check per kind (submit and resend add them); the seed
   // inserts its files directly, so it adds them the same way.
   await db.query(

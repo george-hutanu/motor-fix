@@ -1,7 +1,11 @@
 import type { ListedGarageDto } from '@motor-fix/contracts';
-import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
+import {
+  MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+  ROMANIA_BOUNDS,
+} from '@motor-fix/contracts/place-section';
 import {
   SEARCH_RADIUS_DEFAULT_KM,
+  type SearchBbox,
   type SearchPoint,
 } from '@motor-fix/contracts/search-place';
 
@@ -9,8 +13,28 @@ import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 
 interface InArea {
   distanceM: number;
+  lat: number;
+  lng: number;
   mobile: boolean;
 }
+
+interface AreaOf {
+  point?: SearchPoint;
+  radiusKm?: number;
+  bbox?: SearchBbox;
+  // At most this many, nearest first, when nothing needs the whole area.
+  limit?: number;
+}
+
+const ROMANIA_CENTRE = {
+  lat: (ROMANIA_BOUNDS.latMin + ROMANIA_BOUNDS.latMax) / 2,
+  lng: (ROMANIA_BOUNDS.lngMin + ROMANIA_BOUNDS.lngMax) / 2,
+};
+
+const centreOf = ({ south, west, north, east }: SearchBbox) => ({
+  lat: (south + north) / 2,
+  lng: (west + east) / 2,
+});
 
 // Haversine on a sphere of the Earth's mean radius: within a metre of the
 // ellipsoid at these distances, and it needs no PostGIS extension. Metres
@@ -22,35 +46,60 @@ export const distanceMetersSql = ({ lat, lng }: SearchPoint) => Prisma.sql`
       * power(sin(radians(garage.longitude - ${lng}) / 2), 2)
   ))`;
 
-// A fixed garage is in when within the search radius; a mobile mechanic when
-// the place is inside the area it serves around its seat, whatever the radius.
+// Distances run from the place, else the box's centre, else Romania's. A
+// mobile mechanic is in when the place is inside the area it serves around
+// its seat, whatever the radius or box; with a box and no place there is no
+// place to come to, so none is. A fixed garage is in when inside the box,
+// else within the radius of the place. With neither, every garage with a
+// position.
 export async function garagesInArea(
   prisma: PrismaClient,
-  point: SearchPoint,
-  radiusKm: number = SEARCH_RADIUS_DEFAULT_KM,
+  { bbox, point, radiusKm = SEARCH_RADIUS_DEFAULT_KM, limit }: AreaOf,
 ): Promise<Map<string, InArea>> {
+  const { lat, lng } = point ?? (bbox ? centreOf(bbox) : ROMANIA_CENTRE);
+  const mobileIn = point
+    ? Prisma.sql`distance_m <= COALESCE(service_radius_km, ${MOBILE_SERVICE_RADIUS_DEFAULT_KM}) * 1000`
+    : bbox
+      ? Prisma.sql`FALSE`
+      : Prisma.sql`TRUE`;
+  const fixedIn = bbox
+    ? Prisma.sql`latitude BETWEEN ${bbox.south} AND ${bbox.north}
+        AND longitude BETWEEN ${bbox.west} AND ${bbox.east}`
+    : point
+      ? Prisma.sql`distance_m <= ${radiusKm * 1000}`
+      : Prisma.sql`TRUE`;
   const rows = await prisma.$queryRaw<
-    { id: string; distance_m: number; mobile: boolean }[]
+    {
+      id: string;
+      distance_m: number;
+      latitude: number;
+      longitude: number;
+      mobile: boolean;
+    }[]
   >`
-    SELECT id, distance_m, mobile FROM (
+    SELECT id, distance_m, latitude, longitude, mobile FROM (
       SELECT
         id,
+        latitude,
+        longitude,
         business_kind IS NOT DISTINCT FROM 'mobile' AS mobile,
         service_radius_km,
-        ${distanceMetersSql(point)} AS distance_m
+        ${distanceMetersSql({ lat, lng })} AS distance_m
       FROM garage
       WHERE status = 'approved' AND latitude IS NOT NULL
     ) measured
-    WHERE distance_m <= CASE
-      WHEN mobile
-        THEN COALESCE(service_radius_km, ${MOBILE_SERVICE_RADIUS_DEFAULT_KM}) * 1000
-      ELSE ${radiusKm * 1000}
-    END
+    WHERE CASE WHEN mobile THEN ${mobileIn} ELSE ${fixedIn} END
+    ${limit === undefined ? Prisma.empty : Prisma.sql`ORDER BY distance_m, id LIMIT ${limit}`}
   `;
   return new Map(
     rows.map((row) => [
       row.id,
-      { distanceM: Number(row.distance_m), mobile: row.mobile },
+      {
+        distanceM: Number(row.distance_m),
+        lat: row.latitude,
+        lng: row.longitude,
+        mobile: row.mobile,
+      },
     ]),
   );
 }

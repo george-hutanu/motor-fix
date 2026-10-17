@@ -14,6 +14,9 @@ export interface OverlayOptions<D = undefined> {
   data?: D;
   // Ask before closing a task whose fields changed. On unless set to false.
   confirmDiscard?: boolean;
+  // The opener's way to close the task itself: an abort closes it, unasked,
+  // with "cancelled".
+  signal?: AbortSignal;
 }
 
 // What a task component gets from the overlay it is shown in.

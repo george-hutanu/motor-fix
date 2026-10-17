@@ -402,6 +402,56 @@
       }
     },
     {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Memory share of limit, every service (alert above 85%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "max by (service_name) (process_memory_usage_bytes{service_name=~\"api|worker|web|mcp\", deployment_environment=\"$env\"} / on (service_name, deployment_environment, instance) motorfix_process_memory_limit_bytes{service_name=~\"api|worker|web|mcp\", deployment_environment=\"$env\"})",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
       "id": 9,
       "type": "row",
       "title": "worker",
