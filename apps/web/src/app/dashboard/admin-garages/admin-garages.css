@@ -3,8 +3,10 @@
   gap: var(--mf-space-4);
   min-width: 0;
 }
+/* Inset like the view title above it and the cards' text below it. */
 .counts {
   position: relative;
+  padding-inline: var(--mf-space-4);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -35,7 +37,7 @@
 }
 .tip {
   position: absolute;
-  inset: 100% auto auto 0;
+  inset: 100% auto auto var(--mf-space-4);
   z-index: 1;
   padding: var(--mf-space-2);
   font-size: var(--mf-size-body);
