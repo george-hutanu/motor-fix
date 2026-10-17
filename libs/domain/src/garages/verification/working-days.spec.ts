@@ -21,6 +21,11 @@ describe('the working days a file has waited', () => {
     expect(waited('2026-10-13T10:01:00+03:00')).toBe(1);
   });
 
+  it('does not count a day at the exact hour of sending, only after it', () => {
+    expect(waited('2026-10-13T10:00:00+03:00')).toBe(0);
+    expect(waited('2026-10-15T10:00:00+03:00')).toBe(2);
+  });
+
   it('reads 2 on Wednesday at 10:01 and 3 on Thursday at 10:01', () => {
     expect(waited('2026-10-14T10:01:00+03:00')).toBe(2);
     expect(waited('2026-10-15T10:01:00+03:00')).toBe(3);

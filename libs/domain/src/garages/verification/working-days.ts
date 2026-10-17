@@ -10,8 +10,8 @@ export function workingDaysWaited(
 ): number {
   const sent = localDay(submittedAt);
   let days = daysBetween(sent, localDay(now));
-  // Today counts once the hour of sending has come round.
-  if (days > 0 && addLocalDays(submittedAt, days) > now) days--;
+  // Today counts once the hour of sending has passed, not at it.
+  if (days > 0 && addLocalDays(submittedAt, days) >= now) days--;
   let count = 0;
   for (let n = 1; n <= days; n++) {
     const day = addDays(sent, n);
