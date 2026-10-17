@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -213,6 +214,12 @@ describe('Grafana alerts workflow under hostile input', () => {
     mkdirSync(join(dir, 'bin'));
     mkdirSync(join(dir, 'calls'));
     mkdirSync(alerts(), { recursive: true });
+    // The workflow applies the contact point and the policy before the rules.
+    cpSync(
+      join(root, 'infra', 'observability', 'grafana', 'alerting'),
+      join(dir, 'infra', 'observability', 'grafana', 'alerting'),
+      { recursive: true },
+    );
     const curl = join(dir, 'bin', 'curl');
     writeFileSync(
       curl,
@@ -312,7 +319,9 @@ describe('Grafana alerts workflow under hostile input', () => {
     expect(code).toBe(0);
     expect(puts(calls).map((c) => c.body?.title)).toEqual(['one', 'two']);
     expect(puts(calls).map((c) => c.body?.interval)).toEqual([60, 300]);
-    expect(out.match(/applied/g)).toHaveLength(2);
+    expect(out.match(/applied infra\/observability\/alerts\//g)).toHaveLength(
+      2,
+    );
   });
 
   // @traces 1024-FR-009
