@@ -19,7 +19,6 @@ export function mountOriginGuard(app: Express, secrets: readonly string[]) {
       return;
     }
     refused(`origin refused ${req.method} ${req.path}`);
-    res.removeHeader('X-Powered-By');
     res.status(403).end();
   });
 }

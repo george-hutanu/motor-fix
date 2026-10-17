@@ -36,6 +36,8 @@ const browserDistFolder = resolve(
 );
 
 const app = express();
+// No answer names the framework behind it.
+app.disable('x-powered-by');
 const publicUrl = publicWebUrl();
 const faro = faroUrl();
 const analytics = plausibleDomain();

@@ -15,6 +15,8 @@ let port = 0;
 
 async function serve(secrets: string[]) {
   const app = express();
+  // As server.ts sets it up: no answer names the framework.
+  app.disable('x-powered-by');
   mountOriginGuard(app, secrets);
   app.get('/health/live', (_req, res) => res.send('live'));
   app.get('/health/ready', (_req, res) => res.send('ready'));

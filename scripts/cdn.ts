@@ -87,14 +87,6 @@ export async function run(
 // The environment's zone from the file, its variables read; an exit code
 // when the input is not usable.
 function loadZone(command: string, name: string, env: Env): Zone | number {
-  const needed = [
-    'BUNNY_API_KEY',
-    'BUNNY_PULL_ZONE_ID',
-    'CDN_ORIGIN_URL',
-    'CDN_ORIGIN_HOST',
-  ];
-  if (command === 'apply') needed.push('ORIGIN_SECRET_EDGE');
-  if (!present(env, needed)) return 2;
   const errors: string[] = [];
   const file = readConfig(env, errors);
   for (const error of errors) console.error(error);
@@ -104,7 +96,9 @@ function loadZone(command: string, name: string, env: Env): Zone | number {
   const read = variablesOf(raw).filter(
     (name) => command === 'apply' || !SECRETS.has(name),
   );
-  if (!present(env, read)) return 2;
+  if (!present(env, ['BUNNY_API_KEY', 'BUNNY_PULL_ZONE_ID', ...read])) {
+    return 2;
+  }
   const zone = substitute(raw, env);
   if (!String(zone.pullZone['OriginUrl'] ?? '').startsWith('https://')) {
     console.error('pullZone.OriginUrl must be an https:// address');

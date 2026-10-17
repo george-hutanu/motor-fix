@@ -509,7 +509,7 @@ describe('cdn purge', () => {
 describe('cdn input', () => {
   it('names every missing variable and exits 2 without a call', async () => {
     const { impl, sent } = fakeFetch([]);
-    expect(await run(['check', 'staging'], {}, impl)).toBe(2);
+    expect(await run(['check', 'staging'], { CDN_CONFIG: FILE }, impl)).toBe(2);
     expect(lines.join('\n')).toMatch(/BUNNY_API_KEY/);
     expect(lines.join('\n')).toMatch(/BUNNY_PULL_ZONE_ID/);
     expect(lines.join('\n')).toMatch(/CDN_ORIGIN_URL/);
