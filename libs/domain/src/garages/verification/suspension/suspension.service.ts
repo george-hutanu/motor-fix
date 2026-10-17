@@ -21,8 +21,6 @@ import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { countGarageSuspension } from '../../../metrics/product-counters';
 import type { VerificationActor } from '../verification.service';
 
-export type { SuspensionCause };
-
 export interface Suspension {
   id: string;
   garageId: string;

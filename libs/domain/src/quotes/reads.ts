@@ -120,8 +120,8 @@ export const bookingOf = (
   status: booking.status,
 });
 
-// A waiting quote of a suspended garage reads as withdrawn from the garage's
-// status, before the worker writes the withdrawal.
+// A waiting quote of a suspended garage reads as withdrawn: nothing writes
+// the withdrawal to the quote, so the garage's status decides.
 const shownStatus = (
   quote: Quote & { garage?: Pick<Garage, 'status'> },
 ): Quote['status'] =>

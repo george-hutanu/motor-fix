@@ -1,7 +1,8 @@
+import type { SuspensionCause } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
 
-import { type SuspensionCause, SuspensionService } from './suspension.service';
+import { SuspensionService } from './suspension.service';
 import { staffedGarage } from './suspension.testing';
 import type { AuditPort } from '../../../audit/audit.port';
 import { AuditService } from '../../../audit/audit.service';
