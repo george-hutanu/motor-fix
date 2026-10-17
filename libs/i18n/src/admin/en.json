@@ -46,12 +46,16 @@
     },
     "failed": "Could not open the file",
     "footer": {
+      "alreadyDecided": "Already decided by {name} at {time}",
       "approve": "Approve and publish",
       "ask": "Ask for more",
+      "caenRequired": "Approval needs the CAEN check",
       "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
+      "rarCheckRequired": "Approval needs the RAR check",
       "rarRequired": "The RAR check is required",
       "reason": "Reason: {reason}",
-      "reject": "Reject"
+      "reject": "Reject",
+      "saveFailed": "Could not save the decision"
     },
     "history": {
       "empty": "Nothing to show yet",
@@ -189,6 +193,14 @@
       "uncoveredLine": "Not covered: {jobs}"
     },
     "rejectedBefore": "Rejected before: {reason}, {when}",
+    "reopen": {
+      "button": "Reopen the file",
+      "cancel": "Cancel",
+      "confirm": "Reopen",
+      "failed": "Could not reopen the file",
+      "question": "Reopen the file? The decision stands until you take a new one.",
+      "title": "Reopen the file"
+    },
     "reopenedReport": "Reopened after a report, {when}",
     "report": "{text} · {when}",
     "reported": "Reported",

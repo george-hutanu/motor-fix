@@ -162,7 +162,7 @@ test.describe('signing in for real @seeded', () => {
 
     await page
       .getByRole('navigation', { name: 'Navigare principală' })
-      .getByRole('link', { name: 'Cont' })
+      .getByRole('link', { exact: true, name: 'Cont' })
       .click();
 
     await expect(page).toHaveURL('/ro/garages');

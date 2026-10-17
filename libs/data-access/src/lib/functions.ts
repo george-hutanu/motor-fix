@@ -125,6 +125,10 @@ export type { VerificationFileControllerRead$Params as VerificationFileControlle
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
+export type { VerificationFileControllerDecision$Params as VerificationFileControllerDecision$Params } from './fn/admin/verification-file-controller-decision';
+export { verificationFileControllerDecision as verificationFileControllerDecision } from './fn/admin/verification-file-controller-decision';
+export type { VerificationFileControllerReopen$Params as VerificationFileControllerReopen$Params } from './fn/admin/verification-file-controller-reopen';
+export { verificationFileControllerReopen as verificationFileControllerReopen } from './fn/admin/verification-file-controller-reopen';
 export type { VerificationFileControllerCorrect$Params as VerificationFileControllerCorrect$Params } from './fn/admin/verification-file-controller-correct';
 export { verificationFileControllerCorrect as verificationFileControllerCorrect } from './fn/admin/verification-file-controller-correct';
 export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
