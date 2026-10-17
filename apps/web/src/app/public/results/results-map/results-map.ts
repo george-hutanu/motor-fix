@@ -34,7 +34,8 @@ import {
   styleFor,
 } from '../../map-libre/map-libre';
 
-// The small card keeps 8 px from the map's edges and 14 px above its pin.
+// The small card keeps 8 px below the map's top and 14 px above its pin;
+// results-map.css keeps the same 8 px at its sides.
 const EDGE = 8;
 const GAP = 14;
 
@@ -112,7 +113,10 @@ export class ResultsMap {
   // Bumped on every move of the map, so the small card follows its pin.
   private readonly shifts = signal(0);
   // The small card's own height once drawn, to keep it inside the map.
-  private readonly small = viewChild('small', { read: ElementRef });
+  private readonly small = viewChild<unknown, ElementRef<HTMLElement>>(
+    'small',
+    { read: ElementRef },
+  );
   private readonly smallHeight = signal(0);
   // Where the small card stands: above its pin, pushed down rather than
   // flipped where the pin sits too near the top.
@@ -151,8 +155,10 @@ export class ResultsMap {
     });
     effect(() => this.view()?.show(this.pins()));
     effect(() => this.view()?.light(this.lit()));
+    // Measured again once the garage fills the card, which makes it taller.
     afterRenderEffect(() => {
-      const small = this.small()?.nativeElement as HTMLElement | undefined;
+      this.card();
+      const small = this.small()?.nativeElement;
       if (small) this.smallHeight.set(small.offsetHeight);
     });
   }

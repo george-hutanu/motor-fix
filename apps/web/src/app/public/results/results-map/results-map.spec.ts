@@ -492,6 +492,25 @@ describe('ResultsMap, a tapped pin and its small card', () => {
     expect(card()?.classList).not.toContain('below');
   });
 
+  it('measures the small card again when the page fills it, so a taller card still clears its pin', async () => {
+    await withCard();
+    view.spot.mockReturnValue({ x: 60, y: 200 });
+    shifted();
+    fixture.detectChanges();
+    expect(card()?.style.top).toBe('186px');
+
+    // The garage read fills the card: a new card value, a taller element.
+    Object.defineProperty(card(), 'offsetHeight', {
+      configurable: true,
+      get: () => 60,
+    });
+    fixture.componentRef.setInput('card', { pin: PIN });
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    expect(card()?.style.top).toBe('126px');
+  });
+
   it('closes the small card when the page clears it', async () => {
     await withCard();
 

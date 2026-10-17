@@ -1694,6 +1694,20 @@ describe('Results', () => {
     );
 
     // @traces 270-card-pin-link-FR-010
+    it('keeps the filled small card and reads nothing more when its pin is tapped again', async () => {
+      await loaded();
+      await picked('pin-3');
+      await reads[1]?.answer(
+        pageOf({ items: [garageOf('pin-3', 'Service Trei')] }),
+      );
+
+      await picked('pin-3');
+
+      expect(said(small())).toContain('Service Trei');
+      expect(searches()).toHaveLength(2);
+    });
+
+    // @traces 270-card-pin-link-FR-010
     it('drops a read answered after another pin was tapped', async () => {
       await loaded();
       await picked('pin-3');

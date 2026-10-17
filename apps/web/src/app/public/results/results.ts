@@ -393,6 +393,8 @@ export class Results {
   // away from every pin closes the small card and selects nothing.
   protected async picked(id: string | undefined) {
     if (id === undefined) return this.card.set(undefined);
+    // The small card already open for this pin stays as it is: no second read.
+    if (untracked(this.card)?.pin.id === id) return;
     this.selected.set(id);
     const listed = untracked(this.cards).find((c) => c.garage().id === id);
     const pin = untracked(this.pinned)?.pins.find((p) => p.id === id);

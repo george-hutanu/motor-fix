@@ -36,7 +36,7 @@ const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
 @Component({
   host: {
     '(click)': 'picked($event)',
-    '(focusin)': 'point.emit(true)',
+    '(focusin)': 'aim("focus", true)',
     '(focusout)': 'blurred($event)',
   },
   imports: [Lamp, RatingDial, RouterLink, SaveGarageButton, TranslatePipe],
@@ -57,6 +57,9 @@ export class ResultCard {
   readonly pick = output<void>();
 
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
+  // The card is pointed while the pointer or the focus rests on it; either
+  // leaving alone does not end it.
+  private readonly on = { focus: false, pointer: false };
 
   constructor() {
     const prefetch = inject(ProfilePrefetch);
@@ -70,13 +73,13 @@ export class ResultCard {
       let rest: ReturnType<typeof setTimeout> | undefined;
       const enter = (event: Event) => {
         if ((event as PointerEvent).pointerType === 'touch') return;
-        this.point.emit(true);
+        this.aim('pointer', true);
         clearTimeout(rest);
         rest = setTimeout(want, REST_MS);
       };
       const leave = (event: Event) => {
         if ((event as PointerEvent).pointerType === 'touch') return;
-        this.point.emit(false);
+        this.aim('pointer', false);
         clearTimeout(rest);
         prefetch.cancel(this.garage().slug, this.brand().slug);
       };
@@ -123,7 +126,14 @@ export class ResultCard {
   protected blurred(event: FocusEvent) {
     const next = event.relatedTarget as Node | null;
     if (next && this.host.contains(next)) return;
-    this.point.emit(false);
+    this.aim('focus', false);
+  }
+
+  protected aim(by: 'focus' | 'pointer', on: boolean) {
+    const was = this.on.focus || this.on.pointer;
+    this.on[by] = on;
+    const is = this.on.focus || this.on.pointer;
+    if (is !== was) this.point.emit(is);
   }
 
   protected readonly initials = computed(() =>
