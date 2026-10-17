@@ -1155,3 +1155,21 @@ describe('the garage opened event', () => {
     expect(opened()).toEqual([]);
   });
 });
+
+// @traces 290-FR-009
+describe('the save button in the profile header', () => {
+  it('follows the request button, labelled, for the garage on the page', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer(MOBILE);
+
+    const save = page().querySelector('mf-save-garage-button');
+    const request = page().querySelector('mf-request-quote-button');
+    expect(save?.querySelector('button')?.textContent?.trim()).toBe('Salvează');
+    expect(
+      request &&
+        save &&
+        request.compareDocumentPosition(save) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});

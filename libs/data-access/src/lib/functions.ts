@@ -139,6 +139,12 @@ export type { CarsControllerRemove$Params as CarsControllerRemove$Params } from 
 export { carsControllerRemove as carsControllerRemove } from './fn/cars/cars-controller-remove';
 export type { CarsControllerUpdate$Params as CarsControllerUpdate$Params } from './fn/cars/cars-controller-update';
 export { carsControllerUpdate as carsControllerUpdate } from './fn/cars/cars-controller-update';
+export type { SavedGaragesControllerSave$Params as SavedGaragesControllerSave$Params } from './fn/saved-garages/saved-garages-controller-save';
+export { savedGaragesControllerSave as savedGaragesControllerSave } from './fn/saved-garages/saved-garages-controller-save';
+export type { SavedGaragesControllerRemove$Params as SavedGaragesControllerRemove$Params } from './fn/saved-garages/saved-garages-controller-remove';
+export { savedGaragesControllerRemove as savedGaragesControllerRemove } from './fn/saved-garages/saved-garages-controller-remove';
+export type { SavedGaragesControllerIds$Params as SavedGaragesControllerIds$Params } from './fn/saved-garages/saved-garages-controller-ids';
+export { savedGaragesControllerIds as savedGaragesControllerIds } from './fn/saved-garages/saved-garages-controller-ids';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
 export type { PopularBrandsControllerTiles$Params as PopularBrandsControllerTiles$Params } from './fn/brands/popular-brands-controller-tiles';

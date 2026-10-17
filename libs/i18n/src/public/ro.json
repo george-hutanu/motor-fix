@@ -649,6 +649,16 @@
     "title": "Service‑uri pentru {brand}",
     "widen": "Caută în {km} km"
   },
+  "saveGarage": {
+    "failed": "Nu a mers. Încearcă din nou.",
+    "noConnection": "Fără conexiune",
+    "removed": "Scos din salvate",
+    "save": "Salvează",
+    "saved": "Salvat",
+    "savedToast": "Salvat în Service‑uri salvate",
+    "unavailable": "Indisponibil",
+    "undo": "Anulează"
+  },
   "signIn": {
     "brand": "MotorFix",
     "code": {

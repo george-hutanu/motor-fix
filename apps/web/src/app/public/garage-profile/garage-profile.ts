@@ -37,6 +37,8 @@ import type { LiveView } from '../../live/view';
 import { publicRead } from '../../public-read';
 import { publicLiveResource } from '../live';
 import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
+import { SaveGarageButton } from '../saved-garages/save-garage-button/save-garage-button';
+import { SavedGarages } from '../saved-garages/saved-garages';
 
 // What can change on a garage's page: the garage, its reviews, its
 // verification, prices, mechanics, facilities and response figures.
@@ -69,6 +71,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
     RatingDial,
     ReportGarageLink,
     RequestQuoteButton,
+    SaveGarageButton,
     RouterLink,
     TranslatePipe,
   ],
@@ -85,6 +88,7 @@ export class GarageProfile {
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
   private readonly prefetch = inject(ProfilePrefetch);
+  private readonly saved = inject(SavedGarages);
   protected readonly i18n = inject(I18n);
 
   private readonly slug = toSignal(
@@ -156,7 +160,11 @@ export class GarageProfile {
       const id = this.garage()?.id;
       if (!this.browser || !id || id === viewed) return;
       viewed = id;
-      untracked(() => this.view(id));
+      untracked(() => {
+        this.view(id);
+        // Which garages a driver saved, once per profile opened.
+        void this.saved.load();
+      });
     });
     // The garage's own purge tag, so its edit clears this page at the edge.
     effect(() => {

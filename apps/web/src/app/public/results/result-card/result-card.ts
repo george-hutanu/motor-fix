@@ -19,6 +19,7 @@ import {
 import { Lamp, RatingDial } from '@motor-fix/ui-cockpit';
 
 import { ProfilePrefetch } from '../../profile-prefetch/profile-prefetch';
+import { SaveGarageButton } from '../../saved-garages/save-garage-button/save-garage-button';
 
 const REST_MS = 100;
 
@@ -32,7 +33,7 @@ const FACILITIES: Record<ListedGarageDto['facilities'][number], string> = {
 // One garage of the results: who it is, where, whether it takes the brand,
 // what it costs and how it is rated, and the way to its page.
 @Component({
-  imports: [Lamp, RatingDial, RouterLink, TranslatePipe],
+  imports: [Lamp, RatingDial, RouterLink, SaveGarageButton, TranslatePipe],
   selector: 'mf-result-card',
   styleUrl: './result-card.css',
   templateUrl: './result-card.html',
