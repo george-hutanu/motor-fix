@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
 import { settled } from './accounts.js';
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
 type Language = 'ro' | 'en';
@@ -27,17 +27,6 @@ const t = (language: Language, key: string): string =>
       (node, part) => (node as Texts)[part],
       TEXTS[language],
     ) as string;
-
-type Axe = {
-  run: (context: unknown) => Promise<{
-    violations: Array<{ id: string; nodes: unknown[] }>;
-  }>;
-};
-
-const AXE = readFileSync(
-  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
-  'utf8',
-);
 
 const SHAPES = [
   'cockpit.overlay.openDialog',
@@ -515,17 +504,14 @@ test.describe('accessibility', () => {
       }) => {
         await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
         await openCockpit(page, 390, 844, language);
-        await page.evaluate(AXE);
         await open(page, SHAPES[0], language);
 
-        const violations = await page.evaluate(async () => {
-          const axe = (globalThis as unknown as { axe: Axe }).axe;
-          const found = await axe.run({
-            include: [['.cdk-overlay-container']],
-          });
-          return found.violations.map((v) => `${v.id} (${v.nodes.length})`);
-        });
-        expect(violations).toEqual([]);
+        const found = await violations(
+          page,
+          {},
+          { include: [['.cdk-overlay-container']] },
+        );
+        expect(found.map((v) => `${v.id} (${v.nodes.length})`)).toEqual([]);
       });
     }
   }

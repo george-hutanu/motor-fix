@@ -1,0 +1,208 @@
+import { expect, type Page } from '@playwright/test';
+
+import { hydrated, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
+
+// The seeded driver with a Dacia Logan, and the garage that works on Dacia
+// and has an oil change on its price list (quote-request.spec.ts).
+const DRIVER = 'cerere@example.test';
+const OIL = 'Schimb de ulei și filtre';
+
+// What the keyboard focus sits on, in the page: the focused element, or the
+// label of a visually hidden input (a radio, a switch), its box, whether it
+// shows a ring and what is drawn at its centre.
+function focusFacts() {
+  const focused = document.activeElement as HTMLElement | null;
+  if (!focused || focused === document.body) return null;
+  const own = focused.getBoundingClientRect();
+  const hidden = own.width <= 1 || own.height <= 1;
+  const label = hidden
+    ? (focused.closest('label') ??
+      document.querySelector(`label[for="${focused.id}"]`))
+    : null;
+  const shown = (label as HTMLElement | null) ?? focused;
+  const rect = shown.getBoundingClientRect();
+  const style = getComputedStyle(focused);
+  const top = document.elementFromPoint(
+    rect.left + rect.width / 2,
+    rect.top + rect.height / 2,
+  );
+  const clear =
+    top !== null &&
+    (shown === top || shown.contains(top) || top.contains(shown));
+  return {
+    covered: !clear,
+    coveredBy: top?.tagName.toLowerCase() ?? 'nothing',
+    labelled: label !== null,
+    outline: [style.outlineStyle, style.outlineWidth, style.boxShadow],
+    rect: rect.toJSON() as DOMRect,
+    viewport: [window.innerWidth, window.innerHeight],
+  };
+}
+
+// The focus is shown, ringed and not covered.
+async function focusShows(page: Page) {
+  const facts = await page.evaluate(focusFacts);
+  expect(facts, 'something has the focus').not.toBeNull();
+  if (!facts) return;
+  const { rect, viewport, outline } = facts;
+  const [outlineStyle, outlineWidth, boxShadow] = outline;
+  expect(rect.width * rect.height, 'the focus has a box').toBeGreaterThan(0);
+  const inView =
+    rect.bottom > 0 &&
+    rect.top < viewport[1] &&
+    rect.right > 0 &&
+    rect.left < viewport[0];
+  expect(inView, 'the focus is in view').toBe(true);
+  const ringed =
+    facts.labelled ||
+    (outlineStyle !== 'none' && Number.parseFloat(outlineWidth) > 0) ||
+    boxShadow !== 'none';
+  expect(ringed, 'the focus has a ring').toBe(true);
+  expect(facts.covered, `the focus is covered by ${facts.coveredBy}`).toBe(
+    false,
+  );
+}
+
+// Presses Tab until the focus is on `target`, checking every stop on the way.
+async function tabTo(
+  page: Page,
+  target: ReturnType<Page['locator']>,
+  limit = 60,
+) {
+  for (let presses = 0; presses < limit; presses++) {
+    await page.keyboard.press('Tab');
+    await focusShows(page);
+    if (
+      await target
+        .evaluate((e) => e === document.activeElement)
+        .catch(() => false)
+    )
+      return;
+  }
+  throw new Error(`Tab never reached ${target}`);
+}
+
+// @traces 248-launch-screens-accessible-FR-004
+// @traces 248-launch-screens-accessible-FR-005
+// @traces 248-launch-screens-accessible-FR-006
+test.describe('the core flow by keyboard alone @seeded', () => {
+  test('from home to a sent request, every stop visible and ringed', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    // Signed in first, so the request goes out without the sign-in sheet.
+    await ready(page, '/ro');
+    await page
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+    await signIn(page, DRIVER);
+    await expect(page).toHaveURL('/app/driver');
+    await hydrated(page, '/ro');
+
+    // The skip link is the first stop and lands on the main content.
+    await page.keyboard.press('Tab');
+    const skip = page.getByRole('link', { name: 'Sari la conținut' });
+    await expect(skip).toBeFocused();
+    await focusShows(page);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('main').first()).toBeFocused();
+
+    // A brand, by arrow keys inside its radio group.
+    const brands = page.getByRole('radiogroup', { name: 'Marca mașinii' });
+    await tabTo(page, brands.getByRole('radio', { checked: true }));
+    await page.keyboard.press('ArrowRight');
+    await brands.getByRole('radio', { name: 'Dacia' }).focus();
+    await page.keyboard.press('Space');
+    await expect(brands.getByRole('radio', { name: 'Dacia' })).toBeChecked();
+
+    // The place dialog opens and Escape brings the focus back to its opener.
+    const place = page.locator('mf-home .place').getByRole('button');
+    await tabTo(page, place);
+    await page.keyboard.press('Enter');
+    await expect(
+      page.getByRole('dialog', { name: 'Alege locul' }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(
+      page.getByRole('dialog', { name: 'Alege locul' }),
+    ).toBeHidden();
+    await expect(place).toBeFocused();
+
+    await tabTo(page, page.getByRole('link', { name: 'Caută service‑uri' }));
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL('/ro/garages?brand=dacia');
+    await hydrated(page);
+
+    const results = page.getByRole('list', { name: 'Service‑uri găsite' });
+    await tabTo(
+      page,
+      results.getByRole('link', { name: /Service Auto Militari/ }).first(),
+    );
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/ro\/garages\/service-auto-militari/);
+    await hydrated(page);
+
+    await tabTo(page, page.getByRole('button', { name: 'Cere ofertă' }));
+    await page.keyboard.press('Enter');
+    const quote = page.getByRole('dialog', { name: 'Cere ofertă' });
+    await expect(quote).toBeVisible();
+
+    const oil = quote.getByRole('switch', { name: OIL });
+    await tabTo(page, oil);
+    await page.keyboard.press('Space');
+    await expect(oil).toBeChecked();
+
+    await tabTo(page, quote.getByRole('button', { name: 'Trimite' }));
+    await page.keyboard.press('Enter');
+    await expect(
+      quote.getByText('Trimis către Service Auto Militari.'),
+    ).toBeVisible();
+
+    await tabTo(page, quote.getByRole('link', { name: 'Vezi Cererile mele' }));
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL('/app/driver/requests');
+    await expect(page.locator('[data-request]').first()).toContainText(OIL);
+  });
+
+  test('Escape closes the sign-in sheet and the focus goes back to its button', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 568, width: 320 });
+    await ready(page, '/ro');
+
+    const opener = page.getByRole('button', {
+      exact: true,
+      name: 'Autentificare',
+    });
+    await tabTo(page, opener);
+    await page.keyboard.press('Enter');
+    const sheet = page.getByRole('dialog', { name: 'Autentificare' });
+    await expect(sheet).toBeVisible();
+    await page.keyboard.press('Tab');
+    await focusShows(page);
+
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await expect(opener).toBeFocused();
+  });
+
+  // @traces 248-launch-screens-accessible-FR-010
+  test('a result opens its garage profile from the keyboard', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 568, width: 320 });
+    await ready(page, '/ro/garages?brand=dacia');
+
+    const results = page.getByRole('list', { name: 'Service‑uri găsite' });
+    const first = results
+      .locator('mf-result-card')
+      .first()
+      .getByRole('link')
+      .first();
+    await tabTo(page, first);
+    await page.keyboard.press('Enter');
+
+    await expect(page).toHaveURL(/\/ro\/garages\/[\w-]+/);
+  });
+});

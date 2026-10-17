@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -14,10 +14,6 @@ const COCKPIT = JSON.parse(
   ),
 );
 const GAUGES = COCKPIT.gauges as Record<string, string>;
-const AXE = readFileSync(
-  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
-  'utf8',
-);
 
 type Running = {
   delay: number;
@@ -293,29 +289,17 @@ test('the live label keeps its contrast through the whole blink', async ({
   await expect
     .poll(async () => named(await running(page), 'mf-rise').length)
     .toBe(0);
-  await page.evaluate(AXE);
-  const violations: string[] = [];
+  const found: string[] = [];
   // Five looks across one blink period catch both halves of it.
   for (let look = 0; look < 5; look++) {
-    const found = await page.evaluate(async () => {
-      const axe = (
-        globalThis as unknown as {
-          axe: {
-            run: (
-              ...args: unknown[]
-            ) => Promise<{ violations: { id: string }[] }>;
-          };
-        }
-      ).axe;
-      const result = await axe.run(
-        { include: [['.mf-live']] },
-        { runOnly: ['color-contrast'] },
-      );
-      return result.violations.map((v: { id: string }) => v.id);
-    });
-    violations.push(...found);
+    const seen = await violations(
+      page,
+      { runOnly: ['color-contrast'] },
+      { include: [['.mf-live']] },
+    );
+    found.push(...seen.map((v) => v.id));
     await page.waitForTimeout(220);
   }
 
-  expect(violations).toEqual([]);
+  expect(found).toEqual([]);
 });
