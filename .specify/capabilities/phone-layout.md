@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-09
+updated: 2026-10-17
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -11,6 +11,7 @@ features:
   - 097-garage-dashboard
   - 343-live-quote-requests
   - 344-send-quote
+  - 172-price-list-states
 ---
 
 # Capability: Phone layout and installable web app
@@ -206,6 +207,30 @@ _From 097-garage-dashboard._
 ### 344-FR-017 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the dialog, the button, the Oferte trimise panel and the toasts MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, every control at least 44 px tall, the warning's and hint's text at a contrast of at least 4.5:1 in both schemes, and the two price fields stacking on a phone rather than overflowing.
 
 _From 344-send-quote._
+
+### 172-FR-001 — The garage dashboard's Prețuri view (`/app/garage/prices`, entry `prices` of the one view list, 097-FR-001) MUST get a body that replaces its 097-FR-004 empty state: under the view's existing title and subtitle ("Prețuri" / "Prices", "Intervalele pe care le văd șoferii pe profilul tău" / "The ranges drivers see on your profile", unchanged), one panel titled "Lista de prețuri" / "Price list" holding one row per job of the garage's price list, in the order the owner's read gives them (the list's `position` order, 357-FR-007), followed by the labour note (FR-006). The garage is the session's matched membership (097-FR-006), never the address.
+
+_From 172-price-list-states._
+
+### 172-FR-002 — Each row MUST show the job's name in the interface language, its duration when it has one (the shared duration format: "30 min", "1 h", "1 h 30", "1 zi" / "1 day"; nothing when unset), its state with a lamp, and its price. Prices MUST be whole lei in the language's digit format through the shared whole-lei range format: both ends set → "150–220 lei"; only the low end → "de la 350 lei" / "from 350 lei" (a view text around the shared format of the low end alone); neither → the shared missing mark.
+
+_From 172-price-list-states._
+
+### 172-FR-003 — A public job (`public: true`) MUST read "pe profil" / "on the profile" with a green lamp. A job that is not public MUST read its reason, one label per reason code of 357-FR-012, with an amber lamp: `no_top_price` "ascuns · fără preț maxim" / "hidden · no top price set"; `hidden_by_garage` "ascuns de tine" / "hidden by you"; `not_authorised` "ascuns · nu e în autorizația RAR" / "hidden · not in your RAR authorisation"; `awaiting_approval` "ascuns · așteaptă aprobarea" / "hidden · awaiting approval"; `rejected` "respins" / "rejected". A hidden job whose reason is missing or a code with no label reads "ascuns" / "hidden", never a bare code. The lamp is decorative (hidden from assistive technology); the label carries the state. The labels live with the view's texts in both languages; the API keeps returning codes only.
+
+_From 172-price-list-states._
+
+### 172-FR-004 — Under a row, each of the job's `brandRanges` MUST be one line "<brand name> · <range>" in the order the read gives them, the range in the format of FR-002 (a brand row with no top reads "de la"); a job with none has no line. The brand's name is the catalogue name the read carries, the same in both languages.
+
+_From 172-price-list-states._
+
+### 172-FR-008 — While the first read is running the panel MUST show skeleton rows (busy, no text that could be read as data); when the first read fails it MUST show one problem line and a button "Încearcă din nou" / "Try again" that reads again; an empty list (`items: []`) MUST show "Nu ai încă lucrări în listă." / "No jobs in your list yet." in the panel, with no row, no labour note and no action (adding a job is #140). A read that answers 404 (the garage no longer the actor's) is handled as the dashboard's other live views handle it, never as the empty sentence.
+
+_From 172-price-list-states._
+
+### 172-FR-010 — Every new text MUST exist in Romanian and English with U+2011 in hyphenated Romanian words (080-FR-014); no text smaller than 12 px; the panel MUST read without sideways page scroll at 320 px with every cell wrapping (the row stacks its cells below the dashboard's 768 px breakpoint: name and duration, then state, then price; the mock's phone board shows the same rows stacked); the retry button is a real button at least 44 px tall; the lamp is never the only carrier of the state (the label is, FR-003) and the label, price and lamp colours come from the theme's tokens so they keep the theme's contrast in light and dark; the rows are a list, each row one item, so a screen reader reads name, duration, state and price in that order.
+
+_From 172-price-list-states._
 
 ## Retired
 

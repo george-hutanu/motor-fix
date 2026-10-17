@@ -12341,6 +12341,21 @@
           "brandRanges"
         ]
       },
+      "PublicLabourDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "integer"
+          },
+          "toBani": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
       "PriceListDto": {
         "type": "object",
         "properties": {
@@ -12350,6 +12365,14 @@
             "items": {
               "$ref": "#/components/schemas/PriceListItemDto"
             }
+          },
+          "labour": {
+            "description": "The garage's hourly labour range, as the profile gives it; absent when either end is unset",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicLabourDto"
+              }
+            ]
           }
         },
         "required": [
@@ -12509,21 +12532,6 @@
           "id",
           "nameRo",
           "nameEn"
-        ]
-      },
-      "PublicLabourDto": {
-        "type": "object",
-        "properties": {
-          "fromBani": {
-            "type": "integer"
-          },
-          "toBani": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "fromBani",
-          "toBani"
         ]
       },
       "PublicPriceRowDto": {

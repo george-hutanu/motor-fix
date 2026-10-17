@@ -1,0 +1,47 @@
+<section class="panel">
+  <h2>{{ 'garage.prices.title' | t }}</h2>
+  @if (view.value(); as list) {
+    @if (list.items.length) {
+      <ul class="rows">
+        @for (row of list.items; track row.jobTypeId) {
+          <li data-row class="row" [attr.data-public]="row.public">
+            <span class="line">
+              <span class="name" data-name>{{ name(row) }}</span>
+              @if (duration(row); as time) {
+                <span class="muted" data-duration>{{ time }}</span>
+              }
+            </span>
+            <span class="line">
+              <span class="state" data-state>
+                <span class="lamp" data-lamp aria-hidden="true"></span>
+                {{ state(row) | t }}
+              </span>
+              <span class="price" data-price>{{ price(row) }}</span>
+            </span>
+            @if (row.brandRanges.length) {
+              <ul class="brands">
+                @for (brand of row.brandRanges; track brand.brandId) {
+                  <li data-brand>{{ brand.name }} · {{ price(brand) }}</li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ul>
+      @if (list.labour; as rate) {
+        <p class="muted" data-labour>{{ labour(rate) }}</p>
+      }
+    } @else {
+      <p class="muted">{{ 'garage.prices.empty' | t }}</p>
+    }
+  } @else if (view.failed()) {
+    <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.prices.retry' | t }}</button>
+  } @else {
+    <ul class="rows" aria-busy="true">
+      @for (n of skeletons; track n) {
+        <li data-skeleton class="skeleton" aria-hidden="true"></li>
+      }
+    </ul>
+  }
+</section>

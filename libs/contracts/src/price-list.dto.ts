@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Allow, IsOptional } from 'class-validator';
 
+import { PublicLabourDto } from './garages.dto';
 import { FieldProblemDto } from './listing-check/listing-check.dto';
 
 // Why drivers do not see a job, in the order the first that applies wins.
@@ -79,6 +80,13 @@ export class PriceListDto {
     type: [PriceListItemDto],
   })
   items!: PriceListItemDto[];
+
+  @ApiPropertyOptional({
+    description:
+      "The garage's hourly labour range, as the profile gives it; absent when either end is unset",
+    type: PublicLabourDto,
+  })
+  labour?: PublicLabourDto;
 }
 
 // Both ends are judged by the one range check, so a wrong value is a field

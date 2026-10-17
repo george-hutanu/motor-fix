@@ -33,7 +33,7 @@ const PRIVATE = /^(request|quote|booking|job|media|live|message|car|repair)\./;
 // reaches an owner and a receptionist, and never a mechanic, whose own jobs and
 // bookings come through their mechanic channel.
 export const KIND_CAPABILITY: [RegExp, Capability][] = [
-  [/^price_list\./, 'garage.prices'],
+  [/^(price_list|catalogue_job)\./, 'garage.prices'],
   [/^(member|mechanic|invite)\./, 'garage.team'],
   [/^garage\.(settings_changed|features_changed)$/, 'garage.feature_switches'],
   [/^garage\.updated$/, 'garage.profile'],
