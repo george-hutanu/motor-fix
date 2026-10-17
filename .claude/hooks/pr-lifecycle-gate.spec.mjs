@@ -418,6 +418,21 @@ describe('PR lifecycle gate — green means every check', () => {
   });
 });
 
+describe('PR lifecycle gate — a Mutation run on the head is no part of the PR', () => {
+  const mutation = (status, conclusion = null) => ({ __typename: 'CheckRun', name: 'scripts', workflowName: 'Mutation', status, conclusion });
+
+  // @traces 1344-FR-010
+  it('still calls a green PR mergeable while a Mutation run is going or has failed', () => {
+    for (const m of [mutation('IN_PROGRESS'), mutation('COMPLETED', 'FAILURE')])
+      assert.match(decide(task({ pr: ready({ statusCheckRollup: [...green, m] }) })), /every check passed/);
+  });
+
+  // @traces 1344-FR-010
+  it('never calls a head green on Mutation checks alone', () => {
+    assert.equal(decide(task({ pr: ready({ statusCheckRollup: [mutation('COMPLETED', 'SUCCESS'), review('SUCCESS')] }) })), null);
+  });
+});
+
 describe('PR lifecycle gate — Dependabot PRs need no agent review', () => {
   const checks = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }];
   const botCommit = (over = {}) => ({ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true, ...over });
@@ -526,7 +541,7 @@ describe('PR lifecycle gate — reading the PR', () => {
       calls.length = 0;
       const read = readPr(BRANCH, '.', { env, run });
       assert.ok(calls.every((c) => c.startsWith('gh api ')), calls.join('\n'));
-      assert.deepEqual(read.pr.statusCheckRollup, [{ __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS' }]);
+      assert.deepEqual(read.pr.statusCheckRollup, [{ __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS', workflowName: '' }]);
       assert.equal(read.pr.mergeable, 'MERGEABLE');
       assert.match(decide({ branch: BRANCH, ahead: 1, unpushed: 0, pr: read.pr }), /no agent-review status/);
     }
