@@ -1,7 +1,9 @@
 @if (rows(); as list) {
   @if (list.length) {
     @for (id of compared(); track id) {
-      <mf-quotes-compare [requestId]="id" />
+      <mf-panel data-panel="quotes" [heading]="'driver.panel.quotes' | t">
+        <mf-quotes-compare [requestId]="id" />
+      </mf-panel>
     }
     <ul class="rows">
       @for (row of list; track row.id) {

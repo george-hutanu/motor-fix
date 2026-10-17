@@ -1,8 +1,5 @@
 @if (rows(); as list) {
   <p class="header" data-part="header" aria-live="polite">{{ header() }}</p>
-  @if (offline()) {
-    <p class="offline">{{ 'shell.live.offline' | t }}</p>
-  }
   @if (list.length) {
     <div class="segments" role="radiogroup" [attr.aria-label]="'driver.quotes.sort.label' | t">
       @for (option of sorts; track option) {

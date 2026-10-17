@@ -529,6 +529,17 @@ describe('Cererile mele comparing a request’s quotes', () => {
     expect(shown()).toEqual(['req-new']);
   });
 
+  it('frames the panel under "Oferte primite", apart from the list', async () => {
+    const element = await open('/requests');
+
+    const frame = element
+      .querySelector('mf-quotes-compare')
+      ?.closest('mf-panel');
+    expect(frame).not.toBeNull();
+    expect(text(frame!)).toContain('Oferte primite');
+    expect(frame!.contains(element.querySelector('ul.rows'))).toBe(false);
+  });
+
   it('shows the request the address names', async () => {
     await open('/requests?request=req-old');
 

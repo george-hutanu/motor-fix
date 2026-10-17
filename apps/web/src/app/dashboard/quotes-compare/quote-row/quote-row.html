@@ -8,6 +8,9 @@
   }
   <time [attr.datetime]="q.slot">{{ 'driver.quotes.free' | t: { when: slot() } }}</time>
 </p>
+@if (q.garage.rating !== null) {
+  <mf-rating-dial class="dial" size="small" aria-hidden="true" [value]="q.garage.rating" />
+}
 <p class="rating" data-part="rating" [class.rated]="q.garage.rating !== null">
   @if (q.garage.rating === null) {
     {{ 'driver.quotes.unrated' | t }}

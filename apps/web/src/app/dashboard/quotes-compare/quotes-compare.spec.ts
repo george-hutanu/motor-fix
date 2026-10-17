@@ -327,14 +327,14 @@ describe('the comparison panel’s states', () => {
     ).toContain('Retry');
   });
 
-  it('keeps the rows offline, with the offline line and Acceptă disabled', async () => {
+  it('keeps the rows offline with Acceptă disabled, leaving the offline line to the dashboard', async () => {
     const { element, settle } = await render([comparison()]);
 
     offline.set(true);
     await settle();
 
     expect(rows(element)).toHaveLength(2);
-    expect(text(element)).toContain('Fără conexiune. Ce vezi poate fi vechi.');
+    expect(text(element)).not.toContain('Fără conexiune');
     for (const row of rows(element)) expect(acceptOf(row)?.disabled).toBe(true);
   });
 

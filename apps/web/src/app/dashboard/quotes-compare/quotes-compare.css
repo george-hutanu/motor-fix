@@ -9,11 +9,7 @@ p {
   overflow-wrap: anywhere;
 }
 .header {
-  font-weight: 700;
-}
-.offline {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
 }
 .segments {
   display: flex;
@@ -56,7 +52,13 @@ p {
   outline: var(--mf-focus-width) solid var(--mf-focus);
   outline-offset: var(--mf-focus-offset);
 }
-.rows,
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 .lines {
   display: flex;
   flex-direction: column;

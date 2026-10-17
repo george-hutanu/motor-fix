@@ -181,6 +181,16 @@ describe('a quote row', () => {
     ).toBe('4.7');
   });
 
+  it('draws the Cockpit rating dial beside a rating, and none without reviews', async () => {
+    const rated = (await render(quote())).row;
+    expect(rated.querySelector('mf-rating-dial')).not.toBeNull();
+    expect(text(part(rated, 'rating'))).toBe('4,7');
+    TestBed.resetTestingModule();
+    const unrated = { ...quote().garage, rating: null, reviewCount: 0 };
+    const row = (await render(quote({ garage: unrated }))).row;
+    expect(row.querySelector('mf-rating-dial')).toBeNull();
+  });
+
   it('says a garage with no review has none yet', async () => {
     const unrated = { ...quote().garage, rating: null, reviewCount: 0 };
 

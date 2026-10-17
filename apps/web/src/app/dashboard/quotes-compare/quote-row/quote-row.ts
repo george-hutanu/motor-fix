@@ -16,7 +16,7 @@ import {
   relativeTime,
   TranslatePipe,
 } from '@motor-fix/i18n';
-import { HlmButton } from '@motor-fix/ui-cockpit';
+import { HlmButton, RatingDial } from '@motor-fix/ui-cockpit';
 
 import type { RowState } from '../compare-rules/compare-rules';
 
@@ -33,7 +33,7 @@ const STATE_TEXTS: Record<Exclude<RowState, 'open'>, string> = {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.greyed]': 'greyed()' },
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmButton, RatingDial, TranslatePipe],
   selector: 'li[mfQuoteRow]',
   styleUrl: './quote-row.css',
   templateUrl: './quote-row.html',

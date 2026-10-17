@@ -16,7 +16,7 @@ import {
   RequestsService,
 } from '@motor-fix/data-access';
 import { I18n, relativeTime, TranslatePipe, timeLeft } from '@motor-fix/i18n';
-import { HlmButton } from '@motor-fix/ui-cockpit';
+import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
@@ -42,7 +42,14 @@ const TICK_MS = 60_000;
 // booked request waiting for the garage counts down its time to confirm.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EmptyState, HlmButton, QuotesCompare, RouterLink, TranslatePipe],
+  imports: [
+    EmptyState,
+    HlmButton,
+    Panel,
+    QuotesCompare,
+    RouterLink,
+    TranslatePipe,
+  ],
   selector: 'mf-requests-view',
   styleUrl: './requests-view.css',
   templateUrl: './requests-view.html',
