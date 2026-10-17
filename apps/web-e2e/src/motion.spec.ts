@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { expect, type Page } from '@playwright/test';
 
+import { hydrated } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
@@ -134,7 +135,9 @@ test.describe('with reduced motion', () => {
   test('the skip link appears at once on the first Tab, still', async ({
     page,
   }) => {
-    await page.goto('/');
+    // Hydrated, so the link's click moves the focus rather than following
+    // its address against the page's <base href>.
+    await hydrated(page, '/');
     await expect(page.locator('mf-home h1')).toBeVisible();
 
     await page.keyboard.press('Tab');
