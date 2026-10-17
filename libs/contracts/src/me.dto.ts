@@ -10,6 +10,10 @@ import {
 } from 'class-validator';
 
 import { ACCOUNT_ROLES, type AccountRole } from './account-search';
+import {
+  SUSPENSION_CAUSES,
+  type SuspensionCause,
+} from './garage-suspension.dto';
 
 const LANGUAGE = ['ro', 'en'] as const;
 
@@ -64,6 +68,15 @@ export class GaragePermissionsDto {
   canRecordFinalPrice!: boolean;
 }
 
+// Why a suspended garage is off the map, as its staff are shown it.
+export class GarageSuspensionDto {
+  @ApiProperty({ enum: SUSPENSION_CAUSES })
+  cause!: SuspensionCause;
+
+  @ApiProperty()
+  reason!: string;
+}
+
 // What the person may do at one garage they work at.
 export class GarageAccessDto {
   @ApiProperty({ format: 'uuid' })
@@ -87,6 +100,13 @@ export class GarageAccessDto {
     type: 'object',
   })
   features!: Record<string, boolean>;
+
+  @ApiProperty({
+    description: 'The open suspension; null unless the garage is suspended',
+    nullable: true,
+    type: GarageSuspensionDto,
+  })
+  suspension!: GarageSuspensionDto | null;
 }
 
 export class MeDto {

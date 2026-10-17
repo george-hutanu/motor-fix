@@ -188,5 +188,13 @@
     "stale": "This list may be out of date",
     "toast": "New request: {car} · {job}",
     "toastCar": "New request: {car}"
+  },
+  "suspended": {
+    "next": {
+      "documents_overdue": "Upload the yearly documents.",
+      "recheck_failed": "Upload the renewed RAR authorisation.",
+      "team": "Answer the MotorFix team."
+    },
+    "text": "Profile suspended · {reason}. The profile is off the map until this is fixed."
   }
 }

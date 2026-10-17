@@ -62,6 +62,11 @@ export class WhoAmI {
         id: true,
         name: true,
         status: true,
+        suspensions: {
+          select: { cause: true, reason: true },
+          take: 1,
+          where: { untilTime: null },
+        },
       },
     } as const;
     const [memberships, card] = await Promise.all([
@@ -86,6 +91,7 @@ export class WhoAmI {
       permissions,
       role,
       status: at.status,
+      suspension: at.suspensions[0] ?? null,
     });
     return [
       ...memberships.map((m) =>

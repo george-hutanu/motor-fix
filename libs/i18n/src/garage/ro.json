@@ -190,5 +190,13 @@
     "stale": "Lista poate fi veche",
     "toast": "Cerere nouă: {car} · {job}",
     "toastCar": "Cerere nouă: {car}"
+  },
+  "suspended": {
+    "next": {
+      "documents_overdue": "Încarcă documentele anuale.",
+      "recheck_failed": "Încarcă autorizația RAR reînnoită.",
+      "team": "Răspunde echipei MotorFix."
+    },
+    "text": "Profil suspendat · {reason}. Profilul nu apare pe hartă până se rezolvă."
   }
 }

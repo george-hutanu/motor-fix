@@ -23,6 +23,7 @@ import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overvi
 import { adminOverviewControllerQueue } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewControllerQueue$Params } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { GarageSuspensionCreatedDto } from '../models/garage-suspension-created-dto';
 import { PlatformRuleChangeDto } from '../models/platform-rule-change-dto';
 import { platformRuleChangesControllerApprove } from '../fn/admin/platform-rule-changes-controller-approve';
 import { PlatformRuleChangesControllerApprove$Params } from '../fn/admin/platform-rule-changes-controller-approve';
@@ -41,6 +42,8 @@ import { PlatformRulesControllerChange$Params } from '../fn/admin/platform-rules
 import { platformRulesControllerList } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesControllerList$Params } from '../fn/admin/platform-rules-controller-list';
 import { PlatformRulesDto } from '../models/platform-rules-dto';
+import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
+import { SuspensionControllerSuspend$Params } from '../fn/admin/suspension-controller-suspend';
 import { VerificationCheckRecordedDto } from '../models/verification-check-recorded-dto';
 import { verificationChecksControllerRecord } from '../fn/admin/verification-checks-controller-record';
 import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
@@ -175,6 +178,39 @@ export class AdminService extends BaseService {
   adminOverviewControllerGrowth(params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Promise<AdminGrowthDto> {
     const resp = this.adminOverviewControllerGrowth$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminGrowthDto>): AdminGrowthDto => r.body);
+  }
+
+  /** Path part for operation `suspensionControllerSuspend()` */
+  static readonly SuspensionControllerSuspendPath = '/api/v1/admin/garages/{id}/suspend';
+
+  /**
+   * Take an approved garage off the map.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `suspensionControllerSuspend()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  suspensionControllerSuspend$Response(params: SuspensionControllerSuspend$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageSuspensionCreatedDto>> {
+    const obs = suspensionControllerSuspend(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Take an approved garage off the map.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `suspensionControllerSuspend$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  suspensionControllerSuspend(params: SuspensionControllerSuspend$Params, context?: HttpContext): Promise<GarageSuspensionCreatedDto> {
+    const resp = this.suspensionControllerSuspend$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageSuspensionCreatedDto>): GarageSuspensionCreatedDto => r.body);
   }
 
   /** Path part for operation `verificationChecksControllerRecord()` */

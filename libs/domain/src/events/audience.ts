@@ -21,7 +21,8 @@ export type LiveSubject =
   | {
       type: 'verification';
       garageId: string;
-      // An approval: the garage's public page and the results of every brand.
+      // A status change the public sees (an approval, a suspension): the
+      // garage's public page and the results of every brand.
       published?: true;
     }
   // The garages' staff only: an invite, a mechanic row.

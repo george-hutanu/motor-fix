@@ -79,6 +79,7 @@ const FUEL_WORDS: Record<CarDto['fuel'], string> = {
 const CANNOT_RECEIVE: Record<CannotReceiveReason, string> = {
   brand: 'public.requestQuote.cannotReceive.brand',
   fuel: 'public.requestQuote.cannotReceive.fuel',
+  garage_suspended: 'public.requestQuote.cannotReceive.garage_suspended',
   jobs: 'public.requestQuote.cannotReceive.jobs',
   not_taking_requests: 'public.requestQuote.cannotReceive.not_taking_requests',
 };

@@ -5,11 +5,12 @@ import { AcceptService } from './accept.service';
 import { AuditService } from '../../audit/audit.service';
 import type { Actor } from '../../auth/policy';
 import { outbox } from '../../events/event.port';
+import { SuspensionService } from '../../garages/verification/suspension/suspension.service';
 import type { QuoteStatus } from '../../generated/prisma/enums';
 import { quotesApp } from '../quotes-api.testing';
 import { BOOKING_CONFIRM_LAPSE_HOURS } from '../quotes-config';
 
-const { bearer, post, team, world } = quotesApp();
+const { bearer, get, post, team, world } = quotesApp();
 const { prisma } = world;
 
 const HOUR = 3_600_000;
@@ -582,6 +583,35 @@ describe('an accept that cannot happen', () => {
       to: 'accepted',
     });
     expect(await snapshot(request.id)).toEqual(before);
+  });
+
+  // @traces 049-FR-009
+  it('refuses a quote of a garage suspended through the use case and reads it as withdrawn', async () => {
+    const { andrei, dinamo, quote, request } = await quoted();
+    await new SuspensionService(prisma, new AuditService(), outbox).suspend(
+      { accountId: null, role: 'system' },
+      dinamo.garage.id,
+      'recheck_failed',
+      'Autorizație RAR expirată',
+    );
+    const before = await snapshot(request.id);
+
+    const res = await accept(quote.id, asDriver(andrei));
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ currentStatus: 'withdrawn' });
+    expect(await snapshot(request.id)).toEqual(before);
+    expect(before.bookings).toBe(0);
+    const read = await get(`/requests/${request.id}`, asDriver(andrei));
+    const shown = (read.body.quotes as { id: string; status: string }[]).map(
+      (q) => [q.id, q.status],
+    );
+    expect(shown).toEqual(
+      expect.arrayContaining([
+        [quote.id, 'withdrawn'],
+        [expect.any(String), 'waiting'],
+      ]),
+    );
   });
 
   it.each(['sent', 'closed'] as const)(

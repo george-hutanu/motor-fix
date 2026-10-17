@@ -530,6 +530,7 @@
     "cannotReceive": {
       "brand": "{garage} does not work on {brand}.",
       "fuel": "{garage} does not work on {fuel} for {brand}.",
+      "garage_suspended": "{garage} no longer takes requests.",
       "jobs": "{garage} does not do the jobs asked for on {brand}.",
       "not_taking_requests": "{garage} is not taking requests right now."
     },
