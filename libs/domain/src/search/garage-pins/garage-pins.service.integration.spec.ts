@@ -237,8 +237,8 @@ describe('the pins of a box on the map', () => {
 
 // @traces 269-FR-003
 describe('the pins of a search finding more than 500 garages', () => {
-  it('answers the 500 nearest and still counts every garage found', async () => {
-    await prisma.garage.createMany({
+  const bulk = () =>
+    prisma.garage.createMany({
       data: Array.from({ length: 502 }, (_, n) => ({
         businessKind: 'company' as const,
         latitude: northOf(100 + n * 10),
@@ -249,11 +249,26 @@ describe('the pins of a search finding more than 500 garages', () => {
       })),
     });
 
+  it('answers the 500 nearest and still counts every garage found', async () => {
+    await bulk();
+
     const answer = await pins.forBrand(dacia, PLACE);
 
     expect(answer.total).toBe(502);
     expect(answer.pins).toHaveLength(500);
     expect(answer.pins.at(-1)?.lat).toBe(northOf(100 + 499 * 10));
+  });
+
+  it('answers the 500 nearest the centre of Romania with neither a place nor a box, and counts all of them', async () => {
+    await bulk();
+
+    const answer = await pins.forBrand(dacia);
+
+    // North of Bucharest is nearer the centre: the two southernmost are left out.
+    expect(answer.total).toBe(502);
+    expect(answer.pins).toHaveLength(500);
+    expect(answer.pins[0]?.lat).toBe(northOf(100 + 501 * 10));
+    expect(answer.pins.map((pin) => pin.lat)).not.toContain(northOf(110));
   });
 });
 
