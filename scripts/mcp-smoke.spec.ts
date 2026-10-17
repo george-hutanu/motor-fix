@@ -126,7 +126,7 @@ const line = (lines: string[], step: string) =>
   lines.find((l) => l.split(' — ')[0]?.endsWith(` ${step}`)) ?? '';
 
 describe('mcp-smoke', () => {
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('passes every step against a server set up correctly and exits 0', async () => {
     const { code, lines } = await check();
 
@@ -142,7 +142,7 @@ describe('mcp-smoke', () => {
     ]);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('ends with usage status 2 and sends nothing without an absolute address', async () => {
     for (const args of [[], ['mcp.example'], ['/mcp']]) {
       const { code, text } = await check(args);
@@ -153,7 +153,7 @@ describe('mcp-smoke', () => {
     expect(seen).toEqual([]);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-001
+  // @traces 1019-FR-001
   it('sends an unsigned MCP request', async () => {
     await check();
 
@@ -167,8 +167,8 @@ describe('mcp-smoke', () => {
     });
   });
 
-  // @traces 1019-staging-mcp-connect-FR-001
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-001
+  // @traces 1019-FR-006
   it.each([
     ['answers 200', 200, undefined],
     ['has no challenge', 401, undefined],
@@ -203,7 +203,7 @@ describe('mcp-smoke', () => {
     },
   );
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('ignores one trailing slash on each side of the resource', async () => {
     routes['GET /.well-known/oauth-protected-resource/mcp'] = (_r, _b, res) =>
       json(res, 200, {
@@ -216,7 +216,7 @@ describe('mcp-smoke', () => {
     expect(code).toBe(0);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('fails the resource metadata on another resource, printing both', async () => {
     routes['GET /.well-known/oauth-protected-resource/mcp'] = (_r, _b, res) =>
       json(res, 200, {
@@ -234,7 +234,7 @@ describe('mcp-smoke', () => {
     expect(line(lines, 'server metadata')).toMatch(/^SKIP /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it.each([
     ['none', []],
     ['two', ['https://a.example', 'https://b.example']],
@@ -254,7 +254,7 @@ describe('mcp-smoke', () => {
     },
   );
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('fails a metadata answer that is not JSON, saying so', async () => {
     routes['GET /.well-known/oauth-protected-resource/mcp'] = (_r, _b, res) => {
       res.writeHead(200, { 'content-type': 'text/html' });
@@ -267,7 +267,7 @@ describe('mcp-smoke', () => {
     expect(line(lines, 'resource metadata')).toMatch(/^FAIL .*not JSON/);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-003
+  // @traces 1019-FR-003
   it.each([
     ['another issuer', { issuer: 'https://other.example' }],
     ['no authorization endpoint', { authorization_endpoint: undefined }],
@@ -303,7 +303,7 @@ describe('mcp-smoke', () => {
     },
   );
 
-  // @traces 1019-staging-mcp-connect-FR-004
+  // @traces 1019-FR-004
   it('registers a public client with each assistant callback, without credentials', async () => {
     await check();
 
@@ -322,8 +322,8 @@ describe('mcp-smoke', () => {
     for (const r of registrations) expect(r.auth).toBeUndefined();
   });
 
-  // @traces 1019-staging-mcp-connect-FR-004
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-004
+  // @traces 1019-FR-005
   it('still registers ChatGPT when Claude is refused, and deletes only what was registered', async () => {
     const path =
       'POST /realms/motorfix-assistants/clients-registrations/openid-connect';
@@ -344,7 +344,7 @@ describe('mcp-smoke', () => {
     expect(line(lines, 'delete chatgpt')).toMatch(/^PASS /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-004
+  // @traces 1019-FR-004
   it.each([
     ['an object without one', { client_name: 'x' }],
     ['null', null],
@@ -363,7 +363,7 @@ describe('mcp-smoke', () => {
     },
   );
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('deletes each client with its own registration access token', async () => {
     await check();
 
@@ -374,7 +374,7 @@ describe('mcp-smoke', () => {
     ]);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('fails when the identity server refuses a delete', async () => {
     routes[
       'DELETE /realms/motorfix-assistants/clients-registrations/openid-connect/client-2'
@@ -387,7 +387,7 @@ describe('mcp-smoke', () => {
     expect(line(lines, 'delete chatgpt')).toMatch(/^FAIL .*401/);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('fails the delete of a client registered without a way to delete it', async () => {
     routes[
       'POST /realms/motorfix-assistants/clients-registrations/openid-connect'
@@ -400,7 +400,7 @@ describe('mcp-smoke', () => {
     expect(line(lines, 'delete claude')).toMatch(/^FAIL /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('never prints a registration access token or a client secret', async () => {
     routes[
       'DELETE /realms/motorfix-assistants/clients-registrations/openid-connect/client-1'
@@ -412,7 +412,7 @@ describe('mcp-smoke', () => {
     expect(text).not.toContain(SECRET);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('fails a step whose server does not answer within the limit', async () => {
     routes['GET /.well-known/oauth-protected-resource/mcp'] = () => {
       // never answers
@@ -438,14 +438,14 @@ describe('infra/keycloak/README.md', () => {
   const section =
     start < 0 ? '' : (readme.slice(start).split(/\n## /)[0] ?? '');
 
-  // @traces 1019-staging-mcp-connect-FR-008
+  // @traces 1019-FR-008
   it('names MCP_URL among the GitHub staging variables', () => {
     expect(readme).toMatch(
       /GitHub `staging` environment[\s\S]{0,400}`MCP_URL`/,
     );
   });
 
-  // @traces 1019-staging-mcp-connect-FR-008
+  // @traces 1019-FR-008
   it.each([
     ['the check to run first', 'node scripts/mcp-smoke.ts'],
     ['Claude', 'Claude'],

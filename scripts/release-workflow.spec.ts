@@ -282,7 +282,7 @@ describe('release workflow', () => {
     );
   });
 
-  // @traces 1019-staging-mcp-connect-FR-007
+  // @traces 1019-FR-007
   it('checks the MCP sign-in right after the deploy, before the core flows', () => {
     const block = job('staging');
     const deploy = block.indexOf(
@@ -300,7 +300,7 @@ describe('release workflow', () => {
     expect(step).not.toMatch(/continue-on-error|\|\| *true|if:/);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-007
+  // @traces 1019-FR-007
   it.each([
     ['', '', 'RAILWAY_SERVICE_MCP, MCP_URL'],
     ['svc', '', 'MCP_URL'],
@@ -320,7 +320,7 @@ describe('release workflow', () => {
     },
   );
 
-  // @traces 1019-staging-mcp-connect-FR-007
+  // @traces 1019-FR-007
   it('fails the staging job when the MCP check fails', () => {
     const run = stepRun('Check the MCP sign-in on staging', {
       MCP_URL: 'http://127.0.0.1:9/mcp',

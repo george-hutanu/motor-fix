@@ -122,8 +122,8 @@ const line = (lines: string[], step: string) =>
 const deleted = () => seen.filter((s) => s.method === 'DELETE');
 
 describe('mcp-smoke under hostile servers', () => {
-  // @traces 1019-staging-mcp-connect-FR-004
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-004
+  // @traces 1019-FR-006
   it('never prints the secrets of a registration answer that lacks a client id', async () => {
     routes[REG] = (_r, _b, res) =>
       json(res, 201, {
@@ -138,7 +138,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(text).not.toContain(SECRET);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('never prints secrets echoed in an error body or a non-JSON body', async () => {
     let calls = 0;
     routes[REG] = (_r, _b, res) => {
@@ -166,7 +166,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(reg.text).not.toContain(SECRET);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('never prints a bearer token placed in the challenge', async () => {
     routes['POST /mcp'] = (_r, _b, res) => {
       res.writeHead(401, {
@@ -181,7 +181,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(text).not.toContain(TOKEN);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('prints one line per step even when a body carries line breaks', async () => {
     routes[META] = (_r, _b, res) => {
       res.writeHead(200);
@@ -196,7 +196,7 @@ describe('mcp-smoke under hostile servers', () => {
     );
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('deletes the first client when the second registration drops the connection', async () => {
     const original = routes[REG] as Route;
     let calls = 0;
@@ -216,7 +216,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'delete chatgpt')).toBe('');
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('deletes the first client when the second registration never answers', async () => {
     const original = routes[REG] as Route;
     let calls = 0;
@@ -234,7 +234,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(deleted().map((d) => d.path.split('/').pop())).toEqual(['client-1']);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('deletes the second client when the first delete hangs', async () => {
     const original = routes[REG] as Route;
     routes[REG] = (req, body, res) => {
@@ -252,7 +252,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'delete chatgpt')).toMatch(/^PASS /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('still deletes registered clients when the server metadata step is the one that fails after earlier registrations are impossible', async () => {
     routes[`GET ${REALM}/.well-known/oauth-authorization-server`] = (
       _r,
@@ -269,7 +269,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(deleted()).toEqual([]);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('does not follow a redirect on delete, so the access token goes nowhere else', async () => {
     const original = routes[REG] as Route;
     routes[REG] = (req, body, res) => {
@@ -288,7 +288,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen.filter((s) => s.path === '/leak')).toEqual([]);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-001
+  // @traces 1019-FR-001
   it('fails the challenge on a redirect instead of following it', async () => {
     routes['POST /mcp'] = (_r, _b, res) => {
       res.writeHead(302, { location: `${base}/elsewhere` });
@@ -308,7 +308,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen).toHaveLength(1);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('sends at most seven requests on a fully passing run, exactly seven', async () => {
     const { code } = await check();
 
@@ -316,7 +316,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen).toHaveLength(7);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it.each([
     ['registrations answer 500', 500],
     ['registrations answer 429', 429],
@@ -333,7 +333,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen.length).toBeLessThanOrEqual(5);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('sends no retries when every delete is refused', async () => {
     const original = routes[REG] as Route;
     routes[REG] = (req, body, res) => {
@@ -356,7 +356,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen).toHaveLength(7);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('ends within the limit of one request per step when nothing answers', async () => {
     for (const key of Object.keys(routes)) {
       routes[key] = () => {
@@ -375,7 +375,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen).toHaveLength(1);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('times out a server that sends headers and then stalls the body', async () => {
     routes[META] = (_r, _b, res) => {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -390,7 +390,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'resource metadata')).toMatch(/^FAIL /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('fails the challenge when nothing listens at the address', async () => {
     const { code, lines } = await check(['http://127.0.0.1:1/mcp']);
 
@@ -399,7 +399,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'register claude')).toMatch(/^SKIP /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it.each([
     ['two addresses', ['http://a.example/mcp', 'http://b.example/mcp']],
     ['an empty string', ['']],
@@ -415,7 +415,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen).toEqual([]);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-001
+  // @traces 1019-FR-001
   it('accepts a challenge among several, with the scheme in any case', async () => {
     routes['POST /mcp'] = (_r, _b, res) => {
       res.writeHead(401, {
@@ -429,7 +429,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(code).toBe(0);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-001
+  // @traces 1019-FR-001
   it('uses an absolute metadata address on another host name as given', async () => {
     const port = new URL(base).port;
     routes['POST /mcp'] = (_r, _b, res) => {
@@ -445,7 +445,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'challenge')).toMatch(/^PASS /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-001
+  // @traces 1019-FR-001
   it('fails the challenge when resource_metadata is not an address at all', async () => {
     routes['POST /mcp'] = (_r, _b, res) => {
       res.writeHead(401, {
@@ -461,7 +461,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen).toHaveLength(1);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it.each([
     ['null', 'null'],
     ['an array', '[]'],
@@ -486,7 +486,7 @@ describe('mcp-smoke under hostile servers', () => {
     },
   );
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('fails resource metadata sent as UTF-16 with a byte order mark, saying not JSON', async () => {
     routes[META] = (_r, _b, res) => {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -510,7 +510,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'resource metadata')).toMatch(/^FAIL .*not JSON/);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('fails resource metadata sent as Latin-1 bytes that are not valid UTF-8 text', async () => {
     routes[META] = (_r, _b, res) => {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -523,7 +523,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'resource metadata')).toMatch(/^FAIL .*not JSON/);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('fails a resource metadata answer of tens of megabytes without hanging', async () => {
     routes[META] = (_r, _b, res) => {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -536,7 +536,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'resource metadata')).toMatch(/^FAIL /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it.each([
     ['a number among them', [123]],
     ['a null among them', [null]],
@@ -556,7 +556,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'resource metadata')).toMatch(/^FAIL /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('fails resource metadata whose authorization_servers is a string', async () => {
     routes[META] = (_r, _b, res) =>
       json(res, 200, {
@@ -570,7 +570,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'resource metadata')).toMatch(/^FAIL /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('ignores one trailing slash on the address given, not two', async () => {
     routes['POST /mcp/'] = routes['POST /mcp'] as Route;
     const ok = await check([`${base}/mcp/`]);
@@ -586,7 +586,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(twice.lines, 'resource metadata')).toMatch(/^FAIL /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-002
+  // @traces 1019-FR-002
   it('fails a resource that differs only in case of the path', async () => {
     routes[META] = (_r, _b, res) =>
       json(res, 200, {
@@ -600,7 +600,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'resource metadata')).toContain(`${base}/MCP`);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-003
+  // @traces 1019-FR-003
   it.each([
     ['registration endpoint a number', { registration_endpoint: 5 }],
     ['registration endpoint empty', { registration_endpoint: '' }],
@@ -637,7 +637,7 @@ describe('mcp-smoke under hostile servers', () => {
     },
   );
 
-  // @traces 1019-staging-mcp-connect-FR-004
+  // @traces 1019-FR-004
   it.each([
     ['an empty string', ''],
     ['a number', 7],
@@ -653,7 +653,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'register chatgpt')).toMatch(/^FAIL /);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-004
+  // @traces 1019-FR-004
   it('fails a registration answered 200 with a client id as no registration was created', async () => {
     routes[REG] = (_r, _b, res) => {
       res.writeHead(500, { 'content-type': 'application/json' });
@@ -666,7 +666,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(line(lines, 'register claude')).toMatch(/^FAIL .*500/);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('does not send the registration access token to a host other than the identity server', async () => {
     const port = new URL(base).port;
     routes[REG] = (_r, _b, res) =>
@@ -682,7 +682,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(seen.filter((s) => s.path === '/leak' && s.auth)).toEqual([]);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-005
+  // @traces 1019-FR-005
   it('leaves nothing registered after a run with a refused first registration', async () => {
     const original = routes[REG] as Route;
     let calls = 0;
@@ -698,7 +698,7 @@ describe('mcp-smoke under hostile servers', () => {
     expect(deleted().map((d) => d.path.split('/').pop())).toEqual(['client-1']);
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('gives the same lines and status on a second run', async () => {
     const first = await check();
     const second = await check();
@@ -709,7 +709,7 @@ describe('mcp-smoke under hostile servers', () => {
     );
   });
 
-  // @traces 1019-staging-mcp-connect-FR-006
+  // @traces 1019-FR-006
   it('resolves with a status and never rejects when the request handler throws mid-answer', async () => {
     routes['POST /mcp'] = (req) => {
       req.socket.destroy();
