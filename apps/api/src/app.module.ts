@@ -34,6 +34,7 @@ import {
   SearchModule,
   StorageModule,
   SupportModule,
+  SystemLogModule,
   supportConfig,
   verificationConfig,
   WarmModule,
@@ -106,6 +107,10 @@ export class AppModule {
         ListingPhotosModule.register({ redisUrl: env.REDIS_URL }, garages),
         ListingDocumentsModule.register(garages),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
+        SystemLogModule.register({
+          databaseUrl: env.DATABASE_URL,
+          redisUrl: env.REDIS_URL,
+        }),
         PlatformRulesModule.register(
           { production: env.APP_ENV === 'production', webUrl: email.webUrl },
           notifications,

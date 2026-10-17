@@ -19,7 +19,7 @@ function send(exception: unknown) {
     },
   };
   const host = {
-    switchToHttp: () => ({ getResponse: () => res }),
+    switchToHttp: () => ({ getRequest: () => ({}), getResponse: () => res }),
   } as unknown as ArgumentsHost;
   new ProblemFilter().catch(exception, host);
   return res;

@@ -6,12 +6,15 @@ import type { Thresholds } from './thresholds';
 import {
   type Check,
   type Detail,
+  type Figures,
+  limitCrossed,
   nextTile,
   stateOf,
   type TileKey,
   type TileRow,
   type TileState,
 } from './tiles';
+import { systemLog } from '../admin/system-log/system-log';
 import type { EventPort } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 import { Brevo } from '../notifications/brevo/brevo';
@@ -93,15 +96,24 @@ async function latency(
   }
 }
 
+// A check, and the figures it was judged on (null for a failed check).
+interface Judged extends Check {
+  figures: Figures | null;
+}
+
 async function judge(
   deps: RunDeps,
   tile: TileKey,
   outcome: Outcome,
   now: Date,
-): Promise<Check> {
+): Promise<Judged> {
   const limits = deps.thresholds[tile];
   if (!outcome.ok) {
-    return { detail: { reason: outcome.reason }, state: stateOf(null, limits) };
+    return {
+      detail: { reason: outcome.reason },
+      figures: null,
+      state: stateOf(null, limits),
+    };
   }
   const figures = { ...outcome.figures };
   if (outcome.latencyMs !== undefined) {
@@ -110,8 +122,94 @@ async function judge(
   const { backup_age_h: _, ...shown } = figures;
   return {
     detail: { ...shown, ...outcome.detail },
+    figures,
     state: stateOf(figures, limits),
   };
+}
+
+interface Judgement {
+  changed: boolean;
+  first: boolean;
+  row: TileRow;
+  check: Judged;
+  outcome: Outcome;
+}
+
+// The newest backup the log already holds as completed: null when none,
+// undefined when the log cannot be read, so nothing is written twice.
+async function lastCompleted(
+  prisma: PrismaClient,
+): Promise<number | null | undefined> {
+  const entry = await prisma.systemLogEntry
+    .findFirst({ orderBy: { at: 'desc' }, where: { kind: 'backup_completed' } })
+    .catch(() => undefined);
+  if (entry === undefined) return undefined;
+  const at = (entry?.context as { backup_at?: string } | null)?.backup_at;
+  return at ? Date.parse(at) : null;
+}
+
+async function writeBackup(
+  deps: RunDeps,
+  { changed, row }: Judgement,
+  now: Date,
+): Promise<void> {
+  const last = row.detail['last_backup_at'];
+  if (typeof last !== 'string') return;
+  const logged = await lastCompleted(deps.prisma);
+  // An unreadable log skips only the completed entry, never a late backup.
+  if (logged !== undefined && (logged === null || Date.parse(last) > logged)) {
+    await systemLog.write(
+      'backup_completed',
+      'backup',
+      { backup_at: last },
+      now,
+    );
+  }
+  if (changed && row.state !== 'green') {
+    await systemLog.write(
+      'backup_failed',
+      'backup',
+      { last_backup_at: last, reason: 'too_old' },
+      now,
+    );
+  }
+}
+
+// What a run leaves in the system status log once its tiles are stored: a
+// failed check each time, a tile's confirmed change (a first sight only when
+// it is not green), a backup newer than the last one logged, and a backup
+// that has turned late.
+async function writeLog(
+  deps: RunDeps,
+  judged: Judgement[],
+  now: Date,
+): Promise<void> {
+  for (const judgement of judged) {
+    const { changed, check, first, outcome, row } = judgement;
+    if (changed && !(first && row.state === 'green')) {
+      const crossed = limitCrossed(
+        check.figures,
+        deps.thresholds[row.key],
+        row.state,
+      );
+      await systemLog.write(
+        'status_changed',
+        row.key,
+        { ...row.detail, ...crossed, state: row.state },
+        now,
+      );
+    }
+    if (!outcome.ok) {
+      await systemLog.write(
+        'check_failed',
+        row.key,
+        { reason: outcome.reason },
+        now,
+      );
+    } else if (row.key === 'backup') {
+      await writeBackup(deps, judgement, now);
+    }
+  }
 }
 
 // One run: every due tile probed apart, then every row and its event written
@@ -128,15 +226,19 @@ export async function runChecks(deps: RunDeps): Promise<Change[]> {
   const outcomes = await Promise.all(
     tiles.map((tile) => probe(tile, deps.probes)),
   );
-  const next = await Promise.all(
-    tiles.map(async (tile, n) =>
-      nextTile(
-        tile,
-        stored.get(tile) ?? null,
-        await judge(deps, tile, outcomes[n] as Outcome, now),
-        now,
-      ),
-    ),
+  const next: Judgement[] = await Promise.all(
+    tiles.map(async (tile, n) => {
+      const outcome = outcomes[n] as Outcome;
+      const check = await judge(deps, tile, outcome, now);
+      const { figures: _, ...judged } = check;
+      const previous = stored.get(tile) ?? null;
+      return {
+        ...nextTile(tile, previous, judged, now),
+        check,
+        first: previous === null,
+        outcome,
+      };
+    }),
   );
   await deps.prisma.$transaction(async (tx) => {
     for (const { changed, row } of next) {
@@ -158,6 +260,7 @@ export async function runChecks(deps: RunDeps): Promise<Change[]> {
       });
     }
   });
+  await writeLog(deps, next, now);
   return next
     .filter(({ changed }) => changed)
     .map(({ row }) => ({

@@ -1,5 +1,6 @@
 import type { EventKind } from '@motor-fix/contracts';
 import {
+  isFinalFailure,
   observeQueue,
   observeWorker,
   queueTelemetry,
@@ -17,6 +18,7 @@ import {
 import { type Job, type JobsOptions, Queue, Worker } from 'bullmq';
 
 import { type CarEvent, RemindersService } from './reminders.service';
+import { writeJobFailed } from '../../job-failures';
 import { inJob } from '../../logging';
 import {
   bucharestDaily,
@@ -93,7 +95,7 @@ export class RemindersScheduler {
   }
 
   failed(job: Job<Daily | CarEvent>, error: Error): void {
-    if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
+    if (!isFinalFailure(job, error)) return;
     if (job.name === 'event') {
       const { id, kind } = job.data as CarEvent;
       this.logger.error(`reminders lost ${kind} event ${id}: ${error.message}`);
@@ -101,6 +103,7 @@ export class RemindersScheduler {
       const { day } = job.data as Daily;
       this.logger.error(`reminders run of ${day} failed: ${error.message}`);
     }
+    writeJobFailed(REMINDERS_QUEUE, job, error);
   }
 
   private queueNext(now: Date) {

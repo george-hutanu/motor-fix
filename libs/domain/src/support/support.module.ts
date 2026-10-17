@@ -28,6 +28,7 @@ import { SupportThrottle, SupportThrottleGuard } from './messages/throttle';
 import { SUPPORT_CONFIG, type SupportConfig } from './support-config';
 import { AUTH_REDIS } from '../auth/attempts';
 import type { PrismaClient } from '../generated/prisma/client';
+import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
 import { Brevo } from '../notifications/brevo/brevo';
 import type { EmailConfig } from '../notifications/email-config';
@@ -120,6 +121,7 @@ export class SupportModule
               { autorun: false, connection, telemetry: queueTelemetry() },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('Support'));
             return { queue, stopGauge, worker };
           },
         },

@@ -1,6 +1,7 @@
 // @traces 195-FR-005 392-FR-001 392-FR-002 392-FR-007
 import { Brevo, BrevoError } from './brevo';
 import { BrevoMock } from './brevo-mock.testing';
+import { systemLog } from '../../admin/system-log/system-log';
 
 const mock = new BrevoMock();
 const mail = {
@@ -200,5 +201,94 @@ describe('the Brevo WhatsApp adapter', () => {
       reason: 'provider_503',
       retryable: true,
     });
+  });
+});
+
+// @traces 297-FR-008
+describe('a Brevo error in the system log', () => {
+  const sms = {
+    content: 'MotorFix: ITP-ul expiră curând.',
+    recipient: '+40712345678',
+    sender: 'MotorFix',
+  };
+  const whatsapp = {
+    params: ['B 123 ABC'],
+    sender: '+40700000099',
+    templateId: 12,
+    to: '+40712345678',
+  };
+  let write: jest.SpyInstance;
+
+  beforeEach(() => {
+    // A write that never finishes: the send must not wait for it.
+    write = jest
+      .spyOn(systemLog, 'write')
+      .mockReturnValue(new Promise(() => {}));
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('is written for a refused e-mail as an e-mail error with its status, without waiting for it', async () => {
+    mock.answer({ status: 503 });
+    await expect(brevo().send(mail)).rejects.toBeInstanceOf(BrevoError);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('service_error', 'email', {
+      provider: 'brevo',
+      status: 503,
+    });
+  });
+
+  it('is written for an SMS and a WhatsApp send as a notifications error', async () => {
+    mock.answer({ status: 400 });
+    await expect(brevo().sendSms(sms)).rejects.toBeInstanceOf(BrevoError);
+    mock.answer({ status: 400 });
+    await expect(brevo().sendWhatsApp(whatsapp)).rejects.toBeInstanceOf(
+      BrevoError,
+    );
+    expect(write.mock.calls).toEqual([
+      ['service_error', 'notifications', { provider: 'brevo', status: 400 }],
+      ['service_error', 'notifications', { provider: 'brevo', status: 400 }],
+    ]);
+  });
+
+  it.each([
+    [
+      'an unreachable provider',
+      () => mock.answer({ hang: true, status: 0 }),
+      'provider_unreachable',
+    ],
+    [
+      'an answer without a message id',
+      () => mock.answer({ body: {}, status: 201 }),
+      'provider_bad_answer',
+    ],
+  ])('is written for %s with its reason', async (_, answer, reason) => {
+    answer();
+    await expect(brevo(200).send(mail)).rejects.toBeInstanceOf(BrevoError);
+    expect(write).toHaveBeenCalledWith('service_error', 'email', {
+      provider: 'brevo',
+      reason,
+    });
+  });
+
+  it('carries no recipient, number or text of the message', async () => {
+    mock.answer({ status: 400 });
+    await brevo()
+      .sendSms(sms)
+      .catch(() => undefined);
+    mock.answer({ status: 400 });
+    await brevo()
+      .send(mail)
+      .catch(() => undefined);
+    expect(JSON.stringify(write.mock.calls)).not.toMatch(
+      /40712345678|ana@|ITP|Salut|mesaj/,
+    );
+  });
+
+  it('is not written by a sent message or the account check', async () => {
+    mock.answer({ body: { messageId: '<abc@relay>' }, status: 201 });
+    await brevo().send(mail);
+    mock.answer({ status: 401 });
+    await brevo().checkKey();
+    expect(write).not.toHaveBeenCalled();
   });
 });

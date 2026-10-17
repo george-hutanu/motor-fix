@@ -24,6 +24,7 @@ import {
   StatusModule,
   StorageModule,
   SupportModule,
+  SystemLogModule,
   supportConfig,
   supportMessagesConsumer,
   VERIFICATION_RESULT_CONSUMER,
@@ -113,6 +114,11 @@ export function workerModule(
         redisUrl: env.REDIS_URL,
       }),
       // The admin dashboard's six service tiles, checked every 30 seconds.
+      SystemLogModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+        version: env.RELEASE_SHA,
+      }),
       StatusModule.registerWorker({
         appEnv: env.APP_ENV,
         backupEnv: process.env,

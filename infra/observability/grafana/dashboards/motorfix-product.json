@@ -2734,8 +2734,9 @@
       "type": "timeseries"
     },
     {
+      "id": 98,
       "type": "row",
-      "title": "Support",
+      "title": "System status log",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -2743,8 +2744,114 @@
         "x": 0,
         "y": 125
       },
+      "panels": []
+    },
+    {
+      "id": 99,
+      "type": "stat",
+      "title": "System log writes, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 126
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_system_log_entries_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 100,
+      "type": "stat",
+      "title": "System log writes, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 126
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_system_log_entries_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "System log writes per hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 126
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_system_log_entries_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "Support",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 130
+      },
       "panels": [],
-      "id": 98
+      "id": 102
     },
     {
       "type": "stat",
@@ -2757,7 +2864,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 126
+        "y": 131
       },
       "targets": [
         {
@@ -2776,7 +2883,7 @@
         },
         "overrides": []
       },
-      "id": 99
+      "id": 103
     },
     {
       "type": "stat",
@@ -2789,7 +2896,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 126
+        "y": 131
       },
       "targets": [
         {
@@ -2808,7 +2915,7 @@
         },
         "overrides": []
       },
-      "id": 100
+      "id": 104
     },
     {
       "type": "timeseries",
@@ -2821,7 +2928,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 126
+        "y": 131
       },
       "targets": [
         {
@@ -2838,7 +2945,7 @@
         "defaults": {},
         "overrides": []
       },
-      "id": 101
+      "id": 105
     },
     {
       "type": "stat",
@@ -2851,7 +2958,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 130
+        "y": 135
       },
       "targets": [
         {
@@ -2870,7 +2977,7 @@
         },
         "overrides": []
       },
-      "id": 102
+      "id": 106
     },
     {
       "type": "stat",
@@ -2883,7 +2990,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 130
+        "y": 135
       },
       "targets": [
         {
@@ -2902,7 +3009,7 @@
         },
         "overrides": []
       },
-      "id": 103
+      "id": 107
     },
     {
       "type": "timeseries",
@@ -2915,7 +3022,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 130
+        "y": 135
       },
       "targets": [
         {
@@ -2932,7 +3039,7 @@
         "defaults": {},
         "overrides": []
       },
-      "id": 104
+      "id": 108
     },
     {
       "type": "timeseries",
@@ -2945,7 +3052,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 134
+        "y": 139
       },
       "targets": [
         {
@@ -2962,7 +3069,7 @@
         "defaults": {},
         "overrides": []
       },
-      "id": 105
+      "id": 109
     }
   ]
 }

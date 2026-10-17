@@ -1,3 +1,4 @@
+import { systemLog } from '@motor-fix/domain';
 import {
   type ArgumentsHost,
   HttpException,
@@ -42,7 +43,10 @@ function send(exception: unknown) {
     },
   };
   const host = {
-    switchToHttp: () => ({ getResponse: () => res }),
+    switchToHttp: () => ({
+      getRequest: () => ({ method: 'GET' }),
+      getResponse: () => res,
+    }),
   } as unknown as ArgumentsHost;
   new ProblemFilter().catch(exception, host);
   return res;
@@ -334,5 +338,90 @@ describe('a garage that cannot receive a request', () => {
       status: 400,
     });
     expect(res.body).not.toHaveProperty('ownerPhone');
+  });
+});
+
+// @traces 297-FR-009
+describe('an unexpected error in the system log', () => {
+  let write: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    // A write that never finishes: the answer must not wait for it.
+    write = jest
+      .spyOn(systemLog, 'write')
+      .mockReturnValue(new Promise(() => {}));
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  const sendFor = (
+    exception: unknown,
+    req: { method: string; baseUrl?: string; route?: { path?: string } },
+  ) => {
+    const res = {
+      json() {
+        return this;
+      },
+      set() {
+        return this;
+      },
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      statusCode: 0,
+      type() {
+        return this;
+      },
+    };
+    const host = {
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+    } as unknown as ArgumentsHost;
+    new ProblemFilter().catch(exception, host);
+    return res;
+  };
+
+  it('is written with the method and the route template, and the answer is still a 500', () => {
+    const res = sendFor(new Error('boom at ana@example.test'), {
+      baseUrl: '',
+      method: 'GET',
+      route: { path: '/api/v1/garages/:slug' },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('server_error', 'api', {
+      method: 'GET',
+      route: '/api/v1/garages/:slug',
+    });
+  });
+
+  it('joins a mounted router base to the route', () => {
+    sendFor(new Error('boom'), {
+      baseUrl: '/api/v1/admin',
+      method: 'POST',
+      route: { path: '/accounts/:id' },
+    });
+    expect(write).toHaveBeenCalledWith('server_error', 'api', {
+      method: 'POST',
+      route: '/api/v1/admin/accounts/:id',
+    });
+  });
+
+  it('names the route unknown when none matched', () => {
+    sendFor(new Error('boom'), { method: 'GET' });
+    expect(write).toHaveBeenCalledWith('server_error', 'api', {
+      method: 'GET',
+      route: 'unknown',
+    });
+  });
+
+  it.each([
+    ['a refusal', new NotFoundException()],
+    ['a client error', new HttpException('bad', 400)],
+    ['an oversized body', { type: 'entity.too.large' }],
+  ])('is not written for %s', (_, exception) => {
+    sendFor(exception, { method: 'GET', route: { path: '/api/v1/x' } });
+    expect(write).not.toHaveBeenCalled();
   });
 });

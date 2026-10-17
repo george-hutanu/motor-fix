@@ -1,3 +1,5 @@
+import { systemLog } from '../../admin/system-log/system-log';
+
 interface Mailbox {
   email: string;
   // A listing draft's address comes with no name.
@@ -29,6 +31,21 @@ interface OutgoingWhatsApp {
   params: readonly string[];
 }
 
+// The system status log's source for each kind of send.
+type Channel = 'email' | 'notifications';
+
+// A failed send in the system status log: the HTTP status Brevo answered, or
+// why there was no usable answer. Never awaited: the send does not wait.
+const logFailure = (
+  source: Channel,
+  answer: { status: number } | { reason: string },
+) => {
+  void systemLog.write('service_error', source, {
+    provider: 'brevo',
+    ...answer,
+  });
+};
+
 export class BrevoError extends Error {
   constructor(
     readonly reason: string,
@@ -54,7 +71,7 @@ export class Brevo {
   }
 
   send(mail: OutgoingEmail): Promise<string> {
-    return this.post('/smtp/email', {
+    return this.post('email', '/smtp/email', {
       ...(mail.headers ? { headers: mail.headers } : {}),
       htmlContent: mail.html,
       ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
@@ -66,7 +83,7 @@ export class Brevo {
   }
 
   sendSms(sms: OutgoingSms): Promise<string> {
-    return this.post('/transactionalSMS/sms', {
+    return this.post('notifications', '/transactionalSMS/sms', {
       content: sms.content,
       recipient: digits(sms.recipient),
       sender: sms.sender,
@@ -75,7 +92,7 @@ export class Brevo {
   }
 
   sendWhatsApp(message: OutgoingWhatsApp): Promise<string> {
-    return this.post('/whatsapp/sendMessage', {
+    return this.post('notifications', '/whatsapp/sendMessage', {
       contactNumbers: [digits(message.to)],
       ...(message.params.length ? { params: message.params } : {}),
       senderNumber: digits(message.sender),
@@ -93,13 +110,21 @@ export class Brevo {
 
   // Answers Brevo's message id. Accepted without one, the message may have
   // gone, so it is not retried.
-  private async post(path: string, body: object): Promise<string> {
+  private async post(
+    source: Channel,
+    path: string,
+    body: object,
+  ): Promise<string> {
     const res = await this.call(path, {
       body: JSON.stringify(body),
       headers: { 'content-type': 'application/json' },
       method: 'POST',
+    }).catch((error: BrevoError) => {
+      logFailure(source, { reason: error.reason });
+      throw error;
     });
     if (!res.ok) {
+      logFailure(source, { status: res.status });
       throw new BrevoError(
         `provider_${res.status}`,
         res.status >= 500 || res.status === 429,
@@ -110,6 +135,7 @@ export class Brevo {
     } | null;
     const id = answer?.messageId;
     if (typeof id === 'string' || typeof id === 'number') return String(id);
+    logFailure(source, { reason: 'provider_bad_answer' });
     throw new BrevoError('provider_bad_answer', false);
   }
 
