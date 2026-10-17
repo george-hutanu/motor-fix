@@ -10,6 +10,7 @@ features:
   - 049-garage-suspension
   - 301-verification-queue
   - 302-garage-verification-file
+  - 203-company-caen-check
 ---
 
 # Capability: Garage verification
@@ -70,9 +71,9 @@ _From 300-verification-checks._
 
 _From 300-verification-checks._
 
-### 302-FR-007 — Ticking MUST record the kind `ok` with no detail through the existing record call (300-FR-003) at once, with no confirmation; unticking MUST record `not_run` with no detail, which the record call MUST now accept (`not_run` joins its recorded results, with no detail and no activities; modifies 300-FR-003 and 300-FR-010). "Marchează o problemă" MUST open a small task (`dialog` shape) with the choice "Avertisment" / "Warning" or "Problemă" / "Failure" and a required detail field of 1 to 200 characters, whose save records `warning` or `failed` with the detail and closes; the row then shows the lamp and the detail and the checkbox is unchecked. The drawer MUST show the saved state only from the server's answer: on a failure the control reverts to the last answer and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` it re-reads the file (FR-001) and turns read-only. Every tick's audit entry and event are the record call's (300-FR-006, FR-007); this story writes none of its own.
+### 203-FR-007 — Each of the two rows MUST offer a record form while the file is undecided: three buttons "OK" / "Atenție" / "Problemă" ("OK" / "Warning" / "Failure"), a detail field required for Atenție and Problemă (1 to 200 characters, hidden for OK since the server writes that detail), and a "Resetează" / "Clear" action that records `not_run` when the row has a result. The `company` form holds a "Denumirea firmei" / "Company name" field, required for OK. The `caen` form holds the ticks "4520 pe certificat" / "4520 on the certificate" (absent when the file holds no ONRC certificate), "4520 în ONRC" / "4520 in the ONRC record" and "la punctul de lucru" / "at the workshop address" with the garage's address shown beneath it, or "la sediul social" / "at the registered seat" with the seat address for a mobile mechanic; OK is refused in the form with the missing tick named before anything is sent, and the server's refusal (FR-003) is shown the same way when it arrives. Saving records the kind through the existing record call with the result, the detail and the evidence.
 
-_From 302-garage-verification-file._
+_From 203-company-caen-check._
 
 ### 300-FR-004 — Recording the `activities` kind MUST also take the list of RAR activity codes on the garage's authorisation — required (possibly empty) when the result is `ok`, optional otherwise, an omitted list leaving the garage's list unchanged — validate each against the RAR activity catalogue, and store the list on the garage (`rar_activities`) in the same transaction as the check.
 
@@ -82,9 +83,9 @@ _From 300-verification-checks._
 
 _From 300-verification-checks._
 
-### 300-FR-006 — Every record MUST write one audit history entry carrying the old and new result and detail (and, for `activities`, the old and new list), in the same transaction; creating the rows at submission writes no entry of its own.
+### 203-FR-004 — Every `company` and `caen` record MUST keep what 300-FR-003, 300-FR-006, 300-FR-007, 300-FR-010 and 300-FR-011 already give the record call: `recorded_by` and `recorded_at` set, `automatic = false`, one audit entry whose old and new values now include the evidence, the `verification.check_recorded` event in the outbox in the same transaction, 409 "Dosarul e deja decis" on a decided file that was not reopened, and 404 for anyone but a MotorFix admin. This story adds no second write path.
 
-_From 300-verification-checks._
+_From 203-company-caen-check._
 
 ### 300-FR-007 — Every record MUST emit `verification.check_recorded` with fileId, kind and result through the outbox, in the same transaction, to the admin channel.
 
@@ -253,9 +254,9 @@ _From 302-garage-verification-file._
 
 _From 302-garage-verification-file._
 
-### 302-FR-004 — The drawer's body MUST show, in this order: the header (kind of business as "Societate" / "Company", "PFA", "Întreprindere individuală" / "Sole trader" or "Mecanic mobil" / "Mobile mechanic"; the CUI; the address, or "Sediu social: … · rază <n> km" / "Registered seat: … · <n> km radius" for a mobile mechanic; the phone; the brands; the photos as thumbnails opening the display image; each part left out when the garage has none); a "Raportat" / "Reported" line with each open report's text as escaped plain text and its time, and "Redeschis după un raport, <date>" / "Reopened after a report, <date>" when `reopen_reason` is `garage_report`; a "Respins anterior: <reason label>, <date>" / "Rejected before: …" line with the earlier note when the file follows a rejected one; "VERIFICĂRI ÎN REGISTRE" / "REGISTER CHECKS" with the rows company, CAEN, RAR, activities (labels as US1 scenario 5), each with its lamp (300-FR-008, the result as its text alternative), detail, recorder's first name and time, "neverificat" / "not checked" when `not_run`, and the activity names for `activities`; "DOCUMENTE" / "DOCUMENTS" (FR-005); "VERIFICĂRI MANUALE" / "MANUAL CHECKS" (FR-006); "ISTORIC" / "HISTORY" (FR-010); and the footer of FR-009.
+### 203-FR-006 — In the drawer, the `company` row MUST read "Firmă activă la ANAF și ONRC" / "Active company at ANAF and ONRC" and the `caen` row "Cod CAEN 4520" / "CAEN code 4520" (modifies the labels of 302-FR-004), each grey "neverificat" / "not checked" until recorded. The `company` row MUST carry two links, "ANAF" and "ONRC", and the `caen` row one, "ONRC", each opening the public look-up page (ANAF: `https://mfinante.gov.ro/ro/web/site/info-pj-selectie-dupa-cui`; ONRC: `https://portal.onrc.ro/`) in a new tab and copying the garage's CUI to the clipboard, with a toast "CUI copiat" / "CUI copied"; when the clipboard is unavailable the tab still opens and nothing else happens. The links are plain links to fixed public addresses with no CUI in them; MotorFix sends nothing to those sites.
 
-_From 302-garage-verification-file._
+_From 203-company-caen-check._
 
 ### 302-FR-005 — Each document kind of the contracts list MUST be one row: label from the kind's shared labels (206-FR-004); when present, "· emis acum <n> zile" / "· issued <n> days ago" ("emis azi" / "issued today", "emis ieri" / "issued yesterday") from its issue date, else "· <n> pagini" / "· <n> pages" (singular "1 pagină" / "1 page"); a second line in the warning colour "Mai vechi de 30 de zile la data trimiterii" / "Older than 30 days at the time of sending" or "Data emiterii lipsește" / "Issue date missing" for the certificate when so; one "Deschide" / "Open" button for a one-page document, else "Deschide pagina <n>" / "Open page <n>" per page; when missing, "· lipsește" / "· missing" in the failed colour and no button; when the store is unreachable, "indisponibil" / "unavailable" in place of the buttons. Pressing a button MUST ask the existing page address (206-FR-014) and open it in a new tab; a failed request shows "Nu am putut deschide documentul" / "Could not open the document" with "Reîncearcă" / "Retry" on that row only. This story adds no address route and no audit write of its own: every opening is the one 206-FR-014 already logs.
 
@@ -293,6 +294,42 @@ _From 302-garage-verification-file._
 
 _From 302-garage-verification-file._
 
+### 203-FR-001 — Each `company` and `caen` check MUST carry evidence beside its result and detail, stored with the check and returned with it in the file: for `company`, the company name as the admin typed it, trimmed of surrounding whitespace (1 to 200 characters after trimming, so a name of spaces only counts as empty; no control characters; optional unless `ok`); for `caen`, whether 4520 is on the certificate, whether 4520 is in the ONRC record, whether the address matches, and whether an ONRC certificate was uploaded at the time of the save; for both, the day of the save (Bucharest calendar day, written by the server) as the date the registers were looked up. The admin's part of the evidence (the name; the three ticks) is sent with the record call (modifies 300-FR-003), while whether a certificate was uploaded and the look-up date are written by the server and are not part of the request, is accepted only for these two kinds and only with `ok`, `warning` or `failed` (400 `validation_failed` otherwise), and a `not_run` record clears it.
+
+_From 203-company-caen-check._
+
+### 203-FR-002 — A `company` record MUST be accepted as `ok` only when the evidence holds a company name and the garage's stored CUI passes the shared CUI validator (an optional "RO" prefix, 2 to 10 digits whose last is the control digit under key 753217532, stored without "RO"; the one step 6 uses); the server then writes the detail "CUI valid · <name>" itself, whatever detail was sent. An `ok` save without a name, or on a CUI that fails the validator, is refused with 400 `validation_failed` naming the reason. `warning` and `failed` keep the rules of 300-FR-010: a typed detail of 1 to 200 characters, required.
+
+_From 203-company-caen-check._
+
+### 203-FR-003 — A `caen` record MUST be accepted as `ok` only when the evidence says 4520 is in the ONRC record, the address matches, and 4520 is on the certificate unless no ONRC certificate was uploaded (OD-29). Whether a certificate was uploaded is read by the server from the file's documents at the time of the save and written into the evidence; a value sent by the form for it is ignored. An `ok` save that lacks a required tick is refused with 400 `validation_failed` naming the missing tick. On `ok` the server writes the detail "Întreținerea și repararea autovehiculelor, la punctul de lucru", or "… la sediul social" when the garage is a mobile mechanic, whatever detail was sent. `warning` and `failed` keep the typed, required detail and store the ticks as sent.
+
+_From 203-company-caen-check._
+
+### 203-FR-005 — The system MUST record the company and CAEN results by hand only at launch: every record of either stores `automatic = false` and calls no outside company register. No company-register seam, adapter, alert, metric or retry ships with this story (owner decision, 2026-10-17); the automatic look-up story adds the seam together with its call site.
+
+_From 203-company-caen-check._
+
+### 203-FR-006 — In the drawer, the `company` row MUST read "Firmă activă la ANAF și ONRC" / "Active company at ANAF and ONRC" and the `caen` row "Cod CAEN 4520" / "CAEN code 4520" (modifies the labels of 302-FR-004), each grey "neverificat" / "not checked" until recorded. The `company` row MUST carry two links, "ANAF" and "ONRC", and the `caen` row one, "ONRC", each opening the public look-up page (ANAF: `https://mfinante.gov.ro/ro/web/site/info-pj-selectie-dupa-cui`; ONRC: `https://portal.onrc.ro/`) in a new tab and copying the garage's CUI to the clipboard, with a toast "CUI copiat" / "CUI copied"; when the clipboard is unavailable the tab still opens and nothing else happens. The links are plain links to fixed public addresses with no CUI in them; MotorFix sends nothing to those sites.
+
+_From 203-company-caen-check._
+
+### 203-FR-007 — Each of the two rows MUST offer a record form while the file is undecided: three buttons "OK" / "Atenție" / "Problemă" ("OK" / "Warning" / "Failure"), a detail field required for Atenție and Problemă (1 to 200 characters, hidden for OK since the server writes that detail), and a "Resetează" / "Clear" action that records `not_run` when the row has a result. The `company` form holds a "Denumirea firmei" / "Company name" field, required for OK. The `caen` form holds the ticks "4520 pe certificat" / "4520 on the certificate" (absent when the file holds no ONRC certificate), "4520 în ONRC" / "4520 in the ONRC record" and "la punctul de lucru" / "at the workshop address" with the garage's address shown beneath it, or "la sediul social" / "at the registered seat" with the seat address for a mobile mechanic; OK is refused in the form with the missing tick named before anything is sent, and the server's refusal (FR-003) is shown the same way when it arrives. Saving records the kind through the existing record call with the result, the detail and the evidence.
+
+_From 203-company-caen-check._
+
+### 203-FR-008 — After a save, the row MUST show only the server's answer: the lamp, the detail, the ticks of a `caen` check as stored (each as text, "certificat · ONRC · adresă" or the English equivalents, with a missing certificate read as "fără certificat" / "no certificate"), the recorder's name and the time; the queue line is updated from the answer's summary (300-FR-009): "CUI verificat" on a `company` ok, "CUI <detail>" on a warning or failure. On a failure the form keeps what was typed and ticked and a toast reads "Nu am putut salva verificarea" / "Could not save the check"; on 409 `verification_file_decided` the drawer re-reads the file and turns read-only (as 302-FR-007). Another admin's open drawer refreshes the rows through the existing `verification-file:{fileId}` live update (302-FR-009), with no new channel.
+
+_From 203-company-caen-check._
+
+### 203-FR-009 — Every text of the forms and rows MUST live in the shared i18n files in Romanian and English; the fixed `ok` details the server writes (FR-002, FR-003) are stored in Romanian, like every typed detail, and shown as stored in both languages; the forms MUST read at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, every state conveyed by text as well as colour, the ticks and buttons reachable by keyboard and named for a screen reader; the row's record form opens inside the drawer, which stays the one modal dialog (302-FR-011). Opening a form moves focus to its first control and closing it returns focus to the button that opened it; a refusal (a missing name or tick, a server error) is announced to assistive technology and names the control at fault; every control keeps the drawer's minimum touch target of 44 px.
+
+_From 203-company-caen-check._
+
+### 203-FR-010 — The evidence shape and the register seam live in the contracts and domain libraries; the record call's contract is extended, not duplicated, with OpenAPI updated and the generated client regenerated. The product action "verification check recorded" MUST be counted by kind and result and logged once per record with the file id, the kind, the result and the admin id, listed in `infra/observability/inventory.json` with the record route, its dashboard panel and the reason a count needs no alert of its own; the record route joins the API's request metrics by route.
+
+_From 203-company-caen-check._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -301,3 +338,7 @@ _From 302-garage-verification-file._
 - `207-FR-002` — superseded by `302-FR-002` (2026-10-17)
 - `300-FR-003` — superseded by `302-FR-007` (2026-10-17)
 - `300-FR-010` — superseded by `302-FR-007` (2026-10-17)
+
+- `302-FR-007` — superseded by `203-FR-007` (2026-10-17)
+- `300-FR-006` — superseded by `203-FR-004` (2026-10-17)
+- `302-FR-004` — superseded by `203-FR-006` (2026-10-17)
