@@ -43,6 +43,16 @@ describe('withPageCache', () => {
     expect(answer.headers.get('cdn-tag')).toBe('search');
   });
 
+  it.each([500, 503])(
+    'leaves a %s, such as the maintenance page, for the origin to answer again',
+    (status) => {
+      const original = page({}, status);
+
+      expect(withPageCache('/ro', original)).toBe(original);
+      expect(original.headers.get('cache-control')).toBeNull();
+    },
+  );
+
   it.each(['/app', '/app/', '/app/driver', '/app/garage/quotes?x=1'])(
     'leaves a dashboard page (%s) as it was',
     (path) => {

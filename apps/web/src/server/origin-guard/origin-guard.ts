@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto';
+
 import { metrics } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import type { Express } from 'express';
@@ -12,12 +14,24 @@ export function mountOriginGuard(app: Express, secrets: readonly string[]) {
   if (secrets.length === 0) return;
   app.use((req, res, next) => {
     const sent = req.get('x-origin-secret');
-    if (PROBES.has(req.path) || (sent && secrets.includes(sent))) {
+    if (PROBES.has(req.path) || (sent && known(secrets, sent))) {
       next();
       return;
     }
     refused(`origin refused ${req.method} ${req.path}`);
+    res.removeHeader('X-Powered-By');
     res.status(403).end();
+  });
+}
+
+// Compared in constant time, so the answer's timing tells nothing of a secret.
+function known(secrets: readonly string[], sent: string) {
+  const value = Buffer.from(sent);
+  return secrets.some((secret) => {
+    const candidate = Buffer.from(secret);
+    return (
+      candidate.length === value.length && timingSafeEqual(candidate, value)
+    );
   });
 }
 

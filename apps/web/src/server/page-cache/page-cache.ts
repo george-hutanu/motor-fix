@@ -9,22 +9,28 @@ const PRIVATE_PAGE =
 
 // A rendered public page with the edge's lifetime and its purge tag: the one
 // it set itself (a garage profile), else `search`. A dashboard, a page for
-// one person, an answer setting a cookie or one that is not HTML is returned
-// as it came.
+// one person, an answer setting a cookie, a server error (the maintenance
+// page among them) or one that is not HTML is returned as it came.
 export function withPageCache(path: string, response: Response): Response {
   if (
     PRIVATE_PAGE.test(path) ||
     response.headers.has('set-cookie') ||
-    !response.headers.get('content-type')?.startsWith('text/html')
+    response.status >= 500 ||
+    !isHtml(response.headers.get('content-type'))
   ) {
     return response;
   }
   const headers = new Headers(response.headers);
   headers.set('Cache-Control', PAGE_CACHE_CONTROL);
-  if (!headers.has('CDN-Tag')) headers.set('CDN-Tag', 'search');
+  if (!headers.get('CDN-Tag')?.trim()) headers.set('CDN-Tag', 'search');
   return new Response(response.body, {
     headers,
     status: response.status,
     statusText: response.statusText,
   });
+}
+
+// `text/html`, in any case, with or without parameters.
+function isHtml(type: string | null) {
+  return type?.split(';')[0]?.trim().toLowerCase() === 'text/html';
 }

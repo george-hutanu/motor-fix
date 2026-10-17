@@ -162,7 +162,12 @@ export class GarageProfile {
     effect(() => {
       if (!this.response) return;
       const id = this.garage()?.id;
-      if (id) this.response.headers = { 'CDN-Tag': `garage:${id}` };
+      if (id) {
+        // Added to the render's own headers, which carry its content type.
+        const headers = new Headers(this.response.headers);
+        headers.set('CDN-Tag', `garage:${id}`);
+        this.response.headers = headers;
+      }
       if (this.removed()) this.response.status = 410;
       else if (this.unknown()) this.response.status = 404;
     });

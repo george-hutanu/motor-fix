@@ -79,7 +79,10 @@ export function bunnyConfig(
 ): { apiKey: string; pullZoneId: string } | undefined {
   const apiKey = source['BUNNY_API_KEY']?.trim();
   const pullZoneId = source['BUNNY_PULL_ZONE_ID']?.trim();
-  return apiKey && pullZoneId ? { apiKey, pullZoneId } : undefined;
+  // The zone id goes into the purge address: a number, nothing else.
+  return apiKey && pullZoneId && /^\d+$/.test(pullZoneId)
+    ? { apiKey, pullZoneId }
+    : undefined;
 }
 
 // The bearer Grafana's outage contact point sends; unset refuses every call.
