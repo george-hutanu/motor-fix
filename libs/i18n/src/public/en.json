@@ -23,6 +23,11 @@
     "required": "Tick to continue.",
     "terms": "Terms of use"
   },
+  "contact": {
+    "address": "Or write to us directly at",
+    "heading": "Contact",
+    "intro": "Write to us and a person from the MotorFix team answers you by e‑mail."
+  },
   "garageProfile": {
     "backBrand": "Garages for {brand}",
     "backHome": "Home",

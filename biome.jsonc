@@ -168,6 +168,7 @@
         "apps/web/src/app/public/footer/footer.html",
         "apps/web/src/app/public/frame/frame.html",
         "apps/web/src/app/public/confirm-email/confirm-email.html",
+        "apps/web/src/app/public/contact/contact-page/contact-page.html",
         "apps/web/src/app/public/garage-profile/garage-profile.html",
         "apps/web/src/app/public/garage-profile/gone/gone.html",
         "apps/web/src/app/public/garage-profile/request-quote/request-quote.html",

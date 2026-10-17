@@ -1,0 +1,95 @@
+<div role="status" class="status">
+  @if (save.state() === 'done') {
+    <div class="confirmation" #confirmation tabindex="-1">
+      <span class="check" aria-hidden="true">
+        <svg aria-hidden="true" fill="none" height="26" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6" viewBox="0 0 24 24" width="26">
+          <path d="m5 12.5 4.5 4.5L19 7.5" />
+        </svg>
+      </span>
+      <p class="sent">{{ 'shell.contact.sent' | t }}</p>
+      <p class="reference">{{ 'shell.contact.reference' | t: { reference: reference() } }}</p>
+    </div>
+  }
+</div>
+@if (save.state() === 'done') {
+  @if (inTask()) {
+    <button hlmBtn variant="secondary" type="button" class="close" #close (click)="closed.emit()">
+      {{ 'shell.contact.close' | t }}
+    </button>
+  }
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+    <div class="field">
+      <label for="mf-contact-name">{{ 'shell.contact.name' | t }}</label>
+      <input
+        hlmInput
+        id="mf-contact-name"
+        type="text"
+        autocomplete="name"
+        formControlName="name"
+        [attr.aria-invalid]="save.fieldError(form.controls.name) ? 'true' : null"
+        aria-describedby="mf-contact-name-error"
+      />
+      <mf-field-error id="mf-contact-name-error" [save]="save" [control]="form.controls.name" />
+    </div>
+    <div class="field">
+      <label for="mf-contact-email">{{ 'shell.contact.email' | t }}</label>
+      <input
+        hlmInput
+        id="mf-contact-email"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        spellcheck="false"
+        formControlName="email"
+        [attr.aria-invalid]="save.fieldError(form.controls.email) ? 'true' : null"
+        aria-describedby="mf-contact-email-error"
+      />
+      <mf-field-error id="mf-contact-email-error" [save]="save" [control]="form.controls.email" />
+    </div>
+    <div class="field">
+      <label for="mf-contact-topic">{{ 'shell.contact.topic' | t }}</label>
+      <select
+        hlmInput
+        id="mf-contact-topic"
+        formControlName="topic"
+        [attr.aria-invalid]="save.fieldError(form.controls.topic) ? 'true' : null"
+        aria-describedby="mf-contact-topic-error"
+      >
+        <option value="" disabled>{{ 'shell.contact.choose' | t }}</option>
+        @for (topic of topics; track topic.code) {
+          <option [value]="topic.code">{{ topic.label | t }}</option>
+        }
+      </select>
+      <mf-field-error id="mf-contact-topic-error" [save]="save" [control]="form.controls.topic" />
+    </div>
+    <div class="field">
+      <label for="mf-contact-message">{{ 'shell.contact.message' | t }}</label>
+      <textarea
+        hlmInput
+        id="mf-contact-message"
+        rows="6"
+        formControlName="message"
+        [attr.aria-invalid]="save.fieldError(form.controls.message) ? 'true' : null"
+        aria-describedby="mf-contact-rule mf-contact-message-error"
+      ></textarea>
+      <div class="under">
+        <p class="hint" id="mf-contact-rule">{{ 'shell.contact.rule' | t }}</p>
+        <p class="hint count">{{ 'shell.contact.count' | t: { typed: count(), max } }}</p>
+      </div>
+      <mf-field-error id="mf-contact-message-error" [save]="save" [control]="form.controls.message" />
+    </div>
+    <div class="trap" aria-hidden="true">
+      <label for="mf-contact-website">{{ 'shell.contact.trap' | t }}</label>
+      <input id="mf-contact-website" type="text" tabindex="-1" autocomplete="off" formControlName="website" />
+    </div>
+    <mf-task-error [save]="save" />
+    <button hlmBtn type="submit" class="send" [mfTaskSubmit]="save">
+      @if (retry()) {
+        {{ 'shell.contact.retry' | t }}
+      } @else {
+        {{ 'shell.contact.send' | t }}
+      }
+    </button>
+  </form>
+}

@@ -27,6 +27,33 @@
     "table": "Vezi ca tabel",
     "value": "Valoare"
   },
+  "contact": {
+    "choose": "Alege un subiect",
+    "close": "Închide",
+    "count": "{typed} / {max}",
+    "email": "Adresa de e‑mail",
+    "message": "Mesajul tău",
+    "name": "Numele tău",
+    "problem": {
+      "offline": "Nu ești conectat. Mesajul nu a fost trimis.",
+      "too_many_messages": "Prea multe mesaje. Încearcă din nou peste o oră."
+    },
+    "reference": "Numărul mesajului: {reference}",
+    "retry": "Încearcă din nou",
+    "rule": "Între 20 și 2000 de caractere.",
+    "send": "Trimite mesajul",
+    "sent": "Am primit mesajul tău. Îți răspundem pe e‑mail.",
+    "title": "Ajutor și contact",
+    "topic": "Despre ce este vorba?",
+    "topics": {
+      "account": "Contul meu",
+      "listing": "Listarea service‑ului",
+      "other": "Altceva",
+      "request_or_booking": "Cerere sau programare",
+      "reviews": "Recenzii"
+    },
+    "trap": "Nu completa acest câmp"
+  },
   "emailBanner": {
     "failed": "Nu am putut trimite linkul. Încearcă din nou.",
     "resend": "Retrimite",
