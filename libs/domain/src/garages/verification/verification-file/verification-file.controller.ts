@@ -85,7 +85,6 @@ export class VerificationFileController {
     await this.prisma.$transaction((tx) =>
       this.verification.correctRarNumber(tx, actor, id, body.rarNumber),
     );
-    this.logger.log(`file ${id} RAR number corrected by ${actor.accountId}`);
     return this.files.read(id);
   }
 }

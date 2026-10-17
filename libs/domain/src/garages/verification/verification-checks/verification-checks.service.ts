@@ -29,7 +29,7 @@ import {
   type VerificationCheck,
   type VerificationFileStatus,
 } from '../../../generated/prisma/client';
-import { jobsOf } from '../verification-file/verification-file.service';
+import { pricedJobs } from '../verification-file/verification-file.service';
 
 // A decision waits for the garage or closes the file; reopening it into review
 // lets the admin record again.
@@ -124,7 +124,7 @@ interface RegisterFacts {
 }
 
 // A job of the garage's price list, as the activities check judges it.
-type PricedJob = ReturnType<typeof jobsOf>[number];
+type PricedJob = Awaited<ReturnType<typeof pricedJobs>>[number];
 
 interface RegisterRecord {
   detail?: string;
@@ -493,29 +493,15 @@ export class VerificationChecksService {
   ): Promise<RegisterRecord | undefined> {
     if (!isRegister(kind) || body.result === 'not_run') return undefined;
     if (kind === 'activities') {
-      return activitiesRecord(body, activities, await this.jobs(tx, file));
+      return activitiesRecord(
+        body,
+        activities,
+        await pricedJobs(tx, file.garageId),
+      );
     }
     const facts = await this.facts(tx, file);
     if (kind === 'company') return companyRecord(body, facts);
     return kind === 'caen' ? caenRecord(body, facts) : rarRecord(body, facts);
-  }
-
-  // Every job of the garage's price list once, in the list's order, whatever
-  // its status or visibility.
-  private async jobs(
-    tx: Prisma.TransactionClient,
-    file: { garageId: string },
-  ): Promise<PricedJob[]> {
-    const rows = await tx.garagePrice.findMany({
-      orderBy: [{ position: 'asc' }, { id: 'asc' }],
-      select: {
-        jobType: {
-          select: { id: true, nameEn: true, nameRo: true, rarActivity: true },
-        },
-      },
-      where: { garageId: file.garageId },
-    });
-    return jobsOf(rows);
   }
 
   // What the server reads itself for a register check: the garage's CUI and

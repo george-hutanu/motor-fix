@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
-import { HttpException } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 
 import { VerificationService } from './verification.service';
 import { AuditService } from '../../audit/audit.service';
@@ -1029,6 +1029,45 @@ describe('the RAR number of a file', () => {
       status: 400,
     });
     expect(await numberOf(file.id)).toBe('B 1234/2019');
+  });
+
+  it.each([
+    ['shorter than 3 characters', ' b1 '],
+    ['holding a control character', 'B 12\u000734'],
+  ])(
+    'refuses a submitted number %s, and opens no file',
+    async (_, rarNumber) => {
+      const answer = await refusal(submitted(rarNumber));
+
+      expect(answer).toMatchObject({
+        body: {
+          code: 'validation_failed',
+          errors: [{ code: 'invalid', field: 'rarNumber' }],
+        },
+        status: 400,
+      });
+      expect(await prisma.verificationFile.count({ where: { garageId } })).toBe(
+        0,
+      );
+    },
+  );
+
+  // @traces 204-FR-015
+  it('logs a correction once with the file and the admin, and nothing for the same number', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    try {
+      const file = await submitted('B 1234/2019');
+
+      await correct(file.id, 'b 1234/2019');
+      expect(log).not.toHaveBeenCalled();
+
+      await correct(file.id, 'CJ 221/2021');
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(log.mock.calls[0][0]).toContain(file.id);
+      expect(log.mock.calls[0][0]).toContain(ioana.accountId);
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it.each(['approved', 'rejected', 'more_requested'] as const)(

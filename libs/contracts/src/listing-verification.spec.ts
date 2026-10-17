@@ -3,6 +3,7 @@ import {
   isValidCui,
   normaliseRarNumber,
   RAR_NUMBER_MIN,
+  rarNumberRefused,
   stripCui,
 } from './listing-verification';
 
@@ -77,6 +78,18 @@ describe('a RAR authorisation number as the owner types it', () => {
   it('counts as done from 3 characters', () => {
     expect(normaliseRarNumber(' ab ').length).toBeLessThan(RAR_NUMBER_MIN);
     expect(normaliseRarNumber(' abc ').length).toBe(RAR_NUMBER_MIN);
+  });
+});
+
+// @traces 204-FR-001
+describe('a RAR number refused once normalised', () => {
+  it.each([
+    [' ab ', true],
+    [' abc ', false],
+    ['B 12\u000734', true],
+    [`${'b'.repeat(40)}\u0007`, false],
+  ])('%j refused: %s', (input, refused) => {
+    expect(rarNumberRefused(input)).toBe(refused);
   });
 });
 

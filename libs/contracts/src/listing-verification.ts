@@ -37,6 +37,13 @@ export const normaliseRarNumber = (input: string): string =>
     .slice(0, STEP6_VALUE_MAX)
     .replace(/[\uD800-\uDBFF]$/, '');
 
+// A RAR number refused once normalised: under 3 characters, or holding a
+// control character. The web, the correction and the submission share it.
+export const rarNumberRefused = (input: string): boolean => {
+  const rarNumber = normaliseRarNumber(input);
+  return rarNumber.length < RAR_NUMBER_MIN || /\p{Cc}/u.test(rarNumber);
+};
+
 const STEP6_KEYS = new Set(['cui', 'rarNumber']);
 
 // The section as stored: only the two keys, each a string of at most 40 UTF-16

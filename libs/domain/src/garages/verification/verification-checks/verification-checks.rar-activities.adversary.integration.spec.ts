@@ -334,7 +334,7 @@ describe('an activities record judged against the price list', () => {
   });
 
   it('refuses ok when the only uncovered job is rejected and hidden', async () => {
-    const id = await priced('paintwork', {
+    await priced('paintwork', {
       status: 'rejected',
       visible: false,
     });
@@ -345,7 +345,6 @@ describe('an activities record judged against the price list', () => {
 
     expect(answer.status).toBe(400);
     expect(await garageActivities()).toEqual([]);
-    expect(id).toBeTruthy();
   });
 
   it('lists no uncovered job for a problem sent with an empty list, as an empty list covers every job', async () => {

@@ -2,7 +2,7 @@ import {
   checkSummary,
   normaliseRarNumber,
   queueLamp,
-  RAR_NUMBER_MIN,
+  rarNumberRefused,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TARGET_WORKING_DAYS,
   type VerificationQueueAreaDto,
@@ -13,6 +13,7 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -35,9 +36,6 @@ import type {
   VerificationReopenReason,
 } from '../../generated/prisma/client';
 import { countApproval } from '../../metrics/product-counters';
-
-// No control characters inside a RAR number.
-const CONTROL = /\p{Cc}/u;
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
 
@@ -85,6 +83,8 @@ const refused = (detail: string) =>
 // same commit; a move, its history entry and its event commit together.
 @Injectable()
 export class VerificationService {
+  private readonly logger = new Logger('Verification');
+
   constructor(
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
@@ -151,6 +151,7 @@ export class VerificationService {
     garageId: string,
     rarNumber?: string,
   ): Promise<VerificationFile> {
+    if (rarNumber && rarNumberRefused(rarNumber)) throw rarNumberInvalid();
     const newest = await tx.verificationFile.findFirst({
       orderBy: newestFirst,
       where: { garageId },
@@ -163,7 +164,7 @@ export class VerificationService {
         data: {
           garageId,
           previousFileId: newest?.id ?? null,
-          rarNumber: rarNumber ? normaliseRarNumber(rarNumber) || null : null,
+          rarNumber: rarNumber ? normaliseRarNumber(rarNumber) : null,
         },
       })
       .catch((error: unknown) => {
@@ -197,15 +198,8 @@ export class VerificationService {
   ): Promise<void> {
     requireCapability(actor, 'admin.garages');
     if (!isUUID(fileId)) throw new NotFoundException();
+    if (rarNumberRefused(input)) throw rarNumberInvalid();
     const rarNumber = normaliseRarNumber(input);
-    if (rarNumber.length < RAR_NUMBER_MIN || CONTROL.test(rarNumber)) {
-      throw refusal(
-        HttpStatus.BAD_REQUEST,
-        'validation_failed',
-        'Numărul RAR: între 3 și 40 de caractere, fără caractere de control',
-        [{ code: 'invalid', field: 'rarNumber' }],
-      );
-    }
     // Held until the correction commits, so two corrections serialise and a
     // decision racing it waits.
     const [file] = await tx.$queryRaw<
@@ -242,6 +236,9 @@ export class VerificationService {
       subjectId: fileId,
       subjectType: 'verification_file',
     });
+    this.logger.log(
+      `file ${fileId} RAR number corrected by ${actor.accountId}`,
+    );
   }
 
   // A second admin's open changes nothing and says who opened it first.
@@ -618,4 +615,14 @@ function openedFirst(actor: VerificationActor, file: VerificationFile) {
     openedAt: file.openedAt,
     openedBy: file.openedBy,
   };
+}
+
+// The same refusal for a correction and a submission.
+function rarNumberInvalid() {
+  return refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'Numărul RAR: între 3 și 40 de caractere, fără caractere de control',
+    [{ code: 'invalid', field: 'rarNumber' }],
+  );
 }

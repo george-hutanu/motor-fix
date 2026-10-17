@@ -147,13 +147,7 @@ export class VerificationRegisterForm {
     const list = [...this.ticked()];
     return this.jobs().map((job) => ({
       id: job.jobTypeId,
-      mark: job.rarActivity
-        ? this.t(
-            coversJob(job.rarActivity, list)
-              ? 'form.covered'
-              : 'form.uncovered',
-          )
-        : null,
+      mark: this.jobMark(job.rarActivity, list),
       name: en ? job.nameEn : job.nameRo,
       uncovered: !coversJob(job.rarActivity, list),
     }));
@@ -441,6 +435,17 @@ export class VerificationRegisterForm {
     this.host.nativeElement
       .querySelector<HTMLElement>(`[data-fault="${fault}"]`)
       ?.focus();
+  }
+
+  // A job mapped to a code outside the catalogue can never be ticked, so it
+  // reads uncovered with its code.
+  private jobMark(rarActivity: string | null, list: readonly string[]) {
+    if (!rarActivity) return null;
+    if (coversJob(rarActivity, list)) return this.t('form.covered');
+    const known = this.catalogue().some((a) => a.code === rarActivity);
+    return known
+      ? this.t('form.uncovered')
+      : this.t('form.uncoveredCode', { code: rarActivity });
   }
 
   private t(key: string, params?: Record<string, string | number>) {

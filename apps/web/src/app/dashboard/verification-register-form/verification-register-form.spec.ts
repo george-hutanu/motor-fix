@@ -687,6 +687,24 @@ describe('the activities form', () => {
     expect(text(job('Încărcare freon'))).toContain('neacoperit');
   });
 
+  // @traces 204-FR-008
+  it('marks a job mapped to a code outside the catalogue uncovered, with its code', async () => {
+    await activities((h) =>
+      h.jobs.set([
+        ...JOBS,
+        {
+          jobTypeId: 'job-glass',
+          nameEn: 'Windscreen',
+          nameRo: 'Parbriz',
+          rarActivity: 'glazing',
+        },
+      ]),
+    );
+
+    expect(text(job('Parbriz'))).toContain('neacoperit (cod glazing)');
+    expect(text(job('Plăcuțe de frână'))).not.toContain('cod');
+  });
+
   it('refuses OK with uncovered jobs, naming them', async () => {
     await activities();
 

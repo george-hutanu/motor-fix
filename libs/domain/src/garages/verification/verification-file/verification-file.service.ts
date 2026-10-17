@@ -64,9 +64,26 @@ export function timelineWhere(
 
 const iso = (at: Date | null) => at?.toISOString() ?? null;
 
-// The price list's jobs once each, in the list's order: a job priced for
-// several brands is one job.
-export function jobsOf(
+// Every job of the garage's price list once, in the list's order, whatever
+// its status or visibility.
+export async function pricedJobs(
+  client: Pick<Prisma.TransactionClient, 'garagePrice'>,
+  garageId: string,
+): Promise<VerificationFileJobDto[]> {
+  const prices = await client.garagePrice.findMany({
+    orderBy: [{ position: 'asc' }, { id: 'asc' }],
+    select: {
+      jobType: {
+        select: { id: true, nameEn: true, nameRo: true, rarActivity: true },
+      },
+    },
+    where: { garageId },
+  });
+  return jobsOf(prices);
+}
+
+// A job priced for several brands is one job.
+function jobsOf(
   prices: {
     jobType: {
       id: string;
@@ -154,20 +171,7 @@ export class VerificationFileService {
           orderBy: { code: 'asc' },
           select: { code: true, nameEn: true, nameRo: true },
         }),
-        this.prisma.garagePrice.findMany({
-          orderBy: [{ position: 'asc' }, { id: 'asc' }],
-          select: {
-            jobType: {
-              select: {
-                id: true,
-                nameEn: true,
-                nameRo: true,
-                rarActivity: true,
-              },
-            },
-          },
-          where: { garageId: garage.id },
-        }),
+        pricedJobs(this.prisma, garage.id),
         this.prisma.garageReport.findMany({
           orderBy: { createdAt: 'desc' },
           select: { createdAt: true, text: true },
@@ -269,7 +273,7 @@ export class VerificationFileService {
         seatAddress: garage.seatAddress,
         serviceRadiusKm: garage.serviceRadiusKm,
       },
-      jobs: jobsOf(prices),
+      jobs: prices,
       previousRejection:
         previous?.status === 'rejected' && previous.decidedAt
           ? {

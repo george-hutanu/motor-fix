@@ -149,9 +149,11 @@
         "save": "Salvează",
         "ticks": "Ce ai verificat",
         "uncovered": "neacoperit",
+        "uncoveredCode": "neacoperit (cod {code})",
         "warning": "Atenție"
       },
       "heading": "VERIFICĂRI ÎN REGISTRE",
+      "noActivities": "nicio activitate înregistrată",
       "noNumber": "număr lipsă",
       "number": "Număr RAR",
       "onrc": "ONRC",

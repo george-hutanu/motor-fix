@@ -1779,6 +1779,37 @@ describe('the RAR and activities rows', () => {
     );
   });
 
+  // @traces 204-FR-009
+  it('says no activity is recorded when the list was saved empty, and nothing while unchecked', async () => {
+    const warning = {
+      detail: 'autorizația nu e lizibilă',
+      evidence: { lookedUpOn: daysAgo(0), uncoveredJobTypeIds: [] },
+      recorder: ioana,
+      result: 'warning',
+    } as Partial<VerificationFileCheckDto>;
+    const host = await open(
+      withCheck('activities', warning, { activities: [] }),
+    );
+    const line = text(row(host, 'register', 'activities'));
+    expect(line).toContain('nicio activitate înregistrată');
+    expect(line).toContain('autorizația nu e lizibilă');
+
+    reset();
+    const english = await open(
+      withCheck('activities', warning, { activities: [] }),
+      'en',
+    );
+    expect(text(row(english, 'register', 'activities'))).toContain(
+      'no activity recorded',
+    );
+
+    reset();
+    const unchecked = await open();
+    expect(text(row(unchecked, 'register', 'activities'))).not.toContain(
+      'nicio activitate',
+    );
+  });
+
   it('notes in the footer that the RAR check is required until it is OK', async () => {
     const host = await open();
     expect(text(section(host, 'footer'))).toContain(

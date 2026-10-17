@@ -10,10 +10,7 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import {
-  normaliseRarNumber,
-  RAR_NUMBER_MIN,
-} from '@motor-fix/contracts/listing-verification';
+import { rarNumberRefused } from '@motor-fix/contracts/listing-verification';
 import { lamp } from '@motor-fix/contracts/verification-target';
 import {
   AdminService,
@@ -66,8 +63,6 @@ const LOOKUPS: Partial<Record<CheckKind, Lookup[]>> = {
   rar: [{ copy: 'rar', name: 'rarRegister', url: 'https://portal.rarom.ro/' }],
 };
 type FormKind = 'company' | 'caen' | 'rar' | 'activities';
-// No control characters in a corrected number, as the server refuses them.
-const CONTROL = /\p{Cc}/u;
 const MANUAL: readonly CheckKind[] = [
   'address',
   'photos',
@@ -402,10 +397,7 @@ export class VerificationFile {
   async saveCorrection(event?: Event) {
     event?.preventDefault();
     const rarNumber = this.correcting() ?? '';
-    if (
-      normaliseRarNumber(rarNumber).length < RAR_NUMBER_MIN ||
-      CONTROL.test(rarNumber)
-    ) {
+    if (rarNumberRefused(rarNumber)) {
       this.correctError.set(this.t('register.errors.number'));
       return;
     }
@@ -625,6 +617,16 @@ export class VerificationFile {
     return file;
   }
 
+  // The garage's recorded activities by name, or a line saying the list is
+  // empty, so a recorded check never reads as if the list were unread.
+  private activitiesLine() {
+    const value = this.data();
+    if (!value) return null;
+    const en = this.i18n.language() === 'en';
+    const names = value.activities.map((a) => (en ? a.nameEn : a.nameRo));
+    return names.length ? names.join(', ') : this.t('register.noActivities');
+  }
+
   private result(kind: CheckKind): Result {
     return this.checks().find((c) => c.kind === kind)?.result ?? 'not_run';
   }
@@ -632,17 +634,12 @@ export class VerificationFile {
   private checkRow(kind: CheckKind) {
     const check = this.checks().find((c) => c.kind === kind);
     const result = check?.result ?? 'not_run';
-    const value = this.data();
-    const language = this.i18n.language();
-    const activities =
-      kind === 'activities' && result !== 'not_run' && value
-        ? value.activities
-            .map((a) => (language === 'en' ? a.nameEn : a.nameRo))
-            .join(', ')
-        : null;
     const recorder = check?.recorder;
     return {
-      activities: activities || null,
+      activities:
+        kind === 'activities' && result !== 'not_run'
+          ? this.activitiesLine()
+          : null,
       detail: check?.detail ?? null,
       kind,
       label: REGISTER.includes(kind)

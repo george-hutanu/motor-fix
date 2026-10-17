@@ -147,9 +147,11 @@
         "save": "Save",
         "ticks": "What you checked",
         "uncovered": "not covered",
+        "uncoveredCode": "not covered (code {code})",
         "warning": "Warning"
       },
       "heading": "REGISTER CHECKS",
+      "noActivities": "no activity recorded",
       "noNumber": "number missing",
       "number": "RAR number",
       "onrc": "ONRC",
