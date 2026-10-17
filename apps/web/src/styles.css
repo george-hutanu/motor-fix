@@ -92,14 +92,18 @@ input[type="checkbox"].mf-check:checked::after {
   );
 }
 
-/* A control inside a bar is where the bar is: it never scrolls under it, so
-   it keeps no room, and focusing it (the focus coming back to the tab that
-   opened a sheet) never scrolls the page. */
+/* A control inside a bar, or inside a page's own sticky bar, is where the
+   bar is: it never scrolls under one, so it keeps no room, and focusing it
+   (the focus coming back to the button that opened a sheet or a list) never
+   scrolls the page. */
 :where(
   mf-public-frame > .bar,
   mf-public-tab-bar,
   mf-dashboard-tab-bar,
-  mf-consent-bar
+  mf-consent-bar,
+  mf-list-your-garage nav,
+  mf-list-your-garage .actions,
+  mf-request-drawer .actions
 ) :where(a, button, input, select, textarea, summary, [tabindex]) {
   scroll-margin: 0;
 }
