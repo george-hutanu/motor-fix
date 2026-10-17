@@ -95,27 +95,43 @@ provisioning format (`apiVersion: 1`, folder `MotorFix`, every minute):
 the services, `mcp.json`, `notifications.json` and `quotes.json` for the
 narrower signals. Each rule groups by `deployment_environment`, so an
 environment that never reported raises nothing, and carries its `service`
-label, a summary naming the environment and its dashboard's uid. The
-service rules notify the `MotorFix owner` contact point (the owner's e-mail),
-which is created by hand in Grafana once.
+label, a summary naming the environment, its dashboard's uid and a
+`runbook` annotation (the first steps to take when it fires). Every rule says
+how long it pends (`for`); only the rules whose query already holds the wait
+(an absence over 5 minutes, a rate or an increase over its window, or one
+event that is the alert) fire after `0s`, and `scripts/alert-rules.spec.ts`
+lists them.
+
+Whom they notify is code too, in `infra/observability/grafana/alerting/`:
+`contact-points.json` holds the `MotorFix owner` contact point, e-mail only to
+the owner's address, and `policies.json` the notification policy tree. The
+rules name no receiver (the uptime `outage` rule aside, which keeps its own):
+the tree sends production to the owner at once (30 s, then every 4 hours while
+it lasts) and staging more quietly (5 minutes, then once a day). No route
+carries a mute or active time interval: an alert reaches the owner at any
+hour, and the spec fails on one.
 
 | Service | Signals (the file holds each threshold) |
 |---|---|
-| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time |
-| worker | down, event-loop delay, oldest waiting job per queue, a job's final failure per queue (`verification-result` keeps its own rule) |
-| PostgreSQL | unreachable, connections used, database size |
+| api, web | down (no telemetry for 5 minutes after reporting in the last day), 5xx share over 10 minutes, p95 response time, memory over 85% of the container's limit (`api-memory`, `web-memory`); api also the garage search p95 over 300 ms for 10 minutes (`api-search-latency`) |
+| worker | down, event-loop delay, oldest waiting job per queue, waiting jobs growing for 15 minutes per queue (`worker-queue-growing`), a job's final failure per queue (`verification-result` keeps its own rule), memory (`worker-memory`) |
+| mcp | memory (`mcp-memory`, in `mcp.json`) beside its own signals |
+| PostgreSQL | unreachable, connections used, database size, the oldest outbox event waiting more than 60 s for 5 minutes (`postgres-outbox-stuck`) |
 | Redis | unreachable, memory used, connected clients |
 
 The "Grafana alerts" workflow (`.github/workflows/grafana-alerts.yml`) applies
 every file on a push to `main` that changes one, and by hand
-(`workflow_dispatch`): it creates the `MotorFix` folder (uid `motorfix`) when
+(`workflow_dispatch`): it puts the contact point by its uid (creating it when
+Grafana has none), replaces the whole notification policy tree, then creates the `MotorFix` folder (uid `motorfix`) when
 missing and replaces each file's group whole, so a rule removed from a file
 leaves Grafana too, and a group whose file is gone is left alone. It uses
 `GRAFANA_SA_TOKEN` and `GRAFANA_URL`, as the release does, and without either
 it is skipped with a notice. A change made only in the Grafana UI is
 overwritten by the next run: edit the JSON instead. A file whose rule uid is
 already held by a rule imported by hand fails, naming the file and the group; delete that
-copy in Grafana once and run the workflow again.
+copy in Grafana once and run the workflow again. Once its own contact point
+is in, the run removes any other contact point named `MotorFix owner` (the one
+made by hand); when its own is refused, the hand-made one is kept.
 
 ## Uptime checks and the outage alert
 
