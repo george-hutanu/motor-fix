@@ -1,30 +1,18 @@
+import {
+  SYSTEM_LOG_KINDS,
+  SYSTEM_LOG_SOURCES,
+  type SystemLogKind,
+  type SystemLogSource,
+} from '@motor-fix/contracts';
+
 import type { Figures, TileKey, TileState } from '../../status/tiles';
 
-export const KINDS = [
-  'status_changed',
-  'check_failed',
-  'job_failed',
-  'service_error',
-  'server_error',
-  'backup_completed',
-  'backup_failed',
-  'deploy',
-] as const;
-export type Kind = (typeof KINDS)[number];
+// The lists are the contract's, so the read and the writer cannot drift.
+export const KINDS = SYSTEM_LOG_KINDS;
+export type Kind = SystemLogKind;
 
-export const SOURCES = [
-  'api',
-  'search',
-  'maps',
-  'email',
-  'notifications',
-  'backup',
-  'worker',
-  'webrtc',
-  'identity',
-  'storage',
-] as const;
-export type Source = (typeof SOURCES)[number];
+export const SOURCES = SYSTEM_LOG_SOURCES;
+export type Source = SystemLogSource;
 
 type Severity = 'info' | 'warning' | 'error';
 
