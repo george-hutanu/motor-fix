@@ -51,27 +51,28 @@ async function since(before: Record<string, number>) {
 
 // Lets each entry reach Redis, then holds the store's reply until released:
 // what a reader of Redis sees in between is what a test that waits for the
-// key sees before the service has heard back.
+// key sees before the service has heard back. `unlocked` settles once Redis
+// has answered the release of the key's lock, the fill's last call.
 function holdStoreReplies(redis: Redis) {
   const evaluate = redis.eval.bind(redis);
   const landed = Promise.withResolvers<void>();
   const gate = Promise.withResolvers<void>();
+  const unlocked = Promise.withResolvers<void>();
   jest.spyOn(redis, 'eval').mockImplementation(async (...args) => {
     const reply = await evaluate(...args);
-    if (String(args[0]).includes('ZADD')) {
+    const source = String(args[0]);
+    if (source.includes('ZADD')) {
       landed.resolve();
       await gate.promise;
     }
+    if (source.includes("redis.call('DEL'")) unlocked.resolve();
     return reply;
   });
-  return { landed: landed.promise, release: gate.resolve };
-}
-
-async function lockFree(key: string) {
-  const deadline = performance.now() + 5000;
-  while ((await other.exists(lockKey(key))) !== 0) {
-    if (performance.now() > deadline) throw new Error('the lock was kept');
-  }
+  return {
+    landed: landed.promise,
+    release: gate.resolve,
+    unlocked: unlocked.promise,
+  };
 }
 
 const key = () => cacheKey('profile', randomUUID(), '-');
@@ -165,7 +166,8 @@ describe('the cache service’s count of a fill', () => {
     expect(await since(before)).toEqual({ 'profile stale': 1 });
 
     held.release();
-    await lockFree(k);
+    await held.unlocked;
+    expect(await other.exists(lockKey(k))).toBe(0);
     expect(await since(before)).toEqual({ 'profile stale': 1 });
   });
 
