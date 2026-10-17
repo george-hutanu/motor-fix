@@ -448,7 +448,8 @@ export class VerificationFile {
       entry.kind === 'verification_resent'
         ? 'resent'
         : STATUS_LINES[String(entry.newValue)];
-    return line ? this.t(`lines.${line}`, { name, when }) : null;
+    // A change this drawer has no words for still takes its one line.
+    return this.t(`lines.${line ?? 'changed'}`, { name, when });
   }
 
   // A reason's label when it has one, else its code; then the note.

@@ -56,6 +56,7 @@
     },
     "lines": {
       "approved": "Aprobat de {name}, {when}",
+      "changed": "Modificat de {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
       "more_requested": "Completări cerute de {name}, {when}",
       "opened": "Deschis de {name}, {when}",

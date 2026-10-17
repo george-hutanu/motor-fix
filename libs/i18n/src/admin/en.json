@@ -54,6 +54,7 @@
     },
     "lines": {
       "approved": "Approved by {name}, {when}",
+      "changed": "Changed by {name}, {when}",
       "check": "{check}: {result} — {name}, {when}",
       "more_requested": "More requested by {name}, {when}",
       "opened": "Opened by {name}, {when}",
