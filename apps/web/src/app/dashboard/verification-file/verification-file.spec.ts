@@ -1857,4 +1857,35 @@ describe('reopening', () => {
     expect(text(section(host, 'footer'))).toContain('Respins de Ioana');
     expect(reopenButton(host)).not.toBeNull();
   });
+
+  it('clears an earlier refusal line when the reopening call starts, even if it then fails', async () => {
+    const host = await open();
+    api.verificationFileControllerDecision.mockRejectedValueOnce(
+      refusedBy('verification_transition_refused', {
+        currentStatus: 'rejected',
+        decidedAt: DECIDED_AT,
+        decidedBy: 'Ioana',
+      }),
+    );
+    answer = async () => rejected();
+    await deciding().decide({ decision: 'approved' });
+    await settle();
+    expect(alertIn(host)).not.toBeNull();
+    overlays.open.mockResolvedValue(true);
+    let failCall: (error: unknown) => void = () => undefined;
+    api.verificationFileControllerReopen.mockReturnValue(
+      new Promise((_, reject) => {
+        failCall = reject;
+      }),
+    );
+
+    reopenButton(host)?.click();
+    await settle();
+
+    expect(alertIn(host)).toBeNull();
+    failCall(new HttpErrorResponse({ status: 500 }));
+    await settle();
+    expect(toast).toHaveBeenCalledWith('Nu am putut redeschide dosarul');
+    expect(alertIn(host)).toBeNull();
+  });
 });

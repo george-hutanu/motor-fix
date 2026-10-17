@@ -349,9 +349,9 @@ export class VerificationFile {
     }
     if (this.busy()) return;
     this.busy.set(true);
+    this.refused.set(null);
     try {
       await this.api.verificationFileControllerReopen({ id: this.fileId });
-      this.refused.set(null);
       this.file.reload();
       this.focusHeading();
     } catch {
