@@ -1,6 +1,8 @@
 import type { DocumentKind, SuspensionCause } from '@motor-fix/contracts';
 import { type Counter, metrics } from '@opentelemetry/api';
 
+import type { Kind } from '../admin/system-log/entry';
+
 // The product's key numbers, one counter each; a process that never starts
 // telemetry counts into the API's no-op meter and pays nothing. Every label comes from a
 // fixed set: no identifier, address or free text ever becomes a series.
@@ -156,4 +158,15 @@ export function countAccountChange(field: AccountChangeField) {
     'motorfix_account_changes_total',
     "Changes to an account's own details, by field",
   ).add(1, { field });
+}
+
+// Every write to the system status log, by kind and what became of it.
+export function countSystemLogEntry(
+  kind: Kind,
+  outcome: 'written' | 'grouped' | 'dropped',
+) {
+  counter(
+    'motorfix_system_log_entries_total',
+    'System status log writes, by kind and outcome',
+  ).add(1, { kind, outcome });
 }

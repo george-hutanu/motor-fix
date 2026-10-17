@@ -107,3 +107,24 @@ export function nextTile(
     row: { ...row, ...checked, pendingSince: now, pendingState: check.state },
   };
 }
+
+// The figure and limit a tile went over to reach its state: the red limit for
+// red, the amber one for amber. None for green, or for a failed check.
+export function limitCrossed(
+  figures: Figures | null,
+  limits: Limits,
+  state: TileState,
+): { figure: keyof Figures; limit: number } | null {
+  if (!figures || state === 'green') return null;
+  for (const [figure, [amber, red]] of Object.entries(LIMITS) as [
+    keyof Figures,
+    [keyof Limits, keyof Limits],
+  ][]) {
+    const value = figures[figure];
+    const limit = limits[state === 'red' ? red : amber];
+    if (value !== undefined && limit !== undefined && value >= limit) {
+      return { figure, limit };
+    }
+  }
+  return null;
+}
