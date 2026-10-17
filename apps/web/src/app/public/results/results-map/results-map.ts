@@ -44,8 +44,16 @@ export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
     return async (host, moved) => {
-      const map = await openMapLibre(host, styleFor(document));
+      // From the start: MapLibre adds its focusable canvas while the style
+      // is still loading, under the grey placeholder.
       const stop = keepOutOfTabOrder(host);
+      let map: Awaited<ReturnType<typeof openMapLibre>>;
+      try {
+        map = await openMapLibre(host, styleFor(document));
+      } catch (error) {
+        stop();
+        throw error;
+      }
       const pins = drawPins(map, host, moved);
       return {
         ...pins,
