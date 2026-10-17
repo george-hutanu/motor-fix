@@ -34,9 +34,9 @@ a {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-width: 66px;
+  min-width: 44px;
   min-height: 48px;
-  padding: 0 8px;
+  padding: 0 4px;
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-body);
   font-weight: 700;

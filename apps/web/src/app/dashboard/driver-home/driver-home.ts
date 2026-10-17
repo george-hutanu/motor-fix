@@ -5,8 +5,6 @@ import {
   computed,
   DestroyRef,
   inject,
-  Pipe,
-  type PipeTransform,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
@@ -30,6 +28,7 @@ import { EmptyState } from '../empty-state/empty-state';
 import { Live } from '../live';
 import { OilLine } from '../oil-line/oil-line';
 import { Session } from '../session';
+import { TiePipe } from '../tie/tie';
 import { allowedViews } from '../views';
 
 // A list as a panel reads it: loading (undefined), failed, or its items.
@@ -42,15 +41,6 @@ const CARS_SHOWN = 3;
 // How often a page left open reads the clock again, so the cars rank by the
 // new day soon after midnight with no new read.
 const TICK_MS = 60_000;
-
-// Holds a one- or two-letter word to the word after it ("o mașină", "un
-// service"): where a button's label needs two lines, no word is left alone.
-@Pipe({ name: 'tie' })
-class TiePipe implements PipeTransform {
-  transform(text: string): string {
-    return text.replace(/(^|\s)(\S{1,2}) (?=\S)/gu, '$1$2\u00a0');
-  }
-}
 
 // "Panou", the driver dashboard's first view: the registry's panels, each in
 // its loading, empty, filled or error state, and, with no active request, the
