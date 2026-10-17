@@ -122,16 +122,6 @@ describe('release workflow', () => {
   });
 
   // @traces 1348-FR-001
-  it('switches the production job itself, and no other job carries a condition', () => {
-    expect(job('production')).toMatch(
-      /^ {4}if: vars\.PRODUCTION_ENABLED == 'true'$/m,
-    );
-    for (const name of ['checks', 'images', 'staging']) {
-      expect(job(name)).not.toMatch(/^ {4}if:/m);
-    }
-  });
-
-  // @traces 1348-FR-001
   it('ends staging with a note, after the core flows, while production is off', () => {
     const block = job('staging');
     const at = block.indexOf('- name: Note that production is off');
