@@ -90,8 +90,10 @@ describe('dashboard view lists under hostile input', () => {
   it('has unique paths, and unique capabilities among the released views, in every dashboard', () => {
     for (const area of AREAS) {
       const paths = DASHBOARDS[area].views.map((v) => v.path);
+      // The system log shares Settings' capability: it is the one its
+      // endpoint requires.
       const caps = DASHBOARDS[area].views
-        .filter((v) => !v.unreleased)
+        .filter((v) => !v.unreleased && !(area === 'admin' && v.path === 'log'))
         .map((v) => v.capability)
         .filter(Boolean);
       expect(new Set(paths).size).toBe(paths.length);

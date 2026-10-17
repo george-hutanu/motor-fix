@@ -156,6 +156,7 @@
         "assistant": "AI assistant",
         "catalogue": "Brands and jobs",
         "garages": "Garages",
+        "log": "System log",
         "reviews": "Reported reviews",
         "settings": "Settings",
         "users": "Users"
@@ -220,6 +221,7 @@
       "garages": "Garages",
       "history": "History",
       "jobs": "Jobs",
+      "log": "Log",
       "overview": "Dashboard",
       "prices": "Prices",
       "profile": "Profile",

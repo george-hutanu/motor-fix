@@ -1,0 +1,54 @@
+:host {
+  display: block;
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+section {
+  display: grid;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+h2 {
+  margin: 0;
+  font-size: var(--mf-size-label);
+  color: var(--mf-text-secondary);
+}
+h3 {
+  margin: var(--mf-space-2) 0 0;
+  font-size: var(--mf-size-label);
+  color: var(--mf-text-secondary);
+}
+.fresh:empty {
+  display: none;
+}
+.loading {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+.skeleton {
+  display: block;
+  height: 1em;
+  width: 60%;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.more {
+  min-height: var(--mf-tap);
+}
+.failed,
+.empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-3);
+}
+p {
+  margin: 0;
+}
+.empty p {
+  color: var(--mf-text-secondary);
+}
+button {
+  min-width: var(--mf-tap);
+  min-height: var(--mf-tap);
+}
