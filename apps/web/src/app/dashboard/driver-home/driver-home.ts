@@ -1,8 +1,13 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
+  Pipe,
+  type PipeTransform,
+  PLATFORM_ID,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -34,6 +39,18 @@ const ENDED: readonly RequestSummaryDto['status'][] = ['done', 'closed'];
 
 // The cars the panel shows; the rest are a link away.
 const CARS_SHOWN = 3;
+// How often a page left open reads the clock again, so the cars rank by the
+// new day soon after midnight with no new read.
+const TICK_MS = 60_000;
+
+// Holds a one- or two-letter word to the word after it ("o mașină", "un
+// service"): where a button's label needs two lines, no word is left alone.
+@Pipe({ name: 'tie' })
+class TiePipe implements PipeTransform {
+  transform(text: string): string {
+    return text.replace(/(^|\s)(\S{1,2}) (?=\S)/gu, '$1$2\u00a0');
+  }
+}
 
 // "Panou", the driver dashboard's first view: the registry's panels, each in
 // its loading, empty, filled or error state, and, with no active request, the
@@ -48,6 +65,7 @@ const CARS_SHOWN = 3;
     OilLine,
     Panel,
     RouterLink,
+    TiePipe,
     TranslatePipe,
   ],
   selector: 'mf-driver-home',
@@ -100,6 +118,17 @@ export class DriverHome {
     panelsToDraw(null).filter((key) => key !== 'saved' || this.saved()),
   );
   protected readonly carsShown = CARS_SHOWN;
+  private readonly now = signal(new Date());
+  // The most urgent cars, each with its two most urgent lines.
+  protected readonly topCars = computed(() => {
+    const cars = this.cars();
+    if (!Array.isArray(cars)) return [];
+    const now = this.now();
+    return [...cars]
+      .sort((a, b) => compareCars(a, b, now))
+      .slice(0, CARS_SHOWN)
+      .map((car) => ({ car, lines: carLines(car, now).slice(0, 2) }));
+  });
 
   constructor() {
     void this.i18n.enter('driver');
@@ -109,6 +138,9 @@ export class DriverHome {
       .on(['quote.accepted'])
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.loadRequests());
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
 
   // Both add buttons show only once the driver is known to have no car, so no
@@ -117,21 +149,6 @@ export class DriverHome {
     const car = await openAddCar(this.overlays, []);
     if (car === 'cancelled') return;
     this.cars.update((list) => [car, ...(Array.isArray(list) ? list : [])]);
-  }
-
-  // Read on every check rather than kept, so a page left open overnight
-  // ranks by the new day the next time anything redraws it.
-  protected topCars(): CarDto[] {
-    const cars = this.cars();
-    if (!Array.isArray(cars)) return [];
-    const now = new Date();
-    return [...cars]
-      .sort((a, b) => compareCars(a, b, now))
-      .slice(0, CARS_SHOWN);
-  }
-
-  protected lines(car: CarDto) {
-    return carLines(car, new Date()).slice(0, 2);
   }
 
   protected retryCars() {

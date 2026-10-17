@@ -236,4 +236,13 @@ describe('DashboardTabBar spacing', () => {
       expect(`${px[0]} ${Number(px[1]) % 4}`).toBe(`${px[0]} 0`);
     }
   });
+
+  // A phone reads its tab names and counts at the body size, never the 12 px label size.
+  it('sets every tab name and count at the body size', () => {
+    const css = readFileSync(join(__dirname, 'tab-bar.css'), 'utf8');
+    const sizes = [...css.matchAll(/font-size: ([^;]+);/g)].map((m) => m[1]);
+
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(new Set(sizes)).toEqual(new Set(['var(--mf-size-body)']));
+  });
 });

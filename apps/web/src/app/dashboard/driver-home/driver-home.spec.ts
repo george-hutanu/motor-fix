@@ -853,3 +853,61 @@ describe('Panou drawn from the panel registry', () => {
     }
   });
 });
+
+describe('the add-car and find-garage buttons on a 320 px phone', () => {
+  // Michroma at the body size needs two lines there: a one- or two-letter
+  // word is held to the word after it, so no word is left alone on a line.
+  it('ties "o" and "un" to the word that follows', async () => {
+    const { element } = await render();
+    const raw = (b: Element | null | undefined) => b?.textContent?.trim();
+
+    expect(raw(invitation(element, 'car')?.querySelector('button'))).toBe(
+      'Adaugă o mașină',
+    );
+    expect(raw(invitation(element, 'search')?.querySelector('a'))).toBe(
+      'Caută un service',
+    );
+    expect(raw(panel(element, 'cars')?.querySelector('button'))).toBe(
+      'Adaugă o mașină',
+    );
+    expect(raw(panel(element, 'quotes')?.querySelector('a'))).toBe(
+      'Caută un service',
+    );
+  });
+});
+
+describe('Mașinile mele on a page left open', () => {
+  afterEach(() => jest.useRealTimers());
+
+  // @traces 029-FR-002
+  it('ranks the lines by the new day once it comes, with no new read', async () => {
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      now: new Date('2026-10-08T09:00:00Z'),
+    });
+    // ITP in 8 days (amber) and the oil about 6 days away (red); two days
+    // later the ITP is 6 days away too and, as urgent, comes first.
+    const due = car({
+      itpUntil: '2026-10-16',
+      nextServiceKm: 120213,
+      odometerKm: 120000,
+    });
+    const { element, settle } = await render({ cars: [due] });
+    const kinds = () =>
+      [
+        ...(cards(element)[0]?.querySelectorAll(
+          'mf-oil-line, mf-due-date-line',
+        ) ?? []),
+      ].map((line) => line.tagName.toLowerCase());
+
+    expect(kinds()).toEqual(['mf-oil-line', 'mf-due-date-line']);
+
+    jest.setSystemTime(new Date('2026-10-10T09:00:00Z'));
+    jest.advanceTimersByTime(60_000);
+    await settle();
+
+    expect(kinds()).toEqual(['mf-due-date-line', 'mf-oil-line']);
+    expect(carsList).toHaveBeenCalledTimes(1);
+  });
+});

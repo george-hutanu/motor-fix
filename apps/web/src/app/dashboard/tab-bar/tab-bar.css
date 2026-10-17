@@ -38,7 +38,7 @@ a {
   min-height: 48px;
   padding: 0 8px;
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-label);
+  font-size: var(--mf-size-body);
   font-weight: 700;
   line-height: 1.15;
   text-decoration: none;
@@ -56,21 +56,21 @@ a {
   gap: 4px;
 }
 .chip {
-  min-width: 18px;
-  height: 18px;
+  min-width: 22px;
+  height: 22px;
   padding: 0 4px;
-  border-radius: 9px;
+  border-radius: 11px;
   background: var(--mf-amber);
   color: var(--mf-on-amber);
-  font-size: var(--mf-size-label);
-  line-height: 18px;
+  font-size: var(--mf-size-body);
+  line-height: 22px;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 .chip-skeleton {
-  width: 18px;
-  height: 18px;
-  border-radius: 9px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
   background: var(--mf-line);
 }
 a[aria-current="page"] {

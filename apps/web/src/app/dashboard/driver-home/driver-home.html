@@ -23,13 +23,13 @@
             @if (noCar()) {
               <mf-panel data-invitation="car">
                 <mf-empty-state icon="car" text="driver.empty.addFirstCar">
-                  <button hlmBtn type="button" (click)="addCar()">{{ 'driver.cars.add.title' | t }}</button>
+                  <button hlmBtn type="button" (click)="addCar()">{{ 'driver.cars.add.title' | t | tie }}</button>
                 </mf-empty-state>
               </mf-panel>
             }
             <mf-panel data-invitation="search">
               <mf-empty-state icon="search" text="driver.empty.findGarageForCar">
-                <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t }}</a>
+                <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t | tie }}</a>
               </mf-empty-state>
             </mf-panel>
           </div>
@@ -52,7 +52,7 @@
           }
           @case ('empty') {
             <mf-empty-state icon="quote" text="driver.empty.quotes">
-              <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t }}</a>
+              <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t | tie }}</a>
             </mf-empty-state>
           }
         }
@@ -75,16 +75,17 @@
           }
           @case ('empty') {
             <mf-empty-state icon="car" text="driver.empty.cars">
-              <button hlmBtn type="button" (click)="addCar()">{{ 'driver.cars.add.title' | t }}</button>
+              <button hlmBtn type="button" (click)="addCar()">{{ 'driver.cars.add.title' | t | tie }}</button>
             </mf-empty-state>
           }
           @case ('filled') {
             <ul class="cars">
-              @for (car of topCars(); track car.id) {
+              @for (top of topCars(); track top.car.id) {
+                @let car = top.car;
                 <li>
                   <h3>{{ car.brandName }} {{ car.model }}</h3>
                   <p class="facts">{{ car.year }} · {{ car.odometerKm | km }}</p>
-                  @for (line of lines(car); track line.kind) {
+                  @for (line of top.lines; track line.kind) {
                     @if (line.kind === 'oil' && car.nextServiceKm !== null) {
                       <mf-oil-line [nextServiceKm]="car.nextServiceKm" [odometerKm]="car.odometerKm" />
                     } @else {
