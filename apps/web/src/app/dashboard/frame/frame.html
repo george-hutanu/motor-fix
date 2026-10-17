@@ -1,5 +1,5 @@
 <aside>
-  <a routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
+  <a class="logo" routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
   <span class="eyebrow">{{ dashboard().tag | t }}</span>
   <nav [attr.aria-label]="'shell.frame.menu' | t">
     @for (view of entries(); track view.path) {

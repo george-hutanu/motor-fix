@@ -673,7 +673,7 @@
             "uid": "${prom}"
           },
           "expr": "100 * (sum(rate(motorfix_jobs_total{service_name=\"worker\", deployment_environment=\"$env\", outcome=\"failed\"}[5m])) or vector(0)) / sum(rate(motorfix_jobs_total{service_name=\"worker\", deployment_environment=\"$env\"}[5m]))",
-          "legendFormat": "5xx %"
+          "legendFormat": "failed %"
         }
       ],
       "fieldConfig": {

@@ -124,7 +124,7 @@ describe('the Error % panels', () => {
   type Panel = {
     title?: string;
     panels?: Panel[];
-    targets?: { expr: string }[];
+    targets?: { expr: string; legendFormat?: string }[];
   };
   const flatten = (panels: Panel[]): Panel[] =>
     panels.flatMap((panel) => [panel, ...flatten(panel.panels ?? [])]);
@@ -144,6 +144,32 @@ describe('the Error % panels', () => {
       .flatMap((panel) => panel.targets ?? [])
       .map((target) => target.expr.replace(/\s+/g, ' ')),
   );
+  const targets = ['api', 'web', 'worker', 'mcp', 'overview'].flatMap((name) =>
+    flatten(
+      JSON.parse(
+        read(
+          'infra',
+          'observability',
+          'grafana',
+          'dashboards',
+          `motorfix-${name}.json`,
+        ),
+      ).panels,
+    )
+      .filter((panel) => panel.title === 'Error %')
+      .flatMap((panel) => panel.targets ?? []),
+  );
+
+  it('label a failed-job share "failed %" and only an HTTP share "5xx %"', () => {
+    for (const target of targets) {
+      const jobs = target.expr.includes('motorfix_jobs_total');
+      if (target.legendFormat === undefined) continue;
+      expect([target.expr.slice(0, 60), target.legendFormat]).toEqual([
+        target.expr.slice(0, 60),
+        jobs ? 'failed %' : '5xx %',
+      ]);
+    }
+  });
 
   it('show 0 rather than no value when nothing failed', () => {
     expect(exprs).toHaveLength(8);
