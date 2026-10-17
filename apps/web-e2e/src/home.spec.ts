@@ -70,6 +70,7 @@ test('the server sends eight brand tiles, the first one selected', async ({
   expect(html).not.toMatch(/public\.[a-z]/);
 });
 
+// @traces 1345-FR-014
 test.describe('the brand picker @seeded', () => {
   test('counts the garages that take Dacia after one read, in both languages', async ({
     page,
@@ -99,10 +100,14 @@ test.describe('the brand picker @seeded', () => {
   test('opens the results for the chosen brand @core', async ({ page }) => {
     await ready(page, '/ro');
     await tile(page, 'Dacia').click();
+    const search = page.waitForResponse((response) =>
+      response.url().includes('/api/v1/search/garages'),
+    );
 
     await page.getByRole('link', { name: 'Caută service‑uri' }).click();
 
     await expect(page).toHaveURL('/ro/garages?brand=dacia');
+    await search;
   });
 
   test('moves to the next brand within 5.5 s, and stays put after a tap', async ({
