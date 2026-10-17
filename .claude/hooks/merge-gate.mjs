@@ -62,6 +62,7 @@
 import { execFile } from "node:child_process";
 
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
+import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
 import { carriedFrom, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
 import { judgeProvenance, readProvenance } from "../scripts/pr-test/provenance.mjs";
 import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
@@ -180,10 +181,11 @@ function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
     if (cur.conclusion === "SKIPPED" && ran(c)) return true;
     return when(c) >= when(cur);
   };
+  // Neither the PR QA run (judged through agent-review) nor a Mutation run (never part of a task) is CI.
   const latest = new Map();
   for (const c of checks) {
     const k = key(c);
-    if (checkName(c) !== "agent-review" && c.workflowName !== QA_WORKFLOW && (!latest.has(k) || outranks(c, latest.get(k)))) latest.set(k, c);
+    if (checkName(c) !== "agent-review" && c.workflowName !== QA_WORKFLOW && !isMutationCheck(c) && (!latest.has(k) || outranks(c, latest.get(k)))) latest.set(k, c);
   }
   const ci = [...latest.values()];
   const result = (c) => c.conclusion ?? c.state;

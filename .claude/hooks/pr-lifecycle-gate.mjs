@@ -50,6 +50,7 @@ import { join, relative } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { branchFeatureDir, locateFeature } from "../scripts/lib/feature.mjs";
 import { ghSync } from "../scripts/lib/gh-rest.mjs";
+import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
 import { cloneAt } from "../scripts/specs-repo.mjs";
 
 const IN_DEVELOPMENT = "in development";
@@ -198,7 +199,7 @@ export function decide({ branch, ahead, unpushed, specsUnpushed = 0, pr, prLinke
       return `PR #${pr.number} is a breaking change (! in its title) without the "breaking" label. Add it (gh pr edit ${pr.number} --add-label "breaking").`;
   }
   if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
-  const checks = pr.statusCheckRollup ?? [];
+  const checks = (pr.statusCheckRollup ?? []).filter((c) => !isMutationCheck(c));
   if (!allGreen(checks.filter((c) => !isAgentReview(c)))) return null;
   if (!checks.some(isAgentReview) && !isDependabot(pr))
     return blocked || handedOff

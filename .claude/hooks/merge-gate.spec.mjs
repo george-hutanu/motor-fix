@@ -589,6 +589,28 @@ describe('merge gate — the PR QA run is judged by agent-review, not as a CI ch
   });
 });
 
+describe('merge gate — a Mutation run on the head is no part of the PR', () => {
+  const mutation = (conclusion, status = 'COMPLETED') => ({ ...run('scripts', conclusion, status), workflowName: 'Mutation' });
+
+  // @traces 1344-FR-010
+  it('merges past a Mutation run still going, failed or cancelled', () => {
+    assert.equal(decideMerge(pr([...green, mutation(null, 'IN_PROGRESS'), review('SUCCESS')])), null);
+    assert.equal(decideMerge(pr([...green, mutation('FAILURE'), review('SUCCESS')])), null);
+    assert.equal(decideMerge(pr([...green, mutation('CANCELLED'), review('SUCCESS')])), null);
+  });
+
+  // @traces 1344-FR-010
+  it('still waits for a pending check of any other workflow', () => {
+    const ci = { ...run('Unit tests', null, 'IN_PROGRESS'), workflowName: 'CI' };
+    assert.match(decideMerge(pr([run('CI OK', 'SUCCESS'), ci, mutation('SUCCESS'), review('SUCCESS')])), /CI is still running/);
+  });
+
+  // @traces 1344-FR-010
+  it('still needs CI OK when only Mutation checks sit beside agent-review', () => {
+    assert.match(decideMerge(pr([mutation('SUCCESS'), review('SUCCESS')])), /no CI OK check/);
+  });
+});
+
 describe('merge gate — a cloud session reads the PR over REST', () => {
   const HEAD = 'abc1234def5678';
   const answers = {

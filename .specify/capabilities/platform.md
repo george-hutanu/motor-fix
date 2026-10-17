@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-16
+updated: 2026-10-17
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -85,6 +85,7 @@ features:
   - 1176-replace-object-store
   - 1323-rest-not-graphql
   - 1324-retire-debt-and-ready
+  - 1344-no-mutation-wait
 ---
 
 # Capability: Platform
@@ -269,9 +270,9 @@ _From 431-mutation-testing._
 
 _From 431-mutation-testing._
 
-### 431-FR-011 — The `mutation-runner` subagent and `/speckit-harden` MUST invoke the Nx targets and name this repository's projects, not the `npm -w apps/server` / `apps/scanner` form.
+### 1344-FR-004 — The `mutation-runner` agent MUST remain, its description saying it is invoked only by an explicit mutation review and naming no lifecycle command; the `test-adversary` description MUST NOT place it "before the mutation run".
 
-_From 431-mutation-testing._
+_From 1344-no-mutation-wait._
 
 ### 431-FR-012 — Stryker's working files and reports MUST stay out of git.
 
@@ -2180,6 +2181,30 @@ _From 1324-retire-debt-and-ready._
 
 _From 1324-retire-debt-and-ready._
 
+### 1344-FR-001 — `/speckit-harden` MUST NOT launch `mutation-runner`, dispatch a Mutation workflow run, read a mutation score or wait for a run: its step 1 launches nothing beside the audits, step 2b is removed, the report table has no mutation row, the Done-When has no mutation line, and its argument hint and size rule no longer offer a mutation waiver.
+
+_From 1344-no-mutation-wait._
+
+### 1344-FR-002 — `/speckit-auto`'s build phases and report checklist MUST state that the run dispatches no Mutation workflow run and waits for none, and MUST NOT hold a background wait on one.
+
+_From 1344-no-mutation-wait._
+
+### 1344-FR-003 — No harness script, hook, skill or context under `.claude/` or `.specify/contexts/` that a task's lifecycle runs (auto, harden, review, pr-test, watch, lifecycle, doctor, the evals) MUST dispatch `mutation.yml`, read a Mutation run's report or wait for a Mutation run; `.specify/contexts/harden.md` MUST describe harden without a mutation score and without the `gh workflow run mutation.yml` instruction.
+
+_From 1344-no-mutation-wait._
+
+### 1344-FR-006 — AGENTS.md MUST say that mutation testing is never part of a task's lifecycle, that the Mutation workflow's schedule on `main` and its manual `workflow_dispatch` are the only places it runs, and that follow-up on surviving mutants is picked from the Project like any task.
+
+_From 1344-no-mutation-wait._
+
+### 1344-FR-007 — The constitution's Principle II MUST carry the same rule in one bullet; the version MUST be 4.1.0 with its amendment entry and date, and the constitution card MUST reflect it.
+
+_From 1344-no-mutation-wait._
+
+### 1344-FR-010 — Every reader of a PR's checks that a lifecycle step or gate uses — `merge-gate.mjs`, `pr-lifecycle-gate.mjs`, `.claude/scripts/pr-test/ci-wait.mjs`, `watch.mjs`'s PR summary, and the REST translation in `lib/gh-rest.mjs` that feeds them in a cloud session — MUST leave out the checks of the workflow named `Mutation` (`.github/workflows/mutation.yml`), whatever their state, so that a Mutation run on the PR head neither holds a wait nor refuses or delays the merge.
+
+_From 1344-no-mutation-wait._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -2267,3 +2292,5 @@ _From 1324-retire-debt-and-ready._
 
 - `696-FR-002` — superseded by `1324-FR-012` (2026-10-16)
 - `1324-FR-011` — removed by 1324-retire-debt-and-ready (2026-10-16): a process check, not a behaviour; SC-004's doctor run is the check
+
+- `431-FR-011` — superseded by `1344-FR-004` (2026-10-17)

@@ -1,6 +1,6 @@
 ---
 name: mutation-runner
-description: Reads one Nx project's Stryker results from the Mutation workflow on GitHub Actions (dispatching the run when the branch head has none) and returns a compact survivor table, keeping the report out of the caller's context. Never runs Stryker on this machine. Invoked by /speckit-harden.
+description: Reads one Nx project's Stryker results from the Mutation workflow on GitHub Actions (dispatching the run when the branch head has none) and returns a compact survivor table, keeping the report out of the caller's context. Never runs Stryker on this machine. Invoked only by an explicit mutation review the owner asks for by name; no lifecycle command calls it.
 tools: Bash, Read
 model: haiku
 ---
