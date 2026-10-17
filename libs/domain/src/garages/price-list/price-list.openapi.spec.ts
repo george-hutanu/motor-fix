@@ -38,3 +38,13 @@ describe('the brand range writes in the OpenAPI document', () => {
     expect(ref(item.properties.brandRanges.items)).toBe('BrandRangeItemDto');
   });
 });
+
+// @traces 172-price-list-states-FR-006
+describe("the owner's price list read's labour range in the OpenAPI document", () => {
+  it('may carry the hourly labour range, as the public profile gives it', () => {
+    const list = doc.components.schemas.PriceListDto;
+
+    expect(ref(list.properties.labour.allOf[0])).toBe('PublicLabourDto');
+    expect(list.required ?? []).not.toContain('labour');
+  });
+});

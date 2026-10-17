@@ -366,3 +366,36 @@ describe('the public profile and the owner agree', () => {
     expect(shown.map((job) => job.id)).toEqual([jobs[0].id, jobs[5].id]);
   });
 });
+
+// @traces 172-price-list-states-FR-006
+describe("the owner's read and the hourly labour range", () => {
+  it('gives the labour range the profile gives, when both ends are set', async () => {
+    const w = await world();
+    await prisma.garage.update({
+      data: { labourFromBani: 18_000, labourToBani: 24_000 },
+      where: { id: w.nord.id },
+    });
+
+    const res = await read(w);
+
+    expect(res.status).toBe(200);
+    expect(res.body.labour).toEqual({ fromBani: 18_000, toBani: 24_000 });
+    expect((await profile(w)).body.labour).toEqual(res.body.labour);
+  });
+
+  it.each([
+    [null, null],
+    [18_000, null],
+  ])('gives no labour when its ends are %p and %p', async (from, to) => {
+    const w = await world();
+    await prisma.garage.update({
+      data: { labourFromBani: from, labourToBani: to },
+      where: { id: w.nord.id },
+    });
+
+    const res = await read(w);
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('labour');
+  });
+});
