@@ -11,6 +11,7 @@ export {
 } from './format.pipes';
 export {
   appliedAt,
+  bucharestDayStart,
   calendarNames,
   daysUntil,
   formatClock,
