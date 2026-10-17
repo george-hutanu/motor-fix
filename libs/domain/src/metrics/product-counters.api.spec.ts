@@ -29,6 +29,7 @@ const WORKER_ONLY = [
   'motorfix_quote_received_total',
   'motorfix_decline_windows_closed_total',
   'motorfix_garage_suspended_notices_total',
+  'motorfix_support_emails_total',
 ];
 
 async function series() {
@@ -76,6 +77,8 @@ describe("the API's product counters at start", () => {
     expect(named(all, 'motorfix_request_declines_total')).toHaveLength(
       4 * DECLINE_REASON_CODES.length,
     );
+    // 1345-FR-012: each instance stays under 100 series.
+    expect(all.length).toBeLessThan(100);
   });
 
   it('holds the approvals and the documents opened at 0, though nothing reaches them on staging', async () => {

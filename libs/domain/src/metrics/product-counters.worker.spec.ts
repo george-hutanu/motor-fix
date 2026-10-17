@@ -27,6 +27,13 @@ async function series() {
     );
 }
 
+const SUPPORT_EMAILS = ['support', 'acknowledgement'].flatMap((kind) =>
+  ['sent', 'blocked', 'failed', 'unconfigured'].map((outcome) => [
+    kind,
+    outcome,
+  ]),
+);
+
 const named = (all: Awaited<ReturnType<typeof series>>, name: string) =>
   all.filter((one) => one.name === name);
 
@@ -40,8 +47,19 @@ describe("the worker's product counters at start", () => {
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
     );
-    expect(all).toHaveLength(emails.length + 22);
+    // Its own 22, one per e-mailed template, and one per support e-mail kind
+    // and outcome.
+    expect(all).toHaveLength(emails.length + 22 + SUPPORT_EMAILS.length);
     expect(all.filter((one) => one.value !== 0)).toEqual([]);
+    expect(
+      named(all, 'motorfix_support_emails_total').map((one) => [
+        one.labels['kind'],
+        one.labels['outcome'],
+      ]),
+    ).toEqual(SUPPORT_EMAILS);
+    expect(named(all, 'motorfix_support_messages_total')).toEqual([]);
+    // 1345-FR-012: each instance stays under 100 series.
+    expect(all.length).toBeLessThan(100);
     expect(named(all, 'motorfix_sign_ins_total')).toEqual([]);
   });
 

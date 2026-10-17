@@ -1,6 +1,7 @@
 import { CONSENT_DECISIONS, DOCUMENT_KINDS } from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
+import { type Meter, metrics } from '@opentelemetry/api';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import {
@@ -24,6 +25,7 @@ import {
   countSystemLogEntry,
   countVerificationCheck,
   countVerificationResult,
+  initProductCounters,
 } from './product-counters';
 import { KINDS } from '../admin/system-log/entry';
 import { TEMPLATES } from '../notifications/templates/registry';
@@ -82,17 +84,24 @@ const SEVEN_COUNTERS = [
   'motorfix_notifications_sent_total',
 ];
 
-// The counters only the worker records; every other one is the API's, or both's.
-const WORKER_ONLY = [
-  'motorfix_quotes_total',
-  'motorfix_emails_sent_total',
-  'motorfix_request_received_total',
-  'motorfix_verification_result_total',
-  'motorfix_quote_received_total',
-  'motorfix_decline_windows_closed_total',
-  'motorfix_garage_suspended_notices_total',
-  'motorfix_support_emails_total',
-];
+// The counter names a process starts, read from its real start set: the
+// meter is swapped for one that only records the names it is asked for.
+function startedNames(process: 'api' | 'worker') {
+  const names = new Set<string>();
+  const meter = {
+    createCounter: (name: string) => {
+      names.add(name);
+      return { add: () => undefined };
+    },
+  } as unknown as Meter;
+  const spy = jest.spyOn(metrics, 'getMeter').mockReturnValue(meter);
+  try {
+    initProductCounters(process);
+  } finally {
+    spy.mockRestore();
+  }
+  return names;
+}
 
 // Every series an instance can add, once each.
 function countEverySeries() {
@@ -319,10 +328,9 @@ describe('the product counters', () => {
   });
 
   // The cap of 50 covers the seven counters the observability story added;
-  // every later counter keeps its own fixed set, and each instance stays under
-  // 100 series, far inside the metrics backend's free tier. The API is the
-  // larger one: every series here but the worker's own; the worker's are
-  // counted exactly in product-counters.worker.spec.ts.
+  // every later counter keeps its own fixed set, and each instance (1345-FR-012)
+  // stays under 100 series, far inside the metrics backend's free tier: the
+  // API's are the counters it starts, the worker's the ones it starts.
   it('keeps the seven counters under 50 series and the instance under 100, every label from a fixed set', async () => {
     countEverySeries();
 
@@ -341,9 +349,11 @@ describe('the product counters', () => {
     expect(
       series.filter((s) => SEVEN_COUNTERS.includes(s.name)).length,
     ).toBeLessThan(50);
-    expect(
-      series.filter((s) => !WORKER_ONLY.includes(s.name)).length,
-    ).toBeLessThan(100);
+    for (const process of ['api', 'worker'] as const) {
+      const names = startedNames(process);
+      expect(names.size).toBeGreaterThan(0);
+      expect(series.filter((s) => names.has(s.name)).length).toBeLessThan(100);
+    }
     expect(
       series.filter((s) => s.name === 'motorfix_account_changes_total'),
     ).toHaveLength(ACCOUNT_FIELDS.length);
