@@ -20,15 +20,16 @@ const numbers = (text: string) =>
   (text.match(/\d+/g) ?? []).filter((n) => n !== '1').sort();
 
 describe('legal texts, structure and hygiene', () => {
-  // @traces 243-FR-012 1203-FR-005
-  it.each(kinds)(
+  // @traces 243-FR-012 1203-FR-005 366-FR-003
+  it.each([
+    ['terms', TERMS_VERSION, '2026-10-12'],
+    ['privacy', PRIVACY_VERSION, '2026-10-17'],
+  ] as const)(
     'the %s of both languages carries the shared version',
-    (kind) => {
-      const expected = kind === 'terms' ? TERMS_VERSION : PRIVACY_VERSION;
-
+    (kind, expected, date) => {
       expect(LEGAL_TEXTS.ro[kind].version).toBe(expected);
       expect(LEGAL_TEXTS.en[kind].version).toBe(expected);
-      expect(expected).toBe('2026-10-12');
+      expect(expected).toBe(date);
     },
   );
 
