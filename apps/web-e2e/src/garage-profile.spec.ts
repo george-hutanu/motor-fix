@@ -123,7 +123,9 @@ test.describe('the public garage profile @seeded', () => {
     await page.goto('/ro/garages/service-auto-militari?brand=dacia');
     await expect(heading(page)).toBeVisible();
 
-    await expect(page.getByRole('button', { name: 'Cont' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { exact: true, name: 'Cont' }),
+    ).toBeVisible();
     await expect(
       page.getByRole('button', { exact: true, name: 'Autentificare' }),
     ).toBeHidden();
