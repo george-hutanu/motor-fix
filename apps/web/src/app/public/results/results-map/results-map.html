@@ -7,5 +7,8 @@
     <li><span class="dot takes" aria-hidden="true"></span>{{ 'public.results.map.takes' | t: { brand: brand() } }}</li>
     <li><span class="dot refuses" aria-hidden="true"></span>{{ 'public.results.map.refuses' | t }}</li>
     <li>{{ 'public.results.map.rate' | t }}</li>
+    @if (hasArea()) {
+      <li><span class="dot area" aria-hidden="true"></span>{{ 'public.results.map.mobile' | t }}</li>
+    }
   </ul>
 </section>

@@ -6,11 +6,12 @@ import type {
   Map as MapLibre,
 } from 'maplibre-gl';
 
-import { type LatLng, START } from '../../map-libre/map-libre';
+import { type LatLng, ring, START } from '../../map-libre/map-libre';
 
 // Past this many fixed pins, close ones merge into a counted cluster.
 const CLUSTER_ABOVE = 50;
 const SOURCE = 'pins';
+const AREAS = 'areas';
 const FIT = { animate: false, maxZoom: 15, padding: 40 };
 const FONT = ['Noto Sans Bold'];
 
@@ -23,16 +24,36 @@ export interface PinsMap {
 const fixedOf = (answer: GaragePinsDto | undefined) =>
   (answer?.pins ?? []).filter((pin) => pin.serviceRadiusKm === undefined);
 
+const propertiesOf = (pin: GaragePinDto) => ({
+  id: pin.id,
+  rate: pin.rateLei === null ? '' : String(pin.rateLei),
+  stance: pin.stance,
+});
+
 const collectionOf = (pins: GaragePinDto[]) => ({
   features: pins.map((pin) => ({
     geometry: { coordinates: [pin.lng, pin.lat], type: 'Point' as const },
-    properties: {
-      id: pin.id,
-      rate: pin.rateLei === null ? '' : String(pin.rateLei),
-      stance: pin.stance,
-    },
+    properties: propertiesOf(pin),
     type: 'Feature' as const,
   })),
+  type: 'FeatureCollection' as const,
+});
+
+const areasOf = (answer: GaragePinsDto | undefined) => ({
+  features: (answer?.pins ?? []).flatMap(({ serviceRadiusKm, ...pin }) =>
+    serviceRadiusKm === undefined
+      ? []
+      : [
+          {
+            geometry: {
+              coordinates: [ring(pin, serviceRadiusKm)],
+              type: 'Polygon' as const,
+            },
+            properties: propertiesOf(pin),
+            type: 'Feature' as const,
+          },
+        ],
+  ),
   type: 'FeatureCollection' as const,
 });
 
@@ -46,6 +67,38 @@ export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
   const halo = token('--mf-panel');
   const ink = token('--mf-text');
   const single = ['!', ['has', 'point_count']] as const;
+  const lamp = ['match', ['get', 'stance'], 'works_on', green, red] as never;
+  // A mobile mechanic's area, under every pin; MapLibre sets a polygon's
+  // label at its middle.
+  const areaLayers: LayerSpecification[] = [
+    {
+      id: 'areas-fill',
+      paint: { 'fill-color': lamp, 'fill-opacity': 0.12 },
+      source: AREAS,
+      type: 'fill',
+    },
+    {
+      id: 'areas-line',
+      paint: { 'line-color': lamp, 'line-width': 1.5 },
+      source: AREAS,
+      type: 'line',
+    },
+    {
+      id: 'areas-rate',
+      layout: {
+        'text-field': ['get', 'rate'],
+        'text-font': FONT,
+        'text-size': 12,
+      },
+      paint: {
+        'text-color': ink,
+        'text-halo-color': halo,
+        'text-halo-width': 1.5,
+      },
+      source: AREAS,
+      type: 'symbol',
+    },
+  ];
   const layers: LayerSpecification[] = [
     {
       filter: ['has', 'point_count'],
@@ -75,7 +128,7 @@ export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
       filter: single as never,
       id: 'pins-dot',
       paint: {
-        'circle-color': ['match', ['get', 'stance'], 'works_on', green, red],
+        'circle-color': lamp,
         'circle-radius': 7,
         'circle-stroke-color': halo,
         'circle-stroke-width': 2,
@@ -118,6 +171,8 @@ export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
     for (const layer of layers) map.addLayer(layer);
     clustered = cluster;
   };
+  map.addSource(AREAS, { data: areasOf(undefined), type: 'geojson' });
+  for (const layer of areaLayers) map.addLayer(layer);
   build(false);
 
   return {
@@ -148,6 +203,7 @@ export function drawPins(map: MapLibre, host: HTMLElement): PinsMap {
         build(cluster);
       }
       (map.getSource(SOURCE) as GeoJSONSource).setData(collectionOf(fixed));
+      (map.getSource(AREAS) as GeoJSONSource).setData(areasOf(answer));
     },
   };
 }

@@ -111,6 +111,56 @@ describe('ResultsMap, the legend', () => {
   });
 });
 
+// @traces 269-FR-015
+describe('ResultsMap, the legend with a mobile mechanic', () => {
+  const WITH_AREA: GaragePinsDto = {
+    pins: [
+      ...PINS.pins,
+      {
+        id: 'g-2',
+        lat: 44.45,
+        lng: 26.13,
+        rateLei: 120,
+        serviceRadiusKm: 20,
+        stance: 'works_on',
+      },
+    ],
+    total: 2,
+  };
+
+  it('explains the circle while one is on the map, in Romanian', async () => {
+    await render();
+    fixture.componentRef.setInput('pins', WITH_AREA);
+    fixture.detectChanges();
+
+    expect(legend()).toEqual([
+      'primește BMW',
+      'nu primește',
+      'lei pe oră',
+      'Mecanic mobil · zona deservită',
+    ]);
+    expect(element().querySelector('.legend .area')).not.toBeNull();
+  });
+
+  it('explains the circle in English', async () => {
+    await render({ language: 'en' });
+    fixture.componentRef.setInput('pins', WITH_AREA);
+    fixture.detectChanges();
+
+    expect(legend().at(-1)).toBe('Mobile mechanic · service area');
+  });
+
+  it('drops the entry when the circles go', async () => {
+    await render();
+    fixture.componentRef.setInput('pins', WITH_AREA);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+
+    expect(legend()).toHaveLength(3);
+  });
+});
+
 // @traces 269-FR-017
 describe('ResultsMap, while it opens', () => {
   it('shows a grey map and the legend while the search runs', async () => {

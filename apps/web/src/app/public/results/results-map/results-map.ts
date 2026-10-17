@@ -2,6 +2,7 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   afterNextRender,
   Component,
+  computed,
   DestroyRef,
   type ElementRef,
   effect,
@@ -59,6 +60,9 @@ export class ResultsMap {
   readonly place = input<LatLng | undefined>();
   readonly brand = input.required<string>();
   readonly loading = input(false);
+  protected readonly hasArea = computed(() =>
+    this.pins()?.pins.some((pin) => pin.serviceRadiusKm !== undefined),
+  );
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   protected readonly view = signal<ResultsMapView | undefined>(undefined);

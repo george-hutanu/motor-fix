@@ -62,6 +62,13 @@
   background: var(--mf-red);
 }
 
+/* A mobile mechanic's area: the circle's faint fill and its outline. */
+.area {
+  background: color-mix(in srgb, var(--mf-green) 12%, transparent);
+  border: 1.5px solid var(--mf-green);
+  box-sizing: border-box;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .canvas {
     animation: mf-mapin 800ms var(--mf-motion-ease) both;

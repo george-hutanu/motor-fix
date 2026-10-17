@@ -287,3 +287,80 @@ describe('the pins of a search with neither a place nor a box', () => {
     expect((await pins.forBrand(dacia, PLACE)).pins).toEqual([]);
   });
 });
+
+// @traces 269-FR-002
+// @traces 269-FR-014
+// @traces 269-FR-021
+describe('the pins of a mobile mechanic', () => {
+  const eastOf = (metres: number) =>
+    PLACE.lng +
+    metres / (METRES_PER_DEGREE * Math.cos((PLACE.lat * Math.PI) / 180));
+
+  async function mobile(at: number, radiusKm?: number, bani?: number) {
+    const id = await garage({ at, bani, kind: 'mobile', radiusKm });
+    await prisma.garage.update({
+      data: { longitude: eastOf(3333) },
+      where: { id },
+    });
+    return id;
+  }
+
+  it('answers one whose area covers the place, with its area, its centre to 2 decimals, and nothing that names it', async () => {
+    const id = await mobile(15_000, undefined, 12_000);
+
+    const [pin] = (await pins.forBrand(dacia, PLACE)).pins;
+
+    expect(pin).toEqual({
+      id,
+      lat: Math.round(northOf(15_000) * 100) / 100,
+      lng: Math.round(eastOf(3333) * 100) / 100,
+      rateLei: 120,
+      serviceRadiusKm: 20,
+      stance: 'unstated',
+    });
+  });
+
+  it('keeps the radius the mechanic set', async () => {
+    await mobile(8000, 10);
+
+    expect((await pins.forBrand(dacia, PLACE)).pins[0]?.serviceRadiusKm).toBe(
+      10,
+    );
+  });
+
+  it('answers nothing of one whose area does not cover the place, nor counts it', async () => {
+    await mobile(15_000, 10);
+
+    expect(await pins.forBrand(dacia, PLACE)).toEqual({ pins: [], total: 0 });
+  });
+
+  it('answers one over the place in a box that does not hold its seat', async () => {
+    const id = await mobile(15_000);
+    const box = {
+      east: PLACE.lng + 0.05,
+      north: northOf(5000),
+      south: northOf(-5000),
+      west: PLACE.lng - 0.05,
+    };
+
+    const answer = await pins.forBrand(dacia, PLACE, 25, box);
+
+    expect(ids(answer)).toEqual([id]);
+    expect(answer.total).toBe(1);
+  });
+
+  it('never answers one for a box alone, even when the box holds its seat', async () => {
+    await mobile(1000);
+    const box = {
+      east: PLACE.lng + 0.1,
+      north: northOf(5000),
+      south: northOf(-5000),
+      west: PLACE.lng - 0.1,
+    };
+
+    expect(await pins.forBrand(dacia, undefined, undefined, box)).toEqual({
+      pins: [],
+      total: 0,
+    });
+  });
+});

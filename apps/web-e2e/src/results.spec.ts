@@ -313,4 +313,48 @@ test.describe('the map beside the results @seeded', () => {
       .toEqual(['150 works_on', '200 does_not_take', '90 works_on']);
     expect(total).toBe(4);
   });
+
+  // @traces 269-FR-014
+  // @traces 269-FR-015
+  test('draws the mobile mechanic over the place as a circle with its rate, and no pin', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+
+    const drawn = () =>
+      page.evaluate(async () => {
+        type Feature = {
+          geometry: { type: string };
+          properties: { id: string; rate: string };
+        };
+        const map = (
+          window as unknown as {
+            __MF_MAP?: {
+              getSource(
+                id: string,
+              ): { getData(): Promise<{ features: Feature[] }> } | undefined;
+            };
+          }
+        ).__MF_MAP;
+        const of = async (id: string) =>
+          (await map?.getSource(id)?.getData())?.features ?? [];
+        return {
+          areas: (await of('areas')).map(
+            (f) => `${f.properties.id} ${f.geometry.type} ${f.properties.rate}`,
+          ),
+          pins: (await of('pins')).map((f) => f.properties.id),
+        };
+      });
+
+    await expect
+      .poll(async () => (await drawn()).areas)
+      .toEqual([`${ids[3]} Polygon 120`]);
+    expect((await drawn()).pins).not.toContain(ids[3]);
+    await expect(
+      page
+        .getByRole('region', { name: 'Harta service‑urilor' })
+        .getByText('Mecanic mobil · zona deservită'),
+    ).toBeVisible();
+  });
 });

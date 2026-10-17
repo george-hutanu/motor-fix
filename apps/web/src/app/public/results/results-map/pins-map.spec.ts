@@ -2,6 +2,7 @@ import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
 import type { Map as MapLibre } from 'maplibre-gl';
 
 import { drawPins } from './pins-map';
+import { ring } from '../../map-libre/map-libre';
 
 const GREEN = 'rgb(0, 128, 0)';
 const RED = 'rgb(200, 0, 0)';
@@ -237,5 +238,106 @@ describe('fitting the results map', () => {
       center: [24.97, 45.94],
       zoom: 5.2,
     });
+  });
+});
+
+// @traces 269-FR-014
+describe('a mobile mechanic on the results map', () => {
+  const areasData = () =>
+    map.sources.get('areas')?.setData.mock.calls.at(-1)?.[0];
+  const order = () => map.addLayer.mock.calls.map(([spec]) => spec.id);
+
+  it('draws a light circle of its radius around its centre, labelled with its rate', () => {
+    draw().show(
+      answer([
+        pinOf(1),
+        pinOf(2, { lat: 44.45, lng: 26.12, rateLei: 120, serviceRadiusKm: 20 }),
+      ]),
+    );
+
+    expect(areasData()).toEqual({
+      features: [
+        {
+          geometry: {
+            coordinates: [ring({ lat: 44.45, lng: 26.12 }, 20)],
+            type: 'Polygon',
+          },
+          properties: { id: 'g-2', rate: '120', stance: 'works_on' },
+          type: 'Feature',
+        },
+      ],
+      type: 'FeatureCollection',
+    });
+  });
+
+  it('gives a circle with no rate an empty label', () => {
+    draw().show(answer([pinOf(2, { rateLei: null, serviceRadiusKm: 10 })]));
+
+    expect(areasData().features[0].properties.rate).toBe('');
+  });
+
+  it('fills the circle faintly and outlines it in the lamp colour, under every pin layer', () => {
+    draw();
+
+    expect(layer('areas-fill')).toMatchObject({
+      paint: {
+        'fill-color': ['match', ['get', 'stance'], 'works_on', GREEN, RED],
+        'fill-opacity': 0.12,
+      },
+      source: 'areas',
+      type: 'fill',
+    });
+    expect(layer('areas-line')).toMatchObject({
+      paint: {
+        'line-color': ['match', ['get', 'stance'], 'works_on', GREEN, RED],
+      },
+      source: 'areas',
+      type: 'line',
+    });
+    expect(layer('areas-rate')).toMatchObject({
+      layout: { 'text-field': ['get', 'rate'] },
+      source: 'areas',
+      type: 'symbol',
+    });
+    const ids = order();
+    const lastArea = Math.max(
+      ...['areas-fill', 'areas-line', 'areas-rate'].map((id) =>
+        ids.indexOf(id),
+      ),
+    );
+    expect(lastArea).toBeLessThan(ids.indexOf('pins-dot'));
+    expect(lastArea).toBeLessThan(ids.indexOf('pins-cluster'));
+  });
+
+  it('keeps the circles under the pins when the pins merge into clusters', () => {
+    draw().show(answer(Array.from({ length: 51 }, (_, n) => pinOf(n))));
+
+    expect(map.removeSource).not.toHaveBeenCalledWith('areas');
+    expect(map.removeLayer).not.toHaveBeenCalledWith('areas-fill');
+    expect(order().filter((id) => id.startsWith('areas'))).toEqual([
+      'areas-fill',
+      'areas-line',
+      'areas-rate',
+    ]);
+  });
+
+  it('draws no pin and no marker at the centre of a circle', () => {
+    draw().show(answer([pinOf(2, { serviceRadiusKm: 20 })]));
+
+    expect(lastData().features).toEqual([]);
+    expect(
+      map.addLayer.mock.calls.filter(
+        ([spec]) => spec.source === 'areas' && spec.type === 'circle',
+      ),
+    ).toEqual([]);
+  });
+
+  it('clears the circles when there is no answer', () => {
+    const view = draw();
+    view.show(answer([pinOf(2, { serviceRadiusKm: 20 })]));
+
+    view.show(undefined);
+
+    expect(areasData()).toEqual({ features: [], type: 'FeatureCollection' });
   });
 });
