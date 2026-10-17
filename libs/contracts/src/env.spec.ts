@@ -1,8 +1,11 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
 // @traces 879-FR-017 244-FR-004
+// @traces 430-FR-004 430-FR-007
 import {
+  bunnyConfig,
   faroUrl,
   grafanaUrl,
+  originSecrets,
   outageWebhookToken,
   PLACES_ENV,
   placesApiKey,
@@ -301,5 +304,38 @@ describe('placesApiKey', () => {
 
   it('names the one variable it reads', () => {
     expect(PLACES_ENV).toEqual(['GEOAPIFY_API_KEY']);
+  });
+});
+
+describe('originSecrets', () => {
+  it('reads every value of the list, trimmed, so a secret can be rotated', () => {
+    expect(originSecrets({ ORIGIN_SECRET: ' old , new ' })).toEqual([
+      'old',
+      'new',
+    ]);
+    expect(originSecrets({ ORIGIN_SECRET: 'one' })).toEqual(['one']);
+  });
+
+  it('is empty when unset or blank, and drops empty entries', () => {
+    expect(originSecrets({})).toEqual([]);
+    expect(originSecrets({ ORIGIN_SECRET: ' ' })).toEqual([]);
+    expect(originSecrets({ ORIGIN_SECRET: 'a,, ,b,' })).toEqual(['a', 'b']);
+  });
+});
+
+describe('bunnyConfig', () => {
+  it('reads the key and the pull zone when both are set', () => {
+    expect(
+      bunnyConfig({ BUNNY_API_KEY: ' k ', BUNNY_PULL_ZONE_ID: ' 42 ' }),
+    ).toEqual({ apiKey: 'k', pullZoneId: '42' });
+  });
+
+  it('is undefined when either is missing or blank', () => {
+    expect(bunnyConfig({})).toBeUndefined();
+    expect(bunnyConfig({ BUNNY_API_KEY: 'k' })).toBeUndefined();
+    expect(bunnyConfig({ BUNNY_PULL_ZONE_ID: '42' })).toBeUndefined();
+    expect(
+      bunnyConfig({ BUNNY_API_KEY: ' ', BUNNY_PULL_ZONE_ID: '42' }),
+    ).toBeUndefined();
   });
 });

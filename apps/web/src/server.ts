@@ -12,6 +12,7 @@ import {
 } from '@angular/ssr/node';
 import {
   faroUrl,
+  originSecrets,
   plausibleDomain,
   publicWebUrl,
   readEnv,
@@ -22,6 +23,8 @@ import express from 'express';
 import { apiInternalUrl } from './api-url';
 import { mountCompression } from './server/compress/compress';
 import { mountEdge } from './server/edge';
+import { mountOriginGuard } from './server/origin-guard/origin-guard';
+import { withPageCache } from './server/page-cache/page-cache';
 import { renderError } from './server/render-error/render-error';
 import { mountSearch } from './server/search';
 import { mountStaticFiles } from './server/static-files/static-files';
@@ -49,6 +52,8 @@ const angularApp = new AngularNodeAppEngine({
   allowedHosts: publicUrl ? [publicUrl.hostname] : undefined,
 });
 
+// Before everything else: once a secret is set, only the CDN gets an answer.
+mountOriginGuard(app, originSecrets());
 mountEdge(app, apiInternalUrl());
 mountCompression(app);
 mountSearch(app, publicUrl?.origin);
@@ -62,8 +67,12 @@ app.use((req, res, next) => {
   angularApp
     .handle(req)
     .then(
-      (response) =>
-        response && withTelemetryMeta(response, collector, analytics),
+      async (response) =>
+        response &&
+        withPageCache(
+          req.originalUrl,
+          await withTelemetryMeta(response, collector, analytics),
+        ),
     )
     .then((response) =>
       response ? writeResponseToNodeResponse(response, res) : next(),

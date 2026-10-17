@@ -158,8 +158,11 @@ export class GarageProfile {
       viewed = id;
       untracked(() => this.view(id));
     });
+    // The garage's own purge tag, so its edit clears this page at the edge.
     effect(() => {
       if (!this.response) return;
+      const id = this.garage()?.id;
+      if (id) this.response.headers = { 'CDN-Tag': `garage:${id}` };
       if (this.removed()) this.response.status = 410;
       else if (this.unknown()) this.response.status = 404;
     });

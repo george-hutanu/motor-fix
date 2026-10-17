@@ -108,7 +108,7 @@ const live = {
 };
 
 let harness: RouterTestingHarness;
-let response: { status?: number };
+let response: { status?: number; headers?: HeadersInit };
 
 async function settle() {
   for (let i = 0; i < 5; i++) await Promise.resolve();
@@ -342,6 +342,26 @@ describe('the garage profile', () => {
     expect(page().querySelector('h1')?.textContent).not.toContain('Titan');
     expect(response.status).toBe(410);
   });
+});
+
+// @traces 430-FR-003
+describe('the garage profile purge tag', () => {
+  it('tags the rendered page with the garage, so its edit purges the edge', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(MOBILE);
+
+    expect(response.headers).toEqual({ 'CDN-Tag': `garage:${MOBILE.id}` });
+  });
+
+  it.each([404, 410])(
+    'sets no garage tag on a %s, which keeps the search tag',
+    async (status) => {
+      await open('/ro/garages/atelier-dinamo');
+      await reads[0]?.fail(status);
+
+      expect(response.headers).toBeUndefined();
+    },
+  );
 });
 
 // @traces 355-price-list-ranges-FR-006

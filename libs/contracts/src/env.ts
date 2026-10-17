@@ -62,6 +62,26 @@ export function placesApiKey(
   return source[key]?.trim() || undefined;
 }
 
+// The values the CDN may send in X-Origin-Secret, comma-separated so a new
+// one can be added before the old one goes. Empty: the web answers everyone.
+export function originSecrets(
+  source: Record<string, string | undefined> = process.env,
+): string[] {
+  return (source['ORIGIN_SECRET'] ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+// The CDN's API key and pull zone: both set, the worker sends purges.
+export function bunnyConfig(
+  source: Record<string, string | undefined> = process.env,
+): { apiKey: string; pullZoneId: string } | undefined {
+  const apiKey = source['BUNNY_API_KEY']?.trim();
+  const pullZoneId = source['BUNNY_PULL_ZONE_ID']?.trim();
+  return apiKey && pullZoneId ? { apiKey, pullZoneId } : undefined;
+}
+
 // The bearer Grafana's outage contact point sends; unset refuses every call.
 export function outageWebhookToken(
   source: Record<string, string | undefined> = process.env,
