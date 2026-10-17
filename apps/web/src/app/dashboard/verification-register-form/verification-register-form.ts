@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -226,12 +225,10 @@ export class VerificationRegisterForm {
       this.decided.emit();
       return;
     }
-    const message =
-      error instanceof HttpErrorResponse && problem.status === 400
-        ? (error.error as { message?: unknown } | null)?.message
-        : undefined;
-    if (typeof message === 'string' && message) {
-      this.error.set({ faults: [], text: message });
+    // The API's problem body carries the reason as its detail, a list of
+    // validation messages already joined.
+    if (problem.status === 400 && problem.detail) {
+      this.error.set({ faults: [], text: problem.detail });
       return;
     }
     toast(this.i18n.t('admin.file.manual.saveFailed'));

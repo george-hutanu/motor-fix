@@ -369,7 +369,7 @@ describe('the CAEN form', () => {
       new HttpErrorResponse({
         error: {
           code: 'validation_failed',
-          message: 'Lipsește: 4520 pe certificat',
+          detail: 'Lipsește: 4520 pe certificat',
           status: 400,
         },
         status: 400,
