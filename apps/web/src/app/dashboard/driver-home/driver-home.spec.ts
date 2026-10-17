@@ -450,6 +450,12 @@ describe('Service-uri salvate on Panou, filled', () => {
     expect(control(panel(element, 'saved'), 'Vezi toate')).toBeUndefined();
   });
 
+  it('links its heading only while the list has rows, as the other panels', async () => {
+    const { element } = await render({ saved: pageOf([]) });
+
+    expect(panel(element, 'saved')?.querySelector('h2 a')).toBeNull();
+  });
+
   it('says See all in English', async () => {
     const { element } = await render({
       language: 'en',

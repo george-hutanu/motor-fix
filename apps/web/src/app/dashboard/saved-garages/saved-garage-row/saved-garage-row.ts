@@ -23,36 +23,42 @@ import { Lamp, type LampState, RatingDial } from '@motor-fix/ui-cockpit';
 })
 export class SavedGarageRow {
   readonly item = input.required<SavedGarageItemDto>();
-  // False only once the driver is known to have no car.
-  readonly hasCar = input(true);
+  // False once the driver is known to have no car; undefined while the cars
+  // are not known, when an empty brand list says nothing either way.
+  readonly hasCar = input<boolean | undefined>(true);
   readonly removed = output<string>();
   private readonly i18n = inject(I18n);
   protected readonly language = this.i18n.language;
 
-  protected readonly lamp = computed<LampState>(() => {
-    if (!this.hasCar()) return 'grey';
-    return this.item().brands.length ? 'green' : 'red';
+  protected readonly lamp = computed<LampState | null>(() => {
+    const hasCar = this.hasCar();
+    if (hasCar === false) return 'grey';
+    if (this.item().brands.length) return 'green';
+    return hasCar ? 'red' : null;
   });
 
   protected readonly line = computed(() => {
     const item = this.item();
+    if (!item.available) return this.i18n.t('driver.saved.unavailable');
+    const names = item.brands.map((brand) => brand.name);
+    const works = this.works(names, this.language());
+    return [works, this.where(item)].filter(Boolean).join(' · ');
+  });
+
+  private works(names: readonly string[], language: string) {
     const t = (key: string, params = {}) =>
       this.i18n.t(`driver.saved.${key}`, params);
-    if (!item.available) return t('unavailable');
-    const language = this.language();
-    const names = item.brands.map((brand) => brand.name);
-    const works = !this.hasCar()
-      ? t('noCar')
-      : names.length
-        ? t('worksOn', {
-            brands: new Intl.ListFormat(language === 'en' ? 'en-GB' : 'ro', {
-              type: 'conjunction',
-            }).format(names),
-          })
-        : t('worksOnNone');
-    const where = this.where(item);
-    return where ? `${works} · ${where}` : works;
-  });
+    const hasCar = this.hasCar();
+    if (hasCar === false) return t('noCar');
+    if (names.length) {
+      return t('worksOn', {
+        brands: new Intl.ListFormat(language === 'en' ? 'en-GB' : 'ro', {
+          type: 'conjunction',
+        }).format(names),
+      });
+    }
+    return hasCar ? t('worksOnNone') : null;
+  }
 
   // A mobile mechanic says whether it comes to the place, never a distance.
   private where(item: SavedGarageItemDto) {

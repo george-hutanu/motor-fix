@@ -35,7 +35,7 @@ afterEach(() => TestBed.resetTestingModule());
 
 // @traces 291-FR-008
 describe('a saved garage row under attack: the line', () => {
-  // The shared format writes at most one decimal (019-FR-004).
+  // The shared format writes at most one decimal.
   it('writes a zero distance as 0 km, not nothing', async () => {
     const element = await render(savedItem({ distanceKm: 0 }));
 

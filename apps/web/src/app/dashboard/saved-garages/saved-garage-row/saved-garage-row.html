@@ -3,8 +3,8 @@
   <span class="text">
     <a class="name" data-profile [routerLink]="['/', language(), 'garages', item().slug]">{{ item().name }}</a>
     <span class="line" data-line>
-      @if (item().available) {
-        <mf-lamp [state]="lamp()" [label]="line()" />
+      @if (item().available && lamp(); as state) {
+        <mf-lamp [state]="state" [label]="line()" />
       } @else {
         {{ line() }}
       }

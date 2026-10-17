@@ -120,7 +120,7 @@ export class SavedGaragesList {
     return this.api.savedGaragesControllerList(this.query(cursor));
   }
 
-  // At once, through ST-290's removal with its undo bar.
+  // At once, through the save control's removal with its undo bar.
   remove(garageId: string, row?: SavedGarageItemDto) {
     const known =
       row ??
@@ -129,6 +129,12 @@ export class SavedGaragesList {
     this.deleting.add(garageId);
     return this.saved.remove(garageId).finally(() => {
       this.deleting.delete(garageId);
+      // A read that answered while the call was out and no longer lists it
+      // already leaves it out of the counts.
+      const listed = this.view
+        .value()
+        ?.items.some((item) => item.garageId === garageId);
+      if (!listed) this.removed.update((rows) => without(rows, garageId));
     });
   }
 
@@ -152,4 +158,11 @@ export class SavedGaragesList {
     if (!place || this.store.place()) return;
     this.store.use(place);
   }
+}
+
+function without<K, V>(rows: ReadonlyMap<K, V>, key: K): ReadonlyMap<K, V> {
+  if (!rows.has(key)) return rows;
+  const next = new Map(rows);
+  next.delete(key);
+  return next;
 }

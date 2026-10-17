@@ -11,11 +11,10 @@ import { savedItem } from '../saved-garages.testing';
 
 async function render(
   item: SavedGarageItemDto,
-  {
-    hasCar = true,
-    language = 'ro',
-  }: { hasCar?: boolean; language?: 'ro' | 'en' } = {},
+  options: { hasCar?: boolean | undefined; language?: 'ro' | 'en' } = {},
 ) {
+  const { language = 'ro' } = options;
+  const hasCar = 'hasCar' in options ? options.hasCar : true;
   TestBed.configureTestingModule({ providers: [provideRouter([])] });
   const i18n = TestBed.inject(I18n);
   await i18n.enter('driver');
@@ -162,6 +161,23 @@ describe('the row’s lamp line', () => {
     });
 
     expect(line(element)).toBe('Add a car to see whether it works on it');
+  });
+
+  it('says no verdict while the driver’s cars are not known, only the distance', async () => {
+    const { element } = await render(
+      savedItem({ brands: [], distanceKm: 2.4 }),
+      { hasCar: undefined },
+    );
+
+    expect(lamp(element)).toBeNull();
+    expect(line(element)).toBe('2,4 km');
+  });
+
+  it('still names the brands it works on while the cars are not known', async () => {
+    const { element } = await render(savedItem(), { hasCar: undefined });
+
+    expect(lamp(element)?.dataset['state']).toBe('green');
+    expect(line(element)).toBe('Lucrează pe BMW');
   });
 
   it('hides the lamp’s dot from assistive technology', async () => {

@@ -195,6 +195,31 @@ describe('the saved list store under attack: re-reads', () => {
 
     expect(store.rows()?.map((row) => row.garageId)).not.toContain('garage-1');
   });
+
+  it('counts right once a removal answers after a re-read that already left the row out', async () => {
+    const store = await start([
+      pageOf(savedItems(2), { total: 2 }),
+      pageOf(savedItems(2).slice(1), { total: 1 }),
+    ]);
+    let answer = () => {};
+    saved.remove.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          answer = resolve;
+        }),
+    );
+
+    const removal = store.remove('garage-1');
+    live.emit('saved_garage.removed');
+    await wait(400);
+    await settle();
+    answer();
+    await removal;
+    await settle();
+
+    expect(store.rows()?.map((row) => row.garageId)).toEqual(['garage-2']);
+    expect(store.total()).toBe(1);
+  });
 });
 
 // @traces 291-FR-006

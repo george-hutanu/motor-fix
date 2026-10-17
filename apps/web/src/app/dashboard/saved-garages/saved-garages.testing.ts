@@ -62,7 +62,7 @@ export const savedCar = (over: Partial<CarDto> = {}): CarDto => ({
   ...over,
 });
 
-// ST-290's store as the list uses it: the ids it holds, and its removal.
+// The save control's store as the list uses it: the ids it holds, and its removal.
 export function fakeSavedGarages() {
   const ids = signal<ReadonlySet<string>>(new Set());
   return {

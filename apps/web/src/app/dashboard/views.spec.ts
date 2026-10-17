@@ -77,7 +77,7 @@ describe('the dashboard view lists', () => {
       icon: 'star',
       text: 'driver.empty.reviews',
     });
-    // The saved garages' view draws its own empty state (291-FR-012).
+    // The saved garages' view draws its own empty state.
     expect(byPath('saved')?.emptyState).toBeUndefined();
     expect(byPath('saved')?.load).toEqual(expect.any(Function));
     expect(byPath('saved')?.capability).toBe('driver.saved_garages');

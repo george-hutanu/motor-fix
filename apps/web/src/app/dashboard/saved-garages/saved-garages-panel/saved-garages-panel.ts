@@ -55,7 +55,11 @@ export class SavedGaragesPanel {
     const limit = this.limit();
     return limit === undefined ? rows : rows.slice(0, limit);
   });
-  protected readonly hasCar = computed(() => this.cars()?.length !== 0);
+  // Undefined while the cars are not known.
+  protected readonly hasCar = computed(() => {
+    const cars = this.cars();
+    return cars && cars.length > 0;
+  });
   protected readonly findMore = computed(() => {
     const brand = this.cars()?.[0]?.brandId;
     return {
@@ -76,7 +80,7 @@ export class SavedGaragesPanel {
   });
 
   constructor() {
-    // Its own texts, and ST-290's for the removal's bar and undo.
+    // Its own texts, and the save control's for the removal's bar and undo.
     void this.i18n.enter('driver');
     void this.i18n.enter('public');
     this.list.open();

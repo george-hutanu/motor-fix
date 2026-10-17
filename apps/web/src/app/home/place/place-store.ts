@@ -15,7 +15,7 @@ export interface Place {
 
 const KEY = 'mf-place';
 
-// The Setări city through the address look-up once, never kept (229-FR-006);
+// The Setări city through the address look-up once, never kept;
 // a failed or empty look-up places nothing.
 export async function cityPlace(
   places: PlacesService,

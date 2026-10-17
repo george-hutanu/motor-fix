@@ -209,7 +209,7 @@ describe('SavedGaragesList: a removal from the list', () => {
       savedItem({ garageId: 'g-3' }),
     ]);
 
-  it('takes the row away at once through ST-290’s removal and counts it out', async () => {
+  it('takes the row away at once through the save control’s removal and counts it out', async () => {
     const store = await start({ answers: [three()] });
 
     void store.remove('g-1');

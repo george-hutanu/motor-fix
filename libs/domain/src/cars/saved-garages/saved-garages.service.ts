@@ -183,7 +183,8 @@ const itemOf = (
 });
 
 // The role in use first, so a garage-side account learns to switch roles
-// rather than meeting the capability policy's 404.
+// rather than meeting the capability policy's 404. Each method repeats the
+// controller's guard, so a caller that is not the controller is refused too.
 function driverOnly(actor: Actor) {
   if (actor.role !== 'driver') {
     throw refusal(
@@ -196,7 +197,7 @@ function driverOnly(actor: Actor) {
 }
 
 // The same check before the query or body is validated, so a garage-side
-// account sending a bad place still meets the role refusal first (291-FR-001).
+// account sending a bad place still meets the role refusal first.
 @Injectable()
 export class DriverOnly implements CanActivate {
   canActivate(context: ExecutionContext) {
