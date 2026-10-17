@@ -6,5 +6,23 @@
     "settings": {
       "addresses": "hutanugeorge40@gmail.com"
     }
+  },
+  {
+    "uid": "motorfix-outage-email",
+    "name": "motorfix-outage",
+    "type": "email",
+    "settings": {
+      "addresses": "hutanugeorge40@gmail.com"
+    }
+  },
+  {
+    "uid": "motorfix-outage-webhook",
+    "name": "motorfix-outage",
+    "type": "webhook",
+    "settings": {
+      "url": "{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts",
+      "httpMethod": "POST",
+      "authorization_scheme": "Bearer"
+    }
   }
 ]

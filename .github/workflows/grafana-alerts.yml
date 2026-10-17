@@ -1,9 +1,10 @@
 name: Grafana alerts
 
-# Applies the owner's contact point and the notification policy tree from
-# infra/observability/grafana/alerting/, then infra/observability/alerts/*.json
-# to Grafana's MotorFix folder, one rule group per call, so Grafana holds
-# exactly what the repository holds. The policy PUT replaces the whole tree.
+# Applies every declared contact point integration and the notification
+# policy tree from infra/observability/grafana/alerting/, then
+# infra/observability/alerts/*.json to Grafana's MotorFix folder, one rule
+# group per call, so Grafana holds exactly what the repository holds. The
+# policy PUT replaces the whole tree.
 on:
   push:
     branches: [main]
@@ -47,14 +48,19 @@ jobs:
         env:
           GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
           GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+          OUTAGE_WEBHOOK_TOKEN: ${{ secrets.OUTAGE_WEBHOOK_TOKEN }}
+          STAGING_WEB_URL: ${{ vars.STAGING_WEB_URL }}
         # curl's answers and messages go to /dev/null (a message names the
         # host), so a failure logs the file, the group and curl's exit code
         # only; each call gives up after a minute. Every file is checked
         # first: a group named twice stops the run, since the second PUT would
         # replace the first. A refused file or group is named and the others
-        # are still applied. The contact point is put by its uid, or created
-        # when Grafana has none; only once it is in are the other contact
-        # points of the same name (the hand-made one) removed.
+        # are still applied. Every declared integration is put by its uid, or
+        # created when Grafana has none. A webhook gets its address and token
+        # from jq's $ENV, so neither is ever an argument, and is skipped with
+        # a notice unless both are set. Only once every integration is in are
+        # the other contact points under a declared name (the hand-made ones)
+        # removed, every declared uid kept.
         run: |
           auth="Authorization: Bearer ${GRAFANA_SA_TOKEN}"
           base="$GRAFANA_URL"
@@ -81,6 +87,13 @@ jobs:
           policy_file=infra/observability/grafana/alerting/policies.json
           failed=0
           contacts=1
+          missing=""
+          [[ -n ${OUTAGE_WEBHOOK_TOKEN//[[:space:]]/} ]] || missing="OUTAGE_WEBHOOK_TOKEN"
+          [[ -n ${STAGING_WEB_URL//[[:space:]]/} ]] || missing="${missing:+$missing and }STAGING_WEB_URL"
+          hook='($ENV.STAGING_WEB_URL | gsub("^\\s+|\\s+$"; "") | sub("/+$"; "")) as $web
+            | .settings.url |= sub("^\\{PUBLIC_WEB_URL\\}"; $web)
+            | .settings.authorization_credentials = ($ENV.OUTAGE_WEBHOOK_TOKEN | gsub("^\\s+|\\s+$"; ""))'
+          noticed=0
           if ! points=$(jq -c 'if type == "array" then .[] else error("list") end' "$cp_file" 2> /dev/null); then
             echo "::error::$cp_file: not a list of contact points."
             failed=1
@@ -90,10 +103,25 @@ jobs:
           while IFS= read -r point; do
             [ -n "$point" ] || continue
             uid=$(jq -r .uid <<< "$point")
+            body="$point"
+            if [ "$(jq -r .type <<< "$point")" = webhook ]; then
+              if [ -n "$missing" ]; then
+                [ "$noticed" -eq 1 ] || echo "::notice::The outage webhook is not applied: $missing not set."
+                noticed=1
+                echo "skipped $cp_file ($uid)"
+                continue
+              fi
+              if ! body=$(jq -c "$hook" <<< "$point" 2> /dev/null); then
+                echo "::error::$cp_file: contact point $uid has no settings.url to fill in."
+                failed=1
+                contacts=0
+                continue
+              fi
+            fi
             path=$(jq -rn --arg u "$uid" '$u | @uri')
-            answer=$(status -X PUT "$api/v1/provisioning/contact-points/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point") || true
+            answer=$(printf '%s' "$body" | status -X PUT "$api/v1/provisioning/contact-points/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @-) || true
             if [ "$answer" = 404 ]; then
-              answer=$(status -X POST "$api/v1/provisioning/contact-points" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point") || true
+              answer=$(printf '%s' "$body" | status -X POST "$api/v1/provisioning/contact-points" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @-) || true
             fi
             case "$answer" in
               2[0-9][0-9]) echo "applied $cp_file ($uid)" ;;
@@ -134,14 +162,16 @@ jobs:
           done
           if [ "$contacts" -eq 1 ]; then
             list="${RUNNER_TEMP:-.}/grafana-contact-points.json"
-            while IFS=$'\t' read -r name keep; do
+            while IFS= read -r row; do
+              name=$(jq -r .name <<< "$row")
+              keep=$(jq -c .keep <<< "$row")
               query=$(jq -rn --arg n "$name" '$n | @uri')
               if ! call "$api/v1/provisioning/contact-points?name=$query" -H 'X-Disable-Provenance: true' -o "$list"; then
                 echo "::error::$cp_file: the contact points named $name could not be listed."
                 failed=1
                 continue
               fi
-              if ! olds=$(jq -r --arg keep "$keep" 'if type == "array" then .[] | select(.uid != $keep) | .uid else error("list") end' "$list" 2> /dev/null); then
+              if ! olds=$(jq -r --argjson keep "$keep" 'if type == "array" then .[] | .uid as $u | select(any($keep[]; . == $u) | not) | .uid else error("list") end' "$list" 2> /dev/null); then
                 echo "::error::$cp_file: Grafana's list of the contact points named $name is not a list."
                 failed=1
                 continue
@@ -155,7 +185,7 @@ jobs:
                   failed=1
                 fi
               done <<< "$olds"
-            done < <(jq -r '.[] | [.name, .uid] | @tsv' "$cp_file")
+            done < <(jq -c 'group_by(.name)[] | {name: .[0].name, keep: map(.uid)}' "$cp_file")
             rm -f "$list"
           fi
           exit "$failed"

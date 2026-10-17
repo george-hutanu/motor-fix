@@ -111,9 +111,12 @@ event that is the alert) fire after `0s`, and `scripts/alert-rules.spec.ts`
 lists them.
 
 Whom they notify is code too, in `infra/observability/grafana/alerting/`:
-`contact-points.json` holds the `MotorFix owner` contact point, e-mail only to
-the owner's address, and `policies.json` the notification policy tree. The
-rules name no receiver (the uptime `outage` rule aside, which keeps its own):
+`contact-points.json` holds two contact points, `MotorFix owner` (e-mail only
+to the owner's address) and `motorfix-outage` (an e-mail to the admins,
+uid `motorfix-outage-email`, and the API's webhook, uid
+`motorfix-outage-webhook`), and `policies.json` the notification policy tree.
+The rules name no receiver (the uptime `outage` rule aside, which names
+`motorfix-outage`; the spec fails on a receiver the file does not declare):
 the tree sends production to the owner at once (30 s, then every 4 hours while
 it lasts) and staging more quietly (5 minutes, then once a day). No route
 carries a mute or active time interval: an alert reaches the owner at any
@@ -155,16 +158,19 @@ read only in the staging Redis.
 The "Grafana alerts" workflow (`.github/workflows/grafana-alerts.yml`) applies
 every file on a push to `main` that changes one, and by hand
 (`workflow_dispatch`): it creates the `MotorFix` folder (uid `motorfix`) when
-missing, puts the contact point by its uid (creating it when Grafana has none),
-replaces the whole notification policy tree, then replaces each file's group whole, so a rule removed from a file
+missing, puts every declared integration by its uid (creating it when Grafana
+has none; the webhook only when `OUTAGE_WEBHOOK_TOKEN` and `STAGING_WEB_URL`
+are set, see below), replaces the whole notification policy tree, then replaces each file's group whole, so a rule removed from a file
 leaves Grafana too, and a group whose file is gone is left alone. It uses
 `GRAFANA_SA_TOKEN` and `GRAFANA_URL`, as the release does, and without either
 it is skipped with a notice. A change made only in the Grafana UI is
 overwritten by the next run: edit the JSON instead. A file whose rule uid is
 already held by a rule imported by hand fails, naming the file and the group; delete that
-copy in Grafana once and run the workflow again. Once its own contact point
-is in, the run removes any other contact point named `MotorFix owner` (the one
-made by hand); when its own is refused, the hand-made one is kept.
+copy in Grafana once and run the workflow again. Once every declared
+integration is in, the run removes any other contact point under a declared
+name (one made by hand) and keeps every uid the repository declares, the
+skipped webhook's included; when one of its own is refused, nothing is
+removed.
 
 ## Uptime checks and the outage alert
 
@@ -184,19 +190,28 @@ active admin one e-mail and one push for "down" and again for "back"
 (`ADMIN_OUTAGE_ALERT`, which no saved choice or quiet hours can mute). The
 same alert sent again sends nothing more.
 
-Set up by hand in Grafana Cloud, once per stack (nothing here calls its API):
+The contact point `motorfix-outage` and the rule `alerts/outage.json` are
+applied by the Grafana alerts workflow (`grafana-alerts.yml`) from the
+repository, never by hand; the checks are the one part set up by hand. Once
+per stack:
 
 1. Synthetic Monitoring › Checks: create the two checks from
    `uptime/checks.json`, `{PUBLIC_WEB_URL}` replaced by the environment's
    public web address.
-2. Alerting › Contact points: `motorfix-outage`, a webhook to
-   `{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts` with the header
-   `Authorization: Bearer <token>`, and an e-mail integration listing every
-   admin's address (the fallback when the API itself is down; kept current
-   by hand when an admin joins or leaves).
-3. The API service in Railway: `OUTAGE_WEBHOOK_TOKEN`, the same token. Unset,
-   the webhook refuses every call.
-4. Alerting › Alert rules: import `alerts/outage.json`.
+2. The contact point's e-mail lists every admin's address (the fallback when
+   the API itself is down) in `grafana/alerting/contact-points.json`, one
+   string with the addresses separated by `;`: an admin who joins or leaves
+   is an edit there, which the next run applies. Its webhook, to
+   `{PUBLIC_WEB_URL}/api/v1/monitoring/outage-alerts` with
+   `Authorization: Bearer <token>`, is applied only when the repository holds
+   the GitHub secret `OUTAGE_WEBHOOK_TOKEN` and the GitHub variable
+   `STAGING_WEB_URL` (the staging web address), both set by the owner;
+   without either the run skips it with a notice and still applies the
+   e-mail.
+3. The API service in Railway: `OUTAGE_WEBHOOK_TOKEN`, the same token as the
+   GitHub secret. Unset, the webhook refuses every call.
+4. A changed secret or variable takes effect at the next run of the
+   workflow: a push that changes a file it watches, or `workflow_dispatch`.
 
 A failed nightly backup run (`.github/workflows/backup.yml`) is the backup
 alert: GitHub e-mails the owner about the failed run.
