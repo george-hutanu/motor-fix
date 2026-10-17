@@ -2,7 +2,11 @@
  * @jest-environment @stryker-mutator/jest-runner/jest-env/node
  */
 // @traces 430-FR-002 430-FR-003 430-FR-005
-import { PAGE_CACHE_CONTROL, withPageCache } from './page-cache';
+import {
+  PAGE_CACHE_CONTROL,
+  PRIVATE_CACHE_CONTROL,
+  withPageCache,
+} from './page-cache';
 
 const page = (headers: Record<string, string> = {}, status = 200) =>
   new Response('<html><body>page</body></html>', {
@@ -54,14 +58,15 @@ describe('withPageCache', () => {
   );
 
   it.each(['/app', '/app/', '/app/driver', '/app/garage/quotes?x=1'])(
-    'leaves a dashboard page (%s) as it was',
-    (path) => {
-      const original = page();
-      const answer = withPageCache(path, original);
+    'tells every cache to keep no copy of a dashboard page (%s)',
+    async (path) => {
+      const answer = withPageCache(path, page({}, 404));
 
-      expect(answer).toBe(original);
-      expect(answer.headers.get('cache-control')).toBeNull();
+      expect(PRIVATE_CACHE_CONTROL).toBe('private, no-store');
+      expect(answer.headers.get('cache-control')).toBe(PRIVATE_CACHE_CONTROL);
       expect(answer.headers.get('cdn-tag')).toBeNull();
+      expect(answer.status).toBe(404);
+      expect(await answer.text()).toBe('<html><body>page</body></html>');
     },
   );
 
@@ -72,12 +77,15 @@ describe('withPageCache', () => {
     '/ro/invite/t-1',
     '/ro/sign-in/return?code=x',
     '/ro/account',
-  ])('leaves a page for one person (%s) as it was', (path) => {
-    const original = page();
+  ])(
+    'tells every cache to keep no copy of a page for one person (%s)',
+    (path) => {
+      const answer = withPageCache(path, page({ 'CDN-Tag': 'search' }));
 
-    expect(withPageCache(path, original)).toBe(original);
-    expect(original.headers.get('cache-control')).toBeNull();
-  });
+      expect(answer.headers.get('cache-control')).toBe(PRIVATE_CACHE_CONTROL);
+      expect(answer.headers.get('cdn-tag')).toBeNull();
+    },
+  );
 
   it('does not take an address that only starts like the dashboards for one', () => {
     expect(

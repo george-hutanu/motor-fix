@@ -2,7 +2,11 @@
  * @jest-environment @stryker-mutator/jest-runner/jest-env/node
  */
 // @traces 430-FR-002 430-FR-003 430-FR-005
-import { PAGE_CACHE_CONTROL, withPageCache } from './page-cache';
+import {
+  PAGE_CACHE_CONTROL,
+  PRIVATE_CACHE_CONTROL,
+  withPageCache,
+} from './page-cache';
 
 const page = (
   headers: Record<string, string> = {},
@@ -16,13 +20,14 @@ const page = (
 
 describe('withPageCache under hostile input', () => {
   it.each(['/app?x=1', '/app/?x=/ro', '/app/driver/'])(
-    'leaves %s as a private page',
+    'marks %s as a private page',
     (path) => {
-      const original = page();
+      const answer = withPageCache(path, page({ 'set-cookie': 'a=b' }, 503));
 
-      expect(withPageCache(path, original)).toBe(original);
-      expect(original.headers.get('cache-control')).toBeNull();
-      expect(original.headers.get('cdn-tag')).toBeNull();
+      expect(answer.headers.get('cache-control')).toBe(PRIVATE_CACHE_CONTROL);
+      expect(answer.headers.get('cdn-tag')).toBeNull();
+      expect(answer.headers.get('set-cookie')).toBe('a=b');
+      expect(answer.status).toBe(503);
     },
   );
 
@@ -36,12 +41,12 @@ describe('withPageCache under hostile input', () => {
   );
 
   it.each(['/ro/account/security', '/en/account/', '/ro/reset-password/'])(
-    'leaves a page below a one-person page (%s) as it was',
+    'marks a page below a one-person page (%s) private',
     (path) => {
-      const original = page();
+      const answer = withPageCache(path, page());
 
-      expect(withPageCache(path, original)).toBe(original);
-      expect(original.headers.get('cache-control')).toBeNull();
+      expect(answer.headers.get('cache-control')).toBe(PRIVATE_CACHE_CONTROL);
+      expect(answer.headers.get('cdn-tag')).toBeNull();
     },
   );
 
