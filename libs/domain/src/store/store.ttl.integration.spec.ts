@@ -204,8 +204,8 @@ const steps: [string, () => Promise<unknown>][] = [
   [
     'the garage search pages and their generation',
     async () => {
-      await new GarageSearchCache(store).page(
-        { brandId: 'b' },
+      await new GarageSearchCache(store).entry(
+        { brandId: 'b', kind: 'page' },
         async () => ({ items: [] }) as never,
       );
       await dropSearches(store, ['public:search']);

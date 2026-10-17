@@ -2689,6 +2689,49 @@
         "defaults": {},
         "overrides": []
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 120
+      },
+      "id": 96,
+      "panels": [],
+      "title": "Map pins",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 121
+      },
+      "id": 97,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome, mode) (increase(motorfix_search_pins_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}} {{mode}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Pins reads by outcome and mode",
+      "type": "timeseries"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 122,
+    "count": 123,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -627,6 +627,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_search_pins_total",
+      "source": "libs/domain/src/search/garage-search/garage-search.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each pins answer by outcome (results, none) and mode (area, bbox) for the map on Results; a count has no failure to alert on: the route's errors and latency are the api-error-rate and api-latency rules, and its Redis fallback is in motorfix_search_cache_total under the api-search-cache-fallback-rate alert",
+      "story": "ST-269"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_sign_ins_total",
       "source": "libs/domain/src/auth/sign-in.service.ts",
       "dashboard": "motorfix-product",
@@ -956,6 +965,19 @@
       ],
       "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, and new searches still count in motorfix_searches_total",
       "story": "ST-267"
+    },
+    {
+      "kind": "endpoint",
+      "name": "search-garages-pins",
+      "source": "libs/domain/src/search/garage-search/garage-search.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/search/garages/pins",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; no outside call (the browser fetches the tiles from the place-step map's provider)",
+      "story": "ST-269"
     },
     {
       "kind": "outside-service",

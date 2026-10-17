@@ -8,6 +8,9 @@
       @if (area(); as area) {
         <span class="area">{{ area }}</span>
       }
+      @if (back(); as back) {
+        <button type="button" class="back" (click)="backToSearch()">{{ back }}</button>
+      }
       <button type="button" class="change" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
     </p>
     @if (newer()) {
@@ -20,58 +23,69 @@
     </h1>
   }
 </header>
-@switch (state()) {
-  @case ('loading') {
-    <div class="cards" aria-busy="true">
-      @for (card of skeletons; track card) {
-        <div class="card skeleton" aria-hidden="true"></div>
-      }
-    </div>
-  }
-  @case ('list') {
-    @if (answer(); as answer) {
-      <ul class="cards" [attr.aria-label]="'public.results.list' | t">
-        @for (garage of answer.items; track garage.id) {
-          <li
-            [class.leaving]="leaving().has(garage.id)"
-            [mfLiveChange]="garage"
-            [mfLiveChangeSay]="'public.results.live.updated' | t: { name: garage.name }"
-          >
-            <mf-result-card [brand]="answer.brand" [garage]="garage" />
-          </li>
+@if (state() !== 'missing') {
+  <mf-results-map
+    [brand]="answer()?.brand?.name ?? ''"
+    [loading]="mapLoading()"
+    [pins]="pinned()"
+    [place]="place()"
+    (moved)="move($event)"
+  />
+}
+<div class="found">
+  @switch (state()) {
+    @case ('loading') {
+      <div class="cards" aria-busy="true">
+        @for (card of skeletons; track card) {
+          <div class="card skeleton" aria-hidden="true"></div>
         }
-      </ul>
+      </div>
+    }
+    @case ('list') {
+      @if (answer(); as answer) {
+        <ul class="cards" [attr.aria-label]="'public.results.list' | t">
+          @for (garage of answer.items; track garage.id) {
+            <li
+              [class.leaving]="leaving().has(garage.id)"
+              [mfLiveChange]="garage"
+              [mfLiveChangeSay]="'public.results.live.updated' | t: { name: garage.name }"
+            >
+              <mf-result-card [brand]="answer.brand" [garage]="garage" />
+            </li>
+          }
+        </ul>
+      }
+    }
+    @case ('empty') {
+      <section class="state" aria-live="polite">
+        @if (near()) {
+          <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
+        } @else {
+          <h2>{{ 'public.results.none' | t }}</h2>
+        }
+        <div class="actions">
+          @if (widen(); as wide) {
+            <button type="button" class="primary" (click)="widenTo(wide)">{{ 'public.results.widen' | t: { km: wide } }}</button>
+          }
+          <button type="button" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
+        </div>
+      </section>
+    }
+    @case ('failed') {
+      <section class="state" role="alert">
+        <h1>{{ 'public.results.failed' | t }}</h1>
+        <div class="actions">
+          <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
+        </div>
+      </section>
+    }
+    @case ('missing') {
+      <section class="state" role="alert">
+        <h1>{{ 'public.results.failed' | t }}</h1>
+        <div class="actions">
+          <a class="primary" [routerLink]="['/', i18n.language()]">{{ 'public.results.newSearch' | t }}</a>
+        </div>
+      </section>
     }
   }
-  @case ('empty') {
-    <section class="state" aria-live="polite">
-      @if (near()) {
-        <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
-      } @else {
-        <h2>{{ 'public.results.none' | t }}</h2>
-      }
-      <div class="actions">
-        @if (widen(); as wide) {
-          <button type="button" class="primary" (click)="widenTo(wide)">{{ 'public.results.widen' | t: { km: wide } }}</button>
-        }
-        <button type="button" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
-      </div>
-    </section>
-  }
-  @case ('failed') {
-    <section class="state" role="alert">
-      <h1>{{ 'public.results.failed' | t }}</h1>
-      <div class="actions">
-        <button type="button" class="primary" (click)="retry()">{{ 'public.results.retry' | t }}</button>
-      </div>
-    </section>
-  }
-  @case ('missing') {
-    <section class="state" role="alert">
-      <h1>{{ 'public.results.failed' | t }}</h1>
-      <div class="actions">
-        <a class="primary" [routerLink]="['/', i18n.language()]">{{ 'public.results.newSearch' | t }}</a>
-      </div>
-    </section>
-  }
-}
+</div>

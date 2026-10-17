@@ -32,6 +32,11 @@ export interface GarageSearchControllerForBrand$Params {
   radius?: 25 | 50;
 
 /**
+ * The visible area of the map, "south,west,north,east" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius
+ */
+  bbox?: string;
+
+/**
  * Up to 20 garage ids, comma-separated: answers those of them that are public, in the search's order, with no cursor
  */
   ids?: string;
@@ -54,6 +59,7 @@ export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string
     rb.query('brand', params.brand, {});
     rb.query('brandId', params.brandId, {});
     rb.query('radius', params.radius, {});
+    rb.query('bbox', params.bbox, {});
     rb.query('ids', params.ids, {});
     rb.query('log', params.log, {});
     rb.query('cursor', params.cursor, {});

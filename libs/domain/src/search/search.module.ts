@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { GaragePinsService } from './garage-pins/garage-pins.service';
 import { GarageSearchCache } from './garage-search/garage-search.cache';
 import { GarageSearchController } from './garage-search/garage-search.controller';
 import { GarageSearchService } from './garage-search/garage-search.service';
@@ -19,6 +20,7 @@ import { CacheModule } from '../cache/cache.module';
   ],
   imports: [CacheModule],
   providers: [
+    GaragePinsService,
     GarageSearchCache,
     GarageSearchService,
     HomeService,

@@ -17,8 +17,13 @@ import { BrandRefDto, GarageBrandAnswerDto } from './garage-brands.dto';
 import { FACILITIES, type Facility } from './garage-hours';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 import { NearQueryDto } from './near.dto';
+import { inRomania } from './place-section';
 import {
+  bboxSideKm,
+  parseBbox,
+  SEARCH_BBOX_MAX_KM,
   SEARCH_IDS_MAX,
+  SEARCH_PINS_MAX,
   SEARCH_RADII,
   type SearchRadius,
 } from './search-place';
@@ -50,14 +55,37 @@ export const GARAGE_BRAND_ANSWERS = [
 ] as const;
 export type GarageBrandAnswer = (typeof GARAGE_BRAND_ANSWERS)[number];
 
-export class GarageSearchQueryDto extends NearQueryDto {
+// A box of the visible map, south,west,north,east, wholly inside Romania and
+// no wider or taller than the map may ask about.
+const IsSearchBbox = () =>
+  ValidateBy({
+    name: 'searchBbox',
+    validator: {
+      defaultMessage: () =>
+        `bbox must be south,west,north,east inside Romania, at most ${SEARCH_BBOX_MAX_KM} km wide`,
+      validate: (value: unknown) => {
+        const box = typeof value === 'string' ? parseBbox(value) : undefined;
+        return (
+          box !== undefined &&
+          box.south < box.north &&
+          box.west < box.east &&
+          inRomania(box.south, box.west) &&
+          inRomania(box.north, box.east) &&
+          bboxSideKm(box) <= SEARCH_BBOX_MAX_KM
+        );
+      },
+    },
+  });
+
+// What both the list and the map pins of a search read.
+export class GaragePinsQueryDto extends NearQueryDto {
   @ApiPropertyOptional({
     description:
       'The brand, by its catalogue slug; exactly one of brand and brandId',
     example: 'bmw',
     pattern: '^[a-z0-9-]{1,80}$',
   })
-  @ValidateIf((query: GarageSearchQueryDto) => query.brand !== undefined)
+  @ValidateIf((query: GaragePinsQueryDto) => query.brand !== undefined)
   @IsString()
   @Matches(/^[a-z0-9-]{1,80}$/)
   @ValidateBy({
@@ -65,8 +93,8 @@ export class GarageSearchQueryDto extends NearQueryDto {
     validator: {
       defaultMessage: () => 'give brand or brandId, not both',
       validate: (_value, args) =>
-        ((args as ValidationArguments).object as GarageSearchQueryDto)
-          .brandId === undefined,
+        ((args as ValidationArguments).object as GaragePinsQueryDto).brandId ===
+        undefined,
     },
   })
   brand?: string;
@@ -76,7 +104,7 @@ export class GarageSearchQueryDto extends NearQueryDto {
       'The brand, by its catalogue id; exactly one of brand and brandId',
     format: 'uuid',
   })
-  @ValidateIf((query: GarageSearchQueryDto) => query.brand === undefined)
+  @ValidateIf((query: GaragePinsQueryDto) => query.brand === undefined)
   @IsUUID()
   brandId?: string;
 
@@ -96,6 +124,16 @@ export class GarageSearchQueryDto extends NearQueryDto {
   @IsIn(SEARCH_RADII)
   radius?: SearchRadius;
 
+  @ApiPropertyOptional({
+    description: `The visible area of the map, "south,west,north,east" in Romania, at most ${SEARCH_BBOX_MAX_KM} km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius`,
+    example: '44.35,26,44.5,26.25',
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsSearchBbox()
+  bbox?: string;
+}
+
+export class GarageSearchQueryDto extends GaragePinsQueryDto {
   @ApiPropertyOptional({
     description: `Up to ${SEARCH_IDS_MAX} garage ids, comma-separated: answers those of them that are public, in the search's order, with no cursor`,
     example: '9f1c2a7b-0000-4000-8000-000000000001',
@@ -233,4 +271,49 @@ export class GarageSearchPageDto {
 
   @ApiProperty({ type: BrandCountsDto })
   counts!: BrandCountsDto;
+}
+
+export class GaragePinDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({
+    description:
+      "Where the pin stands; a mobile mechanic's area centre, two decimals",
+    example: 44.437,
+  })
+  lat!: number;
+
+  @ApiProperty({ example: 26.117 })
+  lng!: number;
+
+  @ApiProperty({
+    description: 'The hourly labour rate it starts from, in whole lei',
+    nullable: true,
+    type: 'integer',
+  })
+  rateLei!: number | null;
+
+  @ApiProperty({ enum: GARAGE_BRAND_ANSWERS })
+  stance!: GarageBrandAnswer;
+
+  @ApiPropertyOptional({
+    description: "A mobile mechanic's area, in km; only for one",
+    type: 'integer',
+  })
+  serviceRadiusKm?: number;
+}
+
+export class GaragePinsDto {
+  @ApiProperty({
+    description: `Every garage the search finds with a position, nearest first; ${SEARCH_PINS_MAX} at most`,
+    type: [GaragePinDto],
+  })
+  pins!: GaragePinDto[];
+
+  @ApiProperty({
+    description: "Every approved garage the search finds, as the list's total",
+    type: 'integer',
+  })
+  total!: number;
 }

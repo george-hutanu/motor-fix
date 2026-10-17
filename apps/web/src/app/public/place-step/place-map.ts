@@ -1,17 +1,18 @@
 import { DOCUMENT } from '@angular/common';
 import { InjectionToken, inject } from '@angular/core';
 import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
-import type {
-  GeoJSONSource,
-  MapEventType,
-  Map as MapLibre,
-  Marker,
-} from 'maplibre-gl';
+import type { GeoJSONSource, Marker } from 'maplibre-gl';
 
-export interface LatLng {
-  lat: number;
-  lng: number;
-}
+import {
+  circleBounds,
+  closeMapLibre,
+  type LatLng,
+  openMapLibre,
+  ring,
+  styleFor,
+} from '../map-libre/map-libre';
+
+export type { LatLng };
 
 export interface PlaceMapEvents {
   dragged(at: LatLng): void;
@@ -37,44 +38,6 @@ export type OpenPlaceMap = (
   events: PlaceMapEvents,
 ) => Promise<PlaceMap>;
 
-const STYLES = {
-  dark: 'https://tiles.openfreemap.org/styles/dark',
-  light: 'https://tiles.openfreemap.org/styles/liberty',
-};
-// Romania whole, before anything is placed.
-const START = { center: [24.97, 45.94] as [number, number], zoom: 5.2 };
-const KM_PER_DEGREE = 111.32;
-
-// A test, the e2e suite and the PR QA run point the map at the app's own
-// empty style, so no tile is fetched from outside.
-function styleFor(document: Document) {
-  const view = document.defaultView as
-    | (Window & { __MF_MAP_STYLE?: string })
-    | null;
-  if (view?.__MF_MAP_STYLE) return view.__MF_MAP_STYLE;
-  return view?.matchMedia?.('(prefers-color-scheme: dark)').matches
-    ? STYLES.dark
-    : STYLES.light;
-}
-
-function span(lat: number, km: number) {
-  return {
-    dLat: km / KM_PER_DEGREE,
-    dLng: km / (KM_PER_DEGREE * Math.cos((lat * Math.PI) / 180)),
-  };
-}
-
-export function circleBounds(
-  { lat, lng }: LatLng,
-  km: number,
-): [[number, number], [number, number]] {
-  const { dLat, dLng } = span(lat, km);
-  return [
-    [lng - dLng, lat - dLat],
-    [lng + dLng, lat + dLat],
-  ];
-}
-
 // The view moves only when a placement starts (the first pin, or one set
 // outside the view) or the radius changes; any other move keeps the zoom the
 // user chose.
@@ -89,87 +52,30 @@ export function viewFor(
   return 'keep';
 }
 
-function ring({ lat, lng }: LatLng, km: number): [number, number][] {
-  const { dLat, dLng } = span(lat, km);
-  return Array.from({ length: 65 }, (_, i) => {
-    const angle = (i / 64) * 2 * Math.PI;
-    return [lng + dLng * Math.cos(angle), lat + dLat * Math.sin(angle)];
-  });
-}
-
-// MapLibre's worker and stylesheet are copied to /map by the build
-// (project.json assets) rather than bundled: the worker is looked up beside
-// the module that loads it, which a bundle moves, and the stylesheet would
-// weigh on every page's first load.
-export function mapAssets(document: Document) {
-  const sheet = new URL('/map/maplibre-gl.css', document.baseURI).href;
-  const links = document.head.querySelectorAll<HTMLLinkElement>(
-    'link[rel="stylesheet"]',
-  );
-  if (!Array.from(links).some((link) => link.href === sheet)) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = sheet;
-    document.head.append(link);
-  }
-  return {
-    workerUrl: new URL('/map/maplibre-gl-worker.mjs', document.baseURI).href,
-  };
-}
-
-async function openMapLibre(
+async function openPlaceMap(
   host: HTMLElement,
   events: PlaceMapEvents,
   style: string,
 ): Promise<PlaceMap> {
-  const { workerUrl } = mapAssets(host.ownerDocument);
+  // Once loaded, an error (one failed tile is enough) is only reported, and
+  // the first render after it that settles with no error of its own reports
+  // the recovery.
+  const map = await openMapLibre(host, style, (loaded) => {
+    let down = false;
+    let erred = false;
+    loaded.on('error', () => {
+      down = erred = true;
+      events.failed();
+    });
+    loaded.on('idle', () => {
+      if (down && !erred) {
+        down = false;
+        events.recovered();
+      }
+      erred = false;
+    });
+  });
   const maplibre = await import('maplibre-gl');
-  maplibre.setWorkerUrl(workerUrl);
-  const map: MapLibre = new maplibre.Map({
-    attributionControl: { compact: true },
-    container: host,
-    cooperativeGestures: true,
-    style,
-    ...START,
-  });
-  map.addControl(
-    new maplibre.NavigationControl({ showCompass: false }),
-    'top-right',
-  );
-  // A failure before the map loads tears it down; once it has loaded, an
-  // error (one failed tile is enough) is only reported, and the first render
-  // after it that settles with no error of its own reports the recovery.
-  await new Promise<void>((resolve, reject) => {
-    const loaded = () => {
-      map.off('error', broken);
-      let down = false;
-      let erred = false;
-      map.on('error', () => {
-        down = erred = true;
-        events.failed();
-      });
-      map.on('idle', () => {
-        if (down && !erred) {
-          down = false;
-          events.recovered();
-        }
-        erred = false;
-      });
-      resolve();
-    };
-    const broken = ({ error }: MapEventType['error']) => {
-      map.off('load', loaded);
-      map.remove();
-      reject(error);
-    };
-    map.once('error', broken);
-    map.once('load', loaded);
-  });
-  // Under the test style the e2e suite reads the view off the live map.
-  const view = host.ownerDocument.defaultView as
-    | (Window & { __MF_MAP?: MapLibre; __MF_MAP_STYLE?: string })
-    | null;
-  if (view?.__MF_MAP_STYLE) view.__MF_MAP = map;
   map.on('click', ({ lngLat }) =>
     events.tapped({ lat: lngLat.lat, lng: lngLat.lng }),
   );
@@ -240,10 +146,7 @@ async function openMapLibre(
   };
 
   return {
-    destroy: () => {
-      map.remove();
-      if (view?.__MF_MAP === map) delete view.__MF_MAP;
-    },
+    destroy: () => closeMapLibre(map),
     show(next) {
       draw(next);
       place(next.at);
@@ -258,6 +161,6 @@ async function openMapLibre(
 export const PLACE_MAP = new InjectionToken<OpenPlaceMap>('PLACE_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return (host, events) => openMapLibre(host, events, styleFor(document));
+    return (host, events) => openPlaceMap(host, events, styleFor(document));
   },
 });
