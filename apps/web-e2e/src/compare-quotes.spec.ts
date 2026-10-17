@@ -107,6 +107,19 @@ test.describe('comparing the quotes of a request @seeded', () => {
       );
       const garageId = made.rows[0]?.id ?? '';
       garageIds.push(garageId);
+      // A garage receives the request only when it works on the car's brand
+      // and fuel and does the job asked for.
+      await db.query(
+        `INSERT INTO garage_brand (garage_id, brand_id, stance, petrol, diesel, hybrid, electric, updated_at)
+         SELECT $1, b.id, 'works_on', true, true, true, true, now() FROM brand b WHERE b.key = 'dacia'`,
+        [garageId],
+      );
+      await db.query(
+        `INSERT INTO garage_brand_job (garage_id, brand_id, job_type_id)
+         SELECT $1, b.id, j.id FROM brand b, job_type j
+         WHERE b.key = 'dacia' AND j.key = 'oil-service'`,
+        [garageId],
+      );
       const ownerId = await signUp(request, garage.owner, i + 1);
       await db.query(
         `INSERT INTO account_role (account_id, role) VALUES ($1, 'garage') ON CONFLICT DO NOTHING`,
@@ -139,7 +152,7 @@ test.describe('comparing the quotes of a request @seeded', () => {
         'Idempotency-Key': randomUUID(),
       },
     });
-    expect(sent.status()).toBe(201);
+    expect(sent.status(), await sent.text()).toBe(201);
     requestId = ((await sent.json()) as { id: string }).id;
     // Militari answers first and dearer, the first own garage after and cheaper.
     await quote(request, militari, 500);
@@ -151,7 +164,8 @@ test.describe('comparing the quotes of a request @seeded', () => {
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM quote_request WHERE id = $1', [requestId]);
+    if (requestId)
+      await db.query('DELETE FROM quote_request WHERE id = $1', [requestId]);
     await db.query('DELETE FROM account WHERE email = ANY($1)', [
       [driver, ...garages.map((g) => g.owner)],
     ]);
