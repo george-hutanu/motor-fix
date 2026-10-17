@@ -15,7 +15,7 @@ const AWAY = {
 const LOCALE = { en: 'en-GB', ro: 'ro-RO' };
 
 // A calendar day that exists: 2026-02-30 does not.
-const realDay = (value: string) => {
+export const realDay = (value: string) => {
   if (!DAY.test(value)) return false;
   const time = Date.parse(`${value}T00:00:00Z`);
   return (

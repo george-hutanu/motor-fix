@@ -126,6 +126,20 @@ describe('delivering a support message', () => {
     );
   });
 
+  it('makes the usual promise when the away date has passed, and logs it', async () => {
+    const { id } = await store();
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    await delivery({ awayUntil: '2026-01-01', email: SUPPORT }).handle(job(id));
+
+    expect(sent()[1].textContent).toContain(
+      'We answer within one working day.',
+    );
+    const logged = warn.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toContain('SUPPORT_AWAY_UNTIL 2026-01-01');
+    warn.mockRestore();
+  });
+
   it('leaves an e-mail Brevo refused pending, throws, and never sends the other twice', async () => {
     const { id } = await store();
     const failedBefore = await emails('acknowledgement', 'failed');
@@ -317,7 +331,7 @@ describe('the unsent gauge', () => {
 
   it('reports the count it last read', async () => {
     await store();
-    const stop = observeUnsent(() => countUnsent(prisma), 60_000);
+    const stop = observeUnsent(() => countUnsent(prisma));
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     expect(await counterTotal(reader, 'motorfix_support_messages_unsent')).toBe(

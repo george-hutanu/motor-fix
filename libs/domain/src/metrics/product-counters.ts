@@ -158,17 +158,9 @@ export function countAccountChange(field: AccountChangeField) {
   ).add(1, { field });
 }
 
-export type SupportMessageOutcome =
-  | 'stored'
-  | 'refused_limit'
-  | 'trap'
-  | 'invalid';
+type SupportMessageOutcome = 'stored' | 'refused_limit' | 'trap' | 'invalid';
 export type SupportEmailKind = 'support' | 'acknowledgement';
-export type SupportEmailOutcome =
-  | 'sent'
-  | 'blocked'
-  | 'failed'
-  | 'unconfigured';
+type SupportEmailOutcome = 'sent' | 'blocked' | 'failed' | 'unconfigured';
 
 // A maintenance refusal is counted by motorfix_maintenance_refusals_total.
 export function countSupportMessage(outcome: SupportMessageOutcome) {

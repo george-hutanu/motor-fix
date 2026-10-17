@@ -15,8 +15,6 @@ export const SUPPORT_MESSAGE_MIN = 20;
 export const SUPPORT_MESSAGE_MAX = 2000;
 export const SUPPORT_SUBJECT_REF_MAX = 40;
 
-export const SUPPORT_REFERENCE_PATTERN = /^MF-\d{4}-\d{6,}$/;
-
 // MF, the Bucharest year, and the year's count padded to six digits.
 export const supportReference = (year: number, n: number) =>
   `MF-${year}-${String(n).padStart(6, '0')}`;

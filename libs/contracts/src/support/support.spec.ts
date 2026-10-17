@@ -1,12 +1,10 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import {
-  SUPPORT_REFERENCE_PATTERN,
-  SUPPORT_TOPICS,
-  supportReference,
-} from './support';
+import { SUPPORT_TOPICS, supportReference } from './support';
 import { CreateSupportMessageDto } from './support.dto';
+
+const SUPPORT_REFERENCE_PATTERN = /^MF-\d{4}-\d{6,}$/;
 
 const problems = (dto: object) =>
   validateSync(dto, { forbidNonWhitelisted: true, whitelist: true }).map(

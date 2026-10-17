@@ -11,13 +11,10 @@ export const countUnsent = (prisma: PrismaClient): Promise<number> =>
     where: { supportEmailStatus: { in: ['pending', 'unconfigured'] } },
   });
 
-// Reads the count every `everyMs` and reports the last reading as
+// Reads the count every minute and reports the last reading as
 // motorfix_support_messages_unsent; a failed reading keeps the one before.
 // Returns the stop function.
-export function observeUnsent(
-  read: () => Promise<number>,
-  everyMs = 60_000,
-): () => void {
+export function observeUnsent(read: () => Promise<number>): () => void {
   const logger = new Logger('Support');
   let value: number | undefined;
   const tick = async () => {
@@ -30,7 +27,7 @@ export function observeUnsent(
     }
   };
   void tick();
-  const timer = setInterval(() => void tick(), everyMs);
+  const timer = setInterval(() => void tick(), 60_000);
   timer.unref();
   const gauge = metrics
     .getMeter('motorfix')

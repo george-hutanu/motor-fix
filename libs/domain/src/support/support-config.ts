@@ -1,6 +1,8 @@
 import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import { Logger } from '@nestjs/common';
 
+import { realDay } from './promise/promise';
+
 export interface SupportConfig {
   // Where the support e-mail goes; unset, it waits and the alert says so.
   email?: string;
@@ -10,17 +12,6 @@ export interface SupportConfig {
   // send as well as at start.
   awayUnreadable?: true;
 }
-
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-// A calendar day that exists: 2026-02-30 does not.
-const isDay = (value: string) => {
-  if (!DAY.test(value)) return false;
-  const time = Date.parse(`${value}T00:00:00Z`);
-  return (
-    !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === value
-  );
-};
 
 // Read once at boot. Neither setting is ever assumed: an unset or unreadable
 // one is logged and left out.
@@ -36,7 +27,7 @@ export function supportConfig(
       'SUPPORT_EMAIL is not set to an address: support e-mails wait unsent',
     );
   const away = source['SUPPORT_AWAY_UNTIL']?.trim();
-  if (away && isDay(away)) config.awayUntil = away;
+  if (away && realDay(away)) config.awayUntil = away;
   else if (away) {
     config.awayUnreadable = true;
     logger.error('SUPPORT_AWAY_UNTIL is not a YYYY-MM-DD day: read as unset');

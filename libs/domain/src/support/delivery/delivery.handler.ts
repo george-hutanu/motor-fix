@@ -31,8 +31,6 @@ export interface SupportMessageEvent {
 // find a working one.
 const HOLIDAY_WINDOW_DAYS = 31;
 
-type Outcome = SupportEmailStatus | 'failed';
-
 // Sends a stored message's two e-mails: to the support mailbox, replies set
 // to the sender, and the acknowledgement to the sender. Each is tried only
 // while unsent, and its status is written right after its send, so a retry
@@ -89,14 +87,14 @@ export class SupportDelivery {
       return;
     }
     const contact = this.contactLink('ro');
-    await this.deliver(message, 'support', address, () => ({
-      mail: render('SUPPORT_MESSAGE', 'email', 'ro', {
-        ...supportMessageValues(message),
-        contact,
-      }),
-      replyTo: { email: message.email, name: message.name },
-      to: { email: address },
-    }));
+    await this.deliver(message, 'support', address, () => {
+      const values = supportMessageValues(message);
+      return {
+        mail: render('SUPPORT_MESSAGE', 'email', 'ro', { ...values, contact }),
+        replyTo: { email: message.email, name: values.name },
+        to: { email: address },
+      };
+    });
   }
 
   private async acknowledge(message: SupportMessage): Promise<void> {
@@ -148,19 +146,23 @@ export class SupportDelivery {
     await this.record(message.id, kind, 'sent');
   }
 
-  private async record(id: string, kind: SupportEmailKind, outcome: Outcome) {
-    countSupportEmail(kind, outcome as Exclude<Outcome, 'pending'>);
+  private async record(
+    id: string,
+    kind: SupportEmailKind,
+    outcome: Exclude<SupportEmailStatus, 'pending'>,
+  ) {
+    countSupportEmail(kind, outcome);
     const at = outcome === 'sent' ? this.now() : null;
     await this.prisma.supportMessage.update({
       data:
         kind === 'support'
           ? {
               supportEmailAt: at,
-              supportEmailStatus: outcome as SupportEmailStatus,
+              supportEmailStatus: outcome,
             }
           : {
               acknowledgementAt: at,
-              acknowledgementStatus: outcome as SupportEmailStatus,
+              acknowledgementStatus: outcome,
             },
       where: { id },
     });
