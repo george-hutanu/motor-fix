@@ -69,4 +69,18 @@ describe('the support settings', () => {
       );
     },
   );
+
+  // @traces 279-email-inbox-FR-003
+  it('falls back to support at the sending domain, without a warning', () => {
+    expect(supportConfig({ EMAIL_DOMAIN: 'Example.test' }, NOW)).toEqual({
+      email: 'support@example.test',
+    });
+    expect(
+      supportConfig(
+        { EMAIL_DOMAIN: 'example.test', SUPPORT_EMAIL: 'help@other.test' },
+        NOW,
+      ).email,
+    ).toBe('help@other.test');
+    expect(warn).not.toHaveBeenCalled();
+  });
 });

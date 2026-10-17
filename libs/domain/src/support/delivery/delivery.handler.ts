@@ -14,6 +14,7 @@ import type { Brevo } from '../../notifications/brevo/brevo';
 import {
   blockedReason,
   type EmailConfig,
+  emailEnvelope,
 } from '../../notifications/email-config';
 import { render } from '../../notifications/templates';
 import { supportMessageValues } from '../../notifications/templates/support';
@@ -128,13 +129,13 @@ export class SupportDelivery {
     }
     const { mail, replyTo, to } = build();
     try {
+      // The support mailbox answers the person who wrote, not itself.
       await this.brevo.send({
-        from: this.email.from,
-        html: mail.html,
+        ...emailEnvelope(this.email, to),
         ...(replyTo ? { replyTo } : {}),
+        html: mail.html,
         subject: mail.subject,
         text: mail.text,
-        to,
       });
     } catch (error) {
       countSupportEmail(kind, 'failed');
