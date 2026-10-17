@@ -179,7 +179,7 @@ describe('GET /admin/system-log', () => {
     ]);
   });
 
-  // @traces 298-FR-012
+  // @traces 298-FR-012 299-FR-016
   it('writes no log entry and no audit row when read', async () => {
     await entry('2100-06-02T07:00:00Z');
     // Other specs write to both tables at the same time, so only what this
@@ -308,6 +308,7 @@ describe('GET /admin/system-log narrowed and paged', () => {
     expect(ids(await list(`from=${DAY_START}&q=TARZIU`))).toEqual([late]);
   });
 
+  // @traces 299-FR-016
   it('writes no log entry and keeps the search text out of every entry', async () => {
     const before = await db.query(
       `SELECT count(*) FROM system_log_entry WHERE message LIKE '%zzsecretzz%'
