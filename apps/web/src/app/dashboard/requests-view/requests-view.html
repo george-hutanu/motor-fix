@@ -1,5 +1,8 @@
 @if (rows(); as list) {
   @if (list.length) {
+    @for (id of compared(); track id) {
+      <mf-quotes-compare [requestId]="id" />
+    }
     <ul class="rows">
       @for (row of list; track row.id) {
         <li [attr.data-request]="row.id" tabindex="-1">
@@ -10,6 +13,9 @@
             <span aria-hidden="true">·</span>
             <time>{{ row.when }}</time>
           </p>
+          @if (row.quoted) {
+            <a class="compare" [routerLink]="['/app', 'driver', 'requests']" [queryParams]="{ request: row.id }">{{ 'driver.requests.compare' | t }}</a>
+          }
           @if (row.waiting; as left) {
             <p class="waiting">{{ 'driver.requests.waitingGarage' | t: { left } }}</p>
           }

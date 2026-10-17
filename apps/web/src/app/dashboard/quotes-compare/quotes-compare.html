@@ -1,0 +1,46 @@
+@if (rows(); as list) {
+  <p class="header" data-part="header" aria-live="polite">{{ header() }}</p>
+  @if (offline()) {
+    <p class="offline">{{ 'shell.live.offline' | t }}</p>
+  }
+  @if (list.length) {
+    <div class="segments" role="radiogroup" [attr.aria-label]="'driver.quotes.sort.label' | t">
+      @for (option of sorts; track option) {
+        <label>
+          <input type="radio" name="mf-quotes-sort" [value]="option" [checked]="sort() === option" (change)="choose(option)" />
+          <span>{{ sortLabels[option] | t }}</span>
+        </label>
+      }
+    </div>
+    <ul class="rows">
+      @for (row of list; track row.quote.id) {
+        <li
+          [mfQuoteRow]="row.quote"
+          [attr.data-quote]="row.quote.id"
+          [state]="row.state"
+          [now]="now()"
+          [busy]="busy() === row.quote.id"
+          [locked]="offline() || (busy() !== null && busy() !== row.quote.id)"
+          [problem]="problems()[row.quote.id] ?? null"
+          (accept)="accept($event)"
+        ></li>
+      }
+    </ul>
+  } @else {
+    <mf-empty-state icon="quote" text="driver.empty.quotes" />
+  }
+  <ul class="lines" aria-live="polite">
+    @for (line of lines(); track $index) {
+      <li data-line>{{ line }}</li>
+    }
+  </ul>
+} @else if (view.failed()) {
+  <p role="alert">{{ 'driver.quotes.failed' | t }}</p>
+  <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'driver.quotes.retry' | t }}</button>
+} @else {
+  <div class="rows" aria-busy="true" [attr.aria-label]="'driver.quotes.loading' | t">
+    <div class="skeleton" aria-hidden="true"></div>
+    <div class="skeleton" aria-hidden="true"></div>
+    <div class="skeleton" aria-hidden="true"></div>
+  </div>
+}

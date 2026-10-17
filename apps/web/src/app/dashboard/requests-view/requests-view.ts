@@ -8,7 +8,8 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { REQUEST_STATUS_LABELS } from '@motor-fix/contracts/request-status';
 import {
   type RequestSummaryDto,
@@ -20,6 +21,8 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
 import { liveResource } from '../live';
+import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
+import { QuotesCompare } from '../quotes-compare/quotes-compare';
 
 interface Row {
   id: string;
@@ -29,6 +32,7 @@ interface Row {
   when: string;
   // Set while the booking waits for the garage: the time it has left.
   waiting?: string;
+  quoted: boolean;
 }
 
 const TICK_MS = 60_000;
@@ -38,7 +42,7 @@ const TICK_MS = 60_000;
 // booked request waiting for the garage counts down its time to confirm.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EmptyState, HlmButton, RouterLink, TranslatePipe],
+  imports: [EmptyState, HlmButton, QuotesCompare, RouterLink, TranslatePipe],
   selector: 'mf-requests-view',
   styleUrl: './requests-view.css',
   templateUrl: './requests-view.html',
@@ -60,6 +64,18 @@ export class RequestsView {
     return items.map((item) => this.row(item, language, now));
   });
 
+  private readonly query = toSignal(inject(ActivatedRoute).queryParamMap);
+  // The request whose quotes are compared above the list: the one the
+  // address names when it is the driver's and has quotes, else the newest
+  // still open. A list of one, so another request makes a new panel.
+  protected readonly compared = computed(() => {
+    const items = this.list.value()?.items ?? [];
+    const asked = this.query()?.get('request');
+    const named = items.find((i) => i.id === asked && i.quotesCount > 0);
+    const shown = named ?? openRequestOf(items);
+    return shown ? [shown.id] : [];
+  });
+
   constructor() {
     void this.i18n.enter('driver');
     focusCard('data-request', this.rows);
@@ -76,6 +92,7 @@ export class RequestsView {
     return {
       car: `${brand} ${model} ${year}`,
       id: item.id,
+      quoted: item.quotesCount > 0,
       status: REQUEST_STATUS_LABELS[language][item.status],
       what: jobs.length
         ? jobs.join(', ')
