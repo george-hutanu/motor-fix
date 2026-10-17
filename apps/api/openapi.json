@@ -4704,6 +4704,147 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}": {
+      "put": {
+        "operationId": "PriceListController_setBrandRange",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobTypeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrandRangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandRangeSavedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: not a uuid, or an unknown field"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          },
+          "422": {
+            "description": "validation_failed: the range, an unknown or untaken brand, a job not on the list or without a default range, or a duplicate"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sets a job's own range for a brand the garage takes, creating it or changing it in place",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "PriceListController_removeBrandRange",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobTypeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "400": {
+            "description": "validation_failed: not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found: no such garage, or no range for the brand"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Removes a job's own range for a brand",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{slug}": {
       "get": {
         "operationId": "PublicGaragesController_bySlug",
@@ -11965,6 +12106,31 @@
           "warnings"
         ]
       },
+      "BrandRangeItemDto": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "fromBani": {
+            "type": "integer"
+          },
+          "toBani": {
+            "type": "integer",
+            "description": "Absent when not set"
+          }
+        },
+        "required": [
+          "brandId",
+          "name",
+          "fromBani"
+        ]
+      },
       "PriceListItemDto": {
         "type": "object",
         "properties": {
@@ -12006,13 +12172,21 @@
           "toBani": {
             "type": "integer",
             "description": "The default range's top price, when set"
+          },
+          "brandRanges": {
+            "description": "The job's brand ranges, by the brand's popularity rank, then name; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRangeItemDto"
+            }
           }
         },
         "required": [
           "jobTypeId",
           "nameRo",
           "nameEn",
-          "public"
+          "public",
+          "brandRanges"
         ]
       },
       "PriceListDto": {
@@ -12028,6 +12202,52 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "BrandRangeDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "integer",
+            "example": 110000
+          },
+          "toBani": {
+            "type": "integer",
+            "example": 170000
+          }
+        }
+      },
+      "BrandRangeSavedDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromBani": {
+            "type": "integer"
+          },
+          "toBani": {
+            "type": "integer"
+          },
+          "warnings": {
+            "description": "Notes that do not stop the range from being saved",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldProblemDto"
+            }
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "brandId",
+          "fromBani",
+          "toBani",
+          "warnings"
         ]
       },
       "PublicBrandDto": {

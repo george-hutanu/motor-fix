@@ -139,6 +139,14 @@ export const EVENT_KINDS = [
 
 export type EventKind = (typeof EVENT_KINDS)[number];
 
+// price_list.updated: the jobs and brands whose ranges changed; empty from
+// the verification check, which changes no range.
+export type PriceListUpdatedPayload = {
+  garageId?: string;
+  jobTypeIds?: string[];
+  brandIds?: string[];
+};
+
 // assistant_grant.created, on the account's own stream: an open Asistent AI
 // view adds the assistant without reloading.
 export interface AssistantGrantCreatedPayload {
