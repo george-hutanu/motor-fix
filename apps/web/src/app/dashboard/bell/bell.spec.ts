@@ -106,15 +106,25 @@ describe('Bell', () => {
     expect(none.element.querySelector('.badge')).toBeNull();
   });
 
-  it("names the count in the button's label", async () => {
+  // Its name is its own hidden text, never an aria-label over the badge: a
+  // label that left out what the badge shows ("9+") would not match it.
+  // @traces 248-launch-screens-accessible-FR-007
+  it("names the count in the button's text, not over the badge", async () => {
+    const name = (button: HTMLElement) =>
+      button.querySelector('.sr-only')?.textContent?.trim();
+
     const { button } = await render(3);
-    expect(button.getAttribute('aria-label')).toBe(
-      'Notificări, 3 notificări necitite',
-    );
+    expect(button.hasAttribute('aria-label')).toBe(false);
+    expect(name(button)).toBe('Notificări, 3 notificări necitite');
+    TestBed.resetTestingModule();
+
+    const many = await render(12);
+    expect(many.button.hasAttribute('aria-label')).toBe(false);
+    expect(name(many.button)).toBe('Notificări, 12 notificări necitite');
     TestBed.resetTestingModule();
 
     const none = await render(0);
-    expect(none.button.getAttribute('aria-label')).toBe('Notificări');
+    expect(name(none.button)).toBe('Notificări');
   });
 
   it('opens the list in the drawer with its first page, and refreshes the count', async () => {
