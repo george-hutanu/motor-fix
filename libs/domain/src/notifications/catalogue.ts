@@ -121,6 +121,7 @@ const ENTRIES: Record<string, Entry> = {
   STAFF_INVITE: ['event', ['email', 'whatsapp'], null, 'transactional'],
   STAFF_JOINED: ['event', EPW, null],
   SUPPORT_ACKNOWLEDGEMENT: ['event', ['email'], null, 'transactional'],
+  SUPPORT_MESSAGE: ['direct', ['email'], null, 'transactional'],
   TEST_MESSAGE: ['direct', ['email', 'push'], null, 'transactional'],
   TYRES_SEASON: ['timer', EPSW, 'due_dates'],
   VERIFICATION_RESULT: ['event', EPW, null, 'always'],

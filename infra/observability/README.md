@@ -100,7 +100,7 @@ Grafana UI is overwritten by the next release: edit the JSON instead.
 `infra/observability/alerts/` holds one JSON file per rule group, in Grafana's
 provisioning format (`apiVersion: 1`, folder `MotorFix`, every minute):
 `api.json`, `web.json`, `worker.json`, `postgres.json` and `redis.json` for
-the services, `mcp.json`, `notifications.json` and `quotes.json` for the
+the services, `mcp.json`, `notifications.json`, `quotes.json` and `support.json` for the
 narrower signals. Each rule groups by `deployment_environment`, so an
 environment that never reported raises nothing, and carries its `service`
 label, a summary naming the environment, its dashboard's uid and a
@@ -255,7 +255,7 @@ Rules that keep it there:
   storage figures add at most 150 series per environment, every label value in
   use (`libs/observability/src/datastores/series.spec.ts` holds the ceiling);
   slow statements are WARN log records, never labels.
-- **Product counters.** The `motorfix_*` counters add fewer than 100 series
+- **Product counters.** The `motorfix_*` counters add fewer than 150 series
   per process, one e-mail series per template key included, the seven
   product counters fewer than 50 (`libs/domain/src/metrics/product-counters*.spec.ts`
   hold the ceilings); a story that passes one cuts a label before raising it.

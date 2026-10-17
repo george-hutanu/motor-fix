@@ -70,3 +70,9 @@ a {
   font-size: var(--mf-size-body);
   min-height: var(--mf-tap);
 }
+
+/* The support address can be long: it wraps on a 320 px phone. */
+a.address {
+  color: var(--mf-text);
+  overflow-wrap: anywhere;
+}

@@ -23,6 +23,11 @@
     "required": "Bifează pentru a continua.",
     "terms": "Termenii de utilizare"
   },
+  "contact": {
+    "address": "Sau scrie‑ne direct la",
+    "heading": "Contact",
+    "intro": "Scrie‑ne și îți răspunde pe e‑mail o persoană din echipa MotorFix."
+  },
   "garageProfile": {
     "backBrand": "Service‑uri pentru {brand}",
     "backHome": "Acasă",

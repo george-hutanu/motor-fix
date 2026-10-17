@@ -1,0 +1,11 @@
+<article>
+  <h1>{{ 'public.contact.heading' | t }}</h1>
+  <p class="intro">{{ 'public.contact.intro' | t }}</p>
+  @if (address(); as email) {
+    <p class="address">
+      {{ 'public.contact.address' | t }}
+      <a [href]="'mailto:' + email">{{ email }}</a>
+    </p>
+  }
+  <mf-contact-form />
+</article>

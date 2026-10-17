@@ -1,6 +1,7 @@
 import { RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { SupportService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { MaintenancePage } from './maintenance-page';
@@ -15,8 +16,14 @@ async function render() {
 const text = (element: HTMLElement) =>
   element.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 
+// No support address configured: the page reads it and shows none.
+const support = {
+  provide: SupportService,
+  useValue: { supportContactControllerContact: async () => ({ email: null }) },
+};
+
 beforeEach(() =>
-  TestBed.configureTestingModule({ providers: [provideRouter([])] }),
+  TestBed.configureTestingModule({ providers: [provideRouter([]), support] }),
 );
 
 describe('MaintenancePage under odd conditions', () => {
@@ -84,6 +91,7 @@ describe('MaintenancePage under odd conditions', () => {
       TestBed.configureTestingModule({
         providers: [
           provideRouter([]),
+          support,
           { provide: RESPONSE_INIT, useValue: init },
         ],
       });

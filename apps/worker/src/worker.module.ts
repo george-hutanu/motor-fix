@@ -23,7 +23,10 @@ import {
   reminderDayMs,
   StatusModule,
   StorageModule,
+  SupportModule,
   SystemLogModule,
+  supportConfig,
+  supportMessagesConsumer,
   VERIFICATION_RESULT_CONSUMER,
 } from '@motor-fix/domain';
 import { type DynamicModule, Module } from '@nestjs/common';
@@ -40,7 +43,7 @@ class WorkerModule {}
 // The worker serves no routes of its own: its HTTP listener exists so that
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
-// WhatsApp, runs the monthly news, the daily reminders, the decline windows,
+// WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows,
 // the listing draft sweep, the listing photos' copies and the nightly
 // platform figures (placing the garages with no city first), checks the
 // services behind the admin dashboard's tiles and reads the data stores for
@@ -49,6 +52,7 @@ export function workerModule(
   env: Env<(typeof WORKER_ENV)[number]>,
 ): DynamicModule {
   const email = emailConfig(env.APP_ENV, process.env);
+  const support = supportConfig(process.env);
   const notifications = NotificationsModule.registerWorker({
     databaseUrl: env.DATABASE_URL,
     email,
@@ -76,6 +80,7 @@ export function workerModule(
           QUOTE_RECEIVED_CONSUMER,
           QUOTE_ACCEPTED_CONSUMER,
           REQUEST_RECEIVED_CONSUMER,
+          supportMessagesConsumer(support),
           VERIFICATION_RESULT_CONSUMER,
         ],
         databaseUrl: env.DATABASE_URL,
@@ -93,6 +98,13 @@ export function workerModule(
         notifications,
         redisUrl: env.REDIS_URL,
         webUrl: email.webUrl,
+      }),
+      // The contact form's e-mails: to the support mailbox and the sender.
+      SupportModule.registerWorker({
+        email,
+        notifications,
+        redisUrl: env.REDIS_URL,
+        support,
       }),
       ListingPhotosWorkerModule.register({ redisUrl: env.REDIS_URL }),
       InsightsModule.registerWorker({

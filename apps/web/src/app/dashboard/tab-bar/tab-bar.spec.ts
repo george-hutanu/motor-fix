@@ -250,7 +250,8 @@ describe('DashboardTabBar spacing', () => {
   // plus 4 px a side, never under the 44 px target.
   it('keeps each tab to its name plus 4 px a side, at least 44 px wide', () => {
     const css = readFileSync(join(__dirname, 'tab-bar.css'), 'utf8');
-    const tab = /\na \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    // The contact entry is a button drawn as the tabs, so it shares the rule.
+    const tab = /\na,\nbutton \{([^}]*)\}/.exec(css)?.[1] ?? '';
 
     expect(tab).toContain('min-width: 44px;');
     expect(tab).toContain('padding: 0 4px;');

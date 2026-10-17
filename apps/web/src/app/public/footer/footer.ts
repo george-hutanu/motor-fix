@@ -5,7 +5,8 @@ import { Overlays } from '@motor-fix/overlays';
 
 import { openCookieSettings } from '../../consent/cookie-settings/open-cookie-settings';
 
-// One line under every public page: the legal texts and the cookie settings.
+// One line under every public page: the legal texts, the cookie settings and
+// the contact page.
 @Component({
   imports: [RouterLink, TranslatePipe],
   selector: 'mf-public-footer',
