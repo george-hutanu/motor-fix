@@ -1070,6 +1070,29 @@ describe('the RAR number of a file', () => {
     }
   });
 
+  // @traces 204-FR-015
+  it.each([
+    ['a short number', 'submitted', ' ab ', 400],
+    ['a decided file', 'approved', 'CJ 221/2021', 409],
+    ['a non-admin', 'submitted', 'CJ 221/2021', 404],
+  ] as const)(
+    'logs nothing for a correction refused for %s',
+    async (_, status, number, code) => {
+      const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      try {
+        const file = await fileIn(status);
+        const by = code === 404 ? mihai : undefined;
+
+        expect(await refusal(correct(file.id, number, by))).toMatchObject({
+          status: code,
+        });
+        expect(log).not.toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
+
   it.each(['approved', 'rejected', 'more_requested'] as const)(
     'is refused with 409 on a file that is %s',
     async (status) => {
