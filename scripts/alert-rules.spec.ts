@@ -246,6 +246,16 @@ const EXPECTED: Record<
     type: 'gt',
     value: 3,
   },
+  'worker-cdn-purge-failed': {
+    expr: [
+      'by (deployment_environment)',
+      'increase(motorfix_cdn_purges_total{outcome="failed"}[5m])',
+    ],
+    for: '15m',
+    from: 300,
+    type: 'gt',
+    value: 0,
+  },
   'worker-down': {
     expr: [
       'target_info{service_name="worker"}[24h]',
@@ -472,7 +482,7 @@ describe('alert rules', () => {
   // @traces 267-FR-023
   // @traces 1182-FR-014
   // @traces 1169-FR-012
-  it('holds exactly the twenty rules, each with its threshold, window and wait', () => {
+  it('holds exactly the twenty-one rules, each with its threshold, window and wait', () => {
     const rules = OWN.flatMap((name) =>
       files[name] ? rulesOf(files[name]) : [],
     );
