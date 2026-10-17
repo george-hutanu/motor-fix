@@ -112,6 +112,17 @@ describe('ResultsMap, the legend', () => {
 
     expect(legend()).toEqual(['takes BMW', "doesn't", 'lei per hour']);
   });
+
+  it('holds the brand line as a placeholder until the brand is known, never a bare "primește"', async () => {
+    await render();
+    fixture.componentRef.setInput('brand', '');
+    fixture.detectChanges();
+
+    expect(legend()).toEqual(['', 'nu primește', 'lei pe oră']);
+    expect(
+      element().querySelector('.legend .takes + .skeleton'),
+    ).not.toBeNull();
+  });
 });
 
 // @traces 269-FR-015

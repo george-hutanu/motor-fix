@@ -4,7 +4,8 @@
 
 .map {
   background: var(--mf-panel);
-  border-radius: var(--mf-radius-panel);
+  /* The board's map panel: 24 px, rounder than the 20 px panels. */
+  border-radius: 24px;
   height: 100%;
   overflow: hidden;
   position: relative;
@@ -98,4 +99,14 @@
   from {
     opacity: 0;
   }
+}
+
+/* The brand line until the search names the brand. */
+.legend .skeleton {
+  background: currentColor;
+  border-radius: var(--mf-radius-chip);
+  display: inline-block;
+  height: 0.75em;
+  opacity: 0.15;
+  width: 5em;
 }
