@@ -8,6 +8,10 @@ const whole = (language: 'ro' | 'en', kind: LegalText) =>
     .join('\n');
 
 const CONTACT = { en: /from your account/, ro: /din contul tău/ } as const;
+const WRITE_FROM_ACCOUNT = {
+  en: /writ\w+ to us (at the address above )?(or )?from your account/,
+  ro: /(ne scrii|scriindu‑ne) (la adresa de mai sus )?(sau )?din contul tău/,
+} as const;
 
 describe('the final legal texts', () => {
   // @traces 243-FR-001
@@ -153,7 +157,7 @@ describe('the operator and how to reach it', () => {
     },
   );
 
-  // @traces 1203-FR-010
+  // @traces 1203-FR-010 005-FR-014
   it.each(languages)(
     'the %s operator details add no other address, phone number or officer',
     (language) => {
@@ -165,6 +169,23 @@ describe('the operator and how to reach it', () => {
       expect(text).not.toMatch(
         /\+40|\b0\d{9}\b|DPO|data protection officer|responsabil/i,
       );
+    },
+  );
+
+  // @traces 005-FR-014
+  it.each([
+    ['en', /the address above/],
+    ['ro', /adresa de mai sus/],
+  ] as const)(
+    'every %s paragraph after the first section that sends a right to the account also points to the address above',
+    (language, above) => {
+      const later = LEGAL_TEXTS[language].privacy.sections
+        .slice(1)
+        .flatMap((s) => s.paragraphs)
+        .filter((p) => WRITE_FROM_ACCOUNT[language].test(p));
+      expect(later.length).toBeGreaterThanOrEqual(3);
+      for (const paragraph of later) expect(paragraph).toMatch(above);
+      expect(first(language)).not.toMatch(above);
     },
   );
 
