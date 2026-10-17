@@ -273,6 +273,9 @@ export class CacheService {
         recordWarmRead(kindOf(spec.key), (performance.now() - began) / 1000);
       }
       const { entry, hardMs } = this.entry(spec, filled);
+      // Counted before the entry is sent: whoever finds it in Redis finds
+      // its count already there.
+      if (!background) this.count(spec.key, 'miss');
       const tags = filled.tags ?? [];
       await this.attempt(() =>
         this.redis.eval(
@@ -285,7 +288,6 @@ export class CacheService {
           start,
         ),
       );
-      if (!background) this.count(spec.key, 'miss');
       return entry;
     } finally {
       await this.attempt(() => this.redis.eval(RELEASE, 1, lock, token));

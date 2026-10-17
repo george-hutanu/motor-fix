@@ -290,6 +290,52 @@ describe('the cache service', () => {
     expect(outcomes).toEqual({ 'profile warm': 1 });
   });
 
+  // @traces 1348-FR-006
+  it('records the miss before the entry is sent to Redis, and the warm count likewise', async () => {
+    const redis = client();
+    const cache = new CacheService(redis);
+    const evaluate = redis.eval.bind(redis);
+    const atStore: Record<string, number>[] = [];
+    jest.spyOn(redis, 'eval').mockImplementation(async (...args) => {
+      if (String(args[0]).includes('ZADD')) atStore.push(await counts());
+      return evaluate(...args);
+    });
+    const { read } = source(1, 0);
+
+    const missBefore = (await counts())['profile miss'] ?? 0;
+    await cache.read({ key: key(), read, soft: 600 });
+    const warmBefore = (await counts())['profile warm'] ?? 0;
+    await cache.warm(() => cache.read({ key: key(), read, soft: 600 }));
+
+    expect(atStore).toHaveLength(2);
+    expect(atStore[0]?.['profile miss']).toBe(missBefore + 1);
+    expect(atStore[1]?.['profile warm']).toBe(warmBefore + 1);
+  });
+
+  // @traces 1348-FR-006
+  it('counts the miss exactly once when the store fails', async () => {
+    const redis = client();
+    const cache = new CacheService(redis);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const evaluate = redis.eval.bind(redis);
+    jest
+      .spyOn(redis, 'eval')
+      .mockImplementation((...args) =>
+        String(args[0]).includes('ZADD')
+          ? Promise.reject(new Error('READONLY'))
+          : evaluate(...args),
+      );
+
+    const outcomes = await counting(() =>
+      expect(
+        cache.read({ key: key(), read: source(5, 0).read, soft: 600 }),
+      ).resolves.toBe(5),
+    );
+
+    expect(outcomes).toEqual({ 'profile miss': 1 });
+  });
+
   it('reads a value that is not one of its entries as a miss, and writes over it', async () => {
     const cache = new CacheService(client());
     const k = key();
