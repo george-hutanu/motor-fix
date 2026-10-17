@@ -157,3 +157,33 @@ export function countAccountChange(field: AccountChangeField) {
     "Changes to an account's own details, by field",
   ).add(1, { field });
 }
+
+export type SupportMessageOutcome =
+  | 'stored'
+  | 'refused_limit'
+  | 'trap'
+  | 'invalid';
+export type SupportEmailKind = 'support' | 'acknowledgement';
+export type SupportEmailOutcome =
+  | 'sent'
+  | 'blocked'
+  | 'failed'
+  | 'unconfigured';
+
+// A maintenance refusal is counted by motorfix_maintenance_refusals_total.
+export function countSupportMessage(outcome: SupportMessageOutcome) {
+  counter(
+    'motorfix_support_messages_total',
+    'Messages sent through the contact form, by outcome',
+  ).add(1, { outcome });
+}
+
+export function countSupportEmail(
+  kind: SupportEmailKind,
+  outcome: SupportEmailOutcome,
+) {
+  counter(
+    'motorfix_support_emails_total',
+    "A support message's e-mails, by kind and outcome",
+  ).add(1, { kind, outcome });
+}

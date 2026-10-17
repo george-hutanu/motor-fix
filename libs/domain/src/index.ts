@@ -100,5 +100,7 @@ export { SearchModule } from './search/search.module';
 export { StatusModule } from './status/status.module';
 export * from './storage/storage.module';
 export { type SignedUpload, StorageService } from './storage/storage.service';
+export { SupportModule } from './support/support.module';
+export { type SupportConfig, supportConfig } from './support/support-config';
 export { DaySheetService } from './workshop/day-sheet/day-sheet.service';
 export { WorkshopModule } from './workshop/workshop.module';

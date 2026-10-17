@@ -19,6 +19,8 @@ import {
   countRequestReceived,
   countSearch,
   countSignIn,
+  countSupportEmail,
+  countSupportMessage,
   countVerificationResult,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
@@ -31,6 +33,19 @@ const STEP_ACTIONS = [
   'ticked',
   'unticked',
 ] as const;
+
+const SUPPORT_MESSAGE_OUTCOMES = [
+  'stored',
+  'refused_limit',
+  'trap',
+  'invalid',
+] as const;
+const SUPPORT_EMAILS = (['support', 'acknowledgement'] as const).flatMap(
+  (kind) =>
+    (['sent', 'blocked', 'failed', 'unconfigured'] as const).map(
+      (outcome) => [kind, outcome] as const,
+    ),
+);
 
 const GARAGE_REPORT_OUTCOMES = [
   'created',
@@ -98,6 +113,12 @@ function countEverySeries() {
   (['built', 'skipped'] as const).forEach((outcome) => {
     countVerificationResult(outcome);
   });
+  SUPPORT_MESSAGE_OUTCOMES.forEach((outcome) => {
+    countSupportMessage(outcome);
+  });
+  SUPPORT_EMAILS.forEach(([kind, outcome]) => {
+    countSupportEmail(kind, outcome);
+  });
 }
 
 // @traces 206-FR-016
@@ -105,6 +126,7 @@ function countEverySeries() {
 // @traces 251-FR-018
 // @traces 139-FR-019
 // @traces 209-FR-014
+// @traces 280-FR-021
 describe('the product counters', () => {
   it.each([
     [
@@ -199,6 +221,22 @@ describe('the product counters', () => {
           () => countVerificationResult(outcome),
           'motorfix_verification_result_total',
           { outcome },
+        ] as const,
+    ),
+    ...SUPPORT_MESSAGE_OUTCOMES.map(
+      (outcome) =>
+        [
+          () => countSupportMessage(outcome),
+          'motorfix_support_messages_total',
+          { outcome },
+        ] as const,
+    ),
+    ...SUPPORT_EMAILS.map(
+      ([kind, outcome]) =>
+        [
+          () => countSupportEmail(kind, outcome),
+          'motorfix_support_emails_total',
+          { kind, outcome },
         ] as const,
     ),
     ...GARAGE_REPORT_OUTCOMES.map(

@@ -22,6 +22,7 @@ export { QuotesService } from './services/quotes.service';
 export { GarageJobsService } from './services/garage-jobs.service';
 export { PlacesService } from './services/places.service';
 export { GaragesService } from './services/garages.service';
+export { SupportService } from './services/support.service';
 export { InvitesService } from './services/invites.service';
 export { VerificationDocumentsService } from './services/verification-documents.service';
 export { ListingDraftsService } from './services/listing-drafts.service';
