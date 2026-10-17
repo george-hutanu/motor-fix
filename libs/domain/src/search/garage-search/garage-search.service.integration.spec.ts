@@ -24,8 +24,8 @@ const { prisma } = fixtures();
 // PostgreSQL's answer every time: the cases change rows between reads, and
 // garage-search.cache.integration.spec.ts covers the cache.
 const uncached = {
-  page: (_key, read) => read(),
-} satisfies Pick<GarageSearchCache, 'page'> as unknown as GarageSearchCache;
+  entry: (_key, read) => read(),
+} satisfies Pick<GarageSearchCache, 'entry'> as unknown as GarageSearchCache;
 const search = new GarageSearchService(
   prisma,
   uncached,
@@ -773,5 +773,166 @@ describe('refreshing the cards shown', () => {
     const [item] = (await search.byIds(dacia, [near], CLUJ)).items;
 
     expect(item).toMatchObject({ comesToYou: false, distanceKm: 11.1 });
+  });
+});
+
+// A box over Cluj reaching 0.35° north: past the 25 km circle, short of
+// 'La 55 km'.
+const BOX = {
+  east: CLUJ.lng + 0.1,
+  north: CLUJ.lat + 0.35,
+  south: CLUJ.lat - 0.05,
+  west: CLUJ.lng - 0.1,
+};
+const OTHER_BOX = { ...BOX, north: CLUJ.lat + 0.36 };
+// The row is written on the next turn of the event loop.
+const settled = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+// @traces 269-FR-005
+// @traces 269-FR-006
+// @traces 269-FR-021
+describe('the list of a box on the map', () => {
+  const names = (page: Page) => page.items.map((item) => item.name);
+
+  it('lists the fixed garages inside the box, past the radius, and the mobile mechanics over the place', async () => {
+    await at('Aproape', 0.1);
+    await at('La 33 km', 0.3);
+    await at('La 55 km', 0.5);
+    await at('Mobil 20', 0.3, 20);
+    await at('Mobil 35', 0.3, 35);
+
+    const page = await search.forBrand(dacia, undefined, CLUJ, 25, false, BOX);
+
+    expect(names(page)).toEqual(['Aproape', 'La 33 km', 'Mobil 35']);
+    expect(page.total).toBe(3);
+  });
+
+  it('ignores the radius', async () => {
+    await at('Aproape', 0.1);
+    await at('La 33 km', 0.3);
+    await at('La 55 km', 0.5);
+
+    const narrow = await search.forBrand(
+      dacia,
+      undefined,
+      CLUJ,
+      25,
+      false,
+      BOX,
+    );
+    const wide = await search.forBrand(dacia, undefined, CLUJ, 50, false, BOX);
+
+    expect(wide).toEqual(narrow);
+  });
+
+  it('lists no mobile mechanic for a box alone', async () => {
+    await at('Aproape', 0.1);
+    await at('Mobil 35', 0.1, 35);
+
+    const page = await search.forBrand(
+      dacia,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      BOX,
+    );
+
+    expect(names(page)).toEqual(['Aproape']);
+  });
+
+  it('keeps the groups, their order, the counts and the distances from the place', async () => {
+    const low = await rated('Alfa', 3, 'works_on');
+    const high = await rated('Beta', 5, 'works_on');
+    const other = await rated('Gama', 4.5, 'does_not_take');
+    for (const id of [low, high, other]) {
+      await prisma.garage.update({
+        data: { latitude: CLUJ.lat + 0.1, longitude: CLUJ.lng },
+        where: { id },
+      });
+    }
+
+    const page = await search.forBrand(dacia, undefined, CLUJ, 25, false, BOX);
+
+    expect(page.items.map((item) => item.id)).toEqual([high, low, other]);
+    expect(page).toMatchObject({
+      counts: { doesNotTake: 1, worksOn: 2 },
+      total: 3,
+    });
+    expect(page.items[0]).toMatchObject({
+      comesToYou: false,
+      distanceKm: 11.1,
+    });
+  });
+
+  describe('paging', () => {
+    let cursor: string;
+
+    beforeEach(async () => {
+      for (let n = 0; n < 21; n += 1) {
+        await at(`Garage ${String(n).padStart(2, '0')}`, 0.01);
+      }
+      cursor =
+        (await search.forBrand(dacia, undefined, CLUJ, 25, false, BOX))
+          .nextCursor ?? '';
+    });
+
+    it('pages on with a cursor of the same box', async () => {
+      const next = await search.forBrand(dacia, cursor, CLUJ, 25, false, BOX);
+
+      expect(names(next)).toEqual(['Garage 20']);
+    });
+
+    it.each([
+      ['of another box', () => [cursor, OTHER_BOX] as const],
+      ['of the box, without it', () => [cursor, undefined] as const],
+    ])('refuses a cursor %s', async (_, args) => {
+      const [given, box] = args();
+
+      expect(
+        await refusal(search.forBrand(dacia, given, CLUJ, 25, false, box)),
+      ).toMatchObject({ body: { code: 'invalid_cursor' }, status: 400 });
+    });
+
+    it('refuses a cursor of the circle search in a box', async () => {
+      const circle = (await search.forBrand(dacia, undefined, CLUJ)).nextCursor;
+
+      expect(
+        await refusal(
+          search.forBrand(dacia, circle ?? undefined, CLUJ, 25, false, BOX),
+        ),
+      ).toMatchObject({ body: { code: 'invalid_cursor' }, status: 400 });
+    });
+  });
+
+  it('writes no search log row when asked to log a box, as it does for the search itself', async () => {
+    await at('Aproape', 0.1);
+
+    await search.forBrand(dacia, undefined, CLUJ, 25, true, BOX);
+    await settled();
+    expect(await prisma.searchLog.count()).toBe(0);
+
+    await search.forBrand(dacia, undefined, CLUJ, 25, true);
+    await settled();
+    expect(await prisma.searchLog.count()).toBe(1);
+  });
+
+  it('counts no search for a move of the map', async () => {
+    await at('Aproape', 0.1);
+    const before = await searches('results');
+
+    await search.forBrand(dacia, undefined, CLUJ, 25, false, BOX);
+
+    expect(await searches('results')).toBe(before);
+  });
+
+  it("reads the cards shown again with the box's counts", async () => {
+    const near = await at('Aproape', 0.1);
+    await at('La 33 km', 0.3);
+
+    const page = await search.byIds(dacia, [near], CLUJ, 25, BOX);
+
+    expect(page.items.map((item) => item.id)).toEqual([near]);
+    expect(page.total).toBe(2);
   });
 });

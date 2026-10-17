@@ -595,6 +595,8 @@
     "area": "în {km} km de {place}",
     "areaPicked": "în {km} km de locul ales",
     "areaYou": "în {km} km de tine",
+    "back": "Înapoi la {km} km",
+    "backRomania": "Înapoi la toată România",
     "card": {
       "doesNotTake": "nu primește {brand}",
       "mobile": "Mecanic mobil · vine la tine · rază {km} km",
@@ -609,12 +611,26 @@
       "one": "{count} service găsit",
       "other": "{count} de service‑uri găsite"
     },
+    "inArea": {
+      "few": "{count} service‑uri în zona hărții",
+      "one": "{count} service în zona hărții",
+      "other": "{count} de service‑uri în zona hărții"
+    },
     "list": "Service‑uri găsite",
     "live": {
       "removed": "{name} nu mai apare în listă",
       "updated": "{name} s‑a actualizat"
     },
     "loading": "Se încarcă rezultatele",
+    "map": {
+      "label": "Harta service‑urilor",
+      "mobile": "Mecanic mobil · zona deservită",
+      "rate": "lei pe oră",
+      "refuses": "nu primește",
+      "takes": "primește {brand}",
+      "unavailable": "Harta nu este disponibilă acum",
+      "zoomIn": "Apropie harta"
+    },
     "newSearch": "Căutare nouă",
     "none": "Niciun service găsit",
     "noneNear": "Niciun service în {km} km",
@@ -632,6 +648,16 @@
     },
     "title": "Service‑uri pentru {brand}",
     "widen": "Caută în {km} km"
+  },
+  "saveGarage": {
+    "failed": "Nu a mers. Încearcă din nou.",
+    "noConnection": "Fără conexiune",
+    "removed": "Scos din salvate",
+    "save": "Salvează",
+    "saved": "Salvat",
+    "savedToast": "Salvat în Service‑uri salvate",
+    "unavailable": "Indisponibil",
+    "undo": "Anulează"
   },
   "signIn": {
     "brand": "MotorFix",

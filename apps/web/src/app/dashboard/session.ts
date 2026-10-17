@@ -550,3 +550,17 @@ export class Session {
     }
   }
 }
+
+// A garage-side role last seen may outlive its session (an expired or
+// cleared cookie): one renewal confirms it, and a failed one clears it. A
+// visitor or a driver asks nobody. Called from a constructor.
+export function confirmRoleHint(session: Session) {
+  const hint = session.roleHint();
+  if (
+    isPlatformBrowser(inject(PLATFORM_ID)) &&
+    !session.current() &&
+    hint !== null &&
+    hint !== 'driver'
+  )
+    void session.renew();
+}

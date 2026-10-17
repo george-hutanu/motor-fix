@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ready } from './accounts.js';
+import { ownMap, ready } from './accounts.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -203,5 +203,324 @@ test.describe('the Results page @seeded', () => {
       `1 lucrează pe ${brand.name}`,
     );
     expect(navigations).toBe(0);
+  });
+});
+
+// Garages of this file's own with a position, in the Danube delta, where no
+// seeded garage stands: the pins of a search near there are exactly these.
+// @traces 269-FR-002
+// @traces 269-FR-003
+// @traces 269-FR-012
+test.describe('the map beside the results @seeded', () => {
+  test.skip(
+    !process.env['DATABASE_URL'],
+    'writes its brand and garages straight to PostgreSQL, which needs DATABASE_URL',
+  );
+  // One worker seeds the brand once: parallel workers share the stamp.
+  test.describe.configure({ mode: 'serial' });
+
+  const stamp = `${Date.now().toString(36)}m`;
+  const brand = { name: `Marca Harta ${stamp}`, slug: `marca-harta-${stamp}` };
+  // Far from the other describe's empty place, which runs beside it.
+  const near = '45.350,22.850';
+  const placed = [
+    { at: [45.36, 22.86], bani: 15049, kind: 'company', stance: 'works_on' },
+    { at: [45.34, 22.84], bani: 9000, kind: 'company', stance: 'works_on' },
+    {
+      at: [45.355, 22.83],
+      bani: 20000,
+      kind: 'company',
+      stance: 'does_not_take',
+    },
+    { at: [45.35, 22.87], bani: 12000, kind: 'mobile', stance: 'works_on' },
+  ] as const;
+  let db: Client;
+  let brandId = '';
+  const ids: string[] = [];
+
+  test.beforeAll(async () => {
+    db = new Client({ connectionString: process.env['DATABASE_URL'] });
+    await db.connect();
+    const made = await db.query<{ id: string }>(
+      `INSERT INTO brand (id, key, name, slug, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $1, now()) RETURNING id`,
+      [brand.slug, brand.name],
+    );
+    brandId = made.rows[0]?.id ?? '';
+    for (const [i, garage] of placed.entries()) {
+      const row = await db.query<{ id: string }>(
+        `INSERT INTO garage (id, name, slug, status, approved_at, latitude, longitude,
+                             labour_from_bani, labour_to_bani, business_kind, service_radius_km)
+         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), $3, $4, $5, $5, $6, $7)
+         RETURNING id`,
+        [
+          `Service Harta ${stamp} ${i}`,
+          `e2e-harta-${stamp}-${i}`,
+          garage.at[0],
+          garage.at[1],
+          garage.bani,
+          garage.kind,
+          garage.kind === 'mobile' ? 10 : null,
+        ],
+      );
+      const id = row.rows[0]?.id ?? '';
+      ids.push(id);
+      await db.query(
+        `INSERT INTO garage_brand (garage_id, brand_id, stance, petrol, diesel, hybrid, electric, updated_at)
+         VALUES ($1, $2, $3, $4, $4, $4, $4, now())`,
+        [id, brandId, garage.stance, garage.stance === 'works_on'],
+      );
+    }
+  });
+
+  test.afterAll(async () => {
+    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
+    await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
+    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await db.end();
+  });
+
+  test('draws one pin per fixed garage of the search, with its rate and the colour of its stance', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    // Read as it lands: a body left until later may be gone from the browser.
+    const answer = page
+      .waitForResponse(
+        (r) => r.url().includes('/api/v1/search/garages/pins?') && r.ok(),
+      )
+      .then((r) => r.json() as Promise<{ total: number }>);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    const { total } = await answer;
+
+    await expect(
+      page.getByRole('region', { name: 'Harta service‑urilor' }),
+    ).toBeVisible();
+    const drawn = () =>
+      page.evaluate(async () => {
+        type Feature = { properties: { rate: string; stance: string } };
+        const map = (
+          window as unknown as {
+            __MF_MAP?: {
+              getSource(
+                id: string,
+              ): { getData(): Promise<{ features: Feature[] }> } | undefined;
+            };
+          }
+        ).__MF_MAP;
+        const data = await map?.getSource('pins')?.getData();
+        return (data?.features ?? [])
+          .map((f) => `${f.properties.rate} ${f.properties.stance}`)
+          .sort();
+      });
+
+    await expect
+      .poll(drawn)
+      .toEqual(['150 works_on', '200 does_not_take', '90 works_on']);
+    expect(total).toBe(4);
+  });
+
+  // @traces 269-FR-014
+  // @traces 269-FR-015
+  test('draws the mobile mechanic over the place as a circle with its rate, and no pin', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+
+    const drawn = () =>
+      page.evaluate(async () => {
+        type Feature = {
+          geometry: { type: string };
+          properties: { id: string; rate: string };
+        };
+        const map = (
+          window as unknown as {
+            __MF_MAP?: {
+              getSource(
+                id: string,
+              ): { getData(): Promise<{ features: Feature[] }> } | undefined;
+            };
+          }
+        ).__MF_MAP;
+        const of = async (id: string) =>
+          (await map?.getSource(id)?.getData())?.features ?? [];
+        return {
+          areas: (await of('areas')).map(
+            (f) => `${f.properties.id} ${f.geometry.type} ${f.properties.rate}`,
+          ),
+          pins: (await of('pins')).map((f) => f.properties.id),
+        };
+      });
+
+    await expect
+      .poll(async () => (await drawn()).areas)
+      .toEqual([`${ids[3]} Polygon 120`]);
+    expect((await drawn()).pins).not.toContain(ids[3]);
+    await expect(
+      page
+        .getByRole('region', { name: 'Harta service‑urilor' })
+        .getByText('Mecanic mobil · zona deservită'),
+    ).toBeVisible();
+  });
+
+  // @traces 269-FR-007
+  // @traces 269-FR-008
+  test('follows the map the driver drags, and goes back to the 25 km search', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    const tally = page.locator('.summary .tally');
+    await expect(tally).toContainText('4 service‑uri găsite');
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as unknown as { __MF_MAP?: unknown }).__MF_MAP !==
+            undefined,
+        ),
+      )
+      .toBe(true);
+
+    // Away from the fixed garages; a jump is not the driver's, so it loads nothing.
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          __MF_MAP: { jumpTo(view: object): void };
+        }
+      ).__MF_MAP.jumpTo({ center: [22.6, 45.49], zoom: 12 }),
+    );
+    const boxed = page.waitForResponse(
+      (r) =>
+        r.url().includes('/api/v1/search/garages?') &&
+        r.url().includes('bbox=') &&
+        r.ok(),
+    );
+    const canvas = page.locator('mf-results-map .canvas canvas');
+    const at = await canvas.boundingBox();
+    if (!at) throw new Error('the map has no canvas');
+    const x = at.x + at.width / 2;
+    const y = at.y + at.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 40, y + 20, { steps: 8 });
+    await page.mouse.up();
+    await boxed;
+
+    // Only the mobile mechanic, whose area covers the place, is left.
+    await expect(tally).toContainText('1 service în zona hărții');
+    await expect(page.locator('mf-result-card')).toHaveCount(1);
+
+    await page.getByRole('button', { name: 'Înapoi la 25 km' }).click();
+
+    await expect(tally).toContainText('4 service‑uri găsite');
+    await expect(page.locator('mf-result-card')).toHaveCount(4);
+  });
+
+  // @traces 269-FR-010
+  test('puts the map above the list on a phone, with no sideways scroll at 320 px or 390 px', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    for (const [width, lang, region, scheme] of [
+      [320, 'ro', 'Harta service‑urilor', 'light'],
+      [390, 'en', 'Map of garages', 'dark'],
+    ] as const) {
+      await page.setViewportSize({ height: 800, width });
+      await page.emulateMedia({ colorScheme: scheme });
+      await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+      const map = page.getByRole('region', { name: region });
+
+      await expect(page.locator('mf-result-card')).toHaveCount(4);
+      await expect(map.locator('.legend')).toBeVisible();
+      const mapBox = await map.boundingBox();
+      const cardBox = await page
+        .locator('mf-result-card')
+        .first()
+        .boundingBox();
+      expect(mapBox && cardBox && mapBox.y + mapBox.height <= cardBox.y).toBe(
+        true,
+      );
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+        ),
+      ).toBe(false);
+    }
+  });
+
+  // @traces 269-FR-017
+  test('keeps every card when the map cannot load, and says so on the map', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as { __MF_MAP_STYLE?: string }).__MF_MAP_STYLE =
+        '/map/no-such-style.json';
+    });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+
+    await expect(page.locator('mf-result-card')).toHaveCount(4);
+    await expect(
+      page
+        .getByRole('region', { name: 'Harta service‑urilor' })
+        .getByRole('status'),
+    ).toHaveText('Harta nu este disponibilă acum');
+    await expect(page.locator('.state[role="alert"]')).toHaveCount(0);
+  });
+
+  // Last: the garage it suspends stays suspended for the rest of the file.
+  // @traces 269-FR-018
+  test('takes the pin of a garage suspended while the page is open off the map within 2 seconds', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    const stream = page.waitForResponse(
+      (r) =>
+        r.url().includes('/api/v1/live/public?') &&
+        r.url().includes('garages=') &&
+        r.ok(),
+    );
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await stream;
+    const pinned = () =>
+      page.evaluate(async () => {
+        type Feature = { properties: { id: string } };
+        const map = (
+          window as unknown as {
+            __MF_MAP?: {
+              getSource(
+                id: string,
+              ): { getData(): Promise<{ features: Feature[] }> } | undefined;
+            };
+          }
+        ).__MF_MAP;
+        const data = await map?.getSource('pins')?.getData();
+        return (data?.features ?? []).map((f) => f.properties.id).sort();
+      });
+    await expect.poll(pinned).toHaveLength(3);
+    const id = ids[0];
+
+    // Written as the admin's suspension writes it, with the same audience.
+    await db.query('BEGIN');
+    await db.query(`UPDATE garage SET status = 'suspended' WHERE id = $1`, [
+      id,
+    ]);
+    await db.query(
+      `INSERT INTO outbox_event (kind, subject_id, audience)
+       VALUES ('garage.suspended', $1, $2)`,
+      [id, [`garage:${id}`, `public:garage:${id}`, 'public:search']],
+    );
+    await db.query('COMMIT');
+
+    // The card leaves when the event arrives; the outbox relay's own delay
+    // comes before it, the 2 seconds after.
+    const card = page
+      .locator('mf-result-card')
+      .filter({ hasText: `Service Harta ${stamp} 0` });
+    await expect(card).toHaveCount(0, { timeout: 15_000 });
+    await expect.poll(pinned, { timeout: 2_000 }).not.toContain(id);
   });
 });

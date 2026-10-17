@@ -56,7 +56,7 @@ export class HomeService {
     if (!brand) {
       throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'no such brand');
     }
-    const area = point && (await garagesInArea(this.prisma, point));
+    const area = point && (await garagesInArea(this.prisma, { point }));
     const groups = groupsOf(brand.id, area);
     const inArea = area && { id: { in: [...area.keys()] } };
     const [total, takers, best, others] = await Promise.all([

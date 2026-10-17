@@ -9,8 +9,11 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { GaragePinsDto } from '../models/garage-pins-dto';
 import { garageSearchControllerForBrand } from '../fn/search/garage-search-controller-for-brand';
 import { GarageSearchControllerForBrand$Params } from '../fn/search/garage-search-controller-for-brand';
+import { garageSearchControllerPins } from '../fn/search/garage-search-controller-pins';
+import { GarageSearchControllerPins$Params } from '../fn/search/garage-search-controller-pins';
 import { GarageSearchPageDto } from '../models/garage-search-page-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -42,6 +45,31 @@ export class SearchService extends BaseService {
   garageSearchControllerForBrand(params?: GarageSearchControllerForBrand$Params, context?: HttpContext): Promise<GarageSearchPageDto> {
     const resp = this.garageSearchControllerForBrand$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageSearchPageDto>): GarageSearchPageDto => r.body);
+  }
+
+  /** Path part for operation `garageSearchControllerPins()` */
+  static readonly GarageSearchControllerPinsPath = '/api/v1/search/garages/pins';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageSearchControllerPins()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageSearchControllerPins$Response(params?: GarageSearchControllerPins$Params, context?: HttpContext): Promise<StrictHttpResponse<GaragePinsDto>> {
+    const obs = garageSearchControllerPins(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageSearchControllerPins$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageSearchControllerPins(params?: GarageSearchControllerPins$Params, context?: HttpContext): Promise<GaragePinsDto> {
+    const resp = this.garageSearchControllerPins$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GaragePinsDto>): GaragePinsDto => r.body);
   }
 
 }

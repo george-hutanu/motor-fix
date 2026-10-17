@@ -75,7 +75,9 @@ describe('MaintenancePage', () => {
   });
 
   it('answers 503 with a time to come back when rendered on the server', async () => {
-    const init: ResponseInit = {};
+    const init: ResponseInit = {
+      headers: new Headers({ 'Content-Type': 'text/html;charset=UTF-8' }),
+    };
     TestBed.configureTestingModule({
       providers: [{ provide: RESPONSE_INIT, useValue: init }],
     });
@@ -83,6 +85,9 @@ describe('MaintenancePage', () => {
     await render();
 
     expect(init.status).toBe(503);
-    expect(init.headers).toEqual({ 'Retry-After': '300' });
+    const headers = new Headers(init.headers);
+    expect(headers.get('retry-after')).toBe('300');
+    // The render's own type stays, so the page is still served as HTML.
+    expect(headers.get('content-type')).toBe('text/html;charset=UTF-8');
   });
 });

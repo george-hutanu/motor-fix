@@ -6,6 +6,7 @@ features:
   - 090-itp-status-lamp
   - 092-edit-remove-car
   - 1169-prefetch-intent
+  - 290-save-garage
   - 029-overview-panels-own-data
 ---
 
@@ -139,6 +140,41 @@ _From 092-edit-remove-car._
 
 _From 1169-prefetch-intent._
 
+### 290-FR-001 — The system MUST store a saved garage as SAVED_GARAGE in the `cars` module: account (the driver's account), garage, and `saved_at` (UTC). The pair (account, garage) MUST be unique; a row is deleted on removal (no soft delete). No limit on the number of rows per account.
+
+_From 290-save-garage._
+
+### 290-FR-002 — `PUT /api/v1/me/saved-garages/:garageId` MUST save the garage for the actor's own account and answer 201 with `{ garageId, savedAt }` when a row was created, or 200 with the existing row when it already existed, changing nothing. An optional body `{ savedAt }` (an undo) MUST set `saved_at` to that time on a created row; a `savedAt` in the future (later than the server's now) MUST be refused with 422 `saved_at_in_future` and create nothing; a malformed body, or a `:garageId` that is not a valid id, answers 400 `validation_failed` on all three routes that take one (save and remove).
+
+_From 290-save-garage._
+
+### 290-FR-003 — Only an `approved` garage MAY be saved: a `draft`, `suspended` or unknown garage id answers 404 `not_found` with no garage data, and nothing is stored.
+
+_From 290-save-garage._
+
+### 290-FR-004 — `DELETE /api/v1/me/saved-garages/:garageId` MUST delete the actor's row for that garage and answer 200 with `{ garageId, savedAt }` (the removed row's time, which the undo sends back); when no row exists it MUST answer 204 and change nothing. It MUST work whatever the garage's status.
+
+_From 290-save-garage._
+
+### 290-FR-005 — `GET /api/v1/me/saved-garages/ids` MUST answer `{ ids: [garageId, …] }`, the actor's saved garage ids, every row whatever the garage's status, in no promised order; it is uncached and is the only read of this story (the list with names and dates is #169).
+
+_From 290-save-garage._
+
+### 290-FR-006 — An account whose role in use is not `driver` (no `driver` role, or acting in another role) MUST be answered 403 `driver_role_required` on all three routes (the Build brief's rule; a role check ahead of the capability check); the capability check `driver.saved_garages` stays after it, so a driver whose capabilities ever lack it keeps the capability policy's 404 (130-FR-003 unchanged; today every driver holds it, so no test reaches that branch); a visitor 401 `sign_in_required` as every gated route (130-FR-001). An account never reads or writes another account's rows: the routes are under `/me` and take no account id.
+
+_From 290-save-garage._
+
+### 290-FR-007 — The save and the removal MUST each write, in the same transaction as the row (390-FR-001), one audit entry — "garage saved" (action `create`, subject `saved_garage`, new values `{ garageId, savedAt }`) and "garage removed from saved" (action `delete`, old values the same) — as the driver's action, with **no** `garage_id` (and no car or job id), so the garage's audit view (391) never shows who saved it. An idempotent save (200) and a removal of nothing (204) write no entry.
+
+_From 290-save-garage._
+
+### 290-FR-016 — The three routes MUST be listed with their logs, metrics, dashboard panel and alert (or why not) in `infra/observability/inventory.json` in the same PR, as the constitution asks of every new endpoint.
+
+_From 290-save-garage._
+
+### 290-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: save (201, the row, the audit entry and the event in one transaction, rolled back together on a failed write), save twice (200, one row, no second entry or event), remove (200 with the time), remove when not saved (204), undo with `savedAt` (the first time kept) and a future `savedAt` (422), 404 for a `draft`, `suspended` and unknown garage, 403 without the `driver` role, 401 for a visitor, the ids read with none and several rows, and the audience of both event kinds. In Playwright: as a visitor, tap save on a profile, sign in, see "Salvat"; remove it and undo.
+
+_From 290-save-garage._
 ### 029-FR-003 — The oil-service line MUST use the shared lamp and sentence line. Distance left = next-service km − odometer km; estimated days = distance left ÷ (1,000 ÷ 30.44) km a day (the default 1,000 km a month of MF-23 rule 5, until ST-91 brings the readings), rounded to whole days; the lamp applies the ITP thresholds to those days (green over 60, amber 8 to 60, red 7 or fewer, red when 0 or passed). Sentences, with the kilometres in the person's number format: above 0 km "Schimb de ulei peste <n> km" / "Oil service due in <n> km"; at 0 km "Schimb de ulei acum" / "Oil service due now"; below 0 "Schimbul de ulei a trecut de <n> km" / "Oil service overdue by <n> km" (n positive). The colour is never the only signal (090-FR-004's rule). No grey oil line: ST-91 adds it with the field that writes the value.
 
 _From 029-overview-panels-own-data._

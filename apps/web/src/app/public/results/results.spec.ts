@@ -6,7 +6,9 @@ import { provideRouter, type Route, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
+  type GaragePinsDto,
   type GarageSearchControllerForBrand$Params,
+  type GarageSearchControllerPins$Params,
   type GarageSearchPageDto,
   type ListedGarageDto,
   SearchService,
@@ -17,6 +19,8 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { Results } from './results';
+import type { MapMove } from './results-map/pins-map';
+import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
 import { routes } from '../../app.routes';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
 import type { Place } from '../../home/place/place-store';
@@ -85,6 +89,33 @@ const searchApi = {
       }),
   ),
 };
+const pinsOf = (count: number): GaragePinsDto => ({
+  pins: Array.from({ length: count }, (_, i) => ({
+    id: `pin-${i}`,
+    lat: 44.4 + i / 1000,
+    lng: 26.1,
+    rateLei: 150,
+    stance: 'works_on' as const,
+  })),
+  total: count,
+});
+let pinsAnswer: GaragePinsDto;
+const pinsApi = jest.fn((_params: GarageSearchControllerPins$Params) =>
+  Promise.resolve(pinsAnswer),
+);
+Object.assign(searchApi, { garageSearchControllerPins: pinsApi });
+const mapView: jest.Mocked<ResultsMapView> = {
+  destroy: jest.fn(),
+  fit: jest.fn(),
+  show: jest.fn(),
+};
+let mapMoved: (move: MapMove) => void;
+const openMap = jest.fn(
+  (_host: HTMLElement, onMove: (move: MapMove) => void) => {
+    mapMoved = onMove;
+    return Promise.resolve(mapView);
+  },
+);
 let dialog: (value: OverlayResult<Place>) => void;
 const overlays = {
   open: jest.fn(
@@ -121,6 +152,7 @@ async function configure(platform = 'browser') {
       { provide: PLATFORM_ID, useValue: platform },
       { provide: PublicLive, useValue: live },
       { provide: REDUCED_MOTION, useValue: reduced },
+      { provide: RESULTS_MAP, useValue: openMap },
     ],
   });
   await TestBed.inject(I18n).enter('public');
@@ -131,6 +163,11 @@ beforeEach(() => {
   reads = [];
   localStorage.clear();
   searchApi.garageSearchControllerForBrand.mockClear();
+  pinsAnswer = pinsOf(48);
+  pinsApi.mockClear();
+  openMap.mockClear();
+  mapView.show.mockClear();
+  mapView.fit.mockClear();
   overlays.open.mockClear();
   live.register.mockClear();
   reduced.set(false);
@@ -927,6 +964,486 @@ describe('Results', () => {
         reads.slice(1).every((read) => read.params.near === '46.77,23.59'),
       ).toBe(true);
     });
+
+    // @traces 269-FR-018
+    describe('the pins', () => {
+      const pinsAsked = () => pinsApi.mock.calls.map(([q]) => q);
+
+      it.each([
+        'garage.updated',
+        'garage.suspended',
+        'garage.restored',
+        'verification.decided',
+      ])(
+        'reads the pins again on %s and draws the new answer',
+        async (kind) => {
+          quietly();
+          await loaded();
+          expect(pinsAsked()).toHaveLength(1);
+          pinsAnswer = pinsOf(47);
+
+          send(kind, 'pin-3');
+          await coalesce();
+
+          expect(pinsAsked()).toEqual([{ brand: 'bmw' }, { brand: 'bmw' }]);
+          expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(47));
+        },
+      );
+
+      it('leaves the map where the driver has it on a re-read', async () => {
+        quietly();
+        await loaded();
+        const fits = mapView.fit.mock.calls.length;
+        pinsAnswer = pinsOf(47);
+
+        send('garage.suspended', 'pin-3');
+        await coalesce();
+
+        expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(47));
+        expect(mapView.fit).toHaveBeenCalledTimes(fits);
+      });
+
+      it('reads the pins once for a burst of events', async () => {
+        quietly();
+        await loaded();
+
+        send('garage.updated', 'one');
+        send('garage.suspended', 'pin-7');
+        send('garage.restored', 'pin-8');
+        send('verification.decided', 'pin-9');
+        await coalesce();
+        await reads[1]?.answer();
+        await reads[2]?.answer();
+        await settle();
+
+        expect(pinsAsked()).toHaveLength(2);
+      });
+
+      it('reads no pins on a review event', async () => {
+        await loaded();
+
+        send('review.posted', 'review-9');
+        await coalesce();
+
+        expect(pinsAsked()).toHaveLength(1);
+      });
+
+      it('reads the pins of the box the map shows', async () => {
+        keep(PLACE);
+        await loaded();
+        mapMoved({ bbox: '44.4,26,44.5,26.2' });
+        await settle();
+        await reads[1]?.answer();
+
+        send('garage.updated', 'pin-3');
+        await coalesce();
+
+        expect(pinsAsked().at(-1)).toEqual({
+          bbox: '44.4,26,44.5,26.2',
+          brand: 'bmw',
+          near: '44.447,26.117',
+        });
+      });
+
+      it('keeps the pins shown when the re-read fails', async () => {
+        await loaded();
+        pinsApi.mockImplementationOnce(() =>
+          Promise.reject(new HttpErrorResponse({ status: 500 })),
+        );
+
+        send('garage.suspended', 'pin-3');
+        await coalesce();
+
+        expect(pinsAsked()).toHaveLength(2);
+        expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(48));
+        expect(page().querySelector('[role="alert"]')).toBeNull();
+      });
+
+      it('reads the pins again on each re-open of the stream', async () => {
+        await loaded();
+
+        resync.next();
+        await settle();
+
+        expect(pinsAsked()).toHaveLength(2);
+      });
+    });
+  });
+
+  describe('the map beside the list', () => {
+    beforeEach(() => configure());
+
+    // @traces 269-FR-001
+    it('asks for the pins of the same search, with no log and no ids', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw&radius=50');
+
+      expect(pinsApi.mock.calls.map(([q]) => q)).toEqual([
+        { brand: 'bmw', near: '44.447,26.117', radius: 50 },
+      ]);
+    });
+
+    // @traces 269-FR-016
+    it('shows the map region next to the list', async () => {
+      await open('/ro/garages?brand=bmw');
+
+      expect(
+        page()
+          .querySelector('mf-results-map section.map')
+          ?.getAttribute('aria-label'),
+      ).toBe('Harta service‑urilor');
+      expect(openMap).toHaveBeenCalledTimes(1);
+    });
+
+    // @traces 269-FR-002
+    it('draws every pin of the search while the list shows its first page', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(
+        pageOf({
+          items: Array.from({ length: 20 }, (_, i) =>
+            garageOf(`g-${i}`, `Service ${i}`),
+          ),
+        }),
+      );
+
+      expect(page().querySelectorAll('mf-result-card')).toHaveLength(20);
+      expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(48));
+      expect(mapView.show.mock.lastCall?.[0]?.pins).toHaveLength(48);
+    });
+
+    // @traces 269-FR-005
+    it('fits the map to the place and the pins once they come', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw');
+
+      expect(mapView.fit).toHaveBeenCalledWith(
+        { lat: PLACE.lat, lng: PLACE.lng },
+        pinsOf(48),
+      );
+    });
+
+    // @traces 269-FR-001
+    it('asks for the pins again when the search changes, and not on a live re-read', async () => {
+      keep(PLACE);
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(pageOf({ items: [], total: 0 }));
+      const wider = page().querySelector<HTMLButtonElement>('.state .primary');
+      expect(said(wider)).toBe('Caută în 50 km');
+      wider?.click();
+      await settle();
+      await settle();
+
+      expect(pinsApi.mock.calls.map(([q]) => q.radius)).toEqual([
+        undefined,
+        50,
+      ]);
+    });
+  });
+
+  // @traces 269-FR-017
+  describe('the map when something fails', () => {
+    beforeEach(() => configure());
+
+    const grey = () => page().querySelector('mf-results-map .placeholder');
+    const status = () => page().querySelector('mf-results-map [role="status"]');
+    const failPins = () =>
+      pinsApi.mockImplementationOnce(() =>
+        Promise.reject(new HttpErrorResponse({ status: 500 })),
+      );
+
+    it('shows a grey map while the search runs, even once the pins have come', async () => {
+      await open('/ro/garages?brand=bmw');
+
+      expect(pinsApi).toHaveBeenCalledTimes(1);
+      expect(grey()).not.toBeNull();
+
+      await reads[0]?.answer();
+
+      expect(grey()).toBeNull();
+    });
+
+    it('leaves the map without pins and says nothing over the list when the pins request fails', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer();
+
+      expect(page().querySelectorAll('mf-result-card')).toHaveLength(2);
+      expect(page().querySelector('[role="alert"]')).toBeNull();
+      expect(said(status())).toBe('');
+      expect(grey()).toBeNull();
+      expect(mapView.show).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it('keeps the skeletons while the search runs with the pins failed', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+
+      expect(page().querySelectorAll('.cards .skeleton')).toHaveLength(6);
+      expect(page().querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('keeps the empty state as it is with the pins failed', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer(
+        pageOf({ counts: { doesNotTake: 0, worksOn: 0 }, items: [], total: 0 }),
+      );
+
+      expect(said(page().querySelector('.state h2'))).toBe(
+        'Niciun service găsit',
+      );
+    });
+
+    it('shows the list failure once, with "Reîncearcă", when both fail', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail();
+
+      expect(page().querySelectorAll('[role="alert"]')).toHaveLength(1);
+      expect(said(page().querySelector('.state[role="alert"] h1'))).toBe(
+        'Nu am putut încărca rezultatele',
+      );
+      expect(said(status())).toBe('');
+    });
+
+    it('asks for the pins again on "Reîncearcă" after both failed', async () => {
+      failPins();
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.fail();
+      const before = pinsApi.mock.calls.length;
+
+      const again = [
+        ...page().querySelectorAll<HTMLButtonElement>('.state button'),
+      ].find((b) => said(b) === 'Reîncearcă');
+      expect(again).toBeDefined();
+      again?.click();
+      await settle();
+
+      expect(pinsApi.mock.calls.length).toBe(before + 1);
+    });
+  });
+
+  // @traces 269-FR-006
+  // @traces 269-FR-007
+  // @traces 269-FR-008
+  // @traces 269-FR-009
+  describe('the visible area of the map', () => {
+    const BOX = '44.4,26,44.5,26.2';
+    const OTHER = '44.41,26,44.5,26.2';
+    const NEAR = '44.447,26.117';
+
+    beforeEach(() => configure());
+
+    async function searched(url = '/ro/garages?brand=bmw') {
+      keep(PLACE);
+      await open(url);
+      await reads[0]?.answer();
+    }
+    async function settleOn(bbox: string) {
+      mapMoved({ bbox });
+      await settle();
+    }
+    const pinsAsked = () => pinsApi.mock.calls.map(([q]) => q);
+    const back = () =>
+      page().querySelector<HTMLButtonElement>('.summary .back');
+    const hint = () => page().querySelector('mf-results-map [role="status"]');
+
+    it('loads the list and the pins of the box the map settled on, without logging', async () => {
+      await searched();
+
+      await settleOn(BOX);
+
+      expect(searches().at(-1)).toEqual({
+        bbox: BOX,
+        brand: 'bmw',
+        near: NEAR,
+      });
+      expect(pinsAsked().at(-1)).toEqual({
+        bbox: BOX,
+        brand: 'bmw',
+        near: NEAR,
+      });
+    });
+
+    it('asks nothing for the box it has loaded', async () => {
+      await searched();
+      await settleOn(BOX);
+      await reads[1]?.answer();
+
+      await settleOn(BOX);
+
+      expect(searches()).toHaveLength(2);
+      expect(pinsAsked()).toHaveLength(2);
+    });
+
+    it('shows the newer box when an older answer comes after it', async () => {
+      await searched();
+      await settleOn(BOX);
+      await settleOn(OTHER);
+
+      await reads[2]?.answer(pageOf({ total: 23 }));
+      await reads[1]?.answer(pageOf({ total: 5 }));
+
+      expect(said(page().querySelector('.summary .tally'))).toMatch(/^23 /);
+    });
+
+    it('sums up the map area with the Romanian plural rules and offers "Înapoi la 25 km"', async () => {
+      await searched();
+      await settleOn(BOX);
+      await reads[1]?.answer(pageOf({ total: 23 }));
+
+      expect(said(page().querySelector('.summary .tally'))).toBe(
+        '23 de service‑uri în zona hărții · 31 lucrează pe BMW · 17 nu o primesc',
+      );
+      expect(page().querySelector('.summary .area')).toBeNull();
+      expect(said(back())).toBe('Înapoi la 25 km');
+
+      await settleOn(OTHER);
+      await reads[2]?.answer(
+        pageOf({ counts: { doesNotTake: 1, worksOn: 2 }, total: 3 }),
+      );
+      expect(said(page().querySelector('.summary .tally'))).toMatch(
+        /^3 service‑uri în zona hărții · /,
+      );
+
+      await settleOn(BOX);
+      await reads[3]?.answer(
+        pageOf({ counts: { doesNotTake: 0, worksOn: 1 }, total: 1 }),
+      );
+      expect(said(page().querySelector('.summary .tally'))).toMatch(
+        /^1 service în zona hărții · /,
+      );
+    });
+
+    it('speaks English in the map area', async () => {
+      keep(PLACE);
+      await open('/en/garages?brand=bmw', { language: 'en' });
+      await reads[0]?.answer();
+      await settleOn(BOX);
+      await reads[1]?.answer(pageOf({ total: 23 }));
+
+      expect(said(page().querySelector('.summary .tally'))).toMatch(
+        /^23 garages in the map area · /,
+      );
+      expect(said(back())).toBe('Back to 25 km');
+    });
+
+    it('offers "Înapoi la 50 km" after a widened search', async () => {
+      await searched(`/ro/garages?brand=bmw&near=${NEAR}&radius=50`);
+      await settleOn(BOX);
+      await reads[1]?.answer();
+
+      expect(said(back())).toBe('Înapoi la 50 km');
+    });
+
+    it('offers "Înapoi la toată România" without a place', async () => {
+      await open('/ro/garages?brand=bmw');
+      await reads[0]?.answer();
+      await settleOn(BOX);
+      await reads[1]?.answer();
+
+      expect(searches().at(-1)).toEqual({ bbox: BOX, brand: 'bmw' });
+      expect(said(back())).toBe('Înapoi la toată România');
+    });
+
+    it('restores the first search on "Înapoi la 25 km", unlogged, and fits the map to it', async () => {
+      await searched();
+      await settleOn(BOX);
+      await reads[1]?.answer(pageOf({ total: 23 }));
+      mapView.fit.mockClear();
+
+      back()?.click();
+      await settle();
+      await reads[2]?.answer();
+      await settle();
+
+      expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
+      expect(pinsAsked().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
+      expect(mapView.fit).toHaveBeenCalledWith(
+        { lat: PLACE.lat, lng: PLACE.lng },
+        pinsOf(48),
+      );
+      expect(back()).toBeNull();
+      expect(said(page().querySelector('.summary .tally'))).toMatch(
+        /^48 de service‑uri găsite/,
+      );
+    });
+
+    it('never moves the map to the pins of a box', async () => {
+      await searched();
+      mapView.fit.mockClear();
+
+      await settleOn(BOX);
+      await reads[1]?.answer();
+      await settle();
+
+      expect(mapView.fit).not.toHaveBeenCalled();
+    });
+
+    it('keeps the pins on the map while a box loads', async () => {
+      await searched();
+      pinsApi.mockImplementationOnce(() => new Promise(() => undefined));
+
+      await settleOn(BOX);
+
+      expect(mapView.show).toHaveBeenLastCalledWith(pinsOf(48));
+      expect(page().querySelector('mf-results-map .placeholder')).toBeNull();
+    });
+
+    it('says "Apropie harta" while the box is too wide, and asks nothing', async () => {
+      await searched();
+
+      mapMoved({ tooWide: true });
+      await settle();
+
+      expect(said(hint())).toBe('Apropie harta');
+      expect(searches()).toHaveLength(1);
+      expect(pinsAsked()).toHaveLength(1);
+    });
+
+    it('shows the failure with "Reîncearcă" when a box cannot load, and asks for the same box again', async () => {
+      await searched();
+      await settleOn(BOX);
+      await reads[1]?.fail();
+
+      expect(said(page().querySelector('.state[role="alert"] h1'))).toBe(
+        'Nu am putut încărca rezultatele',
+      );
+
+      await settleOn(BOX);
+
+      expect(searches()).toHaveLength(3);
+      expect(searches().at(-1)).toEqual({
+        bbox: BOX,
+        brand: 'bmw',
+        near: NEAR,
+      });
+    });
+
+    it('leaves the address bar as it was', async () => {
+      await searched();
+      const router = TestBed.inject(Router);
+      const before = router.url;
+
+      await settleOn(BOX);
+      await reads[1]?.answer();
+
+      expect(router.url).toBe(before);
+    });
+
+    it('forgets the box when the bar names another brand', async () => {
+      await searched();
+      await settleOn(BOX);
+      await reads[1]?.answer();
+
+      await open(`/ro/garages?brand=audi&near=${NEAR}`);
+
+      expect(searches().at(-1)).toEqual({
+        brand: 'audi',
+        log: '1',
+        near: NEAR,
+      });
+    });
   });
 
   describe('on the server', () => {
@@ -937,6 +1454,7 @@ describe('Results', () => {
       await open('/ro/garages?brand=bmw');
 
       expect(searches()).toEqual([]);
+      expect(pinsApi).not.toHaveBeenCalled();
       expect(page().querySelectorAll('.card.skeleton')).toHaveLength(6);
     });
   });
