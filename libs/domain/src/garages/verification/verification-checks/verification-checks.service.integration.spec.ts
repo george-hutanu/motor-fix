@@ -354,17 +354,27 @@ describe('recording a check', () => {
   });
 });
 
+// An admin's approval needs both registers checked.
+const registersOk = () =>
+  prisma.verificationCheck.updateMany({
+    data: { result: 'ok' },
+    where: { fileId, kind: { in: ['rar', 'caen'] } },
+  });
+
 describe('a record that is refused', () => {
   const decide = async (
     outcome: 'approved' | 'rejected' | 'more_requested',
   ) => {
     await inTx((tx) => files().open(tx, ioana, fileId));
+    if (outcome === 'approved') await registersOk();
     await inTx((tx) =>
       files().decide(
         tx,
         ioana,
         fileId,
-        outcome === 'approved' ? { outcome } : { outcome, reason: REASON },
+        outcome === 'approved'
+          ? { outcome }
+          : { note: REASON.note, outcome, reason: REASON.code },
       ),
     );
   };
@@ -396,7 +406,11 @@ describe('a record that is refused', () => {
       decided = resolve;
     });
     const deciding = prisma.$transaction(async (tx) => {
-      await files().decide(tx, dan, fileId, { outcome: 'approved' });
+      await files().decide(tx, dan, fileId, {
+        note: REASON.note,
+        outcome: 'rejected',
+        reason: REASON.code,
+      });
       decided();
       await held;
     });

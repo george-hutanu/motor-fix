@@ -282,8 +282,9 @@ describe('the time of the latest sending', () => {
     await inTx((tx) => verification.open(tx, admin, file.id));
     await inTx((tx) =>
       verification.decide(tx, admin, file.id, {
+        note: 'Blurred',
         outcome: 'more_requested',
-        reason: { code: 'documents_unreadable', note: 'Blurred' },
+        reason: 'documents_unreadable',
       }),
     );
     const decided = await prisma.verificationFile.findUniqueOrThrow({

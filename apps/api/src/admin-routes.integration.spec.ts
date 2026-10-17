@@ -39,6 +39,9 @@ const KNOWN = [
   'POST /api/v1/admin/platform-rule-changes/{id}/cancel',
   'POST /api/v1/admin/platform-rule-changes/{id}/refuse',
   'POST /api/v1/admin/notifications/test',
+  // @traces 306-FR-006
+  'POST /api/v1/admin/verification-files/{id}/decision',
+  'POST /api/v1/admin/verification-files/{id}/reopen',
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}',
 ];
 const NON_ADMIN = ['driver', 'garage', 'receptionist', 'mechanic'] as const;

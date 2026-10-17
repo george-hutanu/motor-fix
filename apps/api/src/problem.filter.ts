@@ -37,6 +37,8 @@ export function sendProblem(
     garageId?: string;
     garageName?: string;
     reason?: string;
+    decidedBy?: string;
+    decidedAt?: string;
   } = {},
 ) {
   if (extensions.retryAfterSeconds !== undefined) {
@@ -155,8 +157,9 @@ function detail(message: unknown): string | undefined {
   return Array.isArray(message) ? message.join('; ') : undefined;
 }
 
-// The string members of a refused move (`invalid_transition`) and of a
-// garage that cannot receive a request (`garage_cannot_receive`).
+// The string members of a refused move (`invalid_transition`, and who
+// decided a verification file first), and of a garage that cannot receive a
+// request (`garage_cannot_receive`).
 const STRING_MEMBERS = [
   'entity',
   'currentStatus',
@@ -165,6 +168,8 @@ const STRING_MEMBERS = [
   'garageId',
   'garageName',
   'reason',
+  'decidedBy',
+  'decidedAt',
 ] as const;
 
 function stringMembers(

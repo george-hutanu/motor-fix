@@ -8,9 +8,11 @@ import {
   type VerificationQueueRowDto,
 } from '@motor-fix/contracts';
 import {
+  HttpException,
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
@@ -32,16 +34,22 @@ import type {
   VerificationFileStatus,
   VerificationReopenReason,
 } from '../../generated/prisma/client';
-import { countApproval } from '../../metrics/product-counters';
+import {
+  countApproval,
+  countDecisionRefusal,
+  countReopening,
+} from '../../metrics/product-counters';
 
 export type VerificationActor = Actor | { accountId: null; role: 'system' };
 
-export type Decision =
-  | { outcome: 'approved' }
-  | {
-      outcome: 'more_requested' | 'rejected';
-      reason: { code: string; note: string };
-    };
+// The endpoint's body as the use case takes it; the edge has checked each
+// value, the use case the rules between them.
+export type Decision = {
+  outcome: 'approved' | 'more_requested' | 'rejected';
+  reason?: string;
+  note?: string;
+  requestedItems?: string[];
+};
 
 type Transition = 'open' | 'decide' | 'resend' | 'reopen';
 
@@ -75,11 +83,19 @@ export const newestFirst = [
 const refused = (detail: string) =>
   refusal(HttpStatus.CONFLICT, 'verification_transition_refused', detail);
 
+// The checks an admin's approval waits for, in the order they are asked.
+const GATES = [
+  ['rar', 'rar_check_required', 'the rar check is not ok'],
+  ['caen', 'caen_check_required', 'the caen check is not ok'],
+] as const;
+
 // A garage's verification file and its moves. Each use case runs in the
 // caller's transaction, so a story that creates the garage can submit in the
 // same commit; a move, its history entry and its event commit together.
 @Injectable()
 export class VerificationService {
+  private readonly logger = new Logger('Verification');
+
   constructor(
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
@@ -216,12 +232,14 @@ export class VerificationService {
     decision: Decision,
   ): Promise<VerificationFile> {
     trust(actor);
-    const reason = reasonOf(decision);
+    const { note, reason, requestedItems } = payloadOf(decision);
+    const approved = decision.outcome === 'approved';
     const before = await this.file(tx, fileId);
     // Suspension and its lifting belong to the suspension story alone.
-    if (!reason && before.garageStatus === 'suspended') {
+    if (approved && before.garageStatus === 'suspended') {
       throw refused('the garage is suspended');
     }
+    if (approved && actor.role !== 'system') await this.gate(tx, fileId);
     const decidedAt = new Date();
     const file = await this.move(
       tx,
@@ -231,19 +249,56 @@ export class VerificationService {
       {
         decidedAt,
         decidedBy: actor.accountId,
-        reasonCode: reason?.code ?? null,
-        reasonNote: reason?.note ?? null,
+        reasonCode: reason,
+        reasonNote: note,
+        requestedItems,
         status: decision.outcome,
       },
-      reason ? `${reason.code}: ${reason.note}` : undefined,
-    );
-    if (!reason) await this.publish(tx, actor, before, decidedAt);
+      reason && note ? `${reason}: ${note}` : (note ?? undefined),
+    ).catch((error: unknown) => {
+      if (decidedAlready(error)) {
+        countDecisionRefusal('already_decided');
+        this.logger.log(`file ${fileId} refused: already_decided`);
+      }
+      throw error;
+    });
+    if (approved) await this.publish(tx, actor, before, decidedAt);
     await this.announce(tx, file, 'verification.decided', {
       decision: decision.outcome,
+      note,
+      reason,
     });
     // A request for more documents is not a verdict.
     if (decision.outcome !== 'more_requested') countApproval(decision.outcome);
+    this.logger.log(
+      `file ${fileId} ${decision.outcome} by ${actor.accountId ?? 'system'}`,
+    );
     return file;
+  }
+
+  // An admin approves only a file whose RAR and CAEN checks are ok. The row
+  // lock waits for a check being recorded, which holds the file row FOR
+  // SHARE, so the gate reads what is true when the decision commits.
+  private async gate(tx: Prisma.TransactionClient, fileId: string) {
+    const [row] = await tx.$queryRaw<{ status: VerificationFileStatus }[]>`
+      SELECT status FROM verification_file WHERE id = ${fileId}::uuid
+      FOR UPDATE`;
+    // A file no longer waiting is refused by the move, saying who decided.
+    if (!row || !FROM.decide.includes(row.status)) return;
+    const checks = await tx.verificationCheck.findMany({
+      select: { kind: true, result: true },
+      where: { fileId, kind: { in: ['rar', 'caen'] } },
+    });
+    for (const [kind, code, detail] of GATES) {
+      if (
+        checks.some((check) => check.kind === kind && check.result === 'ok')
+      ) {
+        continue;
+      }
+      countDecisionRefusal(code);
+      this.logger.log(`file ${fileId} refused: ${code}`);
+      throw refusal(HttpStatus.CONFLICT, code, detail);
+    }
   }
 
   // One garage entry: the status, or approved_at when a reopened file of a
@@ -327,11 +382,13 @@ export class VerificationService {
       // Another file of the garage went live meanwhile.
       throw taken(error) ? refused('another file is under way') : error;
     });
-    await this.announce(
-      tx,
-      file,
-      'verification.reopened',
-      reason ? { reason } : {},
+    await this.announce(tx, file, 'verification.reopened', {
+      adminId: actor.accountId,
+      ...(reason && { reason }),
+    });
+    countReopening(actor.role === 'system' ? 'system' : 'admin');
+    this.logger.log(
+      `file ${fileId} reopened by ${actor.accountId ?? 'system'}`,
     );
     return file;
   }
@@ -402,7 +459,9 @@ export class VerificationService {
       | 'verification.reopened',
     extra: {
       decision?: Decision['outcome'];
-      reason?: VerificationReopenReason;
+      reason?: string | null;
+      note?: string | null;
+      adminId?: string | null;
     } = {},
   ) {
     const published = extra.decision === 'approved';
@@ -432,8 +491,18 @@ export class VerificationService {
       const by = reopened ? file.reopenedBy : file.openedBy;
       return refused(`already under review, opened by ${await name(tx, by)}`);
     }
-    return refused(
-      `already decided by ${await name(tx, file.decidedBy)} (${file.status})`,
+    const decidedBy = await name(tx, file.decidedBy);
+    const decidedAt = file.decidedAt?.toISOString() ?? '';
+    return new HttpException(
+      {
+        code: 'verification_transition_refused',
+        currentStatus: file.status,
+        decidedAt,
+        decidedBy,
+        entity: 'verification_file',
+        message: `already decided by ${decidedBy} at ${decidedAt}`,
+      },
+      HttpStatus.CONFLICT,
     );
   }
 }
@@ -520,19 +589,48 @@ async function name(tx: Prisma.TransactionClient, accountId: string | null) {
   return account ? firstName(account.name) : 'someone';
 }
 
-// A negative outcome's reason, required with a code and a note.
-function reasonOf(decision: Decision) {
-  if (decision.outcome === 'approved') return null;
-  const { code, note } = decision.reason;
-  if (!code.trim() || !note.trim()) {
-    throw refusal(
-      HttpStatus.BAD_REQUEST,
-      'validation_failed',
-      'A reason needs a code and a note',
-    );
+// The rules between the payload's values: a rejection names a reason, a
+// rejection and a request for more carry a note, an approval's blank note is
+// none. A reason or items where the decision has no use for them is a
+// malformed body, as the edge would answer it.
+function payloadOf(decision: Decision) {
+  wellFormed(decision);
+  const { note, outcome, reason, requestedItems } = decision;
+  const text = note?.trim() || null;
+  if (outcome === 'rejected' && !reason?.trim()) {
+    throw required('reason_required', 'A rejection needs a reason', 'reason');
   }
-  return decision.reason;
+  if (outcome !== 'approved' && !text) {
+    throw required('note_required', 'This decision needs a note', 'note');
+  }
+  return {
+    note: text,
+    reason: reason ?? null,
+    requestedItems: requestedItems ?? [],
+  };
 }
+
+function wellFormed({ outcome, reason, requestedItems }: Decision) {
+  if (outcome === 'approved' && reason !== undefined) {
+    throw malformed('An approval carries no reason');
+  }
+  if (outcome !== 'more_requested' && requestedItems !== undefined) {
+    throw malformed('Only a request for more lists what is missing');
+  }
+}
+
+const malformed = (detail: string) =>
+  refusal(HttpStatus.BAD_REQUEST, 'validation_failed', detail);
+
+const required = (code: string, detail: string, field: string) =>
+  refusal(HttpStatus.UNPROCESSABLE_ENTITY, code, detail, [
+    { code: 'required', field },
+  ]);
+
+// The move's refusal of a file someone decided first.
+const decidedAlready = (error: unknown) =>
+  error instanceof HttpException &&
+  (error.getResponse() as { decidedBy?: unknown }).decidedBy !== undefined;
 
 // An open that moved nothing: the file was opened before, by this admin or another.
 function openedFirst(actor: VerificationActor, file: VerificationFile) {

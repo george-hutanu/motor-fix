@@ -110,8 +110,18 @@ async function fileIn(status: FileStatus, at = new Date()) {
   const opened = status !== 'submitted';
   const decided = ['approved', 'more_requested', 'rejected'].includes(status);
   const negative = status === 'more_requested' || status === 'rejected';
+  const checked = ['submitted', 'in_review', 'approved'].includes(status);
   return prisma.verificationFile.create({
     data: {
+      // An admin's approval needs both registers checked.
+      ...(checked && {
+        checks: {
+          create: [
+            { kind: 'rar', result: 'ok' },
+            { kind: 'caen', result: 'ok' },
+          ],
+        },
+      }),
       createdAt: at,
       decidedAt: decided ? at : null,
       decidedBy: decided ? ioana.accountId : null,
@@ -141,7 +151,7 @@ function attempt(from: FileStatus, to: FileStatus, fileId: string) {
       fileId,
       to === 'approved'
         ? { outcome: 'approved' }
-        : { outcome: to, reason: REASON },
+        : { note: REASON.note, outcome: to, reason: REASON.code },
     );
   });
 }
@@ -226,7 +236,9 @@ describe('the allowed transitions', () => {
       } else if (from === 'in_review') {
         expect(body.message).toBe('already under review, opened by Ioana');
       } else {
-        expect(body.message).toBe(`already decided by Ioana (${from})`);
+        expect(body.message).toBe(
+          `already decided by Ioana at ${file.decidedAt?.toISOString()}`,
+        );
       }
       const after = await prisma.verificationFile.findUniqueOrThrow({
         where: { id: file.id },
@@ -396,35 +408,21 @@ describe('deciding', () => {
     expect(await history(file.id)).toHaveLength(0);
   });
 
-  it.each([
-    ['an empty code', { code: '', note: 'The CUI is blurred' }],
-    ['a blank note', { code: 'documents_unreadable', note: '   ' }],
-  ])(
-    'refuses a decision with %s as 400 validation_failed',
-    async (_n, reason) => {
-      const file = await fileIn('in_review');
-
-      const refused = await refusal(
-        inTx((tx) =>
-          service().decide(tx, ioana, file.id, { outcome: 'rejected', reason }),
-        ),
-      );
-
-      expect(refused).toMatchObject({
-        body: { code: 'validation_failed' },
-        status: 400,
-      });
-      expect(await history(file.id)).toHaveLength(0);
-    },
-  );
-
   // @traces 879-FR-009
   it.each([
     ['approved', { outcome: 'approved' as const }, 1],
-    ['rejected', { outcome: 'rejected' as const, reason: REASON }, 1],
+    [
+      'rejected',
+      { note: REASON.note, outcome: 'rejected' as const, reason: REASON.code },
+      1,
+    ],
     [
       'more_requested',
-      { outcome: 'more_requested' as const, reason: REASON },
+      {
+        note: REASON.note,
+        outcome: 'more_requested' as const,
+        reason: REASON.code,
+      },
       0,
     ],
   ])(
@@ -486,7 +484,11 @@ describe('deciding', () => {
       const file = await fileIn('submitted');
 
       await inTx((tx) =>
-        service().decide(tx, ioana, file.id, { outcome, reason: REASON }),
+        service().decide(tx, ioana, file.id, {
+          note: REASON.note,
+          outcome,
+          reason: REASON.code,
+        }),
       );
 
       const after = await prisma.verificationFile.findUniqueOrThrow({
@@ -523,8 +525,9 @@ describe('deciding', () => {
       ),
       inTx((tx) =>
         service().decide(tx, dan, file.id, {
+          note: REASON.note,
           outcome: 'rejected',
-          reason: REASON,
+          reason: REASON.code,
         }),
       ),
     ]);
@@ -534,7 +537,7 @@ describe('deciding', () => {
     const error = lost?.reason as HttpException;
     expect(error.getStatus()).toBe(409);
     expect((error.getResponse() as { message: string }).message).toMatch(
-      /^already decided by (Ioana|Dan) \((approved|rejected)\)$/,
+      /^already decided by (Ioana|Dan) at \d{4}-\d{2}-\d{2}T[\d:.]+Z$/,
     );
     expect(await history(file.id)).toHaveLength(1);
     expect(await events(file.id)).toHaveLength(1);
@@ -571,8 +574,9 @@ describe('reopening', () => {
     });
     await inTx((tx) =>
       service().decide(tx, dan, file.id, {
+        note: REASON.note,
         outcome: 'rejected',
-        reason: REASON,
+        reason: REASON.code,
       }),
     );
 
@@ -608,8 +612,9 @@ describe('reopening', () => {
     await inTx((tx) => service().reopen(tx, ioana, file.id));
     await inTx((tx) =>
       service().decide(tx, ioana, file.id, {
+        note: REASON.note,
         outcome: 'rejected',
-        reason: REASON,
+        reason: REASON.code,
       }),
     );
 
@@ -654,6 +659,7 @@ describe('reopening', () => {
       (e) => e.kind === 'verification.reopened',
     );
     expect(event?.payload).toEqual({
+      adminId: null,
       fileId: file.id,
       garageId,
       reason: 'garage_report',
@@ -673,7 +679,11 @@ describe('reopening', () => {
     const [event] = (await events(file.id)).filter(
       (e) => e.kind === 'verification.reopened',
     );
-    expect(event?.payload).toEqual({ fileId: file.id, garageId });
+    expect(event?.payload).toEqual({
+      adminId: dan.accountId,
+      fileId: file.id,
+      garageId,
+    });
   });
 
   it('refuses to reopen a file that is not the newest', async () => {
@@ -877,8 +887,9 @@ describe('the checks of a file', () => {
     await inTx((tx) => service().open(tx, ioana, file.id));
     await inTx((tx) =>
       service().decide(tx, ioana, file.id, {
+        note: REASON.note,
         outcome: 'more_requested',
-        reason: REASON,
+        reason: REASON.code,
       }),
     );
 
@@ -936,4 +947,595 @@ describe('opening a file no longer waiting', () => {
       expect(await events(file.id)).toHaveLength(0);
     },
   );
+});
+
+type Body = {
+  outcome: 'approved' | 'more_requested' | 'rejected';
+  reason?: string;
+  note?: string;
+  requestedItems?: string[];
+};
+
+// The decision as the endpoint's body hands it to the use case.
+const decideWith = (actor: Actor | typeof SYSTEM, fileId: string, body: Body) =>
+  inTx((tx) => service().decide(tx, actor, fileId, body as never));
+
+const refusals = (reason: string) =>
+  counterTotal(reader, 'motorfix_verification_decision_refusals_total', {
+    reason,
+  });
+const reopenings = (role: string) =>
+  counterTotal(reader, 'motorfix_verification_reopenings_total', { role });
+
+const setCheck = (fileId: string, kind: 'rar' | 'caen', result: string) =>
+  prisma.verificationCheck.upsert({
+    create: { fileId, kind, result: result as never },
+    update: { result: result as never },
+    where: { fileId_kind: { fileId, kind } },
+  });
+
+const fileRow = (id: string) =>
+  prisma.verificationFile.findUniqueOrThrow({ where: { id } });
+
+describe('the decision payload', () => {
+  // @traces 306-FR-001 306-FR-012
+  it('answers 422 reason_required to a rejection without a reason', async () => {
+    const file = await fileIn('in_review');
+
+    const refused = await refusal(
+      decideWith(ioana, file.id, {
+        note: 'Lipsește ONRC',
+        outcome: 'rejected',
+      }),
+    );
+
+    expect(refused).toMatchObject({
+      body: {
+        code: 'reason_required',
+        errors: [{ code: 'required', field: 'reason' }],
+      },
+      status: 422,
+    });
+    expect(await history(file.id)).toHaveLength(0);
+    expect(await events(file.id)).toHaveLength(0);
+  });
+
+  // @traces 306-FR-001 306-FR-012
+  it.each([
+    [
+      'a rejection without a note',
+      { outcome: 'rejected', reason: 'documents' },
+    ],
+    [
+      'a rejection with a blank note',
+      { note: '   ', outcome: 'rejected', reason: 'documents' },
+    ],
+    ['a request for more without a note', { outcome: 'more_requested' }],
+    [
+      'a request for more with a blank note',
+      { note: ' \n ', outcome: 'more_requested' },
+    ],
+  ] as [string, Body][])(
+    'answers 422 note_required to %s',
+    async (_name, body) => {
+      const file = await fileIn('in_review');
+
+      const refused = await refusal(decideWith(ioana, file.id, body));
+
+      expect(refused).toMatchObject({
+        body: {
+          code: 'note_required',
+          errors: [{ code: 'required', field: 'note' }],
+        },
+        status: 422,
+      });
+      expect((await fileRow(file.id)).status).toBe('in_review');
+      expect(await history(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 306-FR-001 306-FR-012
+  it.each([
+    ['a reason with an approval', { outcome: 'approved', reason: 'documents' }],
+    [
+      'requested items with a rejection',
+      {
+        note: 'Lipsește ONRC',
+        outcome: 'rejected',
+        reason: 'documents',
+        requestedItems: ['photos'],
+      },
+    ],
+    [
+      'requested items with an approval',
+      { outcome: 'approved', requestedItems: ['photos'] },
+    ],
+  ] as [string, Body][])(
+    'answers 400 validation_failed to %s',
+    async (_name, body) => {
+      const file = await fileIn('in_review');
+
+      const refused = await refusal(decideWith(ioana, file.id, body));
+
+      expect(refused).toMatchObject({
+        body: { code: 'validation_failed' },
+        status: 400,
+      });
+      expect((await fileRow(file.id)).status).toBe('in_review');
+      expect(await history(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 306-FR-001
+  it('stores a blank approval note as null', async () => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, { note: '   ', outcome: 'approved' });
+
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonNote: null,
+      status: 'approved',
+    });
+  });
+});
+
+describe('recording a decision', () => {
+  // @traces 306-FR-004 306-FR-012
+  it('stores an approval with its note, no reason and no items', async () => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, {
+      note: 'CAEN confirmat din ONRC',
+      outcome: 'approved',
+    });
+
+    const after = await fileRow(file.id);
+    expect(after).toMatchObject({
+      decidedBy: ioana.accountId,
+      reasonCode: null,
+      reasonNote: 'CAEN confirmat din ONRC',
+      requestedItems: [],
+      status: 'approved',
+    });
+    expect(after.decidedAt).toBeInstanceOf(Date);
+    const [event] = await events(file.id);
+    expect(event?.payload).toMatchObject({
+      decision: 'approved',
+      fileId: file.id,
+      garageId,
+      note: 'CAEN confirmat din ONRC',
+    });
+  });
+
+  // @traces 306-FR-004 306-FR-012
+  it('stores a rejection with its reason and note, in the file, the history and the event', async () => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, {
+      note: 'Lipsește certificatul ONRC.',
+      outcome: 'rejected',
+      reason: 'documents',
+    });
+
+    expect(await fileRow(file.id)).toMatchObject({
+      decidedBy: ioana.accountId,
+      reasonCode: 'documents',
+      reasonNote: 'Lipsește certificatul ONRC.',
+      requestedItems: [],
+      status: 'rejected',
+    });
+    const [entry, ...more] = await history(file.id);
+    expect(more).toHaveLength(0);
+    expect(entry).toMatchObject({
+      kind: 'verification_decided',
+      newValue: 'rejected',
+      oldValue: 'in_review',
+      text: 'documents: Lipsește certificatul ONRC.',
+    });
+    const [event, ...others] = await events(file.id);
+    expect(others).toHaveLength(0);
+    expect(event).toMatchObject({
+      kind: 'verification.decided',
+      payload: {
+        decision: 'rejected',
+        fileId: file.id,
+        garageId,
+        note: 'Lipsește certificatul ONRC.',
+        reason: 'documents',
+      },
+    });
+  });
+
+  // @traces 306-FR-004 306-FR-012
+  it('stores the items of a request for more, its reason optional', async () => {
+    const file = await fileIn('in_review');
+
+    await decideWith(ioana, file.id, {
+      note: 'Trimite pozele atelierului.',
+      outcome: 'more_requested',
+      requestedItems: ['photos', 'documents'],
+    });
+
+    expect(await fileRow(file.id)).toMatchObject({
+      reasonCode: null,
+      reasonNote: 'Trimite pozele atelierului.',
+      requestedItems: ['photos', 'documents'],
+      status: 'more_requested',
+    });
+    const [event] = await events(file.id);
+    expect(event?.payload).toMatchObject({
+      decision: 'more_requested',
+      note: 'Trimite pozele atelierului.',
+    });
+  });
+
+  // @traces 306-FR-004 306-FR-012
+  it('keeps only the latest decision in the file', async () => {
+    const file = await fileIn('in_review');
+    await decideWith(ioana, file.id, {
+      note: 'Trimite pozele.',
+      outcome: 'more_requested',
+      requestedItems: ['photos'],
+    });
+    await inTx((tx) => service().reopen(tx, dan, file.id));
+
+    await decideWith(dan, file.id, {
+      note: 'Adresa nu corespunde.',
+      outcome: 'rejected',
+      reason: 'address',
+    });
+
+    expect(await fileRow(file.id)).toMatchObject({
+      decidedBy: dan.accountId,
+      reasonCode: 'address',
+      reasonNote: 'Adresa nu corespunde.',
+      requestedItems: [],
+      status: 'rejected',
+    });
+  });
+
+  // @traces 306-FR-004 306-FR-012
+  it('rolls the columns, the history and the event back together when the outbox fails', async () => {
+    const file = await fileIn('in_review');
+    const failing: EventPort = {
+      record: () => Promise.reject(new Error('outbox down')),
+    };
+
+    await expect(
+      inTx((tx) =>
+        service(false, failing).decide(tx, ioana, file.id, {
+          note: 'Lipsește ONRC',
+          outcome: 'rejected',
+          reason: 'documents',
+        } as never),
+      ),
+    ).rejects.toThrow('outbox down');
+
+    expect(await fileRow(file.id)).toMatchObject({
+      decidedBy: null,
+      reasonCode: null,
+      reasonNote: null,
+      requestedItems: [],
+      status: 'in_review',
+    });
+    expect(await history(file.id)).toHaveLength(0);
+    expect(await events(file.id)).toHaveLength(0);
+  });
+});
+
+describe('a file already decided', () => {
+  // @traces 306-FR-002 306-FR-012
+  it('answers 409 naming who decided it, when, and its status', async () => {
+    const file = await fileIn('rejected', new Date('2026-10-17T09:14:00Z'));
+    const before = await refusals('already_decided');
+
+    const { body, status } = await refusal(
+      decideWith(dan, file.id, { outcome: 'approved' }),
+    );
+
+    expect(status).toBe(409);
+    expect(body).toMatchObject({
+      code: 'verification_transition_refused',
+      currentStatus: 'rejected',
+      decidedAt: '2026-10-17T09:14:00.000Z',
+      decidedBy: 'Ioana',
+      entity: 'verification_file',
+      message: 'already decided by Ioana at 2026-10-17T09:14:00.000Z',
+    });
+    expect(await refusals('already_decided')).toBe(before + 1);
+    expect(await history(file.id)).toHaveLength(0);
+  });
+
+  // @traces 306-FR-002
+  it('names MotorFix when the system decided it', async () => {
+    const file = await fileIn('approved');
+    await prisma.verificationFile.update({
+      data: { decidedBy: null },
+      where: { id: file.id },
+    });
+
+    const { body } = await refusal(
+      decideWith(dan, file.id, {
+        note: 'Lipsește ONRC',
+        outcome: 'rejected',
+        reason: 'documents',
+      }),
+    );
+
+    expect(body).toMatchObject({
+      currentStatus: 'approved',
+      decidedBy: 'MotorFix',
+    });
+  });
+
+  // @traces 306-FR-002 306-FR-012
+  it('lets exactly one of two racing decisions commit, every time', async () => {
+    for (let lap = 0; lap < 10; lap += 1) {
+      const file = await prisma.verificationFile.create({
+        data: {
+          checks: {
+            create: [
+              { kind: 'rar', result: 'ok' },
+              { kind: 'caen', result: 'ok' },
+            ],
+          },
+          garageId,
+          status: 'in_review',
+        },
+      });
+
+      const results = await Promise.allSettled([
+        decideWith(ioana, file.id, { outcome: 'approved' }),
+        decideWith(dan, file.id, {
+          note: 'Lipsește ONRC',
+          outcome: 'rejected',
+          reason: 'documents',
+        }),
+      ]);
+
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const lost = results.find((r) => r.status === 'rejected');
+      const error = lost?.reason as HttpException;
+      expect(error.getStatus()).toBe(409);
+      expect(error.getResponse()).toMatchObject({
+        code: 'verification_transition_refused',
+      });
+      expect(await history(file.id)).toHaveLength(1);
+      expect(await events(file.id)).toHaveLength(1);
+      await prisma.verificationFile.delete({ where: { id: file.id } });
+    }
+  });
+});
+
+describe('the approval gates', () => {
+  // @traces 306-FR-003 306-FR-012
+  it.each(['not_run', 'warning', 'failed'])(
+    'refuses an approval while the rar check is %s, before looking at caen',
+    async (result) => {
+      const file = await fileIn('in_review');
+      await setCheck(file.id, 'rar', result);
+      await setCheck(file.id, 'caen', 'failed');
+      const before = await refusals('rar_check_required');
+
+      const refused = await refusal(
+        decideWith(ioana, file.id, { outcome: 'approved' }),
+      );
+
+      expect(refused).toMatchObject({
+        body: { code: 'rar_check_required' },
+        status: 409,
+      });
+      expect(await refusals('rar_check_required')).toBe(before + 1);
+      expect((await fileRow(file.id)).status).toBe('in_review');
+      expect(await history(file.id)).toHaveLength(0);
+      expect(await events(file.id)).toHaveLength(0);
+      const garage = await prisma.garage.findUniqueOrThrow({
+        where: { id: garageId },
+      });
+      expect(garage.status).toBe('draft');
+    },
+  );
+
+  // @traces 306-FR-003 306-FR-012
+  it.each(['not_run', 'warning', 'failed'])(
+    'refuses an approval while the caen check is %s',
+    async (result) => {
+      const file = await fileIn('in_review');
+      await setCheck(file.id, 'caen', result);
+      const before = await refusals('caen_check_required');
+
+      const refused = await refusal(
+        decideWith(ioana, file.id, { outcome: 'approved' }),
+      );
+
+      expect(refused).toMatchObject({
+        body: { code: 'caen_check_required' },
+        status: 409,
+      });
+      expect(await refusals('caen_check_required')).toBe(before + 1);
+      expect(await history(file.id)).toHaveLength(0);
+      expect(await events(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 306-FR-003
+  it('refuses an approval of a file with no rar check at all', async () => {
+    const file = await prisma.verificationFile.create({
+      data: { garageId, status: 'in_review' },
+    });
+
+    const refused = await refusal(
+      decideWith(ioana, file.id, { outcome: 'approved' }),
+    );
+
+    expect(refused.body.code).toBe('rar_check_required');
+  });
+
+  // @traces 306-FR-003 306-FR-012
+  it('lets an approval through when caen was recorded ok from the ONRC record alone', async () => {
+    const file = await fileIn('in_review');
+    await prisma.verificationCheck.update({
+      data: {
+        evidence: { certificate: false, certificateUploaded: false },
+        recordedBy: dan.accountId,
+        result: 'ok',
+      },
+      where: { fileId_kind: { fileId: file.id, kind: 'caen' } },
+    });
+
+    await decideWith(ioana, file.id, { outcome: 'approved' });
+
+    expect((await fileRow(file.id)).status).toBe('approved');
+  });
+
+  // @traces 306-FR-003 306-FR-012
+  it('holds no gate against the system', async () => {
+    const file = await prisma.verificationFile.create({
+      data: { garageId, status: 'submitted' },
+    });
+
+    await decideWith(SYSTEM, file.id, { outcome: 'approved' });
+
+    expect((await fileRow(file.id)).status).toBe('approved');
+  });
+
+  // @traces 306-FR-003
+  it.each([
+    ['rejected', { note: 'Lipsește ONRC', outcome: 'rejected', reason: 'rar' }],
+    ['more_requested', { note: 'Trimite RAR', outcome: 'more_requested' }],
+  ] as [string, Body][])(
+    'does not hold a %s decision on the checks',
+    async (status, body) => {
+      const file = await fileIn('in_review');
+      await setCheck(file.id, 'rar', 'failed');
+
+      await decideWith(ioana, file.id, body);
+
+      expect((await fileRow(file.id)).status).toBe(status);
+    },
+  );
+
+  // @traces 306-FR-003
+  it('waits for a rar result being recorded and judges the approval by it', async () => {
+    const file = await fileIn('in_review');
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked = () => {};
+    const lockTaken = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const recording = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM verification_file WHERE id = ${file.id}::uuid FOR SHARE`;
+      await tx.verificationCheck.update({
+        data: { result: 'failed' },
+        where: { fileId_kind: { fileId: file.id, kind: 'rar' } },
+      });
+      locked();
+      await held;
+    });
+    await lockTaken;
+
+    const deciding = refusal(
+      decideWith(ioana, file.id, { outcome: 'approved' }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    release();
+    await recording;
+
+    expect((await deciding).body.code).toBe('rar_check_required');
+  });
+});
+
+describe('reopening a decided file', () => {
+  // @traces 306-FR-005 306-FR-012
+  it.each(['approved', 'rejected', 'more_requested'] as FileStatus[])(
+    'reopens a %s file for an admin, keeping its decision and naming the admin in the event',
+    async (status) => {
+      const at = new Date('2026-10-10T08:00:00Z');
+      const file = await fileIn(status, at);
+      const before = await reopenings('admin');
+
+      await inTx((tx) => service().reopen(tx, dan, file.id));
+
+      const after = await fileRow(file.id);
+      expect(after).toMatchObject({
+        decidedAt: at,
+        decidedBy: ioana.accountId,
+        reasonCode: file.reasonCode,
+        reasonNote: file.reasonNote,
+        reopenedBy: dan.accountId,
+        status: 'in_review',
+      });
+      expect(after.reopenedAt).toBeInstanceOf(Date);
+      expect(after.submittedAt.getTime()).toBeGreaterThan(at.getTime());
+      const [entry] = await history(file.id);
+      expect(entry).toMatchObject({
+        actorId: dan.accountId,
+        kind: 'verification_reopened',
+        newValue: 'in_review',
+        oldValue: status,
+      });
+      const [event, ...more] = await events(file.id);
+      expect(more).toHaveLength(0);
+      expect(event).toMatchObject({
+        kind: 'verification.reopened',
+        payload: { adminId: dan.accountId, fileId: file.id, garageId },
+      });
+      expect(await reopenings('admin')).toBe(before + 1);
+      expect(await prisma.notification.count()).toBe(0);
+    },
+  );
+
+  // @traces 306-FR-005
+  it('names no admin when the system reopens', async () => {
+    const file = await fileIn('approved');
+    const before = await reopenings('system');
+
+    await inTx((tx) => service().reopen(tx, SYSTEM, file.id, 'garage_report'));
+
+    const [event] = await events(file.id);
+    expect(event?.payload).toEqual({
+      adminId: null,
+      fileId: file.id,
+      garageId,
+      reason: 'garage_report',
+    });
+    expect(await reopenings('system')).toBe(before + 1);
+  });
+
+  // @traces 306-FR-005 306-FR-012
+  it.each(['submitted', 'in_review'] as FileStatus[])(
+    'refuses to reopen a %s file',
+    async (status) => {
+      const file = await fileIn(status);
+
+      const { body, status: code } = await refusal(
+        inTx((tx) => service().reopen(tx, dan, file.id)),
+      );
+
+      expect(code).toBe(409);
+      expect(body.code).toBe('verification_transition_refused');
+      expect(await events(file.id)).toHaveLength(0);
+    },
+  );
+
+  // @traces 306-FR-005 306-FR-012
+  it('leaves a reopened approved garage public with its last approved details', async () => {
+    const approvedAt = new Date('2026-10-01T08:00:00Z');
+    const file = await fileIn('approved', approvedAt);
+
+    await inTx((tx) => service().reopen(tx, dan, file.id));
+
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { id: garageId },
+    });
+    expect(garage).toMatchObject({
+      approvedAt,
+      name: 'Atelier Dinamo',
+      status: 'approved',
+    });
+    expect(await history(garageId)).toHaveLength(0);
+  });
 });

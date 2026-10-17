@@ -18,6 +18,11 @@ export interface VerificationFileStateDto {
   reopenedAt: string | null;
   reopenedBy: (VerificationActorDto & {
 }) | null;
+
+  /**
+   * What the latest request for more asked for; empty otherwise
+   */
+  requestedItems: Array<string>;
   status: 'submitted' | 'in_review' | 'approved' | 'more_requested' | 'rejected';
 
   /**

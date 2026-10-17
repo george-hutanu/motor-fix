@@ -423,6 +423,10 @@ describe('reading a garage by its public slug', () => {
       ),
     );
     expect((await read(hidden.slug)).status).toBe(404);
+    await prisma.verificationCheck.updateMany({
+      data: { result: 'ok' },
+      where: { fileId: file.id, kind: { in: ['rar', 'caen'] } },
+    });
 
     await prisma.$transaction((tx) =>
       verification.decide(

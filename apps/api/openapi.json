@@ -4908,6 +4908,104 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/decision": {
+      "post": {
+        "operationId": "VerificationFileController_decision",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          },
+          "409": {
+            "description": "verification_transition_refused (decidedBy, decidedAt, currentStatus), rar_check_required, caen_check_required"
+          },
+          "422": {
+            "description": "reason_required, note_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}/reopen": {
+      "post": {
+        "operationId": "VerificationFileController_reopen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationFileDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          },
+          "409": {
+            "description": "verification_transition_refused"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/listing-drafts/{id}/photos/upload-url": {
       "post": {
         "operationId": "ListingPhotosController_uploadAddress",
@@ -12340,6 +12438,13 @@
             "type": "string",
             "nullable": true
           },
+          "requestedItems": {
+            "description": "What the latest request for more asked for; empty otherwise",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "reopenedBy": {
             "nullable": true,
             "type": "object",
@@ -12381,6 +12486,7 @@
           "decidedAt",
           "reasonCode",
           "reasonNote",
+          "requestedItems",
           "reopenedBy",
           "reopenedAt",
           "reopenReason",
@@ -12642,6 +12748,52 @@
           "reports",
           "previousRejection",
           "timeline"
+        ]
+      },
+      "VerificationDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "more_requested",
+              "rejected"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Required with rejected, optional with more_requested",
+            "enum": [
+              "documents",
+              "rar",
+              "address",
+              "photos",
+              "other"
+            ]
+          },
+          "requestedItems": {
+            "type": "array",
+            "description": "What is missing; only with more_requested",
+            "items": {
+              "type": "string",
+              "enum": [
+                "documents",
+                "rar",
+                "address",
+                "photos",
+                "other"
+              ]
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "Trimmed; required with rejected and more_requested, optional with approved",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "decision"
         ]
       },
       "PhotoUploadRequestDto": {

@@ -207,6 +207,7 @@ export class VerificationFileService {
         reopenedAt: iso(file.reopenedAt),
         reopenedBy: actor(file.reopenedBy, file.reopenedAt),
         reopenReason: file.reopenReason,
+        requestedItems: file.requestedItems,
         status: file.status,
         submittedAt: file.submittedAt.toISOString(),
       },

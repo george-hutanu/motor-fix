@@ -180,8 +180,9 @@ describe('concurrent decisions', () => {
       ),
       inTx((tx) =>
         service().decide(tx, admin, file.id, {
+          note: REASON.note,
           outcome: 'rejected',
-          reason: REASON,
+          reason: REASON.code,
         }),
       ),
     ]);

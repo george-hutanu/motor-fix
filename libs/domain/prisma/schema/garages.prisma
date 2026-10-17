@@ -332,27 +332,29 @@ enum VerificationFileStatus {
 // writes by hand. The actors are kept without foreign keys, as the history
 // keeps them; a null `decidedBy` is the system.
 model VerificationFile {
-  id             String                 @id @default(uuid()) @db.Uuid
-  garageId       String                 @map("garage_id") @db.Uuid
-  status         VerificationFileStatus @default(submitted)
-  openedBy       String?                @map("opened_by") @db.Uuid
-  openedAt       DateTime?              @map("opened_at") @db.Timestamptz(3)
-  decidedBy      String?                @map("decided_by") @db.Uuid
-  decidedAt      DateTime?              @map("decided_at") @db.Timestamptz(3)
-  reopenedBy     String?                @map("reopened_by") @db.Uuid
-  reopenedAt     DateTime?              @map("reopened_at") @db.Timestamptz(3)
-  previousFileId String?                @unique @map("previous_file_id") @db.Uuid
-  reasonCode     String?                @map("reason_code")
-  reasonNote     String?                @map("reason_note")
-  declaredAt     DateTime?              @map("declared_at") @db.Timestamptz(3)
-  declaredByName String?                @map("declared_by_name")
-  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  id             String                    @id @default(uuid()) @db.Uuid
+  garageId       String                    @map("garage_id") @db.Uuid
+  status         VerificationFileStatus    @default(submitted)
+  openedBy       String?                   @map("opened_by") @db.Uuid
+  openedAt       DateTime?                 @map("opened_at") @db.Timestamptz(3)
+  decidedBy      String?                   @map("decided_by") @db.Uuid
+  decidedAt      DateTime?                 @map("decided_at") @db.Timestamptz(3)
+  reopenedBy     String?                   @map("reopened_by") @db.Uuid
+  reopenedAt     DateTime?                 @map("reopened_at") @db.Timestamptz(3)
+  previousFileId String?                   @unique @map("previous_file_id") @db.Uuid
+  reasonCode     String?                   @map("reason_code")
+  reasonNote     String?                   @map("reason_note")
+  // What a request for more asks for; empty for any other decision.
+  requestedItems String[]                  @default([]) @map("requested_items")
+  declaredAt     DateTime?                 @map("declared_at") @db.Timestamptz(3)
+  declaredByName String?                   @map("declared_by_name")
+  createdAt      DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
   // The latest sending: set at submitting, reset at a resending or a
   // reopening. The admins' queue waits from it.
-  submittedAt    DateTime               @default(now()) @map("submitted_at") @db.Timestamptz(3)
-  garage         Garage                 @relation(fields: [garageId], references: [id], onDelete: Cascade)
-  previousFile   VerificationFile?      @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
-  nextFile       VerificationFile?      @relation("follows")
+  submittedAt    DateTime                  @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  garage         Garage                    @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  previousFile   VerificationFile?         @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
+  nextFile       VerificationFile?         @relation("follows")
   checks         VerificationCheck[]
   reopenReason   VerificationReopenReason? @map("reopen_reason")
   reports        GarageReport[]

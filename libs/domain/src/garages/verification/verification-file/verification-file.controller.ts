@@ -1,5 +1,9 @@
-import { VerificationFileDto } from '@motor-fix/contracts';
 import {
+  VerificationDecisionDto,
+  VerificationFileDto,
+} from '@motor-fix/contracts';
+import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -9,10 +13,13 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 
 import { VerificationFileService } from './verification-file.service';
@@ -58,6 +65,53 @@ export class VerificationFileController {
     if (opened.first) {
       this.logger.log(`file ${id} opened by ${actor.accountId}`);
     }
+    return this.files.read(id);
+  }
+
+  // One decision per review; the answer is the file as it now stands.
+  @Post(':id/decision')
+  @HttpCode(200)
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: VerificationFileDto })
+  @ApiBadRequestResponse({ description: 'validation_failed' })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
+  @ApiConflictResponse({
+    description:
+      'verification_transition_refused (decidedBy, decidedAt, currentStatus), rar_check_required, caen_check_required',
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'reason_required, note_required',
+  })
+  async decision(
+    @CurrentActor() actor: Actor,
+    @Param('id') id: string,
+    @Body() body: VerificationDecisionDto,
+  ): Promise<VerificationFileDto> {
+    await this.prisma.$transaction((tx) =>
+      this.verification.decide(tx, actor, id, {
+        note: body.note,
+        outcome: body.decision,
+        reason: body.reason,
+        requestedItems: body.requestedItems,
+      }),
+    );
+    return this.files.read(id);
+  }
+
+  // A decided file goes back to review; its decision stands until a new one.
+  @Post(':id/reopen')
+  @HttpCode(200)
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: VerificationFileDto })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin, or no file' })
+  @ApiConflictResponse({ description: 'verification_transition_refused' })
+  async reopen(
+    @CurrentActor() actor: Actor,
+    @Param('id') id: string,
+  ): Promise<VerificationFileDto> {
+    await this.prisma.$transaction((tx) =>
+      this.verification.reopen(tx, actor, id),
+    );
     return this.files.read(id);
   }
 }
