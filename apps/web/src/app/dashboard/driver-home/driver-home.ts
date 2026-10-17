@@ -27,6 +27,8 @@ import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
 import { Live } from '../live';
 import { OilLine } from '../oil-line/oil-line';
+import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
+import { QuotesCompare } from '../quotes-compare/quotes-compare';
 import { SavedGaragesList } from '../saved-garages/saved-garages-list';
 import { SavedGaragesPanel } from '../saved-garages/saved-garages-panel/saved-garages-panel';
 import { Session } from '../session';
@@ -56,6 +58,7 @@ const TICK_MS = 60_000;
     KmPipe,
     OilLine,
     Panel,
+    QuotesCompare,
     RouterLink,
     SavedGaragesPanel,
     TiePipe,
@@ -95,9 +98,13 @@ export class DriverHome {
   protected readonly wide = new Set(
     DRIVER_PANELS.filter((p) => p.wide).map((p) => p.key),
   );
-  protected readonly quotes = computed(() =>
-    this.filter((r) => r.quotesCount > 0),
-  );
+  // The request whose quotes the panel compares: the newest still open.
+  protected readonly quotes = computed((): Read<string> => {
+    const requests = this.requests();
+    if (!Array.isArray(requests)) return requests;
+    const open = openRequestOf(requests);
+    return open ? [open.id] : [];
+  });
   protected readonly repairs = computed(() =>
     this.filter((r) => r.status === 'done'),
   );

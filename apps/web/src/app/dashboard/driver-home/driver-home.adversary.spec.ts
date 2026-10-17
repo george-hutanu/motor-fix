@@ -235,7 +235,7 @@ describe('quotes and repairs counted from the requests', () => {
     expect(panel(element, 'quotes')?.querySelector('h2 a')).toBeNull();
   });
 
-  it('fills quotes when only a closed request carries a quote', async () => {
+  it('keeps quotes empty when only a closed request carries a quote', async () => {
     const { element } = await render({
       requests: [
         request({ id: 'a', quotesCount: 0 }),
@@ -243,8 +243,8 @@ describe('quotes and repairs counted from the requests', () => {
       ],
     });
 
-    expect(text(panel(element, 'quotes'))).not.toContain(EMPTY.quotes);
-    expect(panel(element, 'quotes')?.querySelector('h2 a')).not.toBeNull();
+    expect(text(panel(element, 'quotes'))).toContain(EMPTY.quotes);
+    expect(panel(element, 'quotes')?.querySelector('h2 a')).toBeNull();
   });
 
   it('keeps repairs empty while requests are only booked or in work', async () => {
