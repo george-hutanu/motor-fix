@@ -35,6 +35,7 @@ features:
   - 066-suspended-garages
   - 1345-staging-observability
   - 005-data-requests
+  - 1348-release-green
 ---
 
 # Capability: Accounts
@@ -1043,6 +1044,10 @@ _From 005-data-requests._
 ### 005-FR-015 — The owner-only follow-ups (the lawyer's review, legal wording changes, the controller's contact details if they change, a processor contract list) MUST be raised in one `needs-confirmation` comment on the story with exact instructions; the comment does not set the task to Blocked and does not hold the merge.
 
 _From 005-data-requests._
+
+### 1348-FR-005 — The sign-in warm (1169-FR-002) MUST finish before the API's stores close: the warm service keeps every warm it started in flight, and once the application's shutdown has begun it starts no new warm and waits for those running before the Redis store is returned and the database client disconnects, so that `app.close()` resolves only after every warm in flight has finished and no database or Redis call is made after it. The sign-in answer is still never delayed by the warm, and a sign-in that arrives during shutdown is answered without one. A domain integration test that holds a warm's read open MUST fail while the leak is there (`app.close()` resolving before that read finished) and pass after; in CI, `assistant-token.integration.spec.ts` and every other file that follows a signing-in file in its worker run their tests.
+
+_From 1348-release-green._
 
 ## Retired
 

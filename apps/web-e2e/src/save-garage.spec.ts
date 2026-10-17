@@ -5,13 +5,15 @@ import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The driver's saved rows outlive a run: each test starts and ends with none
-// for this garage. A deployed address, whose run has no DATABASE_URL, skips it.
+// for this garage. saved-garages.spec.ts saves Service Colentina for the same
+// driver at the same time, so this one saves another. A deployed address,
+// whose run has no DATABASE_URL, skips it.
 test.describe('saving a garage from its profile @seeded', () => {
   test.skip(
     !process.env['DATABASE_URL'],
     'clears its saved row straight in PostgreSQL, which needs DATABASE_URL',
   );
-  const slug = 'service-colentina';
+  const slug = 'service-titan';
   let db: Client;
 
   const clear = () =>

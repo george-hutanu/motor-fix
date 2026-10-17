@@ -290,6 +290,30 @@ describe('the cache service', () => {
     expect(outcomes).toEqual({ 'profile warm': 1 });
   });
 
+  // @traces 1348-FR-006
+  it('counts the miss exactly once when the store fails', async () => {
+    const redis = client();
+    const cache = new CacheService(redis);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const evaluate = redis.eval.bind(redis);
+    jest
+      .spyOn(redis, 'eval')
+      .mockImplementation((...args) =>
+        String(args[0]).includes('ZADD')
+          ? Promise.reject(new Error('READONLY'))
+          : evaluate(...args),
+      );
+
+    const outcomes = await counting(() =>
+      expect(
+        cache.read({ key: key(), read: source(5, 0).read, soft: 600 }),
+      ).resolves.toBe(5),
+    );
+
+    expect(outcomes).toEqual({ 'profile miss': 1 });
+  });
+
   it('reads a value that is not one of its entries as a miss, and writes over it', async () => {
     const cache = new CacheService(client());
     const k = key();

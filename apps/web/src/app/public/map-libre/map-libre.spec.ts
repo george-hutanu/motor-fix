@@ -233,7 +233,7 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
   });
 });
 
-// @traces 269-FR-016
+// @traces 269-FR-016 270-FR-004
 describe('keepOutOfTabOrder', () => {
   it('takes every control inside the map out of the keyboard order, those added later too, until stopped', async () => {
     const host = document.createElement('div');
@@ -248,9 +248,12 @@ describe('keepOutOfTabOrder', () => {
     await Promise.resolve();
 
     // MapLibre's compact attribution is a <details>, whose <summary> takes focus.
-    for (const control of host.querySelectorAll('canvas, button, a, summary')) {
+    for (const control of host.querySelectorAll('button, a, summary')) {
       expect(control.getAttribute('tabindex')).toBe('-1');
     }
+    // A canvas at tabindex -1 still takes the focus of a tap on a pin
+    // (270-FR-004); without one it cannot be focused at all.
+    expect(host.querySelector('canvas')?.hasAttribute('tabindex')).toBe(false);
 
     stop();
     const after = document.createElement('button');
