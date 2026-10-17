@@ -3380,6 +3380,35 @@
         ]
       }
     },
+    "/api/v1/admin/demand": {
+      "get": {
+        "operationId": "DemandController_demand",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDemandDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
@@ -9781,6 +9810,100 @@
             ]
           }
         }
+      },
+      "AdminDemandBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The brand as stored in the request's car snapshot, not normalised; may be empty",
+            "example": "Dacia"
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests for the brand in the window",
+            "example": 412,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "name",
+          "requests"
+        ]
+      },
+      "AdminDemandJobDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The job type's key",
+            "example": "brakes"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Frâne"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Brakes"
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests that asked for the job in the window",
+            "example": 288,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "key",
+          "nameRo",
+          "nameEn",
+          "requests"
+        ]
+      },
+      "AdminDemandDto": {
+        "type": "object",
+        "properties": {
+          "firstDay": {
+            "type": "string",
+            "description": "The window's first Europe/Bucharest day",
+            "example": "2026-09-18",
+            "format": "date"
+          },
+          "lastDay": {
+            "type": "string",
+            "description": "The window's last day: today in Europe/Bucharest",
+            "example": "2026-10-17",
+            "format": "date"
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests created in the window",
+            "example": 1240,
+            "minimum": 0
+          },
+          "brands": {
+            "description": "Every brand with a request in the window, most first, then by name in code-point order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDemandBrandDto"
+            }
+          },
+          "jobs": {
+            "description": "Every job type asked for in the window, most first, then by key in code-point order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDemandJobDto"
+            }
+          }
+        },
+        "required": [
+          "firstDay",
+          "lastDay",
+          "requests",
+          "brands",
+          "jobs"
+        ]
       },
       "AdminCityDto": {
         "type": "object",

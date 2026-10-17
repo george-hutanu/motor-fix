@@ -12,6 +12,14 @@
   :host {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
+  /* Growth and the brand demand side by side, growth's charts stacked. */
+  mf-admin-growth {
+    grid-column: span 3;
+    --growth-columns: 1;
+  }
+  mf-admin-demand {
+    grid-column: span 3;
+  }
 }
 [role="group"],
 .observability {
