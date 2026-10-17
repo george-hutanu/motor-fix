@@ -12,6 +12,7 @@ import { Subject } from 'rxjs';
 
 import { Bell, BellStore } from './bell';
 import { Live } from '../live';
+import { Session } from '../session';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -37,6 +38,7 @@ let api: {
 };
 let events: Subject<LiveMessage>;
 let open: jest.Mock;
+let token: string | null;
 
 function setup(count = 0, items: NotificationDto[] = []) {
   api = {
@@ -55,6 +57,7 @@ function setup(count = 0, items: NotificationDto[] = []) {
       { provide: NotificationsService, useValue: api },
       { provide: Live, useValue: { events } },
       { provide: Overlays, useValue: { open } },
+      { provide: Session, useValue: { token: () => token } },
     ],
   });
 }
@@ -79,7 +82,10 @@ async function render(count = 0, items: NotificationDto[] = []) {
   return { button, element, fixture, store };
 }
 
-beforeEach(() => jest.mocked(toast).mockClear());
+beforeEach(() => {
+  jest.mocked(toast).mockClear();
+  token = 'access';
+});
 afterEach(() => jest.useRealTimers());
 
 describe('Bell', () => {
@@ -699,5 +705,22 @@ describe('BellStore', () => {
       ['a', '2026-10-05T10:00:00.000Z'],
       ['b', '2026-10-05T10:00:00.000Z'],
     ]);
+  });
+});
+
+// @traces 1345-FR-006
+describe('BellStore without a session', () => {
+  it('asks for no count on start or on the minute tick, and asks again once a token is held', async () => {
+    jest.useFakeTimers();
+    token = null;
+    const { store } = await render(2);
+
+    jest.advanceTimersByTime(60_000);
+    expect(await store.refreshCount()).toBeNull();
+    expect(api.bellControllerUnreadCount).not.toHaveBeenCalled();
+
+    token = 'access';
+    jest.advanceTimersByTime(60_000);
+    expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
   });
 });

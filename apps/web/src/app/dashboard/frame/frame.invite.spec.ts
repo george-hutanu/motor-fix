@@ -50,6 +50,7 @@ async function render(role: string, capabilities: string[]) {
           current: account,
           ended: new Subject<void>(),
           shown: account,
+          token: () => 'access',
         },
       },
       {

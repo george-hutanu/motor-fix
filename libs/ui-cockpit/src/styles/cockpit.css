@@ -18,6 +18,7 @@
   --mf-amber-ink: #ffb000;
   --mf-amber-tint: rgba(255, 176, 0, 0.1);
   --mf-green: #32d74b;
+  --mf-green-ink: #32d74b;
   --mf-red: #ff5a4f;
   --mf-red-ink: #ff5a4f;
   --mf-focus: #ffb000;
@@ -76,6 +77,7 @@
     --mf-amber-ink: #8a5e00;
     --mf-amber-tint: rgba(138, 94, 0, 0.1);
     --mf-green: #1e8e34;
+    --mf-green-ink: #176b28;
     --mf-red: #d93a30;
     --mf-red-ink: #b3261e;
     --mf-focus: #8a5e00;

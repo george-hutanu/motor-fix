@@ -126,6 +126,7 @@ async function open(url: string) {
           ended: new Subject<void>(),
           shown: current,
           signOut: jest.fn(),
+          token: () => 'access',
         },
       },
       {

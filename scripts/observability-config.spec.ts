@@ -118,3 +118,143 @@ describe('the verification result queue', () => {
     });
   });
 });
+
+// @traces 1345-FR-015
+describe('the Error % panels', () => {
+  type Panel = {
+    title?: string;
+    panels?: Panel[];
+    targets?: { expr: string; legendFormat?: string }[];
+  };
+  const flatten = (panels: Panel[]): Panel[] =>
+    panels.flatMap((panel) => [panel, ...flatten(panel.panels ?? [])]);
+  const targets = ['api', 'web', 'worker', 'mcp', 'overview'].flatMap((name) =>
+    flatten(
+      JSON.parse(
+        read(
+          'infra',
+          'observability',
+          'grafana',
+          'dashboards',
+          `motorfix-${name}.json`,
+        ),
+      ).panels,
+    )
+      .filter((panel) => panel.title === 'Error %')
+      .flatMap((panel) => panel.targets ?? []),
+  );
+  const exprs = targets.map((target) => target.expr.replace(/\s+/g, ' '));
+
+  it('label a failed-job share "failed %" and only an HTTP share "5xx %"', () => {
+    expect(targets).toHaveLength(8);
+    for (const target of targets) {
+      const jobs = target.expr.includes('motorfix_jobs_total');
+      expect([target.expr.slice(0, 60), target.legendFormat]).toEqual([
+        target.expr.slice(0, 60),
+        jobs ? 'failed %' : '5xx %',
+      ]);
+    }
+  });
+
+  it('show 0 rather than no value when nothing failed', () => {
+    expect(exprs).toHaveLength(8);
+    for (const expr of exprs) {
+      expect(expr).toMatch(
+        /^100 \* \(sum\(rate\(.+\)\) or vector\(0\)\) \/ sum\(rate\(.+\)\)$/,
+      );
+    }
+  });
+});
+
+// @traces 1345-FR-020
+describe('the observability README after the staging review', () => {
+  const readme = read('infra', 'observability', 'README.md');
+  const section = (title: string) => {
+    const start = readme.indexOf(`\n## ${title}\n`);
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = readme.indexOf('\n## ', start + 1);
+    return readme.slice(start, end === -1 ? undefined : end);
+  };
+
+  it('names the two start-up warnings and the variable each one wants', () => {
+    const configuration = section('Configuration');
+
+    for (const fact of [
+      'datastore metrics: MONITOR_DATABASE_URL unset, PostgreSQL readings off',
+      'browser telemetry off: FARO_URL unset',
+    ]) {
+      expect(configuration).toContain(fact);
+    }
+  });
+
+  it('says which alert rules fire on missing data', () => {
+    const alerts = section('Alert rules');
+
+    expect(alerts).toMatch(/\|\s*No data\s*\|/);
+    for (const uid of [
+      'postgres-unreachable',
+      'redis-unreachable',
+      'worker-queue-backlog',
+    ]) {
+      expect(alerts).toContain(uid);
+    }
+  });
+
+  it('records the product counters at 0 and the three that cannot fire on staging', () => {
+    const counters = section('Product counters');
+
+    for (const fact of [
+      'at 0',
+      'motorfix_garage_approvals_total',
+      'motorfix_verification_result_total',
+      'motorfix_documents_opened_total',
+      'motorfix_decline_windows_closed_total',
+    ]) {
+      expect(counters).toContain(fact);
+    }
+  });
+
+  // @traces 1345-FR-016 1345-FR-017
+  it('records why the failed-job counter keeps its version and why one failed job stays', () => {
+    for (const fact of [
+      'motorfix_queue_failed_total',
+      'service_version',
+      'target_info',
+      'max by (queue)',
+      'removeOnFail: 1000',
+    ]) {
+      expect(readme).toContain(fact);
+    }
+  });
+
+  // @traces 1345-FR-003 1345-FR-019
+  it('lists the owner steps with the variables to set', () => {
+    const steps = section('Owner steps');
+
+    for (const fact of [
+      'MONITOR_DATABASE_URL',
+      'FARO_URL',
+      'GEOAPIFY_API_KEY',
+      'notifications',
+    ]) {
+      expect(steps).toContain(fact);
+    }
+  });
+
+  it('notes in the inventory the counters that cannot fire on staging', () => {
+    const entries = JSON.parse(read('infra', 'observability', 'inventory.json'))
+      .entries as { kind: string; name: string; reason: string }[];
+
+    for (const name of [
+      'motorfix_garage_approvals_total',
+      'motorfix_verification_result_total',
+      'motorfix_documents_opened_total',
+    ]) {
+      expect(
+        entries.find(
+          (entry) => entry.kind === 'product-counter' && entry.name === name,
+        )?.reason,
+      ).toContain('cannot fire on staging');
+    }
+  });
+});

@@ -14,6 +14,7 @@ import {
   type SlowBaseline,
 } from './postgres';
 import { parseRedisInfo, type RedisReading } from './redis';
+import { logEntry } from '../log/log';
 import { telemetryStarted } from '../setup/start';
 
 interface DataStores {
@@ -115,7 +116,8 @@ export function observeDataStores(stores: DataStores): () => void {
       return result.reading;
     });
   if (!postgres) {
-    info(
+    logEntry(
+      'warn',
       'datastore metrics: MONITOR_DATABASE_URL unset, PostgreSQL readings off',
     );
   }

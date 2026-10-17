@@ -53,6 +53,7 @@ const colourNames = [
   '--mf-amber-ink',
   '--mf-amber-tint',
   '--mf-green',
+  '--mf-green-ink',
   '--mf-red',
   '--mf-red-ink',
   '--mf-focus',
@@ -84,6 +85,7 @@ describe('cockpit.css tokens', () => {
       '--mf-amber': '#ffb000',
       '--mf-bg': '#0b0c0e',
       '--mf-green': '#32d74b',
+      '--mf-green-ink': '#32d74b',
       '--mf-line': '#2a2d31',
       '--mf-panel': '#101215',
       '--mf-panel-raised': '#15171a',
@@ -100,6 +102,7 @@ describe('cockpit.css tokens', () => {
       '--mf-amber-ink': '#8a5e00',
       '--mf-bg': '#f4f4f1',
       '--mf-green': '#1e8e34',
+      '--mf-green-ink': '#176b28',
       '--mf-line': '#d3d5d8',
       '--mf-on-amber': '#15171a',
       '--mf-panel': '#ffffff',
@@ -170,6 +173,7 @@ describe('cockpit.css contrast', () => {
         '--mf-text',
         '--mf-text-secondary',
         '--mf-amber-ink',
+        '--mf-green-ink',
         '--mf-red-ink',
       ]) {
         for (const surface of surfaces) {

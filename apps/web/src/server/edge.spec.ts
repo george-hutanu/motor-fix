@@ -32,11 +32,15 @@ describe('web edge', () => {
   let release: () => void;
   let forwarded: { cookie?: string; for?: string }[];
   let apiReady: 'ok' | 'failing' | 'silent';
+  let drops: number;
+  let sockets: (number | undefined)[];
 
   beforeEach(async () => {
     seen = [];
     forwarded = [];
     apiReady = 'ok';
+    drops = 0;
+    sockets = [];
     const answerReady = (res: ServerResponse) => {
       if (apiReady !== 'silent')
         res.writeHead(apiReady === 'ok' ? 204 : 503).end();
@@ -45,6 +49,12 @@ describe('web edge', () => {
       if (req.url === '/health/ready') {
         seen.push({ body: '', method: req.method, url: req.url });
         answerReady(res);
+        return;
+      }
+      sockets.push(req.socket.remotePort);
+      if (drops > 0) {
+        drops--;
+        req.socket.destroy();
         return;
       }
       forwarded.push({
@@ -191,5 +201,65 @@ describe('web edge', () => {
     const res = await fetch(`${base}/api/v1/garages`);
 
     expect(res.status).toBe(502);
+  });
+
+  // @traces 1345-FR-011
+  describe('when the API drops the connection before answering', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it.each(['GET', 'HEAD'])(
+      'sends a %s once more on a fresh connection and logs nothing',
+      async (method) => {
+        drops = 1;
+
+        const res = await fetch(`${base}/api/v1/garages`, { method });
+
+        expect(res.status).toBe(201);
+        expect(sockets).toHaveLength(2);
+        expect(sockets[1]).not.toBe(sockets[0]);
+        expect(console.error).not.toHaveBeenCalled();
+        expect(console.log).not.toHaveBeenCalled();
+      },
+    );
+
+    it('sends a POST once and answers 502', async () => {
+      drops = 1;
+
+      const res = await fetch(`${base}/api/v1/garages`, {
+        body: '{"a":1}',
+        method: 'POST',
+      });
+
+      expect(res.status).toBe(502);
+      expect(sockets).toHaveLength(1);
+    });
+
+    it('answers 502 after a GET fails twice', async () => {
+      drops = 2;
+
+      const res = await fetch(`${base}/api/v1/garages`);
+
+      expect(res.status).toBe(502);
+      expect(sockets).toHaveLength(2);
+    });
+
+    it('retries a stream cut before its headers', async () => {
+      drops = 1;
+
+      const first = await new Promise<string>((resolve) =>
+        get(`${base}/api/v1/stream`, (res: IncomingMessage) =>
+          res.once('data', (chunk) => resolve(String(chunk))),
+        ),
+      );
+
+      expect(first).toBe('data: first\n\n');
+      expect(sockets).toHaveLength(2);
+      release();
+    });
   });
 });

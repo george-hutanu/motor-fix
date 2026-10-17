@@ -1,32 +1,26 @@
-import { setRoute } from '@motor-fix/observability';
+import { logEntry, setRoute } from '@motor-fix/observability';
 import { scrub } from '@motor-fix/observability/scrub';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
-import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import type { ErrorRequestHandler } from 'express';
 
-// A request that ended in a server error: its span is marked failed, one
-// masked JSON line goes to stdout and the same entry to the log exporter.
-export function reportServerError(error: unknown): void {
-  const message = scrub(error instanceof Error ? error.message : String(error));
+// A request that ended in a server error: its span is marked failed, and one
+// masked entry goes to stderr and the log exporter. A caller that names the
+// failure gives its own message, and the error's goes beside it as `error`.
+export function reportServerError(
+  error: unknown,
+  message?: string,
+  attributes: Record<string, string> = {},
+): void {
+  const cause = scrub(error instanceof Error ? error.message : String(error));
   const stack =
     error instanceof Error && error.stack ? scrub(error.stack) : undefined;
   const span = trace.getActiveSpan();
-  span?.recordException({ message, name: 'Error', stack });
-  span?.setStatus({ code: SpanStatusCode.ERROR, message });
-  const ids = span?.spanContext();
-  console.error(
-    JSON.stringify({
-      level: 'error',
-      message,
-      ...(stack && { stack }),
-      ...(ids && { span_id: ids.spanId, trace_id: ids.traceId }),
-    }),
-  );
-  logs.getLogger('motorfix').emit({
-    attributes: stack ? { stack } : {},
-    body: message,
-    severityNumber: SeverityNumber.ERROR,
-    severityText: 'ERROR',
+  span?.recordException({ message: cause, name: 'Error', stack });
+  span?.setStatus({ code: SpanStatusCode.ERROR, message: cause });
+  logEntry('error', message ?? cause, {
+    ...attributes,
+    ...(message && { error: cause }),
+    stack,
   });
 }
 

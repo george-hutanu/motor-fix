@@ -12,7 +12,7 @@
           "title": "Redis unreachable",
           "condition": "B",
           "for": "5m",
-          "noDataState": "OK",
+          "noDataState": "Alerting",
           "execErrState": "Error",
           "labels": {
             "service": "redis"

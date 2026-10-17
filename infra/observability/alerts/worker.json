@@ -124,7 +124,7 @@
           "title": "Worker queue backlog",
           "condition": "B",
           "for": "5m",
-          "noDataState": "OK",
+          "noDataState": "Alerting",
           "execErrState": "Error",
           "labels": {
             "service": "worker"

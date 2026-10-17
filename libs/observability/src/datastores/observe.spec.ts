@@ -1,4 +1,5 @@
 import { diag } from '@opentelemetry/api';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import { observeDataStores } from './observe';
@@ -163,7 +164,7 @@ describe('observeDataStores', () => {
       .filter((line) => line.includes('MONITOR_DATABASE_URL'));
     expect(lines).toEqual([
       JSON.stringify({
-        level: 'info',
+        level: 'warn',
         message:
           'datastore metrics: MONITOR_DATABASE_URL unset, PostgreSQL readings off',
       }),
@@ -351,5 +352,48 @@ describe('observeDataStores', () => {
     expect(store.info.mock.calls.length).toBe(reads);
     expect(await points('motorfix_datastore_up')).toEqual([]);
     expect(await points('motorfix_redis_clients_connected')).toEqual([]);
+  });
+});
+
+// @traces 1345-FR-002
+describe('the PostgreSQL readings left off', () => {
+  const unset = async () => {
+    await started?.flush();
+    return memory.logExporter
+      .getFinishedLogRecords()
+      .filter((record) => String(record.body).includes('MONITOR_DATABASE_URL'));
+  };
+
+  beforeEach(async () => {
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    await started?.flush();
+    memory.logExporter.reset();
+  });
+
+  it('writes one WARN record that names the variable and no value', async () => {
+    observe({ outbox: outbox(), redis: redis() });
+    await tick(50);
+
+    const records = await unset();
+    expect(records).toHaveLength(1);
+    expect(records[0]?.severityNumber).toBe(SeverityNumber.WARN);
+    expect(records[0]?.body).toBe(
+      'datastore metrics: MONITOR_DATABASE_URL unset, PostgreSQL readings off',
+    );
+    expect(records[0]?.attributes).toEqual({});
+  });
+
+  it('writes neither the line nor the record with a monitoring session', async () => {
+    observe({ outbox: outbox(), postgres: postgres(), redis: redis() });
+    await tick(50);
+
+    expect(
+      jest
+        .mocked(console.log)
+        .mock.calls.filter(([line]) =>
+          String(line).includes('MONITOR_DATABASE_URL'),
+        ),
+    ).toEqual([]);
+    expect(await unset()).toEqual([]);
   });
 });

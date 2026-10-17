@@ -39,6 +39,7 @@ const car = (quote: ReturnType<typeof dialog>) =>
 
 // @seeded: a driver sends a request from a garage's profile against the real API.
 // @traces 221-SC-001 221-SC-002 221-SC-007 221-FR-003
+// @traces 1345-FR-007
 test.describe('a quote request from a garage profile @seeded', () => {
   test('goes out from the profile, shows in Cererile mele without a reload and reaches the garage @core', async ({
     page,
@@ -89,14 +90,45 @@ test.describe('a quote request from a garage profile @seeded', () => {
     await hydrated(page, PROFILE);
     await page.getByRole('button', { name: 'Cere ofertă' }).click();
 
-    // The cars read is refused for a visitor; the sign-in gate opens over the
-    // dialog and the read is sent again once the driver is in.
+    // A visitor holds no session, so the sign-in gate opens over the dialog
+    // before the cars are read, and the read goes out once the driver is in.
     await signIn(page, DRIVER);
 
     await expect(page).toHaveURL(PROFILE);
     const quote = dialog(page, 'Cere ofertă');
     await expect(car(quote)).toContainText('Dacia Logan');
     await expect(quote.getByRole('switch', { name: OIL })).toBeVisible();
+  });
+
+  test('a visitor walking to the dialog meets no refused call and no renewal', async ({
+    page,
+  }) => {
+    const refused: string[] = [];
+    const renewals: string[] = [];
+    page.on('response', (response) => {
+      if (response.status() === 401) refused.push(response.url());
+    });
+    page.on('request', (request) => {
+      if (
+        request.method() === 'POST' &&
+        request.url().endsWith('/api/v1/auth/refresh')
+      ) {
+        renewals.push(request.url());
+      }
+    });
+
+    await hydrated(page, '/ro');
+    await hydrated(page, '/ro/garages?brand=dacia');
+    await hydrated(page, PROFILE);
+    await page.getByRole('button', { name: 'Cere ofertă' }).click();
+    await expect(
+      page
+        .getByRole('dialog', { name: 'Autentificare' })
+        .locator('mf-overlay-panel'),
+    ).toBeVisible();
+
+    expect(refused).toEqual([]);
+    expect(renewals).toEqual([]);
   });
 
   for (const [width, scheme, language] of [

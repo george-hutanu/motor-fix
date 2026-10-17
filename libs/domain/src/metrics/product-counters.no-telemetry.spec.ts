@@ -6,6 +6,7 @@ import {
   countQuote,
   countSearch,
   countSignIn,
+  initProductCounters,
 } from './product-counters';
 
 // No startTelemetry in this file: Jest gives it a fresh global, so the
@@ -21,6 +22,16 @@ describe('the product counters with telemetry off', () => {
       countQuote();
       countEmail('SIGN_IN_CODE');
       countNotification('push');
+    }).not.toThrow();
+  });
+});
+
+// @traces 1345-FR-012
+describe('the product counters at start with telemetry off', () => {
+  it('start nothing and never throw', () => {
+    expect(() => {
+      initProductCounters('api');
+      initProductCounters('worker');
     }).not.toThrow();
   });
 });

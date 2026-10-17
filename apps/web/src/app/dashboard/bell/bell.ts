@@ -21,6 +21,7 @@ import { toast } from '@motor-fix/ui-cockpit';
 
 import { BellList } from '../bell-list/bell-list';
 import { Live } from '../live';
+import { Session } from '../session';
 
 const REFRESH_MS = 60_000;
 
@@ -30,6 +31,7 @@ const REFRESH_MS = 60_000;
 export class BellStore {
   private readonly api = inject(NotificationsService);
   private readonly i18n = inject(I18n);
+  private readonly session = inject(Session);
   readonly count = signal(0);
   readonly items = signal<readonly NotificationDto[]>([]);
   readonly state = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -62,7 +64,9 @@ export class BellStore {
 
   // A failed count keeps the last one shown, and so does an answer to an
   // older request than the one shown; the caller still gets its own answer.
+  // Without a token the call would only be refused: the next tick asks again.
   async refreshCount() {
+    if (!this.session.token()) return null;
     const asked = ++this.asked;
     try {
       const { count } = await this.api.bellControllerUnreadCount();
