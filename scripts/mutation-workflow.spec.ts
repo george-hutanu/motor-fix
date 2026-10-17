@@ -153,4 +153,20 @@ describe('the docs that describe a mutation run', () => {
       expect(text).not.toMatch(/npx nx run[^`]*test:mutation/);
     },
   );
+
+  it('leaves mutation out of harden: only the mutation-runner, asked for by name, dispatches a run', () => {
+    for (const path of [
+      '.claude/skills/speckit-harden/SKILL.md',
+      '.specify/contexts/harden.md',
+    ]) {
+      const text = doc(path);
+
+      expect(text).not.toMatch(/gh workflow run mutation\.yml/);
+      expect(text).not.toMatch(/launch[^\n]*`?mutation-runner/i);
+      expect(text).not.toMatch(/mutation score/i);
+    }
+    expect(doc('.claude/agents/mutation-runner.md')).toMatch(
+      /gh workflow run mutation\.yml/,
+    );
+  });
 });
