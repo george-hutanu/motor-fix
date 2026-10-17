@@ -119,16 +119,45 @@ async function challenge(
   await res.body?.cancel();
   if (res.status !== 401) throw new Failed(`expected 401, got ${res.status}`);
   const header = res.headers.get('www-authenticate') ?? '';
-  // One header may carry several challenges (`Basic …, Bearer …`).
-  if (!/(^|,\s*)Bearer\b/i.test(header)) {
-    throw new Failed('the 401 has no Bearer challenge');
-  }
-  const named = /resource_metadata="([^"]*)"/.exec(header)?.[1];
-  const metadata = absolute(named);
+  const bearer = bearerParams(header);
+  if (!bearer) throw new Failed('the 401 has no Bearer challenge');
+  const metadata = absolute(bearer.get('resource_metadata'));
   if (!metadata) {
     throw new Failed('the challenge names no absolute resource_metadata');
   }
   return [metadata, `401 with resource_metadata ${metadata}`];
+}
+
+// The parameters of the Bearer challenge, or undefined when there is none.
+// One header may carry several challenges (`Basic realm="x", Bearer a="b"`):
+// a comma-separated part that is not `name=value` starts the next one.
+function bearerParams(header: string): Map<string, string> | undefined {
+  const challenges: { scheme: string; params: Map<string, string> }[] = [];
+  for (const raw of header.match(/(?:[^",]|"(?:[^"\\]|\\.)*")+/g) ?? []) {
+    const part = raw.trim();
+    const param = authParam(part);
+    const last = challenges.at(-1);
+    if (param && last) {
+      last.params.set(...param);
+      continue;
+    }
+    const scheme = /^\S+/.exec(part)?.[0] ?? '';
+    const first = authParam(part.slice(scheme.length).trim());
+    challenges.push({
+      params: new Map(first ? [first] : []),
+      scheme: scheme.toLowerCase(),
+    });
+  }
+  return challenges.find((c) => c.scheme === 'bearer')?.params;
+}
+
+// `name=value` or `name="quoted \" value"`, the name lower-cased.
+function authParam(part: string): [string, string] | undefined {
+  const match =
+    /^([\w!#$%&'*+.^`|~-]+)\s*=\s*(?:"((?:[^"\\]|\\.)*)"|(\S*))$/.exec(part);
+  if (!match?.[1]) return undefined;
+  const quoted = match[2]?.replace(/\\(.)/g, '$1');
+  return [match[1].toLowerCase(), quoted ?? match[3] ?? ''];
 }
 
 async function resource(
@@ -163,7 +192,11 @@ async function server(issuer: string, send: Send): Promise<[string, string]> {
     'token_endpoint',
     'registration_endpoint',
   ]) {
-    if (!str(body[key])) throw new Failed(`no ${key}`);
+    const value = str(body[key]);
+    if (!value) throw new Failed(`no ${key}`);
+    if (!absolute(value)) {
+      throw new Failed(`${key} is not an absolute http(s) URL: ${value}`);
+    }
   }
   const methods = body['code_challenge_methods_supported'];
   if (!Array.isArray(methods) || !methods.includes('S256')) {

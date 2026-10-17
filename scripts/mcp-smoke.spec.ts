@@ -203,6 +203,47 @@ describe('mcp-smoke', () => {
     },
   );
 
+  // @traces 1019-FR-001
+  it.each([
+    [
+      'after another scheme naming its own',
+      (meta: string) =>
+        `Other resource_metadata="https://elsewhere.invalid/x", Bearer resource_metadata="${meta}"`,
+      0,
+    ],
+    [
+      'on a Bearer challenge with parameters before it',
+      (meta: string) => `Bearer realm="mcp", resource_metadata="${meta}"`,
+      0,
+    ],
+    [
+      'only on another scheme after Bearer',
+      (meta: string) => `Bearer realm="mcp", Other resource_metadata="${meta}"`,
+      1,
+    ],
+  ])(
+    'reads resource_metadata from the Bearer challenge only: %s',
+    async (_name, header, expected) => {
+      const meta = `${base}/.well-known/oauth-protected-resource/mcp`;
+      routes['POST /mcp'] = (_req, _body, res) => {
+        res.writeHead(401, { 'www-authenticate': header(meta) });
+        res.end('{}');
+      };
+
+      const { code, lines } = await check();
+
+      expect(code).toBe(expected);
+      if (expected === 0) {
+        expect(line(lines, 'challenge')).toContain(meta);
+      } else {
+        expect(line(lines, 'challenge')).toMatch(
+          /^FAIL challenge — .*resource_metadata/,
+        );
+        expect(seen).toHaveLength(1);
+      }
+    },
+  );
+
   // @traces 1019-FR-002
   it('ignores one trailing slash on each side of the resource', async () => {
     routes['GET /.well-known/oauth-protected-resource/mcp'] = (_r, _b, res) =>
@@ -297,6 +338,41 @@ describe('mcp-smoke', () => {
       expect(line(lines, 'server metadata')).toMatch(/^FAIL /);
       expect(line(lines, 'register claude')).toMatch(/^SKIP /);
       expect(line(lines, 'register chatgpt')).toMatch(/^SKIP /);
+      expect(seen.some((s) => s.path.includes('clients-registrations'))).toBe(
+        false,
+      );
+    },
+  );
+
+  // @traces 1019-FR-003
+  it.each([
+    ['registration_endpoint', '/register'],
+    ['token_endpoint', 'token'],
+    ['authorization_endpoint', 'ftp://idp.example/auth'],
+  ])(
+    'fails the server metadata when %s is not an absolute http(s) URL, naming it',
+    async (key, value) => {
+      const path =
+        'GET /realms/motorfix-assistants/.well-known/oauth-authorization-server';
+      const issuer = `${base}/realms/motorfix-assistants`;
+      routes[path] = (_r, _b, res) =>
+        json(res, 200, {
+          authorization_endpoint: `${issuer}/auth`,
+          code_challenge_methods_supported: ['S256'],
+          issuer,
+          registration_endpoint: `${issuer}/clients-registrations/openid-connect`,
+          token_endpoint: `${issuer}/token`,
+          [key]: value,
+        });
+
+      const { code, lines } = await check();
+
+      expect(code).toBe(1);
+      const failed = line(lines, 'server metadata');
+      expect(failed).toMatch(/^FAIL /);
+      expect(failed).toContain(key);
+      expect(failed).toContain(value);
+      expect(line(lines, 'register claude')).toMatch(/^SKIP /);
       expect(seen.some((s) => s.path.includes('clients-registrations'))).toBe(
         false,
       );
