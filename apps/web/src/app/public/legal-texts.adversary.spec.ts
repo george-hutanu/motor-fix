@@ -43,7 +43,7 @@ describe('legal texts, structure and hygiene', () => {
     },
   );
 
-  // @traces 243-FR-001 1203-FR-009
+  // @traces 243-FR-001 1203-FR-009 366-FR-006
   it.each(kinds)(
     'the %s has the same sections and paragraph counts in both languages',
     (kind) => {

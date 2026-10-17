@@ -168,7 +168,7 @@ describe('the operator and how to reach it', () => {
     },
   );
 
-  // @traces 1203-FR-008
+  // @traces 1203-FR-008 366-FR-006
   it('no text uses a cedilla where Romanian takes a comma below', () => {
     expect(JSON.stringify(LEGAL_TEXTS)).not.toMatch(/[ŞşŢţ]/);
   });
