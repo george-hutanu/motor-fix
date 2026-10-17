@@ -9,6 +9,7 @@ features:
   - 206-documents-declaration
   - 049-garage-suspension
   - 301-verification-queue
+  - 066-suspended-garages
 ---
 
 # Capability: Garage verification
@@ -239,6 +240,34 @@ _From 301-verification-queue._
 ### 301-FR-013 — Tests MUST cover, in Jest: the waiting-state filter (`more_requested`, `approved`, `rejected` left out) and the oldest-first order including a resend; the working-day count across a weekend and across 1 December; the flag threshold at exactly 2 and at 3 days; `submitted_at` reset on resend and on reopen; red winning over the flag; the four counts equal to the read's total; 404 for each non-admin role; one ADMIN_VERIFICATION_QUEUED per admin per sending, none duplicated on a resend; the row's lamp colour for each case. End to end, as the seeded admin: the queue open with the seeded waiting files, a submission's `verification.submitted` event recorded for another seeded garage from a second context, the row and the four counts appearing without a reload, at desktop and a 320 px phone; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
 
 _From 301-verification-queue._
+
+### 066-FR-001 — The system MUST expose an admin-only summary read of the garages, `GET /api/v1/admin/garages/summary`, platform-wide whatever city the overview has chosen, answering three counts: `listed` (garages whose status is `approved`), `waiting` (the one waiting count of 301-FR-006, the files `submitted` or `in_review`) and `suspended` (garages whose status is `suspended`); every value is a count and nothing in the answer is personal data.
+
+_From 066-suspended-garages._
+
+### 066-FR-002 — The system MUST expose an admin-only list read of the garages by status, `GET /api/v1/admin/garages?status=suspended`, with `offset` 0 to 10000 and `limit` 1 to 200 (default 20; a live re-read asks for every loaded row), answering the rows and `total` (every suspended garage); `status` is required and `suspended` is the one value this story accepts, every other value, a missing status, or an offset or limit out of range answering 400 `validation_failed`. One row per suspended garage, its open suspension (empty `until_time`) when it has one, ordered by the suspension's start, most recent first, then by the garage id ascending (a garage with no open suspension last, by its name, then its id).
+
+_From 066-suspended-garages._
+
+### 066-FR-003 — Each row MUST carry the garage id and name, the id of the garage's newest verification file (absent when it has none; the "Deschide dosarul" link opens it, as the queue's rows link a file), its area (the town recorded for the garage, or for a mobile mechanic its service radius in km; absent when none, as 301-FR-002), and, from the open suspension: the cause, the reason as stored, `fromTime` (UTC), and `cancelledBookings`, the number of the garage's bookings cancelled with the reason `garage_suspended` at or after `fromTime` (0 until #204 cancels them); a garage with no open suspension carries none of these four.
+
+_From 066-suspended-garages._
+
+### 066-FR-004 — For a `recheck_failed` suspension the row MUST carry `rarVerdict` ∈ `expired`, `suspended`, `withdrawn`, decided once on the server: from the failed re-check's recorded verdict when the re-check story (#9) stores one, and until then from the reason, the one of "expirat", "suspendat", "retras" that comes first in the reason's text (any case, any ending); absent when neither names one. The state text per cause is the web's, in Romanian and English: `recheck_failed` "autorizație RAR expirată" / "autorizație RAR suspendată" / "autorizație RAR retrasă" by the verdict and "autorizație RAR nevalidă" without one ("RAR authorisation expired / suspended / withdrawn / invalid"); `documents_overdue` "documente anuale neîncărcate" ("yearly documents not uploaded"); `report_confirmed` "sesizare confirmată" ("report confirmed"); `admin` "decizia unui administrator" ("an admin's decision"); each shown as "suspendat · {text}" ("suspended · {text}").
+
+_From 066-suspended-garages._
+
+### 066-FR-005 — Both reads MUST keep the `admin/*` access policy: an admin reads them, any other role answers 404 `not_found` with no garage data, a missing token 401 `sign_in_required`; reading MUST write no audit entry and change nothing; neither read is refused by maintenance mode (160-FR-003).
+
+_From 066-suspended-garages._
+
+### 066-FR-010 — The two reads MUST be REST with OpenAPI, their query, row and answer DTOs in the contracts library validated at the edge, and the generated client regenerated; the web MUST call them through the generated client; both MUST be listed in `infra/observability/inventory.json` with their metric (the API's request duration by route), dashboard panel and alert or the reason none is needed.
+
+_From 066-suspended-garages._
+
+### 066-FR-011 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the three counts (approved, waiting as `submitted` or `in_review`, suspended; a `draft` garage counting nowhere) and `waiting` equal to the overview's count; the list's filter and order (most recent start first), `total`, the 400s of FR-002, a garage with no open suspension; `cancelledBookings` counting only `garage_suspended` cancellations at or after `fromTime`; `rarVerdict` for each of the three words, for a reason naming none and for the other three causes; 404 for a driver, an owner, a receptionist and a mechanic on both reads; no audit entry written by a read. Web unit tests MUST cover the counts line's three states and its plural forms in both languages, and the panel's state text per cause and verdict, the date, the cancelled count, the empty, loading, failed and stale states, in both languages. Playwright MUST show, as the seeded admin at desktop and a 320 px phone, the counts line and the panel on "Service-uri", then Atelier Dinamo suspended from a second context through the suspend endpoint: the line's figures and the panel's new row appear without a reload; the four sizes, light and dark, Romanian and English are the PR QA sweep's.
+
+_From 066-suspended-garages._
 
 ## Retired
 

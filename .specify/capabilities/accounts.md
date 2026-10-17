@@ -31,6 +31,7 @@ features:
   - 1169-prefetch-intent
   - 029-overview-panels-own-data
   - 366-assistant-privacy
+  - 066-suspended-garages
 ---
 
 # Capability: Accounts
@@ -933,6 +934,10 @@ _From 366-assistant-privacy._
 ### 366-FR-006 — Both languages MUST keep eleven privacy sections with the same paragraph counts in the same order, and the Romanian text MUST use ș and ț with comma below only.
 
 _From 366-assistant-privacy._
+
+### 066-FR-012 — The admin read of accounts (`GET /api/v1/admin/accounts`) MUST carry on each account `serviceSuspended`, true when the account holds a mechanic card at a garage whose status is `suspended`, false otherwise; no screen shows it in this story (the Mecanici table of #27 and the detail page of #28 will show "service suspendat" in red from it). Tests MUST cover a mechanic of a suspended garage (true), of an approved garage (false), an owner of a suspended garage with no mechanic card (false), and the flag turning false once the garage is no longer suspended.
+
+_From 066-suspended-garages._
 
 ## Retired
 
