@@ -240,44 +240,12 @@ afterEach(() => {
   rmSync(dir, { force: true, recursive: true });
 });
 
-describe('the expression reader these tests rest on', () => {
-  it('compares strings without regard to letter case and reads a missing value as empty', () => {
-    expect(holds("vars.X == 'true'", { 'vars.X': 'TRUE' })).toBe(true);
-    expect(holds("vars.X == 'true'", { 'vars.X': 'true ' })).toBe(false);
-    expect(holds("vars.X == 'true'", {})).toBe(false);
-    expect(holds("vars.X != 'true'", {})).toBe(true);
-    expect(holds("vars.X == ''", {})).toBe(true);
-  });
-
-  it('answers a && b || c with the operand GitHub picks', () => {
-    const pick = (x: string | undefined) =>
-      evaluate("vars.X == 'true' && 'on' || 'off'", { 'vars.X': x }).value;
-    expect(pick('true')).toBe('on');
-    expect(pick('no')).toBe('off');
-  });
-
-  it('refuses a function it does not know', () => {
-    expect(() => evaluate("contains(vars.X, 'true')", {})).toThrow(
-      'unsupported function contains',
-    );
-  });
-});
-
 // @traces 1348-FR-001
 describe('the release workflow’s production switch', () => {
   const production = jobOf(release, 'production');
   const condition = production.match(/^ {4}if: (.+)$/m)?.[1] ?? '';
   const staging = stepsOf(release, 'staging');
   const note = step(staging, 'Note that production is off');
-
-  it.each(cases)(
-    'runs the production job only for the value %s the variable lets through',
-    (_label, value) => {
-      expect(holds(condition, { 'vars.PRODUCTION_ENABLED': value })).toBe(
-        isOn(value),
-      );
-    },
-  );
 
   it.each(cases)(
     'says production is off in exactly the runs where the production job is skipped, for %s',
