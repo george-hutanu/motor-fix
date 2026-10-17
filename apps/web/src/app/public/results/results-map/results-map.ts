@@ -1,10 +1,11 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   Component,
   computed,
   DestroyRef,
-  type ElementRef,
+  ElementRef,
   effect,
   InjectionToken,
   inject,
@@ -32,6 +33,10 @@ import {
   openMapLibre,
   styleFor,
 } from '../../map-libre/map-libre';
+
+// The small card keeps 8 px from the map's edges and 14 px above its pin.
+const EDGE = 8;
+const GAP = 14;
 
 export interface ResultsMapView {
   destroy(): void;
@@ -106,15 +111,19 @@ export class ResultsMap {
   private fitWanted = false;
   // Bumped on every move of the map, so the small card follows its pin.
   private readonly shifts = signal(0);
-  // Where the small card stands: at its pin, below it in the top half.
+  // The small card's own height once drawn, to keep it inside the map.
+  private readonly small = viewChild('small', { read: ElementRef });
+  private readonly smallHeight = signal(0);
+  // Where the small card stands: above its pin, pushed down rather than
+  // flipped where the pin sits too near the top.
   protected readonly cardAt = computed(() => {
     const view = this.view();
     const card = this.card();
     if (!view || !card || !this.cardBrand()) return undefined;
     this.shifts();
     const { x, y } = view.spot({ lat: card.pin.lat, lng: card.pin.lng });
-    const height = this.host().nativeElement.clientHeight;
-    return { below: y < height / 2, x: `${x}px`, y: `${y}px` };
+    const top = Math.max(EDGE, y - this.smallHeight() - GAP);
+    return { top: `${top}px`, x: `${x}px`, y: `${y}px` };
   });
 
   constructor() {
@@ -142,6 +151,10 @@ export class ResultsMap {
     });
     effect(() => this.view()?.show(this.pins()));
     effect(() => this.view()?.light(this.lit()));
+    afterRenderEffect(() => {
+      const small = this.small()?.nativeElement as HTMLElement | undefined;
+      if (small) this.smallHeight.set(small.offsetHeight);
+    });
   }
 
   private follow(move: MapMove) {

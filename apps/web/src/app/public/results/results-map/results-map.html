@@ -5,9 +5,10 @@
   }
   @if (cardAt(); as at) {
     <mf-map-card
-      [class.below]="at.below"
+      #small
       [style.--x]="at.x"
       [style.--y]="at.y"
+      [style.top]="at.top"
       [pin]="card()!.pin"
       [brand]="cardBrand()!"
       [garage]="card()!.garage"

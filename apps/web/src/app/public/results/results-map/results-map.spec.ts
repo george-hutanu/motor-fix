@@ -479,6 +479,19 @@ describe('ResultsMap, a tapped pin and its small card', () => {
     expect(card()?.style.getPropertyValue('--y')).toBe('90px');
   });
 
+  it('stands above its pin, pushed inside the map near its top edge rather than flipped', async () => {
+    await withCard();
+
+    expect(card()?.style.top).toBe('26px');
+
+    view.spot.mockReturnValue({ x: 60, y: 5 });
+    shifted();
+    fixture.detectChanges();
+
+    expect(card()?.style.top).toBe('8px');
+    expect(card()?.classList).not.toContain('below');
+  });
+
   it('closes the small card when the page clears it', async () => {
     await withCard();
 
