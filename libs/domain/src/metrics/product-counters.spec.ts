@@ -1,4 +1,8 @@
-import { CONSENT_DECISIONS, DOCUMENT_KINDS } from '@motor-fix/contracts';
+import {
+  CONSENT_DECISIONS,
+  DOCUMENT_KINDS,
+  SYSTEM_LOG_KINDS,
+} from '@motor-fix/contracts';
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import { type Meter, metrics } from '@opentelemetry/api';
@@ -27,7 +31,6 @@ import {
   countVerificationResult,
   initProductCounters,
 } from './product-counters';
-import { KINDS } from '../admin/system-log/entry';
 import { TEMPLATES } from '../notifications/templates/registry';
 
 const STEP_ACTIONS = [
@@ -143,7 +146,7 @@ function countEverySeries() {
   SUPPORT_EMAILS.forEach(([kind, outcome]) => {
     countSupportEmail(kind, outcome);
   });
-  for (const kind of KINDS) {
+  for (const kind of SYSTEM_LOG_KINDS) {
     for (const outcome of ['written', 'grouped', 'dropped'] as const)
       countSystemLogEntry(kind, outcome);
   }

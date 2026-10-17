@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 132,
+    "count": 134,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -660,6 +660,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "quote-requests-compare",
+      "source": "libs/domain/src/quotes/compare/compare.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quote-requests/{id}/quotes",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver's comparison of one request's quotes, read from PostgreSQL and writing quote.first_seen_at once; no counter or alert of its own: a read of the driver's own data, covered by the API's error-rate and latency alerts; no outside call",
+      "story": "ST-313"
+    },
+    {
+      "kind": "endpoint",
       "name": "quotes",
       "source": "libs/domain/src/quotes/quotes/quotes.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/quotes",
@@ -1088,6 +1101,19 @@
       ],
       "reason": "the admin's demand read, counts only; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-103"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-system-log",
+      "source": "libs/domain/src/admin/system-log/system-log.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/system-log",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's read of today's log entries, twenty at most on an indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-298"
     },
     {
       "kind": "endpoint",

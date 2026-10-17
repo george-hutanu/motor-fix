@@ -1,15 +1,13 @@
+import {
+  SYSTEM_LOG_KINDS,
+  SYSTEM_LOG_SOURCES,
+  type SystemLogKind,
+  type SystemLogSource,
+} from '@motor-fix/contracts';
 import { scrubDeep } from '@motor-fix/observability';
 import { Logger } from '@nestjs/common';
 
-import {
-  type Contexts,
-  entryOf,
-  KINDS,
-  type Kind,
-  minuteOf,
-  SOURCES,
-  type Source,
-} from './entry';
+import { type Contexts, entryOf, minuteOf } from './entry';
 import { audienceOf } from '../../events/audience';
 import { type LivePublisher, publishLive } from '../../events/live/live.hub';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -26,19 +24,19 @@ const logger = new Logger('SystemLog');
 const ADMINS = audienceOf({ adminOnly: true, type: 'platform' });
 let ports: Ports | null = null;
 
-const known = (kind: unknown): kind is Kind =>
-  (KINDS as readonly unknown[]).includes(kind);
-const listed = (source: unknown): source is Source =>
-  (SOURCES as readonly unknown[]).includes(source);
+const known = (kind: unknown): kind is SystemLogKind =>
+  (SYSTEM_LOG_KINDS as readonly unknown[]).includes(kind);
+const listed = (source: unknown): source is SystemLogSource =>
+  (SYSTEM_LOG_SOURCES as readonly unknown[]).includes(source);
 
 // One entry per kind, source, fingerprint and minute: a repeat in the same
 // minute only counts one more, even when many arrive at once. The entry is
 // written on the writer's own connection, so a caller rolling its work back
 // keeps it, and a failure here is never the caller's.
-async function store<K extends Kind>(
+async function store<K extends SystemLogKind>(
   { prisma, redis }: Ports,
   kind: K,
-  source: Source,
+  source: SystemLogSource,
   context: Contexts[K],
   at: Date,
 ): Promise<Outcome> {
@@ -80,9 +78,9 @@ export const systemLog = {
   stop(owner?: Ports): void {
     if (!owner || ports === owner) ports = null;
   },
-  async write<K extends Kind>(
+  async write<K extends SystemLogKind>(
     kind: K,
-    source: Source,
+    source: SystemLogSource,
     context: Contexts[K],
     at: Date = new Date(),
   ): Promise<Outcome> {

@@ -50,6 +50,14 @@
           @case ('failed') {
             <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
           }
+          @case ('filled') {
+            @let ids = quotes();
+            @if (ids !== 'failed' && ids) {
+              @for (id of ids; track id) {
+                <mf-quotes-compare [requestId]="id" />
+              }
+            }
+          }
           @case ('empty') {
             <mf-empty-state icon="quote" text="driver.empty.quotes">
               <a hlmBtn [routerLink]="['/', language()]">{{ 'driver.empty.findGarage' | t | tie }}</a>

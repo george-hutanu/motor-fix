@@ -129,6 +129,8 @@ export type { VerificationFileControllerDecision$Params as VerificationFileContr
 export { verificationFileControllerDecision as verificationFileControllerDecision } from './fn/admin/verification-file-controller-decision';
 export type { VerificationFileControllerReopen$Params as VerificationFileControllerReopen$Params } from './fn/admin/verification-file-controller-reopen';
 export { verificationFileControllerReopen as verificationFileControllerReopen } from './fn/admin/verification-file-controller-reopen';
+export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
+export { systemLogControllerList as systemLogControllerList } from './fn/admin/system-log-controller-list';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';
@@ -187,6 +189,8 @@ export type { QuoteRequestsControllerSend$Params as QuoteRequestsControllerSend$
 export { quoteRequestsControllerSend as quoteRequestsControllerSend } from './fn/quote-requests/quote-requests-controller-send';
 export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControllerCandidates$Params } from './fn/quote-requests/quote-requests-controller-candidates';
 export { quoteRequestsControllerCandidates as quoteRequestsControllerCandidates } from './fn/quote-requests/quote-requests-controller-candidates';
+export type { CompareControllerGet$Params as CompareControllerGet$Params } from './fn/quote-requests/compare-controller-get';
+export { compareControllerGet as compareControllerGet } from './fn/quote-requests/compare-controller-get';
 export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from './fn/quotes/quotes-controller-send';
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
 export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';

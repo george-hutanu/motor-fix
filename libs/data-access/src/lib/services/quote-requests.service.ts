@@ -10,6 +10,9 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { CandidateGarageListDto } from '../models/candidate-garage-list-dto';
+import { compareControllerGet } from '../fn/quote-requests/compare-controller-get';
+import { CompareControllerGet$Params } from '../fn/quote-requests/compare-controller-get';
+import { QuoteComparisonDto } from '../models/quote-comparison-dto';
 import { quoteRequestsControllerCandidates } from '../fn/quote-requests/quote-requests-controller-candidates';
 import { QuoteRequestsControllerCandidates$Params } from '../fn/quote-requests/quote-requests-controller-candidates';
 import { quoteRequestsControllerSend } from '../fn/quote-requests/quote-requests-controller-send';
@@ -86,6 +89,31 @@ export class QuoteRequestsService extends BaseService {
   quoteRequestsControllerCandidates(params: QuoteRequestsControllerCandidates$Params, context?: HttpContext): Promise<CandidateGarageListDto> {
     const resp = this.quoteRequestsControllerCandidates$Response(params, context);
     return resp.then((r: StrictHttpResponse<CandidateGarageListDto>): CandidateGarageListDto => r.body);
+  }
+
+  /** Path part for operation `compareControllerGet()` */
+  static readonly CompareControllerGetPath = '/api/v1/quote-requests/{id}/quotes';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `compareControllerGet()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  compareControllerGet$Response(params: CompareControllerGet$Params, context?: HttpContext): Promise<StrictHttpResponse<QuoteComparisonDto>> {
+    const obs = compareControllerGet(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `compareControllerGet$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  compareControllerGet(params: CompareControllerGet$Params, context?: HttpContext): Promise<QuoteComparisonDto> {
+    const resp = this.compareControllerGet$Response(params, context);
+    return resp.then((r: StrictHttpResponse<QuoteComparisonDto>): QuoteComparisonDto => r.body);
   }
 
 }

@@ -84,6 +84,27 @@ describe('the saved garages list route', () => {
   });
 });
 
+// @traces 298-FR-013
+describe('the system log read route', () => {
+  it('is an OpenAPI operation the inventory lists with its metric and alerts', () => {
+    const read = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/admin/system-log'];
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: { name?: string; metric?: string; alerts?: string[] }[] =
+      Object.values(inventory).flatMap((each) =>
+        Array.isArray(each) ? each : [],
+      );
+    const log = entries.find((each) => each.name === 'admin-system-log');
+
+    expect(Object.keys(read)).toEqual(['get']);
+    expect(log?.metric).toMatch(/\/api\/v1\/admin\/system-log$/);
+    expect(log?.alerts?.length).toBeGreaterThan(0);
+  });
+});
+
 describe('the map pins and verification file entries', () => {
   it('keeps the ST-269 pins route and counter beside the ST-302 file routes', () => {
     const inventory = JSON.parse(

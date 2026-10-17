@@ -53,6 +53,9 @@ import { PlatformRulesControllerList$Params } from '../fn/admin/platform-rules-c
 import { PlatformRulesDto } from '../models/platform-rules-dto';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
 import { SuspensionControllerSuspend$Params } from '../fn/admin/suspension-controller-suspend';
+import { systemLogControllerList } from '../fn/admin/system-log-controller-list';
+import { SystemLogControllerList$Params } from '../fn/admin/system-log-controller-list';
+import { SystemLogDto } from '../models/system-log-dto';
 import { VerificationCheckRecordedDto } from '../models/verification-check-recorded-dto';
 import { verificationChecksControllerRecord } from '../fn/admin/verification-checks-controller-record';
 import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
@@ -429,6 +432,31 @@ export class AdminService extends BaseService {
   verificationFileControllerReopen(params: VerificationFileControllerReopen$Params, context?: HttpContext): Promise<VerificationFileDto> {
     const resp = this.verificationFileControllerReopen$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
+  }
+
+  /** Path part for operation `systemLogControllerList()` */
+  static readonly SystemLogControllerListPath = '/api/v1/admin/system-log';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `systemLogControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  systemLogControllerList$Response(params: SystemLogControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<SystemLogDto>> {
+    const obs = systemLogControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `systemLogControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  systemLogControllerList(params: SystemLogControllerList$Params, context?: HttpContext): Promise<SystemLogDto> {
+    const resp = this.systemLogControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SystemLogDto>): SystemLogDto => r.body);
   }
 
   /** Path part for operation `platformRulesControllerList()` */

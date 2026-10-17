@@ -1,11 +1,13 @@
-import { entryOf, KINDS, minuteOf, SOURCES } from './entry';
+import { SYSTEM_LOG_KINDS, SYSTEM_LOG_SOURCES } from '@motor-fix/contracts';
+
+import { entryOf, minuteOf } from './entry';
 
 const at = new Date('2026-10-17T10:41:27.512Z');
 
 // @traces 297-FR-002
 describe('the kinds and sources an entry may name', () => {
   it('are the eight kinds and ten sources of the log', () => {
-    expect(KINDS).toEqual([
+    expect(SYSTEM_LOG_KINDS).toEqual([
       'status_changed',
       'check_failed',
       'job_failed',
@@ -15,7 +17,7 @@ describe('the kinds and sources an entry may name', () => {
       'backup_failed',
       'deploy',
     ]);
-    expect(SOURCES).toEqual([
+    expect(SYSTEM_LOG_SOURCES).toEqual([
       'api',
       'search',
       'maps',
