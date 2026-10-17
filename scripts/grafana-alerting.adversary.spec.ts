@@ -119,6 +119,7 @@ describe('the alerting apply step under hostile Grafana answers', () => {
           GRAFANA_URL: url,
           GROUP: '0',
           LIST: '0',
+          LIST_BODY: '[]',
           OUTAGE_LIST_BODY: '[]',
           OUTAGE_WEBHOOK_TOKEN: '',
           PATH: `${join(dir, 'bin')}:${process.env['PATH']}`,
@@ -193,7 +194,7 @@ describe('the alerting apply step under hostile Grafana answers', () => {
       ]),
     });
     expect(code).toBe(0);
-    expect(deletes(calls).sort()).toEqual(
+    expect(deletes(calls)).toEqual(
       ['old-1', 'old-2', 'old-3', 'old-4'].map(
         (uid) => `DELETE /api/v1/provisioning/contact-points/${uid}`,
       ),
@@ -201,24 +202,107 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   });
 
   // @traces 1347-FR-002
-  it.each<[string, Record<string, string>]>([
-    ['applied', { OUTAGE_WEBHOOK_TOKEN: hook, STAGING_WEB_URL: web }],
-    ['skipped', {}],
-  ])(
-    'keeps one declared outage uid listed alone while the webhook is %s',
-    (_, env) => {
-      for (const uid of OUTAGE) {
-        rmSync(join(dir, 'calls'), { recursive: true });
-        mkdirSync(join(dir, 'calls'));
-        const { code, calls } = apply({
-          OUTAGE_LIST_BODY: JSON.stringify([{ name: 'motorfix-outage', uid }]),
-          ...env,
-        });
-        expect(code).toBe(0);
-        expect(deletes(calls)).toEqual([]);
-      }
+  it.each<[string, string, Record<string, string>]>(
+    OUTAGE.flatMap((uid) => [
+      [uid, 'applied', { OUTAGE_WEBHOOK_TOKEN: hook, STAGING_WEB_URL: web }],
+      [uid, 'skipped', {}],
+    ]),
+  )('keeps %s listed alone while the webhook is %s', (uid, _, env) => {
+    const { code, calls } = apply({
+      OUTAGE_LIST_BODY: JSON.stringify([{ name: 'motorfix-outage', uid }]),
+      ...env,
+    });
+    expect(code).toBe(0);
+    expect(deletes(calls)).toEqual([]);
+  });
+
+  // @traces 1347-FR-002
+  it('deletes a hand-made uid that only resembles a declared one, and keeps the declared', () => {
+    const near = [
+      'motorfix-outage',
+      'motorfix-outage-email-old',
+      'motorfix-outage-webhoo',
+      'Motorfix-Outage-Email',
+    ];
+    const { code, calls } = apply({
+      OUTAGE_LIST_BODY: JSON.stringify(
+        [...near, ...OUTAGE].map((uid) => ({ uid })),
+      ),
+    });
+    expect(code).toBe(0);
+    expect(deletes(calls)).toEqual(
+      near.map((uid) => `DELETE /api/v1/provisioning/contact-points/${uid}`),
+    );
+  });
+
+  // @traces 1347-FR-002
+  it('sends no delete for a listed entry without a uid', () => {
+    const { code, calls } = apply({
+      OUTAGE_LIST_BODY: JSON.stringify([
+        { name: 'motorfix-outage' },
+        { uid: null },
+        { uid: '' },
+        { uid: 'hand' },
+      ]),
+    });
+    expect(code).toBe(0);
+    expect(deletes(calls)).toEqual([
+      'DELETE /api/v1/provisioning/contact-points/hand',
+    ]);
+  });
+
+  // @traces 1347-FR-002
+  it.each(['../policies', 'a?x=1', 'a#frag'])(
+    'deletes the hand-made uid %s as one path segment of the contact points',
+    (uid) => {
+      const { calls } = apply({ OUTAGE_LIST_BODY: JSON.stringify([{ uid }]) });
+      const [target] = deletes(calls).map(
+        (c) => new URL(c.replace(/^DELETE /, url)),
+      );
+      const prefix = '/api/v1/provisioning/contact-points/';
+      expect(target?.search).toBe('');
+      expect(target?.hash).toBe('');
+      expect(target?.pathname.startsWith(prefix)).toBe(true);
+      expect(
+        decodeURIComponent(String(target?.pathname.slice(prefix.length))),
+      ).toBe(uid);
     },
   );
+
+  // @traces 1347-FR-002
+  it('fails the step on an empty list answer for one name and still handles the other', () => {
+    const { code, calls, out } = apply({
+      LIST_BODY: JSON.stringify([{ uid: 'old-1' }]),
+      OUTAGE_LIST_BODY: '',
+    });
+    expect(code).toBe(1);
+    expect(out).toMatch(/::error::.*motorfix-outage is not a list/);
+    expect(deletes(calls)).toEqual([
+      'DELETE /api/v1/provisioning/contact-points/old-1',
+    ]);
+  });
+
+  // @traces 1347-FR-002
+  it('fails the step, still applies the policy and removes nothing, when the webhook has no url to fill in', () => {
+    const file = join(alerting(), 'contact-points.json');
+    const points = declared();
+    const webhook = points.find((p) => p.uid === OUTAGE[1]);
+    if (webhook) delete webhook.settings['url'];
+    writeFileSync(file, JSON.stringify(points));
+    const { code, calls, out } = apply({
+      LIST_BODY: JSON.stringify([{ uid: 'old-1' }]),
+      OUTAGE_WEBHOOK_TOKEN: hook,
+      STAGING_WEB_URL: web,
+    });
+    expect(code).toBe(1);
+    expect(out).toMatch(
+      /::error::.*motorfix-outage-webhook has no settings\.url/,
+    );
+    expect(sequence(calls)).toContain('PUT /api/v1/provisioning/policies');
+    expect(sequence(calls).filter((c) => c.includes('?name='))).toEqual([]);
+    expect(deletes(calls)).toEqual([]);
+    expect(written('.body').filter((b) => b.includes(hook))).toEqual([]);
+  });
 
   // @traces 1347-FR-002
   it('lists and deletes nothing under either name when one outage entry is refused', () => {
@@ -381,11 +465,7 @@ describe('the alerting apply step under hostile Grafana answers', () => {
   // @traces 1347-FR-002
   it('asks once for each declared name, percent-encoded', () => {
     const { calls } = apply({ LIST_BODY: '[]' });
-    expect(
-      sequence(calls)
-        .filter((c) => c.includes('?name='))
-        .sort(),
-    ).toEqual([
+    expect(sequence(calls).filter((c) => c.includes('?name='))).toEqual([
       'GET /api/v1/provisioning/contact-points?name=MotorFix%20owner',
       'GET /api/v1/provisioning/contact-points?name=motorfix-outage',
     ]);
@@ -520,27 +600,6 @@ describe('the alerting apply step under hostile Grafana answers', () => {
       declared().filter((p) => p.type === 'email'),
     );
     expect(sent).toContainEqual(policy);
-  });
-
-  // @traces 1347-FR-002
-  it('sends the webhook as its entry plus the staging url and the token', () => {
-    apply({
-      LIST_BODY: '[]',
-      OUTAGE_WEBHOOK_TOKEN: hook,
-      STAGING_WEB_URL: web,
-    });
-    const sent = written('.body').map((b) => JSON.parse(b));
-    const entry = declared().find((p) => p.uid === OUTAGE[1]);
-    expect(sent.filter((b) => b.uid === OUTAGE[1])).toEqual([
-      {
-        ...entry,
-        settings: {
-          ...entry?.settings,
-          authorization_credentials: hook,
-          url: `${web}/api/v1/monitoring/outage-alerts`,
-        },
-      },
-    ]);
   });
 
   // @traces 880-FR-014

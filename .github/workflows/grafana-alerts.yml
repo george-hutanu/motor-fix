@@ -93,7 +93,6 @@ jobs:
           hook='($ENV.STAGING_WEB_URL | gsub("^\\s+|\\s+$"; "") | sub("/+$"; "")) as $web
             | .settings.url |= sub("^\\{PUBLIC_WEB_URL\\}"; $web)
             | .settings.authorization_credentials = ($ENV.OUTAGE_WEBHOOK_TOKEN | gsub("^\\s+|\\s+$"; ""))'
-          noticed=0
           if ! points=$(jq -c 'if type == "array" then .[] else error("list") end' "$cp_file" 2> /dev/null); then
             echo "::error::$cp_file: not a list of contact points."
             failed=1
@@ -106,8 +105,7 @@ jobs:
             body="$point"
             if [ "$(jq -r .type <<< "$point")" = webhook ]; then
               if [ -n "$missing" ]; then
-                [ "$noticed" -eq 1 ] || echo "::notice::The outage webhook is not applied: $missing not set."
-                noticed=1
+                echo "::notice::The outage webhook is not applied: $missing not set."
                 echo "skipped $cp_file ($uid)"
                 continue
               fi
@@ -171,7 +169,7 @@ jobs:
                 failed=1
                 continue
               fi
-              if ! olds=$(jq -r --argjson keep "$keep" 'if type == "array" then .[] | .uid as $u | select(any($keep[]; . == $u) | not) | .uid else error("list") end' "$list" 2> /dev/null); then
+              if ! olds=$(jq -rn --argjson keep "$keep" 'input | if type == "array" then .[] | .uid | select(type == "string" and . != "") | select(. as $u | any($keep[]; . == $u) | not) else error("list") end' "$list" 2> /dev/null); then
                 echo "::error::$cp_file: Grafana's list of the contact points named $name is not a list."
                 failed=1
                 continue
