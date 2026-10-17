@@ -131,7 +131,8 @@ test.describe('comparing the quotes of a request @seeded', () => {
         description: `Schimb de ulei ${stamp}`,
         garageIds: [militariId, ...garageIds],
         jobTypeIds: [oil?.id],
-        sources: ['profile_direct'],
+        // One source per garage, in the same order.
+        sources: [militariId, ...garageIds].map(() => 'profile_direct'),
       },
       headers: {
         ...bearer(await accessToken(request, driver, password)),
