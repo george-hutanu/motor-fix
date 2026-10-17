@@ -34,6 +34,28 @@ const menu = (page: Page) =>
   (page.viewportSize()?.width ?? 1280) < 768
     ? page.locator('mf-dashboard-tab-bar nav')
     : page.locator('aside nav');
+const chip = (page: Page) =>
+  menu(page).locator('a[href="/app/admin/garages"] .chip');
+const line = (page: Page) => page.locator('.admin-line');
+const LINE = /· (\d+) (?:de )?service/;
+// The heading, the menu counter and the header line read the same number.
+// Other workers send and decide files meanwhile, so each count is compared
+// with the others at one moment, never with a number read earlier.
+async function countsAgree(page: Page) {
+  await expect
+    .poll(
+      async () => {
+        const counter = Number((await chip(page).textContent())?.trim());
+        const header = Number(
+          LINE.exec((await line(page).textContent()) ?? '')?.[1],
+        );
+        const panel = await counted(page);
+        return panel > 0 && panel === counter && counter === header;
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+}
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
@@ -89,9 +111,7 @@ test.describe('the verification queue @seeded', () => {
       );
 
       await expect(heading(page)).toHaveText(HEADING);
-      const before = await counted(page);
-      const chip = menu(page).locator('a[href="/app/admin/garages"] .chip');
-      await expect(chip).toHaveText(String(before));
+      await countsAgree(page);
 
       garageId = randomUUID();
       const name = `Coada Test ${garageId.slice(0, 8)}`;
@@ -124,23 +144,14 @@ test.describe('the verification queue @seeded', () => {
         'href',
         `/app/admin/garages/${fileId}`,
       );
-      const after = await counted(page);
-      expect(after).toBeGreaterThan(before);
       // The four counts: the view's heading, the menu counter, the header
       // line and, one router step away with no reload, the overview's panel.
-      await expect(chip).toHaveText(String(after));
-      const line = page.locator('.admin-line');
-      await expect(line).toContainText(` ${after} `);
-      await expect(line).toContainText('așteaptă verificarea');
+      await countsAgree(page);
+      await expect(line(page)).toContainText('așteaptă verificarea');
       await menu(page).locator('a[href="/app/admin"]').click();
       await expect(page).toHaveURL('/app/admin');
       await expect(heading(page)).toHaveText(HEADING);
-      // Other workers may send files meanwhile: the overview's three counts
-      // agree with each other and hold at least the new one.
-      const panel = await counted(page);
-      expect(panel).toBeGreaterThanOrEqual(after);
-      await expect(chip).toHaveText(String(panel));
-      await expect(line).toContainText(` ${panel} `);
+      await countsAgree(page);
       await expect(
         queue(page).locator('li.row', { hasText: name }),
       ).toBeVisible();
