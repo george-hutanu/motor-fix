@@ -56,6 +56,17 @@ async function countsAgree(page: Page) {
     )
     .toBe(true);
 }
+// From 900 px the rows share their columns: each part starts at one x.
+async function expectColumnsShared(page: Page) {
+  for (const part of ['mf-lamp', '.applied', 'a.open']) {
+    const lefts = await queue(page)
+      .locator(`li.row ${part}`)
+      .evaluateAll((els) =>
+        els.map((el) => Math.round(el.getBoundingClientRect().left)),
+      );
+    expect(new Set(lefts).size).toBe(1);
+  }
+}
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
@@ -105,6 +116,7 @@ test.describe('the verification queue @seeded', () => {
         'data-state',
         'amber',
       );
+      if (!width) await expectColumnsShared(page);
       const names = await queue(page).locator('li.row .name').allTextContents();
       expect(names.indexOf('Service Dobre')).toBeLessThan(
         names.indexOf('Atelier Dinamo'),
