@@ -21,6 +21,9 @@ const KNOWN = [
   'GET /api/v1/admin/accounts/summary',
   // @traces 103-FR-002
   'GET /api/v1/admin/demand',
+  // @traces 066-FR-005
+  'GET /api/v1/admin/garages',
+  'GET /api/v1/admin/garages/summary',
   'GET /api/v1/admin/growth',
   'GET /api/v1/admin/overview',
   'GET /api/v1/admin/platform-rule-changes',

@@ -3,6 +3,7 @@ import {
   queueLamp,
   VERIFICATION_CHECK_KINDS,
   VERIFICATION_TARGET_WORKING_DAYS,
+  type VerificationQueueAreaDto,
   type VerificationQueueDto,
   type VerificationQueueRowDto,
 } from '@motor-fix/contracts';
@@ -464,6 +465,17 @@ type QueueFile = Prisma.VerificationFileGetPayload<{
   };
 }>;
 
+// Where a garage works: a mobile mechanic's radius, else its town.
+export function garageArea(garage: {
+  businessKind: string | null;
+  cityName: string | null;
+  serviceRadiusKm: number | null;
+}): VerificationQueueAreaDto | undefined {
+  if (garage.businessKind === 'mobile' && garage.serviceRadiusKm !== null)
+    return { kind: 'mobile', radiusKm: garage.serviceRadiusKm };
+  return garage.cityName ? { kind: 'town', name: garage.cityName } : undefined;
+}
+
 const isoDay = (day: Date) => day.toISOString().slice(0, 10);
 
 function queueRow(
@@ -473,12 +485,7 @@ function queueRow(
 ): VerificationQueueRowDto {
   const workingDays = workingDaysWaited(submittedAt, now, holidays);
   const flagged = workingDays > VERIFICATION_TARGET_WORKING_DAYS;
-  const area =
-    garage.businessKind === 'mobile' && garage.serviceRadiusKm !== null
-      ? { kind: 'mobile' as const, radiusKm: garage.serviceRadiusKm }
-      : garage.cityName
-        ? { kind: 'town' as const, name: garage.cityName }
-        : undefined;
+  const area = garageArea(garage);
   const team = garage.features[0]?.enabled !== false;
   return {
     ...(area && { area }),

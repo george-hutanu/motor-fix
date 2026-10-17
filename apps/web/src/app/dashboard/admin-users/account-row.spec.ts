@@ -12,6 +12,7 @@ const base: AdminAccountDto = {
   id: 'a',
   name: 'Andrei M.',
   roles: ['driver'],
+  serviceSuspended: false,
   since: '2026-03-12T09:14:00.000Z',
   status: 'active',
 };

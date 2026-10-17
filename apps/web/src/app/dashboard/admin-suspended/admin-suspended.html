@@ -1,0 +1,61 @@
+<mf-panel [heading]="heading()">
+  @switch (state()) {
+    @case ('loading') {
+      <ul class="list" aria-busy="true" [attr.aria-label]="'admin.suspended.loading' | t">
+        @for (n of skeletonRows; track n) {
+          <li class="skeleton-row"><span class="skeleton"></span></li>
+        }
+      </ul>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'admin.queue.failed' | t }}</p>
+        <button type="button" class="retry" (click)="retry()">{{ 'admin.queue.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (rows().length === 0) {
+        <p class="empty">{{ 'admin.suspended.empty' | t }}</p>
+      } @else {
+        <ul class="list">
+          @for (row of rows(); track row.id) {
+            <li class="row">
+              <span class="who">
+                <span class="name">{{ row.name }}</span>
+                @if (row.area) {
+                  <span class="area">{{ row.area }}</span>
+                }
+              </span>
+              <span class="why">
+                <mf-lamp class="state" state="red" [label]="row.state" />
+                @if (row.reason) {
+                  <span class="reason">{{ row.reason }}</span>
+                }
+              </span>
+              <span class="when">
+                @if (row.since) {
+                  <span class="since">{{ row.since }}</span>
+                }
+                @if (row.cancelled) {
+                  <span class="cancelled">{{ row.cancelled }}</span>
+                }
+              </span>
+              @if (row.link) {
+                <a class="open" [routerLink]="row.link" [attr.aria-label]="row.open">{{ 'admin.queue.open' | t }}</a>
+              }
+            </li>
+          }
+        </ul>
+      }
+      @if (stale()) {
+        <div class="failed" role="alert">
+          <p>{{ 'admin.queue.failed' | t }}</p>
+          <button type="button" class="retry" (click)="retry()">{{ 'admin.queue.retry' | t }}</button>
+        </div>
+      }
+      @if (more()) {
+        <button type="button" class="retry more" (click)="showMore()">{{ 'admin.queue.more' | t }}</button>
+      }
+    }
+  }
+</mf-panel>

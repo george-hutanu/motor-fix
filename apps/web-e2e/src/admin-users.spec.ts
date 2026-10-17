@@ -7,6 +7,22 @@ import { test } from './fixtures.js';
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
+// How far a line's text starts from the view title's text, in px: the counts
+// line under the title starts where the title and the cards' text start.
+const offTitle = (page: Page, selector: string) =>
+  page.evaluate((sel) => {
+    const textLeft = (el: Element | null) => {
+      if (!el) return Number.NaN;
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return range.getClientRects()[0]?.left ?? Number.NaN;
+    };
+    return Math.abs(
+      textLeft(document.querySelector(sel)) -
+        textLeft(document.querySelector('header h1')),
+    );
+  }, selector);
+
 const recent = (page: Page) =>
   page.locator('mf-panel').filter({
     has: page.getByRole('heading', { name: /Conturi recente|Recent accounts/ }),
@@ -94,6 +110,9 @@ test.describe('the accounts view @seeded', () => {
       await expect(page.locator('.totals')).toHaveText(
         /^[\d.]+ (de )?(șofer activ|șoferi activi) · [\d.]+ (de )?service(‑uri)? · [\d.]+ (de )?mecanici?$/,
       );
+      expect(
+        await offTitle(page, 'mf-admin-users .totals'),
+      ).toBeLessThanOrEqual(1);
 
       const account = await findRow(page, name);
       await expect(account.locator('.detail')).toHaveText(

@@ -1,0 +1,32 @@
+@switch (state()) {
+  @case ('loading') {
+    <p class="counts" aria-busy="true" [attr.aria-label]="'admin.garages.loading' | t"><span class="skeleton"></span></p>
+  }
+  @case ('failed') {
+    <p class="counts">
+      —
+      <button
+        type="button"
+        class="info"
+        aria-describedby="mf-garages-counts-tip"
+        [attr.aria-label]="'admin.panel.unavailable' | t"
+        [attr.aria-expanded]="tip()"
+        (click)="tip.set(true)"
+        (focus)="tip.set(true)"
+        (blur)="tip.set(false)"
+        (keydown.escape)="tip.set(false)"
+      >
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
+          <circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" />
+          <path d="M9 8v5M9 5v1" stroke="currentColor" stroke-width="1.6" />
+        </svg>
+      </button>
+      <span class="tip" role="tooltip" id="mf-garages-counts-tip" [hidden]="!tip()">{{ 'admin.panel.unavailable' | t }}</span>
+    </p>
+  }
+  @default {
+    <p class="counts">{{ counts() }}</p>
+  }
+}
+<mf-admin-queue />
+<mf-admin-suspended />

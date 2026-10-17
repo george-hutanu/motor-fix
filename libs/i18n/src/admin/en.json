@@ -165,6 +165,21 @@
     "seat": "Registered seat: {seat} · {km} km radius",
     "title": "Verification file"
   },
+  "garages": {
+    "listed": {
+      "one": "{n} listed",
+      "other": "{n} listed"
+    },
+    "loading": "Loading the garage figures",
+    "suspended": {
+      "one": "{n} suspended",
+      "other": "{n} suspended"
+    },
+    "waiting": {
+      "one": "{n} to verify",
+      "other": "{n} to verify"
+    }
+  },
   "growth": {
     "title": "Growth, last 12 months"
   },
@@ -257,6 +272,29 @@
       "one": "waiting {n} working day",
       "other": "waiting {n} working days"
     }
+  },
+  "suspended": {
+    "alone": "suspended",
+    "cancelled": {
+      "one": "{n} booking cancelled",
+      "other": "{n} bookings cancelled"
+    },
+    "cause": {
+      "admin": "an admin's decision",
+      "documents_overdue": "yearly documents not uploaded",
+      "report_confirmed": "report confirmed"
+    },
+    "empty": "No garage is suspended",
+    "heading": "Suspended garages",
+    "loading": "Loading the suspended garages",
+    "rar": {
+      "expired": "RAR authorisation expired",
+      "none": "RAR authorisation invalid",
+      "suspended": "RAR authorisation suspended",
+      "withdrawn": "RAR authorisation withdrawn"
+    },
+    "since": "since {date}",
+    "state": "suspended · {text}"
   },
   "users": {
     "cars": {

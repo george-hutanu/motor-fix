@@ -24,6 +24,11 @@ export interface AdminAccountDto {
   roles: Array<'driver' | 'garage' | 'receptionist' | 'mechanic' | 'admin'>;
 
   /**
+   * True when the account's mechanic card is at a garage whose status is suspended
+   */
+  serviceSuspended: boolean;
+
+  /**
    * When the state began: creation for active, the last recorded suspension for suspended (null when none is recorded)
    */
   since: string | null;

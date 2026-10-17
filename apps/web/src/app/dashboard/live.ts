@@ -11,6 +11,7 @@ import type {
   LiveByeReason,
   LiveMessage,
 } from '@motor-fix/contracts';
+import { VERIFICATION_QUEUE_MAX } from '@motor-fix/contracts/verification-target';
 import { filter, type Observable, Subject } from 'rxjs';
 
 import { Session } from './session';
@@ -294,4 +295,31 @@ export function liveResource<T>(
     resync: live.resync,
     retryAfter: 60_000,
   });
+}
+
+// Every row shown, from offset 0, in reads of at most VERIFICATION_QUEUE_MAX
+// rows (the most one read answers); a row that moved between two reads is
+// kept once.
+export async function pagedRead<R extends { id: string }>(
+  wanted: number,
+  read: (page: { limit: number; offset: number }) => Promise<{
+    items: R[];
+    total: number;
+  }>,
+): Promise<{ items: R[]; total: number }> {
+  const reads: Promise<{ items: R[]; total: number }>[] = [];
+  for (let offset = 0; offset < wanted; offset += VERIFICATION_QUEUE_MAX) {
+    reads.push(
+      read({
+        limit: Math.min(VERIFICATION_QUEUE_MAX, wanted - offset),
+        offset,
+      }),
+    );
+  }
+  const answers = await Promise.all(reads);
+  const seen = new Set<string>();
+  const items = answers
+    .flatMap((answer) => answer.items)
+    .filter((row) => !seen.has(row.id) && seen.add(row.id));
+  return { items, total: answers[0]?.total ?? items.length };
 }
