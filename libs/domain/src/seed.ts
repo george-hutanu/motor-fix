@@ -785,11 +785,21 @@ async function seed(db: Client, secret: string) {
        AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
     [LISTED.map(({ slug }) => slug)],
   );
-  // Every seeded garage has a fiscal code, as a sent listing does.
+  // Every seeded garage has a fiscal code, as a sent listing does, with its
+  // control digit right so an admin can pass its company check: seven digits
+  // from the slug, weighted 7 5 3 2 1 7 5 3 2 from the left once padded to nine.
   await db.query(
-    `UPDATE garage
-     SET cui = (10000000 + abs(hashtext(slug)) % 90000000)::text
-     WHERE cui IS NULL AND slug = ANY($1)`,
+    `WITH code AS (
+       SELECT id, lpad((1000000 + abs(hashtext(slug)) % 9000000)::text, 9, '0') AS body
+       FROM garage WHERE cui IS NULL AND slug = ANY($1)
+     ), sum AS (
+       SELECT id, body, (SELECT sum(substr(body, i::int, 1)::int * w)
+         FROM unnest(ARRAY[7, 5, 3, 2, 1, 7, 5, 3, 2]) WITH ORDINALITY AS k(w, i)) AS total
+       FROM code
+     )
+     UPDATE garage g
+     SET cui = ltrim(sum.body, '0') || ((sum.total * 10 % 11) % 10)::text
+     FROM sum WHERE g.id = sum.id`,
     [[...GARAGES, ...LISTED].map(({ slug }) => slug)],
   );
   // A file has one check per kind (submit and resend add them); the seed
