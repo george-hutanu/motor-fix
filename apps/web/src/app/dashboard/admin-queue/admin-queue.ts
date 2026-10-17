@@ -1,8 +1,11 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   Component,
   computed,
+  DestroyRef,
   HostAttributeToken,
   inject,
+  PLATFORM_ID,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -22,6 +25,9 @@ import { Lamp, Panel } from '@motor-fix/ui-cockpit';
 import { liveResource } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
+// How often a page left open reads the clock again, so "azi" turns into
+// "ieri" soon after midnight with no new read.
+const TICK_MS = 60_000;
 
 // "Service-uri de verificat": the files waiting for an admin, oldest first,
 // read again whenever one is sent, opened, checked, decided or reopened. On
@@ -73,8 +79,9 @@ export class AdminQueue {
     return this.stale() ? `${count} ${this.t('stale')}` : count;
   });
 
+  private readonly now = signal(new Date());
   protected readonly rows = computed(() => {
-    const now = new Date();
+    const now = this.now();
     return (this.queue.value()?.items ?? []).map((row) => this.row(row, now));
   });
 
@@ -146,5 +153,8 @@ export class AdminQueue {
 
   constructor() {
     void this.i18n.enter('admin');
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
 }

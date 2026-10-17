@@ -146,6 +146,32 @@ describe('a queue row', () => {
     expect(link?.getAttribute('href')).toBe('/app/admin/garages/file-1');
   });
 
+  it('says "ieri" once Bucharest midnight passes on a page left open, with no new read', async () => {
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      now: new Date('2026-10-16T20:50:00Z'),
+    });
+    try {
+      const sent = '2026-10-16T20:45:00Z';
+      answer = async () => ({
+        items: [row(1, { submittedAt: sent })],
+        total: 1,
+      });
+      const el = await open();
+      expect(text(rows(el)[0].querySelector('.applied'))).toBe('azi, 23:45');
+
+      jest.setSystemTime(new Date('2026-10-16T21:01:00Z'));
+      jest.advanceTimersByTime(60_000);
+      await settle();
+
+      expect(text(rows(el)[0].querySelector('.applied'))).toBe('ieri, 23:45');
+      expect(asked).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("reads a mobile mechanic's radius and leaves out a team the garage does not keep", async () => {
     answer = async () => ({
       items: [
