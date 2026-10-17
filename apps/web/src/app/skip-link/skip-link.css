@@ -1,0 +1,29 @@
+/* Out of sight, and still read, until the keyboard reaches it; then it shows
+   at the top of the screen over everything, at once. */
+a {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+a:focus-visible {
+  position: fixed;
+  top: var(--mf-space-2);
+  left: var(--mf-space-2);
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: auto;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-4);
+  overflow: visible;
+  clip-path: none;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font-size: var(--mf-size-body);
+  font-weight: 700;
+}

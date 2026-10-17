@@ -39,7 +39,7 @@ export {
   toProblem,
 } from './form/form';
 export { FieldError, TaskDone, TaskError, TaskSubmit } from './form/form-parts';
-export { Overlays } from './overlays';
+export { focusMain, Overlays } from './overlays';
 export {
   injectOverlayTask,
   OVERLAY_TASK,

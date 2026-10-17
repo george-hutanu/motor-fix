@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 
@@ -221,5 +224,27 @@ describe('provideI18n', () => {
     const page = TestBed.inject(DOCUMENT).documentElement;
 
     expect(page.lang).toBe('ro');
+  });
+});
+
+// @traces 248-launch-screens-accessible-FR-007
+describe('the page language', () => {
+  it('follows every switch, there and back', async () => {
+    const i18n = TestBed.inject(I18n);
+    const page = TestBed.inject(DOCUMENT).documentElement;
+
+    for (const language of ['en', 'ro', 'en', 'ro'] as const) {
+      await i18n.use(language);
+      expect(page.lang).toBe(language);
+    }
+  });
+
+  it('starts as Romanian in the page the server sends', () => {
+    const html = readFileSync(
+      join(__dirname, '../../../apps/web/src/index.html'),
+      'utf8',
+    );
+
+    expect(html).toMatch(/<html[^>]*\slang="ro"/);
   });
 });

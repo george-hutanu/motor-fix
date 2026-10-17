@@ -459,6 +459,7 @@ describe('ordering and removing the photos', () => {
     }
   });
 
+  // @traces 248-launch-screens-accessible-FR-010
   it('moves a photo by keyboard, keeps the focus on it and announces its place', async () => {
     const opened = await open({ files: [keyOf(0), keyOf(1), keyOf(2)] });
     await restored(opened, 3);

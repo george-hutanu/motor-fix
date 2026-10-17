@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 
 import { expect, type Page } from '@playwright/test';
 
+import { hydrated } from './accounts.js';
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
@@ -14,10 +15,6 @@ const COCKPIT = JSON.parse(
   ),
 );
 const GAUGES = COCKPIT.gauges as Record<string, string>;
-const AXE = readFileSync(
-  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
-  'utf8',
-);
 
 type Running = {
   delay: number;
@@ -132,6 +129,32 @@ test.describe('with reduced motion', () => {
         return [style.opacity, style.transform];
       }),
     ).toEqual(['1', 'none']);
+  });
+
+  // @traces 248-launch-screens-accessible-FR-006
+  test('the skip link appears at once on the first Tab, still', async ({
+    page,
+  }) => {
+    // Hydrated, so the link's click moves the focus rather than following
+    // its address against the page's <base href>.
+    await hydrated(page, '/');
+    await expect(page.locator('mf-home h1')).toBeVisible();
+
+    await page.keyboard.press('Tab');
+    const skip = page.locator('mf-skip-link a');
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeVisible();
+    expect(await running(page)).toEqual([]);
+    expect(
+      await skip.evaluate((a) => {
+        const style = getComputedStyle(a);
+        return [style.animationName, style.transitionDuration];
+      }),
+    ).toEqual(['none', '0s']);
+
+    await page.keyboard.press('Enter');
+    await expect(page.locator('main').first()).toBeFocused();
+    expect(await running(page)).toEqual([]);
   });
 });
 
@@ -293,29 +316,17 @@ test('the live label keeps its contrast through the whole blink', async ({
   await expect
     .poll(async () => named(await running(page), 'mf-rise').length)
     .toBe(0);
-  await page.evaluate(AXE);
-  const violations: string[] = [];
+  const found: string[] = [];
   // Five looks across one blink period catch both halves of it.
   for (let look = 0; look < 5; look++) {
-    const found = await page.evaluate(async () => {
-      const axe = (
-        globalThis as unknown as {
-          axe: {
-            run: (
-              ...args: unknown[]
-            ) => Promise<{ violations: { id: string }[] }>;
-          };
-        }
-      ).axe;
-      const result = await axe.run(
-        { include: [['.mf-live']] },
-        { runOnly: ['color-contrast'] },
-      );
-      return result.violations.map((v: { id: string }) => v.id);
-    });
-    violations.push(...found);
+    const seen = await violations(
+      page,
+      { runOnly: ['color-contrast'] },
+      { include: [['.mf-live']] },
+    );
+    found.push(...seen.map((v) => v.id));
     await page.waitForTimeout(220);
   }
 
-  expect(violations).toEqual([]);
+  expect(found).toEqual([]);
 });

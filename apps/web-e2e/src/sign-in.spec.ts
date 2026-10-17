@@ -1,21 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-
 import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
-
-type Axe = {
-  run: (context: unknown) => Promise<{
-    violations: Array<{ id: string; nodes: unknown[] }>;
-  }>;
-};
-
-const AXE = readFileSync(
-  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
-  'utf8',
-);
 
 const dialog = (page: Page, name = 'Autentificare') =>
   page.getByRole('dialog', { name });
@@ -271,12 +258,12 @@ const panel = (page: Page, language: 'ro' | 'en') =>
   dialog(page, TITLE[language]).locator('mf-overlay-panel');
 
 async function axeViolations(page: Page) {
-  await page.evaluate(AXE);
-  return page.evaluate(async () => {
-    const axe = (globalThis as unknown as { axe: Axe }).axe;
-    const result = await axe.run({ include: [['.cdk-overlay-container']] });
-    return result.violations.map((v) => `${v.id} (${v.nodes.length})`);
-  });
+  const found = await violations(
+    page,
+    {},
+    { include: [['.cdk-overlay-container']] },
+  );
+  return found.map((v) => `${v.id} (${v.nodes.length})`);
 }
 
 const CASES = SIZES.flatMap(([label, width, height]) =>

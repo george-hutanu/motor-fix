@@ -1,22 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-
 import { expect, type Page } from '@playwright/test';
 
 import { settled } from './accounts.js';
+import { violations } from './axe.js';
 import { test } from './fixtures.js';
-
-type Axe = {
-  run: (
-    context: unknown,
-    options: unknown,
-  ) => Promise<{ violations: Array<{ id: string; nodes: unknown[] }> }>;
-};
-
-const AXE = readFileSync(
-  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
-  'utf8',
-);
 
 const RULES = [
   'landmark-one-main',
@@ -26,14 +12,10 @@ const RULES = [
 ];
 
 async function landmarkViolations(page: Page) {
-  await page.evaluate(AXE);
-  return page.evaluate(async (rules) => {
-    const axe = (globalThis as unknown as { axe: Axe }).axe;
-    const result = await axe.run(document, {
-      runOnly: { type: 'rule', values: rules },
-    });
-    return result.violations.map((v) => `${v.id} (${v.nodes.length})`);
-  }, RULES);
+  const found = await violations(page, {
+    runOnly: { type: 'rule', values: RULES },
+  });
+  return found.map((v) => `${v.id} (${v.nodes.length})`);
 }
 
 for (const [label, width, height] of [

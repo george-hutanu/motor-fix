@@ -1,10 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import { HlmButton } from './button';
+import { HlmDialogImports } from './dialog';
 import { HlmInput } from './input';
 import { HlmLabel } from './label';
+import { HlmSheetImports } from './sheet';
 import { HlmSwitch } from './switch';
 import { HlmTableImports } from './table';
 import { HlmTabsImports } from './tabs';
@@ -192,4 +195,61 @@ describe('helm table', () => {
     expect(q('th').classList).toContain('spartan-table-head');
     expect(q('td').classList).toContain('spartan-table-cell');
   });
+});
+
+@Component({
+  imports: [HlmDialogImports, HlmSheetImports, TranslatePipe],
+  template: `
+    <hlm-dialog>
+      <button hlmDialogTrigger id="named-dialog">open</button>
+      <hlm-dialog-content *hlmDialogPortal="let ctx" [closeLabel]="'cockpit.close' | t">
+        <p>corp</p>
+      </hlm-dialog-content>
+    </hlm-dialog>
+    <hlm-sheet side="bottom">
+      <button hlmSheetTrigger id="named-sheet">open</button>
+      <hlm-sheet-content *hlmSheetPortal="let ctx" [closeLabel]="'cockpit.close' | t">
+        <p>corp</p>
+      </hlm-sheet-content>
+    </hlm-sheet>
+  `,
+})
+class Named {}
+
+// The close button's name, read from the open surface.
+async function closeName(language: 'ro' | 'en', trigger: string) {
+  const i18n = TestBed.inject(I18n);
+  await i18n.enter('cockpit');
+  await i18n.use(language);
+  const fixture = TestBed.createComponent(Named);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  (fixture.nativeElement as HTMLElement)
+    .querySelector<HTMLButtonElement>(trigger)
+    ?.click();
+  fixture.detectChanges();
+  await fixture.whenStable();
+  await new Promise((resolve) => setTimeout(resolve));
+  fixture.detectChanges();
+  const surface = document.querySelector('[role="dialog"]');
+  const name = surface
+    ?.querySelector('button[aria-label]')
+    ?.getAttribute('aria-label');
+  document.querySelector('.cdk-overlay-container')?.remove();
+  return name;
+}
+
+// @traces 248-launch-screens-accessible-FR-007
+describe('helm dialog and sheet close buttons named in both languages', () => {
+  it.each([
+    ['ro', '#named-dialog', 'Închide'],
+    ['en', '#named-dialog', 'Close'],
+    ['ro', '#named-sheet', 'Închide'],
+    ['en', '#named-sheet', 'Close'],
+  ] as const)(
+    'in %s, %s closes by a button named %s',
+    async (language, trigger, name) => {
+      expect(await closeName(language, trigger)).toBe(name);
+    },
+  );
 });

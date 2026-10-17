@@ -30,7 +30,7 @@
   (input)="type($event)"
   (keydown)="keys($event)"
 />
-<p class="message" id="home-place-message" aria-live="polite">
+<p class="message mf-message" id="home-place-message" aria-live="polite">
   @switch (message()) {
     @case ('locationFailed') {
       {{ 'public.home.place.locationFailed' | t }}

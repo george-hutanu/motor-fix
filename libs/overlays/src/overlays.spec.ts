@@ -469,6 +469,64 @@ describe('Overlays: focus', () => {
   });
 });
 
+// @traces 248-launch-screens-accessible-FR-005
+// @traces 248-launch-screens-accessible-FR-004
+describe('Overlays: focus when the opener is gone', () => {
+  let main: HTMLElement;
+
+  beforeEach(() => {
+    main = document.createElement('main');
+    document.body.append(main);
+  });
+
+  afterEach(() => main.remove());
+
+  it('puts the focus on the main content when the opener left the page, not on the body', async () => {
+    const { opener } = await openTask();
+
+    opener?.remove();
+    pressEscape();
+    await settle();
+
+    expect(document.activeElement).toBe(main);
+    expect(main.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('does the same when the task closes itself with a result', async () => {
+    const { opener } = await openTask();
+
+    opener?.remove();
+    top().querySelector<HTMLButtonElement>('#done')?.click();
+    await settle();
+
+    expect(document.activeElement).toBe(main);
+  });
+
+  it('leaves the focus on the opener when it is still there', async () => {
+    const { opener } = await openTask();
+
+    pressEscape();
+    await settle();
+
+    expect(document.activeElement).toBe(opener);
+    expect(main.hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('leaves the focus alone when something else already took it', async () => {
+    const { opener } = await openTask();
+    const other = document.createElement('button');
+    document.body.append(other);
+
+    opener?.remove();
+    pressEscape();
+    other.focus();
+    await settle();
+
+    expect(document.activeElement).toBe(other);
+    other.remove();
+  });
+});
+
 describe('Overlays: the page behind', () => {
   it('dims the page with the theme mask and blocks its scrolling until the task closes', async () => {
     // jsdom lays nothing out; the page is taller than the window here.

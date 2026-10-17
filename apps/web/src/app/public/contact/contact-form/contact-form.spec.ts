@@ -397,3 +397,29 @@ describe('the contact form', () => {
     expect(button('Închide')).toBeUndefined();
   });
 });
+
+// @traces 248-launch-screens-accessible-FR-008
+describe('the contact form’s errors tied to their fields', () => {
+  it('points each field at the error it shows and marks it invalid', async () => {
+    await open();
+
+    button('Trimite mesajul')?.click();
+    await settle();
+
+    for (const name of ['name', 'email', 'topic', 'message']) {
+      const said = (control(name).getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join(' ');
+      expect(said).toContain('Câmpul este obligatoriu.');
+      expect(control(name).getAttribute('aria-invalid')).toBe('true');
+    }
+  });
+
+  it('keeps its status region in a polite live region', async () => {
+    await open();
+
+    const status = root().querySelector('.status');
+    expect(status?.getAttribute('role')).toBe('status');
+  });
+});

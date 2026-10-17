@@ -34,6 +34,3 @@ input:focus-visible {
   color: var(--mf-red-ink);
   font-size: var(--mf-size-small);
 }
-.error:empty {
-  display: none;
-}
