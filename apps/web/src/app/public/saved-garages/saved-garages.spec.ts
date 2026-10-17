@@ -105,8 +105,8 @@ describe('reading what a driver saved', () => {
     expect([...saved.ids()].sort()).toEqual(['g1', 'g2']);
   });
 
-  // The page's address names its language (021-FR-002): reading the session
-  // for the role keeps it.
+  // The page's address names its language: reading the session for the role
+  // keeps it.
   it("reads the session without taking the account's language", async () => {
     const saved = await store({ hint: 'driver' });
 

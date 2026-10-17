@@ -58,6 +58,7 @@ function setup({
     if (joined) current.set(DRIVER);
     return joined;
   });
+  const load = jest.fn(async () => current());
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -77,7 +78,7 @@ function setup({
       },
       {
         provide: Session,
-        useValue: { current, load: async () => current(), switchRole },
+        useValue: { current, load, switchRole },
       },
       { provide: SignInDialog, useValue: { join } },
     ],
@@ -86,7 +87,7 @@ function setup({
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const fixture = TestBed.createComponent(InvitePage);
-  return { acceptInvite, check, fixture, join, navigate, switchRole };
+  return { acceptInvite, check, fixture, join, load, navigate, switchRole };
 }
 
 const flush = async (fixture: { detectChanges(): void }) => {
@@ -148,7 +149,7 @@ describe('the invite link page', () => {
 
   // @traces 131-FR-012
   it('accepts for a signed-in person only on "Acceptă", then opens the garage dashboard in the invited role', async () => {
-    const { acceptInvite, fixture, join, navigate, switchRole } = setup({
+    const { acceptInvite, fixture, join, load, navigate, switchRole } = setup({
       signedIn: DRIVER,
     });
     await flush(fixture);
@@ -157,6 +158,8 @@ describe('the invite link page', () => {
     accept(fixture)?.click();
     await flush(fixture);
 
+    // The page's address names its language: reading the session keeps it.
+    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
     expect(join).not.toHaveBeenCalled();
     expect(acceptInvite).toHaveBeenCalledWith({ body: { token: TOKEN } });
     expect(switchRole).toHaveBeenCalledWith('mechanic');

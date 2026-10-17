@@ -214,7 +214,7 @@ describe('the link to report a garage, for a visitor', () => {
 
     await press(host);
 
-    // The profile's address names its language (021-FR-002).
+    // The profile's address names its language: reading the session keeps it.
     expect(load).toHaveBeenCalledWith({ keepLanguage: true });
     expect(gate).not.toHaveBeenCalled();
     expect(open).toHaveBeenCalledTimes(1);
