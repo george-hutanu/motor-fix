@@ -126,7 +126,8 @@ test('a signed-in driver opens "Ajutor și contact" from the menu, filled in, an
 
   await page.getByRole('button', { name: 'Ajutor și contact' }).click();
   const drawer = page.getByRole('dialog', { name: 'Ajutor și contact' });
-  await expect(drawer).toBeVisible();
+  // The dialog container around the drawer has no box of its own.
+  await expect(drawer.locator('mf-overlay-panel')).toBeVisible();
   await expect(drawer.locator('#mf-contact-name')).toHaveValue('Test driver');
   await expect(drawer.locator('#mf-contact-email')).toHaveValue(
     'driver@example.ro',

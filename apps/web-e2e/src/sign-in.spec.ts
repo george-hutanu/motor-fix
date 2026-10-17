@@ -255,7 +255,10 @@ const TITLE = { en: 'Sign in', ro: 'Autentificare' } as const;
 async function openAt(page: Page, width: number, language: 'ro' | 'en') {
   if (width < 768) {
     await page
-      .getByRole('link', { name: language === 'ro' ? 'Cont' : 'Account' })
+      .getByRole('link', {
+        exact: true,
+        name: language === 'ro' ? 'Cont' : 'Account',
+      })
       .click();
   } else {
     await openFromHeader(page, TITLE[language]);

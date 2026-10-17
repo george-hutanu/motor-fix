@@ -130,7 +130,7 @@ async function phoneStep(page: Page, lang: keyof typeof TEXTS) {
   await ready(page, `/${lang}/garages`);
   // Phones open it from the tab bar, wider screens from the top bar.
   if ((page.viewportSize()?.width ?? 0) < 768) {
-    await page.getByRole('link', { name: t.account }).click();
+    await page.getByRole('link', { exact: true, name: t.account }).click();
   } else {
     await page.getByRole('button', { exact: true, name: t.title }).click();
   }
