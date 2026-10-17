@@ -85,7 +85,7 @@ const STATUS_LINES: Record<string, string | undefined> = {
 // The 409s a decision answers in the footer, each by its line.
 const REFUSALS: Record<string, string | undefined> = {
   caen_check_required: 'caenRequired',
-  rar_check_required: 'rarRequired',
+  rar_check_required: 'rarCheckRequired',
 };
 const SKELETON_SECTIONS = [0, 1, 2, 3];
 // How often a drawer left open reads the clock again, so "azi" turns into

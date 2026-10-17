@@ -51,7 +51,8 @@
       "ask": "Ask for more",
       "caenRequired": "Approval needs the CAEN check",
       "note": "The garage gets the decision by email. With “Ask for more” it can add what is missing without starting over.",
-      "rarRequired": "Approval needs the RAR check",
+      "rarCheckRequired": "Approval needs the RAR check",
+      "rarRequired": "The RAR check is required",
       "reason": "Reason: {reason}",
       "reject": "Reject",
       "saveFailed": "Could not save the decision"

@@ -348,7 +348,7 @@ test.describe('the verification file @seeded', () => {
       'green',
     );
     await expect(drawer(page)).not.toContainText(
-      'Aprobarea cere verificarea RAR',
+      'Verificarea RAR e obligatorie',
     );
 
     await page.goto('/app/admin/garages');

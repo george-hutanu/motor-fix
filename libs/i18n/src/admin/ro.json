@@ -53,7 +53,8 @@
       "ask": "Cere completări",
       "caenRequired": "Aprobarea cere verificarea CAEN",
       "note": "Service‑ul primește decizia pe e‑mail. La „Cere completări” poate adăuga ce lipsește fără să reia tot.",
-      "rarRequired": "Aprobarea cere verificarea RAR",
+      "rarCheckRequired": "Aprobarea cere verificarea RAR",
+      "rarRequired": "Verificarea RAR e obligatorie",
       "reason": "Motiv: {reason}",
       "reject": "Respinge",
       "saveFailed": "Nu am putut salva decizia"

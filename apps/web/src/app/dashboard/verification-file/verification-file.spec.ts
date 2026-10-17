@@ -1687,6 +1687,29 @@ describe('deciding', () => {
     },
   );
 
+  it.each([
+    ['ro', 'Aprobarea cere verificarea RAR', 'Verificarea RAR e obligatorie'],
+    ['en', 'Approval needs the RAR check', 'The RAR check is required'],
+  ] as const)(
+    'keeps the RAR note apart from the RAR refusal in %s',
+    async (language, refusal, note) => {
+      const host = await open(fileOf(), language);
+      api.verificationFileControllerDecision.mockRejectedValue(
+        refusedBy('rar_check_required'),
+      );
+
+      await deciding().decide({ decision: 'approved' });
+      await settle();
+
+      const footer = section(host, 'footer');
+      expect(text(alertIn(host))).toBe(refusal);
+      expect(text(footer?.querySelector('[data-part="rar-required"]'))).toBe(
+        note,
+      );
+      expect(text(footer).split(refusal)).toHaveLength(2);
+    },
+  );
+
   it('says in a toast that the decision could not be saved on any other failure', async () => {
     const host = await open();
     api.verificationFileControllerDecision.mockRejectedValue(
@@ -2233,13 +2256,13 @@ describe('the RAR and activities rows', () => {
   it('notes in the footer that the RAR check is required until it is OK', async () => {
     const host = await open();
     expect(text(section(host, 'footer'))).toContain(
-      'Aprobarea cere verificarea RAR',
+      'Verificarea RAR e obligatorie',
     );
 
     reset();
     const ok = await open(withCheck('rar', { recorder: ioana, result: 'ok' }));
     expect(text(section(ok, 'footer'))).not.toContain(
-      'Aprobarea cere verificarea RAR',
+      'Verificarea RAR e obligatorie',
     );
 
     reset();
@@ -2253,7 +2276,7 @@ describe('the RAR and activities rows', () => {
       }),
     );
     expect(text(section(decided, 'footer'))).not.toContain(
-      'Aprobarea cere verificarea RAR',
+      'Verificarea RAR e obligatorie',
     );
   });
 
