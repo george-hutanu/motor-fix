@@ -43,7 +43,9 @@ export class HomeWarm implements HomeWarmer, BeforeApplicationShutdown {
 
   // Nest runs this before it closes the HTTP server and the stores: a warm
   // still reading then would reopen the database pool once it was closed.
-  // A sign-in answered meanwhile warms nothing.
+  // A sign-in answered meanwhile warms nothing. The wait has no cap of its
+  // own: Redis calls give up after the store's command timeout, and a
+  // database read that never answers is ended by the platform's stop deadline.
   async beforeApplicationShutdown(): Promise<void> {
     this.closed = true;
     await Promise.allSettled([...this.running]);
