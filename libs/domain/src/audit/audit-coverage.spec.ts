@@ -146,6 +146,8 @@ const NOT_CHANGES = new Set([
   // Reading a quote request notes when the garage first saw it; a read is
   // not a change to anyone's data.
   'GarageRequestsService.get',
+  // Comparing a request's quotes notes when the driver first saw each one.
+  'CompareService.get',
   // Reminders follow a car's or a booking's dates: the stories that change
   // those audit the change, and sending a reminder is not one.
   'RemindersService.cancelBooking',
@@ -166,6 +168,9 @@ const NOT_CHANGES = new Set([
   'ListingDocumentsService.remove',
   // Runs inside the sending transaction, which audits the new garage.
   'GaragePhotosService.saveRows',
+  // Runs inside the activities check's record, whose one entry carries the
+  // list before and after.
+  'VerificationChecksService.writeActivities',
   // A visitor's search, counted for the Demand view: no account and no
   // change to anyone's data, so no audit entry by the search's rule.
   'SearchLogService.record',

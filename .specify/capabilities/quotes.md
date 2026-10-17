@@ -14,6 +14,7 @@ features:
   - 222-booking-from-quote
   - 1169-prefetch-intent
   - 049-garage-suspension
+  - 313-compare-quotes
 ---
 
 # Capability: Quotes
@@ -485,6 +486,74 @@ _From 1169-prefetch-intent._
 ### 049-FR-009 — Accepting a waiting quote of a suspended garage MUST keep answering 409 with the quote read as `withdrawn` (the existing rule in the acceptance use case), whether or not the worker has withdrawn the quote yet, and MUST create no booking; the driver's quote reads answer status `withdrawn` for a waiting quote of a suspended garage, from the garage's status, before the withdrawal is written; the label "Retrasă · service suspendat" / "Withdrawn · garage suspended" is the driver quote card's, which does not exist in `apps/web` yet, so this story adds no web text or i18n key for it.
 
 _From 049-garage-suspension._
+
+### 313-FR-001 — The API MUST offer `GET /api/v1/quote-requests/:id/quotes` to the driver who owns the request, and to an AI assistant reading with that driver's consent under the existing actor rule of the driver's request reads; every other caller (another driver, a garage-side actor, an unknown id) MUST get 404 `not_found` in the platform's problem-details shape (220-FR-015), with no other sign that the request exists; a malformed (non-uuid) id answers 400 `validation_failed`, as `GET /api/v1/requests/:id` does. The route needs a session (`ActorGuard`), carries no `@Public()`, and the operation and its DTOs join `apps/api/openapi.json` and the generated client (`npx nx run data-access:generate`, never edited by hand).
+
+_From 313-compare-quotes._
+
+### 313-FR-002 — The read MUST answer, in one body: the request (`id`, `status`, `jobs` with their names in both languages and the description's first line, the car snapshot, and its newest booking's `status` and `confirmBy` when one exists); `quotes`: one per QUOTE of the request in status `waiting`, `accepted`, `lost`, `expired` or `declined_by_driver`, each with `id`, `garage` (`id`, `name`, `slug`, `rating` one decimal or null, `reviewCount`, `area`: the garage's city name, null when unknown, and `mobile` true for a mobile mechanic), `fromBani`, `toBani`, `durationMinutes`, `slot`, `note`, `status`, `sentAt`, `changedAt`, `expiresAt` and `jobs` (each request job with `included` and its names); `withdrawn`: one per QUOTE in status `withdrawn`, with the garage's name and `reason` ∈ `garage` (the garage withdrew it), `suspended` (the garage is suspended); `declined`: one per REQUEST_RECIPIENT whose decline is past its undo window, with the garage's name and `declineReason` (the existing rule the driver's detail applies); `waiting`: the names of the recipient garages that have not answered yet. Nothing private travels: no phone, address, e-mail or plate.
+
+_From 313-compare-quotes._
+
+### 313-FR-003 — The read MUST return `quotes` fastest answer first: `sentAt` ascending, equal times by id ascending; this is the panel's default order, "Cele mai rapide" / "Fastest".
+
+_From 313-compare-quotes._
+
+### 313-FR-004 — The panel MUST offer four sorts in one control above the rows (Cockpit segmented control: "Cele mai rapide", "Preț", "Cel mai devreme", "Notă" / "Fastest", "Price", "Earliest", "Rating"), applied in the browser without a new read: Preț orders by `fromBani` ascending then `toBani` ascending; Cel mai devreme by `slot` ascending; Notă by `rating` descending with null ratings after every rated one, then `reviewCount` descending; every sort falls back to `sentAt` ascending then id. Greyed rows (`expired`, `declined_by_driver`, `lost`) sort with the rest under the same rule. The chosen sort MUST be kept for the browser session (per tab, `sessionStorage`, read inside try/catch) and restored on a later panel in the same tab; a new tab starts on Cele mai rapide.
+
+_From 313-compare-quotes._
+
+### 313-FR-005 — The header MUST read "<jobs> · <brand> <model> · <N> oferte" (English "<N> quotes"), the jobs in the reader's language joined by ", " (the description's first line when the request has no job), and N the count of rows shown that are not `declined_by_driver` (so `waiting`, `accepted`, `lost` and `expired` count; `withdrawn` never has a row). Romanian plural follows the language library: "1 ofertă", "3 oferte", "21 de oferte".
+
+_From 313-compare-quotes._
+
+### 313-FR-006 — Each quote row MUST show, in this order, the same five things: (1) the garage's name; (2) the area and first free slot, "<area> · liber <when>" / "<area> · free <when>", where the area is the garage's city, "Mecanic mobil" / "Mobile mechanic" for a mobile mechanic, and the slot alone when the city is unknown; `when` is "azi, HH:mm" / "today, HH:mm", "mâine, HH:mm" / "tomorrow, HH:mm", or the weekday and date "luni, 12 oct., HH:mm" / "Mon 12 Oct, HH:mm", judged and shown in Europe/Bucharest; (3) the rating with one decimal and the language's decimal mark ("4,7" / "4.7"), or "fără recenzii" / "no reviews yet" when null; (4) the range "<from>–<to> lei" from integer bani with the Romanian thousands separator, the shared range helper's form ("890–1.400 lei", one amount when both ends are equal); (5) the action place. Under the range: the duration "aprox. <d>" / "about <d>" (`45 min`, `1 h`, `1 h 30`, the shared duration helper's form), then the garage's note as plain text when there is one, then "Nu face: <jobs>" / "Does not do: <jobs>" naming every request job the quote left out (`included` false), in the reader's language joined by ", ". A row with `changedAt` set adds "Modificată <relative time>" / "Changed <relative time>" with the existing relative-time helper.
+
+_From 313-compare-quotes._
+
+### 313-FR-007 — The action place and the row's look MUST follow the quote's status: `waiting` (and `expiresAt` in the future) holds Acceptă; `waiting` past `expiresAt`, or `expired`, greys the row with "Expirată" / "Expired" and no action; `declined_by_driver` greys it with "Refuzată de tine" / "Declined by you" and no action; `accepted` reads "Acceptată" / "Accepted" with no action; `lost` greys it with "Închisă" / "Closed" and no action. While the request's newest booking is `awaiting_confirmation`, every `waiting` row reads "În așteptare" / "On hold" in place of Acceptă; when that booking lapses the rows get Acceptă back live, on the re-read `booking.lapsed` triggers (FR-010).
+
+_From 313-compare-quotes._
+
+### 313-FR-008 — Acceptă MUST call the existing accept (`POST /api/v1/quotes/:id/accept`, `historyShared: false`, a fresh `Idempotency-Key` per click kept for a retry of the same click) and re-read the panel on success; while in flight the button shows the form helper's busy state and the row's other buttons are disabled; a refusal shows the server's problem text under the row with no state change. The consent tick, the booking card and everything else of accepting are #61 / #262 and out of this story.
+
+_From 313-compare-quotes._
+
+### 313-FR-009 — Under the rows the panel MUST show one line per withdrawn quote and one per declined garage: "<Garage> și-a retras oferta" / "<Garage> withdrew its quote" for reason `garage`; "<Garage> nu mai primește cereri" / "<Garage> no longer takes requests" for `suspended`; "Refuzat: <Garage> · <reason>" / "Declined: <Garage> · <reason>" where <reason> is the driver-side clause the platform already keeps for each of the four decline reason codes (`DECLINE_REASON_TEXTS[code].clause` in `libs/contracts/src/request-status.ts`, e.g. "nu lucrează pe această marcă, model sau motor"), so no new key is added, only once the undo window has passed; an undone decline removes its line on the next read. Withdrawn and declined garages are never rows and never counted.
+
+_From 313-compare-quotes._
+
+### 313-FR-010 — The panel MUST re-read its request within 5 seconds, through the existing live helper (one coalesced read per burst, one read in flight), when the driver's channel delivers `quote.sent`, `quote.changed`, `quote.withdrawn`, `quote.expired`, `quote.declined_by_driver`, `request.declined`, `request.decline_undone`, `garage.suspended`, `quote.accepted`, `booking.confirmed` or `booking.lapsed`. A suspension reaches the driver's channel as `quote.withdrawn` with `reason` `suspended`: `garage.suspended` is recorded for the garage and the public channel only, so the suspension MUST also record, in the same transaction that suspends the garage, one `quote.withdrawn` event per waiting quote of that garage for its driver (`garage.suspended` stays in the panel's list, harmless); the panel stays on the request it shows (the overview re-selects only on its next load); the re-read is merged by structural sharing so an unchanged row keeps its element, a new quote lands in its sorted place and the header count follows (US3).
+
+_From 313-compare-quotes._
+
+### 313-FR-011 — `QUOTE` MUST gain a nullable `first_seen_at` (timestamptz), set to now by every successful read (the driver's or the assistant's) for each quote returned in `quotes` whose value is null (withdrawn entries are not written), conditionally on null so two concurrent reads keep the earlier time, never changed afterwards; a refused read writes nothing; no audit entry and no event is written for it; the migration adds the column with no backfill.
+
+_From 313-compare-quotes._
+
+### 313-FR-012 — The overview's `quotes` panel MUST show the comparison for the driver's most recent open request with quotes, where "with quotes" means at least one quote that has a row (`waiting`, `accepted`, `lost`, `expired` or `declined_by_driver`) and "open" means status `quoted`, or `booked` while its newest booking is `awaiting_confirmation`, and "most recent" is the request's creation time; the panel's heading link keeps pointing at Cererile mele; with no such request the panel keeps today's states (loading, failed, #262's empty state). The driver's requests list read MUST carry what this needs without a detail read per request (the status and booking fields it already has, plus the quotes count it already has); that count includes withdrawn quotes, so the list picks the request by `quotesCount > 0` and, when the comparison read then has no row (every quote withdrawn), the panel shows today's #262 state, as the zero-row edge case says (no new count field, Principle I).
+
+_From 313-compare-quotes._
+
+### 313-FR-013 — Cererile mele MUST show the same panel above Toate cererile, for the most recent open request with quotes by default; a row of Toate cererile whose request has quotes MUST carry a link that opens that request in the panel (`/app/driver/requests?request=<id>`), the address being the source of truth so a reload or browser Back keeps or restores the shown request; an id that is not the driver's or has no quotes falls back to the default.
+
+_From 313-compare-quotes._
+
+### 313-FR-014 — States: while the read is in flight the panel shows three skeleton rows (`aria-busy`); on a failed read "Nu am putut încărca ofertele." / "We could not load the quotes." with a Reîncearcă / Retry button that reads again; offline, the last rows stay with the dashboard's existing offline line and Acceptă disabled; a background re-read that fails leaves the rows as they are (the live helper's rule).
+
+_From 313-compare-quotes._
+
+### 313-FR-015 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011); the panel MUST pass the sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, every button at least 44 px tall, the greyed rows' text at a contrast of at least 4.5:1, the sort control reachable by keyboard with its chosen option announced, and a row, a line or the header count that a live re-read adds or changes announced politely (a polite live region around the header and the lines, `aria-live="polite"`), without moving focus; the panel and its row are web components as folders (`<name>.ts`, `<name>.html`, `<name>.css`), the row's five things in one grid that stacks on a phone.
+
+_From 313-compare-quotes._
+
+### 313-FR-016 — Observability (AGENTS.md): the new endpoint MUST be listed in `infra/observability/inventory.json` with the API's existing request metrics and logs as its telemetry (a read adds no counter of its own and no alert beyond the API's error-rate alert; the entry says so); no new queue, service or outside call is added.
+
+_From 313-compare-quotes._
+
+### 313-FR-017 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL and Redis: the read's 200 for the driver and for the assistant, the suspension's one `quote.withdrawn` per waiting quote in the suspending transaction, 404 for another driver, a garage actor and an unknown id; the default order with equal `sentAt`; the quotes' statuses split into rows, withdrawn (both reasons) and declined only past the undo window, undone excluded; left-out jobs; the garage's rating, review count, area and mobile flag; `first_seen_at` set once and under two concurrent reads, nothing written by a refused read; no phone, e-mail or plate in the body. Web unit tests: the four sorts with their ties and the unrated garage last; the header for one, three and twenty-one quotes and a request without a job; the slot's today, tomorrow and weekday forms in Europe/Bucharest; the duration forms; the range formatting; each status rendering and the on-hold rule; the sort kept in the session; the live kinds triggering a re-read. Playwright: with two seeded quotes the panel lists them fastest first; re-sorting by price changes the order; a third quote sent by a garage in a second context appears without a reload and the count reads 3.
+
+_From 313-compare-quotes._
 
 ## Retired
 

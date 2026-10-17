@@ -12,6 +12,11 @@ export interface VerificationFileStateDto {
   openedAt: string | null;
   openedBy: (VerificationActorDto & {
 }) | null;
+
+  /**
+   * The garage's RAR authorisation number, normalised
+   */
+  rarNumber: string | null;
   reasonCode: string | null;
   reasonNote: string | null;
   reopenReason: 'garage_report' | null;

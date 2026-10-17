@@ -227,3 +227,22 @@ h4 {
 .skeleton.wide {
   width: 80%;
 }
+.correct {
+  display: grid;
+  gap: var(--mf-space-2);
+  width: 100%;
+  min-width: 0;
+}
+.correct label {
+  font-weight: 700;
+}
+.correct input {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+.correct .error {
+  margin: 0;
+  color: var(--mf-red-ink);
+  font-weight: 700;
+}

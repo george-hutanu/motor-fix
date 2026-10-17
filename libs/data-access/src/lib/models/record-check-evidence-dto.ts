@@ -14,6 +14,11 @@ export interface RecordCheckEvidenceDto {
   certificate?: boolean;
 
   /**
+   * The file's RAR number is in the public register; rar only
+   */
+  found?: boolean;
+
+  /**
    * The company name as the register shows it; company only
    */
   name?: string;
@@ -22,4 +27,14 @@ export interface RecordCheckEvidenceDto {
    * 4520 in the ONRC record; caen only
    */
   onrc?: boolean;
+
+  /**
+   * The register shows the workshop address, or the registered seat for a mobile mechanic; rar only
+   */
+  sameAddress?: boolean;
+
+  /**
+   * The register names the same company; rar only
+   */
+  sameCompany?: boolean;
 }

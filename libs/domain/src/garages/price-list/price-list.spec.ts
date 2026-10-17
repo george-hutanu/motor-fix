@@ -1,3 +1,5 @@
+import { coversJob } from '@motor-fix/contracts';
+
 import { type PriceRow, priceListJobs, publicPriceRows } from './price-list';
 
 // The profile read's two steps, as public-garages.ts runs them.
@@ -28,6 +30,9 @@ const row = (
   jobType: PriceRow['jobType'],
   extra: Partial<Omit<PriceRow, 'jobType'>> = {},
 ): PriceRow => ({
+  brand: extra.brandId
+    ? { name: extra.brandId.toUpperCase(), popularity: null }
+    : null,
   brandId: null,
   durationMinutes: null,
   fromBani: 35_000,
@@ -176,6 +181,9 @@ describe('the price list items', () => {
       ),
     ).toEqual([
       {
+        brandRanges: [
+          { brandId: 'bmw', fromBani: 50_000, name: 'BMW', toBani: 90_000 },
+        ],
         durationMinutes: 90,
         fromBani: 35_000,
         jobTypeId: j.id,
@@ -192,6 +200,9 @@ describe('the price list items', () => {
 
     expect(priceListJobs([row(j, { brandId: 'bmw' })], [])).toEqual([
       {
+        brandRanges: [
+          { brandId: 'bmw', fromBani: 35_000, name: 'BMW', toBani: 48_000 },
+        ],
         jobTypeId: j.id,
         nameEn: j.nameEn,
         nameRo: j.nameRo,
@@ -222,6 +233,37 @@ describe('the price list items', () => {
     ).map((item) => item.jobTypeId);
 
     expect(ids).toEqual([first.id, second.id, brandOnly.id, tieA.id, tieB.id]);
+  });
+
+  // @traces 386-FR-011
+  it("lists a job's brand ranges by popularity, then name, the unranked last", () => {
+    const j = job();
+    const ranked = (brandId: string, name: string, popularity: number | null) =>
+      row(j, { brand: { name, popularity }, brandId, toBani: 90_000 });
+
+    const [item] = priceListJobs(
+      [
+        row(j),
+        ranked('audi', 'Audi', null),
+        ranked('bmw', 'BMW', 2),
+        { ...ranked('alfa', 'Alfa Romeo', null), toBani: null },
+        ranked('dacia', 'Dacia', 1),
+      ],
+      [],
+    );
+
+    expect(item?.brandRanges).toEqual([
+      { brandId: 'dacia', fromBani: 35_000, name: 'Dacia', toBani: 90_000 },
+      { brandId: 'bmw', fromBani: 35_000, name: 'BMW', toBani: 90_000 },
+      { brandId: 'alfa', fromBani: 35_000, name: 'Alfa Romeo' },
+      { brandId: 'audi', fromBani: 35_000, name: 'Audi', toBani: 90_000 },
+    ]);
+  });
+
+  it('gives a job without brand rows no brand range', () => {
+    const [item] = priceListJobs([row(job())], []);
+
+    expect(item?.brandRanges).toEqual([]);
   });
 });
 
@@ -297,6 +339,9 @@ describe('the public price rows of a profile read without a brand', () => {
 
 // @traces 355-price-list-ranges-FR-002
 // @traces 355-price-list-ranges-FR-003
+// @traces 386-FR-001
+// @traces 386-FR-002
+// @traces 386-FR-003
 describe('the public price rows of a profile read with a brand', () => {
   const ranges = (
     rows: PriceRow[],
@@ -427,4 +472,25 @@ describe('the public price rows of a profile read with a brand', () => {
       expect(publicRows(rows, ['B'], { id: 'bmw', ticks: [j.id] })).toEqual([]);
     },
   );
+});
+
+// @traces 204-FR-004
+describe('a job not authorised is a job the activities do not cover', () => {
+  const activities = [null, 'brakes', 'paintwork'];
+  const lists = [
+    [],
+    ['brakes'],
+    ['mechanics', 'paintwork'],
+    ['brakes', 'paintwork'],
+  ];
+
+  it.each(
+    activities.flatMap((activity) =>
+      lists.map((list) => [activity, list] as const),
+    ),
+  )('agrees with coversJob for %s against %j', (activity, list) => {
+    const notAuthorised =
+      stateOf([row(job('approved', activity))], [...list]) === 'not_authorised';
+    expect(notAuthorised).toBe(!coversJob(activity, list));
+  });
 });

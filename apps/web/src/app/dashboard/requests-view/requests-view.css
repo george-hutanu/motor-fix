@@ -55,3 +55,10 @@ p {
 .waiting {
   color: var(--mf-text-secondary);
 }
+.compare {
+  align-self: flex-start;
+  min-height: var(--mf-tap);
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}

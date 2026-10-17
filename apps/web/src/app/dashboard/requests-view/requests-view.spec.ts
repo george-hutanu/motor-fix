@@ -1,8 +1,11 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
+  QuoteRequestsService,
+  QuotesService,
   type RequestSummaryDto,
   RequestsService,
 } from '@motor-fix/data-access';
@@ -45,6 +48,19 @@ const row = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
 
 let events: Subject<LiveMessage>;
 let list: jest.Mock;
+let compare: jest.Mock;
+
+// The comparison panel's own reads; its behaviour is quotes-compare's spec.
+const comparing = () => {
+  compare = jest.fn(() => new Promise<never>(() => undefined));
+  return [
+    {
+      provide: QuoteRequestsService,
+      useValue: { compareControllerGet: compare },
+    },
+    { provide: QuotesService, useValue: { acceptControllerAccept: jest.fn() } },
+  ];
+};
 
 async function render(
   answers: (RequestSummaryDto[] | Error)[],
@@ -60,11 +76,13 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      ...comparing(),
       { provide: RequestsService, useValue: { requestsControllerList: list } },
       {
         provide: Live,
         useValue: {
           events,
+          offline: signal(false),
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
@@ -356,6 +374,7 @@ describe('Cererile mele opened at a request', () => {
             path: 'requests',
           },
         ]),
+        ...comparing(),
         {
           provide: RequestsService,
           useValue: { requestsControllerList: list },
@@ -364,6 +383,7 @@ describe('Cererile mele opened at a request', () => {
           provide: Live,
           useValue: {
             events,
+            offline: signal(false),
             on: (kinds: readonly EventKind[]) =>
               events.pipe(
                 filter((m) => (kinds as readonly string[]).includes(m.kind)),
@@ -423,5 +443,191 @@ describe('Cererile mele opened at a request', () => {
 
     expect(focused()).toBeNull();
     expect(scrolled).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 313-FR-013
+describe('Cererile mele comparing a request’s quotes', () => {
+  const ITEMS = [
+    row({
+      createdAt: '2026-10-12T09:00:00.000Z',
+      id: 'req-none',
+      quotesCount: 0,
+    }),
+    row({
+      createdAt: '2026-10-11T09:00:00.000Z',
+      id: 'req-new',
+      quotesCount: 2,
+      status: 'quoted',
+    }),
+    row({
+      createdAt: '2026-10-10T09:00:00.000Z',
+      id: 'req-old',
+      quotesCount: 1,
+      status: 'quoted',
+    }),
+  ];
+
+  async function open(url: string, items = ITEMS) {
+    events = new Subject();
+    list = jest.fn(async () => ({
+      items,
+      nextCursor: null,
+      total: items.length,
+    }));
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            children: [{ component: RequestsView, path: '**' }],
+            path: 'requests',
+          },
+        ]),
+        ...comparing(),
+        {
+          provide: RequestsService,
+          useValue: { requestsControllerList: list },
+        },
+        {
+          provide: Live,
+          useValue: {
+            events,
+            offline: signal(false),
+            on: (kinds: readonly EventKind[]) =>
+              events.pipe(
+                filter((m) => (kinds as readonly string[]).includes(m.kind)),
+              ),
+            resync: new Subject<void>(),
+          },
+        },
+      ],
+    });
+    await TestBed.inject(I18n).enter('driver');
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url);
+    for (let i = 0; i < 4; i++) {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+      await wait(0);
+    }
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  const shown = () =>
+    compare.mock.calls.map(([args]) => (args as { id: string }).id);
+
+  it('shows the panel above the list for the most recent open request with quotes', async () => {
+    const element = await open('/requests');
+
+    const panel = element.querySelector('mf-quotes-compare');
+    const rows = element.querySelector('ul.rows');
+    expect(panel).not.toBeNull();
+    expect(rows).not.toBeNull();
+    expect(
+      panel!.compareDocumentPosition(rows!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(shown()).toEqual(['req-new']);
+  });
+
+  it('frames the panel under "Oferte primite", apart from the list', async () => {
+    const element = await open('/requests');
+
+    const frame = element
+      .querySelector('mf-quotes-compare')
+      ?.closest('mf-panel');
+    expect(frame).not.toBeNull();
+    expect(text(frame!)).toContain('Oferte primite');
+    expect(frame!.contains(element.querySelector('ul.rows'))).toBe(false);
+  });
+
+  it('shows the request the address names', async () => {
+    await open('/requests?request=req-old');
+
+    expect(shown()).toEqual(['req-old']);
+  });
+
+  it.each([
+    ['not the driver’s', 'req-someone-else'],
+    ['without quotes', 'req-none'],
+  ])('falls back to the default for a request %s', async (_, id) => {
+    await open(`/requests?request=${id}`);
+
+    expect(shown()).toEqual(['req-new']);
+  });
+
+  it('shows no panel while no open request has quotes', async () => {
+    const element = await open('/requests', [
+      row({ quotesCount: 2, status: 'done' }),
+    ]);
+
+    expect(element.querySelector('mf-quotes-compare')).toBeNull();
+    expect(compare).not.toHaveBeenCalled();
+  });
+
+  // @traces 313-FR-010
+  it('stays on the request it shows when a newer one gets its first quote', async () => {
+    await open('/requests');
+    expect(shown()).toEqual(['req-new']);
+
+    const quoted = ITEMS.map((item) =>
+      item.id === 'req-none'
+        ? { ...item, quotesCount: 1, status: 'quoted' as const }
+        : item,
+    );
+    list.mockImplementation(async () => ({
+      items: quoted,
+      nextCursor: null,
+      total: quoted.length,
+    }));
+    events.next({
+      at: new Date().toISOString(),
+      id: 'quote-9',
+      kind: 'quote.sent',
+    });
+    await wait(400);
+    for (let i = 0; i < 4; i++) {
+      TestBed.tick();
+      await wait(0);
+    }
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(shown()).not.toContain('req-none');
+  });
+
+  it('shows the first request to get a quote when none was shown', async () => {
+    const before = [row({ id: 'req-a', quotesCount: 0 })];
+    await open('/requests', before);
+    expect(shown()).toEqual([]);
+
+    const after = [row({ id: 'req-a', quotesCount: 1, status: 'quoted' })];
+    list.mockImplementation(async () => ({
+      items: after,
+      nextCursor: null,
+      total: after.length,
+    }));
+    events.next({
+      at: new Date().toISOString(),
+      id: 'quote-1',
+      kind: 'quote.sent',
+    });
+    await wait(400);
+    for (let i = 0; i < 4; i++) {
+      TestBed.tick();
+      await wait(0);
+    }
+
+    expect(shown()).toEqual(['req-a']);
+  });
+
+  it('links each request with quotes to its comparison, and no other', async () => {
+    const element = await open('/requests');
+
+    const linkOf = (id: string) =>
+      element
+        .querySelector(`[data-request="${id}"] a[href*="request="]`)
+        ?.getAttribute('href');
+    expect(linkOf('req-new')).toBe('/app/driver/requests?request=req-new');
+    expect(linkOf('req-old')).toBe('/app/driver/requests?request=req-old');
+    expect(linkOf('req-none')).toBeUndefined();
   });
 });

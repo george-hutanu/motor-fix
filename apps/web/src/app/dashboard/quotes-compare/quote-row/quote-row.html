@@ -1,0 +1,47 @@
+@let q = quote();
+<p class="name" data-part="name">{{ q.garage.name }}</p>
+<p class="where" data-part="where">
+  @if (q.garage.mobile) {
+    {{ 'driver.quotes.mobile' | t }} ·
+  } @else if (q.garage.area) {
+    {{ q.garage.area }} ·
+  }
+  <time [attr.datetime]="q.slot">{{ 'driver.quotes.free' | t: { when: slot() } }}</time>
+</p>
+@if (q.garage.rating !== null) {
+  <mf-rating-dial class="dial" size="small" aria-hidden="true" [value]="q.garage.rating" />
+}
+<p class="rating" data-part="rating" [class.rated]="q.garage.rating !== null">
+  @if (q.garage.rating === null) {
+    {{ 'driver.quotes.unrated' | t }}
+  } @else {
+    {{ rating() }}
+  }
+</p>
+<p class="price" data-part="price">{{ price() }}</p>
+<p class="duration" data-part="duration">{{ 'driver.quotes.duration' | t: { duration: duration() } }}</p>
+@if (q.note) {
+  <p class="note" data-part="note">{{ q.note }}</p>
+}
+@if (missing()) {
+  <p class="missing" data-part="missing">{{ 'driver.quotes.missing' | t: { jobs: missing() } }}</p>
+}
+@if (changed(); as when) {
+  <p class="changed" data-part="changed">{{ 'driver.quotes.changed' | t: { when } }}</p>
+}
+<div class="action" data-part="action">
+  @if (state() === 'open') {
+    <button
+      hlmBtn
+      type="button"
+      [disabled]="busy() || locked()"
+      [attr.aria-busy]="busy() ? 'true' : null"
+      (click)="send()"
+    >{{ 'driver.quotes.accept' | t }}</button>
+  } @else {
+    <span class="state">{{ stateText() | t }}</span>
+  }
+</div>
+@if (problem(); as text) {
+  <p class="problem" data-part="problem" role="alert">{{ text }}</p>
+}

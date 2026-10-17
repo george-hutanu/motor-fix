@@ -86,3 +86,55 @@ p,
   color: var(--mf-red-ink);
   font-weight: 700;
 }
+.columns {
+  display: grid;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.authorisation,
+.catalogue {
+  display: grid;
+  align-content: start;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+h4 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
+.pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.pages button {
+  min-width: var(--mf-tap);
+  min-height: var(--mf-tap);
+}
+.jobs {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.jobs li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--mf-space-2);
+  overflow-wrap: anywhere;
+}
+.mark {
+  color: var(--mf-text-secondary);
+}
+.uncovered .mark {
+  color: var(--mf-amber-ink);
+  font-weight: 700;
+}

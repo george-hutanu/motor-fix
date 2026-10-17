@@ -29,12 +29,17 @@ describe('certificateStale', () => {
 });
 
 describe('timelineWhere', () => {
-  it("reads the garage's lines by its (garageId, at) index and keeps the file's sending and status changes, its checks' records and its documents' openings", () => {
+  // @traces 204-FR-001
+  it("reads the garage's lines by its (garageId, at) index and keeps the file's sending, status changes and RAR number corrections, its checks' records and its documents' openings", () => {
     expect(timelineWhere('g', 'f', ['c1', 'c2'], ['d1'])).toEqual({
       garageId: 'g',
       OR: [
         {
-          OR: [{ action: 'create' }, { action: 'update', field: 'status' }],
+          OR: [
+            { action: 'create' },
+            { action: 'update', field: 'status' },
+            { action: 'update', field: 'rar_number' },
+          ],
           subjectId: 'f',
           subjectType: 'verification_file',
         },

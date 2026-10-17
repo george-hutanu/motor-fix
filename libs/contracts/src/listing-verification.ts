@@ -28,8 +28,21 @@ export function isValidCui(stripped: string): boolean {
   return ((sum * 10) % 11) % 10 === +stripped.slice(-1);
 }
 
+// Cut at 40 UTF-16 units; a cut through a surrogate pair drops its half, so
+// the number is never stored with a lone surrogate.
 export const normaliseRarNumber = (input: string): string =>
-  input.trim().toUpperCase().slice(0, STEP6_VALUE_MAX);
+  input
+    .trim()
+    .toUpperCase()
+    .slice(0, STEP6_VALUE_MAX)
+    .replace(/[\uD800-\uDBFF]$/, '');
+
+// A RAR number refused once normalised: under 3 characters, or holding a
+// control character. The web, the correction and the submission share it.
+export const rarNumberRefused = (input: string): boolean => {
+  const rarNumber = normaliseRarNumber(input);
+  return rarNumber.length < RAR_NUMBER_MIN || /\p{Cc}/u.test(rarNumber);
+};
 
 const STEP6_KEYS = new Set(['cui', 'rarNumber']);
 
