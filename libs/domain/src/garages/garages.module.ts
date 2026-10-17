@@ -35,6 +35,8 @@ import {
   GARAGE_REPORTS_OPTIONS,
   GarageReportsService,
 } from './verification/garage-reports/garage-reports.service';
+import { SuspensionController } from './verification/suspension/suspension.controller';
+import { SuspensionService } from './verification/suspension/suspension.service';
 import { VerificationService } from './verification/verification.service';
 import { VerificationChecksController } from './verification/verification-checks/verification-checks.controller';
 import { VerificationChecksService } from './verification/verification-checks/verification-checks.service';
@@ -74,6 +76,7 @@ export class GaragesModule {
         ListingDraftsController,
         PriceListController,
         PublicGaragesController,
+        SuspensionController,
         VerificationChecksController,
       ],
       exports: [
@@ -108,6 +111,7 @@ export class GaragesModule {
         StaffInviteService,
         PriceListService,
         PublicGaragesService,
+        SuspensionService,
         VerificationService,
         VerificationChecksService,
         { provide: VERIFICATION_CONFIG, useValue: verification },

@@ -33,6 +33,7 @@ const stored: CarDto = {
   id: 'car-1',
   itpUntil: '2026-11-13',
   model: '320d',
+  nextServiceKm: null,
   odometerKm: 148200,
   plate: 'B123ABC',
   rcaUntil: null,

@@ -5,6 +5,7 @@ import {
   DECLINE_WINDOW_CONSUMER,
   DeclineWindowModule,
   emailConfig,
+  GARAGE_SUSPENDED_CONSUMER,
   HealthModule,
   InsightsModule,
   ListingPhotosWorkerModule,
@@ -67,6 +68,7 @@ export function workerModule(
         consumers: [
           CAR_REMINDERS_CONSUMER,
           DECLINE_WINDOW_CONSUMER,
+          GARAGE_SUSPENDED_CONSUMER,
           NEWS_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
           QUOTE_ACCEPTED_CONSUMER,

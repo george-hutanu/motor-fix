@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -13,6 +13,7 @@ features:
   - 347-read-request
   - 222-booking-from-quote
   - 1169-prefetch-intent
+  - 049-garage-suspension
 ---
 
 # Capability: Quotes
@@ -109,9 +110,9 @@ _From 221-quote-request._
 
 _From 221-quote-request._
 
-### 221-FR-007 — The server MUST check routing for every garage of the call, in one query of the use case, never only in the browser: the garage's status is `approved`; GARAGE_BRAND for the car's brand has stance `works_on`; the car's fuel is ticked on that row; and, when the request has jobs, at least one requested job type is ticked in GARAGE_BRAND_JOB for that brand (a request with no job skips this check). A garage id that does not exist is treated as a garage that is not taking requests (`not_taking_requests`), so the answer never tells an existing garage from a missing one. Garages are checked in the order of `garageIds`; the first garage that fails MUST be answered with 400, code `garage_cannot_receive`, carrying `garageId`, `garageName` and `reason` ∈ `brand`, `fuel`, `jobs`, `not_taking_requests` (status not `approved`); nothing is written. The dialog translates the reason in the driver's language naming the garage ("Nu lucrează pe Dacia", "Nu lucrează pe motorină la Dacia", "Nu face lucrările cerute la Dacia", "Service‑ul nu mai primește cereri"), unticks that garage, and for `not_taking_requests` offers "Înapoi la căutare" / "Back to search". On the profile, when the address carries a brand the garage does not work on (ST-307's red lamp), Cere ofertă MUST be disabled with that lamp's text; in the dialog, a chosen car whose brand or fuel the profile's garage does not take shows the same line under the Select and disables Trimite.
+### 049-FR-008 — The server MUST check routing for every garage of the call, in one query of the use case, never only in the browser: the garage's status is `approved`; GARAGE_BRAND for the car's brand has stance `works_on`; the car's fuel is ticked on that row; and, when the request has jobs, at least one requested job type is ticked in GARAGE_BRAND_JOB for that brand (a request with no job skips this check). A garage id that does not exist, or a garage that is `draft`, is treated as a garage that is not taking requests (`not_taking_requests`), so the answer never tells an existing unpublished garage from a missing one. Garages are checked in the order of `garageIds`; the first garage that fails MUST be answered with code `garage_cannot_receive`, carrying `garageId`, `garageName` and `reason` ∈ `brand`, `fuel`, `jobs`, `not_taking_requests`, `garage_suspended`: 409 for `garage_suspended` (the garage is `suspended`; it was public, so naming it hides nothing), 400 for every other reason; nothing is written. The dialog translates the reason in the driver's language naming the garage ("Nu lucrează pe Dacia", "Nu lucrează pe motorină la Dacia", "Nu face lucrările cerute la Dacia", "Service‑ul nu mai primește cereri" for both `not_taking_requests` and `garage_suspended`, English "This garage no longer takes requests"), unticks that garage, and for `not_taking_requests` and `garage_suspended` offers "Înapoi la căutare" / "Back to search". On the profile, when the address carries a brand the garage does not work on (ST-307's red lamp), Cere ofertă MUST be disabled with that lamp's text; in the dialog, a chosen car whose brand or fuel the profile's garage does not take shows the same line under the Select and disables Trimite.
 
-_From 221-quote-request._
+_From 049-garage-suspension._
 
 ### 221-FR-008 — The send MUST be idempotent per driver: a QUOTE_REQUEST stores the key (a new column, unique with the driver), and a second call with the same key and driver MUST answer the same status and body as the first without writing anything; a different key creates a new request. The replay is by key alone: a second call with the same key and a different body still answers the first answer and writes nothing. A refused call (400, 404, 429) stores nothing, so its key stays free and a retry with it is judged afresh. The web app sends the key the form-saving helper issues per dialog, and a retry after a network failure reuses it.
 
@@ -481,6 +482,10 @@ _From 1169-prefetch-intent._
 
 _From 1169-prefetch-intent._
 
+### 049-FR-009 — Accepting a waiting quote of a suspended garage MUST keep answering 409 with the quote read as `withdrawn` (the existing rule in the acceptance use case), whether or not the worker has withdrawn the quote yet, and MUST create no booking; the driver's quote reads answer status `withdrawn` for a waiting quote of a suspended garage, from the garage's status, before the withdrawal is written; the label "Retrasă · service suspendat" / "Withdrawn · garage suspended" is the driver quote card's, which does not exist in `apps/web` yet, so this story adds no web text or i18n key for it.
+
+_From 049-garage-suspension._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -508,3 +513,5 @@ _From 1169-prefetch-intent._
 - `343-FR-005` — superseded by `347-FR-008` (2026-10-11)
 
 - `344-FR-008` — superseded by `222-FR-005` (2026-10-15)
+
+- `221-FR-007` — superseded by `049-FR-008` (2026-10-17)

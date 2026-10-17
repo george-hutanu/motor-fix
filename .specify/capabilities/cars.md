@@ -1,11 +1,12 @@
 ---
 capability: cars
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
   - 092-edit-remove-car
   - 1169-prefetch-intent
+  - 029-overview-panels-own-data
 ---
 
 # Capability: Cars
@@ -18,9 +19,9 @@ The cars a driver keeps on their account: adding one, the owner's own list and c
 
 _From 089-add-a-car._
 
-### 089-FR-002 — `POST /api/v1/cars` MUST create a car for the actor's own account and answer 201 with the car as the owner sees it; it MUST require the capability `driver.cars`; the one exception to that policy is an account holding the `garage` role and no `driver` row at all, which may also add a car (any other actor answers 404); the body is validated at the edge from the contracts library. `GET /api/v1/cars` MUST answer the actor's own cars (not removed, newest first) for the capability `driver.cars`. No other endpoint of this story returns a car.
+### 029-FR-006 — The car answer of `GET /api/v1/cars` (and the other car answers) MUST carry `nextServiceKm` (a whole number or null), read-only: no endpoint of this story writes it. 089-FR-002's rules (own cars only, not removed, newest first) and 089-FR-011's 404 for another account's car MUST hold unchanged and be covered by this story's tests.
 
-_From 089-add-a-car._
+_From 029-overview-panels-own-data._
 
 ### 089-FR-003 — Validation: brand required and active in the catalogue; model required, trimmed, 1 to 40 characters; year a whole number from 1950 to the current year + 1; odometer a whole number from 0 to 2,000,000; fuel one of the four; engine at most 30 characters, trimmed; plate stored in capitals with spaces and hyphens removed, 2 to 12 characters of letters and digits; each date at most 5 years ahead of today, a past date accepted. A refused body answers 400 `validation_failed` with the fields (472-FR-001), and the dialog shows each message under its field in the person's language (159-FR-002).
 
@@ -70,9 +71,9 @@ _From 090-itp-status-lamp._
 
 _From 090-itp-status-lamp._
 
-### 092-FR-009 — Mașinile mele's car card MUST show the brand and model, "<year> · <km> km", the plate grouped as today when the car has one, then the ITP due-date line (090-FR-001..005), then the RCA and rovinietă lines below; a car added or edited from its dialog shows its lines at once (supersedes 090-FR-006). The card MUST carry a "⋯" menu (accessible name "Acțiuni pentru <brand model>" / "Actions for <brand model>", operable by keyboard, a 44 px touch target) with "Modifică" / "Edit" and "Șterge mașina" / "Remove the car". The card MUST show, after the ITP line, an RCA due-date line and a rovinietă due-date line (the shared line of 090-FR-001 with their own texts, the lamp states of 090-FR-003): "RCA valabilă până în <month> <year>" / "RCA valid until <Month> <year>", "RCA-ul expiră în <n> <zile>" / "RCA expires in <n> days" (mâine/azi as the ITP), "RCA-ul a expirat pe <day>" / "RCA expired on <day>", and the same for "Rovinieta" ("Rovinieta e valabilă până în …", "Rovinieta expiră în …", "Rovinieta a expirat pe …" / "Rovinietă valid until …", "Rovinietă expires in …", "Rovinietă expired on …"); no garage link on these two. With no date the grey line reads "RCA: adaugă data" / "RCA: add the date" and "Rovinietă: adaugă data" / "Rovinietă: add the date"; the ITP's grey sentence stays 090-FR-004's. Each of the three grey lines is a button that opens the edit dialog with the focus on that date's field.
+### 029-FR-007 — The view Mașinile mele's card MUST show the oil-service line (FR-003) after the rovinietă line when the car has a next-service km, and no line otherwise.
 
-_From 092-edit-remove-car._
+_From 029-overview-panels-own-data._
 
 ### 090-FR-007 — Tests MUST cover: the state and sentence for 61, 60, 8, 7, 1, 0 and −1 days and for no date, with a fixed clock in Europe/Bucharest, including just before and after midnight and the change to and from summer time; the Romanian plural and both languages' month names; the link only on a passed date, with its address (Jest); end to end (Playwright): a new driver adds a car with an ITP 36 days ahead and sees the amber line, then adds a car with an ITP 400 days ahead and sees the green line (dates relative to today in Europe/Bucharest, never literal).
 
@@ -138,8 +139,23 @@ _From 092-edit-remove-car._
 
 _From 1169-prefetch-intent._
 
+### 029-FR-003 — The oil-service line MUST use the shared lamp and sentence line. Distance left = next-service km − odometer km; estimated days = distance left ÷ (1,000 ÷ 30.44) km a day (the default 1,000 km a month of MF-23 rule 5, until ST-91 brings the readings), rounded to whole days; the lamp applies the ITP thresholds to those days (green over 60, amber 8 to 60, red 7 or fewer, red when 0 or passed). Sentences, with the kilometres in the person's number format: above 0 km "Schimb de ulei peste <n> km" / "Oil service due in <n> km"; at 0 km "Schimb de ulei acum" / "Oil service due now"; below 0 "Schimbul de ulei a trecut de <n> km" / "Oil service overdue by <n> km" (n positive). The colour is never the only signal (090-FR-004's rule). No grey oil line: ST-91 adds it with the field that writes the value.
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-006 — The car answer of `GET /api/v1/cars` (and the other car answers) MUST carry `nextServiceKm` (a whole number or null), read-only: no endpoint of this story writes it. 089-FR-002's rules (own cars only, not removed, newest first) and 089-FR-011's 404 for another account's car MUST hold unchanged and be covered by this story's tests.
+
+_From 029-overview-panels-own-data._
+
+### 029-FR-007 — The view Mașinile mele's card MUST show the oil-service line (FR-003) after the rovinietă line when the car has a next-service km, and no line otherwise.
+
+_From 029-overview-panels-own-data._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
 
 - `090-FR-006` — superseded by `092-FR-009` (2026-10-11)
+
+- `089-FR-002` — superseded by `029-FR-006` (2026-10-17)
+- `092-FR-009` — superseded by `029-FR-007` (2026-10-17)

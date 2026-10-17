@@ -10,6 +10,11 @@ export interface CarDto {
   id: string;
   itpUntil: string | null;
   model: string;
+
+  /**
+   * The odometer reading the next oil service is due at; read-only
+   */
+  nextServiceKm: number | null;
   odometerKm: number;
   plate: string | null;
   rcaUntil: string | null;

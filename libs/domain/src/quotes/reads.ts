@@ -120,8 +120,17 @@ export const bookingOf = (
   status: booking.status,
 });
 
+// A waiting quote of a suspended garage reads as withdrawn: nothing writes
+// the withdrawal to the quote, so the garage's status decides.
+const shownStatus = (
+  quote: Quote & { garage?: Pick<Garage, 'status'> },
+): Quote['status'] =>
+  quote.status === 'waiting' && quote.garage?.status === 'suspended'
+    ? 'withdrawn'
+    : quote.status;
+
 export const quoteOf = (
-  quote: Quote & { jobs: QuoteJob[] },
+  quote: Quote & { jobs: QuoteJob[]; garage?: Pick<Garage, 'status'> },
 ): Omit<QuoteDto, 'garage'> => ({
   acceptedAt: iso(quote.acceptedAt),
   changedAt: iso(quote.changedAt),
@@ -136,7 +145,7 @@ export const quoteOf = (
   note: quote.note,
   sentAt: quote.sentAt.toISOString(),
   slot: quote.slot.toISOString(),
-  status: quote.status,
+  status: shownStatus(quote),
   toBani: quote.toBani,
   withdrawnAt: iso(quote.withdrawnAt),
 });

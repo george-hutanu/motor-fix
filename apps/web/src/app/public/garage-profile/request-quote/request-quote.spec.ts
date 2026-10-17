@@ -57,6 +57,7 @@ const car = (id: string, model: string, year: number): CarDto => ({
   id,
   itpUntil: null,
   model,
+  nextServiceKm: null,
   odometerKm: 120000,
   plate: null,
   rcaUntil: null,
@@ -224,8 +225,8 @@ async function choose(id: string) {
   await settle();
 }
 
-const press = async () => {
-  button('Trimite')?.click();
+const press = async (label = 'Trimite') => {
+  button(label)?.click();
   await settle();
 };
 
@@ -694,6 +695,46 @@ describe('the garage picker', () => {
     expect(
       [...panel().querySelectorAll('a')].some(
         (a) => a.textContent?.trim() === 'Înapoi la căutare',
+      ),
+    ).toBe(true);
+  });
+});
+
+// @traces 049-FR-008
+describe('a suspended garage in the quote request', () => {
+  const suspended = () =>
+    refusal(409, {
+      code: 'garage_cannot_receive',
+      garageId: GARAGE.id,
+      garageName: GARAGE.name,
+      reason: 'garage_suspended',
+      status: 409,
+    });
+
+  it('says the garage no longer takes requests and offers the way back', async () => {
+    await open();
+    send.mockRejectedValueOnce(suspended());
+    type('Scârțâie la frânare');
+    await press();
+
+    expect(text()).toContain('Service Auto Militari nu mai primește cereri.');
+    expect(
+      [...panel().querySelectorAll('a')].some(
+        (a) => a.textContent?.trim() === 'Înapoi la căutare',
+      ),
+    ).toBe(true);
+  });
+
+  it('says it in English', async () => {
+    await open({ language: 'en' });
+    send.mockRejectedValueOnce(suspended());
+    type('Squeaks when braking');
+    await press('Send');
+
+    expect(text()).toContain('Service Auto Militari no longer takes requests.');
+    expect(
+      [...panel().querySelectorAll('a')].some(
+        (a) => a.textContent?.trim() === 'Back to search',
       ),
     ).toBe(true);
   });

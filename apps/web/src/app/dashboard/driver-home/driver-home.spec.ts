@@ -15,6 +15,7 @@ import { filter, Subject } from 'rxjs';
 
 import { DriverHome } from './driver-home';
 import { AddCar } from '../add-car/add-car';
+import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { Live } from '../live';
 import { Session } from '../session';
 
@@ -27,6 +28,7 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   id: 'car-1',
   itpUntil: null,
   model: 'Logan',
+  nextServiceKm: null,
   odometerKm: 120000,
   plate: null,
   rcaUntil: null,
@@ -70,7 +72,8 @@ type Answer<T> = T[] | Error | Promise<never>;
 interface Setup {
   cars?: Answer<CarDto>;
   requests?: Answer<RequestSummaryDto>;
-  capabilities?: string[];
+  // null: no session shown, as for a moment after signing out.
+  capabilities?: string[] | null;
   language?: 'ro' | 'en';
 }
 
@@ -100,7 +103,11 @@ async function render({
   requestsList = jest.fn(() => answer(requests));
   open = jest.fn(async () => 'cancelled');
   events = new Subject();
-  const current = signal({ capabilities, role: 'driver' } as unknown as MeDto);
+  const current = signal(
+    capabilities === null
+      ? null
+      : ({ capabilities, role: 'driver' } as unknown as MeDto),
+  );
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -370,6 +377,13 @@ describe('Service-uri salvate on Panou', () => {
     expect(control(saved, 'Caută altele')?.getAttribute('href')).toBe('/ro');
   });
 
+  it('is left out while no session is shown', async () => {
+    const { element } = await render({ capabilities: null });
+
+    expect(panel(element, 'saved')).toBeNull();
+    expect(panel(element, 'cars')).not.toBeNull();
+  });
+
   it('is left out for a driver without the saved-garages capability', async () => {
     const { element } = await render({
       capabilities: DRIVER.filter((c) => c !== 'driver.saved_garages'),
@@ -457,6 +471,9 @@ describe('the panels’ states', () => {
     expect(invitation(element, 'search')).toBeNull();
     expect(invitation(element, 'car')).toBeNull();
     expect(text(panel(element, 'cars'))).toContain(EMPTY.cars);
+    expect(
+      element.querySelector('.skeleton[aria-busy="true"]:not(mf-panel *)'),
+    ).not.toBeNull();
   });
 
   it('shows the shared error where a list could not be read, and the other panels as they are', async () => {
@@ -484,7 +501,7 @@ describe('the panels’ states', () => {
     const { element } = await render({ cars: new Error('down') });
 
     expect(text(panel(element, 'cars'))).toContain(
-      'Ceva nu a mers. Încearcă din nou.',
+      'Nu am putut încărca mașinile. Reîncearcă.',
     );
     expect(text(panel(element, 'quotes'))).toContain(EMPTY.quotes);
   });
@@ -511,14 +528,16 @@ describe('the panels’ states', () => {
     expect(text(panel(element, 'repairs'))).toContain(EMPTY.repairs);
   });
 
-  it('shows a filled panel as its frame, with its heading linked to its view and nothing else', async () => {
+  it('shows a filled panel as its frame, with its heading linked to its view', async () => {
     const { element } = await render({
       cars: [car()],
       requests: [request({ quotesCount: 1, status: 'done' })],
     });
 
+    expect(
+      panel(element, 'cars')?.querySelector('h2 a')?.getAttribute('href'),
+    ).toBe('/app/driver/cars');
     for (const [key, href] of [
-      ['cars', '/app/driver/cars'],
       ['quotes', '/app/driver/requests'],
       ['repairs', '/app/driver/requests'],
     ]) {
@@ -561,5 +580,334 @@ describe('Panou once a quote is accepted', () => {
     await new Promise((r) => setTimeout(r, 400));
 
     expect(requestsList).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Only Date is faked: Angular's stability checks still need real timers.
+function clockAt(at: string) {
+  jest.useFakeTimers({
+    doNotFake: [
+      'nextTick',
+      'setImmediate',
+      'clearImmediate',
+      'setTimeout',
+      'clearTimeout',
+      'setInterval',
+      'clearInterval',
+      'queueMicrotask',
+      'requestAnimationFrame',
+      'cancelAnimationFrame',
+      'requestIdleCallback',
+      'cancelIdleCallback',
+      'hrtime',
+      'performance',
+    ],
+    now: new Date(at),
+  });
+}
+
+const BMW = car({
+  brandId: 'bmw',
+  brandName: 'BMW',
+  id: 'bmw',
+  itpUntil: '2026-11-13',
+  model: '320d',
+  nextServiceKm: 152000,
+  odometerKm: 148200,
+  plate: 'B 123 ABC',
+  year: 2019,
+});
+
+const cards = (element: HTMLElement) => [
+  ...(panel(element, 'cars')?.querySelectorAll<HTMLElement>('li') ?? []),
+];
+const lines = (card: HTMLElement) =>
+  [...card.querySelectorAll<HTMLElement>('mf-lamp')].map((lamp) => [
+    lamp.getAttribute('data-state'),
+    text(lamp),
+  ]);
+
+describe('Mașinile mele filled with the driver’s cars', () => {
+  beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
+  afterEach(() => jest.useRealTimers());
+
+  // @traces 029-FR-001 029-FR-002 029-FR-003
+  it('shows the car’s name, year and kilometres and its two most urgent lines, without the plate', async () => {
+    const { element } = await render({ cars: [BMW] });
+    const [card] = cards(element);
+
+    expect(text(card)).toContain('BMW 320d');
+    expect(text(card)).toContain('2019 · 148.200 km');
+    expect(lines(card)).toEqual([
+      ['amber', 'ITP‑ul expiră în 36 de zile'],
+      ['green', 'Schimb de ulei peste 3.800 km'],
+    ]);
+    expect(text(panel(element, 'cars'))).not.toContain('B 123 ABC');
+  });
+
+  // @traces 029-FR-001 029-FR-012
+  it('says it in English for an English reader', async () => {
+    const { element } = await render({ cars: [BMW], language: 'en' });
+    const [card] = cards(element);
+
+    expect(text(card)).toContain('2019 · 148,200 km');
+    expect(lines(card)).toEqual([
+      ['amber', 'ITP expires in 36 days'],
+      ['green', 'Oil service due in 3,800 km'],
+    ]);
+  });
+
+  // @traces 029-FR-002 029-FR-004
+  it('keeps the two most urgent of a car’s four lines', async () => {
+    const { element } = await render({
+      cars: [
+        car({
+          itpUntil: '2027-06-30',
+          nextServiceKm: 124000,
+          rcaUntil: '2026-10-10',
+          rovinietaUntil: '2026-11-01',
+        }),
+      ],
+    });
+
+    expect(lines(cards(element)[0])).toEqual([
+      ['red', 'RCA‑ul expiră în 2 zile'],
+      ['amber', 'Rovinieta expiră în 24 de zile'],
+    ]);
+  });
+
+  // @traces 029-FR-002
+  it('shows a missing date as a grey line in plain text, with no button', async () => {
+    const { element } = await render({
+      cars: [car({ itpUntil: '2026-11-13' })],
+    });
+    const [card] = cards(element);
+
+    expect(lines(card)).toEqual([
+      ['amber', 'ITP‑ul expiră în 36 de zile'],
+      ['grey', 'RCA: adaugă data'],
+    ]);
+    expect(card.querySelector('button')).toBeNull();
+    expect(card.querySelector('a')).toBeNull();
+  });
+
+  // @traces 029-FR-005
+  it('shows the three most urgent of five cars and a link to all of them', async () => {
+    const { element } = await render({
+      cars: [
+        car({ id: 'a', itpUntil: '2027-06-30', model: 'Logan' }),
+        car({ id: 'b', model: 'Duster', rcaUntil: '2026-10-10' }),
+        car({ id: 'c', model: 'Sandero' }),
+        car({ id: 'd', model: 'Spring', nextServiceKm: 121000 }),
+        car({ id: 'e', itpUntil: '2026-09-30', model: 'Jogger' }),
+      ],
+    });
+
+    expect(cards(element).map((c) => text(c.querySelector('h3')))).toEqual([
+      'Dacia Jogger',
+      'Dacia Duster',
+      'Dacia Spring',
+    ]);
+    expect(
+      control(panel(element, 'cars'), 'Toate mașinile (5)')?.getAttribute(
+        'href',
+      ),
+    ).toBe('/app/driver/cars');
+  });
+
+  // @traces 029-FR-005
+  it('keeps the newer car first when two are equally urgent', async () => {
+    const { element } = await render({
+      cars: [
+        car({ id: 'new', itpUntil: '2026-11-13', model: 'Jogger' }),
+        car({ id: 'old', itpUntil: '2026-11-13', model: 'Logan' }),
+      ],
+    });
+
+    expect(cards(element).map((c) => text(c.querySelector('h3')))).toEqual([
+      'Dacia Jogger',
+      'Dacia Logan',
+    ]);
+  });
+
+  // @traces 029-FR-005 029-FR-012
+  it('names the link in English and leaves it out for three cars or fewer', async () => {
+    const five = Array.from({ length: 5 }, (_, i) => car({ id: `c${i}` }));
+    const en = await render({ cars: five, language: 'en' });
+    expect(control(panel(en.element, 'cars'), 'All cars (5)')).toBeDefined();
+    TestBed.resetTestingModule();
+
+    const three = await render({ cars: five.slice(0, 3) });
+    expect(cards(three.element)).toHaveLength(3);
+    expect(text(panel(three.element, 'cars'))).not.toContain('Toate mașinile');
+  });
+});
+
+// @traces 029-FR-008
+describe('Mașinile mele when the cars cannot be read', () => {
+  it('shows its own error with a retry button, and the other panels as they are', async () => {
+    const { element } = await render({ cars: new Error('down') });
+    const cars = panel(element, 'cars');
+
+    expect(text(cars?.querySelector('[role="alert"]'))).toBe(
+      'Nu am putut încărca mașinile. Reîncearcă.',
+    );
+    expect(control(cars, 'Reîncearcă')).toBeDefined();
+    expect(text(panel(element, 'quotes'))).toContain(EMPTY.quotes);
+    expect(text(panel(element, 'repairs'))).toContain(EMPTY.repairs);
+  });
+
+  it('says it in English for an English reader', async () => {
+    const { element } = await render({
+      cars: new Error('down'),
+      language: 'en',
+    });
+
+    expect(text(panel(element, 'cars'))).toContain(
+      'We could not load your cars. Try again.',
+    );
+    expect(control(panel(element, 'cars'), 'Try again')).toBeDefined();
+  });
+
+  it('reads the cars again on retry, with the placeholder until they arrive', async () => {
+    const { element, settle } = await render({ cars: new Error('down') });
+    let arrive: (cars: CarDto[]) => void = () => {};
+    carsList.mockReturnValueOnce(
+      new Promise((resolve) => {
+        arrive = (items) => resolve({ items, nextCursor: null, total: 1 });
+      }),
+    );
+
+    control(panel(element, 'cars'), 'Reîncearcă')?.click();
+    await settle();
+
+    expect(carsList).toHaveBeenCalledTimes(2);
+    expect(
+      panel(element, 'cars')?.querySelector('[aria-busy="true"]'),
+    ).not.toBeNull();
+    expect(panel(element, 'cars')?.querySelector('[role="alert"]')).toBeNull();
+
+    arrive([car({ model: 'Duster' })]);
+    await settle();
+
+    expect(text(cards(element)[0])).toContain('Dacia Duster');
+  });
+
+  it('lets the first row follow the requests alone, without the car invitation', async () => {
+    const { element } = await render({ cars: new Error('down') });
+
+    expect(invitation(element, 'search')).not.toBeNull();
+    expect(invitation(element, 'car')).toBeNull();
+    expect(panel(element, 'activeRequest')).toBeNull();
+  });
+
+  it('shows the search invitation while the cars still load, and the car one only once they are none', async () => {
+    const { element } = await render({ cars: new Promise<never>(() => {}) });
+
+    expect(invitation(element, 'search')).not.toBeNull();
+    expect(invitation(element, 'car')).toBeNull();
+  });
+});
+
+// @traces 029-FR-009
+describe('a car saved from Mașinile mele', () => {
+  beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
+  afterEach(() => jest.useRealTimers());
+
+  it('shows in the panel at once, with its lines, without reading again', async () => {
+    const { element, settle } = await render();
+    open.mockResolvedValueOnce(BMW);
+
+    control(panel(element, 'cars'), 'Adaugă o mașină')?.click();
+    await settle();
+
+    expect(text(cards(element)[0])).toContain('BMW 320d');
+    expect(lines(cards(element)[0])[0]).toEqual([
+      'amber',
+      'ITP‑ul expiră în 36 de zile',
+    ]);
+    expect(carsList).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The view's own names for the registry's keys, kept from before it.
+const DRAWN_AS: Record<string, string> = {
+  active_request: 'activeRequest',
+  history: 'repairs',
+};
+
+// @traces 029-FR-010
+describe('Panou drawn from the panel registry', () => {
+  it('draws the released panels in the registry’s order and widths', async () => {
+    const { element } = await render({ requests: [request()] });
+
+    expect(panels(element)).toEqual(
+      panelsToDraw(null).map((key) => DRAWN_AS[key] ?? key),
+    );
+    for (const entry of DRIVER_PANELS.filter((p) => p.released)) {
+      expect(
+        panel(element, DRAWN_AS[entry.key] ?? entry.key)?.classList.contains(
+          'wide',
+        ),
+      ).toBe(entry.wide);
+    }
+  });
+});
+
+describe('the add-car and find-garage buttons on a 320 px phone', () => {
+  // Michroma at the body size needs two lines there: a one- or two-letter
+  // word is held to the word after it, so no word is left alone on a line.
+  it('ties "o" and "un" to the word that follows', async () => {
+    const { element } = await render();
+    const raw = (b: Element | null | undefined) => b?.textContent?.trim();
+
+    expect(raw(invitation(element, 'car')?.querySelector('button'))).toBe(
+      'Adaugă o mașină',
+    );
+    expect(raw(invitation(element, 'search')?.querySelector('a'))).toBe(
+      'Caută un service',
+    );
+    expect(raw(panel(element, 'cars')?.querySelector('button'))).toBe(
+      'Adaugă o mașină',
+    );
+    expect(raw(panel(element, 'quotes')?.querySelector('a'))).toBe(
+      'Caută un service',
+    );
+  });
+});
+
+describe('Mașinile mele on a page left open', () => {
+  afterEach(() => jest.useRealTimers());
+
+  // @traces 029-FR-002
+  it('ranks the lines by the new day once it comes, with no new read', async () => {
+    jest.useFakeTimers({
+      advanceTimers: true,
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      now: new Date('2026-10-08T09:00:00Z'),
+    });
+    // ITP in 8 days (amber) and the oil about 6 days away (red); two days
+    // later the ITP is 6 days away too and, as urgent, comes first.
+    const due = car({
+      itpUntil: '2026-10-16',
+      nextServiceKm: 120213,
+      odometerKm: 120000,
+    });
+    const { element, settle } = await render({ cars: [due] });
+    const kinds = () =>
+      [
+        ...(cards(element)[0]?.querySelectorAll(
+          'mf-oil-line, mf-due-date-line',
+        ) ?? []),
+      ].map((line) => line.tagName.toLowerCase());
+
+    expect(kinds()).toEqual(['mf-oil-line', 'mf-due-date-line']);
+
+    jest.setSystemTime(new Date('2026-10-10T09:00:00Z'));
+    jest.advanceTimersByTime(60_000);
+    await settle();
+
+    expect(kinds()).toEqual(['mf-due-date-line', 'mf-oil-line']);
+    expect(carsList).toHaveBeenCalledTimes(1);
   });
 });

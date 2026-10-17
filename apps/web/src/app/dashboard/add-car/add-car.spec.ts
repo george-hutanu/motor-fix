@@ -44,6 +44,7 @@ const saved: CarDto = {
   id: 'car-1',
   itpUntil: null,
   model: '320d',
+  nextServiceKm: null,
   odometerKm: 148200,
   plate: null,
   rcaUntil: null,

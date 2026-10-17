@@ -72,6 +72,20 @@ const FIXTURES: Record<
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
   },
+  'POST /api/v1/admin/garages/{id}/suspend': {
+    body: () => ({ cause: 'admin', reason: 'Verificare la cererea echipei' }),
+    path: async () => {
+      const garage = (
+        await db.query(
+          `INSERT INTO garage (id, name, slug, status, approved_at)
+           VALUES (gen_random_uuid(), 'Audit', $1, 'approved', now())
+           RETURNING id`,
+          [`audit-${randomUUID()}`],
+        )
+      ).rows[0].id as string;
+      return `/api/v1/admin/garages/${garage}/suspend`;
+    },
+  },
   'POST /api/v1/admin/live/test': { body: (admin) => ({ accountId: admin }) },
   'POST /api/v1/admin/news': {
     body: () => ({
