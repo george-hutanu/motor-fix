@@ -89,7 +89,8 @@ jobs:
           while IFS= read -r point; do
             [ -n "$point" ] || continue
             uid=$(jq -r .uid <<< "$point")
-            if call -X PUT "$api/v1/provisioning/contact-points/$uid" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point" \
+            path=$(jq -rn --arg u "$uid" '$u | @uri')
+            if call -X PUT "$api/v1/provisioning/contact-points/$path" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point" \
               || call -X POST "$api/v1/provisioning/contact-points" -H 'X-Disable-Provenance: true' -H 'Content-Type: application/json' --data-binary @- <<< "$point"; then
               echo "applied $cp_file ($uid)"
             else

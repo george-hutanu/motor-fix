@@ -5,7 +5,6 @@
     "type": "email",
     "settings": {
       "addresses": "hutanugeorge40@gmail.com"
-    },
-    "disableResolveMessage": false
+    }
   }
 ]

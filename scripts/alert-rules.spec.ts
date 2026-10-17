@@ -363,10 +363,6 @@ const QUEUE_RULES = [
   'worker-jobs-failed',
   'worker-queue-growing',
 ];
-// The rules of the files outside the five that this suite still pins.
-const ELSEWHERE: Record<string, [string, (typeof EXPECTED)[string]]> = {
-  'mcp-memory': ['mcp.json', MEMORY('mcp')],
-};
 
 const PROMQL_WORDS = new Set([
   'and',
@@ -605,13 +601,13 @@ describe('alert rules', () => {
 
   // @traces 880-FR-007
   it('the MCP server has its own memory rule on its dashboard', () => {
-    for (const [uid, [name, want]] of Object.entries(ELSEWHERE)) {
-      const rule = rulesOf(files[name] as AlertFile).find((r) => r.uid === uid);
-      expect(rule).toBeDefined();
-      expectRule(rule as Rule, want);
-      expect(rule?.annotations['dashboard_uid']).toBe('motorfix-mcp');
-      expect(rule?.annotations['summary']).toContain(ENVIRONMENT);
-    }
+    const rule = rulesOf(files['mcp.json'] as AlertFile).find(
+      (r) => r.uid === 'mcp-memory',
+    );
+    expect(rule).toBeDefined();
+    expectRule(rule as Rule, MEMORY('mcp'));
+    expect(rule?.annotations['dashboard_uid']).toBe('motorfix-mcp');
+    expect(rule?.annotations['summary']).toContain(ENVIRONMENT);
   });
 
   // @traces 880-FR-002
@@ -888,7 +884,7 @@ describe('the inventory lists the rules', () => {
         Array.isArray(e.alerts) ? e.alerts : [],
       ),
     );
-    for (const uid of [...Object.keys(EXPECTED), ...Object.keys(ELSEWHERE)])
+    for (const uid of [...Object.keys(EXPECTED), 'mcp-memory'])
       expect([uid, listed.has(uid)]).toEqual([uid, true]);
     const waiting = inventory.entries.filter((e) =>
       /ST-\d+ adds the (?:queue )?alert/.test(e.reason ?? ''),
@@ -948,7 +944,6 @@ describe('the contact point and the notification policy', () => {
   it("e-mails the owner's address only, under the name the rules know", () => {
     expect(points()).toEqual([
       {
-        disableResolveMessage: false,
         name: 'MotorFix owner',
         settings: { addresses: 'hutanugeorge40@gmail.com' },
         type: 'email',
