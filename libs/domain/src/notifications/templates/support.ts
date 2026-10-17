@@ -141,17 +141,22 @@ interface StoredMessage {
   message: string;
 }
 
+// A code's label, or the code itself; an inherited key such as
+// `constructor` is not a label.
+const label = (labels: Readonly<Record<string, string>>, code: string) =>
+  Object.hasOwn(labels, code) ? labels[code] : code;
+
 // SUPPORT_MESSAGE's values, but for the contact link: the codes as the
 // mailbox reads them, in Romanian.
 export function supportMessageValues(message: StoredMessage) {
   return {
     email: message.email,
-    language: LANGUAGES[message.language] ?? message.language,
+    language: label(LANGUAGES, message.language),
     message: message.message,
     name: oneLine(message.name),
     reference: message.reference,
-    role: ROLES[message.role] ?? message.role,
-    subjectRef: message.subjectRef ? oneLine(message.subjectRef) : '—',
-    topic: TOPICS[message.topic] ?? message.topic,
+    role: label(ROLES, message.role),
+    subjectRef: oneLine(message.subjectRef ?? '') || '—',
+    topic: label(TOPICS, message.topic),
   };
 }
