@@ -16,7 +16,9 @@
         "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate",
-        "api-prefetch-hit-rate"
+        "api-prefetch-hit-rate",
+        "api-search-latency",
+        "api-memory"
       ],
       "story": "ST-881"
     },
@@ -27,7 +29,8 @@
       "dashboard": "motorfix-mcp",
       "alerts": [
         "mcp-auth-failures",
-        "mcp-tool-errors"
+        "mcp-tool-errors",
+        "mcp-memory"
       ],
       "reason": "reports mcp_requests_total{outcome}, mcp_tool_calls_total{tool,outcome}, mcp_auth_failures_total{reason}, mcp_tool_call_duration_seconds{tool}, mcp_key_fetches_total{outcome} and mcp_issuer_up (the IssuerProbe, once a minute), one McpToolCall log line per tool call and an mcp.tool <name> span; a new assistant grant is an audit row and an assistant_grant.created event",
       "story": "ST-365"
@@ -40,7 +43,8 @@
       "alerts": [
         "web-down",
         "web-error-rate",
-        "web-latency"
+        "web-latency",
+        "web-memory"
       ],
       "story": "ST-877"
     },
@@ -62,8 +66,10 @@
         "worker-down",
         "worker-saturation",
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed",
-        "worker-cdn-purge-failed"
+        "worker-cdn-purge-failed",
+        "worker-memory"
       ],
       "story": "ST-881"
     },
@@ -79,7 +85,9 @@
         "api-cache-fallback-rate",
         "api-search-cache-fallback-rate",
         "api-search-log-failure-rate",
-        "api-prefetch-hit-rate"
+        "api-prefetch-hit-rate",
+        "api-search-latency",
+        "api-memory"
       ],
       "story": "ST-881"
     },
@@ -92,8 +100,10 @@
         "worker-down",
         "worker-saturation",
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed",
-        "worker-cdn-purge-failed"
+        "worker-cdn-purge-failed",
+        "worker-memory"
       ],
       "story": "ST-881"
     },
@@ -105,7 +115,8 @@
       "alerts": [
         "web-down",
         "web-error-rate",
-        "web-latency"
+        "web-latency",
+        "web-memory"
       ],
       "story": "ST-877"
     },
@@ -127,7 +138,8 @@
       "dashboard": "motorfix-mcp",
       "alerts": [
         "mcp-down",
-        "mcp-issuer-unreachable"
+        "mcp-issuer-unreachable",
+        "mcp-memory"
       ],
       "reason": "staging only; health at /health/live; mcp_issuer_up is its liveness series",
       "story": "ST-1016"
@@ -139,6 +151,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed",
         "profile-views-job-failed"
       ],
@@ -152,6 +165,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -163,6 +177,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -174,6 +189,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -185,6 +201,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-881"
@@ -196,6 +213,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "story": "ST-343"
@@ -218,6 +236,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "reason": "counted by motorfix_garage_suspended_notices_total (built, skipped) on motorfix-queues; one GarageSuspended log line per event with the garage id, the cause and the owners told, never the reason; the job runs in the worker's queue span; BullMQ's queue metrics cover depth, and the shared backlog and failed-job rules alert on it",
@@ -230,6 +249,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "reason": "one QuoteAccepted log line per job naming the quote id and how many staff were told, or why none; BullMQ's queue metrics cover depth and failures; the acceptances themselves are counted by motorfix_quote_accepts_total",
@@ -242,6 +262,7 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
+        "worker-queue-growing",
         "worker-jobs-failed"
       ],
       "reason": "counted by motorfix_quote_received_total (built, muted) on motorfix-queues and motorfix-product; BullMQ's queue metrics cover depth and failures",
@@ -328,7 +349,8 @@
       "alerts": [
         "postgres-unreachable",
         "postgres-connections",
-        "postgres-size"
+        "postgres-size",
+        "postgres-outbox-stuck"
       ],
       "story": "ST-881"
     },
@@ -939,7 +961,8 @@
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
-        "api-latency"
+        "api-latency",
+        "api-search-latency"
       ],
       "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, and new searches still count in motorfix_searches_total",
       "story": "ST-267"
