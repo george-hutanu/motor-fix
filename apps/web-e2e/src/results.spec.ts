@@ -284,11 +284,14 @@ test.describe('the map beside the results @seeded', () => {
     page,
   }) => {
     await ownMap(page);
-    const answer = page.waitForResponse(
-      (r) => r.url().includes('/api/v1/search/garages/pins?') && r.ok(),
-    );
+    // Read as it lands: a body left until later may be gone from the browser.
+    const answer = page
+      .waitForResponse(
+        (r) => r.url().includes('/api/v1/search/garages/pins?') && r.ok(),
+      )
+      .then((r) => r.json() as Promise<{ total: number }>);
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
-    const { total } = (await (await answer).json()) as { total: number };
+    const { total } = await answer;
 
     await expect(
       page.getByRole('region', { name: 'Harta service‑urilor' }),
@@ -413,6 +416,40 @@ test.describe('the map beside the results @seeded', () => {
 
     await expect(tally).toContainText('4 service‑uri găsite');
     await expect(page.locator('mf-result-card')).toHaveCount(4);
+  });
+
+  // @traces 269-FR-010
+  test('puts the map above the list on a phone, with no sideways scroll at 320 px or 390 px', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    for (const [width, lang, region, scheme] of [
+      [320, 'ro', 'Harta service‑urilor', 'light'],
+      [390, 'en', 'Map of garages', 'dark'],
+    ] as const) {
+      await page.setViewportSize({ height: 800, width });
+      await page.emulateMedia({ colorScheme: scheme });
+      await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+      const map = page.getByRole('region', { name: region });
+
+      await expect(page.locator('mf-result-card')).toHaveCount(4);
+      await expect(map.locator('.legend')).toBeVisible();
+      const mapBox = await map.boundingBox();
+      const cardBox = await page
+        .locator('mf-result-card')
+        .first()
+        .boundingBox();
+      expect(mapBox && cardBox && mapBox.y + mapBox.height <= cardBox.y).toBe(
+        true,
+      );
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+        ),
+      ).toBe(false);
+    }
   });
 
   // @traces 269-FR-017
