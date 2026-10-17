@@ -62,3 +62,23 @@ describe('the car edit and removal routes', () => {
     expect(checkInventory(root)).toEqual([]);
   });
 });
+
+describe('the map pins and verification file entries', () => {
+  it('keeps the ST-269 pins route and counter beside the ST-302 file routes', () => {
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const names = (inventory.entries as { name: string }[]).map(
+      (each) => each.name,
+    );
+
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'search-garages-pins',
+        'motorfix_search_pins_total',
+        'admin-verification-file-read',
+        'admin-verification-file-open',
+      ]),
+    );
+  });
+});

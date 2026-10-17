@@ -35,6 +35,15 @@ let questions = 0;
 // Each open task's history entry carries its number; a later task's is higher.
 let entries = 0;
 
+// Above any entry already in the page's state too: a reload keeps
+// history.state but starts the count again, and an entry no higher than the
+// one under it would never see its own Back.
+function nextEntry(window: Window | null) {
+  const below = Number(window?.history.state?.mfOverlay) || 0;
+  entries = Math.max(entries, below) + 1;
+  return entries;
+}
+
 // The panel every task is shown in: the kit's dialog, right-hand sheet or, on
 // a phone, bottom sheet surface (with a grip to drag it down), a header with
 // the title and the X, and the task in a body that scrolls on its own.
@@ -298,7 +307,7 @@ export class OverlayPanel {
       ? null
       : 'right';
   protected readonly questionId = `mf-overlay-question-${++questions}`;
-  private readonly entry = ++entries;
+  private readonly entry = nextEntry(this.window);
   // A close waiting for the browser to step back over this task's entry.
   private leaving: { result?: unknown } | null = null;
   protected readonly asking = signal(false);

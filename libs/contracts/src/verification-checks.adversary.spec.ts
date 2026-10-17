@@ -194,7 +194,12 @@ describe('RecordVerificationCheckDto', () => {
     expect(await errorsFor({ result: 'ok' })).toEqual([]);
   });
 
-  it.each(['not_run', 'OK', '', null, 1, undefined])(
+  // @traces 302-FR-007
+  it('accepts a bare not_run result, as an untick sends', async () => {
+    expect(await errorsFor({ result: 'not_run' })).toEqual([]);
+  });
+
+  it.each(['OK', '', null, 1, undefined])(
     'refuses result %p',
     async (result) => {
       const errors = await errorsFor({ result });

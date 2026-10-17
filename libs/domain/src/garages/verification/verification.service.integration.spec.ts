@@ -324,6 +324,7 @@ describe('opening', () => {
 
     expect(opened).toMatchObject({
       byAnother: false,
+      first: true,
       openedBy: ioana.accountId,
     });
     const after = await prisma.verificationFile.findUniqueOrThrow({
@@ -344,6 +345,7 @@ describe('opening', () => {
 
     expect(second).toEqual({
       byAnother: true,
+      first: false,
       openedAt: first.openedAt,
       openedBy: ioana.accountId,
     });
@@ -909,4 +911,29 @@ describe('the checks of a file', () => {
     ).rejects.toThrow('outbox down');
     expect(await prisma.verificationCheck.count()).toBe(0);
   });
+});
+
+describe('opening a file no longer waiting', () => {
+  // @traces 302-FR-002
+  it.each(['approved', 'rejected', 'more_requested'] as FileStatus[])(
+    'answers a %s file unchanged, with no entry, no event and no 409',
+    async (status) => {
+      const file = await fileIn(status);
+
+      const answer = await inTx((tx) => service().open(tx, dan, file.id));
+
+      expect(answer).toEqual({
+        byAnother: true,
+        first: false,
+        openedAt: file.openedAt,
+        openedBy: ioana.accountId,
+      });
+      const after = await prisma.verificationFile.findUniqueOrThrow({
+        where: { id: file.id },
+      });
+      expect(after).toEqual(file);
+      expect(await history(file.id)).toHaveLength(0);
+      expect(await events(file.id)).toHaveLength(0);
+    },
+  );
 });

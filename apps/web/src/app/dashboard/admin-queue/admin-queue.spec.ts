@@ -1,7 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  provideRouter,
+  Router,
+  UrlSegment,
+} from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   AdminService,
@@ -9,12 +14,13 @@ import {
   type VerificationQueueRowDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
-import { filter, Subject } from 'rxjs';
+import { Overlays } from '@motor-fix/overlays';
+import { BehaviorSubject, filter, Subject } from 'rxjs';
 
 import { AdminQueue } from './admin-queue';
 import { Live } from '../live';
 
-// @traces 301-FR-002 301-FR-005 301-FR-007 301-FR-008 301-FR-009 301-FR-012
+// @traces 301-FR-002 301-FR-005 301-FR-007 301-FR-008 301-FR-009 301-FR-012 302-FR-003
 
 const row = (
   n: number,
@@ -66,7 +72,10 @@ async function settle() {
 class Overview {}
 
 async function open(
-  { overview = false }: { overview?: boolean } = {},
+  {
+    overview = false,
+    providers = [],
+  }: { overview?: boolean; providers?: unknown[] } = {},
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
@@ -97,6 +106,7 @@ async function open(
           },
         },
       },
+      ...(providers as never[]),
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -363,5 +373,108 @@ describe('live', () => {
     await settle();
 
     expect(asked).toHaveLength(2);
+  });
+});
+
+describe('the file named in the address', () => {
+  let close: (result: unknown) => void;
+  let overlays: { open: jest.Mock };
+  let url: BehaviorSubject<UrlSegment[]>;
+
+  const at = (...paths: string[]) => paths.map((p) => new UrlSegment(p, {}));
+
+  function providers(...paths: string[]) {
+    url = new BehaviorSubject(at(...paths));
+    overlays = {
+      open: jest.fn(
+        () =>
+          new Promise((resolve) => {
+            close = resolve;
+          }),
+      ),
+    };
+    return [
+      { provide: Overlays, useValue: overlays },
+      { provide: ActivatedRoute, useValue: { url } },
+    ];
+  }
+
+  it('opens the file as a wide drawer once, and returns to the list when it closes', async () => {
+    await open({ providers: providers('file-9') });
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigate')
+      .mockResolvedValue(true);
+
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+    expect(overlays.open).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        // Every tick is saved as it is made: closing never asks to discard.
+        confirmDiscard: false,
+        data: { fileId: 'file-9' },
+        shape: 'drawer-wide',
+        title: 'admin.file.title',
+      }),
+    );
+    events.next(message('verification.opened'));
+    await settle();
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+
+    close('cancelled');
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith(['/app/admin/garages'], {
+      replaceUrl: true,
+    });
+  });
+
+  it('closes the open drawer before it opens the next file the address names', async () => {
+    await open({ providers: providers('file-9') });
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigate')
+      .mockResolvedValue(true);
+    const first = overlays.open.mock.calls[0]?.[1] as { signal: AbortSignal };
+    const closeFirst = close;
+
+    url.next(at('file-10'));
+    await settle();
+
+    expect(first.signal.aborted).toBe(true);
+    expect(overlays.open).toHaveBeenCalledTimes(2);
+    expect(overlays.open).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ data: { fileId: 'file-10' } }),
+    );
+    closeFirst('cancelled');
+    await settle();
+    expect(navigate).not.toHaveBeenCalled();
+
+    close('cancelled');
+    await settle();
+    expect(navigate).toHaveBeenCalledWith(['/app/admin/garages'], {
+      replaceUrl: true,
+    });
+  });
+
+  it('leaves the address alone when it already names another place', async () => {
+    await open({ providers: providers('file-9') });
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigate')
+      .mockResolvedValue(true);
+
+    url.next([]);
+    close('cancelled');
+    await settle();
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing at the bare list or on the overview', async () => {
+    await open({ providers: providers() });
+    expect(overlays.open).not.toHaveBeenCalled();
+    TestBed.resetTestingModule();
+
+    await open({ overview: true, providers: providers('file-9') });
+    expect(overlays.open).not.toHaveBeenCalled();
   });
 });

@@ -3,12 +3,14 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   HostAttributeToken,
   inject,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   VERIFICATION_QUEUE_MAX,
   VERIFICATION_QUEUE_PAGE,
@@ -20,11 +22,14 @@ import {
   type VerificationQueueRowDto,
 } from '@motor-fix/data-access';
 import { appliedAt, formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { Lamp, Panel } from '@motor-fix/ui-cockpit';
+import { map } from 'rxjs';
 
 import { liveResource } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
+const LIST = '/app/admin/garages';
 // How often a page left open reads the clock again, so "azi" turns into
 // "ieri" soon after midnight with no new read.
 const TICK_MS = 60_000;
@@ -62,6 +67,7 @@ export class AdminQueue {
   );
 
   protected readonly skeletonRows = SKELETON_ROWS;
+  protected readonly list = LIST;
   protected readonly state = computed(() => {
     if (this.queue.value()) return 'ready';
     return this.queue.failed() ? 'failed' : 'loading';
@@ -143,7 +149,7 @@ export class AdminQueue {
         .join(' · '),
       id: row.id,
       lamp: row.lamp,
-      link: ['/app/admin/garages', row.id],
+      link: [LIST, row.id],
       name: row.garageName,
       open: this.t('openNamed', { name: row.garageName }),
       summary: row.summary[language],
@@ -151,9 +157,56 @@ export class AdminQueue {
     };
   }
 
+  // The file named in the address, /app/admin/garages/{fileId}, opens as a
+  // drawer over the list, once; closing it returns the address to the list
+  // unless it already names another place. Another file named while one is
+  // open closes that one first: one drawer at a time.
+  private shown: string | null = null;
+  private drawer?: AbortController;
+  private openFiles() {
+    const fileId = toSignal(
+      inject(ActivatedRoute).url.pipe(map((url) => url[0]?.path ?? null)),
+      { initialValue: null },
+    );
+    const overlays = inject(Overlays);
+    const router = inject(Router);
+    effect(() => {
+      const id = fileId();
+      if (id === this.shown) return;
+      this.shown = id;
+      this.drawer?.abort();
+      this.drawer = undefined;
+      if (!id) return;
+      const drawer = new AbortController();
+      this.drawer = drawer;
+      void overlays
+        .open(
+          () =>
+            import('../verification-file/verification-file').then(
+              (m) => m.VerificationFile,
+            ),
+          {
+            // Each tick saves at once: there is nothing to discard on close.
+            confirmDiscard: false,
+            data: { fileId: id },
+            shape: 'drawer-wide',
+            signal: drawer.signal,
+            title: 'admin.file.title',
+          },
+        )
+        .then(() => {
+          if (this.drawer === drawer) this.drawer = undefined;
+          if (this.shown !== id) return;
+          this.shown = null;
+          void router.navigate([LIST], { replaceUrl: true });
+        });
+    });
+  }
+
   constructor() {
     void this.i18n.enter('admin');
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    if (!this.overview) this.openFiles();
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
