@@ -14,8 +14,9 @@ const VERDICTS: Record<string, RarVerdict> = {
   suspendat: 'suspended',
 };
 
-// A failed re-check's verdict, read from its reason until the re-check
-// stores its own: the first of the three words the text names.
+// A failed re-check's verdict: the first of the three words its reason names.
+// TODO: read the verdict the re-check stores on the suspension once it stores
+// one, and drop this parse with it.
 export function rarVerdict(
   cause: SuspensionCause,
   reason: string,

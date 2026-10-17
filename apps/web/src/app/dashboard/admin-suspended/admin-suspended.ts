@@ -1,9 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  VERIFICATION_QUEUE_MAX,
-  VERIFICATION_QUEUE_PAGE,
-} from '@motor-fix/contracts/verification-target';
+import { VERIFICATION_QUEUE_PAGE } from '@motor-fix/contracts/verification-target';
 import {
   type AdminGaragesDto,
   AdminService,
@@ -13,7 +10,7 @@ import { formatDay, formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, Panel } from '@motor-fix/ui-cockpit';
 
 import { GARAGES_KINDS } from '../admin-garages/kinds';
-import { liveResource } from '../live';
+import { liveResource, pagedRead } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
 
@@ -71,26 +68,10 @@ export class AdminSuspended {
     this.list.reload();
   }
 
-  // Every row shown, from offset 0, in reads of at most VERIFICATION_QUEUE_MAX
-  // rows; a garage that moved between two reads is kept once.
-  private async read(wanted: number): Promise<AdminGaragesDto> {
-    const reads: Promise<AdminGaragesDto>[] = [];
-    for (let offset = 0; offset < wanted; offset += VERIFICATION_QUEUE_MAX) {
-      const limit = Math.min(VERIFICATION_QUEUE_MAX, wanted - offset);
-      reads.push(
-        this.api.adminOverviewControllerGarages({
-          limit,
-          offset,
-          status: 'suspended',
-        }),
-      );
-    }
-    const answers = await Promise.all(reads);
-    const seen = new Set<string>();
-    const items = answers
-      .flatMap((answer) => answer.items)
-      .filter((row) => !seen.has(row.id) && seen.add(row.id));
-    return { items, total: answers[0]?.total ?? items.length };
+  private read(wanted: number): Promise<AdminGaragesDto> {
+    return pagedRead(wanted, (page) =>
+      this.api.adminOverviewControllerGarages({ ...page, status: 'suspended' }),
+    );
   }
 
   private t(key: string, params?: Record<string, string | number>) {
