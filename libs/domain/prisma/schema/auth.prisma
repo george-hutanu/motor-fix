@@ -76,6 +76,7 @@ model Account {
   jobs                    Job[]                    @relation("JobDriver")
   jobStageEntries         JobStageEntry[]          @relation("JobStageActor")
   jobStepsDone            JobStep[]                @relation("JobStepDoneBy")
+  supportMessages         SupportMessage[]
 
   @@index([createdAt(sort: Desc), id(sort: Desc)])
   // The admin's search. The migration also holds account_fold(text) and a

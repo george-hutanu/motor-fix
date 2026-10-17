@@ -176,6 +176,21 @@ header h1 {
   background: var(--mf-line);
   vertical-align: middle;
 }
+/* "Ajutor și contact" opens a task: a button drawn as the links around it. */
+aside nav .action {
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  border: 0;
+  border-radius: var(--mf-radius-chip);
+  background: none;
+  color: var(--mf-text-secondary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+aside nav .action:hover {
+  color: var(--mf-text);
+}
 .chip {
   min-width: 20px;
   height: 20px;

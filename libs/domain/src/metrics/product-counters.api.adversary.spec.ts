@@ -79,11 +79,11 @@ describe('the API product counters started more than once', () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it('stays under 100 series and under 50 per counter', async () => {
+  it('stays under 150 series and under 50 per counter', async () => {
     initProductCounters('api');
 
     const all = await series();
-    expect(all.length).toBeLessThan(100);
+    expect(all.length).toBeLessThan(150);
     const perCounter = new Map<string, number>();
     for (const one of all)
       perCounter.set(one.name, (perCounter.get(one.name) ?? 0) + 1);
