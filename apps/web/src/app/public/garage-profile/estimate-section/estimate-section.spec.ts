@@ -152,6 +152,15 @@ describe('the estimate box', () => {
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     expect(css).toContain('var(--mf-text-secondary)');
   });
+
+  it('writes its small text at body size on a phone and its ranges in fixed-width figures', () => {
+    const css = readFileSync(join(__dirname, 'estimate-section.css'), 'utf8');
+
+    expect(css).toMatch(
+      /@media \(max-width: 767\.98px\) \{\s*:host \{\s*--mf-size-small: var\(--mf-size-body\);/,
+    );
+    expect(css).toMatch(/\.range \{[^}]*font-variant-numeric: tabular-nums/);
+  });
 });
 
 // @traces 356-FR-002 356-FR-003 356-FR-004
@@ -346,8 +355,50 @@ describe('a job that leaves the list', () => {
   });
 });
 
-// @traces 356-FR-011
+// @traces 356-FR-005 356-FR-011
 describe('the box’s request button', () => {
+  it('says where the request went in the box’s one live region, until the next switch change', async () => {
+    await render();
+    toggle('j-diag');
+    open.mockImplementation(
+      async (
+        _task: unknown,
+        { data }: { data: { sent: (r: unknown) => void } },
+      ) => {
+        const sent = {
+          id: 'req-1',
+          recipients: [
+            { garage: { id: 'g-1', name: 'Service Auto Militari', slug: 's' } },
+          ],
+        };
+        data.sent(sent);
+        return sent;
+      },
+    );
+    (
+      box().querySelector('mf-request-quote-button button') as HTMLElement
+    ).click();
+    for (let i = 0; i < 4; i++) {
+      await new Promise((resolve) => setTimeout(resolve));
+      TestBed.tick();
+    }
+    fixture.detectChanges();
+
+    expect(box().querySelectorAll('[role="status"]')).toHaveLength(0);
+    expect(live()).toHaveLength(1);
+    expect(live()[0].textContent?.trim()).toBe(
+      'Trimis către Service Auto Militari.',
+    );
+    expect(text('mf-request-quote-button .sent')).toBe(
+      'Trimis către Service Auto Militari.',
+    );
+
+    toggle('j-brakes');
+    expect(live()[0].textContent?.trim()).toBe(
+      'Estimare de la 1.040 la 1.620 lei',
+    );
+  });
+
   it('is CERE OFERTĂ and hands the jobs on to the request dialog', async () => {
     await render();
     toggle('j-diag');

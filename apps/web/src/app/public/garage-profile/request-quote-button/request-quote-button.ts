@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -20,12 +21,11 @@ import type {
 } from '../request-quote/request-quote';
 import { sentLine } from '../request-quote/sent-line';
 
-let instances = 0;
-
 // The profile's "Cere ofertă": opens the request dialog for the garage and,
 // once a request went, says where. A visitor or a driver sees it; a garage-side
 // role does not. The estimate box hands it the jobs switched on and its own
-// text; the header hands it none, and the dialog starts empty.
+// text, and says the sent line in its own live region; the header hands it
+// none, the dialog starts empty, and the sent line is a status of its own.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, RouterLink, TranslatePipe],
@@ -37,7 +37,13 @@ export class RequestQuoteButton {
   readonly garage = input.required<PublicGarageDto>();
   readonly jobs = input<readonly string[]>();
   readonly textKey = input('public.requestQuote.button');
-  protected readonly noteId = `mf-quote-refused-${++instances}`;
+  readonly announce = input(true);
+  readonly said = output<string>();
+  // Named after the text, which tells the header's button from the box's, so
+  // the server and the browser give the note the same id.
+  protected readonly noteId = computed(
+    () => `mf-quote-refused-${this.textKey().replaceAll('.', '-')}`,
+  );
   private readonly overlays = inject(Overlays);
   private readonly session = inject(Session);
   private readonly route = inject(ActivatedRoute);
@@ -83,7 +89,10 @@ export class RequestQuoteButton {
       data: {
         garage: this.garage(),
         ...(jobs === undefined ? {} : { jobTypeIds: [...jobs] }),
-        sent: (request) => this.sent.set(request),
+        sent: (request) => {
+          this.sent.set(request);
+          this.said.emit(this.line());
+        },
         source,
       },
       shape: 'dialog',

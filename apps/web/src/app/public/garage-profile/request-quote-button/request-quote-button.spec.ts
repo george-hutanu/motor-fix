@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
@@ -62,6 +65,8 @@ async function render(
     expired?: boolean;
     jobs?: string[];
     label?: string;
+    announce?: boolean;
+    said?: (line: string) => void;
   } = {},
 ) {
   open = jest.fn(
@@ -108,6 +113,9 @@ async function render(
   fixture.componentRef.setInput('garage', options.garage ?? GARAGE);
   if (options.jobs) fixture.componentRef.setInput('jobs', options.jobs);
   if (options.label) fixture.componentRef.setInput('textKey', options.label);
+  if (options.announce !== undefined)
+    fixture.componentRef.setInput('announce', options.announce);
+  if (options.said) fixture.componentInstance.said.subscribe(options.said);
   fixture.detectChanges();
   await fixture.whenStable();
   return fixture.nativeElement as HTMLElement;
@@ -340,5 +348,59 @@ describe('RequestQuoteButton with jobs handed over', () => {
     expect(track).toHaveBeenCalledWith('quote_request_started', {
       source: 'profile',
     });
+  });
+});
+
+// @traces 356-FR-005 356-FR-011
+describe('RequestQuoteButton inside the estimate box', () => {
+  const REFUSED = {
+    ...GARAGE,
+    brand: { ...GARAGE.brand, stance: 'does_not_take' },
+  } as PublicGarageDto;
+  const noteOf = (host: HTMLElement) =>
+    button(host)?.getAttribute('aria-describedby');
+
+  it('names its refused note after its text, the same on every render', async () => {
+    const first = noteOf(await render({ garage: REFUSED }));
+    TestBed.resetTestingModule();
+    const again = noteOf(await render({ garage: REFUSED }));
+    TestBed.resetTestingModule();
+    const host = await render({
+      garage: REFUSED,
+      label: 'public.garageProfile.estimate.request',
+    });
+
+    expect(first).toBeTruthy();
+    expect(again).toBe(first);
+    expect(noteOf(host)).not.toBe(first);
+    expect(host.querySelector(`#${noteOf(host)}`)?.className).toBe('note');
+  });
+
+  it('leaves the sent line to the box’s live region, handing it the line', async () => {
+    const said = jest.fn();
+    const host = await render({
+      announce: false,
+      answer: request(['Service Auto Militari']),
+      said,
+    });
+
+    await press(host);
+
+    expect(host.querySelector('[role="status"]')).toBeNull();
+    expect(host.querySelector('.sent')?.textContent?.trim()).toBe(
+      'Trimis către Service Auto Militari.',
+    );
+    expect(said).toHaveBeenCalledWith('Trimis către Service Auto Militari.');
+  });
+
+  it('keeps its arrow off a 320 px phone, so the label stays on one line', () => {
+    const css = readFileSync(
+      join(__dirname, 'request-quote-button.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(
+      /@media \(max-width: 359\.98px\) \{\s*:host\(\.wide\) button::after \{\s*content: none;/,
+    );
   });
 });

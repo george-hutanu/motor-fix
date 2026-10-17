@@ -26,6 +26,6 @@
 @if (selection.dropped()) {
   <p class="dropped" aria-hidden="true">{{ 'public.garageProfile.estimate.dropped' | t }}</p>
 }
-<mf-request-quote-button class="request wide" [garage]="garage()" [jobs]="jobs()" textKey="public.garageProfile.estimate.request" />
+<mf-request-quote-button class="request wide" [garage]="garage()" [jobs]="jobs()" textKey="public.garageProfile.estimate.request" [announce]="false" (said)="sentSaid.set($event)" />
 <p class="note">{{ 'public.garageProfile.estimate.note' | t }}</p>
 <p class="sr-only" aria-live="polite" aria-atomic="true">{{ said() }}</p>

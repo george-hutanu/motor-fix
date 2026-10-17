@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
 } from '@angular/core';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import {
@@ -21,7 +22,8 @@ import { RequestQuoteButton } from '../request-quote-button/request-quote-button
 // range in digit cells, and a request button that takes them to the dialog.
 // The ranges already carry the brand in context. One polite live region says
 // what changed: nothing on load, the totals or the empty text after a switch,
-// and a job the latest read no longer lists until the next switch.
+// a job the latest read no longer lists until the next switch, and where a
+// request went until the next switch.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.aria-label]': 'title()' },
@@ -68,7 +70,13 @@ export class EstimateSection {
       to: formatNum(this.to(), language),
     });
   });
+  // The request button's sent line, cleared by the next switch change.
+  protected readonly sentSaid = linkedSignal({
+    computation: () => '',
+    source: this.selection.on,
+  });
   protected readonly said = computed(() => {
+    if (this.sentSaid()) return this.sentSaid();
     if (this.selection.dropped())
       return this.i18n.t('public.garageProfile.estimate.dropped');
     if (!this.selection.touched()) return '';

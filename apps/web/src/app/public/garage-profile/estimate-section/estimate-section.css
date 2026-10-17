@@ -52,6 +52,7 @@ p {
 .range {
   margin-left: auto;
   color: var(--mf-text-secondary);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -92,4 +93,11 @@ p {
 
 .request {
   display: block;
+}
+
+/* Body size for the small text on a phone, the button's note included. */
+@media (max-width: 767.98px) {
+  :host {
+    --mf-size-small: var(--mf-size-body);
+  }
 }

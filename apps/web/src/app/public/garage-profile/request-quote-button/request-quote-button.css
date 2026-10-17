@@ -47,3 +47,9 @@ p {
   content: "→" / "";
   margin-left: var(--mf-space-2);
 }
+/* On a 320 px phone the arrow would push the label onto a second line. */
+@media (max-width: 359.98px) {
+  :host(.wide) button::after {
+    content: none;
+  }
+}
