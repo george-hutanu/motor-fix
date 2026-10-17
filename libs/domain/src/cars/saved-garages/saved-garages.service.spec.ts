@@ -1,4 +1,8 @@
-import { SavedGaragesService } from './saved-garages.service';
+import {
+  cursorOf,
+  readCursor,
+  SavedGaragesService,
+} from './saved-garages.service';
 import type { AuditPort } from '../../audit/audit.port';
 import type { Actor } from '../../auth/policy';
 import type { EventPort } from '../../events/event.port';
@@ -83,5 +87,40 @@ describe('a save that loses the race to another save', () => {
       code: 'P2002',
     });
     expect(transaction).toHaveBeenCalledTimes(2);
+  });
+});
+
+// @traces 291-FR-001
+describe('the saved list cursor', () => {
+  it('reads back the time and id it was made from', () => {
+    const cursor = cursorOf({ garageId, savedAt });
+
+    expect(cursor).toMatch(/^[\w-]+$/);
+    expect(readCursor(cursor)).toEqual({ at: savedAt, id: garageId });
+  });
+
+  it.each([
+    ['text that is not base64 JSON', '%%%'],
+    ['JSON that is not an object', Buffer.from('3').toString('base64url')],
+    [
+      'a missing id',
+      Buffer.from('{"at":"2026-10-01T08:00:00.000Z"}').toString('base64url'),
+    ],
+    [
+      'a date that is not one',
+      Buffer.from(`{"at":"x","id":"${garageId}"}`).toString('base64url'),
+    ],
+    [
+      'an id that is not a uuid',
+      Buffer.from('{"at":"2026-10-01T08:00:00.000Z","id":"1"}').toString(
+        'base64url',
+      ),
+    ],
+  ])('refuses %s with 400 invalid_cursor', (_, text) => {
+    expect(() => readCursor(text)).toThrow(
+      expect.objectContaining({
+        response: expect.objectContaining({ code: 'invalid_cursor' }),
+      }),
+    );
   });
 });

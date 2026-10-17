@@ -5,7 +5,7 @@ import {
   type SearchPoint,
 } from '@motor-fix/contracts/search-place';
 
-import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 
 interface InArea {
   distanceM: number;
@@ -13,12 +13,20 @@ interface InArea {
 }
 
 // Haversine on a sphere of the Earth's mean radius: within a metre of the
-// ellipsoid at these distances, and it needs no PostGIS extension. A fixed
-// garage is in when within the search radius; a mobile mechanic when the
-// place is inside the area it serves around its seat, whatever the radius.
+// ellipsoid at these distances, and it needs no PostGIS extension. Metres
+// from the point to the garage row's own latitude and longitude.
+export const distanceMetersSql = ({ lat, lng }: SearchPoint) => Prisma.sql`
+  2 * 6371008.8 * asin(sqrt(
+    power(sin(radians(garage.latitude - ${lat}) / 2), 2)
+    + cos(radians(${lat})) * cos(radians(garage.latitude))
+      * power(sin(radians(garage.longitude - ${lng}) / 2), 2)
+  ))`;
+
+// A fixed garage is in when within the search radius; a mobile mechanic when
+// the place is inside the area it serves around its seat, whatever the radius.
 export async function garagesInArea(
   prisma: PrismaClient,
-  { lat, lng }: SearchPoint,
+  point: SearchPoint,
   radiusKm: number = SEARCH_RADIUS_DEFAULT_KM,
 ): Promise<Map<string, InArea>> {
   const rows = await prisma.$queryRaw<
@@ -29,11 +37,7 @@ export async function garagesInArea(
         id,
         business_kind IS NOT DISTINCT FROM 'mobile' AS mobile,
         service_radius_km,
-        2 * 6371008.8 * asin(sqrt(
-          power(sin(radians(latitude - ${lat}) / 2), 2)
-          + cos(radians(${lat})) * cos(radians(latitude))
-            * power(sin(radians(longitude - ${lng}) / 2), 2)
-        )) AS distance_m
+        ${distanceMetersSql(point)} AS distance_m
       FROM garage
       WHERE status = 'approved' AND latitude IS NOT NULL
     ) measured

@@ -143,6 +143,8 @@ export type { SavedGaragesControllerSave$Params as SavedGaragesControllerSave$Pa
 export { savedGaragesControllerSave as savedGaragesControllerSave } from './fn/saved-garages/saved-garages-controller-save';
 export type { SavedGaragesControllerRemove$Params as SavedGaragesControllerRemove$Params } from './fn/saved-garages/saved-garages-controller-remove';
 export { savedGaragesControllerRemove as savedGaragesControllerRemove } from './fn/saved-garages/saved-garages-controller-remove';
+export type { SavedGaragesControllerList$Params as SavedGaragesControllerList$Params } from './fn/saved-garages/saved-garages-controller-list';
+export { savedGaragesControllerList as savedGaragesControllerList } from './fn/saved-garages/saved-garages-controller-list';
 export type { SavedGaragesControllerIds$Params as SavedGaragesControllerIds$Params } from './fn/saved-garages/saved-garages-controller-ids';
 export { savedGaragesControllerIds as savedGaragesControllerIds } from './fn/saved-garages/saved-garages-controller-ids';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
