@@ -27,6 +27,7 @@ features:
   - 1235-unknown-brand-cache
   - 294-status-health-checks
   - 880-grafana-alerts
+  - 297-system-status-log
 ---
 
 # Capability: Observability
@@ -677,6 +678,66 @@ _From 880-grafana-alerts._
 ### 880-FR-017 — Every new rule MUST follow the file's existing shape (1024-FR-001: uid and title prefixed by the service, `condition` `B`, `noDataState: OK`, `execErrState: Error`, the `service` label, a summary naming the environment, query `A` on `grafanacloud-prom` grouped by environment, no `outage` label, no environment named in a query), and every metric a rule names MUST be drawn by a dashboard under `infra/observability/grafana/dashboards/`.
 
 _From 880-grafana-alerts._
+
+### 297-FR-001 — The system MUST keep a System status log table, SYSTEM_LOG_ENTRY, owned by the `admin` module, with: `id`, `at` (timestamptz, the time of the event), `source`, `severity` ∈ {`info`, `warning`, `error`}, `kind`, `message` (English text), `context` (JSON), `fingerprint` (the grouping key within kind and source), `minute` (the minute of `at`, for grouping) and `count` (≥ 1). Indexes: `(at desc)`, `(kind, at)`, a unique index on `(kind, source, fingerprint, minute)`, and a text index on `message` for #171's search.
+
+_From 297-system-status-log._
+
+### 297-FR-002 — `kind` MUST be one of `status_changed`, `check_failed`, `job_failed`, `service_error`, `server_error`, `backup_completed`, `backup_failed`, `deploy`; `source` MUST be one of the tile keys `api`, `search`, `maps`, `email`, `notifications`, `backup`, plus `worker`, `webrtc`, `identity`, `storage`. Any other value MUST be refused by the writer and never stored.
+
+_From 297-system-status-log._
+
+### 297-FR-003 — There MUST be one writer, `systemLog.write()`, in the domain library, usable by the API and the worker; every entry of this story MUST go through it. It MUST scrub `message`, `fingerprint` and every string in `context` (e-mail addresses, Romanian phone numbers, Romanian plates → `***`), set `at` to now when the caller gives none, derive `minute` from `at`, and then either insert a new row with `count` 1 or, when a row with the same `(kind, source, fingerprint, minute)` exists, increment that row's `count` and leave its other fields as first written. The insert-or-increment MUST be one atomic statement, so two instances writing the same key in the same instant produce one row with the summed count, never two rows or a failed write. `message` is built from the kind and the context only (never an error's free text), and `context` carries ids, codes and figures only, each reason string already bounded where it is made.
+
+_From 297-system-status-log._
+
+### 297-FR-004 — The writer MUST run outside any business transaction: it MUST NOT take part in the caller's transaction, a rollback of the caller's work MUST NOT remove the entry, and a failed write MUST NOT fail the caller. On a failed write the entry is dropped, one error is logged to the server error reporting (the structured error log and trace ST-251 set up) with the kind and source but never the entry's text, and nothing retries it. A request or a provider call never waits for the write (the API's filter and the Brevo and Geoapify paths do not await it), so a slow database cannot hold an answer; a `write()` called before the writer has started or after it has stopped MUST be dropped the same way (counted `dropped`), never throw.
+
+_From 297-system-status-log._
+
+### 297-FR-005 — After a new row is inserted (not on an increment), the writer MUST publish `system_log.added` with `{ id, kind, at }` (the live contract's three fields: the hub forwards only those, and #55 reads the row by `id`) on the live channel for the `admin` audience only, straight to Redis with no outbox row; a failed publish MUST be logged and MUST NOT fail the write or the caller.
+
+_From 297-system-status-log._
+
+### 297-FR-006 — The status checks (ST-294) MUST write, on each confirmed tile state change, after the tiles' own transaction has committed (never inside it, FR-004), `status_changed` with source the tile key, severity `warning` for `amber` and `red` and `info` for `green`, fingerprint the new state, context `{ state, latency_ms | failed_share | oldest_waiting_s | last_backup_at | reason, as the tile's detail holds }`; and, on each failed check (a probe that throws or times out), `check_failed` with source the tile key, severity `warning`, fingerprint the reason, context `{ reason }`.
+
+_From 297-system-status-log._
+
+### 297-FR-007 — The worker MUST write `job_failed` (severity `error`, source `worker`) when a job fails for good (its last attempt, or an unrecoverable error), on every queue the worker runs (a queue with its own failed-listener, such as the listing photos, goes through the same final-failure hook), with context `{ queue, job, attempts, error_code }` where `error_code` is the error's `code` when it has one, else its class name, and fingerprint `queue:job:error_code`; a failure that will be retried writes nothing.
+
+_From 297-system-status-log._
+
+### 297-FR-008 — Outside-service errors MUST be written as `service_error` (severity `error`) when the e-mail, SMS and WhatsApp provider (Brevo) refuses or fails a call (source `email` for an e-mail send, `notifications` for an SMS or WhatsApp send) and when the map provider (Geoapify) answers an error or is unreachable (source `maps`), with fingerprint the provider's status or reason and context `{ provider, status | reason }`. Only the product's own calls write it: the status probes' calls to the same providers write `check_failed` (FR-006), never `service_error`. Every provider error thrown writes one, retried attempts included; grouping absorbs the retries. A refusal that is the platform's own rule (the SMS cap, a missing template) is not a provider error. No personal field of the call (recipient, number, address text) MUST reach the entry.
+
+_From 297-system-status-log._
+
+### 297-FR-009 — The API MUST write `server_error` (severity `error`, source `api`) for every 500 answer caused by an unexpected error (not for `HttpException`s, 4xx problems or the oversized-body refusal), with fingerprint the route template (`METHOD /route/:param`, `unknown` when none matched) and context `{ method, route }` (the route with the API's global prefix, as `openapi.json` names it); the write MUST NOT delay or change the error answer.
+
+_From 297-system-status-log._
+
+### 297-FR-010 — The backup entries MUST be derived from the backup bucket the status checks already read: `backup_completed` (severity `info`, source `backup`, fingerprint the manifest's time, context `{ backup_at }`) when the newest manifest's time is newer than the last `backup_completed` entry's; `backup_failed` (severity `error`, source `backup`, fingerprint the day, context `{ last_backup_at, reason }`) when the `backup` tile changes to `amber` or `red` because the last backup is older than its limit, once per change. The backup workflow itself is not changed.
+
+_From 297-system-status-log._
+
+### 297-FR-011 — The worker MUST write `deploy` (severity `info`, source `worker`, fingerprint the version, context `{ version }`) at boot when the release version is set (not `dev`) and the newest `deploy` entry's version differs from it; the same version MUST NOT be logged twice however many instances boot.
+
+_From 297-system-status-log._
+
+### 297-FR-012 — A nightly purge MUST run at 03:30 Europe/Bucharest, once per night across every worker instance (one repeatable job under a fixed scheduler id with the cron pattern `30 3 * * *` in Europe/Bucharest, as the insights snapshot is scheduled), and delete every entry whose `at` is older than 90 days (OD-33); it MUST log how many rows it deleted and be observable like the worker's other jobs. The retention period is a constant of the build, not a setting.
+
+_From 297-system-status-log._
+
+### 297-FR-013 — Nothing in this story MUST write a System status log entry for a change a person makes in the app (a price-list update, a reported review, a document submission, an account change); those are the audit history's. No audit history row MUST be written for a log entry.
+
+_From 297-system-status-log._
+
+### 297-FR-014 — The new table, the writer's counter (`motorfix_system_log_entries_total` by `kind` and `outcome` ∈ `written`, `grouped`, `dropped`), the purge job and the live publish MUST be listed in `infra/observability/inventory.json` in the same change, with the purge's failure alerted like the worker's other jobs.
+
+_From 297-system-status-log._
+
+### 297-FR-015 — Tests MUST exist before the implementation and MUST cover: each source writing one entry with the right kind, source and severity (tile change, failed check, final job failure, Brevo and Geoapify errors, server error, backup completed and failed, deploy); grouping within a minute (40 → count 40) and across a minute boundary (two rows); the scrubber masking an e-mail, a phone and a plate in `message` and in `context`; a failed write not failing the caller and being reported once; the write surviving the caller's rollback; `system_log.added` on the `admin` audience only, on insert and not on increment, and a failed publish not failing the write; the purge deleting a 91-day entry and keeping an 89-day one; a retried job failure writing nothing; a business change (price list, reported review) writing no entry; a refused kind or source. No end-to-end test in this task (#55 runs it).
+
+_From 297-system-status-log._
 
 ## Retired
 
