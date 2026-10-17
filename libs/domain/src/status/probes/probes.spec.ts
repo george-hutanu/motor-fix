@@ -123,6 +123,26 @@ describe('the search probe', () => {
     expect(search.searchParams.has('log')).toBe(false);
   });
 
+  it('times the garage search only, not the brand look-up before it', async () => {
+    let clock = 0;
+    const d = deps({
+      clock: () => clock,
+      fetch: (async (input: string | URL | Request) => {
+        if (String(input).includes('/brands/popular')) {
+          clock += 500;
+          return json([{ slug: 'dacia' }]);
+        }
+        clock += 70;
+        return json({ items: [] });
+      }) as typeof fetch,
+    });
+    expect(await probe('search', d)).toEqual({
+      figures: {},
+      latencyMs: 70,
+      ok: true,
+    });
+  });
+
   it('fails when there is no brand to search for', async () => {
     const d = deps({ fetch: (async () => json([])) as typeof fetch });
     expect(await probe('search', d)).toEqual({ ok: false, reason: 'no_brand' });
@@ -339,5 +359,49 @@ describe('any probe', () => {
       ok: false,
       reason: 'store down',
     });
+  });
+});
+
+describe('a provider call past ten seconds', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const hang = () => new Promise<never>(() => undefined);
+
+  it('cancels the map look-up, so it uses no more provider quota', async () => {
+    let signal: AbortSignal | undefined;
+    const result = probe(
+      'maps',
+      deps({
+        places: {
+          name: 'stub',
+          search: (_q, _lang, s) => {
+            signal = s;
+            return hang();
+          },
+        },
+      }),
+    );
+    await jest.advanceTimersByTimeAsync(10_000);
+    expect(await result).toEqual({ ok: false, reason: 'timeout' });
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('cancels the e-mail account check', async () => {
+    let signal: AbortSignal | undefined;
+    const result = probe(
+      'email',
+      deps({
+        brevo: {
+          checkKey: (s) => {
+            signal = s;
+            return hang();
+          },
+        },
+      }),
+    );
+    await jest.advanceTimersByTimeAsync(10_000);
+    expect(await result).toEqual({ ok: false, reason: 'timeout' });
+    expect(signal?.aborted).toBe(true);
   });
 });

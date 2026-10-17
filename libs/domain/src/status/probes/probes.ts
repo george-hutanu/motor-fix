@@ -13,7 +13,7 @@ export interface ProbeDeps {
   webUrl: URL | undefined;
   fetch: typeof fetch;
   places: PlacesProvider;
-  brevo: { checkKey(): Promise<boolean> } | undefined;
+  brevo: { checkKey(signal: AbortSignal): Promise<boolean> } | undefined;
   // Sent and failed notifications of these channels created since then.
   sends(
     channels: readonly Channel[],
@@ -82,19 +82,19 @@ const PROBES: Record<
       ok: true,
     };
   },
-  email: async (deps) => {
+  email: async (deps, signal) => {
     const brevo = deps.brevo;
     if (!brevo) throw new Error('not_configured');
     const latencyMs = await timed(deps, async () => {
-      if (!(await brevo.checkKey())) throw new Error('provider_refused');
+      if (!(await brevo.checkKey(signal))) throw new Error('provider_refused');
     });
     const counts = await deps.sends(['email'], since(deps));
     return { figures: { failed_share: share(counts) }, latencyMs, ok: true };
   },
-  maps: async (deps) => ({
+  maps: async (deps, signal) => ({
     figures: {},
     latencyMs: await timed(deps, async () => {
-      const answer = await deps.places.search(MAPS_QUERY, 'ro');
+      const answer = await deps.places.search(MAPS_QUERY, 'ro', signal);
       if ('unavailable' in answer) throw new Error(answer.unavailable);
     }),
     ok: true,
@@ -113,26 +113,26 @@ const PROBES: Record<
       ok: true,
     };
   },
-  // The popular brands and the search are one figure; without the log flag
-  // the search writes no search log row.
-  search: async (deps, signal) => ({
-    figures: {},
-    latencyMs: await timed(deps, async () => {
-      const brands: unknown = await (
-        await get(deps, '/api/v1/brands/popular?limit=1', signal)
-      ).json();
-      const slug = Array.isArray(brands)
-        ? (brands[0] as { slug?: unknown } | undefined)?.slug
-        : undefined;
-      if (typeof slug !== 'string' || !slug) throw new Error('no_brand');
-      const query = new URLSearchParams({
-        brand: slug,
-        near: BUCHAREST_CENTRE,
-      });
-      await get(deps, `/api/v1/search/garages?${query}`, signal);
-    }),
-    ok: true,
-  }),
+  // The figure is the garage search's time alone; the brand it searches for
+  // is looked up first, untimed. Without the log flag the search writes no
+  // search log row.
+  search: async (deps, signal) => {
+    const brands: unknown = await (
+      await get(deps, '/api/v1/brands/popular?limit=1', signal)
+    ).json();
+    const slug = Array.isArray(brands)
+      ? (brands[0] as { slug?: unknown } | undefined)?.slug
+      : undefined;
+    if (typeof slug !== 'string' || !slug) throw new Error('no_brand');
+    const query = new URLSearchParams({ brand: slug, near: BUCHAREST_CENTRE });
+    return {
+      figures: {},
+      latencyMs: await timed(deps, async () => {
+        await get(deps, `/api/v1/search/garages?${query}`, signal);
+      }),
+      ok: true,
+    };
+  },
 };
 
 // Never rejects: a throw or a probe past 10 s is a failed check.
