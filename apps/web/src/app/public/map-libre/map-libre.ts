@@ -137,12 +137,13 @@ export function closeMapLibre(map: MapLibre) {
 }
 
 // Keeps the map's canvas, controls and attribution links out of the keyboard
-// order, those MapLibre adds later too, while the pointer can still move the
-// map; `inert` would stop both. Returns the call that stops watching.
+// order, those MapLibre adds later too (its compact attribution is a
+// <details> whose <summary> takes focus), while the pointer can still move
+// the map; `inert` would stop both. Returns the call that stops watching.
 export function keepOutOfTabOrder(host: HTMLElement) {
   const hide = () => {
     for (const control of host.querySelectorAll<HTMLElement>(
-      'a, button, canvas, [tabindex]',
+      'a, button, canvas, summary, [tabindex]',
     )) {
       if (control.tabIndex !== -1) control.tabIndex = -1;
     }

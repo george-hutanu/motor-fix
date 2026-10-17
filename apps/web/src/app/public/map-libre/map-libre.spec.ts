@@ -238,7 +238,8 @@ describe('keepOutOfTabOrder', () => {
   it('takes every control inside the map out of the keyboard order, those added later too, until stopped', async () => {
     const host = document.createElement('div');
     host.innerHTML =
-      '<canvas tabindex="0"></canvas><button>+</button><a href="https://osm.org">OSM</a>';
+      '<canvas tabindex="0"></canvas><button>+</button><a href="https://osm.org">OSM</a>' +
+      '<details><summary>i</summary></details>';
     document.body.append(host);
 
     const stop = keepOutOfTabOrder(host);
@@ -246,7 +247,8 @@ describe('keepOutOfTabOrder', () => {
     host.append(later);
     await Promise.resolve();
 
-    for (const control of host.querySelectorAll('canvas, button, a')) {
+    // MapLibre's compact attribution is a <details>, whose <summary> takes focus.
+    for (const control of host.querySelectorAll('canvas, button, a, summary')) {
       expect(control.getAttribute('tabindex')).toBe('-1');
     }
 
