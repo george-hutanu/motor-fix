@@ -27,6 +27,7 @@ features:
   - 115-listing-checklist
   - 1204-hours-row-live-regions
   - 049-garage-suspension
+  - 386-brand-price-range
 ---
 
 # Capability: Garage listing
@@ -904,6 +905,50 @@ _From 049-garage-suspension._
 ### 049-FR-013 — A suspended garage's owner, receptionists and mechanics MUST still sign in and reach the dashboard's views: the cars in the workshop, the documents, the history, the requests list (where the closed-for-suspension reason already shows). The suspension MUST delete or detach nothing: the account, the members, the reviews, the rating and the history stay, so #106 can show them again.
 
 _From 049-garage-suspension._
+
+### 386-FR-001 — Each job in a garage's price list MUST have one default range (the row with no brand) and MAY have at most one further range per catalogue brand (the row with that brand), never per car model; the brand row carries `from_bani` and `to_bani` only, and the job's duration, visibility and place in the list come from the default row (354-FR-004, 357-FR-003 unchanged).
+
+_From 386-brand-price-range._
+
+### 386-FR-004 — Step 3 of "List your garage" MUST keep letting the owner add, under a job, a range for one of the brands taken in step 2 and not already given for that job (109-FR-008), judged by the one range check as the owner types with the low-below-high error and the `wide_range` warning (109-FR-005), kept in the draft as typed (109-FR-010) and saved at submit as the job's brand row by the starting write (109-FR-015, 917-FR-001). No second entry path, rule or copy of the check is added.
+
+_From 386-brand-price-range._
+
+### 386-FR-005 — The `garages` module MUST provide one write that sets a brand range on a live garage: `PUT /api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}` with body `{ fromBani, toBani }` (both integers, bani), answering 200 with the row as stored (`jobTypeId`, `brandId`, `fromBani`, `toBani`) and the range check's `warnings` (`wide_range` when it applies). A pair with no row gets a new row (`position` the default row's, `visible` true, `updated_by` the actor); a pair with a row has that row changed in place, so one row per job and brand always holds; a write that changes nothing records nothing and sends nothing.
+
+_From 386-brand-price-range._
+
+### 386-FR-006 — The write MUST judge the range by the one range check (354-FR-006) and refuse the whole call with 422 `validation_failed` and field errors, storing nothing and naming every independent field error in one answer, on: any range error; a missing top (`required` on `toBani`); a brand id with no catalogue row (`unknown_brand` on `brandId`; a retired brand is writable, 039-FR-006); a brand the garage does not take at write time (`not_taken` on `brandId`); a job the garage's list does not hold or holds without a default row (`unknown_job`, `no_default_range` on `jobTypeId`); a database refusal on the unique index (`duplicate` on `brandId`). A garage id, job id or brand id that is not a uuid is 400.
+
+_From 386-brand-price-range._
+
+### 386-FR-007 — The `garages` module MUST provide one removal, `DELETE /api/v1/garages/{garageId}/prices/{jobTypeId}/brands/{brandId}`, answering 204 and deleting that brand row; 404 `not_found` when the pair has no row. The default row is never removable here. The removal does not check that the garage takes the brand (a range kept for a refused or unstated brand must stay removable), nor that the brand has a catalogue row; a garage, job or brand id that is not a uuid is 400 and the access rule of FR-008 applies before the 404 for a missing pair.
+
+_From 386-brand-price-range._
+
+### 386-FR-008 — Both writes MUST be allowed only to the garage's owner (a `GARAGE_MEMBER` row with role `owner`, as 040-FR-009): the garage's receptionist or mechanic gets 403 `forbidden`; an actor without an owner membership of that garage, a MotorFix admin included, gets 404 `not_found`; a call without a session gets the sign-in demand like every route. The garage's status does not matter: an owner may change a brand range on a garage not yet live, and the public read shows nothing until approval as today.
+
+_From 386-brand-price-range._
+
+### 386-FR-009 — Every brand range created, changed or removed by the writes MUST be in the audit history, subject `garage_price`, inside the write's transaction: `create` with the new range, `update` with the old and the new range, `delete` with the old range, each with the actor, their role, the garage, the job and the brand, in the shape the audit history reads (ST-243 format, area `prices`, 391-FR-008). The starting write's entries (109-FR-015) stay as they are.
+
+_From 386-brand-price-range._
+
+### 386-FR-010 — A write or removal that changed a row MUST save one `price_list.updated` event in the same transaction, with payload `{ garageId, jobTypeIds: [jobTypeId], brandIds: [brandId] }`, addressed to the garage's public page (`public:garage:{garageId}`) and to the garage's staff (`garage:{garageId}`), so an open profile re-reads its list with the same brand (355-FR-012) and an open Prețuri view re-reads; the verification check's existing emission keeps its empty payload. The profile read after the change MUST answer the new range: the garage's cached profile entry for the written brand is refreshed, not served stale for the cache's soft period; the no-brand and other brands' entries are left as they are. The write does not check the brand's job ticks.
+
+_From 386-brand-price-range._
+
+### 386-FR-012 — The two writes MUST be documented in the OpenAPI file and the generated client regenerated; the MCP tool catalogue gains no tool in this story (the assistant's garage tools come with their own stories and call these use cases).
+
+_From 386-brand-price-range._
+
+### 386-FR-013 — The development seed MUST keep its BMW range for front brakes on the seeded approved garage (355-FR-015) so the scenarios run end to end against the development catalogue.
+
+_From 386-brand-price-range._
+
+### 386-FR-014 — Tests MUST cover, in Jest: the choice rule (brand range over the default for a taken brand, the default for another brand, no brand, a refused brand, an unstated brand, an incomplete brand row; a job hidden by its default stays hidden for every brand); on real PostgreSQL and Redis: the write (create, change in place, no second row, a change of nothing, the `wide_range` warning), its refusals (each code of FR-006, two refusals at once answered together, a non-uuid), the removal and its 404, the access rule (owner 200, receptionist and mechanic 403, another garage's owner and an admin 404, no session 401), the audit entries with old and new values and the `price_list.updated` event with its payload in the same transaction (none when nothing changed), the owner's read with `brandRanges`, and the profile cache answering the new range for the written brand; in Playwright: the owner sets a BMW range on the seeded garage's front brakes over the API, a profile already open for BMW re-reads and shows it, the profile for Audi shows the default, and removing it brings the default back; the form's brand row in step 3 stays walked by `details-prices-mechanics.spec.ts` (research R6: no production path yet turns a sent listing into price rows, so the brief's send-and-approve walk has nothing to walk). The estimate's end-to-end check belongs to #75.
+
+_From 386-brand-price-range._
 
 ## Retired
 
