@@ -1,4 +1,4 @@
-import type { DocumentKind } from '@motor-fix/contracts';
+import type { DocumentKind, SuspensionCause } from '@motor-fix/contracts';
 import { type Counter, metrics } from '@opentelemetry/api';
 
 // The product's key numbers, one counter each; a process that never starts
@@ -44,6 +44,13 @@ export function countApproval(outcome: ApprovalOutcome) {
     'motorfix_garage_approvals_total',
     'Garage verification decisions, by outcome',
   ).add(1, { outcome });
+}
+
+export function countGarageSuspension(cause: SuspensionCause) {
+  counter(
+    'motorfix_garage_suspensions_total',
+    'Garages taken off the map, by cause',
+  ).add(1, { cause });
 }
 
 export function countQuote() {
