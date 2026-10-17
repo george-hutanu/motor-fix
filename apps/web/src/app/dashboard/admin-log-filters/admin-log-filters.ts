@@ -17,13 +17,11 @@ import {
   filtersSet,
   type LogChoice,
   type LogFilter,
+  searchText,
 } from '../admin-log-view/narrowing';
 
 // The wait after the last key before the text is searched for.
 const SETTLE_MS = 300;
-
-const committed = (value: string) =>
-  value.trim().slice(0, SYSTEM_LOG_SEARCH_MAX);
 
 // The log's search box, pickers and dates: from 768 px one row, below it the
 // search box over one button opening the same pickers in a sheet.
@@ -49,7 +47,7 @@ export class AdminLogFilters implements OnDestroy {
   // typed text while the address only catches up with it.
   protected readonly text = linkedSignal<string, string>({
     computation: (q, previous) =>
-      previous !== undefined && committed(previous.value) === q
+      previous !== undefined && searchText(previous.value) === q
         ? previous.value
         : q,
     source: () => this.filter().q,
@@ -87,7 +85,7 @@ export class AdminLogFilters implements OnDestroy {
     clearTimeout(this.wait);
     this.wait = setTimeout(() => {
       this.wait = undefined;
-      this.search.emit(committed(value));
+      this.search.emit(searchText(value));
     }, SETTLE_MS);
   }
 

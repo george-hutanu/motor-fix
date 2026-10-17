@@ -3,10 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
-import {
-  AdminLogFiltersSheet,
-  type LogChoice,
-} from './admin-log-filters-sheet';
+import { AdminLogFiltersSheet } from './admin-log-filters-sheet';
+import type { LogChoice } from '../admin-log-view/narrowing';
 
 @Component({
   template:

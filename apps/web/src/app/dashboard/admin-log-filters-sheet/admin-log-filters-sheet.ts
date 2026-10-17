@@ -6,8 +6,6 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 import { LogPickers } from '../admin-log-filters/log-pickers/log-pickers';
 import type { LogChoice } from '../admin-log-view/narrowing';
 
-export type { LogChoice };
-
 // The phone's log filters: "Aplică" closes with the choice once its dates
 // are right, Escape or the close button with no change.
 @Component({

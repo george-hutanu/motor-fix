@@ -9,6 +9,7 @@ import {
   passes,
   queryOf,
   rangeFault,
+  searchText,
 } from './narrowing';
 
 const NOW = new Date('2026-10-17T12:00:00.000Z');
@@ -154,6 +155,8 @@ describe('the address', () => {
   it.each([
     ['not a day', { from: 'yesterday' }],
     ['a day that does not exist', { from: '2026-02-30' }],
+    ['in a month past the twelfth', { from: '2026-13-01' }],
+    ['in month zero', { from: '2026-00-10' }],
   ])('drops a from that is %s', (_, params) => {
     expect(filterOf(params, NOW)).toEqual({ filter: base, rewrite: true });
   });
@@ -220,6 +223,19 @@ describe('the address', () => {
 });
 
 // @traces 299-FR-010
+describe('the search text', () => {
+  it('trims and cuts to the longest search', () => {
+    expect(searchText(`  ${'a'.repeat(120)}  `)).toBe('a'.repeat(100));
+  });
+
+  it('drops the half of a pair the cut would leave, so the address can hold it', () => {
+    const cut = searchText(`a${'😀'.repeat(60)}`);
+
+    expect(cut).toBe(`a${'😀'.repeat(49)}`);
+    expect(() => encodeURIComponent(cut)).not.toThrow();
+  });
+});
+
 describe('the date limits', () => {
   it('run from ninety days ago to today', () => {
     expect(dayLimits(NOW)).toEqual({ max: '2026-10-17', min: '2026-07-19' });

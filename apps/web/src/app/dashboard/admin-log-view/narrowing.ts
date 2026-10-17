@@ -10,6 +10,7 @@ import {
   type SystemLogSeverity,
   type SystemLogSource,
 } from '@motor-fix/contracts/system-log';
+import type { SystemLogControllerList$Params } from '@motor-fix/data-access';
 import { bucharestDayStart } from '@motor-fix/i18n';
 
 // The types an admin picks and the kinds each sends.
@@ -22,7 +23,7 @@ export const LOG_TYPES = {
   services: ['service_error'],
   status: ['status_changed'],
 } as const satisfies Record<string, readonly SystemLogKind[]>;
-export type LogType = keyof typeof LOG_TYPES;
+type LogType = keyof typeof LOG_TYPES;
 // The pickers' order: the tiles' changes first, the routine kinds last.
 export const LOG_TYPE_ORDER: readonly LogType[] = [
   'status',
@@ -48,17 +49,6 @@ export interface LogFilter {
 // What the pickers and dates choose: the filter without its search.
 export type LogChoice = Omit<LogFilter, 'q'>;
 
-export interface LogQuery {
-  from: string;
-  to: string;
-  limit: number;
-  cursor?: string;
-  kind?: SystemLogKind[];
-  severity?: SystemLogSeverity[];
-  source?: SystemLogSource[];
-  q?: string;
-}
-
 const DAY_MS = 86_400_000;
 const DEFAULT_DAYS = 6;
 const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -66,7 +56,11 @@ const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const isDay = (value: unknown): value is string =>
   typeof value === 'string' &&
   CALENDAR_DAY.test(value) &&
-  new Date(`${value}T00:00:00.000Z`).toISOString().startsWith(value);
+  isRealDay(new Date(`${value}T00:00:00.000Z`), value);
+
+// A month past 12 is no date at all; 30 February rolls into March.
+const isRealDay = (at: Date, value: string) =>
+  !Number.isNaN(at.getTime()) && at.toISOString().startsWith(value);
 
 const plusDays = (day: string, n: number) =>
   new Date(Date.parse(`${day}T00:00:00.000Z`) + n * DAY_MS)
@@ -140,10 +134,17 @@ function choiceOf<T extends string>(
   };
 }
 
+// The text searched for: trimmed and cut to the longest search, never through
+// a surrogate pair, whose half the address could not encode.
+export function searchText(text: string): string {
+  const cut = text.trim().slice(0, SYSTEM_LOG_SEARCH_MAX);
+  return /[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut;
+}
+
 function searchOf(params: Params) {
   const raw = one(params['q']);
   if (typeof raw !== 'string') return { rewrite: raw !== undefined, value: '' };
-  const cut = raw.trim().slice(0, SYSTEM_LOG_SEARCH_MAX);
+  const cut = searchText(raw);
   const value = cut.length >= SYSTEM_LOG_SEARCH_MIN ? cut : '';
   return { rewrite: value !== raw, value };
 }
@@ -190,7 +191,10 @@ export function paramsOf(filter: LogFilter, now: Date) {
   };
 }
 
-export function queryOf(filter: LogFilter, cursor?: string): LogQuery {
+export function queryOf(
+  filter: LogFilter,
+  cursor?: string,
+): SystemLogControllerList$Params {
   return {
     from: dayStart(filter.from),
     limit: SYSTEM_LOG_PAGE_MAX,
@@ -203,7 +207,7 @@ export function queryOf(filter: LogFilter, cursor?: string): LogQuery {
   };
 }
 
-export interface RangeFault {
+interface RangeFault {
   field: 'from' | 'to';
   key: string;
 }

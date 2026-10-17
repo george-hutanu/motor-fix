@@ -42,7 +42,11 @@ export class LogPickers {
   readonly choice = input.required<LogChoice>();
   readonly chosen = output<LogChoice>();
 
-  protected readonly limits = dayLimits(new Date());
+  // Read at each render, so the inputs' max moves past midnight with the
+  // fault check below.
+  protected get limits() {
+    return dayLimits(new Date());
+  }
   // What the controls hold, an unsent range included, until the choice in
   // force changes.
   protected readonly draft = linkedSignal(() => this.choice());
