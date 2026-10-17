@@ -207,6 +207,8 @@ export type { SupportMessageCreatedDto } from './models/support-message-created-
 export type { SuspendedGarageRowDto } from './models/suspended-garage-row-dto';
 export type { SuspendGarageDto } from './models/suspend-garage-dto';
 export type { SwitchRoleDto } from './models/switch-role-dto';
+export type { SystemLogDto } from './models/system-log-dto';
+export type { SystemLogEntryDto } from './models/system-log-entry-dto';
 export type { TestMessageDto } from './models/test-message-dto';
 export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UnreadCountDto } from './models/unread-count-dto';
@@ -385,6 +387,8 @@ export type { VerificationFileControllerRead$Params as VerificationFileControlle
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
+export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
+export { systemLogControllerList as systemLogControllerList } from './fn/admin/system-log-controller-list';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';

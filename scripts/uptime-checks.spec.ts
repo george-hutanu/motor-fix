@@ -109,19 +109,35 @@ describe('the outage rule', () => {
 // @traces 251-FR-004
 describe('the outage setup steps', () => {
   const readme = readFileSync(join(dir, 'README.md'), 'utf8');
-  const section = readme.slice(
-    readme.indexOf('## Uptime checks and the outage alert'),
-  );
+  const start = readme.indexOf('## Uptime checks and the outage alert');
+  const section = readme.slice(start, readme.indexOf('\n## ', start + 1));
 
-  it('name the checks, the rule, the contact point and the token by name, and the by-hand admin list', () => {
+  // @traces 1347-FR-004
+  it('name the checks, the rule, the contact point the workflow applies and the two GitHub values, and leave only the checks by hand', () => {
     const [group] = json('alerts', 'outage.json').groups;
     const receiver = group.rules[0].notification_settings.receiver;
 
-    expect(section).toContain('uptime/checks.json');
-    expect(section).toContain('alerts/outage.json');
-    expect(section).toContain(receiver);
-    expect(section).toContain('OUTAGE_WEBHOOK_TOKEN');
-    expect(section).toMatch(/by hand when an admin joins or leaves/);
+    for (const fact of [
+      'uptime/checks.json',
+      'alerts/outage.json',
+      receiver,
+      'contact-points.json',
+      'OUTAGE_WEBHOOK_TOKEN',
+      'STAGING_WEB_URL',
+    ])
+      expect([fact, section.includes(fact)]).toEqual([fact, true]);
+    expect(section).toMatch(/grafana-alerts\.yml|Grafana alerts/);
+    // The admin list is edited in the file, and the next run applies it.
+    const adminList = section
+      .split(/\.\s+/)
+      .find(
+        (s) => s.includes('contact-points.json') && /joins or leaves/.test(s),
+      );
+    expect(adminList).toMatch(/admin/);
+    expect(adminList).toMatch(/next run applies/);
+    expect(section).not.toMatch(/by hand when an admin joins or leaves/);
+    expect(section).not.toMatch(/nothing here calls its API/);
+    expect(section).not.toMatch(/Alerting › Contact points/);
   });
 });
 

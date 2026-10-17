@@ -17,6 +17,7 @@ import type { Redis } from 'ioredis';
 
 import { purgeSystemLog } from './purge';
 import { systemLog } from './system-log';
+import { SystemLogController } from './system-log.controller';
 import { createPrisma } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { logFinalFailure } from '../../job-failures';
@@ -135,9 +136,10 @@ class SystemLogJobs implements OnApplicationBootstrap, OnApplicationShutdown {
 
 @Module({})
 export class SystemLogModule {
-  // The API: the writer only.
+  // The API: the writer and the admin's read.
   static register(options: SystemLogOptions): DynamicModule {
     return {
+      controllers: [SystemLogController],
       module: SystemLogModule,
       providers: [{ provide: OPTIONS, useValue: options }, SystemLogWriter],
     };

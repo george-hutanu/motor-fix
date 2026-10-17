@@ -4,6 +4,7 @@ import { formatNum, formatPct, I18n } from '@motor-fix/i18n';
 
 import { AdminDemand } from '../admin-demand/admin-demand';
 import { AdminGrowth } from '../admin-growth/admin-growth';
+import { AdminLog } from '../admin-log/admin-log';
 import { AdminOverview } from '../admin-overview';
 import { AdminQueue } from '../admin-queue/admin-queue';
 
@@ -59,7 +60,7 @@ const MISSING = '—';
 
 @Component({
   host: { '[attr.aria-busy]': "regionBusy() ? 'true' : null" },
-  imports: [AdminDemand, AdminGrowth, AdminQueue],
+  imports: [AdminDemand, AdminGrowth, AdminLog, AdminQueue],
   selector: 'mf-admin-panel',
   styleUrl: './admin-panel.css',
   templateUrl: './admin-panel.html',

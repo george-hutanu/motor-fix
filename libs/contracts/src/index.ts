@@ -62,6 +62,8 @@ export * from './staff-invite.dto';
 export * from './support/support';
 export * from './support/support.dto';
 export * from './suspended-garages';
+export * from './system-log/system-log';
+export * from './system-log/system-log.dto';
 export * from './verification-checks';
 export * from './verification-file.dto';
 export * from './verification-queue';
