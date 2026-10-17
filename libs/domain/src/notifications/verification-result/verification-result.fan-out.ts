@@ -26,13 +26,17 @@ const VERIFICATION_RESULT_RUN: JobsOptions = {
 // No requeue: a job an emptied Redis lost is one message lost, not a run.
 export const VERIFICATION_RESULT_CONSUMER = {
   jobs: VERIFICATION_RESULT_RUN,
-  kinds: ['verification.decided'] as readonly EventKind[],
+  kinds: [
+    'verification.decided',
+    'verification.submitted',
+  ] as readonly EventKind[],
   queue: VERIFICATION_RESULT_QUEUE,
 };
 
 // A job as the relay queues it: `id` is the outbox event's.
-export interface VerificationDecidedEvent {
+export interface VerificationEvent {
   id: string;
+  kind?: string;
   // Unchecked: the relay passes the payload through as recorded, so handle()
   // checks each field before it trusts one.
   payload: { decision?: unknown; fileId?: unknown; garageId?: unknown };
@@ -42,7 +46,8 @@ export interface VerificationDecidedEvent {
 // own language. The service sends the e-mail and the bell whatever they
 // muted, and applies the device and WhatsApp rules; the outbox event id keeps
 // a retry or a second relay from building anything twice. The file is read,
-// never written.
+// never written. A file sent, or sent again, is told to every active admin
+// instead, after the sending committed.
 @Injectable()
 export class VerificationResultFanOut {
   private readonly logger = new Logger('VerificationResult');
@@ -53,9 +58,9 @@ export class VerificationResultFanOut {
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
   ) {}
 
-  async handle(
-    job: Pick<Job<VerificationDecidedEvent>, 'data'>,
-  ): Promise<void> {
+  async handle(job: Pick<Job<VerificationEvent>, 'data'>): Promise<void> {
+    if (job.data.kind === 'verification.submitted')
+      return this.queued(job.data);
     const { id: eventId, payload } = job.data;
     const { decision, fileId, garageId } = payload;
     if (
@@ -98,6 +103,42 @@ export class VerificationResultFanOut {
     countVerificationResult('built');
     this.logger.log(
       `verification file ${fileId} ${decision} told to ${told} owners`,
+    );
+  }
+
+  // Every active admin, once per sending: the event id is the sending's.
+  private async queued({ id: eventId, payload }: VerificationEvent) {
+    const { fileId, garageId } = payload;
+    if (typeof fileId !== 'string' || typeof garageId !== 'string') {
+      this.logger.log('verification file ? sent: nobody told');
+      return;
+    }
+    const file = await this.prisma.verificationFile.findFirst({
+      select: { garage: { select: { name: true } } },
+      where: { garageId, id: fileId },
+    });
+    const admins = file
+      ? await this.prisma.account.findMany({
+          select: { id: true },
+          where: { roles: { some: { role: 'admin' } }, status: 'active' },
+        })
+      : [];
+    if (!file || admins.length === 0) {
+      this.logger.log(`verification file ${fileId} sent: nobody told`);
+      return;
+    }
+    await this.notifications.notify({
+      eventId,
+      kind: 'ADMIN_VERIFICATION_QUEUED',
+      params: {
+        dashboard: `${this.config.webUrl}/app/admin`,
+        garage: file.garage.name,
+      },
+      recipients: admins.map(({ id }) => id),
+      subjectId: fileId,
+    });
+    this.logger.log(
+      `verification file ${fileId} sent: told to ${admins.length} admins`,
     );
   }
 

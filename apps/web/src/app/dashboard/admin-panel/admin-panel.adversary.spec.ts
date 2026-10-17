@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -43,6 +44,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   resync = new Subject();
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       AdminOverview,
       {
         provide: Live,
@@ -57,7 +59,10 @@ async function open(language: 'ro' | 'en' = 'ro') {
       },
       {
         provide: AdminService,
-        useValue: { adminOverviewControllerOverview: () => answer() },
+        useValue: {
+          adminOverviewControllerOverview: () => answer(),
+          adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
+        },
       },
     ],
   });

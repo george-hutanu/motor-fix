@@ -194,6 +194,9 @@ export type { UpdateNotificationPreferenceDto } from './models/update-notificati
 export type { UpdateNotificationPreferencesDto } from './models/update-notification-preferences-dto';
 export type { VerificationCheckDto } from './models/verification-check-dto';
 export type { VerificationCheckRecordedDto } from './models/verification-check-recorded-dto';
+export type { VerificationQueueAreaDto } from './models/verification-queue-area-dto';
+export type { VerificationQueueDto } from './models/verification-queue-dto';
+export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
 export { AuthService } from './services/auth.service';
@@ -329,6 +332,8 @@ export type { DemandControllerDemand$Params as DemandControllerDemand$Params } f
 export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
+export type { AdminOverviewControllerQueue$Params as AdminOverviewControllerQueue$Params } from './fn/admin/admin-overview-controller-queue';
+export { adminOverviewControllerQueue as adminOverviewControllerQueue } from './fn/admin/admin-overview-controller-queue';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
 export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';

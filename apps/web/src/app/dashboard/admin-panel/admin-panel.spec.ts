@@ -2,6 +2,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -79,6 +80,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   resync = new Subject();
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       AdminOverview,
       {
         provide: Live,
@@ -96,6 +98,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
         useValue: {
           adminOverviewControllerGrowth: () => growth(),
           adminOverviewControllerOverview: () => answer(),
+          adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
           demandControllerDemand: () => demand(),
         },
       },
@@ -483,5 +486,19 @@ describe('AdminPanel', () => {
       'Active drivers, 12,480, +312 this month',
     );
     expect(text(tile(element, 'Reported reviews'), 'line')).toBe('coming soon');
+  });
+
+  // @traces 301-FR-005
+  it('shows the garages to verify across the overview', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    const queue = element.querySelector('mf-admin-panel mf-admin-queue');
+    expect(queue?.querySelector('h2')?.textContent?.trim()).toBe(
+      'Service‑uri de verificat · 0',
+    );
+    expect(queue?.querySelector('.empty')?.textContent?.trim()).toBe(
+      'Niciun service nu așteaptă verificarea',
+    );
   });
 });

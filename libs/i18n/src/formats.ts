@@ -449,6 +449,21 @@ export function formatSlot(
   });
 }
 
+// When a garage sent its file: "azi, 09:12", "ieri, 14:30", else
+// "lun., 12 oct., 10:00".
+export function appliedAt(
+  value: unknown,
+  language: Language,
+  now: Date,
+): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  return dayAndTime(date, language, now, {
+    [-1]: YESTERDAY[language],
+    0: TODAY[language],
+  });
+}
+
 // "<word>, 14:00" for a Bucharest day `named` has a word for (by days from
 // today), else "joi, 15 oct., 14:00".
 function dayAndTime(

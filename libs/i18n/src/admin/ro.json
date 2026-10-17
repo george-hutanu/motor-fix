@@ -76,6 +76,34 @@
     "waiting": "Așteaptă aprobarea altui admin",
     "withdraw": "Retrage cererea"
   },
+  "queue": {
+    "all": "Vezi toate",
+    "brands": {
+      "few": "{n} mărci",
+      "one": "{n} marcă",
+      "other": "{n} de mărci"
+    },
+    "empty": "Niciun service nu așteaptă verificarea",
+    "failed": "Lista nu a putut fi citită",
+    "heading": "Service‑uri de verificat",
+    "loading": "Se încarcă service‑urile de verificat",
+    "mechanics": {
+      "few": "{n} mecanici",
+      "one": "{n} mecanic",
+      "other": "{n} de mecanici"
+    },
+    "mobile": "Mecanic mobil · rază {km} km",
+    "more": "Mai multe",
+    "open": "Deschide dosarul",
+    "openNamed": "Deschide dosarul {name}",
+    "retry": "Reîncearcă",
+    "stale": "(neactualizat)",
+    "waiting": {
+      "few": "așteaptă de {n} zile lucrătoare",
+      "one": "așteaptă de {n} zi lucrătoare",
+      "other": "așteaptă de {n} de zile lucrătoare"
+    }
+  },
   "users": {
     "cars": {
       "count": {

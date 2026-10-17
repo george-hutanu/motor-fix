@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-15
+updated: 2026-10-16
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -13,6 +13,7 @@ features:
   - 384-response-rate
   - 002-find-account-search
   - 250-launch-analytics-events
+  - 301-verification-queue
 ---
 
 # Capability: Admin dashboard
@@ -53,9 +54,9 @@ _From 163-figures-period-city._
 
 _From 161-headline-numbers._
 
-### 160-FR-012 — The admin shell MUST re-read the overview, through the dashboards' shared live re-read (one re-read per 300 ms burst), on every `verification.submitted`, `verification.decided` and `verification.reopened` message of the admin's stream (matched by event kind, not by object id), and on every reconnect of the stream; the re-read MUST update the header line and the counters without a reload. The stream joins `admin` for an admin as it does today (253-FR-004 unchanged); this story adds no event. `review.reported` and `review.decided` join the list with the reports counter (MF-45).
+### 301-FR-009 — Every open queue MUST re-read its rows and counts on `verification.submitted`, `verification.opened`, `verification.check_recorded`, `verification.decided` and `verification.reopened` from the admin's stream, through the dashboards' shared live re-read (one re-read per 300 ms burst), and on every reconnect, each re-read asking from offset 0 for as many rows as are loaded (at least one page); the admin shell's re-read list (160-FR-012) gains `verification.opened` and `verification.check_recorded`.
 
-_From 160-admin-dashboard-menu._
+_From 301-verification-queue._
 
 ### 160-FR-013 — The seed MUST add, outside production and only once (a second run changes nothing), one `submitted` verification file to the seeded garage `service-dobre` and one `in_review` file to `atelier-dinamo`, both `draft` garages, so a development or test database has 2 garages waiting and the end-to-end check reads a known count; `atelier-test` keeps no file.
 
@@ -543,3 +544,5 @@ _From 250-launch-analytics-events._
 - `001-FR-011` — superseded by `002-FR-011` (2026-10-10)
 
 - `161-FR-002` — superseded by `250-FR-008` (2026-10-15)
+
+- `160-FR-012` — superseded by `301-FR-009` (2026-10-16)

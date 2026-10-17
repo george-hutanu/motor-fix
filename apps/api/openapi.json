@@ -3375,6 +3375,62 @@
         ]
       }
     },
+    "/api/v1/admin/verification-queue": {
+      "get": {
+        "operationId": "AdminOverviewController_queue",
+        "parameters": [
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "A live re-read asks for every row already shown",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationQueueDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: an offset or a limit out of range"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/growth": {
       "get": {
         "operationId": "AdminOverviewController_growth",
@@ -9701,6 +9757,146 @@
           "cities"
         ]
       },
+      "VerificationQueueAreaDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "town",
+              "mobile"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "The town; only for a town"
+          },
+          "radiusKm": {
+            "type": "integer",
+            "description": "The service radius; only for a mobile mechanic"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "CheckSummaryDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "VerificationQueueRowDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The verification file",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "in_review"
+            ]
+          },
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garageName": {
+            "type": "string"
+          },
+          "area": {
+            "description": "Absent when the garage has no town recorded",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VerificationQueueAreaDto"
+              }
+            ]
+          },
+          "brands": {
+            "type": "integer",
+            "description": "Brands the garage works on",
+            "minimum": 0
+          },
+          "mechanics": {
+            "type": "integer",
+            "description": "The garage's mechanics; absent when it keeps no team",
+            "minimum": 0
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CheckSummaryDto"
+          },
+          "lamp": {
+            "type": "string",
+            "description": "Red on a failed check, amber when flagged or on a warning",
+            "enum": [
+              "green",
+              "amber",
+              "red",
+              "grey"
+            ]
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The latest sending"
+          },
+          "workingDays": {
+            "type": "integer",
+            "description": "Working days waited, in Europe/Bucharest",
+            "minimum": 0
+          },
+          "flagged": {
+            "type": "boolean",
+            "description": "Waited more than the 2 working days"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "garageId",
+          "garageName",
+          "brands",
+          "summary",
+          "lamp",
+          "submittedAt",
+          "workingDays",
+          "flagged"
+        ]
+      },
+      "VerificationQueueDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Oldest sending first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationQueueRowDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every file waiting, as the overview counts them",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
       "AdminGrowthMonthDto": {
         "type": "object",
         "properties": {
@@ -10856,21 +11052,6 @@
           "detail",
           "recordedBy",
           "recordedAt"
-        ]
-      },
-      "CheckSummaryDto": {
-        "type": "object",
-        "properties": {
-          "ro": {
-            "type": "string"
-          },
-          "en": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "ro",
-          "en"
         ]
       },
       "VerificationCheckRecordedDto": {

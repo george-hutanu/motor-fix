@@ -5,6 +5,7 @@ import { formatNum, formatPct, I18n } from '@motor-fix/i18n';
 import { AdminDemand } from '../admin-demand/admin-demand';
 import { AdminGrowth } from '../admin-growth/admin-growth';
 import { AdminOverview } from '../admin-overview';
+import { AdminQueue } from '../admin-queue/admin-queue';
 
 type Figures = NonNullable<ReturnType<AdminOverview['figures']>>;
 type Figure = Exclude<keyof Figures, 'observabilityUrl'>;
@@ -58,7 +59,7 @@ const MISSING = '—';
 
 @Component({
   host: { '[attr.aria-busy]': "regionBusy() ? 'true' : null" },
-  imports: [AdminDemand, AdminGrowth],
+  imports: [AdminDemand, AdminGrowth, AdminQueue],
   selector: 'mf-admin-panel',
   styleUrl: './admin-panel.css',
   templateUrl: './admin-panel.html',

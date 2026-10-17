@@ -120,8 +120,11 @@ describe('AdminOverview', () => {
     expect(overview.waiting()).toBe(4);
   });
 
+  // @traces 301-FR-009
   it.each<EventKind>([
     'verification.submitted',
+    'verification.opened',
+    'verification.check_recorded',
     'verification.decided',
     'verification.reopened',
   ])('reads the count again on %s, whatever file it is about', async (kind) => {
@@ -136,17 +139,6 @@ describe('AdminOverview', () => {
 
     expect(reads).toBe(2);
     expect(overview.waiting()).toBe(2);
-  });
-
-  it('does not read again when a file is only opened', async () => {
-    answer = async () => ({ garagesWaiting: 1 });
-    setUp();
-    await wait(0);
-
-    events.next(message('verification.opened'));
-    await wait(400);
-
-    expect(reads).toBe(1);
   });
 
   it('reads once for the events of 300 ms', async () => {

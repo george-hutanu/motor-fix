@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 import {
+  appliedAt,
   calendarNames,
   daysUntil,
   formatClock,
@@ -670,5 +671,24 @@ describe('timeLeft', () => {
 
   it.each(notNumbers)('shows a dash for %p', (value) => {
     expect(timeLeft(value, 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 301-FR-005
+describe('appliedAt', () => {
+  // 13:00 in Bucharest on Thursday 15 October 2026.
+  const now = new Date('2026-10-15T10:00:00Z');
+
+  it.each([
+    ['2026-10-15T06:12:00Z', 'azi, 09:12', 'today, 09:12'],
+    ['2026-10-14T11:30:00Z', 'ieri, 14:30', 'yesterday, 14:30'],
+    ['2026-10-12T07:00:00Z', 'lun., 12 oct., 10:00', 'Mon, 12 Oct, 10:00'],
+  ])('writes %p as %p / %p', (value, ro, en) => {
+    expect(appliedAt(value, 'ro', now)).toBe(ro);
+    expect(appliedAt(value, 'en', now)).toBe(en);
+  });
+
+  it.each(notNumbers)('shows a dash for %p', (value) => {
+    expect(appliedAt(value, 'ro', now)).toBe(MISSING);
   });
 });
