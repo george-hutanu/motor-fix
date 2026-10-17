@@ -97,7 +97,6 @@ export { GarageRequestsService } from './quotes/garage-requests/garage-requests.
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';
 export { QuotesModule } from './quotes/quotes.module';
 export { SearchModule } from './search/search.module';
-export { backupLister } from './status/probes/probes';
 export { StatusModule } from './status/status.module';
 export * from './storage/storage.module';
 export { type SignedUpload, StorageService } from './storage/storage.service';

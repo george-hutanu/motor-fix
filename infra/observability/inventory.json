@@ -154,7 +154,7 @@
         "worker-queue-backlog",
         "worker-jobs-failed"
       ],
-      "reason": "one job every 30 seconds probes the admin dashboard's six service tiles and stores them in status_tile, counted by motorfix_jobs_total{job_name,outcome} and logged once on its final failure; a confirmed tile change logs 'StatusChecks <tile> <state> <figures>' and writes status_tile.changed; a failed run is not retried, the next one follows in 30 seconds; the tiles' own alerting is #170",
+      "reason": "one job every 30 seconds probes the admin dashboard's six service tiles and stores them in status_tile, counted by motorfix_jobs_total{job_name,outcome} and logged once on its final failure; a confirmed tile change logs 'StatusChecks <tile> <state> <figures>' and writes status_tile.changed; a failed run is not retried, the next one follows in 30 seconds; the tiles' own alerting is a later story",
       "story": "ST-294"
     },
     {
@@ -378,7 +378,7 @@
       "alerts": [
         "worker-jobs-failed"
       ],
-      "reason": "the status checks call the public web address every 30 seconds (/health/ready, the popular brands and one garage search without the log flag), timed on the Outside calls row (http_client_request_duration_seconds by server_address); a failed probe shows its tile red, the tiles' own alerting is #170",
+      "reason": "the status checks call the public web address every 30 seconds (/health/ready, the popular brands and one garage search without the log flag), timed on the Outside calls row (http_client_request_duration_seconds by server_address); a failed probe shows its tile red, the tiles' own alerting is a later story",
       "story": "ST-294"
     },
     {

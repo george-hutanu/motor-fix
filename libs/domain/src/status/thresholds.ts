@@ -47,6 +47,9 @@ const checkTile = (
     if (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0) {
       fail(`${tile}.${field} must be a number of 0 or more`);
     }
+    if (field.endsWith('_share') && (limit as number) > 1) {
+      fail(`${tile}.${field} is a share and must be 1 or less`);
+    }
   }
 };
 

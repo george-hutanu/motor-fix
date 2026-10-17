@@ -118,11 +118,13 @@ const PROBES: Record<
   search: async (deps, signal) => ({
     figures: {},
     latencyMs: await timed(deps, async () => {
-      const brands = (await (
+      const brands: unknown = await (
         await get(deps, '/api/v1/brands/popular?limit=1', signal)
-      ).json()) as { slug?: string }[];
-      const slug = brands[0]?.slug;
-      if (!slug) throw new Error('no_brand');
+      ).json();
+      const slug = Array.isArray(brands)
+        ? (brands[0] as { slug?: unknown } | undefined)?.slug
+        : undefined;
+      if (typeof slug !== 'string' || !slug) throw new Error('no_brand');
       const query = new URLSearchParams({
         brand: slug,
         near: BUCHAREST_CENTRE,
@@ -170,18 +172,25 @@ export function newestManifest(
 ): Date | null {
   let newest: Date | null = null;
   for (const { Key, LastModified } of contents ?? []) {
-    if (!Key?.endsWith('.manifest.json') || !LastModified) continue;
+    if (!Key?.endsWith('.manifest.json')) continue;
+    if (!LastModified || Number.isNaN(LastModified.getTime())) continue;
     if (!newest || LastModified > newest) newest = LastModified;
   }
   return newest;
 }
 
+export interface BackupLister {
+  list: NonNullable<ProbeDeps['backup']>;
+  destroy(): void;
+}
+
 // The nightly backup bucket, read with its own settings: the copies of this
-// environment sit under `<environment>/`.
+// environment sit under `<environment>/`. One page of 1000 keys holds them
+// all, as the bucket keeps 30 days of nightly copies.
 export function backupLister(
   appEnv: string,
   source: Record<string, string | undefined>,
-): ProbeDeps['backup'] {
+): BackupLister | undefined {
   const endpoint = source['BACKUP_S3_ENDPOINT'];
   const region = source['BACKUP_S3_REGION'];
   const bucket = source['BACKUP_S3_BUCKET'];
@@ -197,11 +206,14 @@ export function backupLister(
     region,
     requestHandler: { connectionTimeout: 2000, requestTimeout: TIMEOUT_MS },
   });
-  return async (abortSignal) => {
-    const page = await s3.send(
-      new ListObjectsV2Command({ Bucket: bucket, Prefix: `${appEnv}/` }),
-      { abortSignal },
-    );
-    return newestManifest(page.Contents);
+  return {
+    destroy: () => s3.destroy(),
+    list: async (abortSignal) => {
+      const page = await s3.send(
+        new ListObjectsV2Command({ Bucket: bucket, Prefix: `${appEnv}/` }),
+        { abortSignal },
+      );
+      return newestManifest(page.Contents);
+    },
   };
 }

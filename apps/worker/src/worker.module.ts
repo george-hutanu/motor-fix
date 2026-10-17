@@ -1,6 +1,5 @@
 import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
-  backupLister,
   CAR_REMINDERS_CONSUMER,
   DataStoreMetricsModule,
   DECLINE_WINDOW_CONSUMER,
@@ -103,7 +102,8 @@ export function workerModule(
       }),
       // The admin dashboard's six service tiles, checked every 30 seconds.
       StatusModule.registerWorker({
-        backup: backupLister(env.APP_ENV, process.env),
+        appEnv: env.APP_ENV,
+        backupEnv: process.env,
         brevo: { apiKey: email.apiKey, apiUrl: email.apiUrl },
         databaseUrl: env.DATABASE_URL,
         places: placesConfig(env.APP_ENV, process.env),

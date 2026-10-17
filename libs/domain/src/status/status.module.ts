@@ -15,6 +15,7 @@ import {
 import { Queue, Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 
+import { type BackupLister, backupLister } from './probes/probes';
 import { liveProbes, type RunOptions, runChecks } from './run';
 import { parseThresholds, type Thresholds } from './thresholds';
 import { createPrisma } from '../auth/prisma';
@@ -28,7 +29,10 @@ import { borrowStore, returnStore } from '../store/store';
 export const STATUS_QUEUE = 'status-checks';
 const EVERY_MS = 30_000;
 
-interface StatusOptions extends RunOptions {
+interface StatusOptions extends Omit<RunOptions, 'backup'> {
+  // The environment whose backups are read, and the BACKUP_S3_* settings.
+  appEnv: string;
+  backupEnv: Record<string, string | undefined>;
   databaseUrl: string;
   redisUrl: string;
   // STATUS_THRESHOLDS, as configured.
@@ -48,6 +52,7 @@ class StatusChecks implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly jobs: Queue;
   private readonly notifications: Queue;
   private readonly worker: Worker;
+  private readonly backup: BackupLister | undefined;
 
   constructor(
     @Inject(OPTIONS) options: StatusOptions,
@@ -62,7 +67,12 @@ class StatusChecks implements OnApplicationBootstrap, OnApplicationShutdown {
     });
     observeQueue(this.jobs);
     this.notifications = new Queue(NOTIFICATIONS_QUEUE, { connection });
-    const probes = liveProbes(options, this.prisma, this.notifications);
+    this.backup = backupLister(options.appEnv, options.backupEnv);
+    const probes = liveProbes(
+      { ...options, backup: this.backup?.list },
+      this.prisma,
+      this.notifications,
+    );
     this.worker = new Worker(
       STATUS_QUEUE,
       (job) =>
@@ -102,6 +112,7 @@ class StatusChecks implements OnApplicationBootstrap, OnApplicationShutdown {
     await this.worker.close();
     await this.jobs.close();
     await this.notifications.close();
+    this.backup?.destroy();
     await returnStore(this.redis);
     await this.prisma.$disconnect();
   }

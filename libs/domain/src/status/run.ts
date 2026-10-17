@@ -25,7 +25,7 @@ export interface RunOptions {
   backup: ProbeDeps['backup'];
 }
 
-export interface RunDeps {
+interface RunDeps {
   prisma: PrismaClient;
   events: EventPort;
   probes: ProbeDeps;
@@ -33,7 +33,7 @@ export interface RunDeps {
   thresholds: Thresholds;
 }
 
-export interface Change {
+interface Change {
   tile: TileKey;
   state: TileState;
   detail: Detail;
@@ -49,7 +49,7 @@ export function liveProbes(
     backup: options.backup,
     brevo: apiKey ? new Brevo({ apiKey, apiUrl }) : undefined,
     clock: () => performance.now(),
-    fetch: (input, init) => fetch(input, init),
+    fetch,
     now: () => new Date(),
     oldestWaiting: async () => {
       const [job] = await notifications.getWaiting(0, 0);
