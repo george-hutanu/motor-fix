@@ -217,7 +217,7 @@ const DECISION_REFUSAL_REASONS = [
   'rar_check_required',
   'caen_check_required',
 ] as const;
-export type DecisionRefusalReason = (typeof DECISION_REFUSAL_REASONS)[number];
+type DecisionRefusalReason = (typeof DECISION_REFUSAL_REASONS)[number];
 
 export function countDecisionRefusal(reason: DecisionRefusalReason) {
   decisionRefusals().add(1, { reason });

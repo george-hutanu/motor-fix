@@ -30,24 +30,24 @@ export const VERIFICATION_TIMELINE_MAX = 50;
 
 const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
 
-export const VERIFICATION_DECISIONS = [
+const VERIFICATION_DECISIONS = [
   'approved',
   'more_requested',
   'rejected',
 ] as const;
-export type VerificationDecision = (typeof VERIFICATION_DECISIONS)[number];
+type VerificationDecision = (typeof VERIFICATION_DECISIONS)[number];
 
 // What a rejection names, and what a request for more may ask for.
-export const VERIFICATION_REASON_CODES = [
+const VERIFICATION_REASON_CODES = [
   'documents',
   'rar',
   'address',
   'photos',
   'other',
 ] as const;
-export type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
+type VerificationReasonCode = (typeof VERIFICATION_REASON_CODES)[number];
 
-export const VERIFICATION_NOTE_MAX = 1000;
+const VERIFICATION_NOTE_MAX = 1000;
 
 // A note blank after trimming is no note: the use case asks for one where
 // the decision needs it.

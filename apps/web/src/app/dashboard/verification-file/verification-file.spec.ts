@@ -1825,6 +1825,24 @@ describe('reopening', () => {
     expect(document.activeElement).toBe(reopenButton(host));
   });
 
+  it('disables the reopen button while the reopening is on its way', async () => {
+    const host = await open(rejected());
+    overlays.open.mockResolvedValue(true);
+    let settleCall: (value: VerificationFileDto) => void = () => undefined;
+    api.verificationFileControllerReopen.mockReturnValue(
+      new Promise((resolve) => {
+        settleCall = resolve;
+      }),
+    );
+
+    reopenButton(host)?.click();
+    await settle();
+
+    expect(reopenButton(host)?.disabled).toBe(true);
+    settleCall(rejected());
+    await settle();
+  });
+
   it('says in a toast that the file could not be reopened, and changes nothing', async () => {
     const host = await open(rejected());
     overlays.open.mockResolvedValue(true);

@@ -21,7 +21,7 @@
         <div class="title">
           <h3 tabindex="-1">{{ h.name }}</h3>
           @if (decided()) {
-            <button type="button" class="action reopen" data-part="reopen" (click)="reopen()">{{ 'admin.file.reopen.button' | t }}</button>
+            <button type="button" class="action reopen" data-part="reopen" [disabled]="busy()" (click)="reopen()">{{ 'admin.file.reopen.button' | t }}</button>
           }
         </div>
         <div class="facts">

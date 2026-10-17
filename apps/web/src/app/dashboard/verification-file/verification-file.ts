@@ -134,7 +134,7 @@ export class VerificationFile {
   // Why the last decision was refused, kept over later reads until the next.
   protected readonly refused = signal<string | null>(null);
   // A decision or a reopening on its way: a second press waits for nothing.
-  private busy = false;
+  protected readonly busy = signal(false);
 
   protected readonly decided = computed(() =>
     DECIDED.includes(this.file.value()?.file.status ?? ''),
@@ -318,8 +318,8 @@ export class VerificationFile {
   // another admin is named and read again; a missing register check is
   // named, with nothing to re-read.
   async decide(body: VerificationDecisionDto) {
-    if (this.busy) return;
-    this.busy = true;
+    if (this.busy()) return;
+    this.busy.set(true);
     this.refused.set(null);
     try {
       await this.api.verificationFileControllerDecision({
@@ -327,27 +327,29 @@ export class VerificationFile {
         id: this.fileId,
       });
       this.file.reload();
-      this.focusHeading();
     } catch (error) {
       this.refusal(error);
     } finally {
-      this.busy = false;
+      this.busy.set(false);
     }
   }
 
   // Asks first; a decision that is reopened stays shown until the next one.
+  // The button is disabled only while the call is out, so a cancelled
+  // confirmation can hand focus back to it.
   async reopen() {
-    if (this.busy || !this.decided()) return;
-    this.busy = true;
+    if (this.busy() || !this.decided()) return;
+    const answer = await this.overlays.open<true>(VerificationReopen, {
+      shape: 'dialog',
+      title: 'admin.file.reopen.title',
+    });
+    if (answer !== true) {
+      this.focusReopen();
+      return;
+    }
+    if (this.busy()) return;
+    this.busy.set(true);
     try {
-      const answer = await this.overlays.open<true>(VerificationReopen, {
-        shape: 'dialog',
-        title: 'admin.file.reopen.title',
-      });
-      if (answer !== true) {
-        this.focusReopen();
-        return;
-      }
       await this.api.verificationFileControllerReopen({ id: this.fileId });
       this.refused.set(null);
       this.file.reload();
@@ -355,7 +357,7 @@ export class VerificationFile {
     } catch {
       toast(this.t('reopen.failed'));
     } finally {
-      this.busy = false;
+      this.busy.set(false);
     }
   }
 
