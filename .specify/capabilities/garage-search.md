@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-15
+updated: 2026-10-17
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -11,6 +11,7 @@ features:
   - 267-brand-results
   - 1182-cache-service
   - 1169-prefetch-intent
+  - 269-map-price-pins
 ---
 
 # Capability: Garage search
@@ -59,9 +60,9 @@ _From 043-brand-first-garage-list._
 
 _From 043-brand-first-garage-list._
 
-### 267-FR-007 — A new search (the page opening for a brand and place, or the brand or the place changing) MUST write exactly one SEARCH_LOG row: `brand_id`, `area_cell` (a geohash of 5 characters of the place, about 5 km; null without a place) and `at`. No account id, no exact point, no cursor page, no `ids=` read, no reload, no retry, no 50 km widening and no live re-read writes one. The page marks a new search with `log=1`; the API writes nothing without it, and writes the row for every `log=1` request whether the answer came from the cache or from PostgreSQL.
+### 269-FR-006 — In visible-area mode the list MUST keep the brand groups, the order of 267-FR-001, the paging of 267-FR-002 (the cursor names the box), the counts of 043-FR-005 and the distances measured from `near` when it is given; `log=1` with `bbox` MUST write no SEARCH_LOG row (267-FR-007: moving the map is not a new search).
 
-_From 267-brand-results._
+_From 269-map-price-pins._
 
 ### 229-FR-009 — `GET /api/v1/home?brand={slug}&near={lat},{lng}` MUST answer without a session, from the `search` module and the one public garage scope, with: the brand (id, name, slug), `total` (Y) and `takers` (X); when `near` is given, both count only the approved garages in the area of that point (FR-010 and FR-011), and without it they cover all of Romania; `near` MUST be two finite numbers (latitude −90..90, longitude −180..180) inside Romania (the bounding box shared in `libs/contracts`), else 400 `validation_failed`; a missing, blank, over-long or control-character `brand` answers 400 `validation_failed`; a slug with no active brand answers 404 `not_found`; the answer carries the public cache policy of 1182-FR-009 (`public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400`; was `public, max-age=60`, amended by 1182-cache-service).
 
@@ -95,9 +96,9 @@ _From 229-location-or-address._
 
 _From 229-location-or-address._
 
-### 229-FR-019 — The Home read and the garage search stay open to visitors; no new route is added, so the public routes list is unchanged.
+### 269-FR-001 — The API MUST answer `GET /api/v1/search/garages/pins` without a session, from the `search` module and the one public garage scope (approved garages only; draft, suspended and never-approved excluded, as 043-FR-002), with the brand named as the list names it (`brand={slug}` or `brandId`, exactly one, 267-FR-004; an unknown brand answers 404 `not_found` as the list does), `near` and `radius` with the list's validation (267-FR-005, 229-FR-009's `near` rules), and `bbox` (FR-005); the route is marked public, listed in the public routes test, documented in the OpenAPI document with DTOs from the contracts library, and the web client is regenerated from it (225-FR-011).
 
-_From 229-location-or-address._
+_From 269-map-price-pins._
 
 ### 229-FR-020 — Observability: no new service, endpoint, queue or outside call; the existing places look-up metrics cover the address search; the PR's Observability section states this and, if a counter for Home reads with and without a place is added, lists it in the inventory.
 
@@ -123,9 +124,9 @@ _From 267-brand-results._
 
 _From 267-brand-results._
 
-### 267-FR-009 — A page answer MUST be kept in Redis for 60 seconds, keyed by brand, place (as the shared 3-decimal `near` text), radius and cursor (never `log` or `ids`), and the same request within that time MUST be answered from it; the answer is never cached by a CDN (`Cache-Control: no-store`), so every search reaches the API and the log stays complete. `ids=` reads are never cached.
+### 269-FR-019 — The pins answer MUST carry `Cache-Control: no-store` and be kept in Redis for 60 seconds under the list's rules, keyed by brand, place, radius and box (267-FR-009), dropped on the same public garage events (267-FR-010), answered from PostgreSQL when Redis is unavailable (267-FR-011); the list's `bbox` joins its cache key.
 
-_From 267-brand-results._
+_From 269-map-price-pins._
 
 ### 267-FR-010 — Every cached answer MUST be dropped when a public garage change passes through the API (an approval, suspension, restoration, `garage.updated`, a brand-stance change or a review kind), so a count or card read after it is fresh; 60 seconds is the longest an entry lives either way.
 
@@ -179,6 +180,78 @@ _From 1182-cache-service._
 
 _From 1169-prefetch-intent._
 
+### 269-FR-002 — The answer MUST carry `total` (every garage found, the same number the list's `total` gives for the same parameters) and `pins`, one per garage found, each with `id`, `lat`, `lng`, `rateLei` (whole lei, the hourly labour rate rounded to the nearest leu; null when not set), `stance` (`works_on`, `does_not_take` or `unstated`, read from the garage brand rows as 043-FR-010) and, for a mobile mechanic only, `serviceRadiusKm` (20 when none is set, 229-FR-011). A mobile mechanic's `lat`/`lng` is the centre of its circle rounded to 2 decimals (about 1 km), so the answer never gives its seat (X20c); no name, address, city or other field travels.
+
+_From 269-map-price-pins._
+
+### 269-FR-003 — The answer MUST hold at most 500 pins (`SEARCH_PINS_MAX`, a named constant in the contracts library); above that the 500 nearest the place, or the box's centre without a place, are answered and `total` still counts every garage found.
+
+_From 269-map-price-pins._
+
+### 269-FR-004 — The garages found MUST be the list's: the area rule of 229-FR-010 and 229-FR-011 for the 25 or 50 km search, and FR-005's box rule in visible-area mode, through the one shared area query of 229-FR-013 (Constitution V); the pins and the list for the same parameters never disagree on which garages are found.
+
+_From 269-map-price-pins._
+
+### 269-FR-005 — Both the list route (`GET /api/v1/search/garages`) and the pins route MUST accept `bbox={south},{west},{north},{east}` (four finite numbers, latitudes −90..90, longitudes −180..180, south < north, west < east, the box inside Romania's bounding box, each number rounded to 3 decimals as `near` is); with it, a fixed garage is found when its position is inside the box, `radius` is ignored, and a mobile mechanic is found when `near` is given and the place is inside its area (never by the box; without `near` no mobile mechanic). A box wider than 100 km (`SEARCH_BBOX_MAX_KM`) on its longer side, or one failing the checks above, answers 400 `validation_failed`.
+
+_From 269-map-price-pins._
+
+### 269-FR-007 — The page MUST request the visible area when the map has been still for 400 ms after a drag or zoom by the driver (never after the page's own fit-to-pins move), with the box the map shows clamped to Romania's bounding box (nothing is requested when the clamped box is empty), for the pins and for the list's first page; a box equal to the one last loaded requests nothing; a newer request supersedes an in-flight one; the address bar is unchanged (a reload returns to the 25 km search). While a visible-area request is in flight the pins and cards shown stay and the list's loading state of 267-FR-016 applies; when it fails the list shows its error state (267-FR-017) with a retry, the pins stay and the box is not recorded as loaded.
+
+_From 269-map-price-pins._
+
+### 269-FR-008 — In visible-area mode the summary MUST read "{total} de service-uri în zona hărții · {takers} lucrează pe {brand} · {others} nu o primesc" ("{total} garages in the map area · …") with the Romanian plural rules of 267-FR-013, and show a button "Înapoi la 25 km" ("Back to 25 km"; "50 km" when the first search was widened) that restores the first search's list and pins and fits the map to them.
+
+_From 269-map-price-pins._
+
+### 269-FR-009 — When the box the map shows is wider than 100 km on its longer side, the page MUST request nothing, keep the pins and the list it shows, and show the hint "Apropie harta" ("Zoom in") on the map until the box is narrower; the hint and the "map not available" line of FR-017 sit outside the hidden map canvas, in a polite live region (`role="status"`), so a screen reader announces them.
+
+_From 269-map-price-pins._
+
+### 269-FR-010 — Results MUST show an interactive MapLibre map beside the list on desktop (the list and the map side by side from 1024 px), and above the list at full width and a fixed height below that; the phone layout of #51 (summary, map, list sheet) is not built here, and the page never scrolls sideways at 320 px (267-FR-016). The map uses MapLibre's cooperative gestures (one finger scrolls the page, two move the map; Ctrl or ⌘ with the wheel zooms), so it never traps a page scroll.
+
+_From 269-map-price-pins._
+
+### 269-FR-011 — The map MUST use the tile styles and the dark-scheme choice of the place-step map (A17's provider, openfreemap `liberty` and `dark`), honouring the same test override that points it at the app's empty style, so the neighbourhood names come from the style and no test fetches a tile from outside.
+
+_From 269-map-price-pins._
+
+### 269-FR-012 — On load, and on "Înapoi la 25 km", the map MUST fit the bounds of the place and every fixed pin (with padding, at most zoom 15, so one pin does not fill the screen); mobile circles do not widen the fit; with no place and no pin it shows Romania whole. The move is instant (never animated), so reduced motion needs nothing more.
+
+_From 269-map-price-pins._
+
+### 269-FR-013 — Each fixed garage MUST be one pin labelled with its `rateLei` (no label when null) and coloured with the lamp colours of `libs/ui-cockpit` (green for `works_on`, red for `does_not_take` and `unstated`); when the pins answer holds more than 50 fixed pins, pins MUST merge into clusters showing their count (MapLibre's GeoJSON clustering), and a cluster MUST split when zoomed into.
+
+_From 269-map-price-pins._
+
+### 269-FR-014 — Each mobile mechanic MUST be one light circle of its `serviceRadiusKm` around its centre, drawn under the pins, with a small label of its `rateLei` inside and no centre marker, no pin and no address.
+
+_From 269-map-price-pins._
+
+### 269-FR-015 — A legend MUST sit on the map in both languages, with the mock's words (Results.dc.html, `mf-legend-d`): the green lamp "primește {brand}" ("takes {brand}"), the red lamp "nu primește" ("doesn't"), and "lei pe oră" ("lei per hour") for the number on a pin; when a circle is on the map, a fourth entry explains it ("Mecanic mobil · zona deservită" / "Mobile mechanic · service area").
+
+_From 269-map-price-pins._
+
+### 269-FR-016 — The map MUST NOT be the accessible path: the map region carries a text label ("Harta service-urilor" / "Map of garages"), the map canvas, its pins, clusters and controls are hidden from assistive technology and skipped by the keyboard order, and every garage stays in the list.
+
+_From 269-map-price-pins._
+
+### 269-FR-017 — While the search runs the map area MUST show a grey map with the legend; pins appear when the pins request answers. When the map's style fails to load (a map `error` before `load`, or no `load` within 10 s; a single tile error is ignored) the map area MUST read "Harta nu este disponibilă acum" ("The map is not available now") and the list is unchanged; when the pins request fails the map stays without pins, with no message over the list. The map is browser-only: the server renders the placeholder and the legend.
+
+_From 269-map-price-pins._
+
+### 269-FR-018 — The pins MUST be re-read (one pins request for the current parameters) within 2 seconds when a live message of the kinds the list follows about a public garage arrives (`garage.updated`, `garage.suspended`, `garage.restored`, `verification.decided`), through the same stream as the list (267-FR-019), bursts folded as the list folds them; a review event re-reads nothing (a pin shows no rating).
+
+_From 269-map-price-pins._
+
+### 269-FR-020 — The PR MUST list in its Observability section and in `infra/observability/inventory.json`: the pins route counted by outcome (`results`, `none`) and by mode (`area`, `bbox`) in `motorfix_search_pins_total{outcome,mode}`, its latency in `http.server.request.duration` by `http.route` (automatic), a panel on the MotorFix dashboard, and the existing search cache fallback alert covering it; no new outside call (the tiles are fetched by the browser from A17's provider, already in use by the place-step map).
+
+_From 269-map-price-pins._
+
+### 269-FR-021 — Jest on real PostgreSQL and Redis MUST cover: the pins for the 25 km circle and for a box; the 500 cap with the nearest kept and `total` exact; a mobile mechanic only when the place is inside its area, in both modes, and never by the box alone; draft, suspended and never-approved garages excluded; `bbox` validation (wider than 100 km, outside Romania, inverted corners); the list route in visible-area mode (groups, order, counts, distances from the place, no SEARCH_LOG row with `log=1`); the cache key with the box and the drop on a public garage event; the public routes list. Web unit tests MUST cover the pin label and colour for each stance and a null rate, the circle for a mobile mechanic, the legend texts in both languages, the 400 ms stillness and the 100 km guard, the "Înapoi la 25 km" return, the loading, tiles-failed and pins-failed states, and the live re-read. Playwright, with the tile service stubbed: open Results and check the number of pins equals the total of fixed garages found; drag the map and see the list and the total change; tap "Înapoi la 25 km".
+
+_From 269-map-price-pins._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -193,3 +266,7 @@ _From 1169-prefetch-intent._
 - `042-FR-013` — superseded by `267-FR-003` (2026-10-14)
 - `043-FR-011` — superseded by `267-FR-007` (2026-10-14)
 - `229-FR-012` — superseded by `267-FR-005` (2026-10-14)
+
+- `229-FR-019` — superseded by `269-FR-001` (2026-10-17)
+- `267-FR-009` — superseded by `269-FR-019` (2026-10-17)
+- `267-FR-007` — superseded by `269-FR-006` (2026-10-17)
