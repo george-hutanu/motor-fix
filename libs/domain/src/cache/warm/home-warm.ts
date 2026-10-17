@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  type BeforeApplicationShutdown,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 
 import { AccountLoader, actorOf } from '../../auth/account-loader';
 import type { Role } from '../../auth/capabilities';
@@ -16,8 +20,10 @@ const STATUSES = ['waiting', 'quoted', 'closed'] as const;
 // What the home reads first, read while the sign-in answer travels back, so
 // that read finds it in Redis; the routes take it once.
 @Injectable()
-export class HomeWarm implements HomeWarmer {
+export class HomeWarm implements HomeWarmer, BeforeApplicationShutdown {
   private readonly logger = new Logger('CacheWarm');
+  private readonly running = new Set<Promise<void>>();
+  private closed = false;
 
   constructor(
     private readonly cache: CacheService,
@@ -27,7 +33,23 @@ export class HomeWarm implements HomeWarmer {
     private readonly garageRequests: GarageRequestsService,
   ) {}
 
-  async homes(accountId: string, role: Role): Promise<void> {
+  homes(accountId: string, role: Role): Promise<void> {
+    if (this.closed) return Promise.resolve();
+    const warming = this.warm(accountId, role);
+    this.running.add(warming);
+    warming.then(() => this.running.delete(warming));
+    return warming;
+  }
+
+  // Nest runs this before it closes the HTTP server and the stores: a warm
+  // still reading then would reopen the database pool once it was closed.
+  // A sign-in answered meanwhile warms nothing.
+  async beforeApplicationShutdown(): Promise<void> {
+    this.closed = true;
+    await Promise.allSettled([...this.running]);
+  }
+
+  private async warm(accountId: string, role: Role): Promise<void> {
     if ((role !== 'driver' && role !== 'garage') || !this.cache.available) {
       return;
     }
